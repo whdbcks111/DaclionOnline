@@ -1,11 +1,24 @@
 {
-  "name": "dacliononline",
+  "name": "daclion-online",
   "version": "1.0.0",
-  "description": "chat based text mud game service",
-  "main": "index.js",
+  "description": "Real-time multiplayer game with React and Socket.io",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "build:server": "cd server && npm run build",
+    "build:client": "cd client && npm run build",
+    "build": "npm run build:server && npm run build:client"
   },
-  "author": "",
-  "license": "ISC"
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "game",
+    "multiplayer",
+    "socket.io",
+    "react"
+  ]
 }
