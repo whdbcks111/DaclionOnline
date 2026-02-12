@@ -12,6 +12,19 @@ function SessionHandler() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // 서버에서 세션 무효 시 로그인 페이지로
+  useEffect(() => {
+    if (!socket) return;
+
+    const onSessionInvalid = () => {
+      navigate('/login', { replace: true });
+    };
+
+    socket.on('sessionInvalid', onSessionInvalid);
+    return () => { socket.off('sessionInvalid', onSessionInvalid); };
+  }, [socket, navigate]);
+
+  // 서버에서 세션 복원 시 홈으로
   useEffect(() => {
     if (!socket) return;
 
