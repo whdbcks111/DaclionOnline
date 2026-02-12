@@ -59,11 +59,15 @@ export const initLogin = () => {
 
     io.on('connection', socket => {
         // 미들웨어에서 바인딩된 세션이 있으면 클라이언트에 알림
-        if (socket.data.session) {
+        let session;
+        if (socket.data.sessionToken && (session = getSession(socket.data.sessionToken))) {
             socket.emit('sessionRestore', {
-                username: socket.data.session.username,
-                nickname: socket.data.session.nickname,
+                username: session.username,
+                nickname: session.nickname,
             });
+        }
+        else {
+            socket.emit('sessionInvalid');
         }
 
         socket.on('login', async data => {

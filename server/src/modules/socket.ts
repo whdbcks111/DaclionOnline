@@ -25,10 +25,7 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
         if (cookies) {
             const token = parseCookie(cookies, 'sessionToken');
             if (token) {
-                const session = getSession(token);
-                if (session) {
-                    socket.data.session = session;
-                }
+                socket.data.sessionToken = token;
             }
         }
         next();
@@ -36,8 +33,9 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
 
     io.on('connection', (socket) => {
         logger.socket('클라이언트 연결됨:', socket.id);
-        if (socket.data.session) {
-            logger.info(`세션 복원: ${socket.data.session.username}`);
+        let session;
+        if (socket.data.sessionToken && (session = getSession(socket.data.sessionToken))) {
+            logger.info(`세션 복원: ${session.username}`);
         }
 
         // 클라이언트 연결 해제
