@@ -1,0 +1,76 @@
+// ===========================
+// Login 페이지 스타일 (CSS Modules)
+// ===========================
+
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+@use '../styles/themes' as *;
+
+.title {
+    font-family: 'Vitro Core';
+    font-size: 2.5em;
+
+    position: absolute;
+    left: 50%;
+    top: calc(50% - 200px);
+    transform: translate(-50%, -50%);
+
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.loginContainer {
+    background-color: $color-bg-tertiary;
+    width: min(400px, 90vw);
+    aspect-ratio: 4 / 3;
+    padding: 20px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+
+    border-radius: 10px;
+
+    > * {
+        width: 100%;
+    }
+
+    label {
+        box-sizing: border-box;
+    }
+
+    .inputId, .inputPw {
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .label {
+        font-size: 1.5em;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    button {
+        margin-top: 20px;
+    }
+
+    .nav {
+        margin-top: 10px;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .error {
+        color: $color-danger;
+        text-align: center;
+        font-size: 0.9em;
+    }
+}

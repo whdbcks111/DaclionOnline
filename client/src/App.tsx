@@ -1,89 +1,61 @@
-import { useState, useEffect } from 'react'
-import { io } from 'socket.io-client'
-import './App.css'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+import { SocketProvider, useSocket } from './context/SocketContext'
+import { ThemeProvider } from './context/ThemeContext'
+import ThemeToggle from './components/ThemeToggle'
+import Login from './pages/Login'
+import Home from './pages/Home'
+import Register from './pages/Register'
 
-// 환경 변수에서 서버 주소 가져오기
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
-
-// Socket.io 서버 연결
-const socket = io(SERVER_URL)
-
-function App() {
-  const [isConnected, setIsConnected] = useState(false)
-  const [message, setMessage] = useState('')
-  const [messages, setMessages] = useState<any[]>([])
+function SessionHandler() {
+  const { socket } = useSocket();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    // 연결 이벤트
-    socket.on('connect', () => {
-      console.log('서버 연결됨:', socket.id)
-      setIsConnected(true)
-    })
+    if (!socket) return;
 
-    // 메시지 수신
-    socket.on('message', (data) => {
-      console.log('메시지 받음:', data)
-      setMessages((prev) => [...prev, data])
-    })
+    const onSessionRestore = (data: { username: string, nickname: string }) => {
+      if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/') {
+        navigate('/home');
+      }
+    };
 
-    // 연결 해제
-    socket.on('disconnect', () => {
-      console.log('서버 연결 해제됨')
-      setIsConnected(false)
-    })
+    socket.on('sessionRestore', onSessionRestore);
+    return () => { socket.off('sessionRestore', onSessionRestore); };
+  }, [socket, location.pathname, navigate]);
 
-    // 클린업
-    return () => {
-      socket.off('connect')
-      socket.off('message')
-      socket.off('disconnect')
-    }
-  }, [])
+  return null;
+}
 
-  // 메시지 전송
-  const sendMessage = () => {
-    if (message.trim()) {
-      socket.emit('message', message)
-      setMessage('')
-    }
-  }
-
+function App() {
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Socket.io 테스트</h1>
+    <ThemeProvider>
+      <SocketProvider>
+        <BrowserRouter>
+          <SessionHandler />
+          {/* 다크모드 토글 버튼 (모든 페이지에 표시) */}
+          <ThemeToggle />
 
-      <div>
-        <div>서버 주소: {SERVER_URL}</div>
-        <div>연결 상태: {isConnected ? '✅ 연결됨' : '❌ 연결 안됨'}</div>
-      </div>
+          <Routes>
+            {/* 기본 경로 - /login으로 리다이렉트 */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
 
-      <div style={{ marginTop: '20px' }}>
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder="메시지 입력..."
-          style={{ padding: '10px', width: '300px' }}
-        />
-        <button onClick={sendMessage} style={{ padding: '10px 20px', marginLeft: '10px' }}>
-          전송
-        </button>
-      </div>
+            {/* 로그인 페이지 */}
+            <Route path="/login" element={<Login />} />
 
-      <div style={{ marginTop: '30px' }}>
-        <h3>받은 메시지:</h3>
-        <div style={{ border: '1px solid #ccc', padding: '10px', minHeight: '200px' }}>
-          {messages.map((msg, index) => (
-            <div key={index} style={{ marginBottom: '10px', padding: '5px', background: '#f0f0f0' }}>
-              <strong>{msg.id}:</strong> {msg.data}
-              <br />
-              <small>{msg.timestamp}</small>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+            {/* 회원가입 페이지 */}
+            <Route path="/register" element={<Register />} />
+
+            {/* 홈 페이지 (로그인 후) */}
+            <Route path="/home" element={<Home />} />
+
+            {/* 404 - 존재하지 않는 경로는 /login으로 */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </SocketProvider>
+    </ThemeProvider>
   )
 }
 

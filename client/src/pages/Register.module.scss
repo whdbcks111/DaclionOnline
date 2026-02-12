@@ -1,0 +1,80 @@
+// ===========================
+// Login 페이지 스타일 (CSS Modules)
+// ===========================
+
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+@use '../styles/themes' as *;
+
+.registerContainer {
+    background-color: $color-bg-tertiary;
+    width: min(400px, 90vw);
+    aspect-ratio: 4 / 3;
+    padding: 20px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+
+    border-radius: 10px;
+
+    > * {
+        width: 100%;
+    }
+
+    label {
+        box-sizing: border-box;
+    }
+
+    .inputField {
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .verifyField {
+        box-sizing: border-box;
+        width: 100%;
+        display: flex;
+
+        > input {
+            flex-grow: 1;
+            margin-right: 4px;
+        }
+    }
+
+    .label {
+        font-size: 1.5em;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .registerBtn {
+        margin-top: 20px;
+    }
+
+    .nav {
+        margin-top: 10px;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .error {
+        color: $color-danger;
+        text-align: center;
+        font-size: 0.9em;
+    }
+
+    .ok {
+        color: $color-info;
+        text-align: center;
+        font-size: 0.9em;
+    }
+}

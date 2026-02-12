@@ -1,80 +1,94 @@
 import chalk from 'chalk';
 
-// 현재 시간을 포맷팅
+// 현재 시간을 포맷팅 (YY-MM HH:MM:SS)
 const getTimestamp = (): string => {
-  const now = new Date();
-  return now.toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
+    const now = new Date();
+
+    // 연도 (YY)
+    const year = String(now.getFullYear()).slice(-2);
+
+    // 월 (MM)
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+
+    // 일 (DD)
+    const day = String(now.getDate()).padStart(2, '0');
+
+    // 시간
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
 // 로그 레벨별 색상 및 아이콘
 const LOG_STYLES = {
-  info: { color: chalk.blue, icon: 'ℹ' },
-  success: { color: chalk.green, icon: '✓' },
-  warn: { color: chalk.yellow, icon: '⚠' },
-  error: { color: chalk.red, icon: '✗' },
-  debug: { color: chalk.magenta, icon: '🔍' },
-  socket: { color: chalk.cyan, icon: '🔌' },
-  http: { color: chalk.green, icon: '🌐' }
+    info: { color: chalk.blue, icon: 'ℹ' },
+    success: { color: chalk.green, icon: '✓' },
+    warn: { color: chalk.yellow, icon: '⚠' },
+    error: { color: chalk.red, icon: '✗' },
+    debug: { color: chalk.magenta, icon: '🔍' },
+    socket: { color: chalk.cyan, icon: '🔌' },
+    http: { color: chalk.green, icon: '🌐' }
 };
 
 // 기본 로그 함수
 const log = (level: keyof typeof LOG_STYLES, ...args: any[]) => {
-  const style = LOG_STYLES[level];
-  const timestamp = chalk.gray(`[${getTimestamp()}]`);
-  const label = style.color(`[${level.toUpperCase()}]`);
-  const icon = style.icon;
+    const style = LOG_STYLES[level];
+    const timestamp = chalk.gray(`[${getTimestamp()}]`);
+    const label = style.color(`[${level.toUpperCase()}]`);
+    const icon = style.icon;
 
-  console.log(timestamp, icon, label, ...args);
+    console.log(timestamp, icon, label, ...args);
 };
 
 // 커스텀 로거 객체
 export const logger = {
-  // 일반 정보 로그
-  info: (...args: any[]) => log('info', ...args),
+    // 일반 정보 로그
+    info: (...args: any[]) => log('info', ...args),
 
-  // 성공 로그
-  success: (...args: any[]) => log('success', ...args),
+    // 성공 로그
+    success: (...args: any[]) => log('success', ...args),
 
-  // 경고 로그
-  warn: (...args: any[]) => log('warn', ...args),
+    // 경고 로그
+    warn: (...args: any[]) => log('warn', ...args),
 
-  // 에러 로그
-  error: (...args: any[]) => log('error', ...args),
+    // 에러 로그
+    error: (...args: any[]) => log('error', ...args),
 
-  // 디버그 로그
-  debug: (...args: any[]) => log('debug', ...args),
+    // 디버그 로그
+    debug: (...args: any[]) => log('debug', ...args),
 
-  // 소켓 관련 로그
-  socket: (...args: any[]) => log('socket', ...args),
+    // 소켓 관련 로그
+    socket: (...args: any[]) => log('socket', ...args),
 
-  // HTTP 요청 로그
-  http: (...args: any[]) => log('http', ...args),
+    // HTTP 요청 로그
+    http: (...args: any[]) => log('http', ...args),
 
-  // 커스텀 색상 로그
-  custom: (color: 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' | 'white' | 'gray', ...args: any[]) => {
-    const timestamp = chalk.gray(`[${getTimestamp()}]`);
-    const colorFunc = chalk[color];
-    console.log(timestamp, colorFunc(...args));
-  },
+    // 커스텀 색상 로그
+    custom: (color: 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' | 'white' | 'gray', ...args: any[]) => {
+        const timestamp = chalk.gray(`[${getTimestamp()}]`);
+        const colorFunc = chalk[color];
+        console.log(timestamp, colorFunc(...args));
+    },
 
-  // 구분선 출력
-  divider: (char: string = '=', length: number = 50) => {
-    console.log(chalk.gray(char.repeat(length)));
-  },
+    // 구분선 출력
+    divider: (char: string = '=', length: number = 50) => {
+        console.log(chalk.gray(char.repeat(length)));
+    },
 
-  // 박스로 감싸진 메시지
-  box: (message: string, color: 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' = 'blue') => {
-    const colorFunc = chalk[color];
-    const line = '─'.repeat(message.length + 4);
-    console.log(colorFunc(`┌${line}┐`));
-    console.log(colorFunc(`│  ${message}  │`));
-    console.log(colorFunc(`└${line}┘`));
-  }
+    // 박스로 감싸진 메시지
+    box: (message: string, color: 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' = 'blue') => {
+        const colorFunc = chalk[color];
+        const visualLength = [...message].reduce((acc, char) => {
+            // 한글 범위 정규식 (자음, 모음, 완성형 한글 포함)
+            return acc + (/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(char) ? 2 : 1);
+        }, 0);
+        const line = '─'.repeat(visualLength + 4);
+        console.log(colorFunc(`┌${line}┐`));
+        console.log(colorFunc(`│  ${message}  │`));
+        console.log(colorFunc(`└${line}┘`));
+    }
 };
 
 // 기본 export

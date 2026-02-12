@@ -1,0 +1,28 @@
+@use '../styles/variables' as *;
+@use '../styles/themes' as *;
+
+.themeToggle {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 45px;
+  height: 45px;
+  border: none;
+  border-radius: 50%;
+  color: $color-text;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  background-color: $color-bg-secondary;
+
+  .icon {
+    width: 34px;
+    height: 34px;
+  }
+}

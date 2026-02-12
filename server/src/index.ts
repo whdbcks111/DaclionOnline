@@ -1,11 +1,14 @@
 import express from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import logger from './utils/logger.js';
+import prisma from './config/prisma.js';
+import { initSocket } from './modules/socket.js';
+import { initRegister } from './modules/register.js';
+import { initLogin } from './modules/login.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -23,13 +26,11 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Socket.io 서버 설정
-const io = new Server(httpServer, {
-  cors: {
-    origin: CORS_ORIGIN,
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
-});
+initSocket(httpServer, CORS_ORIGIN);
+
+// 모듈들 초기화
+initRegister();
+initLogin();
 
 // CORS 설정 (개발 환경에서만)
 if (NODE_ENV === 'development') {
@@ -39,10 +40,9 @@ if (NODE_ENV === 'development') {
   }));
 }
 
-// API 라우트
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
-});
+// Body parser 미들웨어
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // 프로덕션: Client 정적 파일 제공
 if (NODE_ENV === 'production') {
@@ -59,29 +59,7 @@ if (NODE_ENV === 'production') {
   logger.info('정적 파일 제공:', clientDistPath);
 }
 
-// Socket.io 연결 처리
-io.on('connection', (socket) => {
-  logger.socket('클라이언트 연결됨:', socket.id);
-
-  // 클라이언트로부터 메시지 받기
-  socket.on('message', (data) => {
-    logger.info('받은 메시지:', data);
-
-    // 받은 메시지를 모든 클라이언트에게 브로드캐스트
-    io.emit('message', {
-      id: socket.id,
-      data: data,
-      timestamp: new Date().toISOString()
-    });
-  });
-
-  // 클라이언트 연결 해제
-  socket.on('disconnect', () => {
-    logger.warn('클라이언트 연결 해제됨:', socket.id);
-  });
-});
-
-httpServer.listen(SERVER_PORT, () => {
+httpServer.listen(SERVER_PORT, async () => {
   logger.divider();
   logger.box('서버 시작 완료', 'green');
   logger.success(`서버 실행 중: http://localhost:${SERVER_PORT}`);
@@ -90,5 +68,31 @@ httpServer.listen(SERVER_PORT, () => {
     logger.info(`CORS 허용: ${CORS_ORIGIN}`);
   }
   logger.success('Socket.io 준비 완료');
+
+  // Prisma 데이터베이스 연결 테스트
+  try {
+    await prisma.$connect();
+    logger.success('MariaDB 연결 성공 (Prisma)');
+  } catch (error) {
+    logger.error('MariaDB 연결 실패:', error);
+  }
+
   logger.divider();
 });
+
+// 프로세스 종료 시 정리
+process.on('SIGINT', async () => {
+  logger.warn('\n서버 종료 중...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  logger.warn('\n서버 종료 중...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+function handleLogin(id: string | undefined, pw: string | undefined) {
+  
+}
