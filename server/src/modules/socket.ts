@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io'
 import { Server as HttpServer } from 'http'
 import logger from '../utils/logger.js';
-import { getSession } from './login.js';
+import { getSession, setUserOnline, setUserOffline } from './login.js';
 
 let io: Server;
 
@@ -33,14 +33,21 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
 
     io.on('connection', (socket) => {
         logger.socket('클라이언트 연결됨:', socket.id);
-        let session;
-        if (socket.data.sessionToken && (session = getSession(socket.data.sessionToken))) {
-            logger.info(`세션 복원: ${session.username}`);
+        const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+        if (session) {
+            setUserOnline(session.userId);
+            logger.success(`로그인: ${session.username} (${socket.id})`);
         }
 
         // 클라이언트 연결 해제
         socket.on('disconnect', () => {
-            logger.warn('클라이언트 연결 해제됨:', socket.id);
+            const currentSession = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            if (currentSession) {
+                setUserOffline(currentSession.userId);
+                logger.warn(`로그아웃: ${currentSession.username} (${socket.id})`);
+            } else {
+                logger.warn('클라이언트 연결 해제됨:', socket.id);
+            }
         });
     });
 

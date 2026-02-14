@@ -36,6 +36,23 @@ export function getUserSessionCount(userId: number): number {
     return userSessions.get(userId)?.size ?? 0;
 }
 
+// 온라인 유저 추적: userId -> 연결된 소켓 수
+const onlineUsers = new Map<number, number>()
+
+export function setUserOnline(userId: number) {
+    onlineUsers.set(userId, (onlineUsers.get(userId) ?? 0) + 1);
+}
+
+export function setUserOffline(userId: number) {
+    const count = (onlineUsers.get(userId) ?? 1) - 1;
+    if (count <= 0) onlineUsers.delete(userId);
+    else onlineUsers.set(userId, count);
+}
+
+export function isUserOnline(userId: number): boolean {
+    return onlineUsers.has(userId);
+}
+
 export function createSession(user: { id: number, username: string, nickname: string }): string {
     const sessionToken = randomHex(32)
 
@@ -98,6 +115,8 @@ export const initLogin = () => {
             }
 
             const sessionToken = createSession(user);
+            socket.data.sessionToken = sessionToken;
+            setUserOnline(user.id);
             socket.emit('loginResult', { ok: true, sessionToken });
         });
 
