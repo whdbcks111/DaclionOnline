@@ -1,11 +1,11 @@
 import { pbkdf2Sync } from "crypto";
-import logger from "../utils/logger";
-import { getIO } from "./socket"
-import { loadTemplate, sendMail } from "./mail";
-import { randomDigits, randomHex } from "../utils/random";
-import { validateId, validatePassword, validateEmail, validateNickname } from "../utils/validators";
+import logger from "../utils/logger.js";
+import { getIO } from "./socket.js"
+import { loadTemplate, sendMail } from "./mail.js";
+import { randomDigits, randomHex } from "../utils/random.js";
+import { validateId, validatePassword, validateEmail, validateNickname } from "../utils/validators.js";
 import prisma from "../config/prisma.js";
-import { createSession } from "./login";
+import { createSession } from "./login.js";
 
 const verifyMap: { [key: string]: { code: string, expirationDate: Date, verified?: true } } = {}
 const expiryMinute = 5;

@@ -1,6 +1,6 @@
 import { Server, Socket } from 'socket.io'
 import { Server as HttpServer } from 'http'
-import logger from '../utils/logger';
+import logger from '../utils/logger.js';
 import { getSession } from './login.js';
 
 let io: Server;

@@ -1,7 +1,7 @@
 import { pbkdf2Sync } from "crypto";
-import logger from "../utils/logger";
-import { getIO } from "./socket"
-import { randomHex } from "../utils/random";
+import logger from "../utils/logger.js";
+import { getIO } from "./socket.js"
+import { randomHex } from "../utils/random.js";
 import prisma from "../config/prisma.js";
 
 // 세션 저장소: sessionToken -> { userId, username, nickname }

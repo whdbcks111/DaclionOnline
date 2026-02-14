@@ -1,8 +1,5 @@
-// @ts-ignore - CJS/ESM interop
-import prismaModule from '../generated/prisma/client.js'
+import { PrismaClient } from '../generated/prisma/client.js'
 import { PrismaMariaDb } from '@prisma/adapter-mariadb'
-
-const { PrismaClient } = prismaModule as any
 
 const adapter = new PrismaMariaDb({
   host: process.env.DB_HOST || 'localhost',
