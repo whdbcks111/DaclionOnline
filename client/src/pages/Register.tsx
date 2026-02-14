@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import styles from './Register.module.scss'
 import { useSocket } from '../context/SocketContext';
 import { validateEmail, validateId, validateNickname, validatePassword } from '../utils/validators';
+import type { RegisterResult, SimpleResult } from '../shared/types';
 
 function Register() {
     const navigate = useNavigate();
@@ -21,9 +22,7 @@ function Register() {
     const [isVerifyCodeSent, setVerifyCodeSent] = useState(false);
 
     useEffect(() => {
-        socket?.on('registerResult', result => {
-            if(typeof result !== 'object') return;
-
+        socket?.on('registerResult', (result: RegisterResult) => {
             if(result.ok) {
                 document.cookie = `sessionToken=${result.sessionToken}; path=/; max-age=${60 * 60 * 24 * 7}`;
                 navigate('/home');
@@ -33,9 +32,7 @@ function Register() {
             }
         });
 
-        socket?.on('verifyCodeSendResult', result => {
-            if(typeof result !== 'object') return;
-
+        socket?.on('verifyCodeSendResult', (result: SimpleResult) => {
             if(result.ok) {
                 setVerifyCodeSent(true);
             }
@@ -44,9 +41,7 @@ function Register() {
             }
         });
 
-        socket?.on('verifyCodeResult', result => {
-            if(typeof result !== 'object') return;
-
+        socket?.on('verifyCodeResult', (result: SimpleResult) => {
             if(result.ok) {
                 setCodeVerified(true);
             }

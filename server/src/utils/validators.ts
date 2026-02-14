@@ -2,6 +2,20 @@
 // 유효성 검사 유틸리티
 // ===========================
 
+// 소켓 데이터 구조 검증: 객체인지, 필드별 타입이 일치하는지
+// 타입 뒤에 ?를 붙이면 옵셔널 (undefined 허용)
+// 사용 예: isValidPayload(data, { id: 'string', pw: 'string', bio: 'string?' })
+type FieldType = 'string' | 'number' | 'boolean' | 'string?' | 'number?' | 'boolean?'
+export function isValidPayload(data: unknown, schema: Record<string, FieldType>): boolean {
+    if (typeof data !== 'object' || data === null) return false;
+    const obj = data as Record<string, unknown>;
+    return Object.entries(schema).every(([key, type]) => {
+        const optional = type.endsWith('?');
+        const baseType = optional ? type.slice(0, -1) : type;
+        return (optional && obj[key] === undefined) || typeof obj[key] === baseType;
+    });
+}
+
 // 아이디 검증 
 export function validateId(id: string): string | null {
   if (!id || id.trim().length === 0) return '아이디를 입력해주세요.'

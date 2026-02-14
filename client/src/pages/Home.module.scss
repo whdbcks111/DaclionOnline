@@ -1,0 +1,43 @@
+// ===========================
+// Home 페이지 스타일 (CSS Modules)
+// ===========================
+
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+@use '../styles/themes' as *;
+
+.homeContainer {
+    width: 100%;
+    height: 100vh;
+    @include flex-center;
+}
+
+.chatArea {
+    width: 300px;
+    height: 100%;
+    @include flex-column;
+    background-color: $color-bg-tertiary;
+    border: 1px solid $color-border;
+}
+
+.chatMessages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.chatInput {
+    @include flex-center-vertical;
+    padding: 10px;
+    gap: 8px;
+    border-top: 1px solid $color-border;
+
+    input {
+        flex: 1;
+        box-sizing: border-box;
+    }
+
+    button {
+        white-space: nowrap;
+    }
+}

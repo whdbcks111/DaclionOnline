@@ -2,14 +2,10 @@ import { pbkdf2Sync } from "crypto";
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js"
 import { randomHex } from "../utils/random.js";
+import { isValidPayload } from "../utils/validators.js";
 import prisma from "../config/prisma.js";
-
-// 세션 저장소: sessionToken -> { userId, username, nickname }
-interface Session {
-    userId: number
-    username: string
-    nickname: string
-}
+import type { LoginRequest } from "../shared/types.js";
+import type { Session } from "../types/index.js";
 
 const sessionMap = new Map<string, Session>()
 
@@ -87,15 +83,13 @@ export const initLogin = () => {
             socket.emit('sessionInvalid');
         }
 
-        socket.on('login', async data => {
-            if (typeof data !== 'object') return;
-
-            const { id, pw } = data;
-
-            if (!id || !pw) {
+        socket.on('login', async (data: LoginRequest) => {
+            if (!isValidPayload(data, { id: 'string', pw: 'string' })) {
                 socket.emit('loginResult', { error: '아이디와 비밀번호를 입력해주세요.' });
                 return;
             }
+
+            const { id, pw } = data;
 
             const user = await prisma.user.findUnique({
                 where: { username: id },
@@ -120,7 +114,8 @@ export const initLogin = () => {
             socket.emit('loginResult', { ok: true, sessionToken });
         });
 
-        socket.on('logout', (token: string) => {
+        socket.on('logout', (token: unknown) => {
+            if (typeof token !== 'string') return;
             removeSession(token);
             socket.emit('logoutResult', { ok: true });
         });

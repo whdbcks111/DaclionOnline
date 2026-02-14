@@ -10,7 +10,7 @@
     background-color: $color-bg-tertiary;
     width: min(400px, 90vw);
     aspect-ratio: 4 / 3;
-    padding: 20px;
+    padding: $spacing-lg;
 
     display: flex;
     flex-direction: column;
@@ -22,7 +22,7 @@
     top: 50%;
     transform: translate(-50%, -50%);
 
-    border-radius: 10px;
+    border-radius: $border-radius-lg;
 
     > * {
         width: 100%;
@@ -44,23 +44,23 @@
 
         > input {
             flex-grow: 1;
-            margin-right: 4px;
+            margin-right: $spacing-xs;
         }
     }
 
     .label {
         font-size: 1.5em;
         font-weight: bold;
-        margin-bottom: 20px;
+        margin-bottom: $spacing-lg;
         text-align: center;
     }
 
     .registerBtn {
-        margin-top: 20px;
+        margin-top: $spacing-lg;
     }
 
     .nav {
-        margin-top: 10px;
+        margin-top: $spacing-sm;
         width: 100%;
         display: flex;
         justify-content: space-between;

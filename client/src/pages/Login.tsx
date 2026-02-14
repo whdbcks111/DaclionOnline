@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import styles from './Login.module.scss'
 import { useSocket } from '../context/SocketContext';
 import { validateId, validatePassword } from '../utils/validators';
+import type { LoginResult } from '../shared/types';
 
 function Login() {
   const navigate = useNavigate();
@@ -17,9 +18,7 @@ function Login() {
   useEffect(() => {
     if (!socket) return;
 
-    const onLoginResult = (result: any) => {
-      if (typeof result !== 'object') return;
-
+    const onLoginResult = (result: LoginResult) => {
       if (result.ok) {
         document.cookie = `sessionToken=${result.sessionToken}; path=/; max-age=${60 * 60 * 24 * 7}`;
         navigate('/home');

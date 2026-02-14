@@ -3,11 +3,13 @@ import logger from "../utils/logger.js";
 import { getIO } from "./socket.js"
 import { loadTemplate, sendMail } from "./mail.js";
 import { randomDigits, randomHex } from "../utils/random.js";
-import { validateId, validatePassword, validateEmail, validateNickname } from "../utils/validators.js";
+import { isValidPayload, validateId, validatePassword, validateEmail, validateNickname } from "../utils/validators.js";
 import prisma from "../config/prisma.js";
 import { createSession } from "./login.js";
+import type { RegisterRequest } from "../shared/types.js";
+import type { VerifyEntry } from "../types/index.js";
 
-const verifyMap: { [key: string]: { code: string, expirationDate: Date, verified?: true } } = {}
+const verifyMap: { [key: string]: VerifyEntry } = {}
 const expiryMinute = 5;
 
 export const initRegister = () => {
@@ -15,8 +17,11 @@ export const initRegister = () => {
 
     io.on('connection', socket => {
 
-        socket.on('register', async data => {
-            if(typeof data !== 'object') return;
+        socket.on('register', async (data: RegisterRequest) => {
+            if (!isValidPayload(data, { id: 'string', pw: 'string', email: 'string', nickname: 'string' })) {
+                socket.emit('registerResult', { error: '잘못된 요청입니다.' });
+                return;
+            }
 
             if(!(socket.id in verifyMap)) {
                 socket.emit('registerResult', { error: '인증번호를 보내지 않았습니다.' });
@@ -98,7 +103,8 @@ export const initRegister = () => {
             socket.emit('registerResult', { ok: true, sessionToken });
         });
 
-        socket.on('sendVerifyCode', email => {
+        socket.on('sendVerifyCode', (email: unknown) => {
+            if (typeof email !== 'string') return;
             try {
                 const verifyCode = randomDigits(6);
                 const verifyHtmlTemplate = loadTemplate('verify-code', { code: verifyCode, expiry: `${expiryMinute}분` });
@@ -117,7 +123,8 @@ export const initRegister = () => {
             }
         });
 
-        socket.on('verifyCode', code => {
+        socket.on('verifyCode', (code: unknown) => {
+            if (typeof code !== 'string') return;
             if(!(socket.id in verifyMap)) {
                 socket.emit('verifyCodeResult', { error: '인증번호를 보내지 않았습니다.' });
                 return;

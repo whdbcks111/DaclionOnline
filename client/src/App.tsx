@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+import type { SessionRestoreData } from './shared/types'
 import { SocketProvider, useSocket } from './context/SocketContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ThemeToggle from './components/ThemeToggle'
@@ -28,7 +29,7 @@ function SessionHandler() {
   useEffect(() => {
     if (!socket) return;
 
-    const onSessionRestore = (data: { username: string, nickname: string }) => {
+    const onSessionRestore = (data: SessionRestoreData) => {
       if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/') {
         navigate('/home');
       }
