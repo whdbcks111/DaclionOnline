@@ -1,5 +1,7 @@
-import { PrismaClient } from '../generated/prisma/client.js'
 import { PrismaMariaDb } from '@prisma/adapter-mariadb'
+
+const prismaModule = await import('../generated/prisma/client.js')
+const PrismaClient = prismaModule.PrismaClient
 
 const adapter = new PrismaMariaDb({
   host: process.env.DB_HOST || 'localhost',
