@@ -59,6 +59,15 @@ if (NODE_ENV === 'production') {
   logger.info('정적 파일 제공:', clientDistPath);
 }
 
+// 잘못된 URI 요청 에러 핸들러 (봇 스캔 등)
+app.use((err: any, req: any, res: any, next: any) => {
+  if (err instanceof URIError) {
+    res.status(400).end();
+    return;
+  }
+  next(err);
+});
+
 httpServer.listen(SERVER_PORT, async () => {
   logger.divider();
   logger.box('서버 시작 완료', 'green');
