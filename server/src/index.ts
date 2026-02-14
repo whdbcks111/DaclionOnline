@@ -82,13 +82,13 @@ httpServer.listen(SERVER_PORT, async () => {
 
 // 프로세스 종료 시 정리
 process.on('SIGINT', async () => {
-  logger.warn('\n서버 종료 중...');
+  logger.warn('SIGINT: 서버 종료 중...');
   await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  logger.warn('\n서버 종료 중...');
+  logger.warn('SIGTERM: 서버 종료 중...');
   await prisma.$disconnect();
   process.exit(0);
 });
