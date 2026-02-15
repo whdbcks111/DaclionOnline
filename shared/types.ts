@@ -56,6 +56,20 @@ export interface ChatMessage {
     timestamp: number
 }
 
+// 명령어 정보 (자동완성용)
+export interface CommandArgInfo {
+    name: string
+    description: string
+    required?: boolean
+}
+
+export interface CommandInfo {
+    name: string
+    aliases?: string[]
+    description: string
+    args?: CommandArgInfo[]
+}
+
 // 알림
 export interface NotificationData {
     key: string
@@ -75,6 +89,7 @@ export interface ServerToClientEvents {
     chatHistory: (messages: ChatMessage[]) => void
     chatMessage: (msg: ChatMessage) => void
     notification: (data: NotificationData) => void
+    commandList: (commands: CommandInfo[]) => void
 }
 
 export interface ClientToServerEvents {
@@ -85,4 +100,5 @@ export interface ClientToServerEvents {
     verifyCode: (code: string) => void
     sendMessage: (content: string) => void
     requestChatHistory: () => void
+    requestCommandList: () => void
 }

@@ -1,12 +1,11 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
+import { broadcastMessage, getChatHistory } from "./message.js";
+import { handleCommand } from "./bot.js";
 import type { ChatMessage } from "../../../shared/types.js";
 
 const MAX_MESSAGE_LENGTH = 500;
-const MAX_HISTORY = 100;
-
-const chatHistory: ChatMessage[] = [];
 
 export const initChat = () => {
     const io = getIO();
@@ -14,7 +13,7 @@ export const initChat = () => {
     io.on('connection', (socket) => {
         // 클라이언트 요청 시 이전 대화 전송
         socket.on('requestChatHistory', () => {
-            socket.emit('chatHistory', chatHistory);
+            socket.emit('chatHistory', getChatHistory());
         });
 
         socket.on('sendMessage', (content: unknown) => {
@@ -33,6 +32,12 @@ export const initChat = () => {
                 return;
             }
 
+            // 명령어 처리
+            if (trimmed.startsWith('/')) {
+                handleCommand(session.userId, trimmed);
+                return;
+            }
+
             const msg: ChatMessage = {
                 userId: session.userId,
                 nickname: session.nickname,
@@ -41,13 +46,7 @@ export const initChat = () => {
                 timestamp: Date.now(),
             };
 
-            // 히스토리 저장 (최대 MAX_HISTORY개)
-            chatHistory.push(msg);
-            if (chatHistory.length > MAX_HISTORY) {
-                chatHistory.shift();
-            }
-
-            io.emit('chatMessage', msg);
+            broadcastMessage(msg);
         });
     });
 

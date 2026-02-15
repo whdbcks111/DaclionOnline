@@ -1,12 +1,17 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import styles from './Home.module.scss'
 import { useSocket } from '../context/SocketContext'
 import ChatMessage from '../components/chat/ChatMessage'
-import type { ChatMessage as ChatMessageType } from '@shared/types'
+import CommandAutocomplete, { getFilteredCommands } from '../components/chat/CommandAutocomplete'
+import type { ChatMessage as ChatMessageType, CommandInfo } from '@shared/types'
 
 function Home() {
   const { socket } = useSocket()
   const [messages, setMessages] = useState<ChatMessageType[]>([])
+  const [commands, setCommands] = useState<CommandInfo[]>([])
+  const [commandFilter, setCommandFilter] = useState('')
+  const [showAutocomplete, setShowAutocomplete] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -21,12 +26,19 @@ function Home() {
       setMessages(prev => [...prev, msg])
     }
 
+    const onCommandList = (list: CommandInfo[]) => {
+      setCommands(list)
+    }
+
     socket.on('chatHistory', onChatHistory)
     socket.on('chatMessage', onChatMessage)
+    socket.on('commandList', onCommandList)
     socket.emit('requestChatHistory')
+    socket.emit('requestCommandList')
     return () => {
       socket.off('chatHistory', onChatHistory)
       socket.off('chatMessage', onChatMessage)
+      socket.off('commandList', onCommandList)
     }
   }, [socket])
 
@@ -35,14 +47,85 @@ function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const sendMessage = () => {
+  const sendMessage = useCallback(() => {
     const content = inputRef.current?.textContent?.trim()
     if (!content || !socket) return
 
     socket.emit('sendMessage', content)
     inputRef.current!.textContent = ''
     inputRef.current!.focus()
-  }
+    setShowAutocomplete(false)
+  }, [socket])
+
+  const selectCommand = useCallback((name: string) => {
+    if (!inputRef.current) return
+    inputRef.current.textContent = `/${name} `
+    // 커서를 끝으로 이동
+    const range = document.createRange()
+    range.selectNodeContents(inputRef.current)
+    range.collapse(false)
+    const sel = window.getSelection()
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+    inputRef.current.focus()
+
+    const text = inputRef.current?.textContent ?? '';
+    setCommandFilter(text);
+    setActiveIndex(0);
+  }, [])
+
+  const handleInput = useCallback(() => {
+    const text = inputRef.current?.textContent ?? ''
+    // /로 시작하면 자동완성 표시
+    if (text.startsWith('/')) {
+      setCommandFilter(text)
+      setShowAutocomplete(true)
+      setActiveIndex(0)
+    } else {
+      setShowAutocomplete(false)
+    }
+  }, [])
+
+  // 자동완성에서 필터된 명령어 수 계산 (키보드 네비게이션용)
+  const getFilteredCount = useCallback(() => {
+    const filtered = getFilteredCommands(commands, commandFilter);
+    return filtered.length;
+  }, [commandFilter, commands])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (showAutocomplete) {
+      const count = getFilteredCount()
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setActiveIndex(prev => (prev - 1 + count) % count)
+        return
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setActiveIndex(prev => (prev + 1) % count)
+        return
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault()
+        const filtered = getFilteredCommands(commands, commandFilter);
+        if (filtered[activeIndex]) {
+          selectCommand(filtered[activeIndex].name)
+        }
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setShowAutocomplete(false)
+        return
+      }
+    }
+
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }, [showAutocomplete, getFilteredCount, commandFilter, commands, activeIndex, selectCommand, sendMessage])
 
   return (
     <div className={styles.homeContainer}>
@@ -61,18 +144,22 @@ function Home() {
           <div ref={messagesEndRef} />
         </div>
         <div className={styles.chatInput}>
+          {showAutocomplete && (
+            <CommandAutocomplete
+              commands={commands}
+              filter={commandFilter}
+              activeIndex={activeIndex}
+              onSelect={selectCommand}
+            />
+          )}
           <div
             ref={inputRef}
             className={styles.chatInputField}
             contentEditable
             role="textbox"
             data-placeholder="메시지를 입력하세요"
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                sendMessage()
-              }
-            }}
+            onInput={handleInput}
+            onKeyDown={handleKeyDown}
           />
           <button onClick={sendMessage}>전송</button>
         </div>

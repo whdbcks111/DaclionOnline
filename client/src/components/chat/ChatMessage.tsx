@@ -27,6 +27,14 @@ function formatTime(timestamp: number): string {
     return `${h}:${m}`
 }
 
+function getProfileImageURL(profileImage: string) {
+    if(/^https?:\/\/|^\//.test(profileImage)) {
+        return `url("${profileImage}")`;
+    }
+
+    return `url("${SERVER_URL}/uploads/profiles/${profileImage}")`;
+}
+
 interface Props {
     message: ChatMessageType
     showHeader: boolean
@@ -41,19 +49,23 @@ export default function ChatMessage({ message, showHeader }: Props) {
                 {showHeader && (
                     <div
                         className={styles.avatar}
-                        style={message.profileImage ? { backgroundImage: `url(${SERVER_URL}/uploads/profiles/${message.profileImage})` } : undefined}
+                        style={message.profileImage ? { 
+                            backgroundImage: getProfileImageURL(message.profileImage) 
+                        } : undefined}
                     />
                 )}
             </div>
-            <div className={styles.body}>
+            <div className={styles.bodyWrap}>
                 {showHeader && (
                     <div className={styles.header}>
                         <span className={styles.nickname}>{message.nickname}</span>
                         <span className={styles.timestamp}>{formatTime(message.timestamp)}</span>
                     </div>
                 )}
-                <div className={styles.content}>
-                    {nodes.map((node, i) => renderNode(node, i))}
+                <div className={styles.body}>
+                    <div className={styles.content}>
+                        {nodes.map((node, i) => renderNode(node, i))}
+                    </div>
                 </div>
             </div>
         </div>

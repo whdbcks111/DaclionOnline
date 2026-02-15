@@ -9,6 +9,7 @@ import { initSocket } from './modules/socket.js';
 import { initRegister } from './modules/register.js';
 import { initLogin } from './modules/login.js';
 import { initChat } from './modules/chat.js';
+import { initBot } from './modules/bot.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -28,6 +29,7 @@ initSocket(httpServer, CORS_ORIGIN);
 initRegister();
 initLogin();
 initChat();
+initBot();
 
 // 프로필 이미지 등 업로드 파일 정적 서빙
 const uploadsPath = path.join(process.cwd(), 'uploads');

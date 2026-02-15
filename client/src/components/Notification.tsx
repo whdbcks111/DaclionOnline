@@ -38,7 +38,29 @@ function Notification() {
     if (!socket) return
 
     socket.on('notification', addNotification)
-    return () => { socket.off('notification', addNotification) }
+
+    const onDisconnect = (reason: string) => {
+      // 클라이언트가 직접 끊은 경우는 무시
+      if (reason === 'io client disconnect') return
+      addNotification({
+        key: 'server-disconnect',
+        message: '서버와의 연결이 끊어졌습니다. 잠시 후 새로고침 해주세요.',
+        length: 0,
+      })
+    }
+
+    const onReconnect = () => {
+      setItems(prev => prev.filter(item => item.key !== 'server-disconnect'))
+    }
+
+    socket.on('disconnect', onDisconnect)
+    socket.on('connect', onReconnect)
+
+    return () => {
+      socket.off('notification', addNotification)
+      socket.off('disconnect', onDisconnect)
+      socket.off('connect', onReconnect)
+    }
   }, [socket, addNotification])
 
   if (items.length === 0) return null

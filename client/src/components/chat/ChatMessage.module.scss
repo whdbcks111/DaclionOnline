@@ -31,9 +31,21 @@ $avatar-size: 40px;
     background: url('/icon/profile_image_basic.png') center / cover no-repeat;
 }
 
-.body {
-    flex: 1;
+.bodyWrap {
     min-width: 0;
+}
+
+.header {
+    margin-left: $spacing-xs;
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-xs;
+}
+
+.body {
+    width: fit-content;
+    max-width: 100%;
     padding: $spacing-sm $spacing-md;
     border: 1px solid $color-border;
     border-radius: $border-radius-md;
@@ -54,12 +66,6 @@ $avatar-size: 40px;
     }
 }
 
-.header {
-    display: flex;
-    align-items: baseline;
-    gap: $spacing-sm;
-}
-
 .nickname {
     font-weight: bold;
     color: $color-text;
@@ -72,6 +78,7 @@ $avatar-size: 40px;
 
 .content {
     color: $color-text;
+    white-space: pre-wrap;
 }
 
 .icon {

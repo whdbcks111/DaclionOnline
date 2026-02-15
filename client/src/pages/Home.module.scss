@@ -29,6 +29,7 @@
 }
 
 .chatInput {
+    position: relative;
     @include flex-center-vertical;
     padding: $spacing-xs $spacing-sm;
     gap: 8px;

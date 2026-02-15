@@ -1,0 +1,49 @@
+@use '../../styles/variables' as *;
+@use '../../styles/themes' as *;
+
+.container {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid $color-border;
+    border-bottom: none;
+    border-radius: $border-radius-md $border-radius-md 0 0;
+}
+
+.item {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    cursor: pointer;
+
+    &:hover,
+    &.active {
+        background-color: rgba(0, 0, 0, 0.08);
+
+        :root[data-theme='dark'] & {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+    }
+}
+
+.name {
+    font-weight: bold;
+    color: $color-primary;
+    font-size: $font-size-sm;
+}
+
+.description {
+    color: $color-text-tertiary;
+    font-size: $font-size-sm;
+}
+
+.args {
+    margin-left: auto;
+    color: $color-text-tertiary;
+    font-size: $font-size-sm;
+    white-space: nowrap;
+}
