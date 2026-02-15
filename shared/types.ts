@@ -49,6 +49,7 @@ export type ChatNode =
 
 // 채팅 메시지
 export interface ChatMessage {
+    userId: number
     nickname: string
     content: string
     timestamp: number
@@ -63,6 +64,7 @@ export interface ServerToClientEvents {
     logoutResult: (result: LogoutResult) => void
     verifyCodeSendResult: (result: SimpleResult) => void
     verifyCodeResult: (result: SimpleResult) => void
+    chatHistory: (messages: ChatMessage[]) => void
     chatMessage: (msg: ChatMessage) => void
 }
 
@@ -73,4 +75,5 @@ export interface ClientToServerEvents {
     sendVerifyCode: (email: string) => void
     verifyCode: (code: string) => void
     sendMessage: (content: string) => void
+    requestChatHistory: () => void
 }

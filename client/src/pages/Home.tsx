@@ -13,12 +13,21 @@ function Home() {
   useEffect(() => {
     if (!socket) return
 
+    const onChatHistory = (history: ChatMessageType[]) => {
+      setMessages(history)
+    }
+
     const onChatMessage = (msg: ChatMessageType) => {
       setMessages(prev => [...prev, msg])
     }
 
+    socket.on('chatHistory', onChatHistory)
     socket.on('chatMessage', onChatMessage)
-    return () => { socket.off('chatMessage', onChatMessage) }
+    socket.emit('requestChatHistory')
+    return () => {
+      socket.off('chatHistory', onChatHistory)
+      socket.off('chatMessage', onChatMessage)
+    }
   }, [socket])
 
   // 새 메시지가 오면 스크롤 하단으로
@@ -44,7 +53,7 @@ function Home() {
               key={i}
               message={msg}
               showHeader={i === 0
-                || messages[i - 1].nickname !== msg.nickname
+                || messages[i - 1].userId !== msg.userId
                 || Math.floor(messages[i - 1].timestamp / 60000) !== Math.floor(msg.timestamp / 60000)
               }
             />
