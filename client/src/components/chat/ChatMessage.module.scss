@@ -1,0 +1,100 @@
+@use '../../styles/variables' as *;
+@use '../../styles/themes' as *;
+
+$avatar-size: 40px;
+
+.message {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    margin: $spacing-md $spacing-sm 0;
+}
+
+.withHeader {
+    margin-top: $spacing-md;
+}
+
+.continued {
+    margin-top: $spacing-xs;
+}
+
+.avatarSlot {
+    width: $avatar-size;
+    flex-shrink: 0;
+}
+
+.avatar {
+    width: $avatar-size;
+    height: $avatar-size;
+    border-radius: 50%;
+    border: 1px solid $color-border;
+    background: url('/icon_profile_image_basic.png') center / cover no-repeat;
+}
+
+.body {
+    flex: 1;
+    min-width: 0;
+    padding: $spacing-sm $spacing-md;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-md;
+    line-height: 1.4;
+    word-break: break-word;
+    background-color: rgba(0, 0, 0, 0.04);
+
+    &:hover {
+        background-color: rgba(0, 0, 0, 0.08);
+    }
+
+    :root[data-theme='dark'] & {
+        background-color: rgba(255, 255, 255, 0.04);
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+    }
+}
+
+.header {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-sm;
+}
+
+.nickname {
+    font-weight: bold;
+    color: $color-text;
+}
+
+.timestamp {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+}
+
+.content {
+    color: $color-text;
+}
+
+.icon {
+    width: 1em;
+    height: 1em;
+    vertical-align: middle;
+    margin: 0 2px;
+}
+
+.chatButton {
+    display: inline;
+    padding: 2px $spacing-sm;
+    margin: 0 2px;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-bg-tertiary;
+    color: $color-text;
+    font-size: $font-size-sm;
+    cursor: pointer;
+    vertical-align: middle;
+
+    &:hover {
+        background-color: $color-primary;
+        color: $color-text-inverse;
+    }
+}

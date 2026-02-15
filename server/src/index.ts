@@ -9,6 +9,7 @@ import prisma from './config/prisma.js';
 import { initSocket } from './modules/socket.js';
 import { initRegister } from './modules/register.js';
 import { initLogin } from './modules/login.js';
+import { initChat } from './modules/chat.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -31,6 +32,7 @@ initSocket(httpServer, CORS_ORIGIN);
 // 모듈들 초기화
 initRegister();
 initLogin();
+initChat();
 
 // CORS 설정 (개발 환경에서만)
 if (NODE_ENV === 'development') {
