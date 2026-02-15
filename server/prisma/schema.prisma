@@ -18,6 +18,7 @@ model User {
   passwordSalt    String      @db.VarChar(128)
 
   nickname        String      @unique @db.VarChar(50)
+  profileImage    String?     @db.VarChar(255) @map("profile_image")
 
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")

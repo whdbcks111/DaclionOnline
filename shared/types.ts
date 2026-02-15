@@ -51,6 +51,7 @@ export type ChatNode =
 export interface ChatMessage {
     userId: number
     nickname: string
+    profileImage?: string
     content: string
     timestamp: number
 }

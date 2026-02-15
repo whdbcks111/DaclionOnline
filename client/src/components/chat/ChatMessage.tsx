@@ -5,6 +5,8 @@ import IconNode from './nodes/IconNode'
 import ButtonNode from './nodes/ButtonNode'
 import styles from './ChatMessage.module.scss'
 
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
+
 export function renderNode(node: ChatNode, key: number): React.ReactNode {
     switch (node.type) {
         case 'text':
@@ -36,7 +38,12 @@ export default function ChatMessage({ message, showHeader }: Props) {
     return (
         <div className={`${styles.message} ${showHeader ? styles.withHeader : styles.continued}`}>
             <div className={styles.avatarSlot}>
-                {showHeader && <div className={styles.avatar} />}
+                {showHeader && (
+                    <div
+                        className={styles.avatar}
+                        style={message.profileImage ? { backgroundImage: `url(${SERVER_URL}/uploads/profiles/${message.profileImage})` } : undefined}
+                    />
+                )}
             </div>
             <div className={styles.body}>
                 {showHeader && (

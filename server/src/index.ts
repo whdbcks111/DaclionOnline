@@ -3,7 +3,6 @@ import { createServer } from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import logger from './utils/logger.js';
 import prisma from './config/prisma.js';
 import { initSocket } from './modules/socket.js';
@@ -13,10 +12,6 @@ import { initChat } from './modules/chat.js';
 
 // 환경 변수 로드
 dotenv.config();
-
-// ES 모듈에서 __dirname 사용하기
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -34,6 +29,10 @@ initRegister();
 initLogin();
 initChat();
 
+// 프로필 이미지 등 업로드 파일 정적 서빙
+const uploadsPath = path.join(process.cwd(), 'uploads');
+app.use('/uploads', express.static(uploadsPath));
+
 // CORS 설정 (개발 환경에서만)
 if (NODE_ENV === 'development') {
   app.use(cors({
@@ -48,7 +47,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // 프로덕션: Client 정적 파일 제공
 if (NODE_ENV === 'production') {
-  const clientDistPath = path.join(__dirname, '../../../../client/dist');
+  const clientDistPath = path.join(process.cwd(), '../client/dist');
 
   // 정적 파일 제공
   app.use(express.static(clientDistPath));
@@ -103,7 +102,3 @@ process.on('SIGTERM', async () => {
   await prisma.$disconnect();
   process.exit(0);
 });
-
-function handleLogin(id: string | undefined, pw: string | undefined) {
-  
-}

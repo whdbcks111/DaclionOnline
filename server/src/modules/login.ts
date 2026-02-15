@@ -49,13 +49,14 @@ export function isUserOnline(userId: number): boolean {
     return onlineUsers.has(userId);
 }
 
-export function createSession(user: { id: number, username: string, nickname: string }): string {
+export function createSession(user: { id: number, username: string, nickname: string, profileImage?: string | null }): string {
     const sessionToken = randomHex(32)
 
     sessionMap.set(sessionToken, {
         userId: user.id,
         username: user.username,
         nickname: user.nickname,
+        profileImage: user.profileImage ?? undefined,
     })
 
     if (!userSessions.has(user.id)) {
@@ -93,7 +94,7 @@ export const initLogin = () => {
 
             const user = await prisma.user.findUnique({
                 where: { username: id },
-                select: { id: true, username: true, nickname: true, passwordHash: true, passwordSalt: true },
+                select: { id: true, username: true, nickname: true, profileImage: true, passwordHash: true, passwordSalt: true },
             });
 
             if (!user) {

@@ -144,6 +144,12 @@ dist
 # SvelteKit build / generate output
 .svelte-kit
 
+# Uploaded files (keep directories via .gitkeep)
+server/uploads/**
+!server/uploads/
+!server/uploads/*/
+!server/uploads/**/.gitkeep
+
 ### react ###
 .DS_*
 **/*.backup.*

@@ -36,6 +36,7 @@ export const initChat = () => {
             const msg: ChatMessage = {
                 userId: session.userId,
                 nickname: session.nickname,
+                profileImage: session.profileImage,
                 content: trimmed,
                 timestamp: Date.now(),
             };
