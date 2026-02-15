@@ -32,11 +32,6 @@ export const initChat = () => {
                 return;
             }
 
-            // 명령어 처리
-            if (trimmed.startsWith('/')) {
-                handleCommand(session.userId, trimmed);
-            }
-
             const msg: ChatMessage = {
                 userId: session.userId,
                 nickname: session.nickname,
@@ -46,6 +41,11 @@ export const initChat = () => {
             };
 
             broadcastMessage(msg);
+
+            // 명령어 처리
+            if (trimmed.startsWith('/')) {
+                handleCommand(session.userId, trimmed);
+            }
         });
     });
 
