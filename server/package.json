@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc && cp -r src/templates dist/src/",
-    "start": "node dist/src/index.js"
+    "start": "node dist/server/src/index.js"
   },
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.3.0",
