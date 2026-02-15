@@ -1,11 +1,9 @@
 import nodemailer from 'nodemailer'
 import { readFileSync } from 'fs'
-import { resolve, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { resolve } from 'path'
 import logger from '../utils/logger.js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const TEMPLATES_DIR = resolve(__dirname, '../templates')
+const TEMPLATES_DIR = resolve(process.cwd(), '../shared/templates')
 
 let transporter: nodemailer.Transporter
 
