@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
-import type { SessionRestoreData } from './shared/types'
+import type { SessionRestoreData } from '@shared/types'
 import { SocketProvider, useSocket } from './context/SocketContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ThemeToggle from './components/ThemeToggle'

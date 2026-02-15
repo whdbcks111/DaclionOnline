@@ -12,8 +12,7 @@
     aspect-ratio: 4 / 3;
     padding: $spacing-lg;
 
-    display: flex;
-    flex-direction: column;
+    @include flex-column;
     justify-content: center;
     align-items: center;
 
@@ -49,7 +48,7 @@
     }
 
     .label {
-        font-size: 1.5em;
+        font-size: $font-size-xl;
         font-weight: bold;
         margin-bottom: $spacing-lg;
         text-align: center;
@@ -69,12 +68,12 @@
     .error {
         color: $color-danger;
         text-align: center;
-        font-size: 0.9em;
+        font-size: $font-size-sm;
     }
 
     .ok {
         color: $color-info;
         text-align: center;
-        font-size: 0.9em;
+        font-size: $font-size-sm;
     }
 }

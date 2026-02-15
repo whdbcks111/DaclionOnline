@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import styles from './Register.module.scss'
 import { useSocket } from '../context/SocketContext';
 import { validateEmail, validateId, validateNickname, validatePassword } from '../utils/validators';
-import type { RegisterResult, SimpleResult } from '../shared/types';
+import type { RegisterResult, SimpleResult } from '@shared/types';
 
 function Register() {
     const navigate = useNavigate();

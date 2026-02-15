@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import styles from './Login.module.scss'
 import { useSocket } from '../context/SocketContext';
 import { validateId, validatePassword } from '../utils/validators';
-import type { LoginResult } from '../shared/types';
+import type { LoginResult } from '@shared/types';
 
 function Login() {
   const navigate = useNavigate();
@@ -69,7 +69,8 @@ function Login() {
         <input type='text' name='id' ref={idRef} className={styles.inputId} placeholder='아이디'/>
       </label>
       <label>
-        <input type='password' name='password' ref={pwRef} className={styles.inputPw} placeholder='비밀번호' />
+        <input type='password' name='password' ref={pwRef} className={styles.inputPw} placeholder='비밀번호' 
+          onKeyDown={e => e.key === 'Enter' && login()} />
       </label>
       { error && error.length > 0 ? <div className={styles.error}>{error}</div> : null }
       <button onClick={login}>로그인</button>
