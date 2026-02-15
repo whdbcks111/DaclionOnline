@@ -35,7 +35,6 @@ export const initChat = () => {
             // 명령어 처리
             if (trimmed.startsWith('/')) {
                 handleCommand(session.userId, trimmed);
-                return;
             }
 
             const msg: ChatMessage = {
