@@ -48,7 +48,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // 프로덕션: Client 정적 파일 제공
 if (NODE_ENV === 'production') {
-  const clientDistPath = path.join(__dirname, '../../client/dist');
+  const clientDistPath = path.join(__dirname, '../client/dist');
 
   // 정적 파일 제공
   app.use(express.static(clientDistPath));
