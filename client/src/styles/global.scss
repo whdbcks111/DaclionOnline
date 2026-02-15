@@ -172,3 +172,22 @@ select {
     font-family: $font-family-base;
   }
 }
+
+// 스크롤바 커스텀
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 139, 139, 0.612) transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(139, 139, 139, 0.612);
+    border-radius: 2px;
+  }
+}

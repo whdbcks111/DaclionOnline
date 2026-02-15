@@ -34,9 +34,27 @@
     gap: 8px;
     border-top: 1px solid $color-border;
 
-    input {
+    .chatInputField {
         flex: 1;
         box-sizing: border-box;
+        padding: 8px 15px;
+        margin: 5px 0;
+        border: none;
+        border-radius: 5px;
+        background-color: $white;
+        color: $black;
+        font-family: $font-family-base;
+        font-size: $font-size-sm;
+        outline: none;
+        overflow-y: auto;
+        max-height: 80px;
+        word-break: break-all;
+        -webkit-user-modify: read-write-plaintext-only;
+
+        &:empty::before {
+            content: attr(data-placeholder);
+            color: $color-text-tertiary;
+        }
     }
 
     button {

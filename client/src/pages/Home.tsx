@@ -7,7 +7,7 @@ import type { ChatMessage as ChatMessageType } from '@shared/types'
 function Home() {
   const { socket } = useSocket()
   const [messages, setMessages] = useState<ChatMessageType[]>([])
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -27,11 +27,11 @@ function Home() {
   }, [messages])
 
   const sendMessage = () => {
-    const content = inputRef.current?.value.trim()
+    const content = inputRef.current?.textContent?.trim()
     if (!content || !socket) return
 
     socket.emit('sendMessage', content)
-    inputRef.current!.value = ''
+    inputRef.current!.textContent = ''
     inputRef.current!.focus()
   }
 
@@ -52,12 +52,18 @@ function Home() {
           <div ref={messagesEndRef} />
         </div>
         <div className={styles.chatInput}>
-          <input
+          <div
             ref={inputRef}
-            type="text"
-            autoComplete="false"
-            placeholder="메시지를 입력하세요"
-            onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            className={styles.chatInputField}
+            contentEditable
+            role="textbox"
+            data-placeholder="메시지를 입력하세요"
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                sendMessage()
+              }
+            }}
           />
           <button onClick={sendMessage}>전송</button>
         </div>
