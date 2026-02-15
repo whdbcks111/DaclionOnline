@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSocket } from '../context/SocketContext'
+import { parseChatMessage } from '@shared/chatParser'
+import { renderNode } from './chat/ChatMessage'
 import type { NotificationData } from '@shared/types'
 import styles from './Notification.module.scss'
 
@@ -16,7 +18,7 @@ function Notification() {
   const addNotification = useCallback((data: NotificationData) => {
     const id = nextId++
     const newItem: NotificationItem = { ...data, id }
-    const duration = data.length ?? 3000
+    const duration = data.length ?? 5000
 
     setItems(prev => {
       // 같은 key가 이미 있으면 제거 후 새로 추가
@@ -45,7 +47,7 @@ function Notification() {
     <div className={styles.container}>
       {items.map(item => (
         <div key={item.id} className={styles.item}>
-          {item.message}
+          {parseChatMessage(item.message).map((node, i) => renderNode(node, i))}
         </div>
       ))}
     </div>
