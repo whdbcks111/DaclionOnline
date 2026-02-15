@@ -55,6 +55,13 @@ export interface ChatMessage {
     timestamp: number
 }
 
+// 알림
+export interface NotificationData {
+    key: string
+    message: string
+    length?: number
+}
+
 // 소켓 이벤트 맵
 export interface ServerToClientEvents {
     sessionRestore: (data: SessionRestoreData) => void
@@ -66,6 +73,7 @@ export interface ServerToClientEvents {
     verifyCodeResult: (result: SimpleResult) => void
     chatHistory: (messages: ChatMessage[]) => void
     chatMessage: (msg: ChatMessage) => void
+    notification: (data: NotificationData) => void
 }
 
 export interface ClientToServerEvents {

@@ -4,6 +4,7 @@ import type { SessionRestoreData } from '@shared/types'
 import { SocketProvider, useSocket } from './context/SocketContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ThemeToggle from './components/ThemeToggle'
+import Notification from './components/Notification'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import Register from './pages/Register'
@@ -50,6 +51,7 @@ function App() {
           <SessionHandler />
           {/* 다크모드 토글 버튼 (모든 페이지에 표시) */}
           <ThemeToggle />
+          <Notification />
 
           <Routes>
             {/* 기본 경로 - /login으로 리다이렉트 */}
