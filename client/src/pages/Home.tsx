@@ -55,6 +55,7 @@ function Home() {
           <input
             ref={inputRef}
             type="text"
+            autoComplete="false"
             placeholder="메시지를 입력하세요"
             onKeyDown={e => e.key === 'Enter' && sendMessage()}
           />
