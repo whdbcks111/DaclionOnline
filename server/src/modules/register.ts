@@ -6,7 +6,7 @@ import { randomDigits, randomHex } from "../utils/random.js";
 import { isValidPayload, validateId, validatePassword, validateEmail, validateNickname } from "../utils/validators.js";
 import prisma from "../config/prisma.js";
 import { createSession } from "./login.js";
-import type { RegisterRequest } from "../shared/types.js";
+import type { RegisterRequest } from "../../../shared/types.js";
 import type { VerifyEntry } from "../types/index.js";
 
 const verifyMap: { [key: string]: VerifyEntry } = {}

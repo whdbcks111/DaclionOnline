@@ -4,7 +4,7 @@ import { getIO } from "./socket.js"
 import { randomHex } from "../utils/random.js";
 import { isValidPayload } from "../utils/validators.js";
 import prisma from "../config/prisma.js";
-import type { LoginRequest } from "../shared/types.js";
+import type { LoginRequest } from "../../../shared/types.js";
 import type { Session } from "../types/index.js";
 
 const sessionMap = new Map<string, Session>()
@@ -108,7 +108,15 @@ export const initLogin = () => {
                 return;
             }
 
-            const sessionToken = createSession(user);
+            // 같은 기기에서 이미 유효한 세션이 있으면 재사용
+            const existingSession = socket.data.sessionToken
+                ? getSession(socket.data.sessionToken)
+                : undefined;
+
+            const sessionToken = existingSession?.userId === user.id
+                ? socket.data.sessionToken
+                : createSession(user);
+
             socket.data.sessionToken = sessionToken;
             setUserOnline(user.id);
             socket.emit('loginResult', { ok: true, sessionToken });
