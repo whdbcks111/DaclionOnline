@@ -32,6 +32,7 @@ function Home() {
 
     socket.emit('sendMessage', content)
     inputRef.current!.value = ''
+    inputRef.current!.focus()
   }
 
   return (
