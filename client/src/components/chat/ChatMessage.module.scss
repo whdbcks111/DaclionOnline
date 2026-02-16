@@ -66,6 +66,16 @@ $avatar-size: 40px;
     }
 }
 
+.flag {
+    display: inline-block;
+    padding: 1px $spacing-sm;
+    border-radius: $border-radius-sm;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #fff;
+    line-height: 1.4;
+}
+
 .nickname {
     font-weight: bold;
     color: $color-text;

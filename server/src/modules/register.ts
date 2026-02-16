@@ -94,6 +94,7 @@ export const initRegister = () => {
                     passwordHash: hash,
                     passwordSalt: salt,
                     nickname,
+                    player: { create: {} },
                 },
             });
 

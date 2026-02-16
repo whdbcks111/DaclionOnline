@@ -1,5 +1,5 @@
 import { getIO } from "./socket.js";
-import type { ChatMessage } from "../../../shared/types.js";
+import type { ChatMessage, ChatFlag, ChatNode } from "../../../shared/types.js";
 
 const BOT_USER_ID = 0;
 const BOT_NICKNAME = "Daclion System";
@@ -20,11 +20,19 @@ export function broadcastMessage(msg: ChatMessage): void {
     getIO().emit('chatMessage', msg);
 }
 
+/** permission 기반 플래그 생성 */
+export function getFlagsForPermission(permission: number): ChatFlag[] {
+    const flags: ChatFlag[] = [];
+    if (permission >= 10) flags.push({ text: '관리자', color: '#e74c3c' });
+    return flags;
+}
+
 /** 봇 메시지 전송 */
-export function sendBotMessage(content: string): void {
+export function sendBotMessage(content: string | ChatNode[]): void {
     broadcastMessage({
         userId: BOT_USER_ID,
         nickname: BOT_NICKNAME,
+        flags: [{ text: '봇', color: '$primary' }],
         content,
         timestamp: Date.now(),
         profileImage: '/icons/favicon.png'

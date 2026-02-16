@@ -35,13 +35,23 @@ function getProfileImageURL(profileImage: string) {
     return `url("${SERVER_URL}/uploads/profiles/${profileImage}")`;
 }
 
+/** $prefix는 CSS 변수로 변환 (예: "$primary" → "var(--color-primary)") */
+function resolveFlagColor(color: string): string {
+    if (color.startsWith('$')) {
+        return `var(--color-${color.slice(1)})`
+    }
+    return color
+}
+
 interface Props {
     message: ChatMessageType
     showHeader: boolean
 }
 
 export default function ChatMessage({ message, showHeader }: Props) {
-    const nodes = parseChatMessage(message.content)
+    const nodes: ChatNode[] = typeof(message.content) === 'string' ? 
+        [{ type: 'text', text: message.content }] : 
+        message.content;
 
     return (
         <div className={`${styles.message} ${showHeader ? styles.withHeader : styles.continued}`}>
@@ -58,6 +68,11 @@ export default function ChatMessage({ message, showHeader }: Props) {
             <div className={styles.bodyWrap}>
                 {showHeader && (
                     <div className={styles.header}>
+                        {message.flags?.map((flag, i) => (
+                            <span key={i} className={styles.flag} style={{ backgroundColor: resolveFlagColor(flag.color) }}>
+                                {flag.text}
+                            </span>
+                        ))}
                         <span className={styles.nickname}>{message.nickname}</span>
                         <span className={styles.timestamp}>{formatTime(message.timestamp)}</span>
                     </div>

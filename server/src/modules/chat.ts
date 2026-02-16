@@ -1,7 +1,7 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
-import { broadcastMessage, getChatHistory } from "./message.js";
+import { broadcastMessage, getChatHistory, getFlagsForPermission } from "./message.js";
 import { handleCommand } from "./bot.js";
 import type { ChatMessage } from "../../../shared/types.js";
 
@@ -32,10 +32,12 @@ export const initChat = () => {
                 return;
             }
 
+            const flags = getFlagsForPermission(session.permission);
             const msg: ChatMessage = {
                 userId: session.userId,
                 nickname: session.nickname,
                 profileImage: session.profileImage,
+                flags: flags.length > 0 ? flags : undefined,
                 content: trimmed,
                 timestamp: Date.now(),
             };

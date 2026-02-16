@@ -5,6 +5,7 @@ import { randomHex } from "../utils/random.js";
 import { isValidPayload } from "../utils/validators.js";
 import prisma from "../config/prisma.js";
 import type { LoginRequest } from "../../../shared/types.js";
+import { loadPlayer, unloadPlayer } from "./player.js";
 import type { Session } from "../types/index.js";
 
 const sessionMap = new Map<string, Session>()
@@ -49,7 +50,15 @@ export function isUserOnline(userId: number): boolean {
     return onlineUsers.has(userId);
 }
 
-export function createSession(user: { id: number, username: string, nickname: string, profileImage?: string | null }): string {
+/** userId로 permission 조회 (세션에서) */
+export function getUserPermission(userId: number): number {
+    for (const session of sessionMap.values()) {
+        if (session.userId === userId) return session.permission;
+    }
+    return 0;
+}
+
+export function createSession(user: { id: number, username: string, nickname: string, profileImage?: string | null, permission?: number }): string {
     const sessionToken = randomHex(32)
 
     sessionMap.set(sessionToken, {
@@ -57,6 +66,7 @@ export function createSession(user: { id: number, username: string, nickname: st
         username: user.username,
         nickname: user.nickname,
         profileImage: user.profileImage ?? undefined,
+        permission: user.permission ?? 0,
     })
 
     if (!userSessions.has(user.id)) {
@@ -94,7 +104,7 @@ export const initLogin = () => {
 
             const user = await prisma.user.findUnique({
                 where: { username: id },
-                select: { id: true, username: true, nickname: true, profileImage: true, passwordHash: true, passwordSalt: true },
+                select: { id: true, username: true, nickname: true, profileImage: true, permission: true, passwordHash: true, passwordSalt: true },
             });
 
             if (!user) {
@@ -120,11 +130,16 @@ export const initLogin = () => {
 
             socket.data.sessionToken = sessionToken;
             setUserOnline(user.id);
+            await loadPlayer(user.id);
             socket.emit('loginResult', { ok: true, sessionToken });
         });
 
-        socket.on('logout', (token: unknown) => {
+        socket.on('logout', async (token: unknown) => {
             if (typeof token !== 'string') return;
+            const logoutSession = getSession(token);
+            if (logoutSession && getUserSessionCount(logoutSession.userId) <= 1) {
+                await unloadPlayer(logoutSession.userId);
+            }
             removeSession(token);
             socket.emit('logoutResult', { ok: true });
         });

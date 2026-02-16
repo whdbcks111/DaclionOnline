@@ -47,12 +47,19 @@ export type ChatNode =
     | { type: 'icon'; name: string }
     | { type: 'button'; action: string; children: ChatNode[] }
 
+// 채팅 플래그 (닉네임 옆 배지)
+export interface ChatFlag {
+    text: string
+    color: string
+}
+
 // 채팅 메시지
 export interface ChatMessage {
     userId: number
     nickname: string
     profileImage?: string
-    content: string
+    flags?: ChatFlag[]
+    content: string | ChatNode[]
     timestamp: number
 }
 
@@ -73,7 +80,7 @@ export interface CommandInfo {
 // 알림
 export interface NotificationData {
     key: string
-    message: string
+    message: string | ChatNode[]
     length?: number
 }
 

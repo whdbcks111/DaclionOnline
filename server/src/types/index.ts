@@ -5,6 +5,7 @@ export interface Session {
     username: string
     nickname: string
     profileImage?: string
+    permission: number
 }
 
 export interface MailOptions {

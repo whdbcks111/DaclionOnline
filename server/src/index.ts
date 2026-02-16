@@ -10,6 +10,8 @@ import { initRegister } from './modules/register.js';
 import { initLogin } from './modules/login.js';
 import { initChat } from './modules/chat.js';
 import { initBot } from './modules/bot.js';
+import { initPlayer, saveAllPlayers } from './modules/player.js';
+import { initGame } from './modules/game.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -30,6 +32,8 @@ initRegister();
 initLogin();
 initChat();
 initBot();
+initPlayer();
+initGame();
 
 // 프로필 이미지 등 업로드 파일 정적 서빙
 const uploadsPath = path.join(process.cwd(), 'uploads');
@@ -95,12 +99,14 @@ httpServer.listen(SERVER_PORT, async () => {
 // 프로세스 종료 시 정리
 process.on('SIGINT', async () => {
   logger.warn('SIGINT: 서버 종료 중...');
+  await saveAllPlayers();
   await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   logger.warn('SIGTERM: 서버 종료 중...');
+  await saveAllPlayers();
   await prisma.$disconnect();
   process.exit(0);
 });

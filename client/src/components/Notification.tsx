@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSocket } from '../context/SocketContext'
 import { parseChatMessage } from '@shared/chatParser'
 import { renderNode } from './chat/ChatMessage'
-import type { NotificationData } from '@shared/types'
+import type { ChatNode, NotificationData } from '@shared/types'
 import styles from './Notification.module.scss'
 
 interface NotificationItem extends NotificationData {
@@ -69,7 +69,8 @@ function Notification() {
     <div className={styles.container}>
       {items.map(item => (
         <div key={item.id} className={styles.item}>
-          {parseChatMessage(item.message).map((node, i) => renderNode(node, i))}
+          {(typeof(item.message) === 'string' ? [ { type: 'text', text: item.message } as ChatNode ] : item.message)
+            .map((node: ChatNode, i) => renderNode(node, i))}
         </div>
       ))}
     </div>

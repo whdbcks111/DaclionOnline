@@ -19,9 +19,27 @@ model User {
 
   nickname        String      @unique @db.VarChar(50)
   profileImage    String?     @db.VarChar(255) @map("profile_image")
+  permission      Int         @default(0)
 
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
+  player          Player?
+
   @@map("users")
+}
+
+// 플레이어 테이블
+model Player {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+
+  level     Int      @default(1)
+  exp       Int      @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("players")
 }
