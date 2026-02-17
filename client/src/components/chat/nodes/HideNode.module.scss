@@ -1,0 +1,78 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/themes' as *;
+
+.button {
+    display: inline;
+    padding: 2px $spacing-sm;
+    margin: 0 2px;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-bg-tertiary;
+    color: $color-text;
+    font-size: $font-size-sm;
+    cursor: pointer;
+    vertical-align: middle;
+
+    &:hover {
+        background-color: $color-primary;
+        color: $color-text-inverse;
+    }
+}
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    background-color: $color-bg-tertiary;
+}
+
+.overlayHeader {
+    display: flex;
+    align-items: center;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $color-border;
+    flex-shrink: 0;
+}
+
+.backButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: $border-radius-sm;
+    background: none;
+    color: $color-text;
+    font-size: $font-size-lg;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:hover {
+        background-color: $color-bg-tertiary;
+    }
+}
+
+.senderName {
+    flex: 1;
+    text-align: center;
+    font-weight: bold;
+    color: $color-text;
+}
+
+.date {
+    flex-shrink: 0;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+}
+
+.overlayBody {
+    flex: 1;
+    overflow-y: auto;
+    padding: $spacing-md;
+    color: $color-text;
+    white-space: pre-wrap;
+    line-height: 1.6;
+}

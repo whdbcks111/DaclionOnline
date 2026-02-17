@@ -1,11 +1,19 @@
+import { createContext } from 'react'
 import type { ChatNode, ChatMessage as ChatMessageType } from '@shared/types'
-import { parseChatMessage } from '@shared/chatParser'
 import ColorNode from './nodes/ColorNode'
+import BgNode from './nodes/BgNode'
+import DecoNode from './nodes/DecoNode'
+import SizeNode from './nodes/SizeNode'
+import HideNode from './nodes/HideNode'
 import IconNode from './nodes/IconNode'
 import ButtonNode from './nodes/ButtonNode'
 import styles from './ChatMessage.module.scss'
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
+
+export const ChatMessageContext = createContext<{ nickname: string; timestamp: number }>({
+    nickname: '', timestamp: 0,
+})
 
 export function renderNode(node: ChatNode, key: number): React.ReactNode {
     switch (node.type) {
@@ -13,6 +21,14 @@ export function renderNode(node: ChatNode, key: number): React.ReactNode {
             return <span key={key}>{node.text}</span>
         case 'color':
             return <ColorNode key={key} color={node.color} children={node.children} />
+        case 'bg':
+            return <BgNode key={key} color={node.color} children={node.children} />
+        case 'deco':
+            return <DecoNode key={key} decoration={node.decoration} children={node.children} />
+        case 'size':
+            return <SizeNode key={key} size={node.size} children={node.children} />
+        case 'hide':
+            return <HideNode key={key} title={node.title} children={node.children} />
         case 'icon':
             return <IconNode key={key} name={node.name} />
         case 'button':
@@ -49,40 +65,42 @@ interface Props {
 }
 
 export default function ChatMessage({ message, showHeader }: Props) {
-    const nodes: ChatNode[] = typeof(message.content) === 'string' ? 
-        [{ type: 'text', text: message.content }] : 
+    const nodes: ChatNode[] = typeof(message.content) === 'string' ?
+        [{ type: 'text', text: message.content }] :
         message.content;
 
     return (
-        <div className={`${styles.message} ${showHeader ? styles.withHeader : styles.continued}`}>
-            <div className={styles.avatarSlot}>
-                {showHeader && (
-                    <div
-                        className={styles.avatar}
-                        style={message.profileImage ? { 
-                            backgroundImage: getProfileImageURL(message.profileImage) 
-                        } : undefined}
-                    />
-                )}
-            </div>
-            <div className={styles.bodyWrap}>
-                {showHeader && (
-                    <div className={styles.header}>
-                        {message.flags?.map((flag, i) => (
-                            <span key={i} className={styles.flag} style={{ backgroundColor: resolveFlagColor(flag.color) }}>
-                                {flag.text}
-                            </span>
-                        ))}
-                        <span className={styles.nickname}>{message.nickname}</span>
-                        <span className={styles.timestamp}>{formatTime(message.timestamp)}</span>
-                    </div>
-                )}
-                <div className={styles.body}>
-                    <div className={styles.content}>
-                        {nodes.map((node, i) => renderNode(node, i))}
+        <ChatMessageContext.Provider value={{ nickname: message.nickname, timestamp: message.timestamp }}>
+            <div className={`${styles.message} ${showHeader ? styles.withHeader : styles.continued}`}>
+                <div className={styles.avatarSlot}>
+                    {showHeader && (
+                        <div
+                            className={styles.avatar}
+                            style={message.profileImage ? {
+                                backgroundImage: getProfileImageURL(message.profileImage)
+                            } : undefined}
+                        />
+                    )}
+                </div>
+                <div className={styles.bodyWrap}>
+                    {showHeader && (
+                        <div className={styles.header}>
+                            {message.flags?.map((flag, i) => (
+                                <span key={i} className={styles.flag} style={{ backgroundColor: resolveFlagColor(flag.color) }}>
+                                    {flag.text}
+                                </span>
+                            ))}
+                            <span className={styles.nickname}>{message.nickname}</span>
+                            <span className={styles.timestamp}>{formatTime(message.timestamp)}</span>
+                        </div>
+                    )}
+                    <div className={styles.body}>
+                        <div className={styles.content}>
+                            {nodes.map((node, i) => renderNode(node, i))}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </ChatMessageContext.Provider>
     )
 }

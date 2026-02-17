@@ -38,7 +38,7 @@ export const initChat = () => {
                 nickname: session.nickname,
                 profileImage: session.profileImage,
                 flags: flags.length > 0 ? flags : undefined,
-                content: trimmed,
+                content: [{ type: 'text', text: trimmed }],
                 timestamp: Date.now(),
             };
 

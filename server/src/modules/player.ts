@@ -1,5 +1,9 @@
 import logger from "../utils/logger.js";
 import Player from "../models/Player.js";
+import { registerCommand } from "./bot.js";
+import { sendBotMessage } from "./message.js";
+import { chat } from "../utils/chatBuilder.js";
+import prisma from "../config/prisma.js";
 
 const SAVE_INTERVAL = 30_000; // 30초
 
@@ -59,6 +63,38 @@ export function initPlayer(): void {
     setInterval(async () => {
         await saveAllPlayers();
     }, SAVE_INTERVAL);
+
+    registerCommand({
+        name: '상태창',
+        aliases: ['status', 's'],
+        description: '플레이어 정보를 확인합니다.',
+        async handler(userId, args, raw) {
+            const player = getPlayer(userId);
+            if(!player) return;
+
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { nickname: true, permission: true },
+            });
+            if(!user) return;
+            
+            sendBotMessage(
+                chat()
+                    .text('[ 상태창 ]\n')
+                    .hide('보기', b => 
+                        b.color('yellow', b => b.text('유저 아이디'))
+                        .text(` ${userId}\n`)
+                        .color('yellow', b => b.text('닉네임'))
+                        .text(` ${user.nickname}\n`)
+                        .color('yellow', b => b.text('레벨'))
+                        .text(` ${player.level}\n`)
+                        .color('yellow', b => b.text('경험치'))
+                        .text(` ${player.exp}\n`)
+                    )
+                    .build()
+            )
+        },
+    })
 
     logger.success('플레이어 모듈 초기화 완료');
 }

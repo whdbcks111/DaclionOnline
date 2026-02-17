@@ -1,4 +1,5 @@
 import { getIO } from "./socket.js";
+import { parseChatMessage } from "../utils/chatParser.js";
 import type { ChatMessage, ChatFlag, ChatNode } from "../../../shared/types.js";
 
 const BOT_USER_ID = 0;
@@ -27,13 +28,13 @@ export function getFlagsForPermission(permission: number): ChatFlag[] {
     return flags;
 }
 
-/** 봇 메시지 전송 */
+/** 봇 메시지 전송 (string이면 자동 파싱) */
 export function sendBotMessage(content: string | ChatNode[]): void {
     broadcastMessage({
         userId: BOT_USER_ID,
         nickname: BOT_NICKNAME,
         flags: [{ text: '봇', color: '$primary' }],
-        content,
+        content: typeof content === 'string' ? parseChatMessage(content) : content,
         timestamp: Date.now(),
         profileImage: '/icons/favicon.png'
     });

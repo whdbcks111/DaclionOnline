@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSocket } from '../context/SocketContext'
-import { parseChatMessage } from '@shared/chatParser'
 import { renderNode } from './chat/ChatMessage'
 import type { ChatNode, NotificationData } from '@shared/types'
 import styles from './Notification.module.scss'

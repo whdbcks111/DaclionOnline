@@ -44,6 +44,10 @@ export interface SimpleResult {
 export type ChatNode =
     | { type: 'text'; text: string }
     | { type: 'color'; color: string; children: ChatNode[] }
+    | { type: 'bg'; color: string; children: ChatNode[] }
+    | { type: 'deco'; decoration: string; children: ChatNode[] }
+    | { type: 'size'; size: string; children: ChatNode[] }
+    | { type: 'hide'; title: string; children: ChatNode[] }
     | { type: 'icon'; name: string }
     | { type: 'button'; action: string; children: ChatNode[] }
 
