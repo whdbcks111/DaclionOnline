@@ -46,7 +46,7 @@ export const initChat = () => {
 
             // 명령어 처리
             if (trimmed.startsWith('/')) {
-                handleCommand(session.userId, trimmed);
+                handleCommand(session.userId, trimmed, session.permission);
             }
         });
     });
