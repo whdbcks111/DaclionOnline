@@ -1,4 +1,5 @@
 import { getIO } from "./socket.js";
+import { getSession } from "./login.js";
 import { parseChatMessage } from "../utils/chatParser.js";
 import type { ChatMessage, ChatFlag, ChatNode } from "../../../shared/types.js";
 
@@ -31,6 +32,31 @@ export function getFlagsForPermission(permission: number): ChatFlag[] {
 /** 봇 메시지 전송 (string이면 자동 파싱) */
 export function sendBotMessage(content: string | ChatNode[]): void {
     broadcastMessage({
+        userId: BOT_USER_ID,
+        nickname: BOT_NICKNAME,
+        flags: [{ text: '봇', color: '$primary' }],
+        content: typeof content === 'string' ? parseChatMessage(content) : content,
+        timestamp: Date.now(),
+        profileImage: '/icons/favicon.png'
+    });
+}
+
+/** 특정 유저에게만 메시지 전송 */
+export function sendMessageToUser(userId: number, msg: ChatMessage): void {
+    const io = getIO();
+    for (const [, socket] of io.sockets.sockets) {
+        const session = socket.data.sessionToken
+            ? getSession(socket.data.sessionToken)
+            : undefined;
+        if (session?.userId === userId) {
+            socket.emit('chatMessage', { ...msg, private: true });
+        }
+    }
+}
+
+/** 특정 유저에게만 봇 메시지 전송 */
+export function sendBotMessageToUser(userId: number, content: string | ChatNode[]): void {
+    sendMessageToUser(userId, {
         userId: BOT_USER_ID,
         nickname: BOT_NICKNAME,
         flags: [{ text: '봇', color: '$primary' }],

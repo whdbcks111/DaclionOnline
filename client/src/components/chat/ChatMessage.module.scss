@@ -91,6 +91,13 @@ $avatar-size: 40px;
     white-space: pre-wrap;
 }
 
+.privateLabel {
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+    font-style: italic;
+}
+
 .icon {
     width: 1em;
     height: 1em;

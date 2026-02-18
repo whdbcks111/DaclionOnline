@@ -1,7 +1,7 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
-import { broadcastMessage, getChatHistory, getFlagsForPermission } from "./message.js";
+import { broadcastMessage, sendMessageToUser, getChatHistory, getFlagsForPermission } from "./message.js";
 import { handleCommand } from "./bot.js";
 import type { ChatMessage } from "../../../shared/types.js";
 
@@ -42,12 +42,13 @@ export const initChat = () => {
                 timestamp: Date.now(),
             };
 
-            broadcastMessage(msg);
-
             // 명령어 처리
             if (trimmed.startsWith('/')) {
-                handleCommand(session.userId, trimmed, session.permission);
+                handleCommand(session.userId, trimmed, msg, session.permission);
+                return;
             }
+
+            broadcastMessage(msg);
         });
     });
 

@@ -65,6 +65,7 @@ export interface ChatMessage {
     flags?: ChatFlag[]
     content: string | ChatNode[]
     timestamp: number
+    private?: boolean
 }
 
 // 명령어 정보 (자동완성용)

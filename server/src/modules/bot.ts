@@ -1,7 +1,7 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
-import { sendBotMessage } from "./message.js";
-import type { CommandInfo } from "../../../shared/types.js";
+import { broadcastMessage, sendBotMessage, sendBotMessageToUser, sendMessageToUser } from "./message.js";
+import type { ChatMessage, CommandInfo } from "../../../shared/types.js";
 
 interface CommandArg {
     name: string
@@ -9,13 +9,16 @@ interface CommandArg {
     required?: boolean
 }
 
+type CommandUseVisibility = 'hide' | 'show' | 'private';
+
 interface CommandConfig {
     name: string
     aliases?: string[]
     description: string
     permission?: number        // 최소 권한 레벨 (미지정 시 0, 누구나 사용 가능)
+    showCommandUse?: CommandUseVisibility  // 명령어 사용 채팅 표시 방식 (기본: 'hide')
     args?: CommandArg[]
-    handler: (userId: number, args: string[], raw: string, permission: number) => void
+    handler: (userId: number, args: string[], raw: string, msg: ChatMessage | null, permission: number) => void
 }
 
 const commands = new Map<string, CommandConfig>();
@@ -43,8 +46,8 @@ export function getCommandList(): CommandInfo[] {
     }));
 }
 
-/** 명령어 파싱 및 실행 (chat.ts에서 호출) */
-export function handleCommand(userId: number, raw: string, permission = 0): void {
+/** 명령어 파싱 및 실행 (chat.ts에서 호출). 명령어 사용 채팅 표시 방식 반환 */
+export function handleCommand(userId: number, raw: string, msg: ChatMessage | null = null, permission = 0): void {
     // "/명령어 인자1 인자2" → ["명령어", "인자1", "인자2"]
     const parts = raw.slice(1).split(/\s+/);
     const name = parts[0].toLowerCase();
@@ -52,13 +55,13 @@ export function handleCommand(userId: number, raw: string, permission = 0): void
 
     const cmd = commands.get(name) ?? commands.get(aliasMap.get(name) ?? '');
     if (!cmd) {
-        sendBotMessage(`알 수 없는 명령어: /${name}`);
+        sendBotMessageToUser(userId, `알 수 없는 명령어: /${name}`);
         return;
     }
 
     // 권한 검증
     if ((cmd.permission ?? 0) > permission) {
-        sendBotMessage('권한이 부족합니다.');
+        sendBotMessageToUser(userId, '권한이 부족합니다.');
         return;
     }
 
@@ -68,11 +71,16 @@ export function handleCommand(userId: number, raw: string, permission = 0): void
         const usage = cmd.args
             ?.map(a => a.required ? `<${a.name}>` : `[${a.name}]`)
             .join(' ') ?? '';
-        sendBotMessage(`사용법: /${cmd.name} ${usage}`);
+        sendBotMessageToUser(userId, `사용법: /${cmd.name} ${usage}`);
         return;
     }
 
-    cmd.handler(userId, args, raw, permission);
+    if(msg !== null) {
+        if(cmd.showCommandUse === 'show') broadcastMessage(msg);
+        else if(cmd.showCommandUse == 'private') sendMessageToUser(userId, msg);
+    }
+
+    cmd.handler(userId, args, raw, msg, permission);
 }
 
 /** 봇 모듈 초기화 */
@@ -91,7 +99,7 @@ export const initBot = () => {
         name: '도움말',
         aliases: ['help'],
         description: '명령어 목록을 표시합니다',
-        handler (userId, args, raw, permission) {
+        handler (userId, args, raw, msg, permission) {
             const list = Array.from(commands.values())
                 .filter(cmd => (cmd.permission ?? 0) <= permission);
             const lines = list.map(cmd => {
@@ -134,17 +142,18 @@ export const initBot = () => {
         aliases: ['eval'],
         description: 'JS 코드를 실행합니다.',
         permission: 10,
+        showCommandUse: 'private',
         args: [
             { name: '코드', description: '실행 가능한 자바스크립트 코드' }
         ],
         handler(userId, args, raw) {
-            const code = args.slice(1).join(' ');
+            const code = args.join(' ');
             
             try {
-                sendBotMessage(`결과 : ${eval(code)}`);
+                sendBotMessageToUser(userId, `결과 : ${eval(code)}`);
             }
             catch(e) {
-                sendBotMessage(`오류 : ${e}`)
+                sendBotMessageToUser(userId, `오류 : ${e}`)
             }
         },
     });
