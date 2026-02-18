@@ -1,7 +1,7 @@
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
 import { parseChatMessage } from "../utils/chatParser.js";
-import type { ChatMessage, ChatFlag, ChatNode } from "../../../shared/types.js";
+import type { ChatMessage, ChatFlag, ChatNode, NotificationData } from "../../../shared/types.js";
 
 const BOT_USER_ID = 0;
 const BOT_NICKNAME = "Daclion System";
@@ -64,4 +64,22 @@ export function sendBotMessageToUser(userId: number, content: string | ChatNode[
         timestamp: Date.now(),
         profileImage: '/icons/favicon.png'
     });
+}
+
+/** 전체 알림 브로드캐스트 */
+export function broadcastNotification(data: NotificationData): void {
+    getIO().emit('notification', data);
+}
+
+/** 특정 유저에게만 알림 전송 */
+export function sendNotificationToUser(userId: number, data: NotificationData): void {
+    const io = getIO();
+    for (const [, socket] of io.sockets.sockets) {
+        const session = socket.data.sessionToken
+            ? getSession(socket.data.sessionToken)
+            : undefined;
+        if (session?.userId === userId) {
+            socket.emit('notification', data);
+        }
+    }
 }

@@ -45,6 +45,11 @@ export default class Equipment {
         this.playerId = playerId;
     }
 
+    /** DB 연동 없이 인메모리 전용 Equipment 생성 (Monster 등) */
+    static createEmpty(): Equipment {
+        return new Equipment(0);
+    }
+
     // -- 조회 --
 
     /** 특정 슬롯의 장착 아이템 조회 */

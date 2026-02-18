@@ -12,6 +12,8 @@ import { initChat } from './modules/chat.js';
 import { initBot } from './modules/bot.js';
 import { initPlayer, saveAllPlayers } from './modules/player.js';
 import { initGame } from './modules/game.js';
+import { loadItemData } from './models/Item.js';
+import { loadMonsterData } from './models/Monster.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -89,6 +91,9 @@ httpServer.listen(SERVER_PORT, async () => {
   try {
     await prisma.$connect();
     logger.success('MariaDB 연결 성공 (Prisma)');
+    await loadItemData();
+    await loadMonsterData();
+    logger.success('마스터 데이터 로드 완료');
   } catch (error) {
     logger.error('MariaDB 연결 실패:', error);
   }

@@ -1,8 +1,21 @@
 /** 능력치 종류 */
-export type AttributeType = 'hp' | 'mp' | 'atk' | 'def' | 'speed' | 'critRate' | 'critDmg';
+export type AttributeType =
+    | 'hp' | 'mp'
+    | 'atk' | 'mentality'
+    | 'def' | 'magicDef'
+    | 'armorPen' | 'magicPen'
+    | 'speed' | 'attackSpeed'
+    | 'critRate' | 'critDmg';
 
 /** 모든 능력치 종류 목록 */
-export const ATTRIBUTE_TYPES: AttributeType[] = ['hp', 'mp', 'atk', 'def', 'speed', 'critRate', 'critDmg'];
+export const ATTRIBUTE_TYPES: AttributeType[] = [
+    'hp', 'mp',
+    'atk', 'mentality',
+    'def', 'magicDef',
+    'armorPen', 'magicPen',
+    'speed', 'attackSpeed',
+    'critRate', 'critDmg',
+];
 
 /** Modifier 적용 방식 */
 export type ModifierOp = 'add' | 'multiply';

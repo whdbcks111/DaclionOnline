@@ -38,6 +38,7 @@ model Player {
   level     Int      @default(1)
   exp       Int      @default(0)
   maxWeight Float    @default(100.0) @map("max_weight")
+  stats     Json?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -116,4 +117,22 @@ model Equipment {
   @@unique([playerId, slot, slotIndex])
   @@index([playerId])
   @@map("equipments")
+}
+
+// 몬스터 정의 테이블 (마스터 데이터)
+model MonsterData {
+  id          Int      @id @default(autoincrement())
+
+  name        String   @db.VarChar(100)
+  level       Int      @default(1)
+  exp         Int      @default(0)
+  baseAttribute Json   @map("base_stats")
+  drops       Json?
+  expReward   Int      @default(0) @map("exp_reward")
+  equipments  Json?
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("monster_data")
 }
