@@ -70,6 +70,7 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
     // 필수 인자 검증
     const requiredArgs = cmd.args?.filter(a => a.required) ?? [];
     if (args.length < requiredArgs.length) {
+        if(msg) sendMessageToUser(userId, msg);
         const usage = cmd.args
             ?.map(a => a.required ? `<${a.name}>` : `[${a.name}]`)
             .join(' ') ?? '';
