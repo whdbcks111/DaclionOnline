@@ -35,10 +35,11 @@ model Player {
   userId    Int      @unique @map("user_id")
   user      User     @relation(fields: [userId], references: [id])
 
-  level     Int      @default(1)
-  exp       Int      @default(0)
-  maxWeight Float    @default(100.0) @map("max_weight")
-  stats     Json?
+  level      Int      @default(1)
+  exp        Int      @default(0)
+  maxWeight  Float    @default(100.0) @map("max_weight")
+  stats      Json?
+  locationId Int      @default(1) @map("location_id")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -135,4 +136,21 @@ model MonsterData {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("monster_data")
+}
+
+// 장소 정의 테이블 (마스터 데이터)
+model LocationData {
+  id          Int      @id @default(autoincrement())
+
+  name        String   @db.VarChar(100)
+  x           Float    @default(0)
+  y           Float    @default(0)
+  z           Float    @default(0)
+  spawns      Json?
+  connections Json?
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("location_data")
 }

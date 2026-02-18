@@ -1,6 +1,7 @@
 import logger from "../utils/logger.js";
 import { getOnlinePlayers } from "./player.js";
 import { tickCoroutines } from "./coroutine.js";
+import { updateLocations } from "./location.js";
 
 const TARGET_FPS = 20;
 const FRAME_TIME = 1000 / TARGET_FPS;
@@ -24,6 +25,7 @@ function tick(): void {
         player.lateUpdate(dt);
     }
 
+    updateLocations(dt);
     tickCoroutines(dt);
 }
 

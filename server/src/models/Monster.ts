@@ -38,12 +38,12 @@ export default class Monster extends Entity {
     readonly drops: DropInfo[];
     readonly expReward: number;
 
-    constructor(monsterDataId: number) {
+    constructor(monsterDataId: number, locationId = 0) {
         const data = getMonsterData(monsterDataId);
         if (!data) throw new Error(`MonsterData not found: ${monsterDataId}`);
 
         const equipment = Equipment.createEmpty();
-        super(data.level, data.exp, data.baseAttribute, equipment);
+        super(data.level, data.exp, locationId, data.baseAttribute, equipment);
 
         this.monsterDataId = monsterDataId;
         this.name = data.name;

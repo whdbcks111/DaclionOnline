@@ -23,13 +23,14 @@ export default class Player extends Entity {
     private _nickname: string;
     private _maxWeight: number;
     private _dirty = false;
+    private _moving = false;
 
     private constructor(
         id: number, userId: number, nickname: string, level: number, exp: number,
-        maxWeight: number, inventory: Inventory, equipment: Equipment,
+        locationId: number, maxWeight: number, inventory: Inventory, equipment: Equipment,
         statPoints?: Partial<StatRecord>,
     ) {
-        super(level, exp, DEFAULT_BASE_ATTRIBUTE, equipment, statPoints);
+        super(level, exp, locationId, DEFAULT_BASE_ATTRIBUTE, equipment, statPoints);
         this.id = id;
         this.userId = userId;
         this._nickname = nickname;
@@ -42,6 +43,9 @@ export default class Player extends Entity {
 
     override get isPlayer() { return true; }
 
+    get moving() { return this._moving; }
+    set moving(val: boolean) { this._moving = val; }
+
     // -- Getters / Setters (dirty 추적) --
 
     override get level() { return this._level; }
@@ -49,6 +53,9 @@ export default class Player extends Entity {
 
     override get exp() { return this._exp; }
     override set exp(val: number) { this._exp = val; this._dirty = true; }
+
+    override get locationId() { return this._locationId; }
+    override set locationId(val: number) { this._locationId = val; this._dirty = true; }
 
     get maxWeight() { return this._maxWeight; }
     set maxWeight(val: number) {
@@ -71,7 +78,7 @@ export default class Player extends Entity {
         const inventory = await Inventory.load(data.id, data.maxWeight);
         const equipment = await Equipment.load(data.id);
         const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.maxWeight, inventory, equipment, stats ?? undefined);
+        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined);
     }
 
     /** 새 플레이어 생성 */
@@ -82,7 +89,7 @@ export default class Player extends Entity {
         });
         const inventory = await Inventory.load(data.id, data.maxWeight);
         const equipment = await Equipment.load(data.id);
-        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.maxWeight, inventory, equipment);
+        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment);
     }
 
     /** 변경된 데이터 DB에 저장 */
@@ -94,6 +101,7 @@ export default class Player extends Entity {
                     level: this._level,
                     exp: this._exp,
                     maxWeight: this._maxWeight,
+                    locationId: this._locationId,
                     stats: this.stat.points as any,
                 },
             });

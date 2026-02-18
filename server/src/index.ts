@@ -14,6 +14,8 @@ import { initPlayer, saveAllPlayers } from './modules/player.js';
 import { initGame } from './modules/game.js';
 import { loadItemData } from './models/Item.js';
 import { loadMonsterData } from './models/Monster.js';
+import { loadLocationData } from './models/Location.js';
+import { initLocation } from './modules/location.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -35,6 +37,7 @@ initLogin();
 initChat();
 initBot();
 initPlayer();
+initLocation();
 initGame();
 
 // 프로필 이미지 등 업로드 파일 정적 서빙
@@ -93,6 +96,7 @@ httpServer.listen(SERVER_PORT, async () => {
     logger.success('MariaDB 연결 성공 (Prisma)');
     await loadItemData();
     await loadMonsterData();
+    await loadLocationData();
     logger.success('마스터 데이터 로드 완료');
   } catch (error) {
     logger.error('MariaDB 연결 실패:', error);

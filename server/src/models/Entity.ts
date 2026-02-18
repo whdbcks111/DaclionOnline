@@ -27,16 +27,19 @@ export default abstract class Entity {
 
     protected _level: number;
     protected _exp: number;
+    protected _locationId: number;
 
     constructor(
         level: number,
         exp: number,
+        locationId: number,
         baseAttribute: Partial<AttributeRecord>,
         equipment: Equipment,
         statPoints?: Partial<StatRecord>,
     ) {
         this._level = level;
         this._exp = exp;
+        this._locationId = locationId;
         this.attribute = new Attribute(baseAttribute);
         this.equipment = equipment;
         this.stat = new Stat(statPoints);
@@ -58,6 +61,9 @@ export default abstract class Entity {
 
     get exp() { return this._exp; }
     set exp(val: number) { this._exp = val; }
+
+    get locationId() { return this._locationId; }
+    set locationId(val: number) { this._locationId = val; }
 
     // -- 전투 --
 
