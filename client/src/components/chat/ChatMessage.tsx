@@ -98,10 +98,10 @@ export default function ChatMessage({ message, showHeader }: Props) {
                         <div className={styles.content}>
                             {nodes.map((node, i) => renderNode(node, i))}
                         </div>
-                        {message.private && (
-                            <div className={styles.privateLabel}>나에게만 보이는 메시지입니다.</div>
-                        )}
                     </div>
+                    {message.private && (
+                        <div className={styles.privateLabel}>나에게만 보이는 메시지입니다.</div>
+                    )}
                 </div>
             </div>
         </ChatMessageContext.Provider>

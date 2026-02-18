@@ -55,12 +55,14 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
 
     const cmd = commands.get(name) ?? commands.get(aliasMap.get(name) ?? '');
     if (!cmd) {
+        if(msg) sendMessageToUser(userId, msg);
         sendBotMessageToUser(userId, `알 수 없는 명령어: /${name}`);
         return;
     }
 
     // 권한 검증
     if ((cmd.permission ?? 0) > permission) {
+        if(msg) sendMessageToUser(userId, msg);
         sendBotMessageToUser(userId, '권한이 부족합니다.');
         return;
     }
@@ -117,8 +119,8 @@ export const initBot = () => {
         aliases: ['random'],
         description: '범위 내 랜덤한 정수를 뽑습니다.',
         args: [
-            { name: '최소', description: '범위의 최소값' },
-            { name: '최대', description: '범위의 최대' }
+            { name: '최소', description: '범위의 최소값', required: true },
+            { name: '최대', description: '범위의 최대', required: true }
         ],
         handler(userId, args, raw) {
             let minValue = Number(args[0]);
@@ -144,7 +146,7 @@ export const initBot = () => {
         permission: 10,
         showCommandUse: 'private',
         args: [
-            { name: '코드', description: '실행 가능한 자바스크립트 코드' }
+            { name: '코드', description: '실행 가능한 자바스크립트 코드', required: true }
         ],
         handler(userId, args, raw) {
             const code = args.join(' ');
