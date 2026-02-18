@@ -16,7 +16,7 @@ interface CommandConfig {
     aliases?: string[]
     description: string
     permission?: number        // 최소 권한 레벨 (미지정 시 0, 누구나 사용 가능)
-    showCommandUse?: CommandUseVisibility  // 명령어 사용 채팅 표시 방식 (기본: 'hide')
+    showCommandUse?: CommandUseVisibility  // 명령어 사용 채팅 표시 방식 (기본: 'show')
     args?: CommandArg[]
     handler: (userId: number, args: string[], raw: string, msg: ChatMessage | null, permission: number) => void
 }
@@ -76,7 +76,7 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
     }
 
     if(msg !== null) {
-        if(cmd.showCommandUse === 'show') broadcastMessage(msg);
+        if(cmd.showCommandUse === 'show' || !cmd.showCommandUse) broadcastMessage(msg);
         else if(cmd.showCommandUse == 'private') sendMessageToUser(userId, msg);
     }
 
