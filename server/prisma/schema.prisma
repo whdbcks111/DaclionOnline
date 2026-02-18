@@ -37,9 +37,83 @@ model Player {
 
   level     Int      @default(1)
   exp       Int      @default(0)
+  maxWeight Float    @default(100.0) @map("max_weight")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  items      Item[]
+  equipments Equipment[]
+
   @@map("players")
+}
+
+// 아이템 정의 테이블 (마스터 데이터)
+model ItemData {
+  id            Int         @id @default(autoincrement())
+
+  name          String      @db.VarChar(100)
+  description   String      @db.VarChar(500)
+  category      String      @db.VarChar(50)
+  weight        Float       @default(0)
+  stackable     Boolean     @default(false)
+  maxStack      Int         @default(1) @map("max_stack")
+  baseMetadata  Json?       @map("base_metadata")
+  onUse         String?     @db.VarChar(100) @map("on_use")
+  equipSlot     String?     @db.VarChar(50) @map("equip_slot")
+  modifiers     Json?
+  baseDurability Int?       @map("base_durability")
+
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  items      Item[]
+  equipments Equipment[]
+
+  @@map("item_data")
+}
+
+// 플레이어 인벤토리 아이템 테이블
+model Item {
+  id          Int       @id @default(autoincrement())
+
+  playerId    Int       @map("player_id")
+  player      Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  itemDataId  Int       @map("item_data_id")
+  itemData    ItemData  @relation(fields: [itemDataId], references: [id])
+
+  count       Int       @default(1)
+  durability  Int?
+  metadata    Json?
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([playerId])
+  @@index([itemDataId])
+  @@map("items")
+}
+
+// 장비 슬롯 테이블
+model Equipment {
+  id          Int       @id @default(autoincrement())
+
+  playerId    Int       @map("player_id")
+  player      Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  itemDataId  Int       @map("item_data_id")
+  itemData    ItemData  @relation(fields: [itemDataId], references: [id])
+
+  slot        String    @db.VarChar(50)
+  slotIndex   Int       @default(0) @map("slot_index")
+  durability  Int?
+  metadata    Json?
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([playerId, slot, slotIndex])
+  @@index([playerId])
+  @@map("equipments")
 }
