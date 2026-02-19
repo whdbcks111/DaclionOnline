@@ -56,6 +56,31 @@ class ChatBuilder {
         return this
     }
 
+    progress(options: {
+        value: number;
+        length?: number;
+        color?: string;
+        thickness?: number;
+        shape?: 'rounded' | 'square';
+    }): this {
+        this.nodes.push({
+            type: 'progress',
+            value: Math.max(0, Math.min(1, options.value)),
+            length: options.length ?? 100,
+            color: options.color ?? 'green',
+            thickness: options.thickness ?? 8,
+            shape: options.shape ?? 'rounded',
+        })
+        return this
+    }
+
+    tab(width: number, build: (b: ChatBuilder) => ChatBuilder): this {
+        const inner = new ChatBuilder()
+        build(inner)
+        this.nodes.push({ type: 'tab', width, children: inner.nodes })
+        return this
+    }
+
     build(): ChatNode[] {
         return mergeTextNodes(this.nodes)
     }

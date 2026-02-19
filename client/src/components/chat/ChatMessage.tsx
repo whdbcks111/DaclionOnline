@@ -7,6 +7,8 @@ import SizeNode from './nodes/SizeNode'
 import HideNode from './nodes/HideNode'
 import IconNode from './nodes/IconNode'
 import ButtonNode from './nodes/ButtonNode'
+import ProgressNode from './nodes/ProgressNode'
+import TabNode from './nodes/TabNode'
 import styles from './ChatMessage.module.scss'
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
@@ -33,6 +35,10 @@ export function renderNode(node: ChatNode, key: number): React.ReactNode {
             return <IconNode key={key} name={node.name} />
         case 'button':
             return <ButtonNode key={key} action={node.action} children={node.children} />
+        case 'progress':
+            return <ProgressNode key={key} value={node.value} length={node.length} color={node.color} thickness={node.thickness} shape={node.shape} />
+        case 'tab':
+            return <TabNode key={key} width={node.width} children={node.children} />
     }
 }
 

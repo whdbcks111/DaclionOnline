@@ -1,0 +1,14 @@
+.track {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    background-color: rgba(255, 255, 255, 0.15);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.fill {
+    display: block;
+    height: 100%;
+    transition: width 0.3s ease;
+}

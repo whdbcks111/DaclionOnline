@@ -209,3 +209,30 @@ registerChatTag('hide', {
     kind: 'wrap',
     createNode: (title, children) => ({ type: 'hide', title, children: children! }),
 })
+
+// [tab=width]...[/tab]  — 고정 너비 인라인 블록
+registerChatTag('tab', {
+    kind: 'wrap',
+    validate: (v) => !isNaN(parseInt(v)) && parseInt(v) > 0,
+    createNode: (v, children) => ({ type: 'tab', width: parseInt(v), children: children! }),
+})
+
+// [progress=value,length,color,thickness,shape]
+// 예) [progress=0.75,120,red,10,rounded]
+registerChatTag('progress', {
+    kind: 'selfclose',
+    validate: (v) => {
+        const parts = v.split(',')
+        const val = parseFloat(parts[0])
+        return !isNaN(val) && val >= 0 && val <= 1
+    },
+    createNode: (v) => {
+        const parts = v.split(',')
+        const value = Math.max(0, Math.min(1, parseFloat(parts[0])))
+        const length = parts[1] ? parseInt(parts[1]) : 100
+        const color = parts[2]?.trim() || 'green'
+        const thickness = parts[3] ? parseInt(parts[3]) : 8
+        const shape = parts[4]?.trim() === 'square' ? 'square' : 'rounded'
+        return { type: 'progress', value, length, color, thickness, shape }
+    },
+})

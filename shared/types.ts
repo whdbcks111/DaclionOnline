@@ -50,6 +50,8 @@ export type ChatNode =
     | { type: 'hide'; title: string; children: ChatNode[] }
     | { type: 'icon'; name: string }
     | { type: 'button'; action: string; children: ChatNode[] }
+    | { type: 'progress'; value: number; length: number; color: string; thickness: number; shape: 'rounded' | 'square' }
+    | { type: 'tab'; width: number; children: ChatNode[] }
 
 // 채팅 플래그 (닉네임 옆 배지)
 export interface ChatFlag {
