@@ -146,6 +146,10 @@ export const initLogin = () => {
             });
         });
 
+        socket.on('requestUserCount', () => {
+            socket.emit('userCount', onlineUsers.size);
+        });
+
         socket.on('logout', async (token: unknown) => {
             if (typeof token !== 'string') return;
             const logoutSession = getSession(token);

@@ -44,6 +44,7 @@ function Home() {
     socket.on('userCount', onUserCount)
     socket.emit('requestChatHistory')
     socket.emit('requestCommandList')
+    socket.emit('requestUserCount')
     return () => {
       socket.off('chatHistory', onChatHistory)
       socket.off('chatMessage', onChatMessage)

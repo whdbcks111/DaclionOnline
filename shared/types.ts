@@ -119,4 +119,5 @@ export interface ClientToServerEvents {
     sendMessage: (content: string) => void
     requestChatHistory: () => void
     requestCommandList: () => void
+    requestUserCount: () => void
 }
