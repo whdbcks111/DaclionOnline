@@ -3,15 +3,19 @@ import styles from './Home.module.scss'
 import { useSocket } from '../context/SocketContext'
 import ChatMessage from '../components/chat/ChatMessage'
 import CommandAutocomplete, { getFilteredCommands } from '../components/chat/CommandAutocomplete'
+import Header from '../components/Header'
+import Drawer from '../components/Drawer'
 import type { ChatMessage as ChatMessageType, CommandInfo } from '@shared/types'
 
 function Home() {
-  const { socket } = useSocket()
+  const { socket, sessionInfo, updateProfileImage } = useSocket()
   const [messages, setMessages] = useState<ChatMessageType[]>([])
   const [commands, setCommands] = useState<CommandInfo[]>([])
   const [commandFilter, setCommandFilter] = useState('')
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [userCount, setUserCount] = useState(0)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const inputRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -30,15 +34,21 @@ function Home() {
       setCommands(list)
     }
 
+    const onUserCount = (count: number) => {
+      setUserCount(count)
+    }
+
     socket.on('chatHistory', onChatHistory)
     socket.on('chatMessage', onChatMessage)
     socket.on('commandList', onCommandList)
+    socket.on('userCount', onUserCount)
     socket.emit('requestChatHistory')
     socket.emit('requestCommandList')
     return () => {
       socket.off('chatHistory', onChatHistory)
       socket.off('chatMessage', onChatMessage)
       socket.off('commandList', onCommandList)
+      socket.off('userCount', onUserCount)
     }
   }, [socket])
 
@@ -130,6 +140,7 @@ function Home() {
   return (
     <div className={styles.homeContainer}>
       <div className={styles.chatArea}>
+        <Header userCount={userCount} onMenuClick={() => setDrawerOpen(true)} />
         <div className={styles.chatMessages}>
           {messages.map((msg, i) => (
             <ChatMessage
@@ -164,6 +175,13 @@ function Home() {
           <button onClick={sendMessage}>전송</button>
         </div>
       </div>
+      <Drawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        nickname={sessionInfo?.nickname}
+        profileImage={sessionInfo?.profileImage}
+        onProfileUpdate={updateProfileImage}
+      />
     </div>
   )
 }

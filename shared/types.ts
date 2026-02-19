@@ -4,6 +4,7 @@
 export interface SessionRestoreData {
     username: string
     nickname: string
+    profileImage?: string
 }
 
 export interface LoginRequest {
@@ -14,6 +15,8 @@ export interface LoginRequest {
 export interface LoginResult {
     ok?: boolean
     sessionToken?: string
+    nickname?: string
+    profileImage?: string
     error?: string
 }
 
@@ -104,6 +107,7 @@ export interface ServerToClientEvents {
     chatMessage: (msg: ChatMessage) => void
     notification: (data: NotificationData) => void
     commandList: (commands: CommandInfo[]) => void
+    userCount: (count: number) => void
 }
 
 export interface ClientToServerEvents {

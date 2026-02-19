@@ -1,0 +1,96 @@
+@use '../styles/variables' as *;
+@use '../styles/themes' as *;
+
+$drawer-width: 280px;
+$avatar-size: 80px;
+
+.backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0);
+    pointer-events: none;
+    transition: background-color $transition-base;
+    z-index: 200;
+}
+
+.backdropVisible {
+    background-color: rgba(0, 0, 0, 0.4);
+    pointer-events: auto;
+}
+
+.drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: $drawer-width;
+    height: 100%;
+    background-color: $color-bg-tertiary;
+    border-right: 1px solid $color-border;
+    display: flex;
+    flex-direction: column;
+    padding: $spacing-lg $spacing-md;
+    gap: $spacing-md;
+    transform: translateX(-100%);
+    transition: transform $transition-base;
+    z-index: 201;
+    box-shadow: $shadow-lg;
+}
+
+.drawerOpen {
+    transform: translateX(0);
+}
+
+.profileSection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+    padding-bottom: $spacing-md;
+    border-bottom: 1px solid $color-border;
+}
+
+.avatar {
+    width: $avatar-size;
+    height: $avatar-size;
+    border-radius: 50%;
+    border: 2px solid $color-border;
+    background: url('/icons/profile_image_basic.png') center / cover no-repeat;
+}
+
+.nickname {
+    font-weight: bold;
+    color: $color-text;
+    font-size: $font-size-base;
+}
+
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+}
+
+.uploadButton {
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-bg-tertiary;
+    color: $color-text;
+    font-size: $font-size-sm;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background-color: $color-primary;
+        color: $color-text-inverse;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
+.error {
+    font-size: $font-size-sm;
+    color: $color-danger;
+}

@@ -36,14 +36,20 @@ export function getUserSessionCount(userId: number): number {
 // 온라인 유저 추적: userId -> 연결된 소켓 수
 const onlineUsers = new Map<number, number>()
 
+function broadcastUserCount(): void {
+    try { getIO().emit('userCount', onlineUsers.size) } catch { /* 소켓 미초기화 시 무시 */ }
+}
+
 export function setUserOnline(userId: number) {
     onlineUsers.set(userId, (onlineUsers.get(userId) ?? 0) + 1);
+    broadcastUserCount();
 }
 
 export function setUserOffline(userId: number) {
     const count = (onlineUsers.get(userId) ?? 1) - 1;
     if (count <= 0) onlineUsers.delete(userId);
     else onlineUsers.set(userId, count);
+    broadcastUserCount();
 }
 
 export function isUserOnline(userId: number): boolean {
@@ -88,6 +94,7 @@ export const initLogin = () => {
             socket.emit('sessionRestore', {
                 username: session.username,
                 nickname: session.nickname,
+                profileImage: session.profileImage,
             });
         }
         else {
@@ -131,7 +138,12 @@ export const initLogin = () => {
             socket.data.sessionToken = sessionToken;
             setUserOnline(user.id);
             await loadPlayer(user.id);
-            socket.emit('loginResult', { ok: true, sessionToken });
+            socket.emit('loginResult', {
+                ok: true,
+                sessionToken,
+                nickname: user.nickname,
+                profileImage: user.profileImage ?? undefined,
+            });
         });
 
         socket.on('logout', async (token: unknown) => {

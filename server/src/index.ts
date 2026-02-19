@@ -16,6 +16,7 @@ import { loadItemData } from './models/Item.js';
 import { loadMonsterData } from './models/Monster.js';
 import { loadLocationData } from './models/Location.js';
 import { initLocation } from './modules/location.js';
+import { uploadRouter } from './modules/upload.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -55,6 +56,9 @@ if (NODE_ENV === 'development') {
 // Body parser 미들웨어
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// API 라우트
+app.use('/api', uploadRouter);
 
 // 프로덕션: Client 정적 파일 제공
 if (NODE_ENV === 'production') {

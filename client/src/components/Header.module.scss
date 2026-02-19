@@ -1,0 +1,72 @@
+@use '../styles/variables' as *;
+@use '../styles/themes' as *;
+
+.header {
+    display: flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    border-bottom: 1px solid $color-border;
+    background-color: $color-bg-tertiary;
+    flex-shrink: 0;
+}
+
+.menuButton {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+    border: none;
+    border-radius: $border-radius-sm;
+    background: none;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:hover {
+        background-color: rgba(0, 0, 0, 0.08);
+
+        :root[data-theme='dark'] & {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+    }
+}
+
+.hamburgerIcon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    display: block;
+    filter: brightness(0);
+
+    :root[data-theme='dark'] & {
+        filter: brightness(0) invert(1);
+    }
+}
+
+.title {
+    flex: 1;
+    text-align: center;
+    font-size: $font-size-base;
+    font-weight: bold;
+    color: $color-text;
+    margin: 0;
+}
+
+.userCount {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+    flex-shrink: 0;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #4caf50;
+    flex-shrink: 0;
+}
