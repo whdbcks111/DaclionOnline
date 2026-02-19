@@ -1,7 +1,7 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
-import { broadcastMessage, sendMessageToUser, getChatHistory, getFlagsForPermission } from "./message.js";
+import { broadcastMessage, sendMessageToUser, getChatHistory, getFilteredHistoryForUser, getFlagsForPermission } from "./message.js";
 import { handleCommand } from "./bot.js";
 import type { ChatMessage } from "../../../shared/types.js";
 
@@ -13,7 +13,17 @@ export const initChat = () => {
     io.on('connection', (socket) => {
         // 클라이언트 요청 시 이전 대화 전송
         socket.on('requestChatHistory', () => {
-            socket.emit('chatHistory', getChatHistory());
+            const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            const publicHistory = getChatHistory();
+
+            if (session) {
+                const privateHistory = getFilteredHistoryForUser(session.userId);
+                const combined = [...publicHistory, ...privateHistory]
+                    .sort((a, b) => a.timestamp - b.timestamp);
+                socket.emit('chatHistory', combined);
+            } else {
+                socket.emit('chatHistory', publicHistory);
+            }
         });
 
         socket.on('sendMessage', (content: unknown) => {
