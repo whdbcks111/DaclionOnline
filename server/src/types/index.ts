@@ -17,5 +17,6 @@ export interface MailOptions {
 export interface VerifyEntry {
     code: string
     expirationDate: Date
+    sentAt: Date
     verified?: true
 }

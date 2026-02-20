@@ -11,6 +11,7 @@ import type { VerifyEntry } from "../types/index.js";
 
 const verifyMap: { [key: string]: VerifyEntry } = {}
 const expiryMinute = 5;
+const cooldownSeconds = 60;
 
 export const initRegister = () => {
     const io = getIO();
@@ -107,6 +108,16 @@ export const initRegister = () => {
         socket.on('sendVerifyCode', (email: unknown) => {
             if (typeof email !== 'string') return;
             try {
+                const existing = verifyMap[socket.id];
+                if (existing) {
+                    const elapsed = (Date.now() - existing.sentAt.getTime()) / 1000;
+                    if (elapsed < cooldownSeconds) {
+                        const remaining = Math.ceil(cooldownSeconds - elapsed);
+                        socket.emit('verifyCodeSendResult', { error: `${remaining}초 후에 다시 시도해 주세요.` });
+                        return;
+                    }
+                }
+
                 const verifyCode = randomDigits(6);
                 const verifyHtmlTemplate = loadTemplate('verify-code', { code: verifyCode, expiry: `${expiryMinute}분` });
 
@@ -116,7 +127,7 @@ export const initRegister = () => {
                     html: verifyHtmlTemplate
                 });
 
-                verifyMap[socket.id] = { code: verifyCode, expirationDate: new Date(Date.now() + expiryMinute * 60 * 1000) }
+                verifyMap[socket.id] = { code: verifyCode, expirationDate: new Date(Date.now() + expiryMinute * 60 * 1000), sentAt: new Date() }
                 socket.emit('verifyCodeSendResult', { ok: true });
             }
             catch(e) {
