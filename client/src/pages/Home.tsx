@@ -5,7 +5,7 @@ import ChatMessage from '../components/chat/ChatMessage'
 import CommandAutocomplete, { getFilteredCommands } from '../components/chat/CommandAutocomplete'
 import Header from '../components/Header'
 import Drawer from '../components/Drawer'
-import type { ChatMessage as ChatMessageType, CommandInfo } from '@shared/types'
+import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData } from '@shared/types'
 
 function Home() {
   const { socket, sessionInfo, updateProfileImage } = useSocket()
@@ -16,6 +16,7 @@ function Home() {
   const [activeIndex, setActiveIndex] = useState(0)
   const [userCount, setUserCount] = useState(0)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [playerStats, setPlayerStats] = useState<PlayerStatsData>({ hp: 100, maxHp: 100, mp: 50, maxMp: 50 })
   const inputRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -38,10 +39,15 @@ function Home() {
       setUserCount(count)
     }
 
+    const onPlayerStats = (data: PlayerStatsData) => {
+      setPlayerStats(data)
+    }
+
     socket.on('chatHistory', onChatHistory)
     socket.on('chatMessage', onChatMessage)
     socket.on('commandList', onCommandList)
     socket.on('userCount', onUserCount)
+    socket.on('playerStats', onPlayerStats)
     socket.emit('requestChatHistory')
     socket.emit('requestCommandList')
     socket.emit('requestUserCount')
@@ -50,6 +56,7 @@ function Home() {
       socket.off('chatMessage', onChatMessage)
       socket.off('commandList', onCommandList)
       socket.off('userCount', onUserCount)
+      socket.off('playerStats', onPlayerStats)
     }
   }, [socket])
 
@@ -154,6 +161,14 @@ function Home() {
             />
           ))}
           <div ref={messagesEndRef} />
+        </div>
+        <div className={styles.statusBars}>
+          <div className={styles.hpBar}>
+            <div className={styles.hpFill} style={{ width: `${Math.max(0, playerStats.hp / playerStats.maxHp) * 100}%` }} />
+          </div>
+          <div className={styles.mpBar}>
+            <div className={styles.mpFill} style={{ width: `${Math.max(0, playerStats.mp / playerStats.maxMp) * 100}%` }} />
+          </div>
         </div>
         <div className={styles.chatInput}>
           {showAutocomplete && (

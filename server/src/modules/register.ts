@@ -19,93 +19,98 @@ export const initRegister = () => {
     io.on('connection', socket => {
 
         socket.on('register', async (data: RegisterRequest) => {
-            if (!isValidPayload(data, { id: 'string', pw: 'string', email: 'string', nickname: 'string' })) {
-                socket.emit('registerResult', { error: '잘못된 요청입니다.' });
-                return;
-            }
-
-            if(!(socket.id in verifyMap)) {
-                socket.emit('registerResult', { error: '인증번호를 보내지 않았습니다.' });
-                return;
-            }
-
-            if(!verifyMap[socket.id].verified) {
-                socket.emit('registerResult', { error: '인증이 완료되지 않았습니다.' });
-                return;
-            }
-
-            let id = data.id;
-            let pw = data.pw;
-            let email = data.email;
-            let nickname = data.nickname;
-
-            let idValidateResult = validateId(id);
-            if(idValidateResult) {
-                socket.emit('registerResult', { error: idValidateResult });
-                return;
-            }
-
-            let pwValidateResult = validatePassword(pw);
-            if(pwValidateResult) {
-                socket.emit('registerResult', { error: pwValidateResult });
-                return;
-            }
-
-            let emailValidateResult = validateEmail(email);
-            if(emailValidateResult) {
-                socket.emit('registerResult', { error: emailValidateResult });
-                return;
-            }
-
-            let nicknameValidateResult = validateNickname(nickname);
-            if(nicknameValidateResult) {
-                socket.emit('registerResult', { error: nicknameValidateResult });
-                return;
-            }
-
-            const existing = await prisma.user.findFirst({
-                where: {
-                    OR: [
-                        { username: id },
-                        { email },
-                        { nickname },
-                    ],
-                },
-                select: { username: true, email: true, nickname: true },
-            });
-
-            if(existing) {
-                if(existing.username === id) {
-                    socket.emit('registerResult', { error: '이미 사용 중인 아이디입니다.' });
-                } else if(existing.email === email) {
-                    socket.emit('registerResult', { error: '이미 사용 중인 이메일입니다.' });
-                } else {
-                    socket.emit('registerResult', { error: '이미 사용 중인 닉네임입니다.' });
+            try {
+                if (!isValidPayload(data, { id: 'string', pw: 'string', email: 'string', nickname: 'string' })) {
+                    socket.emit('registerResult', { error: '잘못된 요청입니다.' });
+                    return;
                 }
-                return;
+
+                if(!(socket.id in verifyMap)) {
+                    socket.emit('registerResult', { error: '인증번호를 보내지 않았습니다.' });
+                    return;
+                }
+
+                if(!verifyMap[socket.id].verified) {
+                    socket.emit('registerResult', { error: '인증이 완료되지 않았습니다.' });
+                    return;
+                }
+
+                let id = data.id;
+                let pw = data.pw;
+                let email = data.email;
+                let nickname = data.nickname;
+
+                let idValidateResult = validateId(id);
+                if(idValidateResult) {
+                    socket.emit('registerResult', { error: idValidateResult });
+                    return;
+                }
+
+                let pwValidateResult = validatePassword(pw);
+                if(pwValidateResult) {
+                    socket.emit('registerResult', { error: pwValidateResult });
+                    return;
+                }
+
+                let emailValidateResult = validateEmail(email);
+                if(emailValidateResult) {
+                    socket.emit('registerResult', { error: emailValidateResult });
+                    return;
+                }
+
+                let nicknameValidateResult = validateNickname(nickname);
+                if(nicknameValidateResult) {
+                    socket.emit('registerResult', { error: nicknameValidateResult });
+                    return;
+                }
+
+                const existing = await prisma.user.findFirst({
+                    where: {
+                        OR: [
+                            { username: id },
+                            { email },
+                            { nickname },
+                        ],
+                    },
+                    select: { username: true, email: true, nickname: true },
+                });
+
+                if(existing) {
+                    if(existing.username === id) {
+                        socket.emit('registerResult', { error: '이미 사용 중인 아이디입니다.' });
+                    } else if(existing.email === email) {
+                        socket.emit('registerResult', { error: '이미 사용 중인 이메일입니다.' });
+                    } else {
+                        socket.emit('registerResult', { error: '이미 사용 중인 닉네임입니다.' });
+                    }
+                    return;
+                }
+
+                const salt = randomHex(32);
+                const hash = pbkdf2Sync(pw, salt, 10000, 64, 'sha512').toString('hex');
+
+                const newUser = await prisma.user.create({
+                    data: {
+                        username: id,
+                        email,
+                        passwordHash: hash,
+                        passwordSalt: salt,
+                        nickname,
+                        player: { create: {} },
+                    },
+                });
+
+                delete verifyMap[socket.id!];
+
+                const sessionToken = createSession({ id: newUser.id, username: id, nickname });
+                socket.emit('registerResult', { ok: true, sessionToken });
+            } catch(e) {
+                logger.error('register 처리 중 오류:', e);
+                socket.emit('registerResult', { error: '서버 오류가 발생했습니다.' });
             }
-
-            const salt = randomHex(32);
-            const hash = pbkdf2Sync(pw, salt, 10000, 64, 'sha512').toString('hex');
-
-            const newUser = await prisma.user.create({
-                data: {
-                    username: id,
-                    email,
-                    passwordHash: hash,
-                    passwordSalt: salt,
-                    nickname,
-                    player: { create: {} },
-                },
-            });
-
-            delete verifyMap[socket.id!];
-            
-            const sessionToken = createSession({ id: newUser.id, username: id, nickname });
-            socket.emit('registerResult', { ok: true, sessionToken });
         });
 
-        socket.on('sendVerifyCode', (email: unknown) => {
+        socket.on('sendVerifyCode', async (email: unknown) => {
             if (typeof email !== 'string') return;
             try {
                 const existing = verifyMap[socket.id];
@@ -121,7 +126,7 @@ export const initRegister = () => {
                 const verifyCode = randomDigits(6);
                 const verifyHtmlTemplate = loadTemplate('verify-code', { code: verifyCode, expiry: `${expiryMinute}분` });
 
-                sendMail({
+                await sendMail({
                     to: email,
                     subject: '[Daclion Online] 회원가입 인증번호 안내',
                     html: verifyHtmlTemplate

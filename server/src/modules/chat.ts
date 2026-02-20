@@ -2,6 +2,7 @@ import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
 import { broadcastMessage, sendMessageToUser, getChatHistory, getFilteredHistoryForUser, getFlagsForPermission } from "./message.js";
+import { sendPlayerStats } from "./player.js";
 import { handleCommand } from "./bot.js";
 import type { ChatMessage } from "../../../shared/types.js";
 
@@ -21,6 +22,7 @@ export const initChat = () => {
                 const combined = [...publicHistory, ...privateHistory]
                     .sort((a, b) => a.timestamp - b.timestamp);
                 socket.emit('chatHistory', combined);
+                sendPlayerStats(session.userId);
             } else {
                 socket.emit('chatHistory', publicHistory);
             }

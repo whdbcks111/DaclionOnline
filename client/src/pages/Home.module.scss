@@ -29,12 +29,39 @@
     padding: 10px;
 }
 
+.statusBars {
+    display: flex;
+    flex-direction: row;
+    gap: 2px;
+    padding: 4px $spacing-sm 0;
+    border-top: 1px solid $color-border;
+}
+
+.hpBar,
+.mpBar {
+    flex: 1;
+    height: 3px;
+    background-color: rgba(128, 128, 128, 0.2);
+    overflow: hidden;
+}
+
+.hpFill {
+    height: 100%;
+    background-color: #1abc9c;
+    transition: width 0.4s ease;
+}
+
+.mpFill {
+    height: 100%;
+    background-color: #3498db;
+    transition: width 0.4s ease;
+}
+
 .chatInput {
     position: relative;
     @include flex-center-vertical;
     padding: $spacing-xs $spacing-sm;
     gap: 8px;
-    border-top: 1px solid $color-border;
 
     .chatInputField {
         flex: 1;

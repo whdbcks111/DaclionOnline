@@ -96,54 +96,61 @@ export const initLogin = () => {
                 nickname: session.nickname,
                 profileImage: session.profileImage,
             });
+            // 세션 복원 시 플레이어가 메모리에 없을 수 있으므로 보장
+            loadPlayer(session.userId).catch(e => logger.error('세션 복원 중 플레이어 로드 오류:', e));
         }
         else {
             socket.emit('sessionInvalid');
         }
 
         socket.on('login', async (data: LoginRequest) => {
-            if (!isValidPayload(data, { id: 'string', pw: 'string' })) {
-                socket.emit('loginResult', { error: '아이디와 비밀번호를 입력해주세요.' });
-                return;
+            try {
+                if (!isValidPayload(data, { id: 'string', pw: 'string' })) {
+                    socket.emit('loginResult', { error: '아이디와 비밀번호를 입력해주세요.' });
+                    return;
+                }
+
+                const { id, pw } = data;
+
+                const user = await prisma.user.findUnique({
+                    where: { username: id },
+                    select: { id: true, username: true, nickname: true, profileImage: true, permission: true, passwordHash: true, passwordSalt: true },
+                });
+
+                if (!user) {
+                    socket.emit('loginResult', { error: '아이디 또는 비밀번호가 일치하지 않습니다.' });
+                    return;
+                }
+
+                const hash = pbkdf2Sync(pw, user.passwordSalt, 10000, 64, 'sha512').toString('hex');
+
+                if (hash !== user.passwordHash) {
+                    socket.emit('loginResult', { error: '아이디 또는 비밀번호가 일치하지 않습니다.' });
+                    return;
+                }
+
+                // 같은 기기에서 이미 유효한 세션이 있으면 재사용
+                const existingSession = socket.data.sessionToken
+                    ? getSession(socket.data.sessionToken)
+                    : undefined;
+
+                const sessionToken = existingSession?.userId === user.id
+                    ? socket.data.sessionToken
+                    : createSession(user);
+
+                socket.data.sessionToken = sessionToken;
+                setUserOnline(user.id);
+                await loadPlayer(user.id);
+                socket.emit('loginResult', {
+                    ok: true,
+                    sessionToken,
+                    nickname: user.nickname,
+                    profileImage: user.profileImage ?? undefined,
+                });
+            } catch(e) {
+                logger.error('login 처리 중 오류:', e);
+                socket.emit('loginResult', { error: '서버 오류가 발생했습니다.' });
             }
-
-            const { id, pw } = data;
-
-            const user = await prisma.user.findUnique({
-                where: { username: id },
-                select: { id: true, username: true, nickname: true, profileImage: true, permission: true, passwordHash: true, passwordSalt: true },
-            });
-
-            if (!user) {
-                socket.emit('loginResult', { error: '아이디 또는 비밀번호가 일치하지 않습니다.' });
-                return;
-            }
-
-            const hash = pbkdf2Sync(pw, user.passwordSalt, 10000, 64, 'sha512').toString('hex');
-
-            if (hash !== user.passwordHash) {
-                socket.emit('loginResult', { error: '아이디 또는 비밀번호가 일치하지 않습니다.' });
-                return;
-            }
-
-            // 같은 기기에서 이미 유효한 세션이 있으면 재사용
-            const existingSession = socket.data.sessionToken
-                ? getSession(socket.data.sessionToken)
-                : undefined;
-
-            const sessionToken = existingSession?.userId === user.id
-                ? socket.data.sessionToken
-                : createSession(user);
-
-            socket.data.sessionToken = sessionToken;
-            setUserOnline(user.id);
-            await loadPlayer(user.id);
-            socket.emit('loginResult', {
-                ok: true,
-                sessionToken,
-                nickname: user.nickname,
-                profileImage: user.profileImage ?? undefined,
-            });
         });
 
         socket.on('requestUserCount', () => {
@@ -151,13 +158,18 @@ export const initLogin = () => {
         });
 
         socket.on('logout', async (token: unknown) => {
-            if (typeof token !== 'string') return;
-            const logoutSession = getSession(token);
-            if (logoutSession && getUserSessionCount(logoutSession.userId) <= 1) {
-                await unloadPlayer(logoutSession.userId);
+            try {
+                if (typeof token !== 'string') return;
+                const logoutSession = getSession(token);
+                if (logoutSession && getUserSessionCount(logoutSession.userId) <= 1) {
+                    await unloadPlayer(logoutSession.userId);
+                }
+                removeSession(token);
+                socket.emit('logoutResult', { ok: true });
+            } catch(e) {
+                logger.error('logout 처리 중 오류:', e);
+                socket.emit('logoutResult', { error: '서버 오류가 발생했습니다.' });
             }
-            removeSession(token);
-            socket.emit('logoutResult', { ok: true });
         });
 
     });

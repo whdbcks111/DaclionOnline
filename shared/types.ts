@@ -87,6 +87,14 @@ export interface CommandInfo {
     args?: CommandArgInfo[]
 }
 
+// 플레이어 HP/MP
+export interface PlayerStatsData {
+    hp: number
+    maxHp: number
+    mp: number
+    maxMp: number
+}
+
 // 알림
 export interface NotificationData {
     key: string
@@ -107,6 +115,7 @@ export interface ServerToClientEvents {
     chatMessage: (msg: ChatMessage) => void
     notification: (data: NotificationData) => void
     commandList: (commands: CommandInfo[]) => void
+    playerStats: (data: PlayerStatsData) => void
     userCount: (count: number) => void
 }
 
