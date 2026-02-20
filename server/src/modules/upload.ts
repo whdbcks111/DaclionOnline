@@ -28,29 +28,13 @@ const MAGIC_SIGNATURES = [
     Buffer.from([0x52, 0x49, 0x46, 0x46]),        // WEBP (RIFF 헤더)
 ]
 
-function hasValidMagicBytes(filePath: string): boolean {
-    try {
-        const fd = fs.openSync(filePath, 'r')
-        const buf = Buffer.alloc(12)
-        fs.readSync(fd, buf, 0, 12, 0)
-        fs.closeSync(fd)
-        return MAGIC_SIGNATURES.some((sig) => buf.subarray(0, sig.length).equals(sig))
-    } catch {
-        return false
-    }
+function hasValidMagicBytes(buf: Buffer): boolean {
+    return MAGIC_SIGNATURES.some((sig) => buf.subarray(0, sig.length).equals(sig))
 }
 
-const storage = multer.diskStorage({
-    destination: 'uploads/profiles/',
-    filename: (req, file, cb) => {
-        // originalname의 확장자를 무시하고 MIME 타입에서 강제 결정
-        const ext = MIME_TO_EXT[file.mimetype] ?? '.jpg'
-        cb(null, `${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`)
-    },
-})
-
+// 메모리에 올린 뒤 검증 → 통과하면 직접 디스크에 저장
 const upload = multer({
-    storage,
+    storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (ALLOWED_MIME_TYPES.has(file.mimetype)) cb(null, true)
@@ -70,14 +54,17 @@ uploadRouter.post('/profile-image', upload.single('image'), async (req, res) => 
         return
     }
 
-    // Magic bytes로 실제 파일 내용 검증 (클라이언트 MIME 타입 우회 방지)
-    if (!hasValidMagicBytes(req.file.path)) {
-        fs.unlinkSync(req.file.path)
+    // Magic bytes로 실제 파일 내용 검증 (디스크 저장 전, 메모리에서 검증)
+    if (!hasValidMagicBytes(req.file.buffer)) {
         res.status(400).json({ error: '유효하지 않은 이미지 파일입니다.' })
         return
     }
 
-    const filename = req.file.filename
+    // 검증 통과 후 디스크에 저장
+    const ext = MIME_TO_EXT[req.file.mimetype] ?? '.jpg'
+    const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`
+    fs.writeFileSync(`uploads/profiles/${filename}`, req.file.buffer)
+
     await prisma.user.update({
         where: { id: session.userId },
         data: { profileImage: filename },
