@@ -1,6 +1,7 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
-import { broadcastMessage, sendBotMessage, sendBotMessageToUser, sendMessageToUser } from "./message.js";
+import { sendMessageToChannel, sendBotMessageToChannel, sendBotMessageToUser, sendMessageToUser } from "./message.js";
+import { getUserChannel } from "./channel.js";
 import type { ChatMessage, CommandInfo } from "../../../shared/types.js";
 
 interface CommandArg {
@@ -79,7 +80,7 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
     }
 
     if(msg !== null) {
-        if(cmd.showCommandUse === 'show' || !cmd.showCommandUse) broadcastMessage(msg);
+        if(cmd.showCommandUse === 'show' || !cmd.showCommandUse) sendMessageToChannel(msg, getUserChannel(userId));
         else if(cmd.showCommandUse == 'private') sendMessageToUser(userId, msg);
     }
 
@@ -111,7 +112,7 @@ export const initBot = () => {
                     .join(' ') ?? '';
                 return `/${cmd.name} ${usage} - ${cmd.description}`;
             });
-            sendBotMessage(lines.join('\n'));
+            sendBotMessageToChannel(getUserChannel(userId), lines.join('\n'));
         },
     });
 
@@ -128,7 +129,7 @@ export const initBot = () => {
             let maxValue = Number(args[1]);
 
             if(!Number.isInteger(minValue) || !Number.isInteger(maxValue)) {
-                sendBotMessage('유효한 정수 범위를 입력해주세요.');
+                sendBotMessageToChannel(getUserChannel(userId), '유효한 정수 범위를 입력해주세요.');
                 return;
             }
 
@@ -136,7 +137,7 @@ export const initBot = () => {
                 [ maxValue, minValue ] = [ minValue, maxValue ];
             }
 
-            sendBotMessage(`결과 : ${Math.floor(Math.random() * (maxValue - minValue + 1) + minValue)}`);
+            sendBotMessageToChannel(getUserChannel(userId), `결과 : ${Math.floor(Math.random() * (maxValue - minValue + 1) + minValue)}`);
         },
     });
 

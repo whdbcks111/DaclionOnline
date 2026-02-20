@@ -8,6 +8,7 @@ import type { LoginResult, SessionRestoreData } from '@shared/types'
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
 
 export interface SessionInfo {
+  userId: number
   nickname: string
   profileImage?: string
 }
@@ -64,15 +65,15 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
     // 세션 복원 시 세션 정보 저장
     socketInstance.on('sessionRestore', (data: SessionRestoreData) => {
-      const info: SessionInfo = { nickname: data.nickname, profileImage: data.profileImage }
+      const info: SessionInfo = { userId: data.userId, nickname: data.nickname, profileImage: data.profileImage }
       sessionInfoRef.current = info
       setSessionInfo(info)
     })
 
     // 로그인 성공 시 세션 정보 저장
     socketInstance.on('loginResult', (result: LoginResult) => {
-      if (result.ok && result.nickname) {
-        const info: SessionInfo = { nickname: result.nickname, profileImage: result.profileImage }
+      if (result.ok && result.userId && result.nickname) {
+        const info: SessionInfo = { userId: result.userId, nickname: result.nickname, profileImage: result.profileImage }
         sessionInfoRef.current = info
         setSessionInfo(info)
       }

@@ -2,6 +2,7 @@ import { Server, Socket } from 'socket.io'
 import { Server as HttpServer } from 'http'
 import logger from '../utils/logger.js';
 import { getSession, setUserOnline, setUserOffline } from './login.js';
+import { getUserChannel, getChannelRoomKey } from './channel.js';
 
 let io: Server;
 
@@ -36,6 +37,7 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
         const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
         if (session) {
             setUserOnline(session.userId);
+            socket.join(getChannelRoomKey(getUserChannel(session.userId)));
             logger.success(`로그인: ${session.username} (${socket.id})`);
         }
 

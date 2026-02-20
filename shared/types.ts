@@ -2,6 +2,7 @@
 
 // 소켓 이벤트 데이터 타입
 export interface SessionRestoreData {
+    userId: number
     username: string
     nickname: string
     profileImage?: string
@@ -14,6 +15,7 @@ export interface LoginRequest {
 
 export interface LoginResult {
     ok?: boolean
+    userId?: number
     sessionToken?: string
     nickname?: string
     profileImage?: string
@@ -87,6 +89,13 @@ export interface CommandInfo {
     args?: CommandArgInfo[]
 }
 
+// 채널 정보
+export interface ChannelInfo {
+    id: string | null
+    name: string
+    description?: string
+}
+
 // 플레이어 HP/MP
 export interface PlayerStatsData {
     hp: number
@@ -117,6 +126,8 @@ export interface ServerToClientEvents {
     commandList: (commands: CommandInfo[]) => void
     playerStats: (data: PlayerStatsData) => void
     userCount: (count: number) => void
+    channelChanged: (channel: string | null, history: ChatMessage[]) => void
+    channelList: (channels: ChannelInfo[]) => void
 }
 
 export interface ClientToServerEvents {
@@ -129,4 +140,6 @@ export interface ClientToServerEvents {
     requestChatHistory: () => void
     requestCommandList: () => void
     requestUserCount: () => void
+    joinChannel: (channel: string | null) => void
+    requestChannelList: () => void
 }

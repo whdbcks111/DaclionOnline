@@ -5,7 +5,7 @@ import ChatMessage from '../components/chat/ChatMessage'
 import CommandAutocomplete, { getFilteredCommands } from '../components/chat/CommandAutocomplete'
 import Header from '../components/Header'
 import Drawer from '../components/Drawer'
-import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData } from '@shared/types'
+import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, ChannelInfo } from '@shared/types'
 
 function Home() {
   const { socket, sessionInfo, updateProfileImage } = useSocket()
@@ -17,6 +17,8 @@ function Home() {
   const [userCount, setUserCount] = useState(0)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [playerStats, setPlayerStats] = useState<PlayerStatsData>({ hp: 100, maxHp: 100, mp: 50, maxMp: 50 })
+  const [currentChannel, setCurrentChannel] = useState<string | null>(null)
+  const [channelList, setChannelList] = useState<ChannelInfo[]>([])
   const inputRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -43,20 +45,34 @@ function Home() {
       setPlayerStats(data)
     }
 
+    const onChannelChanged = (channel: string | null, history: ChatMessageType[]) => {
+      setCurrentChannel(channel)
+      setMessages(history)
+    }
+
+    const onChannelList = (list: Parameters<typeof setChannelList>[0]) => {
+      setChannelList(list)
+    }
+
     socket.on('chatHistory', onChatHistory)
     socket.on('chatMessage', onChatMessage)
     socket.on('commandList', onCommandList)
     socket.on('userCount', onUserCount)
     socket.on('playerStats', onPlayerStats)
+    socket.on('channelChanged', onChannelChanged)
+    socket.on('channelList', onChannelList)
     socket.emit('requestChatHistory')
     socket.emit('requestCommandList')
     socket.emit('requestUserCount')
+    socket.emit('requestChannelList')
     return () => {
       socket.off('chatHistory', onChatHistory)
       socket.off('chatMessage', onChatMessage)
       socket.off('commandList', onCommandList)
       socket.off('userCount', onUserCount)
       socket.off('playerStats', onPlayerStats)
+      socket.off('channelChanged', onChannelChanged)
+      socket.off('channelList', onChannelList)
     }
   }, [socket])
 
@@ -65,7 +81,7 @@ function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const sendMessage = useCallback(() => {
+const sendMessage = useCallback(() => {
     const content = inputRef.current?.textContent?.trim()
     if (!content || !socket) return
 
@@ -148,7 +164,15 @@ function Home() {
   return (
     <div className={styles.homeContainer}>
       <div className={styles.chatArea}>
-        <Header userCount={userCount} onMenuClick={() => setDrawerOpen(true)} />
+        <Header
+          userCount={userCount}
+          onMenuClick={() => setDrawerOpen(true)}
+          channelName={
+            sessionInfo && currentChannel === `private_${sessionInfo.userId}`
+              ? '개인 채널'
+              : channelList.find(ch => ch.id === currentChannel)?.name ?? '메인'
+          }
+        />
         <div className={styles.chatMessages}>
           {messages.map((msg, i) => (
             <ChatMessage
@@ -197,6 +221,10 @@ function Home() {
         nickname={sessionInfo?.nickname}
         profileImage={sessionInfo?.profileImage}
         onProfileUpdate={updateProfileImage}
+        userId={sessionInfo?.userId}
+        currentChannel={currentChannel}
+        channelList={channelList}
+        onJoinChannel={(channel) => socket?.emit('joinChannel', channel)}
       />
     </div>
   )

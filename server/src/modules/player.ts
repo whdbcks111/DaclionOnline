@@ -1,7 +1,8 @@
 import logger from "../utils/logger.js";
 import Player from "../models/Player.js";
 import { registerCommand } from "./bot.js";
-import { sendBotMessage, sendBotMessageFiltered, sendBotMessageToUser } from "./message.js";
+import { sendBotMessageToChannel, sendBotMessageFiltered, sendBotMessageToUser } from "./message.js";
+import { getUserChannel } from "./channel.js";
 import { chat } from "../utils/chatBuilder.js";
 import prisma from "../config/prisma.js";
 import { getLocation } from "../models/Location.js";
@@ -175,12 +176,13 @@ export function initPlayer(): void {
                     )
                     .build();
 
+                const channel = getUserChannel(userId);
                 if(args[0] === '공개') {
-                    sendBotMessage(chatNode);
+                    sendBotMessageToChannel(channel, chatNode);
                 }
                 else {
                     sendBotMessageToUser(userId, chatNode);
-                    sendBotMessageFiltered(uid => uid !== userId, chat().text('[ 상태창 ]  비공개 정보입니다.').build(), false);
+                    sendBotMessageFiltered(uid => uid !== userId, channel, chat().text('[ 상태창 ]  비공개 정보입니다.').build(), false);
                 }
             } catch(e) {
                 logger.error('상태창 명령어 처리 중 오류:', e);

@@ -1,50 +1,11 @@
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
 import { parseChatMessage } from "../utils/chatParser.js";
+import { getChannelRoomKey, addToChannelHistory, addToFilteredChannelHistory, getUserChannel } from "./channel.js";
 import type { ChatMessage, ChatFlag, ChatNode, NotificationData } from "../../../shared/types.js";
 
 const BOT_USER_ID = 0;
 const BOT_NICKNAME = "Daclion System";
-
-const MAX_HISTORY = 100;
-const chatHistory: ChatMessage[] = [];
-
-// ── 필터 히스토리 ──
-
-interface FilteredHistoryEntry {
-    filter: (userId: number) => boolean;
-    msg: ChatMessage;
-}
-
-const MAX_FILTERED_HISTORY = 200;
-const filteredHistory: FilteredHistoryEntry[] = [];
-
-function addToFilteredHistory(filter: (userId: number) => boolean, msg: ChatMessage): void {
-    filteredHistory.push({ filter, msg });
-    if (filteredHistory.length > MAX_FILTERED_HISTORY) {
-        filteredHistory.shift();
-    }
-}
-
-/** 특정 userId가 받아야 할 필터 히스토리 메시지 반환 */
-export function getFilteredHistoryForUser(userId: number): ChatMessage[] {
-    return filteredHistory
-        .filter(entry => entry.filter(userId))
-        .map(entry => entry.msg);
-}
-
-export function getChatHistory(): ChatMessage[] {
-    return chatHistory;
-}
-
-/** 메시지를 히스토리에 저장하고 전체 브로드캐스트 */
-export function broadcastMessage(msg: ChatMessage): void {
-    chatHistory.push(msg);
-    if (chatHistory.length > MAX_HISTORY) {
-        chatHistory.shift();
-    }
-    getIO().emit('chatMessage', msg);
-}
 
 /** permission 기반 플래그 생성 */
 export function getFlagsForPermission(permission: number): ChatFlag[] {
@@ -53,16 +14,40 @@ export function getFlagsForPermission(permission: number): ChatFlag[] {
     return flags;
 }
 
-/** 봇 메시지 전송 (string이면 자동 파싱) */
-export function sendBotMessage(content: string | ChatNode[]): void {
-    broadcastMessage({
+// ── 채널 브로드캐스트 ──
+
+/** 특정 채널에 메시지 전송 (채널 히스토리에 저장) */
+export function sendMessageToChannel(msg: ChatMessage, channel: string | null): void {
+    addToChannelHistory(channel, msg);
+    getIO().to(getChannelRoomKey(channel)).emit('chatMessage', msg);
+}
+
+/** 모든 채널에 브로드캐스트 (히스토리에 저장하지 않음) */
+export function broadcastMessageAll(msg: ChatMessage): void {
+    getIO().emit('chatMessage', msg);
+}
+
+// ── 봇 메시지 헬퍼 ──
+
+function makeBotMessage(content: string | ChatNode[]): ChatMessage {
+    return {
         userId: BOT_USER_ID,
         nickname: BOT_NICKNAME,
         flags: [{ text: '봇', color: '$primary' }],
         content: typeof content === 'string' ? parseChatMessage(content) : content,
         timestamp: Date.now(),
-        profileImage: '/icons/favicon.png'
-    });
+        profileImage: '/icons/favicon.png',
+    };
+}
+
+/** 특정 채널에 봇 메시지 전송 */
+export function sendBotMessageToChannel(channel: string | null, content: string | ChatNode[]): void {
+    sendMessageToChannel(makeBotMessage(content), channel);
+}
+
+/** 봇 메시지 전송 (기본: 메인 채널 null) */
+export function sendBotMessage(content: string | ChatNode[], channel: string | null = null): void {
+    sendMessageToChannel(makeBotMessage(content), channel);
 }
 
 // ── 내부 헬퍼 ──
@@ -83,38 +68,33 @@ function forEachSocket(
     }
 }
 
-function makeBotMessage(content: string | ChatNode[]): ChatMessage {
-    return {
-        userId: BOT_USER_ID,
-        nickname: BOT_NICKNAME,
-        flags: [{ text: '봇', color: '$primary' }],
-        content: typeof content === 'string' ? parseChatMessage(content) : content,
-        timestamp: Date.now(),
-        profileImage: '/icons/favicon.png',
-    };
-}
-
 // ── 필터 기반 전송 ──
 
-/** filter를 통과한 유저들에게 메시지 전송 (필터 히스토리 저장)
+/** filter를 통과한 유저들에게 메시지 전송 (채널 범위 한정, 필터 히스토리 저장)
  *  @param privateLabel true면 클라이언트에 "나에게만 보이는 메시지" 라벨 표시 (기본 true) */
 export function sendMessageFiltered(
     filter: (userId: number) => boolean,
+    channel: string | null,
     msg: ChatMessage,
     privateLabel = true,
 ): void {
     const emitMsg = privateLabel ? { ...msg, private: true } : msg;
-    addToFilteredHistory(filter, emitMsg);
-    forEachSocket(filter, socket => socket.emit('chatMessage', emitMsg));
+    addToFilteredChannelHistory(channel, filter, emitMsg);
+    // 해당 채널에 현재 접속 중인 유저에게만 실시간 전달
+    forEachSocket(
+        userId => filter(userId) && getUserChannel(userId) === channel,
+        socket => socket.emit('chatMessage', emitMsg)
+    );
 }
 
-/** filter를 통과한 유저들에게 봇 메시지 전송 */
+/** filter를 통과한 유저들에게 봇 메시지 전송 (채널 범위 한정) */
 export function sendBotMessageFiltered(
     filter: (userId: number) => boolean,
+    channel: string | null,
     content: string | ChatNode[],
     privateLabel = true,
 ): void {
-    sendMessageFiltered(filter, makeBotMessage(content), privateLabel);
+    sendMessageFiltered(filter, channel, makeBotMessage(content), privateLabel);
 }
 
 /** filter를 통과한 유저들에게 알림 전송 */
@@ -124,14 +104,14 @@ export function sendNotificationFiltered(filter: (userId: number) => boolean, da
 
 // ── 편의 함수 ──
 
-/** 특정 유저에게만 메시지 전송 */
+/** 특정 유저에게만 메시지 전송 (유저의 현재 채널로 범위 한정) */
 export function sendMessageToUser(userId: number, msg: ChatMessage, privateLabel = true): void {
-    sendMessageFiltered(id => id === userId, msg, privateLabel);
+    sendMessageFiltered(id => id === userId, getUserChannel(userId), msg, privateLabel);
 }
 
-/** 특정 유저에게만 봇 메시지 전송 */
+/** 특정 유저에게만 봇 메시지 전송 (유저의 현재 채널로 범위 한정) */
 export function sendBotMessageToUser(userId: number, content: string | ChatNode[], privateLabel = true): void {
-    sendMessageFiltered(id => id === userId, makeBotMessage(content), privateLabel);
+    sendMessageFiltered(id => id === userId, getUserChannel(userId), makeBotMessage(content), privateLabel);
 }
 
 /** 전체 알림 브로드캐스트 */

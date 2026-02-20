@@ -6,6 +6,7 @@ import { isValidPayload } from "../utils/validators.js";
 import prisma from "../config/prisma.js";
 import type { LoginRequest } from "../../../shared/types.js";
 import { loadPlayer, unloadPlayer } from "./player.js";
+import { getUserChannel, getChannelRoomKey } from "./channel.js";
 import type { Session } from "../types/index.js";
 
 const sessionMap = new Map<string, Session>()
@@ -92,6 +93,7 @@ export const initLogin = () => {
         let session;
         if (socket.data.sessionToken && (session = getSession(socket.data.sessionToken))) {
             socket.emit('sessionRestore', {
+                userId: session.userId,
                 username: session.username,
                 nickname: session.nickname,
                 profileImage: session.profileImage,
@@ -140,9 +142,11 @@ export const initLogin = () => {
 
                 socket.data.sessionToken = sessionToken;
                 setUserOnline(user.id);
+                socket.join(getChannelRoomKey(getUserChannel(user.id)));
                 await loadPlayer(user.id);
                 socket.emit('loginResult', {
                     ok: true,
+                    userId: user.id,
                     sessionToken,
                     nickname: user.nickname,
                     profileImage: user.profileImage ?? undefined,

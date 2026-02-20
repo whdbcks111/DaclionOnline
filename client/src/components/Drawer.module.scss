@@ -94,3 +94,99 @@ $avatar-size: 80px;
     font-size: $font-size-sm;
     color: $color-danger;
 }
+
+.channelSection {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    border-top: 1px solid $color-border;
+    padding-top: $spacing-md;
+}
+
+.channelToggleButton {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm $spacing-md;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-bg-tertiary;
+    color: $color-text;
+    font-size: $font-size-sm;
+    cursor: pointer;
+
+    &:hover {
+        background-color: $color-primary;
+        color: $color-text-inverse;
+    }
+}
+
+.channelToggleLabel {
+    color: $color-text-tertiary;
+    font-size: 0.75rem;
+}
+
+.channelToggleCurrent {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-weight: bold;
+}
+
+.chevron {
+    display: inline-block;
+    font-style: normal;
+    transition: transform $transition-base;
+}
+
+.chevronUp {
+    transform: rotate(180deg);
+}
+
+.channelList {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+}
+
+.channelItem {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: $spacing-sm $spacing-md;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-bg-secondary;
+    color: $color-text;
+    font-size: $font-size-sm;
+    cursor: pointer;
+    text-align: left;
+    gap: 2px;
+
+    &:hover {
+        border-color: $color-primary;
+        background-color: $color-bg-tertiary;
+    }
+}
+
+.channelItemActive {
+    border-color: $color-primary;
+    background-color: $color-primary;
+    color: $color-text-inverse;
+
+    &:hover {
+        background-color: $color-primary;
+        color: $color-text-inverse;
+    }
+}
+
+.channelName {
+    font-weight: bold;
+}
+
+.channelDesc {
+    font-size: 0.75rem;
+    opacity: 0.75;
+}
