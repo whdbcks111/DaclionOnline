@@ -174,16 +174,22 @@ const sendMessage = useCallback(() => {
           }
         />
         <div className={styles.chatMessages}>
-          {messages.map((msg, i) => (
-            <ChatMessage
-              key={i}
-              message={msg}
-              showHeader={i === 0
-                || messages[i - 1].userId !== msg.userId
-                || Math.floor(messages[i - 1].timestamp / 60000) !== Math.floor(msg.timestamp / 60000)
-              }
-            />
-          ))}
+          {messages.map((msg, i) => {
+            const prev = messages[i - 1]
+            const showHeader = i === 0
+              || prev.userId !== msg.userId
+              || prev.nickname !== msg.nickname
+              || prev.profileImage !== msg.profileImage
+              || JSON.stringify(prev.flags) !== JSON.stringify(msg.flags)
+              || Math.floor(prev.timestamp / 60000) !== Math.floor(msg.timestamp / 60000)
+            return (
+              <ChatMessage
+                key={i}
+                message={msg}
+                showHeader={showHeader}
+              />
+            )
+          })}
           <div ref={messagesEndRef} />
         </div>
         <div className={styles.statusBars}>

@@ -127,7 +127,7 @@ model MonsterData {
   name        String   @db.VarChar(100)
   level       Int      @default(1)
   exp         Int      @default(0)
-  baseAttribute Json   @map("base_stats")
+  baseAttribute Json   @map("base_attribute")
   drops       Json?
   expReward   Int      @default(0) @map("exp_reward")
   equipments  Json?

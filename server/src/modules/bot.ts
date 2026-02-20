@@ -1,6 +1,7 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
-import { sendMessageToChannel, sendBotMessageToChannel, sendBotMessageToUser, sendMessageToUser } from "./message.js";
+import { sendMessageToChannel, sendBotMessageToChannel, sendBotMessageToUser, sendMessageToUser, broadcastMessageAll, getFlagsForPermission } from "./message.js";
+import { parseChatMessage } from "../utils/chatParser.js";
 import { getUserChannel } from "./channel.js";
 import type { ChatMessage, CommandInfo } from "../../../shared/types.js";
 
@@ -159,6 +160,28 @@ export const initBot = () => {
             catch(e) {
                 sendBotMessageToUser(userId, `오류 : ${e}`)
             }
+        },
+    });
+
+    registerCommand({
+        name: '공지',
+        description: '전체 채널에 공지를 브로드캐스트합니다.',
+        permission: 10,
+        showCommandUse: 'hide',
+        args: [
+            { name: '메시지', description: '공지 내용', required: true },
+        ],
+        handler(userId, _args, raw, msg, permission) {
+            const content = raw.replace(/^\/\S+\s*/, '');
+            if (!content.trim()) return;
+            broadcastMessageAll({
+                userId: msg?.userId ?? userId,
+                nickname: msg?.nickname ?? '관리자',
+                profileImage: msg?.profileImage,
+                flags: getFlagsForPermission(permission),
+                content: parseChatMessage(content),
+                timestamp: Date.now(),
+            });
         },
     });
 

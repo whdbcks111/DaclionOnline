@@ -1,7 +1,7 @@
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
 import { parseChatMessage } from "../utils/chatParser.js";
-import { getChannelRoomKey, addToChannelHistory, addToFilteredChannelHistory, getUserChannel } from "./channel.js";
+import { getChannelRoomKey, addToChannelHistory, addToAllChannelHistories, addToFilteredChannelHistory, getUserChannel } from "./channel.js";
 import type { ChatMessage, ChatFlag, ChatNode, NotificationData } from "../../../shared/types.js";
 
 const BOT_USER_ID = 0;
@@ -22,9 +22,13 @@ export function sendMessageToChannel(msg: ChatMessage, channel: string | null): 
     getIO().to(getChannelRoomKey(channel)).emit('chatMessage', msg);
 }
 
-/** 모든 채널에 브로드캐스트 (히스토리에 저장하지 않음) */
+const FLAG_ALL: ChatFlag = { text: '전체', color: '#08c26e' };
+
+/** 모든 채널에 브로드캐스트 (모든 채널 히스토리에 저장, [전체] 플래그 자동 부착) */
 export function broadcastMessageAll(msg: ChatMessage): void {
-    getIO().emit('chatMessage', msg);
+    const flagged: ChatMessage = { ...msg, flags: [FLAG_ALL, ...(msg.flags ?? [])] };
+    addToAllChannelHistories(flagged);
+    getIO().emit('chatMessage', flagged);
 }
 
 // ── 봇 메시지 헬퍼 ──
@@ -45,9 +49,9 @@ export function sendBotMessageToChannel(channel: string | null, content: string 
     sendMessageToChannel(makeBotMessage(content), channel);
 }
 
-/** 봇 메시지 전송 (기본: 메인 채널 null) */
-export function sendBotMessage(content: string | ChatNode[], channel: string | null = null): void {
-    sendMessageToChannel(makeBotMessage(content), channel);
+/** 모든 채널에 봇 메시지 브로드캐스트 (히스토리에 저장하지 않음) */
+export function broadcastBotMessageAll(content: string | ChatNode[]): void {
+    broadcastMessageAll(makeBotMessage(content));
 }
 
 // ── 내부 헬퍼 ──

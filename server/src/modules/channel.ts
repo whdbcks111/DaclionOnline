@@ -62,6 +62,14 @@ export function addToChannelHistory(channel: string | null, msg: ChatMessage): v
     }
 }
 
+/** 모든 채널 히스토리에 메시지 추가 (브로드캐스트용)
+ *  CHANNELS 사전 정의 목록 + 런타임에 생성된 채널 모두 포함 */
+export function addToAllChannelHistories(msg: ChatMessage): void {
+    const ids = new Set<string | null>(CHANNELS.map(ch => ch.id));
+    for (const key of channelHistories.keys()) ids.add(key);
+    for (const id of ids) addToChannelHistory(id, msg);
+}
+
 /** 채널 필터 히스토리에 메시지 추가 */
 export function addToFilteredChannelHistory(channel: string | null, filter: (userId: number) => boolean, msg: ChatMessage): void {
     if (!filteredChannelHistories.has(channel)) {
