@@ -16,7 +16,7 @@ function Home() {
   const [activeIndex, setActiveIndex] = useState(0)
   const [userCount, setUserCount] = useState(0)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [playerStats, setPlayerStats] = useState<PlayerStatsData>({ hp: 100, maxHp: 100, mp: 50, maxMp: 50 })
+  const [playerStats, setPlayerStats] = useState<PlayerStatsData>({ life: 100, maxLife: 100, mentality: 50, maxMentality: 50 })
   const [currentChannel, setCurrentChannel] = useState<string | null>(null)
   const [channelList, setChannelList] = useState<ChannelInfo[]>([])
   const inputRef = useRef<HTMLDivElement>(null)
@@ -205,10 +205,10 @@ const sendMessage = useCallback(() => {
         </div>
         <div className={styles.statusBars}>
           <div className={styles.hpBar}>
-            <div className={styles.hpFill} style={{ width: `${Math.max(0, playerStats.hp / playerStats.maxHp) * 100}%` }} />
+            <div className={styles.hpFill} style={{ width: `${Math.max(0, playerStats.life / playerStats.maxLife) * 100}%` }} />
           </div>
           <div className={styles.mpBar}>
-            <div className={styles.mpFill} style={{ width: `${Math.max(0, playerStats.mp / playerStats.maxMp) * 100}%` }} />
+            <div className={styles.mpFill} style={{ width: `${Math.max(0, playerStats.mentality / playerStats.maxMentality) * 100}%` }} />
           </div>
         </div>
         <div className={styles.chatInput}>

@@ -62,16 +62,16 @@ export async function saveAllPlayers(): Promise<void> {
     await Promise.all(promises);
 }
 
-/** 특정 유저의 HP/MP 상태를 해당 유저 소켓에 전송 */
+/** 특정 유저의 Life/Mentality 상태를 해당 유저 소켓에 전송 */
 export function sendPlayerStats(userId: number): void {
     const player = onlinePlayers.get(userId);
     if (!player) return;
 
     const data = {
-        hp: player.attribute.getBase('hp'),
-        maxHp: player.attribute.get('hp'),
-        mp: player.attribute.getBase('mp'),
-        maxMp: player.attribute.get('mp'),
+        life:         player.attribute.getBase('life'),
+        maxLife:      player.attribute.get('life'),
+        mentality:    player.attribute.getBase('mentality'),
+        maxMentality: player.attribute.get('mentality'),
     };
 
     const io = getIO();
@@ -94,7 +94,7 @@ export function initPlayer(): void {
         }
     }, SAVE_INTERVAL);
 
-    // 주기적 HP/MP 브로드캐스트
+    // 주기적 Life/Mentality 브로드캐스트
     setInterval(() => {
         for (const userId of onlinePlayers.keys()) {
             sendPlayerStats(userId);
@@ -164,7 +164,7 @@ export function initPlayer(): void {
                         // ── 능력치 ──
                         .color('gray', b2 => b2.text('─── 능력치 ───\n'))
                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('공격력'))).tab(V, b2 => b2.text(fmt(attr.atk)))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('마법력'))).text(`${fmt(attr.mentality)}\n`)
+                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('마법력'))).text(`${fmt(attr.magicForce)}\n`)
                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('방어력'))).tab(V, b2 => b2.text(fmt(attr.def)))
                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('마법저항'))).text(`${fmt(attr.magicDef)}\n`)
                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('방어관통'))).tab(V, b2 => b2.text(fmt(attr.armorPen)))

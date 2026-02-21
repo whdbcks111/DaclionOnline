@@ -3,7 +3,7 @@ import { executeItemUse } from "../modules/itemUse.js";
 import { Item, getItemData } from "./Item.js";
 
 export type { ItemData } from "./Item.js";
-export { Item, loadItemData, getItemData, getAllItemData } from "./Item.js";
+export { Item, getItemData, getAllItemData } from "./Item.js";
 
 // 아이템 상태 추적
 const enum ItemState { Clean, New, Modified, Deleted }
@@ -54,26 +54,26 @@ export default class Inventory {
     }
 
     /** 아이템 정의 ID로 조회 (모든 인스턴스) */
-    getItemsByData(itemDataId: number): Item[] {
+    getItemsByData(itemDataId: string): Item[] {
         return this._items.filter(e => e.itemDataId === itemDataId);
     }
 
     /** 특정 아이템 정의의 총 수량 */
-    getCount(itemDataId: number): number {
+    getCount(itemDataId: string): number {
         return this.getItemsByData(itemDataId).reduce((sum, e) => sum + e.count, 0);
     }
 
     // -- 추가 --
 
     /** 무게 체크: 아이템 추가 가능 여부 */
-    canAdd(itemDataId: number, count: number): boolean {
+    canAdd(itemDataId: string, count: number): boolean {
         const data = getItemData(itemDataId);
         if (!data) return false;
         return this.currentWeight + data.weight * count <= this._maxWeight;
     }
 
     /** 아이템 추가. 성공 시 true */
-    addItem(itemDataId: number, count: number, metadata?: Record<string, any> | null): boolean {
+    addItem(itemDataId: string, count: number, metadata?: Record<string, any> | null): boolean {
         const data = getItemData(itemDataId);
         if (!data) return false;
         if (!this.canAdd(itemDataId, count)) return false;
@@ -168,7 +168,7 @@ export default class Inventory {
     }
 
     /** 아이템 정의 ID 기준으로 수량 제거 (여러 인스턴스에 걸쳐) */
-    removeItemByData(itemDataId: number, count: number): boolean {
+    removeItemByData(itemDataId: string, count: number): boolean {
         if (this.getCount(itemDataId) < count) return false;
 
         let remaining = count;

@@ -39,7 +39,7 @@ model Player {
   exp        Int      @default(0)
   maxWeight  Float    @default(100.0) @map("max_weight")
   stats      Json?
-  locationId Int      @default(1) @map("location_id")
+  locationId String   @db.VarChar(100) @default("town_square") @map("location_id")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -50,31 +50,6 @@ model Player {
   @@map("players")
 }
 
-// 아이템 정의 테이블 (마스터 데이터)
-model ItemData {
-  id            Int         @id @default(autoincrement())
-
-  name          String      @db.VarChar(100)
-  description   String      @db.VarChar(500)
-  category      String      @db.VarChar(50)
-  weight        Float       @default(0)
-  stackable     Boolean     @default(false)
-  maxStack      Int         @default(1) @map("max_stack")
-  baseMetadata  Json?       @map("base_metadata")
-  onUse         String?     @db.VarChar(100) @map("on_use")
-  equipSlot     String?     @db.VarChar(50) @map("equip_slot")
-  modifiers     Json?
-  baseDurability Int?       @map("base_durability")
-
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
-
-  items      Item[]
-  equipments Equipment[]
-
-  @@map("item_data")
-}
-
 // 플레이어 인벤토리 아이템 테이블
 model Item {
   id          Int       @id @default(autoincrement())
@@ -82,8 +57,7 @@ model Item {
   playerId    Int       @map("player_id")
   player      Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
-  itemDataId  Int       @map("item_data_id")
-  itemData    ItemData  @relation(fields: [itemDataId], references: [id])
+  itemDataId  String    @db.VarChar(100) @map("item_data_id")
 
   count       Int       @default(1)
   durability  Int?
@@ -93,7 +67,6 @@ model Item {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   @@index([playerId])
-  @@index([itemDataId])
   @@map("items")
 }
 
@@ -104,8 +77,7 @@ model Equipment {
   playerId    Int       @map("player_id")
   player      Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
-  itemDataId  Int       @map("item_data_id")
-  itemData    ItemData  @relation(fields: [itemDataId], references: [id])
+  itemDataId  String    @db.VarChar(100) @map("item_data_id")
 
   slot        String    @db.VarChar(50)
   slotIndex   Int       @default(0) @map("slot_index")
@@ -118,39 +90,4 @@ model Equipment {
   @@unique([playerId, slot, slotIndex])
   @@index([playerId])
   @@map("equipments")
-}
-
-// 몬스터 정의 테이블 (마스터 데이터)
-model MonsterData {
-  id          Int      @id @default(autoincrement())
-
-  name        String   @db.VarChar(100)
-  level       Int      @default(1)
-  exp         Int      @default(0)
-  baseAttribute Json   @map("base_attribute")
-  drops       Json?
-  expReward   Int      @default(0) @map("exp_reward")
-  equipments  Json?
-
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@map("monster_data")
-}
-
-// 장소 정의 테이블 (마스터 데이터)
-model LocationData {
-  id          Int      @id @default(autoincrement())
-
-  name        String   @db.VarChar(100)
-  x           Float    @default(0)
-  y           Float    @default(0)
-  z           Float    @default(0)
-  spawns      Json?
-  connections Json?
-
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@map("location_data")
 }

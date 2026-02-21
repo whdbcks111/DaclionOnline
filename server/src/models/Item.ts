@@ -1,9 +1,8 @@
-import prisma from "../config/prisma.js";
 import type { AttributeModifier } from "./Attribute.js";
 
-/** 아이템 정의 (마스터 데이터, 서버 시작 시 캐싱) */
+/** 아이템 정의 (마스터 데이터, 코드에서 직접 정의) */
 export interface ItemData {
-    id: number;
+    id: string;
     name: string;
     description: string;
     category: string;
@@ -20,12 +19,12 @@ export interface ItemData {
 /** 아이템 인스턴스 (인벤토리/장비 공용) */
 export class Item {
     id: number;
-    readonly itemDataId: number;
+    readonly itemDataId: string;
     count: number;
     durability: number | null;
     metadata: Record<string, any> | null;
 
-    constructor(itemDataId: number, count: number, durability: number | null, metadata: Record<string, any> | null, id = 0) {
+    constructor(itemDataId: string, count: number, durability: number | null, metadata: Record<string, any> | null, id = 0) {
         this.id = id;
         this.itemDataId = itemDataId;
         this.count = count;
@@ -60,33 +59,16 @@ export class Item {
     get baseDurability(): number | null { return this.data?.baseDurability ?? null; }
 }
 
-// 아이템 정의 캐시 (서버 시작 시 로드)
-const itemDataCache = new Map<number, ItemData>();
+// 아이템 마스터 데이터 캐시
+const itemDataCache = new Map<string, ItemData>();
 
-/** 아이템 정의 캐시 로드 (서버 시작 시 1회 호출) */
-export async function loadItemData(): Promise<void> {
-    const rows = await prisma.itemData.findMany();
-    itemDataCache.clear();
-    for (const row of rows) {
-        itemDataCache.set(row.id, {
-            id: row.id,
-            name: row.name,
-            description: row.description,
-            category: row.category,
-            weight: row.weight,
-            stackable: row.stackable,
-            maxStack: row.maxStack,
-            baseMetadata: row.baseMetadata as Record<string, any> | null,
-            onUse: row.onUse,
-            equipSlot: row.equipSlot,
-            modifiers: row.modifiers as AttributeModifier[] | null,
-            baseDurability: row.baseDurability,
-        });
-    }
+/** 아이템 정의 등록 (data/items.ts에서 호출) */
+export function defineItem(data: ItemData): void {
+    itemDataCache.set(data.id, data);
 }
 
 /** 아이템 정의 조회 */
-export function getItemData(itemDataId: number): ItemData | undefined {
+export function getItemData(itemDataId: string): ItemData | undefined {
     return itemDataCache.get(itemDataId);
 }
 

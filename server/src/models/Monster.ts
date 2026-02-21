@@ -1,4 +1,3 @@
-import prisma from "../config/prisma.js";
 import Entity from "./Entity.js";
 import Equipment from "./Equipment.js";
 import { Item, getItemData } from "./Item.js";
@@ -7,22 +6,22 @@ import type { EquipSlot } from "./Equipment.js";
 
 /** 드롭 아이템 정보 */
 export interface DropInfo {
-    itemDataId: number;
+    itemDataId: string;
     minCount: number;
     maxCount: number;
-    probability: number;  // 0.0 ~ 1.0
+    chance: number;  // 0.0 ~ 1.0
 }
 
 /** 몬스터 기본 장비 정보 */
 export interface MonsterEquipInfo {
     slot: EquipSlot;
     slotIndex: number;
-    itemDataId: number;
+    itemDataId: string;
 }
 
-/** 몬스터 정의 (마스터 데이터, 서버 시작 시 캐싱) */
+/** 몬스터 정의 (마스터 데이터, 코드에서 직접 정의) */
 export interface MonsterData {
-    id: number;
+    id: string;
     name: string;
     level: number;
     exp: number;
@@ -33,12 +32,12 @@ export interface MonsterData {
 }
 
 export default class Monster extends Entity {
-    readonly monsterDataId: number;
+    readonly monsterDataId: string;
     override readonly name: string;
     readonly drops: DropInfo[];
     readonly expReward: number;
 
-    constructor(monsterDataId: number, locationId = 0) {
+    constructor(monsterDataId: string, locationId = '') {
         const data = getMonsterData(monsterDataId);
         if (!data) throw new Error(`MonsterData not found: ${monsterDataId}`);
 
@@ -60,10 +59,10 @@ export default class Monster extends Entity {
     }
 
     /** 드롭 테이블을 굴려 드롭 아이템 목록 반환 */
-    rollDrops(): { itemDataId: number; count: number }[] {
-        const result: { itemDataId: number; count: number }[] = [];
+    rollDrops(): { itemDataId: string; count: number }[] {
+        const result: { itemDataId: string; count: number }[] = [];
         for (const drop of this.drops) {
-            if (Math.random() < drop.probability) {
+            if (Math.random() < drop.chance) {
                 const count = Math.floor(
                     Math.random() * (drop.maxCount - drop.minCount + 1) + drop.minCount
                 );
@@ -78,28 +77,15 @@ export default class Monster extends Entity {
 
 // -- MonsterData 캐시 --
 
-const monsterDataCache = new Map<number, MonsterData>();
+const monsterDataCache = new Map<string, MonsterData>();
 
-/** 몬스터 정의 캐시 로드 (서버 시작 시 1회 호출) */
-export async function loadMonsterData(): Promise<void> {
-    const rows = await prisma.monsterData.findMany();
-    monsterDataCache.clear();
-    for (const row of rows) {
-        monsterDataCache.set(row.id, {
-            id: row.id,
-            name: row.name,
-            level: row.level,
-            exp: row.exp,
-            baseAttribute: row.baseAttribute as Partial<AttributeRecord>,
-            drops: (row.drops as unknown as DropInfo[]) ?? [],
-            expReward: row.expReward,
-            equipments: (row.equipments as unknown as MonsterEquipInfo[]) ?? [],
-        });
-    }
+/** 몬스터 정의 등록 (data/monsters.ts에서 호출) */
+export function defineMonster(data: MonsterData): void {
+    monsterDataCache.set(data.id, data);
 }
 
 /** 몬스터 정의 조회 */
-export function getMonsterData(id: number): MonsterData | undefined {
+export function getMonsterData(id: string): MonsterData | undefined {
     return monsterDataCache.get(id);
 }
 

@@ -5,14 +5,10 @@ import Equipment from "./Equipment.js";
 import type { StatRecord } from "./Stat.js";
 
 const DEFAULT_BASE_ATTRIBUTE = {
-    hp: 100,
-    mp: 50,
-    atk: 10,
-    def: 5,
-    speed: 1,
-    attackSpeed: 1,
-    critRate: 0.05,
-    critDmg: 1.5,
+    life:      100,
+    mentality: 50,
+    atk:       10,
+    def:       5,
 } as const;
 
 export default class Player extends Entity {
@@ -27,7 +23,7 @@ export default class Player extends Entity {
 
     private constructor(
         id: number, userId: number, nickname: string, level: number, exp: number,
-        locationId: number, maxWeight: number, inventory: Inventory, equipment: Equipment,
+        locationId: string, maxWeight: number, inventory: Inventory, equipment: Equipment,
         statPoints?: Partial<StatRecord>,
     ) {
         super(level, exp, locationId, DEFAULT_BASE_ATTRIBUTE, equipment, statPoints);
@@ -55,7 +51,7 @@ export default class Player extends Entity {
     override set exp(val: number) { this._exp = val; this._dirty = true; }
 
     override get locationId() { return this._locationId; }
-    override set locationId(val: number) { this._locationId = val; this._dirty = true; }
+    override set locationId(val: string) { this._locationId = val; this._dirty = true; }
 
     get maxWeight() { return this._maxWeight; }
     set maxWeight(val: number) {

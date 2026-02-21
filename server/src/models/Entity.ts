@@ -13,7 +13,7 @@ export interface AttackResult {
     type: AttackType;
     rawAmount: number;
     finalDamage: number;
-    remainingHp: number;
+    remainingLife: number;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -27,12 +27,12 @@ export default abstract class Entity {
 
     protected _level: number;
     protected _exp: number;
-    protected _locationId: number;
+    protected _locationId: string;
 
     constructor(
         level: number,
         exp: number,
-        locationId: number,
+        locationId: string,
         baseAttribute: Partial<AttributeRecord>,
         equipment: Equipment,
         statPoints?: Partial<StatRecord>,
@@ -63,16 +63,16 @@ export default abstract class Entity {
     set exp(val: number) { this._exp = val; }
 
     get locationId() { return this._locationId; }
-    set locationId(val: number) { this._locationId = val; }
+    set locationId(val: string) { this._locationId = val; }
 
     // -- 전투 --
 
     /** 대상 엔티티를 공격 */
     attack(target: Entity, type: AttackType = 'physical', amount?: number): AttackResult {
-        // 기본 공격력: 물리 → atk, 마법 → mentality
+        // 기본 공격력: 물리 → atk, 마법 → magicForce
         const rawAmount = amount ?? (type === 'physical'
             ? this.attribute.get('atk')
-            : this.attribute.get('mentality'));
+            : this.attribute.get('magicForce'));
 
         // 방어/저항 및 관통
         const defense = type === 'physical'
@@ -85,20 +85,20 @@ export default abstract class Entity {
         const effectiveDefense = clamp(defense - penetration, 0, 1);
         const finalDamage = Math.max(0, rawAmount * (1 - effectiveDefense));
 
-        // HP 차감
-        const currentHp = target.attribute.getBase('hp');
-        target.attribute.setBase('hp', currentHp - finalDamage);
-        const remainingHp = target.attribute.get('hp');
+        // Life 차감
+        const currentLife = target.attribute.getBase('life');
+        target.attribute.setBase('life', currentLife - finalDamage);
+        const remainingLife = target.attribute.get('life');
 
         // 플레이어 관련 알림
         if (this.isPlayer || target.isPlayer) {
             broadcastNotification({
                 key: 'attack',
-                message: `${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다. (남은 HP: ${remainingHp.toFixed(1)})`,
+                message: `${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다. (남은 Life: ${remainingLife.toFixed(1)})`,
             });
         }
 
-        return { type, rawAmount, finalDamage, remainingHp };
+        return { type, rawAmount, finalDamage, remainingLife };
     }
 
     // -- 게임 루프 라이프사이클 --

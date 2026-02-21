@@ -96,12 +96,12 @@ export interface ChannelInfo {
     description?: string
 }
 
-// 플레이어 HP/MP
+// 플레이어 Life/Mentality
 export interface PlayerStatsData {
-    hp: number
-    maxHp: number
-    mp: number
-    maxMp: number
+    life: number
+    maxLife: number
+    mentality: number
+    maxMentality: number
 }
 
 // 알림

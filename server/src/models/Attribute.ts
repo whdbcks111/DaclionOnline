@@ -1,7 +1,7 @@
 /** 능력치 종류 */
 export type AttributeType =
-    | 'hp' | 'mp'
-    | 'atk' | 'mentality'
+    | 'life' | 'mentality'
+    | 'atk' | 'magicForce'
     | 'def' | 'magicDef'
     | 'armorPen' | 'magicPen'
     | 'speed' | 'attackSpeed'
@@ -9,8 +9,8 @@ export type AttributeType =
 
 /** 모든 능력치 종류 목록 */
 export const ATTRIBUTE_TYPES: AttributeType[] = [
-    'hp', 'mp',
-    'atk', 'mentality',
+    'life', 'mentality',
+    'atk', 'magicForce',
     'def', 'magicDef',
     'armorPen', 'magicPen',
     'speed', 'attackSpeed',
@@ -31,12 +31,24 @@ export interface AttributeModifier {
 /** 능력치 레코드 */
 export type AttributeRecord = Record<AttributeType, number>;
 
-function createAttributeRecord(defaultValue = 0): AttributeRecord {
-    const record = {} as AttributeRecord;
-    for (const type of ATTRIBUTE_TYPES) {
-        record[type] = defaultValue;
-    }
-    return record;
+/** 능력치 종류별 기본값 */
+export const DEFAULT_ATTRIBUTE: Readonly<AttributeRecord> = {
+    life:        100,
+    mentality:   100,
+    atk:         10,
+    magicForce:  10,
+    def:         0,
+    magicDef:    0,
+    armorPen:    0,
+    magicPen:    0,
+    speed:       1,
+    attackSpeed: 1,
+    critRate:    0.05,
+    critDmg:     1.5,
+};
+
+function createAttributeRecord(): AttributeRecord {
+    return { ...DEFAULT_ATTRIBUTE };
 }
 
 export default class Attribute {

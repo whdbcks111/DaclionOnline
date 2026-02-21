@@ -1,23 +1,22 @@
-import prisma from "../config/prisma.js";
 import Monster from "./Monster.js";
 import type Player from "./Player.js";
 
 /** 몬스터 스폰 정보 */
 export interface SpawnInfo {
-    monsterDataId: number;
+    monsterDataId: string;
     maxCount: number;
     respawnTime: number;  // 초
 }
 
 /** 이동 가능 장소 연결 정보 */
 export interface ConnectionInfo {
-    locationId: number;
+    locationId: string;
     condition?: string;  // 조건 ID (없으면 무조건 이동 가능)
 }
 
 /** 장소 정의 (마스터 데이터) */
 export interface LocationData {
-    id: number;
+    id: string;
     name: string;
     x: number;
     y: number;
@@ -28,7 +27,7 @@ export interface LocationData {
 
 /** 바닥 아이템 */
 export interface DroppedItem {
-    itemDataId: number;
+    itemDataId: string;
     count: number;
     droppedAt: number;  // timestamp
 }
@@ -38,14 +37,14 @@ export type ConnectionStatus = 'visible' | 'locked' | 'hidden';
 
 /** 이동 가능 장소 조회 결과 */
 export interface AvailableConnection {
-    locationId: number;
+    locationId: string;
     name: string;
     status: ConnectionStatus;
 }
 
 // -- 스폰 타이머 --
 interface SpawnTimer {
-    monsterDataId: number;
+    monsterDataId: string;
     maxCount: number;
     respawnTime: number;
     timer: number;  // 남은 리스폰 시간
@@ -62,15 +61,15 @@ export function registerConnectionCondition(conditionId: string, handler: Condit
 
 // -- 패시브 콜백 레지스트리 --
 type PassiveCallback = (location: Location, dt: number) => void;
-const passiveCallbacks = new Map<number, PassiveCallback>();
+const passiveCallbacks = new Map<string, PassiveCallback>();
 
 /** 장소 패시브 함수 등록 */
-export function registerLocationPassive(locationId: number, callback: PassiveCallback): void {
+export function registerLocationPassive(locationId: string, callback: PassiveCallback): void {
     passiveCallbacks.set(locationId, callback);
 }
 
 export default class Location {
-    readonly id: number;
+    readonly id: string;
     readonly data: LocationData;
 
     private _monsters: Monster[] = [];
@@ -108,7 +107,7 @@ export default class Location {
 
     get droppedItems(): ReadonlyArray<DroppedItem> { return this._droppedItems; }
 
-    addDroppedItem(itemDataId: number, count: number): void {
+    addDroppedItem(itemDataId: string, count: number): void {
         this._droppedItems.push({ itemDataId, count, droppedAt: Date.now() });
     }
 
@@ -176,32 +175,17 @@ export default class Location {
 
 // -- LocationData 캐시 + Location 런타임 인스턴스 --
 
-const locationDataCache = new Map<number, LocationData>();
-const locationInstances = new Map<number, Location>();
+const locationDataCache = new Map<string, LocationData>();
+const locationInstances = new Map<string, Location>();
 
-/** 장소 데이터 로드 + 런타임 인스턴스 생성 (서버 시작 시 1회 호출) */
-export async function loadLocationData(): Promise<void> {
-    const rows = await prisma.locationData.findMany();
-    locationDataCache.clear();
-    locationInstances.clear();
-
-    for (const row of rows) {
-        const data: LocationData = {
-            id: row.id,
-            name: row.name,
-            x: row.x,
-            y: row.y,
-            z: row.z,
-            spawns: (row.spawns as unknown as SpawnInfo[]) ?? [],
-            connections: (row.connections as unknown as ConnectionInfo[]) ?? [],
-        };
-        locationDataCache.set(row.id, data);
-        locationInstances.set(row.id, new Location(data));
-    }
+/** 장소 정의 등록 (data/locations.ts에서 호출) */
+export function defineLocation(data: LocationData): void {
+    locationDataCache.set(data.id, data);
+    locationInstances.set(data.id, new Location(data));
 }
 
 /** 런타임 Location 인스턴스 조회 */
-export function getLocation(id: number): Location | undefined {
+export function getLocation(id: string): Location | undefined {
     return locationInstances.get(id);
 }
 
