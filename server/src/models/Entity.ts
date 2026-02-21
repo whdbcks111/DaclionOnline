@@ -65,6 +65,12 @@ export default abstract class Entity {
     get locationId() { return this._locationId; }
     set locationId(val: string) { this._locationId = val; }
 
+    get maxExp() { return Entity.getMaxExpOfLevel(this._level); }
+
+    static getMaxExpOfLevel(level: number): number {
+        return Math.max(1, level * 100);
+    }
+
     // -- 전투 --
 
     /** 대상 엔티티를 공격 */

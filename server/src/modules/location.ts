@@ -16,7 +16,7 @@ export function updateLocations(dt: number): void {
 }
 
 /** 이동 코루틴 */
-function* travelCoroutine(player: Player, targetLocationId: number): CoroutineGenerator {
+function* travelCoroutine(player: Player, targetLocationId: string): CoroutineGenerator {
     const from = getLocation(player.locationId);
     const to = getLocation(targetLocationId);
     if (!from || !to) return;
