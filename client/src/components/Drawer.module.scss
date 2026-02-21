@@ -99,6 +99,33 @@ $avatar-size: 80px;
     color: $color-danger;
 }
 
+.nicknameEditRow {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+}
+
+.nicknameInput {
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    border: 1px solid $color-primary;
+    border-radius: $border-radius-sm;
+    background-color: $color-bg-secondary;
+    color: $color-text;
+    font-size: $font-size-sm;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.nicknameEditButtons {
+    display: flex;
+    gap: $spacing-xs;
+
+    > button {
+        flex: 1;
+    }
+}
+
 .channelSection {
     display: flex;
     flex-direction: column;

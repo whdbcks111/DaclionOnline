@@ -10,17 +10,45 @@ interface Props {
     nickname?: string
     profileImage?: string
     onProfileUpdate: (filename: string) => void
+    onChangeNickname: (nickname: string) => Promise<{ ok?: boolean; error?: string }>
     userId?: number
     currentChannel: string | null
     channelList: ChannelInfo[]
     onJoinChannel: (channel: string | null) => void
 }
 
-export default function Drawer({ open, onClose, nickname, profileImage, onProfileUpdate, userId, currentChannel, channelList, onJoinChannel }: Props) {
+export default function Drawer({ open, onClose, nickname, profileImage, onProfileUpdate, onChangeNickname, userId, currentChannel, channelList, onJoinChannel }: Props) {
     const [uploading, setUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [showChannels, setShowChannels] = useState(false)
+    const [editingNickname, setEditingNickname] = useState(false)
+    const [nicknameInput, setNicknameInput] = useState('')
+    const [nicknameChanging, setNicknameChanging] = useState(false)
+    const [nicknameError, setNicknameError] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const handleNicknameEdit = () => {
+        setNicknameInput(nickname ?? '')
+        setNicknameError(null)
+        setEditingNickname(true)
+    }
+
+    const handleNicknameConfirm = async () => {
+        setNicknameChanging(true)
+        setNicknameError(null)
+        const result = await onChangeNickname(nicknameInput)
+        setNicknameChanging(false)
+        if (result.ok) {
+            setEditingNickname(false)
+        } else {
+            setNicknameError(result.error ?? '변경 실패')
+        }
+    }
+
+    const handleNicknameCancel = () => {
+        setEditingNickname(false)
+        setNicknameError(null)
+    }
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -85,6 +113,32 @@ export default function Drawer({ open, onClose, nickname, profileImage, onProfil
                         {uploading ? '업로드 중...' : '프로필 사진 변경'}
                     </button>
                     {error && <div className={styles.error}>{error}</div>}
+                    {editingNickname ? (
+                        <div className={styles.nicknameEditRow}>
+                            <input
+                                className={styles.nicknameInput}
+                                value={nicknameInput}
+                                onChange={e => setNicknameInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') handleNicknameConfirm(); if (e.key === 'Escape') handleNicknameCancel() }}
+                                maxLength={12}
+                                autoFocus
+                                disabled={nicknameChanging}
+                            />
+                            <div className={styles.nicknameEditButtons}>
+                                <button className={styles.uploadButton} onClick={handleNicknameConfirm} disabled={nicknameChanging}>
+                                    {nicknameChanging ? '변경 중...' : '확인'}
+                                </button>
+                                <button className={styles.uploadButton} onClick={handleNicknameCancel} disabled={nicknameChanging}>
+                                    취소
+                                </button>
+                            </div>
+                            {nicknameError && <div className={styles.error}>{nicknameError}</div>}
+                        </div>
+                    ) : (
+                        <button className={styles.uploadButton} onClick={handleNicknameEdit}>
+                            닉네임 변경
+                        </button>
+                    )}
                 </div>
                 <div className={styles.channelSection}>
                     <button

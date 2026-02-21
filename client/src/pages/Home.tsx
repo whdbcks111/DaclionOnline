@@ -8,7 +8,7 @@ import Drawer from '../components/Drawer'
 import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, ChannelInfo } from '@shared/types'
 
 function Home() {
-  const { socket, sessionInfo, updateProfileImage } = useSocket()
+  const { socket, sessionInfo, updateProfileImage, updateNickname } = useSocket()
   const [messages, setMessages] = useState<ChatMessageType[]>([])
   const [commands, setCommands] = useState<CommandInfo[]>([])
   const [commandFilter, setCommandFilter] = useState('')
@@ -80,6 +80,17 @@ function Home() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+const changeNickname = useCallback((nickname: string): Promise<{ ok?: boolean; error?: string }> => {
+    return new Promise((resolve) => {
+      if (!socket) return resolve({ error: '소켓 연결 없음' })
+      socket.once('nicknameResult', (result) => {
+        if (result.ok && result.nickname) updateNickname(result.nickname)
+        resolve(result)
+      })
+      socket.emit('changeNickname', nickname)
+    })
+  }, [socket, updateNickname])
 
 const sendMessage = useCallback(() => {
     const content = inputRef.current?.textContent?.trim()
@@ -227,6 +238,7 @@ const sendMessage = useCallback(() => {
         nickname={sessionInfo?.nickname}
         profileImage={sessionInfo?.profileImage}
         onProfileUpdate={updateProfileImage}
+        onChangeNickname={changeNickname}
         userId={sessionInfo?.userId}
         currentChannel={currentChannel}
         channelList={channelList}

@@ -128,6 +128,7 @@ export interface ServerToClientEvents {
     userCount: (count: number) => void
     channelChanged: (channel: string | null, history: ChatMessage[]) => void
     channelList: (channels: ChannelInfo[]) => void
+    nicknameResult: (result: SimpleResult & { nickname?: string }) => void
 }
 
 export interface ClientToServerEvents {
@@ -142,4 +143,5 @@ export interface ClientToServerEvents {
     requestUserCount: () => void
     joinChannel: (channel: string | null) => void
     requestChannelList: () => void
+    changeNickname: (nickname: string) => void
 }

@@ -2,7 +2,7 @@ import { pbkdf2Sync } from "crypto";
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js"
 import { randomHex } from "../utils/random.js";
-import { isValidPayload } from "../utils/validators.js";
+import { isValidPayload, validateNickname } from "../utils/validators.js";
 import prisma from "../config/prisma.js";
 import type { LoginRequest } from "../../../shared/types.js";
 import { loadPlayer, unloadPlayer } from "./player.js";
@@ -159,6 +159,48 @@ export const initLogin = () => {
 
         socket.on('requestUserCount', () => {
             socket.emit('userCount', onlineUsers.size);
+        });
+
+        socket.on('changeNickname', async (newNickname: unknown) => {
+            try {
+                const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+                if (!session) {
+                    socket.emit('nicknameResult', { error: '로그인이 필요합니다.' });
+                    return;
+                }
+
+                if (typeof newNickname !== 'string') {
+                    socket.emit('nicknameResult', { error: '잘못된 요청입니다.' });
+                    return;
+                }
+
+                const validationError = validateNickname(newNickname.trim());
+                if (validationError) {
+                    socket.emit('nicknameResult', { error: validationError });
+                    return;
+                }
+
+                const trimmed = newNickname.trim();
+
+                // 중복 검사
+                const existing = await prisma.user.findUnique({ where: { nickname: trimmed }, select: { id: true } });
+                if (existing && existing.id !== session.userId) {
+                    socket.emit('nicknameResult', { error: '이미 사용 중인 닉네임입니다.' });
+                    return;
+                }
+
+                await prisma.user.update({ where: { id: session.userId }, data: { nickname: trimmed } });
+
+                // 해당 유저의 모든 세션 닉네임 업데이트
+                for (const s of sessionMap.values()) {
+                    if (s.userId === session.userId) s.nickname = trimmed;
+                }
+
+                socket.emit('nicknameResult', { ok: true, nickname: trimmed });
+            } catch(e) {
+                logger.error('닉네임 변경 중 오류:', e);
+                socket.emit('nicknameResult', { error: '서버 오류가 발생했습니다.' });
+            }
         });
 
         socket.on('logout', async (token: unknown) => {

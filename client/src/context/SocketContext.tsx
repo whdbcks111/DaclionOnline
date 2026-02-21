@@ -19,6 +19,7 @@ interface SocketContextType {
   isConnected: boolean
   sessionInfo: SessionInfo | null
   updateProfileImage: (filename: string) => void
+  updateNickname: (nickname: string) => void
 }
 
 // Context 생성
@@ -33,6 +34,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   const updateProfileImage = (filename: string) => {
     setSessionInfo(prev => prev ? { ...prev, profileImage: filename } : prev)
+  }
+
+  const updateNickname = (nickname: string) => {
+    setSessionInfo(prev => prev ? { ...prev, nickname } : prev)
   }
 
   useEffect(() => {
@@ -79,6 +84,13 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       }
     })
 
+    // 닉네임 변경 성공 시 세션 정보 업데이트
+    socketInstance.on('nicknameResult', (result) => {
+      if (result.ok && result.nickname) {
+        setSessionInfo(prev => prev ? { ...prev, nickname: result.nickname! } : prev)
+      }
+    })
+
     setSocket(socketInstance)
 
     // 클린업: 컴포넌트 언마운트 시 연결 해제
@@ -89,7 +101,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected, sessionInfo, updateProfileImage }}>
+    <SocketContext.Provider value={{ socket, isConnected, sessionInfo, updateProfileImage, updateNickname }}>
       {children}
     </SocketContext.Provider>
   )
