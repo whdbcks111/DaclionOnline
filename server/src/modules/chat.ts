@@ -70,6 +70,18 @@ export const initChat = () => {
             socket.emit('channelChanged', channel, combined);
         });
 
+        socket.on('chatButtonClick', (action: unknown) => {
+            if (typeof action !== 'string') return;
+
+            const trimmed = action.trim();
+            if (!trimmed.startsWith('/')) return;
+
+            const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            if (!session) { socket.emit('sessionInvalid'); return; }
+
+            handleCommand(session.userId, trimmed, null, session.permission);
+        });
+
         socket.on('sendMessage', (content: unknown) => {
             if (typeof content !== 'string') return;
 

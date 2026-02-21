@@ -138,6 +138,7 @@ export interface ClientToServerEvents {
     sendVerifyCode: (email: string) => void
     verifyCode: (code: string) => void
     sendMessage: (content: string) => void
+    chatButtonClick: (action: string) => void
     requestChatHistory: () => void
     requestCommandList: () => void
     requestUserCount: () => void

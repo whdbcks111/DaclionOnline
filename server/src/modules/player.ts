@@ -195,7 +195,7 @@ export function initPlayer(): void {
         name: '레벨설정',
         description: '플레이어의 레벨을 설정합니다.',
         permission: 10,
-        showCommandUse: 'hide',
+        showCommandUse: 'private',
         args: [
             { name: '대상', description: '플레이어 userId 또는 me', required: true },
             { name: '레벨', description: '설정할 레벨 (1 이상 정수)', required: true },
@@ -234,7 +234,7 @@ export function initPlayer(): void {
         name: '아이템추가',
         description: '플레이어에게 아이템을 추가합니다.',
         permission: 10,
-        showCommandUse: 'hide',
+        showCommandUse: 'private',
         args: [
             { name: '대상', description: '플레이어 userId 또는 me', required: true },
             { name: '아이템id', description: '아이템 데이터 ID', required: true },
@@ -277,6 +277,134 @@ export function initPlayer(): void {
                 logger.error('아이템추가 명령어 처리 중 오류:', e);
                 sendBotMessageToUser(userId, '아이템 추가 중 오류가 발생했습니다.');
             }
+        },
+    });
+
+    registerCommand({
+        name: '인벤토리',
+        aliases: ['inv', 'i'],
+        description: '인벤토리를 확인합니다.',
+        args: [
+            { name: '공개/비공개', description: '공개 여부를 결정합니다.' },
+        ],
+        handler(userId, args) {
+            const player = getPlayer(userId);
+            if (!player) return;
+
+            const inv = player.inventory;
+            const items = inv.items;
+            const fmtW = (w: number) => Number.isInteger(w) ? String(w) : w.toFixed(1);
+
+            const b = chat()
+                .text(`[ 인벤토리 (${fmtW(inv.currentWeight)} / ${fmtW(inv.maxWeight)}) ]`);
+
+            if (items.length === 0) {
+                sendBotMessageToUser(userId, b.text('\n인벤토리가 비어 있습니다.').build());
+                return;
+            }
+
+            const SLOT = 35;
+            const CAT  = 90;
+            const NAME = 170;
+            const CNT  = 55;
+
+            b.text('\n').hide('목록 보기', inner => {
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    inner.tab(SLOT, b2 => b2.color('gray', b3 => b3.text(`[${i + 1}]`)))
+                         .tab(CAT,  b2 => b2.color('gray', b3 => b3.text(`[${item.category}]`)))
+                         .tab(NAME, b2 => b2.text(item.name))
+                         .tab(CNT,  b2 => b2.text(`x${item.count}`));
+
+                    if (item.data?.onUse) {
+                        inner.button(`/사용 ${item.id}`, b2 => b2.text('사용')).text(' ');
+                    }
+
+                    inner.button(`/버리기 ${item.id}`, b2 => b2.text('버리기')).text('\n');
+                }
+                return inner;
+            });
+
+            const channel = getUserChannel(userId);
+            if (args[0] === '공개') {
+                sendBotMessageToChannel(channel, b.build());
+            } else {
+                sendBotMessageToUser(userId, b.build());
+                sendBotMessageFiltered(uid => uid !== userId, channel, chat().text('[ 인벤토리 ]  비공개 정보입니다.').build(), false);
+            }
+        },
+    });
+
+    registerCommand({
+        name: '사용',
+        aliases: ['use'],
+        description: '아이템을 1개 사용합니다.',
+        showCommandUse: 'show',
+        args: [
+            { name: '아이템ID', description: '사용할 아이템 인스턴스 ID', required: true },
+        ],
+        async handler(userId, args) {
+            const player = getPlayer(userId);
+            if (!player) return;
+
+            const itemId = parseInt(args[0], 10);
+            if (isNaN(itemId)) return;
+
+            const item = player.inventory.getItem(itemId);
+            if (!item) {
+                sendBotMessageToUser(userId, '인벤토리에 해당 아이템이 없습니다.');
+                return;
+            }
+
+            if (player.inventory.isUsingItem) {
+                sendBotMessageToUser(userId, '이미 아이템을 사용 중입니다.');
+                return;
+            }
+
+            const result = player.inventory.useItem(itemId);
+            if (!result) {
+                sendBotMessageToUser(userId, `${item.name}은(는) 사용할 수 없습니다.`);
+                return;
+            }
+
+            await result;
+        },
+    });
+
+    registerCommand({
+        name: '버리기',
+        aliases: ['drop'],
+        description: '아이템을 1개 현재 장소에 버립니다.',
+        showCommandUse: 'show',
+        args: [
+            { name: '아이템ID', description: '버릴 아이템 인스턴스 ID', required: true },
+        ],
+        handler(userId, args) {
+            const player = getPlayer(userId);
+            if (!player) return;
+
+            const itemId = parseInt(args[0], 10);
+            if (isNaN(itemId)) return;
+
+            const item = player.inventory.getItem(itemId);
+            if (!item) {
+                sendBotMessageToUser(userId, '인벤토리에 해당 아이템이 없습니다.');
+                return;
+            }
+
+            const location = getLocation(player.locationId);
+            if (!location) {
+                sendBotMessageToUser(userId, '현재 위치를 찾을 수 없습니다.');
+                return;
+            }
+
+            const itemName = item.name;
+            const itemDataId = item.itemDataId;
+
+            player.inventory.removeItem(itemId, 1);
+            location.addDroppedItem(itemDataId, 1);
+
+            sendBotMessageToUser(userId, `${itemName}을(를) 버렸습니다.`);
         },
     });
 

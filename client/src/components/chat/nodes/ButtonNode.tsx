@@ -13,7 +13,7 @@ export default function ButtonNode({ action, children }: Props) {
 
     const handleClick = () => {
         if (!socket) return
-        socket.emit('chatButtonClick' as any, action)
+        socket.emit('chatButtonClick', action)
     }
 
     return (
