@@ -200,6 +200,10 @@ export default abstract class Entity {
         if (this._attackCooldown > 0) {
             this._attackCooldown = Math.max(0, this._attackCooldown - dt);
         }
+
+        if (this.life < this.maxLife) {
+            this.life += dt * 10; // TODO: change value
+        }
     }
     update(dt: number): void {}
     lateUpdate(dt: number): void {}

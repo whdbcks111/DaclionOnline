@@ -77,6 +77,7 @@ export function initPlayerCommands(): void {
                         .text(` ${location?.data.name ?? '???'}  `)
                         .color(player.moving ? 'gold' : 'gray', b2 => b2.text(player.moving ? '이동 중' : '대기 중'))
                         .text('\n')
+                        
                         .color('gray', b2 => b2.text('─── 상태 ───\n'))
                         .color('yellow', b2 => b2.text('생명력'))
                         .text('  ')
@@ -94,12 +95,7 @@ export function initPlayerCommands(): void {
                         .text('  ')
                         .progress({ value: thirstyRatio, length: 120, color: '#43dfb0', thickness: 8 })
                         .text(`  ${player.thirsty} / ${player.maxThirsty}\n`)
-                        .color('gray', b2 => b2.text('─── 스탯 ───\n'))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('근력'))).tab(V, b2 => b2.text(String(stats.strength)))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('민첩'))).tab(V, b2 => b2.text(String(stats.agility)))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('체력'))).text(`${stats.vitality}\n`)
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('감각'))).tab(V, b2 => b2.text(String(stats.sensibility)))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('정신력'))).text(`${stats.mentality}\n`)
+
                         .color('gray', b2 => b2.text('─── 능력치 ───\n'))
                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('공격력'))).tab(V, b2 => b2.text(fmt(attr.atk)))
                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('마법력'))).text(`${fmt(attr.magicForce)}\n`)
@@ -111,6 +107,14 @@ export function initPlayerCommands(): void {
                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('공격속도'))).text(`${fmt(attr.attackSpeed)}\n`)
                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('치명타율'))).tab(V, b2 => b2.text(`${(attr.critRate * 100).toFixed(1)}%`))
                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('치명타피해'))).text(`${(attr.critDmg * 100).toFixed(0)}%\n`)
+                        
+                        .color('gray', b2 => b2.text('─── 스탯 ───\n'))
+                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('스탯포인트'))).text(`${player.statPoint}\n`)
+                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('근력'))).tab(V, b2 => b2.text(String(stats.strength)))
+                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('민첩'))).tab(V, b2 => b2.text(String(stats.agility)))
+                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('체력'))).text(`${stats.vitality}\n`)
+                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('감각'))).tab(V, b2 => b2.text(String(stats.sensibility)))
+                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('정신력'))).text(`${stats.mentality}\n`)
                     )
                     .build();
 
