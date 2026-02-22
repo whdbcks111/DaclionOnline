@@ -122,7 +122,7 @@ export function initLocationCommands(): void {
         handler(userId) {
             const player = getPlayerByUserId(userId);
             const channel = getUserChannel(userId);
-            if (!player || !channel) return;
+            if (!player) return;
 
             const location = getLocation(player.locationId);
             if (!location) {
