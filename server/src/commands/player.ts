@@ -4,7 +4,8 @@ import { getUserChannel } from "../modules/channel.js";
 import { chat } from "../utils/chatBuilder.js";
 import { getPlayerByUserId } from "../modules/player.js";
 import { getLocation } from "../models/Location.js";
-import { getItemData } from "../models/Item.js";
+import { getItemData, Item } from "../models/Item.js";
+import type { EquipSlot } from "../models/Equipment.js";
 import Monster from "../models/Monster.js";
 import { STAT_TYPES } from "../models/Stat.js";
 import type { StatType } from "../models/Stat.js";
@@ -46,6 +47,10 @@ export function initPlayerCommands(): void {
                 const stats = player.stat.points;
 
                 const expRatio = Math.min(1, player.exp / player.maxExp);
+                const lifeRatio = Math.min(1, player.life / player.maxLife);
+                const mentalityRatio = Math.min(1, player.mentality / player.maxMentality);
+                const thirstyRatio = Math.min(1, player.thirsty / player.maxThirsty);
+                const hungryRatio = Math.min(1, player.hungry / player.maxHungry);
                 const fmt = (n: number) => Number.isInteger(n) ? String(n) : n.toFixed(2);
 
                 const L = 80;
@@ -64,15 +69,31 @@ export function initPlayerCommands(): void {
                         .text('  Lv.')
                         .color('lime', b => b.text(String(player.level)))
                         .text('\n')
-                        .color('yellow', b2 => b2.text('위치'))
-                        .text(` ${location?.data.name ?? '???'}  `)
-                        .color(player.moving ? 'gold' : 'gray', b2 => b2.text(player.moving ? '이동 중' : '대기 중'))
-                        .text('\n')
-                        .color('gray', b2 => b2.text('─── 경험치 ───\n'))
                         .color('yellow', b2 => b2.text('EXP'))
                         .text('  ')
                         .progress({ value: expRatio, length: 120, color: '#a855f7', thickness: 8 })
                         .text(`  ${player.exp} / ${player.maxExp}\n`)
+                        .color('yellow', b2 => b2.text('위치'))
+                        .text(` ${location?.data.name ?? '???'}  `)
+                        .color(player.moving ? 'gold' : 'gray', b2 => b2.text(player.moving ? '이동 중' : '대기 중'))
+                        .text('\n')
+                        .color('gray', b2 => b2.text('─── 상태 ───\n'))
+                        .color('yellow', b2 => b2.text('생명력'))
+                        .text('  ')
+                        .progress({ value: lifeRatio, length: 120, color: '#43dfb0', thickness: 8 })
+                        .text(`  ${player.life} / ${player.maxLife}\n`)
+                        .color('yellow', b2 => b2.text('정신력'))
+                        .text('  ')
+                        .progress({ value: mentalityRatio, length: 120, color: '#43dfb0', thickness: 8 })
+                        .text(`  ${player.mentality} / ${player.maxMentality}\n`)
+                        .color('yellow', b2 => b2.text('배고픔'))
+                        .text('  ')
+                        .progress({ value: hungryRatio, length: 120, color: '#43dfb0', thickness: 8 })
+                        .text(`  ${player.hungry} / ${player.maxHungry}\n`)
+                        .color('yellow', b2 => b2.text('목마름'))
+                        .text('  ')
+                        .progress({ value: thirstyRatio, length: 120, color: '#43dfb0', thickness: 8 })
+                        .text(`  ${player.thirsty} / ${player.maxThirsty}\n`)
                         .color('gray', b2 => b2.text('─── 스탯 ───\n'))
                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('근력'))).tab(V, b2 => b2.text(String(stats.strength)))
                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('민첩'))).tab(V, b2 => b2.text(String(stats.agility)))
@@ -174,7 +195,7 @@ export function initPlayerCommands(): void {
             const player = getPlayerByUserId(userId);
             if (!player) return;
 
-            const idx = parseInt(args[0], 10);
+            const idx = parseInt(args[0], 10) - 1;
             if (isNaN(idx)) return;
 
             const item = player.inventory.getItemByIndex(idx);
@@ -210,7 +231,7 @@ export function initPlayerCommands(): void {
             const player = getPlayerByUserId(userId);
             if (!player) return;
 
-            const idx = parseInt(args[0], 10);
+            const idx = parseInt(args[0], 10) - 1;
             if (isNaN(idx)) return;
 
             const item = player.inventory.getItemByIndex(idx);
@@ -236,6 +257,45 @@ export function initPlayerCommands(): void {
     });
 
     registerCommand({
+        name: '장착',
+        aliases: ['equip'],
+        description: '인벤토리의 아이템을 장착합니다.',
+        showCommandUse: 'show',
+        args: [
+            { name: '슬롯ID', description: '장착할 아이템 인벤토리 슬롯 ID', required: true },
+        ],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+
+            const idx = parseInt(args[0], 10) - 1;
+            if (isNaN(idx)) return;
+
+            const item = player.inventory.getItemByIndex(idx);
+            if (!item) {
+                sendBotMessageToUser(userId, '인벤토리에 해당 아이템이 없습니다.');
+                return;
+            }
+
+            const slot = item.equipSlot as EquipSlot | null;
+            if (!slot) {
+                sendBotMessageToUser(userId, `${item.name}은(는) 장착할 수 없는 아이템입니다.`);
+                return;
+            }
+
+            const equipItem = new Item(item.itemDataId, 1, item.durability, item.metadata ? { ...item.metadata } : null);
+            const success = player.equipment.equip(slot, equipItem, player.attribute);
+            if (!success) {
+                sendBotMessageToUser(userId, `${item.name}을(를) 장착할 수 없습니다. (슬롯이 가득 찼습니다.)`);
+                return;
+            }
+
+            player.inventory.removeItem(item.id, 1);
+            sendBotMessageToUser(userId, `${item.name}을(를) 장착했습니다.`);
+        },
+    });
+
+    registerCommand({
         name: '공격',
         aliases: ['attack', 'a'],
         description: '장소의 몬스터를 공격합니다.',
@@ -245,6 +305,7 @@ export function initPlayerCommands(): void {
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
+            const channel = getUserChannel(userId);
             if (!player) return;
 
             const location = getLocation(player.locationId);
@@ -316,7 +377,7 @@ export function initPlayerCommands(): void {
                         .text(`  가용 스탯 포인트 +${levelsGained.length * 3} (현재 ${player.statPoint})`);
                 }
 
-                sendBotMessageToUser(userId, killMsg.build());
+                sendBotMessageToChannel(channel, killMsg.build());
             }
         },
     });

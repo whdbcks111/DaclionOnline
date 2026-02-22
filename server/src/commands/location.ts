@@ -1,5 +1,5 @@
 import { registerCommand } from "../modules/bot.js";
-import { sendBotMessageToUser, sendNotificationToUser } from "../modules/message.js";
+import { sendBotMessageToChannel, sendBotMessageToUser, sendNotificationToUser } from "../modules/message.js";
 import { getPlayerByUserId } from "../modules/player.js";
 import { chat } from "../utils/chatBuilder.js";
 import { getLocation, distanceBetween } from "../models/Location.js";
@@ -7,6 +7,7 @@ import { getItemData } from "../models/Item.js";
 import { startCoroutine, Wait } from "../modules/coroutine.js";
 import type { CoroutineGenerator } from "../modules/coroutine.js";
 import type Player from "../models/Player.js";
+import { getUserChannel } from "../modules/channel.js";
 
 function* travelCoroutine(player: Player, targetLocationId: string): CoroutineGenerator {
     const from = getLocation(player.locationId);
@@ -117,10 +118,11 @@ export function initLocationCommands(): void {
         name: '위치',
         aliases: ['where', 'location'],
         description: '현재 위치 정보를 확인합니다.',
-        showCommandUse: 'hide',
+        showCommandUse: 'show',
         handler(userId) {
             const player = getPlayerByUserId(userId);
-            if (!player) return;
+            const channel = getUserChannel(userId);
+            if (!player || !channel) return;
 
             const location = getLocation(player.locationId);
             if (!location) {
@@ -181,7 +183,7 @@ export function initLocationCommands(): void {
                 }
             }
 
-            sendBotMessageToUser(userId, b.build());
+            sendBotMessageToChannel(channel, b.build());
         },
     });
 

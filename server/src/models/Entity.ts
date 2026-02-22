@@ -3,8 +3,9 @@ import type { AttributeRecord } from "./Attribute.js";
 import Equipment from "./Equipment.js";
 import Stat from "./Stat.js";
 import type { StatRecord } from "./Stat.js";
-import { broadcastNotification, sendBotMessageToUser } from "../modules/message.js";
+import { broadcastNotification, sendBotMessageToUser, sendNotificationFiltered } from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
+import { getPlayerByUserId } from "../modules/player.js";
 
 /** 대미지 타입 */
 export type DamageType = 'physical' | 'magic' | 'absolute';
@@ -160,7 +161,11 @@ export default abstract class Entity {
 
         // 플레이어 관련 알림 + 채팅 메시지
         if (this.isPlayer || target.isPlayer) {
-            broadcastNotification({
+            const locId = this.locationId;
+            sendNotificationFiltered(userId => {
+                const p = getPlayerByUserId(userId);
+                return p?.locationId === locId;
+            }, {
                 key: 'attack',
                 message: `${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.`,
             });
