@@ -37,6 +37,8 @@ export default abstract class Entity {
     protected _locationId: string;
     protected _life: number;
     protected _mentality: number;
+    protected _thirsty: number;
+    protected _hungry: number;
 
     currentTarget: Entity | null = null;
     lastDamageCause: DamageCause | null = null;
@@ -63,6 +65,8 @@ export default abstract class Entity {
         // 현재 생명력/정신력은 최대치로 초기화
         this._life = this.attribute.get('maxLife');
         this._mentality = this.attribute.get('maxMentality');
+        this._thirsty = this.attribute.get('maxThirsty');
+        this._hungry = this.attribute.get('maxHungry');
     }
 
     // -- Getters / Setters --
@@ -95,6 +99,15 @@ export default abstract class Entity {
 
     get maxLife() { return this.attribute.get('maxLife'); }
     get maxMentality() { return this.attribute.get('maxMentality'); }
+
+    get thirsty() { return this._thirsty; }
+    set thirsty(val: number) { this._thirsty = val; }
+
+    get hungry() { return this._hungry; }
+    set hungry(val: number) { this._hungry = val; }
+
+    get maxThirsty() { return this.attribute.get('maxThirsty'); }
+    get maxHungry() { return this.attribute.get('maxHungry'); }
 
     // -- 전투 --
 

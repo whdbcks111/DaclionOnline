@@ -25,6 +25,7 @@ export default class Player extends Entity {
         id: number, userId: number, nickname: string, level: number, exp: number,
         locationId: string, maxWeight: number, inventory: Inventory, equipment: Equipment,
         statPoints?: Partial<StatRecord>,
+        life?: number, mentality?: number, thirsty?: number, hungry?: number,
     ) {
         super(level, exp, locationId, DEFAULT_BASE_ATTRIBUTE, equipment, statPoints);
         this.id = id;
@@ -32,6 +33,11 @@ export default class Player extends Entity {
         this._nickname = nickname;
         this._maxWeight = maxWeight;
         this.inventory = inventory;
+
+        if (life      !== undefined) this._life      = life;
+        if (mentality !== undefined) this._mentality = mentality;
+        if (thirsty   !== undefined) this._thirsty   = thirsty;
+        if (hungry    !== undefined) this._hungry    = hungry;
     }
 
     override get name() { return this._nickname; }
@@ -52,6 +58,18 @@ export default class Player extends Entity {
 
     override get locationId() { return this._locationId; }
     override set locationId(val: string) { this._locationId = val; this._dirty = true; }
+
+    override get life() { return this._life; }
+    override set life(val: number) { this._life = val; this._dirty = true; }
+
+    override get mentality() { return this._mentality; }
+    override set mentality(val: number) { this._mentality = val; this._dirty = true; }
+
+    override get thirsty() { return this._thirsty; }
+    override set thirsty(val: number) { this._thirsty = val; this._dirty = true; }
+
+    override get hungry() { return this._hungry; }
+    override set hungry(val: number) { this._hungry = val; this._dirty = true; }
 
     get maxWeight() { return this._maxWeight; }
     set maxWeight(val: number) {
@@ -74,9 +92,9 @@ export default class Player extends Entity {
         const inventory = await Inventory.load(data.id, data.maxWeight);
         const equipment = await Equipment.load(data.id);
         const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined);
+        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry);
     }
-    
+
     static async load(id: number): Promise<Player | null> {
         const data = await prisma.player.findUnique({
             where: { id },
@@ -86,7 +104,7 @@ export default class Player extends Entity {
         const inventory = await Inventory.load(data.id, data.maxWeight);
         const equipment = await Equipment.load(data.id);
         const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined);
+        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry);
     }
 
     /** 새 플레이어 생성 */
@@ -111,6 +129,10 @@ export default class Player extends Entity {
                     maxWeight: this._maxWeight,
                     locationId: this._locationId,
                     stats: this.stat.points as any,
+                    life: this._life,
+                    mentality: this._mentality,
+                    thirsty: this._thirsty,
+                    hungry: this._hungry,
                 },
             });
             this._dirty = false;

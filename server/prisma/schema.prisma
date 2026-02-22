@@ -41,6 +41,11 @@ model Player {
   stats      Json?
   locationId String   @db.VarChar(100) @default("town_square") @map("location_id")
 
+  life       Float    @default(100.0)
+  mentality  Float    @default(50.0)
+  thirsty    Float    @default(100.0)
+  hungry     Float    @default(100.0)
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

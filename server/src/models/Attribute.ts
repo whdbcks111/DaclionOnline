@@ -1,6 +1,7 @@
 /** 능력치 종류 */
 export type AttributeType =
     | 'maxLife' | 'maxMentality'
+    | 'maxThirsty' | 'maxHungry'
     | 'atk' | 'magicForce'
     | 'def' | 'magicDef'
     | 'armorPen' | 'magicPen'
@@ -10,6 +11,7 @@ export type AttributeType =
 /** 모든 능력치 종류 목록 */
 export const ATTRIBUTE_TYPES: AttributeType[] = [
     'maxLife', 'maxMentality',
+    'maxThirsty', 'maxHungry',
     'atk', 'magicForce',
     'def', 'magicDef',
     'armorPen', 'magicPen',
@@ -35,16 +37,18 @@ export type AttributeRecord = Record<AttributeType, number>;
 export const DEFAULT_ATTRIBUTE: Readonly<AttributeRecord> = {
     maxLife:        100,
     maxMentality:   100,
-    atk:         10,
-    magicForce:  10,
-    def:         0,
-    magicDef:    0,
-    armorPen:    0,
-    magicPen:    0,
-    speed:       1,
-    attackSpeed: 1,
-    critRate:    0.05,
-    critDmg:     1.5,
+    maxHungry:      100,
+    maxThirsty:     100,
+    atk:            10,
+    magicForce:     10,
+    def:            0,
+    magicDef:       0,
+    armorPen:       0,
+    magicPen:       0,
+    speed:          1,
+    attackSpeed:    1,
+    critRate:       0.05,
+    critDmg:        1.5,
 };
 
 function createAttributeRecord(): AttributeRecord {
