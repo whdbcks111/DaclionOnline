@@ -2,7 +2,8 @@ import prisma from "../config/prisma.js";
 import Entity from "./Entity.js";
 import Inventory from "./Inventory.js";
 import Equipment from "./Equipment.js";
-import type { StatRecord } from "./Stat.js";
+import { STAT_TYPES } from "./Stat.js";
+import type { StatType, StatRecord } from "./Stat.js";
 
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
@@ -20,12 +21,14 @@ export default class Player extends Entity {
     private _maxWeight: number;
     private _dirty = false;
     private _moving = false;
+    private _statPoint = 0;
 
     private constructor(
         id: number, userId: number, nickname: string, level: number, exp: number,
         locationId: string, maxWeight: number, inventory: Inventory, equipment: Equipment,
         statPoints?: Partial<StatRecord>,
         life?: number, mentality?: number, thirsty?: number, hungry?: number,
+        statPoint = 0,
     ) {
         super(level, exp, locationId, DEFAULT_BASE_ATTRIBUTE, equipment, statPoints);
         this.id = id;
@@ -33,6 +36,7 @@ export default class Player extends Entity {
         this._nickname = nickname;
         this._maxWeight = maxWeight;
         this.inventory = inventory;
+        this._statPoint = statPoint;
 
         if (life      !== undefined) this._life      = life;
         if (mentality !== undefined) this._mentality = mentality;
@@ -79,7 +83,43 @@ export default class Player extends Entity {
         this._dirty = true;
     }
 
+    get statPoint() { return this._statPoint; }
+    set statPoint(val: number) { this._statPoint = val; this._dirty = true; }
+
     get dirty() { return this._dirty || this.inventory.dirty || this.equipment.dirty; }
+
+    // -- 게임 로직 --
+
+    /** 경험치 획득 및 레벨업 처리. 레벨업한 레벨 목록을 반환 */
+    gainExp(amount: number): number[] {
+        this._exp += amount;
+        this._dirty = true;
+
+        const levelsGained: number[] = [];
+        while (this._exp >= this.maxExp) {
+            this._exp -= this.maxExp;
+            this._level++;
+            levelsGained.push(this._level);
+
+            // 레벨업 보너스: 모든 스탯 +1, 가용 포인트 +3
+            for (const stat of STAT_TYPES) {
+                this.stat.add(stat, 1);
+            }
+            this._statPoint += 3;
+            this.stat.applyModifiers(this.attribute);
+        }
+        return levelsGained;
+    }
+
+    /** 스탯 포인트 분배. 성공 여부를 반환 */
+    allocateStat(statType: StatType, amount: number): boolean {
+        if (this._statPoint < amount) return false;
+        this.stat.add(statType, amount);
+        this._statPoint -= amount;
+        this.stat.applyModifiers(this.attribute);
+        this._dirty = true;
+        return true;
+    }
 
     // -- DB 연동 --
 
@@ -93,7 +133,7 @@ export default class Player extends Entity {
         const inventory = await Inventory.load(data.id, data.maxWeight);
         const equipment = await Equipment.load(data.id);
         const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry);
+        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint);
     }
 
     static async load(id: number): Promise<Player | null> {
@@ -105,7 +145,7 @@ export default class Player extends Entity {
         const inventory = await Inventory.load(data.id, data.maxWeight);
         const equipment = await Equipment.load(data.id);
         const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry);
+        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint);
     }
 
     /** 새 플레이어 생성 */
@@ -134,6 +174,7 @@ export default class Player extends Entity {
                     mentality: this._mentality,
                     thirsty: this._thirsty,
                     hungry: this._hungry,
+                    statPoint: this._statPoint,
                 },
             });
             this._dirty = false;

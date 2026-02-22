@@ -6,8 +6,21 @@ import { getPlayerByUserId } from "../modules/player.js";
 import { getLocation } from "../models/Location.js";
 import { getItemData } from "../models/Item.js";
 import Monster from "../models/Monster.js";
+import { STAT_TYPES } from "../models/Stat.js";
+import type { StatType } from "../models/Stat.js";
 import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
+
+const STAT_KR: Record<StatType, string> = {
+    strength: '근력', agility: '민첩', vitality: '체력', sensibility: '감각', mentality: '정신력',
+};
+const STAT_FROM_INPUT: Record<string, StatType> = {
+    '근력': 'strength', 'strength': 'strength',
+    '민첩': 'agility',  'agility': 'agility',
+    '체력': 'vitality', 'vitality': 'vitality',
+    '감각': 'sensibility', 'sensibility': 'sensibility',
+    '정신력': 'mentality', 'mentality': 'mentality',
+};
 
 export function initPlayerCommands(): void {
     registerCommand({
@@ -283,7 +296,7 @@ export function initPlayerCommands(): void {
                 for (const drop of drops) {
                     location.addDroppedItem(drop.itemDataId, drop.count);
                 }
-                player.exp += monster.expReward;
+                const levelsGained = player.gainExp(monster.expReward);
 
                 const killMsg = chat()
                     .color('gold', b => b.text(`${monster.name} 처치! `))
@@ -297,8 +310,87 @@ export function initPlayerCommands(): void {
                     killMsg.text(`\n드롭: ${dropNames}`);
                 }
 
+                if (levelsGained.length > 0) {
+                    killMsg.text('\n')
+                        .color('aqua', b => b.text(`레벨 업! Lv.${levelsGained[levelsGained.length - 1]}`))
+                        .text(`  가용 스탯 포인트 +${levelsGained.length * 3} (현재 ${player.statPoint})`);
+                }
+
                 sendBotMessageToUser(userId, killMsg.build());
             }
+        },
+    });
+
+    registerCommand({
+        name: '스탯분배',
+        aliases: ['stat'],
+        description: '스탯 포인트를 분배합니다. 인자 없이 입력하면 분배 UI를 표시합니다.',
+        showCommandUse: 'hide',
+        args: [
+            { name: '스탯', description: '근력 / 민첩 / 체력 / 감각 / 정신력 (또는 영문)' },
+            { name: '포인트', description: '투자할 포인트 수' },
+        ],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+
+            const stats = player.stat.points;
+            const available = player.statPoint;
+
+            // 인자 없음: 분배 UI 표시
+            if (args.length === 0) {
+                const b = chat()
+                    .color('gray', b2 => b2.text('[ 스탯 분배 ]  '))
+                    .text('가용 포인트: ')
+                    .color(available > 0 ? 'lime' : 'gray', b2 => b2.text(String(available)))
+                    .text('\n');
+
+                const L = 100;
+                const V = 55;
+                for (const stat of STAT_TYPES) {
+                    b.tab(L, b2 => b2.color('yellow', b3 => b3.text(STAT_KR[stat])))
+                     .tab(V, b2 => b2.text(String(stats[stat])));
+                    if (available > 0) {
+                        b.button(`/스탯분배 ${stat} 1`, b2 => b2.color('lime', b3 => b3.text('[+1]')));
+                    }
+                    b.text('\n');
+                }
+
+                sendBotMessageToUser(userId, b.build());
+                return;
+            }
+
+            // 인자 1개: 사용법 안내
+            if (args.length === 1) {
+                sendBotMessageToUser(userId, `사용법: /스탯분배 [스탯] [포인트]\n예: /스탯분배 근력 3`);
+                return;
+            }
+
+            // 인자 2개: 스탯 분배
+            const statType = STAT_FROM_INPUT[args[0].toLowerCase()] ?? STAT_FROM_INPUT[args[0]];
+            if (!statType) {
+                sendBotMessageToUser(userId, `유효한 스탯 이름을 입력해주세요. (${Object.values(STAT_KR).join(' / ')})`);
+                return;
+            }
+
+            const amount = parseInt(args[1], 10);
+            if (isNaN(amount) || amount < 1) {
+                sendBotMessageToUser(userId, '1 이상의 정수를 입력해주세요.');
+                return;
+            }
+
+            if (available < amount) {
+                sendBotMessageToUser(userId, `가용 포인트가 부족합니다. (현재 ${available})`);
+                return;
+            }
+
+            player.allocateStat(statType, amount);
+            sendBotMessageToUser(userId, chat()
+                .color('yellow', b => b.text(STAT_KR[statType]))
+                .text(` +${amount}  →  현재 ${player.stat.get(statType)}`)
+                .text(`  (남은 포인트: ${player.statPoint})`)
+                .build()
+            );
         },
     });
 }
