@@ -14,13 +14,17 @@ export interface ConnectionInfo {
     condition?: string;  // 조건 ID (없으면 무조건 이동 가능)
 }
 
+export type ZoneType = 'safe' | 'normal';
+
 /** 장소 정의 (마스터 데이터) */
 export interface LocationData {
     id: string;
     name: string;
+    zoneType: ZoneType,
     x: number;
     y: number;
     z: number;
+    isRespawnLocation?: boolean,
     spawns: SpawnInfo[];
     connections: ConnectionInfo[];
 }

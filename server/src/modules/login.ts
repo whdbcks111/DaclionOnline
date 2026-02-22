@@ -5,7 +5,7 @@ import { randomHex } from "../utils/random.js";
 import { isValidPayload, validateNickname } from "../utils/validators.js";
 import prisma from "../config/prisma.js";
 import type { LoginRequest } from "../../../shared/types.js";
-import { loadPlayer, unloadPlayer } from "./player.js";
+import { loadPlayerByUserId, unloadPlayerByUserId } from "./player.js";
 import { getUserChannel, getChannelRoomKey } from "./channel.js";
 import type { Session } from "../types/index.js";
 
@@ -99,7 +99,7 @@ export const initLogin = () => {
                 profileImage: session.profileImage,
             });
             // 세션 복원 시 플레이어가 메모리에 없을 수 있으므로 보장
-            loadPlayer(session.userId).catch(e => logger.error('세션 복원 중 플레이어 로드 오류:', e));
+            loadPlayerByUserId(session.userId).catch(e => logger.error('세션 복원 중 플레이어 로드 오류:', e));
         }
         else {
             socket.emit('sessionInvalid');
@@ -143,7 +143,7 @@ export const initLogin = () => {
                 socket.data.sessionToken = sessionToken;
                 setUserOnline(user.id);
                 socket.join(getChannelRoomKey(getUserChannel(user.id)));
-                await loadPlayer(user.id);
+                await loadPlayerByUserId(user.id);
                 socket.emit('loginResult', {
                     ok: true,
                     userId: user.id,
@@ -208,7 +208,7 @@ export const initLogin = () => {
                 if (typeof token !== 'string') return;
                 const logoutSession = getSession(token);
                 if (logoutSession && getUserSessionCount(logoutSession.userId) <= 1) {
-                    await unloadPlayer(logoutSession.userId);
+                    await unloadPlayerByUserId(logoutSession.userId);
                 }
                 removeSession(token);
                 socket.emit('logoutResult', { ok: true });

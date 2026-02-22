@@ -65,9 +65,21 @@ export default class Player extends Entity {
     // -- DB 연동 --
 
     /** DB에서 플레이어 로드 */
-    static async load(userId: number): Promise<Player | null> {
+    static async loadByUserId(userId: number): Promise<Player | null> {
         const data = await prisma.player.findUnique({
             where: { userId },
+            include: { user: { select: { nickname: true } } },
+        });
+        if (!data) return null;
+        const inventory = await Inventory.load(data.id, data.maxWeight);
+        const equipment = await Equipment.load(data.id);
+        const stats = data.stats as Partial<StatRecord> | null;
+        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined);
+    }
+    
+    static async load(id: number): Promise<Player | null> {
+        const data = await prisma.player.findUnique({
+            where: { id },
             include: { user: { select: { nickname: true } } },
         });
         if (!data) return null;

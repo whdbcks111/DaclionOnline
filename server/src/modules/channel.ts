@@ -88,3 +88,27 @@ export function getFilteredHistoryForUser(userId: number, channel: string | null
         .filter(entry => entry.filter(userId))
         .map(entry => entry.msg);
 }
+
+/** ID로 메시지 내용 수정 (공개/필터 히스토리 모두 탐색) */
+export function editMessageInHistory(id: string, newContent: ChatMessage['content']): void {
+    for (const history of channelHistories.values()) {
+        const msg = history.find(m => m.id === id);
+        if (msg) { msg.content = newContent; return; }
+    }
+    for (const history of filteredChannelHistories.values()) {
+        const entry = history.find(e => e.msg.id === id);
+        if (entry) { entry.msg.content = newContent; return; }
+    }
+}
+
+/** ID로 메시지 삭제 (공개/필터 히스토리 모두 탐색) */
+export function deleteMessageFromHistory(id: string): void {
+    for (const history of channelHistories.values()) {
+        const idx = history.findIndex(m => m.id === id);
+        if (idx !== -1) { history.splice(idx, 1); return; }
+    }
+    for (const history of filteredChannelHistories.values()) {
+        const idx = history.findIndex(e => e.msg.id === id);
+        if (idx !== -1) { history.splice(idx, 1); return; }
+    }
+}

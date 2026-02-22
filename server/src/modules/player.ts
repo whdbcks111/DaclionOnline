@@ -13,51 +13,90 @@ import { getSession } from "./login.js";
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 3_000;  // 3초
 
-const onlinePlayers = new Map<number, Player>(); // userId → Player
+const onlinePlayersFromUserId = new Map<number, Player>(); // userId → Player
+const onlinePlayers = new Map<number, Player>(); // playerId → Player
 
 /** 로그인 시 호출: DB에서 로드하여 메모리에 올림 */
-export async function loadPlayer(userId: number): Promise<Player> {
-    const existing = onlinePlayers.get(userId);
+export async function loadPlayerByUserId(userId: number): Promise<Player> {
+    const existing = onlinePlayersFromUserId.get(userId);
     if (existing) return existing;
 
-    let player = await Player.load(userId);
+    let player = await Player.loadByUserId(userId);
     if (!player) {
         player = await Player.create(userId);
     }
 
-    onlinePlayers.set(userId, player);
+    onlinePlayersFromUserId.set(player.userId, player);
+    onlinePlayers.set(player.id, player);
+    return player;
+}
+
+/** 로그인 시 호출: DB에서 로드하여 메모리에 올림 */
+export async function loadPlayer(id: number): Promise<Player | null> {
+    const existing = onlinePlayers.get(id);
+    if (existing) return existing;
+
+    let player = await Player.load(id);
+    if (!player) {
+        return null;
+    }
+
+    onlinePlayersFromUserId.set(player.userId, player);
+    onlinePlayers.set(player.id, player);
     return player;
 }
 
 /** 로그아웃/연결끊김 시 호출: 저장 후 메모리에서 제거 */
-export async function unloadPlayer(userId: number): Promise<void> {
-    const player = onlinePlayers.get(userId);
+export async function unloadPlayerByUserId(userId: number): Promise<void> {
+    const player = onlinePlayersFromUserId.get(userId);
     if (!player) return;
     await player.save();
-    onlinePlayers.delete(userId);
+    onlinePlayersFromUserId.delete(player.userId);
+    onlinePlayers.delete(player.id);
+}
+
+/** 로그아웃/연결끊김 시 호출: 저장 후 메모리에서 제거 */
+export async function unloadPlayer(id: number): Promise<void> {
+    const player = onlinePlayers.get(id);
+    if (!player) return;
+    await player.save();
+    onlinePlayersFromUserId.delete(player.userId);
+    onlinePlayers.delete(player.id);
 }
 
 /** 온라인 플레이어 조회 (메모리) */
-export function getPlayer(userId: number): Player | undefined {
-    return onlinePlayers.get(userId);
+export function getPlayerByUserId(userId: number): Player | undefined {
+    return onlinePlayersFromUserId.get(userId);
+}
+
+/** 온라인 플레이어 조회 (메모리) */
+export function getPlayer(id: number): Player | undefined {
+    return onlinePlayers.get(id);
 }
 
 /** 온라인 플레이어 목록 반환 */
 export function getOnlinePlayers(): Player[] {
-    return Array.from(onlinePlayers.values());
+    return Array.from(onlinePlayersFromUserId.values());
 }
 
 /** 오프라인 플레이어 조회 (DB에서 직접 로드, 메모리에 올리지 않음) */
-export async function fetchPlayer(userId: number): Promise<Player | null> {
-    const online = onlinePlayers.get(userId);
+export async function fetchPlayerByUserId(userId: number): Promise<Player | null> {
+    const online = onlinePlayersFromUserId.get(userId);
     if (online) return online;
-    return Player.load(userId);
+    return Player.loadByUserId(userId);
+}
+
+/** 오프라인 플레이어 조회 (DB에서 직접 로드, 메모리에 올리지 않음) */
+export async function fetchPlayer(id: number): Promise<Player | null> {
+    const online = onlinePlayers.get(id);
+    if (online) return online;
+    return Player.load(id);
 }
 
 /** 모든 온라인 플레이어 저장 */
 export async function saveAllPlayers(): Promise<void> {
     const promises: Promise<void>[] = [];
-    for (const player of onlinePlayers.values()) {
+    for (const player of onlinePlayersFromUserId.values()) {
         promises.push(player.save());
     }
     await Promise.all(promises);
@@ -65,7 +104,7 @@ export async function saveAllPlayers(): Promise<void> {
 
 /** 특정 유저의 Life/Mentality 상태를 해당 유저 소켓에 전송 */
 export function sendPlayerStats(userId: number): void {
-    const player = onlinePlayers.get(userId);
+    const player = onlinePlayersFromUserId.get(userId);
     if (!player) return;
 
     const data = {
@@ -97,7 +136,7 @@ export function initPlayer(): void {
 
     // 주기적 Life/Mentality 브로드캐스트
     setInterval(() => {
-        for (const userId of onlinePlayers.keys()) {
+        for (const userId of onlinePlayersFromUserId.keys()) {
             sendPlayerStats(userId);
         }
     }, STATS_INTERVAL);
@@ -111,7 +150,7 @@ export function initPlayer(): void {
         description: '플레이어 정보를 확인합니다.',
         async handler(userId, args) {
             try {
-                const player = getPlayer(userId);
+                const player = getPlayerByUserId(userId);
                 if (!player) return;
 
                 const user = await prisma.user.findUnique({
@@ -212,7 +251,7 @@ export function initPlayer(): void {
                     sendBotMessageToUser(userId, '유효한 레벨을 입력해주세요. (1 이상 정수)');
                     return;
                 }
-                const player = await fetchPlayer(targetId);
+                const player = await fetchPlayerByUserId(targetId);
                 if (!player) {
                     sendBotMessageToUser(userId, '플레이어를 찾을 수 없습니다.');
                     return;
@@ -258,7 +297,7 @@ export function initPlayer(): void {
                     sendBotMessageToUser(userId, `아이템 ID '${itemDataId}'를 찾을 수 없습니다.`);
                     return;
                 }
-                const player = await fetchPlayer(targetId);
+                const player = await fetchPlayerByUserId(targetId);
                 if (!player) {
                     sendBotMessageToUser(userId, '플레이어를 찾을 수 없습니다.');
                     return;
@@ -288,7 +327,7 @@ export function initPlayer(): void {
             { name: '공개/비공개', description: '공개 여부를 결정합니다.' },
         ],
         handler(userId, args) {
-            const player = getPlayer(userId);
+            const player = getPlayerByUserId(userId);
             if (!player) return;
 
             const inv = player.inventory;
@@ -317,10 +356,10 @@ export function initPlayer(): void {
                          .tab(CNT,  b2 => b2.text(`x${item.count}`));
 
                     if (item.data?.onUse) {
-                        inner.button(`/사용 ${item.id}`, b2 => b2.text('사용')).text(' ');
+                        inner.closeButton(`/사용 ${i}`, b2 => b2.text('사용')).text(' ');
                     }
 
-                    inner.button(`/버리기 ${item.id}`, b2 => b2.text('버리기')).text('\n');
+                    inner.closeButton(`/버리기 ${i}`, b2 => b2.text('버리기')).text('\n');
                 }
                 return inner;
             });
@@ -341,16 +380,16 @@ export function initPlayer(): void {
         description: '아이템을 1개 사용합니다.',
         showCommandUse: 'show',
         args: [
-            { name: '아이템ID', description: '사용할 아이템 인스턴스 ID', required: true },
+            { name: '슬롯ID', description: '사용할 아이템 인벤토리 슬롯 ID', required: true },
         ],
         async handler(userId, args) {
-            const player = getPlayer(userId);
+            const player = getPlayerByUserId(userId);
             if (!player) return;
 
-            const itemId = parseInt(args[0], 10);
-            if (isNaN(itemId)) return;
+            const idx = parseInt(args[0], 10);
+            if (isNaN(idx)) return;
 
-            const item = player.inventory.getItem(itemId);
+            const item = player.inventory.getItemByIndex(idx);
             if (!item) {
                 sendBotMessageToUser(userId, '인벤토리에 해당 아이템이 없습니다.');
                 return;
@@ -361,7 +400,7 @@ export function initPlayer(): void {
                 return;
             }
 
-            const result = player.inventory.useItem(itemId);
+            const result = player.inventory.useItem(item.id);
             if (!result) {
                 sendBotMessageToUser(userId, `${item.name}은(는) 사용할 수 없습니다.`);
                 return;
@@ -377,16 +416,16 @@ export function initPlayer(): void {
         description: '아이템을 1개 현재 장소에 버립니다.',
         showCommandUse: 'show',
         args: [
-            { name: '아이템ID', description: '버릴 아이템 인스턴스 ID', required: true },
+            { name: '슬롯ID', description: '버릴 아이템 인벤토리 슬롯 ID', required: true },
         ],
         handler(userId, args) {
-            const player = getPlayer(userId);
+            const player = getPlayerByUserId(userId);
             if (!player) return;
 
-            const itemId = parseInt(args[0], 10);
-            if (isNaN(itemId)) return;
+            const idx = parseInt(args[0], 10);
+            if (isNaN(idx)) return;
 
-            const item = player.inventory.getItem(itemId);
+            const item = player.inventory.getItemByIndex(idx);
             if (!item) {
                 sendBotMessageToUser(userId, '인벤토리에 해당 아이템이 없습니다.');
                 return;
@@ -401,10 +440,59 @@ export function initPlayer(): void {
             const itemName = item.name;
             const itemDataId = item.itemDataId;
 
-            player.inventory.removeItem(itemId, 1);
+            player.inventory.removeItem(item.id, 1);
             location.addDroppedItem(itemDataId, 1);
 
             sendBotMessageToUser(userId, `${itemName}을(를) 버렸습니다.`);
+        },
+    });
+
+    registerCommand({
+        name: '순간이동',
+        aliases: ['tp', 'teleport'],
+        description: '플레이어를 지정한 장소로 순간이동시킵니다.',
+        permission: 10,
+        showCommandUse: 'private',
+        args: [
+            { name: '대상', description: '플레이어 userId 또는 me', required: true },
+            { name: '장소id', description: '이동할 장소 ID', required: true },
+        ],
+        async handler(userId, args) {
+            try {
+                const targetId = args[0] === 'me' ? userId : parseInt(args[0], 10);
+                if (isNaN(targetId)) {
+                    sendBotMessageToUser(userId, '유효한 플레이어 ID를 입력해주세요.');
+                    return;
+                }
+
+                const locationId = args[1];
+                const location = getLocation(locationId);
+                if (!location) {
+                    sendBotMessageToUser(userId, `장소 ID '${locationId}'를 찾을 수 없습니다.`);
+                    return;
+                }
+
+                const player = await fetchPlayerByUserId(targetId);
+                if (!player) {
+                    sendBotMessageToUser(userId, '플레이어를 찾을 수 없습니다.');
+                    return;
+                }
+
+                if (player.moving) {
+                    player.moving = false;
+                }
+
+                player.locationId = locationId;
+                await player.save();
+
+                sendBotMessageToUser(userId, `${player.name}을(를) ${location.data.name}(으)로 순간이동시켰습니다.`);
+                if (targetId !== userId) {
+                    sendBotMessageToUser(targetId, `관리자에 의해 ${location.data.name}(으)로 이동되었습니다.`);
+                }
+            } catch (e) {
+                logger.error('순간이동 명령어 처리 중 오류:', e);
+                sendBotMessageToUser(userId, '순간이동 중 오류가 발생했습니다.');
+            }
         },
     });
 

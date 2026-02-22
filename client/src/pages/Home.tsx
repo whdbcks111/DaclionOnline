@@ -54,6 +54,14 @@ function Home() {
       setChannelList(list)
     }
 
+    const onEditMessage = (id: string, content: ChatMessageType['content']) => {
+      setMessages(prev => prev.map(msg => msg.id === id ? { ...msg, content } : msg))
+    }
+
+    const onDeleteMessage = (id: string) => {
+      setMessages(prev => prev.filter(msg => msg.id !== id))
+    }
+
     socket.on('chatHistory', onChatHistory)
     socket.on('chatMessage', onChatMessage)
     socket.on('commandList', onCommandList)
@@ -61,6 +69,8 @@ function Home() {
     socket.on('playerStats', onPlayerStats)
     socket.on('channelChanged', onChannelChanged)
     socket.on('channelList', onChannelList)
+    socket.on('editMessage', onEditMessage)
+    socket.on('deleteMessage', onDeleteMessage)
     socket.emit('requestChatHistory')
     socket.emit('requestCommandList')
     socket.emit('requestUserCount')
@@ -73,6 +83,8 @@ function Home() {
       socket.off('playerStats', onPlayerStats)
       socket.off('channelChanged', onChannelChanged)
       socket.off('channelList', onChannelList)
+      socket.off('editMessage', onEditMessage)
+      socket.off('deleteMessage', onDeleteMessage)
     }
   }, [socket])
 
@@ -195,7 +207,7 @@ const sendMessage = useCallback(() => {
               || Math.floor(prev.timestamp / 60000) !== Math.floor(msg.timestamp / 60000)
             return (
               <ChatMessage
-                key={i}
+                key={msg.id ?? i}
                 message={msg}
                 showHeader={showHeader}
               />

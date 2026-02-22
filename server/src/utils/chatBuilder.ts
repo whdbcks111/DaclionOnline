@@ -56,6 +56,13 @@ class ChatBuilder {
         return this
     }
 
+    closeButton(action: string, build: (b: ChatBuilder) => ChatBuilder): this {
+        const inner = new ChatBuilder()
+        build(inner)
+        this.nodes.push({ type: 'button', action, children: inner.nodes, closeOnClick: true })
+        return this
+    }
+
     progress(options: {
         value: number;
         length?: number;

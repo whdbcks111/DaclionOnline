@@ -1,11 +1,22 @@
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
 import { parseChatMessage } from "../utils/chatParser.js";
-import { getChannelRoomKey, addToChannelHistory, addToAllChannelHistories, addToFilteredChannelHistory, getUserChannel } from "./channel.js";
+import { getChannelRoomKey, addToChannelHistory, addToAllChannelHistories, addToFilteredChannelHistory, getUserChannel, editMessageInHistory, deleteMessageFromHistory } from "./channel.js";
 import type { ChatMessage, ChatFlag, ChatNode, NotificationData } from "../../../shared/types.js";
 
 const BOT_USER_ID = 0;
 const BOT_NICKNAME = "Daclion System";
+
+// ── 메시지 ID 생성 ──
+
+let _msgCounter = 0;
+function generateMessageId(): string {
+    return `m${Date.now().toString(36)}_${(++_msgCounter).toString(36)}`;
+}
+
+function withId(msg: ChatMessage): ChatMessage {
+    return msg.id ? msg : { ...msg, id: generateMessageId() };
+}
 
 /** permission 기반 플래그 생성 */
 export function getFlagsForPermission(permission: number): ChatFlag[] {
@@ -18,15 +29,16 @@ export function getFlagsForPermission(permission: number): ChatFlag[] {
 
 /** 특정 채널에 메시지 전송 (채널 히스토리에 저장) */
 export function sendMessageToChannel(msg: ChatMessage, channel: string | null): void {
-    addToChannelHistory(channel, msg);
-    getIO().to(getChannelRoomKey(channel)).emit('chatMessage', msg);
+    const identified = withId(msg);
+    addToChannelHistory(channel, identified);
+    getIO().to(getChannelRoomKey(channel)).emit('chatMessage', identified);
 }
 
 const FLAG_ALL: ChatFlag = { text: '전체', color: '#08c26e' };
 
 /** 모든 채널에 브로드캐스트 (모든 채널 히스토리에 저장, [전체] 플래그 자동 부착) */
 export function broadcastMessageAll(msg: ChatMessage): void {
-    const flagged: ChatMessage = { ...msg, flags: [FLAG_ALL, ...(msg.flags ?? [])] };
+    const flagged: ChatMessage = withId({ ...msg, flags: [FLAG_ALL, ...(msg.flags ?? [])] });
     addToAllChannelHistories(flagged);
     getIO().emit('chatMessage', flagged);
 }
@@ -82,7 +94,7 @@ export function sendMessageFiltered(
     msg: ChatMessage,
     privateLabel = true,
 ): void {
-    const emitMsg = privateLabel ? { ...msg, private: true } : msg;
+    const emitMsg = withId(privateLabel ? { ...msg, private: true } : msg);
     addToFilteredChannelHistory(channel, filter, emitMsg);
     // 해당 채널에 현재 접속 중인 유저에게만 실시간 전달
     forEachSocket(
@@ -126,4 +138,18 @@ export function broadcastNotification(data: NotificationData): void {
 /** 특정 유저에게만 알림 전송 */
 export function sendNotificationToUser(userId: number, data: NotificationData): void {
     sendNotificationFiltered(id => id === userId, data);
+}
+
+// ── 메시지 편집 / 삭제 ──
+
+/** 이미 전송된 메시지 내용 수정 후 전체 브로드캐스트 */
+export function editMessage(id: string, newContent: ChatMessage['content']): void {
+    editMessageInHistory(id, newContent);
+    getIO().emit('editMessage', id, newContent);
+}
+
+/** 이미 전송된 메시지 삭제 후 전체 브로드캐스트 */
+export function deleteMessage(id: string): void {
+    deleteMessageFromHistory(id);
+    getIO().emit('deleteMessage', id);
 }

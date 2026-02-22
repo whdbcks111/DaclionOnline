@@ -1,7 +1,7 @@
 import logger from "../utils/logger.js";
 import { registerCommand } from "./bot.js";
 import { sendBotMessageToUser, sendNotificationToUser } from "./message.js";
-import { getPlayer } from "./player.js";
+import { getPlayerByUserId } from "./player.js";
 import { chat } from "../utils/chatBuilder.js";
 import { getLocation, getAllLocations, distanceBetween } from "../models/Location.js";
 import { startCoroutine, Wait } from "./coroutine.js";
@@ -67,7 +67,7 @@ export function initLocation(): void {
             { name: '장소이름', description: '이동할 장소 이름', required: false },
         ],
         handler(userId, args) {
-            const player = getPlayer(userId);
+            const player = getPlayerByUserId(userId);
             if (!player) return;
 
             if (player.moving) {
@@ -133,7 +133,7 @@ export function initLocation(): void {
         description: '현재 위치 정보를 확인합니다.',
         showCommandUse: 'hide',
         handler(userId) {
-            const player = getPlayer(userId);
+            const player = getPlayerByUserId(userId);
             if (!player) return;
 
             const location = getLocation(player.locationId);

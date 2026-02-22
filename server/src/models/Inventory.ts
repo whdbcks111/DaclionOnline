@@ -53,6 +53,10 @@ export default class Inventory {
         return this._items.find(e => e.id === itemId);
     }
 
+    getItemByIndex(idx: number): Item | undefined {
+        return this._items[idx];
+    }
+
     /** 아이템 정의 ID로 조회 (모든 인스턴스) */
     getItemsByData(itemDataId: string): Item[] {
         return this._items.filter(e => e.itemDataId === itemDataId);

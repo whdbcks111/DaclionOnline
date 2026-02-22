@@ -183,6 +183,12 @@ registerChatTag('button', {
     createNode: (action, children) => ({ type: 'button', action, children: children! }),
 })
 
+// [closebutton=/명령어]텍스트[/closebutton]  — 클릭 시 hide 오버레이도 닫음
+registerChatTag('closebutton', {
+    kind: 'wrap',
+    createNode: (action, children) => ({ type: 'button', action, children: children!, closeOnClick: true }),
+})
+
 registerChatTag('bg', {
     kind: 'wrap',
     validate: isValidColor,

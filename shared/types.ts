@@ -54,7 +54,7 @@ export type ChatNode =
     | { type: 'size'; size: string; children: ChatNode[] }
     | { type: 'hide'; title: string; children: ChatNode[] }
     | { type: 'icon'; name: string }
-    | { type: 'button'; action: string; children: ChatNode[] }
+    | { type: 'button'; action: string; children: ChatNode[]; closeOnClick?: boolean }
     | { type: 'progress'; value: number; length: number; color: string; thickness: number; shape: 'rounded' | 'square' }
     | { type: 'tab'; width: number; children: ChatNode[] }
 
@@ -66,6 +66,7 @@ export interface ChatFlag {
 
 // 채팅 메시지
 export interface ChatMessage {
+    id?: string
     userId: number
     nickname: string
     profileImage?: string
@@ -129,6 +130,8 @@ export interface ServerToClientEvents {
     channelChanged: (channel: string | null, history: ChatMessage[]) => void
     channelList: (channels: ChannelInfo[]) => void
     nicknameResult: (result: SimpleResult & { nickname?: string }) => void
+    editMessage: (id: string, content: ChatMessage['content']) => void
+    deleteMessage: (id: string) => void
 }
 
 export interface ClientToServerEvents {
