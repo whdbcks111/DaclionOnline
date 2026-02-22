@@ -202,7 +202,7 @@ export default abstract class Entity {
         }
 
         if (this.life < this.maxLife) {
-            this.life += dt * 10; // TODO: change value
+            this.life += dt * 1; // TODO: change value
         }
     }
     update(dt: number): void {}
