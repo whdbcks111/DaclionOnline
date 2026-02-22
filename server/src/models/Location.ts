@@ -205,6 +205,14 @@ export function getAllLocations(): Location[] {
     return Array.from(locationInstances.values());
 }
 
+/** isRespawnLocation이 true인 첫 번째 장소 반환 */
+export function getRespawnLocation(): Location | undefined {
+    for (const loc of locationInstances.values()) {
+        if (loc.data.isRespawnLocation) return loc;
+    }
+    return undefined;
+}
+
 /** 두 장소 간 거리 계산 */
 export function distanceBetween(a: LocationData, b: LocationData): number {
     const dx = a.x - b.x;

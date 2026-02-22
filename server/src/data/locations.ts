@@ -4,6 +4,7 @@ defineLocation({
     id: 'town_square',
     name: '마을 광장',
     zoneType: 'safe',
+    isRespawnLocation: true,
     x: 0,
     y: 0,
     z: 0,

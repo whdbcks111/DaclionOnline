@@ -4,6 +4,7 @@ import Inventory from "./Inventory.js";
 import Equipment from "./Equipment.js";
 import { STAT_TYPES } from "./Stat.js";
 import type { StatType, StatRecord } from "./Stat.js";
+import { getLocation, getRespawnLocation } from "./Location.js";
 
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
@@ -87,6 +88,16 @@ export default class Player extends Entity {
     set statPoint(val: number) { this._statPoint = val; this._dirty = true; }
 
     get dirty() { return this._dirty || this.inventory.dirty || this.equipment.dirty; }
+
+    // -- 게임 루프 --
+
+    override earlyUpdate(dt: number): void {
+        super.earlyUpdate(dt);
+        if (!getLocation(this._locationId)) {
+            const respawn = getRespawnLocation();
+            if (respawn) this.locationId = respawn.id;
+        }
+    }
 
     // -- 게임 로직 --
 
