@@ -5,10 +5,10 @@ import Equipment from "./Equipment.js";
 import type { StatRecord } from "./Stat.js";
 
 const DEFAULT_BASE_ATTRIBUTE = {
-    life:      100,
-    mentality: 50,
-    atk:       10,
-    def:       5,
+    maxLife:      100,
+    maxMentality: 50,
+    atk:          10,
+    def:          5,
 } as const;
 
 export default class Player extends Entity {

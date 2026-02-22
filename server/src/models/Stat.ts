@@ -14,9 +14,9 @@ export type StatRecord = Record<StatType, number>;
 const STAT_CONVERSION: Record<StatType, { attribute: AttributeType; op: ModifierOp; value: number }[]> = {
     strength:    [{ attribute: 'atk', op: 'add', value: 2 }],
     agility:     [{ attribute: 'speed', op: 'add', value: 0.5 }, { attribute: 'attackSpeed', op: 'add', value: 1 }],
-    vitality:    [{ attribute: 'life', op: 'add', value: 10 }, { attribute: 'def', op: 'add', value: 1 }],
+    vitality:    [{ attribute: 'maxLife', op: 'add', value: 10 }, { attribute: 'def', op: 'add', value: 1 }],
     sensibility: [{ attribute: 'critRate', op: 'add', value: 0.01 }, { attribute: 'critDmg', op: 'add', value: 0.05 }],
-    mentality:   [{ attribute: 'mentality', op: 'add', value: 5 }, { attribute: 'magicForce', op: 'add', value: 2 }],
+    mentality:   [{ attribute: 'maxMentality', op: 'add', value: 5 }, { attribute: 'magicForce', op: 'add', value: 2 }],
 };
 
 function createStatRecord(defaultValue = 0): StatRecord {

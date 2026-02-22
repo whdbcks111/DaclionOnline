@@ -1,6 +1,6 @@
 /** 능력치 종류 */
 export type AttributeType =
-    | 'life' | 'mentality'
+    | 'maxLife' | 'maxMentality'
     | 'atk' | 'magicForce'
     | 'def' | 'magicDef'
     | 'armorPen' | 'magicPen'
@@ -9,7 +9,7 @@ export type AttributeType =
 
 /** 모든 능력치 종류 목록 */
 export const ATTRIBUTE_TYPES: AttributeType[] = [
-    'life', 'mentality',
+    'maxLife', 'maxMentality',
     'atk', 'magicForce',
     'def', 'magicDef',
     'armorPen', 'magicPen',
@@ -33,8 +33,8 @@ export type AttributeRecord = Record<AttributeType, number>;
 
 /** 능력치 종류별 기본값 */
 export const DEFAULT_ATTRIBUTE: Readonly<AttributeRecord> = {
-    life:        100,
-    mentality:   100,
+    maxLife:        100,
+    maxMentality:   100,
     atk:         10,
     magicForce:  10,
     def:         0,

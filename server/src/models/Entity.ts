@@ -28,6 +28,8 @@ export default abstract class Entity {
     protected _level: number;
     protected _exp: number;
     protected _locationId: string;
+    protected _life: number;
+    protected _mentality: number;
 
     constructor(
         level: number,
@@ -47,6 +49,10 @@ export default abstract class Entity {
         // modifier 적용: 스탯 → 장비 순서
         this.stat.applyModifiers(this.attribute);
         this.equipment.applyModifiers(this.attribute);
+
+        // 현재 생명력/정신력은 최대치로 초기화
+        this._life = this.attribute.get('maxLife');
+        this._mentality = this.attribute.get('maxMentality');
     }
 
     // -- Getters / Setters --
@@ -71,6 +77,15 @@ export default abstract class Entity {
         return Math.max(1, level * 100);
     }
 
+    get life() { return this._life; }
+    set life(val: number) { this._life = val; }
+
+    get mentality() { return this._mentality; }
+    set mentality(val: number) { this._mentality = val; }
+
+    get maxLife() { return this.attribute.get('maxLife'); }
+    get maxMentality() { return this.attribute.get('maxMentality'); }
+
     // -- 전투 --
 
     /** 대상 엔티티를 공격 */
@@ -92,9 +107,8 @@ export default abstract class Entity {
         const finalDamage = Math.max(0, rawAmount * (1 - effectiveDefense));
 
         // Life 차감
-        const currentLife = target.attribute.getBase('life');
-        target.attribute.setBase('life', currentLife - finalDamage);
-        const remainingLife = target.attribute.get('life');
+        target.life = Math.max(0, target.life - finalDamage);
+        const remainingLife = target.life;
 
         // 플레이어 관련 알림
         if (this.isPlayer || target.isPlayer) {

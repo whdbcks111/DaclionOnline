@@ -108,10 +108,10 @@ export function sendPlayerStats(userId: number): void {
     if (!player) return;
 
     const data = {
-        life:         player.attribute.getBase('life'),
-        maxLife:      player.attribute.get('life'),
-        mentality:    player.attribute.getBase('mentality'),
-        maxMentality: player.attribute.get('mentality'),
+        life:         player.life,
+        maxLife:      player.maxLife,
+        mentality:    player.mentality,
+        maxMentality: player.maxMentality,
     };
 
     const io = getIO();
