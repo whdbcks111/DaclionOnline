@@ -150,11 +150,6 @@ export function initPlayerCommands(): void {
             const b = chat()
                 .text(`[ 인벤토리 (${fmtW(inv.currentWeight)} / ${fmtW(inv.maxWeight)}) ]`);
 
-            if (items.length === 0) {
-                sendBotMessageToUser(userId, b.text('\n인벤토리가 비어 있습니다.').build());
-                return;
-            }
-
             const SLOT = 35;
             const CAT  = 90;
             const NAME = 170;
