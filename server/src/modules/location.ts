@@ -23,7 +23,7 @@ function* travelCoroutine(player: Player, targetLocationId: string): CoroutineGe
 
     const distance = distanceBetween(from.data, to.data);
     const speed = player.attribute.get('speed');
-    const totalTime = Math.max(1, distance / Math.max(0.01, speed));
+    const totalTime = Math.max(1, distance / Math.max(0.01, speed) / 5);
     let elapsed = 0;
 
     player.moving = true;
@@ -62,7 +62,7 @@ export function initLocation(): void {
         name: '이동',
         aliases: ['move', 'go'],
         description: '다른 장소로 이동합니다.',
-        showCommandUse: 'hide',
+        showCommandUse: 'show',
         args: [
             { name: '장소이름', description: '이동할 장소 이름', required: false },
         ],

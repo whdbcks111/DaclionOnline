@@ -7,6 +7,7 @@ import { chat } from "../utils/chatBuilder.js";
 import prisma from "../config/prisma.js";
 import { getLocation } from "../models/Location.js";
 import { getItemData } from "../models/Item.js";
+import Monster from "../models/Monster.js";
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
 
@@ -493,6 +494,90 @@ export function initPlayer(): void {
                 logger.error('순간이동 명령어 처리 중 오류:', e);
                 sendBotMessageToUser(userId, '순간이동 중 오류가 발생했습니다.');
             }
+        },
+    });
+
+    registerCommand({
+        name: '공격',
+        aliases: ['attack', 'a'],
+        description: '장소의 몬스터를 공격합니다.',
+        showCommandUse: 'hide',
+        args: [
+            { name: '번호', description: '장소 내 몬스터 번호 (생략 시 현재 타겟 공격)' },
+        ],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+
+            const location = getLocation(player.locationId);
+            if (!location) {
+                sendBotMessageToUser(userId, '현재 위치를 찾을 수 없습니다.');
+                return;
+            }
+
+            let monster: Monster;
+
+            if (args.length === 0) {
+                const ct = player.currentTarget;
+                if (!ct) {
+                    sendBotMessageToUser(userId, '공격할 대상이 없습니다. 인덱스를 지정해주세요.');
+                    return;
+                }
+                const found = location.monsters.find(m => m === ct);
+                if (!found) {
+                    player.currentTarget = null;
+                    sendBotMessageToUser(userId, '현재 타겟이 이 장소에 없습니다.');
+                    return;
+                }
+                monster = found;
+            } else {
+                const idx = parseInt(args[0], 10) - 1;
+                if (isNaN(idx) || idx < 0) {
+                    sendBotMessageToUser(userId, '유효한 인덱스를 입력해주세요.');
+                    return;
+                }
+                if (idx >= location.monsters.length) {
+                    sendBotMessageToUser(userId, `${idx + 1}번 몬스터가 없습니다. (현재 ${location.monsters.length}마리)`);
+                    return;
+                }
+                monster = location.monsters[idx];
+                player.currentTarget = monster;
+            }
+
+            const result = player.attack(monster);
+
+            const b = chat()
+                .color('orange', b2 => b2.text('[공격] '))
+                .text(`${monster.name}에게 `)
+                .color('red', b2 => b2.text(result.finalDamage.toFixed(1)))
+                .text(' 피해');
+
+            if (monster.life <= 0) {
+                location.removeMonster(monster);
+                if (player.currentTarget === monster) player.currentTarget = null;
+
+                const drops = monster.rollDrops();
+                for (const drop of drops) {
+                    location.addDroppedItem(drop.itemDataId, drop.count);
+                }
+                player.exp += monster.expReward;
+
+                b.text('\n')
+                 .color('gold', b2 => b2.text(`${monster.name} 처치! `))
+                 .text(`EXP +${monster.expReward}`);
+
+                if (drops.length > 0) {
+                    const dropNames = drops.map(d => {
+                        const data = getItemData(d.itemDataId);
+                        return `${data?.name ?? d.itemDataId} x${d.count}`;
+                    }).join(', ');
+                    b.text(`\n드롭: ${dropNames}`);
+                }
+            } else {
+                b.text(` → 남은 Life: ${result.remainingLife.toFixed(1)} / ${monster.maxLife.toFixed(1)}`);
+            }
+
+            sendBotMessageToUser(userId, b.build());
         },
     });
 

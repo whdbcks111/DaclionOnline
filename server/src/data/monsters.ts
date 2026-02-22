@@ -6,7 +6,7 @@ defineMonster({
     level: 1,
     exp: 10,
     baseAttribute: {
-        life: 30,
+        maxLife: 30,
         atk: 3,
         def: 1,
         speed: 0.8,
@@ -24,7 +24,7 @@ defineMonster({
     level: 3,
     exp: 25,
     baseAttribute: {
-        life: 60,
+        maxLife: 60,
         atk: 7,
         def: 3,
         speed: 1.0,

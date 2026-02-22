@@ -13,9 +13,9 @@ export type StatRecord = Record<StatType, number>;
 /** 스탯 1포인트당 능력치 변환 테이블 */
 const STAT_CONVERSION: Record<StatType, { attribute: AttributeType; op: ModifierOp; value: number }[]> = {
     strength:    [{ attribute: 'atk', op: 'add', value: 2 }],
-    agility:     [{ attribute: 'speed', op: 'add', value: 0.5 }, { attribute: 'attackSpeed', op: 'add', value: 1 }],
+    agility:     [{ attribute: 'speed', op: 'add', value: 0.05 }, { attribute: 'attackSpeed', op: 'add', value: 0.01 }],
     vitality:    [{ attribute: 'maxLife', op: 'add', value: 10 }, { attribute: 'def', op: 'add', value: 1 }],
-    sensibility: [{ attribute: 'critRate', op: 'add', value: 0.01 }, { attribute: 'critDmg', op: 'add', value: 0.05 }],
+    sensibility: [{ attribute: 'critRate', op: 'add', value: 0.001 }, { attribute: 'critDmg', op: 'add', value: 0.01 }],
     mentality:   [{ attribute: 'maxMentality', op: 'add', value: 5 }, { attribute: 'magicForce', op: 'add', value: 2 }],
 };
 

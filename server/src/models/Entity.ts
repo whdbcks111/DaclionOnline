@@ -5,15 +5,22 @@ import Stat from "./Stat.js";
 import type { StatRecord } from "./Stat.js";
 import { broadcastNotification } from "../modules/message.js";
 
-/** 공격 타입 */
-export type AttackType = 'physical' | 'magic';
+/** 대미지 타입 */
+export type DamageType = 'physical' | 'magic' | 'absolute';
 
-/** 공격 결과 */
-export interface AttackResult {
-    type: AttackType;
+/** 대미지 결과 */
+export interface DamageResult {
+    type: DamageType;
     rawAmount: number;
     finalDamage: number;
     remainingLife: number;
+}
+
+export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fire' | 'poison' | 'suffocation'
+
+export interface DamageCause {
+    type: DamageCauseType;
+    causeEntity: Entity | null;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -30,6 +37,9 @@ export default abstract class Entity {
     protected _locationId: string;
     protected _life: number;
     protected _mentality: number;
+
+    currentTarget: Entity | null = null;
+    lastDamageCause: DamageCause | null = null;
 
     constructor(
         level: number,
@@ -88,27 +98,39 @@ export default abstract class Entity {
 
     // -- 전투 --
 
+    damage(rawAmount: number, type: DamageType = 'physical', cause: DamageCause | null = null): DamageResult {
+
+        let defense = 0;
+        let penetration = 0;
+
+        if(type === 'physical') {
+            defense = this.attribute.get('def');
+            penetration = this.attribute.get('armorPen');
+        }
+        else if(type === 'magic') {
+            defense = this.attribute.get('magicDef');
+            penetration = this.attribute.get('magicPen');
+        }
+
+        const effectiveDefense = Math.max(0, defense - penetration);
+        const finalDamage = Math.max(0, rawAmount - effectiveDefense);
+
+        // Life 차감
+        this.life = Math.max(0, this.life - finalDamage);
+        const remainingLife = this.life;
+
+        return { type, rawAmount, finalDamage, remainingLife };
+    }
+
     /** 대상 엔티티를 공격 */
-    attack(target: Entity, type: AttackType = 'physical', amount?: number): AttackResult {
+    attack(target: Entity, type: DamageType = 'physical', amount?: number): DamageResult {
         // 기본 공격력: 물리 → atk, 마법 → magicForce
         const rawAmount = amount ?? (type === 'physical'
             ? this.attribute.get('atk')
             : this.attribute.get('magicForce'));
 
-        // 방어/저항 및 관통
-        const defense = type === 'physical'
-            ? target.attribute.get('def')
-            : target.attribute.get('magicDef');
-        const penetration = type === 'physical'
-            ? this.attribute.get('armorPen')
-            : this.attribute.get('magicPen');
-
-        const effectiveDefense = clamp(defense - penetration, 0, 1);
-        const finalDamage = Math.max(0, rawAmount * (1 - effectiveDefense));
-
-        // Life 차감
-        target.life = Math.max(0, target.life - finalDamage);
-        const remainingLife = target.life;
+        const damageResult = target.damage(rawAmount, type, { type: 'attack', causeEntity: this });
+        const { finalDamage, remainingLife } = damageResult;
 
         // 플레이어 관련 알림
         if (this.isPlayer || target.isPlayer) {
@@ -118,7 +140,7 @@ export default abstract class Entity {
             });
         }
 
-        return { type, rawAmount, finalDamage, remainingLife };
+        return damageResult;
     }
 
     // -- 게임 루프 라이프사이클 --
