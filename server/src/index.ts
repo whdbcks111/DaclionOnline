@@ -17,6 +17,7 @@ import './data/monsters.js';
 import './data/locations.js';
 import { initLocation } from './modules/location.js';
 import { uploadRouter } from './modules/upload.js';
+import { initAllCommands } from './commands/index.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -37,6 +38,7 @@ initRegister();
 initLogin();
 initChat();
 initBot();
+initAllCommands();
 initPlayer();
 initLocation();
 initGame();
