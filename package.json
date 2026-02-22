@@ -10,7 +10,7 @@
     "install:all": "npm install && cd server && npm install && cd ../client && npm install",
     "build:server": "cd server && npm run build",
     "build:client": "cd client && npm run build",
-    "build": "bash -c '. $HOME/.nvm/nvm.sh && nvm use && cd server && node_modules/.bin/tsc && cd ../client && node_modules/.bin/tsc -b && node_modules/.bin/vite build'",
+    "build": "bash -c 'unset npm_config_prefix && . $HOME/.nvm/nvm.sh && nvm use && cd server && node_modules/.bin/tsc && cd ../client && node_modules/.bin/tsc -b && node_modules/.bin/vite build'",
     "build:window": "npm run build:server && npm run build:client",
     "start": "cd server && npm start"
   },
