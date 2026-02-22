@@ -77,24 +77,24 @@ export function initPlayerCommands(): void {
                         .text(` ${location?.data.name ?? '???'}  `)
                         .color(player.moving ? 'gold' : 'gray', b2 => b2.text(player.moving ? '이동 중' : '대기 중'))
                         .text('\n')
-                        
+
                         .color('gray', b2 => b2.text('─── 상태 ───\n'))
                         .color('yellow', b2 => b2.text('생명력'))
                         .text('  ')
                         .progress({ value: lifeRatio, length: 120, color: '#43dfb0', thickness: 8 })
-                        .text(`  ${player.life} / ${player.maxLife}\n`)
+                        .text(`  ${player.life.toFixed(1)} / ${player.maxLife.toFixed(1)}\n`)
                         .color('yellow', b2 => b2.text('정신력'))
                         .text('  ')
-                        .progress({ value: mentalityRatio, length: 120, color: '#43dfb0', thickness: 8 })
-                        .text(`  ${player.mentality} / ${player.maxMentality}\n`)
+                        .progress({ value: mentalityRatio, length: 120, color: '#8d5cdc', thickness: 8 })
+                        .text(`  ${player.mentality.toFixed(1)} / ${player.maxMentality.toFixed(1)}\n`)
                         .color('yellow', b2 => b2.text('배고픔'))
                         .text('  ')
-                        .progress({ value: hungryRatio, length: 120, color: '#43dfb0', thickness: 8 })
-                        .text(`  ${player.hungry} / ${player.maxHungry}\n`)
+                        .progress({ value: hungryRatio, length: 120, color: '#dd8f4b', thickness: 8 })
+                        .text(`  ${player.hungry.toFixed(1)} / ${player.maxHungry.toFixed(1)}\n`)
                         .color('yellow', b2 => b2.text('목마름'))
                         .text('  ')
-                        .progress({ value: thirstyRatio, length: 120, color: '#43dfb0', thickness: 8 })
-                        .text(`  ${player.thirsty} / ${player.maxThirsty}\n`)
+                        .progress({ value: thirstyRatio, length: 120, color: '#5795d7', thickness: 8 })
+                        .text(`  ${player.thirsty.toFixed(1)} / ${player.maxThirsty.toFixed(1)}\n`)
 
                         .color('gray', b2 => b2.text('─── 능력치 ───\n'))
                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('공격력'))).tab(V, b2 => b2.text(fmt(attr.atk)))
@@ -348,41 +348,6 @@ export function initPlayerCommands(): void {
             }
 
             const attackResult = player.attack(monster);
-            if (!attackResult) {
-                sendBotMessageToUser(userId, `아직 공격할 수 없습니다. (${player.attackCooldown.toFixed(1)}초 후 가능)`);
-                return;
-            }
-
-            if (monster.life <= 0) {
-                location.removeMonster(monster);
-                if (player.currentTarget === monster) player.currentTarget = null;
-
-                const drops = monster.rollDrops();
-                for (const drop of drops) {
-                    location.addDroppedItem(drop.itemDataId, drop.count);
-                }
-                const levelsGained = player.gainExp(monster.expReward);
-
-                const killMsg = chat()
-                    .color('gold', b => b.text(`${monster.name} 처치! `))
-                    .text(`EXP +${monster.expReward}`);
-
-                if (drops.length > 0) {
-                    const dropNames = drops.map(d => {
-                        const data = getItemData(d.itemDataId);
-                        return `${data?.name ?? d.itemDataId} x${d.count}`;
-                    }).join(', ');
-                    killMsg.text(`\n드롭: ${dropNames}`);
-                }
-
-                if (levelsGained.length > 0) {
-                    killMsg.text('\n')
-                        .color('aqua', b => b.text(`레벨 업! Lv.${levelsGained[levelsGained.length - 1]}`))
-                        .text(`  가용 스탯 포인트 +${levelsGained.length * 3} (현재 ${player.statPoint})`);
-                }
-
-                sendBotMessageToChannel(channel, killMsg.build());
-            }
         },
     });
 

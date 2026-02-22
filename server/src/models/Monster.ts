@@ -4,6 +4,10 @@ import Equipment from "./Equipment.js";
 import { Item, getItemData } from "./Item.js";
 import type { AttributeRecord } from "./Attribute.js";
 import type { EquipSlot } from "./Equipment.js";
+import { getLocation } from "./Location.js";
+import type Player from "./Player.js";
+import { chat } from "../utils/chatBuilder.js";
+import { sendBotMessageToUser } from "../modules/message.js";
 
 /** 드롭 아이템 정보 */
 export interface DropInfo {
@@ -70,12 +74,55 @@ export default class Monster extends Entity {
 
     /** 타겟 공격 AI */
     override update(_dt: number): void {
+        const location = getLocation(this.locationId);
+        if(!location) return;
+
         const target = this.currentTarget;
         if (!target || target.life <= 0 || target.locationId !== this.locationId) {
             this.currentTarget = null;
             return;
         }
         this.attack(target);
+    }
+    
+    override onDeath(): void {
+        const location = getLocation(this.locationId);
+        if(!location) return;
+        
+        location.removeMonster(this);
+
+        if(this.lastDamageCause?.causeEntity?.isPlayer) {
+            const causePlayer = this.lastDamageCause?.causeEntity as Player;
+
+            if (this.lastDamageCause?.causeEntity?.isPlayer) this.lastDamageCause.causeEntity.currentTarget = null;
+
+            const drops = this.rollDrops();
+            for (const drop of drops) {
+                causePlayer.inventory.addItem(drop.itemDataId, drop.count);
+            }
+            const levelsGained = causePlayer.gainExp(this.expReward);
+
+            const killMsg = chat()
+                .color('gold', b => b.text(`${this.name} 처치! `))
+                .text(`EXP +${this.expReward}`);
+
+            if (drops.length > 0) {
+                const dropNames = drops.map(d => {
+                    const data = getItemData(d.itemDataId);
+                    return `${data?.name ?? d.itemDataId} x${d.count}`;
+                }).join(', ');
+                killMsg.text(`\n보상: ${dropNames}`);
+            }
+
+            if (levelsGained.length > 0) {
+                killMsg.text('\n')
+                    .color('aqua', b => b.text(`레벨 업! Lv.${levelsGained[levelsGained.length - 1]}`))
+                    .text(`  가용 스탯 포인트 +${levelsGained.length * 3} (현재 ${causePlayer.statPoint})`);
+            }
+
+            sendBotMessageToUser(causePlayer.userId, killMsg.build());
+
+        }
     }
 
     /** 드롭 테이블을 굴려 드롭 아이템 목록 반환 */

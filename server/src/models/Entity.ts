@@ -44,6 +44,9 @@ export default abstract class Entity {
 
     currentTarget: Entity | null = null;
     lastDamageCause: DamageCause | null = null;
+    isDead: boolean = false;
+    deathTimer: number = 0;
+
     protected _attackCooldown = 0;
 
     constructor(
@@ -135,8 +138,10 @@ export default abstract class Entity {
         const finalDamage = Math.max(0, rawAmount - effectiveDefense);
 
         // Life 차감
-        this.life = Math.max(0, this.life - finalDamage);
+        this.life = this.life - finalDamage;
         const remainingLife = this.life;
+
+        if(cause) this.lastDamageCause = cause;
 
         return { type, rawAmount, finalDamage, remainingLife };
     }
@@ -145,7 +150,12 @@ export default abstract class Entity {
 
     /** 대상 엔티티를 공격 */
     attack(target: Entity, type: DamageType = 'physical', amount?: number): DamageResult | null {
-        if (this._attackCooldown > 0) return null;
+        if (this._attackCooldown > 0) {
+            if(this.isPlayer && this.playerUserId) {
+                sendBotMessageToUser(this.playerUserId, `아직 공격할 수 없습니다. (${this.attackCooldown.toFixed(1)}초 후 가능)`);
+            }
+            return null;
+        }
 
         // 기본 공격력: 물리 → atk, 마법 → magicForce
         const rawAmount = amount ?? (type === 'physical'
@@ -204,7 +214,31 @@ export default abstract class Entity {
         if (this.life < this.maxLife) {
             this.life += dt * 1; // TODO: change value
         }
+
+        if(this.isDead && this.deathTimer > 0) {
+            this.deathTimer -= dt;
+
+            if(this.deathTimer <= 0) {
+                this.respawn();
+            }
+        }
     }
     update(dt: number): void {}
-    lateUpdate(dt: number): void {}
+    lateUpdate(dt: number): void {
+
+        if(this.life <= 0) {
+            this.onDeath();
+        }
+
+    }
+
+    onDeath(): void {
+        this.isDead = true;
+        this.deathTimer = 10;
+    }
+
+    respawn(): void {
+        this.isDead = false;
+        this.deathTimer = 0;
+    }
 }
