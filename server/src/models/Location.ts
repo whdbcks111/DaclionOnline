@@ -152,6 +152,13 @@ export default class Location {
     // -- 게임 루프 --
 
     update(dt: number): void {
+        // 몬스터 업데이트 (스냅샷으로 순회 — 도중 제거 방지)
+        for (const monster of [...this._monsters]) {
+            monster.earlyUpdate(dt);
+            monster.update(dt);
+            monster.lateUpdate(dt);
+        }
+
         // 스폰 타이머
         for (const timer of this._spawnTimers) {
             const currentCount = this._monsters.filter(

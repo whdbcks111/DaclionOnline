@@ -7,9 +7,9 @@ defineMonster({
     exp: 10,
     baseAttribute: {
         maxLife: 30,
-        atk: 3,
+        atk: 10,
         def: 1,
-        speed: 0.8,
+        speed: 0.5,
     },
     drops: [
         { itemDataId: 'health_potion', minCount: 1, maxCount: 1, chance: 0.3 },
@@ -25,9 +25,9 @@ defineMonster({
     exp: 25,
     baseAttribute: {
         maxLife: 60,
-        atk: 7,
+        atk: 15,
         def: 3,
-        speed: 1.0,
+        speed: 0.7,
     },
     drops: [
         { itemDataId: 'health_potion', minCount: 1, maxCount: 1, chance: 0.2 },

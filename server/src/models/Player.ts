@@ -44,6 +44,7 @@ export default class Player extends Entity {
     set name(val: string) { this._nickname = val; }
 
     override get isPlayer() { return true; }
+    override get playerUserId(): number { return this.userId; }
 
     get moving() { return this._moving; }
     set moving(val: boolean) { this._moving = val; }

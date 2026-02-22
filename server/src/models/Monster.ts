@@ -1,4 +1,5 @@
 import Entity from "./Entity.js";
+import type { DamageResult, DamageType, DamageCause } from "./Entity.js";
 import Equipment from "./Equipment.js";
 import { Item, getItemData } from "./Item.js";
 import type { AttributeRecord } from "./Attribute.js";
@@ -56,6 +57,25 @@ export default class Monster extends Entity {
             const item = new Item(eq.itemDataId, 1, itemData.baseDurability, null);
             this.equipment.equip(eq.slot, item, this.attribute, eq.slotIndex);
         }
+    }
+
+    /** 피격 시 공격자를 자동 타게팅 (타겟 없을 때만) */
+    override damage(rawAmount: number, type: DamageType = 'physical', cause: DamageCause | null = null): DamageResult {
+        const result = super.damage(rawAmount, type, cause);
+        if (cause?.causeEntity && !this.currentTarget) {
+            this.currentTarget = cause.causeEntity;
+        }
+        return result;
+    }
+
+    /** 타겟 공격 AI */
+    override update(_dt: number): void {
+        const target = this.currentTarget;
+        if (!target || target.life <= 0 || target.locationId !== this.locationId) {
+            this.currentTarget = null;
+            return;
+        }
+        this.attack(target);
     }
 
     /** 드롭 테이블을 굴려 드롭 아이템 목록 반환 */

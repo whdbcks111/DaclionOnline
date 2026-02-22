@@ -3,6 +3,7 @@ import { sendBotMessageToUser, sendNotificationToUser } from "../modules/message
 import { getPlayerByUserId } from "../modules/player.js";
 import { chat } from "../utils/chatBuilder.js";
 import { getLocation, distanceBetween } from "../models/Location.js";
+import { getItemData } from "../models/Item.js";
 import { startCoroutine, Wait } from "../modules/coroutine.js";
 import type { CoroutineGenerator } from "../modules/coroutine.js";
 import type Player from "../models/Player.js";
@@ -127,18 +128,60 @@ export function initLocationCommands(): void {
                 return;
             }
 
-            const monsterList = location.monsters.length > 0
-                ? location.monsters.map(m => m.name).join(', ')
-                : '없음';
+            const b = chat()
+                .text('[ 현재 위치 ]\n')
+                .color('yellow', b2 => b2.text('장소')).text(` ${location.data.name}\n`)
+                .color('yellow', b2 => b2.text('좌표')).text(` (${location.data.x}, ${location.data.y}, ${location.data.z})\n`)
+                .text('\n')
+                .color('gray', b2 => b2.text('[ 몬스터 ]\n'));
 
-            sendBotMessageToUser(userId, chat()
-                .text(`[ 현재 위치 ]\n`)
-                .color('yellow', b => b.text('장소')).text(` ${location.data.name}\n`)
-                .color('yellow', b => b.text('좌표')).text(` (${location.data.x}, ${location.data.y}, ${location.data.z})\n`)
-                .color('yellow', b => b.text('몬스터')).text(` ${monsterList}\n`)
-                .color('yellow', b => b.text('바닥 아이템')).text(` ${location.droppedItems.length}개\n`)
-                .build()
-            );
+            if (location.monsters.length === 0) {
+                b.color('gray', b2 => b2.text('없음\n'));
+            } else {
+                for (const m of location.monsters) {
+                    const ratio = m.maxLife > 0 ? m.life / m.maxLife : 0;
+                    const pct = Math.floor(ratio * 100);
+                    b.text('- ')
+                     .color('lime', b2 => b2.text(`Lv.${m.level}`))
+                     .text(` ${m.name} `)
+                     .progress({ value: ratio, length: 80, color: '#ef4444', thickness: 6 })
+                     .text(` ${pct}%\n`);
+                }
+            }
+
+            b.text('\n').color('gray', b2 => b2.text('[ 바닥 아이템 ]\n'));
+
+            if (location.droppedItems.length === 0) {
+                b.color('gray', b2 => b2.text('없음\n'));
+            } else {
+                const grouped = new Map<string, number>();
+                for (const di of location.droppedItems) {
+                    grouped.set(di.itemDataId, (grouped.get(di.itemDataId) ?? 0) + di.count);
+                }
+                for (const [itemDataId, count] of grouped) {
+                    const name = getItemData(itemDataId)?.name ?? itemDataId;
+                    b.text(`- ${name} x${count}\n`);
+                }
+            }
+
+            b.text('\n').color('gray', b2 => b2.text('[ 이동 가능 장소 ]\n'));
+
+            const connections = location.getAvailableConnections(player);
+            if (connections.length === 0) {
+                b.color('gray', b2 => b2.text('없음\n'));
+            } else {
+                for (const conn of connections) {
+                    if (conn.status === 'locked') {
+                        b.text('- ').color('gray', b2 => b2.text(`🔒 ${conn.name} (잠김)`)).text('\n');
+                    } else {
+                        b.text('- ').text(`${conn.name} `)
+                         .button(`/이동 ${conn.name}`, b2 => b2.text('[이동]'))
+                         .text('\n');
+                    }
+                }
+            }
+
+            sendBotMessageToUser(userId, b.build());
         },
     });
 

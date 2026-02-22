@@ -269,13 +269,11 @@ export function initPlayerCommands(): void {
                 player.currentTarget = monster;
             }
 
-            const result = player.attack(monster);
-
-            const b = chat()
-                .color('orange', b2 => b2.text('[공격] '))
-                .text(`${monster.name}에게 `)
-                .color('red', b2 => b2.text(result.finalDamage.toFixed(1)))
-                .text(' 피해');
+            const attackResult = player.attack(monster);
+            if (!attackResult) {
+                sendBotMessageToUser(userId, `아직 공격할 수 없습니다. (${player.attackCooldown.toFixed(1)}초 후 가능)`);
+                return;
+            }
 
             if (monster.life <= 0) {
                 location.removeMonster(monster);
@@ -287,22 +285,20 @@ export function initPlayerCommands(): void {
                 }
                 player.exp += monster.expReward;
 
-                b.text('\n')
-                 .color('gold', b2 => b2.text(`${monster.name} 처치! `))
-                 .text(`EXP +${monster.expReward}`);
+                const killMsg = chat()
+                    .color('gold', b => b.text(`${monster.name} 처치! `))
+                    .text(`EXP +${monster.expReward}`);
 
                 if (drops.length > 0) {
                     const dropNames = drops.map(d => {
                         const data = getItemData(d.itemDataId);
                         return `${data?.name ?? d.itemDataId} x${d.count}`;
                     }).join(', ');
-                    b.text(`\n드롭: ${dropNames}`);
+                    killMsg.text(`\n드롭: ${dropNames}`);
                 }
-            } else {
-                b.text(` → 남은 Life: ${result.remainingLife.toFixed(1)} / ${monster.maxLife.toFixed(1)}`);
-            }
 
-            sendBotMessageToUser(userId, b.build());
+                sendBotMessageToUser(userId, killMsg.build());
+            }
         },
     });
 }

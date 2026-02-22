@@ -3,7 +3,8 @@ import type { AttributeRecord } from "./Attribute.js";
 import Equipment from "./Equipment.js";
 import Stat from "./Stat.js";
 import type { StatRecord } from "./Stat.js";
-import { broadcastNotification } from "../modules/message.js";
+import { broadcastNotification, sendBotMessageToUser } from "../modules/message.js";
+import { chat } from "../utils/chatBuilder.js";
 
 /** 대미지 타입 */
 export type DamageType = 'physical' | 'magic' | 'absolute';
@@ -42,6 +43,7 @@ export default abstract class Entity {
 
     currentTarget: Entity | null = null;
     lastDamageCause: DamageCause | null = null;
+    protected _attackCooldown = 0;
 
     constructor(
         level: number,
@@ -75,6 +77,9 @@ export default abstract class Entity {
 
     /** 이 엔티티가 플레이어인지 여부 (Player에서 override) */
     get isPlayer(): boolean { return false; }
+
+    /** 플레이어 userId (Player에서 override, 비플레이어는 undefined) */
+    get playerUserId(): number | undefined { return undefined; }
 
     get level() { return this._level; }
     set level(val: number) { this._level = val; }
@@ -135,22 +140,50 @@ export default abstract class Entity {
         return { type, rawAmount, finalDamage, remainingLife };
     }
 
+    get attackCooldown(): number { return this._attackCooldown; }
+
     /** 대상 엔티티를 공격 */
-    attack(target: Entity, type: DamageType = 'physical', amount?: number): DamageResult {
+    attack(target: Entity, type: DamageType = 'physical', amount?: number): DamageResult | null {
+        if (this._attackCooldown > 0) return null;
+
         // 기본 공격력: 물리 → atk, 마법 → magicForce
         const rawAmount = amount ?? (type === 'physical'
             ? this.attribute.get('atk')
             : this.attribute.get('magicForce'));
 
         const damageResult = target.damage(rawAmount, type, { type: 'attack', causeEntity: this });
-        const { finalDamage, remainingLife } = damageResult;
+        const { finalDamage } = damageResult;
 
-        // 플레이어 관련 알림
+        // 공격 쿨다운 설정
+        const attackSpeed = this.attribute.get('attackSpeed');
+        this._attackCooldown = 1 / Math.max(0.01, attackSpeed);
+
+        // 플레이어 관련 알림 + 채팅 메시지
         if (this.isPlayer || target.isPlayer) {
             broadcastNotification({
                 key: 'attack',
-                message: `${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다. (남은 Life: ${remainingLife.toFixed(1)})`,
+                message: `${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.`,
             });
+
+            const lifeRatio = target.maxLife > 0 ? target.life / target.maxLife : 0;
+            const pct = Math.floor(lifeRatio * 100);
+            const nodes = chat()
+                .color('orange', b => b.text('[공격] '))
+                .text(`${this.name}이(가) ${target.name}에게 `)
+                .color('red', b => b.text(finalDamage.toFixed(1)))
+                .text(' 피해  ')
+                .progress({ value: lifeRatio, length: 80, color: '#ef4444', thickness: 6 })
+                .text(` ${pct}%`)
+                .build();
+
+            const uids = new Set<number>();
+            const attackerUid = this.playerUserId;
+            const targetUid = target.playerUserId;
+            if (attackerUid !== undefined) uids.add(attackerUid);
+            if (targetUid !== undefined) uids.add(targetUid);
+            for (const uid of uids) {
+                sendBotMessageToUser(uid, nodes);
+            }
         }
 
         return damageResult;
@@ -158,7 +191,11 @@ export default abstract class Entity {
 
     // -- 게임 루프 라이프사이클 --
 
-    earlyUpdate(dt: number): void {}
+    earlyUpdate(dt: number): void {
+        if (this._attackCooldown > 0) {
+            this._attackCooldown = Math.max(0, this._attackCooldown - dt);
+        }
+    }
     update(dt: number): void {}
     lateUpdate(dt: number): void {}
 }
