@@ -110,6 +110,8 @@ export interface NotificationData {
     key: string
     message: string | ChatNode[]
     length?: number
+    showProgress?: boolean
+    editExists?: boolean
 }
 
 // 소켓 이벤트 맵

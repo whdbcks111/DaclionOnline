@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSocket } from '../context/SocketContext'
 import { renderNode } from './chat/ChatMessage'
 import type { ChatNode, NotificationData } from '@shared/types'
@@ -6,6 +6,8 @@ import styles from './Notification.module.scss'
 
 interface NotificationItem extends NotificationData {
   id: number
+  duration: number
+  animKey: number
 }
 
 let nextId = 0
@@ -13,23 +15,48 @@ let nextId = 0
 function Notification() {
   const { socket } = useSocket()
   const [items, setItems] = useState<NotificationItem[]>([])
+  const timeoutMap = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const addNotification = useCallback((data: NotificationData) => {
-    const id = nextId++
-    const newItem: NotificationItem = { ...data, id }
     const duration = data.length ?? 5000
+    const key = data.key
+
+    // 기존 타이머 취소
+    const existingTimeout = timeoutMap.current.get(key)
+    if (existingTimeout !== undefined) clearTimeout(existingTimeout)
+    timeoutMap.current.delete(key)
 
     setItems(prev => {
-      // 같은 key가 이미 있으면 제거 후 새로 추가
-      const filtered = prev.filter(item => item.key !== data.key)
+      const existingIdx = data.editExists ? prev.findIndex(item => item.key === key) : -1
+
+      if (existingIdx !== -1) {
+        // 제자리 업데이트 (animKey 증가 → 타이머 애니메이션 재시작)
+        const existing = prev[existingIdx]
+        const updated: NotificationItem = {
+          ...existing,
+          message: data.message,
+          duration,
+          showProgress: data.showProgress,
+          animKey: existing.animKey + 1,
+        }
+        const next = [...prev]
+        next[existingIdx] = updated
+        return next
+      }
+
+      // 새로 추가 (같은 key 제거 후 끝에 삽입)
+      const id = nextId++
+      const newItem: NotificationItem = { ...data, id, duration, animKey: 0 }
+      const filtered = prev.filter(item => item.key !== key)
       return [...filtered, newItem]
     })
 
-    // 자동 제거
     if (duration > 0) {
-      setTimeout(() => {
-        setItems(prev => prev.filter(item => item.id !== id))
+      const t = setTimeout(() => {
+        setItems(p => p.filter(item => item.key !== key))
+        timeoutMap.current.delete(key)
       }, duration)
+      timeoutMap.current.set(key, t)
     }
   }, [])
 
@@ -39,7 +66,6 @@ function Notification() {
     socket.on('notification', addNotification)
 
     const onDisconnect = (reason: string) => {
-      // 클라이언트가 직접 끊은 경우는 무시
       if (reason === 'io client disconnect') return
       addNotification({
         key: 'server-disconnect',
@@ -66,12 +92,26 @@ function Notification() {
 
   return (
     <div className={styles.container}>
-      {items.map(item => (
-        <div key={item.id} className={styles.item}>
-          {(typeof(item.message) === 'string' ? [ { type: 'text', text: item.message } as ChatNode ] : item.message)
-            .map((node: ChatNode, i) => renderNode(node, i))}
-        </div>
-      ))}
+      {items.map(item => {
+        const showProgress = item.showProgress !== false && item.duration > 0
+        return (
+          <div key={item.id} className={styles.item}>
+            <div className={styles.content}>
+              {(typeof item.message === 'string'
+                ? [{ type: 'text', text: item.message } as ChatNode]
+                : item.message
+              ).map((node: ChatNode, i) => renderNode(node, i))}
+            </div>
+            {showProgress && (
+              <div
+                key={item.animKey}
+                className={styles.timer}
+                style={{ animationDuration: `${item.duration}ms` }}
+              />
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

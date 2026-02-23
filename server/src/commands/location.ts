@@ -21,30 +21,30 @@ function* travelCoroutine(player: Player, targetLocationId: string): CoroutineGe
 
     player.moving = true;
 
-    sendNotificationToUser(player.userId, {
-        key: 'travel',
-        message: `${to.data.name}(으)로 이동 시작... (${Math.ceil(totalTime)}초)`,
-    });
+    sendBotMessageToChannel(getUserChannel(player.userId), `${to.data.name}(으)로 이동 시작... (${Math.ceil(totalTime)}초)`);
 
     while (elapsed < totalTime) {
-        const waitTime = Math.min(1, totalTime - elapsed);
+        const waitTime = Math.min(0.5, totalTime - elapsed);
         yield Wait(waitTime);
         elapsed += waitTime;
 
         const progress = Math.min(100, Math.floor((elapsed / totalTime) * 100));
         sendNotificationToUser(player.userId, {
             key: 'travel',
-            message: `${to.data.name}(으)로 이동 중... ${progress}%`,
+            message: chat()
+                .text(`${to.data.name}(으)로 이동 중... \n`)
+                .progress({ value: progress / 100, color: 'white', length: 200, thickness: 6 })
+                .text(` ${progress.toFixed(1)}%`)
+                .build(),
+            editExists: true,
+            showProgress: false,
         });
     }
 
     player.locationId = targetLocationId;
     player.moving = false;
 
-    sendNotificationToUser(player.userId, {
-        key: 'travel',
-        message: `${to.data.name}에 도착했습니다.`,
-    });
+    sendBotMessageToChannel(getUserChannel(player.userId), `${to.data.name}에 도착했습니다.`,);
 }
 
 export function initLocationCommands(): void {

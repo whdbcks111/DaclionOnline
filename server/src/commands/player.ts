@@ -164,10 +164,10 @@ export function initPlayerCommands(): void {
                          .tab(CNT,  b2 => b2.text(`x${item.count}`));
 
                     if (item.data?.onUse) {
-                        inner.closeButton(`/사용 ${i}`, b2 => b2.text('사용')).text(' ');
+                        inner.closeButton(`/사용 ${i + 1}`, b2 => b2.text('사용')).text(' ');
                     }
 
-                    inner.closeButton(`/버리기 ${i}`, b2 => b2.text('버리기')).text('\n');
+                    inner.closeButton(`/버리기 ${i + 1}`, b2 => b2.text('버리기')).text('\n');
                 }
                 return inner;
             });
@@ -342,7 +342,7 @@ export function initPlayerCommands(): void {
                 player.currentTarget = monster;
             }
 
-            const attackResult = player.attack(monster);
+            player.attack(monster);
         },
     });
 
