@@ -57,7 +57,21 @@
   --color-border-light: #374151;
 }
 
+:root {
+  --color-life: #1abc9c;
+  --color-magic: #8d5cdc;
+  --color-hungry: #dd8f4b;
+  --color-thirsty: #5795d7;
+  --color-enemy: #f0314b;
+}
+
 // SCSS 변수를 CSS 변수로 매핑
+$color-life: var(--color-life);
+$color-magic: var(--color-magic);
+$color-hungry: var(--color-hungry);
+$color-thirsty: var(--color-thirsty);
+$color-enemy: var(--color-enemy);
+
 $color-primary: var(--color-primary);
 $color-secondary: var(--color-secondary);
 $color-danger: var(--color-danger);

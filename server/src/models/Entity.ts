@@ -169,6 +169,9 @@ export default abstract class Entity {
         const attackSpeed = this.attribute.get('attackSpeed');
         this._attackCooldown = 1 / Math.max(0.01, attackSpeed);
 
+        const lifeRatio = target.maxLife > 0 ? target.life / target.maxLife : 0;
+        const pct = Math.floor(lifeRatio * 100);
+
         // 플레이어 관련 알림 + 채팅 메시지
         if (this.isPlayer || target.isPlayer) {
             const locId = this.locationId;
@@ -177,17 +180,19 @@ export default abstract class Entity {
                 return p?.locationId === locId;
             }, {
                 key: 'attack',
-                message: `${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.`,
+                message: chat()
+                    .text(`${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.\n`)
+                    .progress({ value: lifeRatio, length: 80, color: this.isPlayer ? '$enemy' : '$life', thickness: 6 })
+                    .text(` ${pct}%`)
+                    .build(),
             });
 
-            const lifeRatio = target.maxLife > 0 ? target.life / target.maxLife : 0;
-            const pct = Math.floor(lifeRatio * 100);
             const nodes = chat()
                 .color('orange', b => b.text('[공격] '))
                 .text(`${this.name}이(가) ${target.name}에게 `)
                 .color('red', b => b.text(finalDamage.toFixed(1)))
                 .text(' 피해  ')
-                .progress({ value: lifeRatio, length: 80, color: '#ef4444', thickness: 6 })
+                .progress({ value: lifeRatio, length: 80, color: this.isPlayer ? '$enemy' : '$life', thickness: 6 })
                 .text(` ${pct}%`)
                 .build();
 

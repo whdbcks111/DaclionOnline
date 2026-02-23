@@ -1,3 +1,4 @@
+import { resolveColor } from '../ChatMessage'
 import styles from './ProgressNode.module.scss'
 
 interface Props {
@@ -24,7 +25,7 @@ export default function ProgressNode({ value, length, color, thickness, shape }:
                 className={styles.fill}
                 style={{
                     width: `${value * 100}%`,
-                    backgroundColor: color,
+                    backgroundColor: resolveColor(color),
                     borderRadius: radius,
                 }}
             />

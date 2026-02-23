@@ -1,5 +1,5 @@
 import type { ChatNode } from '@shared/types'
-import { renderNode } from '../ChatMessage'
+import { renderNode, resolveColor } from '../ChatMessage'
 
 interface Props {
     color: string
@@ -8,7 +8,7 @@ interface Props {
 
 export default function BgNode({ color, children }: Props) {
     return (
-        <span style={{ backgroundColor: color, borderRadius: '2px', padding: '0 2px' }}>
+        <span style={{ backgroundColor: resolveColor(color), borderRadius: '2px', padding: '0 2px' }}>
             {children.map((node, i) => renderNode(node, i))}
         </span>
     )
