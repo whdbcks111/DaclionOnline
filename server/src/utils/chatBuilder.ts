@@ -49,17 +49,17 @@ class ChatBuilder {
         return this
     }
 
-    button(action: string, build: (b: ChatBuilder) => ChatBuilder): this {
+    button(action: string, build: (b: ChatBuilder) => ChatBuilder, showCommand = false): this {
         const inner = new ChatBuilder()
         build(inner)
-        this.nodes.push({ type: 'button', action, children: inner.nodes })
+        this.nodes.push({ type: 'button', action, children: inner.nodes, showCommand: showCommand || undefined })
         return this
     }
 
-    closeButton(action: string, build: (b: ChatBuilder) => ChatBuilder): this {
+    closeButton(action: string, build: (b: ChatBuilder) => ChatBuilder, showCommand = false): this {
         const inner = new ChatBuilder()
         build(inner)
-        this.nodes.push({ type: 'button', action, children: inner.nodes, closeOnClick: true })
+        this.nodes.push({ type: 'button', action, children: inner.nodes, closeOnClick: true, showCommand: showCommand || undefined })
         return this
     }
 

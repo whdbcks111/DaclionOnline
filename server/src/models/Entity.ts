@@ -169,7 +169,7 @@ export default abstract class Entity {
         const attackSpeed = this.attribute.get('attackSpeed');
         this._attackCooldown = 1 / Math.max(0.01, attackSpeed);
 
-        const lifeRatio = target.maxLife > 0 ? target.life / target.maxLife : 0;
+        const lifeRatio = target.maxLife > 0 ? Math.max(0, target.life) / target.maxLife : 0;
         const pct = Math.floor(lifeRatio * 100);
 
         // 플레이어 관련 알림 + 채팅 메시지
@@ -182,7 +182,7 @@ export default abstract class Entity {
                 key: 'attack',
                 message: chat()
                     .text(`${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.\n`)
-                    .progress({ value: lifeRatio, length: 80, color: this.isPlayer ? '$enemy' : '$life', thickness: 6 })
+                    .progress({ value: lifeRatio, length: 150, color: this.isPlayer ? '$enemy' : '$life', thickness: 6 })
                     .text(` ${pct}%`)
                     .build(),
             });
@@ -191,8 +191,8 @@ export default abstract class Entity {
                 .color('orange', b => b.text('[공격] '))
                 .text(`${this.name}이(가) ${target.name}에게 `)
                 .color('red', b => b.text(finalDamage.toFixed(1)))
-                .text(' 피해  ')
-                .progress({ value: lifeRatio, length: 80, color: this.isPlayer ? '$enemy' : '$life', thickness: 6 })
+                .text(' 피해\n')
+                .progress({ value: lifeRatio, length: 150, color: this.isPlayer ? '$enemy' : '$life', thickness: 6 })
                 .text(` ${pct}%`)
                 .build();
 

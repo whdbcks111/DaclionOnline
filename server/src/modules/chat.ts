@@ -70,7 +70,9 @@ export const initChat = () => {
             socket.emit('channelChanged', channel, combined);
         });
 
-        socket.on('chatButtonClick', (action: unknown) => {
+        socket.on('chatButtonClick', (payload: unknown) => {
+            if (typeof payload !== 'object' || payload === null) return;
+            const { action, showCommand } = payload as { action: unknown; showCommand?: unknown };
             if (typeof action !== 'string') return;
 
             const trimmed = action.trim();
@@ -79,7 +81,17 @@ export const initChat = () => {
             const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
             if (!session) { socket.emit('sessionInvalid'); return; }
 
-            handleCommand(session.userId, trimmed, null, session.permission);
+            const flags = getFlagsForPermission(session.permission);
+            const msg: ChatMessage | null = showCommand === true ? {
+                userId: session.userId,
+                nickname: session.nickname,
+                profileImage: session.profileImage,
+                flags: flags.length > 0 ? flags : undefined,
+                content: [{ type: 'text', text: trimmed }],
+                timestamp: Date.now(),
+            } : null;
+
+            handleCommand(session.userId, trimmed, msg, session.permission);
         });
 
         socket.on('sendMessage', (content: unknown) => {

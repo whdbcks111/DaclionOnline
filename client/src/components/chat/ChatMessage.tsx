@@ -34,7 +34,7 @@ export function renderNode(node: ChatNode, key: number): React.ReactNode {
         case 'icon':
             return <IconNode key={key} name={node.name} />
         case 'button':
-            return <ButtonNode key={key} action={node.action} closeOnClick={node.closeOnClick} children={node.children} />
+            return <ButtonNode key={key} action={node.action} closeOnClick={node.closeOnClick} showCommand={node.showCommand} children={node.children} />
         case 'progress':
             return <ProgressNode key={key} value={node.value} length={node.length} color={node.color} thickness={node.thickness} shape={node.shape} />
         case 'tab':

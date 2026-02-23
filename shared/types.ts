@@ -54,7 +54,7 @@ export type ChatNode =
     | { type: 'size'; size: string; children: ChatNode[] }
     | { type: 'hide'; title: string; children: ChatNode[] }
     | { type: 'icon'; name: string }
-    | { type: 'button'; action: string; children: ChatNode[]; closeOnClick?: boolean }
+    | { type: 'button'; action: string; children: ChatNode[]; closeOnClick?: boolean; showCommand?: boolean }
     | { type: 'progress'; value: number; length: number; color: string; thickness: number; shape: 'rounded' | 'square' }
     | { type: 'tab'; width: number; children: ChatNode[] }
 
@@ -143,7 +143,7 @@ export interface ClientToServerEvents {
     sendVerifyCode: (email: string) => void
     verifyCode: (code: string) => void
     sendMessage: (content: string) => void
-    chatButtonClick: (action: string) => void
+    chatButtonClick: (payload: { action: string; showCommand?: boolean }) => void
     requestChatHistory: () => void
     requestCommandList: () => void
     requestUserCount: () => void

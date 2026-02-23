@@ -8,16 +8,17 @@ import styles from '../ChatMessage.module.scss'
 interface Props {
     action: string
     closeOnClick?: boolean
+    showCommand?: boolean
     children: ChatNode[]
 }
 
-export default function ButtonNode({ action, closeOnClick, children }: Props) {
+export default function ButtonNode({ action, closeOnClick, showCommand, children }: Props) {
     const { socket } = useSocket()
     const hideClose = useContext(HideCloseContext)
 
     const handleClick = () => {
         if (!socket) return
-        socket.emit('chatButtonClick', action)
+        socket.emit('chatButtonClick', { action, showCommand })
         if (closeOnClick) hideClose?.()
     }
 

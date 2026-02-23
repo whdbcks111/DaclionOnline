@@ -86,7 +86,7 @@ export function initLocationCommands(): void {
                             if (conn.status === 'locked') {
                                 b.color('gray', b2 => b2.text(`🔒 ${conn.name} (잠김)`)).text('\n');
                             } else {
-                                b.button(`/이동 ${conn.name}`, b2 => b2.text(conn.name)).text('\n');
+                                b.button(`/이동 ${conn.name}`, b2 => b2.text(conn.name), true).text('\n');
                             }
                         }
                         return b;
@@ -177,7 +177,7 @@ export function initLocationCommands(): void {
                         b.text('- ').color('gray', b2 => b2.text(`🔒 ${conn.name} (잠김)`)).text('\n');
                     } else {
                         b.text('- ').text(`${conn.name} `)
-                         .button(`/이동 ${conn.name}`, b2 => b2.text('[이동]'))
+                         .button(`/이동 ${conn.name}`, b2 => b2.text('[이동]'), true)
                          .text('\n');
                     }
                 }
