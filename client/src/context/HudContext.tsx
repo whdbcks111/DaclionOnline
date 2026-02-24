@@ -21,7 +21,7 @@ export const HUD_DEFINITIONS: HudDefinition[] = [
 ]
 
 const DEFAULT_CONFIGS: Record<string, HudConfig> = {
-  'player-status': { id: 'player-status', visible: true, x: 1, y: 1 },
+  'player-status': { id: 'player-status', visible: true, x: 2, y: 10 },
 }
 
 interface HudContextType {
