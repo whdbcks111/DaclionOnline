@@ -100,9 +100,56 @@
 }
 
 .rangeSlider {
+    -webkit-appearance: none;
+    appearance: none;
     width: 100%;
-    accent-color: var(--color-primary);
+    height: 20px;
+    background: transparent;
     cursor: pointer;
+    outline: none;
+
+    &::-webkit-slider-runnable-track {
+        height: 4px;
+        border-radius: 2px;
+        background: linear-gradient(
+            to right,
+            var(--color-primary) var(--fill, 100%),
+            rgba(255, 255, 255, 0.15) var(--fill, 100%)
+        );
+    }
+
+    &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        cursor: pointer;
+        margin-top: -5px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    &::-moz-range-track {
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    &::-moz-range-progress {
+        height: 4px;
+        border-radius: 2px;
+        background: var(--color-primary);
+    }
+
+    &::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
 }
 
 // 토글 스위치

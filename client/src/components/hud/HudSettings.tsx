@@ -6,6 +6,10 @@ interface Props {
   onClose: () => void
 }
 
+function fill(value: number, min: number, max: number) {
+  return `${((value - min) / (max - min)) * 100}%`
+}
+
 export default function HudSettings({ onClose }: Props) {
   const { configs, setVisible, editMode, setEditMode, opacity, setOpacity, scale, setScale } = useHud()
   const panelRef = useRef<HTMLDivElement>(null)
@@ -109,6 +113,7 @@ export default function HudSettings({ onClose }: Props) {
           value={Math.round(opacity * 100)}
           onChange={e => setOpacity(Number(e.target.value) / 100)}
           className={styles.rangeSlider}
+          style={{ '--fill': fill(Math.round(opacity * 100), 10, 100) } as React.CSSProperties}
         />
       </div>
 
@@ -124,6 +129,7 @@ export default function HudSettings({ onClose }: Props) {
           value={Math.round(scale * 100)}
           onChange={e => setScale(Number(e.target.value) / 100)}
           className={styles.rangeSlider}
+          style={{ '--fill': fill(Math.round(scale * 100), 30, 100) } as React.CSSProperties}
         />
       </div>
 
