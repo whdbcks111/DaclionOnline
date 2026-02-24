@@ -1,14 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import styles from './Home.module.scss'
 import { useSocket } from '../context/SocketContext'
+import { HudProvider, useHud } from '../context/HudContext'
 import ChatMessage from '../components/chat/ChatMessage'
 import CommandAutocomplete, { getFilteredCommands } from '../components/chat/CommandAutocomplete'
 import Header from '../components/Header'
 import Drawer from '../components/Drawer'
+import HudContainer from '../components/hud/HudContainer'
+import HudSettings from '../components/hud/HudSettings'
 import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, ChannelInfo } from '@shared/types'
 
-function Home() {
+function HomeContent() {
   const { socket, sessionInfo, updateProfileImage, updateNickname } = useSocket()
+  const { playerStats, setPlayerStats } = useHud()
   const [messages, setMessages] = useState<ChatMessageType[]>([])
   const [commands, setCommands] = useState<CommandInfo[]>([])
   const [commandFilter, setCommandFilter] = useState('')
@@ -16,7 +20,7 @@ function Home() {
   const [activeIndex, setActiveIndex] = useState(0)
   const [userCount, setUserCount] = useState(0)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [playerStats, setPlayerStats] = useState<PlayerStatsData>({ life: 100, maxLife: 100, mentality: 50, maxMentality: 50 })
+  const [hudSettingsOpen, setHudSettingsOpen] = useState(false)
   const [currentChannel, setCurrentChannel] = useState<string | null>(null)
   const [channelList, setChannelList] = useState<ChannelInfo[]>([])
   const inputRef = useRef<HTMLDivElement>(null)
@@ -25,39 +29,19 @@ function Home() {
   useEffect(() => {
     if (!socket) return
 
-    const onChatHistory = (history: ChatMessageType[]) => {
-      setMessages(history)
-    }
-
-    const onChatMessage = (msg: ChatMessageType) => {
-      setMessages(prev => [...prev, msg])
-    }
-
-    const onCommandList = (list: CommandInfo[]) => {
-      setCommands(list)
-    }
-
-    const onUserCount = (count: number) => {
-      setUserCount(count)
-    }
-
-    const onPlayerStats = (data: PlayerStatsData) => {
-      setPlayerStats(data)
-    }
-
+    const onChatHistory = (history: ChatMessageType[]) => setMessages(history)
+    const onChatMessage = (msg: ChatMessageType) => setMessages(prev => [...prev, msg])
+    const onCommandList = (list: CommandInfo[]) => setCommands(list)
+    const onUserCount = (count: number) => setUserCount(count)
+    const onPlayerStats = (data: PlayerStatsData) => setPlayerStats(data)
     const onChannelChanged = (channel: string | null, history: ChatMessageType[]) => {
       setCurrentChannel(channel)
       setMessages(history)
     }
-
-    const onChannelList = (list: Parameters<typeof setChannelList>[0]) => {
-      setChannelList(list)
-    }
-
+    const onChannelList = (list: Parameters<typeof setChannelList>[0]) => setChannelList(list)
     const onEditMessage = (id: string, content: ChatMessageType['content']) => {
       setMessages(prev => prev.map(msg => msg.id === id ? { ...msg, content } : msg))
     }
-
     const onDeleteMessage = (id: string) => {
       setMessages(prev => prev.filter(msg => msg.id !== id))
     }
@@ -75,6 +59,7 @@ function Home() {
     socket.emit('requestCommandList')
     socket.emit('requestUserCount')
     socket.emit('requestChannelList')
+
     return () => {
       socket.off('chatHistory', onChatHistory)
       socket.off('chatMessage', onChatMessage)
@@ -86,14 +71,13 @@ function Home() {
       socket.off('editMessage', onEditMessage)
       socket.off('deleteMessage', onDeleteMessage)
     }
-  }, [socket])
+  }, [socket, setPlayerStats])
 
-  // 새 메시지가 오면 스크롤 하단으로
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-const changeNickname = useCallback((nickname: string): Promise<{ ok?: boolean; error?: string }> => {
+  const changeNickname = useCallback((nickname: string): Promise<{ ok?: boolean; error?: string }> => {
     return new Promise((resolve) => {
       if (!socket) return resolve({ error: '소켓 연결 없음' })
       socket.once('nicknameResult', (result) => {
@@ -104,10 +88,9 @@ const changeNickname = useCallback((nickname: string): Promise<{ ok?: boolean; e
     })
   }, [socket, updateNickname])
 
-const sendMessage = useCallback(() => {
+  const sendMessage = useCallback(() => {
     const content = inputRef.current?.textContent?.trim()
     if (!content || !socket) return
-
     socket.emit('sendMessage', content)
     inputRef.current!.textContent = ''
     inputRef.current!.focus()
@@ -117,7 +100,6 @@ const sendMessage = useCallback(() => {
   const selectCommand = useCallback((name: string) => {
     if (!inputRef.current) return
     inputRef.current.textContent = `/${name} `
-    // 커서를 끝으로 이동
     const range = document.createRange()
     range.selectNodeContents(inputRef.current)
     range.collapse(false)
@@ -125,15 +107,12 @@ const sendMessage = useCallback(() => {
     sel?.removeAllRanges()
     sel?.addRange(range)
     inputRef.current.focus()
-
-    const text = inputRef.current?.textContent ?? '';
-    setCommandFilter(text);
-    setActiveIndex(0);
+    setCommandFilter(inputRef.current.textContent ?? '')
+    setActiveIndex(0)
   }, [])
 
   const handleInput = useCallback(() => {
     const text = inputRef.current?.textContent ?? ''
-    // /로 시작하면 자동완성 표시
     if (text.startsWith('/')) {
       setCommandFilter(text)
       setShowAutocomplete(true)
@@ -143,46 +122,28 @@ const sendMessage = useCallback(() => {
     }
   }, [])
 
-  // 자동완성에서 필터된 명령어 수 계산 (키보드 네비게이션용)
   const getFilteredCount = useCallback(() => {
-    const filtered = getFilteredCommands(commands, commandFilter);
-    return filtered.length;
+    return getFilteredCommands(commands, commandFilter).length
   }, [commandFilter, commands])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (showAutocomplete) {
       const count = getFilteredCount()
-
-      if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setActiveIndex(prev => (prev - 1 + count) % count)
-        return
-      }
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setActiveIndex(prev => (prev + 1) % count)
-        return
-      }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(prev => (prev - 1 + count) % count); return }
+      if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(prev => (prev + 1) % count); return }
       if (e.key === 'Tab') {
         e.preventDefault()
-        const filtered = getFilteredCommands(commands, commandFilter);
-        if (filtered[activeIndex]) {
-          selectCommand(filtered[activeIndex].name)
-        }
+        const filtered = getFilteredCommands(commands, commandFilter)
+        if (filtered[activeIndex]) selectCommand(filtered[activeIndex].name)
         return
       }
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        setShowAutocomplete(false)
-        return
-      }
+      if (e.key === 'Escape') { e.preventDefault(); setShowAutocomplete(false); return }
     }
-
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
   }, [showAutocomplete, getFilteredCount, commandFilter, commands, activeIndex, selectCommand, sendMessage])
+
+  const lifeRatio  = playerStats ? Math.max(0, playerStats.life / playerStats.maxLife) : 1
+  const mpRatio    = playerStats ? Math.max(0, playerStats.mentality / playerStats.maxMentality) : 1
 
   return (
     <div className={styles.homeContainer}>
@@ -205,22 +166,16 @@ const sendMessage = useCallback(() => {
               || prev.profileImage !== msg.profileImage
               || JSON.stringify(prev.flags) !== JSON.stringify(msg.flags)
               || Math.floor(prev.timestamp / 60000) !== Math.floor(msg.timestamp / 60000)
-            return (
-              <ChatMessage
-                key={msg.id ?? i}
-                message={msg}
-                showHeader={showHeader}
-              />
-            )
+            return <ChatMessage key={msg.id ?? i} message={msg} showHeader={showHeader} />
           })}
           <div ref={messagesEndRef} />
         </div>
         <div className={styles.statusBars}>
           <div className={styles.hpBar}>
-            <div className={styles.hpFill} style={{ width: `${Math.max(0, playerStats.life / playerStats.maxLife) * 100}%` }} />
+            <div className={styles.hpFill} style={{ width: `${lifeRatio * 100}%` }} />
           </div>
           <div className={styles.mpBar}>
-            <div className={styles.mpFill} style={{ width: `${Math.max(0, playerStats.mentality / playerStats.maxMentality) * 100}%` }} />
+            <div className={styles.mpFill} style={{ width: `${mpRatio * 100}%` }} />
           </div>
         </div>
         <div className={styles.chatInput}>
@@ -255,9 +210,18 @@ const sendMessage = useCallback(() => {
         currentChannel={currentChannel}
         channelList={channelList}
         onJoinChannel={(channel) => socket?.emit('joinChannel', channel)}
+        onOpenHudSettings={() => { setDrawerOpen(false); setHudSettingsOpen(true) }}
       />
+      <HudContainer />
+      {hudSettingsOpen && <HudSettings onClose={() => setHudSettingsOpen(false)} />}
     </div>
   )
 }
 
-export default Home
+export default function Home() {
+  return (
+    <HudProvider>
+      <HomeContent />
+    </HudProvider>
+  )
+}

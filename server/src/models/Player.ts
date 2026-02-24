@@ -14,7 +14,6 @@ const DEFAULT_BASE_ATTRIBUTE = {
 } as const;
 
 export default class Player extends Entity {
-    readonly id: number;
     readonly userId: number;
     readonly inventory: Inventory;
 
@@ -25,14 +24,13 @@ export default class Player extends Entity {
     private _statPoint = 0;
 
     private constructor(
-        id: number, userId: number, nickname: string, level: number, exp: number,
+        userId: number, nickname: string, level: number, exp: number,
         locationId: string, maxWeight: number, inventory: Inventory, equipment: Equipment,
         statPoints?: Partial<StatRecord>,
         life?: number, mentality?: number, thirsty?: number, hungry?: number,
         statPoint = 0,
     ) {
         super(level, exp, locationId, DEFAULT_BASE_ATTRIBUTE, equipment, statPoints);
-        this.id = id;
         this.userId = userId;
         this._nickname = nickname;
         this._maxWeight = maxWeight;
@@ -141,22 +139,10 @@ export default class Player extends Entity {
             include: { user: { select: { nickname: true } } },
         });
         if (!data) return null;
-        const inventory = await Inventory.load(data.id, data.maxWeight);
-        const equipment = await Equipment.load(data.id);
+        const inventory = await Inventory.load(data.userId, data.maxWeight);
+        const equipment = await Equipment.load(data.userId);
         const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint);
-    }
-
-    static async load(id: number): Promise<Player | null> {
-        const data = await prisma.player.findUnique({
-            where: { id },
-            include: { user: { select: { nickname: true } } },
-        });
-        if (!data) return null;
-        const inventory = await Inventory.load(data.id, data.maxWeight);
-        const equipment = await Equipment.load(data.id);
-        const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint);
+        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint);
     }
 
     /** 새 플레이어 생성 */
@@ -165,16 +151,16 @@ export default class Player extends Entity {
             data: { userId },
             include: { user: { select: { nickname: true } } },
         });
-        const inventory = await Inventory.load(data.id, data.maxWeight);
-        const equipment = await Equipment.load(data.id);
-        return new Player(data.id, data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment);
+        const inventory = await Inventory.load(data.userId, data.maxWeight);
+        const equipment = await Equipment.load(data.userId);
+        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment);
     }
 
     /** 변경된 데이터 DB에 저장 */
     async save(): Promise<void> {
         if (this._dirty) {
             await prisma.player.update({
-                where: { id: this.id },
+                where: { userId: this.userId },
                 data: {
                     level: this._level,
                     exp: this._exp,

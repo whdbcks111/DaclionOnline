@@ -18,6 +18,11 @@ export function getSession(token: string): Session | undefined {
     return sessionMap.get(token);
 }
 
+export function getSessionByUserId(userId: number): Session | undefined {
+    const token = userSessions.get(userId)?.values().next().value;
+    return token ? sessionMap.get(token) : undefined;
+}
+
 export function removeSession(token: string) {
     const session = sessionMap.get(token);
     if (session) {
@@ -59,10 +64,7 @@ export function isUserOnline(userId: number): boolean {
 
 /** userId로 permission 조회 (세션에서) */
 export function getUserPermission(userId: number): number {
-    for (const session of sessionMap.values()) {
-        if (session.userId === userId) return session.permission;
-    }
-    return 0;
+    return getSessionByUserId(userId)?.permission ?? 0;
 }
 
 export function createSession(user: { id: number, username: string, nickname: string, profileImage?: string | null, permission?: number }): string {
@@ -192,8 +194,9 @@ export const initLogin = () => {
                 await prisma.user.update({ where: { id: session.userId }, data: { nickname: trimmed } });
 
                 // 해당 유저의 모든 세션 닉네임 업데이트
-                for (const s of sessionMap.values()) {
-                    if (s.userId === session.userId) s.nickname = trimmed;
+                for (const token of userSessions.get(session.userId) ?? []) {
+                    const s = sessionMap.get(token);
+                    if (s) s.nickname = trimmed;
                 }
 
                 socket.emit('nicknameResult', { ok: true, nickname: trimmed });

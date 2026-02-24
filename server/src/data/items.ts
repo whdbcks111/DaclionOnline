@@ -2,13 +2,13 @@ import { defineItem } from '../models/Item.js';
 import { startCoroutine, Wait } from '../modules/coroutine.js';
 import { registerItemUse } from '../modules/itemUse.js';
 import { sendNotificationToUser } from '../modules/message.js';
-import { getPlayer } from '../modules/player.js';
+import { getPlayerByUserId } from '../modules/player.js';
 import logger from '../utils/logger.js';
 
 registerItemUse('heal_hp', (inv, item, finish) => {
     function* healRoutine(amount: number, time: number) {
         try {
-            const player = getPlayer(inv.playerId);
+            const player = getPlayerByUserId(inv.playerId);
             if(!player) return;
 
             inv.removeItem(item.id, 1);

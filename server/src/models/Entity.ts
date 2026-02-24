@@ -48,6 +48,7 @@ export default abstract class Entity {
     deathTimer: number = 0;
 
     protected _attackCooldown = 0;
+    protected _maxAttackCooldown = 0;
 
     constructor(
         level: number,
@@ -147,6 +148,7 @@ export default abstract class Entity {
     }
 
     get attackCooldown(): number { return this._attackCooldown; }
+    get maxAttackCooldown(): number { return this._maxAttackCooldown; }
 
     /** 대상 엔티티를 공격 */
     attack(target: Entity, type: DamageType = 'physical', amount?: number): DamageResult | null {
@@ -167,7 +169,8 @@ export default abstract class Entity {
 
         // 공격 쿨다운 설정
         const attackSpeed = this.attribute.get('attackSpeed');
-        this._attackCooldown = 1 / Math.max(0.01, attackSpeed);
+        this._maxAttackCooldown = 1 / Math.max(0.01, attackSpeed);
+        this._attackCooldown = this._maxAttackCooldown;
 
         const lifeRatio = target.maxLife > 0 ? Math.max(0, target.life) / target.maxLife : 0;
         const pct = Math.floor(lifeRatio * 100);

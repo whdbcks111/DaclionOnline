@@ -1,0 +1,100 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/themes' as *;
+
+.hud {
+    background-color: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: $border-radius-md;
+    padding: 8px 12px;
+    min-width: 300px;
+    font-family: $font-family-base;
+    color: #e8e8e8;
+    backdrop-filter: blur(4px);
+}
+
+.title {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: $font-size-sm;
+    font-weight: bold;
+    margin-bottom: 8px;
+    white-space: nowrap;
+}
+
+.userId {
+    font-size: 0.7rem;
+    opacity: 0.5;
+    font-weight: normal;
+}
+
+.bars {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.pairedRow {
+    display: flex;
+    gap: 8px;
+
+    .row {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .label {
+        width: 32px;
+    }
+
+    .value {
+        width: 44px;
+    }
+}
+
+.halfRow {
+    width: 50%;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.label {
+    font-size: 0.68rem;
+    opacity: 0.75;
+    width: 38px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.track {
+    flex: 1;
+    height: 6px;
+    background-color: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.life      { background-color: $color-life; }
+.mentality { background-color: $color-magic; }
+.hungry    { background-color: $color-hungry; }
+.thirsty   { background-color: $color-thirsty; }
+.attack    { background-color: white; transition: width 0.45s linear; }
+
+.value {
+    font-size: 0.68rem;
+    opacity: 0.7;
+    width: 60px;
+    flex-shrink: 0;
+    text-align: right;
+    white-space: nowrap;
+}

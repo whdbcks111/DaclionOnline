@@ -1,0 +1,157 @@
+@use '../../styles/variables' as *;
+@use '../../styles/themes' as *;
+
+.panel {
+    position: fixed;
+    z-index: 400;
+    background-color: $color-bg-tertiary;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-md;
+    box-shadow: $shadow-lg;
+    width: 300px;
+    padding: $spacing-md;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    font-family: $font-family-base;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: bold;
+    font-size: $font-size-base;
+    color: $color-text;
+    padding-bottom: $spacing-sm;
+    border-bottom: 1px solid $color-border;
+    cursor: grab;
+    user-select: none;
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+.closeBtn {
+    background: none;
+    border: none;
+    color: $color-text-tertiary;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 6px;
+    border-radius: $border-radius-sm;
+
+    &:hover {
+        color: $color-text;
+        background-color: rgba(255, 255, 255, 0.08);
+    }
+}
+
+.editModeRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    padding: $spacing-xs 0;
+}
+
+.divider {
+    height: 1px;
+    background-color: $color-border;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-xs 0;
+}
+
+.rowLabel {
+    font-size: $font-size-sm;
+    color: $color-text;
+}
+
+.rowDesc {
+    font-size: 0.72rem;
+    color: $color-text-tertiary;
+    margin-top: 2px;
+}
+
+.opacityRow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: $spacing-xs 0;
+}
+
+.opacityValue {
+    margin-left: 8px;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+    font-weight: normal;
+}
+
+.rangeSlider {
+    width: 100%;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+// 토글 스위치
+$switch-width: 40px;
+$switch-height: 22px;
+$knob-size: 16px;
+$knob-offset: ($switch-height - $knob-size) * 0.5;
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: $switch-width;
+    height: $switch-height;
+    flex-shrink: 0;
+    cursor: pointer;
+
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+    }
+}
+
+.slider {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: $switch-height;
+    transition: background-color 0.2s;
+
+    &::before {
+        content: '';
+        position: absolute;
+        width: $knob-size;
+        height: $knob-size;
+        left: $knob-offset;
+        top: $knob-offset;
+        background-color: #fff;
+        border-radius: 50%;
+        transition: transform 0.2s;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .switch input:checked + & {
+        background-color: var(--color-primary);
+    }
+
+    .switch input:checked + &::before {
+        transform: translateX($switch-width - $knob-size - $knob-offset * 2);
+    }
+}

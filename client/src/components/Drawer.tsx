@@ -15,9 +15,10 @@ interface Props {
     currentChannel: string | null
     channelList: ChannelInfo[]
     onJoinChannel: (channel: string | null) => void
+    onOpenHudSettings: () => void
 }
 
-export default function Drawer({ open, onClose, nickname, profileImage, onProfileUpdate, onChangeNickname, userId, currentChannel, channelList, onJoinChannel }: Props) {
+export default function Drawer({ open, onClose, nickname, profileImage, onProfileUpdate, onChangeNickname, userId, currentChannel, channelList, onJoinChannel, onOpenHudSettings }: Props) {
     const [uploading, setUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [showChannels, setShowChannels] = useState(false)
@@ -139,6 +140,9 @@ export default function Drawer({ open, onClose, nickname, profileImage, onProfil
                             닉네임 변경
                         </button>
                     )}
+                    <button className={styles.uploadButton} onClick={onOpenHudSettings}>
+                        HUD 설정
+                    </button>
                 </div>
                 <div className={styles.channelSection}>
                     <button

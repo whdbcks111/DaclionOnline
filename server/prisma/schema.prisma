@@ -31,8 +31,7 @@ model User {
 
 // 플레이어 테이블
 model Player {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @unique @map("user_id")
+  userId    Int      @id @map("user_id")
   user      User     @relation(fields: [userId], references: [id])
 
   level      Int      @default(1)
@@ -61,7 +60,7 @@ model Item {
   id          Int       @id @default(autoincrement())
 
   playerId    Int       @map("player_id")
-  player      Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  player      Player    @relation(fields: [playerId], references: [userId], onDelete: Cascade)
 
   itemDataId  String    @db.VarChar(100) @map("item_data_id")
 
@@ -81,7 +80,7 @@ model Equipment {
   id          Int       @id @default(autoincrement())
 
   playerId    Int       @map("player_id")
-  player      Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  player      Player    @relation(fields: [playerId], references: [userId], onDelete: Cascade)
 
   itemDataId  String    @db.VarChar(100) @map("item_data_id")
 

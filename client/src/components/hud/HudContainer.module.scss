@@ -1,0 +1,28 @@
+@use '../../styles/variables' as *;
+
+.hudItem {
+    position: fixed;
+    z-index: 100;
+    user-select: none;
+    pointer-events: none;
+}
+
+.editMode {
+    pointer-events: auto;
+    cursor: grab;
+    outline: 1px dashed rgba(255, 255, 255, 0.35);
+    outline-offset: 3px;
+    border-radius: $border-radius-sm;
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+.dragHandle {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 2px 4px;
+    margin-bottom: 2px;
+    letter-spacing: 0.03em;
+}

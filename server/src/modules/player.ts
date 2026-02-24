@@ -1,13 +1,12 @@
 import logger from "../utils/logger.js";
 import Player from "../models/Player.js";
 import { getIO } from "./socket.js";
-import { getSession } from "./login.js";
+import { getSession, getSessionByUserId } from "./login.js";
 
 const SAVE_INTERVAL = 30_000;   // 30초
-const STATS_INTERVAL = 3_000;  // 3초
+const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
 
 const onlinePlayersFromUserId = new Map<number, Player>(); // userId → Player
-const onlinePlayers = new Map<number, Player>(); // playerId → Player
 
 /** 로그인 시 호출: DB에서 로드하여 메모리에 올림 */
 export async function loadPlayerByUserId(userId: number): Promise<Player> {
@@ -20,22 +19,6 @@ export async function loadPlayerByUserId(userId: number): Promise<Player> {
     }
 
     onlinePlayersFromUserId.set(player.userId, player);
-    onlinePlayers.set(player.id, player);
-    return player;
-}
-
-/** 로그인 시 호출: DB에서 로드하여 메모리에 올림 */
-export async function loadPlayer(id: number): Promise<Player | null> {
-    const existing = onlinePlayers.get(id);
-    if (existing) return existing;
-
-    let player = await Player.load(id);
-    if (!player) {
-        return null;
-    }
-
-    onlinePlayersFromUserId.set(player.userId, player);
-    onlinePlayers.set(player.id, player);
     return player;
 }
 
@@ -45,26 +28,11 @@ export async function unloadPlayerByUserId(userId: number): Promise<void> {
     if (!player) return;
     await player.save();
     onlinePlayersFromUserId.delete(player.userId);
-    onlinePlayers.delete(player.id);
-}
-
-/** 로그아웃/연결끊김 시 호출: 저장 후 메모리에서 제거 */
-export async function unloadPlayer(id: number): Promise<void> {
-    const player = onlinePlayers.get(id);
-    if (!player) return;
-    await player.save();
-    onlinePlayersFromUserId.delete(player.userId);
-    onlinePlayers.delete(player.id);
 }
 
 /** 온라인 플레이어 조회 (메모리) */
 export function getPlayerByUserId(userId: number): Player | undefined {
     return onlinePlayersFromUserId.get(userId);
-}
-
-/** 온라인 플레이어 조회 (메모리) */
-export function getPlayer(id: number): Player | undefined {
-    return onlinePlayers.get(id);
 }
 
 /** 온라인 플레이어 목록 반환 */
@@ -79,13 +47,6 @@ export async function fetchPlayerByUserId(userId: number): Promise<Player | null
     return Player.loadByUserId(userId);
 }
 
-/** 오프라인 플레이어 조회 (DB에서 직접 로드, 메모리에 올리지 않음) */
-export async function fetchPlayer(id: number): Promise<Player | null> {
-    const online = onlinePlayers.get(id);
-    if (online) return online;
-    return Player.load(id);
-}
-
 /** 모든 온라인 플레이어 저장 */
 export async function saveAllPlayers(): Promise<void> {
     const promises: Promise<void>[] = [];
@@ -95,22 +56,29 @@ export async function saveAllPlayers(): Promise<void> {
     await Promise.all(promises);
 }
 
-/** 특정 유저의 Life/Mentality 상태를 해당 유저 소켓에 전송 */
+/** 특정 유저의 플레이어 HUD 데이터를 해당 유저 소켓에 전송 */
 export function sendPlayerStats(userId: number): void {
     const player = onlinePlayersFromUserId.get(userId);
     if (!player) return;
 
     const data = {
-        life:         player.life,
-        maxLife:      player.maxLife,
-        mentality:    player.mentality,
-        maxMentality: player.maxMentality,
+        userId:            player.userId,
+        nickname:          getSessionByUserId(userId)?.nickname ?? '',
+        life:              player.life,
+        maxLife:           player.maxLife,
+        mentality:         player.mentality,
+        maxMentality:      player.maxMentality,
+        thirsty:           player.thirsty,
+        maxThirsty:        player.maxThirsty,
+        hungry:            player.hungry,
+        maxHungry:         player.maxHungry,
+        attackCooldown:    player.attackCooldown,
+        maxAttackCooldown: player.maxAttackCooldown,
     };
 
     const io = getIO();
     for (const [, socket] of io.sockets.sockets) {
-        const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
-        if (session?.userId === userId) {
+        if (socket.data.sessionToken && getSession(socket.data.sessionToken)?.userId === userId) {
             socket.emit('playerStats', data);
         }
     }

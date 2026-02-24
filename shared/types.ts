@@ -97,12 +97,20 @@ export interface ChannelInfo {
     description?: string
 }
 
-// 플레이어 Life/Mentality
+// 플레이어 HUD 데이터
 export interface PlayerStatsData {
+    userId: number
+    nickname: string
     life: number
     maxLife: number
     mentality: number
     maxMentality: number
+    thirsty: number
+    maxThirsty: number
+    hungry: number
+    maxHungry: number
+    attackCooldown: number
+    maxAttackCooldown: number
 }
 
 // 알림
