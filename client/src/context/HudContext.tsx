@@ -26,7 +26,7 @@ export const HUD_DEFINITIONS: HudDefinition[] = [
 
 const DEFAULT_CONFIGS: Record<string, HudConfig> = {
   'player-status': { id: 'player-status', visible: true, x: 95, y: 10, anchor: 'topRight' },
-  'player-location': { id: 'player-location', visible: true, x: 95, y: 30, anchor: 'topRight' },
+  'player-location': { id: 'player-location', visible: false, x: 95, y: 30, anchor: 'topRight' },
 }
 
 interface HudContextType {
