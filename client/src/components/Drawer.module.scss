@@ -188,8 +188,9 @@ $avatar-size: 80px;
 .channelItem {
     width: 100%;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     padding: $spacing-sm $spacing-md;
     border: 1px solid $color-border;
     border-radius: $border-radius-sm;
@@ -224,4 +225,11 @@ $avatar-size: 80px;
 .channelDesc {
     font-size: 0.75rem;
     opacity: 0.75;
+}
+
+.channelCount {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    flex-shrink: 0;
+    margin-left: $spacing-sm;
 }

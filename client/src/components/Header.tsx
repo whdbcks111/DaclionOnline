@@ -1,12 +1,13 @@
 import styles from './Header.module.scss'
 
 interface Props {
-    userCount: number
+    totalCount: number
+    channelCount: number
     onMenuClick: () => void
     channelName: string
 }
 
-export default function Header({ userCount, onMenuClick, channelName }: Props) {
+export default function Header({ totalCount, channelCount, onMenuClick, channelName }: Props) {
     return (
         <header className={styles.header}>
             <button className={styles.menuButton} onClick={onMenuClick} aria-label="메뉴 열기">
@@ -15,7 +16,8 @@ export default function Header({ userCount, onMenuClick, channelName }: Props) {
             <h1 className={styles.title}>{channelName}</h1>
             <div className={styles.userCount}>
                 <span className={styles.dot} />
-                {userCount}명
+                <span>{channelCount}명</span>
+                <span className={styles.totalCount}>/ 전체 {totalCount}명</span>
             </div>
         </header>
     )

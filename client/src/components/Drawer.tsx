@@ -14,11 +14,16 @@ interface Props {
     userId?: number
     currentChannel: string | null
     channelList: ChannelInfo[]
+    channelCounts: Record<string, number>
     onJoinChannel: (channel: string | null) => void
     onOpenHudSettings: () => void
 }
 
-export default function Drawer({ open, onClose, nickname, profileImage, onProfileUpdate, onChangeNickname, userId, currentChannel, channelList, onJoinChannel, onOpenHudSettings }: Props) {
+function channelRoomKey(channel: string | null): string {
+    return channel === null ? 'channel:main' : `channel:${channel}`
+}
+
+export default function Drawer({ open, onClose, nickname, profileImage, onProfileUpdate, onChangeNickname, userId, currentChannel, channelList, channelCounts, onJoinChannel, onOpenHudSettings }: Props) {
     const [uploading, setUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [showChannels, setShowChannels] = useState(false)
@@ -167,9 +172,7 @@ export default function Drawer({ open, onClose, nickname, profileImage, onProfil
                                     }}
                                 >
                                     <span className={styles.channelName}>{ch.name}</span>
-                                    {ch.description && (
-                                        <span className={styles.channelDesc}>{ch.description}</span>
-                                    )}
+                                    <span className={styles.channelCount}>{channelCounts[channelRoomKey(ch.id)] ?? 0}명</span>
                                 </button>
                             ))}
                             {privateChannelId && (

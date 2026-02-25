@@ -1,6 +1,6 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
-import { getSession } from "./login.js";
+import { getSession, broadcastUserCount } from "./login.js";
 import { sendMessageToChannel, getFlagsForPermission } from "./message.js";
 import { getUserChannel, setUserChannel, getChannelHistory, getChannelRoomKey, getAvailableChannels, getFilteredHistoryForUser } from "./channel.js";
 import { sendPlayerStats } from "./player.js";
@@ -61,6 +61,7 @@ export const initChat = () => {
             }
 
             setUserChannel(session.userId, channel);
+            broadcastUserCount();
 
             // 새 채널의 히스토리 + 필터 히스토리 합쳐서 전송
             const publicHistory = getChannelHistory(channel);

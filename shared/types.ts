@@ -97,6 +97,12 @@ export interface ChannelInfo {
     description?: string
 }
 
+// 온라인 유저 수 데이터
+export interface UserCountData {
+    total: number
+    channelCounts: Record<string, number>  // room key (e.g. 'channel:main') → 인원수
+}
+
 // 플레이어 HUD 데이터
 export interface PlayerStatsData {
     userId: number
@@ -136,7 +142,7 @@ export interface ServerToClientEvents {
     notification: (data: NotificationData) => void
     commandList: (commands: CommandInfo[]) => void
     playerStats: (data: PlayerStatsData) => void
-    userCount: (count: number) => void
+    userCount: (data: UserCountData) => void
     channelChanged: (channel: string | null, history: ChatMessage[]) => void
     channelList: (channels: ChannelInfo[]) => void
     nicknameResult: (result: SimpleResult & { nickname?: string }) => void

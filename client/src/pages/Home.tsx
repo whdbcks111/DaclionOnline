@@ -8,7 +8,11 @@ import Header from '../components/Header'
 import Drawer from '../components/Drawer'
 import HudContainer from '../components/hud/HudContainer'
 import HudSettings from '../components/hud/HudSettings'
-import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, ChannelInfo } from '@shared/types'
+import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, ChannelInfo, UserCountData } from '@shared/types'
+
+function channelRoomKey(channel: string | null): string {
+  return channel === null ? 'channel:main' : `channel:${channel}`
+}
 
 function HomeContent() {
   const { socket, sessionInfo, updateProfileImage, updateNickname } = useSocket()
@@ -18,7 +22,7 @@ function HomeContent() {
   const [commandFilter, setCommandFilter] = useState('')
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
-  const [userCount, setUserCount] = useState(0)
+  const [userCountData, setUserCountData] = useState<UserCountData>({ total: 0, channelCounts: {} })
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [hudSettingsOpen, setHudSettingsOpen] = useState(false)
   const [currentChannel, setCurrentChannel] = useState<string | null>(null)
@@ -32,7 +36,7 @@ function HomeContent() {
     const onChatHistory = (history: ChatMessageType[]) => setMessages(history)
     const onChatMessage = (msg: ChatMessageType) => setMessages(prev => [...prev, msg])
     const onCommandList = (list: CommandInfo[]) => setCommands(list)
-    const onUserCount = (count: number) => setUserCount(count)
+    const onUserCount = (data: UserCountData) => setUserCountData(data)
     const onPlayerStats = (data: PlayerStatsData) => setPlayerStats(data)
     const onChannelChanged = (channel: string | null, history: ChatMessageType[]) => {
       setCurrentChannel(channel)
@@ -149,7 +153,8 @@ function HomeContent() {
     <div className={styles.homeContainer}>
       <div className={styles.chatArea}>
         <Header
-          userCount={userCount}
+          totalCount={userCountData.total}
+          channelCount={userCountData.channelCounts[channelRoomKey(currentChannel)] ?? 0}
           onMenuClick={() => setDrawerOpen(true)}
           channelName={
             sessionInfo && currentChannel === `private_${sessionInfo.userId}`
@@ -209,6 +214,7 @@ function HomeContent() {
         userId={sessionInfo?.userId}
         currentChannel={currentChannel}
         channelList={channelList}
+        channelCounts={userCountData.channelCounts}
         onJoinChannel={(channel) => socket?.emit('joinChannel', channel)}
         onOpenHudSettings={() => { setDrawerOpen(false); setHudSettingsOpen(true) }}
       />

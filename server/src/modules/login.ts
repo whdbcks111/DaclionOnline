@@ -6,7 +6,7 @@ import { isValidPayload, validateNickname } from "../utils/validators.js";
 import prisma from "../config/prisma.js";
 import type { LoginRequest } from "../../../shared/types.js";
 import { loadPlayerByUserId, unloadPlayerByUserId } from "./player.js";
-import { getUserChannel, getChannelRoomKey } from "./channel.js";
+import { getUserChannel, getChannelRoomKey, getAvailableChannels } from "./channel.js";
 import type { Session } from "../types/index.js";
 
 const sessionMap = new Map<string, Session>()
@@ -42,8 +42,18 @@ export function getUserSessionCount(userId: number): number {
 // 온라인 유저 추적: userId -> 연결된 소켓 수
 const onlineUsers = new Map<number, number>()
 
-function broadcastUserCount(): void {
-    try { getIO().emit('userCount', onlineUsers.size) } catch { /* 소켓 미초기화 시 무시 */ }
+function buildUserCountData() {
+    const io = getIO()
+    const channelCounts: Record<string, number> = {}
+    for (const ch of getAvailableChannels()) {
+        const key = getChannelRoomKey(ch.id)
+        channelCounts[key] = io.sockets.adapter.rooms.get(key)?.size ?? 0
+    }
+    return { total: onlineUsers.size, channelCounts }
+}
+
+export function broadcastUserCount(): void {
+    try { getIO().emit('userCount', buildUserCountData()) } catch { /* 소켓 미초기화 시 무시 */ }
 }
 
 export function setUserOnline(userId: number) {
@@ -160,7 +170,7 @@ export const initLogin = () => {
         });
 
         socket.on('requestUserCount', () => {
-            socket.emit('userCount', onlineUsers.size);
+            socket.emit('userCount', buildUserCountData());
         });
 
         socket.on('changeNickname', async (newNickname: unknown) => {
