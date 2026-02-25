@@ -2,6 +2,8 @@ import { registerCommand, getCommandListFiltered } from "../modules/bot.js";
 import { sendBotMessageToChannel, sendBotMessageToUser, broadcastMessageAll, getFlagsForPermission } from "../modules/message.js";
 import { getUserChannel } from "../modules/channel.js";
 import { parseChatMessage } from "../utils/chatParser.js";
+import { getSessionByUserId } from "../modules/login.js";
+import { getPlayerByUserId } from "../modules/player.js";
 
 export function initGeneralCommands(): void {
     registerCommand({
@@ -56,6 +58,8 @@ export function initGeneralCommands(): void {
         ],
         handler(userId, args) {
             const code = args.join(' ');
+            const session = getSessionByUserId(userId);
+            const player = getPlayerByUserId(userId);
             try {
                 sendBotMessageToUser(userId, `결과 : ${eval(code)}`);
             } catch (e) {
