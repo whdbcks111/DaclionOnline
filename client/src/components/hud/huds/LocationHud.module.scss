@@ -1,0 +1,71 @@
+@use '../../../styles/variables' as *;
+
+.container {
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: $border-radius-sm;
+    padding: 8px 10px;
+    min-width: 180px;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.header {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding-bottom: 5px;
+}
+
+.locationName {
+    font-weight: bold;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.coords {
+    font-size: 0.68rem;
+    opacity: 0.55;
+    white-space: nowrap;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.sectionTitle {
+    font-size: 0.68rem;
+    opacity: 0.55;
+    margin-bottom: 1px;
+    letter-spacing: 0.04em;
+}
+
+.entityRow {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.entityIndex {
+    opacity: 0.5;
+    min-width: 14px;
+    white-space: nowrap;
+    text-align: right;
+    flex-shrink: 0;
+    font-size: 0.7rem;
+}
+
+.entityName {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    max-width: 100px;
+}
+

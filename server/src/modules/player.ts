@@ -2,6 +2,8 @@ import logger from "../utils/logger.js";
 import Player from "../models/Player.js";
 import { getIO } from "./socket.js";
 import { getSession, getSessionByUserId } from "./login.js";
+import { getLocation } from "../models/Location.js";
+import type { LocationInfoData } from "../../../shared/types.js";
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -84,6 +86,46 @@ export function sendPlayerStats(userId: number): void {
     }
 }
 
+/** 특정 유저의 위치 정보(몬스터·플레이어 목록)를 해당 유저 소켓에 전송 */
+export function sendLocationInfo(userId: number): void {
+    const player = onlinePlayersFromUserId.get(userId);
+    if (!player) return;
+
+    const location = getLocation(player.locationId);
+    if (!location) return;
+
+    const locationId = player.locationId;
+    const data: LocationInfoData = {
+        locationId,
+        name: location.data.name,
+        x: location.data.x,
+        y: location.data.y,
+        z: location.data.z,
+        monsters: location.monsters.map(m => ({
+            name: m.name,
+            level: m.level,
+            life: m.life,
+            maxLife: m.maxLife,
+        })),
+        players: getOnlinePlayers()
+            .filter(p => p.locationId === locationId)
+            .map(p => ({
+                name: getSessionByUserId(p.userId)?.nickname ?? '',
+                level: p.level,
+                life: p.life,
+                maxLife: p.maxLife,
+                userId: p.userId,
+            })),
+    };
+
+    const io = getIO();
+    for (const [, socket] of io.sockets.sockets) {
+        if (socket.data.sessionToken && getSession(socket.data.sessionToken)?.userId === userId) {
+            socket.emit('locationInfo', data);
+        }
+    }
+}
+
 /** 플레이어 모듈 초기화 */
 export function initPlayer(): void {
     // 주기적 저장
@@ -95,10 +137,11 @@ export function initPlayer(): void {
         }
     }, SAVE_INTERVAL);
 
-    // 주기적 Life/Mentality 브로드캐스트
+    // 주기적 스탯/위치 브로드캐스트
     setInterval(() => {
         for (const userId of onlinePlayersFromUserId.keys()) {
             sendPlayerStats(userId);
+            sendLocationInfo(userId);
         }
     }, STATS_INTERVAL);
 

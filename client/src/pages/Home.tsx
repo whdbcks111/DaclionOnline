@@ -8,7 +8,7 @@ import Header from '../components/Header'
 import Drawer from '../components/Drawer'
 import HudContainer from '../components/hud/HudContainer'
 import HudSettings from '../components/hud/HudSettings'
-import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, ChannelInfo, UserCountData } from '@shared/types'
+import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, LocationInfoData, ChannelInfo, UserCountData } from '@shared/types'
 
 function channelRoomKey(channel: string | null): string {
   return channel === null ? 'channel:main' : `channel:${channel}`
@@ -16,7 +16,7 @@ function channelRoomKey(channel: string | null): string {
 
 function HomeContent() {
   const { socket, sessionInfo, updateProfileImage, updateNickname } = useSocket()
-  const { playerStats, setPlayerStats } = useHud()
+  const { playerStats, setPlayerStats, setLocationInfo } = useHud()
   const [messages, setMessages] = useState<ChatMessageType[]>([])
   const [commands, setCommands] = useState<CommandInfo[]>([])
   const [commandFilter, setCommandFilter] = useState('')
@@ -38,6 +38,7 @@ function HomeContent() {
     const onCommandList = (list: CommandInfo[]) => setCommands(list)
     const onUserCount = (data: UserCountData) => setUserCountData(data)
     const onPlayerStats = (data: PlayerStatsData) => setPlayerStats(data)
+    const onLocationInfo = (data: LocationInfoData) => setLocationInfo(data)
     const onChannelChanged = (channel: string | null, history: ChatMessageType[]) => {
       setCurrentChannel(channel)
       setMessages(history)
@@ -55,6 +56,7 @@ function HomeContent() {
     socket.on('commandList', onCommandList)
     socket.on('userCount', onUserCount)
     socket.on('playerStats', onPlayerStats)
+    socket.on('locationInfo', onLocationInfo)
     socket.on('channelChanged', onChannelChanged)
     socket.on('channelList', onChannelList)
     socket.on('editMessage', onEditMessage)
@@ -70,6 +72,7 @@ function HomeContent() {
       socket.off('commandList', onCommandList)
       socket.off('userCount', onUserCount)
       socket.off('playerStats', onPlayerStats)
+      socket.off('locationInfo', onLocationInfo)
       socket.off('channelChanged', onChannelChanged)
       socket.off('channelList', onChannelList)
       socket.off('editMessage', onEditMessage)

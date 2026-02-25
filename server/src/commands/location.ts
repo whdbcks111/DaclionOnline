@@ -1,6 +1,7 @@
 import { registerCommand } from "../modules/bot.js";
 import { sendBotMessageToChannel, sendBotMessageToUser, sendNotificationToUser } from "../modules/message.js";
-import { getPlayerByUserId } from "../modules/player.js";
+import { getPlayerByUserId, getOnlinePlayers } from "../modules/player.js";
+import { getSessionByUserId } from "../modules/login.js";
 import { chat } from "../utils/chatBuilder.js";
 import { getLocation, distanceBetween } from "../models/Location.js";
 import { getItemData } from "../models/Item.js";
@@ -144,9 +145,27 @@ export function initLocationCommands(): void {
                     const ratio = m.maxLife > 0 ? m.life / m.maxLife : 0;
                     const pct = Math.floor(ratio * 100);
                     b.text('- ')
-                     .color('lime', b2 => b2.text(`Lv.${m.level}`))
+                     .text(`Lv.${m.level}`)
                      .text(` ${m.name} `)
-                     .progress({ value: ratio, length: 80, color: '#ef4444', thickness: 6 })
+                     .progress({ value: ratio, length: 80, color: '$enemy', thickness: 6 })
+                     .text(` ${pct}%\n`);
+                }
+            }
+
+            b.text('\n').color('gray', b2 => b2.text('[ 플레이어 ]\n'));
+
+            const playersHere = getOnlinePlayers().filter(p => p.locationId === player.locationId);
+            if (playersHere.length === 0) {
+                b.color('gray', b2 => b2.text('없음\n'));
+            } else {
+                for (const p of playersHere) {
+                    const nickname = getSessionByUserId(p.userId)?.nickname ?? '(알 수 없음)';
+                    const ratio = p.maxLife > 0 ? p.life / p.maxLife : 0;
+                    const pct = Math.floor(ratio * 100);
+                    b.text(`#${p.userId} `)
+                     .text(`Lv.${p.level}`)
+                     .text(` ${nickname} `)
+                     .progress({ value: ratio, length: 80, color: '$life', thickness: 6 })
                      .text(` ${pct}%\n`);
                 }
             }

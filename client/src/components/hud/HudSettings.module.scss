@@ -74,6 +74,57 @@
     padding: $spacing-xs 0;
 }
 
+.hudRow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: $spacing-xs 0;
+}
+
+.hudRowTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.anchorGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 14px);
+    grid-template-rows: repeat(3, 14px);
+    gap: 2px;
+}
+
+.anchorCell {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    padding: 0;
+    transition: background-color 0.1s, border-color 0.1s;
+
+    :root[data-theme='light'] & {
+        border-color: rgba(0, 0, 0, 0.2);
+        background: rgba(0, 0, 0, 0.05);
+
+        &:hover {
+            border-color: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.1);
+        }
+    }
+
+    &:hover {
+        border-color: rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.12);
+    }
+}
+
+.anchorActive {
+    background: var(--color-primary) !important;
+    border-color: transparent !important;
+}
+
 .rowLabel {
     font-size: $font-size-sm;
     color: $color-text;

@@ -28,6 +28,13 @@ class ChatBuilder {
         return this
     }
 
+    weight(weight: string, build: (b: ChatBuilder) => ChatBuilder): this {
+        const inner = new ChatBuilder()
+        build(inner)
+        this.nodes.push({ type: 'weight', weight, children: inner.nodes })
+        return this
+    }
+
     deco(decoration: string, build: (b: ChatBuilder) => ChatBuilder): this {
         const inner = new ChatBuilder()
         build(inner)

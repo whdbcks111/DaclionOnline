@@ -1,10 +1,24 @@
 import { useCallback } from 'react'
-import { useHud, HUD_DEFINITIONS } from '../../context/HudContext'
+import { useHud, HUD_DEFINITIONS, type AnchorPoint } from '../../context/HudContext'
 import PlayerStatusHud from './huds/PlayerStatusHud'
+import LocationHud from './huds/LocationHud'
 import styles from './HudContainer.module.scss'
 
 const HUD_COMPONENTS: Record<string, React.ComponentType> = {
   'player-status': PlayerStatusHud,
+  'player-location': LocationHud,
+}
+
+const ANCHOR_DATA: Record<AnchorPoint, { tx: number; ty: number; origin: string }> = {
+  topLeft:      { tx: 0,    ty: 0,    origin: 'top left' },
+  topMiddle:    { tx: -50,  ty: 0,    origin: 'top center' },
+  topRight:     { tx: -100, ty: 0,    origin: 'top right' },
+  middleLeft:   { tx: 0,    ty: -50,  origin: 'center left' },
+  center:       { tx: -50,  ty: -50,  origin: 'center center' },
+  middleRight:  { tx: -100, ty: -50,  origin: 'center right' },
+  bottomLeft:   { tx: 0,    ty: -100, origin: 'bottom left' },
+  bottomMiddle: { tx: -50,  ty: -100, origin: 'bottom center' },
+  bottomRight:  { tx: -100, ty: -100, origin: 'bottom right' },
 }
 
 export default function HudContainer() {
@@ -64,11 +78,18 @@ export default function HudContainer() {
         if (!cfg?.visible) return null
         const Component = HUD_COMPONENTS[def.id]
         if (!Component) return null
+        const { tx, ty, origin } = ANCHOR_DATA[cfg.anchor ?? 'topLeft']
         return (
           <div
             key={def.id}
             className={`${styles.hudItem} ${editMode ? styles.editMode : ''}`}
-            style={{ left: `${cfg.x}%`, top: `${cfg.y}%`, opacity, transform: `scale(${scale})`, transformOrigin: 'top left' }}
+            style={{
+              left: `${cfg.x}%`,
+              top: `${cfg.y}%`,
+              opacity,
+              transform: `translate(${tx}%, ${ty}%) scale(${scale})`,
+              transformOrigin: origin,
+            }}
             onMouseDown={e => handleMouseDown(def.id, e)}
             onTouchStart={e => handleTouchStart(def.id, e)}
           >

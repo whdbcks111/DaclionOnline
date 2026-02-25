@@ -51,6 +51,7 @@ export type ChatNode =
     | { type: 'color'; color: string; children: ChatNode[] }
     | { type: 'bg'; color: string; children: ChatNode[] }
     | { type: 'deco'; decoration: string; children: ChatNode[] }
+    | { type: 'weight'; weight: string; children: ChatNode[] }
     | { type: 'size'; size: string; children: ChatNode[] }
     | { type: 'hide'; title: string; children: ChatNode[] }
     | { type: 'icon'; name: string }
@@ -103,6 +104,26 @@ export interface UserCountData {
     channelCounts: Record<string, number>  // room key (e.g. 'channel:main') → 인원수
 }
 
+// 엔티티 HP 바 정보 (위치 HUD용)
+export interface EntityBarInfo {
+    name: string
+    level: number
+    life: number
+    maxLife: number
+    userId?: number  // 플레이어만 존재
+}
+
+// 위치 정보 HUD 데이터
+export interface LocationInfoData {
+    locationId: string
+    name: string
+    x: number
+    y: number
+    z: number
+    monsters: EntityBarInfo[]
+    players: EntityBarInfo[]
+}
+
 // 플레이어 HUD 데이터
 export interface PlayerStatsData {
     userId: number
@@ -142,6 +163,7 @@ export interface ServerToClientEvents {
     notification: (data: NotificationData) => void
     commandList: (commands: CommandInfo[]) => void
     playerStats: (data: PlayerStatsData) => void
+    locationInfo: (data: LocationInfoData) => void
     userCount: (data: UserCountData) => void
     channelChanged: (channel: string | null, history: ChatMessage[]) => void
     channelList: (channels: ChannelInfo[]) => void
@@ -164,4 +186,5 @@ export interface ClientToServerEvents {
     joinChannel: (channel: string | null) => void
     requestChannelList: () => void
     changeNickname: (nickname: string) => void
+    requestLocationInfo: () => void
 }

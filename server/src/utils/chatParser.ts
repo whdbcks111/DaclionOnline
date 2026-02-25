@@ -211,6 +211,14 @@ registerChatTag('size', {
     createNode: (size, children) => ({ type: 'size', size, children: children! }),
 })
 
+const WEIGHTS = new Set(['normal', 'bold', '100', '200', '300', '400', '500', '600', '700', '800', '900'])
+
+registerChatTag('weight', {
+    kind: 'wrap',
+    validate: (v) => WEIGHTS.has(v),
+    createNode: (weight, children) => ({ type: 'weight', weight, children: children! }),
+})
+
 registerChatTag('hide', {
     kind: 'wrap',
     createNode: (title, children) => ({ type: 'hide', title, children: children! }),

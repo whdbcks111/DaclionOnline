@@ -3,7 +3,7 @@ import styles from './ProgressNode.module.scss'
 
 interface Props {
     value: number
-    length: number
+    length: number | string
     color: string
     thickness: number
     shape: 'rounded' | 'square'

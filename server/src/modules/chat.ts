@@ -3,7 +3,7 @@ import { getIO } from "./socket.js";
 import { getSession, broadcastUserCount } from "./login.js";
 import { sendMessageToChannel, getFlagsForPermission } from "./message.js";
 import { getUserChannel, setUserChannel, getChannelHistory, getChannelRoomKey, getAvailableChannels, getFilteredHistoryForUser } from "./channel.js";
-import { sendPlayerStats } from "./player.js";
+import { sendPlayerStats, sendLocationInfo } from "./player.js";
 import { handleCommand } from "./bot.js";
 import type { ChatMessage } from "../../../shared/types.js";
 
@@ -25,9 +25,15 @@ export const initChat = () => {
                     .sort((a, b) => a.timestamp - b.timestamp);
                 socket.emit('chatHistory', combined);
                 sendPlayerStats(session.userId);
+                sendLocationInfo(session.userId);
             } else {
                 socket.emit('chatHistory', publicHistory);
             }
+        });
+
+        socket.on('requestLocationInfo', () => {
+            const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            if (session) sendLocationInfo(session.userId);
         });
 
         // 채널 목록 요청

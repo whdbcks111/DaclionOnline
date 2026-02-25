@@ -1,11 +1,14 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import type { PlayerStatsData } from '@shared/types'
+import type { PlayerStatsData, LocationInfoData } from '@shared/types'
+
+export type AnchorPoint = 'topLeft' | 'topMiddle' | 'topRight' | 'middleLeft' | 'center' | 'middleRight' | 'bottomLeft' | 'bottomMiddle' | 'bottomRight'
 
 export interface HudConfig {
   id: string
   visible: boolean
   x: number  // 화면 너비 대비 %
   y: number  // 화면 높이 대비 %
+  anchor: AnchorPoint
 }
 
 const OPACITY_KEY = 'hud-opacity'
@@ -18,10 +21,12 @@ export interface HudDefinition {
 
 export const HUD_DEFINITIONS: HudDefinition[] = [
   { id: 'player-status', label: '플레이어 상태' },
+  { id: 'player-location', label: '위치 정보' },
 ]
 
 const DEFAULT_CONFIGS: Record<string, HudConfig> = {
-  'player-status': { id: 'player-status', visible: true, x: 2, y: 10 },
+  'player-status': { id: 'player-status', visible: true, x: 95, y: 10, anchor: 'topRight' },
+  'player-location': { id: 'player-location', visible: true, x: 95, y: 30, anchor: 'topRight' },
 }
 
 interface HudContextType {
@@ -30,8 +35,11 @@ interface HudContextType {
   setEditMode: (v: boolean) => void
   setVisible: (id: string, visible: boolean) => void
   setPosition: (id: string, x: number, y: number) => void
+  setAnchor: (id: string, anchor: AnchorPoint) => void
   playerStats: PlayerStatsData | null
   setPlayerStats: (data: PlayerStatsData) => void
+  locationInfo: LocationInfoData | null
+  setLocationInfo: (data: LocationInfoData) => void
   opacity: number
   setOpacity: (v: number) => void
   scale: number
@@ -47,8 +55,12 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
-        const parsed = JSON.parse(saved) as Record<string, HudConfig>
-        return { ...DEFAULT_CONFIGS, ...parsed }
+        const parsed = JSON.parse(saved) as Record<string, Partial<HudConfig>>
+        const merged: Record<string, HudConfig> = {}
+        for (const id of Object.keys(DEFAULT_CONFIGS)) {
+          merged[id] = { ...DEFAULT_CONFIGS[id], ...(parsed[id] ?? {}) }
+        }
+        return merged
       }
     } catch { /* ignore */ }
     return { ...DEFAULT_CONFIGS }
@@ -56,6 +68,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
 
   const [editMode, setEditMode] = useState(false)
   const [playerStats, setPlayerStats] = useState<PlayerStatsData | null>(null)
+  const [locationInfo, setLocationInfo] = useState<LocationInfoData | null>(null)
   const [opacity, setOpacityState] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(OPACITY_KEY)
@@ -91,19 +104,26 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   const setVisible = useCallback((id: string, visible: boolean) => {
     setConfigs(prev => ({
       ...prev,
-      [id]: { ...(prev[id] ?? DEFAULT_CONFIGS[id] ?? { id, x: 50, y: 50 }), visible },
+      [id]: { ...(prev[id] ?? DEFAULT_CONFIGS[id] ?? { id, x: 50, y: 50, anchor: 'topLeft' as AnchorPoint }), visible },
     }))
   }, [])
 
   const setPosition = useCallback((id: string, x: number, y: number) => {
     setConfigs(prev => ({
       ...prev,
-      [id]: { ...(prev[id] ?? DEFAULT_CONFIGS[id] ?? { id, visible: true }), x, y },
+      [id]: { ...(prev[id] ?? DEFAULT_CONFIGS[id] ?? { id, visible: true, anchor: 'topLeft' as AnchorPoint }), x, y },
+    }))
+  }, [])
+
+  const setAnchor = useCallback((id: string, anchor: AnchorPoint) => {
+    setConfigs(prev => ({
+      ...prev,
+      [id]: { ...(prev[id] ?? DEFAULT_CONFIGS[id] ?? { id, visible: true, x: 50, y: 50 }), anchor },
     }))
   }, [])
 
   return (
-    <HudContext.Provider value={{ configs, editMode, setEditMode, setVisible, setPosition, playerStats, setPlayerStats, opacity, setOpacity, scale, setScale }}>
+    <HudContext.Provider value={{ configs, editMode, setEditMode, setVisible, setPosition, setAnchor, playerStats, setPlayerStats, locationInfo, setLocationInfo, opacity, setOpacity, scale, setScale }}>
       {children}
     </HudContext.Provider>
   )

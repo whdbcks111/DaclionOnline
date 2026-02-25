@@ -1,5 +1,5 @@
 import { useRef, useCallback } from 'react'
-import { useHud, HUD_DEFINITIONS } from '../../context/HudContext'
+import { useHud, HUD_DEFINITIONS, type AnchorPoint } from '../../context/HudContext'
 import styles from './HudSettings.module.scss'
 
 interface Props {
@@ -10,8 +10,20 @@ function fill(value: number, min: number, max: number) {
   return `${((value - min) / (max - min)) * 100}%`
 }
 
+const ANCHOR_POINTS: AnchorPoint[] = [
+  'topLeft',    'topMiddle',    'topRight',
+  'middleLeft', 'center',       'middleRight',
+  'bottomLeft', 'bottomMiddle', 'bottomRight',
+]
+
+const ANCHOR_LABELS: Record<AnchorPoint, string> = {
+  topLeft: '좌상단', topMiddle: '상단 중앙', topRight: '우상단',
+  middleLeft: '좌측 중앙', center: '중앙', middleRight: '우측 중앙',
+  bottomLeft: '좌하단', bottomMiddle: '하단 중앙', bottomRight: '우하단',
+}
+
 export default function HudSettings({ onClose }: Props) {
-  const { configs, setVisible, editMode, setEditMode, opacity, setOpacity, scale, setScale } = useHud()
+  const { configs, setVisible, setAnchor, editMode, setEditMode, opacity, setOpacity, scale, setScale } = useHud()
   const panelRef = useRef<HTMLDivElement>(null)
   const posRef = useRef({ x: window.innerWidth - 316, y: 60 })
 
@@ -138,17 +150,30 @@ export default function HudSettings({ onClose }: Props) {
       <div className={styles.list}>
         {HUD_DEFINITIONS.map(def => {
           const cfg = configs[def.id]
+          const currentAnchor = cfg?.anchor ?? 'topLeft'
           return (
-            <div key={def.id} className={styles.row}>
-              <span className={styles.rowLabel}>{def.label}</span>
-              <label className={styles.switch}>
-                <input
-                  type="checkbox"
-                  checked={cfg?.visible ?? false}
-                  onChange={e => setVisible(def.id, e.target.checked)}
-                />
-                <span className={styles.slider} />
-              </label>
+            <div key={def.id} className={styles.hudRow}>
+              <div className={styles.hudRowTop}>
+                <span className={styles.rowLabel}>{def.label}</span>
+                <label className={styles.switch}>
+                  <input
+                    type="checkbox"
+                    checked={cfg?.visible ?? false}
+                    onChange={e => setVisible(def.id, e.target.checked)}
+                  />
+                  <span className={styles.slider} />
+                </label>
+              </div>
+              <div className={styles.anchorGrid}>
+                {ANCHOR_POINTS.map(anchor => (
+                  <button
+                    key={anchor}
+                    className={`${styles.anchorCell} ${currentAnchor === anchor ? styles.anchorActive : ''}`}
+                    title={ANCHOR_LABELS[anchor]}
+                    onClick={() => setAnchor(def.id, anchor)}
+                  />
+                ))}
+              </div>
             </div>
           )
         })}
