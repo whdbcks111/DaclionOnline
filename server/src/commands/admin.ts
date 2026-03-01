@@ -3,7 +3,20 @@ import { sendBotMessageToUser } from "../modules/message.js";
 import { fetchPlayerByUserId } from "../modules/player.js";
 import { getLocation } from "../models/Location.js";
 import { getItemData } from "../models/Item.js";
+import { STAT_TYPES } from "../models/Stat.js";
+import type { StatType } from "../models/Stat.js";
 import logger from "../utils/logger.js";
+
+const STAT_KR: Record<StatType, string> = {
+    strength: '근력', agility: '민첩', vitality: '체력', sensibility: '감각', mentality: '정신력',
+};
+const STAT_FROM_INPUT: Record<string, StatType> = {
+    '근력': 'strength', 'strength': 'strength',
+    '민첩': 'agility',  'agility': 'agility',
+    '체력': 'vitality', 'vitality': 'vitality',
+    '감각': 'sensibility', 'sensibility': 'sensibility',
+    '정신력': 'mentality', 'mentality': 'mentality',
+};
 
 type StatKey = 'life' | 'mentality' | 'thirsty' | 'hungry';
 const STAT_KEYS: StatKey[] = ['life', 'mentality', 'thirsty', 'hungry'];
@@ -161,6 +174,100 @@ export function initAdminCommands(): void {
             } catch (e) {
                 logger.error('아이템추가 명령어 처리 중 오류:', e);
                 sendBotMessageToUser(userId, '아이템 추가 중 오류가 발생했습니다.');
+            }
+        },
+    });
+
+    registerCommand({
+        name: '스탯설정',
+        description: '플레이어의 스탯(근력/민첩/체력/감각/정신력)을 설정합니다.',
+        permission: 10,
+        showCommandUse: 'private',
+        args: [
+            { name: '대상', description: '플레이어 userId 또는 me', required: true },
+            { name: '스탯', description: '근력 / 민첩 / 체력 / 감각 / 정신력 (또는 영문)', required: true },
+            { name: '값', description: '설정할 스탯 포인트 수 (0 이상 정수)', required: true },
+        ],
+        async handler(userId, args) {
+            try {
+                const targetId = args[0] === 'me' ? userId : parseInt(args[0], 10);
+                if (isNaN(targetId)) {
+                    sendBotMessageToUser(userId, '유효한 플레이어 ID를 입력해주세요.');
+                    return;
+                }
+
+                const statType = STAT_FROM_INPUT[args[1]] ?? STAT_FROM_INPUT[args[1]?.toLowerCase()];
+                if (!statType) {
+                    sendBotMessageToUser(userId, `유효한 스탯을 입력해주세요. (${STAT_TYPES.map(s => STAT_KR[s]).join(' / ')})`);
+                    return;
+                }
+
+                const value = parseInt(args[2], 10);
+                if (isNaN(value) || value < 0) {
+                    sendBotMessageToUser(userId, '유효한 값을 입력해주세요. (0 이상 정수)');
+                    return;
+                }
+
+                const player = await fetchPlayerByUserId(targetId);
+                if (!player) {
+                    sendBotMessageToUser(userId, '플레이어를 찾을 수 없습니다.');
+                    return;
+                }
+
+                player.stat.set(statType, value);
+                player.stat.applyModifiers(player.attribute);
+                await player.save();
+
+                sendBotMessageToUser(userId, `${player.name}의 ${STAT_KR[statType]}을(를) ${value}로 설정했습니다.`);
+                if (targetId !== userId) {
+                    sendBotMessageToUser(targetId, `관리자에 의해 ${STAT_KR[statType]}이(가) ${value}로 변경되었습니다.`);
+                }
+            } catch (e) {
+                logger.error('스탯설정 명령어 처리 중 오류:', e);
+                sendBotMessageToUser(userId, '스탯 설정 중 오류가 발생했습니다.');
+            }
+        },
+    });
+
+    registerCommand({
+        name: '스탯포인트설정',
+        description: '플레이어의 스탯 포인트를 설정합니다.',
+        permission: 10,
+        showCommandUse: 'private',
+        args: [
+            { name: '대상', description: '플레이어 userId 또는 me', required: true },
+            { name: '값', description: '설정할 스탯 포인트 수 (0 이상 정수)', required: true },
+        ],
+        async handler(userId, args) {
+            try {
+                const targetId = args[0] === 'me' ? userId : parseInt(args[0], 10);
+                if (isNaN(targetId)) {
+                    sendBotMessageToUser(userId, '유효한 플레이어 ID를 입력해주세요.');
+                    return;
+                }
+
+                const value = parseInt(args[1], 10);
+                if (isNaN(value) || value < 0) {
+                    sendBotMessageToUser(userId, '유효한 값을 입력해주세요. (0 이상 정수)');
+                    return;
+                }
+
+                const player = await fetchPlayerByUserId(targetId);
+                if (!player) {
+                    sendBotMessageToUser(userId, '플레이어를 찾을 수 없습니다.');
+                    return;
+                }
+
+                player.statPoint = value;
+                await player.save();
+
+                sendBotMessageToUser(userId, `${player.name}의 스탯 포인트를 ${value}로 설정했습니다.`);
+                if (targetId !== userId) {
+                    sendBotMessageToUser(targetId, `관리자에 의해 스탯 포인트가 ${value}로 변경되었습니다.`);
+                }
+            } catch (e) {
+                logger.error('스탯포인트설정 명령어 처리 중 오류:', e);
+                sendBotMessageToUser(userId, '스탯 포인트 설정 중 오류가 발생했습니다.');
             }
         },
     });

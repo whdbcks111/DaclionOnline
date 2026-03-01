@@ -152,6 +152,15 @@ export default abstract class Entity {
 
     /** 대상 엔티티를 공격 */
     attack(target: Entity, type: DamageType = 'physical', amount?: number): DamageResult | null {
+        if (this.isDead) return null;
+
+        if (target.isDead) {
+            if (this.isPlayer && this.playerUserId) {
+                sendBotMessageToUser(this.playerUserId, '죽은 대상은 공격할 수 없습니다.');
+            }
+            return null;
+        }
+
         if (this._attackCooldown > 0) {
             if(this.isPlayer && this.playerUserId) {
                 sendBotMessageToUser(this.playerUserId, `아직 공격할 수 없습니다. (${this.attackCooldown.toFixed(1)}초 후 가능)`);
@@ -219,7 +228,7 @@ export default abstract class Entity {
             this._attackCooldown = Math.max(0, this._attackCooldown - dt);
         }
 
-        if (this.life < this.maxLife) {
+        if (!this.isDead && this.life < this.maxLife) {
             this.life += dt * 1; // TODO: change value
         }
 
@@ -234,19 +243,26 @@ export default abstract class Entity {
     update(dt: number): void {}
     lateUpdate(dt: number): void {
 
-        if(this.life <= 0) {
+        if(this.life <= 0 && !this.isDead) {
             this.onDeath();
         }
 
     }
 
+    /** 사망 후 리스폰까지 걸리는 시간 (초). 하위 클래스에서 오버라이드 */
+    get deathDuration(): number { return 10; }
+
     onDeath(): void {
+        this.life = 0;
         this.isDead = true;
-        this.deathTimer = 10;
+        this.deathTimer = this.deathDuration;
     }
 
     respawn(): void {
         this.isDead = false;
         this.deathTimer = 0;
+        this.life = this.maxLife;
+        this.currentTarget = null;
+        this.lastDamageCause = null;
     }
 }

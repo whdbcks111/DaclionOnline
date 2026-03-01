@@ -194,6 +194,11 @@ export function initPlayerCommands(): void {
             const player = getPlayerByUserId(userId);
             if (!player) return;
 
+            if (player.isDead) {
+                sendBotMessageToUser(userId, '사망 상태에서는 행동할 수 없습니다.');
+                return;
+            }
+
             const idx = parseInt(args[0], 10) - 1;
             if (isNaN(idx)) return;
 
@@ -229,6 +234,11 @@ export function initPlayerCommands(): void {
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
             if (!player) return;
+
+            if (player.isDead) {
+                sendBotMessageToUser(userId, '사망 상태에서는 행동할 수 없습니다.');
+                return;
+            }
 
             const idx = parseInt(args[0], 10) - 1;
             if (isNaN(idx)) return;
@@ -267,6 +277,11 @@ export function initPlayerCommands(): void {
             const player = getPlayerByUserId(userId);
             if (!player) return;
 
+            if (player.isDead) {
+                sendBotMessageToUser(userId, '사망 상태에서는 행동할 수 없습니다.');
+                return;
+            }
+
             const idx = parseInt(args[0], 10) - 1;
             if (isNaN(idx)) return;
 
@@ -304,8 +319,12 @@ export function initPlayerCommands(): void {
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
-            const channel = getUserChannel(userId);
             if (!player) return;
+
+            if (player.isDead) {
+                sendBotMessageToUser(userId, '사망 상태에서는 행동할 수 없습니다.');
+                return;
+            }
 
             const location = getLocation(player.locationId);
             if (!location) {

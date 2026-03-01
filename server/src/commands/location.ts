@@ -61,6 +61,11 @@ export function initLocationCommands(): void {
             const player = getPlayerByUserId(userId);
             if (!player) return;
 
+            if (player.isDead) {
+                sendBotMessageToUser(userId, '사망 상태에서는 행동할 수 없습니다.');
+                return;
+            }
+
             if (player.moving) {
                 sendBotMessageToUser(userId, '이동 중에는 다시 이동할 수 없습니다.');
                 return;

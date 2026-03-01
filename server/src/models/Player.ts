@@ -5,6 +5,8 @@ import Equipment from "./Equipment.js";
 import { STAT_TYPES } from "./Stat.js";
 import type { StatType, StatRecord } from "./Stat.js";
 import { getLocation, getRespawnLocation } from "./Location.js";
+import { sendBotMessageToUser, sendNotificationToUser } from "../modules/message.js";
+import { chat } from "../utils/chatBuilder.js";
 
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
@@ -22,6 +24,7 @@ export default class Player extends Entity {
     private _dirty = false;
     private _moving = false;
     private _statPoint = 0;
+    private _deathNotifTimer = 0;
 
     private constructor(
         userId: number, nickname: string, level: number, exp: number,
@@ -85,7 +88,16 @@ export default class Player extends Entity {
     get statPoint() { return this._statPoint; }
     set statPoint(val: number) { this._statPoint = val; this._dirty = true; }
 
-    get dirty() { return this._dirty || this.inventory.dirty || this.equipment.dirty; }
+    get dirty() { return this._dirty || this.stat.dirty || this.inventory.dirty || this.equipment.dirty; }
+
+    override get deathDuration(): number { 
+        let baseDuration = 10;
+
+        if(this.level >= 50) baseDuration = 60 * 5;
+        else if(this.level >= 10) baseDuration = 30;
+
+        return baseDuration; 
+    }
 
     // -- 게임 루프 --
 
@@ -95,6 +107,38 @@ export default class Player extends Entity {
             const respawn = getRespawnLocation();
             if (respawn) this.locationId = respawn.id;
         }
+
+        if (this.isDead) {
+            this._deathNotifTimer -= dt;
+            if (this._deathNotifTimer <= 0) {
+                this._deathNotifTimer = 1;
+                const remaining = Math.ceil(this.deathTimer);
+                sendNotificationToUser(this.userId, {
+                    key: 'player-dead',
+                    message: chat()
+                        .color('red', b => b.text('사망'))
+                        .text(` 리스폰까지 ${remaining}초`)
+                        .build(),
+                    length: 1500,
+                    editExists: true,
+                });
+            }
+        }
+    }
+
+    override onDeath(): void {
+        super.onDeath();
+        this._deathNotifTimer = 0;
+        sendBotMessageToUser(this.userId,
+            chat().color('red', b => b.text('사망했습니다.')).text(` ${this.deathTimer.toFixed(0)}초 후 리스폰됩니다.`).build()
+        );
+    }
+
+    override respawn(): void {
+        super.respawn();
+        const respawnLoc = getRespawnLocation();
+        if (respawnLoc) this.locationId = respawnLoc.id;
+        sendBotMessageToUser(this.userId, '리스폰했습니다.');
     }
 
     // -- 게임 로직 --
@@ -158,7 +202,7 @@ export default class Player extends Entity {
 
     /** 변경된 데이터 DB에 저장 */
     async save(): Promise<void> {
-        if (this._dirty) {
+        if (this._dirty || this.stat.dirty) {
             await prisma.player.update({
                 where: { userId: this.userId },
                 data: {
@@ -175,6 +219,7 @@ export default class Player extends Entity {
                 },
             });
             this._dirty = false;
+            this.stat.resetDirty();
         }
         await this.inventory.save();
         await this.equipment.save();

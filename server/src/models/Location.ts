@@ -173,7 +173,7 @@ export default class Location {
             timer.timer -= dt;
             if (timer.timer <= 0) {
                 timer.timer = timer.respawnTime;
-                const monster = new Monster(timer.monsterDataId, this.id);
+                const monster = new Monster(timer.monsterDataId, this.id, timer.respawnTime);
                 this._monsters.push(monster);
             }
         }

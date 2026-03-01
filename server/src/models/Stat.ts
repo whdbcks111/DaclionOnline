@@ -29,10 +29,14 @@ function createStatRecord(defaultValue = 0): StatRecord {
 
 export default class Stat {
     private _points: StatRecord;
+    private _dirty = false;
 
     constructor(initial?: Partial<StatRecord>) {
         this._points = { ...createStatRecord(), ...initial };
     }
+
+    get dirty(): boolean { return this._dirty; }
+    resetDirty(): void { this._dirty = false; }
 
     /** 특정 스탯 포인트 조회 */
     get(stat: StatType): number {
@@ -42,11 +46,13 @@ export default class Stat {
     /** 특정 스탯 포인트 설정 */
     set(stat: StatType, value: number): void {
         this._points[stat] = value;
+        this._dirty = true;
     }
 
     /** 스탯 포인트 증가 */
     add(stat: StatType, amount: number): void {
         this._points[stat] += amount;
+        this._dirty = true;
     }
 
     /** 전체 스탯 레코드 반환 */

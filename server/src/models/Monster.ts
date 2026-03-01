@@ -41,8 +41,11 @@ export default class Monster extends Entity {
     override readonly name: string;
     readonly drops: DropInfo[];
     readonly expReward: number;
+    readonly respawnTime: number;
 
-    constructor(monsterDataId: string, locationId = '') {
+    override get deathDuration(): number { return this.respawnTime; }
+
+    constructor(monsterDataId: string, locationId = '', respawnTime = 10) {
         const data = getMonsterData(monsterDataId);
         if (!data) throw new Error(`MonsterData not found: ${monsterDataId}`);
 
@@ -53,6 +56,7 @@ export default class Monster extends Entity {
         this.name = data.name;
         this.drops = data.drops;
         this.expReward = data.expReward;
+        this.respawnTime = respawnTime;
 
         // 기본 장비 장착
         for (const eq of data.equipments) {
@@ -74,22 +78,21 @@ export default class Monster extends Entity {
 
     /** 타겟 공격 AI */
     override update(_dt: number): void {
+        if (this.isDead) return;
+
         const location = getLocation(this.locationId);
         if(!location) return;
 
         const target = this.currentTarget;
-        if (!target || target.life <= 0 || target.locationId !== this.locationId) {
+        if (!target || target.isDead || target.life <= 0 || target.locationId !== this.locationId) {
             this.currentTarget = null;
             return;
         }
         this.attack(target);
     }
-    
+
     override onDeath(): void {
-        const location = getLocation(this.locationId);
-        if(!location) return;
-        
-        location.removeMonster(this);
+        super.onDeath();
 
         if(this.lastDamageCause?.causeEntity?.isPlayer) {
             const causePlayer = this.lastDamageCause?.causeEntity as Player;
@@ -121,7 +124,6 @@ export default class Monster extends Entity {
             }
 
             sendBotMessageToUser(causePlayer.userId, killMsg.build());
-
         }
     }
 
