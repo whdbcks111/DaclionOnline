@@ -2,11 +2,13 @@ import { useCallback } from 'react'
 import { useHud, HUD_DEFINITIONS, type AnchorPoint } from '../../context/HudContext'
 import PlayerStatusHud from './huds/PlayerStatusHud'
 import LocationHud from './huds/LocationHud'
+import MinimapHud from './huds/MinimapHud'
 import styles from './HudContainer.module.scss'
 
 const HUD_COMPONENTS: Record<string, React.ComponentType> = {
   'player-status': PlayerStatusHud,
   'player-location': LocationHud,
+  'minimap': MinimapHud,
 }
 
 const ANCHOR_DATA: Record<AnchorPoint, { tx: number; ty: number; origin: string }> = {

@@ -95,6 +95,21 @@ export function sendLocationInfo(userId: number): void {
     if (!location) return;
 
     const locationId = player.locationId;
+
+    const adjacentLocations = location.data.connections
+        .map(conn => {
+            const adj = getLocation(conn.locationId);
+            if (!adj) return null;
+            return {
+                locationId: adj.id,
+                name: adj.data.name,
+                x: adj.data.x,
+                y: adj.data.y,
+                z: adj.data.z,
+            };
+        })
+        .filter((v): v is NonNullable<typeof v> => v !== null);
+
     const data: LocationInfoData = {
         locationId,
         name: location.data.name,
@@ -116,6 +131,7 @@ export function sendLocationInfo(userId: number): void {
                 maxLife: p.maxLife,
                 userId: p.userId,
             })),
+        adjacentLocations,
     };
 
     const io = getIO();

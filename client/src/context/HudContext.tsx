@@ -22,11 +22,13 @@ export interface HudDefinition {
 export const HUD_DEFINITIONS: HudDefinition[] = [
   { id: 'player-status', label: '플레이어 상태' },
   { id: 'player-location', label: '위치 정보' },
+  { id: 'minimap', label: '미니맵' },
 ]
 
 const DEFAULT_CONFIGS: Record<string, HudConfig> = {
   'player-status': { id: 'player-status', visible: true, x: 95, y: 10, anchor: 'topRight' },
   'player-location': { id: 'player-location', visible: false, x: 95, y: 30, anchor: 'topRight' },
+  'minimap': { id: 'minimap', visible: true, x: 5, y: 90, anchor: 'bottomLeft' },
 }
 
 interface HudContextType {

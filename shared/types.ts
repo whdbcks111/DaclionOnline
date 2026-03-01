@@ -113,6 +113,15 @@ export interface EntityBarInfo {
     userId?: number  // 플레이어만 존재
 }
 
+// 인접 위치 데이터 (미니맵용)
+export interface AdjacentLocationData {
+    locationId: string
+    name: string
+    x: number
+    y: number
+    z: number
+}
+
 // 위치 정보 HUD 데이터
 export interface LocationInfoData {
     locationId: string
@@ -122,6 +131,7 @@ export interface LocationInfoData {
     z: number
     monsters: EntityBarInfo[]
     players: EntityBarInfo[]
+    adjacentLocations: AdjacentLocationData[]
 }
 
 // 플레이어 HUD 데이터
