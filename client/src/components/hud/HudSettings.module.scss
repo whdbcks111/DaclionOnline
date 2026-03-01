@@ -87,6 +87,156 @@
     justify-content: space-between;
 }
 
+.hudRowActions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.settingsBtn {
+    background: none;
+    border: none;
+    color: $color-text-tertiary;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 2px 4px;
+    border-radius: $border-radius-sm;
+    line-height: 1;
+    transition: color 0.15s, background-color 0.15s;
+
+    &:hover {
+        color: $color-text;
+        background-color: rgba(255, 255, 255, 0.08);
+    }
+}
+
+.settingsBtnActive {
+    color: var(--color-primary);
+}
+
+// 개별 HUD 설정 패널
+.hudDetail {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: $border-radius-sm;
+    border: 1px solid $color-border;
+}
+
+.detailRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.detailLabel {
+    font-size: 0.7rem;
+    color: $color-text-tertiary;
+    white-space: nowrap;
+}
+
+.detailValue {
+    font-size: 0.7rem;
+    color: $color-text-tertiary;
+    min-width: 28px;
+    text-align: right;
+}
+
+.detailSliderRow {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detailSliderLabel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+// 단위 토글 (%/px)
+.unitToggle {
+    display: flex;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    overflow: hidden;
+}
+
+.unitBtn {
+    background: none;
+    border: none;
+    color: $color-text-tertiary;
+    cursor: pointer;
+    font-size: 0.68rem;
+    padding: 2px 7px;
+    transition: background-color 0.1s, color 0.1s;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: $color-text;
+    }
+}
+
+.unitActive {
+    background: var(--color-primary) !important;
+    color: #fff !important;
+}
+
+// 좌표 기준점 2x2 그리드
+.posAnchorGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 14px);
+    grid-template-rows: repeat(2, 14px);
+    gap: 2px;
+}
+
+.posAnchorCell {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    padding: 0;
+    transition: background-color 0.1s, border-color 0.1s;
+
+    :root[data-theme='light'] & {
+        border-color: rgba(0, 0, 0, 0.2);
+        background: rgba(0, 0, 0, 0.05);
+
+        &:hover {
+            border-color: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.1);
+        }
+    }
+
+    &:hover {
+        border-color: rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.12);
+    }
+}
+
+// 위치 초기화 버튼
+.resetBtn {
+    background: none;
+    border: 1px solid $color-border;
+    color: $color-text-tertiary;
+    cursor: pointer;
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    border-radius: $border-radius-sm;
+    white-space: nowrap;
+    transition: color 0.1s, border-color 0.1s;
+
+    &:hover {
+        color: $color-text;
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+}
+
 .anchorGrid {
     display: grid;
     grid-template-columns: repeat(3, 14px);

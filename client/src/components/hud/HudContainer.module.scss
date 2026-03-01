@@ -10,7 +10,7 @@
 .editMode {
     pointer-events: auto;
     cursor: grab;
-    outline: 1px dashed rgba(255, 255, 255, 0.35);
+    outline: 1px dashed rgba(255, 255, 255, 0.4);
     outline-offset: 3px;
     border-radius: $border-radius-sm;
 
@@ -19,10 +19,21 @@
     }
 }
 
-.dragHandle {
+.editOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(66, 66, 66, 0.623);
+    border-radius: $border-radius-sm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.editLabel {
     font-size: 0.68rem;
-    color: rgba(255, 255, 255, 0.5);
-    padding: 2px 4px;
-    margin-bottom: 2px;
-    letter-spacing: 0.03em;
+    color: rgba(255, 255, 255, 0.9);
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
 }

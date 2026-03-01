@@ -1,5 +1,5 @@
-import { useRef, useCallback } from 'react'
-import { useHud, HUD_DEFINITIONS, type AnchorPoint } from '../../context/HudContext'
+import { useRef, useCallback, useState } from 'react'
+import { useHud, HUD_DEFINITIONS, type AnchorPoint, type PosAnchor } from '../../context/HudContext'
 import styles from './HudSettings.module.scss'
 
 interface Props {
@@ -22,8 +22,18 @@ const ANCHOR_LABELS: Record<AnchorPoint, string> = {
   bottomLeft: '좌하단', bottomMiddle: '하단 중앙', bottomRight: '우하단',
 }
 
+const POS_ANCHOR_POINTS: PosAnchor[] = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight']
+
+const POS_ANCHOR_LABELS: Record<PosAnchor, string> = {
+  topLeft: '좌상단', topRight: '우상단', bottomLeft: '좌하단', bottomRight: '우하단',
+}
+
 export default function HudSettings({ onClose }: Props) {
-  const { configs, setVisible, setAnchor, editMode, setEditMode, opacity, setOpacity, scale, setScale } = useHud()
+  const {
+    configs, setVisible, setAnchor, setPosUnit, setPosAnchor, setHudOpacity, setHudScale, resetPosition,
+    editMode, setEditMode, opacity, setOpacity, scale, setScale,
+  } = useHud()
+  const [openSettingsId, setOpenSettingsId] = useState<string | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const posRef = useRef({ x: window.innerWidth - 316, y: 60 })
 
@@ -150,30 +160,127 @@ export default function HudSettings({ onClose }: Props) {
       <div className={styles.list}>
         {HUD_DEFINITIONS.map(def => {
           const cfg = configs[def.id]
-          const currentAnchor = cfg?.anchor ?? 'topLeft'
+          const currentAnchor    = cfg?.anchor    ?? 'topLeft'
+          const currentPosAnchor = cfg?.posAnchor ?? 'topLeft'
+          const currentUnit      = cfg?.posUnit   ?? '%'
+          const hudOpacity       = cfg?.opacity
+          const hudScale         = cfg?.scale
+          const isOpen = openSettingsId === def.id
           return (
             <div key={def.id} className={styles.hudRow}>
               <div className={styles.hudRowTop}>
                 <span className={styles.rowLabel}>{def.label}</span>
-                <label className={styles.switch}>
-                  <input
-                    type="checkbox"
-                    checked={cfg?.visible ?? false}
-                    onChange={e => setVisible(def.id, e.target.checked)}
-                  />
-                  <span className={styles.slider} />
-                </label>
-              </div>
-              <div className={styles.anchorGrid}>
-                {ANCHOR_POINTS.map(anchor => (
+                <div className={styles.hudRowActions}>
                   <button
-                    key={anchor}
-                    className={`${styles.anchorCell} ${currentAnchor === anchor ? styles.anchorActive : ''}`}
-                    title={ANCHOR_LABELS[anchor]}
-                    onClick={() => setAnchor(def.id, anchor)}
-                  />
-                ))}
+                    className={`${styles.settingsBtn} ${isOpen ? styles.settingsBtnActive : ''}`}
+                    title="설정"
+                    onClick={() => setOpenSettingsId(isOpen ? null : def.id)}
+                  >⚙</button>
+                  <label className={styles.switch}>
+                    <input
+                      type="checkbox"
+                      checked={cfg?.visible ?? false}
+                      onChange={e => setVisible(def.id, e.target.checked)}
+                    />
+                    <span className={styles.slider} />
+                  </label>
+                </div>
               </div>
+
+              {isOpen && (
+                <div className={styles.hudDetail}>
+
+                  {/* 현재 위치 + 리셋 */}
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>
+                      X: {currentUnit === '%' ? `${cfg?.x?.toFixed(1) ?? 0}%` : `${Math.round(cfg?.x ?? 0)}px`}
+                      {'  '}
+                      Y: {currentUnit === '%' ? `${cfg?.y?.toFixed(1) ?? 0}%` : `${Math.round(cfg?.y ?? 0)}px`}
+                    </span>
+                    <button className={styles.resetBtn} onClick={() => resetPosition(def.id)}>↺ 초기화</button>
+                  </div>
+
+                  {/* 좌표 단위 */}
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>좌표 단위</span>
+                    <div className={styles.unitToggle}>
+                      <button
+                        className={`${styles.unitBtn} ${currentUnit === '%' ? styles.unitActive : ''}`}
+                        onClick={() => setPosUnit(def.id, '%')}
+                      >%</button>
+                      <button
+                        className={`${styles.unitBtn} ${currentUnit === 'px' ? styles.unitActive : ''}`}
+                        onClick={() => setPosUnit(def.id, 'px')}
+                      >px</button>
+                    </div>
+                  </div>
+
+                  {/* 좌표 기준점 */}
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>좌표 기준점</span>
+                    <div className={styles.posAnchorGrid}>
+                      {POS_ANCHOR_POINTS.map(pa => (
+                        <button
+                          key={pa}
+                          className={`${styles.posAnchorCell} ${currentPosAnchor === pa ? styles.anchorActive : ''}`}
+                          title={POS_ANCHOR_LABELS[pa]}
+                          onClick={() => setPosAnchor(def.id, pa)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 정렬 기준 (셀프 앵커) */}
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>정렬 기준</span>
+                    <div className={styles.anchorGrid}>
+                      {ANCHOR_POINTS.map(anchor => (
+                        <button
+                          key={anchor}
+                          className={`${styles.anchorCell} ${currentAnchor === anchor ? styles.anchorActive : ''}`}
+                          title={ANCHOR_LABELS[anchor]}
+                          onClick={() => setAnchor(def.id, anchor)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 개별 투명도 (전역에 곱셈) */}
+                  <div className={styles.detailSliderRow}>
+                    <div className={styles.detailSliderLabel}>
+                      <span className={styles.detailLabel}>투명도</span>
+                      <span className={styles.detailValue}>{Math.round((hudOpacity ?? 1) * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={10}
+                      max={100}
+                      value={Math.round((hudOpacity ?? 1) * 100)}
+                      onChange={e => setHudOpacity(def.id, Number(e.target.value) / 100)}
+                      className={styles.rangeSlider}
+                      style={{ '--fill': fill(Math.round((hudOpacity ?? 1) * 100), 10, 100) } as React.CSSProperties}
+                    />
+                  </div>
+
+                  {/* 개별 크기 (전역에 곱셈, 50~200%) */}
+                  <div className={styles.detailSliderRow}>
+                    <div className={styles.detailSliderLabel}>
+                      <span className={styles.detailLabel}>크기</span>
+                      <span className={styles.detailValue}>{Math.round((hudScale ?? 1) * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={50}
+                      max={200}
+                      value={Math.round((hudScale ?? 1) * 100)}
+                      onChange={e => setHudScale(def.id, Number(e.target.value) / 100)}
+                      className={styles.rangeSlider}
+                      style={{ '--fill': fill(Math.round((hudScale ?? 1) * 100), 50, 200) } as React.CSSProperties}
+                    />
+                  </div>
+
+                </div>
+              )}
             </div>
           )
         })}

@@ -10,9 +10,89 @@
     gap: 4px;
 }
 
+.svg {
+    display: block;
+}
+
 .locationName {
     font-size: 0.7rem;
     color: rgba(255, 255, 255, 0.7);
     text-align: center;
     white-space: nowrap;
+}
+
+.zoomRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 0 2px;
+    pointer-events: auto;
+}
+
+.zoomLabel {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.45);
+    flex-shrink: 0;
+}
+
+.zoomValue {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.45);
+    flex-shrink: 0;
+    min-width: 28px;
+    text-align: right;
+}
+
+.zoomSlider {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 14px;
+    background: transparent;
+    cursor: pointer;
+    outline: none;
+
+    &::-webkit-slider-runnable-track {
+        height: 3px;
+        border-radius: 2px;
+        background: linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0.6) var(--fill, 50%),
+            rgba(255, 255, 255, 0.15) var(--fill, 50%)
+        );
+    }
+
+    &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.85);
+        cursor: pointer;
+        margin-top: -3.5px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    &::-moz-range-track {
+        height: 3px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    &::-moz-range-progress {
+        height: 3px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.6);
+    }
+
+    &::-moz-range-thumb {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.85);
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
 }
