@@ -46,14 +46,6 @@ export interface AvailableConnection {
     status: ConnectionStatus;
 }
 
-// -- 스폰 타이머 --
-interface SpawnTimer {
-    monsterDataId: string;
-    maxCount: number;
-    respawnTime: number;
-    timer: number;  // 남은 리스폰 시간
-}
-
 // -- 조건 핸들러 레지스트리 --
 type ConditionHandler = (player: Player) => ConnectionStatus;
 const conditionHandlers = new Map<string, ConditionHandler>();
@@ -78,19 +70,17 @@ export default class Location {
 
     private _monsters: Monster[] = [];
     private _droppedItems: DroppedItem[] = [];
-    private _spawnTimers: SpawnTimer[];
 
     constructor(data: LocationData) {
         this.id = data.id;
         this.data = data;
 
-        // 스폰 타이머 초기화
-        this._spawnTimers = data.spawns.map(s => ({
-            monsterDataId: s.monsterDataId,
-            maxCount: s.maxCount,
-            respawnTime: s.respawnTime,
-            timer: 0,
-        }));
+        // 서버 로드 시 즉시 전부 스폰
+        for (const spawn of data.spawns) {
+            for (let i = 0; i < spawn.maxCount; i++) {
+                this._monsters.push(new Monster(spawn.monsterDataId, this.id, spawn.respawnTime));
+            }
+        }
     }
 
     // -- 몬스터 관리 --
@@ -157,25 +147,6 @@ export default class Location {
             monster.earlyUpdate(dt);
             monster.update(dt);
             monster.lateUpdate(dt);
-        }
-
-        // 스폰 타이머
-        for (const timer of this._spawnTimers) {
-            const currentCount = this._monsters.filter(
-                m => m.monsterDataId === timer.monsterDataId
-            ).length;
-
-            if (currentCount >= timer.maxCount) {
-                timer.timer = timer.respawnTime;
-                continue;
-            }
-
-            timer.timer -= dt;
-            if (timer.timer <= 0) {
-                timer.timer = timer.respawnTime;
-                const monster = new Monster(timer.monsterDataId, this.id, timer.respawnTime);
-                this._monsters.push(monster);
-            }
         }
 
         // 패시브 콜백

@@ -42,10 +42,12 @@ export default class Monster extends Entity {
     readonly drops: DropInfo[];
     readonly expReward: number;
     readonly respawnTime: number;
+    /** true이면 일회성 몬스터 — 사망 시 리스폰 없이 즉시 제거 */
+    readonly isOneShot: boolean;
 
     override get deathDuration(): number { return this.respawnTime; }
 
-    constructor(monsterDataId: string, locationId = '', respawnTime = 10) {
+    constructor(monsterDataId: string, locationId = '', respawnTime = 10, isOneShot = false) {
         const data = getMonsterData(monsterDataId);
         if (!data) throw new Error(`MonsterData not found: ${monsterDataId}`);
 
@@ -57,6 +59,7 @@ export default class Monster extends Entity {
         this.drops = data.drops;
         this.expReward = data.expReward;
         this.respawnTime = respawnTime;
+        this.isOneShot = isOneShot;
 
         // 기본 장비 장착
         for (const eq of data.equipments) {
@@ -124,6 +127,11 @@ export default class Monster extends Entity {
             }
 
             sendBotMessageToUser(causePlayer.userId, killMsg.build());
+        }
+
+        if (this.isOneShot) {
+            this.deathTimer = 0;
+            getLocation(this.locationId)?.removeMonster(this);
         }
     }
 
