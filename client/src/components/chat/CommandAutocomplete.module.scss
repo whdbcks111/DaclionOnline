@@ -47,3 +47,40 @@
     font-size: $font-size-sm;
     white-space: nowrap;
 }
+
+.hint {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    background-color: rgba(0, 0, 0, 0.04);
+    border-bottom: 1px solid $color-border;
+    pointer-events: none;
+
+    :root[data-theme='dark'] & {
+        background-color: rgba(255, 255, 255, 0.04);
+    }
+}
+
+.hintLabel {
+    font-weight: bold;
+    color: $color-primary;
+    font-size: $font-size-sm;
+}
+
+.hintPos {
+    color: $color-text-tertiary;
+    font-size: $font-size-sm;
+}
+
+.required {
+    margin-left: auto;
+    color: #e74c3c;
+    font-size: $font-size-sm;
+    white-space: nowrap;
+}
+
+.completionDesc {
+    color: $color-text-tertiary;
+    font-size: $font-size-sm;
+}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import styles from './Home.module.scss'
 import { useSocket } from '../context/SocketContext'
 import { HudProvider, useHud } from '../context/HudContext'
@@ -8,7 +8,7 @@ import Header from '../components/Header'
 import Drawer from '../components/Drawer'
 import HudContainer from '../components/hud/HudContainer'
 import HudSettings from '../components/hud/HudSettings'
-import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, LocationInfoData, ChannelInfo, UserCountData } from '@shared/types'
+import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, LocationInfoData, ChannelInfo, UserCountData, CompletionItem } from '@shared/types'
 
 function channelRoomKey(channel: string | null): string {
   return channel === null ? 'channel:main' : `channel:${channel}`
@@ -27,6 +27,7 @@ function HomeContent() {
   const [hudSettingsOpen, setHudSettingsOpen] = useState(false)
   const [currentChannel, setCurrentChannel] = useState<string | null>(null)
   const [channelList, setChannelList] = useState<ChannelInfo[]>([])
+  const [dynamicCompletions, setDynamicCompletions] = useState<CompletionItem[]>([])
   const inputRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -50,6 +51,7 @@ function HomeContent() {
     const onDeleteMessage = (id: string) => {
       setMessages(prev => prev.filter(msg => msg.id !== id))
     }
+    const onArgCompletions = (items: CompletionItem[]) => setDynamicCompletions(items)
 
     socket.on('chatHistory', onChatHistory)
     socket.on('chatMessage', onChatMessage)
@@ -61,6 +63,7 @@ function HomeContent() {
     socket.on('channelList', onChannelList)
     socket.on('editMessage', onEditMessage)
     socket.on('deleteMessage', onDeleteMessage)
+    socket.on('argCompletions', onArgCompletions)
     socket.emit('requestChatHistory')
     socket.emit('requestCommandList')
     socket.emit('requestUserCount')
@@ -77,6 +80,7 @@ function HomeContent() {
       socket.off('channelList', onChannelList)
       socket.off('editMessage', onEditMessage)
       socket.off('deleteMessage', onDeleteMessage)
+      socket.off('argCompletions', onArgCompletions)
     }
   }, [socket, setPlayerStats])
 
@@ -129,25 +133,109 @@ function HomeContent() {
     }
   }, [])
 
-  const getFilteredCount = useCallback(() => {
-    return getFilteredCommands(commands, commandFilter).length
+  // 명령어가 완성된 후 파라미터 입력 모드 계산
+  const paramMode = useMemo(() => {
+    if (!commandFilter.startsWith('/')) return null
+    const afterSlash = commandFilter.slice(1)
+    const spaceIdx = afterSlash.indexOf(' ')
+    if (spaceIdx === -1) return null
+
+    const cmdName = afterSlash.slice(0, spaceIdx).toLowerCase()
+    const cmd = commands.find(c =>
+      c.name === cmdName || c.aliases?.includes(cmdName)
+    )
+    if (!cmd?.args?.length) return null
+
+    const argsText = afterSlash.slice(spaceIdx + 1)
+    const argParts = argsText.split(' ')
+
+    // text 파라미터 이후는 argIndex 증가 멈춤
+    const textArgIdx = cmd.args.findIndex(a => a.isText)
+    let argIndex = argParts.length - 1
+    if (textArgIdx !== -1 && argIndex > textArgIdx) {
+      const argsAfter = cmd.args.length - 1 - textArgIdx
+      // text 이후 argsAfter개의 뒤쪽 인자 영역을 고려
+      const afterStart = argParts.length - argsAfter
+      argIndex = afterStart > textArgIdx ? textArgIdx + (argIndex - afterStart + 1) : textArgIdx
+    }
+    argIndex = Math.min(argIndex, cmd.args.length - 1)
+
+    const currentArg = cmd.args[argIndex]
+    const currentTyped = argParts[argParts.length - 1] ?? ''
+    const isDynamic = currentArg.dynamicCompletions === true
+    const allCompletions: CompletionItem[] = currentArg.completions ?? []
+    const filtered = isDynamic ? [] : allCompletions.filter(c => {
+      const val = typeof c === 'string' ? c : c.value
+      return !currentTyped || val.toLowerCase().startsWith(currentTyped.toLowerCase())
+    })
+
+    return {
+      arg: { ...currentArg, argIndex, totalArgs: cmd.args.length },
+      completions: filtered,
+      currentTyped,
+      isDynamic,
+    }
   }, [commandFilter, commands])
+
+  // 동적 자동완성: 파라미터 입력 중 서버에 completions 요청
+  useEffect(() => {
+    if (!socket || !paramMode?.isDynamic) {
+      setDynamicCompletions([])
+      return
+    }
+    socket.emit('requestCompletions', commandFilter)
+  }, [socket, paramMode?.isDynamic, commandFilter])
+
+  // 파라미터 자동완성 선택 시 해당 인자를 완성
+  const selectCompletion = useCallback((value: string) => {
+    if (!inputRef.current) return
+    const text = inputRef.current.textContent ?? ''
+    const firstSpace = text.indexOf(' ')
+    if (firstSpace === -1) return
+
+    const cmdPart = text.slice(0, firstSpace + 1)           // "/cmd "
+    const argsText = text.slice(firstSpace + 1)             // "a b c"
+    const lastSpace = argsText.lastIndexOf(' ')
+    const beforeLast = argsText.slice(0, lastSpace + 1)     // "a b "
+
+    inputRef.current.textContent = `${cmdPart}${beforeLast}${value} `
+    const range = document.createRange()
+    range.selectNodeContents(inputRef.current)
+    range.collapse(false)
+    const sel = window.getSelection()
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+    inputRef.current.focus()
+    setCommandFilter(inputRef.current.textContent ?? '')
+    setActiveIndex(0)
+  }, [])
+
+  const getFilteredCount = useCallback(() => {
+    if (paramMode) return paramMode.isDynamic ? dynamicCompletions.length : paramMode.completions.length
+    return getFilteredCommands(commands, commandFilter).length
+  }, [commandFilter, commands, paramMode, dynamicCompletions])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (showAutocomplete) {
       const count = getFilteredCount()
-      if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(prev => (prev - 1 + count) % count); return }
-      if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(prev => (prev + 1) % count); return }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(prev => (prev - 1 + Math.max(1, count)) % Math.max(1, count)); return }
+      if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(prev => (prev + 1) % Math.max(1, count)); return }
       if (e.key === 'Tab') {
         e.preventDefault()
-        const filtered = getFilteredCommands(commands, commandFilter)
-        if (filtered[activeIndex]) selectCommand(filtered[activeIndex].name)
+        if (paramMode) {
+          const items = paramMode.isDynamic ? dynamicCompletions : paramMode.completions
+          const item = items[activeIndex]
+          if (item) selectCompletion(typeof item === 'string' ? item : item.value)
+        } else {
+          const filtered = getFilteredCommands(commands, commandFilter)
+          if (filtered[activeIndex]) selectCommand(filtered[activeIndex].name)
+        }
         return
       }
       if (e.key === 'Escape') { e.preventDefault(); setShowAutocomplete(false); return }
     }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
-  }, [showAutocomplete, getFilteredCount, commandFilter, commands, activeIndex, selectCommand, sendMessage])
+  }, [showAutocomplete, getFilteredCount, commandFilter, commands, activeIndex, selectCommand, selectCompletion, sendMessage, paramMode, dynamicCompletions])
 
   const lifeRatio  = playerStats ? Math.max(0, playerStats.life / playerStats.maxLife) : 1
   const mpRatio    = playerStats ? Math.max(0, playerStats.mentality / playerStats.maxMentality) : 1
@@ -193,6 +281,9 @@ function HomeContent() {
               filter={commandFilter}
               activeIndex={activeIndex}
               onSelect={selectCommand}
+              paramHint={paramMode?.arg}
+              paramCompletions={paramMode?.isDynamic ? dynamicCompletions : paramMode?.completions}
+              onSelectCompletion={selectCompletion}
             />
           )}
           <div

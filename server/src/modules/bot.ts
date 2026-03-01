@@ -2,12 +2,17 @@ import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
 import { sendMessageToChannel, sendBotMessageToUser, sendMessageToUser } from "./message.js";
 import { getUserChannel } from "./channel.js";
-import type { ChatMessage, CommandInfo } from "../../../shared/types.js";
+import { getSession } from "./login.js";
+import type { ChatMessage, CommandInfo, CompletionItem } from "../../../shared/types.js";
 
 interface CommandArg {
     name: string
     description: string
     required?: boolean
+    /** 띄어쓰기를 포함하는 긴 텍스트 파라미터 (명령어당 최대 1개) */
+    isText?: boolean
+    /** 자동완성 후보 목록. 함수 형태는 requestCompletions 이벤트 시 호출됨 */
+    completions?: CompletionItem[] | ((userId: number, args: string[], raw: string) => CompletionItem[])
 }
 
 type CommandUseVisibility = 'hide' | 'show' | 'private';
@@ -54,16 +59,67 @@ export function getCommandList(): CommandInfo[] {
             name: a.name,
             description: a.description,
             required: a.required,
+            isText: a.isText,
+            completions: typeof a.completions === 'function' ? undefined : a.completions,
+            dynamicCompletions: typeof a.completions === 'function',
         })),
     }));
 }
 
-/** 명령어 파싱 및 실행 (chat.ts에서 호출). 명령어 사용 채팅 표시 방식 반환 */
+/**
+ * isText 파라미터를 고려한 인자 파싱.
+ * isText 파라미터는 앞/뒤 인자를 제외한 나머지 전체를 하나의 문자열로 합친다.
+ * 예) argDefs=[A, B:text, C], remainder="1 hello world 2"
+ *     → ['1', 'hello world', '2']
+ */
+function parseArgs(remainder: string, argDefs?: CommandArg[]): string[] {
+    const textIdx = argDefs?.findIndex(a => a.isText) ?? -1;
+
+    if (textIdx === -1 || !argDefs) {
+        return remainder ? remainder.trim().split(/\s+/).filter(Boolean) : [];
+    }
+
+    const trimmed = remainder.trim();
+    if (!trimmed) return [];
+
+    const argsAfter = argDefs.length - 1 - textIdx;
+
+    // 앞 인자들을 앞에서부터 토큰 단위로 추출
+    const before: string[] = [];
+    let pos = 0;
+    for (let i = 0; i < textIdx; i++) {
+        while (pos < trimmed.length && /\s/.test(trimmed[pos])) pos++;
+        if (pos >= trimmed.length) break;
+        const start = pos;
+        while (pos < trimmed.length && !/\s/.test(trimmed[pos])) pos++;
+        before.push(trimmed.slice(start, pos));
+    }
+    while (pos < trimmed.length && /\s/.test(trimmed[pos])) pos++;
+
+    // 뒤 인자들을 끝에서부터 토큰 단위로 추출
+    const after: string[] = [];
+    let endPos = trimmed.length;
+    for (let i = 0; i < argsAfter; i++) {
+        while (endPos > pos && /\s/.test(trimmed[endPos - 1])) endPos--;
+        if (endPos <= pos) break;
+        const end = endPos;
+        while (endPos > pos && !/\s/.test(trimmed[endPos - 1])) endPos--;
+        after.unshift(trimmed.slice(endPos, end));
+        while (endPos > pos && /\s/.test(trimmed[endPos - 1])) endPos--;
+    }
+
+    // 남은 부분이 텍스트 인자
+    const textValue = trimmed.slice(pos, endPos).trim();
+
+    return [...before, textValue, ...after];
+}
+
+/** 명령어 파싱 및 실행 (chat.ts에서 호출) */
 export function handleCommand(userId: number, raw: string, msg: ChatMessage | null = null, permission = 0): void {
-    // "/명령어 인자1 인자2" → ["명령어", "인자1", "인자2"]
-    const parts = raw.slice(1).split(/\s+/);
-    const name = parts[0].toLowerCase();
-    const args = parts.slice(1);
+    const rawSliced = raw.slice(1);
+    const wsIdx = rawSliced.search(/\s/);
+    const name = (wsIdx === -1 ? rawSliced : rawSliced.slice(0, wsIdx)).toLowerCase();
+    const remainder = wsIdx === -1 ? '' : rawSliced.slice(wsIdx + 1);
 
     const cmd = commands.get(name) ?? commands.get(aliasMap.get(name) ?? '');
     if (!cmd) {
@@ -79,12 +135,17 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
         return;
     }
 
+    const args = parseArgs(remainder, cmd.args);
+
     // 필수 인자 검증
     const requiredArgs = cmd.args?.filter(a => a.required) ?? [];
     if (args.length < requiredArgs.length) {
         if(msg) sendMessageToUser(userId, msg);
         const usage = cmd.args
-            ?.map(a => a.required ? `<${a.name}>` : `[${a.name}]`)
+            ?.map(a => {
+                const label = a.isText ? `${a.name}:텍스트` : a.name;
+                return a.required ? `<${label}>` : `[${label}]`;
+            })
             .join(' ') ?? '';
         sendBotMessageToUser(userId, `사용법: /${cmd.name} ${usage}`);
         return;
@@ -102,10 +163,53 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
 export const initBot = () => {
     const io = getIO();
 
-    // 명령어 목록 요청 이벤트
     io.on('connection', (socket) => {
+        // 명령어 목록 요청
         socket.on('requestCommandList', () => {
             socket.emit('commandList', getCommandList());
+        });
+
+        // 파라미터 자동완성 요청 (입력 중 실시간 호출)
+        socket.on('requestCompletions', (raw: string) => {
+            const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            if (!session || !raw.startsWith('/')) return;
+
+            const rawSliced = raw.slice(1);
+            const wsIdx = rawSliced.search(/\s/);
+            if (wsIdx === -1) return;
+
+            const cmdName = rawSliced.slice(0, wsIdx).toLowerCase();
+            const remainder = rawSliced.slice(wsIdx + 1);
+            const cmd = commands.get(cmdName) ?? commands.get(aliasMap.get(cmdName) ?? '');
+            if (!cmd?.args?.length) return;
+
+            // 현재 입력 위치의 argIndex 계산 (클라이언트와 동일한 로직)
+            const argParts = remainder.split(' ');
+            const textIdx = cmd.args.findIndex(a => a.isText);
+            let argIndex = argParts.length - 1;
+            if (textIdx !== -1 && argIndex > textIdx) {
+                const argsAfter = cmd.args.length - 1 - textIdx;
+                const afterStart = argParts.length - argsAfter;
+                argIndex = afterStart > textIdx ? textIdx + (argIndex - afterStart + 1) : textIdx;
+            }
+            argIndex = Math.min(argIndex, cmd.args.length - 1);
+
+            const currentArg = cmd.args[argIndex];
+            if (!currentArg?.completions) return;
+
+            const currentTyped = argParts[argParts.length - 1] ?? '';
+            const parsedArgs = parseArgs(remainder, cmd.args);
+
+            const allCompletions = typeof currentArg.completions === 'function'
+                ? currentArg.completions(session.userId, parsedArgs, raw)
+                : currentArg.completions;
+
+            const filtered = allCompletions.filter(c => {
+                const val = typeof c === 'string' ? c : c.value;
+                return !currentTyped || val.toLowerCase().startsWith(currentTyped.toLowerCase());
+            });
+
+            socket.emit('argCompletions', filtered);
         });
     });
 

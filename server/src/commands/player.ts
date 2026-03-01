@@ -11,6 +11,7 @@ import { STAT_TYPES } from "../models/Stat.js";
 import type { StatType } from "../models/Stat.js";
 import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
+import { CompletionItem } from "../../../shared/types.js";
 
 const STAT_KR: Record<StatType, string> = {
     strength: '근력', agility: '민첩', vitality: '체력', sensibility: '감각', mentality: '정신력',
@@ -186,9 +187,18 @@ export function initPlayerCommands(): void {
         name: '사용',
         aliases: ['use'],
         description: '아이템을 1개 사용합니다.',
-        showCommandUse: 'show',
+        showCommandUse: 'private',
         args: [
-            { name: '슬롯ID', description: '사용할 아이템 인벤토리 슬롯 ID', required: true },
+            { name: '슬롯ID', description: '사용할 아이템 인벤토리 슬롯 ID', required: true,
+                completions(userId, args, raw) {
+                    let player = getPlayerByUserId(userId);
+                    if(!player) return [];
+                    return player.inventory.items.map((item, slot): CompletionItem => ({
+                        value: String(slot + 1),
+                        description: item.name
+                    }))
+                },  
+            },
         ],
         async handler(userId, args) {
             const player = getPlayerByUserId(userId);
@@ -218,6 +228,8 @@ export function initPlayerCommands(): void {
                 sendBotMessageToUser(userId, `${item.name}은(는) 사용할 수 없습니다.`);
                 return;
             }
+
+            sendBotMessageToUser(userId, `${item.name}을(를) 사용합니다.`);
 
             await result;
         },

@@ -77,11 +77,20 @@ export interface ChatMessage {
     private?: boolean
 }
 
+/** 자동완성 항목 (값만 또는 값+설명) */
+export type CompletionItem = string | { value: string; description?: string }
+
 // 명령어 정보 (자동완성용)
 export interface CommandArgInfo {
     name: string
     description: string
     required?: boolean
+    /** 띄어쓰기를 포함하는 긴 텍스트 파라미터 (명령어당 최대 1개) */
+    isText?: boolean
+    /** 자동완성 후보 목록 (정적) */
+    completions?: CompletionItem[]
+    /** true이면 자동완성이 서버에서 동적으로 계산됨 (requestCompletions 이벤트 사용) */
+    dynamicCompletions?: boolean
 }
 
 export interface CommandInfo {
@@ -172,6 +181,7 @@ export interface ServerToClientEvents {
     chatMessage: (msg: ChatMessage) => void
     notification: (data: NotificationData) => void
     commandList: (commands: CommandInfo[]) => void
+    argCompletions: (items: CompletionItem[]) => void
     playerStats: (data: PlayerStatsData) => void
     locationInfo: (data: LocationInfoData) => void
     userCount: (data: UserCountData) => void
@@ -197,4 +207,5 @@ export interface ClientToServerEvents {
     requestChannelList: () => void
     changeNickname: (nickname: string) => void
     requestLocationInfo: () => void
+    requestCompletions: (raw: string) => void
 }

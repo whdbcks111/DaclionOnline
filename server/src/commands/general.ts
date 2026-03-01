@@ -54,10 +54,10 @@ export function initGeneralCommands(): void {
         permission: 10,
         showCommandUse: 'private',
         args: [
-            { name: '코드', description: '실행 가능한 자바스크립트 코드', required: true },
+            { name: '코드', description: '실행 가능한 자바스크립트 코드', required: true, isText: true },
         ],
         handler(userId, args) {
-            const code = args.join(' ');
+            const code = args[0];
             const session = getSessionByUserId(userId);
             const player = getPlayerByUserId(userId);
             try {
