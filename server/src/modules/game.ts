@@ -2,6 +2,7 @@ import logger from "../utils/logger.js";
 import { getOnlinePlayers } from "./player.js";
 import { tickCoroutines } from "./coroutine.js";
 import { updateLocations } from "./location.js";
+import { updateAllShops } from "../models/Shop.js";
 
 const TARGET_FPS = 20;
 const FRAME_TIME = 1000 / TARGET_FPS;
@@ -26,6 +27,7 @@ function tick(): void {
     }
 
     updateLocations(dt);
+    updateAllShops(dt);
     tickCoroutines(dt);
 }
 

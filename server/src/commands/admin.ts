@@ -1,11 +1,12 @@
 import { registerCommand } from "../modules/bot.js";
 import { sendBotMessageToUser } from "../modules/message.js";
-import { fetchPlayerByUserId } from "../modules/player.js";
-import { getLocation } from "../models/Location.js";
-import { getItemData } from "../models/Item.js";
+import { fetchPlayerByUserId, getOnlinePlayers } from "../modules/player.js";
+import { getLocation, getAllLocations } from "../models/Location.js";
+import { getItemData, getAllItemData } from "../models/Item.js";
 import { STAT_TYPES } from "../models/Stat.js";
 import type { StatType } from "../models/Stat.js";
 import logger from "../utils/logger.js";
+import type { CompletionItem } from "../../../shared/types.js";
 
 const STAT_KR: Record<StatType, string> = {
     strength: '근력', agility: '민첩', vitality: '체력', sensibility: '감각', mentality: '정신력',
@@ -34,7 +35,14 @@ export function initAdminCommands(): void {
         permission: 10,
         showCommandUse: 'private',
         args: [
-            { name: '대상', description: '플레이어 userId 또는 me', required: true },
+            { name: '대상', description: '플레이어 userId 또는 me', required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((p): CompletionItem => ({ value: String(p.userId), description: p.name })),
+                    ];
+                },
+            },
             { name: '레벨', description: '설정할 레벨 (1 이상, 소수점 가능)', required: true },
         ],
         async handler(userId, args) {
@@ -80,8 +88,17 @@ export function initAdminCommands(): void {
         permission: 10,
         showCommandUse: 'private',
         args: [
-            { name: '대상', description: '플레이어 userId 또는 me', required: true },
-            { name: '스탯', description: 'life / mentality / thirsty / hungry', required: true },
+            { name: '대상', description: '플레이어 userId 또는 me', required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((p): CompletionItem => ({ value: String(p.userId), description: p.name })),
+                    ];
+                },
+            },
+            { name: '상태', description: 'life / mentality / thirsty / hungry', required: true,
+                completions: STAT_KEYS.map(k => ({ value: k, description: k })),
+            },
             { name: '값', description: '설정할 값 (0 ~ 최대치)', required: true },
         ],
         async handler(userId, args) {
@@ -134,8 +151,19 @@ export function initAdminCommands(): void {
         permission: 10,
         showCommandUse: 'private',
         args: [
-            { name: '대상', description: '플레이어 userId 또는 me', required: true },
-            { name: '아이템id', description: '아이템 데이터 ID', required: true },
+            { name: '대상', description: '플레이어 userId 또는 me', required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((p): CompletionItem => ({ value: String(p.userId), description: p.name })),
+                    ];
+                },
+            },
+            { name: '아이템id', description: '아이템 데이터 ID', required: true,
+                completions() {
+                    return getAllItemData().map((d): CompletionItem => ({ value: d.id, description: d.name }));
+                },
+            },
             { name: '개수', description: '추가할 개수 (1 이상 정수)', required: true },
         ],
         async handler(userId, args) {
@@ -184,8 +212,17 @@ export function initAdminCommands(): void {
         permission: 10,
         showCommandUse: 'private',
         args: [
-            { name: '대상', description: '플레이어 userId 또는 me', required: true },
-            { name: '스탯', description: '근력 / 민첩 / 체력 / 감각 / 정신력 (또는 영문)', required: true },
+            { name: '대상', description: '플레이어 userId 또는 me', required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((p): CompletionItem => ({ value: String(p.userId), description: p.name })),
+                    ];
+                },
+            },
+            { name: '스탯', description: '근력 / 민첩 / 체력 / 감각 / 정신력 (또는 영문)', required: true,
+                completions: STAT_TYPES.map((s): CompletionItem => ({ value: STAT_KR[s], description: s })),
+            },
             { name: '값', description: '설정할 스탯 포인트 수 (0 이상 정수)', required: true },
         ],
         async handler(userId, args) {
@@ -235,7 +272,14 @@ export function initAdminCommands(): void {
         permission: 10,
         showCommandUse: 'private',
         args: [
-            { name: '대상', description: '플레이어 userId 또는 me', required: true },
+            { name: '대상', description: '플레이어 userId 또는 me', required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((p): CompletionItem => ({ value: String(p.userId), description: p.name })),
+                    ];
+                },
+            },
             { name: '값', description: '설정할 스탯 포인트 수 (0 이상 정수)', required: true },
         ],
         async handler(userId, args) {
@@ -278,7 +322,14 @@ export function initAdminCommands(): void {
         permission: 10,
         showCommandUse: 'private',
         args: [
-            { name: '대상', description: '플레이어 userId 또는 me', required: true },
+            { name: '대상', description: '플레이어 userId 또는 me', required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((p): CompletionItem => ({ value: String(p.userId), description: p.name })),
+                    ];
+                },
+            },
             { name: '값', description: '설정할 골드 수량 (0 이상 정수)', required: true },
         ],
         async handler(userId, args) {
@@ -322,8 +373,19 @@ export function initAdminCommands(): void {
         permission: 10,
         showCommandUse: 'private',
         args: [
-            { name: '대상', description: '플레이어 userId 또는 me', required: true },
-            { name: '장소id', description: '이동할 장소 ID', required: true },
+            { name: '대상', description: '플레이어 userId 또는 me', required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((p): CompletionItem => ({ value: String(p.userId), description: p.name })),
+                    ];
+                },
+            },
+            { name: '장소id', description: '이동할 장소 ID', required: true,
+                completions() {
+                    return getAllLocations().map((loc): CompletionItem => ({ value: loc.id, description: loc.data.name }));
+                },
+            },
         ],
         async handler(userId, args) {
             try {

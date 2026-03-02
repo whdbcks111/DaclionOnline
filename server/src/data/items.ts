@@ -14,7 +14,30 @@ registerItemUse('heal_hp', (inv, item, finish) => {
             inv.removeItem(item.id, 1);
             sendNotificationToUser(player.userId, { key: 'item:heal_hp', message: '꿀꺽꿀꺽...', length: time * 1000 });
             yield Wait(time);
-            sendNotificationToUser(player.userId, { key: 'item:heal_hp', message: `생명력을 ${amount.toFixed(0)} 회복했습니다!` });
+            player.life += amount;
+            sendNotificationToUser(player.userId, { key: 'item:heal_hp', message: `생명력을 ${amount.toFixed(0)}만큼 회복했습니다!` });
+        }
+        catch(e) {
+            logger.error(e);
+        }
+        finally {
+            finish();
+        }
+    }
+    startCoroutine(healRoutine(item.metadata?.amount ?? 0, item.metadata?.time ?? 1));
+});
+
+registerItemUse('heal_mp', (inv, item, finish) => {
+    function* healRoutine(amount: number, time: number) {
+        try {
+            const player = getPlayerByUserId(inv.playerId);
+            if(!player) return;
+
+            inv.removeItem(item.id, 1);
+            sendNotificationToUser(player.userId, { key: 'item:heal_mp', message: '꿀꺽꿀꺽...', length: time * 1000 });
+            yield Wait(time);
+            player.mentality += amount;
+            sendNotificationToUser(player.userId, { key: 'item:heal_mp', message: `정신력을 ${amount.toFixed(0)}만큼 회복했습니다!` });
         }
         catch(e) {
             logger.error(e);
@@ -49,7 +72,7 @@ defineItem({
     weight: 0.5,
     stackable: true,
     maxStack: 99,
-    baseMetadata: null,
+    baseMetadata: { amount: 50 },
     onUse: 'heal_mp',
     equipSlot: null,
     modifiers: null,

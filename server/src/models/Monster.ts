@@ -117,19 +117,20 @@ export default class Monster extends Entity {
             const levelsGained = causePlayer.gainExp(this.expReward);
 
             const killMsg = chat()
-                .color('gold', b => b.text(`${this.name} 처치! `))
-                .text(`EXP +${this.expReward}`);
+                .color('gold', b => b.text(`${this.name} 처치 완료!\n`))
+                .weight('bold', b => b.text('[ 보상 ]'))
+                .text(`\nEXP +${this.expReward}`);
 
             if (goldGained > 0) {
-                killMsg.text(`  `).color('gold', b => b.text(`Gold +${goldGained}`));
+                killMsg.text(`\nGold +${goldGained}`);
             }
 
             if (drops.length > 0) {
                 const dropNames = drops.map(d => {
                     const data = getItemData(d.itemDataId);
                     return `${data?.name ?? d.itemDataId} x${d.count}`;
-                }).join(', ');
-                killMsg.text(`\n보상: ${dropNames}`);
+                }).join('\n');
+                killMsg.text(`\n${dropNames}`);
             }
 
             if (levelsGained.length > 0) {

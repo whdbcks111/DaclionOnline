@@ -29,7 +29,7 @@ export function initPlayerCommands(): void {
         name: '상태창',
         aliases: ['status', 's'],
         args: [
-            { name: '공개/비공개', description: '공개 여부를 결정합니다.' },
+            { name: '공개/비공개', description: '공개 여부를 결정합니다.', completions: ['공개', '비공개'] },
         ],
         description: '플레이어 정보를 확인합니다.',
         async handler(userId, args) {
@@ -140,7 +140,7 @@ export function initPlayerCommands(): void {
         aliases: ['inv', 'i'],
         description: '인벤토리를 확인합니다.',
         args: [
-            { name: '공개/비공개', description: '공개 여부를 결정합니다.' },
+            { name: '공개/비공개', description: '공개 여부를 결정합니다.', completions: ['공개', '비공개'] },
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
@@ -168,6 +168,10 @@ export function initPlayerCommands(): void {
 
                     if (item.data?.onUse) {
                         inner.closeButton(`/사용 ${i + 1}`, b2 => b2.text('사용')).text(' ');
+                    }
+
+                    if (item.equipSlot) {
+                        inner.closeButton(`/장착 ${i + 1}`, b2 => b2.text('장착')).text(' ');
                     }
 
                     inner.closeButton(`/버리기 ${i + 1}`, b2 => b2.text('버리기')).text('\n');
@@ -243,7 +247,16 @@ export function initPlayerCommands(): void {
         description: '아이템을 1개 현재 장소에 버립니다.',
         showCommandUse: 'show',
         args: [
-            { name: '슬롯ID', description: '버릴 아이템 인벤토리 슬롯 ID', required: true },
+            { name: '슬롯ID', description: '버릴 아이템 인벤토리 슬롯 ID', required: true,
+                completions(userId) {
+                    const player = getPlayerByUserId(userId);
+                    if (!player) return [];
+                    return player.inventory.items.map((item, slot): CompletionItem => ({
+                        value: String(slot + 1),
+                        description: item.name,
+                    }));
+                },
+            },
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
@@ -285,7 +298,17 @@ export function initPlayerCommands(): void {
         description: '인벤토리의 아이템을 장착합니다.',
         showCommandUse: 'show',
         args: [
-            { name: '슬롯ID', description: '장착할 아이템 인벤토리 슬롯 ID', required: true },
+            { name: '슬롯ID', description: '장착할 아이템 인벤토리 슬롯 ID', required: true,
+                completions(userId) {
+                    const player = getPlayerByUserId(userId);
+                    if (!player) return [];
+                    return player.inventory.items
+                        .map((item, slot): CompletionItem | null =>
+                            item.equipSlot ? { value: String(slot + 1), description: `[${item.category}] ${item.name}` } : null
+                        )
+                        .filter((c): c is CompletionItem => c !== null);
+                },
+            },
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
@@ -329,7 +352,18 @@ export function initPlayerCommands(): void {
         description: '장소의 몬스터를 공격합니다.',
         showCommandUse: 'hide',
         args: [
-            { name: '번호', description: '장소 내 몬스터 번호 (생략 시 현재 타겟 공격)' },
+            { name: '번호', description: '장소 내 몬스터 번호 (생략 시 현재 타겟 공격)',
+                completions(userId) {
+                    const player = getPlayerByUserId(userId);
+                    if (!player) return [];
+                    const location = getLocation(player.locationId);
+                    if (!location) return [];
+                    return location.monsters.map((m, i): CompletionItem => ({
+                        value: String(i + 1),
+                        description: `Lv.${m.level} ${m.name}`,
+                    }));
+                },
+            },
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
@@ -385,8 +419,18 @@ export function initPlayerCommands(): void {
         description: '스탯 포인트를 분배합니다. 인자 없이 입력하면 분배 UI를 표시합니다.',
         showCommandUse: 'hide',
         args: [
-            { name: '스탯', description: '근력 / 민첩 / 체력 / 감각 / 정신력 (또는 영문)' },
-            { name: '포인트', description: '투자할 포인트 수' },
+            { name: '스탯', description: '근력 / 민첩 / 체력 / 감각 / 정신력 (또는 영문)',
+                completions: ['근력', '민첩', '체력', '감각', '정신력'],
+            },
+            { name: '포인트', description: '투자할 포인트 수',
+                completions(userId) {
+                    const player = getPlayerByUserId(userId);
+                    if (!player || player.statPoint <= 0) return [];
+                    return Array.from({ length: Math.min(player.statPoint, 10) }, (_, i) =>
+                        String(i + 1)
+                    );
+                },
+            },
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);

@@ -9,6 +9,7 @@ import { startCoroutine, Wait } from "../modules/coroutine.js";
 import type { CoroutineGenerator } from "../modules/coroutine.js";
 import type Player from "../models/Player.js";
 import { getUserChannel } from "../modules/channel.js";
+import type { CompletionItem } from "../../../shared/types.js";
 
 function* travelCoroutine(player: Player, targetLocationId: string): CoroutineGenerator {
     const from = getLocation(player.locationId);
@@ -55,7 +56,19 @@ export function initLocationCommands(): void {
         description: '다른 장소로 이동합니다.',
         showCommandUse: 'show',
         args: [
-            { name: '장소이름', description: '이동할 장소 이름', required: false },
+            { name: '장소이름', description: '이동할 장소 이름', required: false,
+                completions(userId) {
+                    const player = getPlayerByUserId(userId);
+                    if (!player) return [];
+                    const location = getLocation(player.locationId);
+                    if (!location) return [];
+                    return location.getAvailableConnections(player).map((c): CompletionItem =>
+                        c.status === 'locked'
+                            ? { value: c.name, description: '(잠김)' }
+                            : c.name
+                    );
+                },
+            },
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);

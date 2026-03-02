@@ -23,6 +23,7 @@ export interface LocationData {
     y: number
     z: number
     isRespawnLocation?: boolean
+    shopId?: string
     spawns: SpawnInfo[]
     connections: ConnectionInfo[]
 }
