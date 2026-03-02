@@ -24,6 +24,9 @@ export interface MonsterEquipInfo {
     itemDataId: string;
 }
 
+/** 골드 보상 — 고정값 또는 최소~최대 범위 */
+export type GoldReward = number | { min: number; max: number };
+
 /** 몬스터 정의 (마스터 데이터, 코드에서 직접 정의) */
 export interface MonsterData {
     id: string;
@@ -33,6 +36,7 @@ export interface MonsterData {
     baseAttribute: Partial<AttributeRecord>;
     drops: DropInfo[];
     expReward: number;
+    goldReward?: GoldReward;
     equipments: MonsterEquipInfo[];
 }
 
@@ -41,6 +45,7 @@ export default class Monster extends Entity {
     override readonly name: string;
     readonly drops: DropInfo[];
     readonly expReward: number;
+    readonly goldReward: GoldReward;
     readonly respawnTime: number;
     /** true이면 일회성 몬스터 — 사망 시 리스폰 없이 즉시 제거 */
     readonly isOneShot: boolean;
@@ -58,6 +63,7 @@ export default class Monster extends Entity {
         this.name = data.name;
         this.drops = data.drops;
         this.expReward = data.expReward;
+        this.goldReward = data.goldReward ?? 0;
         this.respawnTime = respawnTime;
         this.isOneShot = isOneShot;
 
@@ -106,11 +112,17 @@ export default class Monster extends Entity {
             for (const drop of drops) {
                 causePlayer.inventory.addItem(drop.itemDataId, drop.count);
             }
+            const goldGained = this.rollGold();
+            if (goldGained > 0) causePlayer.gold += goldGained;
             const levelsGained = causePlayer.gainExp(this.expReward);
 
             const killMsg = chat()
                 .color('gold', b => b.text(`${this.name} 처치! `))
                 .text(`EXP +${this.expReward}`);
+
+            if (goldGained > 0) {
+                killMsg.text(`  `).color('gold', b => b.text(`Gold +${goldGained}`));
+            }
 
             if (drops.length > 0) {
                 const dropNames = drops.map(d => {
@@ -133,6 +145,13 @@ export default class Monster extends Entity {
             this.deathTimer = 0;
             getLocation(this.locationId)?.removeMonster(this);
         }
+    }
+
+    /** 골드 보상을 굴려 최종 지급량 반환 */
+    rollGold(): number {
+        const r = this.goldReward;
+        if (typeof r === 'number') return r;
+        return Math.floor(Math.random() * (r.max - r.min + 1) + r.min);
     }
 
     /** 드롭 테이블을 굴려 드롭 아이템 목록 반환 */

@@ -15,6 +15,7 @@ defineMonster({
         { itemDataId: 'health_potion', minCount: 1, maxCount: 1, chance: 0.3 },
     ],
     expReward: 10,
+    goldReward: { min: 1, max: 5 },
     equipments: [],
 });
 
@@ -34,5 +35,6 @@ defineMonster({
         { itemDataId: 'old_sword',     minCount: 1, maxCount: 1, chance: 0.05 },
     ],
     expReward: 25,
+    goldReward: { min: 5, max: 15 },
     equipments: [],
 });
