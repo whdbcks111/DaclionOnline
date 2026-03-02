@@ -30,6 +30,7 @@ function HomeContent() {
   const [dynamicCompletions, setDynamicCompletions] = useState<CompletionItem[]>([])
   const inputRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const isComposing = useRef(false)
 
   useEffect(() => {
     if (!socket) return
@@ -100,11 +101,21 @@ function HomeContent() {
   }, [socket, updateNickname])
 
   const sendMessage = useCallback(() => {
-    const content = inputRef.current?.textContent?.trim()
-    if (!content || !socket) return
-    socket.emit('sendMessage', content)
-    inputRef.current!.textContent = ''
-    inputRef.current!.focus()
+    const inputElement = inputRef.current;
+    const content = inputRef.current?.textContent?.trim();
+    if (!content || !socket) return;
+
+    socket.emit('sendMessage', content);
+
+    if(inputElement) {
+      inputElement.blur();
+      inputElement.textContent = '';
+
+      setTimeout(() => {
+        inputElement.focus();
+      }, 10);
+    }
+
     setShowAutocomplete(false)
   }, [socket])
 
@@ -294,6 +305,12 @@ function HomeContent() {
             data-placeholder="메시지를 입력하세요"
             onInput={handleInput}
             onKeyDown={handleKeyDown}
+            onCompositionStart={() => {
+              isComposing.current = true;
+            }}
+            onCompositionEnd={() => {
+              isComposing.current = false;
+            }}
           />
           <button onClick={sendMessage}>전송</button>
         </div>
