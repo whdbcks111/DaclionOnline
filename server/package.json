@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && cp src/data/*.json dist/server/src/data/",
     "start": "node dist/server/src/index.js"
   },
   "dependencies": {
