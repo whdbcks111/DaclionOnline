@@ -1,6 +1,7 @@
 import Monster from "./Monster.js";
 import type Player from "./Player.js";
 import type { LocationData, SpawnInfo, ConnectionInfo, ZoneType } from "../../../shared/types.js";
+import logger from "../utils/logger.js";
 
 export type { LocationData, SpawnInfo, ConnectionInfo, ZoneType };
 
@@ -28,6 +29,7 @@ const conditionHandlers = new Map<string, ConditionHandler>();
 /** 이동 조건 핸들러 등록 */
 export function registerConnectionCondition(conditionId: string, handler: ConditionHandler): void {
     conditionHandlers.set(conditionId, handler);
+    logger.debug('장소 연결 조건 추가 : ', conditionId);
 }
 
 // -- 패시브 콜백 레지스트리 --

@@ -36,7 +36,8 @@
         "locationId": "town_square"
       },
       {
-        "locationId": "dark_forest"
+        "locationId": "dark_forest",
+        "condition": "level_5"
       }
     ]
   },

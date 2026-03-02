@@ -6,6 +6,7 @@ import { defineLocation, getAllLocationData, getAllLocations, reloadAllLocations
 import type { LocationData } from "../models/Location.js";
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
+import '../data/locations.js'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
