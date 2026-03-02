@@ -18,6 +18,8 @@ export interface HudConfig {
 
 const OPACITY_KEY = 'hud-opacity'
 const SCALE_KEY = 'hud-scale'
+const QUICK_SLOTS_KEY = 'hud-quick-slots'
+export const MAX_QUICK_SLOTS = 10
 
 export interface HudDefinition {
   id: string
@@ -28,12 +30,14 @@ export const HUD_DEFINITIONS: HudDefinition[] = [
   { id: 'player-status', label: '플레이어 상태' },
   { id: 'player-location', label: '위치 정보' },
   { id: 'minimap', label: '미니맵' },
+  { id: 'quick-slots', label: '퀵 슬롯' },
 ]
 
 const DEFAULT_CONFIGS: Record<string, HudConfig> = {
-  'player-status':   { id: 'player-status',   visible: true,  x: 5, y: 10, posUnit: '%', posAnchor: 'topRight',  anchor: 'topRight' },
-  'player-location': { id: 'player-location', visible: false, x: 5, y: 30, posUnit: '%', posAnchor: 'topRight',  anchor: 'topRight' },
-  'minimap':         { id: 'minimap',         visible: false, x: 5, y: 45, posUnit: '%', posAnchor: 'topRight',  anchor: 'topRight' },
+  'player-status':   { id: 'player-status',   visible: true,  x: 5,  y: 10, posUnit: '%', posAnchor: 'topRight',    anchor: 'topRight' },
+  'player-location': { id: 'player-location', visible: false, x: 5,  y: 30, posUnit: '%', posAnchor: 'topRight',    anchor: 'topRight' },
+  'minimap':         { id: 'minimap',         visible: false, x: 5,  y: 45, posUnit: '%', posAnchor: 'topRight',    anchor: 'topRight' },
+  'quick-slots':     { id: 'quick-slots',     visible: false, x: 50, y: 10,  posUnit: '%', posAnchor: 'bottomLeft',  anchor: 'bottomMiddle' },
 }
 
 interface HudContextType {
@@ -56,6 +60,11 @@ interface HudContextType {
   setOpacity: (v: number) => void
   scale: number
   setScale: (v: number) => void
+  quickSlots: string[]
+  addQuickSlot: (text: string) => void
+  removeQuickSlot: (index: number) => void
+  moveQuickSlot: (from: number, to: number) => void
+  updateQuickSlot: (index: number, text: string) => void
 }
 
 const HudContext = createContext<HudContextType | null>(null)
@@ -81,6 +90,32 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   const [editMode, setEditMode] = useState(false)
   const [playerStats, setPlayerStats] = useState<PlayerStatsData | null>(null)
   const [locationInfo, setLocationInfo] = useState<LocationInfoData | null>(null)
+  const [quickSlots, setQuickSlots] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(QUICK_SLOTS_KEY)
+      if (saved) return JSON.parse(saved) as string[]
+    } catch { /* ignore */ }
+    return []
+  })
+
+  const saveQuickSlots = useCallback((slots: string[]) => {
+    setQuickSlots(slots)
+    localStorage.setItem(QUICK_SLOTS_KEY, JSON.stringify(slots))
+  }, [])
+
+  const addQuickSlot    = useCallback((text: string) => saveQuickSlots([...quickSlots, text]), [quickSlots, saveQuickSlots])
+  const removeQuickSlot = useCallback((index: number) => saveQuickSlots(quickSlots.filter((_, i) => i !== index)), [quickSlots, saveQuickSlots])
+  const moveQuickSlot   = useCallback((from: number, to: number) => {
+    const next = [...quickSlots]
+    const [item] = next.splice(from, 1)
+    next.splice(to, 0, item)
+    saveQuickSlots(next)
+  }, [quickSlots, saveQuickSlots])
+  const updateQuickSlot = useCallback((index: number, text: string) => {
+    const next = [...quickSlots]
+    next[index] = text
+    saveQuickSlots(next)
+  }, [quickSlots, saveQuickSlots])
   const [opacity, setOpacityState] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(OPACITY_KEY)
@@ -174,6 +209,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
       setVisible, setPosition, setAnchor, setPosUnit, setPosAnchor, setHudOpacity, setHudScale, resetPosition,
       playerStats, setPlayerStats, locationInfo, setLocationInfo,
       opacity, setOpacity, scale, setScale,
+      quickSlots, addQuickSlot, removeQuickSlot, moveQuickSlot, updateQuickSlot,
     }}>
       {children}
     </HudContext.Provider>

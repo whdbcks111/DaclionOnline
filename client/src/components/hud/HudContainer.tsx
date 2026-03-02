@@ -4,12 +4,14 @@ import type { HudConfig } from '../../context/HudContext'
 import PlayerStatusHud from './huds/PlayerStatusHud'
 import LocationHud from './huds/LocationHud'
 import MinimapHud from './huds/MinimapHud'
+import QuickSlotHud from './huds/QuickSlotHud'
 import styles from './HudContainer.module.scss'
 
 const HUD_COMPONENTS: Record<string, React.ComponentType> = {
   'player-status': PlayerStatusHud,
   'player-location': LocationHud,
   'minimap': MinimapHud,
+  'quick-slots': QuickSlotHud,
 }
 
 const ANCHOR_DATA: Record<AnchorPoint, { tx: number; ty: number; origin: string }> = {
@@ -41,6 +43,7 @@ export default function HudContainer() {
 
   const handleMouseDown = useCallback((id: string, e: React.MouseEvent) => {
     if (!editMode) return
+    if ((e.target as HTMLElement).closest('input, button, textarea, select, a')) return
     e.preventDefault()
     const cfg = configs[id]
     const startMouseX = e.clientX
