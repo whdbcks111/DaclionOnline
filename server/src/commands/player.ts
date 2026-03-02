@@ -78,6 +78,8 @@ export function initPlayerCommands(): void {
                         .text(` ${location?.data.name ?? '???'}  `)
                         .color(player.moving ? 'gold' : 'gray', b2 => b2.text(player.moving ? '이동 중' : '대기 중'))
                         .text('\n')
+                        .color('yellow', b2 => b2.text('골드'))
+                        .text(` ${player.gold.toLocaleString()}G\n`)
 
                         .color('gray', b2 => b2.text('─── 상태 ───\n'))
                         .color('yellow', b2 => b2.text('생명력'))

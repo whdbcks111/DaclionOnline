@@ -14,7 +14,6 @@ import { initPlayer, saveAllPlayers } from './modules/player.js';
 import { initGame } from './modules/game.js';
 import './data/items.js';
 import './data/monsters.js';
-import './data/locations.js';
 import { initLocation } from './modules/location.js';
 import { uploadRouter } from './modules/upload.js';
 import { initAllCommands } from './commands/index.js';

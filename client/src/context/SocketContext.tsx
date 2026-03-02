@@ -11,6 +11,7 @@ export interface SessionInfo {
   userId: number
   nickname: string
   profileImage?: string
+  permission: number
 }
 
 // Context 타입 정의
@@ -70,7 +71,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
     // 세션 복원 시 세션 정보 저장
     socketInstance.on('sessionRestore', (data: SessionRestoreData) => {
-      const info: SessionInfo = { userId: data.userId, nickname: data.nickname, profileImage: data.profileImage }
+      const info: SessionInfo = { userId: data.userId, nickname: data.nickname, profileImage: data.profileImage, permission: data.permission ?? 0 }
       sessionInfoRef.current = info
       setSessionInfo(info)
     })
@@ -78,7 +79,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     // 로그인 성공 시 세션 정보 저장
     socketInstance.on('loginResult', (result: LoginResult) => {
       if (result.ok && result.userId && result.nickname) {
-        const info: SessionInfo = { userId: result.userId, nickname: result.nickname, profileImage: result.profileImage }
+        const info: SessionInfo = { userId: result.userId, nickname: result.nickname, profileImage: result.profileImage, permission: result.permission ?? 0 }
         sessionInfoRef.current = info
         setSessionInfo(info)
       }

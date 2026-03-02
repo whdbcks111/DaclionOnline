@@ -1,0 +1,407 @@
+@use '../styles/themes' as *;
+
+// ─── 레이아웃 ───────────────────────────────────────
+
+.root {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background: #191c1e;
+  color: #e8e8e8;
+  font-family: 'Suit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+// ─── 툴바 ─────────────────────────────────────────
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  height: 48px;
+  background: #111315;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.backBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ccc;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e8e8e8;
+  flex: 1;
+}
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.saveBtn {
+  background: var(--color-primary);
+  border: none;
+  color: #fff;
+  padding: 6px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.15);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.saveMsg {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
+
+  &.ok {
+    background: rgba(26, 188, 156, 0.2);
+    color: #1abc9c;
+  }
+
+  &.error {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+  }
+
+  &.saving {
+    color: #aaa;
+  }
+}
+
+// ─── 지도 ─────────────────────────────────────────
+
+.map {
+  flex: 1;
+  display: block;
+  cursor: grab;
+  background: #191c1e;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+// ─── 컨텍스트 메뉴 ───────────────────────────────
+
+.ctxMenu {
+  background: #25292c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  min-width: 150px;
+}
+
+.ctxItem {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  color: #ddd;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  line-height: 1.5;
+
+  small {
+    color: #888;
+    font-size: 10px;
+  }
+
+  &:hover {
+    background: rgba(74, 184, 174, 0.2);
+    color: #fff;
+  }
+}
+
+// ─── 속성 패널 ───────────────────────────────────
+
+.panel {
+  width: 300px;
+  flex-shrink: 0;
+  background: #1a1d20;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  font-weight: 600;
+  color: #ccc;
+  flex-shrink: 0;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+
+  &:hover {
+    color: #fff;
+  }
+}
+
+.panelBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+  }
+}
+
+// ─── 필드 ─────────────────────────────────────────
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  > span {
+    font-size: 11px;
+    color: #888;
+    font-weight: 500;
+  }
+}
+
+.fieldRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #bbb;
+
+  input[type='checkbox'] {
+    accent-color: var(--color-primary);
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.coordRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.fieldSmall {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  > span {
+    font-size: 10px;
+    color: #888;
+    font-weight: 500;
+    text-align: center;
+  }
+}
+
+.input {
+  background: #252a2d;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #e8e8e8;
+  font-size: 12px;
+  padding: 5px 8px;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+
+  &:focus {
+    border-color: var(--color-primary);
+  }
+
+  option {
+    background: #252a2d;
+  }
+}
+
+.inputSmall {
+  @extend .input;
+  width: 52px;
+  text-align: center;
+  padding: 5px 4px;
+}
+
+// ─── 섹션 ─────────────────────────────────────────
+
+.section {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+// ─── 연결 리스트 ──────────────────────────────────
+
+.listRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #252a2d;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+.connName {
+  flex: 1;
+  color: #ddd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.connId {
+  font-size: 10px;
+  color: #666;
+  white-space: nowrap;
+}
+
+.missing {
+  color: #e74c3c;
+  font-style: italic;
+}
+
+.addSelect {
+  margin-top: 2px;
+}
+
+// ─── 스폰 ─────────────────────────────────────────
+
+.spawnRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+
+  .input {
+    flex: 1;
+  }
+}
+
+// ─── 버튼 ─────────────────────────────────────────
+
+.removeBtn {
+  background: transparent;
+  border: none;
+  color: #e74c3c;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  border-radius: 3px;
+
+  &:hover {
+    background: rgba(231, 76, 60, 0.15);
+  }
+}
+
+.addBtn {
+  background: rgba(74, 184, 174, 0.12);
+  border: 1px solid rgba(74, 184, 174, 0.3);
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  text-align: left;
+
+  &:hover {
+    background: rgba(74, 184, 174, 0.22);
+  }
+}
+
+.deleteBtn {
+  margin-top: 8px;
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 7px;
+  border-radius: 4px;
+  width: 100%;
+
+  &:hover {
+    background: rgba(231, 76, 60, 0.22);
+  }
+}
+
+// ─── 줌 배지 ──────────────────────────────────────
+
+.zoomBadge {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.55);
+  color: #aaa;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  pointer-events: none;
+  user-select: none;
+}

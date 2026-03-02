@@ -109,6 +109,7 @@ export const initLogin = () => {
                 username: session.username,
                 nickname: session.nickname,
                 profileImage: session.profileImage,
+                permission: session.permission,
             });
             // 세션 복원 시 플레이어가 메모리에 없을 수 있으므로 보장
             loadPlayerByUserId(session.userId).catch(e => logger.error('세션 복원 중 플레이어 로드 오류:', e));
@@ -162,6 +163,7 @@ export const initLogin = () => {
                     sessionToken,
                     nickname: user.nickname,
                     profileImage: user.profileImage ?? undefined,
+                    permission: user.permission ?? 0,
                 });
             } catch(e) {
                 logger.error('login 처리 중 오류:', e);

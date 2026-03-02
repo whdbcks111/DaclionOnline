@@ -8,6 +8,7 @@ import Notification from './components/Notification'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import Register from './pages/Register'
+import LocationEditor from './pages/LocationEditor'
 
 function SessionHandler() {
   const { socket } = useSocket();
@@ -65,6 +66,9 @@ function App() {
 
             {/* 홈 페이지 (로그인 후) */}
             <Route path="/home" element={<Home />} />
+
+            {/* 어드민 페이지 */}
+            <Route path="/admin/locations" element={<LocationEditor />} />
 
             {/* 404 - 존재하지 않는 경로는 /login으로 */}
             <Route path="*" element={<Navigate to="/login" replace />} />

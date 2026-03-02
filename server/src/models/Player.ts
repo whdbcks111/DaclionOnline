@@ -21,6 +21,7 @@ export default class Player extends Entity {
 
     private _nickname: string;
     private _maxWeight: number;
+    private _gold = 0;
     private _dirty = false;
     private _moving = false;
     private _statPoint = 0;
@@ -31,7 +32,7 @@ export default class Player extends Entity {
         locationId: string, maxWeight: number, inventory: Inventory, equipment: Equipment,
         statPoints?: Partial<StatRecord>,
         life?: number, mentality?: number, thirsty?: number, hungry?: number,
-        statPoint = 0,
+        statPoint = 0, gold = 0,
     ) {
         super(level, exp, locationId, DEFAULT_BASE_ATTRIBUTE, equipment, statPoints);
         this.userId = userId;
@@ -39,6 +40,7 @@ export default class Player extends Entity {
         this._maxWeight = maxWeight;
         this.inventory = inventory;
         this._statPoint = statPoint;
+        this._gold = gold;
 
         if (life      !== undefined) this._life      = life;
         if (mentality !== undefined) this._mentality = mentality;
@@ -87,6 +89,9 @@ export default class Player extends Entity {
 
     get statPoint() { return this._statPoint; }
     set statPoint(val: number) { this._statPoint = val; this._dirty = true; }
+
+    get gold() { return this._gold; }
+    set gold(val: number) { this._gold = Math.max(0, val); this._dirty = true; }
 
     get dirty() { return this._dirty || this.stat.dirty || this.inventory.dirty || this.equipment.dirty; }
 
@@ -186,7 +191,7 @@ export default class Player extends Entity {
         const inventory = await Inventory.load(data.userId, data.maxWeight);
         const equipment = await Equipment.load(data.userId);
         const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint);
+        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint, data.gold);
     }
 
     /** 새 플레이어 생성 */
@@ -216,7 +221,8 @@ export default class Player extends Entity {
                     thirsty: this._thirsty,
                     hungry: this._hungry,
                     statPoint: this._statPoint,
-                },
+                    gold: this._gold,
+                } as any,
             });
             this._dirty = false;
             this.stat.resetDirty();

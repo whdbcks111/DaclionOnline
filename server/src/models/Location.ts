@@ -1,33 +1,8 @@
 import Monster from "./Monster.js";
 import type Player from "./Player.js";
+import type { LocationData, SpawnInfo, ConnectionInfo, ZoneType } from "../../../shared/types.js";
 
-/** 몬스터 스폰 정보 */
-export interface SpawnInfo {
-    monsterDataId: string;
-    maxCount: number;
-    respawnTime: number;  // 초
-}
-
-/** 이동 가능 장소 연결 정보 */
-export interface ConnectionInfo {
-    locationId: string;
-    condition?: string;  // 조건 ID (없으면 무조건 이동 가능)
-}
-
-export type ZoneType = 'safe' | 'normal';
-
-/** 장소 정의 (마스터 데이터) */
-export interface LocationData {
-    id: string;
-    name: string;
-    zoneType: ZoneType,
-    x: number;
-    y: number;
-    z: number;
-    isRespawnLocation?: boolean,
-    spawns: SpawnInfo[];
-    connections: ConnectionInfo[];
-}
+export type { LocationData, SpawnInfo, ConnectionInfo, ZoneType };
 
 /** 바닥 아이템 */
 export interface DroppedItem {
@@ -160,10 +135,24 @@ export default class Location {
 const locationDataCache = new Map<string, LocationData>();
 const locationInstances = new Map<string, Location>();
 
-/** 장소 정의 등록 (data/locations.ts에서 호출) */
+/** 장소 정의 등록 */
 export function defineLocation(data: LocationData): void {
     locationDataCache.set(data.id, data);
     locationInstances.set(data.id, new Location(data));
+}
+
+/** 모든 LocationData 반환 (JSON 직렬화용) */
+export function getAllLocationData(): LocationData[] {
+    return Array.from(locationDataCache.values());
+}
+
+/** 전체 장소 레지스트리를 초기화하고 새 데이터로 재로드 */
+export function reloadAllLocations(locations: LocationData[]): void {
+    locationDataCache.clear();
+    locationInstances.clear();
+    for (const data of locations) {
+        defineLocation(data);
+    }
 }
 
 /** 런타임 Location 인스턴스 조회 */

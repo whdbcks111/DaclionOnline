@@ -1,11 +1,39 @@
 // 서버-클라이언트 공통 타입 정의
 
+// -- 위치 데이터 (서버-클라이언트 공유) --
+
+export type ZoneType = 'safe' | 'normal'
+
+export interface SpawnInfo {
+    monsterDataId: string
+    maxCount: number
+    respawnTime: number
+}
+
+export interface ConnectionInfo {
+    locationId: string
+    condition?: string
+}
+
+export interface LocationData {
+    id: string
+    name: string
+    zoneType: ZoneType
+    x: number
+    y: number
+    z: number
+    isRespawnLocation?: boolean
+    spawns: SpawnInfo[]
+    connections: ConnectionInfo[]
+}
+
 // 소켓 이벤트 데이터 타입
 export interface SessionRestoreData {
     userId: number
     username: string
     nickname: string
     profileImage?: string
+    permission?: number
 }
 
 export interface LoginRequest {
@@ -19,6 +47,7 @@ export interface LoginResult {
     sessionToken?: string
     nickname?: string
     profileImage?: string
+    permission?: number
     error?: string
 }
 
@@ -190,6 +219,8 @@ export interface ServerToClientEvents {
     nicknameResult: (result: SimpleResult & { nickname?: string }) => void
     editMessage: (id: string, content: ChatMessage['content']) => void
     deleteMessage: (id: string) => void
+    adminLocations: (data: LocationData[]) => void
+    adminSaveResult: (result: SimpleResult) => void
 }
 
 export interface ClientToServerEvents {
@@ -208,4 +239,6 @@ export interface ClientToServerEvents {
     changeNickname: (nickname: string) => void
     requestLocationInfo: () => void
     requestCompletions: (raw: string) => void
+    adminRequestLocations: () => void
+    adminSaveLocations: (locations: LocationData[]) => void
 }
