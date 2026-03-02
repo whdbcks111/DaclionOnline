@@ -245,7 +245,7 @@ function HomeContent() {
       }
       if (e.key === 'Escape') { e.preventDefault(); setShowAutocomplete(false); return }
     }
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
+    if (e.key === 'Enter' && !e.shiftKey && !isComposing.current) { e.preventDefault(); sendMessage() }
   }, [showAutocomplete, getFilteredCount, commandFilter, commands, activeIndex, selectCommand, selectCompletion, sendMessage, paramMode, dynamicCompletions])
 
   const lifeRatio  = playerStats ? Math.max(0, playerStats.life / playerStats.maxLife) : 1

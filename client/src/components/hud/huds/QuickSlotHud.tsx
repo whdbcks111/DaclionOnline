@@ -72,10 +72,27 @@ export default function QuickSlotHud() {
             <button
               className={styles.btn}
               title={slot}
-              onClick={() => editMode
-                ? (setEditingIndex(i), setEditingValue(slot))
-                : sendMessage(slot)
-              }
+              onMouseDown={e => e.preventDefault()}
+              onTouchStart={e => e.preventDefault()}
+              onTouchEnd={e => {
+                e.preventDefault()
+                if(editMode) {
+                  setEditingIndex(i);
+                  setEditingValue(slot);
+                }
+                else {
+                  sendMessage(slot);
+                }
+              }}
+              onClick={e => {
+                if(editMode) {
+                  setEditingIndex(i);
+                  setEditingValue(slot);
+                }
+                else {
+                  sendMessage(slot);
+                }
+              }}
             >
               {slot}
             </button>
@@ -84,6 +101,9 @@ export default function QuickSlotHud() {
             <button
               className={styles.removeBtn}
               title="삭제"
+              onMouseDown={e => e.preventDefault()}
+              onTouchStart={e => e.preventDefault()}
+              onTouchEnd={e => { e.preventDefault(); removeQuickSlot(i) }}
               onClick={() => removeQuickSlot(i)}
             >✕</button>
           )}

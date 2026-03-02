@@ -162,7 +162,8 @@ export default function HudSettings({ onClose }: Props) {
           const cfg = configs[def.id]
           const currentAnchor    = cfg?.anchor    ?? 'topLeft'
           const currentPosAnchor = cfg?.posAnchor ?? 'topLeft'
-          const currentUnit      = cfg?.posUnit   ?? '%'
+          const currentUnitX     = cfg?.posUnitX  ?? '%'
+          const currentUnitY     = cfg?.posUnitY  ?? '%'
           const hudOpacity       = cfg?.opacity
           const hudScale         = cfg?.scale
           const isOpen = openSettingsId === def.id
@@ -193,24 +194,39 @@ export default function HudSettings({ onClose }: Props) {
                   {/* 현재 위치 + 리셋 */}
                   <div className={styles.detailRow}>
                     <span className={styles.detailLabel}>
-                      X: {currentUnit === '%' ? `${cfg?.x?.toFixed(1) ?? 0}%` : `${Math.round(cfg?.x ?? 0)}px`}
+                      X: {currentUnitX === '%' ? `${cfg?.x?.toFixed(1) ?? 0}%` : `${Math.round(cfg?.x ?? 0)}px`}
                       {'  '}
-                      Y: {currentUnit === '%' ? `${cfg?.y?.toFixed(1) ?? 0}%` : `${Math.round(cfg?.y ?? 0)}px`}
+                      Y: {currentUnitY === '%' ? `${cfg?.y?.toFixed(1) ?? 0}%` : `${Math.round(cfg?.y ?? 0)}px`}
                     </span>
                     <button className={styles.resetBtn} onClick={() => resetPosition(def.id)}>↺ 초기화</button>
                   </div>
 
-                  {/* 좌표 단위 */}
+                  {/* X 좌표 단위 */}
                   <div className={styles.detailRow}>
-                    <span className={styles.detailLabel}>좌표 단위</span>
+                    <span className={styles.detailLabel}>X 단위</span>
                     <div className={styles.unitToggle}>
                       <button
-                        className={`${styles.unitBtn} ${currentUnit === '%' ? styles.unitActive : ''}`}
-                        onClick={() => setPosUnit(def.id, '%')}
+                        className={`${styles.unitBtn} ${currentUnitX === '%' ? styles.unitActive : ''}`}
+                        onClick={() => setPosUnit(def.id, 'x', '%')}
                       >%</button>
                       <button
-                        className={`${styles.unitBtn} ${currentUnit === 'px' ? styles.unitActive : ''}`}
-                        onClick={() => setPosUnit(def.id, 'px')}
+                        className={`${styles.unitBtn} ${currentUnitX === 'px' ? styles.unitActive : ''}`}
+                        onClick={() => setPosUnit(def.id, 'x', 'px')}
+                      >px</button>
+                    </div>
+                  </div>
+
+                  {/* Y 좌표 단위 */}
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Y 단위</span>
+                    <div className={styles.unitToggle}>
+                      <button
+                        className={`${styles.unitBtn} ${currentUnitY === '%' ? styles.unitActive : ''}`}
+                        onClick={() => setPosUnit(def.id, 'y', '%')}
+                      >%</button>
+                      <button
+                        className={`${styles.unitBtn} ${currentUnitY === 'px' ? styles.unitActive : ''}`}
+                        onClick={() => setPosUnit(def.id, 'y', 'px')}
                       >px</button>
                     </div>
                   </div>

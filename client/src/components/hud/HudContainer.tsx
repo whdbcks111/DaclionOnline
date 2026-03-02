@@ -27,14 +27,14 @@ const ANCHOR_DATA: Record<AnchorPoint, { tx: number; ty: number; origin: string 
 }
 
 function getPositionStyle(cfg: HudConfig): React.CSSProperties {
-  const unit = cfg.posUnit ?? '%'
-  const u = unit === '%' ? '%' : 'px'
+  const ux = cfg.posUnitX ?? '%'
+  const uy = cfg.posUnitY ?? '%'
   const pa = cfg.posAnchor ?? 'topLeft'
   const isRight  = pa === 'topRight'  || pa === 'bottomRight'
   const isBottom = pa === 'bottomLeft' || pa === 'bottomRight'
   return {
-    [isRight  ? 'right' : 'left']: `${cfg.x}${u}`,
-    [isBottom ? 'bottom' : 'top']: `${cfg.y}${u}`,
+    [isRight  ? 'right' : 'left']: `${cfg.x}${ux}`,
+    [isBottom ? 'bottom' : 'top']: `${cfg.y}${uy}`,
   }
 }
 
@@ -51,23 +51,20 @@ export default function HudContainer() {
     const startX = cfg?.x ?? 50
     const startY = cfg?.y ?? 50
     const pa = cfg?.posAnchor ?? 'topLeft'
-    const unit = cfg?.posUnit ?? '%'
+    const unitX = cfg?.posUnitX ?? '%'
+    const unitY = cfg?.posUnitY ?? '%'
     const isRight  = pa === 'topRight'  || pa === 'bottomRight'
     const isBottom = pa === 'bottomLeft' || pa === 'bottomRight'
 
     const onMouseMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startMouseX
       const dy = ev.clientY - startMouseY
-      let newX, newY
-      if (unit === '%') {
-        const dxPct = (dx / window.innerWidth) * 100
-        const dyPct = (dy / window.innerHeight) * 100
-        newX = Math.max(0, Math.min(100, startX + (isRight  ? -dxPct : dxPct)))
-        newY = Math.max(0, Math.min(100, startY + (isBottom ? -dyPct : dyPct)))
-      } else {
-        newX = Math.max(0, startX + (isRight  ? -dx : dx))
-        newY = Math.max(0, startY + (isBottom ? -dy : dy))
-      }
+      const newX = unitX === '%'
+        ? Math.max(0, Math.min(100, startX + (isRight  ? -(dx / window.innerWidth)  * 100 : (dx / window.innerWidth)  * 100)))
+        : Math.max(0, startX + (isRight  ? -dx : dx))
+      const newY = unitY === '%'
+        ? Math.max(0, Math.min(100, startY + (isBottom ? -(dy / window.innerHeight) * 100 : (dy / window.innerHeight) * 100)))
+        : Math.max(0, startY + (isBottom ? -dy : dy))
       setPosition(id, newX, newY)
     }
     const onMouseUp = () => {
@@ -87,7 +84,8 @@ export default function HudContainer() {
     const startX = cfg?.x ?? 50
     const startY = cfg?.y ?? 50
     const pa = cfg?.posAnchor ?? 'topLeft'
-    const unit = cfg?.posUnit ?? '%'
+    const unitX = cfg?.posUnitX ?? '%'
+    const unitY = cfg?.posUnitY ?? '%'
     const isRight  = pa === 'topRight'  || pa === 'bottomRight'
     const isBottom = pa === 'bottomLeft' || pa === 'bottomRight'
 
@@ -95,16 +93,12 @@ export default function HudContainer() {
       const t = ev.touches[0]
       const dx = t.clientX - startMouseX
       const dy = t.clientY - startMouseY
-      let newX, newY
-      if (unit === '%') {
-        const dxPct = (dx / window.innerWidth) * 100
-        const dyPct = (dy / window.innerHeight) * 100
-        newX = Math.max(0, Math.min(100, startX + (isRight  ? -dxPct : dxPct)))
-        newY = Math.max(0, Math.min(100, startY + (isBottom ? -dyPct : dyPct)))
-      } else {
-        newX = Math.max(0, startX + (isRight  ? -dx : dx))
-        newY = Math.max(0, startY + (isBottom ? -dy : dy))
-      }
+      const newX = unitX === '%'
+        ? Math.max(0, Math.min(100, startX + (isRight  ? -(dx / window.innerWidth)  * 100 : (dx / window.innerWidth)  * 100)))
+        : Math.max(0, startX + (isRight  ? -dx : dx))
+      const newY = unitY === '%'
+        ? Math.max(0, Math.min(100, startY + (isBottom ? -(dy / window.innerHeight) * 100 : (dy / window.innerHeight) * 100)))
+        : Math.max(0, startY + (isBottom ? -dy : dy))
       setPosition(id, newX, newY)
     }
     const cleanup = () => {

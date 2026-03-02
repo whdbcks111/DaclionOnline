@@ -9,7 +9,8 @@ export interface HudConfig {
   visible: boolean
   x: number
   y: number
-  posUnit: '%' | 'px'
+  posUnitX: '%' | 'px'
+  posUnitY: '%' | 'px'
   posAnchor: PosAnchor
   anchor: AnchorPoint
   opacity?: number   // undefined = use global
@@ -34,10 +35,10 @@ export const HUD_DEFINITIONS: HudDefinition[] = [
 ]
 
 const DEFAULT_CONFIGS: Record<string, HudConfig> = {
-  'player-status':   { id: 'player-status',   visible: true,  x: 5,  y: 10, posUnit: '%', posAnchor: 'topRight',    anchor: 'topRight' },
-  'player-location': { id: 'player-location', visible: false, x: 5,  y: 30, posUnit: '%', posAnchor: 'topRight',    anchor: 'topRight' },
-  'minimap':         { id: 'minimap',         visible: false, x: 5,  y: 45, posUnit: '%', posAnchor: 'topRight',    anchor: 'topRight' },
-  'quick-slots':     { id: 'quick-slots',     visible: false, x: 50, y: 10,  posUnit: '%', posAnchor: 'bottomLeft',  anchor: 'bottomMiddle' },
+  'player-status':   { id: 'player-status',   visible: true,  x: 5,  y: 10, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight' },
+  'player-location': { id: 'player-location', visible: false, x: 5,  y: 30, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight' },
+  'minimap':         { id: 'minimap',         visible: false, x: 5,  y: 45, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight' },
+  'quick-slots':     { id: 'quick-slots',     visible: false, x: 50, y: 10,  posUnitX: '%', posUnitY: '%', posAnchor: 'bottomLeft',  anchor: 'bottomMiddle' },
 }
 
 interface HudContextType {
@@ -47,7 +48,7 @@ interface HudContextType {
   setVisible: (id: string, visible: boolean) => void
   setPosition: (id: string, x: number, y: number) => void
   setAnchor: (id: string, anchor: AnchorPoint) => void
-  setPosUnit: (id: string, unit: '%' | 'px') => void
+  setPosUnit: (id: string, axis: 'x' | 'y', unit: '%' | 'px') => void
   setPosAnchor: (id: string, posAnchor: PosAnchor) => void
   setHudOpacity: (id: string, opacity: number | undefined) => void
   setHudScale: (id: string, scale: number | undefined) => void
@@ -76,10 +77,17 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
-        const parsed = JSON.parse(saved) as Record<string, Partial<HudConfig>>
+        const parsed = JSON.parse(saved) as Record<string, Partial<HudConfig> & { posUnit?: '%' | 'px' }>
         const merged: Record<string, HudConfig> = {}
         for (const id of Object.keys(DEFAULT_CONFIGS)) {
-          merged[id] = { ...DEFAULT_CONFIGS[id], ...(parsed[id] ?? {}) }
+          const p = parsed[id] ?? {}
+          const fallback = p.posUnit ?? DEFAULT_CONFIGS[id].posUnitX
+          merged[id] = {
+            ...DEFAULT_CONFIGS[id],
+            ...p,
+            posUnitX: p.posUnitX ?? fallback,
+            posUnitY: p.posUnitY ?? fallback,
+          }
         }
         return merged
       }
@@ -151,7 +159,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   const patchConfig = useCallback((id: string, patch: Partial<HudConfig>) => {
     setConfigs(prev => ({
       ...prev,
-      [id]: { ...(prev[id] ?? DEFAULT_CONFIGS[id] ?? { id, visible: true, x: 50, y: 50, posUnit: '%' as const, posAnchor: 'topLeft' as PosAnchor, anchor: 'topLeft' as AnchorPoint }), ...patch },
+      [id]: { ...(prev[id] ?? DEFAULT_CONFIGS[id] ?? { id, visible: true, x: 50, y: 50, posUnitX: '%' as const, posUnitY: '%' as const, posAnchor: 'topLeft' as PosAnchor, anchor: 'topLeft' as AnchorPoint }), ...patch },
     }))
   }, [])
 
@@ -159,22 +167,27 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   const setPosition  = useCallback((id: string, x: number, y: number)           => patchConfig(id, { x, y }), [patchConfig])
   const setAnchor    = useCallback((id: string, anchor: AnchorPoint)            => patchConfig(id, { anchor }), [patchConfig])
 
-  const setPosUnit = useCallback((id: string, unit: '%' | 'px') => {
+  const setPosUnit = useCallback((id: string, axis: 'x' | 'y', unit: '%' | 'px') => {
     setConfigs(prev => {
       const cfg = prev[id] ?? DEFAULT_CONFIGS[id]
-      if (!cfg || cfg.posUnit === unit) return prev
+      if (!cfg) return prev
       const vw = window.innerWidth
       const vh = window.innerHeight
-      let newX = cfg.x
-      let newY = cfg.y
-      if (cfg.posUnit === '%' && unit === 'px') {
-        newX = Math.round(cfg.x / 100 * vw)
-        newY = Math.round(cfg.y / 100 * vh)
-      } else if (cfg.posUnit === 'px' && unit === '%') {
-        newX = Math.round(cfg.x / vw * 1000) / 10
-        newY = Math.round(cfg.y / vh * 1000) / 10
+      if (axis === 'x') {
+        const cur = cfg.posUnitX ?? '%'
+        if (cur === unit) return prev
+        let newX = cfg.x
+        if (cur === '%' && unit === 'px') newX = Math.round(cfg.x / 100 * vw)
+        else if (cur === 'px' && unit === '%') newX = Math.round(cfg.x / vw * 1000) / 10
+        return { ...prev, [id]: { ...cfg, posUnitX: unit, x: newX } }
+      } else {
+        const cur = cfg.posUnitY ?? '%'
+        if (cur === unit) return prev
+        let newY = cfg.y
+        if (cur === '%' && unit === 'px') newY = Math.round(cfg.y / 100 * vh)
+        else if (cur === 'px' && unit === '%') newY = Math.round(cfg.y / vh * 1000) / 10
+        return { ...prev, [id]: { ...cfg, posUnitY: unit, y: newY } }
       }
-      return { ...prev, [id]: { ...cfg, posUnit: unit, x: newX, y: newY } }
     })
   }, [])
 
@@ -182,9 +195,8 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     setConfigs(prev => {
       const cfg = prev[id] ?? DEFAULT_CONFIGS[id]
       if (!cfg || cfg.posAnchor === posAnchor) return prev
-      const unit = cfg.posUnit ?? '%'
-      const maxX = unit === '%' ? 100 : window.innerWidth
-      const maxY = unit === '%' ? 100 : window.innerHeight
+      const maxX = (cfg.posUnitX ?? '%') === '%' ? 100 : window.innerWidth
+      const maxY = (cfg.posUnitY ?? '%') === '%' ? 100 : window.innerHeight
       const oldIsRight  = cfg.posAnchor === 'topRight'  || cfg.posAnchor === 'bottomRight'
       const oldIsBottom = cfg.posAnchor === 'bottomLeft' || cfg.posAnchor === 'bottomRight'
       const newIsRight  = posAnchor === 'topRight'  || posAnchor === 'bottomRight'
@@ -200,7 +212,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   const resetPosition = useCallback((id: string) => {
     const def = DEFAULT_CONFIGS[id]
     if (!def) return
-    patchConfig(id, { x: def.x, y: def.y, posUnit: def.posUnit, posAnchor: def.posAnchor })
+    patchConfig(id, { x: def.x, y: def.y, posUnitX: def.posUnitX, posUnitY: def.posUnitY, posAnchor: def.posAnchor })
   }, [patchConfig])
 
   return (
