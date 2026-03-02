@@ -6,7 +6,7 @@ import type Attribute from "./Attribute.js";
 export type EquipSlot = 'head' | 'body' | 'legs' | 'feet' | 'accessory' | 'mainHand' | 'offHand';
 
 /** 슬롯별 최대 장착 수 */
-const SLOT_MAX: Record<EquipSlot, number> = {
+export const SLOT_MAX: Record<EquipSlot, number> = {
     head: 1,
     body: 1,
     legs: 1,
@@ -124,6 +124,54 @@ export default class Equipment {
         return true;
     }
 
+    /** 아이템 장착 (슬롯이 가득 찰 경우 마지막 장착 아이템을 해제 후 장착). 해제된 아이템 반환 (빈 슬롯이었으면 null, 유효하지 않으면 undefined) */
+    equipSwap(slot: EquipSlot, item: Item, attribute: Attribute, targetSlotIndex?: number): Item | null | undefined {
+        const data = getItemData(item.itemDataId);
+        if (!data || data.equipSlot !== slot) return undefined;
+
+        const max = SLOT_MAX[slot];
+        let useIndex: number;
+
+        if (targetSlotIndex !== undefined) {
+            if (targetSlotIndex < 0 || targetSlotIndex >= max) return undefined;
+            useIndex = targetSlotIndex;
+        } else {
+            let emptyIndex = -1;
+            let lastOccupied = -1;
+            for (let i = 0; i < max; i++) {
+                const entry = this._slots.get(slotKey(slot, i));
+                if (!entry || entry.state === EquipState.Deleted) {
+                    if (emptyIndex === -1) emptyIndex = i;
+                } else {
+                    lastOccupied = i;
+                }
+            }
+            useIndex = emptyIndex !== -1 ? emptyIndex : lastOccupied;
+        }
+
+        if (useIndex < 0) return undefined;
+
+        const displaced = this.unequip(slot, useIndex, attribute);
+
+        // unequip이 Clean 항목을 Deleted로 마킹하면 dbId가 남아있다 — 보존해서 save()에서 update로 처리
+        const deletedEntry = this._slots.get(slotKey(slot, useIndex));
+        const inheritDbId = deletedEntry?.state === EquipState.Deleted ? deletedEntry.dbId : 0;
+
+        this._slots.set(slotKey(slot, useIndex), {
+            dbId: inheritDbId,
+            item,
+            slot,
+            slotIndex: useIndex,
+            state: EquipState.New,
+        });
+
+        if (data.modifiers) {
+            attribute.addModifiers(data.modifiers.map(m => ({ ...m, source: modSource(slot, useIndex) })));
+        }
+
+        return displaced;
+    }
+
     /** 아이템 해제. 해제된 Item 반환 (인벤토리 복귀용). 없으면 null */
     unequip(slot: EquipSlot, slotIndex: number, attribute: Attribute): Item | null {
         const key = slotKey(slot, slotIndex);
@@ -196,18 +244,32 @@ export default class Equipment {
         for (const [key, entry] of this._slots) {
             switch (entry.state) {
                 case EquipState.New:
-                    ops.push(
-                        prisma.equipment.create({
-                            data: {
-                                playerId: this.playerId,
-                                itemDataId: entry.item.itemDataId,
-                                slot: entry.slot,
-                                slotIndex: entry.slotIndex,
-                                durability: entry.item.durability,
-                                metadata: entry.item.metadata ?? undefined,
-                            },
-                        }).then(row => { entry.dbId = row.id; })
-                    );
+                    if (entry.dbId > 0) {
+                        // equipSwap으로 기존 DB 행 재사용 → update
+                        ops.push(
+                            prisma.equipment.update({
+                                where: { id: entry.dbId },
+                                data: {
+                                    itemDataId: entry.item.itemDataId,
+                                    durability: entry.item.durability,
+                                    metadata: entry.item.metadata ?? undefined,
+                                },
+                            })
+                        );
+                    } else {
+                        ops.push(
+                            prisma.equipment.create({
+                                data: {
+                                    playerId: this.playerId,
+                                    itemDataId: entry.item.itemDataId,
+                                    slot: entry.slot,
+                                    slotIndex: entry.slotIndex,
+                                    durability: entry.item.durability,
+                                    metadata: entry.item.metadata ?? undefined,
+                                },
+                            }).then(row => { entry.dbId = row.id; })
+                        );
+                    }
                     break;
                 case EquipState.Deleted:
                     if (entry.dbId > 0) {

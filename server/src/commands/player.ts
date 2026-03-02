@@ -6,6 +6,7 @@ import { getPlayerByUserId } from "../modules/player.js";
 import { getLocation } from "../models/Location.js";
 import { getItemData, Item } from "../models/Item.js";
 import type { EquipSlot } from "../models/Equipment.js";
+import { SLOT_MAX } from "../models/Equipment.js";
 import Monster from "../models/Monster.js";
 import { STAT_TYPES } from "../models/Stat.js";
 import type { StatType } from "../models/Stat.js";
@@ -22,6 +23,19 @@ const STAT_FROM_INPUT: Record<string, StatType> = {
     '체력': 'vitality', 'vitality': 'vitality',
     '감각': 'sensibility', 'sensibility': 'sensibility',
     '정신력': 'mentality', 'mentality': 'mentality',
+};
+
+const SLOT_KR: Record<EquipSlot, string> = {
+    head: '머리', body: '몸통', legs: '다리', feet: '발', accessory: '장신구', mainHand: '손', offHand: '보조',
+};
+const SLOT_FROM_INPUT: Record<string, EquipSlot> = {
+    '머리': 'head', 'head': 'head',
+    '몸통': 'body', '몸': 'body', 'body': 'body',
+    '다리': 'legs', 'legs': 'legs',
+    '발': 'feet', 'feet': 'feet',
+    '장신구': 'accessory', '악세사리': 'accessory', 'accessory': 'accessory',
+    '손': 'mainHand', '주손': 'mainHand', '주무기': 'mainHand', 'mainhand': 'mainHand',
+    '보조': 'offHand', '보조무기': 'offHand', '보조손': 'offHand', 'offhand': 'offHand',
 };
 
 export function initPlayerCommands(): void {
@@ -309,6 +323,7 @@ export function initPlayerCommands(): void {
                         .filter((c): c is CompletionItem => c !== null);
                 },
             },
+            { name: '슬롯인덱스', description: '장착할 슬롯 인덱스 (1부터, 악세사리 등 다중 슬롯용)' },
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
@@ -334,15 +349,90 @@ export function initPlayerCommands(): void {
                 return;
             }
 
+            let targetSlotIndex: number | undefined;
+            if (args[1]) {
+                targetSlotIndex = parseInt(args[1], 10) - 1;
+                if (isNaN(targetSlotIndex) || targetSlotIndex < 0 || targetSlotIndex >= SLOT_MAX[slot]) {
+                    sendBotMessageToUser(userId, `유효한 슬롯 인덱스를 입력해주세요. (1~${SLOT_MAX[slot]})`);
+                    return;
+                }
+            }
+
             const equipItem = new Item(item.itemDataId, 1, item.durability, item.metadata ? { ...item.metadata } : null);
-            const success = player.equipment.equip(slot, equipItem, player.attribute);
-            if (!success) {
-                sendBotMessageToUser(userId, `${item.name}을(를) 장착할 수 없습니다. (슬롯이 가득 찼습니다.)`);
+            const displaced = player.equipment.equipSwap(slot, equipItem, player.attribute, targetSlotIndex);
+
+            if (displaced === undefined) {
+                sendBotMessageToUser(userId, `${item.name}을(를) 장착할 수 없습니다.`);
                 return;
             }
 
             player.inventory.removeItem(item.id, 1);
-            sendBotMessageToUser(userId, `${item.name}을(를) 장착했습니다.`);
+
+            if (displaced !== null) {
+                player.inventory.addItem(displaced.itemDataId, 1, displaced.metadata ?? null);
+                sendBotMessageToUser(userId, `${item.name}을(를) 장착했습니다. (기존 장착 해제: ${getItemData(displaced.itemDataId)?.name ?? displaced.itemDataId})`);
+            } else {
+                sendBotMessageToUser(userId, `${item.name}을(를) 장착했습니다.`);
+            }
+        },
+    });
+
+    registerCommand({
+        name: '장착해제',
+        aliases: ['unequip'],
+        description: '장착된 아이템을 해제합니다.',
+        showCommandUse: 'show',
+        args: [
+            { name: '슬롯명', description: '해제할 슬롯 (머리/몸통/다리/발/장신구/손/보조)', required: true,
+                completions: Object.values(SLOT_KR),
+            },
+            { name: '인덱스', description: '해제할 슬롯 인덱스 (1부터, 악세사리 등 다중 슬롯용)' },
+        ],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+
+            if (player.isDead) {
+                sendBotMessageToUser(userId, '사망 상태에서는 행동할 수 없습니다.');
+                return;
+            }
+
+            const slot = SLOT_FROM_INPUT[args[0]?.toLowerCase() ?? ''] ?? SLOT_FROM_INPUT[args[0]];
+            if (!slot) {
+                sendBotMessageToUser(userId, `유효한 슬롯명을 입력해주세요. (머리/몸통/다리/발/장신구/주무기/보조)`);
+                return;
+            }
+
+            const max = SLOT_MAX[slot];
+            let slotIndex: number;
+
+            if (args[1]) {
+                slotIndex = parseInt(args[1], 10) - 1;
+                if (isNaN(slotIndex) || slotIndex < 0 || slotIndex >= max) {
+                    sendBotMessageToUser(userId, `유효한 인덱스를 입력해주세요. (1~${max})`);
+                    return;
+                }
+            } else {
+                // 마지막으로 장착된 슬롯 인덱스 탐색
+                let lastOccupied = -1;
+                for (let i = 0; i < max; i++) {
+                    if (player.equipment.getEquipped(slot, i)) lastOccupied = i;
+                }
+                if (lastOccupied === -1) {
+                    sendBotMessageToUser(userId, `${SLOT_KR[slot]} 슬롯에 장착된 아이템이 없습니다.`);
+                    return;
+                }
+                slotIndex = lastOccupied;
+            }
+
+            const unequipped = player.equipment.unequip(slot, slotIndex, player.attribute);
+            if (!unequipped) {
+                sendBotMessageToUser(userId, `${SLOT_KR[slot]} 슬롯(${slotIndex + 1})에 장착된 아이템이 없습니다.`);
+                return;
+            }
+
+            player.inventory.addItem(unequipped.itemDataId, 1, unequipped.metadata ?? null);
+            sendBotMessageToUser(userId, `${getItemData(unequipped.itemDataId)?.name ?? unequipped.itemDataId}을(를) 장착 해제했습니다.`);
         },
     });
 
