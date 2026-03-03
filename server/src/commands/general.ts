@@ -1,5 +1,6 @@
 import { registerCommand, getCommandListFiltered } from "../modules/bot.js";
 import { sendBotMessageToChannel, sendBotMessageToUser, broadcastMessageAll, getFlagsForPermission } from "../modules/message.js";
+import { chat } from "../utils/chatBuilder.js";
 import { getUserChannel } from "../modules/channel.js";
 import { parseChatMessage } from "../utils/chatParser.js";
 import { getSessionByUserId } from "../modules/login.js";
@@ -9,16 +10,35 @@ export function initGeneralCommands(): void {
     registerCommand({
         name: '도움말',
         aliases: ['help'],
+        showCommandUse: 'private',
         description: '명령어 목록을 표시합니다',
         handler(userId, _args, _raw, _msg, permission) {
             const list = getCommandListFiltered(permission);
-            const lines = list.map(cmd => {
-                const usage = cmd.args
-                    ?.map(a => a.required ? `<${a.name}>` : `[${a.name}]`)
-                    .join(' ') ?? '';
-                return `/${cmd.name} ${usage} - ${cmd.description}`;
-            });
-            sendBotMessageToChannel(getUserChannel(userId), lines.join('\n'));
+
+            const groups = new Map<number, typeof list>();
+            for (const cmd of list) {
+                if (!groups.has(cmd.permission)) groups.set(cmd.permission, []);
+                groups.get(cmd.permission)!.push(cmd);
+            }
+
+            const sections = [...groups.entries()]
+                .sort(([a], [b]) => a - b)
+                .map(([perm, cmds]) => {
+                    const header = perm === 0 ? '=== 일반 명령어 ===' : `=== 권한 ${perm} 이상 ===`;
+                    const lines = cmds.map(cmd => {
+                        const usage = cmd.args
+                            ?.map(a => a.required ? `<${a.name}>` : `[${a.name}]`)
+                            .join(' ') ?? '';
+                        return `/${cmd.name}${usage ? ' ' + usage : ''} - ${cmd.description}`;
+                    });
+                    return header + '\n' + lines.join('\n');
+                });
+
+            const node = chat()
+                .text('[ 도움말 ]')
+                .hide('목록 보기', b => b.text(sections.join('\n\n')))
+                .build();
+            sendBotMessageToUser(userId, node);
         },
     });
 

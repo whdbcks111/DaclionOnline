@@ -46,6 +46,7 @@ export function getCommandListFiltered(permission: number) {
             name: cmd.name,
             args: cmd.args,
             description: cmd.description,
+            permission: cmd.permission ?? 0,
         }));
 }
 
