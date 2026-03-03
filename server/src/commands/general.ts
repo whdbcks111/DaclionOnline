@@ -21,23 +21,39 @@ export function initGeneralCommands(): void {
                 groups.get(cmd.permission)!.push(cmd);
             }
 
-            const sections = [...groups.entries()]
-                .sort(([a], [b]) => a - b)
-                .map(([perm, cmds]) => {
-                    const header = perm === 0 ? '=== 일반 명령어 ===' : `=== 권한 ${perm} 이상 ===`;
-                    const lines = cmds.map(cmd => {
-                        const usage = cmd.args
-                            ?.map(a => a.required ? `<${a.name}>` : `[${a.name}]`)
-                            .join(' ') ?? '';
-                        return `/${cmd.name}${usage ? ' ' + usage : ''} - ${cmd.description}`;
-                    });
-                    return header + '\n' + lines.join('\n');
-                });
+            const sortedGroups = [...groups.entries()].sort((x, y) => x[0] - y[0]);
+            const CMD = 260;
 
             const node = chat()
-                .text('[ 도움말 ]')
-                .hide('목록 보기', b => b.text(sections.join('\n\n')))
+                .text('[ 도움말 ]\n')
+                .hide('목록 보기', b => {
+                    for (let gi = 0; gi < sortedGroups.length; gi++) {
+                        const [perm, cmds] = sortedGroups[gi];
+                        if (gi > 0) b.text('\n');
+
+                        const header = perm === 0 ? '일반 명령어' : `권한 ${perm} 이상`;
+                        b.color('gray', b2 => b2.text(`─── ${header} ───\n`));
+
+                        for (const cmd of cmds) {
+                            b.weight('bold', b2 => b2.text(`/${cmd.name}`));
+                            for (const arg of cmd.args ?? []) {
+                                b.text(' ');
+                                if (arg.required) {
+                                    b.color('#ddd', b2 => b2.text(`<${arg.name}>`));
+                                } else {
+                                    b.color('#bbb', b2 => b2.text(`[${arg.name}]`));
+                                }
+                            }
+                            b
+                            .text('\n')
+                            .color('#9e9e9e', b2 => b2.bg('#00000044', b3 => b3.text(cmd.description)))
+                            .text('\n');
+                        }
+                    }
+                    return b;
+                })
                 .build();
+
             sendBotMessageToUser(userId, node);
         },
     });
