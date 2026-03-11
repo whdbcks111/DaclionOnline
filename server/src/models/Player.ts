@@ -173,7 +173,7 @@ export default class Player extends Entity {
                 this.stat.add(stat, 1);
             }
             this._statPoint += 3;
-            this.stat.applyModifiers(this.attribute);
+            this.stat.applyModifiers(this.attribute, this);
         }
         return levelsGained;
     }
@@ -183,7 +183,7 @@ export default class Player extends Entity {
         if (this._statPoint < amount) return false;
         this.stat.add(statType, amount);
         this._statPoint -= amount;
-        this.stat.applyModifiers(this.attribute);
+        this.stat.applyModifiers(this.attribute, this);
         this._dirty = true;
         return true;
     }

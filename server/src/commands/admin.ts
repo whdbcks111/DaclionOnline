@@ -242,7 +242,7 @@ export function initAdminCommands(): void {
                 }
 
                 player.stat.set(statType, value);
-                player.stat.applyModifiers(player.attribute);
+                player.stat.applyModifiers(player.attribute, player);
                 await player.save();
 
                 sendBotMessageToUser(userId, `${player.name}의 ${statType.label}을(를) ${value}로 설정했습니다.`);

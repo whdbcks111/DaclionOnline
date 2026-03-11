@@ -62,7 +62,7 @@ export default abstract class Entity {
         this.stat = new Stat(statPoints);
 
         // modifier 적용: 스탯 → 장비 순서
-        this.stat.applyModifiers(this.attribute);
+        this.stat.applyModifiers(this.attribute, this);
         this.equipment.applyModifiers(this.attribute);
 
         // 현재 생명력/정신력은 최대치로 초기화

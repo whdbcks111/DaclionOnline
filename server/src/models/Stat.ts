@@ -1,33 +1,52 @@
 import type Attribute from "./Attribute.js"
 import type { AttributeKey, ModifierOp } from "./Attribute.js"
+import type Entity from "./Entity.js"
 
 // ── StatType 클래스 열거형 ──
 
-interface StatConversion {
-    attribute: AttributeKey
-    op: ModifierOp
-    value: number
-}
+/** 스탯 modifier 추가 헬퍼 (source는 내부에서 자동 설정됨) */
+export type StatAddMod = (attribute: AttributeKey, op: ModifierOp, value: number) => void
+
+/** 스탯 → 능력치 변환 함수. add로 modifier를 추가하고 points로 투자 포인트를 받음 */
+export type StatModifyFn = (add: StatAddMod, points: number, entity: Entity) => void
 
 /** 스탯 종류 — Java 클래스 열거형 패턴 */
 export class StatType {
     /** @internal 자기 등록용 레지스트리. 인스턴스 선언보다 먼저 초기화되어야 함 */
     private static _all: StatType[] = []
 
-    static readonly STRENGTH    = new StatType('strength',    '근력',   [{ attribute: 'atk', op: 'add', value: 2 }])
-    static readonly AGILITY     = new StatType('agility',     '민첩',   [{ attribute: 'speed', op: 'add', value: 0.05 }, { attribute: 'attackSpeed', op: 'add', value: 0.01 }])
-    static readonly VITALITY    = new StatType('vitality',    '체력',   [{ attribute: 'maxLife', op: 'add', value: 10 }, { attribute: 'def', op: 'add', value: 1 }])
-    static readonly SENSIBILITY = new StatType('sensibility', '감각',   [{ attribute: 'critRate', op: 'add', value: 0.001 }, { attribute: 'critDmg', op: 'add', value: 0.01 }])
-    static readonly MENTALITY   = new StatType('mentality',   '정신력', [{ attribute: 'maxMentality', op: 'add', value: 5 }, { attribute: 'magicForce', op: 'add', value: 2 }])
+    static readonly STRENGTH = new StatType('strength', '근력', (add, points, _entity) => {
+        add('atk', 'add', 2 * points)
+    })
+
+    static readonly AGILITY = new StatType('agility', '민첩', (add, points, _entity) => {
+        add('speed', 'add', 0.05 * points)
+        add('attackSpeed', 'add', 0.01 * points)
+    })
+
+    static readonly VITALITY = new StatType('vitality', '체력', (add, points, _entity) => {
+        add('maxLife', 'add', 10 * points)
+        add('def', 'add', 1 * points)
+    })
+
+    static readonly SENSIBILITY = new StatType('sensibility', '감각', (add, points, _entity) => {
+        add('critRate', 'add', 0.001 * points)
+        add('critDmg', 'add', 0.01 * points)
+    })
+
+    static readonly MENTALITY = new StatType('mentality', '정신력', (add, points, _entity) => {
+        add('maxMentality', 'add', 5 * points)
+        add('magicForce', 'add', 2 * points)
+    })
 
     readonly key: StatKey
     readonly label: string
-    readonly conversions: ReadonlyArray<StatConversion>
+    readonly modify: StatModifyFn
 
-    private constructor(key: StatKey, label: string, conversions: StatConversion[]) {
+    private constructor(key: StatKey, label: string, modify: StatModifyFn) {
         this.key = key
         this.label = label
-        this.conversions = conversions
+        this.modify = modify
         StatType._all.push(this)
     }
 
@@ -100,7 +119,7 @@ export default class Stat {
     }
 
     /** 스탯 기반 modifier를 attribute에 적용 (기존 stat modifier 제거 후 재적용) */
-    applyModifiers(attribute: Attribute): void {
+    applyModifiers(attribute: Attribute, entity: Entity): void {
         for (const stat of StatType.values()) {
             attribute.removeBySource(`stat:${stat.key}`)
         }
@@ -109,14 +128,11 @@ export default class Stat {
             const points = this._points[stat.key]
             if (points <= 0) continue
 
-            for (const conv of stat.conversions) {
-                attribute.addModifier({
-                    attribute: conv.attribute,
-                    op: conv.op,
-                    value: conv.value * points,
-                    source: `stat:${stat.key}`,
-                })
+            const source = `stat:${stat.key}`
+            const add: StatAddMod = (attr, op, value) => {
+                attribute.addModifier({ attribute: attr, op, value, source })
             }
+            stat.modify(add, points, entity)
         }
     }
 }
