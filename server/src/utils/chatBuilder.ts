@@ -49,6 +49,19 @@ class ChatBuilder {
         return this
     }
 
+    tooltip(description: string | ((b: ChatBuilder) => ChatBuilder), build: (b: ChatBuilder) => ChatBuilder): this {
+        const desc = new ChatBuilder()
+        if (typeof description === 'string') {
+            desc.text(description)
+        } else {
+            description(desc)
+        }
+        const inner = new ChatBuilder()
+        build(inner)
+        this.nodes.push({ type: 'tooltip', description: desc.nodes, children: inner.nodes })
+        return this
+    }
+
     hide(title: string, build: (b: ChatBuilder) => ChatBuilder): this {
         const inner = new ChatBuilder()
         build(inner)

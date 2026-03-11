@@ -231,6 +231,16 @@ registerChatTag('tab', {
     createNode: (v, children) => ({ type: 'tab', width: parseInt(v), children: children! }),
 })
 
+// [tooltip=설명글]본문[/tooltip]
+registerChatTag('tooltip', {
+    kind: 'wrap',
+    createNode: (value, children) => ({
+        type: 'tooltip',
+        description: parseChatMessage(value),
+        children: children!,
+    }),
+})
+
 // [progress=value,length,color,thickness,shape]
 // 예) [progress=0.75,120,red,10,rounded]
 registerChatTag('progress', {

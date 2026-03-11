@@ -2,6 +2,7 @@
 export type AttributeType =
     | 'maxLife' | 'maxMentality'
     | 'maxThirsty' | 'maxHungry'
+    | 'maxWeight'
     | 'atk' | 'magicForce'
     | 'def' | 'magicDef'
     | 'armorPen' | 'magicPen'
@@ -12,6 +13,7 @@ export type AttributeType =
 export const ATTRIBUTE_TYPES: AttributeType[] = [
     'maxLife', 'maxMentality',
     'maxThirsty', 'maxHungry',
+    'maxWeight',
     'atk', 'magicForce',
     'def', 'magicDef',
     'armorPen', 'magicPen',
@@ -39,6 +41,7 @@ export const DEFAULT_ATTRIBUTE: Readonly<AttributeRecord> = {
     maxMentality:   100,
     maxHungry:      100,
     maxThirsty:     100,
+    maxWeight:      50,
     atk:            10,
     magicForce:     10,
     def:            0,

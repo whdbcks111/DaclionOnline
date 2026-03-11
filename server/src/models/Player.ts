@@ -11,6 +11,7 @@ import { chat } from "../utils/chatBuilder.js";
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
     maxMentality: 50,
+    maxWeight:    50,
     atk:          10,
     def:          5,
 } as const;
@@ -20,7 +21,6 @@ export default class Player extends Entity {
     readonly inventory: Inventory;
 
     private _nickname: string;
-    private _maxWeight: number;
     private _gold = 0;
     private _dirty = false;
     private _moving = false;
@@ -34,13 +34,15 @@ export default class Player extends Entity {
         life?: number, mentality?: number, thirsty?: number, hungry?: number,
         statPoint = 0, gold = 0,
     ) {
-        super(level, exp, locationId, DEFAULT_BASE_ATTRIBUTE, equipment, statPoints);
+        super(level, exp, locationId, { ...DEFAULT_BASE_ATTRIBUTE, maxWeight }, equipment, statPoints);
         this.userId = userId;
         this._nickname = nickname;
-        this._maxWeight = maxWeight;
         this.inventory = inventory;
         this._statPoint = statPoint;
         this._gold = gold;
+
+        // inventory에 계산된 maxWeight 동기화
+        this.inventory.maxWeight = this.attribute.get('maxWeight');
 
         if (life      !== undefined) this._life      = life;
         if (mentality !== undefined) this._mentality = mentality;
@@ -80,10 +82,13 @@ export default class Player extends Entity {
     override get hungry() { return this._hungry; }
     override set hungry(val: number) { this._hungry = val; this._dirty = true; }
 
-    get maxWeight() { return this._maxWeight; }
+    /** 계산된 최대 중량 (base + modifier) */
+    get maxWeight() { return this.attribute.get('maxWeight'); }
+
+    /** 기본 최대 중량 직접 설정 (DB 저장 대상) */
     set maxWeight(val: number) {
-        this._maxWeight = val;
-        this.inventory.maxWeight = val;
+        this.attribute.setBase('maxWeight', val);
+        this.inventory.maxWeight = this.attribute.get('maxWeight');
         this._dirty = true;
     }
 
@@ -95,13 +100,13 @@ export default class Player extends Entity {
 
     get dirty() { return this._dirty || this.stat.dirty || this.inventory.dirty || this.equipment.dirty; }
 
-    override get deathDuration(): number { 
+    override get deathDuration(): number {
         let baseDuration = 10;
 
         if(this.level >= 50) baseDuration = 60 * 5;
         else if(this.level >= 10) baseDuration = 30;
 
-        return baseDuration; 
+        return baseDuration;
     }
 
     // -- 게임 루프 --
@@ -112,6 +117,9 @@ export default class Player extends Entity {
             const respawn = getRespawnLocation();
             if (respawn) this.locationId = respawn.id;
         }
+
+        // attribute modifier로 maxWeight가 바뀔 수 있으므로 매 프레임 동기화
+        this.inventory.maxWeight = this.attribute.get('maxWeight');
 
         if (this.isDead) {
             this._deathNotifTimer -= dt;
@@ -213,7 +221,7 @@ export default class Player extends Entity {
                 data: {
                     level: this._level,
                     exp: this._exp,
-                    maxWeight: this._maxWeight,
+                    maxWeight: this.attribute.getBase('maxWeight'),
                     locationId: this._locationId,
                     stats: this.stat.points as any,
                     life: this._life,

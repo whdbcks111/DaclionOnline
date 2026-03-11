@@ -1,0 +1,54 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/themes' as *;
+
+.wrapper {
+    position: relative;
+    display: inline;
+}
+
+.trigger {
+    cursor: help;
+    border-bottom: 1px dashed currentColor;
+    display: inline;
+}
+
+.tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 200;
+    min-width: 120px;
+    max-width: 280px;
+    padding: $spacing-xs $spacing-sm;
+    background-color: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: $color-text;
+    font-size: $font-size-sm;
+    white-space: pre-wrap;
+    word-break: break-word;
+    pointer-events: none;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 5px solid transparent;
+        border-top-color: $color-border;
+    }
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: calc(100% - 1px);
+        left: 50%;
+        transform: translateX(-50%);
+        border: 5px solid transparent;
+        border-top-color: $color-bg-primary;
+        z-index: 1;
+    }
+}

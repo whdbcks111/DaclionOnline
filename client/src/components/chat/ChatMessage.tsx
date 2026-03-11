@@ -10,6 +10,7 @@ import ButtonNode from './nodes/ButtonNode'
 import ProgressNode from './nodes/ProgressNode'
 import TabNode from './nodes/TabNode'
 import WeightNode from './nodes/WeightNode'
+import TooltipNode from './nodes/TooltipNode'
 import styles from './ChatMessage.module.scss'
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
@@ -42,6 +43,8 @@ export function renderNode(node: ChatNode, key: number): React.ReactNode {
             return <TabNode key={key} width={node.width} children={node.children} />
         case 'weight':
             return <WeightNode key={key} weight={node.weight} children={node.children} />
+        case 'tooltip':
+            return <TooltipNode key={key} description={node.description} children={node.children} />
     }
 }
 
