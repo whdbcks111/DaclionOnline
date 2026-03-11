@@ -8,6 +8,7 @@ import { getItemData } from "../models/Item.js";
 import { startCoroutine, Wait } from "../modules/coroutine.js";
 import type { CoroutineGenerator } from "../modules/coroutine.js";
 import type Player from "../models/Player.js";
+import { AttributeType } from "../models/Attribute.js";
 import { getUserChannel } from "../modules/channel.js";
 import type { CompletionItem } from "../../../shared/types.js";
 
@@ -17,7 +18,7 @@ function* travelCoroutine(player: Player, targetLocationId: string): CoroutineGe
     if (!from || !to) return;
 
     const distance = distanceBetween(from.data, to.data);
-    const speed = player.attribute.get('speed');
+    const speed = player.attribute.get(AttributeType.SPEED);
     const totalTime = Math.max(1, distance / Math.max(0.01, speed) / 5);
     let elapsed = 0;
 

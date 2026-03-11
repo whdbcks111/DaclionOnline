@@ -3,29 +3,19 @@ import { sendBotMessageToUser } from "../modules/message.js";
 import { fetchPlayerByUserId, getOnlinePlayers } from "../modules/player.js";
 import { getLocation, getAllLocations } from "../models/Location.js";
 import { getItemData, getAllItemData } from "../models/Item.js";
-import { STAT_TYPES } from "../models/Stat.js";
-import type { StatType } from "../models/Stat.js";
+import { StatType } from "../models/Stat.js";
+import { AttributeType } from "../models/Attribute.js";
 import logger from "../utils/logger.js";
 import type { CompletionItem } from "../../../shared/types.js";
 
-const STAT_KR: Record<StatType, string> = {
-    strength: '근력', agility: '민첩', vitality: '체력', sensibility: '감각', mentality: '정신력',
-};
-const STAT_FROM_INPUT: Record<string, StatType> = {
-    '근력': 'strength', 'strength': 'strength',
-    '민첩': 'agility',  'agility': 'agility',
-    '체력': 'vitality', 'vitality': 'vitality',
-    '감각': 'sensibility', 'sensibility': 'sensibility',
-    '정신력': 'mentality', 'mentality': 'mentality',
-};
 
 type StatKey = 'life' | 'mentality' | 'thirsty' | 'hungry';
 const STAT_KEYS: StatKey[] = ['life', 'mentality', 'thirsty', 'hungry'];
-const STAT_MAX_MAP: Record<StatKey, 'maxLife' | 'maxMentality' | 'maxThirsty' | 'maxHungry'> = {
-    life:      'maxLife',
-    mentality: 'maxMentality',
-    thirsty:   'maxThirsty',
-    hungry:    'maxHungry',
+const STAT_MAX_MAP: Record<StatKey, AttributeType> = {
+    life:      AttributeType.MAX_LIFE,
+    mentality: AttributeType.MAX_MENTALITY,
+    thirsty:   AttributeType.MAX_THIRSTY,
+    hungry:    AttributeType.MAX_HUNGRY,
 };
 
 export function initAdminCommands(): void {
@@ -221,7 +211,7 @@ export function initAdminCommands(): void {
                 },
             },
             { name: '스탯', description: '근력 / 민첩 / 체력 / 감각 / 정신력 (또는 영문)', required: true,
-                completions: STAT_TYPES.map((s): CompletionItem => ({ value: STAT_KR[s], description: s })),
+                completions: StatType.values().map((s): CompletionItem => ({ value: s.label, description: s.key })),
             },
             { name: '값', description: '설정할 스탯 포인트 수 (0 이상 정수)', required: true },
         ],
@@ -233,9 +223,9 @@ export function initAdminCommands(): void {
                     return;
                 }
 
-                const statType = STAT_FROM_INPUT[args[1]] ?? STAT_FROM_INPUT[args[1]?.toLowerCase()];
+                const statType = StatType.fromInput(args[1]);
                 if (!statType) {
-                    sendBotMessageToUser(userId, `유효한 스탯을 입력해주세요. (${STAT_TYPES.map(s => STAT_KR[s]).join(' / ')})`);
+                    sendBotMessageToUser(userId, `유효한 스탯을 입력해주세요. (${StatType.values().map(s => s.label).join(' / ')})`);
                     return;
                 }
 
@@ -255,9 +245,9 @@ export function initAdminCommands(): void {
                 player.stat.applyModifiers(player.attribute);
                 await player.save();
 
-                sendBotMessageToUser(userId, `${player.name}의 ${STAT_KR[statType]}을(를) ${value}로 설정했습니다.`);
+                sendBotMessageToUser(userId, `${player.name}의 ${statType.label}을(를) ${value}로 설정했습니다.`);
                 if (targetId !== userId) {
-                    sendBotMessageToUser(targetId, `관리자에 의해 ${STAT_KR[statType]}이(가) ${value}로 변경되었습니다.`);
+                    sendBotMessageToUser(targetId, `관리자에 의해 ${statType.label}이(가) ${value}로 변경되었습니다.`);
                 }
             } catch (e) {
                 logger.error('스탯설정 명령어 처리 중 오류:', e);

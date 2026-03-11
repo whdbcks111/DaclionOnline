@@ -8,22 +8,11 @@ import { getItemData, Item } from "../models/Item.js";
 import type { EquipSlot } from "../models/Equipment.js";
 import { SLOT_MAX } from "../models/Equipment.js";
 import Monster from "../models/Monster.js";
-import { STAT_TYPES } from "../models/Stat.js";
-import type { StatType } from "../models/Stat.js";
+import { StatType } from "../models/Stat.js";
 import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
 import { CompletionItem } from "../../../shared/types.js";
 
-const STAT_KR: Record<StatType, string> = {
-    strength: '근력', agility: '민첩', vitality: '체력', sensibility: '감각', mentality: '정신력',
-};
-const STAT_FROM_INPUT: Record<string, StatType> = {
-    '근력': 'strength', 'strength': 'strength',
-    '민첩': 'agility',  'agility': 'agility',
-    '체력': 'vitality', 'vitality': 'vitality',
-    '감각': 'sensibility', 'sensibility': 'sensibility',
-    '정신력': 'mentality', 'mentality': 'mentality',
-};
 
 const SLOT_KR: Record<EquipSlot, string> = {
     head: '머리', body: '몸통', legs: '다리', feet: '발', accessory: '장신구', mainHand: '손', offHand: '보조',
@@ -560,11 +549,11 @@ export function initPlayerCommands(): void {
 
                 const L = 100;
                 const V = 55;
-                for (const stat of STAT_TYPES) {
-                    b.tab(L, b2 => b2.color('yellow', b3 => b3.text(STAT_KR[stat])))
-                     .tab(V, b2 => b2.text(String(stats[stat])));
+                for (const stat of StatType.values()) {
+                    b.tab(L, b2 => b2.color('yellow', b3 => b3.text(stat.label)))
+                     .tab(V, b2 => b2.text(String(stats[stat.key])));
                     if (available > 0) {
-                        b.button(`/스탯분배 ${stat} 1`, b2 => b2.color('lime', b3 => b3.text('[+1]')));
+                        b.button(`/스탯분배 ${stat.key} 1`, b2 => b2.color('lime', b3 => b3.text('[+1]')));
                     }
                     b.text('\n');
                 }
@@ -580,9 +569,9 @@ export function initPlayerCommands(): void {
             }
 
             // 인자 2개: 스탯 분배
-            const statType = STAT_FROM_INPUT[args[0].toLowerCase()] ?? STAT_FROM_INPUT[args[0]];
+            const statType = StatType.fromInput(args[0]);
             if (!statType) {
-                sendBotMessageToUser(userId, `유효한 스탯 이름을 입력해주세요. (${Object.values(STAT_KR).join(' / ')})`);
+                sendBotMessageToUser(userId, `유효한 스탯 이름을 입력해주세요. (${StatType.values().map(s => s.label).join(' / ')})`);
                 return;
             }
 
@@ -599,7 +588,7 @@ export function initPlayerCommands(): void {
 
             player.allocateStat(statType, amount);
             sendBotMessageToUser(userId, chat()
-                .color('yellow', b => b.text(STAT_KR[statType]))
+                .color('yellow', b => b.text(statType.label))
                 .text(` +${amount}  →  현재 ${player.stat.get(statType)}`)
                 .text(`  (남은 포인트: ${player.statPoint})`)
                 .build()

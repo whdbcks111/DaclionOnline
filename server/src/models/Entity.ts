@@ -1,9 +1,9 @@
-import Attribute from "./Attribute.js";
+import Attribute, { AttributeType } from "./Attribute.js";
 import type { AttributeRecord } from "./Attribute.js";
 import Equipment from "./Equipment.js";
 import Stat from "./Stat.js";
 import type { StatRecord } from "./Stat.js";
-import { broadcastNotification, sendBotMessageToUser, sendNotificationFiltered } from "../modules/message.js";
+import { sendBotMessageToUser, sendNotificationFiltered } from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
 import { getPlayerByUserId } from "../modules/player.js";
 
@@ -23,10 +23,6 @@ export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fi
 export interface DamageCause {
     type: DamageCauseType;
     causeEntity: Entity | null;
-}
-
-function clamp(value: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, value));
 }
 
 export default abstract class Entity {
@@ -70,10 +66,10 @@ export default abstract class Entity {
         this.equipment.applyModifiers(this.attribute);
 
         // 현재 생명력/정신력은 최대치로 초기화
-        this._life = this.attribute.get('maxLife');
-        this._mentality = this.attribute.get('maxMentality');
-        this._thirsty = this.attribute.get('maxThirsty');
-        this._hungry = this.attribute.get('maxHungry');
+        this._life = this.attribute.get(AttributeType.MAX_LIFE);
+        this._mentality = this.attribute.get(AttributeType.MAX_MENTALITY);
+        this._thirsty = this.attribute.get(AttributeType.MAX_THIRSTY);
+        this._hungry = this.attribute.get(AttributeType.MAX_HUNGRY);
     }
 
     // -- Getters / Setters --
@@ -107,8 +103,8 @@ export default abstract class Entity {
     get mentality() { return this._mentality; }
     set mentality(val: number) { this._mentality = val; }
 
-    get maxLife() { return this.attribute.get('maxLife'); }
-    get maxMentality() { return this.attribute.get('maxMentality'); }
+    get maxLife()     { return this.attribute.get(AttributeType.MAX_LIFE); }
+    get maxMentality(){ return this.attribute.get(AttributeType.MAX_MENTALITY); }
 
     get thirsty() { return this._thirsty; }
     set thirsty(val: number) { this._thirsty = val; }
@@ -116,33 +112,30 @@ export default abstract class Entity {
     get hungry() { return this._hungry; }
     set hungry(val: number) { this._hungry = val; }
 
-    get maxThirsty() { return this.attribute.get('maxThirsty'); }
-    get maxHungry() { return this.attribute.get('maxHungry'); }
+    get maxThirsty() { return this.attribute.get(AttributeType.MAX_THIRSTY); }
+    get maxHungry()  { return this.attribute.get(AttributeType.MAX_HUNGRY); }
 
     // -- 전투 --
 
     damage(rawAmount: number, type: DamageType = 'physical', cause: DamageCause | null = null): DamageResult {
-
         let defense = 0;
         let penetration = 0;
 
-        if(type === 'physical') {
-            defense = this.attribute.get('def');
-            penetration = this.attribute.get('armorPen');
-        }
-        else if(type === 'magic') {
-            defense = this.attribute.get('magicDef');
-            penetration = this.attribute.get('magicPen');
+        if (type === 'physical') {
+            defense    = this.attribute.get(AttributeType.DEF);
+            penetration = this.attribute.get(AttributeType.ARMOR_PEN);
+        } else if (type === 'magic') {
+            defense    = this.attribute.get(AttributeType.MAGIC_DEF);
+            penetration = this.attribute.get(AttributeType.MAGIC_PEN);
         }
 
         const effectiveDefense = Math.max(0, defense - penetration);
         const finalDamage = Math.max(0, rawAmount - effectiveDefense);
 
-        // Life 차감
         this.life = this.life - finalDamage;
         const remainingLife = this.life;
 
-        if(cause) this.lastDamageCause = cause;
+        if (cause) this.lastDamageCause = cause;
 
         return { type, rawAmount, finalDamage, remainingLife };
     }
@@ -162,7 +155,7 @@ export default abstract class Entity {
         }
 
         if (this._attackCooldown > 0) {
-            if(this.isPlayer && this.playerUserId) {
+            if (this.isPlayer && this.playerUserId) {
                 sendBotMessageToUser(this.playerUserId, `아직 공격할 수 없습니다. (${this.attackCooldown.toFixed(1)}초 후 가능)`);
             }
             return null;
@@ -170,14 +163,14 @@ export default abstract class Entity {
 
         // 기본 공격력: 물리 → atk, 마법 → magicForce
         const rawAmount = amount ?? (type === 'physical'
-            ? this.attribute.get('atk')
-            : this.attribute.get('magicForce'));
+            ? this.attribute.get(AttributeType.ATK)
+            : this.attribute.get(AttributeType.MAGIC_FORCE));
 
         const damageResult = target.damage(rawAmount, type, { type: 'attack', causeEntity: this });
         const { finalDamage } = damageResult;
 
         // 공격 쿨다운 설정
-        const attackSpeed = this.attribute.get('attackSpeed');
+        const attackSpeed = this.attribute.get(AttributeType.ATTACK_SPEED);
         this._maxAttackCooldown = 1 / Math.max(0.01, attackSpeed);
         this._attackCooldown = this._maxAttackCooldown;
 
@@ -232,21 +225,21 @@ export default abstract class Entity {
             this.life += dt * 1; // TODO: change value
         }
 
-        if(this.isDead && this.deathTimer > 0) {
+        if (this.isDead && this.deathTimer > 0) {
             this.deathTimer -= dt;
 
-            if(this.deathTimer <= 0) {
+            if (this.deathTimer <= 0) {
                 this.respawn();
             }
         }
     }
-    update(dt: number): void {}
-    lateUpdate(dt: number): void {
 
-        if(this.life <= 0 && !this.isDead) {
+    update(_dt: number): void {}
+
+    lateUpdate(_dt: number): void {
+        if (this.life <= 0 && !this.isDead) {
             this.onDeath();
         }
-
     }
 
     /** 사망 후 리스폰까지 걸리는 시간 (초). 하위 클래스에서 오버라이드 */

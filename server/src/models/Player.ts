@@ -2,8 +2,9 @@ import prisma from "../config/prisma.js";
 import Entity from "./Entity.js";
 import Inventory from "./Inventory.js";
 import Equipment from "./Equipment.js";
-import { STAT_TYPES } from "./Stat.js";
-import type { StatType, StatRecord } from "./Stat.js";
+import { StatType } from "./Stat.js";
+import type { StatRecord } from "./Stat.js";
+import { AttributeType } from "./Attribute.js";
 import { getLocation, getRespawnLocation } from "./Location.js";
 import { sendBotMessageToUser, sendNotificationToUser } from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
@@ -42,7 +43,7 @@ export default class Player extends Entity {
         this._gold = gold;
 
         // inventory에 계산된 maxWeight 동기화
-        this.inventory.maxWeight = this.attribute.get('maxWeight');
+        this.inventory.maxWeight = this.attribute.get(AttributeType.MAX_WEIGHT);
 
         if (life      !== undefined) this._life      = life;
         if (mentality !== undefined) this._mentality = mentality;
@@ -83,12 +84,12 @@ export default class Player extends Entity {
     override set hungry(val: number) { this._hungry = val; this._dirty = true; }
 
     /** 계산된 최대 중량 (base + modifier) */
-    get maxWeight() { return this.attribute.get('maxWeight'); }
+    get maxWeight() { return this.attribute.get(AttributeType.MAX_WEIGHT); }
 
     /** 기본 최대 중량 직접 설정 (DB 저장 대상) */
     set maxWeight(val: number) {
-        this.attribute.setBase('maxWeight', val);
-        this.inventory.maxWeight = this.attribute.get('maxWeight');
+        this.attribute.setBase(AttributeType.MAX_WEIGHT, val);
+        this.inventory.maxWeight = this.attribute.get(AttributeType.MAX_WEIGHT);
         this._dirty = true;
     }
 
@@ -119,7 +120,7 @@ export default class Player extends Entity {
         }
 
         // attribute modifier로 maxWeight가 바뀔 수 있으므로 매 프레임 동기화
-        this.inventory.maxWeight = this.attribute.get('maxWeight');
+        this.inventory.maxWeight = this.attribute.get(AttributeType.MAX_WEIGHT);
 
         if (this.isDead) {
             this._deathNotifTimer -= dt;
@@ -168,7 +169,7 @@ export default class Player extends Entity {
             levelsGained.push(this._level);
 
             // 레벨업 보너스: 모든 스탯 +1, 가용 포인트 +3
-            for (const stat of STAT_TYPES) {
+            for (const stat of StatType.values()) {
                 this.stat.add(stat, 1);
             }
             this._statPoint += 3;
@@ -221,7 +222,7 @@ export default class Player extends Entity {
                 data: {
                     level: this._level,
                     exp: this._exp,
-                    maxWeight: this.attribute.getBase('maxWeight'),
+                    maxWeight: this.attribute.getBase(AttributeType.MAX_WEIGHT),
                     locationId: this._locationId,
                     stats: this.stat.points as any,
                     life: this._life,

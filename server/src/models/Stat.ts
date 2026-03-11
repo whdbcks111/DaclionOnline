@@ -1,85 +1,121 @@
-import type Attribute from "./Attribute.js";
-import type { AttributeType, ModifierOp } from "./Attribute.js";
+import type Attribute from "./Attribute.js"
+import type { AttributeKey, ModifierOp } from "./Attribute.js"
 
-/** 스탯 종류 */
-export type StatType = 'strength' | 'agility' | 'vitality' | 'sensibility' | 'mentality';
+// ── StatType 클래스 열거형 ──
 
-/** 모든 스탯 종류 목록 */
-export const STAT_TYPES: StatType[] = ['strength', 'agility', 'vitality', 'sensibility', 'mentality'];
+interface StatConversion {
+    attribute: AttributeKey
+    op: ModifierOp
+    value: number
+}
+
+/** 스탯 종류 — Java 클래스 열거형 패턴 */
+export class StatType {
+    /** @internal 자기 등록용 레지스트리. 인스턴스 선언보다 먼저 초기화되어야 함 */
+    private static _all: StatType[] = []
+
+    static readonly STRENGTH    = new StatType('strength',    '근력',   [{ attribute: 'atk', op: 'add', value: 2 }])
+    static readonly AGILITY     = new StatType('agility',     '민첩',   [{ attribute: 'speed', op: 'add', value: 0.05 }, { attribute: 'attackSpeed', op: 'add', value: 0.01 }])
+    static readonly VITALITY    = new StatType('vitality',    '체력',   [{ attribute: 'maxLife', op: 'add', value: 10 }, { attribute: 'def', op: 'add', value: 1 }])
+    static readonly SENSIBILITY = new StatType('sensibility', '감각',   [{ attribute: 'critRate', op: 'add', value: 0.001 }, { attribute: 'critDmg', op: 'add', value: 0.01 }])
+    static readonly MENTALITY   = new StatType('mentality',   '정신력', [{ attribute: 'maxMentality', op: 'add', value: 5 }, { attribute: 'magicForce', op: 'add', value: 2 }])
+
+    readonly key: StatKey
+    readonly label: string
+    readonly conversions: ReadonlyArray<StatConversion>
+
+    private constructor(key: StatKey, label: string, conversions: StatConversion[]) {
+        this.key = key
+        this.label = label
+        this.conversions = conversions
+        StatType._all.push(this)
+    }
+
+    /** 모든 StatType 목록 */
+    static values(): readonly StatType[] { return StatType._all }
+
+    /** key 문자열로 조회 */
+    static fromKey(key: string): StatType | undefined {
+        return StatType._all.find(s => s.key === key)
+    }
+
+    /** key 또는 label로 조회 (커맨드 입력 파싱용) */
+    static fromInput(input: string): StatType | undefined {
+        const lower = input.toLowerCase()
+        return StatType._all.find(s => s.key === lower || s.label === input)
+    }
+
+    toString(): string { return this.key }
+}
+
+// ── 내부 타입 ──
+
+/** 스탯 키 문자열 (StatRecord, DB 저장에 사용) */
+export type StatKey = 'strength' | 'agility' | 'vitality' | 'sensibility' | 'mentality'
 
 /** 스탯 레코드 */
-export type StatRecord = Record<StatType, number>;
+export type StatRecord = Record<StatKey, number>
 
-/** 스탯 1포인트당 능력치 변환 테이블 */
-const STAT_CONVERSION: Record<StatType, { attribute: AttributeType; op: ModifierOp; value: number }[]> = {
-    strength:    [{ attribute: 'atk', op: 'add', value: 2 }],
-    agility:     [{ attribute: 'speed', op: 'add', value: 0.05 }, { attribute: 'attackSpeed', op: 'add', value: 0.01 }],
-    vitality:    [{ attribute: 'maxLife', op: 'add', value: 10 }, { attribute: 'def', op: 'add', value: 1 }],
-    sensibility: [{ attribute: 'critRate', op: 'add', value: 0.001 }, { attribute: 'critDmg', op: 'add', value: 0.01 }],
-    mentality:   [{ attribute: 'maxMentality', op: 'add', value: 5 }, { attribute: 'magicForce', op: 'add', value: 2 }],
-};
+// ── Stat 클래스 ──
 
 function createStatRecord(defaultValue = 0): StatRecord {
-    const record = {} as StatRecord;
-    for (const type of STAT_TYPES) {
-        record[type] = defaultValue;
+    const record = {} as StatRecord
+    for (const type of StatType.values()) {
+        record[type.key] = defaultValue
     }
-    return record;
+    return record
 }
 
 export default class Stat {
-    private _points: StatRecord;
-    private _dirty = false;
+    private _points: StatRecord
+    private _dirty = false
 
     constructor(initial?: Partial<StatRecord>) {
-        this._points = { ...createStatRecord(), ...initial };
+        this._points = { ...createStatRecord(), ...initial }
     }
 
-    get dirty(): boolean { return this._dirty; }
-    resetDirty(): void { this._dirty = false; }
+    get dirty(): boolean { return this._dirty }
+    resetDirty(): void { this._dirty = false }
 
     /** 특정 스탯 포인트 조회 */
     get(stat: StatType): number {
-        return this._points[stat];
+        return this._points[stat.key]
     }
 
     /** 특정 스탯 포인트 설정 */
     set(stat: StatType, value: number): void {
-        this._points[stat] = value;
-        this._dirty = true;
+        this._points[stat.key] = value
+        this._dirty = true
     }
 
     /** 스탯 포인트 증가 */
     add(stat: StatType, amount: number): void {
-        this._points[stat] += amount;
-        this._dirty = true;
+        this._points[stat.key] += amount
+        this._dirty = true
     }
 
     /** 전체 스탯 레코드 반환 */
     get points(): Readonly<StatRecord> {
-        return this._points;
+        return this._points
     }
 
     /** 스탯 기반 modifier를 attribute에 적용 (기존 stat modifier 제거 후 재적용) */
     applyModifiers(attribute: Attribute): void {
-        // 기존 스탯 modifier 전부 제거
-        for (const statType of STAT_TYPES) {
-            attribute.removeBySource(`stat:${statType}`);
+        for (const stat of StatType.values()) {
+            attribute.removeBySource(`stat:${stat.key}`)
         }
 
-        // 현재 스탯에 따라 modifier 추가
-        for (const statType of STAT_TYPES) {
-            const points = this._points[statType];
-            if (points <= 0) continue;
+        for (const stat of StatType.values()) {
+            const points = this._points[stat.key]
+            if (points <= 0) continue
 
-            const conversions = STAT_CONVERSION[statType];
-            for (const conv of conversions) {
+            for (const conv of stat.conversions) {
                 attribute.addModifier({
                     attribute: conv.attribute,
                     op: conv.op,
                     value: conv.value * points,
-                    source: `stat:${statType}`,
-                });
+                    source: `stat:${stat.key}`,
+                })
             }
         }
     }
