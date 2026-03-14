@@ -130,3 +130,40 @@ DaclionOnline/
 - 소켓 이벤트 타입은 `shared/types.ts`의 `ServerToClientEvents`, `ClientToServerEvents` 참조
 - 서버 모듈은 `init*()` 함수 패턴으로 초기화
 - 환경변수는 `server/.env`, `client/.env`에서 관리
+
+## 클래스형 Enum 패턴
+
+열거 가능한 타입(슬롯 종류, 스탯 종류, 능력치 종류 등)은 반드시 **Java 스타일 클래스 enum**으로 구현한다.
+
+```ts
+export class FooType {
+    private static _all: FooType[] = []  // 반드시 인스턴스 선언보다 먼저
+
+    static readonly BAR = new FooType('bar', '바', /* 메타데이터 */)
+    static readonly BAZ = new FooType('baz', '바즈')
+
+    readonly key: FooKey       // string union 타입 (DB/직렬화용)
+    readonly label: string     // 한글 표시명
+    // 필요 시 추가: defaultValue, format, max, aliases 등
+
+    private constructor(key: FooKey, label: string, ...) {
+        this.key = key
+        this.label = label
+        FooType._all.push(this)
+    }
+
+    static values(): readonly FooType[] { return FooType._all }
+    static fromKey(key: string): FooType | undefined { ... }
+    static fromInput(input: string): FooType | undefined { ... }  // 별칭 파싱 필요 시
+}
+
+export type FooKey = 'bar' | 'baz'
+```
+
+**적용 대상**: `AttributeType` (`Attribute.ts`), `StatType` (`Stat.ts`), `EquipSlotType` (`Equipment.ts`)
+
+**규칙**:
+- 하드코딩된 레코드/배열(`Record<K, string>`, `Record<K, number>` 등)은 클래스 필드로 대체
+- `values()`로 순회, `fromKey()`로 단일 조회, `fromInput()`으로 사용자 입력 파싱
+- 문자열 union 타입(`FooKey`)은 DB 저장/직렬화 용도로만 유지
+- 명령어 completions, 표시 레이블 등은 항상 클래스 필드에서 읽어옴

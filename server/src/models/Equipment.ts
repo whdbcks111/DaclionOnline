@@ -2,19 +2,58 @@ import prisma from "../config/prisma.js";
 import { Item, getItemData } from "./Item.js";
 import type Attribute from "./Attribute.js";
 
-/** 장비 슬롯 종류 */
+/** 장비 슬롯 키 */
 export type EquipSlot = 'head' | 'body' | 'legs' | 'feet' | 'accessory' | 'mainHand' | 'offHand';
 
-/** 슬롯별 최대 장착 수 */
-export const SLOT_MAX: Record<EquipSlot, number> = {
-    head: 1,
-    body: 1,
-    legs: 1,
-    feet: 1,
-    accessory: 3,
-    mainHand: 1,
-    offHand: 1,
-};
+/** 장비 슬롯 종류 — Java 클래스 열거형 패턴 */
+export class EquipSlotType {
+    /** @internal 자기 등록용 레지스트리. 인스턴스 선언보다 먼저 초기화되어야 함 */
+    private static _all: EquipSlotType[] = []
+
+    static readonly HEAD      = new EquipSlotType('head',      '머리',   1)
+    static readonly BODY      = new EquipSlotType('body',      '몸통',   1, ['몸'])
+    static readonly LEGS      = new EquipSlotType('legs',      '다리',   1)
+    static readonly FEET      = new EquipSlotType('feet',      '발',     1)
+    static readonly MAIN_HAND = new EquipSlotType('mainHand',  '손',     1, ['주손', '주무기', 'mainhand'])
+    static readonly OFF_HAND  = new EquipSlotType('offHand',   '보조',   1, ['보조무기', '보조손', 'offhand'])
+    static readonly ACCESSORY = new EquipSlotType('accessory', '장신구', 3, ['악세사리'])
+
+    readonly key: EquipSlot
+    readonly label: string
+    readonly max: number
+    private readonly _aliases: string[]
+
+    private constructor(key: EquipSlot, label: string, max: number, aliases: string[] = []) {
+        this.key = key
+        this.label = label
+        this.max = max
+        this._aliases = aliases
+        EquipSlotType._all.push(this)
+    }
+
+    /** 모든 EquipSlotType 목록 */
+    static values(): readonly EquipSlotType[] { return EquipSlotType._all }
+
+    /** key 문자열로 조회 */
+    static fromKey(key: string): EquipSlotType | undefined {
+        return EquipSlotType._all.find(s => s.key === key)
+    }
+
+    /** key, label, aliases로 조회 (커맨드 입력 파싱용) */
+    static fromInput(input: string): EquipSlotType | undefined {
+        const lower = input.toLowerCase()
+        return EquipSlotType._all.find(s =>
+            s.key === lower || s.label === input || s._aliases.includes(input) || s._aliases.includes(lower)
+        )
+    }
+
+    toString(): string { return this.key }
+}
+
+/** 슬롯별 최대 장착 수 (호환성 유지) */
+export const SLOT_MAX: Record<EquipSlot, number> = Object.fromEntries(
+    EquipSlotType.values().map(s => [s.key, s.max])
+) as Record<EquipSlot, number>;
 
 /** 슬롯 키 생성 */
 function slotKey(slot: EquipSlot, index: number): string {

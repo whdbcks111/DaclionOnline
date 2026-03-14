@@ -6,26 +6,15 @@ import { getPlayerByUserId } from "../modules/player.js";
 import { getLocation } from "../models/Location.js";
 import { getItemData, Item } from "../models/Item.js";
 import type { EquipSlot } from "../models/Equipment.js";
-import { SLOT_MAX } from "../models/Equipment.js";
+import { SLOT_MAX, EquipSlotType } from "../models/Equipment.js";
 import Monster from "../models/Monster.js";
 import { StatType } from "../models/Stat.js";
+import { AttributeType } from "../models/Attribute.js";
 import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
 import { CompletionItem } from "../../../shared/types.js";
 
 
-const SLOT_KR: Record<EquipSlot, string> = {
-    head: '머리', body: '몸통', legs: '다리', feet: '발', accessory: '장신구', mainHand: '손', offHand: '보조',
-};
-const SLOT_FROM_INPUT: Record<string, EquipSlot> = {
-    '머리': 'head', 'head': 'head',
-    '몸통': 'body', '몸': 'body', 'body': 'body',
-    '다리': 'legs', 'legs': 'legs',
-    '발': 'feet', 'feet': 'feet',
-    '장신구': 'accessory', '악세사리': 'accessory', 'accessory': 'accessory',
-    '손': 'mainHand', '주손': 'mainHand', '주무기': 'mainHand', 'mainhand': 'mainHand',
-    '보조': 'offHand', '보조무기': 'offHand', '보조손': 'offHand', 'offhand': 'offHand',
-};
 
 export function initPlayerCommands(): void {
     registerCommand({
@@ -55,8 +44,6 @@ export function initPlayerCommands(): void {
                 const mentalityRatio = Math.min(1, player.mentality / player.maxMentality);
                 const thirstyRatio = Math.min(1, player.thirsty / player.maxThirsty);
                 const hungryRatio = Math.min(1, player.hungry / player.maxHungry);
-                const fmt = (n: number) => Number.isInteger(n) ? String(n) : n.toFixed(2);
-
                 const L = 80;
                 const V = 50;
 
@@ -86,12 +73,10 @@ export function initPlayerCommands(): void {
 
                         .color('gray', b2 => b2.text('─── 장착 정보 ───\n'));
 
-                        const slotOrder: EquipSlot[] = ['head', 'body', 'legs', 'feet', 'mainHand', 'offHand', 'accessory'];
-                        for (const slot of slotOrder) {
-                            const max = SLOT_MAX[slot];
-                            for (let i = 0; i < max; i++) {
-                                const equipped = player.equipment.getEquipped(slot, i);
-                                const slotLabel = max > 1 ? `${SLOT_KR[slot]}${i + 1}` : SLOT_KR[slot];
+                        for (const slotType of EquipSlotType.values()) {
+                            for (let i = 0; i < slotType.max; i++) {
+                                const equipped = player.equipment.getEquipped(slotType.key, i);
+                                const slotLabel = slotType.max > 1 ? `${slotType.label}${i + 1}` : slotType.label;
                                 b.tab(L, b2 => b2.color('yellow', b3 => b3.text(slotLabel)));
                                 if (equipped) {
                                     const itemName = getItemData(equipped.itemDataId)?.name ?? equipped.itemDataId;
@@ -121,25 +106,38 @@ export function initPlayerCommands(): void {
                         .progress({ value: thirstyRatio, length: 120, color: '$thirsty', thickness: 8 })
                         .text(`  ${player.thirsty.toFixed(1)} / ${player.maxThirsty.toFixed(1)}\n`)
 
-                        .color('gray', b2 => b2.text('─── 능력치 ───\n'))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('공격력'))).tab(V, b2 => b2.text(fmt(attr.atk)))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('마법력'))).text(`${fmt(attr.magicForce)}\n`)
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('방어력'))).tab(V, b2 => b2.text(fmt(attr.def)))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('마법저항'))).text(`${fmt(attr.magicDef)}\n`)
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('방어관통'))).tab(V, b2 => b2.text(fmt(attr.armorPen)))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('마법관통'))).text(`${fmt(attr.magicPen)}\n`)
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('이동속도'))).tab(V, b2 => b2.text(fmt(attr.speed)))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('공격속도'))).text(`${fmt(attr.attackSpeed)}\n`)
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('치명타율'))).tab(V, b2 => b2.text(`${(attr.critRate * 100).toFixed(1)}%`))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('치명타피해'))).text(`${(attr.critDmg * 100).toFixed(0)}%\n`)
+                        .color('gray', b2 => b2.text('─── 능력치 ───\n'));
 
-                        .color('gray', b2 => b2.text('─── 스탯 ───\n'))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('스탯포인트'))).text(`${player.statPoint}\n`)
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('근력'))).tab(V, b2 => b2.text(String(stats.strength)))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('민첩'))).tab(V, b2 => b2.text(String(stats.agility)))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('체력'))).text(`${stats.vitality}\n`)
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('감각'))).tab(V, b2 => b2.text(String(stats.sensibility)))
-                        .tab(L, b2 => b2.color('yellow', b3 => b3.text('정신력'))).text(`${stats.mentality}\n`);
+                        const combatAttrs = AttributeType.values().filter(a => !a.key.startsWith('max'));
+                        for (let i = 0; i < combatAttrs.length; i += 2) {
+                            const left = combatAttrs[i];
+                            const right = combatAttrs[i + 1];
+                            b.tab(L, b2 => b2.color('yellow', b3 => b3.text(left.label)))
+                             .tab(V, b2 => b2.text(left.format(attr[left.key])));
+                            if (right) {
+                                b.tab(L, b2 => b2.color('yellow', b3 => b3.text(right.label)))
+                                 .text(`${right.format(attr[right.key])}\n`);
+                            } else {
+                                b.text('\n');
+                            }
+                        }
+
+                        b.color('gray', b2 => b2.text('─── 스탯 ───\n'))
+                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('스탯포인트'))).text(`${player.statPoint}\n`);
+
+                        const statTypes = StatType.values();
+                        for (let i = 0; i < statTypes.length; i += 2) {
+                            const left = statTypes[i];
+                            const right = statTypes[i + 1];
+                            b.tab(L, b2 => b2.color('yellow', b3 => b3.text(left.label)))
+                             .tab(V, b2 => b2.text(String(stats[left.key])));
+                            if (right) {
+                                b.tab(L, b2 => b2.color('yellow', b3 => b3.text(right.label)))
+                                 .text(`${stats[right.key]}\n`);
+                            } else {
+                                b.text('\n');
+                            }
+                        }
 
                         return b;
                     })
@@ -393,8 +391,8 @@ export function initPlayerCommands(): void {
         description: '장착된 아이템을 해제합니다.',
         showCommandUse: 'show',
         args: [
-            { name: '슬롯명', description: '해제할 슬롯 (머리/몸통/다리/발/장신구/손/보조)', required: true,
-                completions: Object.values(SLOT_KR),
+            { name: '슬롯명', description: `해제할 슬롯 (${EquipSlotType.values().map(s => s.label).join('/')})`, required: true,
+                completions: EquipSlotType.values().map(s => s.label),
             },
             { name: '인덱스', description: '해제할 슬롯 인덱스 (1부터, 악세사리 등 다중 슬롯용)' },
         ],
@@ -407,13 +405,13 @@ export function initPlayerCommands(): void {
                 return;
             }
 
-            const slot = SLOT_FROM_INPUT[args[0]?.toLowerCase() ?? ''] ?? SLOT_FROM_INPUT[args[0]];
-            if (!slot) {
-                sendBotMessageToUser(userId, `유효한 슬롯명을 입력해주세요. (머리/몸통/다리/발/장신구/주무기/보조)`);
+            const slotType = EquipSlotType.fromInput(args[0] ?? '');
+            if (!slotType) {
+                sendBotMessageToUser(userId, `유효한 슬롯명을 입력해주세요. (${EquipSlotType.values().map(s => s.label).join('/')})`);
                 return;
             }
 
-            const max = SLOT_MAX[slot];
+            const max = slotType.max;
             let slotIndex: number;
 
             if (args[1]) {
@@ -426,18 +424,18 @@ export function initPlayerCommands(): void {
                 // 마지막으로 장착된 슬롯 인덱스 탐색
                 let lastOccupied = -1;
                 for (let i = 0; i < max; i++) {
-                    if (player.equipment.getEquipped(slot, i)) lastOccupied = i;
+                    if (player.equipment.getEquipped(slotType.key, i)) lastOccupied = i;
                 }
                 if (lastOccupied === -1) {
-                    sendBotMessageToUser(userId, `${SLOT_KR[slot]} 슬롯에 장착된 아이템이 없습니다.`);
+                    sendBotMessageToUser(userId, `${slotType.label} 슬롯에 장착된 아이템이 없습니다.`);
                     return;
                 }
                 slotIndex = lastOccupied;
             }
 
-            const unequipped = player.equipment.unequip(slot, slotIndex, player.attribute);
+            const unequipped = player.equipment.unequip(slotType.key, slotIndex, player.attribute);
             if (!unequipped) {
-                sendBotMessageToUser(userId, `${SLOT_KR[slot]} 슬롯(${slotIndex + 1})에 장착된 아이템이 없습니다.`);
+                sendBotMessageToUser(userId, `${slotType.label} 슬롯(${slotIndex + 1})에 장착된 아이템이 없습니다.`);
                 return;
             }
 
@@ -520,7 +518,7 @@ export function initPlayerCommands(): void {
         showCommandUse: 'hide',
         args: [
             { name: '스탯', description: '근력 / 민첩 / 체력 / 감각 / 정신력 (또는 영문)',
-                completions: ['근력', '민첩', '체력', '감각', '정신력'],
+                completions: StatType.values().map(s => s.label),
             },
             { name: '포인트', description: '투자할 포인트 수',
                 completions(userId) {

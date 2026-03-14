@@ -18,17 +18,20 @@ export class AttributeType {
     static readonly MAGIC_PEN    = new AttributeType('magicPen',     '마법관통',       0)
     static readonly SPEED        = new AttributeType('speed',        '이동속도',       1)
     static readonly ATTACK_SPEED = new AttributeType('attackSpeed',  '공격속도',       1)
-    static readonly CRIT_RATE    = new AttributeType('critRate',     '치명타율',    0.05)
-    static readonly CRIT_DMG     = new AttributeType('critDmg',      '치명타피해', 1.5)
+    static readonly CRIT_RATE    = new AttributeType('critRate',     '치명타율',    0.05, v => `${(v * 100).toFixed(1)}%`)
+    static readonly CRIT_DMG     = new AttributeType('critDmg',      '치명타피해', 1.5,  v => `${(v * 100).toFixed(0)}%`)
 
     readonly key: AttributeKey
     readonly label: string
     readonly defaultValue: number
+    /** 값을 표시용 문자열로 변환 */
+    readonly format: (value: number) => string
 
-    private constructor(key: AttributeKey, label: string, defaultValue: number) {
+    private constructor(key: AttributeKey, label: string, defaultValue: number, format?: (v: number) => string) {
         this.key = key
         this.label = label
         this.defaultValue = defaultValue
+        this.format = format ?? (v => Number.isInteger(v) ? String(v) : v.toFixed(2))
         AttributeType._all.push(this)
     }
 
