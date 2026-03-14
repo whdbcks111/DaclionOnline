@@ -49,26 +49,26 @@ export function initPlayerCommands(): void {
 
                 const chatNode = chat()
                     .text('[ 상태창 ]  ')
-                    .color('yellow', b => b.text(user.nickname))
+                    .text(user.nickname)
                     .text('  Lv.')
-                    .color('lime', b => b.text(String(player.level)))
+                    .text(String(player.level))
                     .text('\n')
                     .hide('상세 보기', b => {
                         b
                         .color('gray', b2 => b2.text('─── 기본 정보 ───\n'))
-                        .color('yellow', b2 => b2.text(user.nickname))
+                        .text(user.nickname)
                         .text('  Lv.')
-                        .color('lime', b2 => b2.text(String(player.level)))
+                        .text(String(player.level))
                         .text('\n')
-                        .color('yellow', b2 => b2.text('EXP'))
+                        .weight('bold',b2 => b2.text('EXP'))
                         .text('  ')
                         .progress({ value: expRatio, length: 120, color: '#a855f7', thickness: 8 })
                         .text(`  ${player.exp} / ${player.maxExp}\n`)
-                        .color('yellow', b2 => b2.text('위치'))
+                        .weight('bold',b2 => b2.text('위치'))
                         .text(` ${location?.data.name ?? '???'}  `)
                         .color(player.moving ? 'gold' : 'gray', b2 => b2.text(player.moving ? '이동 중' : '대기 중'))
                         .text('\n')
-                        .color('yellow', b2 => b2.text('골드'))
+                        .weight('bold',b2 => b2.text('골드'))
                         .text(` ${player.gold.toLocaleString()}G\n`)
 
                         .color('gray', b2 => b2.text('─── 장착 정보 ───\n'));
@@ -77,7 +77,7 @@ export function initPlayerCommands(): void {
                             for (let i = 0; i < slotType.max; i++) {
                                 const equipped = player.equipment.getEquipped(slotType.key, i);
                                 const slotLabel = slotType.max > 1 ? `${slotType.label}${i + 1}` : slotType.label;
-                                b.tab(L, b2 => b2.color('yellow', b3 => b3.text(slotLabel)));
+                                b.tab(L, b2 => b2.weight('bold',b3 => b3.text(slotLabel)));
                                 if (equipped) {
                                     const itemName = getItemData(equipped.itemDataId)?.name ?? equipped.itemDataId;
                                     b.text(`${itemName}\n`);
@@ -89,19 +89,19 @@ export function initPlayerCommands(): void {
 
                         b
                         .color('gray', b2 => b2.text('─── 상태 ───\n'))
-                        .color('yellow', b2 => b2.text('생명력'))
+                        .weight('bold',b2 => b2.text('생명력'))
                         .text('  ')
                         .progress({ value: lifeRatio, length: 120, color: '$life', thickness: 8 })
                         .text(`  ${player.life.toFixed(1)} / ${player.maxLife.toFixed(1)}\n`)
-                        .color('yellow', b2 => b2.text('정신력'))
+                        .weight('bold',b2 => b2.text('정신력'))
                         .text('  ')
                         .progress({ value: mentalityRatio, length: 120, color: '$magic', thickness: 8 })
                         .text(`  ${player.mentality.toFixed(1)} / ${player.maxMentality.toFixed(1)}\n`)
-                        .color('yellow', b2 => b2.text('배고픔'))
+                        .weight('bold',b2 => b2.text('배고픔'))
                         .text('  ')
                         .progress({ value: hungryRatio, length: 120, color: '$hungry', thickness: 8 })
                         .text(`  ${player.hungry.toFixed(1)} / ${player.maxHungry.toFixed(1)}\n`)
-                        .color('yellow', b2 => b2.text('목마름'))
+                        .weight('bold',b2 => b2.text('목마름'))
                         .text('  ')
                         .progress({ value: thirstyRatio, length: 120, color: '$thirsty', thickness: 8 })
                         .text(`  ${player.thirsty.toFixed(1)} / ${player.maxThirsty.toFixed(1)}\n`)
@@ -112,10 +112,10 @@ export function initPlayerCommands(): void {
                         for (let i = 0; i < combatAttrs.length; i += 2) {
                             const left = combatAttrs[i];
                             const right = combatAttrs[i + 1];
-                            b.tab(L, b2 => b2.color('yellow', b3 => b3.text(left.label)))
+                            b.tab(L, b2 => b2.weight('bold',b3 => b3.text(left.label)))
                              .tab(V, b2 => b2.text(left.format(attr[left.key])));
                             if (right) {
-                                b.tab(L, b2 => b2.color('yellow', b3 => b3.text(right.label)))
+                                b.tab(L, b2 => b2.weight('bold',b3 => b3.text(right.label)))
                                  .text(`${right.format(attr[right.key])}\n`);
                             } else {
                                 b.text('\n');
@@ -123,16 +123,16 @@ export function initPlayerCommands(): void {
                         }
 
                         b.color('gray', b2 => b2.text('─── 스탯 ───\n'))
-                         .tab(L, b2 => b2.color('yellow', b3 => b3.text('스탯포인트'))).text(`${player.statPoint}\n`);
+                         .tab(L, b2 => b2.weight('bold',b3 => b3.text('스탯포인트'))).text(`${player.statPoint}\n`);
 
                         const statTypes = StatType.values();
                         for (let i = 0; i < statTypes.length; i += 2) {
                             const left = statTypes[i];
                             const right = statTypes[i + 1];
-                            b.tab(L, b2 => b2.color('yellow', b3 => b3.text(left.label)))
+                            b.tab(L, b2 => b2.weight('bold',b3 => b3.text(left.label)))
                              .tab(V, b2 => b2.text(String(stats[left.key])));
                             if (right) {
-                                b.tab(L, b2 => b2.color('yellow', b3 => b3.text(right.label)))
+                                b.tab(L, b2 => b2.weight('bold',b3 => b3.text(right.label)))
                                  .text(`${stats[right.key]}\n`);
                             } else {
                                 b.text('\n');
@@ -548,7 +548,7 @@ export function initPlayerCommands(): void {
                 const L = 100;
                 const V = 55;
                 for (const stat of StatType.values()) {
-                    b.tab(L, b2 => b2.color('yellow', b3 => b3.text(stat.label)))
+                    b.tab(L, b2 => b2.weight('bold',b3 => b3.text(stat.label)))
                      .tab(V, b2 => b2.text(String(stats[stat.key])));
                     if (available > 0) {
                         b.button(`/스탯분배 ${stat.key} 1`, b2 => b2.color('lime', b3 => b3.text('[+1]')));
