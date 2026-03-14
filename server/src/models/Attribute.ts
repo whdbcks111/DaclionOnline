@@ -5,21 +5,100 @@ export class AttributeType {
     /** @internal 자기 등록용 레지스트리. 인스턴스 선언보다 먼저 초기화되어야 함 */
     private static _all: AttributeType[] = []
 
-    static readonly MAX_LIFE     = new AttributeType('maxLife',      '최대 생명력',  100)
-    static readonly MAX_MENTALITY= new AttributeType('maxMentality', '최대 정신력',  100)
-    static readonly MAX_THIRSTY  = new AttributeType('maxThirsty',   '최대 목마름',  100)
-    static readonly MAX_HUNGRY   = new AttributeType('maxHungry',    '최대 배고픔',  100)
-    static readonly MAX_WEIGHT   = new AttributeType('maxWeight',    '최대 중량',     50)
-    static readonly ATK          = new AttributeType('atk',          '공격력',        10,   undefined, v => `기본 공격 시 ${v.toFixed(1)}의 피해를 줍니다.`)
-    static readonly MAGIC_FORCE  = new AttributeType('magicForce',   '마법력',        10,   undefined, v => `마법 공격 시 ${v.toFixed(1)}의 피해를 줍니다.`)
-    static readonly DEF          = new AttributeType('def',          '방어력',         0,   undefined, v => `물리 피해를 ${v.toFixed(1)} 감소시킵니다.`)
-    static readonly MAGIC_DEF    = new AttributeType('magicDef',     '마법저항',       0,   undefined, v => `마법 피해를 ${v.toFixed(1)} 감소시킵니다.`)
-    static readonly ARMOR_PEN    = new AttributeType('armorPen',     '방어관통',       0,   undefined, v => `대상의 방어력을 ${v.toFixed(1)} 무시합니다.`)
-    static readonly MAGIC_PEN    = new AttributeType('magicPen',     '마법관통',       0,   undefined, v => `대상의 마법저항을 ${v.toFixed(1)} 무시합니다.`)
-    static readonly SPEED        = new AttributeType('speed',        '이동속도',       1,   undefined, v => `이동 속도가 ${v.toFixed(2)}배입니다.`)
-    static readonly ATTACK_SPEED = new AttributeType('attackSpeed',  '공격속도',       1,   undefined, v => `공격 속도가 ${v.toFixed(2)}배입니다.`)
-    static readonly CRIT_RATE    = new AttributeType('critRate',     '치명타율',    0.05, v => `${(v * 100).toFixed(1)}%`, v => `${(v * 100).toFixed(1)}% 확률로 치명타가 발생합니다.`)
-    static readonly CRIT_DMG     = new AttributeType('critDmg',      '치명타피해', 1.5,  v => `${(v * 100).toFixed(0)}%`, v => `치명타 시 ${(v * 100).toFixed(0)}%의 피해를 줍니다.`)
+    static readonly MAX_LIFE     = new AttributeType(
+        'maxLife',      
+        '최대 생명력',  
+        100
+    )
+    static readonly MAX_MENTALITY= new AttributeType(
+        'maxMentality', 
+        '최대 정신력',  
+        100
+    )
+    static readonly MAX_THIRSTY  = new AttributeType(
+        'maxThirsty',   
+        '최대 목마름',  
+        100
+    )
+    static readonly MAX_HUNGRY   = new AttributeType(
+        'maxHungry',    
+        '최대 배고픔',  
+        100
+    )
+    static readonly MAX_WEIGHT   = new AttributeType(
+        'maxWeight',    
+        '최대 중량',     
+        50
+    )
+    static readonly ATK          = new AttributeType(
+        'atk',          
+        '공격력',        
+        10,   
+        undefined, 
+        v => `기본 공격 시 ${v.toFixed(1)}의 피해를 줍니다.`
+    )
+    static readonly MAGIC_FORCE  = new AttributeType(
+        'magicForce',   
+        '마법력',        
+        10,   
+        undefined, 
+        v => `마법 공격 시 ${v.toFixed(1)}의 피해를 줍니다.`
+    )
+    static readonly DEF          = new AttributeType(
+        'def',          
+        '방어력',         
+        0,   
+        undefined, 
+        v => `물리 피해를 ${v.toFixed(1)} 감소시킵니다.`
+    )
+    static readonly MAGIC_DEF    = new AttributeType(
+        'magicDef',     
+        '마법저항',       
+        0,   
+        undefined, 
+        v => `마법 피해를 ${v.toFixed(1)} 감소시킵니다.`
+    )
+    static readonly ARMOR_PEN    = new AttributeType(
+        'armorPen',     
+        '방어관통',       
+        0,   
+        undefined, 
+        v => `대상의 방어력을 ${v.toFixed(1)} 무시합니다.`
+    )
+    static readonly MAGIC_PEN    = new AttributeType(
+        'magicPen',     
+        '마법관통',       
+        0,   
+        undefined, 
+        v => `대상의 마법저항을 ${v.toFixed(1)} 무시합니다.`
+    )
+    static readonly SPEED        = new AttributeType(
+        'speed',        
+        '이동속도',       
+        1,   
+        undefined, 
+        v => `이동 속도가 ${v.toFixed(2)}배입니다.`
+    )
+    static readonly ATTACK_SPEED = new AttributeType(
+        'attackSpeed',  
+        '공격속도',       
+        1,   
+        undefined, 
+        v => `공격 속도가 ${v.toFixed(2)}배입니다.`
+    )
+    static readonly CRIT_RATE    = new AttributeType(
+        'critRate',     
+        '치명타율',    
+        0.05, 
+        v => `${(v * 100).toFixed(1)}%`, v => `${(v * 100).toFixed(1)}% 확률로 치명타가 발생합니다.` + 'ddd'.repeat(100)
+    )
+    static readonly CRIT_DMG     = new AttributeType(
+        'critDmg',      
+        '치명타피해', 
+        1.5,  
+        v => `${(v * 100).toFixed(0)}%`, 
+        v => `치명타 시 ${(v * 100).toFixed(0)}%의 피해를 줍니다.`
+    )
 
     readonly key: AttributeKey
     readonly label: string
