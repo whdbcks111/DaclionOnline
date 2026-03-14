@@ -10,38 +10,55 @@ export class StatType {
     /** @internal 자기 등록용 레지스트리. 인스턴스 선언보다 먼저 초기화되어야 함 */
     private static _all: StatType[] = []
 
-    static readonly STRENGTH = new StatType('strength', '근력', (entity, points, source) => {
-        entity.attribute.addModifier({ attribute: 'atk', op: 'add', value: 2 * points, source })
-    })
+    static readonly STRENGTH = new StatType('strength', '근력',
+        (entity, points, source) => {
+            entity.attribute.addModifier({ attribute: 'atk', op: 'add', value: 2 * points, source })
+        },
+        p => `근력 1 → 공격력 +2\n현재 근력 ${p}: 공격력 +${2 * p}`
+    )
 
-    static readonly AGILITY = new StatType('agility', '민첩', (entity, points, source) => {
-        entity.attribute.addModifier({ attribute: 'speed', op: 'add', value: 0.05 * points, source })
-        entity.attribute.addModifier({ attribute: 'attackSpeed', op: 'add', value: 0.01 * points, source })
-    })
+    static readonly AGILITY = new StatType('agility', '민첩',
+        (entity, points, source) => {
+            entity.attribute.addModifier({ attribute: 'speed', op: 'add', value: 0.05 * points, source })
+            entity.attribute.addModifier({ attribute: 'attackSpeed', op: 'add', value: 0.01 * points, source })
+        },
+        p => `민첩 1 → 이동속도 +0.05, 공격속도 +0.01\n현재 민첩 ${p}: 이동속도 +${(0.05 * p).toFixed(2)}, 공격속도 +${(0.01 * p).toFixed(2)}`
+    )
 
-    static readonly VITALITY = new StatType('vitality', '체력', (entity, points, source) => {
-        entity.attribute.addModifier({ attribute: 'maxLife', op: 'add', value: 10 * points, source })
-        entity.attribute.addModifier({ attribute: 'def', op: 'add', value: 1 * points, source })
-    })
+    static readonly VITALITY = new StatType('vitality', '체력',
+        (entity, points, source) => {
+            entity.attribute.addModifier({ attribute: 'maxLife', op: 'add', value: 10 * points, source })
+            entity.attribute.addModifier({ attribute: 'def', op: 'add', value: 1 * points, source })
+        },
+        p => `체력 1 → 최대 생명력 +10, 방어력 +1\n현재 체력 ${p}: 최대 생명력 +${10 * p}, 방어력 +${p}`
+    )
 
-    static readonly SENSIBILITY = new StatType('sensibility', '감각', (entity, points, source) => {
-        entity.attribute.addModifier({ attribute: 'critRate', op: 'add', value: 0.001 * points, source })
-        entity.attribute.addModifier({ attribute: 'critDmg', op: 'add', value: 0.01 * points, source })
-    })
+    static readonly SENSIBILITY = new StatType('sensibility', '감각',
+        (entity, points, source) => {
+            entity.attribute.addModifier({ attribute: 'critRate', op: 'add', value: 0.001 * points, source })
+            entity.attribute.addModifier({ attribute: 'critDmg', op: 'add', value: 0.01 * points, source })
+        },
+        p => `감각 1 → 치명타율 +0.1%, 치명타 피해 +1%\n현재 감각 ${p}: 치명타율 +${(0.1 * p).toFixed(1)}%, 치명타 피해 +${p}%`
+    )
 
-    static readonly MENTALITY = new StatType('mentality', '정신력', (entity, points, source) => {
-        entity.attribute.addModifier({ attribute: 'maxMentality', op: 'add', value: 5 * points, source })
-        entity.attribute.addModifier({ attribute: 'magicForce', op: 'add', value: 2 * points, source })
-    })
+    static readonly MENTALITY = new StatType('mentality', '정신력',
+        (entity, points, source) => {
+            entity.attribute.addModifier({ attribute: 'maxMentality', op: 'add', value: 5 * points, source })
+            entity.attribute.addModifier({ attribute: 'magicForce', op: 'add', value: 2 * points, source })
+        },
+        p => `정신력 1 → 최대 정신력 +5, 마법력 +2\n현재 정신력 ${p}: 최대 정신력 +${5 * p}, 마법력 +${2 * p}`
+    )
 
     readonly key: StatKey
     readonly label: string
     readonly modify: StatModifyFn
+    readonly getDescription: (points: number) => string
 
-    private constructor(key: StatKey, label: string, modify: StatModifyFn) {
+    private constructor(key: StatKey, label: string, modify: StatModifyFn, getDescription: (points: number) => string) {
         this.key = key
         this.label = label
         this.modify = modify
+        this.getDescription = getDescription
         StatType._all.push(this)
     }
 

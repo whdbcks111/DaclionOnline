@@ -129,10 +129,10 @@ export function initPlayerCommands(): void {
                         for (let i = 0; i < statTypes.length; i += 2) {
                             const left = statTypes[i];
                             const right = statTypes[i + 1];
-                            b.tab(L, b2 => b2.weight('bold',b3 => b3.text(left.label)))
+                            b.tab(L, b2 => b2.tooltip(left.getDescription(stats[left.key]), b3 => b3.weight('bold', b4 => b4.text(left.label))))
                              .tab(V, b2 => b2.text(String(stats[left.key])));
                             if (right) {
-                                b.tab(L, b2 => b2.weight('bold',b3 => b3.text(right.label)))
+                                b.tab(L, b2 => b2.tooltip(right.getDescription(stats[right.key]), b3 => b3.weight('bold', b4 => b4.text(right.label))))
                                  .text(`${stats[right.key]}\n`);
                             } else {
                                 b.text('\n');
@@ -548,7 +548,7 @@ export function initPlayerCommands(): void {
                 const L = 100;
                 const V = 55;
                 for (const stat of StatType.values()) {
-                    b.tab(L, b2 => b2.weight('bold',b3 => b3.text(stat.label)))
+                    b.tab(L, b2 => b2.tooltip(stat.getDescription(stats[stat.key]), b3 => b3.weight('bold', b4 => b4.text(stat.label))))
                      .tab(V, b2 => b2.text(String(stats[stat.key])));
                     if (available > 0) {
                         b.button(`/스탯분배 ${stat.key} 1`, b2 => b2.color('lime', b3 => b3.text('[+1]')));
