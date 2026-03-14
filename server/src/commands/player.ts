@@ -112,10 +112,10 @@ export function initPlayerCommands(): void {
                         for (let i = 0; i < combatAttrs.length; i += 2) {
                             const left = combatAttrs[i];
                             const right = combatAttrs[i + 1];
-                            b.tab(L, b2 => b2.weight('bold',b3 => b3.text(left.label)))
+                            b.tab(L, b2 => b2.tooltip(left.getDescription(attr[left.key]), b3 => b3.weight('bold', b4 => b4.text(left.label))))
                              .tab(V, b2 => b2.text(left.format(attr[left.key])));
                             if (right) {
-                                b.tab(L, b2 => b2.weight('bold',b3 => b3.text(right.label)))
+                                b.tab(L, b2 => b2.tooltip(right.getDescription(attr[right.key]), b3 => b3.weight('bold', b4 => b4.text(right.label))))
                                  .text(`${right.format(attr[right.key])}\n`);
                             } else {
                                 b.text('\n');
