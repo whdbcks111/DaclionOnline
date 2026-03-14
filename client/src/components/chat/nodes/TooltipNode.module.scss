@@ -21,7 +21,7 @@
     min-width: 120px;
     max-width: 280px;
     padding: $spacing-xs $spacing-sm;
-    background-color: $color-bg-primary;
+    background-color: $color-bg;
     border: 1px solid $color-border;
     border-radius: $border-radius-sm;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -48,7 +48,7 @@
         left: 50%;
         transform: translateX(-50%);
         border: 5px solid transparent;
-        border-top-color: $color-bg-primary;
+        border-top-color: $color-bg;
         z-index: 1;
     }
 }
