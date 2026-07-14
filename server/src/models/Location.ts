@@ -2,13 +2,14 @@ import Monster from "./Monster.js";
 import type Player from "./Player.js";
 import type { LocationData, SpawnInfo, ConnectionInfo, ZoneType } from "../../../shared/types.js";
 import logger from "../utils/logger.js";
+import { TagCollection, normalizeTags } from "../../../shared/tags.js";
+import type { TagReadable } from "../../../shared/tags.js";
+import type { ItemSnapshot } from "./Item.js";
 
 export type { LocationData, SpawnInfo, ConnectionInfo, ZoneType };
 
 /** 바닥 아이템 */
-export interface DroppedItem {
-    itemDataId: string;
-    count: number;
+export interface DroppedItem extends ItemSnapshot {
     droppedAt: number;  // timestamp
 }
 
@@ -41,9 +42,10 @@ export function registerLocationPassive(locationId: string, callback: PassiveCal
     passiveCallbacks.set(locationId, callback);
 }
 
-export default class Location {
+export default class Location implements TagReadable {
     readonly id: string;
     readonly data: LocationData;
+    readonly tags: TagCollection;
 
     private _monsters: Monster[] = [];
     private _droppedItems: DroppedItem[] = [];
@@ -51,6 +53,7 @@ export default class Location {
     constructor(data: LocationData) {
         this.id = data.id;
         this.data = data;
+        this.tags = new TagCollection({ definition: data.tags });
 
         // 서버 로드 시 즉시 전부 스폰
         for (const spawn of data.spawns) {
@@ -78,8 +81,10 @@ export default class Location {
 
     get droppedItems(): ReadonlyArray<DroppedItem> { return this._droppedItems; }
 
-    addDroppedItem(itemDataId: string, count: number): void {
-        this._droppedItems.push({ itemDataId, count, droppedAt: Date.now() });
+    hasTag(tag: string): boolean { return this.tags.hasTag(tag); }
+
+    addDroppedItem(item: ItemSnapshot): void {
+        this._droppedItems.push({ ...item, tags: [...item.tags], droppedAt: Date.now() });
     }
 
     pickupItem(index: number): DroppedItem | null {
@@ -139,8 +144,9 @@ const locationInstances = new Map<string, Location>();
 
 /** 장소 정의 등록 */
 export function defineLocation(data: LocationData): void {
-    locationDataCache.set(data.id, data);
-    locationInstances.set(data.id, new Location(data));
+    const normalized = { ...data, tags: normalizeTags(data.tags ?? []) };
+    locationDataCache.set(normalized.id, normalized);
+    locationInstances.set(normalized.id, new Location(normalized));
 }
 
 /** 모든 LocationData 반환 (JSON 직렬화용) */

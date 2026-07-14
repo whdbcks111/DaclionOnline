@@ -4,6 +4,7 @@ import { registerItemUse } from '../modules/itemUse.js';
 import { sendNotificationToUser } from '../modules/message.js';
 import { getPlayerByUserId } from '../modules/player.js';
 import logger from '../utils/logger.js';
+import { GameTags } from '../../../shared/tags.js';
 
 registerItemUse('heal_hp', (inv, item, finish) => {
     function* healRoutine(amount: number, time: number) {
@@ -62,6 +63,7 @@ defineItem({
     equipSlot: null,
     modifiers: null,
     baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_NATURAL],
 });
 
 defineItem({
@@ -77,6 +79,7 @@ defineItem({
     equipSlot: null,
     modifiers: null,
     baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER],
 });
 
 defineItem({
@@ -94,6 +97,7 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 5, source: '' },
     ],
     baseDurability: 50,
+    tags: [GameTags.ITEM_WEAPON, GameTags.PROPERTY_FIRE],
 });
 
 defineItem({
@@ -111,4 +115,23 @@ defineItem({
         { attribute: 'def', op: 'add', value: 3, source: '' },
     ],
     baseDurability: 60,
+    tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_WOOD],
+});
+
+defineItem({
+    id: 'venom_dagger',
+    name: '독 단검',
+    description: '독을 머금은 단검. 무생물에게는 독 효과가 통하지 않는다.',
+    category: '단검',
+    weight: 1.5,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 3, source: '' },
+    ],
+    baseDurability: 40,
+    tags: [GameTags.ITEM_WEAPON, GameTags.PROPERTY_POISON],
 });

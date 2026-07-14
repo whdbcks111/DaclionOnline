@@ -1,6 +1,8 @@
 import prisma from "../config/prisma.js";
 import { executeItemUse } from "../modules/itemUse.js";
 import { Item, getItemData } from "./Item.js";
+import type { ItemSnapshot } from "./Item.js";
+import type { TagId } from "../../../shared/tags.js";
 
 export type { ItemData } from "./Item.js";
 export { Item, getItemData, getAllItemData } from "./Item.js";
@@ -18,6 +20,14 @@ export default class Inventory {
     private constructor(playerId: number, maxWeight: number) {
         this.playerId = playerId;
         this._maxWeight = maxWeight;
+    }
+
+    private track(item: Item, state: ItemState): void {
+        item.tags.setPersistentChangeHandler(() => {
+            if (this._states.get(item) === ItemState.Clean) this._states.set(item, ItemState.Modified);
+        });
+        this._items.push(item);
+        this._states.set(item, state);
     }
 
     // -- Getters --
@@ -77,17 +87,35 @@ export default class Inventory {
     }
 
     /** 아이템 추가. 성공 시 true */
-    addItem(itemDataId: string, count: number, metadata?: Record<string, any> | null): boolean {
+    addItem(
+        itemDataId: string,
+        count: number,
+        metadata?: Record<string, any> | null,
+        tags: readonly TagId[] = [],
+    ): boolean {
         const data = getItemData(itemDataId);
         if (!data) return false;
-        if (!this.canAdd(itemDataId, count)) return false;
+        return this.addItemSnapshot({
+            itemDataId,
+            count,
+            durability: data.baseDurability,
+            metadata: metadata ?? (data.baseMetadata ? { ...data.baseMetadata } : null),
+            tags: [...tags],
+        });
+    }
 
-        let remaining = count;
+    /** 아이템 이동 시 metadata/내구도/영속 태그를 보존해 추가 */
+    addItemSnapshot(snapshot: ItemSnapshot): boolean {
+        const data = getItemData(snapshot.itemDataId);
+        if (!data || snapshot.count <= 0) return false;
+        if (!this.canAdd(snapshot.itemDataId, snapshot.count)) return false;
+
+        let remaining = snapshot.count;
 
         // 스택 가능하면 기존 아이템에 먼저 채우기
         if (data.stackable) {
             for (const item of this._items) {
-                if (item.itemDataId !== itemDataId) continue;
+                if (!item.canStackWith(snapshot)) continue;
                 const space = data.maxStack - item.count;
                 if (space <= 0) continue;
 
@@ -105,13 +133,14 @@ export default class Inventory {
         while (remaining > 0) {
             const qty = data.stackable ? Math.min(remaining, data.maxStack) : 1;
             const item = new Item(
-                itemDataId,
+                snapshot.itemDataId,
                 qty,
-                data.baseDurability,
-                metadata ?? (data.baseMetadata ? { ...data.baseMetadata } : null),
+                snapshot.durability,
+                snapshot.metadata ? { ...snapshot.metadata } : null,
+                0,
+                snapshot.tags,
             );
-            this._items.push(item);
-            this._states.set(item, ItemState.New);
+            this.track(item, ItemState.New);
             remaining -= qty;
         }
 
@@ -217,9 +246,9 @@ export default class Inventory {
                 row.durability,
                 row.metadata as Record<string, any> | null,
                 row.id,
+                (row.tags as TagId[] | null) ?? [],
             );
-            inv._items.push(item);
-            inv._states.set(item, ItemState.Clean);
+            inv.track(item, ItemState.Clean);
         }
         return inv;
     }
@@ -241,6 +270,7 @@ export default class Inventory {
                                 count: item.count,
                                 durability: item.durability,
                                 metadata: item.metadata ?? undefined,
+                                tags: item.tags.persistentValues(),
                             },
                         }).then(row => { item.id = row.id; })
                     );
@@ -253,6 +283,7 @@ export default class Inventory {
                                 count: item.count,
                                 durability: item.durability,
                                 metadata: item.metadata ?? undefined,
+                                tags: item.tags.persistentValues(),
                             },
                         })
                     );

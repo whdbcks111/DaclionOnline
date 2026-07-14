@@ -32,6 +32,14 @@
 3. 위치 스폰은 `data/locations.json`의 `spawns`에서 연결한다.
 4. UI에 새 상태가 필요하면 공유 payload → `modules/player.ts` → `HudContext` → HUD 컴포넌트 순서로 확장한다.
 
+## 태그/속성 효과 추가
+
+1. 기존 공용 ID가 필요하면 `shared/tags.ts::GameTags`를 추가하고, 객체 정의의 `tags`에 부여한다. 동적 콘텐츠 태그는 `namespace:path` 문자열을 그대로 등록할 수 있다.
+2. 상성·저항·면역을 별도 시스템으로 나누지 않고 `data/tagEffects.ts`에서 `defineTagEffectModifier(source, target, modifier)` 단방향 행을 추가한다.
+3. 대미지 외 효과값은 raw 태그 배열을 읽지 않고 `applyTagEffectValue`를 사용하며, 완전 무효화 시 `effective`도 검사한다.
+4. 영속 태그 소유 객체를 추가하면 메모리 `TagCollection`, dirty callback, Prisma/JSON 저장과 이동 snapshot을 함께 연결한다.
+5. 규칙과 대표 데이터는 [systems/tags-effects.md](../systems/tags-effects.md)에 동기화하고 중첩·방향성 테스트를 추가한다.
+
 ## 위치/이동 추가
 
 1. `data/locations.json`에 좌표, 연결, 스폰, 상점 ID를 정의한다. 연결은 필요한 방향마다 명시한다.

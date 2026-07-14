@@ -305,10 +305,10 @@ export function initPlayerCommands(): void {
             }
 
             const itemName = item.name;
-            const itemDataId = item.itemDataId;
+            const snapshot = item.snapshot(1);
 
             player.inventory.removeItem(item.id, 1);
-            location.addDroppedItem(itemDataId, 1);
+            location.addDroppedItem(snapshot);
 
             sendBotMessageToUser(userId, `${itemName}을(를) 버렸습니다.`);
         },
@@ -366,7 +366,7 @@ export function initPlayerCommands(): void {
                 }
             }
 
-            const equipItem = new Item(item.itemDataId, 1, item.durability, item.metadata ? { ...item.metadata } : null);
+            const equipItem = Item.fromSnapshot(item.snapshot(1));
             const displaced = player.equipment.equipSwap(slot, equipItem, player.attribute, targetSlotIndex);
 
             if (displaced === undefined) {
@@ -377,7 +377,7 @@ export function initPlayerCommands(): void {
             player.inventory.removeItem(item.id, 1);
 
             if (displaced !== null) {
-                player.inventory.addItem(displaced.itemDataId, 1, displaced.metadata ?? null);
+                player.inventory.addItemSnapshot(displaced.snapshot(1));
                 sendBotMessageToUser(userId, `${item.name}을(를) 장착했습니다. (기존 장착 해제: ${getItemData(displaced.itemDataId)?.name ?? displaced.itemDataId})`);
             } else {
                 sendBotMessageToUser(userId, `${item.name}을(를) 장착했습니다.`);
@@ -439,7 +439,7 @@ export function initPlayerCommands(): void {
                 return;
             }
 
-            player.inventory.addItem(unequipped.itemDataId, 1, unequipped.metadata ?? null);
+            player.inventory.addItemSnapshot(unequipped.snapshot(1));
             sendBotMessageToUser(userId, `${getItemData(unequipped.itemDataId)?.name ?? unequipped.itemDataId}을(를) 장착 해제했습니다.`);
         },
     });

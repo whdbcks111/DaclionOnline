@@ -1,4 +1,5 @@
 import { defineMonster } from '../models/Monster.js';
+import { GameTags } from '../../../shared/tags.js';
 
 defineMonster({
     id: 'slime',
@@ -17,6 +18,7 @@ defineMonster({
     expReward: 10,
     goldReward: { min: 1, max: 5 },
     equipments: [],
+    tags: [GameTags.ENTITY_SLIME, GameTags.PROPERTY_WATER],
 });
 
 defineMonster({
@@ -37,4 +39,25 @@ defineMonster({
     expReward: 25,
     goldReward: { min: 5, max: 15 },
     equipments: [],
+    tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_NATURAL],
+});
+
+defineMonster({
+    id: 'stone_golem',
+    name: '돌 골렘',
+    level: 5,
+    exp: 50,
+    baseAttribute: {
+        maxLife: 120,
+        atk: 18,
+        def: 10,
+        speed: 0.35,
+    },
+    drops: [
+        { itemDataId: 'old_shield', minCount: 1, maxCount: 1, chance: 0.08 },
+    ],
+    expReward: 50,
+    goldReward: { min: 10, max: 25 },
+    equipments: [],
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_NATURAL],
 });

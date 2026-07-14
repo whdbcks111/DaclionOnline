@@ -15,6 +15,7 @@
 | 인증·세션·프로필 기능 | [systems/auth-session.md](systems/auth-session.md) |
 | 채팅·채널·명령어 기능 | [systems/chat-command.md](systems/chat-command.md) |
 | 플레이어·전투·위치·게임 루프 | [systems/player-world.md](systems/player-world.md) |
+| 태그·속성 상성·효과 배율 | [systems/tags-effects.md](systems/tags-effects.md) |
 | 아이템·인벤토리·장비·상점 | [systems/items-shop.md](systems/items-shop.md) |
 | DB 모델과 저장 경계 | [data/database.md](data/database.md) |
 | 실행·빌드·환경 설정 | [development.md](development.md) |

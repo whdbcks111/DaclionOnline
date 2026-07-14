@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc && cp src/data/*.json dist/server/src/data/",
+    "test": "tsx --test src/**/*.test.ts",
     "start": "node dist/server/src/index.js"
   },
   "dependencies": {

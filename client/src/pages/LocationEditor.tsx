@@ -67,7 +67,7 @@ export default function LocationEditor() {
     if (!socket) return
 
     const onLocations = (data: LocationData[]) => {
-      setLocations(data)
+      setLocations(data.map(location => ({ ...location, tags: location.tags ?? [] })))
     }
 
     const onSaveResult = (result: { ok?: boolean; error?: string }) => {
@@ -213,6 +213,7 @@ export default function LocationEditor() {
       z: 0,
       spawns: [],
       connections: [],
+      tags: [],
     }
     setLocations(prev => [...prev, newLoc])
     setSelectedId(newLoc.id)
@@ -299,7 +300,10 @@ export default function LocationEditor() {
   const save = useCallback(() => {
     if (!socket) return
     setSaveStatus('saving')
-    socket.emit('adminSaveLocations', locations)
+    socket.emit('adminSaveLocations', locations.map(location => ({
+      ...location,
+      tags: location.tags.filter(Boolean),
+    })))
   }, [socket, locations])
 
   // --- 연결선 중복 제거용 Set ---
@@ -492,6 +496,18 @@ export default function LocationEditor() {
                   <option value="safe">safe (안전 구역)</option>
                   <option value="normal">normal (일반 구역)</option>
                 </select>
+              </label>
+
+              <label className={styles.field}>
+                <span>태그 (쉼표 구분)</span>
+                <input
+                  className={styles.input}
+                  placeholder="location:safe, property:natural"
+                  value={selectedLoc.tags.join(', ')}
+                  onChange={e => updateSelected({
+                    tags: e.target.value.split(',').map(tag => tag.trim().toLowerCase()),
+                  })}
+                />
               </label>
 
               <label className={styles.fieldRow}>

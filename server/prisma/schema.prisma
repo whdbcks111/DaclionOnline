@@ -38,6 +38,7 @@ model Player {
   exp        Int      @default(0)
   maxWeight  Float    @default(100.0) @map("max_weight")
   stats      Json?
+  tags       Json?
   locationId String   @db.VarChar(100) @default("town_square") @map("location_id")
 
   life                Float    @default(100.0)
@@ -68,6 +69,7 @@ model Item {
   count       Int       @default(1)
   durability  Int?
   metadata    Json?
+  tags        Json?
 
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
@@ -89,6 +91,7 @@ model Equipment {
   slotIndex   Int       @default(0) @map("slot_index")
   durability  Int?
   metadata    Json?
+  tags        Json?
 
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")

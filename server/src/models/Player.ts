@@ -8,6 +8,8 @@ import { AttributeType } from "./Attribute.js";
 import { getLocation, getRespawnLocation } from "./Location.js";
 import { sendBotMessageToUser, sendNotificationToUser } from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
+import { GameTags } from "../../../shared/tags.js";
+import type { TagId } from "../../../shared/tags.js";
 
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
@@ -34,8 +36,18 @@ export default class Player extends Entity {
         statPoints?: Partial<StatRecord>,
         life?: number, mentality?: number, thirsty?: number, hungry?: number,
         statPoint = 0, gold = 0,
+        persistentTags: readonly TagId[] = [],
     ) {
-        super(level, exp, locationId, { ...DEFAULT_BASE_ATTRIBUTE, maxWeight }, equipment, statPoints);
+        super(
+            level,
+            exp,
+            locationId,
+            { ...DEFAULT_BASE_ATTRIBUTE, maxWeight },
+            equipment,
+            statPoints,
+            [GameTags.ENTITY_PLAYER],
+            persistentTags,
+        );
         this.userId = userId;
         this._nickname = nickname;
         this.inventory = inventory;
@@ -100,6 +112,8 @@ export default class Player extends Entity {
     set gold(val: number) { this._gold = Math.max(0, val); this._dirty = true; }
 
     get dirty() { return this._dirty || this.stat.dirty || this.inventory.dirty || this.equipment.dirty; }
+
+    protected override onPersistentTagsChanged(): void { this._dirty = true; }
 
     override get deathDuration(): number {
         let baseDuration = 10;
@@ -200,7 +214,7 @@ export default class Player extends Entity {
         const inventory = await Inventory.load(data.userId, data.maxWeight);
         const equipment = await Equipment.load(data.userId);
         const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint, data.gold);
+        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint, data.gold, (data.tags as TagId[] | null) ?? []);
     }
 
     /** 새 플레이어 생성 */
@@ -231,6 +245,7 @@ export default class Player extends Entity {
                     hungry: this._hungry,
                     statPoint: this._statPoint,
                     gold: this._gold,
+                    tags: this.tags.persistentValues(),
                 } as any,
             });
             this._dirty = false;

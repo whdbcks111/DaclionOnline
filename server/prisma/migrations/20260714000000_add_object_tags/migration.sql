@@ -1,0 +1,3 @@
+ALTER TABLE `players` ADD COLUMN `tags` JSON NULL;
+ALTER TABLE `items` ADD COLUMN `tags` JSON NULL;
+ALTER TABLE `equipments` ADD COLUMN `tags` JSON NULL;

@@ -7,6 +7,7 @@ import type { LocationData } from "../models/Location.js";
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
 import '../data/locations.js'
+import { normalizeTags } from '../../../shared/tags.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,7 +66,10 @@ export function initLocation(): void {
             }
 
             try {
-                const data = locations as LocationData[];
+                const data = (locations as LocationData[]).map(location => ({
+                    ...location,
+                    tags: normalizeTags(location.tags ?? []),
+                }));
                 saveLocationsToJson(data);
                 reloadAllLocations(data);
                 logger.success(`어드민 ${session.username}: 장소 데이터 저장 (${data.length}개)`);

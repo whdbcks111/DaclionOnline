@@ -14,6 +14,8 @@ Location ── monsters[]
          └─ connections[] ──> Location
 ```
 
+모든 Entity와 Location은 `TagCollection`을 가지며, Entity의 유효 태그에는 현재 장착 아이템 태그가 포함된다. 상세 API와 속성표는 [태그·효과 배율 시스템](tags-effects.md)을 참고한다.
+
 ## 게임 루프와 갱신 주기
 
 - `modules/game.ts`: 20 FPS. 모든 온라인 Player의 `earlyUpdate → update → lateUpdate`, Location/Monster, Shop, Coroutine 순으로 갱신한다.
@@ -38,6 +40,7 @@ Player setter, Stat, Inventory, Equipment는 변경 상태를 추적한다. `Pla
 ## 전투·사망·보상
 
 - 공격마다 공격자의 `critRate`를 0~1로 보정해 치명타를 판정하고, 성공하면 raw damage에 `max(0, critDmg)`을 곱한다.
+- 치명타 뒤 공격자→대상 단방향 태그 modifier를 적용한다. 면역 0배, 저항 0.5배, 우세 1.5배이며 복수 일치 시 곱하지 않고 가장 낮은 한 값만 쓴다.
 - 물리 피해는 `max(0, raw - max(0, 대상 def - 공격자 armorPen))`, 마법은 대상 magicDef/공격자 magicPen, absolute는 방어와 관통 0으로 계산한다.
 - 공격 속도로 cooldown을 `1 / attackSpeed`초 설정한다.
 - Monster는 처음 맞은 공격자를 target으로 삼고 같은 위치에 살아 있는 동안 자동 공격한다.
@@ -53,7 +56,7 @@ Player setter, Stat, Inventory, Equipment는 변경 상태를 추적한다. `Pla
 - `/이동` 시간은 `max(1, distance / speed / 5)`초이고 0.5초 단위 coroutine 알림을 갱신한다.
 - 위치 편집기는 `/admin/locations`에서 그래프를 편집하고 `adminSaveLocations`로 JSON과 런타임을 한 번에 교체한다.
 
-현재 월드는 마을 광장(리스폰), 초원, 상점 거리, 어두운 숲, 잡화점으로 구성된다. 어두운 숲 연결은 `level_5` 조건을 사용한다.
+현재 월드는 마을 광장(리스폰), 초원, 상점 거리, 어두운 숲, 잡화점으로 구성된다. 초원에는 물 속성 슬라임, 어두운 숲에는 자연 속성 고블린과 무생물 돌 골렘이 스폰되며 어두운 숲 연결은 `level_5` 조건을 사용한다.
 
 ## HUD 데이터
 

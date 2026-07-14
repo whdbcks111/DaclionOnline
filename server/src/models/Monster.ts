@@ -8,6 +8,8 @@ import { getLocation } from "./Location.js";
 import type Player from "./Player.js";
 import { chat } from "../utils/chatBuilder.js";
 import { sendBotMessageToUser } from "../modules/message.js";
+import { GameTags, normalizeTags } from "../../../shared/tags.js";
+import type { TagId } from "../../../shared/tags.js";
 
 /** 드롭 아이템 정보 */
 export interface DropInfo {
@@ -38,6 +40,7 @@ export interface MonsterData {
     expReward: number;
     goldReward?: GoldReward;
     equipments: MonsterEquipInfo[];
+    tags: TagId[];
 }
 
 export default class Monster extends Entity {
@@ -57,7 +60,7 @@ export default class Monster extends Entity {
         if (!data) throw new Error(`MonsterData not found: ${monsterDataId}`);
 
         const equipment = Equipment.createEmpty();
-        super(data.level, data.exp, locationId, data.baseAttribute, equipment);
+        super(data.level, data.exp, locationId, data.baseAttribute, equipment, undefined, [GameTags.ENTITY_MONSTER, ...data.tags]);
 
         this.monsterDataId = monsterDataId;
         this.name = data.name;
@@ -178,7 +181,7 @@ const monsterDataCache = new Map<string, MonsterData>();
 
 /** 몬스터 정의 등록 (data/monsters.ts에서 호출) */
 export function defineMonster(data: MonsterData): void {
-    monsterDataCache.set(data.id, data);
+    monsterDataCache.set(data.id, { ...data, tags: normalizeTags(data.tags) });
 }
 
 /** 몬스터 정의 조회 */

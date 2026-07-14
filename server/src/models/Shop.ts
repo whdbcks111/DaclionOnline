@@ -1,5 +1,7 @@
 import type { Item } from "./Item.js";
 import logger from "../utils/logger.js";
+import { TagCollection, normalizeTags } from "../../../shared/tags.js";
+import type { TagId, TagReadable } from "../../../shared/tags.js";
 
 /** 판매 물품 목록 항목 (플레이어가 상점에 판매) */
 export interface SellEntry {
@@ -12,7 +14,7 @@ export interface SellEntry {
 /** 구매 물품 목록 항목 (플레이어가 상점에서 구매) */
 export interface BuyEntry {
     label: string;
-    create: () => { itemDataId: string; count: number; metadata?: Record<string, any> | null };
+    create: () => { itemDataId: string; count: number; metadata?: Record<string, any> | null; tags?: TagId[] };
     count: number;           // 1회 구매 수량
     price: number;           // 1회 구매 가격
     stock: number;           // 최대 재고
@@ -23,18 +25,23 @@ export interface ShopData {
     id: string;
     sellList: SellEntry[];   // 판매 물품 목록 (플레이어가 상점에 팔 수 있는 것)
     buyList: BuyEntry[];     // 구매 물품 목록 (플레이어가 상점에서 살 수 있는 것)
+    tags: TagId[];
 }
 
-export class Shop {
+export class Shop implements TagReadable {
     readonly data: ShopData;
+    readonly tags: TagCollection;
     private _stocks: number[];
     private _restockTimers: number[];
 
     constructor(data: ShopData) {
         this.data = data;
+        this.tags = new TagCollection({ definition: data.tags });
         this._stocks = data.buyList.map(e => e.stock);
         this._restockTimers = data.buyList.map(() => 0);
     }
+
+    hasTag(tag: TagId): boolean { return this.tags.hasTag(tag); }
 
     getStock(buyIndex: number): number {
         return this._stocks[buyIndex] ?? 0;
@@ -64,7 +71,8 @@ const shopInstances = new Map<string, Shop>();
 
 /** 상점 정의 등록 */
 export function defineShop(data: ShopData): void {
-    shopInstances.set(data.id, new Shop(data));
+    const normalized = { ...data, tags: normalizeTags(data.tags) };
+    shopInstances.set(data.id, new Shop(normalized));
     logger.debug('상점 정의 추가:', data.id);
 }
 

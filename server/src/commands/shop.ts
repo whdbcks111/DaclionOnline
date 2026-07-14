@@ -185,7 +185,7 @@ export function initShopCommands(): void {
 
             shop.consumeStock(entryIndex, amount);
             player.gold -= totalCost;
-            player.inventory.addItem(created.itemDataId, totalItemCount, created.metadata ?? null);
+            player.inventory.addItem(created.itemDataId, totalItemCount, created.metadata ?? null, created.tags ?? []);
 
             sendBotMessageToUser(userId, chat()
                 .color('lime', b => b.text('구매 완료'))

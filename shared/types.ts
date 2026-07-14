@@ -1,4 +1,5 @@
 // 서버-클라이언트 공통 타입 정의
+import type { TagId } from './tags.js'
 
 // -- 위치 데이터 (서버-클라이언트 공유) --
 
@@ -26,6 +27,7 @@ export interface LocationData {
     shopId?: string
     spawns: SpawnInfo[]
     connections: ConnectionInfo[]
+    tags: TagId[]
 }
 
 // 소켓 이벤트 데이터 타입

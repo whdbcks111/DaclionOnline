@@ -1,4 +1,5 @@
 import { defineShop } from '../models/Shop.js';
+import { GameTags } from '../../../shared/tags.js';
 
 defineShop({
     id: 'general_store',
@@ -35,6 +36,14 @@ defineShop({
             stock: 3,
             restockTime: 120,
         },
+        {
+            label: '독 단검',
+            create: () => ({ itemDataId: 'venom_dagger', count: 1 }),
+            count: 1,
+            price: 45,
+            stock: 2,
+            restockTime: 180,
+        },
     ],
     sellList: [
         {
@@ -55,5 +64,12 @@ defineShop({
             count: 1,
             price: 12,
         },
+        {
+            label: '독 단검',
+            filter: (item) => item.itemDataId === 'venom_dagger',
+            count: 1,
+            price: 20,
+        },
     ],
+    tags: [GameTags.SHOP_GENERAL],
 });

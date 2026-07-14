@@ -7,6 +7,9 @@ import { sendBotMessageToUser, sendNotificationFiltered } from "../modules/messa
 import { chat } from "../utils/chatBuilder.js";
 import { getPlayerByUserId } from "../modules/player.js";
 import { applyCritical, calculateFinalDamage } from "./Combat.js";
+import { applyTagEffectValue } from "./TagEffect.js";
+import { TagCollection } from "../../../shared/tags.js";
+import type { TagId, TagReadable } from "../../../shared/tags.js";
 
 /** 대미지 타입 */
 export type DamageType = 'physical' | 'magic' | 'absolute';
@@ -15,9 +18,13 @@ export type DamageType = 'physical' | 'magic' | 'absolute';
 export interface DamageResult {
     type: DamageType;
     rawAmount: number;
+    modifiedAmount: number;
     finalDamage: number;
     remainingLife: number;
     critical: boolean;
+    effectModifier: number;
+    effectSourceTag?: TagId;
+    effectTargetTag?: TagId;
 }
 
 export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fire' | 'poison' | 'suffocation'
@@ -28,10 +35,11 @@ export interface DamageCause {
     critical?: boolean;
 }
 
-export default abstract class Entity {
+export default abstract class Entity implements TagReadable {
     readonly attribute: Attribute;
     readonly equipment: Equipment;
     readonly stat: Stat;
+    readonly tags: TagCollection;
 
     protected _level: number;
     protected _exp: number;
@@ -56,6 +64,8 @@ export default abstract class Entity {
         baseAttribute: Partial<AttributeRecord>,
         equipment: Equipment,
         statPoints?: Partial<StatRecord>,
+        definitionTags: readonly TagId[] = [],
+        persistentTags: readonly TagId[] = [],
     ) {
         this._level = level;
         this._exp = exp;
@@ -63,6 +73,11 @@ export default abstract class Entity {
         this.attribute = new Attribute(baseAttribute);
         this.equipment = equipment;
         this.stat = new Stat(statPoints);
+        this.tags = new TagCollection({
+            definition: definitionTags,
+            persistent: persistentTags,
+            onPersistentChange: () => this.onPersistentTagsChanged(),
+        });
 
         // modifier 적용: 스탯 → 장비 순서
         this.stat.applyModifiers(this);
@@ -118,12 +133,26 @@ export default abstract class Entity {
     get maxThirsty() { return this.attribute.get(AttributeType.MAX_THIRSTY); }
     get maxHungry()  { return this.attribute.get(AttributeType.MAX_HUNGRY); }
 
+    /** 엔티티 본체와 장착 아이템 태그를 합친 유효 태그 조회 */
+    hasTag(tag: TagId): boolean {
+        return this.tags.hasTag(tag) || this.equipment.hasTag(tag);
+    }
+
+    getTags(): TagId[] {
+        return [...new Set([...this.tags.values(), ...this.equipment.getTags()])].sort();
+    }
+
+    protected onPersistentTagsChanged(): void {}
+
     // -- 전투 --
 
     damage(rawAmount: number, type: DamageType = 'physical', cause: DamageCause | null = null): DamageResult {
         let defense = 0;
         let penetration = 0;
         const attacker = cause?.type === 'attack' ? cause.causeEntity : null;
+        const effect = attacker
+            ? applyTagEffectValue(rawAmount, attacker, this)
+            : { value: rawAmount, modifier: 1, sourceTag: '', targetTag: '', effective: true };
 
         if (type === 'physical') {
             defense    = this.attribute.get(AttributeType.DEF);
@@ -133,14 +162,24 @@ export default abstract class Entity {
             penetration = attacker?.attribute.get(AttributeType.MAGIC_PEN) ?? 0;
         }
 
-        const finalDamage = calculateFinalDamage(rawAmount, defense, penetration);
+        const finalDamage = calculateFinalDamage(effect.value, defense, penetration);
 
         this.life = this.life - finalDamage;
         const remainingLife = this.life;
 
         if (cause) this.lastDamageCause = cause;
 
-        return { type, rawAmount, finalDamage, remainingLife, critical: cause?.critical === true };
+        return {
+            type,
+            rawAmount,
+            modifiedAmount: effect.value,
+            finalDamage,
+            remainingLife,
+            critical: cause?.critical === true,
+            effectModifier: effect.modifier,
+            effectSourceTag: effect.sourceTag || undefined,
+            effectTargetTag: effect.targetTag || undefined,
+        };
     }
 
     get attackCooldown(): number { return this._attackCooldown; }
@@ -175,7 +214,10 @@ export default abstract class Entity {
         );
 
         const damageResult = target.damage(rawAmount, type, { type: 'attack', causeEntity: this, critical });
-        const { finalDamage } = damageResult;
+        const { finalDamage, effectModifier } = damageResult;
+        const effectLabel = effectModifier === 0
+            ? '효과 없음! '
+            : effectModifier !== 1 ? `상성 x${effectModifier}! ` : '';
 
         // 공격 쿨다운 설정
         const attackSpeed = this.attribute.get(AttributeType.ATTACK_SPEED);
@@ -194,14 +236,16 @@ export default abstract class Entity {
             }, {
                 key: 'attack',
                 message: chat()
-                    .text(`${critical ? '치명타! ' : ''}${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.\n`)
+                    .text(`${critical ? '치명타! ' : ''}${effectLabel}${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.\n`)
                     .progress({ value: lifeRatio, length: 150, color: this.isPlayer ? '$enemy' : '$life', thickness: 6 })
                     .text(` ${pct}%`)
                     .build(),
             });
 
             const nodes = chat()
-                .color(critical ? 'gold' : 'orange', b => b.text(critical ? '[치명타] ' : '[공격] '))
+                .color(effectModifier === 0 ? 'gray' : critical ? 'gold' : 'orange', b => b.text(
+                    effectModifier === 0 ? '[면역] ' : critical ? '[치명타] ' : effectModifier > 1 ? '[상성 우세] ' : effectModifier < 1 ? '[상성 저항] ' : '[공격] '
+                ))
                 .text(`${this.name}이(가) ${target.name}에게 `)
                 .color('red', b => b.text(finalDamage.toFixed(1)))
                 .text(' 피해\n')

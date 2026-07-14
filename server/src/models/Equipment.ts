@@ -1,6 +1,7 @@
 import prisma from "../config/prisma.js";
 import { Item, getItemData } from "./Item.js";
 import type Attribute from "./Attribute.js";
+import type { TagId, TagReadable } from "../../../shared/tags.js";
 
 /** 장비 슬롯 키 */
 export type EquipSlot = 'head' | 'body' | 'legs' | 'feet' | 'accessory' | 'mainHand' | 'offHand';
@@ -66,7 +67,7 @@ function modSource(slot: EquipSlot, index: number): string {
 }
 
 // 장비 상태 추적
-const enum EquipState { Clean, New, Deleted }
+const enum EquipState { Clean, New, Modified, Deleted }
 
 interface EquipEntry {
     dbId: number;       // DB id (신규는 0)
@@ -76,12 +77,19 @@ interface EquipEntry {
     state: EquipState;
 }
 
-export default class Equipment {
+export default class Equipment implements TagReadable {
     readonly playerId: number;
     private _slots = new Map<string, EquipEntry>();
 
     private constructor(playerId: number) {
         this.playerId = playerId;
+    }
+
+    private setEntry(key: string, entry: EquipEntry): void {
+        entry.item.tags.setPersistentChangeHandler(() => {
+            if (entry.state === EquipState.Clean) entry.state = EquipState.Modified;
+        });
+        this._slots.set(key, entry);
     }
 
     /** DB 연동 없이 인메모리 전용 Equipment 생성 (Monster 등) */
@@ -105,6 +113,23 @@ export default class Equipment {
             }
         }
         return result;
+    }
+
+    /** 장착 아이템의 정의/영속/런타임 태그를 엔티티 유효 태그로 제공 */
+    hasTag(tag: TagId): boolean {
+        for (const entry of this._slots.values()) {
+            if (entry.state !== EquipState.Deleted && entry.item.hasTag(tag)) return true;
+        }
+        return false;
+    }
+
+    getTags(): TagId[] {
+        const result = new Set<TagId>();
+        for (const entry of this._slots.values()) {
+            if (entry.state === EquipState.Deleted) continue;
+            for (const tag of entry.item.tags.values()) result.add(tag);
+        }
+        return [...result].sort();
     }
 
     get dirty(): boolean {
@@ -146,7 +171,7 @@ export default class Equipment {
         if (existing && existing.state !== EquipState.Deleted) return false;
 
         // 장착
-        this._slots.set(key, {
+        this.setEntry(key, {
             dbId: 0,
             item,
             slot,
@@ -196,7 +221,7 @@ export default class Equipment {
         const deletedEntry = this._slots.get(slotKey(slot, useIndex));
         const inheritDbId = deletedEntry?.state === EquipState.Deleted ? deletedEntry.dbId : 0;
 
-        this._slots.set(slotKey(slot, useIndex), {
+        this.setEntry(slotKey(slot, useIndex), {
             dbId: inheritDbId,
             item,
             slot,
@@ -258,13 +283,15 @@ export default class Equipment {
 
         for (const row of rows) {
             const key = slotKey(row.slot as EquipSlot, row.slotIndex);
-            eq._slots.set(key, {
+            eq.setEntry(key, {
                 dbId: row.id,
                 item: new Item(
                     row.itemDataId,
                     1,
                     row.durability,
                     row.metadata as Record<string, any> | null,
+                    0,
+                    (row.tags as TagId[] | null) ?? [],
                 ),
                 slot: row.slot as EquipSlot,
                 slotIndex: row.slotIndex,
@@ -292,6 +319,7 @@ export default class Equipment {
                                     itemDataId: entry.item.itemDataId,
                                     durability: entry.item.durability,
                                     metadata: entry.item.metadata ?? undefined,
+                                    tags: entry.item.tags.persistentValues(),
                                 },
                             })
                         );
@@ -305,10 +333,23 @@ export default class Equipment {
                                     slotIndex: entry.slotIndex,
                                     durability: entry.item.durability,
                                     metadata: entry.item.metadata ?? undefined,
+                                    tags: entry.item.tags.persistentValues(),
                                 },
                             }).then(row => { entry.dbId = row.id; })
                         );
                     }
+                    break;
+                case EquipState.Modified:
+                    ops.push(
+                        prisma.equipment.update({
+                            where: { id: entry.dbId },
+                            data: {
+                                durability: entry.item.durability,
+                                metadata: entry.item.metadata ?? undefined,
+                                tags: entry.item.tags.persistentValues(),
+                            },
+                        })
+                    );
                     break;
                 case EquipState.Deleted:
                     if (entry.dbId > 0) {

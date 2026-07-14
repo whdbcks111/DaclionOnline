@@ -7,6 +7,7 @@
     "x": 0,
     "y": 0,
     "z": 0,
+    "tags": ["location:safe"],
     "spawns": [],
     "connections": [
       {
@@ -24,6 +25,7 @@
     "x": 100,
     "y": 0,
     "z": 0,
+    "tags": ["location:safe", "location:wilderness", "property:natural"],
     "spawns": [
       {
         "monsterDataId": "slime",
@@ -48,6 +50,7 @@
     "x": -50,
     "y": 0,
     "z": 0,
+    "tags": ["location:safe"],
     "spawns": [],
     "connections": [
       {
@@ -65,11 +68,17 @@
     "x": 200,
     "y": 0,
     "z": 0,
+    "tags": ["location:wilderness", "property:natural"],
     "spawns": [
       {
         "monsterDataId": "goblin",
         "maxCount": 3,
         "respawnTime": 60
+      },
+      {
+        "monsterDataId": "stone_golem",
+        "maxCount": 1,
+        "respawnTime": 90
       }
     ],
     "connections": [
@@ -86,6 +95,7 @@
     "y": 15,
     "z": 0,
     "shopId": "general_store",
+    "tags": ["location:safe", "location:shop"],
     "spawns": [],
     "connections": [
       {

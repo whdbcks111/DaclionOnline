@@ -26,21 +26,32 @@
 
 | 모델/레지스트리 | 주요 API | 용도 |
 | --- | --- | --- |
-| `Entity` | `damage`, `attack`, `earlyUpdate/update/lateUpdate`, `onDeath`, `respawn`, `getMaxExpOfLevel` | 공격자 관통·치명타를 포함한 공통 전투와 생명주기 |
+| `Entity` | `hasTag`, `getTags`, `damage`, `attack`, `earlyUpdate/update/lateUpdate`, `onDeath`, `respawn`, `getMaxExpOfLevel` | 본체+장비 유효 태그, 속성 배율·관통·치명타를 포함한 공통 전투와 생명주기 |
 | Combat | `applyCritical`, `calculateFinalDamage` | 부작용 없는 치명타 판정과 방어/관통 최종 대미지 계산 |
+| Tag effects | `defineTagEffectModifier`, `resolveTagEffect`, `applyTagEffectValue`, `getAllTagEffectModifiers` | 단방향 source→target 효과 배율 등록·판정·수치 적용 |
 | `Player` | `loadByUserId`, `create`, `save`, `gainExp`, `allocateStat` | 영속 플레이어와 성장 |
 | `AttributeType`, `Attribute` | `values/fromKey`, `get`, `setBase`, `addModifier(s)`, `removeBySource` | 클래스형 능력치 메타데이터와 기본값 + add/multiply 수정자 계산 |
 | `StatType`, `Stat` | `values/fromKey/fromInput`, `get/set/add`, `applyModifiers(entity)` | 클래스형 5종 스탯과 Entity 기반 Attribute 변환 |
-| `Inventory` | `getItem*`, `getCount`, `canAdd`, `addItem`, `useItem`, `removeItem*`, `load`, `save` | 무게/스택/사용/DB 동기화 |
-| `EquipSlotType`, `Equipment` | `values/fromKey/fromInput`, `getEquipped`, `getAllEquipped`, `equip`, `equipSwap`, `unequip`, `applyModifiers`, `load`, `save` | 클래스형 슬롯 메타데이터와 장비 modifier/DB 동기화 |
-| Item registry | `defineItem`, `getItemData`, `getAllItemData` | 아이템 마스터 데이터 |
+| `Inventory` | `getItem*`, `getCount`, `canAdd`, `addItem`, `addItemSnapshot`, `useItem`, `removeItem*`, `load`, `save` | 무게/스택/사용/태그 포함 snapshot 이동/DB 동기화 |
+| `EquipSlotType`, `Equipment` | `values/fromKey/fromInput`, `getEquipped`, `getAllEquipped`, `hasTag`, `getTags`, `equip`, `equipSwap`, `unequip`, `applyModifiers`, `load`, `save` | 클래스형 슬롯 메타데이터, 장비 modifier·유효 태그·DB 동기화 |
+| `Item`, Item registry | `hasTag`, `snapshot/fromSnapshot`, `defineItem`, `getItemData`, `getAllItemData` | 아이템 정의/인스턴스 태그와 손실 없는 이동 snapshot |
 | `Monster` | `damage`, `update`, `onDeath`, `rollDrops`, `rollGold` | 타게팅 AI, 보상, 리스폰 |
 | Monster registry | `defineMonster`, `getMonsterData`, `getAllMonsterData` | 몬스터 마스터 데이터 |
-| `Location` | `add/removeMonster`, `addDroppedItem`, `pickupItem`, `getAvailableConnections`, `update` | 한 장소의 런타임 상태 |
+| `Location` | `hasTag`, `add/removeMonster`, `addDroppedItem`, `pickupItem`, `getAvailableConnections`, `update` | 장소 태그와 태그 포함 바닥 아이템 snapshot, 런타임 상태 |
 | Location registry | `defineLocation`, `reloadAllLocations`, `getLocation`, `getAllLocations`, `getRespawnLocation`, `distanceBetween` | 월드 위치 정의/조회 |
 | Location extension | `registerConnectionCondition`, `registerLocationPassive` | 이동 조건과 위치별 프레임 콜백 |
 | `Shop` | `getStock`, `consumeStock`, `update` | 재고와 재입고 |
 | Shop registry | `defineShop`, `getShop`, `updateAllShops` | 상점 정의/조회/프레임 갱신 |
+
+## 공용 태그 API (`shared/tags.ts`)
+
+| API | 용도 |
+| --- | --- |
+| `TagCollection` | 정의·영속·source별 런타임 태그 합성. 내부 Set은 노출하지 않음 |
+| `hasTag/hasAny/hasAll/matches` | 다른 기능이 raw 배열 없이 태그를 조회 |
+| `add/remove/replacePersistent` | dirty callback과 연결되는 영속 태그 변경 |
+| `setRuntime/removeRuntime` | 버프·지역 효과 등 비영속 태그를 source 단위 교체 |
+| `normalizeTag/normalizeTags` | `namespace:path` 검증, 소문자화, 중복 제거 |
 
 ## 출력/파싱 유틸
 
