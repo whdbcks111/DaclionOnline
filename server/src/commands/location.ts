@@ -291,14 +291,18 @@ export function initLocationCommands(): void {
             } else {
                 for (let index = 0; index < objects.length; index++) {
                     const object = objects[index];
+                    b.text(`${index + 1}. `)
+                     .text(`Lv.${object.level}`)
+                     .text(` ${object.name} `);
+                    if (object.isDefeated) {
+                        b.color('red', b2 => b2.text(`(${object.defeatLabel})`)).text('\n');
+                        continue;
+                    }
                     const ratio = object.maxLife > 0
                         ? Math.max(0, Math.min(1, object.life / object.maxLife))
                         : 0;
                     const pct = Math.floor(ratio * 100);
-                    b.text(`${index + 1}. `)
-                     .text(`Lv.${object.level}`)
-                     .text(` ${object.name} `)
-                     .progress({ value: ratio, length: 80, color: '$enemy', thickness: 6 })
+                    b.progress({ value: ratio, length: 80, color: '$enemy', thickness: 6 })
                      .text(` ${pct}%`);
                     if (object.isInteractable) {
                         b.text(' ').button(`/상호작용 ${index + 1}`, b2 => b2.text('[상호작용]'), true);

@@ -476,10 +476,13 @@ export function initPlayerCommands(): void {
                     if (!player) return [];
                     const location = getLocation(player.locationId);
                     if (!location) return [];
-                    return location.getObjects().map((object, i): CompletionItem => ({
-                        value: String(i + 1),
-                        description: `Lv.${object.level} ${object.name}`,
-                    }));
+                    return location.getObjects()
+                        .map((object, index) => ({ object, index }))
+                        .sort((a, b) => Number(a.object.isDefeated) - Number(b.object.isDefeated))
+                        .map(({ object, index }): CompletionItem => ({
+                            value: String(index + 1),
+                            description: `Lv.${object.level} ${object.name}${object.isDefeated ? ` (${object.defeatLabel})` : ''}`,
+                        }));
                 },
             },
         ],

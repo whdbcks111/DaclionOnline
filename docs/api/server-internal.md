@@ -28,7 +28,7 @@
 
 | 모델/레지스트리 | 주요 API | 용도 |
 | --- | --- | --- |
-| `Entity` | `attackOwner`, `isInteractable/interact`, `getAttackDeniedReason`, `hasTag`, `getTags`, `hasEffectSourceTag/hasEffectTargetTag`, `damage`, `canAttack`, `commitAttack`, `attack`, `earlyUpdate/update/lateUpdate`, `onDeath`, `respawn`, `getMaxExpOfLevel` | 실제 피해원/귀속 주체 분리, 상호작용·대상별 공격 조건 확장, 문맥 태그, 속성 배율·관통·치명타·쿨다운 전투와 생명주기 |
+| `Entity` | `attackOwner`, `isDefeated/defeatLabel`, `isInteractable/interact`, `getAttackDeniedReason`, `hasTag`, `getTags`, `hasEffectSourceTag/hasEffectTargetTag`, `damage`, `canAttack`, `commitAttack`, `attack`, `earlyUpdate/update/lateUpdate`, `onDeath`, `respawn`, `getMaxExpOfLevel` | 실제 피해원/귀속 주체 분리, life 0 프레임을 포함한 제압 상태와 표시 라벨, 상호작용·대상별 공격 조건 확장, 문맥 태그, 전투 생명주기 |
 | Combat | `applyCritical`, `calculateFinalDamage` | 부작용 없는 치명타 판정과 방어/관통 최종 대미지 계산 |
 | Tag effects | `defineTagEffectModifier`, `resolveTagEffect`, `applyTagEffectValue`, `getAllTagEffectModifiers` | `TagEffectReadable` 문맥 태그를 우선하는 단방향 source→target 배율 등록·판정·수치 적용 |
 | `Player` | `loadByUserId`, `create`, `save`, `performBasicAttack`, `gainExp`, `allocateStat` | 영속 플레이어, 무기 오버라이드 기본 공격과 성장 |

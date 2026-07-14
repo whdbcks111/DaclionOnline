@@ -55,6 +55,7 @@ Player setter, Stat, Inventory, Equipment는 변경 상태를 추적한다. `Pla
 - Monster 사망 시 마지막 공격원의 `attackOwner`가 Player이면 드롭, 골드, 경험치를 지급한다.
 - Resource는 Entity 생명력·피해·사망·리스폰을 재사용하지만 공격 AI가 없다. `requiredToolTags`가 있으면 공격자의 주무기 태그를 `Equipment.hasEquippedItemTag`로 검사하고 조건에 맞지 않는 공격을 시작 전에 거부한다.
 - Resource 파괴 시 `drops`의 가중치 합에서 한 항목을 선택하고 `expReward.min~max` 범위의 경험치를 지급한다. 실제 피해원이 Projectile이어도 `attackOwner`인 Player에게 보상이 귀속된다.
+- `Entity.isDefeated`는 `isDead`가 설정되기 전 life가 0이 된 프레임도 포함한다. 일반 Entity의 `defeatLabel`은 `사망`, Resource는 `파괴됨`이며 공격 가능 여부와 위치 출력이 이 API를 사용한다.
 - 레벨 요구 경험치는 `level * 100`; 레벨업마다 모든 Stat +1, 가용 statPoint +3이다.
 - Player 사망 시간은 기본 10초, 레벨 10 이상 30초, 50 이상 5분이며 첫 respawn location으로 이동한다.
 
@@ -65,7 +66,7 @@ Player setter, Stat, Inventory, Equipment는 변경 상태를 추적한다. `Pla
 - `LocationData.objects`의 각 항목은 `type: monster | resource`, `dataId`, `maxCount`, `respawnTime`을 가진다. 런타임에서는 둘 모두 `Location.getObjects/getObject/hasObject/addObject/removeObject` API로 다루며 별도 몬스터 배열을 두지 않는다.
 - 연결 condition은 `data/locations.ts`의 handler registry가 `visible | locked | hidden`을 반환한다.
 - `/이동` 시간은 `max(1, distance / speed / 5)`초이고 0.5초 단위 coroutine 알림을 갱신한다.
-- `/위치`는 Monster와 Resource를 경계 없이 `[ 오브젝트 ]` 번호 목록으로 표시한다. 등록된 상호작용 handler가 있는 살아 있는 오브젝트에는 `/상호작용 번호` 버튼을 붙이며, 나머지는 같은 명령을 실행해도 불가 알림을 보낸다.
+- `/위치`는 Monster와 Resource를 경계 없이 `[ 오브젝트 ]` 번호 목록으로 표시한다. 사망·파괴된 오브젝트는 체력 progress 대신 붉은 `(사망)`·`(파괴됨)` 상태를 표시한다. 등록된 상호작용 handler가 있는 살아 있는 오브젝트에는 `/상호작용 번호` 버튼을 붙이며, 나머지는 같은 명령을 실행해도 불가 알림을 보낸다.
 - `/위치`는 바닥 아이템도 개별 번호와 줍기 버튼으로 표시한다. `/줍기 번호`는 해당 드롭 스택 전체, `/줍기 전체`는 중량이 허용할 때 모든 스택을 인벤토리로 옮긴다.
 - 위치 편집기는 `/admin/locations`에서 그래프를 편집하고 `adminSaveLocations`로 JSON과 런타임을 한 번에 교체한다.
 

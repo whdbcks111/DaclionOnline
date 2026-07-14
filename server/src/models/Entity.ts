@@ -104,6 +104,12 @@ export default abstract class Entity implements TagReadable {
     /** 공격 보상·어그로를 귀속할 최종 소유자. Projectile은 owner를 반환한다. */
     get attackOwner(): Entity { return this; }
 
+    /** lateUpdate의 사망 처리 전 life가 먼저 0이 된 프레임까지 포함한 제압 상태. */
+    get isDefeated(): boolean { return this.isDead || this.life <= 0; }
+
+    /** 사용자 출력에서 제압 상태를 설명하는 기본 라벨. */
+    get defeatLabel(): string { return '사망'; }
+
     /** 상호작용 handler가 있는 월드 오브젝트에서 override한다. */
     get isInteractable(): boolean { return false; }
 
@@ -209,11 +215,11 @@ export default abstract class Entity implements TagReadable {
 
     /** 공격 시작 가능 여부를 검사하고 플레이어라면 실패 이유를 안내한다. */
     canAttack(target: Entity): boolean {
-        if (this.isDead) return false;
+        if (this.isDefeated) return false;
 
-        if (target.isDead) {
+        if (target.isDefeated) {
             if (this.isPlayer && this.playerUserId) {
-                sendBotMessageToUser(this.playerUserId, '죽은 대상은 공격할 수 없습니다.');
+                sendBotMessageToUser(this.playerUserId, '이미 제압된 대상은 공격할 수 없습니다.');
             }
             return false;
         }

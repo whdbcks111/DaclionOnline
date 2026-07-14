@@ -42,8 +42,9 @@ export default class Resource extends Entity {
     private readonly respawnTime: number;
 
     override get deathDuration(): number { return this.respawnTime; }
+    override get defeatLabel(): string { return '파괴됨'; }
     override get isInteractable(): boolean {
-        return !this.isDead && this.interaction !== undefined && interactionRegistry.has(this.interaction);
+        return !this.isDefeated && this.interaction !== undefined && interactionRegistry.has(this.interaction);
     }
 
     constructor(resourceDataId: string, locationId = '', respawnTime = 30) {

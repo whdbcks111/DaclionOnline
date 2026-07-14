@@ -97,7 +97,7 @@ export default class Monster extends Entity {
         if(!location) return;
 
         const target = this.currentTarget;
-        if (!target || target.isDead || target.life <= 0 || target.locationId !== this.locationId) {
+        if (!target || target.isDefeated || target.locationId !== this.locationId) {
             this.currentTarget = null;
             return;
         }

@@ -124,7 +124,7 @@ export default class Projectile extends Entity {
         this._remainingTravelTime = Math.max(0, this._remainingTravelTime - Math.max(0, dt));
         if (this._remainingTravelTime > 0) return;
 
-        if (this.target.isDead || this.target.life <= 0 || this.target.locationId !== this.locationId) {
+        if (this.target.isDefeated || this.target.locationId !== this.locationId) {
             this.despawn();
             return;
         }
