@@ -6,6 +6,7 @@ import type { StatRecord } from "./Stat.js";
 import { sendBotMessageToUser, sendNotificationFiltered } from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
 import { getPlayerByUserId } from "../modules/player.js";
+import { applyCritical, calculateFinalDamage } from "./Combat.js";
 
 /** 대미지 타입 */
 export type DamageType = 'physical' | 'magic' | 'absolute';
@@ -16,6 +17,7 @@ export interface DamageResult {
     rawAmount: number;
     finalDamage: number;
     remainingLife: number;
+    critical: boolean;
 }
 
 export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fire' | 'poison' | 'suffocation'
@@ -23,6 +25,7 @@ export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fi
 export interface DamageCause {
     type: DamageCauseType;
     causeEntity: Entity | null;
+    critical?: boolean;
 }
 
 export default abstract class Entity {
@@ -120,24 +123,24 @@ export default abstract class Entity {
     damage(rawAmount: number, type: DamageType = 'physical', cause: DamageCause | null = null): DamageResult {
         let defense = 0;
         let penetration = 0;
+        const attacker = cause?.type === 'attack' ? cause.causeEntity : null;
 
         if (type === 'physical') {
             defense    = this.attribute.get(AttributeType.DEF);
-            penetration = this.attribute.get(AttributeType.ARMOR_PEN);
+            penetration = attacker?.attribute.get(AttributeType.ARMOR_PEN) ?? 0;
         } else if (type === 'magic') {
             defense    = this.attribute.get(AttributeType.MAGIC_DEF);
-            penetration = this.attribute.get(AttributeType.MAGIC_PEN);
+            penetration = attacker?.attribute.get(AttributeType.MAGIC_PEN) ?? 0;
         }
 
-        const effectiveDefense = Math.max(0, defense - penetration);
-        const finalDamage = Math.max(0, rawAmount - effectiveDefense);
+        const finalDamage = calculateFinalDamage(rawAmount, defense, penetration);
 
         this.life = this.life - finalDamage;
         const remainingLife = this.life;
 
         if (cause) this.lastDamageCause = cause;
 
-        return { type, rawAmount, finalDamage, remainingLife };
+        return { type, rawAmount, finalDamage, remainingLife, critical: cause?.critical === true };
     }
 
     get attackCooldown(): number { return this._attackCooldown; }
@@ -162,11 +165,16 @@ export default abstract class Entity {
         }
 
         // 기본 공격력: 물리 → atk, 마법 → magicForce
-        const rawAmount = amount ?? (type === 'physical'
+        const baseAmount = amount ?? (type === 'physical'
             ? this.attribute.get(AttributeType.ATK)
             : this.attribute.get(AttributeType.MAGIC_FORCE));
+        const { rawAmount, critical } = applyCritical(
+            baseAmount,
+            this.attribute.get(AttributeType.CRIT_RATE),
+            this.attribute.get(AttributeType.CRIT_DMG),
+        );
 
-        const damageResult = target.damage(rawAmount, type, { type: 'attack', causeEntity: this });
+        const damageResult = target.damage(rawAmount, type, { type: 'attack', causeEntity: this, critical });
         const { finalDamage } = damageResult;
 
         // 공격 쿨다운 설정
@@ -186,14 +194,14 @@ export default abstract class Entity {
             }, {
                 key: 'attack',
                 message: chat()
-                    .text(`${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.\n`)
+                    .text(`${critical ? '치명타! ' : ''}${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.\n`)
                     .progress({ value: lifeRatio, length: 150, color: this.isPlayer ? '$enemy' : '$life', thickness: 6 })
                     .text(` ${pct}%`)
                     .build(),
             });
 
             const nodes = chat()
-                .color('orange', b => b.text('[공격] '))
+                .color(critical ? 'gold' : 'orange', b => b.text(critical ? '[치명타] ' : '[공격] '))
                 .text(`${this.name}이(가) ${target.name}에게 `)
                 .color('red', b => b.text(finalDamage.toFixed(1)))
                 .text(' 피해\n')

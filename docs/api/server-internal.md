@@ -26,7 +26,8 @@
 
 | 모델/레지스트리 | 주요 API | 용도 |
 | --- | --- | --- |
-| `Entity` | `damage`, `attack`, `earlyUpdate/update/lateUpdate`, `onDeath`, `respawn`, `getMaxExpOfLevel` | 플레이어/몬스터 공통 전투와 생명주기 |
+| `Entity` | `damage`, `attack`, `earlyUpdate/update/lateUpdate`, `onDeath`, `respawn`, `getMaxExpOfLevel` | 공격자 관통·치명타를 포함한 공통 전투와 생명주기 |
+| Combat | `applyCritical`, `calculateFinalDamage` | 부작용 없는 치명타 판정과 방어/관통 최종 대미지 계산 |
 | `Player` | `loadByUserId`, `create`, `save`, `gainExp`, `allocateStat` | 영속 플레이어와 성장 |
 | `AttributeType`, `Attribute` | `values/fromKey`, `get`, `setBase`, `addModifier(s)`, `removeBySource` | 클래스형 능력치 메타데이터와 기본값 + add/multiply 수정자 계산 |
 | `StatType`, `Stat` | `values/fromKey/fromInput`, `get/set/add`, `applyModifiers(entity)` | 클래스형 5종 스탯과 Entity 기반 Attribute 변환 |

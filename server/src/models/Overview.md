@@ -2,7 +2,7 @@
 
 서버가 권위를 갖는 게임 상태와 규칙을 표현한다.
 
-- `Entity`, `Player`, `Monster`: 전투, 생명주기, 성장, AI.
+- `Combat`, `Entity`, `Player`, `Monster`: 치명타·방어/관통 계산 API, 전투 생명주기, 성장, AI.
 - `AttributeType`/`Attribute`, `StatType`/`Stat`: 클래스형 enum 메타데이터, 기본 능력치와 Entity 기반 source modifier 계산.
 - `Item`, `Inventory`, `EquipSlotType`/`Equipment`: 마스터/인스턴스, 무게·스택·슬롯·영속성.
 - `Location`: 몬스터, 드롭, 연결 조건, 월드 레지스트리.

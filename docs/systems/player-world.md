@@ -37,7 +37,8 @@ Player setter, Stat, Inventory, Equipment는 변경 상태를 추적한다. `Pla
 
 ## 전투·사망·보상
 
-- 물리 피해는 `max(0, raw - max(0, def - armorPen))`, 마법은 magicDef/magicPen, absolute는 방어 0으로 계산한다.
+- 공격마다 공격자의 `critRate`를 0~1로 보정해 치명타를 판정하고, 성공하면 raw damage에 `max(0, critDmg)`을 곱한다.
+- 물리 피해는 `max(0, raw - max(0, 대상 def - 공격자 armorPen))`, 마법은 대상 magicDef/공격자 magicPen, absolute는 방어와 관통 0으로 계산한다.
 - 공격 속도로 cooldown을 `1 / attackSpeed`초 설정한다.
 - Monster는 처음 맞은 공격자를 target으로 삼고 같은 위치에 살아 있는 동안 자동 공격한다.
 - Monster 사망 시 마지막 원인이 Player 공격이면 드롭, 골드, 경험치를 지급한다.
