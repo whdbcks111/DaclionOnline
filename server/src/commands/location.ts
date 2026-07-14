@@ -222,7 +222,7 @@ export function initLocationCommands(): void {
 
     registerCommand({
         name: '위치',
-        aliases: ['where', 'location'],
+        aliases: ['where', 'loc'],
         description: '현재 위치 정보를 확인합니다.',
         showCommandUse: 'show',
         handler(userId) {
