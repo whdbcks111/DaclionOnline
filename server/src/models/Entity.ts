@@ -3,13 +3,14 @@ import type { AttributeRecord } from "./Attribute.js";
 import Equipment, { EquipSlotType } from "./Equipment.js";
 import Stat from "./Stat.js";
 import type { StatRecord } from "./Stat.js";
-import { sendBotMessageToUser, sendNotificationFiltered } from "../modules/message.js";
+import { sendBotMessageToUser, sendNotificationFiltered, sendNotificationToUser } from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
 import { isOnlinePlayerAtLocation } from "../modules/playerRegistry.js";
 import { applyCritical, calculateFinalDamage } from "./Combat.js";
 import { applyTagEffectValue } from "./TagEffect.js";
 import { TagCollection } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
+import type Player from "./Player.js";
 
 /** 대미지 타입 */
 export type DamageType = 'physical' | 'magic' | 'absolute';
@@ -102,6 +103,14 @@ export default abstract class Entity implements TagReadable {
 
     /** 공격 보상·어그로를 귀속할 최종 소유자. Projectile은 owner를 반환한다. */
     get attackOwner(): Entity { return this; }
+
+    /** 상호작용 handler가 있는 월드 오브젝트에서 override한다. */
+    get isInteractable(): boolean { return false; }
+
+    interact(_player: Player): boolean { return false; }
+
+    /** 공격 불가 사유. undefined이면 공격 가능하다. */
+    getAttackDeniedReason(_attacker: Entity): string | undefined { return undefined; }
 
     get level() { return this._level; }
     set level(val: number) { this._level = val; }
@@ -212,6 +221,19 @@ export default abstract class Entity implements TagReadable {
         if (this._attackCooldown > 0) {
             if (this.isPlayer && this.playerUserId) {
                 sendBotMessageToUser(this.playerUserId, `아직 공격할 수 없습니다. (${this.attackCooldown.toFixed(1)}초 후 가능)`);
+            }
+            return false;
+        }
+
+        const attackOwner = this.attackOwner;
+        const deniedReason = target.getAttackDeniedReason(attackOwner);
+        if (deniedReason) {
+            const userId = attackOwner.playerUserId;
+            if (userId !== undefined) {
+                sendNotificationToUser(userId, {
+                    key: 'attack-denied',
+                    message: deniedReason,
+                });
             }
             return false;
         }

@@ -25,12 +25,13 @@
 3. 사용형 아이템이면 `modules/itemUse.ts`의 레지스트리에 `registerItemUse()` 핸들러를 등록하고 반드시 `finish()`가 모든 종료 경로에서 호출되게 한다.
 4. 영속 필드가 더 필요하면 `prisma/schema.prisma`, `Inventory` load/save, DB 문서를 함께 수정한다.
 
-## 몬스터/전투 추가
+## 몬스터/자원/전투 추가
 
 1. `data/monsters.ts`에 `defineMonster()` 마스터 데이터를 추가한다.
 2. 공통 전투 공식은 `models/Entity.ts`, 몬스터 AI·보상·드롭은 `models/Monster.ts`에 둔다.
-3. 위치 스폰은 `data/locations.json`의 `spawns`에서 연결한다.
-4. UI에 새 상태가 필요하면 공유 payload → `modules/player.ts` → `HudContext` → HUD 컴포넌트 순서로 확장한다.
+3. 비공격 자원은 `data/resources.ts`의 `defineResource()`로 능력치·필수 주무기 도구 태그·가중치 드롭·경험치 범위를 정의한다. 선택형 동작은 `registerResourceInteraction(key, handler)`에 등록한다.
+4. 위치 배치는 `data/locations.json`의 `objects`에 `type: monster | resource`와 `dataId/maxCount/respawnTime`을 넣는다.
+5. UI에 새 상태가 필요하면 공유 payload → `modules/player.ts` → `HudContext` → HUD 컴포넌트 순서로 확장한다.
 
 ## 투사체/기본 공격 무기 추가
 
@@ -50,10 +51,10 @@
 
 ## 위치/이동 추가
 
-1. `data/locations.json`에 좌표, 연결, 스폰, 상점 ID를 정의한다. 연결은 필요한 방향마다 명시한다.
+1. `data/locations.json`에 좌표, 연결, 통합 `objects` 배치, 상점 ID를 정의한다. 연결은 필요한 방향마다 명시한다.
 2. 조건부 연결은 `data/locations.ts`에서 `registerConnectionCondition(conditionId, handler)`로 등록한다.
 3. 런타임 동작은 `models/Location.ts`, 소켓 기반 관리자 저장은 `modules/location.ts`, 사용자 명령은 `commands/location.ts`에서 다룬다.
-4. `LocationData` 구조 변경 시 `shared/types.ts`와 `LocationEditor.tsx`도 함께 수정한다.
+4. `LocationData` 구조 변경 시 `shared/types.ts`와 `LocationEditor.tsx`도 함께 수정한다. 런타임 오브젝트는 raw 배열 대신 `Location.getObjects/getObject/hasObject/addObject/removeObject`를 사용한다.
 
 ## HUD 추가
 

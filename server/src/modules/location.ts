@@ -2,12 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import logger from "../utils/logger.js";
-import { defineLocation, getAllLocationData, getAllLocations, reloadAllLocations } from "../models/Location.js";
+import { getAllLocationData, getAllLocations, normalizeLocationData, reloadAllLocations } from "../models/Location.js";
 import type { LocationData } from "../models/Location.js";
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
 import '../data/locations.js'
-import { normalizeTags } from '../../../shared/tags.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,9 +17,7 @@ export function loadLocationsFromJson(): void {
     try {
         const raw = fs.readFileSync(LOCATIONS_JSON, 'utf-8');
         const locations: LocationData[] = JSON.parse(raw);
-        for (const loc of locations) {
-            defineLocation(loc);
-        }
+        reloadAllLocations(locations);
         logger.success(`장소 ${locations.length}개 로드 완료 (${LOCATIONS_JSON})`);
     } catch (e) {
         logger.error('locations.json 로드 실패:', e);
@@ -66,10 +63,7 @@ export function initLocation(): void {
             }
 
             try {
-                const data = (locations as LocationData[]).map(location => ({
-                    ...location,
-                    tags: normalizeTags(location.tags ?? []),
-                }));
+                const data = (locations as LocationData[]).map(location => normalizeLocationData(location));
                 saveLocationsToJson(data);
                 reloadAllLocations(data);
                 logger.success(`어드민 ${session.username}: 장소 데이터 저장 (${data.length}개)`);

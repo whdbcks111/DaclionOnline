@@ -1,7 +1,7 @@
 # HUD Views Overview
 
 - `PlayerStatusHud`: 생명력·정신력·허기·갈증·공격 cooldown.
-- `LocationHud`: 현재 위치의 몬스터/플레이어 체력.
+- `LocationHud`: 현재 위치의 Monster/Resource 통합 오브젝트와 플레이어 체력.
 - `MinimapHud`: 현재 및 인접 위치 좌표.
 - `QuickSlotHud`: 저장한 채팅/명령 문자열을 즉시 전송.
 

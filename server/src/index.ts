@@ -15,6 +15,7 @@ import { initGame } from './modules/game.js';
 import './data/projectiles.js';
 import './data/items.js';
 import './data/monsters.js';
+import './data/resources.js';
 import './data/shops.js';
 import './data/tagEffects.js';
 import { initLocation } from './modules/location.js';

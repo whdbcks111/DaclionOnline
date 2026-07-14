@@ -120,11 +120,11 @@ export function sendLocationInfo(userId: number): void {
         x: location.data.x,
         y: location.data.y,
         z: location.data.z,
-        monsters: location.monsters.map(m => ({
-            name: m.name,
-            level: m.level,
-            life: m.life,
-            maxLife: m.maxLife,
+        objects: location.getObjects().map(object => ({
+            name: object.name,
+            level: object.level,
+            life: object.life,
+            maxLife: object.maxLife,
         })),
         players: getOnlinePlayers()
             .filter(p => p.locationId === locationId)

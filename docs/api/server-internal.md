@@ -28,20 +28,22 @@
 
 | 모델/레지스트리 | 주요 API | 용도 |
 | --- | --- | --- |
-| `Entity` | `attackOwner`, `hasTag`, `getTags`, `hasEffectSourceTag/hasEffectTargetTag`, `damage`, `canAttack`, `commitAttack`, `attack`, `earlyUpdate/update/lateUpdate`, `onDeath`, `respawn`, `getMaxExpOfLevel` | 실제 피해원/귀속 주체 분리, 문맥 태그, 속성 배율·관통·치명타·쿨다운 전투와 생명주기 |
+| `Entity` | `attackOwner`, `isInteractable/interact`, `getAttackDeniedReason`, `hasTag`, `getTags`, `hasEffectSourceTag/hasEffectTargetTag`, `damage`, `canAttack`, `commitAttack`, `attack`, `earlyUpdate/update/lateUpdate`, `onDeath`, `respawn`, `getMaxExpOfLevel` | 실제 피해원/귀속 주체 분리, 상호작용·대상별 공격 조건 확장, 문맥 태그, 속성 배율·관통·치명타·쿨다운 전투와 생명주기 |
 | Combat | `applyCritical`, `calculateFinalDamage` | 부작용 없는 치명타 판정과 방어/관통 최종 대미지 계산 |
 | Tag effects | `defineTagEffectModifier`, `resolveTagEffect`, `applyTagEffectValue`, `getAllTagEffectModifiers` | `TagEffectReadable` 문맥 태그를 우선하는 단방향 source→target 배율 등록·판정·수치 적용 |
 | `Player` | `loadByUserId`, `create`, `save`, `performBasicAttack`, `gainExp`, `allocateStat` | 영속 플레이어, 무기 오버라이드 기본 공격과 성장 |
 | `AttributeType`, `Attribute` | `values/fromKey`, `get`, `setBase`, `addModifier(s)`, `removeBySource` | 클래스형 능력치 메타데이터와 기본값 + add/multiply 수정자 계산 |
 | `StatType`, `Stat` | `values/fromKey/fromInput`, `get/set/add`, `applyModifiers(entity)` | 클래스형 5종 스탯과 Entity 기반 Attribute 변환 |
 | `Inventory` | `getItem*`, `getFirstItemByData`, `getCount`, `setItemMetadata/resetItemMetadata`, `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`, `canAdd`, `canAddSnapshot(s)`, `addItem`, `addItemSnapshot`, `useItem`, `removeItem*`, `removeItemInstance`, `load`, `save` | metadata·내구도 dirty 추적, 정확한 탄약 인스턴스 소비, 무게/스택/사용/태그 포함 이동/DB 동기화 |
-| `EquipSlotType`, `Equipment` | `values/fromKey/fromInput`, `getEquipped`, `getAllEquipped`, `setItemMetadata/resetItemMetadata`, `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`, `hasTag`, `getTags`, `hasEffectSourceTag`, `equip`, `equipSwap`, `unequip`, `applyModifiers`, `load`, `save` | 슬롯 메타데이터, 장착 상태·dirty 추적, 일반 태그와 공격 상성용 무기 태그, modifier·DB 동기화 |
+| `EquipSlotType`, `Equipment` | `values/fromKey/fromInput`, `getEquipped`, `getAllEquipped`, `hasEquippedItemTag`, `setItemMetadata/resetItemMetadata`, `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`, `hasTag`, `getTags`, `hasEffectSourceTag`, `equip`, `equipSwap`, `unequip`, `applyModifiers`, `load`, `save` | 슬롯 메타데이터, 특정 슬롯 도구 태그 검사, 장착 상태·dirty 추적, 일반 태그와 공격 상성용 무기 태그, modifier·DB 동기화 |
 | `Item`, Item registry | `basicAttackOverrideKey`, `image`, `durability/durabilityRatio/isBroken`, `setDurability`, `changeDurability`, `increaseDurability`, `decreaseDurability`, `getMetadata/getMetadataSnapshot/getMetadataDeltaSnapshot`, `setMetadata/resetMetadata`, `hasTag`, `snapshot/fromSnapshot/fromPersistence`, `defineItem`, `getItemData`, `getAllItemData` | 공격 레지스트리 key, 내구도, 기본값+delta 합성, 이미지·태그와 이동 snapshot |
 | `Projectile`, registry | `define/get/getAllProjectileData`, `parseProjectileReference`, `spawnProjectile`, `spawnProjectileFromData`, `getActiveProjectiles`, `removeProjectile`, `updateProjectiles` | 비영속 투사체 마스터/JSON 검증, 생성·조회·비행·적중·소멸 |
 | `Monster` | `damage`, `update`, `onDeath`, `rollDrops`, `rollGold` | 타게팅 AI, 보상, 리스폰 |
 | Monster registry | `defineMonster`, `getMonsterData`, `getAllMonsterData` | 몬스터 마스터 데이터 |
-| `Location` | `hasTag`, `add/removeMonster`, `addDroppedItem`, `getDroppedItems`, `pickupItem/pickupAllItems`, `getAvailableConnections`, `update` | 장소 태그와 raw 배열을 숨긴 바닥 아이템 조회·단일/전체 회수, 런타임 상태 |
-| Location registry | `defineLocation`, `reloadAllLocations`, `getLocation`, `getAllLocations`, `getRespawnLocation`, `distanceBetween` | 월드 위치 정의/조회 |
+| `Resource` | `isInteractable`, `interact`, `getAttackDeniedReason`, `onDeath`, `rollDrop`, `rollExp` | 비공격 Entity 자원, 도구 제한, 가중치 드롭·범위 경험치·리스폰 |
+| Resource registry | `defineResource`, `getResourceData`, `getAllResourceData`, `registerResourceInteraction` | 자원 마스터 데이터와 key→상호작용 함수 등록 |
+| `Location` | `hasTag`, `getObjects/getObject/getObjectCount/hasObject`, `addObject/removeObject`, `addDroppedItem`, `getDroppedItems`, `pickupItem/pickupAllItems`, `getAvailableConnections`, `update` | Monster/Resource 통합 오브젝트와 raw 배열을 숨긴 바닥 아이템 조회·단일/전체 회수, 런타임 상태 |
+| Location registry | `normalizeLocationData`, `defineLocation`, `reloadAllLocations`, `getLocation`, `getAllLocations`, `getRespawnLocation`, `distanceBetween` | 통합 오브젝트 배치 검증·복사, 월드 위치 정의/조회 |
 | Location extension | `registerConnectionCondition`, `registerLocationPassive` | 이동 조건과 위치별 프레임 콜백 |
 | `Shop` | `getStock`, `consumeStock`, `update` | 재고와 재입고 |
 | Shop registry | `defineShop`, `getShop`, `updateAllShops` | 상점 정의/조회/프레임 갱신 |

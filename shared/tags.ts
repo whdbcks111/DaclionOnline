@@ -16,6 +16,7 @@ export const GameTags = Object.freeze({
     ENTITY_PLAYER: 'entity:player',
     ENTITY_MONSTER: 'entity:monster',
     ENTITY_PROJECTILE: 'entity:projectile',
+    ENTITY_RESOURCE: 'entity:resource',
     ENTITY_SLIME: 'entity:slime',
     ENTITY_HUMANOID: 'entity:humanoid',
 
@@ -23,6 +24,7 @@ export const GameTags = Object.freeze({
     ITEM_WEAPON: 'item:weapon',
     ITEM_ARMOR: 'item:armor',
     ITEM_AMMUNITION: 'item:ammunition',
+    ITEM_TOOL: 'item:tool',
 
     PROPERTY_FIRE: 'property:fire',
     PROPERTY_WATER: 'property:water',
@@ -31,6 +33,17 @@ export const GameTags = Object.freeze({
     PROPERTY_POISON: 'property:poison',
 
     MATERIAL_WOOD: 'material:wood',
+    MATERIAL_STONE: 'material:stone',
+    MATERIAL_COAL: 'material:coal',
+    MATERIAL_IRON: 'material:iron',
+    MATERIAL_GOLD: 'material:gold',
+    MATERIAL_RUBY: 'material:ruby',
+    MATERIAL_EMERALD: 'material:emerald',
+    MATERIAL_DIAMOND: 'material:diamond',
+
+    TOOL_MINING: 'tool:mining',
+
+    RESOURCE_ORE: 'resource:ore',
 
     TRAIT_INANIMATE: 'trait:inanimate',
 
@@ -38,6 +51,7 @@ export const GameTags = Object.freeze({
     LOCATION_WILDERNESS: 'location:wilderness',
     LOCATION_SHOP: 'location:shop',
     SHOP_GENERAL: 'shop:general',
+    SHOP_MINING: 'shop:mining',
 } satisfies Record<string, TagId>)
 
 const TAG_PATTERN = /^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9/._-]*$/

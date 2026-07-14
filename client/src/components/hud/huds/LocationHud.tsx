@@ -25,11 +25,11 @@ export default function LocationHud() {
         <span className={styles.locationName}>{locationInfo.name}</span>
         <span className={styles.coords}>({locationInfo.x}, {locationInfo.y}, {locationInfo.z})</span>
       </div>
-      {locationInfo.monsters.length > 0 && (
+      {locationInfo.objects.length > 0 && (
         <div className={styles.section}>
-          <div className={styles.sectionTitle}>몬스터</div>
-          {locationInfo.monsters.map((m, i) => (
-            <EntityRow key={i} entity={m} index={i + 1} color="$enemy" />
+          <div className={styles.sectionTitle}>오브젝트</div>
+          {locationInfo.objects.map((object, i) => (
+            <EntityRow key={i} entity={object} index={i + 1} color="$enemy" />
           ))}
         </div>
       )}

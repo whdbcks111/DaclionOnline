@@ -221,6 +221,48 @@ export function initLocationCommands(): void {
     });
 
     registerCommand({
+        name: '상호작용',
+        aliases: ['interact'],
+        description: '현재 위치의 오브젝트와 상호작용합니다.',
+        showCommandUse: 'hide',
+        args: [
+            { name: '번호', description: '상호작용할 오브젝트 번호', required: true,
+                completions(userId) {
+                    const player = getPlayerByUserId(userId);
+                    const location = player ? getLocation(player.locationId) : undefined;
+                    if (!location) return [];
+                    return location.getObjects().map((object, index): CompletionItem => ({
+                        value: String(index + 1),
+                        description: `${object.name}${object.isInteractable ? ' (상호작용 가능)' : ''}`,
+                    }));
+                },
+            },
+        ],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            if (player.isDead) {
+                sendBotMessageToUser(userId, '사망 상태에서는 행동할 수 없습니다.');
+                return;
+            }
+            const location = getLocation(player.locationId);
+            if (!location) return;
+            const number = Number(args[0]);
+            const object = Number.isInteger(number) ? location.getObject(number - 1) : undefined;
+            if (!object) {
+                sendBotMessageToUser(userId, '유효한 오브젝트 번호를 입력해주세요.');
+                return;
+            }
+            if (!object.interact(player)) {
+                sendNotificationToUser(userId, {
+                    key: 'object-interaction',
+                    message: '상호작용이 불가능한 오브젝트입니다.',
+                });
+            }
+        },
+    });
+
+    registerCommand({
         name: '위치',
         aliases: ['where', 'loc'],
         description: '현재 위치 정보를 확인합니다.',
@@ -241,19 +283,27 @@ export function initLocationCommands(): void {
                 .color('yellow', b2 => b2.text('장소')).text(` ${location.data.name}\n`)
                 .color('yellow', b2 => b2.text('좌표')).text(` (${location.data.x}, ${location.data.y}, ${location.data.z})\n`)
                 .text('\n')
-                .color('gray', b2 => b2.text('[ 몬스터 ]\n'));
+                .color('gray', b2 => b2.text('[ 오브젝트 ]\n'));
 
-            if (location.monsters.length === 0) {
+            const objects = location.getObjects();
+            if (objects.length === 0) {
                 b.color('gray', b2 => b2.text('없음\n'));
             } else {
-                for (const m of location.monsters) {
-                    const ratio = m.maxLife > 0 ? m.life / m.maxLife : 0;
+                for (let index = 0; index < objects.length; index++) {
+                    const object = objects[index];
+                    const ratio = object.maxLife > 0
+                        ? Math.max(0, Math.min(1, object.life / object.maxLife))
+                        : 0;
                     const pct = Math.floor(ratio * 100);
-                    b.text('- ')
-                     .text(`Lv.${m.level}`)
-                     .text(` ${m.name} `)
+                    b.text(`${index + 1}. `)
+                     .text(`Lv.${object.level}`)
+                     .text(` ${object.name} `)
                      .progress({ value: ratio, length: 80, color: '$enemy', thickness: 6 })
-                     .text(` ${pct}%\n`);
+                     .text(` ${pct}%`);
+                    if (object.isInteractable) {
+                        b.text(' ').button(`/상호작용 ${index + 1}`, b2 => b2.text('[상호작용]'), true);
+                    }
+                    b.text('\n');
                 }
             }
 

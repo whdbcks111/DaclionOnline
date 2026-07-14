@@ -8,13 +8,16 @@
     "y": 0,
     "z": 0,
     "tags": ["location:safe"],
-    "spawns": [],
+    "objects": [],
     "connections": [
       {
         "locationId": "field"
       },
       {
         "locationId": "shop_street"
+      },
+      {
+        "locationId": "feveric_mine"
       }
     ]
   },
@@ -26,9 +29,10 @@
     "y": 0,
     "z": 0,
     "tags": ["location:safe", "location:wilderness", "property:natural"],
-    "spawns": [
+    "objects": [
       {
-        "monsterDataId": "slime",
+        "type": "monster",
+        "dataId": "slime",
         "maxCount": 5,
         "respawnTime": 30
       }
@@ -51,7 +55,7 @@
     "y": 0,
     "z": 0,
     "tags": ["location:safe"],
-    "spawns": [],
+    "objects": [],
     "connections": [
       {
         "locationId": "town_square"
@@ -69,14 +73,16 @@
     "y": 0,
     "z": 0,
     "tags": ["location:wilderness", "property:natural"],
-    "spawns": [
+    "objects": [
       {
-        "monsterDataId": "goblin",
+        "type": "monster",
+        "dataId": "goblin",
         "maxCount": 3,
         "respawnTime": 60
       },
       {
-        "monsterDataId": "stone_golem",
+        "type": "monster",
+        "dataId": "stone_golem",
         "maxCount": 1,
         "respawnTime": 90
       }
@@ -96,10 +102,51 @@
     "z": 0,
     "shopId": "general_store",
     "tags": ["location:safe", "location:shop"],
-    "spawns": [],
+    "objects": [],
     "connections": [
       {
         "locationId": "shop_street"
+      }
+    ]
+  },
+  {
+    "id": "feveric_mine",
+    "name": "피버릭 광산",
+    "zoneType": "normal",
+    "x": 0,
+    "y": -150,
+    "z": -20,
+    "tags": ["location:wilderness", "material:stone"],
+    "objects": [
+      {
+        "type": "resource",
+        "dataId": "ore_deposit",
+        "maxCount": 10,
+        "respawnTime": 45
+      }
+    ],
+    "connections": [
+      {
+        "locationId": "town_square"
+      },
+      {
+        "locationId": "feveric_mine_shop"
+      }
+    ]
+  },
+  {
+    "id": "feveric_mine_shop",
+    "name": "피버릭 광산 상점",
+    "zoneType": "safe",
+    "x": 20,
+    "y": -150,
+    "z": -20,
+    "shopId": "feveric_mine_store",
+    "tags": ["location:safe", "location:shop", "material:stone"],
+    "objects": [],
+    "connections": [
+      {
+        "locationId": "feveric_mine"
       }
     ]
   }

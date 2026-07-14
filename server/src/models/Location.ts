@@ -1,12 +1,14 @@
 import Monster from "./Monster.js";
+import Resource from "./Resource.js";
+import type Entity from "./Entity.js";
 import type Player from "./Player.js";
-import type { LocationData, SpawnInfo, ConnectionInfo, ZoneType } from "../../../shared/types.js";
+import type { LocationData, LocationObjectSpawnInfo, ConnectionInfo, ZoneType } from "../../../shared/types.js";
 import logger from "../utils/logger.js";
 import { TagCollection, normalizeTags } from "../../../shared/tags.js";
 import type { TagReadable } from "../../../shared/tags.js";
 import type { ItemSnapshot } from "./Item.js";
 
-export type { LocationData, SpawnInfo, ConnectionInfo, ZoneType };
+export type { LocationData, LocationObjectSpawnInfo, ConnectionInfo, ZoneType };
 
 /** 바닥 아이템 */
 export interface DroppedItem extends ItemSnapshot {
@@ -47,7 +49,7 @@ export default class Location implements TagReadable {
     readonly data: LocationData;
     readonly tags: TagCollection;
 
-    private _monsters: Monster[] = [];
+    private _objects: Entity[] = [];
     private _droppedItems: DroppedItem[] = [];
 
     constructor(data: LocationData) {
@@ -56,25 +58,43 @@ export default class Location implements TagReadable {
         this.tags = new TagCollection({ definition: data.tags });
 
         // 서버 로드 시 즉시 전부 스폰
-        for (const spawn of data.spawns) {
+        for (const spawn of data.objects) {
             for (let i = 0; i < spawn.maxCount; i++) {
-                this._monsters.push(new Monster(spawn.monsterDataId, this.id, spawn.respawnTime));
+                let object: Entity;
+                if (spawn.type === 'monster') {
+                    object = new Monster(spawn.dataId, this.id, spawn.respawnTime);
+                } else if (spawn.type === 'resource') {
+                    object = new Resource(spawn.dataId, this.id, spawn.respawnTime);
+                } else {
+                    throw new Error(`Unsupported location object type: ${String(spawn.type)}`);
+                }
+                this._objects.push(object);
             }
         }
     }
 
-    // -- 몬스터 관리 --
+    // -- 월드 오브젝트 관리 --
 
-    get monsters(): ReadonlyArray<Monster> { return this._monsters; }
+    getObjects(): readonly Entity[] { return [...this._objects]; }
 
-    addMonster(monster: Monster): void {
-        monster.locationId = this.id;
-        this._monsters.push(monster);
+    getObjectCount(): number { return this._objects.length; }
+
+    getObject(index: number): Entity | undefined {
+        return this._objects[index];
     }
 
-    removeMonster(monster: Monster): void {
-        const idx = this._monsters.indexOf(monster);
-        if (idx !== -1) this._monsters.splice(idx, 1);
+    hasObject(object: Entity): boolean {
+        return this._objects.includes(object);
+    }
+
+    addObject(object: Entity): void {
+        object.locationId = this.id;
+        this._objects.push(object);
+    }
+
+    removeObject(object: Entity): void {
+        const idx = this._objects.indexOf(object);
+        if (idx !== -1) this._objects.splice(idx, 1);
     }
 
     // -- 바닥 아이템 관리 --
@@ -140,11 +160,11 @@ export default class Location implements TagReadable {
     // -- 게임 루프 --
 
     update(dt: number): void {
-        // 몬스터 업데이트 (스냅샷으로 순회 — 도중 제거 방지)
-        for (const monster of [...this._monsters]) {
-            monster.earlyUpdate(dt);
-            monster.update(dt);
-            monster.lateUpdate(dt);
+        // 모든 월드 오브젝트 업데이트 (스냅샷으로 순회 — 도중 제거 방지)
+        for (const object of [...this._objects]) {
+            object.earlyUpdate(dt);
+            object.update(dt);
+            object.lateUpdate(dt);
         }
 
         // 패시브 콜백
@@ -158,24 +178,55 @@ export default class Location implements TagReadable {
 const locationDataCache = new Map<string, LocationData>();
 const locationInstances = new Map<string, Location>();
 
+/** 외부 LocationData를 검증하고 내부 보관용 복사본으로 정규화 */
+export function normalizeLocationData(data: LocationData): LocationData {
+    if (!Array.isArray(data.objects)) {
+        throw new Error(`Location objects must be an array: ${data.id}`);
+    }
+    return {
+        ...data,
+        objects: data.objects.map(object => {
+            if (object.type !== 'monster' && object.type !== 'resource') {
+                throw new Error(`Invalid location object type: ${object.type}`);
+            }
+            if (!object.dataId.trim() || !Number.isInteger(object.maxCount) || object.maxCount < 0
+                || !Number.isFinite(object.respawnTime) || object.respawnTime < 0) {
+                throw new Error(`Invalid location object spawn: ${data.id}/${object.dataId}`);
+            }
+            return { ...object };
+        }),
+        connections: data.connections.map(connection => ({ ...connection })),
+        tags: normalizeTags(data.tags ?? []),
+    };
+}
+
+function registerNormalizedLocation(data: LocationData): void {
+    locationDataCache.set(data.id, data);
+    locationInstances.set(data.id, new Location(data));
+}
+
 /** 장소 정의 등록 */
 export function defineLocation(data: LocationData): void {
-    const normalized = { ...data, tags: normalizeTags(data.tags ?? []) };
-    locationDataCache.set(normalized.id, normalized);
-    locationInstances.set(normalized.id, new Location(normalized));
+    registerNormalizedLocation(normalizeLocationData(data));
 }
 
 /** 모든 LocationData 반환 (JSON 직렬화용) */
 export function getAllLocationData(): LocationData[] {
-    return Array.from(locationDataCache.values());
+    return Array.from(locationDataCache.values(), data => ({
+        ...data,
+        objects: data.objects.map(object => ({ ...object })),
+        connections: data.connections.map(connection => ({ ...connection })),
+        tags: [...data.tags],
+    }));
 }
 
 /** 전체 장소 레지스트리를 초기화하고 새 데이터로 재로드 */
 export function reloadAllLocations(locations: LocationData[]): void {
+    const normalizedLocations = locations.map(normalizeLocationData);
     locationDataCache.clear();
     locationInstances.clear();
-    for (const data of locations) {
-        defineLocation(data);
+    for (const data of normalizedLocations) {
+        registerNormalizedLocation(data);
     }
 }
 

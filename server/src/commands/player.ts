@@ -7,7 +7,7 @@ import { getLocation } from "../models/Location.js";
 import { getItemData, Item } from "../models/Item.js";
 import type { EquipSlot } from "../models/Equipment.js";
 import { SLOT_MAX, EquipSlotType } from "../models/Equipment.js";
-import Monster from "../models/Monster.js";
+import type Entity from "../models/Entity.js";
 import { StatType } from "../models/Stat.js";
 import { AttributeType } from "../models/Attribute.js";
 import prisma from "../config/prisma.js";
@@ -467,18 +467,18 @@ export function initPlayerCommands(): void {
     registerCommand({
         name: '공격',
         aliases: ['attack', 'a'],
-        description: '장소의 몬스터를 공격합니다.',
+        description: '장소의 오브젝트를 공격합니다.',
         showCommandUse: 'hide',
         args: [
-            { name: '번호', description: '장소 내 몬스터 번호 (생략 시 현재 타겟 공격)',
+            { name: '번호', description: '장소 내 오브젝트 번호 (생략 시 현재 타겟 공격)',
                 completions(userId) {
                     const player = getPlayerByUserId(userId);
                     if (!player) return [];
                     const location = getLocation(player.locationId);
                     if (!location) return [];
-                    return location.monsters.map((m, i): CompletionItem => ({
+                    return location.getObjects().map((object, i): CompletionItem => ({
                         value: String(i + 1),
-                        description: `Lv.${m.level} ${m.name}`,
+                        description: `Lv.${object.level} ${object.name}`,
                     }));
                 },
             },
@@ -498,7 +498,7 @@ export function initPlayerCommands(): void {
                 return;
             }
 
-            let monster: Monster;
+            let target: Entity;
 
             if (args.length === 0) {
                 const ct = player.currentTarget;
@@ -506,28 +506,29 @@ export function initPlayerCommands(): void {
                     sendBotMessageToUser(userId, '공격할 대상이 없습니다. 번호를 지정해주세요.');
                     return;
                 }
-                const found = location.monsters.find(m => m === ct);
-                if (!found) {
+                if (!location.hasObject(ct)) {
                     player.currentTarget = null;
                     sendBotMessageToUser(userId, '현재 타겟이 이 장소에 없습니다.');
                     return;
                 }
-                monster = found;
+                target = ct;
             } else {
-                const idx = parseInt(args[0], 10) - 1;
-                if (isNaN(idx) || idx < 0) {
+                const number = Number(args[0]);
+                const idx = number - 1;
+                if (!Number.isInteger(number) || idx < 0) {
                     sendBotMessageToUser(userId, '유효한 번호를 입력해주세요.');
                     return;
                 }
-                if (idx >= location.monsters.length) {
-                    sendBotMessageToUser(userId, `${idx + 1}번 몬스터가 없습니다. (현재 ${location.monsters.length}마리)`);
+                const selected = location.getObject(idx);
+                if (!selected) {
+                    sendBotMessageToUser(userId, `${idx + 1}번 오브젝트가 없습니다. (현재 ${location.getObjectCount()}개)`);
                     return;
                 }
-                monster = location.monsters[idx];
-                player.currentTarget = monster;
+                target = selected;
+                player.currentTarget = target;
             }
 
-            player.performBasicAttack(monster);
+            player.performBasicAttack(target);
         },
     });
 

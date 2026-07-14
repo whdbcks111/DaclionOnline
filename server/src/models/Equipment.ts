@@ -106,7 +106,13 @@ export default class Equipment implements TagReadable {
 
     /** 특정 슬롯의 장착 아이템 조회 */
     getEquipped(slot: EquipSlot, slotIndex = 0): Item | undefined {
-        return this._slots.get(slotKey(slot, slotIndex))?.item;
+        const entry = this._slots.get(slotKey(slot, slotIndex));
+        return entry && entry.state !== EquipState.Deleted ? entry.item : undefined;
+    }
+
+    /** 특정 장비 슬롯 아이템의 태그를 내부 슬롯 Map 노출 없이 검사한다. */
+    hasEquippedItemTag(slot: EquipSlot, tag: TagId, slotIndex = 0): boolean {
+        return this.getEquipped(slot, slotIndex)?.hasTag(tag) ?? false;
     }
 
     /** 모든 장착 아이템 반환 */

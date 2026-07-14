@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX, RefObject, MouseEvent as RMouseEvent, WheelEvent as RWheelEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { LocationData, ZoneType, SpawnInfo } from '@shared/types'
+import type { LocationData, ZoneType, LocationObjectSpawnInfo } from '@shared/types'
 import { useSocket } from '../context/SocketContext'
 import styles from './LocationEditor.module.scss'
 
@@ -67,7 +67,11 @@ export default function LocationEditor() {
     if (!socket) return
 
     const onLocations = (data: LocationData[]) => {
-      setLocations(data.map(location => ({ ...location, tags: location.tags ?? [] })))
+      setLocations(data.map(location => ({
+        ...location,
+        objects: location.objects ?? [],
+        tags: location.tags ?? [],
+      })))
     }
 
     const onSaveResult = (result: { ok?: boolean; error?: string }) => {
@@ -211,7 +215,7 @@ export default function LocationEditor() {
       x: contextMenu.worldX,
       y: contextMenu.worldY,
       z: 0,
-      spawns: [],
+      objects: [],
       connections: [],
       tags: [],
     }
@@ -268,25 +272,28 @@ export default function LocationEditor() {
     }))
   }, [selectedId])
 
-  // --- 스폰 관리 ---
-  const addSpawn = useCallback(() => {
+  // --- 오브젝트 배치 관리 ---
+  const addObjectSpawn = useCallback(() => {
     updateSelected({
-      spawns: [...(locations.find(l => l.id === selectedId)?.spawns ?? []), { monsterDataId: '', maxCount: 1, respawnTime: 30 }],
+      objects: [
+        ...(locations.find(l => l.id === selectedId)?.objects ?? []),
+        { type: 'monster', dataId: '', maxCount: 1, respawnTime: 30 },
+      ],
     })
   }, [updateSelected, locations, selectedId])
 
-  const updateSpawn = useCallback((index: number, patch: Partial<SpawnInfo>) => {
+  const updateObjectSpawn = useCallback((index: number, patch: Partial<LocationObjectSpawnInfo>) => {
     setLocations(prev => prev.map(l => {
       if (l.id !== selectedId) return l
-      const spawns = l.spawns.map((s, i) => i === index ? { ...s, ...patch } : s)
-      return { ...l, spawns }
+      const objects = l.objects.map((object, i) => i === index ? { ...object, ...patch } : object)
+      return { ...l, objects }
     }))
   }, [selectedId])
 
-  const removeSpawn = useCallback((index: number) => {
+  const removeObjectSpawn = useCallback((index: number) => {
     setLocations(prev => prev.map(l => {
       if (l.id !== selectedId) return l
-      return { ...l, spawns: l.spawns.filter((_, i) => i !== index) }
+      return { ...l, objects: l.objects.filter((_, i) => i !== index) }
     }))
   }, [selectedId])
 
@@ -582,37 +589,47 @@ export default function LocationEditor() {
                 </select>
               </div>
 
-              {/* 스폰 */}
+              {/* 오브젝트 배치 */}
               <div className={styles.section}>
-                <div className={styles.sectionTitle}>몬스터 스폰</div>
-                {selectedLoc.spawns.map((spawn, i) => (
+                <div className={styles.sectionTitle}>오브젝트 배치</div>
+                {selectedLoc.objects.map((object, i) => (
                   <div key={i} className={styles.spawnRow}>
+                    <select
+                      className={styles.input}
+                      value={object.type}
+                      onChange={e => updateObjectSpawn(i, {
+                        type: e.target.value as LocationObjectSpawnInfo['type'],
+                      })}
+                    >
+                      <option value="monster">몬스터</option>
+                      <option value="resource">자원</option>
+                    </select>
                     <input
                       className={styles.input}
-                      placeholder="monster ID"
-                      value={spawn.monsterDataId}
-                      onChange={e => updateSpawn(i, { monsterDataId: e.target.value })}
+                      placeholder="data ID"
+                      value={object.dataId}
+                      onChange={e => updateObjectSpawn(i, { dataId: e.target.value })}
                     />
                     <input
                       className={styles.inputSmall}
                       type="number"
                       min={1}
                       title="최대 수"
-                      value={spawn.maxCount}
-                      onChange={e => updateSpawn(i, { maxCount: Number(e.target.value) })}
+                      value={object.maxCount}
+                      onChange={e => updateObjectSpawn(i, { maxCount: Number(e.target.value) })}
                     />
                     <input
                       className={styles.inputSmall}
                       type="number"
                       min={1}
                       title="리스폰(초)"
-                      value={spawn.respawnTime}
-                      onChange={e => updateSpawn(i, { respawnTime: Number(e.target.value) })}
+                      value={object.respawnTime}
+                      onChange={e => updateObjectSpawn(i, { respawnTime: Number(e.target.value) })}
                     />
-                    <button className={styles.removeBtn} onClick={() => removeSpawn(i)}>✕</button>
+                    <button className={styles.removeBtn} onClick={() => removeObjectSpawn(i)}>✕</button>
                   </div>
                 ))}
-                <button className={styles.addBtn} onClick={addSpawn}>+ 스폰 추가</button>
+                <button className={styles.addBtn} onClick={addObjectSpawn}>+ 오브젝트 추가</button>
               </div>
 
               <button className={styles.deleteBtn} onClick={deleteSelected}>위치 삭제</button>

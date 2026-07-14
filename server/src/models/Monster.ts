@@ -149,7 +149,7 @@ export default class Monster extends Entity {
 
         if (this.isOneShot) {
             this.deathTimer = 0;
-            getLocation(this.locationId)?.removeMonster(this);
+            getLocation(this.locationId)?.removeObject(this);
         }
     }
 

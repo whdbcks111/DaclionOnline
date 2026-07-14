@@ -101,3 +101,28 @@ defineShop({
     ],
     tags: [GameTags.SHOP_GENERAL],
 });
+
+defineShop({
+    id: 'feveric_mine_store',
+    buyList: [
+        {
+            label: '곡괭이',
+            create: () => ({ itemDataId: 'basic_pickaxe', count: 1 }),
+            count: 1,
+            price: 50,
+            stock: 5,
+            restockTime: 120,
+        },
+    ],
+    sellList: [
+        { label: '돌', filter: item => item.itemDataId === 'stone', count: 99, price: 2 },
+        { label: '석탄', filter: item => item.itemDataId === 'coal', count: 99, price: 5 },
+        { label: '철', filter: item => item.itemDataId === 'iron_ore', count: 99, price: 10 },
+        { label: '금', filter: item => item.itemDataId === 'gold_ore', count: 99, price: 25 },
+        { label: '루비', filter: item => item.itemDataId === 'ruby', count: 99, price: 55 },
+        { label: '에메랄드', filter: item => item.itemDataId === 'emerald', count: 99, price: 60 },
+        { label: '다이아몬드', filter: item => item.itemDataId === 'diamond', count: 99, price: 180 },
+        { label: '곡괭이', filter: item => item.itemDataId === 'basic_pickaxe', count: 1, price: 25 },
+    ],
+    tags: [GameTags.SHOP_MINING],
+});

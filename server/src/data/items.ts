@@ -195,3 +195,51 @@ defineItem({
     baseDurability: null,
     tags: [GameTags.ITEM_AMMUNITION, GameTags.MATERIAL_WOOD, GameTags.PROPERTY_NATURAL],
 });
+
+defineItem({
+    id: 'basic_pickaxe',
+    name: '곡괭이',
+    description: '광석처럼 단단한 자원을 채굴할 수 있는 기본 곡괭이.',
+    image: 'items/basic_pickaxe',
+    category: '도구',
+    weight: 2.8,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 4, source: '' },
+    ],
+    baseDurability: 100,
+    tags: [GameTags.ITEM_TOOL, GameTags.TOOL_MINING, GameTags.MATERIAL_IRON],
+});
+
+const mineralItems = [
+    { id: 'stone', name: '돌', description: '가장 흔한 광물 자원.', weight: 0.8, tag: GameTags.MATERIAL_STONE },
+    { id: 'coal', name: '석탄', description: '연료로 사용할 수 있는 검은 광물.', weight: 0.5, tag: GameTags.MATERIAL_COAL },
+    { id: 'iron_ore', name: '철', description: '도구와 장비 제작에 쓰이는 철 광석.', weight: 0.7, tag: GameTags.MATERIAL_IRON },
+    { id: 'gold_ore', name: '금', description: '희소하고 가치 있는 금 광석.', weight: 0.6, tag: GameTags.MATERIAL_GOLD },
+    { id: 'ruby', name: '루비', description: '붉게 빛나는 희귀 보석.', weight: 0.2, tag: GameTags.MATERIAL_RUBY },
+    { id: 'emerald', name: '에메랄드', description: '초록빛을 띠는 희귀 보석.', weight: 0.2, tag: GameTags.MATERIAL_EMERALD },
+    { id: 'diamond', name: '다이아몬드', description: '극히 희귀하고 단단한 보석.', weight: 0.2, tag: GameTags.MATERIAL_DIAMOND },
+] as const;
+
+for (const mineral of mineralItems) {
+    defineItem({
+        id: mineral.id,
+        name: mineral.name,
+        description: mineral.description,
+        image: `items/${mineral.id}`,
+        category: '광물',
+        weight: mineral.weight,
+        stackable: true,
+        maxStack: 99,
+        baseMetadata: null,
+        onUse: null,
+        equipSlot: null,
+        modifiers: null,
+        baseDurability: null,
+        tags: [mineral.tag],
+    });
+}

@@ -5,8 +5,11 @@ import type { TagId } from './tags.js'
 
 export type ZoneType = 'safe' | 'normal'
 
-export interface SpawnInfo {
-    monsterDataId: string
+export type LocationObjectType = 'monster' | 'resource'
+
+export interface LocationObjectSpawnInfo {
+    type: LocationObjectType
+    dataId: string
     maxCount: number
     respawnTime: number
 }
@@ -25,7 +28,7 @@ export interface LocationData {
     z: number
     isRespawnLocation?: boolean
     shopId?: string
-    spawns: SpawnInfo[]
+    objects: LocationObjectSpawnInfo[]
     connections: ConnectionInfo[]
     tags: TagId[]
 }
@@ -171,7 +174,7 @@ export interface LocationInfoData {
     x: number
     y: number
     z: number
-    monsters: EntityBarInfo[]
+    objects: EntityBarInfo[]
     players: EntityBarInfo[]
     adjacentLocations: AdjacentLocationData[]
 }
