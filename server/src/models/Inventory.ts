@@ -71,6 +71,11 @@ export default class Inventory {
         return this._items[idx];
     }
 
+    /** 아이템 정의 ID와 일치하는 첫 인스턴스 조회 */
+    getFirstItemByData(itemDataId: string): Item | undefined {
+        return this._items.find(item => item.itemDataId === itemDataId);
+    }
+
     /** 아이템 정의 ID로 조회 (모든 인스턴스) */
     getItemsByData(itemDataId: string): Item[] {
         return this._items.filter(e => e.itemDataId === itemDataId);
@@ -244,6 +249,22 @@ export default class Inventory {
             if (this._states.get(item) === ItemState.Clean) {
                 this._states.set(item, ItemState.Modified);
             }
+        }
+        return true;
+    }
+
+    /** DB ID가 아직 0인 신규 아이템도 안전하게 특정 인스턴스에서 제거한다. */
+    removeItemInstance(item: Item, count: number): boolean {
+        const idx = this._items.indexOf(item);
+        if (idx === -1 || count <= 0 || item.count < count) return false;
+
+        item.count -= count;
+        if (item.count <= 0) {
+            this._items.splice(idx, 1);
+            if (this._states.get(item) === ItemState.New) this._states.delete(item);
+            else this._states.set(item, ItemState.Deleted);
+        } else if (this._states.get(item) === ItemState.Clean) {
+            this._states.set(item, ItemState.Modified);
         }
         return true;
     }

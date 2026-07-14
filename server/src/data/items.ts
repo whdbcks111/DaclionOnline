@@ -5,6 +5,13 @@ import { sendNotificationToUser } from '../modules/message.js';
 import { getPlayerByUserId } from '../modules/player.js';
 import logger from '../utils/logger.js';
 import { GameTags } from '../../../shared/tags.js';
+import {
+    executeProjectileItemAttack,
+    ItemAttackOverrideKeys,
+    registerItemAttackOverride,
+} from '../modules/itemAttack.js';
+
+registerItemAttackOverride(ItemAttackOverrideKeys.PROJECTILE, executeProjectileItemAttack);
 
 registerItemUse('heal_hp', (inv, item, finish) => {
     function* healRoutine(amount: number, time: number) {
@@ -139,4 +146,52 @@ defineItem({
     ],
     baseDurability: 40,
     tags: [GameTags.ITEM_WEAPON, GameTags.PROPERTY_POISON],
+});
+
+defineItem({
+    id: 'light_bow',
+    name: '가벼운 활',
+    description: '가벼운 화살을 소모해 원거리 기본 공격을 한다. 화살이 없으면 근접 공격한다.',
+    image: 'items/light_bow',
+    category: '활',
+    weight: 1.8,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 2, source: '' },
+    ],
+    baseDurability: 80,
+    tags: [GameTags.ITEM_WEAPON, GameTags.MATERIAL_WOOD],
+});
+
+defineItem({
+    id: 'wooden_arrow',
+    name: '화살',
+    description: '투사체 기본 공격에 한 발씩 소모되는 가벼운 나무 화살.',
+    image: 'items/wooden_arrow',
+    category: '탄약',
+    weight: 0.1,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: {
+        projectile: {
+            dataId: 'basic_arrow',
+            overrides: {
+                name: '가벼운 화살',
+                damageBonus: 2,
+                attributeOverrides: { armorPen: 1 },
+            },
+        },
+    },
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_AMMUNITION, GameTags.MATERIAL_WOOD, GameTags.PROPERTY_NATURAL],
 });

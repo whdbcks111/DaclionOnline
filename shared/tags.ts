@@ -15,12 +15,14 @@ export interface TagReadable {
 export const GameTags = Object.freeze({
     ENTITY_PLAYER: 'entity:player',
     ENTITY_MONSTER: 'entity:monster',
+    ENTITY_PROJECTILE: 'entity:projectile',
     ENTITY_SLIME: 'entity:slime',
     ENTITY_HUMANOID: 'entity:humanoid',
 
     ITEM_CONSUMABLE: 'item:consumable',
     ITEM_WEAPON: 'item:weapon',
     ITEM_ARMOR: 'item:armor',
+    ITEM_AMMUNITION: 'item:ammunition',
 
     PROPERTY_FIRE: 'property:fire',
     PROPERTY_WATER: 'property:water',

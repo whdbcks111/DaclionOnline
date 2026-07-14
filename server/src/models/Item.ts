@@ -10,6 +10,13 @@ export interface ItemMetadata {
     [key: string]: ItemMetadataValue;
 }
 
+/** 코드 레지스트리와 JSON metadata 사이의 직렬화 경계 key. */
+export const ItemMetadataKeys = Object.freeze({
+    BASIC_ATTACK_OVERRIDE: 'basicAttackOverride',
+    PROJECTILE_ATTACK: 'projectileAttack',
+    PROJECTILE: 'projectile',
+} as const);
+
 const METADATA_STORAGE_KEY = '__daclionItemMetadata';
 const METADATA_STORAGE_VERSION = 1;
 
@@ -104,6 +111,12 @@ export class Item implements TagReadable {
         }
         const value = this.data?.baseMetadata?.[key];
         return value === undefined ? undefined : cloneMetadataValue(value) as T;
+    }
+
+    /** 장착 무기가 요청하는 기본 공격 오버라이드 레지스트리 key. */
+    get basicAttackOverrideKey(): string | undefined {
+        const value = this.getMetadata(ItemMetadataKeys.BASIC_ATTACK_OVERRIDE);
+        return typeof value === 'string' && value.trim() ? value : undefined;
     }
 
     /** 기본 metadata와 delta를 합친 읽기 전용 스냅샷 */

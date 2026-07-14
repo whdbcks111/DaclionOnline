@@ -32,6 +32,14 @@
 3. 위치 스폰은 `data/locations.json`의 `spawns`에서 연결한다.
 4. UI에 새 상태가 필요하면 공유 payload → `modules/player.ts` → `HudContext` → HUD 컴포넌트 순서로 확장한다.
 
+## 투사체/기본 공격 무기 추가
+
+1. 공용 투사체 템플릿은 `data/projectiles.ts`에서 `defineProjectileData()`로 등록한다. 임의 스킬은 `spawnProjectile` 또는 `spawnProjectileFromData`를 직접 호출한다.
+2. 아이템 기본 공격이면 `basicAttackOverride`를 `modules/itemAttack.ts`의 등록 key와 연결한다. 새 동작은 `registerItemAttackOverride()`로 추가하고 미처리 시 `false`를 반환해 근접 폴백을 보존한다.
+3. 탄약형은 무기의 `projectileAttack.ammunitionItemId`와 탄약의 `projectile` 참조를 사용한다. 무탄약형은 무기의 `projectileAttack.projectile`에 같은 참조를 직접 둔다.
+4. 상성 태그와 관통 등은 owner 장비를 참조하지 말고 ProjectileData/metadata override에 정의한다. 보상·어그로만 `attackOwner`를 사용한다.
+5. 새 metadata 필드는 `Item.getMetadata`와 검증 parser로 읽고 Inventory raw 배열을 직접 순회하거나 수정하지 않는다.
+
 ## 태그/속성 효과 추가
 
 1. 기존 공용 ID가 필요하면 `shared/tags.ts::GameTags`를 추가하고, 객체 정의의 `tags`에 부여한다. 동적 콘텐츠 태그는 `namespace:path` 문자열을 그대로 등록할 수 있다.

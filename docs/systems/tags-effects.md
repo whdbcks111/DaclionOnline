@@ -18,12 +18,15 @@
 | 객체 | 정의 태그 | 영속 태그 | 런타임 태그 |
 | --- | --- | --- | --- |
 | Entity / Player / Monster | Player 기본값, MonsterData | Player `tags` JSON | `Entity.tags.setRuntime` |
+| Projectile | ProjectileData + 발사 metadata override | 없음 | 짧은 수명 동안 `Entity.tags.setRuntime` 가능 |
 | ItemData / Item | ItemData | Item·Equipment `tags` JSON | `Item.tags.setRuntime` |
 | LocationData / Location | locations.json | 정의 파일 자체 | `Location.tags.setRuntime` |
 | ShopData / Shop | shops.ts | 없음 | `Shop.tags.setRuntime` |
 | DroppedItem | Item snapshot에서 보존 | 월드 드롭은 현재 비영속 | 원본 Item snapshot |
 
 일반 태그 조회에서는 장착 아이템 태그가 `Equipment.hasTag/getTags`를 통해 Entity의 유효 태그에 포함된다. 단, 상성 판정은 공격·피격 문맥을 분리한다. 공격자는 Entity 본체 태그와 `Equipment.hasEffectSourceTag`가 제공하는 무기 태그를 사용하고, 피격 대상은 장비를 전부 제외한 Entity 본체의 정의·영속·런타임 태그만 사용한다. 갑옷 패시브가 실제로 `Entity.tags.setRuntime(source, tags)`를 호출해 속성을 부여한 경우에는 본체 런타임 태그이므로 피격 상성에 포함된다.
+
+Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만 조회한다. owner 본체와 활·스태프 같은 발사 무기의 태그는 복사하거나 참조하지 않으므로, 투사체 상성은 `ProjectileData` 및 발사 metadata의 `tags` 오버라이드로만 결정된다. 피격 측 규칙은 다른 Entity와 같다.
 
 아이템을 인벤토리↔장비↔바닥으로 이동할 때는 `Item.snapshot`, `Item.fromSnapshot`, `Inventory.addItemSnapshot`, `Location.addDroppedItem`을 사용한다. 이 경로는 metadata, 내구도, 영속 태그를 함께 보존하며, 스택은 이 값들이 모두 같은 인스턴스끼리만 합쳐진다.
 
@@ -66,6 +69,8 @@
 ```
 
 `Entity.damage`가 공격 원인의 Entity와 피격 Entity를 `applyTagEffectValue`에 전달하며, `TagEffectReadable.hasEffectSourceTag/hasEffectTargetTag`가 있으면 일반 `hasTag`보다 우선한다. 따라서 플레이어 공격과 몬스터 자동 공격이 같은 문맥 규칙을 사용한다. 결과에는 `modifiedAmount`, `effectModifier`, 일치한 source/target tag가 들어가며 공격 메시지는 면역·저항·우세를 구분한다.
+
+투사체 공격에서는 `DamageCause.causeEntity`가 owner가 아닌 Projectile이다. 보상과 어그로는 `causeEntity.attackOwner`로 owner에게 돌아가지만, 위 상성 계산에는 실제 causeEntity만 전달된다.
 
 대표 데이터로 낡은 검은 `property:fire`, 독 단검은 `property:poison`, 슬라임은 `trait:inanimate + property:water + property:poison`, 고블린은 `property:natural`, 돌 골렘은 `trait:inanimate + property:natural`을 가진다. 낡은 검은 슬라임에게 0.5배, 고블린에게 1.5배이며 독 단검의 공격은 슬라임과 돌 골렘에게 0배다. 반대로 낡은 검을 장착한 플레이어가 피격될 때는 검의 불 태그가 대상 태그에 포함되지 않는다.
 

@@ -5,9 +5,17 @@ import { randomHex } from "../utils/random.js";
 import { isValidPayload, validateNickname } from "../utils/validators.js";
 import prisma from "../config/prisma.js";
 import type { LoginRequest } from "../../../shared/types.js";
-import { loadPlayerByUserId, unloadPlayerByUserId } from "./player.js";
 import { getUserChannel, getChannelRoomKey, getAvailableChannels } from "./channel.js";
 import type { Session } from "../types/index.js";
+
+// message/socket → login → player → Entity → message 순환 초기화를 피한다.
+async function loadPlayerByUserId(userId: number) {
+    return (await import('./player.js')).loadPlayerByUserId(userId);
+}
+
+async function unloadPlayerByUserId(userId: number) {
+    return (await import('./player.js')).unloadPlayerByUserId(userId);
+}
 
 const sessionMap = new Map<string, Session>()
 

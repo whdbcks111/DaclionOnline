@@ -527,7 +527,7 @@ export function initPlayerCommands(): void {
                 player.currentTarget = monster;
             }
 
-            player.attack(monster);
+            player.performBasicAttack(monster);
         },
     });
 

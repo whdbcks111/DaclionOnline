@@ -10,6 +10,7 @@ import { sendBotMessageToUser, sendNotificationToUser } from "../modules/message
 import { chat } from "../utils/chatBuilder.js";
 import { GameTags } from "../../../shared/tags.js";
 import type { TagId } from "../../../shared/tags.js";
+import { executeItemAttackOverride } from "../modules/itemAttack.js";
 
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
@@ -170,6 +171,19 @@ export default class Player extends Entity {
     }
 
     // -- 게임 로직 --
+
+    /** 주무기 metadata의 기본 공격 오버라이드를 실행하고, 미처리 시 직접 근접 공격한다. */
+    performBasicAttack(target: Entity): void {
+        const weapon = this.equipment.getEquipped('mainHand');
+        const overrideKey = weapon?.basicAttackOverrideKey;
+        if (weapon && overrideKey && executeItemAttackOverride(overrideKey, {
+            attacker: this,
+            target,
+            weapon,
+            inventory: this.inventory,
+        })) return;
+        this.attack(target);
+    }
 
     /** 경험치 획득 및 레벨업 처리. 레벨업한 레벨 목록을 반환 */
     gainExp(amount: number): number[] {

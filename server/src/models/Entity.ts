@@ -5,7 +5,7 @@ import Stat from "./Stat.js";
 import type { StatRecord } from "./Stat.js";
 import { sendBotMessageToUser, sendNotificationFiltered } from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
-import { getPlayerByUserId } from "../modules/player.js";
+import { isOnlinePlayerAtLocation } from "../modules/playerRegistry.js";
 import { applyCritical, calculateFinalDamage } from "./Combat.js";
 import { applyTagEffectValue } from "./TagEffect.js";
 import { TagCollection } from "../../../shared/tags.js";
@@ -99,6 +99,9 @@ export default abstract class Entity implements TagReadable {
 
     /** 플레이어 userId (Player에서 override, 비플레이어는 undefined) */
     get playerUserId(): number | undefined { return undefined; }
+
+    /** 공격 보상·어그로를 귀속할 최종 소유자. Projectile은 owner를 반환한다. */
+    get attackOwner(): Entity { return this; }
 
     get level() { return this._level; }
     set level(val: number) { this._level = val; }
@@ -195,23 +198,40 @@ export default abstract class Entity implements TagReadable {
     get attackCooldown(): number { return this._attackCooldown; }
     get maxAttackCooldown(): number { return this._maxAttackCooldown; }
 
-    /** 대상 엔티티를 공격 */
-    attack(target: Entity, type: DamageType = 'physical', amount?: number): DamageResult | null {
-        if (this.isDead) return null;
+    /** 공격 시작 가능 여부를 검사하고 플레이어라면 실패 이유를 안내한다. */
+    canAttack(target: Entity): boolean {
+        if (this.isDead) return false;
 
         if (target.isDead) {
             if (this.isPlayer && this.playerUserId) {
                 sendBotMessageToUser(this.playerUserId, '죽은 대상은 공격할 수 없습니다.');
             }
-            return null;
+            return false;
         }
 
         if (this._attackCooldown > 0) {
             if (this.isPlayer && this.playerUserId) {
                 sendBotMessageToUser(this.playerUserId, `아직 공격할 수 없습니다. (${this.attackCooldown.toFixed(1)}초 후 가능)`);
             }
-            return null;
+            return false;
         }
+
+        return true;
+    }
+
+    /** 성공한 공격의 쿨다운과 선택적인 주무기 내구도 소모를 확정한다. */
+    commitAttack(consumeMainHandDurability = false): void {
+        const attackSpeed = this.attribute.get(AttributeType.ATTACK_SPEED);
+        this._maxAttackCooldown = 1 / Math.max(0.01, attackSpeed);
+        this._attackCooldown = this._maxAttackCooldown;
+        if (consumeMainHandDurability) {
+            this.equipment.decreaseItemDurability(EquipSlotType.MAIN_HAND.key, 0, 1);
+        }
+    }
+
+    /** 대상 엔티티를 직접 공격 */
+    attack(target: Entity, type: DamageType = 'physical', amount?: number): DamageResult | null {
+        if (!this.canAttack(target)) return null;
 
         // 기본 공격력: 물리 → atk, 마법 → magicForce
         const baseAmount = amount ?? (type === 'physical'
@@ -224,34 +244,27 @@ export default abstract class Entity implements TagReadable {
         );
 
         const damageResult = target.damage(rawAmount, type, { type: 'attack', causeEntity: this, critical });
-        // 현재 전투에는 원거리 공격 구분이 없으므로 물리 기본 공격을 근접 공격으로 취급한다.
-        if (type === 'physical') {
-            this.equipment.decreaseItemDurability(EquipSlotType.MAIN_HAND.key, 0, 1);
-        }
+        // 즉시 피해를 적용하는 물리 직접 공격은 근접 공격으로 취급한다.
+        this.commitAttack(type === 'physical');
         const { finalDamage, effectModifier } = damageResult;
         const effectLabel = effectModifier === 0
             ? '효과 없음! '
             : effectModifier !== 1 ? `상성 x${effectModifier}! ` : '';
 
-        // 공격 쿨다운 설정
-        const attackSpeed = this.attribute.get(AttributeType.ATTACK_SPEED);
-        this._maxAttackCooldown = 1 / Math.max(0.01, attackSpeed);
-        this._attackCooldown = this._maxAttackCooldown;
-
         const lifeRatio = target.maxLife > 0 ? Math.max(0, target.life) / target.maxLife : 0;
         const pct = Math.floor(lifeRatio * 100);
 
-        // 플레이어 관련 알림 + 채팅 메시지
-        if (this.isPlayer || target.isPlayer) {
+        const attackerUid = this.playerUserId;
+        const targetUid = target.playerUserId;
+
+        // 플레이어가 직접 또는 소유한 엔티티를 통해 관여한 전투 알림
+        if (attackerUid !== undefined || targetUid !== undefined) {
             const locId = this.locationId;
-            sendNotificationFiltered(userId => {
-                const p = getPlayerByUserId(userId);
-                return p?.locationId === locId;
-            }, {
+            sendNotificationFiltered(userId => isOnlinePlayerAtLocation(userId, locId), {
                 key: 'attack',
                 message: chat()
                     .text(`${critical ? '치명타! ' : ''}${effectLabel}${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.\n`)
-                    .progress({ value: lifeRatio, length: 150, color: this.isPlayer ? '$enemy' : '$life', thickness: 6 })
+                    .progress({ value: lifeRatio, length: 150, color: attackerUid !== undefined ? '$enemy' : '$life', thickness: 6 })
                     .text(` ${pct}%`)
                     .build(),
             });
@@ -263,13 +276,11 @@ export default abstract class Entity implements TagReadable {
                 .text(`${this.name}이(가) ${target.name}에게 `)
                 .color('red', b => b.text(finalDamage.toFixed(1)))
                 .text(' 피해\n')
-                .progress({ value: lifeRatio, length: 150, color: this.isPlayer ? '$enemy' : '$life', thickness: 6 })
+                .progress({ value: lifeRatio, length: 150, color: attackerUid !== undefined ? '$enemy' : '$life', thickness: 6 })
                 .text(` ${pct}%`)
                 .build();
 
             const uids = new Set<number>();
-            const attackerUid = this.playerUserId;
-            const targetUid = target.playerUserId;
             if (attackerUid !== undefined) uids.add(attackerUid);
             if (targetUid !== undefined) uids.add(targetUid);
             for (const uid of uids) {

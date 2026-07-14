@@ -10,7 +10,7 @@
 - Item 인스턴스의 추가 태그는 DB JSON에 저장되며 정의 태그와 합쳐 조회한다.
 - 인벤토리↔장비↔바닥 이동은 `ItemSnapshot`으로 metadata delta, 내구도, 영속 태그를 보존한다. 스택도 이 값이 모두 같을 때만 합쳐진다.
 
-현재 정의는 `health_potion`, `mana_potion`, `old_sword`, `old_shield`, `venom_dagger`다. 낡은 검의 불 태그와 독 단검의 독 태그는 장착 시 Entity의 공격 효과 태그가 된다.
+현재 정의는 `health_potion`, `mana_potion`, `old_sword`, `old_shield`, `venom_dagger`, `light_bow`, `wooden_arrow`다. 낡은 검의 불 태그와 독 단검의 독 태그는 장착 시 Entity의 직접 공격 효과 태그가 된다. 가벼운 활은 화살 한 발을 소비해 화살 자체의 자연 속성으로 공격한다.
 
 metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-level key 단위로 합쳐 계산한다. `getMetadata/getMetadataSnapshot`으로 읽고 `setMetadata/resetMetadata`로 변경한다. 기본값과 같은 값을 설정하면 delta가 제거되며, override가 없는 필드는 실행 중 `ItemData.baseMetadata`가 바뀌어도 즉시 최신 값을 상속한다. 객체·배열 같은 중첩 값은 해당 top-level 필드 전체가 하나의 override다.
 
@@ -20,12 +20,12 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 ## Inventory API와 규칙
 
-- 조회: `getItem`, `getItemByIndex`, `getItemsByData`, `getCount`.
+- 조회: `getItem`, `getItemByIndex`, `getFirstItemByData`, `getItemsByData`, `getCount`.
 - metadata 변경: `setItemMetadata`, `resetItemMetadata`가 대상 Item API를 호출하고 Inventory를 dirty로 표시한다. 조회는 반환된 Item의 `getMetadata`를 사용한다.
 - 내구도 변경: `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`가 Item API를 호출하고 Inventory를 dirty로 표시한다.
 - 추가: `canAdd`, `canAddSnapshot(s)`이 총 무게와 아이템 정의를 검사하고 `addItem`이 stackable/maxStack 규칙에 따라 병합 또는 새 인스턴스를 만든다. 기존 인스턴스를 이동할 때는 `addItemSnapshot`을 사용한다.
 - 사용: `useItem`이 `ItemData.onUse` handler를 실행하며 동시에 하나의 아이템만 사용할 수 있다.
-- 제거: `removeItem`, `removeItemByData`가 수량 또는 인스턴스를 dirty/deleted 상태로 바꾼다.
+- 제거: `removeItem`, `removeItemByData`, `removeItemInstance`가 수량 또는 인스턴스를 dirty/deleted 상태로 바꾼다. 발사는 신규 아이템의 임시 DB ID가 겹쳐도 안전한 `removeItemInstance`로 선택한 탄약만 소비한다.
 - 저장: state map의 New/Modified/Deleted 항목을 Prisma create/update/delete로 반영한다.
 
 바닥 아이템은 `Location.getDroppedItems()`의 복사본으로 표시하고 `pickupItem/pickupAllItems`로만 제거한다. 전체 줍기는 모든 스택의 중량을 먼저 검사하므로 하나라도 받을 수 없는 경우 바닥 상태를 변경하지 않는다.
@@ -33,6 +33,47 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 `/인벤토리` 목록과 `/상태창`의 장착 정보는 이름 앞에 `Item.image` 아이콘을 표시한다. 내구도가 있는 아이템은 이름 오른쪽에 `em` 길이의 짧은 progress와 현재/최대값 tooltip을 추가한다. progress 색은 50% 초과 초록, 20% 초과~50% 금색, 20% 이하 빨강이며 존재하지 않는 이미지 에셋은 숨겨진다.
 
 사용 효과는 `registerItemUse(id, handler)`로 등록한다. handler는 성공·실패를 포함한 모든 비동기 종료 경로에서 `finish()`를 호출해야 Inventory의 사용 잠금이 풀린다. 현재 HP/MP 포션은 coroutine으로 지연 후 회복한다.
+
+## 기본 공격 오버라이드와 투사체 아이템
+
+장착 무기는 metadata의 `basicAttackOverride` 문자열로 `modules/itemAttack.ts`의 key→함수 레지스트리를 선택한다. 현재 `projectile` handler가 있으며 처리할 수 없으면 `false`를 반환해 `Player.performBasicAttack`이 직접 근접 공격으로 폴백한다. 가벼운 활은 탄약이 없거나 탄약 설정이 유효하지 않을 때 이 폴백을 사용한다.
+
+탄약 소비형 metadata 예시는 다음과 같다.
+
+```jsonc
+// weapon.baseMetadata
+{
+  "basicAttackOverride": "projectile",
+  "projectileAttack": { "ammunitionItemId": "wooden_arrow" }
+}
+
+// ammunition.baseMetadata
+{
+  "projectile": {
+    "dataId": "basic_arrow",
+    "overrides": {
+      "damageBonus": 2,
+      "attributeOverrides": { "armorPen": 1 }
+    }
+  }
+}
+```
+
+탄약을 소비하지 않는 스태프·마법 무기형은 `projectileAttack` 안에 참조를 직접 둔다.
+
+```json
+{
+  "basicAttackOverride": "projectile",
+  "projectileAttack": {
+    "projectile": {
+      "dataId": "basic_magic_orb",
+      "overrides": { "damageMultiplier": 1.2 }
+    }
+  }
+}
+```
+
+`overrides`는 `name`, 절대 `damage`, `damageType`, `travelTime`, `damageMultiplier`, `damageBonus`, `tags`, `attributeOverrides`를 지원한다. 값은 `parseProjectileReference`가 검증하며 투사체 템플릿은 `data/projectiles.ts`에서 `defineProjectileData`로 등록한다. 피해량을 직접 지정하지 않으면 물리는 owner `atk`, 마법은 `magicForce`에 multiplier와 bonus를 적용한다.
 
 ## Equipment API와 규칙
 
@@ -57,4 +98,4 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 - `Shop.update(dt)`가 재입고 timer를 누적하며 게임 루프가 모든 상점을 갱신한다.
 - 재고는 메모리 상태여서 서버 재시작 시 최대치로 초기화된다.
 
-현재 `general_store`가 포션, 낡은 검, 낡은 방패를 판매·매입하며 `shop_general` 위치에 연결되어 있다.
+현재 `general_store`가 포션, 낡은 검, 낡은 방패, 독 단검, 가벼운 활과 화살을 판매·매입하며 `shop_general` 위치에 연결되어 있다.

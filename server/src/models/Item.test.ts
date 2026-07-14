@@ -81,6 +81,17 @@ test('metadata setter는 delta만 저장하고 변경 callback을 호출한다',
     assert.equal(changes, 2);
 });
 
+test('기본 공격 오버라이드 key는 base metadata와 인스턴스 delta를 따른다', () => {
+    defineItem(itemData('test_attack_override', undefined, { basicAttackOverride: 'projectile' }));
+    const item = new Item('test_attack_override', 1, null, null);
+
+    assert.equal(item.basicAttackOverrideKey, 'projectile');
+    item.setMetadata('basicAttackOverride', 'custom_attack');
+    assert.equal(item.basicAttackOverrideKey, 'custom_attack');
+    item.resetMetadata('basicAttackOverride');
+    assert.equal(item.basicAttackOverrideKey, 'projectile');
+});
+
 test('구형 전체 metadata는 기본값과 다른 필드만 delta로 마이그레이션한다', () => {
     defineItem(itemData('test_legacy_metadata', undefined, { amount: 50, time: 1 }));
     const persisted = migratePersistedItemMetadata('test_legacy_metadata', {

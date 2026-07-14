@@ -44,6 +44,22 @@ defineShop({
             stock: 2,
             restockTime: 180,
         },
+        {
+            label: '가벼운 활',
+            create: () => ({ itemDataId: 'light_bow', count: 1 }),
+            count: 1,
+            price: 40,
+            stock: 3,
+            restockTime: 120,
+        },
+        {
+            label: '화살 10개',
+            create: () => ({ itemDataId: 'wooden_arrow', count: 10 }),
+            count: 10,
+            price: 8,
+            stock: 20,
+            restockTime: 20,
+        },
     ],
     sellList: [
         {
@@ -69,6 +85,18 @@ defineShop({
             filter: (item) => item.itemDataId === 'venom_dagger',
             count: 1,
             price: 20,
+        },
+        {
+            label: '가벼운 활',
+            filter: (item) => item.itemDataId === 'light_bow',
+            count: 1,
+            price: 20,
+        },
+        {
+            label: '화살',
+            filter: (item) => item.itemDataId === 'wooden_arrow',
+            count: 99,
+            price: 1,
         },
     ],
     tags: [GameTags.SHOP_GENERAL],

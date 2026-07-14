@@ -82,8 +82,9 @@ export default class Monster extends Entity {
     /** 피격 시 공격자를 자동 타게팅 (타겟 없을 때만) */
     override damage(rawAmount: number, type: DamageType = 'physical', cause: DamageCause | null = null): DamageResult {
         const result = super.damage(rawAmount, type, cause);
-        if (cause?.causeEntity && !this.currentTarget) {
-            this.currentTarget = cause.causeEntity;
+        const attacker = cause?.causeEntity?.attackOwner;
+        if (attacker && !this.currentTarget) {
+            this.currentTarget = attacker;
         }
         return result;
     }
@@ -106,10 +107,11 @@ export default class Monster extends Entity {
     override onDeath(): void {
         super.onDeath();
 
-        if(this.lastDamageCause?.causeEntity?.isPlayer) {
-            const causePlayer = this.lastDamageCause?.causeEntity as Player;
+        const attackOwner = this.lastDamageCause?.causeEntity?.attackOwner;
+        if(attackOwner?.isPlayer) {
+            const causePlayer = attackOwner as Player;
 
-            if (this.lastDamageCause?.causeEntity?.isPlayer) this.lastDamageCause.causeEntity.currentTarget = null;
+            attackOwner.currentTarget = null;
 
             const drops = this.rollDrops();
             for (const drop of drops) {

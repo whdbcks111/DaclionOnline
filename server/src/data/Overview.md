@@ -2,7 +2,8 @@
 
 서버 시작 시 import 부작용으로 런타임 레지스트리에 들어가는 마스터 데이터를 둔다.
 
-- `items.ts`: 아이템 이미지 key·`baseMetadata`·정의 태그·사용 효과 등록. 인스턴스는 기본 metadata 전체를 복사하지 않고 top-level delta만 저장한다. 대표 속성 무기는 불 검과 독 단검이며 이미지 key를 생략하면 `items/{id}`를 사용한다.
+- `items.ts`: 아이템 이미지 key·`baseMetadata`·정의 태그·사용/공격 효과 등록. 인스턴스는 기본 metadata 전체를 복사하지 않고 top-level delta만 저장한다. 불 검, 독 단검과 탄약 투사체를 발사하는 가벼운 활/화살이 있다.
+- `projectiles.ts`: 코드에서 참조하는 투사체 마스터 데이터. 물리 화살과 무탄약 무기용 마력 구체 예시를 등록한다.
 - `monsters.ts`: 몬스터 정의 태그, 능력치·보상·드롭 정의. 무생물·물·독 슬라임, 자연 고블린, 무생물 돌 골렘이 있다.
 - `shops.ts`: 상점 태그, 매매 목록과 재고 정의.
 - `tagEffects.ts`: `source tag → target tag → modifier` 단방향 효과 테이블.

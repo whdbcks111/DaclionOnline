@@ -12,6 +12,7 @@ import { initChat } from './modules/chat.js';
 import { initBot } from './modules/bot.js';
 import { initPlayer, saveAllPlayers } from './modules/player.js';
 import { initGame } from './modules/game.js';
+import './data/projectiles.js';
 import './data/items.js';
 import './data/monsters.js';
 import './data/shops.js';

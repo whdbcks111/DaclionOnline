@@ -8,6 +8,8 @@ Entity
   │          ├─ Equipment
   │          └─ Stat ──> Attribute modifiers
   └─ Monster ─ Equipment
+  └─ Projectile ── owner: Entity
+                └─ target: Entity
 
 Location ── monsters[]
          ├─ droppedItems[]
@@ -18,7 +20,7 @@ Location ── monsters[]
 
 ## 게임 루프와 갱신 주기
 
-- `modules/game.ts`: 20 FPS. 모든 온라인 Player의 `earlyUpdate → update → lateUpdate`, Location/Monster, Shop, Coroutine 순으로 갱신한다.
+- `modules/game.ts`: 20 FPS. 모든 온라인 Player의 `earlyUpdate → update → lateUpdate`, 활성 Projectile, Location/Monster, Shop, Coroutine 순으로 갱신한다.
 - `modules/player.ts`: 500ms마다 `playerStats`와 `locationInfo`, 30초마다 dirty 상태를 DB에 저장한다.
 - `Entity.earlyUpdate`: 공격 cooldown 감소, 생명력 자연 회복, 사망 timer와 respawn.
 - `Entity.lateUpdate`: life가 0 이하가 된 엔티티의 사망 처리.
@@ -44,8 +46,12 @@ Player setter, Stat, Inventory, Equipment는 변경 상태를 추적한다. `Pla
 - 물리 피해는 `max(0, raw - max(0, 대상 def - 공격자 armorPen))`, 마법은 대상 magicDef/공격자 magicPen, absolute는 방어와 관통 0으로 계산한다.
 - 공격 속도로 cooldown을 `1 / attackSpeed`초 설정한다.
 - 현재 별도 원거리 분류가 없으므로 성공적으로 실행된 물리 기본 공격을 근접 공격으로 취급하며, 공격자의 `mainHand:0` 아이템에 내구도가 있으면 공격마다 1 차감한다. 0에서도 공격과 장비 modifier는 유지된다.
-- Monster는 처음 맞은 공격자를 target으로 삼고 같은 위치에 살아 있는 동안 자동 공격한다.
-- Monster 사망 시 마지막 원인이 Player 공격이면 드롭, 골드, 경험치를 지급한다.
+- `Player.performBasicAttack`은 주무기의 `basicAttackOverride`를 먼저 실행한다. 오버라이드가 없거나 `false`를 반환하면 기존 직접 근접 공격으로 폴백한다.
+- Projectile은 좌표가 없는 현재 월드 모델에 맞춰 지정된 비행 시간 뒤 같은 위치의 target을 공격하고 즉시 소멸한다. 영속 저장하지 않으며 `spawnProjectile` 또는 마스터 데이터 기반 `spawnProjectileFromData`로 생성한다.
+- 투사체가 실제 `DamageCause.causeEntity`이므로 상성·관통·치명타는 투사체 자체 태그와 능력치를 사용한다. `attackOwner`는 최종 발사자를 반환해 메시지, Monster 어그로와 처치 보상만 owner에게 귀속한다.
+- 투사체 무기 발사 성공 시 owner의 공격 cooldown과 주무기 내구도 1을 확정한다. Projectile 자신의 적중 공격은 owner의 근접 무기 태그나 내구도에 접근하지 않는다.
+- Monster는 처음 맞힌 실제 공격원의 `attackOwner`를 target으로 삼고 같은 위치에 살아 있는 동안 자동 공격한다.
+- Monster 사망 시 마지막 공격원의 `attackOwner`가 Player이면 드롭, 골드, 경험치를 지급한다.
 - 레벨 요구 경험치는 `level * 100`; 레벨업마다 모든 Stat +1, 가용 statPoint +3이다.
 - Player 사망 시간은 기본 10초, 레벨 10 이상 30초, 50 이상 5분이며 첫 respawn location으로 이동한다.
 
