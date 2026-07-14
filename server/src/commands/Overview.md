@@ -4,7 +4,7 @@
 
 - `general.ts`: 도움말, 랜덤, 공지, 관리자 eval.
 - `player.ts`: 상태/인벤토리/아이템/장비/공격/스탯. 아이템 이동은 metadata·내구도·영속 태그를 보존하는 snapshot API를 사용한다.
-- `location.ts`: 위치 조회와 coroutine 이동.
+- `location.ts`: 위치 조회, 개별/전체 바닥 아이템 줍기와 coroutine 이동.
 - `shop.ts`: 상점 조회, 구매, 판매.
 - `admin.ts`: 권한 10의 플레이어/월드 관리 명령.
 

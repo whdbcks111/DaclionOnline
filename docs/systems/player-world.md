@@ -54,6 +54,7 @@ Player setter, Stat, Inventory, Equipment는 변경 상태를 추적한다. `Pla
 - `modules/location.ts`가 시작할 때 JSON을 런타임 Location 레지스트리로 바꾼다.
 - 연결 condition은 `data/locations.ts`의 handler registry가 `visible | locked | hidden`을 반환한다.
 - `/이동` 시간은 `max(1, distance / speed / 5)`초이고 0.5초 단위 coroutine 알림을 갱신한다.
+- `/위치`는 바닥 아이템을 개별 번호와 줍기 버튼으로 표시한다. `/줍기 번호`는 해당 드롭 스택 전체, `/줍기 전체`는 중량이 허용할 때 모든 스택을 인벤토리로 옮긴다.
 - 위치 편집기는 `/admin/locations`에서 그래프를 편집하고 `adminSaveLocations`로 JSON과 런타임을 한 번에 교체한다.
 
 현재 월드는 마을 광장(리스폰), 초원, 상점 거리, 어두운 숲, 잡화점으로 구성된다. 초원에는 물 속성 슬라임, 어두운 숲에는 자연 속성 고블린과 무생물 돌 골렘이 스폰되며 어두운 숲 연결은 `level_5` 조건을 사용한다.

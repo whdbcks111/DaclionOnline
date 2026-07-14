@@ -135,6 +135,92 @@ export function initLocationCommands(): void {
     });
 
     registerCommand({
+        name: '줍기',
+        aliases: ['pickup'],
+        description: '현재 위치의 바닥 아이템을 줍습니다.',
+        showCommandUse: 'show',
+        args: [
+            { name: '번호/전체', description: '주울 바닥 아이템 번호 또는 전체', required: true,
+                completions(userId) {
+                    const player = getPlayerByUserId(userId);
+                    if (!player) return [];
+                    const location = getLocation(player.locationId);
+                    if (!location) return [];
+                    const items = location.getDroppedItems();
+                    return [
+                        ...items.map((item, index): CompletionItem => ({
+                            value: String(index + 1),
+                            description: `${getItemData(item.itemDataId)?.name ?? item.itemDataId} x${item.count}`,
+                        })),
+                        ...(items.length > 0 ? [{ value: '전체', description: '바닥 아이템 모두 줍기' }] : []),
+                    ];
+                },
+            },
+        ],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+
+            if (player.isDead) {
+                sendBotMessageToUser(userId, '사망 상태에서는 행동할 수 없습니다.');
+                return;
+            }
+
+            const location = getLocation(player.locationId);
+            if (!location) {
+                sendBotMessageToUser(userId, '현재 위치를 찾을 수 없습니다.');
+                return;
+            }
+
+            const droppedItems = location.getDroppedItems();
+            if (droppedItems.length === 0) {
+                sendBotMessageToUser(userId, '현재 위치에 주울 아이템이 없습니다.');
+                return;
+            }
+
+            if (args[0] === '전체') {
+                if (!player.inventory.canAddSnapshots(droppedItems)) {
+                    sendBotMessageToUser(userId, '인벤토리 중량이 부족하여 바닥 아이템을 모두 주울 수 없습니다.');
+                    return;
+                }
+
+                const pickedItems = location.pickupAllItems();
+                for (const item of pickedItems) player.inventory.addItemSnapshot(item);
+                const totalCount = pickedItems.reduce((sum, item) => sum + item.count, 0);
+                sendBotMessageToUser(userId, `바닥 아이템 ${totalCount}개를 모두 주웠습니다.`);
+                return;
+            }
+
+            const itemNumber = Number(args[0]);
+            const index = itemNumber - 1;
+            if (!Number.isInteger(itemNumber) || index < 0 || index >= droppedItems.length) {
+                sendBotMessageToUser(userId, `유효한 번호를 입력해주세요. (1~${droppedItems.length} 또는 전체)`);
+                return;
+            }
+
+            const selected = droppedItems[index];
+            if (!player.inventory.canAddSnapshot(selected)) {
+                sendBotMessageToUser(userId, '인벤토리 중량이 부족하여 아이템을 주울 수 없습니다.');
+                return;
+            }
+
+            const picked = location.pickupItem(index);
+            if (!picked) {
+                sendBotMessageToUser(userId, '아이템을 줍는 중 오류가 발생했습니다.');
+                return;
+            }
+            if (!player.inventory.addItemSnapshot(picked)) {
+                location.addDroppedItem(picked);
+                sendBotMessageToUser(userId, '아이템을 줍는 중 오류가 발생했습니다.');
+                return;
+            }
+
+            const itemName = getItemData(picked.itemDataId)?.name ?? picked.itemDataId;
+            sendBotMessageToUser(userId, `${itemName} x${picked.count}을(를) 주웠습니다.`);
+        },
+    });
+
+    registerCommand({
         name: '위치',
         aliases: ['where', 'location'],
         description: '현재 위치 정보를 확인합니다.',
@@ -191,17 +277,19 @@ export function initLocationCommands(): void {
 
             b.text('\n').color('gray', b2 => b2.text('[ 바닥 아이템 ]\n'));
 
-            if (location.droppedItems.length === 0) {
+            const droppedItems = location.getDroppedItems();
+            if (droppedItems.length === 0) {
                 b.color('gray', b2 => b2.text('없음\n'));
             } else {
-                const grouped = new Map<string, number>();
-                for (const di of location.droppedItems) {
-                    grouped.set(di.itemDataId, (grouped.get(di.itemDataId) ?? 0) + di.count);
+                for (let index = 0; index < droppedItems.length; index++) {
+                    const item = droppedItems[index];
+                    const name = getItemData(item.itemDataId)?.name ?? item.itemDataId;
+                    b.color('gray', b2 => b2.text(`[${index + 1}] `))
+                     .text(`${name} x${item.count} `)
+                     .button(`/줍기 ${index + 1}`, b2 => b2.text('[줍기]'), true)
+                     .text('\n');
                 }
-                for (const [itemDataId, count] of grouped) {
-                    const name = getItemData(itemDataId)?.name ?? itemDataId;
-                    b.text(`- ${name} x${count}\n`);
-                }
+                b.button('/줍기 전체', b2 => b2.text('[전체 줍기]'), true).text('\n');
             }
 
             b.text('\n').color('gray', b2 => b2.text('[ 이동 가능 장소 ]\n'));

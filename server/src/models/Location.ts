@@ -79,17 +79,33 @@ export default class Location implements TagReadable {
 
     // -- 바닥 아이템 관리 --
 
-    get droppedItems(): ReadonlyArray<DroppedItem> { return this._droppedItems; }
+    /** 내부 배열을 노출하지 않는 바닥 아이템 스냅샷 */
+    getDroppedItems(): DroppedItem[] {
+        return this._droppedItems.map(item => ({
+            ...item,
+            metadata: item.metadata ? { ...item.metadata } : null,
+            tags: [...item.tags],
+        }));
+    }
 
     hasTag(tag: string): boolean { return this.tags.hasTag(tag); }
 
     addDroppedItem(item: ItemSnapshot): void {
-        this._droppedItems.push({ ...item, tags: [...item.tags], droppedAt: Date.now() });
+        this._droppedItems.push({
+            ...item,
+            metadata: item.metadata ? { ...item.metadata } : null,
+            tags: [...item.tags],
+            droppedAt: Date.now(),
+        });
     }
 
     pickupItem(index: number): DroppedItem | null {
         if (index < 0 || index >= this._droppedItems.length) return null;
         return this._droppedItems.splice(index, 1)[0];
+    }
+
+    pickupAllItems(): DroppedItem[] {
+        return this._droppedItems.splice(0);
     }
 
     // -- 이동 가능 장소 조회 --

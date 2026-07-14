@@ -86,6 +86,21 @@ export default class Inventory {
         return this.currentWeight + data.weight * count <= this._maxWeight;
     }
 
+    canAddSnapshot(snapshot: ItemSnapshot): boolean {
+        return this.canAddSnapshots([snapshot]);
+    }
+
+    /** 여러 아이템 스냅샷을 전부 추가할 수 있는지 원자적으로 검사 */
+    canAddSnapshots(snapshots: readonly ItemSnapshot[]): boolean {
+        let addedWeight = 0;
+        for (const snapshot of snapshots) {
+            const data = getItemData(snapshot.itemDataId);
+            if (!data || snapshot.count <= 0) return false;
+            addedWeight += data.weight * snapshot.count;
+        }
+        return this.currentWeight + addedWeight <= this._maxWeight;
+    }
+
     /** 아이템 추가. 성공 시 true */
     addItem(
         itemDataId: string,
@@ -108,7 +123,7 @@ export default class Inventory {
     addItemSnapshot(snapshot: ItemSnapshot): boolean {
         const data = getItemData(snapshot.itemDataId);
         if (!data || snapshot.count <= 0) return false;
-        if (!this.canAdd(snapshot.itemDataId, snapshot.count)) return false;
+        if (!this.canAddSnapshot(snapshot)) return false;
 
         let remaining = snapshot.count;
 

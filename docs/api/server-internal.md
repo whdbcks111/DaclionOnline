@@ -32,12 +32,12 @@
 | `Player` | `loadByUserId`, `create`, `save`, `gainExp`, `allocateStat` | 영속 플레이어와 성장 |
 | `AttributeType`, `Attribute` | `values/fromKey`, `get`, `setBase`, `addModifier(s)`, `removeBySource` | 클래스형 능력치 메타데이터와 기본값 + add/multiply 수정자 계산 |
 | `StatType`, `Stat` | `values/fromKey/fromInput`, `get/set/add`, `applyModifiers(entity)` | 클래스형 5종 스탯과 Entity 기반 Attribute 변환 |
-| `Inventory` | `getItem*`, `getCount`, `canAdd`, `addItem`, `addItemSnapshot`, `useItem`, `removeItem*`, `load`, `save` | 무게/스택/사용/태그 포함 snapshot 이동/DB 동기화 |
+| `Inventory` | `getItem*`, `getCount`, `canAdd`, `canAddSnapshot(s)`, `addItem`, `addItemSnapshot`, `useItem`, `removeItem*`, `load`, `save` | 단일·복수 snapshot 수용 검사, 무게/스택/사용/태그 포함 이동/DB 동기화 |
 | `EquipSlotType`, `Equipment` | `values/fromKey/fromInput`, `getEquipped`, `getAllEquipped`, `hasTag`, `getTags`, `equip`, `equipSwap`, `unequip`, `applyModifiers`, `load`, `save` | 클래스형 슬롯 메타데이터, 장비 modifier·유효 태그·DB 동기화 |
 | `Item`, Item registry | `hasTag`, `snapshot/fromSnapshot`, `defineItem`, `getItemData`, `getAllItemData` | 아이템 정의/인스턴스 태그와 손실 없는 이동 snapshot |
 | `Monster` | `damage`, `update`, `onDeath`, `rollDrops`, `rollGold` | 타게팅 AI, 보상, 리스폰 |
 | Monster registry | `defineMonster`, `getMonsterData`, `getAllMonsterData` | 몬스터 마스터 데이터 |
-| `Location` | `hasTag`, `add/removeMonster`, `addDroppedItem`, `pickupItem`, `getAvailableConnections`, `update` | 장소 태그와 태그 포함 바닥 아이템 snapshot, 런타임 상태 |
+| `Location` | `hasTag`, `add/removeMonster`, `addDroppedItem`, `getDroppedItems`, `pickupItem/pickupAllItems`, `getAvailableConnections`, `update` | 장소 태그와 raw 배열을 숨긴 바닥 아이템 조회·단일/전체 회수, 런타임 상태 |
 | Location registry | `defineLocation`, `reloadAllLocations`, `getLocation`, `getAllLocations`, `getRespawnLocation`, `distanceBetween` | 월드 위치 정의/조회 |
 | Location extension | `registerConnectionCondition`, `registerLocationPassive` | 이동 조건과 위치별 프레임 콜백 |
 | `Shop` | `getStock`, `consumeStock`, `update` | 재고와 재입고 |

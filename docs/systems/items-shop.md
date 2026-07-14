@@ -15,10 +15,12 @@
 ## Inventory API와 규칙
 
 - 조회: `getItem`, `getItemByIndex`, `getItemsByData`, `getCount`.
-- 추가: `canAdd`가 총 무게를 검사하고 `addItem`이 stackable/maxStack 규칙에 따라 병합 또는 새 인스턴스를 만든다. 기존 인스턴스를 이동할 때는 `addItemSnapshot`을 사용한다.
+- 추가: `canAdd`, `canAddSnapshot(s)`이 총 무게와 아이템 정의를 검사하고 `addItem`이 stackable/maxStack 규칙에 따라 병합 또는 새 인스턴스를 만든다. 기존 인스턴스를 이동할 때는 `addItemSnapshot`을 사용한다.
 - 사용: `useItem`이 `ItemData.onUse` handler를 실행하며 동시에 하나의 아이템만 사용할 수 있다.
 - 제거: `removeItem`, `removeItemByData`가 수량 또는 인스턴스를 dirty/deleted 상태로 바꾼다.
 - 저장: state map의 New/Modified/Deleted 항목을 Prisma create/update/delete로 반영한다.
+
+바닥 아이템은 `Location.getDroppedItems()`의 복사본으로 표시하고 `pickupItem/pickupAllItems`로만 제거한다. 전체 줍기는 모든 스택의 중량을 먼저 검사하므로 하나라도 받을 수 없는 경우 바닥 상태를 변경하지 않는다.
 
 사용 효과는 `registerItemUse(id, handler)`로 등록한다. handler는 성공·실패를 포함한 모든 비동기 종료 경로에서 `finish()`를 호출해야 Inventory의 사용 잠금이 풀린다. 현재 HP/MP 포션은 coroutine으로 지연 후 회복한다.
 
