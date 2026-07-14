@@ -62,7 +62,9 @@ Entity/Resource/SkillBook
 
 ## 발동 경로와 수명주기
 
-- `/스킬 스킬이름`: 명령 입력은 숨기고 `SkillBook.activateByInput()`을 호출한다.
+- `/스킬목록` 또는 `sl`: 현재 표시 가능한 보유 스킬의 레벨·사용 상태와 정보/사용 버튼을 표시한다.
+- `/스킬 스킬이름` 또는 `su 스킬이름`: 명령 입력은 숨기고 `SkillBook.activateByInput()`을 호출한다.
+- `/스킬정보 스킬이름` 또는 `si 스킬이름`: 계산된 상세 정보와 현재 발동 상태를 표시한다.
 - 일반 채팅: 명령이 아닌 메시지를 각 스킬의 `activateOnMessage`로 검사하고 일치하면 원문 전송 대신 같은 발동 API를 호출한다.
 - 자동 조건: 0.25초마다 현재 표시 가능한 스킬의 `autoActivate`를 검사한다.
 - 자동 획득: 첫 update와 관련 progress 변경 후 `autoAcquire.watchedProgress`만 다시 검사한다.
