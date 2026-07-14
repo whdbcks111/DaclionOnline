@@ -4,6 +4,7 @@ import { sendMessageToChannel, sendBotMessageToUser, sendMessageToUser } from ".
 import { getUserChannel } from "./channel.js";
 import { getSession } from "./login.js";
 import type { ChatMessage, CommandInfo, CompletionItem } from "../../../shared/types.js";
+import { parseCommandInput } from "../../../shared/commandInput.js";
 
 interface CommandArg {
     name: string
@@ -30,11 +31,22 @@ interface CommandConfig {
 const commands = new Map<string, CommandConfig>();
 const aliasMap = new Map<string, string>(); // alias → name
 
+function resolveCommand(name: string, hasSlash: boolean): CommandConfig | undefined {
+    if (hasSlash) return commands.get(name) ?? commands.get(aliasMap.get(name) ?? '');
+    return commands.get(aliasMap.get(name) ?? '');
+}
+
+/** 슬래시 없는 입력의 첫 단어가 등록된 명령 별칭인지 확인한다. */
+export function isCommandAliasInput(raw: string): boolean {
+    const input = parseCommandInput(raw);
+    return input !== undefined && !input.hasSlash && aliasMap.has(input.token);
+}
+
 /** 명령어 등록 (전역) */
 export function registerCommand(config: CommandConfig): void {
-    commands.set(config.name, config);
+    commands.set(config.name.toLowerCase(), config);
     for (const alias of config.aliases ?? []) {
-        aliasMap.set(alias, config.name);
+        aliasMap.set(alias.toLowerCase(), config.name.toLowerCase());
     }
 }
 
@@ -117,12 +129,15 @@ function parseArgs(remainder: string, argDefs?: CommandArg[]): string[] {
 
 /** 명령어 파싱 및 실행 (chat.ts에서 호출) */
 export function handleCommand(userId: number, raw: string, msg: ChatMessage | null = null, permission = 0): void {
-    const rawSliced = raw.slice(1);
-    const wsIdx = rawSliced.search(/\s/);
-    const name = (wsIdx === -1 ? rawSliced : rawSliced.slice(0, wsIdx)).toLowerCase();
-    const remainder = wsIdx === -1 ? '' : rawSliced.slice(wsIdx + 1);
+    const input = parseCommandInput(raw);
+    if (!input) {
+        if (msg) sendMessageToUser(userId, msg);
+        sendBotMessageToUser(userId, '알 수 없는 명령어: /');
+        return;
+    }
+    const { token: name, remainder, hasSlash } = input;
 
-    const cmd = commands.get(name) ?? commands.get(aliasMap.get(name) ?? '');
+    const cmd = resolveCommand(name, hasSlash);
     if (!cmd) {
         if(msg) sendMessageToUser(userId, msg);
         sendBotMessageToUser(userId, `알 수 없는 명령어: /${name}`);
@@ -173,16 +188,13 @@ export const initBot = () => {
         // 파라미터 자동완성 요청 (입력 중 실시간 호출)
         socket.on('requestCompletions', (raw: string) => {
             const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
-            if (!session || !raw.startsWith('/')) return;
+            if (typeof raw !== 'string') return;
+            const input = parseCommandInput(raw);
+            if (!session || !input?.hasSeparator) return;
 
-            const rawSliced = raw.slice(1);
-            const wsIdx = rawSliced.search(/\s/);
-            if (wsIdx === -1) return;
-
-            const cmdName = rawSliced.slice(0, wsIdx).toLowerCase();
-            const remainder = rawSliced.slice(wsIdx + 1);
-            const cmd = commands.get(cmdName) ?? commands.get(aliasMap.get(cmdName) ?? '');
+            const cmd = resolveCommand(input.token, input.hasSlash);
             if (!cmd?.args?.length) return;
+            const remainder = input.remainder;
 
             // 현재 입력 위치의 argIndex 계산 (클라이언트와 동일한 로직)
             const argParts = remainder.split(' ');

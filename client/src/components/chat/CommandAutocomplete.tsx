@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { CommandInfo, CommandArgInfo, CompletionItem } from '@shared/types'
+import { getFilteredCommands } from '../../utils/commandAutocomplete'
 import styles from './CommandAutocomplete.module.scss'
 
 function completionValue(item: CompletionItem): string {
@@ -20,16 +21,6 @@ interface Props {
     /** 파라미터 자동완성 목록 (이미 필터링된 목록) */
     paramCompletions?: CompletionItem[]
     onSelectCompletion?: (value: string) => void
-}
-
-export function getFilteredCommands(commands: CommandInfo[], filter: string) {
-    const query = filter.slice(1).toLowerCase()
-    const filtered = commands.filter(cmd =>
-        cmd.name.startsWith(query) || query.startsWith(cmd.name) ||
-            cmd.aliases?.some(a => a.startsWith(query) || query.startsWith(a))
-    )
-
-    return filtered;
 }
 
 export default function CommandAutocomplete({

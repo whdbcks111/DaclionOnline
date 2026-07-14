@@ -1,5 +1,5 @@
 # Client Utils Overview
 
-브라우저 측 순수 지원 함수를 둔다. 현재 `validators.ts`가 회원가입 입력에 즉시 피드백을 주는 ID/PW/email/nickname validator를 제공한다. 보안 검증의 최종 권위는 서버 validator다.
+브라우저 측 순수 지원 함수를 둔다. `validators.ts`가 회원가입 입력에 즉시 피드백을 주는 ID/PW/email/nickname validator를 제공하고, `commandAutocomplete.ts`가 슬래시 명령과 슬래시 없는 정확한 별칭의 명령 해석·후보 필터를 제공한다. 보안 검증과 명령 실행의 최종 권위는 서버다.
 
 검증 규칙이 바뀌면 서버와 클라이언트 구현의 의도된 차이를 확인하고 이 문서를 갱신한다.

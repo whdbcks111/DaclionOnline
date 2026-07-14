@@ -12,7 +12,7 @@
 | Player | `loadPlayerByUserId`, `unloadPlayerByUserId`, `getPlayerByUserId`, `getOnlinePlayers`, `fetchPlayerByUserId`, `saveAllPlayers` | Player 수명과 저장 |
 | Player registry | `registerOnlinePlayer`, `getOnlinePlayer`, `unregisterOnlinePlayer`, `getOnlinePlayerSnapshot`, `isOnlinePlayerAtLocation` | 내부 Map을 숨긴 온라인 객체 조회와 위치 필터 |
 | HUD | `sendPlayerStats`, `sendLocationInfo` | 특정 사용자의 모든 소켓에 HUD payload 전송 |
-| Command | `registerCommand`, `handleCommand`, `getCommandList`, `getCommandListFiltered` | 명령 등록/파싱/실행/목록 |
+| Command | `registerCommand`, `handleCommand`, `isCommandAliasInput`, `getCommandList`, `getCommandListFiltered` | 명령 등록, 슬래시/슬래시 없는 별칭 판정·실행과 목록 |
 | Channel | `getUserChannel`, `setUserChannel`, `getChannelRoomKey`, `getChannelHistory`, `getFilteredHistoryForUser` | room과 히스토리 상태 |
 | Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageFiltered`, `sendMessageToUser` | 일반 메시지 전송 |
 | Bot message | `sendBotMessageToChannel`, `broadcastBotMessageAll`, `sendBotMessageFiltered`, `sendBotMessageToUser` | 파싱된 시스템 메시지 전송 |
@@ -60,6 +60,7 @@
 
 | API | 용도 |
 | --- | --- |
+| `parseCommandInput()` | 공유 채팅 입력에서 첫 명령 토큰, 나머지 인자, 슬래시·구분자 여부 추출 |
 | `chat()` | `text/color/bg/weight/deco/size/tooltip/hide/icon/button/closeButton/progress/tab` fluent builder로 `ChatNode[]` 생성; progress length는 px 숫자 또는 CSS 문자열 |
 | `parseChatMessage()` | 커스텀 태그 문자열을 `ChatNode[]`로 파싱 |
 | `registerChatTag()` | 새 wrap/self-closing 태그 등록 |

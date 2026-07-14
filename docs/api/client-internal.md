@@ -18,7 +18,9 @@
 | --- | --- | --- |
 | `renderNode(node, key)` | `components/chat/ChatMessage.tsx` | ChatNode별 renderer dispatch |
 | `resolveColor(color)` | `components/chat/ChatMessage.tsx` | `$token` 또는 CSS color 해석 |
-| `getFilteredCommands(commands, filter)` | `components/chat/CommandAutocomplete.tsx` | 명령 이름/별칭 prefix 필터 |
+| `resolveCommandInput(commands, raw)` | `utils/commandAutocomplete.ts` | 슬래시 명령 또는 첫 단어가 정확한 별칭인 입력을 CommandInfo에 연결 |
+| `isCommandAutocompleteInput(commands, raw)` | `utils/commandAutocomplete.ts` | 현재 입력이 명령 자동완성 대상인지 판정 |
+| `getFilteredCommands(commands, filter)` | `utils/commandAutocomplete.ts` | 슬래시 명령 prefix 또는 정확한 슬래시 없는 별칭 필터 |
 | `HideCloseContext` | `components/chat/nodes/HideNode.tsx` | close button이 상위 hide UI를 닫는 callback |
 | `TooltipNode` | `components/chat/nodes/TooltipNode.tsx` | hover/touch 위치를 측정해 ChatNode 설명 overlay 표시 |
 

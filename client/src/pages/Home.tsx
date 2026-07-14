@@ -3,7 +3,12 @@ import styles from './Home.module.scss'
 import { useSocket } from '../context/SocketContext'
 import { HudProvider, useHud } from '../context/HudContext'
 import ChatMessage from '../components/chat/ChatMessage'
-import CommandAutocomplete, { getFilteredCommands } from '../components/chat/CommandAutocomplete'
+import CommandAutocomplete from '../components/chat/CommandAutocomplete'
+import {
+  getFilteredCommands,
+  isCommandAutocompleteInput,
+  resolveCommandInput,
+} from '../utils/commandAutocomplete'
 import Header from '../components/Header'
 import Drawer from '../components/Drawer'
 import HudContainer from '../components/hud/HudContainer'
@@ -135,29 +140,23 @@ function HomeContent() {
 
   const handleInput = useCallback(() => {
     const text = inputRef.current?.textContent ?? ''
-    if (text.startsWith('/')) {
+    if (isCommandAutocompleteInput(commands, text)) {
       setCommandFilter(text)
       setShowAutocomplete(true)
       setActiveIndex(0)
     } else {
       setShowAutocomplete(false)
     }
-  }, [])
+  }, [commands])
 
   // 명령어가 완성된 후 파라미터 입력 모드 계산
   const paramMode = useMemo(() => {
-    if (!commandFilter.startsWith('/')) return null
-    const afterSlash = commandFilter.slice(1)
-    const spaceIdx = afterSlash.indexOf(' ')
-    if (spaceIdx === -1) return null
-
-    const cmdName = afterSlash.slice(0, spaceIdx).toLowerCase()
-    const cmd = commands.find(c =>
-      c.name === cmdName || c.aliases?.includes(cmdName)
-    )
+    const input = resolveCommandInput(commands, commandFilter)
+    if (!input?.hasSeparator) return null
+    const cmd = input.command
     if (!cmd?.args?.length) return null
 
-    const argsText = afterSlash.slice(spaceIdx + 1)
+    const argsText = input.remainder
     const argParts = argsText.split(' ')
 
     // text 파라미터 이후는 argIndex 증가 멈춤
@@ -200,8 +199,8 @@ function HomeContent() {
   // 파라미터 자동완성 선택 시 해당 인자를 완성
   const selectCompletion = useCallback((value: string) => {
     if (!inputRef.current) return
-    const text = inputRef.current.textContent ?? ''
-    const firstSpace = text.indexOf(' ')
+    const text = (inputRef.current.textContent ?? '').trimStart()
+    const firstSpace = text.search(/\s/)
     if (firstSpace === -1) return
 
     const cmdPart = text.slice(0, firstSpace + 1)           // "/cmd "

@@ -4,7 +4,7 @@ import { getSession, broadcastUserCount } from "./login.js";
 import { sendMessageToChannel, getFlagsForPermission } from "./message.js";
 import { getUserChannel, setUserChannel, getChannelHistory, getChannelRoomKey, getAvailableChannels, getFilteredHistoryForUser } from "./channel.js";
 import { sendPlayerStats, sendLocationInfo } from "./player.js";
-import { handleCommand } from "./bot.js";
+import { handleCommand, isCommandAliasInput } from "./bot.js";
 import type { ChatMessage } from "../../../shared/types.js";
 
 const MAX_MESSAGE_LENGTH = 500;
@@ -127,7 +127,7 @@ export const initChat = () => {
             };
 
             // 명령어 처리
-            if (trimmed.startsWith('/')) {
+            if (trimmed.startsWith('/') || isCommandAliasInput(trimmed)) {
                 handleCommand(session.userId, trimmed, msg, session.permission);
                 return;
             }

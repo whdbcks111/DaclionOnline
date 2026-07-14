@@ -8,12 +8,14 @@ Home/QuickSlot/ButtonNode
         v
 modules/chat.ts ── 일반문장 ──> modules/message.ts ──> Socket room
         │                              │
-        │ '/'                          └─ modules/channel.ts history
+        │ '/' 또는 첫 단어=별칭         └─ modules/channel.ts history
         v
 modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notification output
 ```
 
 `ChatMessage.content`는 사용자 일반 입력에서는 text node 배열이고, 시스템 메시지는 `chat()` 빌더 또는 `parseChatMessage()`로 만든 `ChatNode[]`다. 클라이언트 `ChatMessage.tsx`가 노드 트리를 재귀 렌더링한다.
+
+정식 명령 이름은 기존처럼 `/상태창` 형태로 실행한다. `registerCommand.aliases`에 등록된 값은 `/s`뿐 아니라 `s`, `s 공개`처럼 슬래시 없이 첫 단어로 입력해도 실행된다. 슬래시 없는 입력은 첫 단어 전체가 별칭과 정확히 일치할 때만 명령이며 `상태창`처럼 정식 이름만 쓰거나 별칭의 일부만 쓴 입력은 일반 채팅으로 남는다. 따라서 새 별칭은 일상 대화의 흔한 첫 단어와 충돌하지 않도록 정한다.
 
 ## 채널과 히스토리
 
@@ -60,9 +62,10 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 ## 자동완성
 
 1. `requestCommandList`가 명령 이름, 별칭, 설명, 인자 메타데이터를 보낸다.
-2. 정적 `completions`는 클라이언트가 즉시 필터링한다.
-3. 함수형 completion은 `dynamicCompletions: true`로 표시된다.
-4. `Home.tsx`가 입력 중 `requestCompletions(raw)`을 보내고 서버가 현재 사용자 상태를 이용해 `argCompletions`를 응답한다.
+2. `/`로 시작한 입력은 명령 이름과 별칭 prefix를 필터링한다. 슬래시 없는 입력은 첫 단어가 정확한 별칭일 때 해당 명령과 인자 자동완성을 연다.
+3. 정적 `completions`는 클라이언트가 즉시 필터링한다.
+4. 함수형 completion은 `dynamicCompletions: true`로 표시된다.
+5. `Home.tsx`가 입력 중 `requestCompletions(raw)`을 보내고 서버가 현재 사용자 상태를 이용해 `argCompletions`를 응답한다. 서버도 같은 `parseCommandInput` 규칙으로 슬래시 없는 별칭을 해석한다.
 
 명령 목록 자체는 자동완성을 위해 전체가 전송되지만 실제 실행 권한은 서버에서 다시 검사한다.
 
