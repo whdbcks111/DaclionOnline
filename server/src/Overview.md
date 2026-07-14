@@ -7,6 +7,7 @@
 - `commands/`: 사용자 `/명령어` 핸들러.
 - `models/`: 게임 도메인 객체와 레지스트리.
 - `data/`: 코드/JSON 마스터 데이터 등록.
+- `scripts/`: idempotent 운영 데이터 변환.
 - `utils/`, `types/`: 공통 서버 지원 코드.
 
 초기화 순서나 최상위 폴더 책임이 바뀌면 이 문서와 [`docs/architecture/overview.md`](../../docs/architecture/overview.md)를 갱신한다.

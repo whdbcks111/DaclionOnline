@@ -6,7 +6,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc && cp src/data/*.json dist/server/src/data/",
     "test": "tsx --test src/**/*.test.ts",
-    "db:migrate:deploy": "prisma migrate deploy && prisma generate",
+    "db:migrate:item-metadata": "tsx src/scripts/migrateItemMetadataDeltas.ts",
+    "db:migrate:deploy": "prisma migrate deploy && prisma generate && npm run db:migrate:item-metadata",
     "start": "node dist/server/src/index.js"
   },
   "dependencies": {

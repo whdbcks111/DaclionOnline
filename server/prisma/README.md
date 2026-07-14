@@ -3,8 +3,11 @@
 ## CLI 명령어
 
 ```bash
-# 운영/스테이징: pending migration 적용 + Prisma Client 생성
+# 운영/스테이징: pending migration 적용 + Prisma Client 생성 + item metadata 데이터 변환
 npm run db:migrate:deploy
+
+# item metadata 데이터 변환만 idempotent 재실행
+npm run db:migrate:item-metadata
 
 # 스키마 변경 후 마이그레이션 생성 + 적용
 npx prisma migrate dev --name 마이그레이션이름

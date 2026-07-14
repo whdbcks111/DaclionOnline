@@ -83,7 +83,7 @@ export default class Location implements TagReadable {
     getDroppedItems(): DroppedItem[] {
         return this._droppedItems.map(item => ({
             ...item,
-            metadata: item.metadata ? { ...item.metadata } : null,
+            metadataDelta: item.metadataDelta ? { ...item.metadataDelta } : null,
             tags: [...item.tags],
         }));
     }
@@ -93,7 +93,7 @@ export default class Location implements TagReadable {
     addDroppedItem(item: ItemSnapshot): void {
         this._droppedItems.push({
             ...item,
-            metadata: item.metadata ? { ...item.metadata } : null,
+            metadataDelta: item.metadataDelta ? { ...item.metadataDelta } : null,
             tags: [...item.tags],
             droppedAt: Date.now(),
         });

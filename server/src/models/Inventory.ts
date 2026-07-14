@@ -1,7 +1,7 @@
 import prisma from "../config/prisma.js";
 import { executeItemUse } from "../modules/itemUse.js";
-import { Item, getItemData } from "./Item.js";
-import type { ItemSnapshot } from "./Item.js";
+import { Item, createItemMetadataDelta, getItemData } from "./Item.js";
+import type { ItemMetadata, ItemSnapshot } from "./Item.js";
 import type { TagId } from "../../../shared/tags.js";
 
 export type { ItemData } from "./Item.js";
@@ -23,9 +23,13 @@ export default class Inventory {
     }
 
     private track(item: Item, state: ItemState): void {
-        item.tags.setPersistentChangeHandler(() => {
+        const markModified = () => {
             if (this._states.get(item) === ItemState.Clean) this._states.set(item, ItemState.Modified);
+        };
+        item.tags.setPersistentChangeHandler(() => {
+            markModified();
         });
+        item.setMetadataChangeHandler(markModified);
         this._items.push(item);
         this._states.set(item, state);
     }
@@ -77,6 +81,19 @@ export default class Inventory {
         return this.getItemsByData(itemDataId).reduce((sum, e) => sum + e.count, 0);
     }
 
+    /** 아이템 metadata override를 변경하고 dirty 상태로 표시한다. */
+    setItemMetadata(itemId: number, key: string, value: unknown): boolean {
+        const item = this.getItem(itemId);
+        if (!item) return false;
+        item.setMetadata(key, value);
+        return true;
+    }
+
+    /** 아이템 metadata override를 제거해 최신 기본값을 다시 상속한다. */
+    resetItemMetadata(itemId: number, key: string): boolean {
+        return this.getItem(itemId)?.resetMetadata(key) ?? false;
+    }
+
     // -- 추가 --
 
     /** 무게 체크: 아이템 추가 가능 여부 */
@@ -105,7 +122,7 @@ export default class Inventory {
     addItem(
         itemDataId: string,
         count: number,
-        metadata?: Record<string, any> | null,
+        metadataOverrides?: ItemMetadata | null,
         tags: readonly TagId[] = [],
     ): boolean {
         const data = getItemData(itemDataId);
@@ -114,7 +131,7 @@ export default class Inventory {
             itemDataId,
             count,
             durability: data.baseDurability,
-            metadata: metadata ?? (data.baseMetadata ? { ...data.baseMetadata } : null),
+            metadataDelta: createItemMetadataDelta(itemDataId, metadataOverrides),
             tags: [...tags],
         });
     }
@@ -151,7 +168,7 @@ export default class Inventory {
                 snapshot.itemDataId,
                 qty,
                 snapshot.durability,
-                snapshot.metadata ? { ...snapshot.metadata } : null,
+                snapshot.metadataDelta,
                 0,
                 snapshot.tags,
             );
@@ -255,11 +272,11 @@ export default class Inventory {
         });
 
         for (const row of rows) {
-            const item = new Item(
+            const item = Item.fromPersistence(
                 row.itemDataId,
                 row.count,
                 row.durability,
-                row.metadata as Record<string, any> | null,
+                row.metadata,
                 row.id,
                 (row.tags as TagId[] | null) ?? [],
             );
@@ -284,7 +301,7 @@ export default class Inventory {
                                 itemDataId: item.itemDataId,
                                 count: item.count,
                                 durability: item.durability,
-                                metadata: item.metadata ?? undefined,
+                                metadata: item.getPersistedMetadata(),
                                 tags: item.tags.persistentValues(),
                             },
                         }).then(row => { item.id = row.id; })
@@ -297,7 +314,7 @@ export default class Inventory {
                             data: {
                                 count: item.count,
                                 durability: item.durability,
-                                metadata: item.metadata ?? undefined,
+                                metadata: item.getPersistedMetadata(),
                                 tags: item.tags.persistentValues(),
                             },
                         })

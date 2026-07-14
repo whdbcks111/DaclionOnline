@@ -86,9 +86,13 @@ export default class Equipment implements TagReadable {
     }
 
     private setEntry(key: string, entry: EquipEntry): void {
-        entry.item.tags.setPersistentChangeHandler(() => {
+        const markModified = () => {
             if (entry.state === EquipState.Clean) entry.state = EquipState.Modified;
+        };
+        entry.item.tags.setPersistentChangeHandler(() => {
+            markModified();
         });
+        entry.item.setMetadataChangeHandler(markModified);
         this._slots.set(key, entry);
     }
 
@@ -113,6 +117,19 @@ export default class Equipment implements TagReadable {
             }
         }
         return result;
+    }
+
+    /** 장착 아이템 metadata override를 변경하고 dirty 상태로 표시한다. */
+    setItemMetadata(slot: EquipSlot, slotIndex: number, metadataKey: string, value: unknown): boolean {
+        const item = this.getEquipped(slot, slotIndex);
+        if (!item) return false;
+        item.setMetadata(metadataKey, value);
+        return true;
+    }
+
+    /** 장착 아이템 metadata override를 제거해 최신 기본값을 다시 상속한다. */
+    resetItemMetadata(slot: EquipSlot, slotIndex: number, metadataKey: string): boolean {
+        return this.getEquipped(slot, slotIndex)?.resetMetadata(metadataKey) ?? false;
     }
 
     /** 장착 아이템의 정의/영속/런타임 태그를 엔티티 유효 태그로 제공 */
@@ -285,11 +302,11 @@ export default class Equipment implements TagReadable {
             const key = slotKey(row.slot as EquipSlot, row.slotIndex);
             eq.setEntry(key, {
                 dbId: row.id,
-                item: new Item(
+                item: Item.fromPersistence(
                     row.itemDataId,
                     1,
                     row.durability,
-                    row.metadata as Record<string, any> | null,
+                    row.metadata,
                     0,
                     (row.tags as TagId[] | null) ?? [],
                 ),
@@ -318,7 +335,7 @@ export default class Equipment implements TagReadable {
                                 data: {
                                     itemDataId: entry.item.itemDataId,
                                     durability: entry.item.durability,
-                                    metadata: entry.item.metadata ?? undefined,
+                                    metadata: entry.item.getPersistedMetadata(),
                                     tags: entry.item.tags.persistentValues(),
                                 },
                             })
@@ -332,7 +349,7 @@ export default class Equipment implements TagReadable {
                                     slot: entry.slot,
                                     slotIndex: entry.slotIndex,
                                     durability: entry.item.durability,
-                                    metadata: entry.item.metadata ?? undefined,
+                                    metadata: entry.item.getPersistedMetadata(),
                                     tags: entry.item.tags.persistentValues(),
                                 },
                             }).then(row => { entry.dbId = row.id; })
@@ -345,7 +362,7 @@ export default class Equipment implements TagReadable {
                             where: { id: entry.dbId },
                             data: {
                                 durability: entry.item.durability,
-                                metadata: entry.item.metadata ?? undefined,
+                                metadata: entry.item.getPersistedMetadata(),
                                 tags: entry.item.tags.persistentValues(),
                             },
                         })

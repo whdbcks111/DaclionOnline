@@ -17,7 +17,9 @@ npm run build         # .nvmrc 적용 후 서버와 클라이언트 빌드
 npm run build:window  # 현재 셸 Node로 양쪽 빌드
 npm start             # 빌드된 서버 실행
 cd client && npm run lint
-cd server && npm run db:migrate:deploy  # 운영 DB pending migration 적용 + Prisma Client 생성
+cd server && npm run db:migrate:deploy  # 운영 schema migration + Client 생성 + metadata 데이터 변환
+cd server && npm run db:migrate:item-metadata  # 아이템 metadata 데이터 변환만 재실행
+cd server && npm run db:migrate:item-metadata -- --dry-run  # 변경 대상 수만 확인
 ```
 
 기본 포트는 서버 `3001`, Vite `5173`이다.
@@ -29,7 +31,8 @@ cd server && npm run db:migrate:deploy  # 운영 DB pending migration 적용 + P
 | `server/.env` | `PORT` | `3001` |
 | `server/.env` | `CORS_ORIGIN` | `http://localhost:5173` |
 | `server/.env` | `NODE_ENV` | `development`; production이면 클라이언트 정적 파일 제공 |
-| `server/.env` | `DATABASE_URL` | Prisma 설정에서 읽는 MariaDB 연결 문자열 |
+| `server/.env` | `DATABASE_URL` | Prisma CLI가 읽는 MariaDB 연결 문자열 |
+| `server/.env` | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | 런타임 Prisma MariaDB adapter 연결 정보 |
 | `server/.env` | `GMAIL_USER`, `GMAIL_APP_PASSWORD` | 인증 메일 전송 |
 | `client/.env` | `VITE_SERVER_URL` | 기본 `http://localhost:3001` |
 

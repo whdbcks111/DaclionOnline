@@ -4,19 +4,22 @@
 
 - `models/Item.ts::ItemData`는 이름, 이미지 key, 분류, 무게, 스택, 기본 metadata, 사용 handler ID, 장비 슬롯, modifier, 내구도와 정의 태그를 정의한다.
 - `data/items.ts`가 `defineItem()`으로 마스터 데이터를 프로세스 레지스트리에 등록한다.
-- DB `Item`과 런타임 `Item` 객체는 플레이어가 실제 보유한 수량·내구도·metadata를 표현한다.
+- DB `Item`과 런타임 `Item` 객체는 플레이어가 실제 보유한 수량·내구도와 인스턴스 metadata delta를 표현한다.
 - 장착된 항목은 DB `Equipment`와 런타임 `Equipment` 슬롯 맵에 별도로 존재한다.
 
 - Item 인스턴스의 추가 태그는 DB JSON에 저장되며 정의 태그와 합쳐 조회한다.
-- 인벤토리↔장비↔바닥 이동은 `ItemSnapshot`으로 metadata, 내구도, 영속 태그를 보존한다. 스택도 이 값이 모두 같을 때만 합쳐진다.
+- 인벤토리↔장비↔바닥 이동은 `ItemSnapshot`으로 metadata delta, 내구도, 영속 태그를 보존한다. 스택도 이 값이 모두 같을 때만 합쳐진다.
 
 현재 정의는 `health_potion`, `mana_potion`, `old_sword`, `old_shield`, `venom_dagger`다. 낡은 검의 불 태그와 독 단검의 독 태그는 장착 시 Entity의 공격 효과 태그가 된다.
 
-아이템 이미지는 `Item.image` 공개 API로 조회한다. `/icons` 아래의 확장자 없는 key를 사용하며 `metadata.image` → `ItemData.image` → `items/{itemDataId}` 순서로 결정된다. 따라서 일반 아이템은 `client/public/icons/items/{id}.png`를 자동으로 사용하고, 동일 정의의 개별 인스턴스만 다른 외형이 필요하면 기존 JSON metadata에 `{ image: "items/variant_key" }`를 저장한다. 경로 이탈이나 URL 형태의 값은 무시되어 기본 이미지로 대체된다.
+metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-level key 단위로 합쳐 계산한다. `getMetadata/getMetadataSnapshot`으로 읽고 `setMetadata/resetMetadata`로 변경한다. 기본값과 같은 값을 설정하면 delta가 제거되며, override가 없는 필드는 실행 중 `ItemData.baseMetadata`가 바뀌어도 즉시 최신 값을 상속한다. 객체·배열 같은 중첩 값은 해당 top-level 필드 전체가 하나의 override다.
+
+아이템 이미지는 `Item.image` 공개 API로 조회한다. `/icons` 아래의 확장자 없는 key를 사용하며 `getMetadata('image')` → `ItemData.image` → `items/{itemDataId}` 순서로 결정된다. 따라서 일반 아이템은 `client/public/icons/items/{id}.png`를 자동으로 사용하고, 동일 정의의 개별 인스턴스만 다른 외형이 필요하면 `setMetadata('image', 'items/variant_key')`를 호출한다. 경로 이탈이나 URL 형태의 값은 무시되어 기본 이미지로 대체된다.
 
 ## Inventory API와 규칙
 
 - 조회: `getItem`, `getItemByIndex`, `getItemsByData`, `getCount`.
+- metadata 변경: `setItemMetadata`, `resetItemMetadata`가 대상 Item API를 호출하고 Inventory를 dirty로 표시한다. 조회는 반환된 Item의 `getMetadata`를 사용한다.
 - 추가: `canAdd`, `canAddSnapshot(s)`이 총 무게와 아이템 정의를 검사하고 `addItem`이 stackable/maxStack 규칙에 따라 병합 또는 새 인스턴스를 만든다. 기존 인스턴스를 이동할 때는 `addItemSnapshot`을 사용한다.
 - 사용: `useItem`이 `ItemData.onUse` handler를 실행하며 동시에 하나의 아이템만 사용할 수 있다.
 - 제거: `removeItem`, `removeItemByData`가 수량 또는 인스턴스를 dirty/deleted 상태로 바꾼다.
@@ -36,6 +39,7 @@
 - `equipSwap`: 지정 슬롯 또는 빈/마지막 슬롯에 장착하며 밀려난 Item을 반환한다.
 - `unequip`: modifier를 제거하고 Item을 반환한다.
 - `applyModifiers`: 로드된 모든 장비 modifier를 Attribute에 다시 적용한다.
+- `setItemMetadata/resetItemMetadata`: 장착 아이템의 delta를 변경하고 해당 슬롯을 dirty로 표시한다.
 - `save`: 슬롯별 state를 Prisma에 반영한다.
 
 장비 modifier의 `source`는 데이터 정의 값 대신 실제 슬롯 기반 source로 치환되어, 특정 장비 해제 시 정확히 제거된다.

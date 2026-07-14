@@ -1,4 +1,4 @@
-import type { Item } from "./Item.js";
+import type { Item, ItemMetadata } from "./Item.js";
 import logger from "../utils/logger.js";
 import { TagCollection, normalizeTags } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
@@ -14,7 +14,7 @@ export interface SellEntry {
 /** 구매 물품 목록 항목 (플레이어가 상점에서 구매) */
 export interface BuyEntry {
     label: string;
-    create: () => { itemDataId: string; count: number; metadata?: Record<string, any> | null; tags?: TagId[] };
+    create: () => { itemDataId: string; count: number; metadata?: ItemMetadata | null; tags?: TagId[] };
     count: number;           // 1회 구매 수량
     price: number;           // 1회 구매 가격
     stock: number;           // 최대 재고

@@ -25,7 +25,7 @@ registerItemUse('heal_hp', (inv, item, finish) => {
             finish();
         }
     }
-    startCoroutine(healRoutine(item.metadata?.amount ?? 0, item.metadata?.time ?? 1));
+    startCoroutine(healRoutine(item.getMetadata<number>('amount') ?? 0, item.getMetadata<number>('time') ?? 1));
 });
 
 registerItemUse('heal_mp', (inv, item, finish) => {
@@ -47,7 +47,7 @@ registerItemUse('heal_mp', (inv, item, finish) => {
             finish();
         }
     }
-    startCoroutine(healRoutine(item.metadata?.amount ?? 0, item.metadata?.time ?? 1));
+    startCoroutine(healRoutine(item.getMetadata<number>('amount') ?? 0, item.getMetadata<number>('time') ?? 1));
 });
 
 defineItem({
