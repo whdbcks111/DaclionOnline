@@ -90,7 +90,8 @@ export class AttributeType {
         'critRate',     
         '치명타율',    
         0.05, 
-        v => `${(v * 100).toFixed(1)}%`, v => `${(v * 100).toFixed(1)}% 확률로 치명타가 발생합니다.` + 'ddd'.repeat(100)
+        v => `${(v * 100).toFixed(1)}%`,
+        v => `${(v * 100).toFixed(1)}% 확률로 치명타가 발생합니다.`
     )
     static readonly CRIT_DMG     = new AttributeType(
         'critDmg',      
