@@ -27,7 +27,7 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 바닥 아이템은 `Location.getDroppedItems()`의 복사본으로 표시하고 `pickupItem/pickupAllItems`로만 제거한다. 전체 줍기는 모든 스택의 중량을 먼저 검사하므로 하나라도 받을 수 없는 경우 바닥 상태를 변경하지 않는다.
 
-`/인벤토리` 목록은 각 아이템 이름 바로 앞에 `Item.image`가 가리키는 작은 아이콘을 표시한다. 존재하지 않는 클라이언트 에셋은 깨진 이미지 대신 숨겨진다.
+`/인벤토리` 목록과 `/상태창`의 장착 정보는 각 아이템 이름 바로 앞에 `Item.image`가 가리키는 작은 아이콘을 표시한다. 존재하지 않는 클라이언트 에셋은 깨진 이미지 대신 숨겨진다.
 
 사용 효과는 `registerItemUse(id, handler)`로 등록한다. handler는 성공·실패를 포함한 모든 비동기 종료 경로에서 `finish()`를 호출해야 Inventory의 사용 잠금이 풀린다. 현재 HP/MP 포션은 coroutine으로 지연 후 회복한다.
 

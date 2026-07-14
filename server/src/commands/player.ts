@@ -79,8 +79,9 @@ export function initPlayerCommands(): void {
                                 const slotLabel = slotType.max > 1 ? `${slotType.label}${i + 1}` : slotType.label;
                                 b.tab(L, b2 => b2.weight('bold',b3 => b3.text(slotLabel)));
                                 if (equipped) {
-                                    const itemName = getItemData(equipped.itemDataId)?.name ?? equipped.itemDataId;
-                                    b.text(`${itemName}\n`);
+                                    b.icon(equipped.image)
+                                     .text(equipped.name || equipped.itemDataId)
+                                     .text('\n');
                                 } else {
                                     b.color('gray', b2 => b2.text('(없음)')).text('\n');
                                 }
