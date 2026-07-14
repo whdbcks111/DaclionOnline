@@ -70,7 +70,7 @@
 | --- | --- |
 | `parseCommandInput()` | 공유 채팅 입력에서 첫 명령 토큰, 나머지 인자, 슬래시·구분자 여부 추출 |
 | `chat()` | `text/color/bg/weight/deco/size/tooltip/hide/icon/button/closeButton/progress/tab` fluent builder로 `ChatNode[]` 생성; progress length는 px 숫자 또는 CSS 문자열 |
-| `parseChatMessage()` | 커스텀 태그 문자열을 `ChatNode[]`로 파싱 |
+| `parseChatMessage()` | 커스텀 태그 문자열을 `ChatNode[]`로 파싱하고 `$magic` 같은 테마 색상 token을 보존 |
 | `registerChatTag()` | 새 wrap/self-closing 태그 등록 |
 | `mergeTextNodes()` | 인접 텍스트 노드 병합 |
 | `validateId/Password/Email/Nickname` | 서버 입력 검증; 클라이언트에도 대응 validator가 있음 |

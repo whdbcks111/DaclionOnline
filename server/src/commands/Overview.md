@@ -8,6 +8,6 @@
 - `shop.ts`: 상점 조회, 구매, 판매.
 - `admin.ts`: 권한 10의 플레이어/월드 관리 명령.
 - `progress.ts`: `/통계`로 공개 Progress snapshot을 공개 또는 비공개 표시한다.
-- `skill.ts`: `/스킬목록`의 보유 스킬·상태·버튼 UI, `/스킬 이름` 발동과 `/스킬정보 이름`의 계산/색상 포맷 UI. 모든 명령은 SkillBook 공개 API만 사용하며 단축어는 각각 `sl`, `su`, `si`다.
+- `skill.ts`: `/스킬목록`의 보유 스킬·발동/쿨다운·버튼 UI, `/스킬 이름` 발동과 `/스킬정보 이름`의 계산 설명·소모값·재사용 대기시간·발동 조건 UI. 모든 명령은 SkillBook 공개 API만 사용하며 단축어는 각각 `sl`, `su`, `si`다.
 
 명령 이름·인자·권한·자동완성·표시 방식이 바뀌면 이 문서와 [`docs/systems/chat-command.md`](../../../docs/systems/chat-command.md)를 갱신한다.

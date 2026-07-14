@@ -157,6 +157,7 @@ const NAMED_COLORS = new Set([
 
 function isValidColor(value: string): boolean {
     if (NAMED_COLORS.has(value)) return true
+    if (/^\$[a-z][a-z0-9-]*$/.test(value)) return true
     return /^#[0-9a-fA-F]{3,6}$/.test(value)
 }
 

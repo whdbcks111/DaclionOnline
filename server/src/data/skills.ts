@@ -35,9 +35,9 @@ defineSkill({
         + '공격 직전에 물리 관통력이 일회성으로 [color=orange]+{{armorPenFlat}}[/color] 및 '
         + '[color=orange]+{{armorPenPercent}}%[/color] 증가합니다.',
     costTemplate:
-        '[color=blue]정신력 {{manaCost}}[/color] · 재사용 대기시간 [color=gold]{{maxCooldown}}초[/color]',
+        '[color=$magic]정신력 {{manaCost}}[/color]',
     activationConditionTemplate:
-        '살아 있는 현재 대상과 [color=blue]정신력 {{manaCost}} 이상[/color]이 필요합니다. '
+        '살아 있는 현재 대상과 [color=$magic]정신력 {{manaCost}} 이상[/color]이 필요합니다. '
         + '`/스킬 {{name}}` 또는 채팅에 [color=gold]강타![/color]를 입력해 발동합니다.',
     activationMessage: '강타!',
     baseMetadata: {

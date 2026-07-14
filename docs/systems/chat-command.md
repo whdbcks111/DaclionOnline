@@ -48,9 +48,9 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 | 플레이어 | `/공격` (`attack`, `a`) | 위치 내 Monster/Resource 타게팅/공격; 자동완성은 생존 대상 뒤에 원래 번호의 사망·파괴 대상을 배치 |
 | 플레이어 | `/스탯분배` (`stat`) | 가용 포인트 분배 |
 | 진행 | `/통계` (`statistics`, `stats`) | 공개 통계 counter 표시 |
-| 스킬 | `/스킬목록` (`skilllist`, `sl`) | 표시 가능한 보유 스킬의 레벨·상태와 정보/사용 버튼 표시 |
+| 스킬 | `/스킬목록` (`skilllist`, `sl`) | 표시 가능한 보유 스킬의 레벨·발동/쿨다운 상태와 정보/사용 버튼 표시 |
 | 스킬 | `/스킬` (`skill`, `su`) | 보유 스킬을 이름으로 발동; 입력 메시지는 숨김 |
-| 스킬 | `/스킬정보` (`skillinfo`, `si`) | 계산된 설명·소모·발동 조건·현재 상태 표시 |
+| 스킬 | `/스킬정보` (`skillinfo`, `si`) | 계산된 설명·소모값·재사용 대기시간·발동 조건 표시 |
 | 위치 | `/이동` (`move`, `go`) | 연결된 위치로 coroutine 이동 |
 | 위치 | `/줍기` (`pickup`) | 번호로 바닥 스택을 줍거나 `전체`로 모두 줍기 |
 | 위치 | `/상호작용` (`interact`) | 번호로 상호작용 가능한 월드 오브젝트 기능 실행 |
@@ -81,6 +81,6 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 
 ## ChatNode 확장 지점
 
-현재 노드는 text, color, bg, deco, weight, size, tooltip, hide, icon, button, progress, tab이다. 문자열 태그는 color/icon/button/closebutton/bg/deco/size/weight/tooltip/hide/tab/progress를 지원한다. icon의 name은 `/icons/{name}.png`로 해석되며 없는 에셋은 숨긴다. progress length는 기존 숫자 px와 `em` 같은 CSS 문자열을 모두 지원해 아이템 내구도처럼 짧고 반응형인 표시를 만들 수 있다. tooltip은 hover와 touch에서 설명 ChatNode overlay를 표시하며 상태창의 능력치·스탯·내구도 설명에 사용된다. `$primary`, `$life` 같은 테마 토큰은 빌더가 직접 만든 노드에서 클라이언트 `resolveColor()`로 해석한다. 스킬 설명·소모·발동 조건 템플릿도 최종적으로 `parseChatMessage()`를 사용하므로 `[color=orange]{{damage}}[/color]` 같은 계산값 색상 표현을 재사용한다.
+현재 노드는 text, color, bg, deco, weight, size, tooltip, hide, icon, button, progress, tab이다. 문자열 태그는 color/icon/button/closebutton/bg/deco/size/weight/tooltip/hide/tab/progress를 지원한다. icon의 name은 `/icons/{name}.png`로 해석되며 없는 에셋은 숨긴다. progress length는 기존 숫자 px와 `em` 같은 CSS 문자열을 모두 지원해 아이템 내구도처럼 짧고 반응형인 표시를 만들 수 있다. tooltip은 hover와 touch에서 설명 ChatNode overlay를 표시하며 상태창의 능력치·스탯·내구도 설명에 사용된다. `$primary`, `$life`, `$magic` 같은 테마 토큰은 빌더와 `[color=$magic]...[/color]` 문자열 태그에서 클라이언트 `resolveColor()`로 해석한다. 스킬 설명·소모·발동 조건 템플릿도 최종적으로 `parseChatMessage()`를 사용하므로 `[color=orange]{{damage}}[/color]` 같은 계산값 색상 표현을 재사용한다.
 
 새 노드는 공유 union, 서버 parser/builder, 클라이언트 node renderer 세 곳을 함께 변경한다.

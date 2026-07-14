@@ -58,7 +58,7 @@ Entity/Resource/SkillBook
 - `{{skill.level}}`, `{{skill.maxLevel}}`, `{{skill.name}}`.
 - `{{maxCooldown}}`, `{{remainingCooldown}}`: 내장 계산값.
 
-설명·소모·발동 조건은 모두 같은 포맷터를 사용한다. 결과 문자열은 `parseChatMessage()`를 거치므로 `[color=orange]{{damage}}[/color]`처럼 기존 채팅 전용 문법을 사용할 수 있다. 공격력/물리 피해는 주황색, 정신력은 파란색, 치명타·쿨다운 강조는 금색을 기본 표현으로 사용한다.
+설명·소모·발동 조건은 모두 같은 포맷터를 사용한다. 결과 문자열은 `parseChatMessage()`를 거치므로 `[color=orange]{{damage}}[/color]`처럼 기존 채팅 전용 문법을 사용할 수 있다. 공격력/물리 피해는 주황색, 정신력은 상태창과 같은 `$magic` 보라색, 치명타·쿨다운 강조는 금색을 기본 표현으로 사용한다.
 
 ## 발동 경로와 수명주기
 
@@ -82,7 +82,7 @@ Entity/Resource/SkillBook
 - 공격 전 `armorPen +10`과 `armorPen ×1.05` modifier를 추가하고 공격 확정 직후 `source` 단위로 제거한다.
 - 일반 `Entity.attack()`을 사용하므로 방어·상성·자원 도구 제한·공격 쿨다운·주무기 내구도 규칙을 그대로 따른다.
 
-`/스킬정보 강타`는 레벨, 계산된 설명, 소모/쿨다운, 포맷된 발동 조건, 현재 사용 가능 여부를 상태창 형태로 표시한다.
+`/스킬정보 강타`는 레벨, 계산된 설명, 소모값, 재사용 대기시간, 포맷된 발동 조건을 각각 구분해 표시한다.
 
 ## 영속성
 

@@ -4,12 +4,10 @@ import { getPlayerByUserId } from '../modules/player.js';
 import { chat } from '../utils/chatBuilder.js';
 import { parseChatMessage } from '../utils/chatParser.js';
 import type { CompletionItem } from '../../../shared/types.js';
-import type Player from '../models/Player.js';
 import type Skill from '../models/Skill.js';
 
-interface SkillDisplayStatus {
+interface SkillListStatus {
     label: string;
-    detail: string;
     color: string;
 }
 
@@ -22,17 +20,13 @@ function skillCompletions(userId: number): CompletionItem[] {
     }));
 }
 
-function getSkillDisplayStatus(player: Player, skill: Skill): SkillDisplayStatus {
-    if (skill.isActive) return { label: '발동 중', detail: '현재 발동 중입니다.', color: 'gold' };
+function getSkillListStatus(skill: Skill): SkillListStatus | null {
+    if (skill.isActive) return { label: '발동 중', color: 'gold' };
     const remaining = skill.getRemainingCooldown();
     if (remaining > 0) {
-        const label = `재사용 대기 ${remaining.toFixed(1)}초`;
-        return { label, detail: label, color: 'red' };
+        return { label: `재사용 대기 ${remaining.toFixed(1)}초`, color: 'red' };
     }
-    const status = player.skills.getActivationStatus(skill);
-    return status.accepted
-        ? { label: '사용 가능', detail: '지금 사용할 수 있습니다.', color: 'lime' }
-        : { label: '조건 불충족', detail: status.reason, color: 'red' };
+    return null;
 }
 
 export function initSkillCommands(): void {
@@ -52,14 +46,15 @@ export function initSkillCommands(): void {
                 builder.text('\n현재 표시 가능한 보유 스킬이 없습니다.');
             } else {
                 for (const [index, skill] of skills.entries()) {
-                    const status = getSkillDisplayStatus(player, skill);
+                    const status = getSkillListStatus(skill);
                     builder.text('\n')
                         .color('gray', b => b.text(`${index + 1}. `))
                         .weight('bold', b => b.color('gold', b2 => b2.text(skill.name)))
-                        .text(`  Lv.${skill.level}  `)
-                        .tooltip(status.detail, b => b.color(status.color, b2 => b2.text(status.label)))
-                        .text('  ')
-                        .closeButton(`/스킬정보 ${skill.name}`, b => b.text('[정보]'))
+                        .text(`  Lv.${skill.level}`);
+                    if (status) {
+                        builder.text('  ').color(status.color, b => b.text(status.label));
+                    }
+                    builder.text('  ').closeButton(`/스킬정보 ${skill.name}`, b => b.text('[정보]'))
                         .text(' ')
                         .closeButton(`/스킬 ${skill.name}`, b => b.color('gold', b2 => b2.text('[사용]')));
                 }
@@ -112,9 +107,6 @@ export function initSkillCommands(): void {
                 return;
             }
 
-            const status = getSkillDisplayStatus(player, skill);
-            const statusLabel = status.label === '조건 불충족' ? status.detail : status.label;
-
             const nodes = [
                 ...chat()
                     .color('gray', b => b.text('[ 스킬 정보 ]  '))
@@ -123,16 +115,17 @@ export function initSkillCommands(): void {
                     .color('gray', b => b.text('─── 효과 ───\n'))
                     .build(),
                 ...parseChatMessage(skill.formatDescription(player)),
-                ...chat().text('\n').color('gray', b => b.text('─── 소모 및 재사용 ───\n')).build(),
+                ...chat().text('\n').color('gray', b => b.text('─── 소모값 ───\n')).build(),
                 ...parseChatMessage(skill.formatCost(player)),
+                ...chat()
+                    .text('\n')
+                    .color('gray', b => b.text('─── 재사용 대기시간 ───\n'))
+                    .color('gold', b => b.text(skill.format('{{maxCooldown}}초', player)))
+                    .build(),
                 ...chat().text('\n').color('gray', b => b.text('─── 발동 조건 ───\n')).build(),
                 ...parseChatMessage(skill.formatActivationCondition(player)),
                 ...chat()
                     .text('\n')
-                    .color('gray', b => b.text('─── 현재 상태 ───\n'))
-                    .color(status.color, b => b.text(statusLabel))
-                    .text('\n')
-                    .color('gray', b => b.text(`획득 경로: ${skill.acquisitionSource ?? '알 수 없음'}\n`))
                     .closeButton(`/스킬 ${skill.name}`, b => b.color('gold', b2 => b2.text('[사용]')))
                     .build(),
             ];

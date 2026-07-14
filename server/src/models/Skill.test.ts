@@ -4,6 +4,7 @@ import type Player from './Player.js';
 import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import Skill, { defineSkill } from './Skill.js';
+import { parseChatMessage } from '../utils/chatParser.js';
 
 class TestEntity extends Entity {
     constructor(override readonly name: string) {
@@ -70,4 +71,12 @@ test('공격 옵션으로 한 번의 공격을 확정 치명타로 계산한다'
     assert.ok(result);
     assert.equal(result.critical, true);
     assert.equal(result.rawAmount, 20);
+});
+
+test('스킬 포맷 문자열은 상태창과 같은 테마 색상 token을 사용할 수 있다', () => {
+    assert.deepEqual(parseChatMessage('[color=$magic]정신력 20[/color]'), [{
+        type: 'color',
+        color: '$magic',
+        children: [{ type: 'text', text: '정신력 20' }],
+    }]);
 });
