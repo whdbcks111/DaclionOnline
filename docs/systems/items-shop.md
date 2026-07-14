@@ -2,7 +2,7 @@
 
 ## 마스터 데이터와 인스턴스
 
-- `models/Item.ts::ItemData`는 이름, 분류, 무게, 스택, 기본 metadata, 사용 handler ID, 장비 슬롯, modifier, 내구도와 정의 태그를 정의한다.
+- `models/Item.ts::ItemData`는 이름, 이미지 key, 분류, 무게, 스택, 기본 metadata, 사용 handler ID, 장비 슬롯, modifier, 내구도와 정의 태그를 정의한다.
 - `data/items.ts`가 `defineItem()`으로 마스터 데이터를 프로세스 레지스트리에 등록한다.
 - DB `Item`과 런타임 `Item` 객체는 플레이어가 실제 보유한 수량·내구도·metadata를 표현한다.
 - 장착된 항목은 DB `Equipment`와 런타임 `Equipment` 슬롯 맵에 별도로 존재한다.
@@ -11,6 +11,8 @@
 - 인벤토리↔장비↔바닥 이동은 `ItemSnapshot`으로 metadata, 내구도, 영속 태그를 보존한다. 스택도 이 값이 모두 같을 때만 합쳐진다.
 
 현재 정의는 `health_potion`, `mana_potion`, `old_sword`, `old_shield`, `venom_dagger`다. 낡은 검의 불 태그와 독 단검의 독 태그는 장착 시 Entity의 공격 효과 태그가 된다.
+
+아이템 이미지는 `Item.image` 공개 API로 조회한다. `/icons` 아래의 확장자 없는 key를 사용하며 `metadata.image` → `ItemData.image` → `items/{itemDataId}` 순서로 결정된다. 따라서 일반 아이템은 `client/public/icons/items/{id}.png`를 자동으로 사용하고, 동일 정의의 개별 인스턴스만 다른 외형이 필요하면 기존 JSON metadata에 `{ image: "items/variant_key" }`를 저장한다. 경로 이탈이나 URL 형태의 값은 무시되어 기본 이미지로 대체된다.
 
 ## Inventory API와 규칙
 
@@ -21,6 +23,8 @@
 - 저장: state map의 New/Modified/Deleted 항목을 Prisma create/update/delete로 반영한다.
 
 바닥 아이템은 `Location.getDroppedItems()`의 복사본으로 표시하고 `pickupItem/pickupAllItems`로만 제거한다. 전체 줍기는 모든 스택의 중량을 먼저 검사하므로 하나라도 받을 수 없는 경우 바닥 상태를 변경하지 않는다.
+
+`/인벤토리` 목록은 각 아이템 이름 바로 앞에 `Item.image`가 가리키는 작은 아이콘을 표시한다. 존재하지 않는 클라이언트 에셋은 깨진 이미지 대신 숨겨진다.
 
 사용 효과는 `registerItemUse(id, handler)`로 등록한다. handler는 성공·실패를 포함한 모든 비동기 종료 경로에서 `finish()`를 호출해야 Inventory의 사용 잠금이 풀린다. 현재 HP/MP 포션은 coroutine으로 지연 후 회복한다.
 

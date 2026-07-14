@@ -185,7 +185,7 @@ export function initPlayerCommands(): void {
                     const item = items[i];
                     inner.tab(SLOT, b2 => b2.color('gray', b3 => b3.text(`[${i + 1}]`)))
                          .tab(CAT,  b2 => b2.color('gray', b3 => b3.text(`[${item.category}]`)))
-                         .tab(NAME, b2 => b2.text(item.name))
+                         .tab(NAME, b2 => b2.icon(item.image).text(item.name))
                          .tab(CNT,  b2 => b2.text(`x${item.count}`));
 
                     if (item.data?.onUse) {

@@ -35,7 +35,7 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 | 일반 | `/실행` (`eval`) | JS eval, 권한 10 |
 | 일반 | `/공지` | 전체 채널 공지, 권한 10 |
 | 플레이어 | `/상태창` (`status`, `s`) | 레벨·자원·능력치·스탯·장비 표시 |
-| 플레이어 | `/인벤토리` (`inv`, `i`) | 무게와 아이템 목록 표시 |
+| 플레이어 | `/인벤토리` (`inv`, `i`) | 무게와 이름 앞의 작은 아이콘을 포함한 아이템 목록 표시 |
 | 플레이어 | `/사용` (`use`) | 아이템 효과 실행 |
 | 플레이어 | `/버리기` (`drop`) | 현재 Location에 아이템 드롭 |
 | 플레이어 | `/장착` (`equip`) | 인벤토리 아이템 장착/교체 |
@@ -68,6 +68,6 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 
 ## ChatNode 확장 지점
 
-현재 노드는 text, color, bg, deco, weight, size, tooltip, hide, icon, button, progress, tab이다. 문자열 태그는 color/icon/button/closebutton/bg/deco/size/weight/tooltip/hide/tab/progress를 지원한다. tooltip은 hover와 touch에서 설명 ChatNode overlay를 표시하며 상태창의 능력치·스탯 설명에 사용된다. `$primary`, `$life` 같은 테마 토큰은 빌더가 직접 만든 노드에서 클라이언트 `resolveColor()`로 해석한다.
+현재 노드는 text, color, bg, deco, weight, size, tooltip, hide, icon, button, progress, tab이다. 문자열 태그는 color/icon/button/closebutton/bg/deco/size/weight/tooltip/hide/tab/progress를 지원한다. icon의 name은 `/icons/{name}.png`로 해석되며 없는 에셋은 숨긴다. tooltip은 hover와 touch에서 설명 ChatNode overlay를 표시하며 상태창의 능력치·스탯 설명에 사용된다. `$primary`, `$life` 같은 테마 토큰은 빌더가 직접 만든 노드에서 클라이언트 `resolveColor()`로 해석한다.
 
 새 노드는 공유 union, 서버 parser/builder, 클라이언트 node renderer 세 곳을 함께 변경한다.

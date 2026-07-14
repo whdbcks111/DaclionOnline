@@ -7,6 +7,8 @@ export interface ItemData {
     id: string;
     name: string;
     description: string;
+    /** /icons 아래의 확장자 없는 이미지 key. 생략하면 items/{id} */
+    image?: string;
     category: string;
     weight: number;
     stackable: boolean;
@@ -67,6 +69,13 @@ export class Item implements TagReadable {
     /** 아이템 설명 */
     get description(): string { return this.data?.description ?? ''; }
 
+    /** metadata → 마스터 데이터 → ID 기반 기본 경로 순서로 결정한 이미지 key */
+    get image(): string {
+        return normalizeItemImage(this.metadata?.image)
+            ?? normalizeItemImage(this.data?.image)
+            ?? `items/${this.itemDataId}`;
+    }
+
     /** 아이템 카테고리 */
     get category(): string { return this.data?.category ?? ''; }
 
@@ -117,8 +126,17 @@ export class Item implements TagReadable {
 // 아이템 마스터 데이터 캐시
 const itemDataCache = new Map<string, ItemData>();
 
+/** 로컬 /icons 경로 밖으로 벗어나지 않는 이미지 key만 허용한다. */
+function normalizeItemImage(value: unknown): string | undefined {
+    if (typeof value !== 'string' || value.includes('..')) return undefined;
+    return /^[a-zA-Z0-9][a-zA-Z0-9/_-]*$/.test(value) ? value : undefined;
+}
+
 /** 아이템 정의 등록 (data/items.ts에서 호출) */
 export function defineItem(data: ItemData): void {
+    if (data.image !== undefined && !normalizeItemImage(data.image)) {
+        throw new Error(`Invalid item image key: ${data.image}`);
+    }
     itemDataCache.set(data.id, { ...data, tags: normalizeTags(data.tags) });
 }
 

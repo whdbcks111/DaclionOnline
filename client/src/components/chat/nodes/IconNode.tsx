@@ -8,8 +8,10 @@ export default function IconNode({ name }: Props) {
     return (
         <img
             src={`/icons/${name}.png`}
-            alt={name}
+            alt=""
+            aria-hidden="true"
             className={styles.icon}
+            onError={event => { event.currentTarget.hidden = true }}
         />
     )
 }
