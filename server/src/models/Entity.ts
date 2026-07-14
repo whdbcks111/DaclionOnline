@@ -1,6 +1,6 @@
 import Attribute, { AttributeType } from "./Attribute.js";
 import type { AttributeRecord } from "./Attribute.js";
-import Equipment from "./Equipment.js";
+import Equipment, { EquipSlotType } from "./Equipment.js";
 import Stat from "./Stat.js";
 import type { StatRecord } from "./Stat.js";
 import { sendBotMessageToUser, sendNotificationFiltered } from "../modules/message.js";
@@ -214,6 +214,10 @@ export default abstract class Entity implements TagReadable {
         );
 
         const damageResult = target.damage(rawAmount, type, { type: 'attack', causeEntity: this, critical });
+        // 현재 전투에는 원거리 공격 구분이 없으므로 물리 기본 공격을 근접 공격으로 취급한다.
+        if (type === 'physical') {
+            this.equipment.decreaseItemDurability(EquipSlotType.MAIN_HAND.key, 0, 1);
+        }
         const { finalDamage, effectModifier } = damageResult;
         const effectLabel = effectModifier === 0
             ? '효과 없음! '

@@ -31,7 +31,7 @@ login/session restore
      -> Equipment.save
 ```
 
-- Player scalar setter와 Player/Item 영속 태그·metadata callback, Stat/Inventory/Equipment가 dirty 상태를 추적한다.
+- Player scalar setter와 Player/Item 영속 태그·metadata·내구도 callback, Stat/Inventory/Equipment가 dirty 상태를 추적한다.
 - `fetchPlayerByUserId()`는 오프라인 Player를 DB에서 읽지만 온라인 Map에는 올리지 않는다.
 - 위치 JSON, 채팅/세션/온라인 상태, 몬스터/드롭, 상점 재고는 DB에 저장되지 않는다.
 - 회원가입은 User와 Player를 nested create하므로 기본 Player 레코드가 즉시 생긴다.

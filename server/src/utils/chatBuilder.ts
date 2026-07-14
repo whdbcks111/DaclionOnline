@@ -85,7 +85,7 @@ class ChatBuilder {
 
     progress(options: {
         value: number;
-        length?: number;
+        length?: number | string;
         color?: string;
         thickness?: number;
         shape?: 'rounded' | 'square';

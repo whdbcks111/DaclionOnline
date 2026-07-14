@@ -43,6 +43,7 @@ Player setter, Stat, Inventory, Equipment는 변경 상태를 추적한다. `Pla
 - 치명타 뒤 공격자→대상 단방향 태그 modifier를 적용한다. 면역 0배, 저항 0.5배, 우세 1.5배이며 복수 일치 시 곱하지 않고 가장 낮은 한 값만 쓴다.
 - 물리 피해는 `max(0, raw - max(0, 대상 def - 공격자 armorPen))`, 마법은 대상 magicDef/공격자 magicPen, absolute는 방어와 관통 0으로 계산한다.
 - 공격 속도로 cooldown을 `1 / attackSpeed`초 설정한다.
+- 현재 별도 원거리 분류가 없으므로 성공적으로 실행된 물리 기본 공격을 근접 공격으로 취급하며, 공격자의 `mainHand:0` 아이템에 내구도가 있으면 공격마다 1 차감한다. 0에서도 공격과 장비 modifier는 유지된다.
 - Monster는 처음 맞은 공격자를 target으로 삼고 같은 위치에 살아 있는 동안 자동 공격한다.
 - Monster 사망 시 마지막 원인이 Player 공격이면 드롭, 골드, 경험치를 지급한다.
 - 레벨 요구 경험치는 `level * 100`; 레벨업마다 모든 Stat +1, 가용 statPoint +3이다.

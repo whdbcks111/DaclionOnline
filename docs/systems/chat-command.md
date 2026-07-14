@@ -68,6 +68,6 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 
 ## ChatNode 확장 지점
 
-현재 노드는 text, color, bg, deco, weight, size, tooltip, hide, icon, button, progress, tab이다. 문자열 태그는 color/icon/button/closebutton/bg/deco/size/weight/tooltip/hide/tab/progress를 지원한다. icon의 name은 `/icons/{name}.png`로 해석되며 없는 에셋은 숨긴다. tooltip은 hover와 touch에서 설명 ChatNode overlay를 표시하며 상태창의 능력치·스탯 설명에 사용된다. `$primary`, `$life` 같은 테마 토큰은 빌더가 직접 만든 노드에서 클라이언트 `resolveColor()`로 해석한다.
+현재 노드는 text, color, bg, deco, weight, size, tooltip, hide, icon, button, progress, tab이다. 문자열 태그는 color/icon/button/closebutton/bg/deco/size/weight/tooltip/hide/tab/progress를 지원한다. icon의 name은 `/icons/{name}.png`로 해석되며 없는 에셋은 숨긴다. progress length는 기존 숫자 px와 `em` 같은 CSS 문자열을 모두 지원해 아이템 내구도처럼 짧고 반응형인 표시를 만들 수 있다. tooltip은 hover와 touch에서 설명 ChatNode overlay를 표시하며 상태창의 능력치·스탯·내구도 설명에 사용된다. `$primary`, `$life` 같은 테마 토큰은 빌더가 직접 만든 노드에서 클라이언트 `resolveColor()`로 해석한다.
 
 새 노드는 공유 union, 서버 parser/builder, 클라이언트 node renderer 세 곳을 함께 변경한다.

@@ -88,7 +88,7 @@ export type ChatNode =
     | { type: 'hide'; title: string; children: ChatNode[] }
     | { type: 'icon'; name: string }
     | { type: 'button'; action: string; children: ChatNode[]; closeOnClick?: boolean; showCommand?: boolean }
-    | { type: 'progress'; value: number; length: number; color: string; thickness: number; shape: 'rounded' | 'square' }
+    | { type: 'progress'; value: number; length: number | string; color: string; thickness: number; shape: 'rounded' | 'square' }
     | { type: 'tab'; width: number; children: ChatNode[] }
     | { type: 'tooltip'; description: ChatNode[]; children: ChatNode[] }
 

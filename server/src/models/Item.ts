@@ -52,10 +52,10 @@ export class Item implements TagReadable {
     id: number;
     readonly itemDataId: string;
     count: number;
-    durability: number | null;
     readonly tags: TagCollection;
+    private _durability: number | null;
     private _metadataDelta: ItemMetadata;
-    private _metadataChangeHandler: (() => void) | null = null;
+    private _persistentChangeHandler: (() => void) | null = null;
 
     constructor(
         itemDataId: string,
@@ -68,7 +68,10 @@ export class Item implements TagReadable {
         this.id = id;
         this.itemDataId = itemDataId;
         this.count = count;
-        this.durability = durability;
+        const maxDurability = this.baseDurability;
+        this._durability = maxDurability === null
+            ? null
+            : normalizeDurability(durability ?? maxDurability, maxDurability);
         this._metadataDelta = cloneMetadata(metadataDelta ?? {});
         this.tags = new TagCollection({
             definition: getItemData(itemDataId)?.tags,
@@ -137,20 +140,20 @@ export class Item implements TagReadable {
             && isDeepStrictEqual(this._metadataDelta[key], normalized)) return;
 
         this._metadataDelta[key] = normalized;
-        this._metadataChangeHandler?.();
+        this._persistentChangeHandler?.();
     }
 
     /** 인스턴스 override를 제거해 현재 ItemData.baseMetadata를 다시 상속한다. */
     resetMetadata(key: string): boolean {
         if (!Object.hasOwn(this._metadataDelta, key)) return false;
         delete this._metadataDelta[key];
-        this._metadataChangeHandler?.();
+        this._persistentChangeHandler?.();
         return true;
     }
 
-    /** Inventory/Equipment가 metadata 변경을 dirty 상태로 연결할 때 사용한다. */
-    setMetadataChangeHandler(handler: (() => void) | null): void {
-        this._metadataChangeHandler = handler;
+    /** Inventory/Equipment가 영속 상태 변경을 dirty 상태로 연결할 때 사용한다. */
+    setPersistentChangeHandler(handler: (() => void) | null): void {
+        this._persistentChangeHandler = handler;
     }
 
     /** Prisma JSON 필드에 저장할 버전이 표시된 delta payload */
@@ -173,13 +176,52 @@ export class Item implements TagReadable {
     /** 기본(최대) 내구도. null = 무한 */
     get baseDurability(): number | null { return this.data?.baseDurability ?? null; }
 
+    /** 현재 내구도. null이면 내구도 시스템을 사용하지 않는다. */
+    get durability(): number | null { return this._durability; }
+
+    /** UI에 바로 사용할 0~1 내구도 비율. 내구도가 없으면 null */
+    get durabilityRatio(): number | null {
+        const max = this.baseDurability;
+        if (max === null || this._durability === null) return null;
+        return max > 0 ? this._durability / max : 0;
+    }
+
+    get isBroken(): boolean { return this._durability !== null && this._durability <= 0; }
+
+    /** 현재 내구도를 0~baseDurability 범위로 설정한다. */
+    setDurability(value: number): number | null {
+        const max = this.baseDurability;
+        if (max === null || this._durability === null) return null;
+        const next = normalizeDurability(value, max);
+        if (next === this._durability) return next;
+        this._durability = next;
+        this._persistentChangeHandler?.();
+        return next;
+    }
+
+    /** 양수/음수 delta만큼 내구도를 변경한다. */
+    changeDurability(delta: number): number | null {
+        if (!Number.isFinite(delta)) throw new Error('Durability delta must be finite');
+        return this._durability === null ? null : this.setDurability(this._durability + delta);
+    }
+
+    increaseDurability(amount = 1): number | null {
+        if (!Number.isFinite(amount) || amount < 0) throw new Error('Durability increase must be a non-negative number');
+        return this.changeDurability(amount);
+    }
+
+    decreaseDurability(amount = 1): number | null {
+        if (!Number.isFinite(amount) || amount < 0) throw new Error('Durability decrease must be a non-negative number');
+        return this.changeDurability(-amount);
+    }
+
     hasTag(tag: TagId): boolean { return this.tags.hasTag(tag); }
 
     snapshot(count = this.count): ItemSnapshot {
         return {
             itemDataId: this.itemDataId,
             count,
-            durability: this.durability,
+            durability: this._durability,
             metadataDelta: this.getMetadataDeltaSnapshot(),
             tags: this.tags.persistentValues(),
         };
@@ -218,7 +260,7 @@ export class Item implements TagReadable {
     /** 스택 병합 시 인스턴스별 영속 데이터가 같은지 검사 */
     canStackWith(snapshot: ItemSnapshot): boolean {
         return this.itemDataId === snapshot.itemDataId
-            && this.durability === snapshot.durability
+            && this._durability === snapshot.durability
             && isDeepStrictEqual(this._metadataDelta, snapshot.metadataDelta ?? {})
             && JSON.stringify(this.tags.persistentValues()) === JSON.stringify(normalizeTags(snapshot.tags));
     }
@@ -226,6 +268,11 @@ export class Item implements TagReadable {
 
 // 아이템 마스터 데이터 캐시
 const itemDataCache = new Map<string, ItemData>();
+
+function normalizeDurability(value: number, max: number): number {
+    if (!Number.isFinite(value)) throw new Error('Durability must be finite');
+    return Math.max(0, Math.min(max, Math.trunc(value)));
+}
 
 function cloneMetadataValue(value: unknown): ItemMetadataValue {
     const serialized = JSON.stringify(value);
@@ -293,6 +340,10 @@ function normalizeItemImage(value: unknown): string | undefined {
 export function defineItem(data: ItemData): void {
     if (data.image !== undefined && !normalizeItemImage(data.image)) {
         throw new Error(`Invalid item image key: ${data.image}`);
+    }
+    if (data.baseDurability !== null
+        && (!Number.isInteger(data.baseDurability) || data.baseDurability < 0)) {
+        throw new Error(`Invalid item base durability: ${data.baseDurability}`);
     }
     itemDataCache.set(data.id, {
         ...data,

@@ -16,10 +16,13 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 아이템 이미지는 `Item.image` 공개 API로 조회한다. `/icons` 아래의 확장자 없는 key를 사용하며 `getMetadata('image')` → `ItemData.image` → `items/{itemDataId}` 순서로 결정된다. 따라서 일반 아이템은 `client/public/icons/items/{id}.png`를 자동으로 사용하고, 동일 정의의 개별 인스턴스만 다른 외형이 필요하면 `setMetadata('image', 'items/variant_key')`를 호출한다. 경로 이탈이나 URL 형태의 값은 무시되어 기본 이미지로 대체된다.
 
+내구도는 `baseDurability`가 있는 아이템만 사용한다. `durability/durabilityRatio/isBroken`으로 조회하고 `setDurability/changeDurability/increaseDurability/decreaseDurability`로 0~기본 내구도 범위 안에서 변경한다. 변경 callback이 소유 Inventory/Equipment를 dirty로 표시하며 0이 되어도 현재는 자동 파괴하거나 modifier를 제거하지 않는다.
+
 ## Inventory API와 규칙
 
 - 조회: `getItem`, `getItemByIndex`, `getItemsByData`, `getCount`.
 - metadata 변경: `setItemMetadata`, `resetItemMetadata`가 대상 Item API를 호출하고 Inventory를 dirty로 표시한다. 조회는 반환된 Item의 `getMetadata`를 사용한다.
+- 내구도 변경: `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`가 Item API를 호출하고 Inventory를 dirty로 표시한다.
 - 추가: `canAdd`, `canAddSnapshot(s)`이 총 무게와 아이템 정의를 검사하고 `addItem`이 stackable/maxStack 규칙에 따라 병합 또는 새 인스턴스를 만든다. 기존 인스턴스를 이동할 때는 `addItemSnapshot`을 사용한다.
 - 사용: `useItem`이 `ItemData.onUse` handler를 실행하며 동시에 하나의 아이템만 사용할 수 있다.
 - 제거: `removeItem`, `removeItemByData`가 수량 또는 인스턴스를 dirty/deleted 상태로 바꾼다.
@@ -27,7 +30,7 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 바닥 아이템은 `Location.getDroppedItems()`의 복사본으로 표시하고 `pickupItem/pickupAllItems`로만 제거한다. 전체 줍기는 모든 스택의 중량을 먼저 검사하므로 하나라도 받을 수 없는 경우 바닥 상태를 변경하지 않는다.
 
-`/인벤토리` 목록과 `/상태창`의 장착 정보는 각 아이템 이름 바로 앞에 `Item.image`가 가리키는 작은 아이콘을 표시한다. 존재하지 않는 클라이언트 에셋은 깨진 이미지 대신 숨겨진다.
+`/인벤토리` 목록과 `/상태창`의 장착 정보는 이름 앞에 `Item.image` 아이콘을 표시한다. 내구도가 있는 아이템은 이름 오른쪽에 `em` 길이의 짧은 progress와 현재/최대값 tooltip을 추가한다. progress 색은 50% 초과 초록, 20% 초과~50% 금색, 20% 이하 빨강이며 존재하지 않는 이미지 에셋은 숨겨진다.
 
 사용 효과는 `registerItemUse(id, handler)`로 등록한다. handler는 성공·실패를 포함한 모든 비동기 종료 경로에서 `finish()`를 호출해야 Inventory의 사용 잠금이 풀린다. 현재 HP/MP 포션은 coroutine으로 지연 후 회복한다.
 
@@ -40,6 +43,7 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 - `unequip`: modifier를 제거하고 Item을 반환한다.
 - `applyModifiers`: 로드된 모든 장비 modifier를 Attribute에 다시 적용한다.
 - `setItemMetadata/resetItemMetadata`: 장착 아이템의 delta를 변경하고 해당 슬롯을 dirty로 표시한다.
+- `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`: 장착 아이템 내구도를 변경하고 해당 슬롯을 dirty로 표시한다.
 - `save`: 슬롯별 state를 Prisma에 반영한다.
 
 장비 modifier의 `source`는 데이터 정의 값 대신 실제 슬롯 기반 source로 치환되어, 특정 장비 해제 시 정확히 제거된다.

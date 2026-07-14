@@ -29,7 +29,7 @@ export default class Inventory {
         item.tags.setPersistentChangeHandler(() => {
             markModified();
         });
-        item.setMetadataChangeHandler(markModified);
+        item.setPersistentChangeHandler(markModified);
         this._items.push(item);
         this._states.set(item, state);
     }
@@ -92,6 +92,22 @@ export default class Inventory {
     /** 아이템 metadata override를 제거해 최신 기본값을 다시 상속한다. */
     resetItemMetadata(itemId: number, key: string): boolean {
         return this.getItem(itemId)?.resetMetadata(key) ?? false;
+    }
+
+    setItemDurability(itemId: number, value: number): number | null | undefined {
+        return this.getItem(itemId)?.setDurability(value);
+    }
+
+    changeItemDurability(itemId: number, delta: number): number | null | undefined {
+        return this.getItem(itemId)?.changeDurability(delta);
+    }
+
+    increaseItemDurability(itemId: number, amount = 1): number | null | undefined {
+        return this.getItem(itemId)?.increaseDurability(amount);
+    }
+
+    decreaseItemDurability(itemId: number, amount = 1): number | null | undefined {
+        return this.getItem(itemId)?.decreaseDurability(amount);
     }
 
     // -- 추가 --

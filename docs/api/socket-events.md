@@ -53,6 +53,8 @@
 | `adminLocations` | 태그 포함 `LocationData[]` | `modules/location.ts` | `pages/LocationEditor.tsx` |
 | `adminSaveResult` | `SimpleResult` | `modules/location.ts` | `pages/LocationEditor.tsx` |
 
+`ChatMessage`와 `NotificationData` 안의 progress `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다.
+
 ## Room과 전송 범위
 
 - 공개 채널 room은 `channel:main` 또는 `channel:{channelId}` 형식이다.

@@ -92,7 +92,7 @@ export default class Equipment implements TagReadable {
         entry.item.tags.setPersistentChangeHandler(() => {
             markModified();
         });
-        entry.item.setMetadataChangeHandler(markModified);
+        entry.item.setPersistentChangeHandler(markModified);
         this._slots.set(key, entry);
     }
 
@@ -130,6 +130,22 @@ export default class Equipment implements TagReadable {
     /** 장착 아이템 metadata override를 제거해 최신 기본값을 다시 상속한다. */
     resetItemMetadata(slot: EquipSlot, slotIndex: number, metadataKey: string): boolean {
         return this.getEquipped(slot, slotIndex)?.resetMetadata(metadataKey) ?? false;
+    }
+
+    setItemDurability(slot: EquipSlot, slotIndex: number, value: number): number | null | undefined {
+        return this.getEquipped(slot, slotIndex)?.setDurability(value);
+    }
+
+    changeItemDurability(slot: EquipSlot, slotIndex: number, delta: number): number | null | undefined {
+        return this.getEquipped(slot, slotIndex)?.changeDurability(delta);
+    }
+
+    increaseItemDurability(slot: EquipSlot, slotIndex: number, amount = 1): number | null | undefined {
+        return this.getEquipped(slot, slotIndex)?.increaseDurability(amount);
+    }
+
+    decreaseItemDurability(slot: EquipSlot, slotIndex: number, amount = 1): number | null | undefined {
+        return this.getEquipped(slot, slotIndex)?.decreaseDurability(amount);
     }
 
     /** 장착 아이템의 정의/영속/런타임 태그를 엔티티 유효 태그로 제공 */

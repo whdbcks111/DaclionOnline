@@ -14,7 +14,28 @@ import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
 import { CompletionItem } from "../../../shared/types.js";
 
+function itemDurabilityColor(ratio: number): string {
+    if (ratio <= 0.2) return 'red';
+    if (ratio <= 0.5) return 'gold';
+    return 'lime';
+}
 
+function itemLabel(b: ReturnType<typeof chat>, item: Item): ReturnType<typeof chat> {
+    b.icon(item.image).text(item.name || item.itemDataId);
+    const ratio = item.durabilityRatio;
+    if (ratio !== null) {
+        b.text(' ').tooltip(
+            `내구도 ${item.durability} / ${item.baseDurability}`,
+            inner => inner.progress({
+                value: ratio,
+                length: '3.5em',
+                color: itemDurabilityColor(ratio),
+                thickness: 5,
+            }),
+        );
+    }
+    return b;
+}
 
 export function initPlayerCommands(): void {
     registerCommand({
@@ -79,9 +100,7 @@ export function initPlayerCommands(): void {
                                 const slotLabel = slotType.max > 1 ? `${slotType.label}${i + 1}` : slotType.label;
                                 b.tab(L, b2 => b2.weight('bold',b3 => b3.text(slotLabel)));
                                 if (equipped) {
-                                    b.icon(equipped.image)
-                                     .text(equipped.name || equipped.itemDataId)
-                                     .text('\n');
+                                    itemLabel(b, equipped).text('\n');
                                 } else {
                                     b.color('gray', b2 => b2.text('(없음)')).text('\n');
                                 }
@@ -186,7 +205,7 @@ export function initPlayerCommands(): void {
                     const item = items[i];
                     inner.tab(SLOT, b2 => b2.color('gray', b3 => b3.text(`[${i + 1}]`)))
                          .tab(CAT,  b2 => b2.color('gray', b3 => b3.text(`[${item.category}]`)))
-                         .tab(NAME, b2 => b2.icon(item.image).text(item.name))
+                         .tab(NAME, b2 => itemLabel(b2, item))
                          .tab(CNT,  b2 => b2.text(`x${item.count}`));
 
                     if (item.data?.onUse) {

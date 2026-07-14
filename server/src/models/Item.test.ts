@@ -9,7 +9,12 @@ import {
     type ItemMetadata,
 } from './Item.js';
 
-function itemData(id: string, image?: string, baseMetadata: ItemMetadata | null = null): ItemData {
+function itemData(
+    id: string,
+    image?: string,
+    baseMetadata: ItemMetadata | null = null,
+    baseDurability: number | null = null,
+): ItemData {
     return {
         id,
         name: id,
@@ -23,7 +28,7 @@ function itemData(id: string, image?: string, baseMetadata: ItemMetadata | null 
         onUse: null,
         equipSlot: null,
         modifiers: null,
-        baseDurability: null,
+        baseDurability,
         tags: [],
     };
 }
@@ -63,7 +68,7 @@ test('metadata setter는 delta만 저장하고 변경 callback을 호출한다',
     defineItem(itemData('test_metadata_api', undefined, { amount: 50 }));
     const item = new Item('test_metadata_api', 1, null, null);
     let changes = 0;
-    item.setMetadataChangeHandler(() => { changes++; });
+    item.setPersistentChangeHandler(() => { changes++; });
 
     item.setMetadata('amount', 75);
     assert.equal(item.getMetadata<number>('amount'), 75);
@@ -93,4 +98,22 @@ test('구형 전체 metadata는 기본값과 다른 필드만 delta로 마이그
         time: 3,
         image: 'items/legacy_variant',
     });
+});
+
+test('내구도 API는 설정·증가·차감을 범위 안에서 처리하고 변경 callback을 호출한다', () => {
+    defineItem(itemData('test_durability', undefined, null, 10));
+    const item = new Item('test_durability', 1, 10, null);
+    let changes = 0;
+    item.setPersistentChangeHandler(() => { changes++; });
+
+    assert.equal(item.decreaseDurability(3), 7);
+    assert.equal(item.durabilityRatio, 0.7);
+    assert.equal(item.increaseDurability(20), 10);
+    assert.equal(item.setDurability(-5), 0);
+    assert.equal(item.isBroken, true);
+    assert.equal(changes, 3);
+
+    assert.equal(item.decreaseDurability(), 0);
+    assert.equal(changes, 3);
+    assert.throws(() => item.changeDurability(Number.NaN));
 });
