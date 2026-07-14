@@ -23,7 +23,7 @@
 | ShopData / Shop | shops.ts | 없음 | `Shop.tags.setRuntime` |
 | DroppedItem | Item snapshot에서 보존 | 월드 드롭은 현재 비영속 | 원본 Item snapshot |
 
-장착 아이템 태그는 `Equipment.hasTag/getTags` 공개 API를 통해 소유 Entity의 유효 태그에 포함된다. 따라서 무기의 속성은 공격 속성이 되고 방어구의 속성은 피격 대상 속성으로도 작동한다. 인벤토리 보관 아이템은 Entity 태그에 포함되지 않는다.
+일반 태그 조회에서는 장착 아이템 태그가 `Equipment.hasTag/getTags`를 통해 Entity의 유효 태그에 포함된다. 단, 상성 판정은 공격·피격 문맥을 분리한다. 공격자는 Entity 본체 태그와 `Equipment.hasEffectSourceTag`가 제공하는 무기 태그를 사용하고, 피격 대상은 장비를 전부 제외한 Entity 본체의 정의·영속·런타임 태그만 사용한다. 갑옷 패시브가 실제로 `Entity.tags.setRuntime(source, tags)`를 호출해 속성을 부여한 경우에는 본체 런타임 태그이므로 피격 상성에 포함된다.
 
 아이템을 인벤토리↔장비↔바닥으로 이동할 때는 `Item.snapshot`, `Item.fromSnapshot`, `Inventory.addItemSnapshot`, `Location.addDroppedItem`을 사용한다. 이 경로는 metadata, 내구도, 영속 태그를 함께 보존하며, 스택은 이 값들이 모두 같은 인스턴스끼리만 합쳐진다.
 
@@ -65,8 +65,8 @@
   -> 최종 대미지
 ```
 
-`Entity.damage`가 공격 원인의 Entity와 피격 Entity를 `applyTagEffectValue`에 전달하므로 플레이어 공격과 몬스터 자동 공격이 같은 규칙을 사용한다. 결과에는 `modifiedAmount`, `effectModifier`, 일치한 source/target tag가 들어가며 공격 메시지는 면역·저항·우세를 구분한다.
+`Entity.damage`가 공격 원인의 Entity와 피격 Entity를 `applyTagEffectValue`에 전달하며, `TagEffectReadable.hasEffectSourceTag/hasEffectTargetTag`가 있으면 일반 `hasTag`보다 우선한다. 따라서 플레이어 공격과 몬스터 자동 공격이 같은 문맥 규칙을 사용한다. 결과에는 `modifiedAmount`, `effectModifier`, 일치한 source/target tag가 들어가며 공격 메시지는 면역·저항·우세를 구분한다.
 
-대표 데이터로 낡은 검은 `property:fire`, 독 단검은 `property:poison`, 슬라임은 `property:water`, 고블린은 `property:natural`, 돌 골렘은 `trait:inanimate + property:natural`을 가진다. 낡은 검은 슬라임에게 0.5배, 고블린에게 1.5배이며 독 단검의 공격은 돌 골렘에게 0배다.
+대표 데이터로 낡은 검은 `property:fire`, 독 단검은 `property:poison`, 슬라임은 `trait:inanimate + property:water + property:poison`, 고블린은 `property:natural`, 돌 골렘은 `trait:inanimate + property:natural`을 가진다. 낡은 검은 슬라임에게 0.5배, 고블린에게 1.5배이며 독 단검의 공격은 슬라임과 돌 골렘에게 0배다. 반대로 낡은 검을 장착한 플레이어가 피격될 때는 검의 불 태그가 대상 태그에 포함되지 않는다.
 
 상태 이상이나 회복 같은 새 효과는 대상의 태그 배열을 직접 읽지 말고 `applyTagEffectValue` 또는 `resolveTagEffect`를 호출한다. 0배일 때 부수 효과도 막아야 한다면 반환값의 `effective`를 검사한다.

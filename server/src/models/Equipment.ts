@@ -1,6 +1,7 @@
 import prisma from "../config/prisma.js";
 import { Item, getItemData } from "./Item.js";
 import type Attribute from "./Attribute.js";
+import { GameTags } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
 
 /** 장비 슬롯 키 */
@@ -163,6 +164,15 @@ export default class Equipment implements TagReadable {
             for (const tag of entry.item.tags.values()) result.add(tag);
         }
         return [...result].sort();
+    }
+
+    /** 공격 효과에는 무기 장비의 태그만 제공한다. */
+    hasEffectSourceTag(tag: TagId): boolean {
+        for (const entry of this._slots.values()) {
+            if (entry.state === EquipState.Deleted) continue;
+            if (entry.item.hasTag(GameTags.ITEM_WEAPON) && entry.item.hasTag(tag)) return true;
+        }
+        return false;
     }
 
     get dirty(): boolean {

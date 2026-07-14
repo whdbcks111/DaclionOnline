@@ -31,3 +31,16 @@ test('복수 상성은 곱하지 않고 가장 낮은 단일 배율을 택한다
 
     assert.equal(resolveTagEffect(source, water).modifier, 0.5)
 })
+
+test('문맥 태그 API가 일반 장비 태그보다 공격·피격 판정에 우선한다', () => {
+    const waterSource = {
+        hasTag: (tag: string) => tag === GameTags.PROPERTY_WATER,
+        hasEffectSourceTag: (tag: string) => tag === GameTags.PROPERTY_WATER,
+    }
+    const playerWithFireSword = {
+        hasTag: (tag: string) => tag === GameTags.PROPERTY_FIRE,
+        hasEffectTargetTag: () => false,
+    }
+
+    assert.equal(resolveTagEffect(waterSource, playerWithFireSword).modifier, 1)
+})

@@ -18,7 +18,12 @@ defineMonster({
     expReward: 10,
     goldReward: { min: 1, max: 5 },
     equipments: [],
-    tags: [GameTags.ENTITY_SLIME, GameTags.PROPERTY_WATER],
+    tags: [
+        GameTags.ENTITY_SLIME,
+        GameTags.TRAIT_INANIMATE,
+        GameTags.PROPERTY_WATER,
+        GameTags.PROPERTY_POISON,
+    ],
 });
 
 defineMonster({

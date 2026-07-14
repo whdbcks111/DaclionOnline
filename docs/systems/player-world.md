@@ -14,7 +14,7 @@ Location ── monsters[]
          └─ connections[] ──> Location
 ```
 
-모든 Entity와 Location은 `TagCollection`을 가지며, Entity의 유효 태그에는 현재 장착 아이템 태그가 포함된다. 상세 API와 속성표는 [태그·효과 배율 시스템](tags-effects.md)을 참고한다.
+모든 Entity와 Location은 `TagCollection`을 가진다. Entity의 일반 태그 조회에는 장착 아이템이 포함되지만 상성에서는 무기 태그를 공격 측에만 사용하고, 피격 측은 장비를 제외한 본체 태그만 사용한다. 상세 API와 속성표는 [태그·효과 배율 시스템](tags-effects.md)을 참고한다.
 
 ## 게임 루프와 갱신 주기
 

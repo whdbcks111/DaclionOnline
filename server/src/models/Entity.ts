@@ -142,6 +142,16 @@ export default abstract class Entity implements TagReadable {
         return [...new Set([...this.tags.values(), ...this.equipment.getTags()])].sort();
     }
 
+    /** 공격 효과: 본체 태그 + 무기 태그 */
+    hasEffectSourceTag(tag: TagId): boolean {
+        return this.tags.hasTag(tag) || this.equipment.hasEffectSourceTag(tag);
+    }
+
+    /** 피격 효과: 본체의 정의·영속·런타임 태그만 사용한다. */
+    hasEffectTargetTag(tag: TagId): boolean {
+        return this.tags.hasTag(tag);
+    }
+
     protected onPersistentTagsChanged(): void {}
 
     // -- 전투 --
