@@ -17,6 +17,7 @@ npm run build         # .nvmrc 적용 후 서버와 클라이언트 빌드
 npm run build:window  # 현재 셸 Node로 양쪽 빌드
 npm start             # 빌드된 서버 실행
 cd client && npm run lint
+cd server && npm run db:migrate:deploy  # 운영 DB pending migration 적용 + Prisma Client 생성
 ```
 
 기본 포트는 서버 `3001`, Vite `5173`이다.

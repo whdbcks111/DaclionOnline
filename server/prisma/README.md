@@ -3,10 +3,13 @@
 ## CLI 명령어
 
 ```bash
+# 운영/스테이징: pending migration 적용 + Prisma Client 생성
+npm run db:migrate:deploy
+
 # 스키마 변경 후 마이그레이션 생성 + 적용
 npx prisma migrate dev --name 마이그레이션이름
 
-# 마이그레이션 초기화 (데이터 전부 삭제됨)
+# 로컬 개발 DB만: 전체 데이터를 삭제하고 migration 재적용
 npx prisma migrate reset --force
 
 # Prisma Client 재생성 (타입 업데이트)
@@ -21,6 +24,17 @@ npx prisma db pull
 # 스키마를 DB에 바로 반영 (마이그레이션 없이)
 npx prisma db push
 ```
+
+## 기존 DB baseline
+
+`migrations/0_init`은 Prisma Migrate 도입 이전 DB의 초기 구조다. 기존 데이터를 가진 DB에서 처음 연결할 때만 다음 순서를 사용한다.
+
+```bash
+npx prisma migrate resolve --applied 0_init
+npm run db:migrate:deploy
+```
+
+`resolve --applied`는 baseline SQL을 실행하지 않고 `_prisma_migrations`에 적용 완료 이력만 남긴다. 이후 migration은 일반 운영 명령으로 적용한다. 빈 DB에는 `resolve`를 사용하지 않고 `npm run db:migrate:deploy`만 실행한다.
 
 ## 스키마 정의 (schema.prisma)
 

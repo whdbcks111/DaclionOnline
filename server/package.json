@@ -6,6 +6,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc && cp src/data/*.json dist/server/src/data/",
     "test": "tsx --test src/**/*.test.ts",
+    "db:migrate:deploy": "prisma migrate deploy && prisma generate",
     "start": "node dist/server/src/index.js"
   },
   "dependencies": {

@@ -43,4 +43,10 @@ login/session restore
 5. `server/database/schema.sql`을 계속 참조용으로 유지한다면 함께 동기화한다.
 6. 이 문서와 관련 `Overview.md`를 갱신하고 서버 build를 실행한다.
 
-태그 JSON 컬럼 추가 migration은 `server/prisma/migrations/20260714000000_add_object_tags/migration.sql`이다. 배포 DB에 migration을 적용한 뒤 생성된 Prisma client를 갱신해야 한다.
+## Migration 운영
+
+- `server/prisma/migrations/0_init`은 Prisma Migrate 도입 전부터 존재하던 DB 구조의 baseline이다. 기존 운영 DB에는 SQL을 다시 실행하지 않고 `prisma migrate resolve --applied 0_init`으로 최초 한 번만 적용 이력을 등록한다.
+- 빈 DB에서는 `0_init`부터 모든 migration이 순서대로 실행되어 전체 스키마를 만든다.
+- 태그 JSON 컬럼 추가 migration은 `20260714000000_add_object_tags`다.
+- 일반 운영 배포에서는 `cd server && npm run db:migrate:deploy`를 실행한다. 이 명령은 pending migration을 적용한 다음 Prisma Client를 생성한다.
+- `migrate reset`은 전체 데이터를 삭제하므로 운영 DB에서 금지한다.
