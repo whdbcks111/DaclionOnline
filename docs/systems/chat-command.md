@@ -15,6 +15,8 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 
 `ChatMessage.content`는 사용자 일반 입력에서는 text node 배열이고, 시스템 메시지는 `chat()` 빌더 또는 `parseChatMessage()`로 만든 `ChatNode[]`다. 클라이언트 `ChatMessage.tsx`가 노드 트리를 재귀 렌더링한다.
 
+`Home.tsx`는 메시지 전송 후 입력 내용만 비우고 contenteditable의 포커스와 커서를 유지한다. 전송 버튼의 pointer down도 입력 포커스를 빼앗지 않으므로 모바일 가상 키보드가 매 전송마다 닫히거나 다시 열리며 깜빡이지 않는다.
+
 정식 명령 이름은 기존처럼 `/상태창` 형태로 실행한다. `registerCommand.aliases`에 등록된 값은 `/s`뿐 아니라 `s`, `s 공개`처럼 슬래시 없이 첫 단어로 입력해도 실행된다. 슬래시 없는 입력은 첫 단어 전체가 별칭과 정확히 일치할 때만 명령이며 `상태창`처럼 정식 이름만 쓰거나 별칭의 일부만 쓴 입력은 일반 채팅으로 남는다. 따라서 새 별칭은 일상 대화의 흔한 첫 단어와 충돌하지 않도록 정한다.
 
 ## 채널과 히스토리

@@ -113,12 +113,16 @@ function HomeContent() {
     socket.emit('sendMessage', content);
 
     if(inputElement) {
-      inputElement.blur();
       inputElement.textContent = '';
-
-      setTimeout(() => {
-        inputElement.focus();
-      }, 10);
+      if (document.activeElement !== inputElement) {
+        inputElement.focus({ preventScroll: true });
+      }
+      const range = document.createRange();
+      range.selectNodeContents(inputElement);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
     }
 
     setShowAutocomplete(false)
@@ -311,7 +315,10 @@ function HomeContent() {
               isComposing.current = false;
             }}
           />
-          <button onClick={sendMessage}>전송</button>
+          <button
+            onPointerDown={event => event.preventDefault()}
+            onClick={sendMessage}
+          >전송</button>
         </div>
       </div>
       <Drawer
