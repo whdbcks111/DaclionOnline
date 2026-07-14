@@ -27,6 +27,7 @@
 - [`docs/systems/player-world.md`](docs/systems/player-world.md)
 - [`docs/systems/items-shop.md`](docs/systems/items-shop.md)
 - [`docs/systems/tags-effects.md`](docs/systems/tags-effects.md)
+- [`docs/systems/progress-skills.md`](docs/systems/progress-skills.md)
 - [`docs/data/database.md`](docs/data/database.md)
 - [`docs/development.md`](docs/development.md)
 - 소스 폴더별 `Overview.md`: `server/**/Overview.md`, `client/**/Overview.md`, `shared/**/Overview.md`

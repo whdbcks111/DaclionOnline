@@ -11,6 +11,8 @@ import { chat } from "../utils/chatBuilder.js";
 import { GameTags } from "../../../shared/tags.js";
 import type { TagId } from "../../../shared/tags.js";
 import { executeItemAttackOverride } from "../modules/itemAttack.js";
+import { PlayerProgress } from "./Progress.js";
+import SkillBook from "./SkillBook.js";
 
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
@@ -23,6 +25,8 @@ const DEFAULT_BASE_ATTRIBUTE = {
 export default class Player extends Entity {
     readonly userId: number;
     readonly inventory: Inventory;
+    readonly progress: PlayerProgress;
+    readonly skills: SkillBook;
 
     private _nickname: string;
     private _gold = 0;
@@ -34,6 +38,7 @@ export default class Player extends Entity {
     private constructor(
         userId: number, nickname: string, level: number, exp: number,
         locationId: string, maxWeight: number, inventory: Inventory, equipment: Equipment,
+        progress: PlayerProgress, skills: SkillBook,
         statPoints?: Partial<StatRecord>,
         life?: number, mentality?: number, thirsty?: number, hungry?: number,
         statPoint = 0, gold = 0,
@@ -52,6 +57,9 @@ export default class Player extends Entity {
         this.userId = userId;
         this._nickname = nickname;
         this.inventory = inventory;
+        this.progress = progress;
+        this.skills = skills;
+        this.skills.bindOwner(this);
         this._statPoint = statPoint;
         this._gold = gold;
 
@@ -112,7 +120,10 @@ export default class Player extends Entity {
     get gold() { return this._gold; }
     set gold(val: number) { this._gold = Math.max(0, val); this._dirty = true; }
 
-    get dirty() { return this._dirty || this.stat.dirty || this.inventory.dirty || this.equipment.dirty; }
+    get dirty() {
+        return this._dirty || this.stat.dirty || this.inventory.dirty
+            || this.equipment.dirty || this.progress.dirty || this.skills.dirty;
+    }
 
     protected override onPersistentTagsChanged(): void { this._dirty = true; }
 
@@ -155,6 +166,11 @@ export default class Player extends Entity {
         }
     }
 
+    override update(dt: number): void {
+        super.update(dt);
+        this.skills.update(dt);
+    }
+
     override onDeath(): void {
         super.onDeath();
         this._deathNotifTimer = 0;
@@ -183,6 +199,24 @@ export default class Player extends Entity {
             inventory: this.inventory,
         })) return;
         this.attack(target);
+    }
+
+    canSpendMentality(amount: number): boolean {
+        return Number.isFinite(amount) && amount >= 0 && this.mentality >= amount;
+    }
+
+    spendMentality(amount: number): boolean {
+        if (!this.canSpendMentality(amount)) return false;
+        this.mentality -= amount;
+        return true;
+    }
+
+    restoreMentality(amount: number): number {
+        if (!Number.isFinite(amount) || amount < 0) {
+            throw new Error('회복할 정신력은 0 이상의 유한한 값이어야 합니다.');
+        }
+        this.mentality = Math.min(this.maxMentality, this.mentality + amount);
+        return this.mentality;
     }
 
     /** 경험치 획득 및 레벨업 처리. 레벨업한 레벨 목록을 반환 */
@@ -225,10 +259,14 @@ export default class Player extends Entity {
             include: { user: { select: { nickname: true } } },
         });
         if (!data) return null;
-        const inventory = await Inventory.load(data.userId, data.maxWeight);
-        const equipment = await Equipment.load(data.userId);
+        const [inventory, equipment, progress, skills] = await Promise.all([
+            Inventory.load(data.userId, data.maxWeight),
+            Equipment.load(data.userId),
+            PlayerProgress.load(data.userId),
+            SkillBook.load(data.userId),
+        ]);
         const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint, data.gold, (data.tags as TagId[] | null) ?? []);
+        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, progress, skills, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint, data.gold, (data.tags as TagId[] | null) ?? []);
     }
 
     /** 새 플레이어 생성 */
@@ -239,7 +277,9 @@ export default class Player extends Entity {
         });
         const inventory = await Inventory.load(data.userId, data.maxWeight);
         const equipment = await Equipment.load(data.userId);
-        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment);
+        const progress = PlayerProgress.createEmpty(data.userId);
+        const skills = SkillBook.createEmpty(data.userId);
+        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, progress, skills);
     }
 
     /** 변경된 데이터 DB에 저장 */
@@ -267,5 +307,7 @@ export default class Player extends Entity {
         }
         await this.inventory.save();
         await this.equipment.save();
+        await this.progress.save();
+        await this.skills.save();
     }
 }

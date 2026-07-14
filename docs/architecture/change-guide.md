@@ -49,6 +49,23 @@
 4. 영속 태그 소유 객체를 추가하면 메모리 `TagCollection`, dirty callback, Prisma/JSON 저장과 이동 snapshot을 함께 연결한다.
 5. 규칙과 대표 데이터는 [systems/tags-effects.md](../systems/tags-effects.md)에 동기화하고 중첩·방향성 테스트를 추가한다.
 
+## 이벤트/통계/플래그 추가
+
+1. 다른 기능에 직접 결합하지 않을 의미 있는 도메인 동작은 `models/GameEvent.ts::GameEventIds`에 ID를 추가하고 상태가 확정되는 모델에서 `emitGameEvent()`를 호출한다.
+2. 누적 통계는 `data/progress.ts`에서 `defineStatistic()`으로 이벤트와 연결한다. 임의 flag/state는 `defineProgress()`로 타입과 표시 metadata를 먼저 등록한다.
+3. 변경은 `PlayerProgress`의 counter/flag/state 공개 API만 사용한다. 내부 Map과 `player_progress` Prisma row를 직접 읽지 않는다.
+4. 고빈도 handler에서는 DB I/O를 하지 않는다. 메모리 dirty 변경은 Player의 30초/unload/종료 flush가 저장한다.
+5. 이벤트/진행 상태 ID와 사용처를 [systems/progress-skills.md](../systems/progress-skills.md)에 기록한다.
+
+## 스킬 추가
+
+1. `data/skills.ts`에 `defineSkill()` 마스터 데이터를 등록한다. base metadata, 계산 필드, 설명/소모/발동 조건 템플릿과 수명주기 callback을 필요한 만큼만 정의한다.
+2. 스킬 숫자는 설명 문자열에 중복 하드코딩하지 않고 `{{calc.field}}` 또는 `{{meta.field}}`로 치환한다. 색상은 `[color=orange]...[/color]` 같은 기존 채팅 문법을 사용한다.
+3. 자동 획득은 `autoAcquire.watchedProgress`를 좁게 지정하고 `PlayerProgress` API로 조건을 검사한다. 직접 메시지 발동은 `activateOnMessage`, 런타임 조건 발동은 `autoActivate`를 사용한다.
+4. 공격 스킬은 방어·상성·내구도·이벤트를 우회하지 않도록 `Entity.attack()` 또는 Projectile 공개 API를 사용한다. 일회성 Attribute modifier는 고유 source로 추가하고 `finally`에서 제거한다.
+5. 인스턴스 metadata는 `Skill.get/set/resetMetadata`, 목록과 획득/발동은 `SkillBook` API만 사용한다. raw Map/DB row 접근은 금지한다.
+6. [systems/progress-skills.md](../systems/progress-skills.md)와 data/models/commands Overview를 갱신하고 템플릿·delta·전투 옵션 테스트를 추가한다.
+
 ## 위치/이동 추가
 
 1. `data/locations.json`에 좌표, 연결, 통합 `objects` 배치, 상점 ID를 정의한다. 연결은 필요한 방향마다 명시한다.

@@ -51,10 +51,49 @@ model Player {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  items      Item[]
-  equipments Equipment[]
+  items           Item[]
+  equipments      Equipment[]
+  progressEntries PlayerProgress[]
+  skills          PlayerSkill[]
 
   @@map("players")
+}
+
+// 플레이어별 통계·플래그·상태값. 기본값은 row를 만들지 않는다.
+model PlayerProgress {
+  playerId  Int      @map("player_id")
+  player    Player   @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+
+  key       String   @db.VarChar(150)
+  kind      String   @db.VarChar(20)
+  intValue  BigInt?  @map("int_value")
+  textValue String?  @db.VarChar(255) @map("text_value")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([playerId, key])
+  @@index([key, intValue])
+  @@map("player_progress")
+}
+
+// 코드 SkillData를 참조하는 플레이어별 스킬 인스턴스
+model PlayerSkill {
+  playerId          Int       @map("player_id")
+  player            Player    @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+
+  skillDataId       String    @db.VarChar(100) @map("skill_data_id")
+  level             Int       @default(1)
+  cooldownEndsAt    DateTime? @map("cooldown_ends_at")
+  metadata          Json?
+  tags              Json?
+  acquisitionSource String?   @db.VarChar(100) @map("acquisition_source")
+
+  acquiredAt        DateTime  @default(now()) @map("acquired_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@id([playerId, skillDataId])
+  @@index([skillDataId])
+  @@map("player_skills")
 }
 
 // 플레이어 인벤토리 아이템 테이블

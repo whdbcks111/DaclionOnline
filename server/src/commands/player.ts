@@ -37,6 +37,20 @@ function itemLabel(b: ReturnType<typeof chat>, item: Item): ReturnType<typeof ch
     return b;
 }
 
+function getObjectTargetCompletions(userId: number): CompletionItem[] {
+    const player = getPlayerByUserId(userId);
+    if (!player) return [];
+    const location = getLocation(player.locationId);
+    if (!location) return [];
+    return location.getObjects()
+        .map((object, index) => ({ object, index }))
+        .sort((a, b) => Number(a.object.isDefeated) - Number(b.object.isDefeated))
+        .map(({ object, index }) => ({
+            value: String(index + 1),
+            description: `Lv.${object.level} ${object.name}${object.isDefeated ? ` (${object.defeatLabel})` : ''}`,
+        }));
+}
+
 export function initPlayerCommands(): void {
     registerCommand({
         name: '상태창',
@@ -465,25 +479,61 @@ export function initPlayerCommands(): void {
     });
 
     registerCommand({
+        name: '대상지정',
+        aliases: ['target', 't'],
+        description: '장소의 오브젝트를 현재 대상으로 지정합니다.',
+        showCommandUse: 'hide',
+        args: [
+            {
+                name: '번호',
+                description: '현재 장소의 오브젝트 번호',
+                required: true,
+                completions: getObjectTargetCompletions,
+            },
+        ],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            if (player.isDefeated) {
+                sendBotMessageToUser(userId, '사망 상태에서는 대상을 지정할 수 없습니다.');
+                return;
+            }
+            const location = getLocation(player.locationId);
+            if (!location) {
+                sendBotMessageToUser(userId, '현재 위치를 찾을 수 없습니다.');
+                return;
+            }
+            const number = Number(args[0]);
+            const index = number - 1;
+            if (!Number.isInteger(number) || index < 0) {
+                sendBotMessageToUser(userId, '유효한 번호를 입력해주세요.');
+                return;
+            }
+            const target = location.getObject(index);
+            if (!target) {
+                sendBotMessageToUser(userId, `${number}번 오브젝트가 없습니다. (현재 ${location.getObjectCount()}개)`);
+                return;
+            }
+            if (target.isDefeated) {
+                sendBotMessageToUser(userId, `이미 ${target.defeatLabel} 상태인 대상입니다.`);
+                return;
+            }
+            player.currentTarget = target;
+            sendBotMessageToUser(userId, chat()
+                .color('gold', b => b.text('[대상 지정] '))
+                .text(`${number}. Lv.${target.level} ${target.name}`)
+                .build());
+        },
+    });
+
+    registerCommand({
         name: '공격',
         aliases: ['attack', 'a'],
         description: '장소의 오브젝트를 공격합니다.',
         showCommandUse: 'hide',
         args: [
             { name: '번호', description: '장소 내 오브젝트 번호 (생략 시 현재 타겟 공격)',
-                completions(userId) {
-                    const player = getPlayerByUserId(userId);
-                    if (!player) return [];
-                    const location = getLocation(player.locationId);
-                    if (!location) return [];
-                    return location.getObjects()
-                        .map((object, index) => ({ object, index }))
-                        .sort((a, b) => Number(a.object.isDefeated) - Number(b.object.isDefeated))
-                        .map(({ object, index }): CompletionItem => ({
-                            value: String(index + 1),
-                            description: `Lv.${object.level} ${object.name}${object.isDefeated ? ` (${object.defeatLabel})` : ''}`,
-                        }));
-                },
+                completions: getObjectTargetCompletions,
             },
         ],
         handler(userId, args) {

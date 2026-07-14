@@ -32,6 +32,7 @@ export async function loadPlayerByUserId(userId: number): Promise<Player> {
 export async function unloadPlayerByUserId(userId: number): Promise<void> {
     const player = getOnlinePlayer(userId);
     if (!player) return;
+    player.skills.finishAll();
     await player.save();
     unregisterOnlinePlayer(player.userId);
 }

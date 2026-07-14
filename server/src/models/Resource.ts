@@ -7,6 +7,7 @@ import { chat } from '../utils/chatBuilder.js';
 import { sendBotMessageToUser } from '../modules/message.js';
 import { GameTags, normalizeTags } from '../../../shared/tags.js';
 import type { TagId } from '../../../shared/tags.js';
+import { emitGameEvent, GameEventIds } from './GameEvent.js';
 
 export interface WeightedResourceDrop {
     itemDataId: string;
@@ -88,6 +89,11 @@ export default class Resource extends Entity {
 
     override onDeath(): void {
         super.onDeath();
+        emitGameEvent(GameEventIds.RESOURCE_DESTROYED, {
+            actor: this.lastDamageCause?.causeEntity ?? undefined,
+            subject: this,
+            data: { resourceDataId: this.resourceDataId },
+        });
         const attackOwner = this.lastDamageCause?.causeEntity?.attackOwner;
         if (!attackOwner?.isPlayer) return;
         const player = attackOwner as Player;

@@ -2,13 +2,18 @@ import type { AttributeModifier } from "./Attribute.js";
 import { TagCollection, normalizeTags } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
 import { isDeepStrictEqual } from "node:util";
+import {
+    cloneMetadata,
+    cloneMetadataValue,
+    createMetadataDelta,
+    decodeMetadataDelta,
+    encodeMetadataDelta,
+    isEncodedMetadataDelta,
+} from './Metadata.js';
+import type { MetadataRecord, MetadataValue } from './Metadata.js';
 
-export type ItemMetadataValue = string | number | boolean | null
-    | ItemMetadataValue[]
-    | { [key: string]: ItemMetadataValue };
-export interface ItemMetadata {
-    [key: string]: ItemMetadataValue;
-}
+export type ItemMetadataValue = MetadataValue;
+export interface ItemMetadata extends MetadataRecord {}
 
 /** 코드 레지스트리와 JSON metadata 사이의 직렬화 경계 key. */
 export const ItemMetadataKeys = Object.freeze({
@@ -287,52 +292,32 @@ function normalizeDurability(value: number, max: number): number {
     return Math.max(0, Math.min(max, Math.trunc(value)));
 }
 
-function cloneMetadataValue(value: unknown): ItemMetadataValue {
-    const serialized = JSON.stringify(value);
-    if (serialized === undefined) throw new Error('Item metadata value must be JSON serializable');
-    return JSON.parse(serialized) as ItemMetadataValue;
-}
-
-function cloneMetadata(metadata: ItemMetadata): ItemMetadata {
-    return cloneMetadataValue(metadata) as ItemMetadata;
-}
-
-function isMetadataRecord(value: unknown): value is ItemMetadata {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 /** 기존 전체 metadata에서 현재 기본값과 다른 top-level 필드만 추린다. */
 export function createItemMetadataDelta(itemDataId: string, metadata: unknown): ItemMetadata {
-    if (!isMetadataRecord(metadata)) return {};
     const baseMetadata = getItemData(itemDataId)?.baseMetadata ?? {};
-    const delta: ItemMetadata = {};
-    for (const [key, value] of Object.entries(metadata)) {
-        if (!isDeepStrictEqual(value, baseMetadata[key])) {
-            delta[key] = cloneMetadataValue(value);
-        }
-    }
-    return delta;
+    return createMetadataDelta(baseMetadata, metadata) as ItemMetadata;
 }
 
 export function isPersistedItemMetadataDelta(value: unknown): value is PersistedItemMetadataDelta {
-    return isMetadataRecord(value)
-        && value[METADATA_STORAGE_KEY] === METADATA_STORAGE_VERSION
-        && isMetadataRecord(value.values);
+    return isEncodedMetadataDelta(value, METADATA_STORAGE_KEY, METADATA_STORAGE_VERSION);
 }
 
 export function encodeItemMetadataDelta(delta: ItemMetadata): PersistedItemMetadataDelta {
-    return {
-        [METADATA_STORAGE_KEY]: METADATA_STORAGE_VERSION,
-        values: cloneMetadata(delta),
-    };
+    return encodeMetadataDelta(
+        METADATA_STORAGE_KEY,
+        METADATA_STORAGE_VERSION,
+        delta,
+    ) as PersistedItemMetadataDelta;
 }
 
 /** 새 payload는 그대로 읽고, 구형 전체 metadata는 현재 기본값 기준 delta로 변환한다. */
 export function decodeItemMetadataDelta(itemDataId: string, persistedMetadata: unknown): ItemMetadata {
-    if (isPersistedItemMetadataDelta(persistedMetadata)) {
-        return cloneMetadata(persistedMetadata.values);
-    }
-    return createItemMetadataDelta(itemDataId, persistedMetadata);
+    return decodeMetadataDelta(
+        METADATA_STORAGE_KEY,
+        METADATA_STORAGE_VERSION,
+        getItemData(itemDataId)?.baseMetadata,
+        persistedMetadata,
+    ) as ItemMetadata;
 }
 
 /** 운영 데이터 마이그레이션에서 구형 payload를 버전이 표시된 delta로 변환한다. */

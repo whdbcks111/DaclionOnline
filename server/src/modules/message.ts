@@ -1,5 +1,5 @@
 import { getIO } from "./socket.js";
-import { getSession } from "./login.js";
+import { getSession, getSessionByUserId } from "./login.js";
 import { parseChatMessage } from "../utils/chatParser.js";
 import { getChannelRoomKey, addToChannelHistory, addToAllChannelHistories, addToFilteredChannelHistory, getUserChannel, editMessageInHistory, deleteMessageFromHistory } from "./channel.js";
 import type { ChatMessage, ChatFlag, ChatNode, NotificationData } from "../../../shared/types.js";
@@ -59,6 +59,22 @@ function makeBotMessage(content: string | ChatNode[]): ChatMessage {
 /** 특정 채널에 봇 메시지 전송 */
 export function sendBotMessageToChannel(channel: string | null, content: string | ChatNode[]): void {
     sendMessageToChannel(makeBotMessage(content), channel);
+}
+
+/** 시스템이 플레이어의 실제 채팅처럼 현재 채널에 짧은 텍스트를 전송한다. */
+export function sendPlayerTextToCurrentChannel(userId: number, content: string): boolean {
+    const session = getSessionByUserId(userId);
+    if (!session) return false;
+    const flags = getFlagsForPermission(session.permission);
+    sendMessageToChannel({
+        userId,
+        nickname: session.nickname,
+        profileImage: session.profileImage,
+        flags: flags.length > 0 ? flags : undefined,
+        content: [{ type: 'text', text: content }],
+        timestamp: Date.now(),
+    }, getUserChannel(userId));
+    return true;
 }
 
 /** 모든 채널에 봇 메시지 브로드캐스트 (히스토리에 저장하지 않음) */

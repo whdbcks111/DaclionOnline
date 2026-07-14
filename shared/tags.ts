@@ -45,6 +45,9 @@ export const GameTags = Object.freeze({
 
     RESOURCE_ORE: 'resource:ore',
 
+    SKILL_ACTIVE: 'skill:active',
+    SKILL_COMBAT: 'skill:combat',
+
     TRAIT_INANIMATE: 'trait:inanimate',
 
     LOCATION_SAFE: 'location:safe',

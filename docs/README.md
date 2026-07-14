@@ -16,6 +16,7 @@
 | 채팅·채널·명령어 기능 | [systems/chat-command.md](systems/chat-command.md) |
 | 플레이어·전투·위치·게임 루프 | [systems/player-world.md](systems/player-world.md) |
 | 태그·속성 상성·효과 배율 | [systems/tags-effects.md](systems/tags-effects.md) |
+| 이벤트·통계·플래그·스킬 | [systems/progress-skills.md](systems/progress-skills.md) |
 | 아이템·인벤토리·장비·상점 | [systems/items-shop.md](systems/items-shop.md) |
 | DB 모델과 저장 경계 | [data/database.md](data/database.md) |
 | 실행·빌드·환경 설정 | [development.md](development.md) |
@@ -46,7 +47,7 @@ client/src  ── Socket.io / HTTP ──>  server/src/modules
 
 서버의 영속 데이터 중 입출력이 잦고 즉시 확정이 중요하지 않은 게임 상태는 요청마다 DB를 읽고 쓰지 않는다. 시작/로그인 시 메모리에 로드하고, 도메인 API를 통한 변경에서 dirty를 표시한 뒤 주기적 flush와 정상 종료·unload 시 저장하는 구조를 기본으로 한다.
 
-- 현재 기준 구현은 `modules/player.ts`의 온라인 Player map과 30초 저장, `Player/Inventory/Equipment/Stat`의 dirty 추적이다.
+- 현재 기준 구현은 `modules/player.ts`의 온라인 Player map과 30초 저장, `Player/Inventory/Equipment/Stat/PlayerProgress/SkillBook`의 dirty 추적이다.
 - 계정 생성, 인증 정보 변경처럼 즉시 성공 여부가 중요하거나 유실되면 안 되는 데이터는 트랜잭션/즉시 저장이 가능하다. 이 예외는 의도를 코드와 문서에 남긴다.
 - 새 영속 상태는 메모리 소유자, dirty 설정 지점, flush 주기, unload/종료 저장, 실패 처리 방식을 설계한다.
 

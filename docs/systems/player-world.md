@@ -4,13 +4,16 @@
 
 ```text
 Entity
-  ├─ Player ── Inventory
-  │          ├─ Equipment
-  │          └─ Stat ──> Attribute modifiers
-  └─ Monster ─ Equipment
-  └─ Resource
+  ├─ Player
+  │    ├─ Inventory
+  │    ├─ Equipment
+  │    ├─ Stat ──> Attribute modifiers
+  │    ├─ PlayerProgress
+  │    └─ SkillBook ──> Skill[]
+  ├─ Monster ── Equipment
+  ├─ Resource
   └─ Projectile ── owner: Entity
-                └─ target: Entity
+                   └─ target: Entity
 
 Location ── objects[] (Monster | Resource)
          ├─ droppedItems[]
@@ -21,16 +24,16 @@ Location ── objects[] (Monster | Resource)
 
 ## 게임 루프와 갱신 주기
 
-- `modules/game.ts`: 20 FPS. 모든 온라인 Player의 `earlyUpdate → update → lateUpdate`, 활성 Projectile, Location의 모든 월드 오브젝트, Shop, Coroutine 순으로 갱신한다.
+- `modules/game.ts`: 20 FPS. 모든 온라인 Player의 `earlyUpdate → update(SkillBook 포함) → lateUpdate`, 활성 Projectile, Location의 모든 월드 오브젝트, Shop, Coroutine 순으로 갱신한다.
 - `modules/player.ts`: 500ms마다 `playerStats`와 `locationInfo`, 30초마다 dirty 상태를 DB에 저장한다.
 - `Entity.earlyUpdate`: 공격 cooldown 감소, 생명력 자연 회복, 사망 timer와 respawn.
 - `Entity.lateUpdate`: life가 0 이하가 된 엔티티의 사망 처리.
 
 ## 플레이어 수명
 
-로그인 또는 세션 복원 시 `loadPlayerByUserId()`가 DB의 Player, Inventory, Equipment를 한 객체 그래프로 로드한다. 레코드가 없으면 기본 Player를 생성한다. 온라인 동안 `modules/player.ts`의 Map이 동일 userId 객체를 공유한다.
+로그인 또는 세션 복원 시 `loadPlayerByUserId()`가 DB의 Player, Inventory, Equipment, PlayerProgress, SkillBook을 한 객체 그래프로 로드한다. 레코드가 없으면 기본 Player를 생성한다. 온라인 동안 `modules/player.ts`의 Map이 동일 userId 객체를 공유한다.
 
-Player setter, Stat, Inventory, Equipment는 변경 상태를 추적한다. `Player.save()`는 Player/Stat을 갱신하고 이어서 Inventory와 Equipment의 생성·수정·삭제를 저장한다.
+Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook은 변경 상태를 추적한다. `Player.save()`는 Player/Stat을 갱신하고 이어서 나머지 소유 상태를 저장한다.
 
 ## 능력치와 스탯
 
@@ -43,6 +46,7 @@ Player setter, Stat, Inventory, Equipment는 변경 상태를 추적한다. `Pla
 ## 전투·사망·보상
 
 - 공격마다 공격자의 `critRate`를 0~1로 보정해 치명타를 판정하고, 성공하면 raw damage에 `max(0, critDmg)`을 곱한다.
+- `Entity.attack`의 optional `AttackOptions`는 해당 한 번의 `criticalRate/criticalDamage/consumeMainHandDurability`만 override한다. 스킬도 일반 피해·상성·이벤트 경로를 재사용할 때 이 API를 사용한다.
 - 치명타 뒤 공격자→대상 단방향 태그 modifier를 적용한다. 면역 0배, 저항 0.5배, 우세 1.5배이며 복수 일치 시 곱하지 않고 가장 낮은 한 값만 쓴다.
 - 물리 피해는 `max(0, raw - max(0, 대상 def - 공격자 armorPen))`, 마법은 대상 magicDef/공격자 magicPen, absolute는 방어와 관통 0으로 계산한다.
 - 공격 속도로 cooldown을 `1 / attackSpeed`초 설정한다.
@@ -58,6 +62,8 @@ Player setter, Stat, Inventory, Equipment는 변경 상태를 추적한다. `Pla
 - `Entity.isDefeated`는 `isDead`가 설정되기 전 life가 0이 된 프레임도 포함한다. 일반 Entity의 `defeatLabel`은 `사망`, Resource는 `파괴됨`이며 공격 가능 여부와 위치 출력이 이 API를 사용한다.
 - 레벨 요구 경험치는 `level * 100`; 레벨업마다 모든 Stat +1, 가용 statPoint +3이다.
 - Player 사망 시간은 기본 10초, 레벨 10 이상 30초, 50 이상 5분이며 첫 respawn location으로 이동한다.
+
+치명타 성공, 제압, 자원 파괴는 `GameEvent`로 발행된다. 현재 치명타 이벤트는 `combat:critical_hits` 통계를 증가시키고 강타 자동 획득 조건에 사용된다. 진행 상태와 스킬 수명주기의 상세 계약은 [이벤트·진행 상태·스킬 시스템](progress-skills.md)을 참고한다.
 
 ## 위치와 이동
 

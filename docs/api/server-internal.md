@@ -14,7 +14,7 @@
 | HUD | `sendPlayerStats`, `sendLocationInfo` | 특정 사용자의 모든 소켓에 HUD payload 전송 |
 | Command | `registerCommand`, `handleCommand`, `isCommandAliasInput`, `getCommandList`, `getCommandListFiltered` | 명령 등록, 슬래시/슬래시 없는 별칭 판정·실행과 목록 |
 | Channel | `getUserChannel`, `setUserChannel`, `getChannelRoomKey`, `getChannelHistory`, `getFilteredHistoryForUser` | room과 히스토리 상태 |
-| Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageFiltered`, `sendMessageToUser` | 일반 메시지 전송 |
+| Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageFiltered`, `sendMessageToUser`, `sendPlayerTextToCurrentChannel` | 일반 메시지와 시스템이 생성한 플레이어 표시 메시지 전송 |
 | Bot message | `sendBotMessageToChannel`, `broadcastBotMessageAll`, `sendBotMessageFiltered`, `sendBotMessageToUser` | 파싱된 시스템 메시지 전송 |
 | Notification | `broadcastNotification`, `sendNotificationFiltered`, `sendNotificationToUser` | 화면 알림 전송 |
 | Message mutation | `editMessage`, `deleteMessage` | 히스토리 수정 후 이벤트 브로드캐스트 |
@@ -28,10 +28,10 @@
 
 | 모델/레지스트리 | 주요 API | 용도 |
 | --- | --- | --- |
-| `Entity` | `attackOwner`, `isDefeated/defeatLabel`, `isInteractable/interact`, `getAttackDeniedReason`, `hasTag`, `getTags`, `hasEffectSourceTag/hasEffectTargetTag`, `damage`, `canAttack`, `commitAttack`, `attack`, `earlyUpdate/update/lateUpdate`, `onDeath`, `respawn`, `getMaxExpOfLevel` | 실제 피해원/귀속 주체 분리, life 0 프레임을 포함한 제압 상태와 표시 라벨, 상호작용·대상별 공격 조건 확장, 문맥 태그, 전투 생명주기 |
+| `Entity` | `attackOwner`, `isDefeated/defeatLabel`, `isInteractable/interact`, `getAttackDeniedReason`, `hasTag`, `getTags`, `hasEffectSourceTag/hasEffectTargetTag`, `damage`, `canAttack`, `commitAttack`, `attack(options)`, `earlyUpdate/update/lateUpdate`, `onDeath`, `respawn`, `getMaxExpOfLevel` | 실제 피해원/귀속 주체 분리, life 0 프레임을 포함한 제압 상태와 표시 라벨, 상호작용·대상별 공격 조건 확장, 공격 1회의 치명타/내구도 옵션, 전투 생명주기 |
 | Combat | `applyCritical`, `calculateFinalDamage` | 부작용 없는 치명타 판정과 방어/관통 최종 대미지 계산 |
 | Tag effects | `defineTagEffectModifier`, `resolveTagEffect`, `applyTagEffectValue`, `getAllTagEffectModifiers` | `TagEffectReadable` 문맥 태그를 우선하는 단방향 source→target 배율 등록·판정·수치 적용 |
-| `Player` | `loadByUserId`, `create`, `save`, `performBasicAttack`, `gainExp`, `allocateStat` | 영속 플레이어, 무기 오버라이드 기본 공격과 성장 |
+| `Player` | `loadByUserId`, `create`, `save`, `performBasicAttack`, `canSpendMentality/spendMentality/restoreMentality`, `gainExp`, `allocateStat` | 영속 플레이어, 무기 오버라이드 기본 공격과 스킬 자원·성장 |
 | `AttributeType`, `Attribute` | `values/fromKey`, `get`, `setBase`, `addModifier(s)`, `removeBySource` | 클래스형 능력치 메타데이터와 기본값 + add/multiply 수정자 계산 |
 | `StatType`, `Stat` | `values/fromKey/fromInput`, `get/set/add`, `applyModifiers(entity)` | 클래스형 5종 스탯과 Entity 기반 Attribute 변환 |
 | `Inventory` | `getItem*`, `getFirstItemByData`, `getCount`, `setItemMetadata/resetItemMetadata`, `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`, `canAdd`, `canAddSnapshot(s)`, `addItem`, `addItemSnapshot`, `useItem`, `removeItem*`, `removeItemInstance`, `load`, `save` | metadata·내구도 dirty 추적, 정확한 탄약 인스턴스 소비, 무게/스택/사용/태그 포함 이동/DB 동기화 |
@@ -47,6 +47,12 @@
 | Location extension | `registerConnectionCondition`, `registerLocationPassive` | 이동 조건과 위치별 프레임 콜백 |
 | `Shop` | `getStock`, `consumeStock`, `update` | 재고와 재입고 |
 | Shop registry | `defineShop`, `getShop`, `updateAllShops` | 상점 정의/조회/프레임 갱신 |
+| Game events | `emitGameEvent`, `subscribeGameEvent`, `subscribeAllGameEvents`, `getRecentGameEvents` | 동기식 내부 이벤트와 원시 Entity 없는 최근 trace 스냅샷 |
+| `ProgressType`, `PlayerProgress` | `values/fromKey`, `getCounter/setCounter/increment`, `getFlag/setFlag`, `getState/setState`, `reset`, `getSnapshots`, `subscribeChanges`, `load/save` | 통계·NPC 플래그·분기 상태의 메모리 dirty 영속 API |
+| Progress registry | `defineProgress`, `defineStatistic`, `getProgressDefinition`, `getAllProgressDefinitions` | `namespace:path` 상태 정의와 이벤트 기반 counter 등록 |
+| `Skill`, `SkillBook` | `get/set/resetMetadata`, `get/setActiveState`, `getCalculatedField`, `formatDescription/Cost/ActivationCondition`, `grant`, `activateByInput/FromMessage`, `getActivationStatus`, `update`, `finishAll`, `load/save` | 스킬 인스턴스 delta·런타임 상태·템플릿 계산과 획득/발동/지속/dirty 수명주기 |
+| Skill registry | `defineSkill`, `getSkillData`, `getAllSkillData`, `acceptSkill/denySkill` | 정적 SkillData와 조건 결과 등록/조회 |
+| Metadata | `cloneMetadataValue`, `createMetadataDelta`, `encodeMetadataDelta`, `decodeMetadataDelta` | Item/Skill이 공유하는 JSON-safe top-level delta 직렬화 |
 
 ## 공용 태그 API (`shared/tags.ts`)
 

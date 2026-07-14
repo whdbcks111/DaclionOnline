@@ -3,7 +3,7 @@ import { getIO } from "./socket.js";
 import { getSession, broadcastUserCount } from "./login.js";
 import { sendMessageToChannel, getFlagsForPermission } from "./message.js";
 import { getUserChannel, setUserChannel, getChannelHistory, getChannelRoomKey, getAvailableChannels, getFilteredHistoryForUser } from "./channel.js";
-import { sendPlayerStats, sendLocationInfo } from "./player.js";
+import { sendPlayerStats, sendLocationInfo, getPlayerByUserId } from "./player.js";
 import { handleCommand, isCommandAliasInput } from "./bot.js";
 import type { ChatMessage } from "../../../shared/types.js";
 
@@ -131,6 +131,10 @@ export const initChat = () => {
                 handleCommand(session.userId, trimmed, msg, session.permission);
                 return;
             }
+
+            // 일반 채팅 형식으로 등록된 스킬 트리거를 명령과 동일한 발동 API로 처리
+            const skillActivation = getPlayerByUserId(session.userId)?.skills.activateFromMessage(trimmed);
+            if (skillActivation?.matched) return;
 
             sendMessageToChannel(msg, getUserChannel(session.userId));
         });

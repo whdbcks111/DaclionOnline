@@ -10,5 +10,7 @@
 - `tagEffects.ts`: `source tag → target tag → modifier` 단방향 효과 테이블.
 - `locations.json`: 위치 태그·좌표·연결·`monster | resource` 통합 오브젝트 배치·상점 연결의 원본.
 - `locations.ts`: 연결 condition handler 등 코드형 위치 확장.
+- `progress.ts`: 게임 이벤트에 연결되는 공개 통계 정의. 현재 치명타 누적 횟수가 있다.
+- `skills.ts`: 스킬 마스터 metadata·계산 필드·포맷 문자열·획득/발동/수명주기. 현재 치명타 5회에 획득하는 강타가 있다.
 
 ID는 DB와 다른 데이터 파일에서 참조되므로 변경 시 참조 전체를 확인한다. 데이터 구조나 ID가 바뀌면 이 문서와 해당 [`docs/systems/`](../../../docs/systems) 문서를 갱신한다.

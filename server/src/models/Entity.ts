@@ -11,6 +11,7 @@ import { applyTagEffectValue } from "./TagEffect.js";
 import { TagCollection } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
 import type Player from "./Player.js";
+import { emitGameEvent, GameEventIds } from "./GameEvent.js";
 
 /** 대미지 타입 */
 export type DamageType = 'physical' | 'magic' | 'absolute';
@@ -26,6 +27,16 @@ export interface DamageResult {
     effectModifier: number;
     effectSourceTag?: TagId;
     effectTargetTag?: TagId;
+}
+
+/** 한 번의 직접 공격에만 적용할 수 있는 계산 옵션. */
+export interface AttackOptions {
+    /** 생략하면 공격자의 현재 치명타율을 사용한다. */
+    criticalRate?: number;
+    /** 생략하면 공격자의 현재 치명타 피해 배율을 사용한다. */
+    criticalDamage?: number;
+    /** 생략하면 물리 직접 공격에서만 주무기 내구도를 소모한다. */
+    consumeMainHandDurability?: boolean;
 }
 
 export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fire' | 'poison' | 'suffocation'
@@ -258,7 +269,12 @@ export default abstract class Entity implements TagReadable {
     }
 
     /** 대상 엔티티를 직접 공격 */
-    attack(target: Entity, type: DamageType = 'physical', amount?: number): DamageResult | null {
+    attack(
+        target: Entity,
+        type: DamageType = 'physical',
+        amount?: number,
+        options: AttackOptions = {},
+    ): DamageResult | null {
         if (!this.canAttack(target)) return null;
 
         // 기본 공격력: 물리 → atk, 마법 → magicForce
@@ -267,13 +283,23 @@ export default abstract class Entity implements TagReadable {
             : this.attribute.get(AttributeType.MAGIC_FORCE));
         const { rawAmount, critical } = applyCritical(
             baseAmount,
-            this.attribute.get(AttributeType.CRIT_RATE),
-            this.attribute.get(AttributeType.CRIT_DMG),
+            options.criticalRate ?? this.attribute.get(AttributeType.CRIT_RATE),
+            options.criticalDamage ?? this.attribute.get(AttributeType.CRIT_DMG),
         );
 
         const damageResult = target.damage(rawAmount, type, { type: 'attack', causeEntity: this, critical });
+        if (critical) {
+            emitGameEvent(GameEventIds.CRITICAL_HIT, {
+                actor: this,
+                subject: target,
+                data: {
+                    damageType: type,
+                    finalDamage: damageResult.finalDamage,
+                },
+            });
+        }
         // 즉시 피해를 적용하는 물리 직접 공격은 근접 공격으로 취급한다.
-        this.commitAttack(type === 'physical');
+        this.commitAttack(options.consumeMainHandDurability ?? type === 'physical');
         const { finalDamage, effectModifier } = damageResult;
         const effectLabel = effectModifier === 0
             ? '효과 없음! '
@@ -354,6 +380,11 @@ export default abstract class Entity implements TagReadable {
         this.life = 0;
         this.isDead = true;
         this.deathTimer = this.deathDuration;
+        emitGameEvent(GameEventIds.ENTITY_DEFEATED, {
+            actor: this.lastDamageCause?.causeEntity ?? undefined,
+            subject: this,
+            data: { causeType: this.lastDamageCause?.type ?? 'unknown' },
+        });
     }
 
     respawn(): void {
