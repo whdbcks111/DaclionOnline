@@ -6,6 +6,7 @@ import { initShopCommands } from "./shop.js";
 import { initSkillCommands } from "./skill.js";
 import { initProgressCommands } from "./progress.js";
 import { initCraftingCommands } from "./crafting.js";
+import { initNpcCommands } from "./npc.js";
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -16,4 +17,5 @@ export function initAllCommands(): void {
     initSkillCommands();
     initProgressCommands();
     initCraftingCommands();
+    initNpcCommands();
 }

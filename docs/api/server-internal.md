@@ -42,12 +42,14 @@
 | Monster registry | `defineMonster`, `getMonsterData`, `getAllMonsterData` | 몬스터 마스터 데이터 |
 | `Resource` | `isInteractable`, `interact`, `getAttackDeniedReason`, `onDeath`, `rollDrop`, `rollExp` | 비공격 Entity 자원, 도구 제한, 가중치 드롭·범위 경험치·리스폰 |
 | Resource registry | `defineResource`, `getResourceData`, `getAllResourceData`, `registerResourceInteraction` | 자원 마스터 데이터와 key→상호작용 함수 등록 |
-| `Location` | `hasTag`, `getObjects/getObject/getObjectCount/hasObject`, `addObject/removeObject`, `addDroppedItem`, `getDroppedItems`, `pickupItem/pickupAllItems`, `getAvailableConnections`, `update` | Monster/Resource 통합 오브젝트와 raw 배열을 숨긴 바닥 아이템 조회·단일/전체 회수, 런타임 상태 |
+| `Location` | `hasTag`, `getObjects/getObject/getObjectCount/hasObject`, `addObject/removeObject`, `getNpcs/getNpc/hasNpc`, `addDroppedItem`, `getDroppedItems`, `pickupItem/pickupAllItems`, `getAvailableConnections`, `update` | Monster/Resource 통합 오브젝트, ID 기반 NPC와 raw 배열을 숨긴 바닥 아이템 조회·단일/전체 회수 |
 | Location registry | `normalizeLocationData`, `defineLocation`, `reloadAllLocations`, `getLocation`, `getAllLocations`, `getRespawnLocation`, `distanceBetween` | 통합 오브젝트 배치 검증·복사, 월드 위치 정의/조회 |
 | Location extension | `registerConnectionCondition`, `registerLocationPassive` | 이동 조건과 위치별 프레임 콜백 |
 | `Shop` | `getStock`, `consumeStock`, `update` | 재고와 재입고 |
 | Shop registry | `defineShop`, `getShop`, `updateAllShops` | 상점 정의/조회/프레임 갱신 |
 | Game events | `emitGameEvent`, `subscribeGameEvent`, `subscribeAllGameEvents`, `getRecentGameEvents` | 동기식 내부 이벤트와 원시 Entity 없는 최근 trace 스냅샷 |
+| `NPC`, `DialogueScenario`, `Dialogue` | `NPC.define/getNpc/getAll`, `getEntryScenario/getScenario`, `say/event/setFlag/goto/choice/end` | NPC 정적 정의, 조건부 generator 장면과 타입별 대화 액션 생성 |
+| NPC dialogue | `startNpcDialogue`, `chooseNpcDialogue`, `endNpcDialogue/endNpcDialogueByUserId`, `is/getActiveNpcDialogue`, `updateNpcDialogues` | player별 비영속 대화 세션 시작·선택·종료와 이탈 안전망 |
 | `ProgressType`, `PlayerProgress` | `values/fromKey`, `getCounter/setCounter/increment`, `getFlag/setFlag`, `getState/setState`, `reset`, `getSnapshots`, `subscribeChanges`, `load/save` | 통계·NPC 플래그·분기 상태의 메모리 dirty 영속 API |
 | Progress registry | `defineProgress`, `defineStatistic`, `getProgressDefinition`, `getAllProgressDefinitions` | `namespace:path` 상태 정의와 이벤트 기반 counter 등록 |
 | `Skill`, `SkillBook` | `get/set/resetMetadata`, `get/setActiveState`, `getCalculatedField`, `formatDescription/Cost/ActivationCondition`, `grant`, `activateByInput/FromMessage`, `getActivationStatus`, `update`, `finishAll`, `load/save` | 스킬 인스턴스 delta·런타임 상태·템플릿 계산과 획득/발동/지속/dirty 수명주기 |

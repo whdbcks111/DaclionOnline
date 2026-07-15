@@ -22,7 +22,7 @@
 | `changeNickname` | `nickname: string` | 필요 | `modules/login.ts` | `nicknameResult`; DB와 모든 메모리 세션 갱신 |
 | `requestLocationInfo` | 없음 | 필요 | `modules/chat.ts` | `locationInfo` |
 | `adminRequestLocations` | 없음 | 권한 10 | `modules/location.ts` | `adminLocations` |
-| `adminSaveLocations` | `LocationData[]` | 권한 10 | `modules/location.ts` | `objects(type/dataId/maxCount/respawnTime)`와 `tags`를 검증·정규화한 뒤 JSON 저장 및 런타임 재로드, `adminSaveResult` |
+| `adminSaveLocations` | `LocationData[]` | 권한 10 | `modules/location.ts` | `objects(type/dataId/maxCount/respawnTime)`, `npcIds`, `tags`를 검증·정규화한 뒤 JSON 저장 및 런타임 재로드, `adminSaveResult` |
 
 클라이언트 emit 위치는 주로 `pages/Login.tsx`, `pages/Register.tsx`, `pages/Home.tsx`, `pages/LocationEditor.tsx`, `components/chat/nodes/ButtonNode.tsx`, `components/hud/huds/QuickSlotHud.tsx`다.
 
@@ -50,7 +50,7 @@
 | `nicknameResult` | `SimpleResult & { nickname? }` | `modules/login.ts` | `SocketContext.tsx`, `pages/Home.tsx` |
 | `editMessage` | `(id, content)` | `modules/message.ts` | `pages/Home.tsx` |
 | `deleteMessage` | `id: string` | `modules/message.ts` | `pages/Home.tsx` |
-| `adminLocations` | 태그·통합 `objects` 포함 `LocationData[]` | `modules/location.ts` | `pages/LocationEditor.tsx` |
+| `adminLocations` | 태그·통합 `objects`·`npcIds` 포함 `LocationData[]` | `modules/location.ts` | `pages/LocationEditor.tsx` |
 | `adminSaveResult` | `SimpleResult` | `modules/location.ts` | `pages/LocationEditor.tsx` |
 
 `ChatMessage`와 `NotificationData` 안의 progress `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다.

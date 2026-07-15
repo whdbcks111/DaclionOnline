@@ -8,10 +8,11 @@
 - `resources.ts`: 비공격 Entity 자원의 능력치, 도구 제한, 가중치 드롭, 범위 경험치, 상호작용 handler 정의. 현재 광석이 있다.
 - `shops.ts`: 잡화점과 피버릭 광산 상점의 태그, 매매 목록과 재고 정의.
 - `tagEffects.ts`: `source tag → target tag → modifier` 단방향 효과 테이블.
-- `locations.json`: 위치 태그·좌표·연결·`monster | resource` 통합 오브젝트 배치·상점 연결의 원본.
+- `locations.json`: 위치 태그·좌표·연결·`monster | resource` 통합 오브젝트·NPC ID 배치·상점 연결의 원본.
 - `locations.ts`: 연결 condition handler 등 코드형 위치 확장.
 - `progress.ts`: 게임 이벤트에 연결되는 공개 통계 정의. 현재 치명타 누적 횟수가 있다.
 - `skills.ts`: 스킬 마스터 metadata·계산 필드·포맷 문자열·획득/발동/수명주기. 현재 치명타 5회에 획득하는 강타가 있다.
 - `crafting.ts`: predicate 재료·발견 조건·제작 시간·결과 factory 정의. 현재 철광석 3개와 돌 2개로 철 곡괭이를 만드는 `basic:iron_pickaxe`가 있다.
+- `npcs.ts`: NPC ID, 조건부 진입점과 generator 대화 장면 정의. 현재 마을 광장 안내인과 영속 사냥터 질문 플래그가 있다.
 
 ID는 DB와 다른 데이터 파일에서 참조되므로 변경 시 참조 전체를 확인한다. 데이터 구조나 ID가 바뀌면 이 문서와 해당 [`docs/systems/`](../../../docs/systems) 문서를 갱신한다.

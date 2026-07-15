@@ -7,6 +7,7 @@ import logger from "../utils/logger.js";
 import { TagCollection, normalizeTags } from "../../../shared/tags.js";
 import type { TagReadable } from "../../../shared/tags.js";
 import type { ItemSnapshot } from "./Item.js";
+import NPC, { normalizeNpcId } from "./NPC.js";
 
 export type { LocationData, LocationObjectSpawnInfo, ConnectionInfo, ZoneType };
 
@@ -97,6 +98,21 @@ export default class Location implements TagReadable {
         if (idx !== -1) this._objects.splice(idx, 1);
     }
 
+    // -- NPC 조회 --
+
+    getNpcs(): readonly NPC[] {
+        return this.data.npcIds.map(id => NPC.getNpc(id)).filter((npc): npc is NPC => npc !== undefined);
+    }
+
+    getNpc(index: number): NPC | undefined {
+        const id = this.data.npcIds[index];
+        return id ? NPC.getNpc(id) : undefined;
+    }
+
+    hasNpc(npc: NPC): boolean {
+        return this.data.npcIds.includes(npc.id);
+    }
+
     // -- 바닥 아이템 관리 --
 
     /** 내부 배열을 노출하지 않는 바닥 아이템 스냅샷 */
@@ -183,8 +199,13 @@ export function normalizeLocationData(data: LocationData): LocationData {
     if (!Array.isArray(data.objects)) {
         throw new Error(`Location objects must be an array: ${data.id}`);
     }
+    const npcIds = [...new Set((data.npcIds ?? []).map(normalizeNpcId))];
+    for (const npcId of npcIds) {
+        if (!NPC.getNpc(npcId)) throw new Error(`Location NPC definition not found: ${data.id}/${npcId}`);
+    }
     return {
         ...data,
+        npcIds,
         objects: data.objects.map(object => {
             if (object.type !== 'monster' && object.type !== 'resource') {
                 throw new Error(`Invalid location object type: ${object.type}`);
@@ -214,6 +235,7 @@ export function defineLocation(data: LocationData): void {
 export function getAllLocationData(): LocationData[] {
     return Array.from(locationDataCache.values(), data => ({
         ...data,
+        npcIds: [...data.npcIds],
         objects: data.objects.map(object => ({ ...object })),
         connections: data.connections.map(connection => ({ ...connection })),
         tags: [...data.tags],

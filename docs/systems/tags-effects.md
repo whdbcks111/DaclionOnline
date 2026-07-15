@@ -22,6 +22,7 @@
 | ItemData / Item | ItemData | Item·Equipment `tags` JSON | `Item.tags.setRuntime` |
 | LocationData / Location | locations.json | 정의 파일 자체 | `Location.tags.setRuntime` |
 | ShopData / Shop | shops.ts | 없음 | `Shop.tags.setRuntime` |
+| NPC | npcs.ts | 없음 | `NPC.tags.setRuntime` 가능 |
 | DroppedItem | Item snapshot에서 보존 | 월드 드롭은 현재 비영속 | 원본 Item snapshot |
 
 일반 태그 조회에서는 장착 아이템 태그가 `Equipment.hasTag/getTags`를 통해 Entity의 유효 태그에 포함된다. 단, 상성 판정은 공격·피격 문맥을 분리한다. 공격자는 Entity 본체 태그와 `Equipment.hasEffectSourceTag`가 제공하는 무기 태그를 사용하고, 피격 대상은 장비를 전부 제외한 Entity 본체의 정의·영속·런타임 태그만 사용한다. 갑옷 패시브가 실제로 `Entity.tags.setRuntime(source, tags)`를 호출해 속성을 부여한 경우에는 본체 런타임 태그이므로 피격 상성에 포함된다.

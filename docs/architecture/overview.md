@@ -13,8 +13,8 @@ Browser
 Express + Socket.io (`server/src/index.ts`)
   ├─ modules: 인증, 채팅, 채널, 플레이어, 위치, 게임 루프
   ├─ commands: 채팅 명령을 도메인 호출로 변환
-  ├─ models: Entity/Player/Monster/Resource/Projectile/Location/Inventory/Progress/Skill/Crafting
-  ├─ data: 아이템·몬스터·자원·투사체·상점·위치·통계·스킬·제작법 마스터 데이터
+  ├─ models: Entity/Player/Monster/Resource/Projectile/Location/NPC/Inventory/Progress/Skill/Crafting
+  ├─ data: 아이템·몬스터·자원·투사체·상점·위치·NPC·통계·스킬·제작법 마스터 데이터
   └─ Prisma ─────────────────────────────── MariaDB
 ```
 
@@ -25,7 +25,7 @@ Express + Socket.io (`server/src/index.ts`)
 1. 환경 변수와 Express/HTTP 서버를 준비한다.
 2. `initSocket()`으로 Socket.io와 쿠키 기반 세션 바인딩 미들웨어를 연다.
 3. 회원가입, 로그인, 채팅, 봇/명령어, 플레이어, 위치, 게임 루프를 초기화한다.
-4. `data/items.ts`, `data/monsters.ts`, `data/resources.ts`, `data/projectiles.ts`, `data/shops.ts`, `data/progress.ts`, `data/skills.ts`, `data/crafting.ts`의 import 부작용으로 마스터 데이터를 레지스트리에 등록한다. 통계 정의가 먼저 등록되도록 progress 뒤에 skills를 import한다.
+4. `data/items.ts`, `data/monsters.ts`, `data/resources.ts`, `data/projectiles.ts`, `data/shops.ts`, `data/progress.ts`, `data/skills.ts`, `data/crafting.ts`, `data/npcs.ts`의 import 부작용으로 마스터 데이터를 레지스트리에 등록한다. 통계/플래그 정의가 참조 기능보다 먼저 등록되도록 순서를 유지한다.
 5. `/uploads` 정적 파일과 `/api/profile-image` 라우트를 연결한다.
 6. 리슨 시작 후 Prisma 연결을 확인한다. 종료 신호에서는 온라인 플레이어를 저장한 후 DB 연결을 닫는다.
 
@@ -43,6 +43,7 @@ Express + Socket.io (`server/src/index.ts`)
 | Player Progress/Skill | `Player.progress`, `Player.skills` | 로그인 중 메모리, Player와 같은 30초/unload/종료 dirty flush |
 | 제작법 발견/진행 | `Player.progress` flag / `models/Crafting.ts` | 발견은 PlayerProgress로 영속, 진행 작업은 접속 중 메모리에만 유지 |
 | 최근 GameEvent trace | `models/GameEvent.ts` | 최근 500개 메모리 스냅샷, 재시작 시 소실 |
+| NPC 정의/활성 대화 | `models/NPC.ts` / `models/NpcDialogue.ts` | 정의는 코드 레지스트리, player별 세션은 메모리이며 이동·사망·logout 시 폐기 |
 | User/Player/Item/Equipment/PlayerProgress/PlayerSkill | Prisma 모델 | MariaDB 영속 저장 |
 | HUD 배치·투명도·퀵슬롯 | `HudContext.tsx` | 브라우저 `localStorage` |
 
@@ -58,7 +59,7 @@ Express + Socket.io (`server/src/index.ts`)
 
 ### 게임 루프
 
-`modules/game.ts`가 20 FPS로 온라인 Player의 `earlyUpdate → update → lateUpdate`, Projectile, 모든 Location 오브젝트, Shop, Coroutine을 갱신한다. Player update는 제작법 발견 조건도 주기적으로 검사하고, Coroutine이 제작 대기 시간을 처리한다. 별도 500ms 타이머가 `playerStats`와 `locationInfo` HUD 데이터를 각 사용자에게 보낸다.
+`modules/game.ts`가 20 FPS로 온라인 Player의 `earlyUpdate → update → lateUpdate`, Projectile, 모든 Location 오브젝트, Shop, Coroutine과 NPC 대화 세션 유효성을 갱신한다. Player update는 제작법 발견 조건도 주기적으로 검사하고, Coroutine이 제작 대기 시간을 처리한다. 별도 500ms 타이머가 `playerStats`와 `locationInfo` HUD 데이터를 각 사용자에게 보낸다.
 
 ## 신뢰 경계
 

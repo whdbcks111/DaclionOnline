@@ -32,6 +32,9 @@ export const GameEventIds = Object.freeze({
     SKILL_FINISHED: 'skill:finished',
     CRAFTING_RECIPE_DISCOVERED: 'crafting:recipe_discovered',
     ITEM_CRAFTED: 'crafting:item_crafted',
+    NPC_DIALOGUE_STARTED: 'npc:dialogue_started',
+    NPC_DIALOGUE_CHOICE: 'npc:dialogue_choice',
+    NPC_DIALOGUE_ENDED: 'npc:dialogue_ended',
 } as const);
 
 export type GameEventHandler = (event: GameEvent) => void;

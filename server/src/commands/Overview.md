@@ -10,5 +10,6 @@
 - `progress.ts`: `/통계`로 공개 Progress snapshot을 공개 또는 비공개 표시한다.
 - `skill.ts`: `/스킬목록`의 보유 스킬·발동/쿨다운·버튼 UI, `/스킬 이름` 발동과 `/스킬정보 이름`의 계산 설명·소모값·재사용 대기시간·발동 조건 UI. 모든 명령은 SkillBook 공개 API만 사용하며 단축어는 각각 `sl`, `su`, `si`다.
 - `crafting.ts`: `/제작법목록`의 발견 제작법·재료·시간·버튼 UI와 `/제작 <이름> [개수]` 파싱/시작. 명령 metadata는 이름과 선택 개수를 두 인자로 표시하되, 실행 시에는 이름 중간 공백을 보존하고 마지막 숫자 token만 개수로 해석한다.
+- `npc.ts`: `/대화 번호`, 선택지 버튼의 session 검증, `/대화종료`. 명령 입력은 숨기며 모든 상태 변경은 NpcDialogue 공개 API를 사용한다.
 
 명령 이름·인자·권한·자동완성·표시 방식이 바뀌면 이 문서와 [`docs/systems/chat-command.md`](../../../docs/systems/chat-command.md)를 갱신한다.

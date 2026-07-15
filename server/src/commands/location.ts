@@ -311,6 +311,25 @@ export function initLocationCommands(): void {
                 }
             }
 
+            b.text('\n').color('gray', b2 => b2.text('[ NPC ]\n'));
+
+            const npcs = location.getNpcs();
+            if (npcs.length === 0) {
+                b.color('gray', b2 => b2.text('없음\n'));
+            } else {
+                for (let index = 0; index < npcs.length; index++) {
+                    const npc = npcs[index];
+                    b.text(`${index + 1}. `)
+                     .color('gold', b2 => b2.text(npc.name));
+                    if (npc.description) {
+                        b.color('gray', b2 => b2.text(` - ${npc.description}`));
+                    }
+                    b.text(' ')
+                     .button(`/대화 ${index + 1}`, b2 => b2.text('[대화]'), true)
+                     .text('\n');
+                }
+            }
+
             b.text('\n').color('gray', b2 => b2.text('[ 플레이어 ]\n'));
 
             const playersHere = getOnlinePlayers().filter(p => p.locationId === player.locationId);

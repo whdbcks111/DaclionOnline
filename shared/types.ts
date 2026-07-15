@@ -28,6 +28,7 @@ export interface LocationData {
     z: number
     isRespawnLocation?: boolean
     shopId?: string
+    npcIds: string[]
     objects: LocationObjectSpawnInfo[]
     connections: ConnectionInfo[]
     tags: TagId[]

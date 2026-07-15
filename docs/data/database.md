@@ -19,6 +19,7 @@ Item/Equipment의 `metadata` JSON은 전체 유효값이 아니라 `{ "__daclion
 
 `player_progress`는 counter/flag를 `int_value`, state를 `text_value`에 저장한다. 등록된 기본값 `0/false/빈 문자열`은 row를 삭제하거나 만들지 않는다. `kind`가 직렬화 타입 경계이며 기능 코드는 Prisma row 대신 `PlayerProgress` API만 사용한다.
 제작법 발견 여부도 `crafting:recipe/{namespace}/{path}` FLAG로 이 테이블에 저장되므로 제작 시스템 추가에 따른 별도 스키마 마이그레이션은 없다.
+NPC 대화 결과 flag/state도 같은 `player_progress`에 저장한다. 진행 중인 대화 세션은 접속 중 메모리에만 존재하며 이동·사망·로그아웃·연결 이탈 시 폐기되므로 별도 NPC 마이그레이션은 없다.
 
 ## 로드와 저장
 

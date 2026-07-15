@@ -69,6 +69,7 @@ export default function LocationEditor() {
     const onLocations = (data: LocationData[]) => {
       setLocations(data.map(location => ({
         ...location,
+        npcIds: location.npcIds ?? [],
         objects: location.objects ?? [],
         tags: location.tags ?? [],
       })))
@@ -215,6 +216,7 @@ export default function LocationEditor() {
       x: contextMenu.worldX,
       y: contextMenu.worldY,
       z: 0,
+      npcIds: [],
       objects: [],
       connections: [],
       tags: [],
@@ -297,6 +299,28 @@ export default function LocationEditor() {
     }))
   }, [selectedId])
 
+  // --- NPC 배치 관리 ---
+  const addNpc = useCallback(() => {
+    setLocations(prev => prev.map(location => location.id !== selectedId ? location : {
+      ...location,
+      npcIds: [...location.npcIds, ''],
+    }))
+  }, [selectedId])
+
+  const updateNpc = useCallback((index: number, npcId: string) => {
+    setLocations(prev => prev.map(location => location.id !== selectedId ? location : {
+      ...location,
+      npcIds: location.npcIds.map((id, i) => i === index ? npcId : id),
+    }))
+  }, [selectedId])
+
+  const removeNpc = useCallback((index: number) => {
+    setLocations(prev => prev.map(location => location.id !== selectedId ? location : {
+      ...location,
+      npcIds: location.npcIds.filter((_, i) => i !== index),
+    }))
+  }, [selectedId])
+
   // --- 위치 삭제 ---
   const deleteSelected = useCallback(() => {
     setLocations(prev => prev.filter(l => l.id !== selectedId))
@@ -309,6 +333,7 @@ export default function LocationEditor() {
     setSaveStatus('saving')
     socket.emit('adminSaveLocations', locations.map(location => ({
       ...location,
+      npcIds: location.npcIds.map(id => id.trim()).filter(Boolean),
       tags: location.tags.filter(Boolean),
     })))
   }, [socket, locations])
@@ -587,6 +612,23 @@ export default function LocationEditor() {
                     ))
                   }
                 </select>
+              </div>
+
+              {/* NPC 배치 */}
+              <div className={styles.section}>
+                <div className={styles.sectionTitle}>NPC 배치</div>
+                {selectedLoc.npcIds.map((npcId, i) => (
+                  <div key={`${npcId}-${i}`} className={styles.listRow}>
+                    <input
+                      className={styles.input}
+                      placeholder="NPC ID"
+                      value={npcId}
+                      onChange={e => updateNpc(i, e.target.value)}
+                    />
+                    <button className={styles.removeBtn} onClick={() => removeNpc(i)}>✕</button>
+                  </div>
+                ))}
+                <button className={styles.addBtn} onClick={addNpc}>+ NPC 추가</button>
               </div>
 
               {/* 오브젝트 배치 */}

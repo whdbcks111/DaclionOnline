@@ -80,6 +80,13 @@
 3. 런타임 동작은 `models/Location.ts`, 소켓 기반 관리자 저장은 `modules/location.ts`, 사용자 명령은 `commands/location.ts`에서 다룬다.
 4. `LocationData` 구조 변경 시 `shared/types.ts`와 `LocationEditor.tsx`도 함께 수정한다. 런타임 오브젝트는 raw 배열 대신 `Location.getObjects/getObject/hasObject/addObject/removeObject`를 사용한다.
 
+## NPC/대화 추가
+
+1. `data/npcs.ts`에서 `NPC.define()`으로 ID, 진입점 함수와 generator 기반 `DialogueScenario`를 등록한다.
+2. 조건부 대사는 scenario 함수 안의 일반 `if`를 사용하고, 장면 간 전이는 `Dialogue.goto/choice`, 영속 결과는 등록된 `PlayerProgress` flag/state API를 사용한다.
+3. 장소에는 정의를 복사하지 않고 `locations.json.npcIds`만 배치하며 조회는 `Location.getNpcs/getNpc/hasNpc`를 사용한다.
+4. 새 종료 경로는 `endNpcDialogue()`로 합치고 이동·사망·logout에서 세션이 남지 않는지 테스트한다. 상세 계약은 [systems/npc-dialogue.md](../systems/npc-dialogue.md)에 동기화한다.
+
 ## HUD 추가
 
 1. `HudContext.tsx`의 `HUD_DEFINITIONS`, 기본 설정, 필요한 상태를 추가한다.

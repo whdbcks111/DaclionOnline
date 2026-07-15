@@ -11,6 +11,7 @@ import {
     registerOnlinePlayer,
     unregisterOnlinePlayer,
 } from "./playerRegistry.js";
+import { DialogueEndReason, endNpcDialogue } from "../models/NpcDialogue.js";
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -33,6 +34,7 @@ export async function loadPlayerByUserId(userId: number): Promise<Player> {
 export async function unloadPlayerByUserId(userId: number): Promise<void> {
     const player = getOnlinePlayer(userId);
     if (!player) return;
+    endNpcDialogue(player, DialogueEndReason.UNLOADED, false);
     cancelCrafting(player);
     player.skills.finishAll();
     await player.save();

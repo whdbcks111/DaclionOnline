@@ -14,6 +14,7 @@ import { executeItemAttackOverride } from "../modules/itemAttack.js";
 import { PlayerProgress } from "./Progress.js";
 import SkillBook from "./SkillBook.js";
 import { updateCraftingRecipeDiscovery } from "./Crafting.js";
+import { DialogueEndReason, endNpcDialogue } from "./NpcDialogue.js";
 
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
@@ -81,7 +82,10 @@ export default class Player extends Entity {
     override get playerUserId(): number { return this.userId; }
 
     get moving() { return this._moving; }
-    set moving(val: boolean) { this._moving = val; }
+    set moving(val: boolean) {
+        if (val && !this._moving) endNpcDialogue(this, DialogueEndReason.MOVED);
+        this._moving = val;
+    }
 
     // -- Getters / Setters (dirty 추적) --
 
@@ -92,7 +96,11 @@ export default class Player extends Entity {
     override set exp(val: number) { this._exp = val; this._dirty = true; }
 
     override get locationId() { return this._locationId; }
-    override set locationId(val: string) { this._locationId = val; this._dirty = true; }
+    override set locationId(val: string) {
+        if (val !== this._locationId) endNpcDialogue(this, DialogueEndReason.MOVED);
+        this._locationId = val;
+        this._dirty = true;
+    }
 
     override get life() { return this._life; }
     override set life(val: number) { this._life = val; this._dirty = true; }
@@ -180,6 +188,7 @@ export default class Player extends Entity {
 
     override onDeath(): void {
         super.onDeath();
+        endNpcDialogue(this, DialogueEndReason.DEFEATED);
         this._deathNotifTimer = 0;
         sendBotMessageToUser(this.userId,
             chat().color('red', b => b.text('사망했습니다.')).text(` ${this.deathTimer.toFixed(0)}초 후 리스폰됩니다.`).build()

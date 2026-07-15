@@ -8,6 +8,7 @@
     "y": 0,
     "z": 0,
     "tags": ["location:safe"],
+    "npcIds": ["town_guide"],
     "objects": [],
     "connections": [
       {
@@ -29,6 +30,7 @@
     "y": 0,
     "z": 0,
     "tags": ["location:safe", "location:wilderness", "property:natural"],
+    "npcIds": [],
     "objects": [
       {
         "type": "monster",
@@ -55,6 +57,7 @@
     "y": 0,
     "z": 0,
     "tags": ["location:safe"],
+    "npcIds": [],
     "objects": [],
     "connections": [
       {
@@ -73,6 +76,7 @@
     "y": 0,
     "z": 0,
     "tags": ["location:wilderness", "property:natural"],
+    "npcIds": [],
     "objects": [
       {
         "type": "monster",
@@ -102,6 +106,7 @@
     "z": 0,
     "shopId": "general_store",
     "tags": ["location:safe", "location:shop"],
+    "npcIds": [],
     "objects": [],
     "connections": [
       {
@@ -117,6 +122,7 @@
     "y": -150,
     "z": -20,
     "tags": ["location:wilderness", "material:stone"],
+    "npcIds": [],
     "objects": [
       {
         "type": "resource",
@@ -143,6 +149,7 @@
     "z": -20,
     "shopId": "feveric_mine_store",
     "tags": ["location:safe", "location:shop", "material:stone"],
+    "npcIds": [],
     "objects": [],
     "connections": [
       {

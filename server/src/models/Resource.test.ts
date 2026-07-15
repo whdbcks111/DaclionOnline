@@ -113,6 +113,7 @@ test('Location은 몬스터와 자원을 하나의 오브젝트 API로 제공한
         x: 0,
         y: 0,
         z: 0,
+        npcIds: [],
         objects: [
             { type: 'monster', dataId: 'test_location_monster', maxCount: 1, respawnTime: 10 },
             { type: 'resource', dataId: 'test_location_resource', maxCount: 2, respawnTime: 20 },

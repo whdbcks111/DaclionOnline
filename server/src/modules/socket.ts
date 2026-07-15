@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io'
 import { Server as HttpServer } from 'http'
 import logger from '../utils/logger.js';
-import { getSession, setUserOnline, setUserOffline } from './login.js';
+import { getSession, isUserOnline, setUserOnline, setUserOffline } from './login.js';
 import { getUserChannel, getChannelRoomKey } from './channel.js';
 
 let io: Server;
@@ -46,6 +46,13 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
             const currentSession = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
             if (currentSession) {
                 setUserOffline(currentSession.userId);
+                if (!isUserOnline(currentSession.userId)) {
+                    void import('../models/NpcDialogue.js').then(({ endNpcDialogueByUserId }) => {
+                        if (!isUserOnline(currentSession.userId)) {
+                            endNpcDialogueByUserId(currentSession.userId);
+                        }
+                    });
+                }
                 logger.warn(`로그아웃: ${currentSession.username} (${socket.id})`);
             } else {
                 logger.warn('클라이언트 연결 해제됨:', socket.id);
