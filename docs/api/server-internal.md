@@ -28,7 +28,7 @@
 
 | 모델/레지스트리 | 주요 API | 용도 |
 | --- | --- | --- |
-| `Entity` | `attackOwner`, `isDefeated/defeatLabel`, `isInteractable/interact`, `hasTag/getTags`, `damage/heal`, `canAttack/attack(AttackOptions)`, `get/apply/remove/clearStatusEffect(s)`, `getStatusEffectDisplaySnapshots`, `disableAction(s)/enableAction`, `disableAction(s)ForTick`, `canPerformAction`, `earlyUpdate/update/lateUpdate`, `onDeath/respawn` | 속도 회피·회피 불가·고정 피해를 포함한 전투·회복, raw Map 없는 상태효과 표시 DTO, source별 지속/한 tick 행동 제한과 공통 생명주기 |
+| `Entity` | `attackOwner`, `isDefeated/defeatLabel`, `isInteractable/interact`, `hasTag/getTags`, `damage/heal`, `clampVitals`, `canAttack/attack(AttackOptions)`, `get/apply/remove/clearStatusEffect(s)`, `getStatusEffectDisplaySnapshots`, `disableAction(s)/enableAction`, `disableAction(s)ForTick`, `canPerformAction`, `earlyUpdate/update/lateUpdate`, `onDeath/respawn` | 속도 회피·회피 불가·고정 피해를 포함한 전투·회복, 최대 자원 상한 보정, raw Map 없는 상태효과 표시 DTO, source별 지속/한 tick 행동 제한과 공통 생명주기 |
 | Combat | `calculateEvasionChance`, `rollEvasion`, `applyCritical`, `calculateFinalDamage` | 부작용 없는 속도 회피율·치명타·방어/관통 최종 대미지 계산 |
 | Tag effects | `defineTagEffectModifier`, `resolveTagEffect`, `applyTagEffectValue`, `getAllTagEffectModifiers` | `TagEffectReadable` 문맥 태그를 우선하는 단방향 source→target 배율 등록·판정·수치 적용 |
 | `Player` | `loadByUserId`, `create`, `save`, `performBasicAttack`, `canSpendMentality/spendMentality/restoreMentality`, `gainExp`, `allocateStat` | 영속 플레이어, 무기 오버라이드 기본 공격과 스킬 자원·성장 |

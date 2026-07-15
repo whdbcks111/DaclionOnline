@@ -30,6 +30,7 @@ Location ── objects[] (Monster | Resource)
 - `modules/game.ts`: 20 FPS. 모든 온라인 Player의 `earlyUpdate → update(SkillBook 포함) → lateUpdate`, 활성 Projectile의 전체 Entity lifecycle, Location의 모든 월드 오브젝트, Shop, Coroutine 순으로 갱신한다.
 - `modules/player.ts`: 500ms마다 `playerStats`와 `locationInfo`, 30초마다 dirty 상태를 DB에 저장한다.
 - `Entity.earlyUpdate`: tick 행동 제한 초기화 → StatusEffect early/update → 공격 cooldown 감소 → 치유 modifier가 적용되는 생명력 자연 회복 → 사망 timer와 respawn.
+- StatusEffect나 장비·스탯 modifier 제거로 최대 생명력·정신력·목마름·배고픔이 감소하면 `clampVitals()`가 같은 earlyUpdate에서 현재값을 새 최대값 이하로 보정한다. Player override setter를 통과하므로 변경은 dirty 저장 대상이다.
 - `Entity.lateUpdate`: life가 0 이하가 된 엔티티의 사망 처리.
 
 ## 플레이어 수명

@@ -2,7 +2,7 @@
 
 서버가 권위를 갖는 게임 상태와 규칙을 표현한다.
 
-- `Combat`, `TagEffect`, `Entity`, `Player`, `Monster`: 공격자/피격자 속도 비율 회피·치명타·공격/피격 문맥 태그·단방향 배율·방어/관통 계산, 회피 불가/고정 피해 `AttackOptions`, 치유 modifier를 통과하는 `heal`, 공격 쿨다운, Lv.50까지 난도가 증가하는 경험치 곡선, 전투 생명주기와 AI. Monster의 선택형 공격 프로필은 피해 타입과 적중 시 상태이상을 정의한다. `attackOwner`로 실제 피해원과 보상·어그로 귀속 주체를 분리하고 `isDefeated/defeatLabel`, `getAttackDeniedReason/isInteractable/interact`로 대상별 상태와 동작을 확장한다.
+- `Combat`, `TagEffect`, `Entity`, `Player`, `Monster`: 공격자/피격자 속도 비율 회피·치명타·공격/피격 문맥 태그·단방향 배율·방어/관통 계산, 회피 불가/고정 피해 `AttackOptions`, 치유 modifier를 통과하는 `heal`, 최대 자원 감소 시 현재값을 보정하는 `clampVitals`, 공격 쿨다운, Lv.50까지 난도가 증가하는 경험치 곡선, 전투 생명주기와 AI. Monster의 선택형 공격 프로필은 피해 타입과 적중 시 상태이상을 정의한다. `attackOwner`로 실제 피해원과 보상·어그로 귀속 주체를 분리하고 `isDefeated/defeatLabel`, `getAttackDeniedReason/isInteractable/interact`로 대상별 상태와 동작을 확장한다.
 - `StatusEffectType`/`StatusEffect`: 아이콘 key를 가진 클래스형 효과 정의와 Entity별 비영속 duration/level/metadata delta. 동일 타입은 기존 인스턴스를 유지해 레벨·시간만 병합하며 화염·화상·맹독·마비독, start/early/update/remove callback, 설명 template과 UI용 표시 snapshot을 제공한다.
 - `ActionType`: 스킬·채팅·명령·공격·이동·장소 이동 분류와 Entity의 source key 기반 지속/한 tick 제한 API. 한 source 해제가 다른 기절·속박 제한을 제거하지 않는다.
 - `Resource`: 공격 AI가 없는 Entity 자원. `defeatLabel=파괴됨`, 공격 가능 여부, 주무기 태그 제한, key 기반 상호작용, 성공 시 고정/범위 쿨타임, 단일 가중치 드롭, 범위 경험치와 리스폰을 제공한다.

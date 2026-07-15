@@ -212,6 +212,23 @@ export default abstract class Entity implements TagReadable {
     get maxThirsty() { return this.attribute.get(AttributeType.MAX_THIRSTY); }
     get maxHungry()  { return this.attribute.get(AttributeType.MAX_HUNGRY); }
 
+    /** 최대 자원 modifier가 줄어든 뒤 현재값이 새 최대값을 넘지 않도록 보정한다. */
+    clampVitals(): boolean {
+        let changed = false;
+        const clamp = (current: number, maximum: number, set: (value: number) => void): void => {
+            if (!Number.isFinite(maximum)) return;
+            const upperBound = Math.max(0, maximum);
+            if (current <= upperBound) return;
+            set(upperBound);
+            changed = true;
+        };
+        clamp(this.life, this.maxLife, value => { this.life = value; });
+        clamp(this.mentality, this.maxMentality, value => { this.mentality = value; });
+        clamp(this.thirsty, this.maxThirsty, value => { this.thirsty = value; });
+        clamp(this.hungry, this.maxHungry, value => { this.hungry = value; });
+        return changed;
+    }
+
     /** 엔티티 본체와 장착 아이템 태그를 합친 유효 태그 조회 */
     hasTag(tag: TagId): boolean {
         return this.tags.hasTag(tag) || this.equipment.hasTag(tag);
@@ -687,6 +704,7 @@ export default abstract class Entity implements TagReadable {
         this.tickActionDisableSources.clear();
         this.earlyUpdateStatusEffects(dt);
         this.updateStatusEffects(dt);
+        this.clampVitals();
 
         if (this._attackCooldown > 0) {
             this._attackCooldown = Math.max(0, this._attackCooldown - dt);
