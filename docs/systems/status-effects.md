@@ -6,7 +6,7 @@
 
 ```text
 StatusEffectType
-  ├─ id / label / maxLevel / aliases / tags
+  ├─ id / label / icon / maxLevel / aliases / tags
   ├─ baseMetadata / calculatedFields / descriptionTemplate
   └─ onStart / onEarlyUpdate / onUpdate / onRemove
 
@@ -22,7 +22,7 @@ Entity
 
 외부 기능은 raw Map을 읽지 않고 다음 `Entity` 공개 API를 사용한다.
 
-- 조회: `getStatusEffects`, `getStatusEffect`, `hasStatusEffect`
+- 조회: `getStatusEffects`, `getStatusEffect`, `hasStatusEffect`, `getStatusEffectDisplaySnapshots`
 - 적용: `applyStatusEffect(type, duration, level)`
 - 제거: `removeStatusEffect`, `clearStatusEffects`
 - lifecycle: `updateStatusEffects`는 일반적으로 게임 루프가 호출한다.
@@ -41,6 +41,14 @@ Entity
 모든 갱신은 기존 `StatusEffect` 객체를 유지한다. `onStart`를 재실행하지 않고 `metadataDelta`, 누적 틱 시간과 기존 `onUpdate` 흐름이 이어진다. 결과는 클래스형 enum `StatusEffectApplyAction`의 `ADDED/UPGRADED/REFRESHED/IGNORED/REJECTED`로 확인할 수 있다.
 
 Metadata는 Skill/Item과 같은 원본+top-level delta 방식이다. `getMetadata/getMetadataSnapshot/getMetadataDeltaSnapshot/setMetadata/resetMetadata`를 사용한다. 설명 문자열은 `{{level}}`, `{{duration}}`, `{{meta.key}}`, `{{calc.key}}`를 치환하며 기존 채팅 색상 문법을 보존한다.
+
+## 표시와 관리자 지급
+
+`StatusEffectType.icon`은 `/icons/{icon}.png`의 확장자 없는 key다. 생략하면 `status-effects/{id}`를 사용하므로 새 타입을 추가할 때 같은 작업에 `client/public/icons/status-effects/{id}.png`를 배치한다.
+
+- `/상태창` 맨 아래는 `Lv.레벨 [아이콘]효과명 MM:SS`를 표시하며 효과명 hover에는 계산된 설명과 현재/최대 지속시간이 나온다.
+- `playerStats.statusEffects`는 `getStatusEffectDisplaySnapshots()`을 ChatNode 설명으로 변환해 전송한다. PlayerStatusHud는 아이콘 위에 남은 지속시간 비율을 반시계 방향 fill로 표시하고 hover/focus 상세 정보를 제공한다.
+- 관리자 `/상태이상부여 대상 상태이상코드 레벨 시간`은 온라인 Player만 대상으로 `Entity.applyStatusEffect()`를 호출한다. 상태효과가 런타임 전용이므로 오프라인 객체에 적용하거나 DB에 저장하지 않는다.
 
 ## Lifecycle callback
 

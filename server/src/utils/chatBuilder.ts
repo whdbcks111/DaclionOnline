@@ -9,6 +9,11 @@ class ChatBuilder {
         return this
     }
 
+    appendNodes(nodes: readonly ChatNode[]): this {
+        this.nodes.push(...nodes)
+        return this
+    }
+
     color(color: string, build: (b: ChatBuilder) => ChatBuilder): this {
         const inner = new ChatBuilder()
         build(inner)

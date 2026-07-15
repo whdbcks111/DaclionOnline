@@ -13,6 +13,14 @@ import { AttributeType } from "../models/Attribute.js";
 import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
 import { CompletionItem } from "../../../shared/types.js";
+import { parseChatMessage } from "../utils/chatParser.js";
+
+function formatStatusDuration(seconds: number): string {
+    const totalSeconds = Math.max(0, Math.ceil(seconds));
+    const minutes = Math.floor(totalSeconds / 60);
+    const remainder = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+}
 
 function itemDurabilityColor(ratio: number): string {
     if (ratio <= 0.2) return 'red';
@@ -170,6 +178,24 @@ export function initPlayerCommands(): void {
                                  .text(`${stats[right.key]}\n`);
                             } else {
                                 b.text('\n');
+                            }
+                        }
+
+                        const statusEffects = player.getStatusEffectDisplaySnapshots();
+                        b.color('gray', b2 => b2.text('─── 상태이상 ───\n'));
+                        if (statusEffects.length === 0) {
+                            b.color('gray', b2 => b2.text('(없음)\n'));
+                        } else {
+                            for (const effect of statusEffects) {
+                                b.text(`Lv.${effect.level} `)
+                                    .icon(effect.icon)
+                                    .tooltip(
+                                        detail => detail
+                                            .appendNodes(parseChatMessage(effect.description))
+                                            .text(`\n남은 시간 ${formatStatusDuration(effect.duration)} / ${formatStatusDuration(effect.maxDuration)}`),
+                                        name => name.weight('bold', inner => inner.text(effect.label)),
+                                    )
+                                    .text(` ${formatStatusDuration(effect.duration)}\n`);
                             }
                         }
 

@@ -82,3 +82,125 @@
     text-align: right;
     white-space: nowrap;
 }
+
+.effects {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(0.3rem, 1vw, 0.5rem);
+    margin-top: clamp(0.45rem, 1.5vw, 0.7rem);
+    padding-top: clamp(0.4rem, 1vw, 0.6rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.effect {
+    position: relative;
+    width: clamp(2.15rem, 7vw, 2.8rem);
+    outline: none;
+}
+
+.effectIcon {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
+
+    img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: contain;
+    }
+}
+
+.effectProgress {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.effectProgressFill {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.24);
+    stroke-width: 50;
+    transform-origin: center;
+    transform: scaleX(-1) rotate(-90deg);
+}
+
+.effectProgressBorder {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.65);
+    stroke-width: 4;
+}
+
+.effectLevel {
+    position: absolute;
+    right: -0.18em;
+    bottom: -0.18em;
+    min-width: 1.8em;
+    padding: 0.05em 0.22em;
+    border-radius: 0.4em;
+    background: rgba(0, 0, 0, 0.88);
+    color: #fff;
+    font-size: clamp(0.5rem, 1.7vw, 0.62rem);
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.effectTooltip {
+    position: absolute;
+    top: calc(100% + 0.55rem);
+    right: 0;
+    z-index: 220;
+    display: none;
+    flex-direction: column;
+    gap: 0.35rem;
+    width: max-content;
+    min-width: 11rem;
+    max-width: min(18rem, 80vw);
+    padding: 0.55rem 0.7rem;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background: $color-bg;
+    box-shadow: $shadow-lg;
+    color: $color-text;
+    font-size: clamp(0.68rem, 2vw, 0.78rem);
+    line-height: 1.45;
+    white-space: normal;
+    word-break: keep-all;
+    pointer-events: none;
+}
+
+.effect:hover .effectTooltip,
+.effect:focus .effectTooltip,
+.effect:focus-within .effectTooltip {
+    display: flex;
+}
+
+.effectDescription {
+    white-space: pre-wrap;
+}
+
+.effectTime {
+    color: $color-text-tertiary;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: $breakpoint-mobile) {
+    .hud {
+        min-width: min(18rem, 86vw);
+    }
+
+    .effectTooltip {
+        right: auto;
+        left: 0;
+        max-width: 72vw;
+    }
+}

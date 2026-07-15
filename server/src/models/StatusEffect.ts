@@ -31,6 +31,8 @@ export type StatusEffectUpdateCallback = (
 export interface StatusEffectTypeOptions {
     id: string;
     label: string;
+    /** `client/public/icons` 아래 PNG 경로에서 확장자를 제외한 key. */
+    icon?: string;
     maxLevel: number;
     descriptionTemplate: string;
     baseMetadata?: StatusEffectMetadata | null;
@@ -181,6 +183,7 @@ export class StatusEffectType implements TagReadable {
 
     readonly id: string;
     readonly label: string;
+    readonly icon: string;
     readonly maxLevel: number;
     readonly descriptionTemplate: string;
     readonly baseMetadata: Readonly<StatusEffectMetadata> | null;
@@ -195,6 +198,7 @@ export class StatusEffectType implements TagReadable {
     private constructor(options: StatusEffectTypeOptions) {
         this.id = normalizeStatusEffectId(options.id);
         this.label = options.label.trim();
+        this.icon = normalizeStatusEffectIcon(options.icon ?? `status-effects/${this.id}`);
         this.maxLevel = options.maxLevel;
         this.descriptionTemplate = options.descriptionTemplate;
         this.baseMetadata = options.baseMetadata
@@ -245,6 +249,14 @@ export class StatusEffectType implements TagReadable {
     hasTag(tag: TagId): boolean {
         return this.tags.includes(normalizeTag(tag));
     }
+}
+
+function normalizeStatusEffectIcon(icon: string): string {
+    const normalized = icon.trim().replace(/^\/+|\.png$/gi, '');
+    if (!/^[a-z0-9][a-z0-9/_-]*$/i.test(normalized) || normalized.includes('..')) {
+        throw new Error(`Invalid StatusEffectType icon: ${icon}`);
+    }
+    return normalized;
 }
 
 /** Entity 한 개에 붙어 갱신되는 비영속 상태효과 인스턴스. */

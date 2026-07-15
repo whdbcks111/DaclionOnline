@@ -28,7 +28,7 @@
 
 | 모델/레지스트리 | 주요 API | 용도 |
 | --- | --- | --- |
-| `Entity` | `attackOwner`, `isDefeated/defeatLabel`, `isInteractable/interact`, `hasTag/getTags`, `damage/heal`, `canAttack/attack(AttackOptions)`, `get/apply/remove/clearStatusEffect(s)`, `disableAction(s)/enableAction`, `disableAction(s)ForTick`, `canPerformAction`, `earlyUpdate/update/lateUpdate`, `onDeath/respawn` | 속도 회피·회피 불가·고정 피해를 포함한 전투·회복, 원본 Map을 숨긴 상태효과, source별 지속/한 tick 행동 제한과 공통 생명주기 |
+| `Entity` | `attackOwner`, `isDefeated/defeatLabel`, `isInteractable/interact`, `hasTag/getTags`, `damage/heal`, `canAttack/attack(AttackOptions)`, `get/apply/remove/clearStatusEffect(s)`, `getStatusEffectDisplaySnapshots`, `disableAction(s)/enableAction`, `disableAction(s)ForTick`, `canPerformAction`, `earlyUpdate/update/lateUpdate`, `onDeath/respawn` | 속도 회피·회피 불가·고정 피해를 포함한 전투·회복, raw Map 없는 상태효과 표시 DTO, source별 지속/한 tick 행동 제한과 공통 생명주기 |
 | Combat | `calculateEvasionChance`, `rollEvasion`, `applyCritical`, `calculateFinalDamage` | 부작용 없는 속도 회피율·치명타·방어/관통 최종 대미지 계산 |
 | Tag effects | `defineTagEffectModifier`, `resolveTagEffect`, `applyTagEffectValue`, `getAllTagEffectModifiers` | `TagEffectReadable` 문맥 태그를 우선하는 단방향 source→target 배율 등록·판정·수치 적용 |
 | `Player` | `loadByUserId`, `create`, `save`, `performBasicAttack`, `canSpendMentality/spendMentality/restoreMentality`, `gainExp`, `allocateStat` | 영속 플레이어, 무기 오버라이드 기본 공격과 스킬 자원·성장 |
@@ -56,7 +56,7 @@
 | Skill registry | `defineSkill`, `getSkillData`, `getAllSkillData`, `acceptSkill/denySkill` | 정적 SkillData와 조건 결과 등록/조회 |
 | Crafting | `CraftingRecipeIngredient`, `defineCraftingRecipe`, `get/findCraftingRecipe*`, `updateCraftingRecipeDiscovery`, `getDiscoveredCraftingRecipes`, `startCrafting`, `executeCrafting`, `cancelCrafting` | predicate 재료, 실제 선택 재료 factory, Progress 기반 제작법 발견, 지연 제작·취소 |
 | Metadata | `cloneMetadataValue`, `createMetadataDelta`, `encodeMetadataDelta`, `decodeMetadataDelta` | Item/Skill이 공유하는 JSON-safe top-level delta 직렬화 |
-| `StatusEffectType`, `StatusEffect` | `define/values/fromKey/fromInput`, `formatDescription`, `get/set/resetMetadata`, `upgrade/refreshDuration`, lifecycle callback | 클래스형 효과 정의, 대상별 duration/level/metadata delta와 병합·틱 처리 |
+| `StatusEffectType`, `StatusEffect` | `define/values/fromKey/fromInput`, `icon`, `formatDescription`, `get/set/resetMetadata`, `upgrade/refreshDuration`, lifecycle callback | 아이콘 key를 가진 클래스형 효과 정의, 대상별 duration/level/metadata delta와 병합·틱 처리 |
 | `ActionType` | `values/fromKey/fromInput`; `SKILL/CHAT/COMMAND/ATTACK/MOVEMENT/LOCATION_TRAVEL` | 스킬·통신·전투·이동 실행 경계가 공유하는 행동 분류 |
 
 ## 공용 태그 API (`shared/tags.ts`)
@@ -74,7 +74,7 @@
 | API | 용도 |
 | --- | --- |
 | `parseCommandInput()` | 공유 채팅 입력에서 첫 명령 토큰, 나머지 인자, 슬래시·구분자 여부 추출 |
-| `chat()` | `text/color/bg/weight/deco/size/tooltip/hide/icon/button/closeButton/progress/tab` fluent builder로 `ChatNode[]` 생성; progress length는 px 숫자 또는 CSS 문자열 |
+| `chat()` | `text/appendNodes/color/bg/weight/deco/size/tooltip/hide/icon/button/closeButton/progress/tab` fluent builder로 `ChatNode[]` 생성; 계산 설명처럼 이미 파싱된 node도 안전하게 합성 |
 | `parseChatMessage()` | 커스텀 태그 문자열을 `ChatNode[]`로 파싱하고 `$magic` 같은 테마 색상 token을 보존 |
 | `registerChatTag()` | 새 wrap/self-closing 태그 등록 |
 | `mergeTextNodes()` | 인접 텍스트 노드 병합 |

@@ -12,6 +12,7 @@ import {
     unregisterOnlinePlayer,
 } from "./playerRegistry.js";
 import { DialogueEndReason, endNpcDialogue } from "../models/NpcDialogue.js";
+import { parseChatMessage } from "../utils/chatParser.js";
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -85,6 +86,10 @@ export function sendPlayerStats(userId: number): void {
         maxHungry:         player.maxHungry,
         attackCooldown:    player.attackCooldown,
         maxAttackCooldown: player.maxAttackCooldown,
+        statusEffects:     player.getStatusEffectDisplaySnapshots().map(effect => ({
+            ...effect,
+            description: parseChatMessage(effect.description),
+        })),
     };
 
     const io = getIO();

@@ -42,7 +42,7 @@
 | `notification` | `NotificationData` | `modules/message.ts` | `components/Notification.tsx` |
 | `commandList` | `CommandInfo[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `argCompletions` | `CompletionItem[]` | `modules/bot.ts` | `pages/Home.tsx` |
-| `playerStats` | `PlayerStatsData` | `modules/player.ts` | `pages/Home.tsx` → `HudContext` |
+| `playerStats` | `PlayerStatsData` (자원·공격 cooldown·아이콘/설명/남은 비율의 `statusEffects`) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` → `PlayerStatusHud` |
 | `locationInfo` | `LocationInfoData` (`objects`에 Monster/Resource 공통 체력 DTO) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` |
 | `userCount` | `UserCountData` | `modules/login.ts` | `pages/Home.tsx` |
 | `channelChanged` | `(channel, history)` | `modules/chat.ts` | `pages/Home.tsx` |

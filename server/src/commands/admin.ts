@@ -1,12 +1,13 @@
 import { registerCommand } from "../modules/bot.js";
 import { sendBotMessageToUser } from "../modules/message.js";
-import { fetchPlayerByUserId, getOnlinePlayers } from "../modules/player.js";
+import { fetchPlayerByUserId, getOnlinePlayers, getPlayerByUserId } from "../modules/player.js";
 import { getLocation, getAllLocations } from "../models/Location.js";
 import { getItemData, getAllItemData } from "../models/Item.js";
 import { StatType } from "../models/Stat.js";
 import { AttributeType } from "../models/Attribute.js";
 import logger from "../utils/logger.js";
 import type { CompletionItem } from "../../../shared/types.js";
+import { StatusEffectType } from "../models/StatusEffect.js";
 
 
 type StatKey = 'life' | 'mentality' | 'thirsty' | 'hungry';
@@ -19,6 +20,81 @@ const STAT_MAX_MAP: Record<StatKey, AttributeType> = {
 };
 
 export function initAdminCommands(): void {
+    registerCommand({
+        name: '상태이상부여',
+        aliases: ['effectgive'],
+        description: '온라인 플레이어에게 런타임 상태이상을 부여합니다.',
+        permission: 10,
+        showCommandUse: 'private',
+        args: [
+            { name: '대상', description: '온라인 플레이어 userId 또는 me', required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((p): CompletionItem => ({ value: String(p.userId), description: p.name })),
+                    ];
+                },
+            },
+            { name: '상태이상코드', description: '부여할 상태이상 ID', required: true,
+                completions: StatusEffectType.values().map((effect): CompletionItem => ({
+                    value: effect.id,
+                    description: effect.label,
+                })),
+            },
+            { name: '레벨', description: '효과 레벨 (1 이상 정수)', required: true },
+            { name: '시간', description: '지속시간(초)', required: true },
+        ],
+        handler(userId, args) {
+            try {
+                const targetId = args[0] === 'me' ? userId : Number.parseInt(args[0], 10);
+                if (!Number.isInteger(targetId)) {
+                    sendBotMessageToUser(userId, '유효한 온라인 플레이어 ID 또는 me를 입력해주세요.');
+                    return;
+                }
+
+                const type = StatusEffectType.fromInput(args[1] ?? '');
+                if (!type) {
+                    sendBotMessageToUser(userId, `상태이상 '${args[1] ?? ''}'을(를) 찾을 수 없습니다.`);
+                    return;
+                }
+
+                const level = Number.parseInt(args[2], 10);
+                const duration = Number.parseFloat(args[3]);
+                if (!Number.isInteger(level) || level < 1) {
+                    sendBotMessageToUser(userId, '레벨은 1 이상의 정수여야 합니다.');
+                    return;
+                }
+                if (!Number.isFinite(duration) || duration <= 0) {
+                    sendBotMessageToUser(userId, '시간은 0보다 큰 초 단위 숫자여야 합니다.');
+                    return;
+                }
+
+                const target = getPlayerByUserId(targetId);
+                if (!target) {
+                    sendBotMessageToUser(userId, '상태이상은 런타임 전용이므로 온라인 플레이어에게만 부여할 수 있습니다.');
+                    return;
+                }
+
+                const result = target.applyStatusEffect(type, duration, level);
+                if (!result.action.changed || !result.effect) {
+                    sendBotMessageToUser(userId, result.action.key === 'rejected'
+                        ? `${target.name}에게 ${type.label}을(를) 적용할 수 없습니다.`
+                        : `${target.name}의 기존 ${type.label} 효과가 더 강하거나 오래 남아 있어 변경되지 않았습니다.`);
+                    return;
+                }
+
+                const message = `${target.name}에게 ${type.label} Lv.${result.effect.level}을(를) ${duration}초 부여했습니다.`;
+                sendBotMessageToUser(userId, message);
+                if (targetId !== userId) {
+                    sendBotMessageToUser(targetId, `관리자에 의해 ${type.label} Lv.${result.effect.level} 효과가 부여되었습니다.`);
+                }
+            } catch (error) {
+                logger.error('상태이상부여 명령어 처리 중 오류:', error);
+                sendBotMessageToUser(userId, '상태이상 부여 중 오류가 발생했습니다.');
+            }
+        },
+    });
+
     registerCommand({
         name: '레벨설정',
         description: '플레이어의 레벨(+경험치)을 설정합니다. 소수점 입력 시 소수 부분을 경험치 진행률로 설정합니다. (예: 5.75 → 레벨 5, 경험치 75%)',

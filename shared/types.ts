@@ -181,6 +181,17 @@ export interface LocationInfoData {
 }
 
 // 플레이어 HUD 데이터
+export interface StatusEffectHudData {
+    id: string
+    label: string
+    icon: string
+    level: number
+    duration: number
+    maxDuration: number
+    durationRatio: number
+    description: ChatNode[]
+}
+
 export interface PlayerStatsData {
     userId: number
     nickname: string
@@ -194,6 +205,7 @@ export interface PlayerStatsData {
     maxHungry: number
     attackCooldown: number
     maxAttackCooldown: number
+    statusEffects: StatusEffectHudData[]
 }
 
 // 알림

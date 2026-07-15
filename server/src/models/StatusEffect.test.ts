@@ -82,6 +82,16 @@ test('같은 상태효과 재적용은 인스턴스와 metadata를 유지하며 
     assert.equal(updates, 2);
     assert.equal(effect.getMetadata('elapsedByCallback'), 3);
     assert.equal(effect.formatDescription(target), '레벨 3, 값 7, 계산 6');
+    assert.deepEqual(target.getStatusEffectDisplaySnapshots(), [{
+        id: 'test_merge_effect',
+        label: '병합 시험',
+        icon: 'status-effects/test_merge_effect',
+        level: 3,
+        duration: 3,
+        maxDuration: 4,
+        durationRatio: 0.75,
+        description: '레벨 3, 값 7, 계산 6',
+    }]);
 });
 
 test('상태효과는 만료·직접 제거 시 callback을 실행하고 Entity 목록에서 제거된다', () => {

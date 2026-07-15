@@ -78,6 +78,17 @@ export interface StatusEffectApplyResult {
     effect?: StatusEffect;
 }
 
+export interface StatusEffectDisplaySnapshot {
+    id: string;
+    label: string;
+    icon: string;
+    level: number;
+    duration: number;
+    maxDuration: number;
+    durationRatio: number;
+    description: string;
+}
+
 export default abstract class Entity implements TagReadable {
     readonly attribute: Attribute;
     readonly equipment: Equipment;
@@ -311,6 +322,20 @@ export default abstract class Entity implements TagReadable {
 
     getStatusEffects(): readonly StatusEffect[] {
         return [...this.statusEffects.values()];
+    }
+
+    /** 상태창과 HUD가 내부 effect Map을 읽지 않고 사용하는 표시 스냅샷. */
+    getStatusEffectDisplaySnapshots(): StatusEffectDisplaySnapshot[] {
+        return this.getStatusEffects().map(effect => ({
+            id: effect.type.id,
+            label: effect.type.label,
+            icon: effect.type.icon,
+            level: effect.level,
+            duration: effect.duration,
+            maxDuration: effect.maxDuration,
+            durationRatio: effect.durationRatio,
+            description: effect.formatDescription(this),
+        }));
     }
 
     getStatusEffect(type: StatusEffectType | string): StatusEffect | undefined {
