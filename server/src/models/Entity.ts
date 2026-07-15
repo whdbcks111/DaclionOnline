@@ -6,7 +6,7 @@ import type { StatRecord } from "./Stat.js";
 import { sendBotMessageToUser, sendNotificationFiltered, sendNotificationToUser } from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
 import { isOnlinePlayerAtLocation } from "../modules/playerRegistry.js";
-import { applyCritical, calculateFinalDamage } from "./Combat.js";
+import { applyCritical, calculateEvasionChance, calculateFinalDamage, rollEvasion } from "./Combat.js";
 import { applyTagEffectValue } from "./TagEffect.js";
 import type { TagEffectReadable } from "./TagEffect.js";
 import { TagCollection } from "../../../shared/tags.js";
@@ -32,6 +32,8 @@ export interface DamageResult {
     finalDamage: number;
     remainingLife: number;
     critical: boolean;
+    evaded: boolean;
+    fixedDamage: boolean;
     effectModifier: number;
     effectSourceTag?: TagId;
     effectTargetTag?: TagId;
@@ -45,6 +47,10 @@ export interface AttackOptions {
     criticalDamage?: number;
     /** 생략하면 물리 직접 공격에서만 주무기 내구도를 소모한다. */
     consumeMainHandDurability?: boolean;
+    /** true이면 대상의 이동속도와 행동 가능 여부에 관계없이 회피할 수 없다. */
+    unavoidable?: boolean;
+    /** true이면 치명타·속성 상성·방어·관통을 적용하지 않고 지정한 피해량을 그대로 준다. */
+    fixedDamage?: boolean;
 }
 
 export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fire' | 'poison' | 'suffocation'
@@ -53,6 +59,8 @@ export interface DamageCause {
     type: DamageCauseType;
     causeEntity: Entity | null;
     critical?: boolean;
+    /** 고정 피해는 속성 상성·방어·관통을 거치지 않는다. */
+    fixedDamage?: boolean;
     /** causeEntity가 없어도 속성 상성을 계산할 수 있는 효과원. */
     effectSource?: TagEffectReadable;
 }
@@ -412,21 +420,24 @@ export default abstract class Entity implements TagReadable {
     damage(rawAmount: number, type: DamageType = 'physical', cause: DamageCause | null = null): DamageResult {
         let defense = 0;
         let penetration = 0;
+        const fixedDamage = cause?.fixedDamage === true;
         const attacker = cause?.type === 'attack' ? cause.causeEntity : null;
         const effectSource = cause?.effectSource ?? attacker;
-        const effect = effectSource
+        const effect = !fixedDamage && effectSource
             ? applyTagEffectValue(rawAmount, effectSource, this)
             : { value: rawAmount, modifier: 1, sourceTag: '', targetTag: '', effective: true };
 
-        if (type === 'physical') {
+        if (!fixedDamage && type === 'physical') {
             defense    = this.attribute.get(AttributeType.DEF);
             penetration = attacker?.attribute.get(AttributeType.ARMOR_PEN) ?? 0;
-        } else if (type === 'magic') {
+        } else if (!fixedDamage && type === 'magic') {
             defense    = this.attribute.get(AttributeType.MAGIC_DEF);
             penetration = attacker?.attribute.get(AttributeType.MAGIC_PEN) ?? 0;
         }
 
-        const finalDamage = calculateFinalDamage(effect.value, defense, penetration);
+        const finalDamage = fixedDamage
+            ? Math.max(0, rawAmount)
+            : calculateFinalDamage(effect.value, defense, penetration);
 
         this.life = this.life - finalDamage;
         const remainingLife = this.life;
@@ -440,6 +451,8 @@ export default abstract class Entity implements TagReadable {
             finalDamage,
             remainingLife,
             critical: cause?.critical === true,
+            evaded: false,
+            fixedDamage,
             effectModifier: effect.modifier,
             effectSourceTag: effect.sourceTag || undefined,
             effectTargetTag: effect.targetTag || undefined,
@@ -516,13 +529,50 @@ export default abstract class Entity implements TagReadable {
         const baseAmount = amount ?? (type === 'physical'
             ? this.attribute.get(AttributeType.ATK)
             : this.attribute.get(AttributeType.MAGIC_FORCE));
-        const { rawAmount, critical } = applyCritical(
-            baseAmount,
-            options.criticalRate ?? this.attribute.get(AttributeType.CRIT_RATE),
-            options.criticalDamage ?? this.attribute.get(AttributeType.CRIT_DMG),
-        );
 
-        const damageResult = target.damage(rawAmount, type, { type: 'attack', causeEntity: this, critical });
+        const evasionChance = options.unavoidable || !target.canPerformAction(ActionType.MOVEMENT)
+            ? 0
+            : calculateEvasionChance(
+                this.attribute.get(AttributeType.SPEED),
+                target.attribute.get(AttributeType.SPEED),
+            );
+        if (rollEvasion(evasionChance)) {
+            this.commitAttack(options.consumeMainHandDurability ?? type === 'physical');
+            const result: DamageResult = {
+                type,
+                rawAmount: Math.max(0, baseAmount),
+                modifiedAmount: 0,
+                finalDamage: 0,
+                remainingLife: target.life,
+                critical: false,
+                evaded: true,
+                fixedDamage: options.fixedDamage === true,
+                effectModifier: 1,
+            };
+            this.notifyEvadedAttack(target, evasionChance);
+            emitGameEvent(GameEventIds.ATTACK_EVADED, {
+                actor: this,
+                subject: target,
+                data: { evasionChance, damageType: type },
+            });
+            return result;
+        }
+
+        const criticalResult = options.fixedDamage
+            ? { rawAmount: Math.max(0, baseAmount), critical: false }
+            : applyCritical(
+                baseAmount,
+                options.criticalRate ?? this.attribute.get(AttributeType.CRIT_RATE),
+                options.criticalDamage ?? this.attribute.get(AttributeType.CRIT_DMG),
+            );
+        const { rawAmount, critical } = criticalResult;
+
+        const damageResult = target.damage(rawAmount, type, {
+            type: 'attack',
+            causeEntity: this,
+            critical,
+            fixedDamage: options.fixedDamage,
+        });
         if (critical) {
             emitGameEvent(GameEventIds.CRITICAL_HIT, {
                 actor: this,
@@ -560,7 +610,7 @@ export default abstract class Entity implements TagReadable {
 
             const nodes = chat()
                 .color(effectModifier === 0 ? 'gray' : critical ? 'gold' : 'orange', b => b.text(
-                    effectModifier === 0 ? '[면역] ' : critical ? '[치명타] ' : effectModifier > 1 ? '[상성 우세] ' : effectModifier < 1 ? '[상성 저항] ' : '[공격] '
+                    damageResult.fixedDamage ? '[고정 피해] ' : effectModifier === 0 ? '[면역] ' : critical ? '[치명타] ' : effectModifier > 1 ? '[상성 우세] ' : effectModifier < 1 ? '[상성 저항] ' : '[공격] '
                 ))
                 .text(`${this.name}이(가) ${target.name}에게 `)
                 .color('red', b => b.text(finalDamage.toFixed(1)))
@@ -578,6 +628,28 @@ export default abstract class Entity implements TagReadable {
         }
 
         return damageResult;
+    }
+
+    private notifyEvadedAttack(target: Entity, evasionChance: number): void {
+        const attackerUid = this.playerUserId;
+        const targetUid = target.playerUserId;
+        if (attackerUid === undefined && targetUid === undefined) return;
+
+        const message = `${target.name}이(가) ${this.name}의 공격을 회피했습니다!`;
+        sendNotificationFiltered(userId => isOnlinePlayerAtLocation(userId, this.locationId), {
+            key: 'attack-evaded',
+            message,
+        });
+
+        const nodes = chat()
+            .tooltip(`${(evasionChance * 100).toFixed(1)}% 회피 확률`, b => b
+                .color('cyan', b2 => b2.text('[회피] '))
+                .text(message))
+            .build();
+        const userIds = new Set<number>();
+        if (attackerUid !== undefined) userIds.add(attackerUid);
+        if (targetUid !== undefined) userIds.add(targetUid);
+        for (const userId of userIds) sendBotMessageToUser(userId, nodes);
     }
 
     // -- 게임 루프 라이프사이클 --

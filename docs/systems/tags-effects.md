@@ -66,11 +66,14 @@ Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만
 
 ```text
 기본 공격력
+  -> 속도 기반 회피 판정
   -> 치명타 판정
   -> 단방향 태그 효과 modifier (0 / 0.5 / 1 / 1.5)
   -> 방어력 - 공격자 관통
   -> 최종 대미지
 ```
+
+`AttackOptions.fixedDamage`인 공격은 이 회피 이후의 치명타·태그 modifier·방어/관통 단계를 모두 생략한다. `unavoidable`까지 지정해야 회피도 생략한다.
 
 `Entity.damage`가 공격 원인의 Entity와 피격 Entity를 `applyTagEffectValue`에 전달하며, `TagEffectReadable.hasEffectSourceTag/hasEffectTargetTag`가 있으면 일반 `hasTag`보다 우선한다. 따라서 플레이어 공격과 몬스터 자동 공격이 같은 문맥 규칙을 사용한다. 결과에는 `modifiedAmount`, `effectModifier`, 일치한 source/target tag가 들어가며 공격 메시지는 면역·저항·우세를 구분한다.
 

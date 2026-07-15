@@ -84,7 +84,7 @@ callback은 대상의 raw 필드를 우회하지 않고 `damage`, `heal`, 상태
 
 ## 행동 제한 API
 
-`ActionType`은 `SKILL`, `CHAT`, `COMMAND`, `ATTACK`, `MOVEMENT`, `LOCATION_TRAVEL`을 가진 클래스형 enum이다. SkillBook, 채팅 입력, 명령 버튼/입력, Entity 공격, `/이동`이 각각 소유 action을 검사한다. 아직 회피 동작은 없지만 새 이동 기능은 `MOVEMENT`를 검사해야 한다.
+`ActionType`은 `SKILL`, `CHAT`, `COMMAND`, `ATTACK`, `MOVEMENT`, `LOCATION_TRAVEL`을 가진 클래스형 enum이다. SkillBook, 채팅 입력, 명령 버튼/입력, Entity 공격, 속도 기반 자동 회피, `/이동`이 각각 소유 action을 검사한다. `MOVEMENT`가 제한된 피격자는 속도 차이가 나더라도 회피율이 0%가 된다.
 
 - 지속 제한: `disableAction/disableActions(action, source)`, `enableAction`, `clearActionDisableSource`
 - 한 tick 제한: `disableActionForTick/disableActionsForTick`, `clearTickActionDisableSource`
