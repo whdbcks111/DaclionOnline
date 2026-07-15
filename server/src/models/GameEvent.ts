@@ -35,6 +35,9 @@ export const GameEventIds = Object.freeze({
     NPC_DIALOGUE_STARTED: 'npc:dialogue_started',
     NPC_DIALOGUE_CHOICE: 'npc:dialogue_choice',
     NPC_DIALOGUE_ENDED: 'npc:dialogue_ended',
+    STATUS_EFFECT_APPLIED: 'status_effect:applied',
+    STATUS_EFFECT_UPDATED: 'status_effect:updated',
+    STATUS_EFFECT_REMOVED: 'status_effect:removed',
 } as const);
 
 export type GameEventHandler = (event: GameEvent) => void;

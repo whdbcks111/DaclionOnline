@@ -17,7 +17,7 @@ Entity/Resource/SkillBook
 
 `GameEvent`는 도메인 동작을 직접 DB나 스킬에 결합하지 않는 동기식 내부 이벤트다. handler에서는 DB I/O를 하지 않고 Player가 소유한 메모리 상태만 변경한다. 운영 진단용 trace는 최근 500개만 유지하며 `getRecentGameEvents()`가 ID·사용자 ID·이름·primitive data 스냅샷만 반환한다. 프로세스를 재시작하면 trace는 사라진다.
 
-현재 표준 이벤트 ID는 치명타, Entity 제압, Resource 파괴, 스킬 획득·시작·종료, 제작법 발견·아이템 제작, NPC 대화 시작·선택·종료다. 새 이벤트는 `GameEventIds`에 넣고 실제 상태가 확정되는 모델 API에서 `emitGameEvent()`를 호출한다.
+현재 표준 이벤트 ID는 치명타, Entity 제압, Resource 파괴, 스킬 획득·시작·종료, 제작법 발견·아이템 제작, NPC 대화 시작·선택·종료, 상태효과 적용·갱신·제거다. 새 이벤트는 `GameEventIds`에 넣고 실제 상태가 확정되는 모델 API에서 `emitGameEvent()`를 호출한다.
 
 ## 진행 상태와 통계
 

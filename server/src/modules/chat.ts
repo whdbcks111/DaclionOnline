@@ -1,11 +1,12 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
 import { getSession, broadcastUserCount } from "./login.js";
-import { sendMessageToChannel, getFlagsForPermission } from "./message.js";
+import { sendMessageToChannel, getFlagsForPermission, sendNotificationToUser } from "./message.js";
 import { getUserChannel, setUserChannel, getChannelHistory, getChannelRoomKey, getAvailableChannels, getFilteredHistoryForUser } from "./channel.js";
 import { sendPlayerStats, sendLocationInfo, getPlayerByUserId } from "./player.js";
 import { handleCommand, isCommandAliasInput } from "./bot.js";
 import type { ChatMessage } from "../../../shared/types.js";
+import { ActionType } from "../models/Action.js";
 
 const MAX_MESSAGE_LENGTH = 500;
 
@@ -87,6 +88,14 @@ export const initChat = () => {
 
             const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
             if (!session) { socket.emit('sessionInvalid'); return; }
+            const player = getPlayerByUserId(session.userId);
+            if (player && !player.canPerformAction(ActionType.COMMAND)) {
+                sendNotificationToUser(session.userId, {
+                    key: 'action-disabled:command',
+                    message: '현재 명령어를 사용할 수 없는 상태입니다.',
+                });
+                return;
+            }
 
             const flags = getFlagsForPermission(session.permission);
             const msg: ChatMessage | null = showCommand === true ? {
@@ -128,12 +137,29 @@ export const initChat = () => {
 
             // 명령어 처리
             if (trimmed.startsWith('/') || isCommandAliasInput(trimmed)) {
+                const player = getPlayerByUserId(session.userId);
+                if (player && !player.canPerformAction(ActionType.COMMAND)) {
+                    sendNotificationToUser(session.userId, {
+                        key: 'action-disabled:command',
+                        message: '현재 명령어를 사용할 수 없는 상태입니다.',
+                    });
+                    return;
+                }
                 handleCommand(session.userId, trimmed, msg, session.permission);
                 return;
             }
 
+            const player = getPlayerByUserId(session.userId);
+            if (player && !player.canPerformAction(ActionType.CHAT)) {
+                sendNotificationToUser(session.userId, {
+                    key: 'action-disabled:chat',
+                    message: '현재 채팅을 사용할 수 없는 상태입니다.',
+                });
+                return;
+            }
+
             // 일반 채팅 형식으로 등록된 스킬 트리거를 명령과 동일한 발동 API로 처리
-            const skillActivation = getPlayerByUserId(session.userId)?.skills.activateFromMessage(trimmed);
+            const skillActivation = player?.skills.activateFromMessage(trimmed);
             if (skillActivation?.matched) return;
 
             sendMessageToChannel(msg, getUserChannel(session.userId));

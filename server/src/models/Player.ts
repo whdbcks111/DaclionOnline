@@ -54,7 +54,7 @@ export default class Player extends Entity {
             { ...DEFAULT_BASE_ATTRIBUTE, maxWeight },
             equipment,
             statPoints,
-            [GameTags.ENTITY_PLAYER],
+            [GameTags.ENTITY_PLAYER, GameTags.TRAIT_LIVING],
             persistentTags,
         );
         this.userId = userId;

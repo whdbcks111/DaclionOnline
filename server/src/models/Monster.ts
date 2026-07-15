@@ -60,7 +60,8 @@ export default class Monster extends Entity {
         if (!data) throw new Error(`MonsterData not found: ${monsterDataId}`);
 
         const equipment = Equipment.createEmpty();
-        super(data.level, data.exp, locationId, data.baseAttribute, equipment, undefined, [GameTags.ENTITY_MONSTER, ...data.tags]);
+        const traitTags = data.tags.includes(GameTags.TRAIT_INANIMATE) ? [] : [GameTags.TRAIT_LIVING];
+        super(data.level, data.exp, locationId, data.baseAttribute, equipment, undefined, [GameTags.ENTITY_MONSTER, ...traitTags, ...data.tags]);
 
         this.monsterDataId = monsterDataId;
         this.name = data.name;

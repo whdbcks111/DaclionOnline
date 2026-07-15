@@ -5,7 +5,7 @@
 - `config/`: 외부 인프라 설정.
 - `modules/`: 애플리케이션 서비스와 통신 경계.
 - `commands/`: 사용자 `/명령어` 핸들러.
-- `models/`: 게임 도메인 객체와 레지스트리.
+- `models/`: 게임 도메인 객체와 레지스트리. Entity 공통 상태효과와 source별 행동 제한도 이 계층이 소유한다.
 - `data/`: 코드/JSON 마스터 데이터 등록.
 - `scripts/`: idempotent 운영 데이터 변환.
 - `utils/`, `types/`: 공통 서버 지원 코드.

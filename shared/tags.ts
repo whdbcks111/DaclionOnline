@@ -49,6 +49,7 @@ export const GameTags = Object.freeze({
     SKILL_COMBAT: 'skill:combat',
 
     TRAIT_INANIMATE: 'trait:inanimate',
+    TRAIT_LIVING: 'trait:living',
 
     LOCATION_SAFE: 'location:safe',
     LOCATION_WILDERNESS: 'location:wilderness',

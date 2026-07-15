@@ -11,8 +11,8 @@
 | `logout` | `token: string` | 토큰 | `modules/login.ts` | `logoutResult`; 마지막 세션이면 Player 저장/언로드 |
 | `sendVerifyCode` | `email: string` | 불필요 | `modules/register.ts` | `verifyCodeSendResult`; 6자리, 5분 만료, 60초 재전송 제한 |
 | `verifyCode` | `code: string` | 불필요 | `modules/register.ts` | `verifyCodeResult` |
-| `sendMessage` | `content: string` | 필요 | `modules/chat.ts` | 최대 500자; 일반 채팅, `/` 명령 또는 첫 단어가 정확한 명령 별칭인 입력 실행 |
-| `chatButtonClick` | `{ action, showCommand? }` | 필요 | `modules/chat.ts` | `/` action만 `handleCommand()`로 전달 |
+| `sendMessage` | `content: string` | 필요 | `modules/chat.ts` | 최대 500자; `ActionType.CHAT/COMMAND` 제한 확인 후 일반 채팅 또는 명령 실행 |
+| `chatButtonClick` | `{ action, showCommand? }` | 필요 | `modules/chat.ts` | `ActionType.COMMAND` 제한 확인 후 `/` action만 `handleCommand()`로 전달 |
 | `requestChatHistory` | 없음 | 선택 | `modules/chat.ts` | `chatHistory`; 인증 시 private history와 HUD 데이터도 전송 |
 | `requestCommandList` | 없음 | 불필요 | `modules/bot.ts` | `commandList` |
 | `requestCompletions` | `raw: string` | 필요 | `modules/bot.ts` | 슬래시 명령과 슬래시 없는 별칭 입력의 동적 인자 후보 `argCompletions` |

@@ -13,7 +13,7 @@ Browser
 Express + Socket.io (`server/src/index.ts`)
   ├─ modules: 인증, 채팅, 채널, 플레이어, 위치, 게임 루프
   ├─ commands: 채팅 명령을 도메인 호출로 변환
-  ├─ models: Entity/Player/Monster/Resource/Projectile/Location/NPC/Inventory/Progress/Skill/Crafting
+  ├─ models: Entity/Player/Monster/Resource/Projectile/Location/NPC/StatusEffect/Inventory/Progress/Skill/Crafting
   ├─ data: 아이템·몬스터·자원·투사체·상점·위치·NPC·통계·스킬·제작법 마스터 데이터
   └─ Prisma ─────────────────────────────── MariaDB
 ```
@@ -44,6 +44,7 @@ Express + Socket.io (`server/src/index.ts`)
 | 제작법 발견/진행 | `Player.progress` flag / `models/Crafting.ts` | 발견은 PlayerProgress로 영속, 진행 작업은 접속 중 메모리에만 유지 |
 | 최근 GameEvent trace | `models/GameEvent.ts` | 최근 500개 메모리 스냅샷, 재시작 시 소실 |
 | NPC 정의/활성 대화 | `models/NPC.ts` / `models/NpcDialogue.ts` | 정의는 코드 레지스트리, player별 세션은 메모리이며 이동·사망·logout 시 폐기 |
+| Entity 상태효과/행동 제한 | `models/StatusEffect.ts` / `models/Action.ts` | 효과와 tick/source별 제한은 메모리, 제압·재시작 시 소실 |
 | User/Player/Item/Equipment/PlayerProgress/PlayerSkill | Prisma 모델 | MariaDB 영속 저장 |
 | HUD 배치·투명도·퀵슬롯 | `HudContext.tsx` | 브라우저 `localStorage` |
 

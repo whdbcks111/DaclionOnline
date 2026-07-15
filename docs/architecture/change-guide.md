@@ -56,6 +56,14 @@
 4. 영속 태그 소유 객체를 추가하면 메모리 `TagCollection`, dirty callback, Prisma/JSON 저장과 이동 snapshot을 함께 연결한다.
 5. 규칙과 대표 데이터는 [systems/tags-effects.md](../systems/tags-effects.md)에 동기화하고 중첩·방향성 테스트를 추가한다.
 
+## 상태효과/행동 제한 추가
+
+1. `StatusEffectType.define()`으로 ID, label, maxLevel, 원본 metadata, 설명 template과 필요한 lifecycle callback만 등록한다.
+2. 주기 효과는 인스턴스 metadata delta에 tick 누적값을 저장하고, 대상 변경은 `Entity.damage/heal/applyStatusEffect` 등 공개 API를 사용한다.
+3. 최초 조건은 `onStart`, 한 tick 선행 제한은 `onEarlyUpdate`, 일반 진행은 `onUpdate`, modifier 정리는 `onRemove`에 둔다.
+4. 행동 금지는 raw Set 대신 `ActionType`과 `disableAction(s)/disableAction(s)ForTick`을 source key로 적용한다. 새 사용자 동작은 실행 경계에서 `canPerformAction`을 검사한다.
+5. 병합 시 기존 인스턴스와 metadata가 유지되는지, 만료·조건 불충족·사망에서 정리되는지 테스트하고 [systems/status-effects.md](../systems/status-effects.md)를 갱신한다.
+
 ## 이벤트/통계/플래그 추가
 
 1. 다른 기능에 직접 결합하지 않을 의미 있는 도메인 동작은 `models/GameEvent.ts::GameEventIds`에 ID를 추가하고 상태가 확정되는 모델에서 `emitGameEvent()`를 호출한다.

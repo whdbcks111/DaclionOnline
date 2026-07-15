@@ -8,10 +8,18 @@ import { chat } from "../utils/chatBuilder.js";
 import { isOnlinePlayerAtLocation } from "../modules/playerRegistry.js";
 import { applyCritical, calculateFinalDamage } from "./Combat.js";
 import { applyTagEffectValue } from "./TagEffect.js";
+import type { TagEffectReadable } from "./TagEffect.js";
 import { TagCollection } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
 import type Player from "./Player.js";
 import { emitGameEvent, GameEventIds } from "./GameEvent.js";
+import StatusEffect, {
+    StatusEffectApplyAction,
+    StatusEffectRemovalReason,
+    StatusEffectType,
+} from "./StatusEffect.js";
+import logger from "../utils/logger.js";
+import { ActionType } from "./Action.js";
 
 /** 대미지 타입 */
 export type DamageType = 'physical' | 'magic' | 'absolute';
@@ -45,6 +53,21 @@ export interface DamageCause {
     type: DamageCauseType;
     causeEntity: Entity | null;
     critical?: boolean;
+    /** causeEntity가 없어도 속성 상성을 계산할 수 있는 효과원. */
+    effectSource?: TagEffectReadable;
+}
+
+export interface HealingResult {
+    rawAmount: number;
+    modifiedAmount: number;
+    healedAmount: number;
+    remainingLife: number;
+    modifier: number;
+}
+
+export interface StatusEffectApplyResult {
+    action: StatusEffectApplyAction;
+    effect?: StatusEffect;
 }
 
 export default abstract class Entity implements TagReadable {
@@ -52,6 +75,10 @@ export default abstract class Entity implements TagReadable {
     readonly equipment: Equipment;
     readonly stat: Stat;
     readonly tags: TagCollection;
+    private readonly statusEffects = new Map<string, StatusEffect>();
+    private readonly healingReceivedModifiers = new Map<string, number>();
+    private readonly actionDisableSources = new Map<string, Set<string>>();
+    private readonly tickActionDisableSources = new Map<string, Set<string>>();
 
     protected _level: number;
     protected _exp: number;
@@ -183,14 +210,212 @@ export default abstract class Entity implements TagReadable {
 
     protected onPersistentTagsChanged(): void {}
 
+    // -- 행동 제한 --
+
+    canPerformAction(action: ActionType): boolean {
+        return !this.actionDisableSources.get(action.key)?.size
+            && !this.tickActionDisableSources.get(action.key)?.size;
+    }
+
+    disableAction(action: ActionType, source: string): void {
+        addActionDisableSource(this.actionDisableSources, action, source);
+    }
+
+    disableActions(actions: readonly ActionType[], source: string): void {
+        for (const action of actions) this.disableAction(action, source);
+    }
+
+    enableAction(action: ActionType, source: string): boolean {
+        return removeActionDisableSource(this.actionDisableSources, action, source);
+    }
+
+    clearActionDisableSource(source: string): boolean {
+        return clearActionDisableSource(this.actionDisableSources, source);
+    }
+
+    /** 현재 게임 tick에만 유지되고 다음 earlyUpdate 시작에서 자동 제거된다. */
+    disableActionForTick(action: ActionType, source: string): void {
+        addActionDisableSource(this.tickActionDisableSources, action, source);
+    }
+
+    disableActionsForTick(actions: readonly ActionType[], source: string): void {
+        for (const action of actions) this.disableActionForTick(action, source);
+    }
+
+    clearTickActionDisableSource(source: string): boolean {
+        return clearActionDisableSource(this.tickActionDisableSources, source);
+    }
+
+    releaseActionDisableSource(source: string): boolean {
+        const persistentChanged = this.clearActionDisableSource(source);
+        const tickChanged = this.clearTickActionDisableSource(source);
+        return persistentChanged || tickChanged;
+    }
+
+    getActionDisableSources(action: ActionType): readonly string[] {
+        return [...new Set([
+            ...(this.actionDisableSources.get(action.key) ?? []),
+            ...(this.tickActionDisableSources.get(action.key) ?? []),
+        ])];
+    }
+
+    // -- 회복 --
+
+    /** 현재 치유량 modifier를 적용해 생명력을 회복한다. */
+    heal(rawAmount: number): HealingResult {
+        if (!Number.isFinite(rawAmount) || rawAmount < 0) {
+            throw new Error(`Healing amount must be a non-negative finite number: ${rawAmount}`);
+        }
+        const modifier = this.getHealingReceivedModifier();
+        const modifiedAmount = rawAmount * modifier;
+        const healedAmount = this.isDefeated
+            ? 0
+            : Math.max(0, Math.min(modifiedAmount, this.maxLife - this.life));
+        this.life += healedAmount;
+        return {
+            rawAmount,
+            modifiedAmount,
+            healedAmount,
+            remainingLife: this.life,
+            modifier,
+        };
+    }
+
+    setHealingReceivedModifier(source: string, modifier: number): void {
+        if (!source.trim()) throw new Error('Healing modifier source must not be empty');
+        if (!Number.isFinite(modifier) || modifier < 0) {
+            throw new Error(`Healing modifier must be a non-negative finite number: ${modifier}`);
+        }
+        this.healingReceivedModifiers.set(source, modifier);
+    }
+
+    removeHealingReceivedModifier(source: string): boolean {
+        return this.healingReceivedModifiers.delete(source);
+    }
+
+    getHealingReceivedModifier(): number {
+        let result = 1;
+        for (const modifier of this.healingReceivedModifiers.values()) result *= modifier;
+        return Math.max(0, result);
+    }
+
+    // -- 상태효과 --
+
+    getStatusEffects(): readonly StatusEffect[] {
+        return [...this.statusEffects.values()];
+    }
+
+    getStatusEffect(type: StatusEffectType | string): StatusEffect | undefined {
+        const resolved = typeof type === 'string' ? StatusEffectType.fromKey(type) : type;
+        return resolved ? this.statusEffects.get(resolved.id) : undefined;
+    }
+
+    hasStatusEffect(type: StatusEffectType | string): boolean {
+        return this.getStatusEffect(type) !== undefined;
+    }
+
+    applyStatusEffect(type: StatusEffectType, duration: number, level: number): StatusEffectApplyResult {
+        if (!Number.isFinite(duration) || duration <= 0) {
+            throw new Error(`StatusEffect duration must be a positive finite number: ${duration}`);
+        }
+        const normalizedLevel = type.normalizeLevel(level);
+        const existing = this.statusEffects.get(type.id);
+        if (existing) {
+            let action = StatusEffectApplyAction.IGNORED;
+            if (normalizedLevel > existing.level) {
+                existing.upgrade(normalizedLevel, duration);
+                action = StatusEffectApplyAction.UPGRADED;
+            } else if (normalizedLevel === existing.level && existing.refreshDuration(duration)) {
+                action = StatusEffectApplyAction.REFRESHED;
+            }
+            if (action.changed) {
+                emitGameEvent(GameEventIds.STATUS_EFFECT_UPDATED, {
+                    subject: this,
+                    data: { effectId: type.id, level: existing.level, duration: existing.duration, action: action.key },
+                });
+            }
+            return { action, effect: existing };
+        }
+
+        if (this.isDefeated) return { action: StatusEffectApplyAction.REJECTED };
+        const effect = new StatusEffect(type, duration, normalizedLevel);
+        this.statusEffects.set(type.id, effect);
+        try {
+            if (effect.start(this) === 'remove') {
+                this.removeStatusEffect(type, StatusEffectRemovalReason.INVALID_TARGET);
+                return { action: StatusEffectApplyAction.REJECTED };
+            }
+        } catch (error) {
+            logger.error(`StatusEffect 시작 실패: ${type.id}/${this.name}`, error);
+            this.removeStatusEffect(type, StatusEffectRemovalReason.ERROR);
+            return { action: StatusEffectApplyAction.REJECTED };
+        }
+        emitGameEvent(GameEventIds.STATUS_EFFECT_APPLIED, {
+            subject: this,
+            data: { effectId: type.id, level: effect.level, duration: effect.duration },
+        });
+        return { action: StatusEffectApplyAction.ADDED, effect };
+    }
+
+    removeStatusEffect(
+        type: StatusEffectType | string,
+        reason = StatusEffectRemovalReason.MANUAL,
+    ): boolean {
+        const effect = this.getStatusEffect(type);
+        if (!effect || this.statusEffects.get(effect.type.id) !== effect) return false;
+        this.statusEffects.delete(effect.type.id);
+        try {
+            effect.remove(this, reason);
+        } catch (error) {
+            logger.error(`StatusEffect 제거 callback 실패: ${effect.type.id}/${this.name}`, error);
+        }
+        emitGameEvent(GameEventIds.STATUS_EFFECT_REMOVED, {
+            subject: this,
+            data: { effectId: effect.type.id, level: effect.level, reason: reason.key },
+        });
+        return true;
+    }
+
+    clearStatusEffects(reason = StatusEffectRemovalReason.MANUAL): void {
+        for (const effect of [...this.statusEffects.values()]) {
+            this.removeStatusEffect(effect.type, reason);
+        }
+    }
+
+    updateStatusEffects(dt: number): void {
+        if (this.isDefeated) {
+            this.clearStatusEffects(StatusEffectRemovalReason.TARGET_DEFEATED);
+            return;
+        }
+        for (const effect of [...this.statusEffects.values()]) {
+            if (this.statusEffects.get(effect.type.id) !== effect) continue;
+            try {
+                const state = effect.advance(this, dt);
+                if (this.isDefeated) {
+                    this.clearStatusEffects(StatusEffectRemovalReason.TARGET_DEFEATED);
+                    return;
+                }
+                if (state.result === 'remove') {
+                    this.removeStatusEffect(effect.type, StatusEffectRemovalReason.INVALID_TARGET);
+                } else if (state.expired) {
+                    this.removeStatusEffect(effect.type, StatusEffectRemovalReason.EXPIRED);
+                }
+            } catch (error) {
+                logger.error(`StatusEffect 업데이트 실패: ${effect.type.id}/${this.name}`, error);
+                this.removeStatusEffect(effect.type, StatusEffectRemovalReason.ERROR);
+            }
+        }
+    }
+
     // -- 전투 --
 
     damage(rawAmount: number, type: DamageType = 'physical', cause: DamageCause | null = null): DamageResult {
         let defense = 0;
         let penetration = 0;
         const attacker = cause?.type === 'attack' ? cause.causeEntity : null;
-        const effect = attacker
-            ? applyTagEffectValue(rawAmount, attacker, this)
+        const effectSource = cause?.effectSource ?? attacker;
+        const effect = effectSource
+            ? applyTagEffectValue(rawAmount, effectSource, this)
             : { value: rawAmount, modifier: 1, sourceTag: '', targetTag: '', effective: true };
 
         if (type === 'physical') {
@@ -227,6 +452,16 @@ export default abstract class Entity implements TagReadable {
     /** 공격 시작 가능 여부를 검사하고 플레이어라면 실패 이유를 안내한다. */
     canAttack(target: Entity): boolean {
         if (this.isDefeated) return false;
+
+        if (!this.canPerformAction(ActionType.ATTACK)) {
+            if (this.isPlayer && this.playerUserId) {
+                sendNotificationToUser(this.playerUserId, {
+                    key: 'action-disabled:attack',
+                    message: '현재 공격할 수 없는 상태입니다.',
+                });
+            }
+            return false;
+        }
 
         if (target.isDefeated) {
             if (this.isPlayer && this.playerUserId) {
@@ -348,12 +583,16 @@ export default abstract class Entity implements TagReadable {
     // -- 게임 루프 라이프사이클 --
 
     earlyUpdate(dt: number): void {
+        this.tickActionDisableSources.clear();
+        this.earlyUpdateStatusEffects(dt);
+        this.updateStatusEffects(dt);
+
         if (this._attackCooldown > 0) {
             this._attackCooldown = Math.max(0, this._attackCooldown - dt);
         }
 
-        if (!this.isDead && this.life < this.maxLife) {
-            this.life += dt * 1; // TODO: change value
+        if (!this.isDefeated && this.life < this.maxLife) {
+            this.heal(dt * 1); // TODO: change value
         }
 
         if (this.isDead && this.deathTimer > 0) {
@@ -361,6 +600,21 @@ export default abstract class Entity implements TagReadable {
 
             if (this.deathTimer <= 0) {
                 this.respawn();
+            }
+        }
+    }
+
+    private earlyUpdateStatusEffects(dt: number): void {
+        if (this.isDefeated) return;
+        for (const effect of [...this.statusEffects.values()]) {
+            if (this.statusEffects.get(effect.type.id) !== effect) continue;
+            try {
+                if (effect.earlyUpdate(this, dt) === 'remove') {
+                    this.removeStatusEffect(effect.type, StatusEffectRemovalReason.INVALID_TARGET);
+                }
+            } catch (error) {
+                logger.error(`StatusEffect earlyUpdate 실패: ${effect.type.id}/${this.name}`, error);
+                this.removeStatusEffect(effect.type, StatusEffectRemovalReason.ERROR);
             }
         }
     }
@@ -385,6 +639,7 @@ export default abstract class Entity implements TagReadable {
             subject: this,
             data: { causeType: this.lastDamageCause?.type ?? 'unknown' },
         });
+        this.clearStatusEffects(StatusEffectRemovalReason.TARGET_DEFEATED);
     }
 
     respawn(): void {
@@ -394,4 +649,38 @@ export default abstract class Entity implements TagReadable {
         this.currentTarget = null;
         this.lastDamageCause = null;
     }
+}
+
+function addActionDisableSource(
+    registry: Map<string, Set<string>>,
+    action: ActionType,
+    source: string,
+): void {
+    const normalizedSource = source.trim();
+    if (!normalizedSource) throw new Error('Action disable source must not be empty');
+    const sources = registry.get(action.key) ?? new Set<string>();
+    sources.add(normalizedSource);
+    registry.set(action.key, sources);
+}
+
+function removeActionDisableSource(
+    registry: Map<string, Set<string>>,
+    action: ActionType,
+    source: string,
+): boolean {
+    const sources = registry.get(action.key);
+    if (!sources?.delete(source.trim())) return false;
+    if (sources.size === 0) registry.delete(action.key);
+    return true;
+}
+
+function clearActionDisableSource(registry: Map<string, Set<string>>, source: string): boolean {
+    const normalizedSource = source.trim();
+    let changed = false;
+    for (const [actionKey, sources] of registry) {
+        if (!sources.delete(normalizedSource)) continue;
+        changed = true;
+        if (sources.size === 0) registry.delete(actionKey);
+    }
+    return changed;
 }

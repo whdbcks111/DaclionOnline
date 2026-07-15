@@ -11,6 +11,7 @@ import type Player from "../models/Player.js";
 import { AttributeType } from "../models/Attribute.js";
 import { getUserChannel } from "../modules/channel.js";
 import type { CompletionItem } from "../../../shared/types.js";
+import { ActionType } from "../models/Action.js";
 
 function* travelCoroutine(player: Player, targetLocationId: string): CoroutineGenerator {
     const from = getLocation(player.locationId);
@@ -114,6 +115,14 @@ export function initLocationCommands(): void {
                     .build();
 
                 sendBotMessageToUser(userId, msg);
+                return;
+            }
+
+            if (!player.canPerformAction(ActionType.LOCATION_TRAVEL)) {
+                sendNotificationToUser(userId, {
+                    key: 'action-disabled:location-travel',
+                    message: '현재 다른 장소로 이동할 수 없는 상태입니다.',
+                });
                 return;
             }
 

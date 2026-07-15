@@ -4,7 +4,7 @@
 
 - `general.ts`: 도움말, 랜덤, 공지, 관리자 eval.
 - `player.ts`: 상태/인벤토리/아이템/장비/대상/공격/스탯. `/대상지정`은 공격 없이 `currentTarget`을 정하고, `/공격`은 통합 Location 오브젝트를 대상으로 `Player.performBasicAttack`을 호출한다. 양쪽 자동완성은 생존 대상을 먼저, 원래 번호를 유지한 사망·파괴 대상을 뒤에 표시한다. 상태창 장착 정보와 인벤토리는 `Item.image` 및 내구도 progress를 표시하며 아이템 이동은 metadata delta·내구도·영속 태그를 보존하는 snapshot API를 사용한다.
-- `location.ts`: Monster/Resource 통합 위치 조회, 오브젝트 상호작용, 개별/전체 바닥 아이템 줍기와 coroutine 이동. `/위치`의 제압된 오브젝트는 progress 대신 붉은 `(사망)` 또는 `(파괴됨)` 상태를 표시한다.
+- `location.ts`: Monster/Resource 통합 위치 조회, 오브젝트 상호작용, 개별/전체 바닥 아이템 줍기와 coroutine 이동. `/이동`은 `ActionType.LOCATION_TRAVEL` 제한을 검사하며 `/위치`의 제압된 오브젝트는 붉은 상태를 표시한다.
 - `shop.ts`: 상점 조회, 구매, 판매.
 - `admin.ts`: 권한 10의 플레이어/월드 관리 명령.
 - `progress.ts`: `/통계`로 공개 Progress snapshot을 공개 또는 비공개 표시한다.

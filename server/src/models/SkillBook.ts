@@ -16,6 +16,7 @@ import { sendBotMessageToUser, sendNotificationToUser, sendPlayerTextToCurrentCh
 import { chat } from '../utils/chatBuilder.js';
 import logger from '../utils/logger.js';
 import type { TagId } from '../../../shared/tags.js';
+import { ActionType } from './Action.js';
 
 export interface SkillActivationOutcome {
     matched: boolean;
@@ -319,6 +320,9 @@ export default class SkillBook {
         const owner = this.requireOwner();
         if (!skill.isVisibleTo(owner)) return { accepted: false, reason: '현재 표시되지 않는 스킬입니다.' };
         if (owner.isDefeated) return { accepted: false, reason: '사망 상태에서는 스킬을 사용할 수 없습니다.' };
+        if (!owner.canPerformAction(ActionType.SKILL)) {
+            return { accepted: false, reason: '현재 스킬을 사용할 수 없는 상태입니다.' };
+        }
         if (skill.isActive) return { accepted: false, reason: '이미 발동 중인 스킬입니다.' };
         const remaining = skill.getRemainingCooldown();
         if (remaining > 0) {

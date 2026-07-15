@@ -293,7 +293,9 @@ export function removeProjectile(projectile: Projectile): boolean {
 /** 게임 프레임에서 비행 시간을 갱신하고 적중·소멸을 처리한다. */
 export function updateProjectiles(dt: number): void {
     for (const projectile of [...activeProjectiles]) {
+        projectile.earlyUpdate(dt);
         projectile.update(dt);
+        projectile.lateUpdate(dt);
         if (!projectile.active) activeProjectiles.delete(projectile);
     }
 }

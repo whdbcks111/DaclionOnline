@@ -2,9 +2,11 @@
 
 서버가 권위를 갖는 게임 상태와 규칙을 표현한다.
 
-- `Combat`, `TagEffect`, `Entity`, `Player`, `Monster`: 치명타·공격용 본체+무기/피격용 본체 전용 태그 문맥·단방향 효과 배율·방어/관통 계산 API, 공격 쿨다운 확정, 전투 생명주기, 성장, AI. `attackOwner`로 실제 피해원과 보상·어그로 귀속 주체를 분리하고 `isDefeated/defeatLabel`, `getAttackDeniedReason/isInteractable/interact`로 대상별 상태와 동작을 확장한다. `AttackOptions`는 스킬 같은 한 번의 공격만 치명타율·배율·내구도 소비를 override한다.
+- `Combat`, `TagEffect`, `Entity`, `Player`, `Monster`: 치명타·공격/피격 문맥 태그·단방향 배율·방어/관통 계산, 치유 modifier를 통과하는 `heal`, 공격 쿨다운, 전투 생명주기, 성장, AI. `attackOwner`로 실제 피해원과 보상·어그로 귀속 주체를 분리하고 `isDefeated/defeatLabel`, `getAttackDeniedReason/isInteractable/interact`로 대상별 상태와 동작을 확장한다.
+- `StatusEffectType`/`StatusEffect`: 클래스형 효과 정의와 Entity별 비영속 duration/level/metadata delta. 동일 타입은 기존 인스턴스를 유지해 레벨·시간만 병합하며 화염·화상·맹독·마비독, start/early/update/remove callback과 설명 template을 제공한다.
+- `ActionType`: 스킬·채팅·명령·공격·이동·장소 이동 분류와 Entity의 source key 기반 지속/한 tick 제한 API. 한 source 해제가 다른 기절·속박 제한을 제거하지 않는다.
 - `Resource`: 공격 AI가 없는 Entity 자원. `defeatLabel=파괴됨`, 주무기 태그 제한, key 기반 상호작용, 단일 가중치 드롭, 범위 경험치와 리스폰을 제공한다.
-- `Projectile`: `Entity`를 상속하는 비영속 투사체, 마스터 데이터/JSON 오버라이드 검증, owner·target·비행 시간·적중 수명주기와 정적 레지스트리 API. 상성은 owner 장비가 아닌 투사체 본체 태그만 사용한다.
+- `Projectile`: `Entity`를 상속하는 비영속 투사체, 마스터 데이터/JSON 오버라이드 검증, owner·target·비행 시간·적중 수명주기와 정적 레지스트리 API. 상성은 owner 장비가 아닌 투사체 본체 태그만 사용하며 전체 Entity lifecycle로 상태효과도 갱신한다.
 - `AttributeType`/`Attribute`, `StatType`/`Stat`: 클래스형 enum 메타데이터, 기본 능력치와 Entity 기반 source modifier 계산.
 - `Item`, `Inventory`, `EquipSlotType`/`Equipment`: `baseMetadata`+인스턴스 delta와 내구도의 조회·설정·증가·차감·dirty callback, 기본 공격 오버라이드 key, 이미지 API, 마스터/인스턴스 태그, 손실 없는 snapshot 이동, 무게·스택·슬롯·영속성. `selectItems/replaceSelectedItems`는 겹치는 predicate 재료를 중복 없이 선택하고 선검증 교환한다.
 - `Location`: 장소 태그, Monster/Resource 통합 오브젝트 API, ID 기반 `getNpcs/getNpc/hasNpc`, raw 배열을 숨긴 태그 포함 드롭 조회·단일/전체 회수, 연결 조건, 월드 레지스트리.

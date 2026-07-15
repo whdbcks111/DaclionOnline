@@ -23,11 +23,14 @@
 | LocationData / Location | locations.json | 정의 파일 자체 | `Location.tags.setRuntime` |
 | ShopData / Shop | shops.ts | 없음 | `Shop.tags.setRuntime` |
 | NPC | npcs.ts | 없음 | `NPC.tags.setRuntime` 가능 |
+| StatusEffectType / StatusEffect | 타입 정의 | 없음 | 인스턴스 metadata와 별개인 효과원 태그 |
 | DroppedItem | Item snapshot에서 보존 | 월드 드롭은 현재 비영속 | 원본 Item snapshot |
 
 일반 태그 조회에서는 장착 아이템 태그가 `Equipment.hasTag/getTags`를 통해 Entity의 유효 태그에 포함된다. 단, 상성 판정은 공격·피격 문맥을 분리한다. 공격자는 Entity 본체 태그와 `Equipment.hasEffectSourceTag`가 제공하는 무기 태그를 사용하고, 피격 대상은 장비를 전부 제외한 Entity 본체의 정의·영속·런타임 태그만 사용한다. 갑옷 패시브가 실제로 `Entity.tags.setRuntime(source, tags)`를 호출해 속성을 부여한 경우에는 본체 런타임 태그이므로 피격 상성에 포함된다.
 
 Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만 조회한다. owner 본체와 활·스태프 같은 발사 무기의 태그는 복사하거나 참조하지 않으므로, 투사체 상성은 `ProjectileData` 및 발사 metadata의 `tags` 오버라이드로만 결정된다. 피격 측 규칙은 다른 Entity와 같다.
+
+화염과 맹독 주기 피해는 `DamageCause.effectSource`에 StatusEffect 인스턴스를 전달한다. 따라서 시전자나 장비 태그가 아니라 효과 타입의 `property:fire/property:poison` 태그로 상성을 계산한다. `trait:living`은 Player와 무생물이 아닌 Monster에 기본 부여되며 화상·맹독·마비독 적용 조건에 사용된다.
 
 아이템을 인벤토리↔장비↔바닥으로 이동할 때는 `Item.snapshot`, `Item.fromSnapshot`, `Inventory.addItemSnapshot`, `Location.addDroppedItem`을 사용한다. 이 경로는 metadata, 내구도, 영속 태그를 함께 보존하며, 스택은 이 값들이 모두 같은 인스턴스끼리만 합쳐진다.
 
