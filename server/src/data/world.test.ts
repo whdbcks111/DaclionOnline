@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import Entity from '../models/Entity.js';
-import { getAllLocations, reloadAllLocations } from '../models/Location.js';
+import { getAllLocations, getLocation, normalizeLocationInput, reloadAllLocations } from '../models/Location.js';
 import { getAllMonsterData, getMonsterData } from '../models/Monster.js';
 import { getResourceData } from '../models/Resource.js';
 import type { LocationData } from '../../../shared/types.js';
@@ -44,6 +44,15 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
 
     reloadAllLocations(locations);
     assert.equal(getAllLocations().length, locations.length);
+    assert.equal(normalizeLocationInput('바람결 초원 3 · 맑은-샘터'), '바람결초원3맑은샘터');
+    assert.equal(
+        getLocation('meadow_2')?.findAvailableConnection({ level: 50 } as never, '초원3')?.locationId,
+        'meadow_3',
+    );
+    assert.equal(
+        getLocation('meadow_2')?.findAvailableConnection({ level: 50 } as never, 'MEADOW_3')?.locationId,
+        'meadow_3',
+    );
 });
 
 test('1~50레벨 동급 몬스터 성장 곡선은 처치당 20%에서 5%로 낮아진다', () => {

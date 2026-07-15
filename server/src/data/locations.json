@@ -48,7 +48,7 @@
   },
   {
     "id": "field",
-    "name": "바람결 초원 1 · 들머리",
+    "name": "바람결 초원 1 들머리",
     "zoneType": "normal",
     "x": 100,
     "y": 0,
@@ -66,7 +66,7 @@
   },
   {
     "id": "meadow_2",
-    "name": "바람결 초원 2 · 낮은 구릉",
+    "name": "바람결 초원 2 낮은 구릉",
     "zoneType": "normal",
     "x": 190,
     "y": 25,
@@ -83,7 +83,7 @@
   },
   {
     "id": "meadow_3",
-    "name": "바람결 초원 3 · 맑은 샘터",
+    "name": "바람결 초원 3 맑은 샘터",
     "zoneType": "normal",
     "x": 280,
     "y": 50,
@@ -102,7 +102,7 @@
   },
   {
     "id": "swamp_edge",
-    "name": "안개수렁 1 · 물먹은 둑",
+    "name": "안개수렁 1 물먹은 둑",
     "zoneType": "normal",
     "x": 350,
     "y": 120,
@@ -120,7 +120,7 @@
   },
   {
     "id": "swamp_basin",
-    "name": "안개수렁 2 · 잠든 포자밭",
+    "name": "안개수렁 2 잠든 포자밭",
     "zoneType": "normal",
     "x": 420,
     "y": 180,
@@ -138,7 +138,7 @@
   },
   {
     "id": "swamp_heart",
-    "name": "안개수렁 3 · 가라앉은 심부",
+    "name": "안개수렁 3 가라앉은 심부",
     "zoneType": "normal",
     "x": 485,
     "y": 245,
@@ -157,7 +157,7 @@
   },
   {
     "id": "ember_foothills",
-    "name": "홍염산지 1 · 잿빛 기슭",
+    "name": "홍염산지 1 잿빛 기슭",
     "zoneType": "normal",
     "x": 555,
     "y": 190,
@@ -175,7 +175,7 @@
   },
   {
     "id": "volcanic_slope",
-    "name": "홍염산지 2 · 불티 비탈",
+    "name": "홍염산지 2 불티 비탈",
     "zoneType": "normal",
     "x": 630,
     "y": 130,
@@ -193,7 +193,7 @@
   },
   {
     "id": "volcanic_crater",
-    "name": "홍염산지 3 · 끓는 분화구",
+    "name": "홍염산지 3 끓는 분화구",
     "zoneType": "normal",
     "x": 700,
     "y": 70,
@@ -212,7 +212,7 @@
   },
   {
     "id": "volcanic_core",
-    "name": "홍염산지 4 · 칼데라 중심",
+    "name": "홍염산지 4 칼데라 중심",
     "zoneType": "normal",
     "x": 765,
     "y": 15,
@@ -228,7 +228,7 @@
   },
   {
     "id": "feveric_mine",
-    "name": "피버릭 갱도 · 입구",
+    "name": "피버릭 갱도 입구",
     "zoneType": "normal",
     "x": 0,
     "y": -130,
@@ -262,7 +262,7 @@
   },
   {
     "id": "mine_junction",
-    "name": "피버릭 갱도 · 세 갈래 교차로",
+    "name": "피버릭 갱도 세 갈래 교차로",
     "zoneType": "normal",
     "x": 0,
     "y": -220,
@@ -281,7 +281,7 @@
   },
   {
     "id": "mine_east_tunnel",
-    "name": "피버릭 갱도 · 동쪽 굴절로",
+    "name": "피버릭 갱도 동쪽 굴절로",
     "zoneType": "normal",
     "x": 75,
     "y": -295,
@@ -300,7 +300,7 @@
   },
   {
     "id": "mine_west_tunnel",
-    "name": "피버릭 갱도 · 서쪽 붕락로",
+    "name": "피버릭 갱도 서쪽 붕락로",
     "zoneType": "normal",
     "x": -75,
     "y": -295,
@@ -319,7 +319,7 @@
   },
   {
     "id": "abandoned_rail",
-    "name": "피버릭 갱도 · 버려진 운반로",
+    "name": "피버릭 갱도 버려진 운반로",
     "zoneType": "normal",
     "x": 30,
     "y": -375,
@@ -338,7 +338,7 @@
   },
   {
     "id": "flooded_tunnel",
-    "name": "피버릭 갱도 · 침수 회랑",
+    "name": "피버릭 갱도 침수 회랑",
     "zoneType": "normal",
     "x": -95,
     "y": -390,
@@ -356,7 +356,7 @@
   },
   {
     "id": "crystal_gallery",
-    "name": "피버릭 갱도 · 수정 군락",
+    "name": "피버릭 갱도 수정 군락",
     "zoneType": "normal",
     "x": 110,
     "y": -410,
@@ -375,7 +375,7 @@
   },
   {
     "id": "deep_shaft",
-    "name": "피버릭 갱도 · 맥동하는 심층",
+    "name": "피버릭 갱도 맥동하는 심층",
     "zoneType": "normal",
     "x": 5,
     "y": -500,

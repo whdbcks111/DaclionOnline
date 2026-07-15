@@ -173,6 +173,23 @@ export default class Location implements TagReadable {
         return result;
     }
 
+    /** 구분 기호·공백 차이와 location ID를 허용하고, 부분 이름은 유일할 때만 찾는다. */
+    findAvailableConnection(player: Player, input: string): AvailableConnection | undefined {
+        const normalizedInput = normalizeLocationInput(input);
+        if (!normalizedInput) return undefined;
+        const connections = this.getAvailableConnections(player);
+        const exact = connections.find(connection =>
+            normalizeLocationInput(connection.name) === normalizedInput
+            || normalizeLocationInput(connection.locationId) === normalizedInput,
+        );
+        if (exact) return exact;
+
+        const partial = connections.filter(connection =>
+            normalizeLocationInput(connection.name).includes(normalizedInput),
+        );
+        return partial.length === 1 ? partial[0] : undefined;
+    }
+
     // -- 게임 루프 --
 
     update(dt: number): void {
@@ -276,4 +293,11 @@ export function distanceBetween(a: LocationData, b: LocationData): number {
     const dy = a.y - b.y;
     const dz = a.z - b.z;
     return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+export function normalizeLocationInput(input: string): string {
+    return input
+        .normalize('NFKC')
+        .toLocaleLowerCase('ko-KR')
+        .replace(/[\s·ㆍ•‧・._-]+/gu, '');
 }

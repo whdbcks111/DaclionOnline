@@ -127,7 +127,7 @@ export function initLocationCommands(): void {
             }
 
             const targetName = args.join(' ');
-            const target = connections.find(c => c.name === targetName);
+            const target = currentLocation.findAvailableConnection(player, targetName);
 
             if (!target) {
                 sendBotMessageToUser(userId, `이동할 수 없는 장소입니다: ${targetName}`);
