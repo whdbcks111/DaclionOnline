@@ -27,6 +27,12 @@
     font-weight: normal;
 }
 
+.level {
+    color: $color-secondary;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
 .bars {
     display: flex;
     flex-direction: column;

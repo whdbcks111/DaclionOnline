@@ -12,7 +12,7 @@
 
 `useHud()`의 설정 API는 `setVisible`, `setPosition`, `setAnchor`, `setPosUnit`, `setPosAnchor`, `setHudOpacity`, `setHudScale`, `resetPosition`이다. 퀵슬롯은 `addQuickSlot`, `removeQuickSlot`, `moveQuickSlot`, `updateQuickSlot`으로만 변경한다.
 
-`PlayerStatusHud`는 `playerStats.statusEffects`를 사용해 효과별 아이콘, 레벨, 반시계 방향 duration fill과 hover/focus 설명을 표시한다. 아이콘 URL은 서버가 보낸 key를 `/icons/{key}.png`로 해석하며 효과가 사라지면 다음 0.5초 HUD payload에서 목록에서도 제거된다.
+`PlayerStatusHud`는 이름 옆에 `playerStats.level`을 표시하고, `playerStats.statusEffects`를 사용해 효과별 아이콘, 레벨, 반시계 방향 duration fill과 hover/focus 설명을 표시한다. 아이콘 URL은 서버가 보낸 key를 `/icons/{key}.png`로 해석하며 효과가 사라지면 다음 0.5초 HUD payload에서 목록에서도 제거된다.
 
 ## 채팅 UI API
 

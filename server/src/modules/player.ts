@@ -76,6 +76,7 @@ export function sendPlayerStats(userId: number): void {
     const data = {
         userId:            player.userId,
         nickname:          getSessionByUserId(userId)?.nickname ?? '',
+        level:             player.level,
         life:              player.life,
         maxLife:           player.maxLife,
         mentality:         player.mentality,

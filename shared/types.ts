@@ -195,6 +195,7 @@ export interface StatusEffectHudData {
 export interface PlayerStatsData {
     userId: number
     nickname: string
+    level: number
     life: number
     maxLife: number
     mentality: number
