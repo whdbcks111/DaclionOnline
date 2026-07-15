@@ -49,6 +49,7 @@ export function initSkillCommands(): void {
                     const status = getSkillListStatus(skill);
                     builder.text('\n')
                         .color('gray', b => b.text(`${index + 1}. `))
+                        .icon(skill.data.icon)
                         .weight('bold', b => b.color('gold', b2 => b2.text(skill.name)))
                         .text(`  Lv.${skill.level}`);
                     if (status) {
@@ -110,6 +111,7 @@ export function initSkillCommands(): void {
             const nodes = [
                 ...chat()
                     .color('gray', b => b.text('[ 스킬 정보 ]  '))
+                    .icon(skill.data.icon)
                     .weight('bold', b => b.color('gold', b2 => b2.text(skill.name)))
                     .text(`  Lv.${skill.level} / ${skill.maxLevel}\n`)
                     .color('gray', b => b.text('─── 효과 ───\n'))

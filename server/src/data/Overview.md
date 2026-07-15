@@ -2,16 +2,16 @@
 
 서버 시작 시 import 부작용으로 런타임 레지스트리에 들어가는 마스터 데이터를 둔다.
 
-- `items.ts`: 아이템 이미지 key·`baseMetadata`·정의 태그·사용/공격 효과 등록. HP 회복은 `Entity.heal()`로 받는 치유량 상태효과를 반영한다. 인스턴스는 기본 metadata 전체를 복사하지 않고 top-level delta만 저장한다.
+- `items.ts`: 아이템 이미지 key·`baseMetadata`·정의 태그·사용/공격 효과 등록. HP 회복은 `Entity.heal()`로 받는 치유량 상태효과를 반영하며 `learn_skill` 스킬북은 신규 획득 성공 때만 한 개를 소비한다. 인스턴스는 기본 metadata 전체를 복사하지 않고 top-level delta만 저장한다.
 - `projectiles.ts`: 코드에서 참조하는 투사체 마스터 데이터. 물리 화살과 무탄약 무기용 마력 구체 예시를 등록한다.
-- `monsters.ts`: Lv.1~50 몬스터의 속성 태그, 물리/마법 공격, 선택적 상태이상, 능력치·보상·드롭 정의. 동급 기준 경험치는 `level * 20`을 사용하며 슬라임 계열, 늪 생물, 갱도 파수체, 화산 생물이 있다.
+- `monsters.ts`: Lv.1~50 몬스터의 속성 태그, 물리/마법 공격, 선택적 상태이상, 능력치·보상·드롭 정의. 일반 동급 경험치는 `level * 20`이며 슬라임 계열, 늪 생물, 갱도 파수체, 화산 생물과 실제 지각 붕괴 패턴·스킬북 드롭을 가진 광산 보스가 있다.
 - `resources.ts`: 비공격 Entity 자원의 능력치, 공격 가능 여부, 도구 제한, 가중치 드롭, 범위 경험치, 상호작용·랜덤 쿨타임 정의. 일반/응축/수정 광맥과 1~2시간 쿨타임 보물상자가 있다.
 - `shops.ts`: 별등불 잡화점과 은맥 광부 보급소에 연결되는 상점 태그, 매매 목록과 재고 정의.
 - `tagEffects.ts`: `source tag → target tag → modifier` 단방향 효과 테이블.
-- `locations.json`: 루미나르 개척촌, 바람결 초원, 안개수렁, 홍염산지, 미로형 피버릭 갱도의 좌표·연결·`monster | resource` 통합 오브젝트·NPC ID·상점 배치 원본.
+- `locations.json`: 루미나르 개척촌, 바람결 초원, 안개수렁, 홍염산지, 보스 수정 왕좌를 포함한 미로형 피버릭 갱도의 좌표·연결·`monster | resource` 통합 오브젝트·NPC ID·상점 배치 원본.
 - `locations.ts`: Lv.10/20/28/36/45 연결 condition handler 등록.
 - `progress.ts`: 게임 이벤트에 연결되는 공개 통계 정의. 현재 치명타 누적 횟수가 있다.
-- `skills.ts`: 스킬 마스터 metadata·계산 필드·포맷 문자열·획득/발동/수명주기. 현재 치명타 5회에 획득하는 강타가 있다.
+- `skills.ts`: 아이콘 key·스킬 마스터 metadata·계산 필드·포맷 문자열·Entity 공용 획득/발동/수명주기. 치명타 5회에 획득하는 강타와 플레이어/광산 보스가 함께 쓰는 지각 붕괴가 있다.
 - `crafting.ts`: predicate 재료·발견 조건·제작 시간·결과 factory 정의. 현재 철광석 3개와 돌 2개로 철 곡괭이를 만드는 `basic:iron_pickaxe`가 있다.
 - `npcs.ts`: NPC ID, 조건부 진입점과 generator 대화 장면 정의. 현재 루미나르 개척촌 안내인과 영속 사냥터 질문 플래그가 있다.
 

@@ -389,7 +389,25 @@
     "connections": [
       { "locationId": "abandoned_rail" },
       { "locationId": "flooded_tunnel" },
-      { "locationId": "crystal_gallery" }
+      { "locationId": "crystal_gallery" },
+      { "locationId": "crystal_throne", "condition": "level_28" }
+    ]
+  },
+  {
+    "id": "crystal_throne",
+    "name": "피버릭 갱도 수정 왕좌",
+    "zoneType": "normal",
+    "x": 5,
+    "y": -610,
+    "z": -165,
+    "tags": ["location:wilderness", "location:mine", "property:ice", "material:diamond"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "crystal_vein_overlord", "maxCount": 1, "respawnTime": 600 },
+      { "type": "resource", "dataId": "crystal_ore_deposit", "maxCount": 2, "respawnTime": 120 }
+    ],
+    "connections": [
+      { "locationId": "deep_shaft" }
     ]
   }
 ]

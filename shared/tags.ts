@@ -21,12 +21,14 @@ export const GameTags = Object.freeze({
     ENTITY_HUMANOID: 'entity:humanoid',
     ENTITY_ELEMENTAL: 'entity:elemental',
     ENTITY_BEAST: 'entity:beast',
+    ENTITY_BOSS: 'entity:boss',
 
     ITEM_CONSUMABLE: 'item:consumable',
     ITEM_WEAPON: 'item:weapon',
     ITEM_ARMOR: 'item:armor',
     ITEM_AMMUNITION: 'item:ammunition',
     ITEM_TOOL: 'item:tool',
+    ITEM_SKILL_BOOK: 'item:skill_book',
 
     PROPERTY_FIRE: 'property:fire',
     PROPERTY_WATER: 'property:water',

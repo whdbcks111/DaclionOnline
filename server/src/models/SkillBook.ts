@@ -1,8 +1,10 @@
 import prisma from '../config/prisma.js';
+import type Entity from './Entity.js';
 import type Player from './Player.js';
 import Skill, {
     SkillFinishReason,
     acceptSkill,
+    createSkillContext,
     getAllSkillData,
 } from './Skill.js';
 import type {
@@ -25,9 +27,14 @@ export interface SkillActivationOutcome {
     skill?: Skill;
 }
 
+export interface RuntimeSkillEntry {
+    skillDataId: string;
+    level?: number;
+}
+
 export default class SkillBook {
-    readonly playerId: number;
-    private owner?: Player;
+    readonly playerId: number | null;
+    private owner?: Entity;
     private readonly skills = new Map<string, Skill>();
     private readonly dirtyVersions = new Map<string, number>();
     private version = 0;
@@ -36,12 +43,22 @@ export default class SkillBook {
     private fullAutoAcquireCheck = true;
     private readonly changedProgress = new Set<string>();
 
-    private constructor(playerId: number) {
+    private constructor(playerId: number | null) {
         this.playerId = playerId;
     }
 
     static createEmpty(playerId: number): SkillBook {
         return new SkillBook(playerId);
+    }
+
+    /** DB 저장 없이 Entity 수명 동안만 유지되는 몬스터/NPC용 스킬북. */
+    static createRuntime(owner: Entity, entries: readonly RuntimeSkillEntry[] = []): SkillBook {
+        const book = new SkillBook(null);
+        book.bindOwner(owner);
+        for (const entry of entries) {
+            book.grant(entry.skillDataId, 'runtime', entry.level ?? 1);
+        }
+        return book;
     }
 
     static async load(playerId: number): Promise<SkillBook> {
@@ -69,13 +86,14 @@ export default class SkillBook {
 
     get dirty(): boolean { return this.dirtyVersions.size > 0; }
 
-    bindOwner(player: Player): void {
-        if (player.userId !== this.playerId) throw new Error('SkillBook owner mismatch');
-        if (this.owner && this.owner !== player) throw new Error('SkillBook owner is already bound');
-        this.owner = player;
-        player.progress.subscribeChanges(id => {
-            this.changedProgress.add(id);
-        });
+    bindOwner(owner: Entity): void {
+        if (this.playerId !== null && owner.playerUserId !== this.playerId) {
+            throw new Error('SkillBook owner mismatch');
+        }
+        if (this.owner && this.owner !== owner) throw new Error('SkillBook owner is already bound');
+        this.owner = owner;
+        const player = this.getPlayerOwner();
+        player?.progress.subscribeChanges(id => this.changedProgress.add(id));
     }
 
     has(skillDataId: string): boolean {
@@ -121,37 +139,41 @@ export default class SkillBook {
         }
     }
 
-    grant(skillDataId: string, acquisitionSource = 'system'): { skill: Skill; acquired: boolean } {
+    grant(skillDataId: string, acquisitionSource = 'system', level = 1): { skill: Skill; acquired: boolean } {
         const existing = this.get(skillDataId);
         if (existing) return { skill: existing, acquired: false };
         const owner = this.requireOwner();
         const skill = new Skill({
             playerId: this.playerId,
             skillDataId,
+            level,
             acquisitionSource,
         });
         this.attach(skill);
         this.markDirty(skill.skillDataId);
 
-        const context = { player: owner, skill };
+        const context = createSkillContext(owner, skill);
         try {
             skill.data.onAcquire?.(context);
         } catch (error) {
             logger.error(`스킬 획득 초기화 실패: ${skill.skillDataId}`, error);
         }
 
-        const acquiredText = `스킬 [ ${skill.name} ] 를 획득했습니다!`;
-        sendBotMessageToUser(owner.userId, chat()
-            .color('gold', b => b.weight('bold', b2 => b2.text(acquiredText)))
-            .build());
-        sendNotificationToUser(owner.userId, {
-            key: `skill-acquired:${skill.skillDataId}`,
-            message: acquiredText,
-        });
-        emitGameEvent(GameEventIds.SKILL_ACQUIRED, {
-            actor: owner,
-            data: { skillDataId: skill.skillDataId, source: acquisitionSource },
-        });
+        const player = this.getPlayerOwner();
+        if (player) {
+            const acquiredText = `스킬 [ ${skill.name} ] 를 획득했습니다!`;
+            sendBotMessageToUser(player.userId, chat()
+                .color('gold', b => b.weight('bold', b2 => b2.text(acquiredText)))
+                .build());
+            sendNotificationToUser(player.userId, {
+                key: `skill-acquired:${skill.skillDataId}`,
+                message: acquiredText,
+            });
+            emitGameEvent(GameEventIds.SKILL_ACQUIRED, {
+                actor: owner,
+                data: { skillDataId: skill.skillDataId, source: acquisitionSource },
+            });
+        }
         return { skill, acquired: true };
     }
 
@@ -162,11 +184,23 @@ export default class SkillBook {
             : { matched: false, activated: false, reason: '보유하고 있거나 현재 표시 가능한 스킬이 아닙니다.' };
     }
 
+    /** 보유한 스킬 ID를 직접 발동한다. 몬스터 패턴과 서버 자동 로직의 진입점이다. */
+    activateById(skillDataId: string): SkillActivationOutcome {
+        const skill = this.get(skillDataId);
+        return skill
+            ? this.activate(skill, false)
+            : { matched: false, activated: false, reason: '보유한 스킬이 아닙니다.' };
+    }
+
+    hasActiveSkill(): boolean {
+        return this.getAll().some(skill => skill.isActive);
+    }
+
     activateFromMessage(message: string): SkillActivationOutcome {
         const owner = this.requireOwner();
         for (const skill of this.getVisible()) {
             try {
-                if (skill.data.activateOnMessage?.({ player: owner, skill, message })) {
+                if (skill.data.activateOnMessage?.({ ...createSkillContext(owner, skill), message })) {
                     return this.activate(skill, true);
                 }
             } catch (error) {
@@ -178,10 +212,11 @@ export default class SkillBook {
 
     update(dt: number): void {
         const owner = this.requireOwner();
+        const player = this.getPlayerOwner();
         this.autoAcquireTimer -= dt;
         this.autoActivateTimer -= dt;
 
-        if (this.autoAcquireTimer <= 0) {
+        if (player && this.autoAcquireTimer <= 0) {
             this.autoAcquireTimer = 0.5;
             this.evaluateAutoAcquire();
         }
@@ -190,7 +225,7 @@ export default class SkillBook {
             this.autoActivateTimer = 0.25;
             for (const skill of this.getVisible()) {
                 try {
-                    if (skill.data.autoActivate?.({ player: owner, skill })) {
+                    if (skill.data.autoActivate?.(createSkillContext(owner, skill))) {
                         this.activate(skill, false);
                     }
                 } catch (error) {
@@ -209,7 +244,7 @@ export default class SkillBook {
             }
             if (usable.accepted) {
                 try {
-                    skill.data.onPassiveUpdate?.({ player: owner, skill }, dt);
+                    skill.data.onPassiveUpdate?.(createSkillContext(owner, skill), dt);
                 } catch (error) {
                     logger.error(`스킬 패시브 업데이트 실패: ${skill.skillDataId}`, error);
                 }
@@ -239,15 +274,16 @@ export default class SkillBook {
     }
 
     async save(): Promise<void> {
-        if (!this.dirty) return;
+        const playerId = this.playerId;
+        if (playerId === null || !this.dirty) return;
         const snapshots = [...this.dirtyVersions].flatMap(([id, version]) => {
             const skill = this.skills.get(id);
             return skill ? [{ id, version, skill }] : [];
         });
         const operations = snapshots.map(({ skill }) => prisma.playerSkill.upsert({
-            where: { playerId_skillDataId: { playerId: this.playerId, skillDataId: skill.skillDataId } },
+            where: { playerId_skillDataId: { playerId, skillDataId: skill.skillDataId } },
             create: {
-                playerId: this.playerId,
+                playerId,
                 skillDataId: skill.skillDataId,
                 level: skill.level,
                 cooldownEndsAt: skill.getCooldownEndDate(),
@@ -282,26 +318,28 @@ export default class SkillBook {
             denied = { accepted: false, reason: '스킬 발동 조건을 확인할 수 없습니다.' };
         }
         if (!denied.accepted) {
-            if (notifyDenied) sendNotificationToUser(owner.userId, {
+            const player = this.getPlayerOwner();
+            if (notifyDenied && player) sendNotificationToUser(player.userId, {
                 key: `skill-denied:${skill.skillDataId}`,
                 message: denied.reason,
             });
             return { matched: true, activated: false, reason: denied.reason, skill };
         }
 
-        if (skill.data.activationMessage) {
-            sendPlayerTextToCurrentChannel(owner.userId, skill.format(skill.data.activationMessage, owner));
+        const player = this.getPlayerOwner();
+        if (player && skill.data.activationMessage) {
+            sendPlayerTextToCurrentChannel(player.userId, skill.format(skill.data.activationMessage, owner));
         }
 
         let startResult: SkillStartResult | void;
         try {
-            startResult = skill.data.onStart?.({ player: owner, skill });
+            startResult = skill.data.onStart?.(createSkillContext(owner, skill));
             skill.beginActive(startResult ?? {});
             skill.startCooldown(skill.getMaxCooldown(owner));
         } catch (error) {
             logger.error(`스킬 시작 실패: ${skill.skillDataId}`, error);
             const reason = '스킬 발동 중 오류가 발생했습니다.';
-            if (notifyDenied) sendNotificationToUser(owner.userId, {
+            if (notifyDenied && player) sendNotificationToUser(player.userId, {
                 key: `skill-error:${skill.skillDataId}`,
                 message: reason,
             });
@@ -330,7 +368,7 @@ export default class SkillBook {
         }
         const usable = skill.checkUsable(owner);
         if (!usable.accepted) return usable;
-        return skill.data.canActivate?.({ player: owner, skill }) ?? acceptSkill();
+        return skill.data.canActivate?.(createSkillContext(owner, skill)) ?? acceptSkill();
     }
 
     private finish(skill: Skill, reason: SkillFinishReason): void {
@@ -355,6 +393,8 @@ export default class SkillBook {
 
     private evaluateAutoAcquire(): void {
         const owner = this.requireOwner();
+        const player = this.getPlayerOwner();
+        if (!player || this.playerId === null) return;
         const changed = new Set(this.changedProgress);
         this.changedProgress.clear();
         for (const data of getAllSkillData()) {
@@ -363,7 +403,7 @@ export default class SkillBook {
                 && !data.autoAcquire.watchedProgress.some(key => changed.has(key))) continue;
             const preview = new Skill({ playerId: this.playerId, skillDataId: data.id });
             try {
-                if (data.autoAcquire.check({ player: owner, skill: preview })) {
+                if (data.autoAcquire.check(createSkillContext(owner, preview))) {
                     this.grant(data.id, 'automatic');
                 }
             } catch (error) {
@@ -375,8 +415,7 @@ export default class SkillBook {
 
     private createUpdateContext(skill: Skill): SkillUpdateContext {
         return {
-            player: this.requireOwner(),
-            skill,
+            ...createSkillContext(this.requireOwner(), skill),
             state: skill.getActiveStateSnapshot(),
             elapsed: skill.activeElapsed,
             duration: skill.activeDuration,
@@ -389,11 +428,17 @@ export default class SkillBook {
     }
 
     private markDirty(id: string): void {
+        if (this.playerId === null) return;
         this.dirtyVersions.set(id, ++this.version);
     }
 
-    private requireOwner(): Player {
+    private requireOwner(): Entity {
         if (!this.owner) throw new Error(`SkillBook owner is not bound: ${this.playerId}`);
         return this.owner;
+    }
+
+    private getPlayerOwner(): Player | null {
+        const owner = this.owner;
+        return owner?.isPlayer ? owner as Player : null;
     }
 }

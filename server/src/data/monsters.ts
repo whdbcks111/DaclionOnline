@@ -173,6 +173,47 @@ defineWorldMonster({
 });
 
 defineWorldMonster({
+    id: 'crystal_vein_overlord',
+    name: '수정맥의 군주',
+    level: 32,
+    baseAttribute: {
+        // 인접 Lv.30 심층 맥동체(760)의 6배 이상인 보스 체력.
+        maxLife: 4800,
+        atk: 122,
+        magicForce: 118,
+        def: 58,
+        magicDef: 64,
+        speed: 0.7,
+        attackSpeed: 0.22,
+        critRate: 0.06,
+        critDmg: 1.6,
+    },
+    expReward: 32 * 20 * 6,
+    drops: [
+        { itemDataId: 'diamond', minCount: 1, maxCount: 2, chance: 0.35 },
+        { itemDataId: 'ruby', minCount: 1, maxCount: 2, chance: 0.25 },
+        { itemDataId: 'emerald', minCount: 1, maxCount: 2, chance: 0.25 },
+        { itemDataId: 'seismic_crush_skillbook', minCount: 1, maxCount: 1, chance: 0.03 },
+    ],
+    goldReward: { min: 180, max: 280 },
+    attack: { damageType: 'physical' },
+    skills: [{ skillDataId: 'seismic_crush', level: 3 }],
+    skillPattern: {
+        sequence: ['seismic_crush'],
+        initialDelay: 5,
+        interval: { min: 10, max: 13 },
+    },
+    tags: [
+        GameTags.ENTITY_BOSS,
+        GameTags.ENTITY_ELEMENTAL,
+        GameTags.TRAIT_INANIMATE,
+        GameTags.PROPERTY_NATURAL,
+        GameTags.PROPERTY_ICE,
+        GameTags.MATERIAL_DIAMOND,
+    ],
+});
+
+defineWorldMonster({
     id: 'ember_slime',
     name: '불씨 슬라임',
     level: 30,

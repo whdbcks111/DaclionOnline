@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
+import type Entity from './Entity.js';
 import type Player from './Player.js';
 import { TagCollection, normalizeTags } from '../../../shared/tags.js';
 import type { TagId, TagReadable } from '../../../shared/tags.js';
@@ -15,7 +16,10 @@ export type SkillMetadata = MetadataRecord;
 export type SkillCalculatedValue = string | number | boolean;
 
 export interface SkillContext {
-    player: Player;
+    /** 스킬을 실제로 발동하는 Entity. 플레이어와 몬스터가 같은 SkillData를 공유한다. */
+    owner: Entity;
+    /** 플레이어 소유자일 때만 존재하는 플레이어 전용 API 경계. */
+    player: Player | null;
     skill: Skill;
 }
 
@@ -72,6 +76,7 @@ export interface SkillAutoAcquire {
 export interface SkillData {
     id: string;
     name: string;
+    icon: string;
     aliases?: readonly string[];
     maxLevel: number;
     descriptionTemplate: string;
@@ -100,7 +105,7 @@ const METADATA_STORAGE_VERSION = 1;
 const skillDataRegistry = new Map<string, Readonly<SkillData>>();
 
 export default class Skill implements TagReadable {
-    readonly playerId: number;
+    readonly playerId: number | null;
     readonly skillDataId: string;
     readonly tags: TagCollection;
     readonly acquiredAt: Date;
@@ -117,7 +122,7 @@ export default class Skill implements TagReadable {
     private _activeState: SkillMetadata = {};
 
     constructor(options: {
-        playerId: number;
+        playerId: number | null;
         skillDataId: string;
         level?: number;
         cooldownEndsAt?: Date | number | null;
@@ -213,13 +218,13 @@ export default class Skill implements TagReadable {
         return true;
     }
 
-    getCalculatedField(key: string, player: Player): SkillCalculatedValue | undefined {
-        if (key === 'maxCooldown') return this.getMaxCooldown(player);
-        return this.data.calculatedFields?.[key]?.({ player, skill: this });
+    getCalculatedField(key: string, owner: Entity): SkillCalculatedValue | undefined {
+        if (key === 'maxCooldown') return this.getMaxCooldown(owner);
+        return this.data.calculatedFields?.[key]?.(createSkillContext(owner, this));
     }
 
-    getMaxCooldown(player: Player): number {
-        const value = this.data.calculateMaxCooldown?.({ player, skill: this }) ?? 0;
+    getMaxCooldown(owner: Entity): number {
+        const value = this.data.calculateMaxCooldown?.(createSkillContext(owner, this)) ?? 0;
         if (!Number.isFinite(value) || value < 0) {
             throw new Error(`Invalid skill cooldown: ${this.skillDataId}/${value}`);
         }
@@ -242,29 +247,29 @@ export default class Skill implements TagReadable {
         return this._cooldownEndsAt > Date.now() ? new Date(this._cooldownEndsAt) : null;
     }
 
-    isVisibleTo(player: Player): boolean {
-        return this.data.isVisible?.({ player, skill: this }) ?? true;
+    isVisibleTo(owner: Entity): boolean {
+        return this.data.isVisible?.(createSkillContext(owner, this)) ?? true;
     }
 
-    checkUsable(player: Player): SkillCheckResult {
-        return this.data.canUse?.({ player, skill: this }) ?? acceptSkill();
+    checkUsable(owner: Entity): SkillCheckResult {
+        return this.data.canUse?.(createSkillContext(owner, this)) ?? acceptSkill();
     }
 
-    formatDescription(player: Player): string {
-        return this.format(this.data.descriptionTemplate, player);
+    formatDescription(owner: Entity): string {
+        return this.format(this.data.descriptionTemplate, owner);
     }
 
-    formatCost(player: Player): string {
-        return this.format(this.data.costTemplate, player);
+    formatCost(owner: Entity): string {
+        return this.format(this.data.costTemplate, owner);
     }
 
-    formatActivationCondition(player: Player): string {
-        return this.format(this.data.activationConditionTemplate, player);
+    formatActivationCondition(owner: Entity): string {
+        return this.format(this.data.activationConditionTemplate, owner);
     }
 
-    format(template: string, player: Player): string {
+    format(template: string, owner: Entity): string {
         return template.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (original, rawKey: string) => {
-            const value = this.resolveTemplateValue(rawKey.trim(), player);
+            const value = this.resolveTemplateValue(rawKey.trim(), owner);
             return value === undefined ? original : formatCalculatedValue(value);
         });
     }
@@ -318,16 +323,16 @@ export default class Skill implements TagReadable {
         this._activeState = {};
     }
 
-    private resolveTemplateValue(key: string, player: Player): SkillCalculatedValue | MetadataValue | undefined {
+    private resolveTemplateValue(key: string, owner: Entity): SkillCalculatedValue | MetadataValue | undefined {
         if (key === 'skill.name' || key === 'name') return this.name;
         if (key === 'skill.level' || key === 'level') return this.level;
         if (key === 'skill.maxLevel' || key === 'maxLevel') return this.maxLevel;
         if (key === 'skill.remainingCooldown' || key === 'remainingCooldown') {
             return this.getRemainingCooldown();
         }
-        if (key.startsWith('calc.')) return this.getCalculatedField(key.slice(5), player);
+        if (key.startsWith('calc.')) return this.getCalculatedField(key.slice(5), owner);
         if (key.startsWith('meta.')) return this.getMetadata(key.slice(5));
-        return this.getCalculatedField(key, player) ?? this.getMetadata(key);
+        return this.getCalculatedField(key, owner) ?? this.getMetadata(key);
     }
 
     static fromPersistence(options: {
@@ -357,6 +362,7 @@ export default class Skill implements TagReadable {
 export function defineSkill(data: SkillData): void {
     const id = normalizeSkillId(data.id);
     if (!data.name.trim()) throw new Error(`Skill name must not be empty: ${id}`);
+    if (!data.icon.trim()) throw new Error(`Skill icon must not be empty: ${id}`);
     if (!Number.isInteger(data.maxLevel) || data.maxLevel < 1) {
         throw new Error(`Invalid skill max level: ${id}`);
     }
@@ -385,6 +391,14 @@ export function getAllSkillData(): ReadonlyArray<Readonly<SkillData>> {
 
 export function acceptSkill(): SkillCheckResult { return { accepted: true }; }
 export function denySkill(reason: string): SkillCheckResult { return { accepted: false, reason }; }
+
+export function createSkillContext(owner: Entity, skill: Skill): SkillContext {
+    return {
+        owner,
+        player: owner.isPlayer ? owner as Player : null,
+        skill,
+    };
+}
 
 function normalizeSkillId(id: string): string {
     const normalized = id.trim().toLowerCase();

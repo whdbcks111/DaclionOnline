@@ -57,6 +57,34 @@ registerItemUse('heal_mp', (inv, item, finish) => {
     startCoroutine(healRoutine(item.getMetadata<number>('amount') ?? 0, item.getMetadata<number>('time') ?? 1));
 });
 
+registerItemUse('learn_skill', (inv, item, finish) => {
+    try {
+        const player = getPlayerByUserId(inv.playerId);
+        if (!player) return;
+        const skillDataId = item.getMetadata<string>('skillDataId');
+        if (!skillDataId) {
+            sendNotificationToUser(player.userId, {
+                key: 'item:learn_skill:invalid',
+                message: '이 스킬북에는 유효한 스킬 정보가 없습니다.',
+            });
+            return;
+        }
+        const result = player.skills.grant(skillDataId, `item:${item.itemDataId}`);
+        if (!result.acquired) {
+            sendNotificationToUser(player.userId, {
+                key: `item:learn_skill:owned:${skillDataId}`,
+                message: `이미 스킬 [ ${result.skill.name} ] 을(를) 보유하고 있습니다.`,
+            });
+            return;
+        }
+        inv.removeItemInstance(item, 1);
+    } catch (error) {
+        logger.error('스킬북 사용 실패', error);
+    } finally {
+        finish();
+    }
+});
+
 defineItem({
     id: 'health_potion',
     name: '체력 포션',
@@ -232,6 +260,23 @@ defineItem({
     ],
     baseDurability: 180,
     tags: [GameTags.ITEM_TOOL, GameTags.TOOL_MINING, GameTags.MATERIAL_IRON],
+});
+
+defineItem({
+    id: 'seismic_crush_skillbook',
+    name: '지각 붕괴 스킬북',
+    description: '사용하면 스킬 [ 지각 붕괴 ] 를 획득하는 희귀한 수정 각인서.',
+    image: 'items/seismic_crush_skillbook',
+    category: '스킬북',
+    weight: 0.3,
+    stackable: true,
+    maxStack: 10,
+    baseMetadata: { skillDataId: 'seismic_crush' },
+    onUse: 'learn_skill',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_DIAMOND],
 });
 
 const mineralItems = [

@@ -11,6 +11,8 @@ import { sendBotMessageToUser } from "../modules/message.js";
 import { GameTags, normalizeTags } from "../../../shared/tags.js";
 import type { TagId } from "../../../shared/tags.js";
 import { StatusEffectType } from "./StatusEffect.js";
+import SkillBook from "./SkillBook.js";
+import type { RuntimeSkillEntry, SkillActivationOutcome } from "./SkillBook.js";
 
 /** 드롭 아이템 정보 */
 export interface DropInfo {
@@ -42,6 +44,15 @@ export interface MonsterAttackProfile {
     effect?: MonsterAttackEffect;
 }
 
+export interface MonsterSkillPattern {
+    /** 등록된 스킬 ID를 이 순서대로 반복한다. */
+    sequence: string[];
+    /** 전투를 시작한 뒤 첫 패턴까지 기다리는 시간(초). */
+    initialDelay: number;
+    /** 각 패턴 사이의 무작위 대기 범위(초). */
+    interval: { min: number; max: number };
+}
+
 /** 몬스터 정의 (마스터 데이터, 코드에서 직접 정의) */
 export interface MonsterData {
     id: string;
@@ -54,6 +65,8 @@ export interface MonsterData {
     goldReward?: GoldReward;
     equipments: MonsterEquipInfo[];
     attack?: MonsterAttackProfile;
+    skills?: RuntimeSkillEntry[];
+    skillPattern?: MonsterSkillPattern;
     tags: TagId[];
 }
 
@@ -66,7 +79,12 @@ export default class Monster extends Entity {
     readonly respawnTime: number;
     /** true이면 일회성 몬스터 — 사망 시 리스폰 없이 즉시 제거 */
     readonly isOneShot: boolean;
+    /** 플레이어와 동일한 SkillData를 실행하되 DB에는 저장하지 않는 런타임 스킬북. */
+    readonly skills: SkillBook;
     private readonly attackProfile?: Readonly<MonsterAttackProfile>;
+    private readonly skillPattern?: Readonly<MonsterSkillPattern>;
+    private skillPatternIndex = 0;
+    private skillPatternTimer = 0;
 
     override get deathDuration(): number { return this.respawnTime; }
 
@@ -89,6 +107,13 @@ export default class Monster extends Entity {
             ...data.attack,
             effect: data.attack.effect ? { ...data.attack.effect } : undefined,
         } : undefined;
+        this.skillPattern = data.skillPattern ? {
+            ...data.skillPattern,
+            sequence: [...data.skillPattern.sequence],
+            interval: { ...data.skillPattern.interval },
+        } : undefined;
+        this.skillPatternTimer = this.skillPattern?.initialDelay ?? 0;
+        this.skills = SkillBook.createRuntime(this, data.skills ?? []);
 
         // 기본 장비 장착
         for (const eq of data.equipments) {
@@ -109,8 +134,13 @@ export default class Monster extends Entity {
         return result;
     }
 
+    /** 보유한 실제 SkillData를 몬스터 AI나 외부 패턴 로직에서 직접 발동한다. */
+    activateSkill(skillDataId: string): SkillActivationOutcome {
+        return this.skills.activateById(skillDataId);
+    }
+
     /** 타겟 공격 AI */
-    override update(_dt: number): void {
+    override update(dt: number): void {
         if (this.isDead) return;
 
         const location = getLocation(this.locationId);
@@ -119,7 +149,27 @@ export default class Monster extends Entity {
         const target = this.currentTarget;
         if (!target || target.isDefeated || target.locationId !== this.locationId) {
             this.currentTarget = null;
+            this.skillPatternTimer = this.skillPattern?.initialDelay ?? 0;
             return;
+        }
+
+        const wasSkillActive = this.skills.hasActiveSkill();
+        this.skills.update(dt);
+        if (wasSkillActive || this.skills.hasActiveSkill()) return;
+
+        if (this.skillPattern) {
+            this.skillPatternTimer -= dt;
+            if (this.skillPatternTimer <= 0) {
+                const skillId = this.skillPattern.sequence[this.skillPatternIndex];
+                const outcome = skillId ? this.activateSkill(skillId) : undefined;
+                if (outcome?.activated) {
+                    this.skillPatternIndex = (this.skillPatternIndex + 1) % this.skillPattern.sequence.length;
+                    this.skillPatternTimer = rollRange(this.skillPattern.interval);
+                    return;
+                }
+                // 일반 공격 쿨다운 등 일시적 조건이면 짧게 재시도한다.
+                this.skillPatternTimer = 0.5;
+            }
         }
         const result = this.attack(target, this.attackProfile?.damageType ?? 'physical');
         const effect = this.attackProfile?.effect;
@@ -130,6 +180,7 @@ export default class Monster extends Entity {
     }
 
     override onDeath(): void {
+        this.skills.finishAll();
         super.onDeath();
 
         const attackOwner = this.lastDamageCause?.causeEntity?.attackOwner;
@@ -178,6 +229,12 @@ export default class Monster extends Entity {
         }
     }
 
+    override respawn(): void {
+        super.respawn();
+        this.skillPatternTimer = this.skillPattern?.initialDelay ?? 0;
+        this.skillPatternIndex = 0;
+    }
+
     /** 골드 보상을 굴려 최종 지급량 반환 */
     rollGold(): number {
         const r = this.goldReward;
@@ -212,11 +269,19 @@ export function defineMonster(data: MonsterData): void {
         throw new Error(`Invalid MonsterData: ${data.id}`);
     }
     const effect = data.attack?.effect;
+    const pattern = data.skillPattern;
     if (effect && (!StatusEffectType.fromKey(effect.statusEffectId)
         || !Number.isFinite(effect.chance) || effect.chance < 0 || effect.chance > 1
         || !Number.isFinite(effect.duration) || effect.duration <= 0
         || !Number.isInteger(effect.level) || effect.level < 1)) {
         throw new Error(`Invalid monster attack effect: ${data.id}`);
+    }
+    if (pattern && (pattern.sequence.length === 0
+        || pattern.sequence.some(id => !data.skills?.some(skill => skill.skillDataId === id))
+        || !Number.isFinite(pattern.initialDelay) || pattern.initialDelay < 0
+        || !Number.isFinite(pattern.interval.min) || !Number.isFinite(pattern.interval.max)
+        || pattern.interval.min <= 0 || pattern.interval.max < pattern.interval.min)) {
+        throw new Error(`Invalid monster skill pattern: ${data.id}`);
     }
     monsterDataCache.set(data.id, {
         ...data,
@@ -226,6 +291,12 @@ export function defineMonster(data: MonsterData): void {
         attack: data.attack ? {
             ...data.attack,
             effect: effect ? { ...effect } : undefined,
+        } : undefined,
+        skills: data.skills?.map(skill => ({ ...skill })),
+        skillPattern: pattern ? {
+            ...pattern,
+            sequence: [...pattern.sequence],
+            interval: { ...pattern.interval },
         } : undefined,
         tags: normalizeTags(data.tags),
     });
@@ -239,4 +310,8 @@ export function getMonsterData(id: string): MonsterData | undefined {
 /** 모든 몬스터 정의 조회 */
 export function getAllMonsterData(): MonsterData[] {
     return Array.from(monsterDataCache.values());
+}
+
+function rollRange(range: { min: number; max: number }): number {
+    return range.min + Math.random() * (range.max - range.min);
 }

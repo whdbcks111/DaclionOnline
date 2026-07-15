@@ -7,17 +7,21 @@ import Equipment from './Equipment.js';
 import { AttributeType } from './Attribute.js';
 import { PlayerProgress } from './Progress.js';
 import SkillBook from './SkillBook.js';
+import Inventory from './Inventory.js';
 import { getIO, initSocket } from '../modules/socket.js';
 import { getChannelHistory } from '../modules/channel.js';
 import { createSession, removeSession } from '../modules/login.js';
+import { registerOnlinePlayer, unregisterOnlinePlayer } from '../modules/playerRegistry.js';
 import '../data/progress.js';
 import '../data/skills.js';
+import '../data/items.js';
 
 class TestSkillPlayer extends Entity {
     override readonly name = '스킬 시험 플레이어';
     readonly userId = 9301;
     readonly progress = PlayerProgress.createEmpty(this.userId);
     readonly skills = SkillBook.createEmpty(this.userId);
+    readonly inventory = Inventory.createEmpty(this.userId, 100);
 
     constructor() {
         super(1, 0, 'test', { maxLife: 100 }, Equipment.createEmpty());
@@ -62,6 +66,21 @@ class TestTarget extends Entity {
     }
 }
 
+class TestMonsterSkillOwner extends Entity {
+    override readonly name = '보스 시험체';
+    readonly skills: SkillBook;
+
+    constructor() {
+        super(30, 0, 'test', {
+            maxLife: 1000,
+            magicForce: 100,
+            speed: 1,
+            attackSpeed: 0.2,
+        }, Equipment.createEmpty());
+        this.skills = SkillBook.createRuntime(this, [{ skillDataId: 'seismic_crush', level: 3 }]);
+    }
+}
+
 const httpServer = createServer();
 initSocket(httpServer, 'http://localhost');
 test.after(() => { getIO().close(); });
@@ -100,5 +119,42 @@ test('강타는 일회성 관통을 제거하고 확정 치명타 공격과 비�
         assert.ok(player.attackCooldown > 0);
     } finally {
         removeSession(sessionToken);
+    }
+});
+
+test('몬스터 런타임 스킬북도 플레이어와 같은 SkillData 수명주기를 실행한다', () => {
+    const monster = new TestMonsterSkillOwner();
+    const target = new TestTarget();
+    monster.currentTarget = target;
+
+    const outcome = monster.skills.activateById('seismic_crush');
+    assert.equal(outcome.activated, true);
+    assert.equal(monster.skills.get('seismic_crush')?.isActive, true);
+
+    monster.skills.update(1.8);
+
+    assert.ok(target.life < target.maxLife);
+    assert.equal(monster.skills.get('seismic_crush')?.isActive, false);
+    assert.equal(monster.skills.get('seismic_crush')?.data.icon, 'skills/seismic_crush');
+});
+
+test('스킬북은 신규 스킬 획득 때만 아이템 한 개를 소비한다', async () => {
+    const player = new TestSkillPlayer();
+    registerOnlinePlayer(player as unknown as Player);
+    try {
+        player.inventory.addItem('seismic_crush_skillbook', 1);
+        const firstBook = player.inventory.getFirstItemByData('seismic_crush_skillbook');
+        assert.ok(firstBook);
+        await player.inventory.useItem(firstBook.id);
+        assert.equal(player.skills.has('seismic_crush'), true);
+        assert.equal(player.inventory.getCount('seismic_crush_skillbook'), 0);
+
+        player.inventory.addItem('seismic_crush_skillbook', 1);
+        const duplicateBook = player.inventory.getFirstItemByData('seismic_crush_skillbook');
+        assert.ok(duplicateBook);
+        await player.inventory.useItem(duplicateBook.id);
+        assert.equal(player.inventory.getCount('seismic_crush_skillbook'), 1);
+    } finally {
+        unregisterOnlinePlayer(player.userId);
     }
 });

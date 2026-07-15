@@ -39,11 +39,11 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 ## 스킬 정의와 인스턴스
 
-`data/skills.ts`의 `defineSkill()`이 코드 마스터 데이터를 등록하고, Player별 `Skill`은 레벨·쿨다운 종료 시각·획득 정보·영속 태그·metadata delta만 가진다. `SkillBook`이 보유 목록과 수명주기, 자동 획득·자동 발동, dirty 저장을 소유한다.
+`data/skills.ts`의 `defineSkill()`이 코드 마스터 데이터를 등록하고, Player별 `Skill`은 레벨·쿨다운 종료 시각·획득 정보·영속 태그·metadata delta만 가진다. `SkillBook`이 보유 목록과 수명주기, 자동 획득·자동 발동, dirty 저장을 소유한다. `SkillContext.owner`는 실제 시전자 Entity이며 `player`는 플레이어 시전자일 때만 존재하므로 같은 `SkillData`를 Monster도 실행할 수 있다. `SkillBook.createRuntime()`은 몬스터 수명 동안만 유지되는 비영속 스킬북을 만든다.
 
 `SkillData`의 확장 지점은 다음과 같다.
 
-- 표시: `descriptionTemplate`, `costTemplate`, `activationConditionTemplate`, `isVisible`.
+- 표시: `icon`, `descriptionTemplate`, `costTemplate`, `activationConditionTemplate`, `isVisible`.
 - 계산: `baseMetadata`, `calculatedFields`, `calculateMaxCooldown`.
 - 획득/발동: `autoAcquire`, `autoActivate`, `activateOnMessage`, `canUse`, `canActivate`.
 - 수명주기: `onAcquire`, `onStart`, `onUpdate`, `onFinish`, `onPassiveUpdate`.
@@ -66,7 +66,7 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 ## 발동 경로와 수명주기
 
-- `/스킬목록` 또는 `sl`: 현재 표시 가능한 보유 스킬의 레벨·사용 상태와 정보/사용 버튼을 표시한다.
+- `/스킬목록` 또는 `sl`: 현재 표시 가능한 보유 스킬의 아이콘·레벨·사용 상태와 정보/사용 버튼을 표시한다.
 - `/스킬 스킬이름` 또는 `su 스킬이름`: 명령 입력은 숨기고 `SkillBook.activateByInput()`을 호출한다.
 - `/스킬정보 스킬이름` 또는 `si 스킬이름`: 계산된 상세 정보와 현재 발동 상태를 표시한다.
 - 일반 채팅: 명령이 아닌 메시지를 각 스킬의 `activateOnMessage`로 검사하고 일치하면 원문 전송 대신 같은 발동 API를 호출한다.
@@ -87,6 +87,14 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 - 일반 `Entity.attack()`을 사용하므로 방어·상성·자원 도구 제한·공격 쿨다운·주무기 내구도 규칙을 그대로 따른다.
 
 `/스킬정보 강타`는 레벨, 계산된 설명, 소모값, 재사용 대기시간, 포맷된 발동 조건을 각각 구분해 표시한다.
+
+## 지각 붕괴와 몬스터 스킬
+
+`seismic_crush`(지각 붕괴)는 1.8초 시전 예고 후 현재 대상에게 마법 피해를 주고 확률적으로 마비독을 부여한다. 플레이어는 정신력을 소모하지만 Monster 런타임 시전에는 플레이어 자원 비용이 없다. `SkillBook.activateById()`가 몬스터 패턴의 공개 발동 경계이며, `MonsterData.skills`가 보유 ID·레벨을, `skillPattern`이 순환 순서·첫 지연·반복 간격을 정의한다. 시전 중에는 일반 공격을 수행하지 않는다.
+
+피버릭 갱도 수정 왕좌의 보스 `수정맥의 군주`는 지각 붕괴 3레벨을 5초 뒤 처음 사용하고 이후 10~13초마다 반복한다. 낮은 확률로 `지각 붕괴 스킬북`을 드롭하며, 사용 시 `SkillBook.grant()`를 통해 영속 플레이어 스킬로 교환된다. 이미 보유한 경우 아이템을 소비하지 않는다.
+
+스킬 정의에는 `/icons/{SkillData.icon}.png` 에셋이 필수다. 스킬 목록과 정보창은 아이콘을 이름 앞에 표시하며, 스킬 아이콘은 아이템과 달리 속성색을 담은 불투명 카드형 배경을 사용할 수 있다.
 
 ## 영속성
 
