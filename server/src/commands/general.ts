@@ -32,21 +32,21 @@ export function initGeneralCommands(): void {
                         if (gi > 0) b.text('\n');
 
                         const header = perm === 0 ? '일반 명령어' : `권한 ${perm} 이상`;
-                        b.color('gray', b2 => b2.text(`─── ${header} ───\n`));
+                        b.color('$text-tertiary', b2 => b2.text(`─── ${header} ───\n`));
 
                         for (const cmd of cmds) {
                             b.weight('bold', b2 => b2.text(`/${cmd.name}`));
                             for (const arg of cmd.args ?? []) {
                                 b.text(' ');
                                 if (arg.required) {
-                                    b.color('#ddd', b2 => b2.text(`<${arg.name}>`));
+                                    b.color('$info', b2 => b2.text(`<${arg.name}>`));
                                 } else {
-                                    b.color('#bbb', b2 => b2.text(`[${arg.name}]`));
+                                    b.color('$text-tertiary', b2 => b2.text(`[${arg.name}]`));
                                 }
                             }
                             b
                             .text('\n')
-                            .color('#9e9e9e', b2 => b2.bg('#00000044', b3 => b3.text(cmd.description)))
+                            .color('$text-secondary', b2 => b2.bg('$background-secondary', b3 => b3.text(cmd.description)))
                             .text('\n');
                         }
                     }

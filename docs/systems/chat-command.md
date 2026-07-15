@@ -36,7 +36,7 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 
 | 분류 | 명령(별칭) | 역할 |
 | --- | --- | --- |
-| 일반 | `/도움말` (`help`) | 권한별 명령 목록 |
+| 일반 | `/도움말` (`help`) | 권한별 명령 목록. 구분선·인자·설명은 라이트/다크 테마별 text/background token으로 표시 |
 | 일반 | `/랜덤` (`random`) | 두 정수 사이 난수 |
 | 일반 | `/실행` (`eval`) | JS eval, 권한 10 |
 | 일반 | `/공지` | 전체 채널 공지, 권한 10 |
