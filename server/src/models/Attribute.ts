@@ -15,6 +15,20 @@ export class AttributeType {
         '최대 정신력',  
         100
     )
+    static readonly LIFE_REGEN    = new AttributeType(
+        'lifeRegen',
+        '생명력 재생',
+        1,
+        v => `${v.toFixed(2)}/초`,
+        v => `초당 생명력을 ${v.toFixed(2)} 회복합니다.`
+    )
+    static readonly MENTALITY_REGEN = new AttributeType(
+        'mentalityRegen',
+        '정신력 재생',
+        1,
+        v => `${v.toFixed(2)}/초`,
+        v => `초당 정신력을 ${v.toFixed(2)} 회복합니다.`
+    )
     static readonly MAX_THIRSTY  = new AttributeType(
         'maxThirsty',   
         '최대 목마름',  
@@ -134,6 +148,7 @@ export class AttributeType {
 /** 능력치 키 문자열 (AttributeRecord, AttributeModifier에 사용) */
 export type AttributeKey =
     | 'maxLife' | 'maxMentality' | 'maxThirsty' | 'maxHungry'
+    | 'lifeRegen' | 'mentalityRegen'
     | 'maxWeight'
     | 'atk' | 'magicForce'
     | 'def' | 'magicDef'

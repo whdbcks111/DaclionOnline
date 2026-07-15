@@ -227,14 +227,6 @@ export default class Player extends Entity {
         return true;
     }
 
-    restoreMentality(amount: number): number {
-        if (!Number.isFinite(amount) || amount < 0) {
-            throw new Error('회복할 정신력은 0 이상의 유한한 값이어야 합니다.');
-        }
-        this.mentality = Math.min(this.maxMentality, this.mentality + amount);
-        return this.mentality;
-    }
-
     /** 경험치 획득 및 레벨업 처리. 레벨업한 레벨 목록을 반환 */
     gainExp(amount: number): number[] {
         this._exp += amount;

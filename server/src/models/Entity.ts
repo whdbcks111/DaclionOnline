@@ -321,6 +321,15 @@ export default abstract class Entity implements TagReadable {
         };
     }
 
+    /** 치유량 modifier와 별개로 정신력을 최대치 안에서 회복한다. */
+    restoreMentality(rawAmount: number): number {
+        if (!Number.isFinite(rawAmount) || rawAmount < 0) {
+            throw new Error(`Mentality recovery must be a non-negative finite number: ${rawAmount}`);
+        }
+        this.mentality = Math.min(this.maxMentality, this.mentality + rawAmount);
+        return this.mentality;
+    }
+
     setHealingReceivedModifier(source: string, modifier: number): void {
         if (!source.trim()) throw new Error('Healing modifier source must not be empty');
         if (!Number.isFinite(modifier) || modifier < 0) {
@@ -711,7 +720,10 @@ export default abstract class Entity implements TagReadable {
         }
 
         if (!this.isDefeated && this.life < this.maxLife) {
-            this.heal(dt * 1); // TODO: change value
+            this.heal(dt * Math.max(0, this.attribute.get(AttributeType.LIFE_REGEN)));
+        }
+        if (!this.isDefeated && this.mentality < this.maxMentality) {
+            this.restoreMentality(dt * Math.max(0, this.attribute.get(AttributeType.MENTALITY_REGEN)));
         }
 
         if (this.isDead && this.deathTimer > 0) {
