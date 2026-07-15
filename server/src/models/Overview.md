@@ -9,7 +9,7 @@
 - `Projectile`: `Entity`를 상속하는 비영속 투사체, 마스터 데이터/JSON 오버라이드 검증, owner·target·비행 시간·적중 수명주기와 정적 레지스트리 API. 상성은 owner 장비가 아닌 투사체 본체 태그만 사용하며 전체 Entity lifecycle로 상태효과도 갱신한다.
 - `AttributeType`/`Attribute`, `StatType`/`Stat`: 클래스형 enum 메타데이터, 기본 능력치와 Entity 기반 source modifier 계산.
 - `Item`, `Inventory`, `EquipSlotType`/`Equipment`: `baseMetadata`+인스턴스 delta와 내구도의 조회·설정·증가·차감·dirty callback, 기본 공격 오버라이드 key, 이미지 API, 마스터/인스턴스 태그, 손실 없는 snapshot 이동, 무게·스택·슬롯·영속성. `selectItems/replaceSelectedItems`는 겹치는 predicate 재료를 중복 없이 선택하고 선검증 교환한다.
-- `Location`: 장소 태그, Monster/Resource 통합 오브젝트 API, ID 기반 `getNpcs/getNpc/hasNpc`, raw 배열을 숨긴 태그 포함 드롭 조회·단일/전체 회수, 연결 조건, 구분 기호를 무시하고 ID·유일한 부분 이름도 찾는 `findAvailableConnection`, 월드 레지스트리.
+- `Location`: 장소 태그, Monster/Resource 통합 오브젝트 API, ID 기반 `getNpcs/getNpc/hasNpc`, raw 배열을 숨긴 태그 포함 드롭 조회·단일/전체 회수, 공개 가능한 잠금 사유가 포함된 연결 조건, 구분 기호를 무시하고 ID·유일한 부분 이름도 찾는 `findAvailableConnection`, 월드 레지스트리.
 - `NPC`/`NpcDialogue`: 정적 NPC 정의와 generator 기반 조건부 시나리오, 대사·이벤트·플래그·전이·선택·종료 액션, player별 비영속 대화 세션. 이동·사망·logout/연결 이탈은 공통 종료 API로 정리한다.
 - `Shop`: 상점 태그, 구매/판매 정의와 재고 timer.
 - `GameEvent`: 동기식 내부 이벤트 발행/구독과 원시 Entity를 제거한 최근 500개 trace 스냅샷.

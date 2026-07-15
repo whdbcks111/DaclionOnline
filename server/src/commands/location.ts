@@ -135,7 +135,8 @@ export function initLocationCommands(): void {
             }
 
             if (target.status === 'locked') {
-                sendBotMessageToUser(userId, `${targetName}은(는) 잠겨 있습니다.`);
+                const reason = target.lockReason ? ` (${target.lockReason})` : '';
+                sendBotMessageToUser(userId, `잠긴 길이라 이동할 수 없습니다: ${target.name}${reason}`);
                 return;
             }
 

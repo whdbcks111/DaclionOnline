@@ -19,15 +19,22 @@ export interface DroppedItem extends ItemSnapshot {
 /** 이동 조건 결과 */
 export type ConnectionStatus = 'visible' | 'locked' | 'hidden';
 
+/** 외부에 공개해도 되는 잠금 사유는 조건 handler가 명시적으로 제공한다. */
+export interface ConnectionConditionResult {
+    status: ConnectionStatus;
+    publicReason?: string;
+}
+
 /** 이동 가능 장소 조회 결과 */
 export interface AvailableConnection {
     locationId: string;
     name: string;
     status: ConnectionStatus;
+    lockReason?: string;
 }
 
 // -- 조건 핸들러 레지스트리 --
-type ConditionHandler = (player: Player) => ConnectionStatus;
+type ConditionHandler = (player: Player) => ConnectionStatus | ConnectionConditionResult;
 const conditionHandlers = new Map<string, ConditionHandler>();
 
 /** 이동 조건 핸들러 등록 */
@@ -154,10 +161,16 @@ export default class Location implements TagReadable {
             if (!target) continue;
 
             let status: ConnectionStatus = 'visible';
+            let lockReason: string | undefined;
             if (conn.condition) {
                 const handler = conditionHandlers.get(conn.condition);
                 if (handler) {
-                    status = handler(player);
+                    const condition = handler(player);
+                    status = typeof condition === 'string' ? condition : condition.status;
+                    const publicReason = typeof condition === 'string'
+                        ? undefined
+                        : condition.publicReason?.trim();
+                    lockReason = status === 'locked' && publicReason ? publicReason : undefined;
                 }
             }
 
@@ -167,6 +180,7 @@ export default class Location implements TagReadable {
                 locationId: conn.locationId,
                 name: target.data.name,
                 status,
+                ...(lockReason ? { lockReason } : {}),
             });
         }
 

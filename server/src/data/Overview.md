@@ -9,7 +9,7 @@
 - `shops.ts`: 별등불 잡화점과 은맥 광부 보급소에 연결되는 상점 태그, 매매 목록과 재고 정의.
 - `tagEffects.ts`: `source tag → target tag → modifier` 단방향 효과 테이블.
 - `locations.json`: 루미나르 개척촌, 바람결 초원, 안개수렁, 홍염산지, 보스 수정 왕좌를 포함한 미로형 피버릭 갱도의 좌표·연결·`monster | resource` 통합 오브젝트·NPC ID·상점 배치 원본.
-- `locations.ts`: Lv.10/20/28/36/45 연결 condition handler 등록.
+- `locations.ts`: Lv.10/20/28/36/45 연결 condition handler와 실제 이동 실패 시 공개할 필요 레벨 설명 등록.
 - `progress.ts`: 게임 이벤트에 연결되는 공개 통계 정의. 현재 치명타 누적 횟수가 있다.
 - `skills.ts`: 아이콘 key·스킬 마스터 metadata·계산 필드·포맷 문자열·Entity 공용 획득/발동/수명주기. 치명타 5회에 획득하는 강타와 플레이어/광산 보스가 함께 쓰는 지각 붕괴가 있다.
 - `crafting.ts`: predicate 재료·발견 조건·제작 시간·결과 factory 정의. 현재 철광석 3개와 돌 2개로 철 곡괭이를 만드는 `basic:iron_pickaxe`가 있다.
