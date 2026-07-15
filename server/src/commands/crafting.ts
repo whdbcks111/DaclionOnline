@@ -76,13 +76,19 @@ export function initCraftingCommands(): void {
         aliases: ['craft'],
         description: '발견한 제작법으로 아이템을 제작합니다. 마지막 숫자는 제작 개수입니다.',
         showCommandUse: 'hide',
-        args: [{
-            name: '제작법이름 [개수]',
-            description: '제작법 이름과 선택적인 제작 개수',
-            required: true,
-            isText: true,
-            completions: recipeCompletions,
-        }],
+        args: [
+            {
+                name: '제작법이름',
+                description: '제작할 제작법 이름',
+                required: true,
+                isText: true,
+                completions: recipeCompletions,
+            },
+            {
+                name: '개수',
+                description: '제작할 개수 (1~99, 기본 1)',
+            },
+        ],
         handler(userId, _args, raw) {
             const player = getPlayerByUserId(userId);
             if (!player) return;

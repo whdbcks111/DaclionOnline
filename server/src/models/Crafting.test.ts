@@ -11,7 +11,8 @@ import {
     defineCraftingRecipe,
     executeCrafting,
 } from './Crafting.js';
-import { parseCraftingCommandRemainder } from '../commands/crafting.js';
+import { initCraftingCommands, parseCraftingCommandRemainder } from '../commands/crafting.js';
+import { getCommandList } from '../modules/bot.js';
 
 function defineTestItem(id: string, category: string, stackable: boolean, durability: number | null): void {
     defineItem({
@@ -164,4 +165,17 @@ test('제작 명령은 마지막 숫자만 개수로 해석한다', () => {
         recipeName: '철 곡괭이', quantity: 12,
     });
     assert.equal(parseCraftingCommandRemainder('12'), null);
+});
+
+test('제작 명령 metadata는 제작법 이름과 개수를 두 인자로 표시한다', () => {
+    initCraftingCommands();
+    const command = getCommandList().find(entry => entry.name === '제작');
+
+    assert.deepEqual(command?.args?.map(argument => ({
+        name: argument.name,
+        required: argument.required ?? false,
+    })), [
+        { name: '제작법이름', required: true },
+        { name: '개수', required: false },
+    ]);
 });
