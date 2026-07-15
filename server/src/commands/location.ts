@@ -329,7 +329,13 @@ export function initLocationCommands(): void {
             } else {
                 for (let index = 0; index < npcs.length; index++) {
                     const npc = npcs[index];
-                    b.text(`${index + 1}. `)
+                    const questMarker = player.quests.getNpcMarker(npc.id);
+                    b.text(`${index + 1}. `);
+                    if (questMarker) {
+                        b.tooltip(questMarker.label, marker => marker
+                            .color(questMarker.color, text => text.weight('bold', value => value.text(`${questMarker.symbol} `))));
+                    }
+                    b
                      .color('gold', b2 => b2.text(npc.name));
                     if (npc.description) {
                         b.color('gray', b2 => b2.text(` - ${npc.description}`));

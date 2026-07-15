@@ -23,6 +23,8 @@ export type DialogueAction =
     | { readonly type: 'setFlag'; readonly id: string; readonly value: boolean }
     | { readonly type: 'goto'; readonly target: string }
     | { readonly type: 'choice'; readonly choices: readonly DialogueChoice[] }
+    | { readonly type: 'acceptQuest'; readonly questId: string }
+    | { readonly type: 'turnInQuest'; readonly questId: string }
     | { readonly type: 'end' };
 
 export type DialogueScript = (context: DialogueContext) => Generator<DialogueAction, void, void>;
@@ -55,6 +57,14 @@ export class Dialogue {
                 target: normalizeScenarioKey(choice.target),
             })),
         };
+    }
+
+    static acceptQuest(questId: string): DialogueAction {
+        return { type: 'acceptQuest', questId: questId.trim().toLowerCase() };
+    }
+
+    static turnInQuest(questId: string): DialogueAction {
+        return { type: 'turnInQuest', questId: questId.trim().toLowerCase() };
     }
 
     static end(): DialogueAction {

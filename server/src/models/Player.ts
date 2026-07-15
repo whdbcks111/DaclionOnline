@@ -15,6 +15,7 @@ import { PlayerProgress } from "./Progress.js";
 import SkillBook from "./SkillBook.js";
 import { updateCraftingRecipeDiscovery } from "./Crafting.js";
 import { DialogueEndReason, endNpcDialogue } from "./NpcDialogue.js";
+import QuestBook from './QuestBook.js';
 
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
@@ -29,6 +30,7 @@ export default class Player extends Entity {
     readonly inventory: Inventory;
     readonly progress: PlayerProgress;
     readonly skills: SkillBook;
+    readonly quests: QuestBook;
 
     private _nickname: string;
     private _gold = 0;
@@ -43,7 +45,7 @@ export default class Player extends Entity {
     private constructor(
         userId: number, nickname: string, level: number, exp: number,
         locationId: string, maxWeight: number, inventory: Inventory, equipment: Equipment,
-        progress: PlayerProgress, skills: SkillBook,
+        progress: PlayerProgress, skills: SkillBook, quests: QuestBook,
         statPoints?: Partial<StatRecord>,
         life?: number, mentality?: number, thirsty?: number, hungry?: number,
         statPoint = 0, gold = 0,
@@ -65,6 +67,10 @@ export default class Player extends Entity {
         this.progress = progress;
         this.skills = skills;
         this.skills.bindOwner(this);
+        this.quests = quests;
+        this.quests.bindOwner(this);
+        this.inventory.subscribeChanges(() => this.quests.refreshSnapshotObjectives());
+        this.progress.subscribeChanges(() => this.quests.refreshSnapshotObjectives());
         this._statPoint = statPoint;
         this._gold = gold;
 
@@ -92,7 +98,11 @@ export default class Player extends Entity {
     // -- Getters / Setters (dirty 추적) --
 
     override get level() { return this._level; }
-    override set level(val: number) { this._level = val; this._dirty = true; }
+    override set level(val: number) {
+        this._level = val;
+        this._dirty = true;
+        this.quests?.refreshSnapshotObjectives();
+    }
 
     override get exp() { return this._exp; }
     override set exp(val: number) { this._exp = val; this._dirty = true; }
@@ -102,6 +112,7 @@ export default class Player extends Entity {
         if (val !== this._locationId) endNpcDialogue(this, DialogueEndReason.MOVED);
         this._locationId = val;
         this._dirty = true;
+        this.quests?.refreshSnapshotObjectives();
     }
 
     override get life() { return this._life; }
@@ -134,7 +145,7 @@ export default class Player extends Entity {
 
     get dirty() {
         return this._dirty || this.stat.dirty || this.inventory.dirty
-            || this.equipment.dirty || this.progress.dirty || this.skills.dirty;
+            || this.equipment.dirty || this.progress.dirty || this.skills.dirty || this.quests.dirty;
     }
 
     protected override onPersistentTagsChanged(): void { this._dirty = true; }
@@ -247,6 +258,7 @@ export default class Player extends Entity {
             this._statPoint += 3;
             this.stat.applyModifiers(this);
         }
+        if (levelsGained.length > 0) this.quests.refreshSnapshotObjectives();
         return levelsGained;
     }
 
@@ -269,14 +281,15 @@ export default class Player extends Entity {
             include: { user: { select: { nickname: true } } },
         });
         if (!data) return null;
-        const [inventory, equipment, progress, skills] = await Promise.all([
+        const [inventory, equipment, progress, skills, quests] = await Promise.all([
             Inventory.load(data.userId, data.maxWeight),
             Equipment.load(data.userId),
             PlayerProgress.load(data.userId),
             SkillBook.load(data.userId),
+            QuestBook.load(data.userId),
         ]);
         const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, progress, skills, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint, data.gold, (data.tags as TagId[] | null) ?? []);
+        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, progress, skills, quests, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint, data.gold, (data.tags as TagId[] | null) ?? []);
     }
 
     /** 새 플레이어 생성 */
@@ -289,7 +302,8 @@ export default class Player extends Entity {
         const equipment = await Equipment.load(data.userId);
         const progress = PlayerProgress.createEmpty(data.userId);
         const skills = SkillBook.createEmpty(data.userId);
-        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, progress, skills);
+        const quests = QuestBook.createEmpty(data.userId);
+        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, progress, skills, quests);
     }
 
     /** 변경된 데이터 DB에 저장 */
@@ -335,5 +349,6 @@ export default class Player extends Entity {
         await this.equipment.save();
         await this.progress.save();
         await this.skills.save();
+        await this.quests.save();
     }
 }

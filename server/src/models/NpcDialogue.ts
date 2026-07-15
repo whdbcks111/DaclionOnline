@@ -236,6 +236,16 @@ function executeAction(
             session.choices = action.choices.map(choice => ({ ...choice }));
             sendChoices(session);
             return ACTION_PAUSE;
+        case 'acceptQuest': {
+            const result = session.player.quests.accept(action.questId, session.npc.id);
+            if (!result.success && result.reason) sendBotMessageToUser(session.player.userId, result.reason);
+            return undefined;
+        }
+        case 'turnInQuest': {
+            const result = session.player.quests.turnIn(action.questId, session.npc.id);
+            if (!result.success && result.reason) sendBotMessageToUser(session.player.userId, result.reason);
+            return undefined;
+        }
         case 'end':
             endNpcDialogue(session.player, DialogueEndReason.COMPLETED);
             return ACTION_END;

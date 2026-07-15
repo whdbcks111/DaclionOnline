@@ -95,6 +95,14 @@
 3. 장소에는 정의를 복사하지 않고 `locations.json.npcIds`만 배치하며 조회는 `Location.getNpcs/getNpc/hasNpc`를 사용한다.
 4. 새 종료 경로는 `endNpcDialogue()`로 합치고 이동·사망·logout에서 세션이 남지 않는지 테스트한다. 상세 계약은 [systems/npc-dialogue.md](../systems/npc-dialogue.md)에 동기화한다.
 
+## 퀘스트 추가
+
+1. `data/quests.ts`에서 stable `namespace:path` ID, 제공/보고 NPC, `QuestStage/QuestObjective`, `QuestReward`를 `defineQuest()`로 등록한다.
+2. 처치·파괴는 개별 raw 데이터보다 Entity 태그 predicate를 사용하고, 아이템 보유·제출은 `Inventory.countMatching/selectItems/replaceSelectedItems`를 사용한다.
+3. NPC generator는 `player.quests.canAccept/isActive/canTurnIn`으로 분기하고 `Dialogue.acceptQuest/turnInQuest` 액션을 yield한다.
+4. 새 목표 동작은 상태가 확정되는 소유 모델에서 `GameEventIds`를 발행하거나 Player/Inventory/Progress 변경 구독으로 갱신한다.
+5. [systems/quests.md](../systems/quests.md), DB/API 문서와 data/models/commands Overview를 함께 갱신한다.
+
 ## HUD 추가
 
 1. `HudContext.tsx`의 `HUD_DEFINITIONS`, 기본 설정, 필요한 상태를 추가한다.

@@ -10,7 +10,7 @@ data/npcs.ts
 
 player별 ActiveNpcDialogue (메모리)
   └─ scenario generator
-       ├─ say / event / setFlag / goto / end
+       ├─ say / event / setFlag / acceptQuest / turnInQuest / goto / end
        └─ choice ── 일시 정지 ──> /대화선택 sessionId 번호 ──> 다음 scenario
 ```
 
@@ -54,6 +54,8 @@ NPC.define({
 | `Dialogue.setFlag(id, value?)` | 등록된 PlayerProgress flag 설정 |
 | `Dialogue.goto(scenarioKey)` | 같은 NPC의 다른 장면으로 즉시 이동 |
 | `Dialogue.choice(choices)` | 버튼 선택지를 출력하고 세션을 정지 |
+| `Dialogue.acceptQuest(id)` | 현재 NPC를 제공자로 검증해 퀘스트 수락 |
+| `Dialogue.turnInQuest(id)` | 현재 NPC를 보고 대상으로 검증해 보상 수령·완료 |
 | `Dialogue.end()` | 정상 종료 |
 
 이벤트 callback은 DB row나 다른 기능의 raw 상태를 직접 수정하지 않고 Inventory, PlayerProgress, 퀘스트 등 소유 기능의 공개 API만 호출한다. 장시간 대기나 비동기 DB I/O를 generator 안에서 수행하지 않는다.
@@ -61,6 +63,7 @@ NPC.define({
 ## 명령과 수명주기
 
 - `/위치`의 `[ NPC ]` 목록은 장소별 번호, 설명, `/대화 번호` 버튼을 표시한다.
+- NPC 이름 앞에는 QuestBook 공개 API로 계산한 수락 가능 `!`, 보고 가능 `?`, 진행 중 `·` marker가 표시된다.
 - `/대화 번호`는 NPC의 진입점에서 새 세션을 시작한다.
 - 선택지 버튼은 내부 `/대화선택 <sessionId> <번호>`를 사용한다. sessionId가 달라진 오래된 버튼은 거부된다.
 - `/대화종료`는 플레이어가 직접 현재 대화를 끝낸다.

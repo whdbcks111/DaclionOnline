@@ -21,6 +21,7 @@ import './data/tagEffects.js';
 import './data/progress.js';
 import './data/skills.js';
 import './data/crafting.js';
+import './data/quests.js';
 import './data/npcs.js';
 import { initLocation } from './modules/location.js';
 import { uploadRouter } from './modules/upload.js';

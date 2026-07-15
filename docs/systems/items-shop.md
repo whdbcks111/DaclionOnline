@@ -25,7 +25,8 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 ## Inventory API와 규칙
 
-- 조회: `getItem`, `getItemByIndex`, `getFirstItemByData`, `getItemsByData`, `getCount`.
+- 조회: `getItem`, `getItemByIndex`, `getFirstItemByData`, `getItemsByData`, `getCount`, predicate 수량용 `countMatching`.
+- 변경 구독: `subscribeChanges`는 수량·metadata·내구도·태그 변화 뒤 호출되며 QuestBook 같은 소유 기능의 현재 보유 조건 갱신에 사용한다. `replaceSelectedItems` 안의 연속 변경은 한 번으로 묶는다.
 - metadata 변경: `setItemMetadata`, `resetItemMetadata`가 대상 Item API를 호출하고 Inventory를 dirty로 표시한다. 조회는 반환된 Item의 `getMetadata`를 사용한다.
 - 내구도 변경: `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`가 Item API를 호출하고 Inventory를 dirty로 표시한다.
 - 추가: `canAdd`, `canAddSnapshot(s)`이 총 무게와 아이템 정의를 검사하고 `addItem`이 stackable/maxStack 규칙에 따라 병합 또는 새 인스턴스를 만든다. 기존 인스턴스를 이동할 때는 `addItemSnapshot`을 사용한다.

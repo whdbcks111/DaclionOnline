@@ -12,6 +12,7 @@ Prisma 스키마는 `server/prisma/schema.prisma`, 런타임 클라이언트 설
 | `Equipment` / `equipments` | id, Player N:1 cascade | itemDataId, slot, slotIndex, durability, metadata/tags JSON; `(playerId, slot, slotIndex)` unique |
 | `PlayerProgress` / `player_progress` | `(playerId, key)` 복합 PK, Player N:1 cascade | kind, intValue, textValue, updatedAt |
 | `PlayerSkill` / `player_skills` | `(playerId, skillDataId)` 복합 PK, Player N:1 cascade | level, cooldownEndsAt, metadata/tags JSON, acquisitionSource, timestamps |
+| `PlayerQuest` / `player_quests` | `(playerId, questDataId)` 복합 PK, Player N:1 cascade | status, currentStageId, objectiveProgress/metadata/tags JSON, completionCount, 수락·보고·완료·반복 시각 |
 
 `itemDataId`는 DB 외래키가 아니라 코드의 `data/items.ts` 마스터 데이터 ID다. `locationId`도 JSON 마스터 데이터 ID다. 마스터 ID 변경 시 기존 DB 레코드 호환을 직접 처리해야 한다.
 
@@ -21,6 +22,7 @@ Item/Equipment의 `metadata` JSON은 전체 유효값이 아니라 `{ "__daclion
 제작법 발견 여부도 `crafting:recipe/{namespace}/{path}` FLAG로 이 테이블에 저장되므로 제작 시스템 추가에 따른 별도 스키마 마이그레이션은 없다.
 NPC 대화 결과 flag/state도 같은 `player_progress`에 저장한다. 진행 중인 대화 세션은 접속 중 메모리에만 존재하며 이동·사망·로그아웃·연결 이탈 시 폐기되므로 별도 NPC 마이그레이션은 없다.
 StatusEffect 인스턴스와 ActionType 제한도 Entity의 런타임 메모리에만 존재한다. 상태효과 metadata delta는 실행 중 누적값을 기본 metadata와 분리하기 위한 구조이며 DB에 flush하지 않으므로 스키마 변경은 없다.
+퀘스트는 코드 `QuestData`를 원본으로 삼고 `player_quests`에는 플레이어별 인스턴스만 저장한다. 목표 진행 JSON key는 `{stageId}/{objectiveId}`이며 metadata는 Item/Skill과 같은 versioned top-level delta다. 반복 완료 횟수와 재수락 가능 시각을 같은 행에 유지한다.
 
 ## 로드와 저장
 
@@ -31,6 +33,7 @@ login/session restore
      -> Equipment.load
      -> PlayerProgress.load
      -> SkillBook.load
+     -> QuestBook.load
   -> online Player Map
 
 30초 / logout / process signal
@@ -40,9 +43,11 @@ login/session restore
      -> Equipment.save
      -> PlayerProgress.save
      -> SkillBook.save
+     -> QuestBook.save
 ```
 
-- Player scalar setter와 Player/Item/Skill 영속 태그·metadata·내구도 callback, Stat/Inventory/Equipment/PlayerProgress/SkillBook이 dirty 상태를 추적한다.
+- Player scalar setter와 Player/Item/Skill/Quest 영속 태그·metadata·내구도 callback, Stat/Inventory/Equipment/PlayerProgress/SkillBook/QuestBook이 dirty 상태를 추적한다.
+- 동일 Player의 save 호출은 진행 중 promise를 공유하고 겹친 요청을 다음 pass로 예약해 자동 저장·보상 저장·unload 저장을 직렬화한다. 신규 Equipment는 `(playerId, slot, slotIndex)` upsert를 사용해 이미 생성된 슬롯 행과 충돌해도 복구한다.
 - `fetchPlayerByUserId()`는 오프라인 Player를 DB에서 읽지만 온라인 Map에는 올리지 않는다.
 - 위치 JSON, 채팅/세션/온라인 상태, 몬스터/드롭, 상점 재고는 DB에 저장되지 않는다.
 - 회원가입은 User와 Player를 nested create하므로 기본 Player 레코드가 즉시 생긴다.
@@ -62,6 +67,7 @@ login/session restore
 - 빈 DB에서는 `0_init`부터 모든 migration이 순서대로 실행되어 전체 스키마를 만든다.
 - 태그 JSON 컬럼 추가 migration은 `20260714000000_add_object_tags`다.
 - 통계·플래그와 스킬 인스턴스 테이블 migration은 `20260715000000_add_progress_and_skills`다.
+- 플레이어 퀘스트 인스턴스 테이블 migration은 `20260716000000_add_player_quests`다.
 - 일반 운영 배포에서는 `cd server && npm run db:migrate:deploy`를 실행한다. 이 명령은 pending schema migration 적용, Prisma Client 생성, 아이템 metadata delta 데이터 마이그레이션을 순서대로 실행한다.
 - metadata 데이터 마이그레이션은 `src/scripts/migrateItemMetadataDeltas.ts`가 담당한다. 이미 버전 1인 행과 `null` 행은 건너뛰므로 재실행할 수 있다. 구형 전체 metadata 중 현재 `baseMetadata`와 같은 값은 기본값으로 간주해 제거하므로, 기본 metadata를 변경하기 전에 서버를 중지한 상태에서 운영 명령을 먼저 실행해야 한다.
 - `migrate reset`은 전체 데이터를 삭제하므로 운영 DB에서 금지한다.

@@ -24,6 +24,7 @@
 | ShopData / Shop | shops.ts | 없음 | `Shop.tags.setRuntime` |
 | NPC | npcs.ts | 없음 | `NPC.tags.setRuntime` 가능 |
 | StatusEffectType / StatusEffect | 타입 정의 | 없음 | 인스턴스 metadata와 별개인 효과원 태그 |
+| QuestData / Quest | quests.ts | `player_quests.tags` JSON | `Quest.tags.setRuntime` 가능 |
 | DroppedItem | Item snapshot에서 보존 | 월드 드롭은 현재 비영속 | 원본 Item snapshot |
 
 일반 태그 조회에서는 장착 아이템 태그가 `Equipment.hasTag/getTags`를 통해 Entity의 유효 태그에 포함된다. 단, 상성 판정은 공격·피격 문맥을 분리하며 양쪽 모두 Entity 본체의 정의·영속·런타임 태그만 자동 사용한다. 장착 무기의 속성 태그는 아이템 분류에는 남지만 기본 물리 피해 전체의 상성으로 합산하지 않는다. 갑옷이나 무기 패시브가 실제로 `Entity.tags.setRuntime(source, tags)`를 호출해 본체 속성을 부여한 경우에만 그 런타임 태그가 공격·피격 상성에 포함된다.

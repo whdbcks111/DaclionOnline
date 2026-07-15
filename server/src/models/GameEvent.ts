@@ -39,6 +39,11 @@ export const GameEventIds = Object.freeze({
     STATUS_EFFECT_APPLIED: 'status_effect:applied',
     STATUS_EFFECT_UPDATED: 'status_effect:updated',
     STATUS_EFFECT_REMOVED: 'status_effect:removed',
+    QUEST_ACCEPTED: 'quest:accepted',
+    QUEST_OBJECTIVE_UPDATED: 'quest:objective_updated',
+    QUEST_READY: 'quest:ready',
+    QUEST_COMPLETED: 'quest:completed',
+    QUEST_ABANDONED: 'quest:abandoned',
 } as const);
 
 export type GameEventHandler = (event: GameEvent) => void;

@@ -55,6 +55,7 @@ model Player {
   equipments      Equipment[]
   progressEntries PlayerProgress[]
   skills          PlayerSkill[]
+  quests          PlayerQuest[]
 
   @@map("players")
 }
@@ -94,6 +95,30 @@ model PlayerSkill {
   @@id([playerId, skillDataId])
   @@index([skillDataId])
   @@map("player_skills")
+}
+
+// 코드 QuestData를 참조하는 플레이어별 퀘스트 진행 상태
+model PlayerQuest {
+  playerId          Int       @map("player_id")
+  player            Player    @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+
+  questDataId       String    @db.VarChar(100) @map("quest_data_id")
+  status            String    @db.VarChar(20)
+  currentStageId    String    @db.VarChar(100) @map("current_stage_id")
+  objectiveProgress Json?     @map("objective_progress")
+  metadata          Json?
+  tags              Json?
+  completionCount   Int       @default(0) @map("completion_count")
+
+  acceptedAt        DateTime  @default(now()) @map("accepted_at")
+  readyAt           DateTime? @map("ready_at")
+  completedAt       DateTime? @map("completed_at")
+  repeatAvailableAt DateTime? @map("repeat_available_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@id([playerId, questDataId])
+  @@index([questDataId, status])
+  @@map("player_quests")
 }
 
 // 플레이어 인벤토리 아이템 테이블

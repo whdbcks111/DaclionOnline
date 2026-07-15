@@ -27,6 +27,9 @@ export default class Inventory {
     private _items: Item[] = [];
     private _states: Map<Item, ItemState> = new Map();
     private _usingItem = false;
+    private readonly changeHandlers = new Set<() => void>();
+    private changeBatchDepth = 0;
+    private changePending = false;
 
     private constructor(playerId: number, maxWeight: number) {
         this.playerId = playerId;
@@ -41,6 +44,7 @@ export default class Inventory {
     private track(item: Item, state: ItemState): void {
         const markModified = () => {
             if (this._states.get(item) === ItemState.Clean) this._states.set(item, ItemState.Modified);
+            this.notifyChange();
         };
         item.tags.setPersistentChangeHandler(() => {
             markModified();
@@ -76,6 +80,12 @@ export default class Inventory {
         return total;
     }
 
+    /** 퀘스트 등 소유 기능이 아이템 변화 뒤 현재 보유 조건을 다시 검사할 때 사용한다. */
+    subscribeChanges(handler: () => void): () => void {
+        this.changeHandlers.add(handler);
+        return () => { this.changeHandlers.delete(handler); };
+    }
+
     // -- 조회 --
 
     /** 아이템 인스턴스 ID로 조회 */
@@ -100,6 +110,11 @@ export default class Inventory {
     /** 특정 아이템 정의의 총 수량 */
     getCount(itemDataId: string): number {
         return this.getItemsByData(itemDataId).reduce((sum, e) => sum + e.count, 0);
+    }
+
+    /** raw items 배열을 노출하지 않고 predicate에 맞는 총 수량을 반환한다. */
+    countMatching(matches: (item: Item) => boolean): number {
+        return this._items.reduce((sum, item) => sum + (matches(item) ? item.count : 0), 0);
     }
 
     /**
@@ -289,6 +304,7 @@ export default class Inventory {
             remaining -= qty;
         }
 
+        this.notifyChange();
         return true;
     }
 
@@ -323,13 +339,18 @@ export default class Inventory {
         );
         if (this.currentWeight - selectedWeight + outputWeight > this._maxWeight) return false;
 
-        for (const [item, count] of totals) {
-            if (!this.removeItemInstance(item, count)) return false;
-        }
-        for (const output of outputs) {
-            if (!this.addItemSnapshot(output)) {
-                throw new Error(`검증된 제작 결과 추가 실패: ${output.itemDataId}`);
+        this.beginChangeBatch();
+        try {
+            for (const [item, count] of totals) {
+                if (!this.removeItemInstance(item, count)) return false;
             }
+            for (const output of outputs) {
+                if (!this.addItemSnapshot(output)) {
+                    throw new Error(`검증된 제작 결과 추가 실패: ${output.itemDataId}`);
+                }
+            }
+        } finally {
+            this.endChangeBatch();
         }
         return true;
     }
@@ -384,6 +405,7 @@ export default class Inventory {
                 this._states.set(item, ItemState.Modified);
             }
         }
+        this.notifyChange();
         return true;
     }
 
@@ -400,6 +422,7 @@ export default class Inventory {
         } else if (this._states.get(item) === ItemState.Clean) {
             this._states.set(item, ItemState.Modified);
         }
+        this.notifyChange();
         return true;
     }
 
@@ -430,7 +453,29 @@ export default class Inventory {
                 }
             }
         }
+        this.notifyChange();
         return true;
+    }
+
+    private beginChangeBatch(): void { this.changeBatchDepth++; }
+
+    private endChangeBatch(): void {
+        this.changeBatchDepth = Math.max(0, this.changeBatchDepth - 1);
+        if (this.changeBatchDepth !== 0 || !this.changePending) return;
+        this.changePending = false;
+        this.dispatchChange();
+    }
+
+    private notifyChange(): void {
+        if (this.changeBatchDepth > 0) {
+            this.changePending = true;
+            return;
+        }
+        this.dispatchChange();
+    }
+
+    private dispatchChange(): void {
+        for (const handler of [...this.changeHandlers]) handler();
     }
 
     // -- DB 연동 --

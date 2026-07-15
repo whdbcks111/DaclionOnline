@@ -9,7 +9,8 @@ Entity
   │    ├─ Equipment
   │    ├─ Stat ──> Attribute modifiers
   │    ├─ PlayerProgress
-  │    └─ SkillBook ──> Skill[]
+  │    ├─ SkillBook ──> Skill[]
+  │    └─ QuestBook ──> Quest[]
   ├─ Monster ── Equipment
   ├─ Resource
   └─ Projectile ── owner: Entity
@@ -35,9 +36,9 @@ Location ── objects[] (Monster | Resource)
 
 ## 플레이어 수명
 
-로그인 또는 세션 복원 시 `loadPlayerByUserId()`가 DB의 Player, Inventory, Equipment, PlayerProgress, SkillBook을 한 객체 그래프로 로드한다. 레코드가 없으면 기본 Player를 생성한다. 온라인 동안 `modules/player.ts`의 Map이 동일 userId 객체를 공유한다.
+로그인 또는 세션 복원 시 `loadPlayerByUserId()`가 DB의 Player, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook을 한 객체 그래프로 로드한다. 레코드가 없으면 기본 Player를 생성한다. 온라인 동안 `modules/player.ts`의 Map이 동일 userId 객체를 공유한다.
 
-Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook은 변경 상태를 추적한다. `Player.save()`는 Player/Stat을 갱신하고 이어서 나머지 소유 상태를 저장한다.
+Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook은 변경 상태를 추적한다. `Player.save()`는 Player/Stat을 갱신하고 이어서 나머지 소유 상태를 저장한다. 같은 Player에서 자동 저장과 unload/보상 저장이 겹치면 save promise를 공유하고 추가 pass를 예약해 직렬화한다.
 
 ## 능력치와 스탯
 
