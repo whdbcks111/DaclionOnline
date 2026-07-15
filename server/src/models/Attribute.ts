@@ -29,6 +29,20 @@ export class AttributeType {
         v => `${v.toFixed(2)}/초`,
         v => `초당 정신력을 ${v.toFixed(2)} 회복합니다.`
     )
+    static readonly HUNGER_DRAIN = new AttributeType(
+        'hungerDrain',
+        '배고픔 감소량',
+        0.01,
+        v => `${v.toFixed(2)}/초`,
+        v => `초당 배고픔이 ${v.toFixed(2)} 감소합니다.`
+    )
+    static readonly THIRST_DRAIN = new AttributeType(
+        'thirstDrain',
+        '수분 감소량',
+        0.02,
+        v => `${v.toFixed(2)}/초`,
+        v => `초당 수분이 ${v.toFixed(2)} 감소합니다.`
+    )
     static readonly MAX_THIRSTY  = new AttributeType(
         'maxThirsty',   
         '최대 목마름',  
@@ -148,7 +162,7 @@ export class AttributeType {
 /** 능력치 키 문자열 (AttributeRecord, AttributeModifier에 사용) */
 export type AttributeKey =
     | 'maxLife' | 'maxMentality' | 'maxThirsty' | 'maxHungry'
-    | 'lifeRegen' | 'mentalityRegen'
+    | 'lifeRegen' | 'mentalityRegen' | 'hungerDrain' | 'thirstDrain'
     | 'maxWeight'
     | 'atk' | 'magicForce'
     | 'def' | 'magicDef'

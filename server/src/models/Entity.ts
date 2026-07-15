@@ -332,6 +332,22 @@ export default abstract class Entity implements TagReadable {
         return this.mentality;
     }
 
+    /** 능력치에 따라 배고픔과 수분을 감소시킨다. 플레이어 생존 틱에서 호출한다. */
+    depleteSurvivalNeeds(dt: number): void {
+        if (!Number.isFinite(dt) || dt < 0) {
+            throw new Error(`Survival need delta time must be a non-negative finite number: ${dt}`);
+        }
+        if (this.isDefeated || dt === 0) return;
+        const hungerDrain = Math.max(0, this.attribute.get(AttributeType.HUNGER_DRAIN));
+        const thirstDrain = Math.max(0, this.attribute.get(AttributeType.THIRST_DRAIN));
+        if (hungerDrain > 0 && this.hungry > 0) {
+            this.hungry = Math.max(0, this.hungry - hungerDrain * dt);
+        }
+        if (thirstDrain > 0 && this.thirsty > 0) {
+            this.thirsty = Math.max(0, this.thirsty - thirstDrain * dt);
+        }
+    }
+
     setHealingReceivedModifier(source: string, modifier: number): void {
         if (!source.trim()) throw new Error('Healing modifier source must not be empty');
         if (!Number.isFinite(modifier) || modifier < 0) {

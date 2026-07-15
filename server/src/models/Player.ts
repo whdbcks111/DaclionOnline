@@ -163,6 +163,7 @@ export default class Player extends Entity {
 
     override earlyUpdate(dt: number): void {
         super.earlyUpdate(dt);
+        this.depleteSurvivalNeeds(dt);
         if (!getLocation(this._locationId)) {
             const respawn = getRespawnLocation();
             if (respawn) this.locationId = respawn.id;
