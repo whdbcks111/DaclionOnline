@@ -21,7 +21,7 @@
 ## 아이템/사용 효과 추가
 
 1. `models/Item.ts`의 `ItemData` 계약을 확인한다.
-2. `data/items.ts`에 `defineItem()`을 추가한다.
+2. `data/items.ts`에 `defineItem()`을 추가하고 `client/public/icons/items/{itemDataId}.png` 128×128 투명 배경 아이콘을 같이 생성한다.
 3. 사용형 아이템이면 `modules/itemUse.ts`의 레지스트리에 `registerItemUse()` 핸들러를 등록하고 반드시 `finish()`가 모든 종료 경로에서 호출되게 한다.
 4. 영속 필드가 더 필요하면 `prisma/schema.prisma`, `Inventory` load/save, DB 문서를 함께 수정한다.
 

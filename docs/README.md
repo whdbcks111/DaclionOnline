@@ -91,6 +91,10 @@ UI 스타일은 고정 px 배치와 크기에 의존하지 않는다. 기존 SCS
 - 예: `chore(format): formatted code structure`
 - 예: `feat(inventory): add item remove API`
 
+### 8. 아이템 정의와 아이콘은 함께 추가
+
+`data/items.ts`에 아이템 마스터 데이터를 추가하면 같은 작업에 `client/public/icons/items/{itemDataId}.png` 아이콘도 만든다. 기본 규격은 기존 아이콘과 같은 128×128 PNG, 투명 배경, 중앙 배치이며 파일명은 `itemDataId`와 일치시킨다. 정의의 `image` key를 별도로 바꾸면 해당 key 경로에 에셋이 실제로 존재하는지 확인한다.
+
 ## 문서 유지 규칙
 
 의미 있는 코드 변경은 같은 변경에서 문서까지 완료해야 한다.
