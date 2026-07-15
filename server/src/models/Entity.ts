@@ -51,6 +51,8 @@ export interface AttackOptions {
     unavoidable?: boolean;
     /** true이면 치명타·속성 상성·방어·관통을 적용하지 않고 지정한 피해량을 그대로 준다. */
     fixedDamage?: boolean;
+    /** 생략하면 물리 직접 공격이 주무기의 적중 callback을 실행한다. */
+    triggerMainHandHitEffects?: boolean;
 }
 
 export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fire' | 'poison' | 'suffocation'
@@ -238,9 +240,9 @@ export default abstract class Entity implements TagReadable {
         return [...new Set([...this.tags.values(), ...this.equipment.getTags()])].sort();
     }
 
-    /** 공격 효과: 본체 태그 + 무기 태그 */
+    /** 공격 효과: 본체 태그만 사용한다. 무기 속성은 별도 피해/적중 효과로 명시한다. */
     hasEffectSourceTag(tag: TagId): boolean {
-        return this.tags.hasTag(tag) || this.equipment.hasEffectSourceTag(tag);
+        return this.tags.hasTag(tag);
     }
 
     /** 피격 효과: 본체의 정의·영속·런타임 태그만 사용한다. */
@@ -637,6 +639,14 @@ export default abstract class Entity implements TagReadable {
                     finalDamage: damageResult.finalDamage,
                 },
             });
+        }
+        if (damageResult.finalDamage > 0 && (options.triggerMainHandHitEffects ?? type === 'physical')) {
+            const weapon = this.equipment.getEquipped(EquipSlotType.MAIN_HAND.key);
+            try {
+                weapon?.data?.onBasicAttackHit?.({ attacker: this, target, weapon, result: damageResult });
+            } catch (error) {
+                logger.error(`아이템 공격 적중 효과 실패: ${weapon?.itemDataId ?? 'unknown'}`, error);
+            }
         }
         // 즉시 피해를 적용하는 물리 직접 공격은 근접 공격으로 취급한다.
         this.commitAttack(options.consumeMainHandDurability ?? type === 'physical');

@@ -26,7 +26,7 @@
 | StatusEffectType / StatusEffect | 타입 정의 | 없음 | 인스턴스 metadata와 별개인 효과원 태그 |
 | DroppedItem | Item snapshot에서 보존 | 월드 드롭은 현재 비영속 | 원본 Item snapshot |
 
-일반 태그 조회에서는 장착 아이템 태그가 `Equipment.hasTag/getTags`를 통해 Entity의 유효 태그에 포함된다. 단, 상성 판정은 공격·피격 문맥을 분리한다. 공격자는 Entity 본체 태그와 `Equipment.hasEffectSourceTag`가 제공하는 무기 태그를 사용하고, 피격 대상은 장비를 전부 제외한 Entity 본체의 정의·영속·런타임 태그만 사용한다. 갑옷 패시브가 실제로 `Entity.tags.setRuntime(source, tags)`를 호출해 속성을 부여한 경우에는 본체 런타임 태그이므로 피격 상성에 포함된다.
+일반 태그 조회에서는 장착 아이템 태그가 `Equipment.hasTag/getTags`를 통해 Entity의 유효 태그에 포함된다. 단, 상성 판정은 공격·피격 문맥을 분리하며 양쪽 모두 Entity 본체의 정의·영속·런타임 태그만 자동 사용한다. 장착 무기의 속성 태그는 아이템 분류에는 남지만 기본 물리 피해 전체의 상성으로 합산하지 않는다. 갑옷이나 무기 패시브가 실제로 `Entity.tags.setRuntime(source, tags)`를 호출해 본체 속성을 부여한 경우에만 그 런타임 태그가 공격·피격 상성에 포함된다.
 
 Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만 조회한다. owner 본체와 활·스태프 같은 발사 무기의 태그는 복사하거나 참조하지 않으므로, 투사체 상성은 `ProjectileData` 및 발사 metadata의 `tags` 오버라이드로만 결정된다. 피격 측 규칙은 다른 Entity와 같다.
 
@@ -79,7 +79,7 @@ Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만
 
 투사체 공격에서는 `DamageCause.causeEntity`가 owner가 아닌 Projectile이다. 보상과 어그로는 `causeEntity.attackOwner`로 owner에게 돌아가지만, 위 상성 계산에는 실제 causeEntity만 전달된다.
 
-대표 데이터로 낡은 검은 `property:fire`, 독 단검은 `property:poison`, 기본 슬라임은 `trait:inanimate + property:water + property:poison`, 화산 생물은 `property:fire`, 수정 파수체는 `trait:inanimate + property:ice`를 가진다. 낡은 검은 기본 슬라임에게 0.5배, 수정 파수체에게 1.5배이며 독 단검의 공격은 무생물 슬라임과 파수체에게 0배다. 반대로 낡은 검을 장착한 플레이어가 피격될 때는 검의 불 태그가 대상 태그에 포함되지 않는다.
+대표 데이터로 낡은 검은 `property:fire`, 독 단검은 `property:poison` 아이템 분류를 가지지만 두 태그는 기본 물리 피해에 자동 적용되지 않는다. 기본 슬라임은 `trait:inanimate + property:water + property:poison`, 화산 생물은 `property:fire`, 수정 파수체는 `trait:inanimate + property:ice`를 가진다. 독 단검은 물리 피해 뒤 별도 맹독 적중 효과를 시도하므로 무생물에게 칼날 피해는 들어가고 맹독만 거부된다. 별도의 불 추가 피해를 가진 무기를 만들 때도 Item callback이나 명시적인 추가 damage 호출에서 무기를 `effectSource`로 전달해야 한다.
 
 광석 자원은 `entity:resource + resource:ore + trait:inanimate`와 단계별 재료 태그를 가진다. 보물상자는 `resource:treasure + trait:inanimate + material:wood`이며 공격 불가다. 공격 가능 도구 판정은 상성표와 별개로 곡괭이의 `tool:mining` 태그를 `Resource.getAttackDeniedReason`에서 검사한다. 지역은 `location:mine/swamp/volcanic`, 몬스터는 `entity:slime/elemental/beast`와 속성 태그를 조합한다.
 

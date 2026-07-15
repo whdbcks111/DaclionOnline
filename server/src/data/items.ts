@@ -10,6 +10,7 @@ import {
     ItemAttackOverrideKeys,
     registerItemAttackOverride,
 } from '../modules/itemAttack.js';
+import { StatusEffectType } from '../models/StatusEffect.js';
 
 registerItemAttackOverride(ItemAttackOverrideKeys.PROJECTILE, executeProjectileItemAttack);
 
@@ -160,7 +161,7 @@ defineItem({
 defineItem({
     id: 'venom_dagger',
     name: '독 단검',
-    description: '독을 머금은 단검. 무생물에게는 독 효과가 통하지 않는다.',
+    description: '독을 머금은 단검. 물리 공격 적중 시 50% 확률로 8초간 1레벨 맹독을 부여한다.',
     image: 'items/venom_dagger',
     category: '단검',
     weight: 1.5,
@@ -174,6 +175,11 @@ defineItem({
     ],
     baseDurability: 40,
     tags: [GameTags.ITEM_WEAPON, GameTags.PROPERTY_POISON],
+    onBasicAttackHit: ({ target }) => {
+        if (Math.random() < 0.5) {
+            target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 8, 1);
+        }
+    },
 });
 
 defineItem({

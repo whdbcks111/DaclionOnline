@@ -10,7 +10,7 @@
 - Item 인스턴스의 추가 태그는 DB JSON에 저장되며 정의 태그와 합쳐 조회한다.
 - 인벤토리↔장비↔바닥 이동은 `ItemSnapshot`으로 metadata delta, 내구도, 영속 태그를 보존한다. 스택도 이 값이 모두 같을 때만 합쳐진다.
 
-현재 장비·소모품 정의는 `health_potion`, `mana_potion`, `old_sword`, `old_shield`, `venom_dagger`, `light_bow`, `wooden_arrow`, `basic_pickaxe`, `iron_pickaxe`, `seismic_crush_skillbook`이다. 낡은 검의 불 태그와 독 단검의 독 태그는 장착 시 Entity의 직접 공격 효과 태그가 된다. 가벼운 활은 화살 한 발을 소비해 화살 자체의 자연 속성으로 공격한다. 두 곡괭이는 `item:tool + tool:mining` 태그를 가진 주무기이며 광석의 공격 조건을 만족한다. 철 곡괭이는 제작법으로 획득한다.
+현재 장비·소모품 정의는 `health_potion`, `mana_potion`, `old_sword`, `old_shield`, `venom_dagger`, `light_bow`, `wooden_arrow`, `basic_pickaxe`, `iron_pickaxe`, `seismic_crush_skillbook`이다. 무기 속성 태그는 아이템 분류·제작 조건에 남지만 직접 물리 공격 상성에는 자동 합산하지 않는다. 독 단검은 물리 피해가 실제로 적중한 뒤 50% 확률로 8초간 1레벨 맹독을 부여하며 무생물은 상태효과 적용만 거부한다. 가벼운 활은 화살 한 발을 소비해 화살 자체의 자연 속성으로 공격한다. 두 곡괭이는 `item:tool + tool:mining` 태그를 가진 주무기이며 광석의 공격 조건을 만족한다. 철 곡괭이는 제작법으로 획득한다.
 
 광물 아이템은 `stone`, `coal`, `iron_ore`, `gold_ore`, `ruby`, `emerald`, `diamond`이며 모두 99개까지 쌓인다. 피버릭 갱도 입구의 은맥 광부 보급소는 곡괭이를 50 Gold에 판매하고 광물을 희귀도에 따라 각각 2, 5, 10, 25, 55, 60, 180 Gold에 매입한다.
 
@@ -39,6 +39,8 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 `/인벤토리` 목록과 `/상태창`의 장착 정보는 이름 앞에 `Item.image` 아이콘을 표시한다. 내구도가 있는 아이템은 이름 오른쪽에 `em` 길이의 짧은 progress와 현재/최대값 tooltip을 추가한다. progress 색은 50% 초과 초록, 20% 초과~50% 금색, 20% 이하 빨강이며 존재하지 않는 이미지 에셋은 숨겨진다.
 
 사용 효과는 `registerItemUse(id, handler)`로 등록한다. handler는 성공·실패를 포함한 모든 비동기 종료 경로에서 `finish()`를 호출해야 Inventory의 사용 잠금이 풀린다. 현재 HP/MP 포션은 coroutine으로 지연 후 회복하며, HP 포션은 `Entity.heal()`을 사용해 화상·맹독 등 받는 치유량 modifier를 반영한다.
+
+직접 공격 후처리는 선택형 `ItemData.onBasicAttackHit(context)`를 사용한다. 회피되지 않고 최종 피해가 0보다 큰 물리 공격이면 `Entity.attack`이 실행하므로 일반 공격과 강타 같은 물리 스킬이 같은 무기 효과를 쓴다. 필요하면 `AttackOptions.triggerMainHandHitEffects`로 해당 공격만 끌 수 있다. 투사체는 발사자 장비가 아닌 자체 Entity가 공격하므로 발사 무기의 적중 callback을 실행하지 않는다. 물리 피해와 상태효과·추가 속성 피해를 한 상성값으로 섞지 않는다.
 
 ## 기본 공격 오버라이드와 투사체 아이템
 

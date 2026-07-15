@@ -11,6 +11,8 @@ import {
     isEncodedMetadataDelta,
 } from './Metadata.js';
 import type { MetadataRecord, MetadataValue } from './Metadata.js';
+import type Entity from './Entity.js';
+import type { DamageResult } from './Entity.js';
 
 export type ItemMetadataValue = MetadataValue;
 export interface ItemMetadata extends MetadataRecord {}
@@ -48,6 +50,15 @@ export interface ItemData {
     modifiers: AttributeModifier[] | null;
     baseDurability: number | null;
     tags: TagId[];
+    /** 직접 공격이 회피되지 않고 피해를 준 뒤 실행되는 무기별 후처리. */
+    onBasicAttackHit?: (context: ItemBasicAttackHitContext) => void;
+}
+
+export interface ItemBasicAttackHitContext {
+    attacker: Entity;
+    target: Entity;
+    weapon: Item;
+    result: DamageResult;
 }
 
 /** 소유 계층 사이에서 아이템 상태를 손실 없이 이동하는 불변 스냅샷 */
