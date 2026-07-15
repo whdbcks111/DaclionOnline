@@ -1,7 +1,7 @@
 [
   {
     "id": "town_square",
-    "name": "마을 광장",
+    "name": "루미나르 개척촌 광장",
     "zoneType": "safe",
     "isRespawnLocation": true,
     "x": 0,
@@ -11,150 +11,385 @@
     "npcIds": ["town_guide"],
     "objects": [],
     "connections": [
-      {
-        "locationId": "field"
-      },
-      {
-        "locationId": "shop_street"
-      },
-      {
-        "locationId": "feveric_mine"
-      }
-    ]
-  },
-  {
-    "id": "field",
-    "name": "초원",
-    "zoneType": "safe",
-    "x": 100,
-    "y": 0,
-    "z": 0,
-    "tags": ["location:safe", "location:wilderness", "property:natural"],
-    "npcIds": [],
-    "objects": [
-      {
-        "type": "monster",
-        "dataId": "slime",
-        "maxCount": 5,
-        "respawnTime": 30
-      }
-    ],
-    "connections": [
-      {
-        "locationId": "town_square"
-      },
-      {
-        "locationId": "dark_forest",
-        "condition": "level_5"
-      }
+      { "locationId": "field" },
+      { "locationId": "shop_street" },
+      { "locationId": "feveric_mine" }
     ]
   },
   {
     "id": "shop_street",
-    "name": "상점 거리",
+    "name": "루미나르 장터",
     "zoneType": "safe",
-    "x": -50,
-    "y": 0,
+    "x": -55,
+    "y": 5,
     "z": 0,
     "tags": ["location:safe"],
     "npcIds": [],
     "objects": [],
     "connections": [
-      {
-        "locationId": "town_square"
-      },
-      {
-        "locationId": "shop_general"
-      }
-    ]
-  },
-  {
-    "id": "dark_forest",
-    "name": "어두운 숲",
-    "zoneType": "normal",
-    "x": 200,
-    "y": 0,
-    "z": 0,
-    "tags": ["location:wilderness", "property:natural"],
-    "npcIds": [],
-    "objects": [
-      {
-        "type": "monster",
-        "dataId": "goblin",
-        "maxCount": 3,
-        "respawnTime": 60
-      },
-      {
-        "type": "monster",
-        "dataId": "stone_golem",
-        "maxCount": 1,
-        "respawnTime": 90
-      }
-    ],
-    "connections": [
-      {
-        "locationId": "field"
-      }
+      { "locationId": "town_square" },
+      { "locationId": "shop_general" }
     ]
   },
   {
     "id": "shop_general",
-    "name": "잡화점",
+    "name": "별등불 잡화점",
     "zoneType": "safe",
-    "x": -65,
-    "y": 15,
+    "x": -80,
+    "y": 25,
     "z": 0,
     "shopId": "general_store",
     "tags": ["location:safe", "location:shop"],
     "npcIds": [],
     "objects": [],
     "connections": [
-      {
-        "locationId": "shop_street"
-      }
+      { "locationId": "shop_street" }
+    ]
+  },
+  {
+    "id": "field",
+    "name": "바람결 초원 1 · 들머리",
+    "zoneType": "normal",
+    "x": 100,
+    "y": 0,
+    "z": 0,
+    "tags": ["location:wilderness", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "slime", "maxCount": 5, "respawnTime": 20 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "town_square" },
+      { "locationId": "meadow_2" }
+    ]
+  },
+  {
+    "id": "meadow_2",
+    "name": "바람결 초원 2 · 낮은 구릉",
+    "zoneType": "normal",
+    "x": 190,
+    "y": 25,
+    "z": 4,
+    "tags": ["location:wilderness", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "grass_slime", "maxCount": 4, "respawnTime": 28 }
+    ],
+    "connections": [
+      { "locationId": "field" },
+      { "locationId": "meadow_3" }
+    ]
+  },
+  {
+    "id": "meadow_3",
+    "name": "바람결 초원 3 · 맑은 샘터",
+    "zoneType": "normal",
+    "x": 280,
+    "y": 50,
+    "z": 2,
+    "tags": ["location:wilderness", "property:natural", "property:water"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "purple_slime", "maxCount": 3, "respawnTime": 35 },
+      { "type": "monster", "dataId": "spring_slime", "maxCount": 2, "respawnTime": 40 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "meadow_2" },
+      { "locationId": "swamp_edge", "condition": "level_10" }
+    ]
+  },
+  {
+    "id": "swamp_edge",
+    "name": "안개수렁 1 · 물먹은 둑",
+    "zoneType": "normal",
+    "x": 350,
+    "y": 120,
+    "z": -4,
+    "tags": ["location:wilderness", "location:swamp", "property:water", "property:poison"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "bog_slime", "maxCount": 4, "respawnTime": 38 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "meadow_3" },
+      { "locationId": "swamp_basin" }
+    ]
+  },
+  {
+    "id": "swamp_basin",
+    "name": "안개수렁 2 · 잠든 포자밭",
+    "zoneType": "normal",
+    "x": 420,
+    "y": 180,
+    "z": -9,
+    "tags": ["location:wilderness", "location:swamp", "property:natural", "property:poison"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "sporeling", "maxCount": 3, "respawnTime": 45 },
+      { "type": "monster", "dataId": "mire_lurker", "maxCount": 2, "respawnTime": 55 }
+    ],
+    "connections": [
+      { "locationId": "swamp_edge" },
+      { "locationId": "swamp_heart" }
+    ]
+  },
+  {
+    "id": "swamp_heart",
+    "name": "안개수렁 3 · 가라앉은 심부",
+    "zoneType": "normal",
+    "x": 485,
+    "y": 245,
+    "z": -16,
+    "tags": ["location:wilderness", "location:swamp", "property:water", "property:poison"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "mire_lurker", "maxCount": 2, "respawnTime": 55 },
+      { "type": "monster", "dataId": "swamp_core", "maxCount": 2, "respawnTime": 75 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "swamp_basin" },
+      { "locationId": "ember_foothills", "condition": "level_28" }
+    ]
+  },
+  {
+    "id": "ember_foothills",
+    "name": "홍염산지 1 · 잿빛 기슭",
+    "zoneType": "normal",
+    "x": 555,
+    "y": 190,
+    "z": 18,
+    "tags": ["location:wilderness", "location:volcanic", "property:fire"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ember_slime", "maxCount": 4, "respawnTime": 48 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "swamp_heart" },
+      { "locationId": "volcanic_slope" }
+    ]
+  },
+  {
+    "id": "volcanic_slope",
+    "name": "홍염산지 2 · 불티 비탈",
+    "zoneType": "normal",
+    "x": 630,
+    "y": 130,
+    "z": 48,
+    "tags": ["location:wilderness", "location:volcanic", "property:fire"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ash_wraith", "maxCount": 3, "respawnTime": 52 },
+      { "type": "monster", "dataId": "lava_armor", "maxCount": 1, "respawnTime": 75 }
+    ],
+    "connections": [
+      { "locationId": "ember_foothills" },
+      { "locationId": "volcanic_crater", "condition": "level_36" }
+    ]
+  },
+  {
+    "id": "volcanic_crater",
+    "name": "홍염산지 3 · 끓는 분화구",
+    "zoneType": "normal",
+    "x": 700,
+    "y": 70,
+    "z": 72,
+    "tags": ["location:wilderness", "location:volcanic", "property:fire"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "flame_salamander", "maxCount": 3, "respawnTime": 58 },
+      { "type": "monster", "dataId": "crater_heart", "maxCount": 1, "respawnTime": 90 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "volcanic_slope" },
+      { "locationId": "volcanic_core", "condition": "level_45" }
+    ]
+  },
+  {
+    "id": "volcanic_core",
+    "name": "홍염산지 4 · 칼데라 중심",
+    "zoneType": "normal",
+    "x": 765,
+    "y": 15,
+    "z": 48,
+    "tags": ["location:wilderness", "location:volcanic", "property:fire"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "caldera_beast", "maxCount": 1, "respawnTime": 150 }
+    ],
+    "connections": [
+      { "locationId": "volcanic_crater" }
     ]
   },
   {
     "id": "feveric_mine",
-    "name": "피버릭 광산",
+    "name": "피버릭 갱도 · 입구",
     "zoneType": "normal",
     "x": 0,
-    "y": -150,
-    "z": -20,
-    "tags": ["location:wilderness", "material:stone"],
+    "y": -130,
+    "z": -18,
+    "tags": ["location:wilderness", "location:mine", "material:stone"],
     "npcIds": [],
     "objects": [
-      {
-        "type": "resource",
-        "dataId": "ore_deposit",
-        "maxCount": 10,
-        "respawnTime": 45
-      }
+      { "type": "monster", "dataId": "cave_slime", "maxCount": 2, "respawnTime": 32 },
+      { "type": "resource", "dataId": "ore_deposit", "maxCount": 6, "respawnTime": 45 }
     ],
     "connections": [
-      {
-        "locationId": "town_square"
-      },
-      {
-        "locationId": "feveric_mine_shop"
-      }
+      { "locationId": "town_square" },
+      { "locationId": "feveric_mine_shop" },
+      { "locationId": "mine_junction" }
     ]
   },
   {
     "id": "feveric_mine_shop",
-    "name": "피버릭 광산 상점",
+    "name": "은맥 광부 보급소",
     "zoneType": "safe",
-    "x": 20,
-    "y": -150,
-    "z": -20,
+    "x": 28,
+    "y": -132,
+    "z": -18,
     "shopId": "feveric_mine_store",
-    "tags": ["location:safe", "location:shop", "material:stone"],
+    "tags": ["location:safe", "location:shop", "location:mine", "material:stone"],
     "npcIds": [],
     "objects": [],
     "connections": [
-      {
-        "locationId": "feveric_mine"
-      }
+      { "locationId": "feveric_mine" }
+    ]
+  },
+  {
+    "id": "mine_junction",
+    "name": "피버릭 갱도 · 세 갈래 교차로",
+    "zoneType": "normal",
+    "x": 0,
+    "y": -220,
+    "z": -36,
+    "tags": ["location:wilderness", "location:mine", "material:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "stone_golem", "maxCount": 2, "respawnTime": 65 },
+      { "type": "resource", "dataId": "ore_deposit", "maxCount": 4, "respawnTime": 48 }
+    ],
+    "connections": [
+      { "locationId": "feveric_mine" },
+      { "locationId": "mine_east_tunnel" },
+      { "locationId": "mine_west_tunnel" }
+    ]
+  },
+  {
+    "id": "mine_east_tunnel",
+    "name": "피버릭 갱도 · 동쪽 굴절로",
+    "zoneType": "normal",
+    "x": 75,
+    "y": -295,
+    "z": -48,
+    "tags": ["location:wilderness", "location:mine", "material:iron"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "stone_golem", "maxCount": 2, "respawnTime": 65 },
+      { "type": "resource", "dataId": "dense_ore_deposit", "maxCount": 4, "respawnTime": 70 }
+    ],
+    "connections": [
+      { "locationId": "mine_junction" },
+      { "locationId": "abandoned_rail" },
+      { "locationId": "crystal_gallery", "condition": "level_20" }
+    ]
+  },
+  {
+    "id": "mine_west_tunnel",
+    "name": "피버릭 갱도 · 서쪽 붕락로",
+    "zoneType": "normal",
+    "x": -75,
+    "y": -295,
+    "z": -52,
+    "tags": ["location:wilderness", "location:mine", "material:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "cave_slime", "maxCount": 3, "respawnTime": 35 },
+      { "type": "resource", "dataId": "dense_ore_deposit", "maxCount": 3, "respawnTime": 70 }
+    ],
+    "connections": [
+      { "locationId": "mine_junction" },
+      { "locationId": "flooded_tunnel" },
+      { "locationId": "abandoned_rail" }
+    ]
+  },
+  {
+    "id": "abandoned_rail",
+    "name": "피버릭 갱도 · 버려진 운반로",
+    "zoneType": "normal",
+    "x": 30,
+    "y": -375,
+    "z": -70,
+    "tags": ["location:wilderness", "location:mine", "material:iron"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "stone_golem", "maxCount": 2, "respawnTime": 68 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "mine_east_tunnel" },
+      { "locationId": "mine_west_tunnel" },
+      { "locationId": "deep_shaft" }
+    ]
+  },
+  {
+    "id": "flooded_tunnel",
+    "name": "피버릭 갱도 · 침수 회랑",
+    "zoneType": "normal",
+    "x": -95,
+    "y": -390,
+    "z": -78,
+    "tags": ["location:wilderness", "location:mine", "property:water"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "spring_slime", "maxCount": 3, "respawnTime": 42 },
+      { "type": "resource", "dataId": "dense_ore_deposit", "maxCount": 4, "respawnTime": 72 }
+    ],
+    "connections": [
+      { "locationId": "mine_west_tunnel" },
+      { "locationId": "deep_shaft" }
+    ]
+  },
+  {
+    "id": "crystal_gallery",
+    "name": "피버릭 갱도 · 수정 군락",
+    "zoneType": "normal",
+    "x": 110,
+    "y": -410,
+    "z": -92,
+    "tags": ["location:wilderness", "location:mine", "property:ice", "material:diamond"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "crystal_guardian", "maxCount": 2, "respawnTime": 82 },
+      { "type": "resource", "dataId": "crystal_ore_deposit", "maxCount": 5, "respawnTime": 100 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "mine_east_tunnel" },
+      { "locationId": "deep_shaft" }
+    ]
+  },
+  {
+    "id": "deep_shaft",
+    "name": "피버릭 갱도 · 맥동하는 심층",
+    "zoneType": "normal",
+    "x": 5,
+    "y": -500,
+    "z": -125,
+    "tags": ["location:wilderness", "location:mine", "property:natural", "material:iron"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "deep_guardian", "maxCount": 2, "respawnTime": 95 },
+      { "type": "resource", "dataId": "crystal_ore_deposit", "maxCount": 3, "respawnTime": 105 }
+    ],
+    "connections": [
+      { "locationId": "abandoned_rail" },
+      { "locationId": "flooded_tunnel" },
+      { "locationId": "crystal_gallery" }
     ]
   }
 ]

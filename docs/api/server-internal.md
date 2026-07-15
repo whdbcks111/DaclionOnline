@@ -38,9 +38,9 @@
 | `EquipSlotType`, `Equipment` | `values/fromKey/fromInput`, `getEquipped`, `getAllEquipped`, `hasEquippedItemTag`, `setItemMetadata/resetItemMetadata`, `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`, `hasTag`, `getTags`, `hasEffectSourceTag`, `equip`, `equipSwap`, `unequip`, `applyModifiers`, `load`, `save` | 슬롯 메타데이터, 특정 슬롯 도구 태그 검사, 장착 상태·dirty 추적, 일반 태그와 공격 상성용 무기 태그, modifier·DB 동기화 |
 | `Item`, Item registry | `basicAttackOverrideKey`, `image`, `durability/durabilityRatio/isBroken`, `setDurability`, `changeDurability`, `increaseDurability`, `decreaseDurability`, `getMetadata/getMetadataSnapshot/getMetadataDeltaSnapshot`, `setMetadata/resetMetadata`, `hasTag`, `snapshot/fromSnapshot/fromPersistence`, `defineItem`, `getItemData`, `getAllItemData` | 공격 레지스트리 key, 내구도, 기본값+delta 합성, 이미지·태그와 이동 snapshot |
 | `Projectile`, registry | `define/get/getAllProjectileData`, `parseProjectileReference`, `spawnProjectile`, `spawnProjectileFromData`, `getActiveProjectiles`, `removeProjectile`, `updateProjectiles` | 비영속 투사체 마스터/JSON 검증, 생성·조회·비행·적중·소멸 |
-| `Monster` | `damage`, `update`, `onDeath`, `rollDrops`, `rollGold` | 타게팅 AI, 보상, 리스폰 |
-| Monster registry | `defineMonster`, `getMonsterData`, `getAllMonsterData` | 몬스터 마스터 데이터 |
-| `Resource` | `isInteractable`, `interact`, `getAttackDeniedReason`, `onDeath`, `rollDrop`, `rollExp` | 비공격 Entity 자원, 도구 제한, 가중치 드롭·범위 경험치·리스폰 |
+| `Monster` | `damage`, `update`, `onDeath`, `rollDrops`, `rollGold` | 타게팅 AI, 물리/마법 공격 프로필과 적중 상태이상, 보상, 리스폰 |
+| Monster registry | `defineMonster`, `getMonsterData`, `getAllMonsterData` | Lv.1~50 몬스터 마스터 데이터 |
+| `Resource` | `isInteractable`, `interactionCooldownRemaining`, `interact`, `rollInteractionCooldown`, `getAttackDeniedReason`, `onDeath`, `rollDrop`, `rollExp` | 비공격 Entity 자원, 공격/도구 제한, 상호작용 쿨타임, 가중치 드롭·범위 경험치·리스폰 |
 | Resource registry | `defineResource`, `getResourceData`, `getAllResourceData`, `registerResourceInteraction` | 자원 마스터 데이터와 key→상호작용 함수 등록 |
 | `Location` | `hasTag`, `getObjects/getObject/getObjectCount/hasObject`, `addObject/removeObject`, `getNpcs/getNpc/hasNpc`, `addDroppedItem`, `getDroppedItems`, `pickupItem/pickupAllItems`, `getAvailableConnections`, `update` | Monster/Resource 통합 오브젝트, ID 기반 NPC와 raw 배열을 숨긴 바닥 아이템 조회·단일/전체 회수 |
 | Location registry | `normalizeLocationData`, `defineLocation`, `reloadAllLocations`, `getLocation`, `getAllLocations`, `getRespawnLocation`, `distanceBetween` | 통합 오브젝트 배치 검증·복사, 월드 위치 정의/조회 |

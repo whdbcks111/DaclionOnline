@@ -187,7 +187,11 @@ export default abstract class Entity implements TagReadable {
     get maxExp() { return Entity.getMaxExpOfLevel(this._level); }
 
     static getMaxExpOfLevel(level: number): number {
-        return Math.max(1, level * 100);
+        const normalizedLevel = Math.max(1, level);
+        // Lv.1의 1배에서 Lv.50의 4배까지 레벨당 요구량 배율을 늘린다.
+        // 동급 몬스터 기준 보상(level * 20)은 Lv.1에서 20%, Lv.50에서 5%가 된다.
+        const growthMultiplier = 1 + 3 * Math.min(49, normalizedLevel - 1) / 49;
+        return Math.max(1, Math.round(normalizedLevel * 100 * growthMultiplier));
     }
 
     get life() { return this._life; }

@@ -14,7 +14,7 @@ player별 ActiveNpcDialogue (메모리)
        └─ choice ── 일시 정지 ──> /대화선택 sessionId 번호 ──> 다음 scenario
 ```
 
-NPC 정의는 `models/NPC.ts`의 정적 레지스트리가 소유한다. 장소 JSON은 정의 전체를 복사하지 않고 `npcIds`만 저장하며, `Location` 공개 API가 ID를 NPC 객체로 해석한다. 현재 예시는 마을 광장의 `town_guide`(안내인 리아)다.
+NPC 정의는 `models/NPC.ts`의 정적 레지스트리가 소유한다. 장소 JSON은 정의 전체를 복사하지 않고 `npcIds`만 저장하며, `Location` 공개 API가 ID를 NPC 객체로 해석한다. 현재 예시는 루미나르 개척촌 광장의 `town_guide`(안내인 리아)다.
 
 활성 대화는 `models/NpcDialogue.ts`의 player별 메모리 세션이다. 재접속이나 서버 재시작 시 이어지지 않는다. 대화에서 설정한 flag/state는 `PlayerProgress` 공개 API를 통해 기존 `player_progress` 테이블에 dirty 저장되므로 별도 NPC DB 테이블은 없다.
 

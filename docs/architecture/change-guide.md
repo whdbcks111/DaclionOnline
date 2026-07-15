@@ -36,7 +36,7 @@
 
 1. `data/monsters.ts`에 `defineMonster()` 마스터 데이터를 추가한다.
 2. 공통 전투 공식은 `models/Entity.ts`, 몬스터 AI·보상·드롭은 `models/Monster.ts`에 둔다.
-3. 비공격 자원은 `data/resources.ts`의 `defineResource()`로 능력치·필수 주무기 도구 태그·가중치 드롭·경험치 범위를 정의한다. 선택형 동작은 `registerResourceInteraction(key, handler)`에 등록한다.
+3. 비공격 자원은 `data/resources.ts`의 `defineResource()`로 능력치·공격 가능 여부·필수 주무기 도구 태그·가중치 드롭·경험치 범위·상호작용 쿨타임을 정의한다. 선택형 동작은 `registerResourceInteraction(key, handler)`에 등록하고 성공 시 `false` 이외를 반환해야 쿨타임이 시작된다.
 4. 위치 배치는 `data/locations.json`의 `objects`에 `type: monster | resource`와 `dataId/maxCount/respawnTime`을 넣는다.
 5. UI에 새 상태가 필요하면 공유 payload → `modules/player.ts` → `HudContext` → HUD 컴포넌트 순서로 확장한다.
 

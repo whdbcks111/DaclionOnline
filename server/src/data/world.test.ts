@@ -1,0 +1,76 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+import Entity from '../models/Entity.js';
+import { getAllLocations, reloadAllLocations } from '../models/Location.js';
+import { getAllMonsterData, getMonsterData } from '../models/Monster.js';
+import { getResourceData } from '../models/Resource.js';
+import type { LocationData } from '../../../shared/types.js';
+import './items.js';
+import './monsters.js';
+import './resources.js';
+import './npcs.js';
+import './locations.js';
+import { rollTreasureReward } from './resources.js';
+
+const locations = JSON.parse(
+    readFileSync(new URL('./locations.json', import.meta.url), 'utf-8'),
+) as LocationData[];
+
+test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
+    const ids = new Set(locations.map(location => location.id));
+    assert.equal(locations.length, 22);
+    assert.equal(ids.size, locations.length);
+
+    for (const location of locations) {
+        for (const connection of location.connections) {
+            assert.ok(ids.has(connection.locationId), `${location.id} -> ${connection.locationId}`);
+            const target = locations.find(candidate => candidate.id === connection.locationId);
+            assert.ok(target?.connections.some(candidate => candidate.locationId === location.id),
+                `${location.id} <-> ${connection.locationId}`);
+        }
+        for (const object of location.objects) {
+            assert.ok(object.type === 'monster'
+                ? getMonsterData(object.dataId)
+                : getResourceData(object.dataId), `${location.id}/${object.dataId}`);
+            assert.notEqual(object.dataId, 'goblin');
+        }
+    }
+
+    assert.equal(getMonsterData('goblin'), undefined);
+    assert.ok(locations.some(location => location.tags.includes('location:swamp')));
+    assert.ok(locations.some(location => location.tags.includes('location:volcanic')));
+    assert.ok(locations.filter(location => location.tags.includes('location:mine')).length >= 8);
+
+    reloadAllLocations(locations);
+    assert.equal(getAllLocations().length, locations.length);
+});
+
+test('1~50레벨 동급 몬스터 성장 곡선은 처치당 20%에서 5%로 낮아진다', () => {
+    const monsters = getAllMonsterData();
+    const levelOne = getMonsterData('slime');
+    const levelFifty = getMonsterData('caldera_beast');
+
+    assert.equal(Math.min(...monsters.map(monster => monster.level)), 1);
+    assert.equal(Math.max(...monsters.map(monster => monster.level)), 50);
+    assert.equal(Entity.getMaxExpOfLevel(1), 100);
+    assert.equal(Entity.getMaxExpOfLevel(50), 20_000);
+    assert.equal(levelOne!.expReward / Entity.getMaxExpOfLevel(1), 0.2);
+    assert.equal(levelFifty!.expReward / Entity.getMaxExpOfLevel(50), 0.05);
+    assert.ok(monsters.every(monster => monster.expReward === monster.level * 20));
+});
+
+test('보물상자는 1~2시간 쿨타임과 가중치 기반 골드·아이템 보상을 가진다', () => {
+    const chest = getResourceData('treasure_chest');
+    assert.deepEqual(chest?.interactionCooldown, { min: 3600, max: 7200 });
+    assert.equal(chest?.attackable, false);
+
+    const coins = rollTreasureReward(() => 0);
+    assert.equal(coins.label, '묵직한 동전 주머니');
+    assert.equal(coins.gold, 35);
+
+    const values = [0.999999, 0, 0];
+    const rare = rollTreasureReward(() => values.shift() ?? 0);
+    assert.equal(rare.itemDataId, 'diamond');
+    assert.equal(rare.itemCount, 1);
+});

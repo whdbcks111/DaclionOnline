@@ -1,6 +1,9 @@
-import { registerConnectionCondition } from "../models/Location.js";
+import { registerConnectionCondition } from '../models/Location.js';
 
+const levelConditions = [10, 20, 28, 36, 45] as const;
 
-registerConnectionCondition('level_5', player => {
-    return player.level >= 5 ? 'visible' : 'locked';
-});
+for (const requiredLevel of levelConditions) {
+    registerConnectionCondition(`level_${requiredLevel}`, player => (
+        player.level >= requiredLevel ? 'visible' : 'locked'
+    ));
+}

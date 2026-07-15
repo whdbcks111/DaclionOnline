@@ -15,7 +15,7 @@ defineProgress({
 NPC.define({
     id: 'town_guide',
     name: '안내인 리아',
-    description: '마을을 찾은 모험가에게 길을 알려주는 안내인입니다.',
+    description: '루미나르 개척촌을 찾은 모험가에게 길을 알려주는 안내인입니다.',
     tags: ['npc:guide'],
     entryScenario: ({ player }) => player.progress.getFlag(MONSTER_HUNT_QUESTION_FLAG)
         ? 'returning'
@@ -30,7 +30,7 @@ NPC.define({
         }),
         new DialogueScenario('returning', function* ({ player }) {
             if (player.progress.getFlag(MONSTER_HUNT_QUESTION_FLAG)) {
-                yield Dialogue.say('다시 만났네, 모험가. 초원으로 가는 길은 잘 찾았어?');
+                yield Dialogue.say('다시 만났네, 모험가. 바람결 초원으로 가는 길은 잘 찾았어?');
             }
             yield Dialogue.choice([
                 { label: '네, 고마워요.', target: 'goodbye' },
@@ -42,7 +42,7 @@ NPC.define({
             yield Dialogue.end();
         }),
         new DialogueScenario('monster_help', function* () {
-            yield Dialogue.say('몬스터는 광장에서 초원으로 가면 만날 수 있어. 도움이 필요하면 언제든 말해~');
+            yield Dialogue.say('광장 동쪽의 바람결 초원부터 시작해 봐. 초원 너머에는 안개수렁과 홍염산지가 이어지고, 남쪽 피버릭 갱도에서는 광물도 캘 수 있어. 도움이 필요하면 언제든 말해~');
             yield Dialogue.setFlag(MONSTER_HUNT_QUESTION_FLAG);
             yield Dialogue.end();
         }),

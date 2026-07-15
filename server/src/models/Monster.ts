@@ -10,6 +10,7 @@ import { chat } from "../utils/chatBuilder.js";
 import { sendBotMessageToUser } from "../modules/message.js";
 import { GameTags, normalizeTags } from "../../../shared/tags.js";
 import type { TagId } from "../../../shared/tags.js";
+import { StatusEffectType } from "./StatusEffect.js";
 
 /** 드롭 아이템 정보 */
 export interface DropInfo {
@@ -29,6 +30,18 @@ export interface MonsterEquipInfo {
 /** 골드 보상 — 고정값 또는 최소~최대 범위 */
 export type GoldReward = number | { min: number; max: number };
 
+export interface MonsterAttackEffect {
+    statusEffectId: string;
+    chance: number;
+    duration: number;
+    level: number;
+}
+
+export interface MonsterAttackProfile {
+    damageType?: DamageType;
+    effect?: MonsterAttackEffect;
+}
+
 /** 몬스터 정의 (마스터 데이터, 코드에서 직접 정의) */
 export interface MonsterData {
     id: string;
@@ -40,6 +53,7 @@ export interface MonsterData {
     expReward: number;
     goldReward?: GoldReward;
     equipments: MonsterEquipInfo[];
+    attack?: MonsterAttackProfile;
     tags: TagId[];
 }
 
@@ -52,6 +66,7 @@ export default class Monster extends Entity {
     readonly respawnTime: number;
     /** true이면 일회성 몬스터 — 사망 시 리스폰 없이 즉시 제거 */
     readonly isOneShot: boolean;
+    private readonly attackProfile?: Readonly<MonsterAttackProfile>;
 
     override get deathDuration(): number { return this.respawnTime; }
 
@@ -70,6 +85,10 @@ export default class Monster extends Entity {
         this.goldReward = data.goldReward ?? 0;
         this.respawnTime = respawnTime;
         this.isOneShot = isOneShot;
+        this.attackProfile = data.attack ? {
+            ...data.attack,
+            effect: data.attack.effect ? { ...data.attack.effect } : undefined,
+        } : undefined;
 
         // 기본 장비 장착
         for (const eq of data.equipments) {
@@ -102,7 +121,12 @@ export default class Monster extends Entity {
             this.currentTarget = null;
             return;
         }
-        this.attack(target);
+        const result = this.attack(target, this.attackProfile?.damageType ?? 'physical');
+        const effect = this.attackProfile?.effect;
+        if (result && !result.evaded && effect && Math.random() < effect.chance) {
+            const type = StatusEffectType.fromKey(effect.statusEffectId);
+            if (type) target.applyStatusEffect(type, effect.duration, effect.level);
+        }
     }
 
     override onDeath(): void {
@@ -184,7 +208,27 @@ const monsterDataCache = new Map<string, MonsterData>();
 
 /** 몬스터 정의 등록 (data/monsters.ts에서 호출) */
 export function defineMonster(data: MonsterData): void {
-    monsterDataCache.set(data.id, { ...data, tags: normalizeTags(data.tags) });
+    if (!data.id.trim() || !Number.isInteger(data.level) || data.level < 1) {
+        throw new Error(`Invalid MonsterData: ${data.id}`);
+    }
+    const effect = data.attack?.effect;
+    if (effect && (!StatusEffectType.fromKey(effect.statusEffectId)
+        || !Number.isFinite(effect.chance) || effect.chance < 0 || effect.chance > 1
+        || !Number.isFinite(effect.duration) || effect.duration <= 0
+        || !Number.isInteger(effect.level) || effect.level < 1)) {
+        throw new Error(`Invalid monster attack effect: ${data.id}`);
+    }
+    monsterDataCache.set(data.id, {
+        ...data,
+        baseAttribute: { ...data.baseAttribute },
+        drops: data.drops.map(drop => ({ ...drop })),
+        equipments: data.equipments.map(equipment => ({ ...equipment })),
+        attack: data.attack ? {
+            ...data.attack,
+            effect: effect ? { ...effect } : undefined,
+        } : undefined,
+        tags: normalizeTags(data.tags),
+    });
 }
 
 /** 몬스터 정의 조회 */

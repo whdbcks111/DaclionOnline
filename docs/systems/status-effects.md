@@ -46,6 +46,8 @@ Metadata는 Skill/Item과 같은 원본+top-level delta 방식이다. `getMetada
 
 `StatusEffectType.icon`은 `/icons/{icon}.png`의 확장자 없는 key다. 생략하면 `status-effects/{id}`를 사용하므로 새 타입을 추가할 때 같은 작업에 `client/public/icons/status-effects/{id}.png`를 배치한다.
 
+`MonsterData.attack.effect`는 상태이상 ID, 확률, 지속시간, 레벨을 데이터로 지정한다. 몬스터 기본 공격이 회피되지 않았을 때만 `StatusEffectType.fromKey()`와 `Entity.applyStatusEffect()`를 통해 적용되며, 퍼플/수렁 계열과 화산 몬스터가 맹독·마비독·화염의 실제 필드 테스트 데이터를 제공한다.
+
 - `/상태창` 맨 아래는 `Lv.레벨 [아이콘]효과명 MM:SS`를 표시하며 효과명 hover에는 계산된 설명과 현재/최대 지속시간이 나온다.
 - `playerStats.statusEffects`는 `getStatusEffectDisplaySnapshots()`을 ChatNode 설명으로 변환해 전송한다. PlayerStatusHud는 아이콘 위에 남은 지속시간 비율을 반시계 방향 fill로 표시하고 hover/focus 상세 정보를 제공한다.
 - 관리자 `/상태이상부여 대상 상태이상코드 레벨 시간`은 온라인 Player만 대상으로 `Entity.applyStatusEffect()`를 호출한다. 상태효과가 런타임 전용이므로 오프라인 객체에 적용하거나 DB에 저장하지 않는다.

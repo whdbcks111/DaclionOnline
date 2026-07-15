@@ -19,6 +19,8 @@ export const GameTags = Object.freeze({
     ENTITY_RESOURCE: 'entity:resource',
     ENTITY_SLIME: 'entity:slime',
     ENTITY_HUMANOID: 'entity:humanoid',
+    ENTITY_ELEMENTAL: 'entity:elemental',
+    ENTITY_BEAST: 'entity:beast',
 
     ITEM_CONSUMABLE: 'item:consumable',
     ITEM_WEAPON: 'item:weapon',
@@ -44,6 +46,7 @@ export const GameTags = Object.freeze({
     TOOL_MINING: 'tool:mining',
 
     RESOURCE_ORE: 'resource:ore',
+    RESOURCE_TREASURE: 'resource:treasure',
 
     SKILL_ACTIVE: 'skill:active',
     SKILL_COMBAT: 'skill:combat',
@@ -54,6 +57,9 @@ export const GameTags = Object.freeze({
     LOCATION_SAFE: 'location:safe',
     LOCATION_WILDERNESS: 'location:wilderness',
     LOCATION_SHOP: 'location:shop',
+    LOCATION_MINE: 'location:mine',
+    LOCATION_SWAMP: 'location:swamp',
+    LOCATION_VOLCANIC: 'location:volcanic',
     SHOP_GENERAL: 'shop:general',
     SHOP_MINING: 'shop:mining',
 } satisfies Record<string, TagId>)

@@ -79,8 +79,8 @@ Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만
 
 투사체 공격에서는 `DamageCause.causeEntity`가 owner가 아닌 Projectile이다. 보상과 어그로는 `causeEntity.attackOwner`로 owner에게 돌아가지만, 위 상성 계산에는 실제 causeEntity만 전달된다.
 
-대표 데이터로 낡은 검은 `property:fire`, 독 단검은 `property:poison`, 슬라임은 `trait:inanimate + property:water + property:poison`, 고블린은 `property:natural`, 돌 골렘은 `trait:inanimate + property:natural`을 가진다. 낡은 검은 슬라임에게 0.5배, 고블린에게 1.5배이며 독 단검의 공격은 슬라임과 돌 골렘에게 0배다. 반대로 낡은 검을 장착한 플레이어가 피격될 때는 검의 불 태그가 대상 태그에 포함되지 않는다.
+대표 데이터로 낡은 검은 `property:fire`, 독 단검은 `property:poison`, 기본 슬라임은 `trait:inanimate + property:water + property:poison`, 화산 생물은 `property:fire`, 수정 파수체는 `trait:inanimate + property:ice`를 가진다. 낡은 검은 기본 슬라임에게 0.5배, 수정 파수체에게 1.5배이며 독 단검의 공격은 무생물 슬라임과 파수체에게 0배다. 반대로 낡은 검을 장착한 플레이어가 피격될 때는 검의 불 태그가 대상 태그에 포함되지 않는다.
 
-광석 자원은 `entity:resource + resource:ore + trait:inanimate + material:stone`을 가진다. 공격 가능 도구 판정은 상성표와 별개로 곡괭이의 `tool:mining` 태그를 `Resource.getAttackDeniedReason`에서 검사한다.
+광석 자원은 `entity:resource + resource:ore + trait:inanimate`와 단계별 재료 태그를 가진다. 보물상자는 `resource:treasure + trait:inanimate + material:wood`이며 공격 불가다. 공격 가능 도구 판정은 상성표와 별개로 곡괭이의 `tool:mining` 태그를 `Resource.getAttackDeniedReason`에서 검사한다. 지역은 `location:mine/swamp/volcanic`, 몬스터는 `entity:slime/elemental/beast`와 속성 태그를 조합한다.
 
 상태 이상이나 회복 같은 새 효과는 대상의 태그 배열을 직접 읽지 말고 `applyTagEffectValue` 또는 `resolveTagEffect`를 호출한다. 0배일 때 부수 효과도 막아야 한다면 반환값의 `effective`를 검사한다.

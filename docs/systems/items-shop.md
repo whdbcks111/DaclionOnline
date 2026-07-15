@@ -12,7 +12,7 @@
 
 현재 장비·소모품 정의는 `health_potion`, `mana_potion`, `old_sword`, `old_shield`, `venom_dagger`, `light_bow`, `wooden_arrow`, `basic_pickaxe`, `iron_pickaxe`다. 낡은 검의 불 태그와 독 단검의 독 태그는 장착 시 Entity의 직접 공격 효과 태그가 된다. 가벼운 활은 화살 한 발을 소비해 화살 자체의 자연 속성으로 공격한다. 두 곡괭이는 `item:tool + tool:mining` 태그를 가진 주무기이며 광석의 공격 조건을 만족한다. 철 곡괭이는 제작법으로 획득한다.
 
-광물 아이템은 `stone`, `coal`, `iron_ore`, `gold_ore`, `ruby`, `emerald`, `diamond`이며 모두 99개까지 쌓인다. 피버릭 광산 상점은 곡괭이를 50 Gold에 판매하고 광물을 희귀도에 따라 각각 2, 5, 10, 25, 55, 60, 180 Gold에 매입한다.
+광물 아이템은 `stone`, `coal`, `iron_ore`, `gold_ore`, `ruby`, `emerald`, `diamond`이며 모두 99개까지 쌓인다. 피버릭 갱도 입구의 은맥 광부 보급소는 곡괭이를 50 Gold에 판매하고 광물을 희귀도에 따라 각각 2, 5, 10, 25, 55, 60, 180 Gold에 매입한다.
 
 metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-level key 단위로 합쳐 계산한다. `getMetadata/getMetadataSnapshot`으로 읽고 `setMetadata/resetMetadata`로 변경한다. 기본값과 같은 값을 설정하면 delta가 제거되며, override가 없는 필드는 실행 중 `ItemData.baseMetadata`가 바뀌어도 즉시 최신 값을 상속한다. 객체·배열 같은 중첩 값은 해당 top-level 필드 전체가 하나의 override다.
 
@@ -102,4 +102,4 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 - `Shop.update(dt)`가 재입고 timer를 누적하며 게임 루프가 모든 상점을 갱신한다.
 - 재고는 메모리 상태여서 서버 재시작 시 최대치로 초기화된다.
 
-현재 `general_store`가 포션, 낡은 검, 낡은 방패, 독 단검, 가벼운 활과 화살을 판매·매입하며 `shop_general` 위치에 연결되어 있다.
+현재 `general_store`가 포션, 낡은 검, 낡은 방패, 독 단검, 가벼운 활과 화살을 판매·매입하며 루미나르 장터의 `shop_general`(별등불 잡화점)에 연결되어 있다.

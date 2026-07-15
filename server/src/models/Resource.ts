@@ -4,7 +4,7 @@ import Equipment from './Equipment.js';
 import type Player from './Player.js';
 import { getItemData } from './Item.js';
 import { chat } from '../utils/chatBuilder.js';
-import { sendBotMessageToUser } from '../modules/message.js';
+import { sendBotMessageToUser, sendNotificationToUser } from '../modules/message.js';
 import { GameTags, normalizeTags } from '../../../shared/tags.js';
 import type { TagId } from '../../../shared/tags.js';
 import { emitGameEvent, GameEventIds } from './GameEvent.js';
@@ -25,10 +25,12 @@ export interface ResourceData {
     drops: WeightedResourceDrop[];
     expReward: { min: number; max: number };
     interaction?: string;
+    attackable?: boolean;
+    interactionCooldown?: number | { min: number; max: number };
     tags: TagId[];
 }
 
-export type ResourceInteraction = (resource: Resource, player: Player) => void;
+export type ResourceInteraction = (resource: Resource, player: Player) => boolean | void;
 
 const resourceDataRegistry = new Map<string, ResourceData>();
 const interactionRegistry = new Map<string, ResourceInteraction>();
@@ -41,12 +43,16 @@ export default class Resource extends Entity {
     private readonly expReward: Readonly<{ min: number; max: number }>;
     private readonly interaction?: string;
     private readonly respawnTime: number;
+    private readonly attackable: boolean;
+    private readonly interactionCooldown?: number | Readonly<{ min: number; max: number }>;
+    private _interactionCooldownRemaining = 0;
 
     override get deathDuration(): number { return this.respawnTime; }
     override get defeatLabel(): string { return '파괴됨'; }
     override get isInteractable(): boolean {
         return !this.isDefeated && this.interaction !== undefined && interactionRegistry.has(this.interaction);
     }
+    get interactionCooldownRemaining(): number { return this._interactionCooldownRemaining; }
 
     constructor(resourceDataId: string, locationId = '', respawnTime = 30) {
         const data = getResourceData(resourceDataId);
@@ -67,9 +73,14 @@ export default class Resource extends Entity {
         this.expReward = data.expReward;
         this.interaction = data.interaction;
         this.respawnTime = respawnTime;
+        this.attackable = data.attackable ?? true;
+        this.interactionCooldown = typeof data.interactionCooldown === 'object'
+            ? { ...data.interactionCooldown }
+            : data.interactionCooldown;
     }
 
     override getAttackDeniedReason(attacker: Entity): string | undefined {
+        if (!this.attackable) return '이 오브젝트는 공격할 수 없습니다.';
         if (this.requiredToolTags.length === 0) return undefined;
         const usable = this.requiredToolTags.every(tag =>
             attacker.equipment.hasEquippedItemTag('mainHand', tag),
@@ -83,8 +94,29 @@ export default class Resource extends Entity {
 
     override interact(player: Player): boolean {
         if (!this.isInteractable || !this.interaction) return false;
-        interactionRegistry.get(this.interaction)?.(this, player);
+        if (this._interactionCooldownRemaining > 0) {
+            const minutes = Math.ceil(this._interactionCooldownRemaining / 60);
+            sendNotificationToUser(player.userId, {
+                key: `resource-cooldown:${this.locationId}:${this.resourceDataId}`,
+                message: `아직 다시 상호작용할 수 없습니다. (약 ${minutes}분 후 가능)`,
+            });
+            return true;
+        }
+        const handled = interactionRegistry.get(this.interaction)?.(this, player);
+        if (handled !== false) this._interactionCooldownRemaining = this.rollInteractionCooldown();
         return true;
+    }
+
+    override update(dt: number): void {
+        super.update(dt);
+        this._interactionCooldownRemaining = Math.max(0, this._interactionCooldownRemaining - dt);
+    }
+
+    rollInteractionCooldown(random = Math.random): number {
+        const cooldown = this.interactionCooldown;
+        if (cooldown === undefined) return 0;
+        if (typeof cooldown === 'number') return cooldown;
+        return cooldown.min + random() * (cooldown.max - cooldown.min);
     }
 
     override onDeath(): void {
@@ -143,6 +175,14 @@ export function defineResource(data: ResourceData): void {
         || data.expReward.min < 0 || data.expReward.max < data.expReward.min) {
         throw new Error(`Invalid resource exp range: ${data.id}`);
     }
+    const cooldown = data.interactionCooldown;
+    if (cooldown !== undefined) {
+        const valid = typeof cooldown === 'number'
+            ? Number.isFinite(cooldown) && cooldown >= 0
+            : Number.isFinite(cooldown.min) && Number.isFinite(cooldown.max)
+                && cooldown.min >= 0 && cooldown.max >= cooldown.min;
+        if (!valid) throw new Error(`Invalid resource interaction cooldown: ${data.id}`);
+    }
     for (const drop of data.drops) {
         if (!Number.isFinite(drop.weight) || drop.weight <= 0
             || !Number.isInteger(drop.minCount) || !Number.isInteger(drop.maxCount)
@@ -157,6 +197,7 @@ export function defineResource(data: ResourceData): void {
         tags: normalizeTags(data.tags),
         drops: data.drops.map(drop => ({ ...drop })),
         expReward: { ...data.expReward },
+        interactionCooldown: typeof cooldown === 'object' ? { ...cooldown } : cooldown,
     });
 }
 
@@ -181,6 +222,9 @@ function cloneResourceData(data: ResourceData): ResourceData {
         requiredToolTags: [...data.requiredToolTags],
         drops: data.drops.map(drop => ({ ...drop })),
         expReward: { ...data.expReward },
+        interactionCooldown: typeof data.interactionCooldown === 'object'
+            ? { ...data.interactionCooldown }
+            : data.interactionCooldown,
         tags: [...data.tags],
     };
 }
