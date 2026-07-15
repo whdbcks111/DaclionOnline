@@ -13,7 +13,8 @@
 5. 구현 전에 관련 `Overview.md`와 `docs/`를 탐색해 기존 코드/API를 재사용하고, 중복과 불필요한 계층 없이 가장 짧고 명확하게 작성한다.
 6. 슬롯·스탯·능력치처럼 열거 가능한 도메인 타입은 `values/fromKey/fromInput`과 메타데이터를 가진 Java 스타일 클래스형 enum을 사용하고 문자열 key는 직렬화 경계에만 둔다.
 7. 의미 있는 작업 완료 후 관련 변경을 커밋하며 메시지는 `name(scope): message` 형식을 따른다. 예: `chore(format): formatted code structure`, `feat(inventory): add item remove API`.
-8. 아이템 마스터 데이터를 추가할 때는 같은 변경에 `client/public/icons/items/{itemDataId}.png` 128×128 투명 배경 아이콘도 함께 추가한다.
+8. 아이템·스킬·상태이상 등 게임 아이콘은 밝은 색상, 단순한 형태, 굵고 명확한 실루엣의 캐주얼 모바일 게임 스타일로 통일한다. 새 아이콘 필드를 가진 데이터를 추가할 때 대응하는 128×128 투명 PNG도 같은 작업에 만든다.
+9. 아이템 마스터 데이터를 추가할 때는 같은 변경에 `client/public/icons/items/{itemDataId}.png` 128×128 투명 배경 아이콘도 함께 추가한다.
 
 ## 문서 경로
 
