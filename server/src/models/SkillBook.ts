@@ -288,6 +288,10 @@ export default class SkillBook {
             return { matched: true, activated: false, reason: denied.reason, skill };
         }
 
+        if (skill.data.activationMessage) {
+            sendPlayerTextToCurrentChannel(owner.userId, skill.format(skill.data.activationMessage, owner));
+        }
+
         let startResult: SkillStartResult | void;
         try {
             startResult = skill.data.onStart?.({ player: owner, skill });
@@ -301,10 +305,6 @@ export default class SkillBook {
                 message: reason,
             });
             return { matched: true, activated: false, reason, skill };
-        }
-
-        if (skill.data.activationMessage) {
-            sendPlayerTextToCurrentChannel(owner.userId, skill.format(skill.data.activationMessage, owner));
         }
 
         emitGameEvent(GameEventIds.SKILL_STARTED, {

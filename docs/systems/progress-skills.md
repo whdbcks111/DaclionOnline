@@ -71,14 +71,14 @@ Entity/Resource/SkillBook
 - 자동 조건: 0.25초마다 현재 표시 가능한 스킬의 `autoActivate`를 검사한다.
 - 자동 획득: 첫 update와 관련 progress 변경 후 `autoAcquire.watchedProgress`만 다시 검사한다.
 
-발동은 사망·활성 중·쿨다운·`canUse/canActivate`를 검사한 뒤 `onStart`를 실행한다. 성공한 경우에만 쿨다운과 선택적 `activationMessage`를 확정한다. 지속시간이 있으면 `onUpdate`, 종료 시 `onFinish`, 로그인 중 사용 가능한 패시브에는 `onPassiveUpdate`가 호출된다. 로그아웃 시 활성 스킬을 `UNLOADED` 사유로 종료한 다음 저장한다.
+발동은 사망·활성 중·쿨다운·`canUse/canActivate`를 먼저 검사한다. 조건을 통과하면 선택적 `activationMessage`를 플레이어 메시지로 전송한 뒤 `onStart`를 실행하므로 공격·회복 같은 즉시 효과보다 발동 메시지가 먼저 표시된다. `onStart`가 성공하면 활성 상태와 쿨다운을 확정한다. 지속시간이 있으면 `onUpdate`, 종료 시 `onFinish`, 로그인 중 사용 가능한 패시브에는 `onPassiveUpdate`가 호출된다. 로그아웃 시 활성 스킬을 `UNLOADED` 사유로 종료한 다음 저장한다.
 
 ## 강타
 
 첫 스킬 `power_strike`(강타)는 치명타 누적 5회에 자동 획득한다.
 
 - `/대상지정 번호`로 선택한 같은 위치의 살아 있는 오브젝트를 공격한다.
-- `/스킬 강타` 또는 일반 채팅 `강타!`로 발동하고, 성공 시 플레이어가 보낸 `강타!` 메시지를 채널에 남긴다.
+- `/스킬 강타` 또는 일반 채팅 `강타!`로 발동하고, 조건 통과 시 플레이어가 보낸 `강타!` 메시지를 공격 결과보다 먼저 채널에 남긴다.
 - 정신력을 소모하고 현재 공격력·레벨 배율로 물리 공격을 수행한다.
 - 해당 공격의 치명타율만 100%로 override한다.
 - 공격 전 `armorPen +10`과 `armorPen ×1.05` modifier를 추가하고 공격 확정 직후 `source` 단위로 제거한다.

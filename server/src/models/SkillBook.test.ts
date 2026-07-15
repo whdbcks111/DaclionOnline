@@ -8,6 +8,8 @@ import { AttributeType } from './Attribute.js';
 import { PlayerProgress } from './Progress.js';
 import SkillBook from './SkillBook.js';
 import { getIO, initSocket } from '../modules/socket.js';
+import { getChannelHistory } from '../modules/channel.js';
+import { createSession, removeSession } from '../modules/login.js';
 import '../data/progress.js';
 import '../data/skills.js';
 
@@ -43,8 +45,20 @@ class TestSkillPlayer extends Entity {
 
 class TestTarget extends Entity {
     override readonly name = '강타 대상';
+    activationMessageSeenBeforeDamage = false;
+
     constructor() {
         super(1, 0, 'test', { maxLife: 100, def: 0 }, Equipment.createEmpty());
+    }
+
+    override damage(...args: Parameters<Entity['damage']>): ReturnType<Entity['damage']> {
+        const lastMessage = getChannelHistory(null).at(-1);
+        const content = lastMessage?.content;
+        this.activationMessageSeenBeforeDamage = lastMessage?.userId === 9301
+            && (content === '강타!'
+                || (Array.isArray(content)
+                    && content.some(node => node.type === 'text' && node.text === '강타!')));
+        return super.damage(...args);
     }
 }
 
@@ -68,13 +82,23 @@ test('강타는 일회성 관통을 제거하고 확정 치명타 공격과 비�
     const target = new TestTarget();
     player.currentTarget = target;
     player.skills.grant('power_strike', 'test');
+    const sessionToken = createSession({
+        id: player.userId,
+        username: 'skill_test',
+        nickname: player.name,
+    });
 
-    const outcome = player.skills.activateByInput('강타');
+    try {
+        const outcome = player.skills.activateByInput('강타');
 
-    assert.equal(outcome.activated, true);
-    assert.equal(player.mentality, player.maxMentality - 20);
-    assert.equal(target.life, 100 - (10 * 1.15 * 1.5));
-    assert.equal(player.attribute.get(AttributeType.ARMOR_PEN), 0);
-    assert.equal(player.progress.getCounter('combat:critical_hits'), 1n);
-    assert.ok(player.attackCooldown > 0);
+        assert.equal(outcome.activated, true);
+        assert.equal(target.activationMessageSeenBeforeDamage, true);
+        assert.equal(player.mentality, player.maxMentality - 20);
+        assert.equal(target.life, 100 - (10 * 1.15 * 1.5));
+        assert.equal(player.attribute.get(AttributeType.ARMOR_PEN), 0);
+        assert.equal(player.progress.getCounter('combat:critical_hits'), 1n);
+        assert.ok(player.attackCooldown > 0);
+    } finally {
+        removeSession(sessionToken);
+    }
 });
