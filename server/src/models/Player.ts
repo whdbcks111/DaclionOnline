@@ -37,6 +37,8 @@ export default class Player extends Entity {
     private _statPoint = 0;
     private _deathNotifTimer = 0;
     private _craftingDiscoveryTimer = 0;
+    private _savePromise: Promise<void> | null = null;
+    private _saveRequested = false;
 
     private constructor(
         userId: number, nickname: string, level: number, exp: number,
@@ -292,6 +294,22 @@ export default class Player extends Entity {
 
     /** 변경된 데이터 DB에 저장 */
     async save(): Promise<void> {
+        this._saveRequested = true;
+        if (this._savePromise) return this._savePromise;
+        this._savePromise = (async () => {
+            while (this._saveRequested) {
+                this._saveRequested = false;
+                await this.saveDirtyState();
+            }
+        })();
+        try {
+            await this._savePromise;
+        } finally {
+            this._savePromise = null;
+        }
+    }
+
+    private async saveDirtyState(): Promise<void> {
         if (this._dirty || this.stat.dirty) {
             await prisma.player.update({
                 where: { userId: this.userId },

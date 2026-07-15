@@ -93,7 +93,7 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 - `applyModifiers`: 로드된 모든 장비 modifier를 Attribute에 다시 적용한다.
 - `setItemMetadata/resetItemMetadata`: 장착 아이템의 delta를 변경하고 해당 슬롯을 dirty로 표시한다.
 - `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`: 장착 아이템 내구도를 변경하고 해당 슬롯을 dirty로 표시한다.
-- `save`: 슬롯별 state를 Prisma에 반영한다.
+- `save`: 슬롯별 state를 Prisma에 반영한다. DB ID가 없는 신규 슬롯은 `(playerId, slot, slotIndex)` upsert로 저장해 겹친 저장이나 이전 성공 뒤 재시도에도 유니크 오류를 내지 않는다.
 
 장비 modifier의 `source`는 데이터 정의 값 대신 실제 슬롯 기반 source로 치환되어, 특정 장비 해제 시 정확히 제거된다.
 

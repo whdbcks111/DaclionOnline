@@ -374,12 +374,25 @@ export default class Equipment implements TagReadable {
                         );
                     } else {
                         ops.push(
-                            prisma.equipment.create({
-                                data: {
+                            prisma.equipment.upsert({
+                                where: {
+                                    playerId_slot_slotIndex: {
+                                        playerId: this.playerId,
+                                        slot: entry.slot,
+                                        slotIndex: entry.slotIndex,
+                                    },
+                                },
+                                create: {
                                     playerId: this.playerId,
                                     itemDataId: entry.item.itemDataId,
                                     slot: entry.slot,
                                     slotIndex: entry.slotIndex,
+                                    durability: entry.item.durability,
+                                    metadata: entry.item.getPersistedMetadata(),
+                                    tags: entry.item.tags.persistentValues(),
+                                },
+                                update: {
+                                    itemDataId: entry.item.itemDataId,
                                     durability: entry.item.durability,
                                     metadata: entry.item.getPersistedMetadata(),
                                     tags: entry.item.tags.persistentValues(),
