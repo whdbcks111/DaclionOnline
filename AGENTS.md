@@ -26,6 +26,7 @@
 - [`docs/systems/chat-command.md`](docs/systems/chat-command.md)
 - [`docs/systems/player-world.md`](docs/systems/player-world.md)
 - [`docs/systems/items-shop.md`](docs/systems/items-shop.md)
+- [`docs/systems/crafting.md`](docs/systems/crafting.md)
 - [`docs/systems/tags-effects.md`](docs/systems/tags-effects.md)
 - [`docs/systems/progress-skills.md`](docs/systems/progress-skills.md)
 - [`docs/data/database.md`](docs/data/database.md)

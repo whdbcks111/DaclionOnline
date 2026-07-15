@@ -25,6 +25,13 @@
 3. 사용형 아이템이면 `modules/itemUse.ts`의 레지스트리에 `registerItemUse()` 핸들러를 등록하고 반드시 `finish()`가 모든 종료 경로에서 호출되게 한다.
 4. 영속 필드가 더 필요하면 `prisma/schema.prisma`, `Inventory` load/save, DB 문서를 함께 수정한다.
 
+## 제작법 추가
+
+1. `data/crafting.ts`에 `defineCraftingRecipe()`로 `namespace:path` ID, predicate 재료, 1개당 시간, 결과 factory를 등록한다.
+2. 결과 이름과 아이콘이 일반 아이템이면 `resultItemDataId`를 지정하고 `name`은 생략한다. 특수 발견 조건은 `discoveryCondition`으로 기본 재료 소지 조건을 대체한다.
+3. factory는 `ingredients` 인자의 실제 `Item`을 통해 내구도·metadata·태그 승계 결과를 만들고 `ItemSnapshot` 또는 배열을 반환한다.
+4. Inventory raw 배열을 직접 필터링/수정하지 않고 `selectItems/replaceSelectedItems`를 사용한다. 정의·저장·실행 규칙은 [systems/crafting.md](../systems/crafting.md)와 동기화한다.
+
 ## 몬스터/자원/전투 추가
 
 1. `data/monsters.ts`에 `defineMonster()` 마스터 데이터를 추가한다.

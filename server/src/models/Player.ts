@@ -13,6 +13,7 @@ import type { TagId } from "../../../shared/tags.js";
 import { executeItemAttackOverride } from "../modules/itemAttack.js";
 import { PlayerProgress } from "./Progress.js";
 import SkillBook from "./SkillBook.js";
+import { updateCraftingRecipeDiscovery } from "./Crafting.js";
 
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
@@ -34,6 +35,7 @@ export default class Player extends Entity {
     private _moving = false;
     private _statPoint = 0;
     private _deathNotifTimer = 0;
+    private _craftingDiscoveryTimer = 0;
 
     private constructor(
         userId: number, nickname: string, level: number, exp: number,
@@ -169,6 +171,11 @@ export default class Player extends Entity {
     override update(dt: number): void {
         super.update(dt);
         this.skills.update(dt);
+        this._craftingDiscoveryTimer -= dt;
+        if (this._craftingDiscoveryTimer <= 0) {
+            this._craftingDiscoveryTimer = 0.5;
+            updateCraftingRecipeDiscovery(this);
+        }
     }
 
     override onDeath(): void {

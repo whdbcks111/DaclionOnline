@@ -18,6 +18,7 @@ Prisma 스키마는 `server/prisma/schema.prisma`, 런타임 클라이언트 설
 Item/Equipment의 `metadata` JSON은 전체 유효값이 아니라 `{ "__daclionItemMetadata": 1, "values": { ...delta } }` 형식의 top-level delta만 저장한다. 런타임 `Item`이 `ItemData.baseMetadata`와 합쳐 읽으며, Item setter callback이 Inventory/Equipment dirty 상태를 만든다. `PlayerSkill.metadata`도 같은 공용 codec으로 `{ "__daclionSkillMetadata": 1, "values": { ...delta } }`만 저장한다. 이 구조 덕분에 delta에 없는 기본 필드는 기존 아이템과 스킬에도 최신 마스터 값이 적용된다.
 
 `player_progress`는 counter/flag를 `int_value`, state를 `text_value`에 저장한다. 등록된 기본값 `0/false/빈 문자열`은 row를 삭제하거나 만들지 않는다. `kind`가 직렬화 타입 경계이며 기능 코드는 Prisma row 대신 `PlayerProgress` API만 사용한다.
+제작법 발견 여부도 `crafting:recipe/{namespace}/{path}` FLAG로 이 테이블에 저장되므로 제작 시스템 추가에 따른 별도 스키마 마이그레이션은 없다.
 
 ## 로드와 저장
 

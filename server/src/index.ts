@@ -20,6 +20,7 @@ import './data/shops.js';
 import './data/tagEffects.js';
 import './data/progress.js';
 import './data/skills.js';
+import './data/crafting.js';
 import { initLocation } from './modules/location.js';
 import { uploadRouter } from './modules/upload.js';
 import { initAllCommands } from './commands/index.js';

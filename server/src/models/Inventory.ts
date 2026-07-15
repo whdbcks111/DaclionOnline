@@ -7,6 +7,17 @@ import type { TagId } from "../../../shared/tags.js";
 export type { ItemData } from "./Item.js";
 export { Item, getItemData, getAllItemData } from "./Item.js";
 
+export interface InventoryItemRequirement {
+    count: number;
+    matches: (item: Item) => boolean;
+}
+
+export interface InventoryItemSelection {
+    requirementIndex: number;
+    item: Item;
+    count: number;
+}
+
 // 아이템 상태 추적
 const enum ItemState { Clean, New, Modified, Deleted }
 
@@ -20,6 +31,11 @@ export default class Inventory {
     private constructor(playerId: number, maxWeight: number) {
         this.playerId = playerId;
         this._maxWeight = maxWeight;
+    }
+
+    /** DB 없이 사용하는 빈 인벤토리. 테스트와 비영속 소유자용이다. */
+    static createEmpty(playerId: number, maxWeight: number): Inventory {
+        return new Inventory(playerId, maxWeight);
     }
 
     private track(item: Item, state: ItemState): void {
@@ -84,6 +100,82 @@ export default class Inventory {
     /** 특정 아이템 정의의 총 수량 */
     getCount(itemDataId: string): number {
         return this.getItemsByData(itemDataId).reduce((sum, e) => sum + e.count, 0);
+    }
+
+    /**
+     * 여러 필터 요구량에 실제 아이템 수량을 중복 없이 배정한다.
+     * 최대 유량으로 겹치는 필터도 가능한 조합이 있으면 찾아낸다.
+     */
+    selectItems(requirements: readonly InventoryItemRequirement[]): InventoryItemSelection[] | null {
+        if (requirements.some(requirement => !Number.isSafeInteger(requirement.count) || requirement.count <= 0)) {
+            return null;
+        }
+        if (requirements.length === 0) return [];
+
+        const itemCount = this._items.length;
+        const source = 0;
+        const itemOffset = 1;
+        const requirementOffset = itemOffset + itemCount;
+        const sink = requirementOffset + requirements.length;
+        const size = sink + 1;
+        const capacity = Array.from({ length: size }, () => Array<number>(size).fill(0));
+
+        for (let itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+            const item = this._items[itemIndex];
+            capacity[source][itemOffset + itemIndex] = item.count;
+            for (let requirementIndex = 0; requirementIndex < requirements.length; requirementIndex++) {
+                if (requirements[requirementIndex].matches(item)) {
+                    capacity[itemOffset + itemIndex][requirementOffset + requirementIndex] = item.count;
+                }
+            }
+        }
+        for (let index = 0; index < requirements.length; index++) {
+            capacity[requirementOffset + index][sink] = requirements[index].count;
+        }
+
+        const residual = capacity.map(row => [...row]);
+        let totalFlow = 0;
+        while (true) {
+            const parent = Array<number>(size).fill(-1);
+            parent[source] = source;
+            const queue = [source];
+            for (let cursor = 0; cursor < queue.length && parent[sink] === -1; cursor++) {
+                const node = queue[cursor];
+                for (let next = 0; next < size; next++) {
+                    if (parent[next] !== -1 || residual[node][next] <= 0) continue;
+                    parent[next] = node;
+                    queue.push(next);
+                }
+            }
+            if (parent[sink] === -1) break;
+
+            let flow = Number.POSITIVE_INFINITY;
+            for (let node = sink; node !== source; node = parent[node]) {
+                flow = Math.min(flow, residual[parent[node]][node]);
+            }
+            for (let node = sink; node !== source; node = parent[node]) {
+                const previous = parent[node];
+                residual[previous][node] -= flow;
+                residual[node][previous] += flow;
+            }
+            totalFlow += flow;
+        }
+
+        const requiredTotal = requirements.reduce((sum, requirement) => sum + requirement.count, 0);
+        if (totalFlow !== requiredTotal) return null;
+
+        const selections: InventoryItemSelection[] = [];
+        for (let itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+            for (let requirementIndex = 0; requirementIndex < requirements.length; requirementIndex++) {
+                const count = residual[requirementOffset + requirementIndex][itemOffset + itemIndex];
+                if (count > 0) selections.push({
+                    requirementIndex,
+                    item: this._items[itemIndex],
+                    count,
+                });
+            }
+        }
+        return selections;
     }
 
     /** 아이템 metadata override를 변경하고 dirty 상태로 표시한다. */
@@ -197,6 +289,48 @@ export default class Inventory {
             remaining -= qty;
         }
 
+        return true;
+    }
+
+    /** 선택된 재료를 소비하고 결과 snapshot을 추가한다. 실패하면 아무것도 변경하지 않는다. */
+    replaceSelectedItems(
+        selections: readonly InventoryItemSelection[],
+        outputs: readonly ItemSnapshot[],
+    ): boolean {
+        const totals = new Map<Item, number>();
+        for (const selection of selections) {
+            if (!Number.isSafeInteger(selection.count) || selection.count <= 0) return false;
+            totals.set(selection.item, (totals.get(selection.item) ?? 0) + selection.count);
+        }
+        for (const [item, count] of totals) {
+            if (!this._items.includes(item) || item.count < count) return false;
+        }
+
+        let outputWeight = 0;
+        try {
+            for (const output of outputs) {
+                const data = getItemData(output.itemDataId);
+                if (!data || !Number.isSafeInteger(output.count) || output.count <= 0) return false;
+                Item.fromSnapshot(output);
+                outputWeight += data.weight * output.count;
+            }
+        } catch {
+            return false;
+        }
+        const selectedWeight = [...totals].reduce(
+            (sum, [item, count]) => sum + item.weight * count,
+            0,
+        );
+        if (this.currentWeight - selectedWeight + outputWeight > this._maxWeight) return false;
+
+        for (const [item, count] of totals) {
+            if (!this.removeItemInstance(item, count)) return false;
+        }
+        for (const output of outputs) {
+            if (!this.addItemSnapshot(output)) {
+                throw new Error(`검증된 제작 결과 추가 실패: ${output.itemDataId}`);
+            }
+        }
         return true;
     }
 

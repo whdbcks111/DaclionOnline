@@ -30,6 +30,8 @@ export const GameEventIds = Object.freeze({
     SKILL_ACQUIRED: 'skill:acquired',
     SKILL_STARTED: 'skill:started',
     SKILL_FINISHED: 'skill:finished',
+    CRAFTING_RECIPE_DISCOVERED: 'crafting:recipe_discovered',
+    ITEM_CRAFTED: 'crafting:item_crafted',
 } as const);
 
 export type GameEventHandler = (event: GameEvent) => void;

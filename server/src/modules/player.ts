@@ -4,6 +4,7 @@ import { getIO } from "./socket.js";
 import { getSession, getSessionByUserId } from "./login.js";
 import { getLocation } from "../models/Location.js";
 import type { LocationInfoData } from "../../../shared/types.js";
+import { cancelCrafting } from "../models/Crafting.js";
 import {
     getOnlinePlayer,
     getOnlinePlayerSnapshot,
@@ -32,6 +33,7 @@ export async function loadPlayerByUserId(userId: number): Promise<Player> {
 export async function unloadPlayerByUserId(userId: number): Promise<void> {
     const player = getOnlinePlayer(userId);
     if (!player) return;
+    cancelCrafting(player);
     player.skills.finishAll();
     await player.save();
     unregisterOnlinePlayer(player.userId);

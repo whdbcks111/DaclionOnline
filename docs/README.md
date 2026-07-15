@@ -18,6 +18,7 @@
 | 태그·속성 상성·효과 배율 | [systems/tags-effects.md](systems/tags-effects.md) |
 | 이벤트·통계·플래그·스킬 | [systems/progress-skills.md](systems/progress-skills.md) |
 | 아이템·인벤토리·장비·상점 | [systems/items-shop.md](systems/items-shop.md) |
+| 제작법 발견·재료 필터·제작 | [systems/crafting.md](systems/crafting.md) |
 | DB 모델과 저장 경계 | [data/database.md](data/database.md) |
 | 실행·빌드·환경 설정 | [development.md](development.md) |
 

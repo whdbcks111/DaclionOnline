@@ -5,6 +5,7 @@ import { initLocationCommands } from "./location.js";
 import { initShopCommands } from "./shop.js";
 import { initSkillCommands } from "./skill.js";
 import { initProgressCommands } from "./progress.js";
+import { initCraftingCommands } from "./crafting.js";
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -14,4 +15,5 @@ export function initAllCommands(): void {
     initShopCommands();
     initSkillCommands();
     initProgressCommands();
+    initCraftingCommands();
 }

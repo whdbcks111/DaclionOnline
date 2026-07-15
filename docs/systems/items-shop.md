@@ -10,7 +10,7 @@
 - Item 인스턴스의 추가 태그는 DB JSON에 저장되며 정의 태그와 합쳐 조회한다.
 - 인벤토리↔장비↔바닥 이동은 `ItemSnapshot`으로 metadata delta, 내구도, 영속 태그를 보존한다. 스택도 이 값이 모두 같을 때만 합쳐진다.
 
-현재 장비·소모품 정의는 `health_potion`, `mana_potion`, `old_sword`, `old_shield`, `venom_dagger`, `light_bow`, `wooden_arrow`, `basic_pickaxe`다. 낡은 검의 불 태그와 독 단검의 독 태그는 장착 시 Entity의 직접 공격 효과 태그가 된다. 가벼운 활은 화살 한 발을 소비해 화살 자체의 자연 속성으로 공격한다. 곡괭이는 `item:tool + tool:mining` 태그를 가진 주무기이며 광석의 공격 조건을 만족한다.
+현재 장비·소모품 정의는 `health_potion`, `mana_potion`, `old_sword`, `old_shield`, `venom_dagger`, `light_bow`, `wooden_arrow`, `basic_pickaxe`, `iron_pickaxe`다. 낡은 검의 불 태그와 독 단검의 독 태그는 장착 시 Entity의 직접 공격 효과 태그가 된다. 가벼운 활은 화살 한 발을 소비해 화살 자체의 자연 속성으로 공격한다. 두 곡괭이는 `item:tool + tool:mining` 태그를 가진 주무기이며 광석의 공격 조건을 만족한다. 철 곡괭이는 제작법으로 획득한다.
 
 광물 아이템은 `stone`, `coal`, `iron_ore`, `gold_ore`, `ruby`, `emerald`, `diamond`이며 모두 99개까지 쌓인다. 피버릭 광산 상점은 곡괭이를 50 Gold에 판매하고 광물을 희귀도에 따라 각각 2, 5, 10, 25, 55, 60, 180 Gold에 매입한다.
 
@@ -26,6 +26,7 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 - metadata 변경: `setItemMetadata`, `resetItemMetadata`가 대상 Item API를 호출하고 Inventory를 dirty로 표시한다. 조회는 반환된 Item의 `getMetadata`를 사용한다.
 - 내구도 변경: `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`가 Item API를 호출하고 Inventory를 dirty로 표시한다.
 - 추가: `canAdd`, `canAddSnapshot(s)`이 총 무게와 아이템 정의를 검사하고 `addItem`이 stackable/maxStack 규칙에 따라 병합 또는 새 인스턴스를 만든다. 기존 인스턴스를 이동할 때는 `addItemSnapshot`을 사용한다.
+- 조건부 선택·교환: `selectItems`는 겹치는 여러 predicate에 아이템 수량을 중복 없이 배정하고, `replaceSelectedItems`는 선택 재료와 결과 snapshot의 수량·무게를 선검증한 뒤 교환한다.
 - 사용: `useItem`이 `ItemData.onUse` handler를 실행하며 동시에 하나의 아이템만 사용할 수 있다.
 - 제거: `removeItem`, `removeItemByData`, `removeItemInstance`가 수량 또는 인스턴스를 dirty/deleted 상태로 바꾼다. 발사는 신규 아이템의 임시 DB ID가 겹쳐도 안전한 `removeItemInstance`로 선택한 탄약만 소비한다.
 - 저장: state map의 New/Modified/Deleted 항목을 Prisma create/update/delete로 반영한다.

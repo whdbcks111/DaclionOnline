@@ -215,6 +215,25 @@ defineItem({
     tags: [GameTags.ITEM_TOOL, GameTags.TOOL_MINING, GameTags.MATERIAL_IRON],
 });
 
+defineItem({
+    id: 'iron_pickaxe',
+    name: '철 곡괭이',
+    description: '철과 돌을 조합해 만든 튼튼한 채굴 도구.',
+    image: 'items/iron_pickaxe',
+    category: '도구',
+    weight: 3.2,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 7, source: '' },
+    ],
+    baseDurability: 180,
+    tags: [GameTags.ITEM_TOOL, GameTags.TOOL_MINING, GameTags.MATERIAL_IRON],
+});
+
 const mineralItems = [
     { id: 'stone', name: '돌', description: '가장 흔한 광물 자원.', weight: 0.8, tag: GameTags.MATERIAL_STONE },
     { id: 'coal', name: '석탄', description: '연료로 사용할 수 있는 검은 광물.', weight: 0.5, tag: GameTags.MATERIAL_COAL },
