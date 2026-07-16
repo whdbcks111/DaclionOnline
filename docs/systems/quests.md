@@ -1,6 +1,8 @@
 # 퀘스트 시스템
 
-직업 전직소는 메인/서브 슬롯별 전사·궁수·암살자·마법사 시험 8개를 같은 QuestData API로 정의한다. 수락/보상 조건은 `CareerProfile.canAssign`을 사용하므로 Lv.20/50 제한, 기존 슬롯 보유와 메인·서브 동일 직업 금지를 보고 시점에도 다시 검증한다. 직업 보상은 `QuestReward.custom`에서 `CareerProfile.assign`만 호출한다.
+직업 전직소는 메인/서브 슬롯별 전사·궁수·암살자·마법사 시험 8개를 같은 QuestData API로 정의한다. 전투 목표는 추상적인 `단단한/속성 적 제압` 대신 실제 predicate와 일치하는 `무생물 속성`, `자연 속성`, `생명체 속성`, `불·얼음·독·자연 속성 적 처치`로 표시한다. 수락/보상 조건은 `CareerProfile.canAssign`을 사용하므로 Lv.20/50 제한, 기존 슬롯 보유와 메인·서브 동일 직업 금지를 보고 시점에도 다시 검증한다. 직업 보상은 `QuestReward.custom`에서 `CareerProfile.assign`만 호출한다.
+
+`QuestReward.item`의 표시명은 퀘스트 정의 시점에 아이템 registry가 아직 준비되지 않았더라도 snapshot을 보여줄 때 `getItemData`로 다시 해석한다. 따라서 전직 보상에는 `apprentice_staff` 같은 내부 ID 대신 `견습 마법 지팡이`가 표시된다.
 
 ## 구성
 

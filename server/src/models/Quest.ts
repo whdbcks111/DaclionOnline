@@ -253,6 +253,7 @@ export class QuestStage {
 
 export interface QuestRewardData {
     label: string;
+    resolveLabel?: () => string;
     item?: ItemSnapshot;
     canGrant?: (player: Player) => boolean;
     grant?: (player: Player) => void;
@@ -260,14 +261,16 @@ export interface QuestRewardData {
 
 /** 보상 표기·사전 검사·지급을 한 객체에 묶는다. */
 export class QuestReward {
-    readonly label: string;
+    private readonly fallbackLabel: string;
+    private readonly labelResolver?: () => string;
     private readonly item?: ItemSnapshot;
     private readonly canGrantHandler?: QuestRewardData['canGrant'];
     private readonly grantHandler?: QuestRewardData['grant'];
 
     private constructor(data: QuestRewardData) {
-        this.label = data.label.trim();
-        if (!this.label) throw new Error('퀘스트 보상 이름은 비어 있을 수 없습니다.');
+        this.fallbackLabel = data.label.trim();
+        if (!this.fallbackLabel) throw new Error('퀘스트 보상 이름은 비어 있을 수 없습니다.');
+        this.labelResolver = data.resolveLabel;
         this.item = data.item ? cloneItemSnapshot(data.item) : undefined;
         this.canGrantHandler = data.canGrant;
         this.grantHandler = data.grant;
@@ -294,6 +297,7 @@ export class QuestReward {
         const data = getItemData(itemDataId);
         return new QuestReward({
             label: `${label?.trim() || data?.name || itemDataId} x${count}`,
+            resolveLabel: () => `${label?.trim() || getItemData(itemDataId)?.name || itemDataId} x${count}`,
             item: {
                 itemDataId,
                 count,
@@ -303,6 +307,8 @@ export class QuestReward {
             },
         });
     }
+
+    get label(): string { return this.labelResolver?.() || this.fallbackLabel; }
 
     static skill(skillDataId: string, level = 1): QuestReward {
         requirePositiveInteger(level, '퀘스트 스킬 레벨');

@@ -175,7 +175,7 @@ registerChatTag('color', {
 
 registerChatTag('icon', {
     kind: 'selfclose',
-    validate: (v) => ICON_NAMES.has(v),
+    validate: (v) => ICON_NAMES.has(v) || /^attributes\/[a-z][a-zA-Z0-9]*$/.test(v),
     createNode: (name) => ({ type: 'icon', name }),
 })
 

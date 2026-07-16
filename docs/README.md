@@ -108,6 +108,8 @@ UI 스타일은 고정 px 배치와 크기에 의존하지 않는다. 기존 SCS
 
 `JobData.icon`을 추가하면 `client/public/icons/jobs/{key}.png` 128×128 투명 PNG를 같은 변경에 추가한다. 엘리트 직업은 원래 메인 직업 계보 아이콘을 재사용할 수 있다.
 
+`AttributeType`은 `attributes/{key}` 아이콘 key를 자동으로 소유한다. 새 능력치를 추가하면 `client/public/icons/attributes/{key}.png` 128×128 투명 PNG도 같은 변경에 만들고, 상태창과 스킬 계수 표기는 별도 경로 문자열 대신 `AttributeType.icon/iconMarkup` 및 `{{icon.attributeKey}}` 템플릿을 사용한다. 능력치 아이콘은 대표색 한 가지를 중심으로 하고 흰색·짙은 무채색 등 보조색은 1~2개 이하로 제한해 작은 크기에서도 즉시 구분되게 한다.
+
 ## 문서 유지 규칙
 
 의미 있는 코드 변경은 같은 변경에서 문서까지 완료해야 한다.

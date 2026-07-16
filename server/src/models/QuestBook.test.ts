@@ -97,6 +97,18 @@ class TestQuestPlayer extends Entity {
     async save(): Promise<void> {}
 }
 
+test('아이템 보상 이름은 퀘스트 정의보다 늦게 등록된 마스터 데이터도 표시명으로 해석한다', () => {
+    const reward = QuestReward.item('quest_late_reward', 1);
+    assert.equal(reward.label, 'quest_late_reward x1');
+    defineItem({
+        id: 'quest_late_reward',
+        name: '뒤늦게 등록된 보상',
+        description: '', category: '시험', weight: 1, stackable: true, maxStack: 99,
+        baseMetadata: null, onUse: null, equipSlot: null, modifiers: null, baseDurability: null, tags: [],
+    });
+    assert.equal(reward.label, '뒤늦게 등록된 보상 x1');
+});
+
 class TestQuestTarget extends Entity {
     override readonly name: string;
 

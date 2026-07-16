@@ -47,7 +47,7 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 | 일반 | `/직업정보` (`careerinfo`, `ji`) | 직업 설명·단계·지급 스킬 표시 |
 | 일반 | `/실행` (`eval`) | JS eval, 권한 10 |
 | 일반 | `/공지` | 전체 채널 공지, 권한 10 |
-| 플레이어 | `/상태창` (`status`, `s`) | 레벨·자원·생명력/정신력 초당 재생·배고픔/수분 초당 감소량을 포함한 능력치·스탯·장비와 맨 아래 상태이상 아이콘/레벨/남은 시간/hover 설명 표시 |
+| 플레이어 | `/상태창` (`status`, `s`) | 레벨·자원·장비, 대표색 아이콘이 붙은 한 행 단위 능력치·스탯과 맨 아래 상태이상 아이콘/레벨/남은 시간/hover 설명 표시 |
 | 플레이어 | `/인벤토리` (`inv`, `i`) | 무게와 이름 앞의 작은 아이콘을 포함한 아이템 목록 표시 |
 | 플레이어 | `/사용` (`use`) | 아이템 효과 실행 |
 | 플레이어 | `/버리기` (`drop`) | 현재 Location에 아이템 드롭 |
@@ -104,6 +104,6 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 
 ## ChatNode 확장 지점
 
-현재 노드는 text, color, bg, deco, weight, size, tooltip, hide, icon, button, progress, tab, worldMap이다. 문자열 태그는 color/icon/button/closebutton/bg/deco/size/weight/tooltip/hide/tab/progress를 지원하며 worldMap은 검증된 서버 snapshot만 `chat().worldMap()`으로 생성한다. icon의 name은 `/icons/{name}.png`로 해석되며 없는 에셋은 숨긴다. progress length는 기존 숫자 px와 `em` 같은 CSS 문자열을 모두 지원해 아이템 내구도처럼 짧고 반응형인 표시를 만들 수 있다. tooltip은 hover와 touch에서 설명 ChatNode overlay를 표시하며 상태창의 능력치·스탯·내구도 설명에 사용된다. worldMap은 Hide 상세보기 안에서 휠/drag/pinch와 장소 정보 card를 제공한다. `$primary`, `$life`, `$magic` 같은 테마 토큰은 빌더와 `[color=$magic]...[/color]` 문자열 태그에서 클라이언트 `resolveColor()`로 해석한다. 스킬 설명·소모·발동 조건 템플릿도 최종적으로 `parseChatMessage()`를 사용하므로 `[color=orange]{{damage}}[/color]` 같은 계산값 색상 표현을 재사용한다.
+현재 노드는 text, color, bg, deco, weight, size, tooltip, hide, icon, button, progress, tab, worldMap이다. 문자열 태그는 color/icon/button/closebutton/bg/deco/size/weight/tooltip/hide/tab/progress를 지원하며 worldMap은 검증된 서버 snapshot만 `chat().worldMap()`으로 생성한다. icon의 name은 `/icons/{name}.png`로 해석되며 없는 에셋은 숨긴다. 안전한 기본 icon 이름 외에 `attributes/{AttributeKey}` 경로를 허용해 스킬의 `{{icon.atk}}` 같은 계수 표기가 상태창 아이콘을 재사용한다. progress length는 숫자 px와 `em` 같은 CSS 길이를 지원한다. tooltip은 hover와 touch에서 설명 ChatNode overlay를 표시한다. `$primary`, `$life`, `$magic` 같은 테마 token은 빌더와 문자열 태그에서 해석된다.
 
 새 노드는 공유 union, 서버 parser/builder, 클라이언트 node renderer 세 곳을 함께 변경한다.

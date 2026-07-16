@@ -138,18 +138,22 @@ export function initPlayerCommands(): void {
 
                         b
                         .color('gray', b2 => b2.text('─── 상태 ───\n'))
+                        .icon(AttributeType.MAX_LIFE.icon).text(' ')
                         .weight('bold',b2 => b2.text('생명력'))
                         .text('  ')
                         .progress({ value: lifeRatio, length: 120, color: '$life', thickness: 8 })
                         .text(`  ${player.life.toFixed(1)} / ${player.maxLife.toFixed(1)}\n`)
+                        .icon(AttributeType.MAX_MENTALITY.icon).text(' ')
                         .weight('bold',b2 => b2.text('정신력'))
                         .text('  ')
                         .progress({ value: mentalityRatio, length: 120, color: '$magic', thickness: 8 })
                         .text(`  ${player.mentality.toFixed(1)} / ${player.maxMentality.toFixed(1)}\n`)
+                        .icon(AttributeType.MAX_HUNGRY.icon).text(' ')
                         .weight('bold',b2 => b2.text('배고픔'))
                         .text('  ')
                         .progress({ value: hungryRatio, length: 120, color: '$hungry', thickness: 8 })
                         .text(`  ${player.hungry.toFixed(1)} / ${player.maxHungry.toFixed(1)}\n`)
+                        .icon(AttributeType.MAX_THIRSTY.icon).text(' ')
                         .weight('bold',b2 => b2.text('목마름'))
                         .text('  ')
                         .progress({ value: thirstyRatio, length: 120, color: '$thirsty', thickness: 8 })
@@ -157,18 +161,22 @@ export function initPlayerCommands(): void {
 
                         .color('gray', b2 => b2.text('─── 능력치 ───\n'));
 
-                        const combatAttrs = AttributeType.values().filter(a => !a.key.startsWith('max'));
-                        for (let i = 0; i < combatAttrs.length; i += 2) {
-                            const left = combatAttrs[i];
-                            const right = combatAttrs[i + 1];
-                            b.tab(L, b2 => b2.tooltip(left.getDescription(attr[left.key]), b3 => b3.weight('bold', b4 => b4.text(left.label))))
-                             .tab(V, b2 => b2.text(left.format(attr[left.key])));
-                            if (right) {
-                                b.tab(L, b2 => b2.tooltip(right.getDescription(attr[right.key]), b3 => b3.weight('bold', b4 => b4.text(right.label))))
-                                 .text(`${right.format(attr[right.key])}\n`);
-                            } else {
-                                b.text('\n');
-                            }
+                        const stateMaximums = new Set([
+                            AttributeType.MAX_LIFE,
+                            AttributeType.MAX_MENTALITY,
+                            AttributeType.MAX_HUNGRY,
+                            AttributeType.MAX_THIRSTY,
+                        ]);
+                        const combatAttrs = AttributeType.values().filter(attribute => !stateMaximums.has(attribute));
+                        for (const attribute of combatAttrs) {
+                            b.tab(155, label => label
+                                .icon(attribute.icon)
+                                .text(' ')
+                                .tooltip(
+                                    attribute.getDescription(attr[attribute.key]),
+                                    name => name.weight('bold', text => text.text(attribute.label)),
+                                ))
+                                .text(`${attribute.format(attr[attribute.key])}\n`);
                         }
 
                         b.color('gray', b2 => b2.text('─── 스탯 ───\n'))

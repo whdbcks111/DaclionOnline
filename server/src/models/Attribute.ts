@@ -131,6 +131,8 @@ export class AttributeType {
 
     readonly key: AttributeKey
     readonly label: string
+    /** 상태창과 스킬 계수 표시에 공통으로 쓰는 아이콘 key. */
+    readonly icon: string
     readonly defaultValue: number
     /** 값을 표시용 문자열로 변환 */
     readonly format: (value: number) => string
@@ -140,6 +142,7 @@ export class AttributeType {
     private constructor(key: AttributeKey, label: string, defaultValue: number, format?: (v: number) => string, description?: (v: number) => string) {
         this.key = key
         this.label = label
+        this.icon = `attributes/${key}`
         this.defaultValue = defaultValue
         this.format = format ?? (v => Number.isInteger(v) ? String(v) : v.toFixed(2))
         this.getDescription = description ?? (() => '')
@@ -153,6 +156,9 @@ export class AttributeType {
     static fromKey(key: string): AttributeType | undefined {
         return AttributeType._all.find(a => a.key === key)
     }
+
+    /** 스킬/상태 설명 포맷 문자열에 삽입 가능한 채팅 아이콘 문법. */
+    get iconMarkup(): string { return `[icon=${this.icon}]` }
 
     toString(): string { return this.key }
 }

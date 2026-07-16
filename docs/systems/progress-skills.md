@@ -52,6 +52,10 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 `activationPhrase`가 없으면 `activationMessage`를 일반 채팅의 정확 일치 시전어로도 사용한다. 직업 요구 조건은 [직업·전직 시스템](careers.md)의 `CareerProfile.hasJob`을 사용해 엘리트 하위 계보를 자동 호환한다.
 
+스킬 템플릿은 `{{icon.atk}}`, `{{icon.magicForce}}`, `{{icon.maxMentality}}`처럼 `icon.{AttributeKey}`를 사용하면 해당 `AttributeType.iconMarkup`으로 치환된다. 공격력·마법력 계수, 관통, 방어, 속도, 치명타와 정신력 소모 표기는 이 문법을 사용해 상태창과 같은 대표색 아이콘을 재사용한다.
+
+계산 필드는 `[tooltip=산식]현재값[/tooltip]`을 반환할 수 있다. 스킬 정보 본문은 현재 적용될 결과 숫자만 보여주고 hover에서 능력치 계수·기본값·레벨당 증가량을 설명한다. 실제 발동과 표시 계산은 같은 함수와 상수를 사용해 밸런스 변경 시 서로 어긋나지 않게 한다.
+
 직업 귀속처럼 현재 사용할 수 없는 스킬은 DB에서 제거하지 않는다. `isVisible`과 `canUse`로 표시/사용만 비활성화한다. `SkillBook.grant()`는 신규 획득일 때 채팅과 notification에 `스킬 [ 이름 ] 를 획득했습니다!`를 보내며 이미 보유한 스킬은 중복 생성하지 않는다.
 
 ### Metadata와 계산 필드

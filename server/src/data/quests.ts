@@ -42,10 +42,10 @@ defineQuest({
 export const CAREER_QUEST_IDS: Record<string, string> = {};
 
 const careerQuestDefinitions = [
-    { id: 'warrior', name: '전사', label: '단단한 적 제압', weapon: 'training_axe', matches: (target: { hasTag(tag: string): boolean }) => target.hasTag(GameTags.TRAIT_INANIMATE) },
-    { id: 'archer', name: '궁수', label: '자연 속성 적 제압', weapon: 'light_bow', matches: (target: { hasTag(tag: string): boolean }) => target.hasTag(GameTags.PROPERTY_NATURAL) },
-    { id: 'assassin', name: '암살자', label: '생명체 적 제압', weapon: 'venom_dagger', matches: (target: { hasTag(tag: string): boolean }) => target.hasTag(GameTags.TRAIT_LIVING) },
-    { id: 'mage', name: '마법사', label: '속성 적 제압', weapon: 'apprentice_staff', matches: (target: { hasTag(tag: string): boolean }) => [GameTags.PROPERTY_FIRE, GameTags.PROPERTY_ICE, GameTags.PROPERTY_POISON, GameTags.PROPERTY_NATURAL].some(tag => target.hasTag(tag)) },
+    { id: 'warrior', name: '전사', label: '무생물 속성 적 처치', weapon: 'training_axe', matches: (target: { hasTag(tag: string): boolean }) => target.hasTag(GameTags.TRAIT_INANIMATE) },
+    { id: 'archer', name: '궁수', label: '자연 속성 적 처치', weapon: 'light_bow', matches: (target: { hasTag(tag: string): boolean }) => target.hasTag(GameTags.PROPERTY_NATURAL) },
+    { id: 'assassin', name: '암살자', label: '생명체 속성 적 처치', weapon: 'venom_dagger', matches: (target: { hasTag(tag: string): boolean }) => target.hasTag(GameTags.TRAIT_LIVING) },
+    { id: 'mage', name: '마법사', label: '불·얼음·독·자연 속성 적 처치', weapon: 'apprentice_staff', matches: (target: { hasTag(tag: string): boolean }) => [GameTags.PROPERTY_FIRE, GameTags.PROPERTY_ICE, GameTags.PROPERTY_POISON, GameTags.PROPERTY_NATURAL].some(tag => target.hasTag(tag)) },
 ] as const;
 
 for (const slot of JobSlotType.values()) for (const job of careerQuestDefinitions) {

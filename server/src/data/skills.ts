@@ -37,6 +37,54 @@ function attackPower(context: SkillContext): number {
     return context.owner.attribute.get(AttributeType.ATK) * multiplier;
 }
 
+function valueByLevel(level: number, base: number, perLevel: number): number {
+    return base + Math.max(0, level - 1) * perLevel;
+}
+
+function percentByLevel(level: number, base: number, perLevel: number): number {
+    return valueByLevel(level, base, perLevel);
+}
+
+function formatNumber(value: number): string {
+    return Number.isInteger(value) ? value.toString() : value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function tooltipValue(value: number, description: string, suffix = ''): string {
+    return `[tooltip=${description}]${formatNumber(value)}${suffix}[/tooltip]`;
+}
+
+function levelValueTooltip(
+    context: SkillContext,
+    label: string,
+    base: number,
+    perLevel: number,
+    suffix = '',
+): string {
+    const value = valueByLevel(context.skill.level, base, perLevel);
+    const growth = perLevel === 0 ? '' : ` · 스킬 레벨당 +${formatNumber(perLevel)}${suffix}`;
+    return tooltipValue(value, `${label}: 기본 ${formatNumber(base)}${suffix}${growth}`, suffix);
+}
+
+function attributeDamageTooltip(
+    context: SkillContext,
+    attribute: AttributeType,
+    basePercent: number,
+    perLevelPercent: number,
+): string {
+    const percent = percentByLevel(context.skill.level, basePercent, perLevelPercent);
+    const damage = context.owner.attribute.get(attribute) * percent / 100;
+    const growth = perLevelPercent === 0 ? '' : ` · 스킬 레벨당 계수 +${formatNumber(perLevelPercent)}%p`;
+    return tooltipValue(damage, `${attribute.label} × ${formatNumber(percent)}%${growth}`);
+}
+
+function cooldownByLevel(context: SkillContext, base: number, perLevelReduction: number, minimum: number): number {
+    return Math.max(minimum, base - Math.max(0, context.skill.level - 1) * perLevelReduction);
+}
+
+function activationGuide(requirement: string): string {
+    return `${requirement} \`/스킬 {{name}}\` 또는 채팅에 [color=gold]{{name}}![/color]를 입력해 발동합니다.`;
+}
+
 defineSkill({
     id: 'power_strike',
     name: '강타',
@@ -44,14 +92,14 @@ defineSkill({
     aliases: ['powerstrike'],
     maxLevel: 5,
     descriptionTemplate:
-        '현재 대상으로 기본 공격을 가해 [color=orange]{{damage}}[/color]의 예상 물리 피해를 입힙니다. '
+        '현재 대상으로 기본 공격을 가해 {{icon.atk}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 예상 물리 피해를 입힙니다. '
         + '이 공격은 [color=gold]100% 확률로 치명타[/color]가 발생합니다.\n'
-        + '공격 직전에 물리 관통력이 일회성으로 [color=orange]+{{armorPenFlat}}[/color] 및 '
+        + '공격 직전에 {{icon.armorPen}} 물리 관통력이 일회성으로 [color=orange]+{{armorPenFlat}}[/color] 및 '
         + '[color=orange]+{{armorPenPercent}}%[/color] 증가합니다.',
     costTemplate:
-        '[color=$magic]정신력 {{manaCost}}[/color]',
+        '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
     activationConditionTemplate:
-        '살아 있는 현재 대상과 [color=$magic]정신력 {{manaCost}} 이상[/color]이 필요합니다. '
+        `살아 있는 현재 대상과 {{icon.maxMentality}} [color=$magic]정신력 {{manaCost}} 이상[/color]이 필요합니다. `
         + '`/스킬 {{name}}` 또는 채팅에 [color=gold]강타![/color]를 입력해 발동합니다.',
     activationMessage: '강타!',
     baseMetadata: {
@@ -67,8 +115,15 @@ defineSkill({
     calculatedFields: {
         manaCost,
         attackPower,
-        damage: context => attackPower(context)
-            * context.owner.attribute.get(AttributeType.CRIT_DMG),
+        damage: context => {
+            const attackMultiplier = numberMeta(context, 'baseAttackMultiplier')
+                + (context.skill.level - 1) * numberMeta(context, 'attackMultiplierPerLevel');
+            const critMultiplier = context.owner.attribute.get(AttributeType.CRIT_DMG);
+            return tooltipValue(
+                attackPower(context) * critMultiplier,
+                `공격력 × ${formatNumber(attackMultiplier * 100)}% × 치명타 피해 ${formatNumber(critMultiplier * 100)}% · 스킬 레벨당 계수 +${formatNumber(numberMeta(context, 'attackMultiplierPerLevel') * 100)}%p`,
+            );
+        },
         armorPenFlat: context => numberMeta(context, 'armorPenFlat'),
         armorPenPercent: context => numberMeta(context, 'armorPenPercent'),
     },
@@ -134,20 +189,20 @@ defineSkill({
 });
 
 const BATTLE_RUSH = defineAttributeBuff('battle_rush', '전투 질주', '공격력과 이동속도가 증가합니다.', [
-    { attribute: AttributeType.ATK, op: 'multiply', value: 1.12 },
-    { attribute: AttributeType.SPEED, op: 'multiply', value: 1.25 },
+    { attribute: AttributeType.ATK, op: 'multiply', value: level => 1 + percentByLevel(level, 15, 3) / 100 },
+    { attribute: AttributeType.SPEED, op: 'multiply', value: level => 1 + percentByLevel(level, 20, 3) / 100 },
 ]);
 const INDOMITABLE = defineAttributeBuff('indomitable', '불굴', '방어력과 최대 생명력이 증가합니다.', [
-    { attribute: AttributeType.DEF, op: 'add', value: 12 },
-    { attribute: AttributeType.MAX_LIFE, op: 'multiply', value: 1.2 },
+    { attribute: AttributeType.DEF, op: 'add', value: level => valueByLevel(level, 15, 5) },
+    { attribute: AttributeType.MAX_LIFE, op: 'multiply', value: level => 1 + percentByLevel(level, 20, 3) / 100 },
 ]);
 const MANA_BARRIER = defineAttributeBuff('mana_barrier', '마력 보호막', '방어력과 마법 저항력이 증가합니다.', [
-    { attribute: AttributeType.DEF, op: 'add', value: 8 },
-    { attribute: AttributeType.MAGIC_DEF, op: 'add', value: 15 },
+    { attribute: AttributeType.DEF, op: 'add', value: level => valueByLevel(level, 12, 4) },
+    { attribute: AttributeType.MAGIC_DEF, op: 'add', value: level => valueByLevel(level, 20, 5) },
 ]);
 const ELEMENTAL_INSIGHT = defineAttributeBuff('elemental_insight', '원소 통찰', '마법력과 정신력 재생이 증가합니다.', [
-    { attribute: AttributeType.MAGIC_FORCE, op: 'multiply', value: 1.18 },
-    { attribute: AttributeType.MENTALITY_REGEN, op: 'add', value: 2 },
+    { attribute: AttributeType.MAGIC_FORCE, op: 'multiply', value: level => 1 + percentByLevel(level, 20, 4) / 100 },
+    { attribute: AttributeType.MENTALITY_REGEN, op: 'add', value: level => valueByLevel(level, 2, 0.75) },
 ]);
 
 const STUN = StatusEffectType.define({
@@ -171,8 +226,8 @@ const WIND_EVASION = StatusEffectType.define({
 const STEALTH = StatusEffectType.define({
     id: 'stealth', label: '은신', icon: 'skills/career_assassin', maxLevel: 5,
     descriptionTemplate: '다른 대상이 공격 대상으로 지정할 수 없고 이동속도가 증가합니다.',
-    onStart: ({ target, effect }) => applyStealth(target, effect.type.id),
-    onUpdate: ({ target, effect }) => applyStealth(target, effect.type.id),
+    onStart: ({ target, effect }) => applyStealth(target, effect.type.id, effect.level),
+    onUpdate: ({ target, effect }) => applyStealth(target, effect.type.id, effect.level),
     onRemove: ({ target, effect }) => {
         target.tags.removeRuntime(`status:${effect.type.id}`);
         target.attribute.removeBySource(`status:${effect.type.id}`);
@@ -180,19 +235,19 @@ const STEALTH = StatusEffectType.define({
     aliases: ['은신'], tags: [GameTags.PROPERTY_DARK],
 });
 
-type BuffModifier = { attribute: AttributeType; op: 'add' | 'multiply'; value: number };
+type BuffModifier = { attribute: AttributeType; op: 'add' | 'multiply'; value: (level: number) => number };
 function defineAttributeBuff(id: string, label: string, description: string, modifiers: readonly BuffModifier[]): StatusEffectType {
-    const apply = (target: import('../models/Entity.js').default) => {
+    const apply = (target: import('../models/Entity.js').default, level: number) => {
         const source = `status:${id}`;
         target.attribute.removeBySource(source);
         target.attribute.addModifiers(modifiers.map(modifier => ({
-            attribute: modifier.attribute.key, op: modifier.op, value: modifier.value, source,
+            attribute: modifier.attribute.key, op: modifier.op, value: modifier.value(level), source,
         })));
     };
     return StatusEffectType.define({
         id, label, icon: id === 'mana_barrier' || id === 'elemental_insight' ? 'skills/career_mage' : 'skills/career_warrior', maxLevel: 5, descriptionTemplate: description,
-        onStart: ({ target }) => apply(target),
-        onUpdate: ({ target }) => apply(target),
+        onStart: ({ target, effect }) => apply(target, effect.level),
+        onUpdate: ({ target, effect }) => apply(target, effect.level),
         onRemove: ({ target }) => target.attribute.removeBySource(`status:${id}`),
         tags: [],
     });
@@ -202,11 +257,16 @@ function applyStun(target: import('../models/Entity.js').default, id: string): v
     target.disableActions([ActionType.SKILL, ActionType.ATTACK, ActionType.MOVEMENT, ActionType.LOCATION_TRAVEL], `status:${id}`);
 }
 
-function applyStealth(target: import('../models/Entity.js').default, id: string): void {
+function applyStealth(target: import('../models/Entity.js').default, id: string, level = 1): void {
     const source = `status:${id}`;
     target.tags.setRuntime(source, [GameTags.TRAIT_STEALTH]);
     target.attribute.removeBySource(source);
-    target.attribute.addModifier({ attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.25, source });
+    target.attribute.addModifier({
+        attribute: AttributeType.SPEED.key,
+        op: 'multiply',
+        value: 1 + percentByLevel(level, 25, 5) / 100,
+        source,
+    });
 }
 
 const JOBS = {
@@ -258,46 +318,83 @@ function projectileAttack(context: SkillContext, dataId: string, multiplier: num
 
 defineSkill({
     id: 'steel_slash', name: '강철 베기', icon: 'skills/career_warrior', maxLevel: 5,
-    descriptionTemplate: '검 또는 도끼로 [color=orange]공격력의 145%[/color] 물리 피해를 입힙니다.',
-    costTemplate: '[color=$magic]정신력 10[/color]', activationConditionTemplate: '검 또는 도끼와 현재 대상이 필요합니다.',
-    activationMessage: '강철 베기!', activationPhrase: '강철 베기!', baseMetadata: null, calculateMaxCooldown: () => 5,
+    descriptionTemplate: '검 또는 도끼로 현재 대상에게 {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 10[/color]',
+    activationConditionTemplate: activationGuide('검 또는 도끼와 살아 있는 현재 대상이 필요합니다.'),
+    activationMessage: '강철 베기!', activationPhrase: '강철 베기!', baseMetadata: null,
+    calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.ATK, 175, 12) },
+    calculateMaxCooldown: context => cooldownByLevel(context, 5, 0.2, 4.2),
     jobRequirement: jobRequirement(JOBS.warrior), weaponRequirement: weaponRequirement('검 또는 도끼를 장착해야 합니다.', GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE),
-    canActivate: simpleCheck(10), onStart: context => { spend(context, 10); directAttack(context, 1.45, { consumeMainHandDurability: true }); },
+    canActivate: simpleCheck(10), onStart: context => {
+        spend(context, 10);
+        directAttack(context, percentByLevel(context.skill.level, 175, 12) / 100, { consumeMainHandDurability: true });
+    },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
 });
 
 defineSkill({
     id: 'battle_rush', name: '전투 질주', icon: 'skills/career_warrior', maxLevel: 5,
-    descriptionTemplate: '8초간 공격력과 이동속도가 증가합니다.', costTemplate: '[color=$magic]정신력 14[/color]',
-    activationConditionTemplate: '전사 계보 직업이 필요합니다.', activationMessage: '전투 질주!', baseMetadata: null,
-    calculateMaxCooldown: () => 18, jobRequirement: jobRequirement(JOBS.warrior), canActivate: simpleCheck(14, false),
-    onStart: context => { spend(context, 14); context.owner.applyStatusEffect(BATTLE_RUSH, 8, context.skill.level); },
+    descriptionTemplate: '{{duration}} 동안 {{icon.atk}} 공격력이 [color=orange]{{attackBonus}}[/color], {{icon.speed}} 이동속도가 [color=cyan]{{speedBonus}}[/color] 증가합니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 14[/color]',
+    activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '전투 질주!', baseMetadata: null,
+    calculatedFields: {
+        duration: context => levelValueTooltip(context, '지속시간', 8, 1, '초'),
+        attackBonus: context => levelValueTooltip(context, '공격력 증가', 15, 3, '%'),
+        speedBonus: context => levelValueTooltip(context, '이동속도 증가', 20, 3, '%'),
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 18, 1, 14),
+    jobRequirement: jobRequirement(JOBS.warrior), canActivate: simpleCheck(14, false),
+    onStart: context => {
+        spend(context, 14);
+        context.owner.applyStatusEffect(BATTLE_RUSH, valueByLevel(context.skill.level, 8, 1), context.skill.level);
+    },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
 });
 
 defineSkill({
     id: 'indomitable', name: '불굴', icon: 'skills/career_warrior', maxLevel: 5,
-    descriptionTemplate: '10초간 방어력과 최대 생명력이 증가하고 생명력을 15% 회복합니다.', costTemplate: '[color=$magic]정신력 18[/color]',
-    activationConditionTemplate: '전사 계보 직업이 필요합니다.', activationMessage: '불굴!', baseMetadata: null,
-    calculateMaxCooldown: () => 28, jobRequirement: jobRequirement(JOBS.warrior), canActivate: simpleCheck(18, false),
-    onStart: context => { spend(context, 18); context.owner.applyStatusEffect(INDOMITABLE, 10, context.skill.level); context.owner.heal(context.owner.maxLife * 0.15); },
+    descriptionTemplate: '{{duration}} 동안 {{icon.def}} 방어력이 [color=yellow]+{{defBonus}}[/color], {{icon.maxLife}} 최대 생명력이 [color=green]{{lifeBonus}}[/color] 증가하고 최대 생명력의 [color=green]{{healPercent}}[/color]를 회복합니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
+    activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '불굴!', baseMetadata: null,
+    calculatedFields: {
+        duration: context => levelValueTooltip(context, '지속시간', 10, 1, '초'),
+        defBonus: context => levelValueTooltip(context, '방어력 증가', 15, 5),
+        lifeBonus: context => levelValueTooltip(context, '최대 생명력 증가', 20, 3, '%'),
+        healPercent: context => levelValueTooltip(context, '즉시 회복량', 15, 2, '%'),
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 28, 1.5, 22),
+    jobRequirement: jobRequirement(JOBS.warrior), canActivate: simpleCheck(18, false),
+    onStart: context => {
+        spend(context, 18);
+        context.owner.applyStatusEffect(INDOMITABLE, valueByLevel(context.skill.level, 10, 1), context.skill.level);
+        context.owner.heal(context.owner.maxLife * percentByLevel(context.skill.level, 15, 2) / 100);
+    },
     tags: [GameTags.SKILL_ACTIVE],
 });
 
 defineSkill({
     id: 'arcane_arrow', name: '마력 화살', icon: 'skills/career_archer', maxLevel: 5,
-    descriptionTemplate: '탄약 없이 마력 화살을 발사해 마법 피해를 입힙니다.', costTemplate: '[color=$magic]정신력 12[/color]',
-    activationConditionTemplate: '활과 현재 대상이 필요합니다.', activationMessage: '마력 화살!', baseMetadata: null,
-    calculateMaxCooldown: () => 5, jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
-    canActivate: simpleCheck(12), onStart: context => { spend(context, 12); projectileAttack(context, 'basic_magic_orb', 1.25, [GameTags.PROPERTY_LIGHT]); },
+    descriptionTemplate: '탄약을 소모하지 않는 빛 속성 화살을 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 12[/color]',
+    activationConditionTemplate: activationGuide('활과 살아 있는 현재 대상이 필요합니다.'), activationMessage: '마력 화살!', baseMetadata: null,
+    calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 160, 12) },
+    calculateMaxCooldown: context => cooldownByLevel(context, 5, 0.2, 4.2),
+    jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
+    canActivate: simpleCheck(12), onStart: context => {
+        spend(context, 12);
+        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 160, 12) / 100, [GameTags.PROPERTY_LIGHT]);
+    },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
 });
 
 defineSkill({
     id: 'multishot', name: '다중 사격', icon: 'skills/career_archer', maxLevel: 5,
-    descriptionTemplate: '현재 장소의 공격 가능한 대상 최대 3명에게 화살을 발사합니다.', costTemplate: '[color=$magic]정신력 18[/color]',
-    activationConditionTemplate: '활과 공격 가능한 오브젝트가 필요합니다.', activationMessage: '다중 사격!', baseMetadata: null,
-    calculateMaxCooldown: () => 11, jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
+    descriptionTemplate: '현재 장소의 공격 가능한 대상 최대 [color=gold]3명[/color]에게 각각 {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 화살을 발사합니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
+    activationConditionTemplate: activationGuide('활과 현재 장소의 공격 가능한 오브젝트가 필요합니다.'), activationMessage: '다중 사격!', baseMetadata: null,
+    calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.ATK, 100, 10) },
+    calculateMaxCooldown: context => cooldownByLevel(context, 11, 0.5, 9),
+    jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
     canActivate: context => {
         const checked = simpleCheck(18, false, true)(context);
         if (!checked.accepted) return checked;
@@ -307,7 +404,12 @@ defineSkill({
     }, onStart: context => {
         const player = requirePlayer(context); spend(context, 18);
         for (const target of getLocation(player.locationId)?.getAttackableObjects(player).slice(0, 3) ?? []) {
-            spawnProjectileFromData({ owner: player, target, dataId: 'basic_arrow', overrides: { damageMultiplier: 0.85 } });
+            spawnProjectileFromData({
+                owner: player,
+                target,
+                dataId: 'basic_arrow',
+                overrides: { damageMultiplier: percentByLevel(context.skill.level, 100, 10) / 100 },
+            });
         }
         player.commitAttack(false);
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
@@ -315,92 +417,201 @@ defineSkill({
 
 defineSkill({
     id: 'stunning_shot', name: '충격 화살', icon: 'skills/career_archer', maxLevel: 5,
-    descriptionTemplate: '강화 화살을 발사해 적중한 대상을 2초간 기절시킵니다.', costTemplate: '[color=$magic]정신력 20[/color]',
-    activationConditionTemplate: '활과 현재 대상이 필요합니다.', activationMessage: '충격 화살!', baseMetadata: null,
-    calculateMaxCooldown: () => 16, jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
-    canActivate: simpleCheck(20), onStart: context => { spend(context, 20); projectileAttack(context, 'basic_arrow', 1.05, undefined, (_p, result) => { if (!result.evaded) _p.target.applyStatusEffect(STUN, 2, 1); }); },
+    descriptionTemplate: '{{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 강화 화살을 발사합니다. 적중한 대상은 {{stunDuration}} 동안 기절합니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 20[/color]',
+    activationConditionTemplate: activationGuide('활과 살아 있는 현재 대상이 필요합니다.'), activationMessage: '충격 화살!', baseMetadata: null,
+    calculatedFields: {
+        damage: context => attributeDamageTooltip(context, AttributeType.ATK, 125, 10),
+        stunDuration: context => levelValueTooltip(context, '기절 지속시간', 2, 0.25, '초'),
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 16, 0.75, 13),
+    jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
+    canActivate: simpleCheck(20), onStart: context => {
+        spend(context, 20);
+        projectileAttack(context, 'basic_arrow', percentByLevel(context.skill.level, 125, 10) / 100, undefined, (_p, result) => {
+            if (!result.evaded) _p.target.applyStatusEffect(STUN, valueByLevel(context.skill.level, 2, 0.25), context.skill.level);
+        });
+    },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
 });
 
 defineSkill({
     id: 'wind_evasion', name: '바람 회피', icon: 'skills/career_archer', maxLevel: 5,
-    descriptionTemplate: '4초간 이동 가능한 동안 공격을 확정 회피합니다.', costTemplate: '[color=$magic]정신력 22[/color]',
-    activationConditionTemplate: '궁수 계보 직업이 필요합니다.', activationMessage: '바람 회피!', baseMetadata: null,
-    calculateMaxCooldown: () => 24, jobRequirement: jobRequirement(JOBS.archer), canActivate: simpleCheck(22, false),
-    onStart: context => { spend(context, 22); context.owner.applyStatusEffect(WIND_EVASION, 4, context.skill.level); }, tags: [GameTags.SKILL_ACTIVE],
+    descriptionTemplate: '{{duration}} 동안 {{icon.speed}} 이동 가능한 상태라면 받는 공격을 [color=cyan]확정적으로 회피[/color]합니다. 이동이 금지된 동안에는 발동하지 않습니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 22[/color]',
+    activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '바람 회피!', baseMetadata: null,
+    calculatedFields: { duration: context => levelValueTooltip(context, '확정 회피 지속시간', 4, 0.5, '초') },
+    calculateMaxCooldown: context => cooldownByLevel(context, 24, 1.5, 18),
+    jobRequirement: jobRequirement(JOBS.archer), canActivate: simpleCheck(22, false),
+    onStart: context => {
+        spend(context, 22);
+        context.owner.applyStatusEffect(WIND_EVASION, valueByLevel(context.skill.level, 4, 0.5), context.skill.level);
+    }, tags: [GameTags.SKILL_ACTIVE],
 });
 
 defineSkill({
     id: 'stealth', name: '은신', icon: 'skills/career_assassin', maxLevel: 5,
-    descriptionTemplate: '8초간 은신하고 이동속도가 증가합니다. 암습 사용 시 해제됩니다.', costTemplate: '[color=$magic]정신력 16[/color]',
-    activationConditionTemplate: '암살자 계보 직업이 필요합니다.', activationMessage: '은신!', baseMetadata: null,
-    calculateMaxCooldown: () => 20, jobRequirement: jobRequirement(JOBS.assassin), canActivate: simpleCheck(16, false),
-    onStart: context => { spend(context, 16); context.owner.applyStatusEffect(STEALTH, 8, context.skill.level); }, tags: [GameTags.SKILL_ACTIVE],
+    descriptionTemplate: '{{duration}} 동안 다른 대상이 공격 대상으로 지정할 수 없는 은신 상태가 되고 {{icon.speed}} 이동속도가 [color=cyan]{{speedBonus}}[/color] 증가합니다. 암습 사용 시 해제됩니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 16[/color]',
+    activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '은신!', baseMetadata: null,
+    calculatedFields: {
+        duration: context => levelValueTooltip(context, '은신 지속시간', 8, 0.75, '초'),
+        speedBonus: context => levelValueTooltip(context, '이동속도 증가', 25, 5, '%'),
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 20, 1, 16),
+    jobRequirement: jobRequirement(JOBS.assassin), canActivate: simpleCheck(16, false),
+    onStart: context => {
+        spend(context, 16);
+        context.owner.applyStatusEffect(STEALTH, valueByLevel(context.skill.level, 8, 0.75), context.skill.level);
+    }, tags: [GameTags.SKILL_ACTIVE],
 });
 
 defineSkill({
     id: 'ambush', name: '암습', icon: 'skills/career_assassin', maxLevel: 5,
-    descriptionTemplate: '은신을 해제하고 회피 불가 확정 치명타 공격을 가합니다.', costTemplate: '[color=$magic]정신력 18[/color]',
-    activationConditionTemplate: '단검, 은신 효과와 현재 대상이 필요합니다.', activationMessage: '암습!', baseMetadata: null,
-    calculateMaxCooldown: () => 10, jobRequirement: jobRequirement(JOBS.assassin), weaponRequirement: weaponRequirement('단검을 장착해야 합니다.', GameTags.WEAPON_DAGGER),
+    descriptionTemplate: '은신을 해제하고 {{icon.atk}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 {{icon.critRate}} 확정 치명타 공격을 가합니다. 이 공격은 회피할 수 없습니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
+    activationConditionTemplate: activationGuide('단검, 은신 효과와 살아 있는 현재 대상이 필요합니다.'), activationMessage: '암습!', baseMetadata: null,
+    calculatedFields: { damage: context => {
+        const percent = percentByLevel(context.skill.level, 180, 15);
+        const damage = context.owner.attribute.get(AttributeType.ATK) * percent / 100
+            * context.owner.attribute.get(AttributeType.CRIT_DMG);
+        return tooltipValue(
+            damage,
+            `공격력 × ${formatNumber(percent)}% × 치명타 피해 ${formatNumber(context.owner.attribute.get(AttributeType.CRIT_DMG) * 100)}% · 스킬 레벨당 계수 +15%p`,
+        );
+    } },
+    calculateMaxCooldown: context => cooldownByLevel(context, 10, 0.5, 8),
+    jobRequirement: jobRequirement(JOBS.assassin), weaponRequirement: weaponRequirement('단검을 장착해야 합니다.', GameTags.WEAPON_DAGGER),
     canActivate: context => context.owner.getStatusEffect(STEALTH) ? simpleCheck(18)(context) : denySkill('은신 상태에서만 사용할 수 있습니다.'),
-    onStart: context => { spend(context, 18); context.owner.removeStatusEffect(STEALTH); directAttack(context, 1.65, { criticalRate: 1, unavoidable: true, consumeMainHandDurability: true }); },
+    onStart: context => {
+        spend(context, 18);
+        context.owner.removeStatusEffect(STEALTH);
+        directAttack(context, percentByLevel(context.skill.level, 180, 15) / 100, { criticalRate: 1, unavoidable: true, consumeMainHandDurability: true });
+    },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
 });
 
 defineSkill({
     id: 'venom_blade', name: '맹독 칼날', icon: 'skills/career_assassin', maxLevel: 5,
-    descriptionTemplate: '단검으로 공격하고 적중 대상에게 맹독을 부여합니다.', costTemplate: '[color=$magic]정신력 14[/color]',
-    activationConditionTemplate: '단검과 현재 대상이 필요합니다.', activationMessage: '맹독 칼날!', baseMetadata: null,
-    calculateMaxCooldown: () => 9, jobRequirement: jobRequirement(JOBS.assassin), weaponRequirement: weaponRequirement('단검을 장착해야 합니다.', GameTags.WEAPON_DAGGER),
-    canActivate: simpleCheck(14), onStart: context => { const found = targetOrDeny(context); if ('reason' in found) throw new Error(found.reason); spend(context, 14); const result = directAttack(context, 1.2, { consumeMainHandDurability: true }); if (!result.evaded && result.finalDamage > 0) found.target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 8, Math.min(5, context.skill.level)); },
+    descriptionTemplate: '단검으로 {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다. 피해를 준 대상에게 Lv.{{level}} 맹독을 {{poisonDuration}} 동안 부여합니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 14[/color]',
+    activationConditionTemplate: activationGuide('단검과 살아 있는 현재 대상이 필요합니다.'), activationMessage: '맹독 칼날!', baseMetadata: null,
+    calculatedFields: {
+        damage: context => attributeDamageTooltip(context, AttributeType.ATK, 145, 10),
+        poisonDuration: context => levelValueTooltip(context, '맹독 지속시간', 8, 1, '초'),
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 9, 0.5, 7),
+    jobRequirement: jobRequirement(JOBS.assassin), weaponRequirement: weaponRequirement('단검을 장착해야 합니다.', GameTags.WEAPON_DAGGER),
+    canActivate: simpleCheck(14), onStart: context => {
+        const found = targetOrDeny(context);
+        if ('reason' in found) throw new Error(found.reason);
+        spend(context, 14);
+        const result = directAttack(context, percentByLevel(context.skill.level, 145, 10) / 100, { consumeMainHandDurability: true });
+        if (!result.evaded && result.finalDamage > 0) {
+            found.target.applyStatusEffect(StatusEffectType.DEADLY_POISON, valueByLevel(context.skill.level, 8, 1), context.skill.level);
+        }
+    },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.PROPERTY_POISON],
 });
 
 defineSkill({
     id: 'magic_bolt', name: '마력탄', icon: 'skills/career_mage', maxLevel: 5,
-    descriptionTemplate: '지팡이로 응축한 정신 에너지를 발사해 마법 피해를 입힙니다.', costTemplate: '[color=$magic]정신력 10[/color]',
-    activationConditionTemplate: '지팡이와 현재 대상이 필요합니다.', activationMessage: '마력탄!', baseMetadata: null,
-    calculateMaxCooldown: () => 4, jobRequirement: jobRequirement(JOBS.mage), weaponRequirement: weaponRequirement('지팡이를 장착해야 합니다.', GameTags.WEAPON_STAFF),
-    canActivate: simpleCheck(10), onStart: context => { spend(context, 10); projectileAttack(context, 'basic_magic_orb', 1.3); }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+    descriptionTemplate: '지팡이로 응축한 정신 에너지를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 10[/color]',
+    activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'), activationMessage: '마력탄!', baseMetadata: null,
+    calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 165, 13) },
+    calculateMaxCooldown: context => cooldownByLevel(context, 4, 0.2, 3.2),
+    jobRequirement: jobRequirement(JOBS.mage), weaponRequirement: weaponRequirement('지팡이를 장착해야 합니다.', GameTags.WEAPON_STAFF),
+    canActivate: simpleCheck(10), onStart: context => {
+        spend(context, 10);
+        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 165, 13) / 100);
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
 });
 
 defineSkill({
     id: 'mana_barrier', name: '마력 보호막', icon: 'skills/career_mage', maxLevel: 5,
-    descriptionTemplate: '10초간 방어력과 마법 저항력을 증가시킵니다.', costTemplate: '[color=$magic]정신력 22[/color]',
-    activationConditionTemplate: '마법사 계보 직업이 필요합니다.', activationMessage: '마력 보호막!', baseMetadata: null,
-    calculateMaxCooldown: () => 22, jobRequirement: jobRequirement(JOBS.mage), canActivate: simpleCheck(22, false),
-    onStart: context => { spend(context, 22); context.owner.applyStatusEffect(MANA_BARRIER, 10, context.skill.level); }, tags: [GameTags.SKILL_ACTIVE],
+    descriptionTemplate: '{{duration}} 동안 {{icon.def}} 방어력이 [color=yellow]+{{defBonus}}[/color], {{icon.magicDef}} 마법 저항력이 [color=purple]+{{magicDefBonus}}[/color] 증가합니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 22[/color]',
+    activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '마력 보호막!', baseMetadata: null,
+    calculatedFields: {
+        duration: context => levelValueTooltip(context, '지속시간', 10, 1, '초'),
+        defBonus: context => levelValueTooltip(context, '방어력 증가', 12, 4),
+        magicDefBonus: context => levelValueTooltip(context, '마법 저항력 증가', 20, 5),
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 22, 1, 18),
+    jobRequirement: jobRequirement(JOBS.mage), canActivate: simpleCheck(22, false),
+    onStart: context => {
+        spend(context, 22);
+        context.owner.applyStatusEffect(MANA_BARRIER, valueByLevel(context.skill.level, 10, 1), context.skill.level);
+    }, tags: [GameTags.SKILL_ACTIVE],
 });
 
 defineSkill({
     id: 'elemental_bind', name: '원소 속박', icon: 'skills/career_mage', maxLevel: 5,
-    descriptionTemplate: '마법 피해를 주고 대상의 행동을 1.5초간 속박합니다.', costTemplate: '[color=$magic]정신력 24[/color]',
-    activationConditionTemplate: '지팡이와 현재 대상이 필요합니다.', activationMessage: '원소 속박!', baseMetadata: null,
-    calculateMaxCooldown: () => 15, jobRequirement: jobRequirement(JOBS.mage), weaponRequirement: weaponRequirement('지팡이를 장착해야 합니다.', GameTags.WEAPON_STAFF),
-    canActivate: simpleCheck(24), onStart: context => { spend(context, 24); projectileAttack(context, 'basic_magic_orb', 0.9, [GameTags.PROPERTY_ICE], (_p, result) => { if (!result.evaded) _p.target.applyStatusEffect(STUN, 1.5, 1); }); }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+    descriptionTemplate: '얼음 속성 구체로 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. 적중한 대상은 {{bindDuration}} 동안 공격·스킬·이동·장소 이동을 할 수 없습니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 24[/color]',
+    activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'), activationMessage: '원소 속박!', baseMetadata: null,
+    calculatedFields: {
+        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 115, 10),
+        bindDuration: context => levelValueTooltip(context, '속박 지속시간', 1.5, 0.2, '초'),
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 15, 0.75, 12),
+    jobRequirement: jobRequirement(JOBS.mage), weaponRequirement: weaponRequirement('지팡이를 장착해야 합니다.', GameTags.WEAPON_STAFF),
+    canActivate: simpleCheck(24), onStart: context => {
+        spend(context, 24);
+        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 115, 10) / 100, [GameTags.PROPERTY_ICE], (_p, result) => {
+            if (!result.evaded) _p.target.applyStatusEffect(STUN, valueByLevel(context.skill.level, 1.5, 0.2), context.skill.level);
+        });
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
 });
 
 defineSkill({
     id: 'elemental_insight', name: '원소 통찰', icon: 'skills/career_mage', maxLevel: 5,
-    descriptionTemplate: '12초간 마법력과 정신력 재생이 증가합니다.', costTemplate: '[color=$magic]정신력 16[/color]',
-    activationConditionTemplate: '마법사 계보 직업이 필요합니다.', activationMessage: '원소 통찰!', baseMetadata: null,
-    calculateMaxCooldown: () => 25, jobRequirement: jobRequirement(JOBS.mage), canActivate: simpleCheck(16, false),
-    onStart: context => { spend(context, 16); context.owner.applyStatusEffect(ELEMENTAL_INSIGHT, 12, context.skill.level); }, tags: [GameTags.SKILL_ACTIVE],
+    descriptionTemplate: '{{duration}} 동안 {{icon.magicForce}} 마법력이 [color=$magic]{{magicBonus}}[/color], {{icon.mentalityRegen}} 정신력 재생이 [color=purple]+{{regenBonus}}/초[/color] 증가합니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 16[/color]',
+    activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '원소 통찰!', baseMetadata: null,
+    calculatedFields: {
+        duration: context => levelValueTooltip(context, '지속시간', 12, 1, '초'),
+        magicBonus: context => levelValueTooltip(context, '마법력 증가', 20, 4, '%'),
+        regenBonus: context => levelValueTooltip(context, '정신력 재생 증가', 2, 0.75),
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 25, 1.25, 20),
+    jobRequirement: jobRequirement(JOBS.mage), canActivate: simpleCheck(16, false),
+    onStart: context => {
+        spend(context, 16);
+        context.owner.applyStatusEffect(ELEMENTAL_INSIGHT, valueByLevel(context.skill.level, 12, 1), context.skill.level);
+    }, tags: [GameTags.SKILL_ACTIVE],
 });
 
 for (const elemental of [
-    { id: 'fireball', name: '화염구', icon: 'affinities/fire', tag: GameTags.PROPERTY_FIRE, stat: 'career:mage_fire_kills', effect: StatusEffectType.FIRE },
-    { id: 'frost_bolt', name: '빙결탄', icon: 'affinities/ice', tag: GameTags.PROPERTY_ICE, stat: 'career:mage_ice_kills', effect: STUN },
-    { id: 'lightning_orb', name: '뇌전구', icon: 'affinities/electric', tag: GameTags.PROPERTY_ELECTRIC, stat: 'career:mage_electric_kills', effect: StatusEffectType.PARALYTIC_POISON },
+    { id: 'fireball', name: '화염구', icon: 'affinities/fire', tag: GameTags.PROPERTY_FIRE, stat: 'career:mage_fire_kills', effect: StatusEffectType.FIRE, effectLabel: '화염', duration: 6, durationPerLevel: 1 },
+    { id: 'frost_bolt', name: '빙결탄', icon: 'affinities/ice', tag: GameTags.PROPERTY_ICE, stat: 'career:mage_ice_kills', effect: STUN, effectLabel: '기절', duration: 2, durationPerLevel: 0.25 },
+    { id: 'lightning_orb', name: '뇌전구', icon: 'affinities/electric', tag: GameTags.PROPERTY_ELECTRIC, stat: 'career:mage_electric_kills', effect: StatusEffectType.PARALYTIC_POISON, effectLabel: '마비독', duration: 5, durationPerLevel: 0.75 },
 ] as const) defineSkill({
     id: elemental.id, name: elemental.name, icon: elemental.icon, maxLevel: 5,
-    descriptionTemplate: `${elemental.name}를 발사해 속성 마법 피해와 상태효과를 부여합니다.`, costTemplate: '[color=$magic]정신력 28[/color]',
-    activationConditionTemplate: `마법사 계보와 지팡이가 필요하며 관련 속성 몬스터 처치 통계 5회에 자동 획득합니다.`,
-    activationMessage: `${elemental.name}!`, baseMetadata: null, calculateMaxCooldown: () => 9,
+    descriptionTemplate: `${elemental.name}를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 속성 마법 피해를 입히고 Lv.{{level}} ${elemental.effectLabel} 효과를 {{effectDuration}} 동안 부여합니다.`,
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 28[/color]',
+    activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'),
+    activationMessage: `${elemental.name}!`, baseMetadata: null,
+    calculatedFields: {
+        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 185, 15),
+        effectDuration: context => levelValueTooltip(context, `${elemental.effectLabel} 지속시간`, elemental.duration, elemental.durationPerLevel, '초'),
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 9, 0.5, 7),
     jobRequirement: jobRequirement(JOBS.mage), weaponRequirement: weaponRequirement('지팡이를 장착해야 합니다.', GameTags.WEAPON_STAFF),
     autoAcquire: { watchedProgress: [elemental.stat], check: ({ player }) => Boolean(player?.career?.hasJob(JOBS.mage) && player.progress.getCounter(elemental.stat) >= 5n) },
-    canActivate: simpleCheck(28), onStart: context => { spend(context, 28); projectileAttack(context, 'basic_magic_orb', 1.55, [elemental.tag], (_p, result) => { if (!result.evaded) _p.target.applyStatusEffect(elemental.effect, 4, Math.min(3, context.skill.level)); }); },
+    canActivate: simpleCheck(28), onStart: context => {
+        spend(context, 28);
+        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 185, 15) / 100, [elemental.tag], (_p, result) => {
+            if (!result.evaded) {
+                _p.target.applyStatusEffect(
+                    elemental.effect,
+                    valueByLevel(context.skill.level, elemental.duration, elemental.durationPerLevel),
+                    context.skill.level,
+                );
+            }
+        });
+    },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, elemental.tag],
 });
 
@@ -426,9 +637,9 @@ defineSkill({
     maxLevel: 5,
     descriptionTemplate:
         '[color=gold]{{castTime}}초[/color] 동안 지면의 힘을 모은 뒤 현재 대상에게 '
-        + '[color=$magic]{{damage}}의 마법 피해[/color]를 입힙니다. '
+        + '{{icon.magicForce}} [color=$magic]{{damage}}의 마법 피해[/color]를 입힙니다. '
         + '적중 시 [color=violet]{{paralysisChance}}% 확률[/color]로 마비독을 부여합니다.',
-    costTemplate: '[color=$magic]정신력 {{manaCost}}[/color]',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
     activationConditionTemplate:
         '살아 있는 현재 대상과 공격 가능 상태가 필요합니다. 시전 중에는 다른 공격을 하지 않습니다.',
     activationMessage: '지각 붕괴!',

@@ -9,9 +9,10 @@ import { PlayerProgress } from './Progress.js';
 import type Player from './Player.js';
 import '../data/jobs.js';
 import '../data/skills.js';
-import { getSkillData } from './Skill.js';
+import Skill, { getSkillData } from './Skill.js';
 import { getAllQuestData } from './Quest.js';
 import '../data/quests.js';
+import '../data/items.js';
 import { getIO, initSocket } from '../modules/socket.js';
 
 initSocket(createServer(), 'http://localhost');
@@ -47,6 +48,9 @@ test('1차 직업은 최소 3개 스킬을 지급하고 서로 다른 12개 순�
         assert.equal(png.readUInt32BE(20), 128);
     }
     assert.equal(getAllQuestData().filter(quest => quest.tags.includes('quest:career')).length, 8);
+    const mageTrial = getAllQuestData().find(quest => quest.id === 'career:main_mage_promotion');
+    assert.equal(mageTrial?.stages[0].objectives[0].label, '불·얼음·독·자연 속성 적 처치');
+    assert.ok(mageTrial?.rewards.some(reward => reward.label === '견습 마법 지팡이 x1'));
     for (const main of firstJobs) for (const sub of firstJobs) {
         assert.equal(Boolean(resolveEliteJob(main.id, sub.id)), main.id !== sub.id, `${main.id}>${sub.id}`);
     }
@@ -89,4 +93,24 @@ test('Lv.200에는 서로 다른 메인·서브 순서 조합으로 엘리트 �
     assert.equal(career.evaluateElitePromotion(), true);
     assert.equal(career.eliteJobId, 'career:spellblade');
     assert.equal(career.evaluateElitePromotion(), false);
+});
+
+test('직업 스킬 설명은 현재 수치와 계수 hover를 제공하고 두 발동 방식을 안내한다', () => {
+    const { player } = createCareer();
+    const skillIds = [
+        'steel_slash', 'battle_rush', 'indomitable', 'arcane_arrow', 'multishot',
+        'stunning_shot', 'wind_evasion', 'stealth', 'ambush', 'venom_blade',
+        'magic_bolt', 'mana_barrier', 'elemental_bind', 'elemental_insight',
+        'fireball', 'frost_bolt', 'lightning_orb',
+    ];
+    for (const skillDataId of skillIds) {
+        const skill = new Skill({ playerId: player.userId, skillDataId, level: 3 });
+        const description = skill.formatDescription(player);
+        const activation = skill.formatActivationCondition(player);
+        assert.doesNotMatch(description, /\{\{/);
+        assert.match(description, /\[tooltip=/);
+        assert.match(activation, /\/스킬/);
+        assert.match(activation, /!/);
+        assert.doesNotMatch(activation, /계보|계승/);
+    }
 });

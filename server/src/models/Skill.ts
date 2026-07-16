@@ -12,6 +12,7 @@ import {
 } from './Metadata.js';
 import type { MetadataRecord, MetadataValue } from './Metadata.js';
 import { JobSlotType } from './Job.js';
+import { AttributeType } from './Attribute.js';
 
 export type SkillMetadata = MetadataRecord;
 export type SkillCalculatedValue = string | number | boolean;
@@ -356,6 +357,7 @@ export default class Skill implements TagReadable {
         if (key === 'skill.remainingCooldown' || key === 'remainingCooldown') {
             return this.getRemainingCooldown();
         }
+        if (key.startsWith('icon.')) return AttributeType.fromKey(key.slice(5))?.iconMarkup;
         if (key.startsWith('calc.')) return this.getCalculatedField(key.slice(5), owner);
         if (key.startsWith('meta.')) return this.getMetadata(key.slice(5));
         return this.getCalculatedField(key, owner) ?? this.getMetadata(key);

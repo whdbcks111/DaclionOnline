@@ -15,6 +15,7 @@
 7. 의미 있는 작업 완료 후 관련 변경을 커밋하며 메시지는 `name(scope): message` 형식을 따른다. 예: `chore(format): formatted code structure`, `feat(inventory): add item remove API`.
 8. 아이템·스킬·상태이상 등 게임 아이콘은 밝은 색상, 단순한 형태, 굵고 명확한 실루엣의 캐주얼 모바일 게임 스타일로 통일한다. 새 아이콘 필드를 가진 데이터를 추가할 때 대응하는 128×128 투명 PNG도 같은 작업에 만든다.
 9. 아이템 마스터 데이터를 추가할 때는 같은 변경에 `client/public/icons/items/{itemDataId}.png` 128×128 투명 배경 아이콘도 함께 추가한다.
+10. 새 `AttributeType` 능력치를 추가할 때는 대표색 1색과 무채색/포인트색 1~2색 이하로 구성한 `client/public/icons/attributes/{attributeKey}.png` 128×128 투명 아이콘을 함께 추가하고, 상태창·스킬 계수 표기는 `AttributeType.icon/iconMarkup`을 재사용한다.
 10. 새 `property:*` 속성 또는 속성표에 노출할 태그를 추가할 때는 `defineTagEffectTagDisplay` 표시 메타데이터와 `client/public/icons/affinities/{icon}.png` 128×128 투명 배경 아이콘을 같은 변경에 추가한다.
 11. 장소에 `mapIcon`을 추가할 때는 `client/public/icons/map/{mapIcon}.png` 128×128 투명 배경 랜드마크 아이콘을 같은 변경에 추가한다.
 12. 직업 정의에 아이콘을 추가할 때는 `client/public/icons/jobs/{key}.png` 128×128 투명 배경 아이콘을 같은 변경에 추가한다. 엘리트 직업은 계보 아이콘을 재사용할 수 있다.
