@@ -87,15 +87,19 @@
     }
 
     button {
+        min-width: clamp(3.6rem, 8vw, 4.2rem);
+        padding: 10px 15px;
+        border: none;
+        border-radius: 5px;
+        font-family: $font-family-base;
+        font-size: $font-size-sm;
+        font-weight: 400;
+        line-height: 1.6;
         white-space: nowrap;
     }
 
     .visibilityButton {
-        min-width: clamp(3.6rem, 9vw, 4.5rem);
-        padding-inline: clamp(0.55rem, 1.8vw, 0.8rem);
-        border: 1px solid $color-border;
-        border-radius: $border-radius-sm;
-        transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+        transition: color 0.15s ease, background-color 0.15s ease;
     }
 
     .visibilityPrivate {
@@ -105,7 +109,6 @@
 
     .visibilityPublic {
         color: $color-bg;
-        border-color: $color-primary;
         background: $color-primary;
     }
 }
