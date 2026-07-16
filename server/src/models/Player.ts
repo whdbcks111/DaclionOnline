@@ -16,6 +16,7 @@ import SkillBook from "./SkillBook.js";
 import { updateCraftingRecipeDiscovery } from "./Crafting.js";
 import { DialogueEndReason, endNpcDialogue } from "./NpcDialogue.js";
 import QuestBook from './QuestBook.js';
+import { markLocationVisited } from './WorldMap.js';
 
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
@@ -65,6 +66,7 @@ export default class Player extends Entity {
         this._nickname = nickname;
         this.inventory = inventory;
         this.progress = progress;
+        markLocationVisited(this, locationId);
         this.skills = skills;
         this.skills.bindOwner(this);
         this.quests = quests;
@@ -112,6 +114,7 @@ export default class Player extends Entity {
         if (val !== this._locationId) endNpcDialogue(this, DialogueEndReason.MOVED);
         this._locationId = val;
         this._dirty = true;
+        if (this.progress) markLocationVisited(this, val);
         this.quests?.refreshSnapshotObjectives();
     }
 

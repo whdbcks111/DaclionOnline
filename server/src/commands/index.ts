@@ -9,6 +9,7 @@ import { initCraftingCommands } from "./crafting.js";
 import { initNpcCommands } from "./npc.js";
 import { initQuestCommands } from './quest.js';
 import { initAffinityCommands } from './affinity.js';
+import { initMapCommands } from './map.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -22,4 +23,5 @@ export function initAllCommands(): void {
     initNpcCommands();
     initQuestCommands();
     initAffinityCommands();
+    initMapCommands();
 }

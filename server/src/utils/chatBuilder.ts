@@ -1,4 +1,4 @@
-import type { ChatNode } from "../../../shared/types.js"
+import type { ChatNode, WorldMapData } from "../../../shared/types.js"
 import { mergeTextNodes } from "./chatParser.js"
 
 class ChatBuilder {
@@ -110,6 +110,11 @@ class ChatBuilder {
         const inner = new ChatBuilder()
         build(inner)
         this.nodes.push({ type: 'tab', width, children: inner.nodes })
+        return this
+    }
+
+    worldMap(data: WorldMapData): this {
+        this.nodes.push({ type: 'worldMap', data })
         return this
     }
 

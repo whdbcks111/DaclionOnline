@@ -1,0 +1,62 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import type { LocationData } from '../../../shared/types.js';
+import { PlayerProgress } from './Progress.js';
+import { reloadAllLocations } from './Location.js';
+import {
+    getVisitedLocationIds,
+    getWorldMapSnapshot,
+    markLocationVisited,
+} from './WorldMap.js';
+import type Player from './Player.js';
+
+function location(
+    id: string,
+    x: number,
+    connections: string[],
+    tags: string[] = ['location:wilderness'],
+): LocationData {
+    return {
+        id,
+        name: id,
+        zoneType: id === 'start' ? 'safe' : 'normal',
+        x,
+        y: 0,
+        z: 0,
+        npcIds: [],
+        objects: [],
+        connections: connections.map(locationId => ({ locationId })),
+        tags,
+        ...(id === 'start' ? { mapIcon: 'town-plaza' } : {}),
+    };
+}
+
+test('지도는 방문 장소와 한 단계 인접 미방문 장소만 공개하고 hidden 장소는 제외한다', () => {
+    reloadAllLocations([
+        location('start', 0, ['near', 'secret']),
+        location('near', 100, ['start', 'beyond']),
+        location('beyond', 200, ['near']),
+        location('secret', -100, ['start'], ['location:hidden']),
+        location('isolated', 400, []),
+    ]);
+    const player = {
+        locationId: 'start',
+        level: 50,
+        progress: PlayerProgress.createEmpty(10),
+    } as Player;
+
+    assert.equal(markLocationVisited(player, 'start'), true);
+    assert.equal(markLocationVisited(player, 'start'), false);
+    assert.equal(markLocationVisited(player, 'secret'), true);
+    assert.equal(markLocationVisited(player, 'isolated'), true);
+    assert.deepEqual(getVisitedLocationIds(player).sort(), ['isolated', 'secret', 'start']);
+
+    const snapshot = getWorldMapSnapshot(player);
+    assert.deepEqual(snapshot.locations.map(node => node.id).sort(), ['isolated', 'near', 'start']);
+    assert.equal(snapshot.locations.find(node => node.id === 'start')?.current, true);
+    assert.equal(snapshot.locations.find(node => node.id === 'start')?.mapIcon, 'town-plaza');
+    assert.equal(snapshot.locations.find(node => node.id === 'near')?.visited, false);
+    assert.equal(snapshot.locations.some(node => node.id === 'beyond'), false);
+    assert.equal(snapshot.locations.some(node => node.id === 'secret'), false);
+    assert.deepEqual(snapshot.connections, [{ from: 'near', to: 'start', discovered: false }]);
+});

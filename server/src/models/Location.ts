@@ -234,8 +234,13 @@ export function normalizeLocationData(data: LocationData): LocationData {
     for (const npcId of npcIds) {
         if (!NPC.getNpc(npcId)) throw new Error(`Location NPC definition not found: ${data.id}/${npcId}`);
     }
+    const mapIcon = data.mapIcon?.trim();
+    if (mapIcon && !/^[a-z0-9][a-z0-9_-]*$/.test(mapIcon)) {
+        throw new Error(`Invalid location map icon key: ${data.id}/${mapIcon}`);
+    }
     return {
         ...data,
+        ...(mapIcon ? { mapIcon } : { mapIcon: undefined }),
         npcIds,
         objects: data.objects.map(object => {
             if (object.type !== 'monster' && object.type !== 'resource') {

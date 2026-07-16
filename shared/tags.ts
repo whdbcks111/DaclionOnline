@@ -71,6 +71,7 @@ export const GameTags = Object.freeze({
     LOCATION_MINE: 'location:mine',
     LOCATION_SWAMP: 'location:swamp',
     LOCATION_VOLCANIC: 'location:volcanic',
+    LOCATION_HIDDEN: 'location:hidden',
     SHOP_GENERAL: 'shop:general',
     SHOP_MINING: 'shop:mining',
 } satisfies Record<string, TagId>)

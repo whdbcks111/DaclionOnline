@@ -102,6 +102,8 @@ UI 스타일은 고정 px 배치와 크기에 의존하지 않는다. 기존 SCS
 
 새 `property:*` 속성 또는 `/속성표`에 노출할 태그를 추가하면 `defineTagEffectTagDisplay`의 라벨·아이콘 key와 `client/public/icons/affinities/{icon}.png` 128×128 투명 PNG를 같은 변경에 추가한다. 속성 상성은 `defineTagEffectModifier` 단방향 행으로 등록하며, 표시 정보와 실제 상성 관계가 함께 테스트되어야 한다.
 
+`LocationData.mapIcon`을 추가하면 `client/public/icons/map/{mapIcon}.png` 128×128 투명 PNG를 같은 변경에 추가한다. 지도 랜드마크도 동일한 캐주얼 스타일과 작은 크기에서 구분되는 실루엣을 사용한다.
+
 ## 문서 유지 규칙
 
 의미 있는 코드 변경은 같은 변경에서 문서까지 완료해야 한다.

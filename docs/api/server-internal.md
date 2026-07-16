@@ -45,6 +45,7 @@
 | `Location` | `hasTag`, `getObjects/getObject/getObjectCount/hasObject`, `addObject/removeObject`, `getNpcs/getNpc/hasNpc`, `addDroppedItem`, `getDroppedItems`, `pickupItem/pickupAllItems`, `getAvailableConnections/findAvailableConnection`, `update` | Monster/Resource 통합 오브젝트, ID 기반 NPC, 유연한 장소 입력, 공개 가능한 `lockReason`, raw 배열을 숨긴 바닥 아이템 조회·단일/전체 회수 |
 | Location registry | `normalizeLocationData`, `defineLocation`, `reloadAllLocations`, `getLocation`, `getAllLocations`, `getRespawnLocation`, `distanceBetween`, `normalizeLocationInput` | 통합 오브젝트 배치 검증·복사, 월드 위치 정의/조회와 사용자 입력 정규화 |
 | Location extension | `registerConnectionCondition`, `registerLocationPassive` | 문자열 상태 또는 공개 잠금 사유가 포함된 `{ status, publicReason }` 이동 조건과 위치별 프레임 콜백 |
+| World map | `markLocationVisited`, `hasVisitedLocation`, `getVisitedLocationIds`, `getWorldMapSnapshot` | Progress raw key를 숨긴 방문 영속 API와 `location:hidden` 및 한 단계 공개 범위를 적용한 지도 DTO |
 | `Shop` | `getStock`, `consumeStock`, `update` | 재고와 재입고 |
 | Shop registry | `defineShop`, `getShop`, `updateAllShops` | 상점 정의/조회/프레임 갱신 |
 | Game events | `emitGameEvent`, `subscribeGameEvent`, `subscribeAllGameEvents`, `getRecentGameEvents` | 동기식 내부 이벤트와 원시 Entity 없는 최근 trace 스냅샷 |
@@ -76,7 +77,7 @@
 | API | 용도 |
 | --- | --- |
 | `parseCommandInput()` | 공유 채팅 입력에서 첫 명령 토큰, 나머지 인자, 슬래시·구분자 여부 추출 |
-| `chat()` | `text/appendNodes/color/bg/weight/deco/size/tooltip/hide/icon/button/closeButton/progress/tab` fluent builder로 `ChatNode[]` 생성; 계산 설명처럼 이미 파싱된 node도 안전하게 합성 |
+| `chat()` | `text/appendNodes/color/bg/weight/deco/size/tooltip/hide/icon/button/closeButton/progress/tab/worldMap` fluent builder로 `ChatNode[]` 생성; 계산 설명처럼 이미 파싱된 node도 안전하게 합성 |
 | `parseChatMessage()` | 커스텀 태그 문자열을 `ChatNode[]`로 파싱하고 `$magic` 같은 테마 색상 token을 보존 |
 | `registerChatTag()` | 새 wrap/self-closing 태그 등록 |
 | `mergeTextNodes()` | 인접 텍스트 노드 병합 |

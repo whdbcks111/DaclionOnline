@@ -1,0 +1,203 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/themes' as *;
+
+.mapShell {
+    position: relative;
+    width: 100%;
+    height: clamp(22rem, 68vh, 52rem);
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-md;
+    background:
+        radial-gradient(circle at 50% 45%, rgba(75, 103, 125, 0.2), transparent 55%),
+        rgba(10, 17, 23, 0.94);
+    color: rgba(255, 255, 255, 0.88);
+    white-space: normal;
+}
+
+.map {
+    display: block;
+    width: 100%;
+    height: calc(100% - 2.75rem);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+
+    &:active { cursor: grabbing; }
+}
+
+.toolbar {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    gap: clamp(0.35rem, 1.2vw, 0.75rem);
+    padding: 0.4rem 0.65rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(7, 12, 17, 0.82);
+
+    button {
+        min-width: 2rem;
+        min-height: 2rem;
+        padding: 0.25rem 0.55rem;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: $border-radius-sm;
+        background: rgba(255, 255, 255, 0.08);
+        color: inherit;
+        cursor: pointer;
+
+        &:hover, &:focus-visible { background: rgba(255, 255, 255, 0.18); }
+    }
+}
+
+.legend {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: rgba(255, 255, 255, 0.68);
+    font-size: clamp(0.68rem, 1.5vw, 0.82rem);
+    white-space: nowrap;
+}
+
+.visitedDot, .unknownDot {
+    width: 0.55rem;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--color-primary);
+}
+
+.unknownDot { background: #77818a; }
+.spacer { flex: 1; }
+
+.gridLine {
+    stroke: rgba(255, 255, 255, 0.035);
+    stroke-width: 1;
+}
+
+.discoveredPath, .unknownPath {
+    stroke: rgba(189, 221, 238, 0.55);
+    stroke-width: 2;
+}
+
+.unknownPath {
+    stroke: rgba(150, 157, 164, 0.38);
+    stroke-dasharray: 5 5;
+}
+
+.blip {
+    cursor: pointer;
+    outline: none;
+
+    &:focus-visible .iconBackdrop,
+    &:focus-visible .nodeDot,
+    &.active .iconBackdrop,
+    &.active .nodeDot {
+        stroke: white;
+        stroke-width: 2.5;
+    }
+}
+
+.nodeDot {
+    fill: var(--color-primary);
+    stroke: rgba(255, 255, 255, 0.82);
+    stroke-width: 1.5;
+}
+
+.unknown .nodeDot {
+    fill: #707981;
+    stroke: #a8afb5;
+}
+
+.iconBackdrop {
+    fill: rgba(13, 23, 31, 0.92);
+    stroke: rgba(255, 255, 255, 0.48);
+    stroke-width: 1.5;
+}
+
+.landmarkIcon {
+    pointer-events: none;
+}
+
+.unknown .landmarkIcon {
+    filter: grayscale(1);
+    opacity: 0.55;
+}
+
+.unknown .iconBackdrop {
+    fill: rgba(63, 68, 73, 0.9);
+    stroke: rgba(176, 181, 185, 0.55);
+}
+
+.currentRing {
+    fill: none;
+    stroke: var(--color-primary);
+    stroke-width: 3;
+    opacity: 0.8;
+    animation: currentPulse 1.7s ease-out infinite;
+}
+
+.nodeLabel {
+    fill: rgba(255, 255, 255, 0.84);
+    stroke: rgba(5, 9, 12, 0.95);
+    stroke-width: 3;
+    paint-order: stroke;
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.infoCard {
+    position: absolute;
+    left: clamp(0.6rem, 2vw, 1rem);
+    bottom: clamp(2.25rem, 5vw, 3rem);
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    max-width: min(22rem, calc(100% - 1.2rem));
+    padding: 0.6rem 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: $border-radius-md;
+    background: rgba(8, 14, 19, 0.9);
+    box-shadow: 0 0.4rem 1.4rem rgba(0, 0, 0, 0.28);
+    pointer-events: none;
+
+    strong { font-size: 0.95rem; }
+    span { color: rgba(255, 255, 255, 0.66); font-size: 0.76rem; }
+}
+
+.help {
+    position: absolute;
+    right: 0.7rem;
+    bottom: 0.45rem;
+    color: rgba(255, 255, 255, 0.42);
+    font-size: clamp(0.65rem, 1.4vw, 0.75rem);
+    pointer-events: none;
+}
+
+.empty {
+    position: absolute;
+    inset: 2.75rem 0 0;
+    display: grid;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+@keyframes currentPulse {
+    from { r: 12; opacity: 0.9; }
+    to { r: 22; opacity: 0; }
+}
+
+@media (max-width: 640px) {
+    .mapShell { height: clamp(24rem, 72vh, 44rem); }
+    .toolbar { flex-wrap: wrap; }
+    .legend { font-size: 0.68rem; }
+    .toolbar button { min-width: 1.9rem; padding-inline: 0.4rem; }
+    .nodeLabel { font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .currentRing { animation: none; }
+}

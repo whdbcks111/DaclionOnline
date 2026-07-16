@@ -25,6 +25,7 @@
 | `getFilteredCommands(commands, filter)` | `utils/commandAutocomplete.ts` | 슬래시 명령 prefix 또는 정확한 슬래시 없는 별칭 필터 |
 | `HideCloseContext` | `components/chat/nodes/HideNode.tsx` | close button이 상위 hide UI를 닫는 callback |
 | `TooltipNode` | `components/chat/nodes/TooltipNode.tsx` | hover/touch 위치를 측정해 ChatNode 설명 overlay 표시 |
+| `WorldMapNode` | `components/chat/nodes/WorldMapNode.tsx` | worldMap snapshot의 SVG 경로·점·랜드마크와 wheel/drag/pinch 카메라, 장소 정보 card 표시 |
 
 ## 클라이언트 검증 API
 

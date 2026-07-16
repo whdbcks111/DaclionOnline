@@ -13,5 +13,6 @@
 - `npc.ts`: `/대화 번호`, 선택지 버튼의 session 검증, `/대화종료`. 명령 입력은 숨기며 모든 상태 변경은 NpcDialogue 공개 API를 사용한다.
 - `quest.ts`: `/퀘스트목록(ql)`, `/퀘스트정보(qi)`, `/퀘스트포기(qa)`의 단계 목표·보상·상태 UI와 자동완성. QuestBook snapshot·명령형 API만 사용한다.
 - `affinity.ts`: `/속성표(affinity)`에서 TagEffect 표시 snapshot을 아이콘이 포함된 전체 화면 스크롤 UI로 렌더링한다. 속성 아래 공격/방어를 1단계로, 우세·열세·무효/취약·저항·면역을 각각 별도 한 줄의 2단계로 렌더링한다.
+- `map.ts`: `/지도(map)`에서 플레이어별 방문 장소와 한 단계 인접 미방문 장소 snapshot을 `worldMap` 상세보기 메시지 노드로 전달한다.
 
 명령 이름·인자·권한·자동완성·표시 방식이 바뀌면 이 문서와 [`docs/systems/chat-command.md`](../../../docs/systems/chat-command.md)를 갱신한다.

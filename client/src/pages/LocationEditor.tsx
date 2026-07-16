@@ -519,6 +519,16 @@ export default function LocationEditor() {
               </label>
 
               <label className={styles.field}>
+                <span>지도 랜드마크 아이콘</span>
+                <input
+                  className={styles.input}
+                  placeholder="예: town-plaza (비우면 점으로 표시)"
+                  value={selectedLoc.mapIcon ?? ''}
+                  onChange={e => updateSelected({ mapIcon: e.target.value.trim() || undefined })}
+                />
+              </label>
+
+              <label className={styles.field}>
                 <span>구역 타입</span>
                 <select
                   className={styles.input}

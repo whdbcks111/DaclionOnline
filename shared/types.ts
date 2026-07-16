@@ -32,6 +32,33 @@ export interface LocationData {
     objects: LocationObjectSpawnInfo[]
     connections: ConnectionInfo[]
     tags: TagId[]
+    /** 지도에서 점 대신 표시할 /icons/map/{key}.png 랜드마크 아이콘 */
+    mapIcon?: string
+}
+
+export interface WorldMapLocationData {
+    id: string
+    name: string
+    zoneType: ZoneType
+    zoneLabel: string
+    x: number
+    y: number
+    z: number
+    visited: boolean
+    current: boolean
+    mapIcon?: string
+}
+
+export interface WorldMapConnectionData {
+    from: string
+    to: string
+    discovered: boolean
+}
+
+/** 지도 ChatNode가 담는 플레이어별 공개 범위 스냅샷 */
+export interface WorldMapData {
+    locations: WorldMapLocationData[]
+    connections: WorldMapConnectionData[]
 }
 
 // 소켓 이벤트 데이터 타입
@@ -95,6 +122,7 @@ export type ChatNode =
     | { type: 'progress'; value: number; length: number | string; color: string; thickness: number; shape: 'rounded' | 'square' }
     | { type: 'tab'; width: number; children: ChatNode[] }
     | { type: 'tooltip'; description: ChatNode[]; children: ChatNode[] }
+    | { type: 'worldMap'; data: WorldMapData }
 
 // 채팅 플래그 (닉네임 옆 배지)
 export interface ChatFlag {
