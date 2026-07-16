@@ -16,8 +16,9 @@
 - `GameEvent`: 동기식 내부 이벤트 발행/구독과 원시 Entity를 제거한 최근 500개 trace 스냅샷.
 - `ProgressType`/`PlayerProgress`: 통계 counter, NPC/퀘스트 flag, 짧은 state의 목적형 조회·변경·구독과 versioned dirty 저장. `defineProgress/defineStatistic`이 정적 정의와 이벤트 counter를 등록한다.
 - `WorldMap`: `PlayerProgress`의 `world:visited/{locationId}` flag를 숨기는 방문 기록 API와 방문지·한 단계 인접 미방문지만 반환하는 지도 snapshot. `location:hidden`은 방문 여부와 무관하게 노드와 연결에서 제외한다.
+- `Job`/`CareerProfile`: 1차·엘리트 직업 정적 레지스트리, 메인→서브 순서 조합, Progress STATE 영속, 동일 직업 이중 선택 금지, 계보 호환·능력치 source modifier·스킬 지급과 Lv.200 자동 전직.
 - `Metadata`: Item과 Skill이 공유하는 JSON-safe clone 및 버전형 top-level delta codec.
-- `Skill`/`SkillBook`: 아이콘을 가진 코드 SkillData 레지스트리, Entity 공용 owner/player context, base metadata+인스턴스 delta, 계산/색상 템플릿, 획득·발동·지속·패시브 callback. 플레이어는 dirty 영속/자동 획득을, Monster는 `createRuntime/activateById` 비영속 실행을 사용한다. 플레이어 발동은 조건 통과 후 `activationMessage`를 먼저 전송하고 `onStart` 효과를 실행한다.
+- `Skill`/`SkillBook`: 아이콘을 가진 코드 SkillData 레지스트리, Entity 공용 owner/player context, 직업 계보·주무기 태그 요구 조건과 공통 메시지 시전어, base metadata+인스턴스 delta, 계산/색상 템플릿과 lifecycle. 플레이어는 dirty 영속/자동 획득을, Monster는 비영속 실행을 사용한다.
 - `Crafting`: predicate와 필요 수량을 가진 재료 클래스, `namespace:path` 제작법 레지스트리, 실제 선택된 재료를 받는 결과 factory, Progress flag 발견과 coroutine 제작 수명주기.
 
 공개 메서드나 모델 관계, 계산식, 저장 경계가 바뀌면 이 문서와 [`docs/api/server-internal.md`](../../../docs/api/server-internal.md), 관련 시스템 문서를 갱신한다.

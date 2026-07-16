@@ -10,6 +10,7 @@ import { initNpcCommands } from "./npc.js";
 import { initQuestCommands } from './quest.js';
 import { initAffinityCommands } from './affinity.js';
 import { initMapCommands } from './map.js';
+import { initCareerCommands } from './career.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -24,4 +25,5 @@ export function initAllCommands(): void {
     initQuestCommands();
     initAffinityCommands();
     initMapCommands();
+    initCareerCommands();
 }

@@ -91,6 +91,11 @@ export default class Location implements TagReadable {
         return this._objects[index];
     }
 
+    /** 다중 공격이 raw 오브젝트 배열을 순회하지 않도록 공격 가능한 생존 대상만 반환한다. */
+    getAttackableObjects(attacker: Entity): readonly Entity[] {
+        return this._objects.filter(object => !object.isDefeated && !object.getAttackDeniedReason(attacker.attackOwner));
+    }
+
     hasObject(object: Entity): boolean {
         return this._objects.includes(object);
     }

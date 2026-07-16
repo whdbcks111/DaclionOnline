@@ -9,6 +9,7 @@ Entity
   │    ├─ Equipment
   │    ├─ Stat ──> Attribute modifiers
   │    ├─ PlayerProgress
+  │    ├─ CareerProfile
   │    ├─ SkillBook ──> Skill[]
   │    └─ QuestBook ──> Quest[]
   ├─ Monster ── Equipment

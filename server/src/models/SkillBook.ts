@@ -200,7 +200,9 @@ export default class SkillBook {
         const owner = this.requireOwner();
         for (const skill of this.getVisible()) {
             try {
-                if (skill.data.activateOnMessage?.({ ...createSkillContext(owner, skill), message })) {
+                const phrase = skill.data.activationPhrase ?? skill.data.activationMessage;
+                if ((phrase && message.trim() === phrase.trim())
+                    || skill.data.activateOnMessage?.({ ...createSkillContext(owner, skill), message })) {
                     return this.activate(skill, true);
                 }
             } catch (error) {

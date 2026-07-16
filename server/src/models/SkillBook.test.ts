@@ -15,6 +15,8 @@ import { registerOnlinePlayer, unregisterOnlinePlayer } from '../modules/playerR
 import '../data/progress.js';
 import '../data/skills.js';
 import '../data/items.js';
+import '../data/jobs.js';
+import CareerProfile, { CareerProgressIds } from './Career.js';
 
 class TestSkillPlayer extends Entity {
     override readonly name = '스킬 시험 플레이어';
@@ -22,9 +24,11 @@ class TestSkillPlayer extends Entity {
     readonly progress = PlayerProgress.createEmpty(this.userId);
     readonly skills = SkillBook.createEmpty(this.userId);
     readonly inventory = Inventory.createEmpty(this.userId, 100);
+    readonly career: CareerProfile;
 
     constructor() {
         super(1, 0, 'test', { maxLife: 100 }, Equipment.createEmpty());
+        this.career = new CareerProfile(this as unknown as Player);
         this.skills.bindOwner(this as unknown as Player);
     }
 
@@ -94,6 +98,16 @@ test('치명타 통계가 5회가 되면 강타를 자동 획득한다', () => {
     assert.equal(player.skills.has('power_strike'), true);
     assert.equal(player.skills.get('power_strike')?.acquisitionSource, 'automatic');
     assert.equal(player.skills.dirty, true);
+});
+
+test('엘리트 직업은 원래 메인 직업 스킬의 표시 조건을 계속 만족한다', () => {
+    const player = new TestSkillPlayer();
+    player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+    player.progress.setState(CareerProgressIds.SUB, 'career:mage');
+    player.progress.setState(CareerProgressIds.ELITE, 'career:spellblade');
+    player.skills.grant('steel_slash', 'test');
+
+    assert.equal(player.skills.getVisible().some(skill => skill.skillDataId === 'steel_slash'), true);
 });
 
 test('강타는 일회성 관통을 제거하고 확정 치명타 공격과 비용을 확정한다', () => {

@@ -44,6 +44,8 @@ export const GameEventIds = Object.freeze({
     QUEST_READY: 'quest:ready',
     QUEST_COMPLETED: 'quest:completed',
     QUEST_ABANDONED: 'quest:abandoned',
+    CAREER_ASSIGNED: 'career:assigned',
+    CAREER_ELITE_PROMOTED: 'career:elite_promoted',
 } as const);
 
 export type GameEventHandler = (event: GameEvent) => void;

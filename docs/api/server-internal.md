@@ -28,10 +28,10 @@
 
 | 모델/레지스트리 | 주요 API | 용도 |
 | --- | --- | --- |
-| `Entity` | `attackOwner`, `isDefeated/defeatLabel`, `isInteractable/interact`, `hasTag/getTags`, `damage/heal/restoreMentality/depleteSurvivalNeeds`, `clampVitals`, `canAttack/attack(AttackOptions)`, `get/apply/remove/clearStatusEffect(s)`, `getStatusEffectDisplaySnapshots`, `disableAction(s)/enableAction`, `disableAction(s)ForTick`, `canPerformAction`, `earlyUpdate/update/lateUpdate`, `onDeath/respawn` | 속도 회피·회피 불가·고정 피해·선택적 주무기 적중 효과를 포함한 전투, 생명력·정신력 재생, 배고픔·수분 초당 감소와 최대 자원 상한 보정, raw Map 없는 상태효과 표시 DTO, source별 지속/한 tick 행동 제한과 공통 생명주기 |
+| `Entity` | `attackOwner`, `isDefeated/defeatLabel`, `getAttackDeniedReason`, `grant/remove/consumeGuaranteedEvasion`, `isInteractable/interact`, `hasTag/getTags`, `damage/heal`, `canAttack/attack(AttackOptions)`, 상태효과·행동 제한·lifecycle API | 속도/일시 확정 회피, 은신 타게팅 거부, 회피 불가·고정 피해 전투, 자원 회복, source별 상태효과·행동 제한과 공통 생명주기 |
 | Combat | `calculateEvasionChance`, `rollEvasion`, `applyCritical`, `calculateFinalDamage` | 부작용 없는 속도 회피율·치명타·방어/관통 최종 대미지 계산 |
 | Tag effects | `defineTagEffectModifier`, `defineTagEffectTagDisplay`, `resolveTagEffect`, `applyTagEffectValue`, `getAllTagEffectModifiers`, `getTagEffectAffinitySnapshots` | `TagEffectReadable` 문맥 태그를 우선하는 단방향 source→target 배율 등록·판정·수치 적용과 라벨·아이콘이 포함된 공격/방어 관계 표시 DTO |
-| `Player` | `loadByUserId`, `create`, `save`, `performBasicAttack`, `canSpendMentality/spendMentality/restoreMentality`, `gainExp`, `allocateStat` | 영속 플레이어, 직렬화된 aggregate 저장, 무기 오버라이드·적중 callback 기본 공격과 스킬 자원·성장 |
+| `Player` | `career`, `loadByUserId`, `create`, `save`, `performBasicAttack`, `canSpendMentality/spendMentality/restoreMentality`, `gainExp`, `allocateStat` | CareerProfile을 포함한 영속 aggregate, 무기 오버라이드·적중 callback 기본 공격과 스킬 자원·성장 |
 | `AttributeType`, `Attribute` | `values/fromKey`, `get`, `setBase`, `addModifier(s)`, `removeBySource` | 생명력/정신력 초당 재생과 배고픔/수분 초당 감소를 포함한 클래스형 능력치 메타데이터와 기본값 + add/multiply 수정자 계산 |
 | `StatType`, `Stat` | `values/fromKey/fromInput`, `get/set/add`, `applyModifiers(entity)` | 클래스형 5종 스탯과 Entity 기반 Attribute 변환 |
 | `Inventory` | `createEmpty`, `getItem*`, `getFirstItemByData`, `getCount/countMatching`, `selectItems`, `replaceSelectedItems`, `subscribeChanges`, `setItemMetadata/resetItemMetadata`, `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`, `canAdd`, `canAddSnapshot(s)`, `addItem`, `addItemSnapshot`, `useItem`, `removeItem*`, `removeItemInstance`, `load`, `save` | metadata·내구도 dirty 추적, raw 배열 없는 predicate 수량/변경 구독, 겹치는 재료 predicate의 중복 없는 선택과 선검증 교환, 무게/스택/사용/태그 포함 이동/DB 동기화 |
@@ -42,10 +42,12 @@
 | Monster registry | `defineMonster`, `getMonsterData`, `getAllMonsterData` | Lv.1~50 몬스터 마스터 데이터 |
 | `Resource` | `isInteractable`, `interactionCooldownRemaining`, `interact`, `rollInteractionCooldown`, `getAttackDeniedReason`, `onDeath`, `rollDrop`, `rollExp` | 비공격 Entity 자원, 공격/도구 제한, 상호작용 쿨타임, 가중치 드롭·범위 경험치·리스폰 |
 | Resource registry | `defineResource`, `getResourceData`, `getAllResourceData`, `registerResourceInteraction` | 자원 마스터 데이터와 key→상호작용 함수 등록 |
-| `Location` | `hasTag`, `getObjects/getObject/getObjectCount/hasObject`, `addObject/removeObject`, `getNpcs/getNpc/hasNpc`, `addDroppedItem`, `getDroppedItems`, `pickupItem/pickupAllItems`, `getAvailableConnections/findAvailableConnection`, `update` | Monster/Resource 통합 오브젝트, ID 기반 NPC, 유연한 장소 입력, 공개 가능한 `lockReason`, raw 배열을 숨긴 바닥 아이템 조회·단일/전체 회수 |
+| `Location` | `hasTag`, `getObjects/getObject/getObjectCount/getAttackableObjects/hasObject`, `addObject/removeObject`, `getNpcs/getNpc/hasNpc`, `addDroppedItem`, `getDroppedItems`, `pickupItem/pickupAllItems`, `getAvailableConnections/findAvailableConnection`, `update` | Monster/Resource 통합 오브젝트, 다중 공격 대상 snapshot, ID 기반 NPC, 유연한 장소 입력, 공개 가능한 `lockReason`, 바닥 아이템 조회·회수 |
 | Location registry | `normalizeLocationData`, `defineLocation`, `reloadAllLocations`, `getLocation`, `getAllLocations`, `getRespawnLocation`, `distanceBetween`, `normalizeLocationInput` | 통합 오브젝트 배치 검증·복사, 월드 위치 정의/조회와 사용자 입력 정규화 |
 | Location extension | `registerConnectionCondition`, `registerLocationPassive` | 문자열 상태 또는 공개 잠금 사유가 포함된 `{ status, publicReason }` 이동 조건과 위치별 프레임 콜백 |
 | World map | `markLocationVisited`, `hasVisitedLocation`, `getVisitedLocationIds`, `getWorldMapSnapshot` | Progress raw key를 숨긴 방문 영속 API와 `location:hidden` 및 한 단계 공개 범위를 적용한 지도 DTO |
+| Job registry | `defineJob/getJob/getAllJobs`, `defineEliteJobRecipe/resolveEliteJob`, `isJobDescendant`, `JobTier/JobSlotType` | 1차·엘리트 정의, 동일 직업 금지 순서 조합과 하위 계보 판정 |
+| `CareerProfile` | `main/sub/elite/effectiveMainJob`, `hasJob`, `canAssign/assign`, `evaluateElitePromotion`, `refreshModifiers` | Progress 영속 직업 상태, Lv.20/50 선택, 스킬·modifier 지급과 Lv.200 자동 전직 |
 | `Shop` | `getStock`, `consumeStock`, `update` | 재고와 재입고 |
 | Shop registry | `defineShop`, `getShop`, `updateAllShops` | 상점 정의/조회/프레임 갱신 |
 | Game events | `emitGameEvent`, `subscribeGameEvent`, `subscribeAllGameEvents`, `getRecentGameEvents` | 동기식 내부 이벤트와 원시 Entity 없는 최근 trace 스냅샷 |
@@ -55,7 +57,7 @@
 | Progress registry | `defineProgress`, `defineStatistic`, `getProgressDefinition`, `getAllProgressDefinitions` | `namespace:path` 상태 정의와 이벤트 기반 counter 등록 |
 | `QuestStatus`, `QuestMarker`, `QuestObjective`, `QuestStage`, `QuestReward`, `QuestData` | `values/fromKey`, 목표 `event/kill/destroy/talk/craft/possess/item/visit/custom`, 보상 `exp/gold/item/skill/flag/custom`, `define/get/findQuestData` | 퀘스트 정의, 단계형 목표·제출 조건·보상과 NPC marker |
 | `Quest`, `QuestBook` | `get/set/resetMetadata`, `get/getByInput/getStatus/isActive/isCompleted`, `canAccept/accept`, `canTurnIn/turnIn`, `abandon`, `getSnapshot(s)/getNpcMarker`, `handleGameEvent/refreshSnapshotObjectives`, `load/save` | 플레이어별 진행·반복·보상, GameEvent/현재 상태 목표 갱신과 versioned dirty 영속화 |
-| `Skill`, `SkillBook` | `get/set/resetMetadata`, `get/setActiveState`, `getCalculatedField`, `formatDescription/Cost/ActivationCondition`, `createRuntime`, `grant`, `activateByInput/ById/FromMessage`, `hasActiveSkill`, `getActivationStatus`, `update`, `finishAll`, `load/save` | 아이콘과 Entity 공용 context, 스킬 인스턴스 delta·런타임 상태·템플릿 계산, 플레이어 영속/몬스터 비영속 발동 수명주기 |
+| `Skill`, `SkillBook` | `get/set/resetMetadata`, `get/setActiveState`, `getCalculatedField`, `formatDescription/Cost/ActivationCondition`, `createRuntime`, `grant`, `activateByInput/ById/FromMessage`, `hasActiveSkill`, `getActivationStatus`, `update`, `finishAll`, `load/save` | 직업 계보·주무기 태그 표시/사용 조건, 공통 메시지 시전어, 인스턴스 delta·템플릿 계산과 플레이어 영속/몬스터 비영속 lifecycle |
 | Skill registry | `defineSkill`, `getSkillData`, `getAllSkillData`, `acceptSkill/denySkill` | 정적 SkillData와 조건 결과 등록/조회 |
 | Crafting | `CraftingRecipeIngredient`, `defineCraftingRecipe`, `get/findCraftingRecipe*`, `updateCraftingRecipeDiscovery`, `getDiscoveredCraftingRecipes`, `startCrafting`, `executeCrafting`, `cancelCrafting` | predicate 재료, 실제 선택 재료 factory, Progress 기반 제작법 발견, 지연 제작·취소 |
 | Metadata | `cloneMetadataValue`, `createMetadataDelta`, `encodeMetadataDelta`, `decodeMetadataDelta` | Item/Skill이 공유하는 JSON-safe top-level delta 직렬화 |

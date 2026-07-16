@@ -17,7 +17,7 @@ Entity/Resource/SkillBook
 
 `GameEvent`는 도메인 동작을 직접 DB나 스킬에 결합하지 않는 동기식 내부 이벤트다. handler에서는 DB I/O를 하지 않고 Player가 소유한 메모리 상태만 변경한다. 운영 진단용 trace는 최근 500개만 유지하며 `getRecentGameEvents()`가 ID·사용자 ID·이름·primitive data 스냅샷만 반환한다. 프로세스를 재시작하면 trace는 사라진다.
 
-현재 표준 이벤트 ID는 치명타, 공격 회피, Entity 제압, Resource 파괴, 스킬 획득·시작·종료, 제작법 발견·아이템 제작, NPC 대화 시작·선택·종료, 상태효과 적용·갱신·제거, 퀘스트 수락·목표 갱신·보고 가능·완료·포기다. 새 이벤트는 `GameEventIds`에 넣고 실제 상태가 확정되는 모델 API에서 `emitGameEvent()`를 호출한다. 퀘스트 목표 추적은 [퀘스트 시스템](quests.md)을 참고한다.
+현재 표준 이벤트 ID는 치명타, 공격 회피, Entity 제압, Resource 파괴, 스킬 획득·시작·종료, 제작법 발견·아이템 제작, NPC 대화, 상태효과, 퀘스트, 직업 배정·엘리트 전직이다. 새 이벤트는 `GameEventIds`에 넣고 실제 상태가 확정되는 모델 API에서 `emitGameEvent()`를 호출한다. 퀘스트 목표 추적은 [퀘스트 시스템](quests.md)을 참고한다.
 
 ## 진행 상태와 통계
 
@@ -48,6 +48,9 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 - 획득/발동: `autoAcquire`, `autoActivate`, `activateOnMessage`, `canUse`, `canActivate`.
 - 수명주기: `onAcquire`, `onStart`, `onUpdate`, `onFinish`, `onPassiveUpdate`.
 - 분류: `tags`, `maxLevel`, `aliases`, `activationMessage`.
+- 직업/장비: `jobRequirement`, `weaponRequirement`, 공통 메시지 시전어 `activationPhrase`.
+
+`activationPhrase`가 없으면 `activationMessage`를 일반 채팅의 정확 일치 시전어로도 사용한다. 직업 요구 조건은 [직업·전직 시스템](careers.md)의 `CareerProfile.hasJob`을 사용해 엘리트 하위 계보를 자동 호환한다.
 
 직업 귀속처럼 현재 사용할 수 없는 스킬은 DB에서 제거하지 않는다. `isVisible`과 `canUse`로 표시/사용만 비활성화한다. `SkillBook.grant()`는 신규 획득일 때 채팅과 notification에 `스킬 [ 이름 ] 를 획득했습니다!`를 보내며 이미 보유한 스킬은 중복 생성하지 않는다.
 

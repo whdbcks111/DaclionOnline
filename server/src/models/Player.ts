@@ -17,6 +17,7 @@ import { updateCraftingRecipeDiscovery } from "./Crafting.js";
 import { DialogueEndReason, endNpcDialogue } from "./NpcDialogue.js";
 import QuestBook from './QuestBook.js';
 import { markLocationVisited } from './WorldMap.js';
+import CareerProfile from './Career.js';
 
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
@@ -32,6 +33,7 @@ export default class Player extends Entity {
     readonly progress: PlayerProgress;
     readonly skills: SkillBook;
     readonly quests: QuestBook;
+    readonly career: CareerProfile;
 
     private _nickname: string;
     private _gold = 0;
@@ -71,6 +73,8 @@ export default class Player extends Entity {
         this.skills.bindOwner(this);
         this.quests = quests;
         this.quests.bindOwner(this);
+        this.career = new CareerProfile(this);
+        this.career.initialize();
         this.inventory.subscribeChanges(() => this.quests.refreshSnapshotObjectives());
         this.progress.subscribeChanges(() => this.quests.refreshSnapshotObjectives());
         this._statPoint = statPoint;
@@ -103,6 +107,7 @@ export default class Player extends Entity {
     override set level(val: number) {
         this._level = val;
         this._dirty = true;
+        this.career?.evaluateElitePromotion();
         this.quests?.refreshSnapshotObjectives();
     }
 
@@ -263,6 +268,7 @@ export default class Player extends Entity {
             this.stat.applyModifiers(this);
         }
         if (levelsGained.length > 0) this.quests.refreshSnapshotObjectives();
+        if (levelsGained.length > 0) this.career.evaluateElitePromotion();
         return levelsGained;
     }
 

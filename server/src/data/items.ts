@@ -136,7 +136,7 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 5, source: '' },
     ],
     baseDurability: 50,
-    tags: [GameTags.ITEM_WEAPON, GameTags.PROPERTY_FIRE],
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.PROPERTY_FIRE],
 });
 
 defineItem({
@@ -174,7 +174,7 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 3, source: '' },
     ],
     baseDurability: 40,
-    tags: [GameTags.ITEM_WEAPON, GameTags.PROPERTY_POISON],
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.PROPERTY_POISON],
     onBasicAttackHit: ({ target }) => {
         if (Math.random() < 0.5) {
             target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 8, 1);
@@ -201,7 +201,44 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 2, source: '' },
     ],
     baseDurability: 80,
-    tags: [GameTags.ITEM_WEAPON, GameTags.MATERIAL_WOOD],
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_WOOD],
+});
+
+defineItem({
+    id: 'training_axe',
+    name: '훈련용 도끼',
+    description: '전직소에서 지급하는 균형 잡힌 한손 도끼.',
+    image: 'items/training_axe',
+    category: '도끼',
+    weight: 3.4,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [{ attribute: 'atk', op: 'add', value: 7, source: '' }],
+    baseDurability: 90,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_AXE, GameTags.MATERIAL_IRON],
+});
+
+defineItem({
+    id: 'apprentice_staff',
+    name: '견습 마법 지팡이',
+    description: '정신 에너지를 모아 마법 투사체를 안정적으로 발사하는 지팡이.',
+    image: 'items/apprentice_staff',
+    category: '지팡이',
+    weight: 2.2,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: { projectile: { dataId: 'basic_magic_orb' } },
+    },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [{ attribute: 'magicForce', op: 'add', value: 8, source: '' }],
+    baseDurability: 100,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_WOOD],
 });
 
 defineItem({

@@ -18,6 +18,7 @@
 | 태그·속성 상성·효과 배율 | [systems/tags-effects.md](systems/tags-effects.md) |
 | 상태효과·행동 제한·지속 피해 | [systems/status-effects.md](systems/status-effects.md) |
 | 이벤트·통계·플래그·스킬 | [systems/progress-skills.md](systems/progress-skills.md) |
+| 메인·서브·엘리트 직업과 전직 | [systems/careers.md](systems/careers.md) |
 | 아이템·인벤토리·장비·상점 | [systems/items-shop.md](systems/items-shop.md) |
 | 제작법 발견·재료 필터·제작 | [systems/crafting.md](systems/crafting.md) |
 | NPC 배치·조건부 대화·선택지 | [systems/npc-dialogue.md](systems/npc-dialogue.md) |
@@ -103,6 +104,8 @@ UI 스타일은 고정 px 배치와 크기에 의존하지 않는다. 기존 SCS
 새 `property:*` 속성 또는 `/속성표`에 노출할 태그를 추가하면 `defineTagEffectTagDisplay`의 라벨·아이콘 key와 `client/public/icons/affinities/{icon}.png` 128×128 투명 PNG를 같은 변경에 추가한다. 속성 상성은 `defineTagEffectModifier` 단방향 행으로 등록하며, 표시 정보와 실제 상성 관계가 함께 테스트되어야 한다.
 
 `LocationData.mapIcon`을 추가하면 `client/public/icons/map/{mapIcon}.png` 128×128 투명 PNG를 같은 변경에 추가한다. 지도 랜드마크도 동일한 캐주얼 스타일과 작은 크기에서 구분되는 실루엣을 사용한다.
+
+`JobData.icon`을 추가하면 `client/public/icons/jobs/{key}.png` 128×128 투명 PNG를 같은 변경에 추가한다. 엘리트 직업은 원래 메인 직업 계보 아이콘을 재사용할 수 있다.
 
 ## 문서 유지 규칙
 

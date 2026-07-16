@@ -30,6 +30,12 @@ export const GameTags = Object.freeze({
     ITEM_TOOL: 'item:tool',
     ITEM_SKILL_BOOK: 'item:skill_book',
 
+    WEAPON_SWORD: 'weapon:sword',
+    WEAPON_AXE: 'weapon:axe',
+    WEAPON_BOW: 'weapon:bow',
+    WEAPON_DAGGER: 'weapon:dagger',
+    WEAPON_STAFF: 'weapon:staff',
+
     PROPERTY_FIRE: 'property:fire',
     PROPERTY_WATER: 'property:water',
     PROPERTY_ICE: 'property:ice',
@@ -64,6 +70,7 @@ export const GameTags = Object.freeze({
 
     TRAIT_INANIMATE: 'trait:inanimate',
     TRAIT_LIVING: 'trait:living',
+    TRAIT_STEALTH: 'trait:stealth',
 
     LOCATION_SAFE: 'location:safe',
     LOCATION_WILDERNESS: 'location:wilderness',

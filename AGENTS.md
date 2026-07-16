@@ -17,6 +17,7 @@
 9. 아이템 마스터 데이터를 추가할 때는 같은 변경에 `client/public/icons/items/{itemDataId}.png` 128×128 투명 배경 아이콘도 함께 추가한다.
 10. 새 `property:*` 속성 또는 속성표에 노출할 태그를 추가할 때는 `defineTagEffectTagDisplay` 표시 메타데이터와 `client/public/icons/affinities/{icon}.png` 128×128 투명 배경 아이콘을 같은 변경에 추가한다.
 11. 장소에 `mapIcon`을 추가할 때는 `client/public/icons/map/{mapIcon}.png` 128×128 투명 배경 랜드마크 아이콘을 같은 변경에 추가한다.
+12. 직업 정의에 아이콘을 추가할 때는 `client/public/icons/jobs/{key}.png` 128×128 투명 배경 아이콘을 같은 변경에 추가한다. 엘리트 직업은 계보 아이콘을 재사용할 수 있다.
 
 ## 문서 경로
 
@@ -35,6 +36,7 @@
 - [`docs/systems/status-effects.md`](docs/systems/status-effects.md)
 - [`docs/systems/npc-dialogue.md`](docs/systems/npc-dialogue.md)
 - [`docs/systems/progress-skills.md`](docs/systems/progress-skills.md)
+- [`docs/systems/careers.md`](docs/systems/careers.md)
 - [`docs/data/database.md`](docs/data/database.md)
 - [`docs/development.md`](docs/development.md)
 - 소스 폴더별 `Overview.md`: `server/**/Overview.md`, `client/**/Overview.md`, `shared/**/Overview.md`

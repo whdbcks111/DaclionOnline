@@ -11,6 +11,7 @@ import {
     encodeMetadataDelta,
 } from './Metadata.js';
 import type { MetadataRecord, MetadataValue } from './Metadata.js';
+import { JobSlotType } from './Job.js';
 
 export type SkillMetadata = MetadataRecord;
 export type SkillCalculatedValue = string | number | boolean;
@@ -73,6 +74,16 @@ export interface SkillAutoAcquire {
     check: (context: SkillContext) => boolean;
 }
 
+export interface SkillJobRequirement {
+    anyOf: readonly string[];
+    slot?: JobSlotType;
+}
+
+export interface SkillWeaponRequirement {
+    mainHandAnyTags: readonly TagId[];
+    description: string;
+}
+
 export interface SkillData {
     id: string;
     name: string;
@@ -83,6 +94,8 @@ export interface SkillData {
     costTemplate: string;
     activationConditionTemplate: string;
     activationMessage?: string;
+    /** 생략 시 activationMessage와 정확히 같은 `이름!` 메시지로 발동한다. */
+    activationPhrase?: string;
     baseMetadata: SkillMetadata | null;
     calculatedFields?: Readonly<Record<string, (context: SkillContext) => SkillCalculatedValue>>;
     calculateMaxCooldown?: (context: SkillContext) => number;
@@ -92,6 +105,8 @@ export interface SkillData {
     isVisible?: (context: SkillContext) => boolean;
     canUse?: (context: SkillContext) => SkillCheckResult;
     canActivate?: (context: SkillContext) => SkillCheckResult;
+    jobRequirement?: SkillJobRequirement;
+    weaponRequirement?: SkillWeaponRequirement;
     onAcquire?: (context: SkillContext) => void;
     onStart?: (context: SkillContext) => SkillStartResult | void;
     onUpdate?: (context: SkillUpdateContext, dt: number) => SkillUpdateResult | void;
@@ -248,11 +263,22 @@ export default class Skill implements TagReadable {
     }
 
     isVisibleTo(owner: Entity): boolean {
-        return this.data.isVisible?.(createSkillContext(owner, this)) ?? true;
+        const context = createSkillContext(owner, this);
+        if (this.data.jobRequirement) {
+            if (!context.player?.career || !this.data.jobRequirement.anyOf.some(jobId =>
+                context.player!.career.hasJob(jobId, this.data.jobRequirement?.slot))) return false;
+        }
+        return this.data.isVisible?.(context) ?? true;
     }
 
     checkUsable(owner: Entity): SkillCheckResult {
-        return this.data.canUse?.(createSkillContext(owner, this)) ?? acceptSkill();
+        const context = createSkillContext(owner, this);
+        const weapon = this.data.weaponRequirement;
+        if (weapon && (!context.player || !weapon.mainHandAnyTags.some(tag =>
+            context.player!.equipment.hasEquippedItemTag('mainHand', tag)))) {
+            return denySkill(weapon.description);
+        }
+        return this.data.canUse?.(context) ?? acceptSkill();
     }
 
     formatDescription(owner: Entity): string {
@@ -376,6 +402,14 @@ export function defineSkill(data: SkillData): void {
         autoAcquire: data.autoAcquire ? Object.freeze({
             ...data.autoAcquire,
             watchedProgress: Object.freeze([...data.autoAcquire.watchedProgress]),
+        }) : undefined,
+        jobRequirement: data.jobRequirement ? Object.freeze({
+            ...data.jobRequirement,
+            anyOf: Object.freeze([...data.jobRequirement.anyOf]),
+        }) : undefined,
+        weaponRequirement: data.weaponRequirement ? Object.freeze({
+            ...data.weaponRequirement,
+            mainHandAnyTags: Object.freeze(normalizeTags(data.weaponRequirement.mainHandAnyTags)),
         }) : undefined,
         tags: Object.freeze(normalizeTags(data.tags)),
     }));

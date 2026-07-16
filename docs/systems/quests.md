@@ -1,5 +1,7 @@
 # 퀘스트 시스템
 
+직업 전직소는 메인/서브 슬롯별 전사·궁수·암살자·마법사 시험 8개를 같은 QuestData API로 정의한다. 수락/보상 조건은 `CareerProfile.canAssign`을 사용하므로 Lv.20/50 제한, 기존 슬롯 보유와 메인·서브 동일 직업 금지를 보고 시점에도 다시 검증한다. 직업 보상은 `QuestReward.custom`에서 `CareerProfile.assign`만 호출한다.
+
 ## 구성
 
 ```text

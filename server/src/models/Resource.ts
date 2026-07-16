@@ -80,6 +80,8 @@ export default class Resource extends Entity {
     }
 
     override getAttackDeniedReason(attacker: Entity): string | undefined {
+        const commonReason = super.getAttackDeniedReason(attacker);
+        if (commonReason) return commonReason;
         if (!this.attackable) return '이 오브젝트는 공격할 수 없습니다.';
         if (this.requiredToolTags.length === 0) return undefined;
         const usable = this.requiredToolTags.every(tag =>

@@ -113,6 +113,12 @@ export function initPlayerCommands(): void {
                         .text('\n')
                         .weight('bold',b2 => b2.text('골드'))
                         .text(` ${player.gold.toLocaleString()}G\n`)
+                        .weight('bold', b2 => b2.text('메인 직업'))
+                        .text(` ${player.career.effectiveMainJob?.name ?? '(미선택)'}`)
+                        .text(player.career.eliteJob ? ` (${player.career.mainJob?.name} 계보)` : '')
+                        .text('\n')
+                        .weight('bold', b2 => b2.text('서브 직업'))
+                        .text(` ${player.career.subJob?.name ?? '(미선택)'}\n`)
 
                         .color('gray', b2 => b2.text('─── 장착 정보 ───\n'));
 

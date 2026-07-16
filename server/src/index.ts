@@ -18,6 +18,7 @@ import './data/monsters.js';
 import './data/resources.js';
 import './data/shops.js';
 import './data/tagEffects.js';
+import './data/jobs.js';
 import './data/progress.js';
 import './data/skills.js';
 import './data/crafting.js';

@@ -1,6 +1,8 @@
 import NPC, { Dialogue, DialogueScenario } from '../models/NPC.js';
 import { defineProgress, ProgressType } from '../models/Progress.js';
 import { FIRST_SLIME_HUNT_QUEST_ID } from './quests.js';
+import { CAREER_QUEST_IDS } from './quests.js';
+import { JobSlotType, getAllJobs, JobTier } from '../models/Job.js';
 
 export const MONSTER_HUNT_QUESTION_FLAG = 'npc:monster-hunt-question';
 
@@ -79,5 +81,67 @@ NPC.define({
             yield Dialogue.turnInQuest(FIRST_SLIME_HUNT_QUEST_ID);
             yield Dialogue.end();
         }),
+    ],
+});
+
+const careerJobs = getAllJobs().filter(job => job.tier === JobTier.FIRST);
+const careerQuestEntries = JobSlotType.values().flatMap(slot => careerJobs.map(job => ({
+    slot,
+    job,
+    questId: CAREER_QUEST_IDS[`${slot.key}:${job.id}`],
+    key: `${slot.key}_${job.id.split(':')[1]}`,
+})));
+
+NPC.define({
+    id: 'job_master',
+    name: '전직관 세레나',
+    description: '모험가의 자질을 살펴 전직 시험을 안내하는 루미나르 전직관입니다.',
+    tags: ['npc:career'],
+    entryScenario: ({ player }) => {
+        const ready = careerQuestEntries.find(entry => player.quests.canTurnIn(entry.questId, 'job_master'));
+        if (ready) return `complete_${ready.key}`;
+        const active = careerQuestEntries.find(entry => player.quests.isActive(entry.questId));
+        return active ? 'progress' : 'menu';
+    },
+    scenarios: [
+        new DialogueScenario('menu', function* ({ player }) {
+            yield Dialogue.say('어서 와요. 직업은 힘의 크기보다 앞으로 걸어갈 방식을 정하는 선택이에요.');
+            const choices = careerQuestEntries
+                .filter(entry => player.quests.canAccept(entry.questId, 'job_master'))
+                .map(entry => ({
+                    label: `${entry.slot.label}: ${entry.job.name} 시험을 선택한다`,
+                    target: `offer_${entry.key}`,
+                }));
+            if (choices.length === 0) {
+                const next = !player.career.mainJobId ? '메인 직업은 Lv.20부터 선택할 수 있어요.'
+                    : !player.career.subJobId ? '서브 직업은 Lv.50부터 선택할 수 있으며 메인과 같은 직업은 고를 수 없어요.'
+                    : '모든 1차 전직을 마쳤군요. Lv.200에는 두 직업의 조합에 맞춰 엘리트 직업으로 각성합니다.';
+                yield Dialogue.say(next);
+                yield Dialogue.end();
+                return;
+            }
+            choices.push({ label: '조금 더 생각해 볼게요.', target: 'goodbye' });
+            yield Dialogue.choice(choices);
+        }),
+        new DialogueScenario('progress', function* () {
+            yield Dialogue.say('선택한 전직 시험이 아직 진행 중이에요. 퀘스트 목록에서 목표를 확인하고 돌아오세요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('goodbye', function* () {
+            yield Dialogue.say('서두르지 않아도 괜찮아요. 자신의 전투 방식을 충분히 생각해 보세요.');
+            yield Dialogue.end();
+        }),
+        ...careerQuestEntries.flatMap(entry => [
+            new DialogueScenario(`offer_${entry.key}`, function* () {
+                yield Dialogue.say(`${entry.job.name}의 길을 선택했군요. 시험을 마치면 ${entry.slot.label}(으)로 인정하겠습니다.`);
+                yield Dialogue.acceptQuest(entry.questId);
+                yield Dialogue.end();
+            }),
+            new DialogueScenario(`complete_${entry.key}`, function* () {
+                yield Dialogue.say(`시험을 통과했습니다. 지금부터 ${entry.job.name}의 힘을 다룰 자격이 있어요.`);
+                yield Dialogue.turnInQuest(entry.questId);
+                yield Dialogue.end();
+            }),
+        ]),
     ],
 });

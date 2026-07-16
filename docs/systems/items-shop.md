@@ -1,5 +1,7 @@
 # 아이템·인벤토리·장비·상점 시스템
 
+주무기는 `weapon:sword/axe/bow/dagger/staff` 태그로 직업 스킬 사용 조건을 제공한다. 전직 시험의 기본 장비 보상은 훈련용 도끼·가벼운 활·독 단검·견습 마법 지팡이이며 스킬은 `Equipment.hasEquippedItemTag` API로만 검사한다.
+
 ## 마스터 데이터와 인스턴스
 
 - `models/Item.ts::ItemData`는 이름, 이미지 key, 분류, 무게, 스택, 기본 metadata, 사용 handler ID, 장비 슬롯, modifier, 내구도와 정의 태그를 정의한다.

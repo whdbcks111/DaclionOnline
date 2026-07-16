@@ -9,7 +9,7 @@ import { isOnlinePlayerAtLocation } from "../modules/playerRegistry.js";
 import { applyCritical, calculateEvasionChance, calculateFinalDamage, rollEvasion } from "./Combat.js";
 import { applyTagEffectValue } from "./TagEffect.js";
 import type { TagEffectReadable } from "./TagEffect.js";
-import { TagCollection } from "../../../shared/tags.js";
+import { GameTags, TagCollection } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
 import type Player from "./Player.js";
 import { emitGameEvent, GameEventIds } from "./GameEvent.js";
@@ -100,6 +100,7 @@ export default abstract class Entity implements TagReadable {
     private readonly healingReceivedModifiers = new Map<string, number>();
     private readonly actionDisableSources = new Map<string, Set<string>>();
     private readonly tickActionDisableSources = new Map<string, Set<string>>();
+    private readonly guaranteedEvasionSources = new Set<string>();
 
     protected _level: number;
     protected _exp: number;
@@ -175,7 +176,16 @@ export default abstract class Entity implements TagReadable {
     interact(_player: Player): boolean { return false; }
 
     /** 공격 불가 사유. undefined이면 공격 가능하다. */
-    getAttackDeniedReason(_attacker: Entity): string | undefined { return undefined; }
+    getAttackDeniedReason(attacker: Entity): string | undefined {
+        return attacker !== this && this.hasTag(GameTags.TRAIT_STEALTH) ? '대상이 은신 중이라 공격할 수 없습니다.' : undefined;
+    }
+
+    grantGuaranteedEvasion(source: string): void { if (source.trim()) this.guaranteedEvasionSources.add(source); }
+    removeGuaranteedEvasion(source: string): boolean { return this.guaranteedEvasionSources.delete(source); }
+    consumeGuaranteedEvasion(): boolean {
+        const source = this.guaranteedEvasionSources.values().next().value as string | undefined;
+        return source ? this.guaranteedEvasionSources.delete(source) : false;
+    }
 
     get level() { return this._level; }
     set level(val: number) { this._level = val; }
@@ -603,9 +613,11 @@ export default abstract class Entity implements TagReadable {
             ? this.attribute.get(AttributeType.ATK)
             : this.attribute.get(AttributeType.MAGIC_FORCE));
 
+        const guaranteedEvasion = !options.unavoidable && target.canPerformAction(ActionType.MOVEMENT)
+            && target.consumeGuaranteedEvasion();
         const evasionChance = options.unavoidable || !target.canPerformAction(ActionType.MOVEMENT)
             ? 0
-            : calculateEvasionChance(
+            : guaranteedEvasion ? 1 : calculateEvasionChance(
                 this.attribute.get(AttributeType.SPEED),
                 target.attribute.get(AttributeType.SPEED),
             );
