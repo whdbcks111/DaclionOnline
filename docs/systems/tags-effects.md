@@ -43,6 +43,8 @@ Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만
 - 판정: `resolveTagEffect(source, target)`
 - 수치 적용: `applyTagEffectValue(value, source, target)`
 - 목록: `getAllTagEffectModifiers()`
+- 표시 등록: `defineTagEffectTagDisplay(tag, label, icon)`
+- 속성표 DTO: `getTagEffectAffinitySnapshots()`
 
 `modifier=0`은 대미지와 효과 강도를 0으로 만들고 `effective=false`를 반환한다. `0.5`는 절반, `1.5`는 1.5배다. 반대 방향은 자동 생성되지 않으며 필요할 때 별도 행으로 등록한다.
 
@@ -50,18 +52,25 @@ Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만
 
 현재 마스터 테이블은 `server/src/data/tagEffects.ts`에 있다.
 
-| 효과 태그 → 대상 태그 | 배율 | 의미 |
-| --- | ---: | --- |
-| `property:poison` → `trait:inanimate` | 0 | 독은 무생물에게 무효 |
-| `property:fire` → `property:water` | 0.5 | 물 대상은 불에 저항 |
-| `property:fire` → `property:ice` | 1.5 | 불은 얼음에 우세 |
-| `property:fire` → `property:natural` | 1.5 | 불은 자연에 우세 |
-| `property:water` → `property:fire` | 1.5 | 물은 불에 우세 |
-| `property:water` → `property:ice` | 0.5 | 얼음 대상은 물에 저항 |
-| `property:ice` → `property:fire` | 0.5 | 불 대상은 얼음에 저항 |
-| `property:ice` → `property:water` | 1.5 | 얼음은 물에 우세 |
-| `property:natural` → `property:water` | 1.5 | 자연은 물에 우세 |
-| `property:natural` → `property:fire` | 0.5 | 불 대상은 자연에 저항 |
+같은 파일은 `/속성표`에 필요한 14개 속성과 무생물의 라벨 및 `affinities/*` 아이콘 key도 등록한다. `/속성표`는 내부 Map이나 태그 배열을 직접 읽지 않고 `getTagEffectAffinitySnapshots()`만 사용해 각 속성의 `공격: 우세·열세·무효`, `방어: 취약·저항·면역`을 구분한다. 실제 아이콘은 `client/public/icons/affinities/`의 128×128 투명 PNG다. 새 속성이나 표시 태그는 modifier 행, 표시 메타데이터, 아이콘을 같은 변경에 추가하고 property 태그 누락·PNG 규격 테스트를 통과해야 한다.
+
+| 공격 속성 | 우세 1.5배 | 열세 0.5배 | 무효 0배 |
+| --- | --- | --- | --- |
+| 불 | 얼음, 자연, 벌레, 금속 | 물, 돌, 땅 | - |
+| 물 | 불, 돌, 땅 | 얼음, 전기, 자연 | - |
+| 얼음 | 물, 자연, 벌레 | 불, 돌, 금속 | - |
+| 자연 | 물, 돌, 땅 | 불, 언데드, 벌레, 금속 | - |
+| 독 | 벌레 | - | 무생물, 언데드 |
+| 전기 | 물, 금속 | 돌 | 땅 |
+| 돌 | 불, 얼음, 벌레 | 물, 자연, 금속 | - |
+| 어둠 | 빛 | 언데드, 신성 | - |
+| 빛 | 어둠 | - | - |
+| 언데드 | 자연 | 빛, 신성 | - |
+| 신성 | 어둠, 언데드 | - | - |
+| 벌레 | 자연 | 불, 독, 돌 | - |
+| 금속 | 얼음, 자연, 돌 | 불, 전기, 땅 | - |
+| 땅 | 전기, 금속, 불 | 물, 자연 | - |
+| 무생물 | - | - | - |
 
 ## 전투 적용 순서
 

@@ -8,6 +8,7 @@ import { initProgressCommands } from "./progress.js";
 import { initCraftingCommands } from "./crafting.js";
 import { initNpcCommands } from "./npc.js";
 import { initQuestCommands } from './quest.js';
+import { initAffinityCommands } from './affinity.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -20,4 +21,5 @@ export function initAllCommands(): void {
     initCraftingCommands();
     initNpcCommands();
     initQuestCommands();
+    initAffinityCommands();
 }

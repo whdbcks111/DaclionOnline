@@ -30,7 +30,7 @@
 | --- | --- | --- |
 | `Entity` | `attackOwner`, `isDefeated/defeatLabel`, `isInteractable/interact`, `hasTag/getTags`, `damage/heal/restoreMentality/depleteSurvivalNeeds`, `clampVitals`, `canAttack/attack(AttackOptions)`, `get/apply/remove/clearStatusEffect(s)`, `getStatusEffectDisplaySnapshots`, `disableAction(s)/enableAction`, `disableAction(s)ForTick`, `canPerformAction`, `earlyUpdate/update/lateUpdate`, `onDeath/respawn` | 속도 회피·회피 불가·고정 피해·선택적 주무기 적중 효과를 포함한 전투, 생명력·정신력 재생, 배고픔·수분 초당 감소와 최대 자원 상한 보정, raw Map 없는 상태효과 표시 DTO, source별 지속/한 tick 행동 제한과 공통 생명주기 |
 | Combat | `calculateEvasionChance`, `rollEvasion`, `applyCritical`, `calculateFinalDamage` | 부작용 없는 속도 회피율·치명타·방어/관통 최종 대미지 계산 |
-| Tag effects | `defineTagEffectModifier`, `resolveTagEffect`, `applyTagEffectValue`, `getAllTagEffectModifiers` | `TagEffectReadable` 문맥 태그를 우선하는 단방향 source→target 배율 등록·판정·수치 적용 |
+| Tag effects | `defineTagEffectModifier`, `defineTagEffectTagDisplay`, `resolveTagEffect`, `applyTagEffectValue`, `getAllTagEffectModifiers`, `getTagEffectAffinitySnapshots` | `TagEffectReadable` 문맥 태그를 우선하는 단방향 source→target 배율 등록·판정·수치 적용과 라벨·아이콘이 포함된 공격/방어 관계 표시 DTO |
 | `Player` | `loadByUserId`, `create`, `save`, `performBasicAttack`, `canSpendMentality/spendMentality/restoreMentality`, `gainExp`, `allocateStat` | 영속 플레이어, 직렬화된 aggregate 저장, 무기 오버라이드·적중 callback 기본 공격과 스킬 자원·성장 |
 | `AttributeType`, `Attribute` | `values/fromKey`, `get`, `setBase`, `addModifier(s)`, `removeBySource` | 생명력/정신력 초당 재생과 배고픔/수분 초당 감소를 포함한 클래스형 능력치 메타데이터와 기본값 + add/multiply 수정자 계산 |
 | `StatType`, `Stat` | `values/fromKey/fromInput`, `get/set/add`, `applyModifiers(entity)` | 클래스형 5종 스탯과 Entity 기반 Attribute 변환 |

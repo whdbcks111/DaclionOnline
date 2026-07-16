@@ -11,6 +11,26 @@ export interface TagEffectResult extends TagEffectModifier {
     effective: boolean
 }
 
+export interface TagEffectTagDisplay {
+    tag: TagId
+    label: string
+    icon: string
+}
+
+export interface TagEffectDisplayRelation extends TagEffectTagDisplay {
+    modifier: number
+}
+
+/** `/속성표` 같은 UI가 내부 modifier Map을 직접 읽지 않고 사용하는 표시 DTO. */
+export interface TagEffectAffinitySnapshot extends TagEffectTagDisplay {
+    attackAdvantages: TagEffectDisplayRelation[]
+    attackDisadvantages: TagEffectDisplayRelation[]
+    attackImmunities: TagEffectDisplayRelation[]
+    defenseVulnerabilities: TagEffectDisplayRelation[]
+    defenseResistances: TagEffectDisplayRelation[]
+    defenseImmunities: TagEffectDisplayRelation[]
+}
+
 /** 전투 문맥별 태그를 제공할 수 있는 객체. 미구현 시 일반 hasTag로 fallback한다. */
 export interface TagEffectReadable extends TagReadable {
     hasEffectSourceTag?(tag: TagId): boolean
@@ -18,6 +38,15 @@ export interface TagEffectReadable extends TagReadable {
 }
 
 const modifiers = new Map<TagId, Map<TagId, number>>()
+const tagDisplays = new Map<TagId, TagEffectTagDisplay>()
+
+/** 상성표에 노출할 태그의 라벨과 IconNode key를 등록한다. */
+export function defineTagEffectTagDisplay(tag: TagId, label: string, icon: string): void {
+    const normalized = normalizeTag(tag)
+    if (!label.trim()) throw new Error(`태그 표시 라벨은 비어 있을 수 없습니다: ${normalized}`)
+    if (!icon.trim()) throw new Error(`태그 아이콘 key는 비어 있을 수 없습니다: ${normalized}`)
+    tagDisplays.set(normalized, { tag: normalized, label: label.trim(), icon: icon.trim() })
+}
 
 /** 단방향 태그 효과 배율을 등록한다. 같은 쌍을 다시 등록하면 교체한다. */
 export function defineTagEffectModifier(sourceTag: TagId, targetTag: TagId, modifier: number): void {
@@ -69,4 +98,56 @@ export function getAllTagEffectModifiers(): TagEffectModifier[] {
         for (const [targetTag, modifier] of targets) result.push({ sourceTag, targetTag, modifier })
     }
     return result
+}
+
+/**
+ * 등록된 태그별 공격/방어 관계를 UI용 불변 snapshot으로 반환한다.
+ * 단방향 규칙을 역관계로 추론하지 않고 실제 등록 행만 양쪽 관점으로 분류한다.
+ */
+export function getTagEffectAffinitySnapshots(): TagEffectAffinitySnapshot[] {
+    const createSnapshot = (display: TagEffectTagDisplay): TagEffectAffinitySnapshot => ({
+        ...display,
+        attackAdvantages: [],
+        attackDisadvantages: [],
+        attackImmunities: [],
+        defenseVulnerabilities: [],
+        defenseResistances: [],
+        defenseImmunities: [],
+    })
+    const snapshots = new Map<TagId, TagEffectAffinitySnapshot>()
+    for (const display of tagDisplays.values()) snapshots.set(display.tag, createSnapshot(display))
+
+    for (const [sourceTag, targets] of modifiers) {
+        const source = snapshots.get(sourceTag)
+        if (!source) continue
+        for (const [targetTag, modifier] of targets) {
+            const targetDisplay = tagDisplays.get(targetTag)
+            const target = snapshots.get(targetTag)
+            if (!targetDisplay || !target) continue
+
+            const outgoing = { ...targetDisplay, modifier }
+            const sourceDisplay = tagDisplays.get(sourceTag)!
+            const incoming = { ...sourceDisplay, modifier }
+            if (modifier === 0) {
+                source.attackImmunities.push(outgoing)
+                target.defenseImmunities.push(incoming)
+            } else if (modifier > 1) {
+                source.attackAdvantages.push(outgoing)
+                target.defenseVulnerabilities.push(incoming)
+            } else if (modifier < 1) {
+                source.attackDisadvantages.push(outgoing)
+                target.defenseResistances.push(incoming)
+            }
+        }
+    }
+
+    return [...snapshots.values()].map(snapshot => ({
+        ...snapshot,
+        attackAdvantages: [...snapshot.attackAdvantages],
+        attackDisadvantages: [...snapshot.attackDisadvantages],
+        attackImmunities: [...snapshot.attackImmunities],
+        defenseVulnerabilities: [...snapshot.defenseVulnerabilities],
+        defenseResistances: [...snapshot.defenseResistances],
+        defenseImmunities: [...snapshot.defenseImmunities],
+    }))
 }

@@ -52,9 +52,10 @@
 
 1. 기존 공용 ID가 필요하면 `shared/tags.ts::GameTags`를 추가하고, 객체 정의의 `tags`에 부여한다. 동적 콘텐츠 태그는 `namespace:path` 문자열을 그대로 등록할 수 있다.
 2. 상성·저항·면역을 별도 시스템으로 나누지 않고 `data/tagEffects.ts`에서 `defineTagEffectModifier(source, target, modifier)` 단방향 행을 추가한다.
-3. 대미지 외 효과값은 raw 태그 배열을 읽지 않고 `applyTagEffectValue`를 사용하며, 완전 무효화 시 `effective`도 검사한다.
-4. 영속 태그 소유 객체를 추가하면 메모리 `TagCollection`, dirty callback, Prisma/JSON 저장과 이동 snapshot을 함께 연결한다.
-5. 규칙과 대표 데이터는 [systems/tags-effects.md](../systems/tags-effects.md)에 동기화하고 중첩·방향성 테스트를 추가한다.
+3. 새 `property:*` 속성 또는 `/속성표` 노출 태그는 같은 파일에서 `defineTagEffectTagDisplay`로 라벨·아이콘을 등록하고 `client/public/icons/affinities/`에 128×128 투명 PNG를 함께 추가한다.
+4. 대미지 외 효과값은 raw 태그 배열을 읽지 않고 `applyTagEffectValue`를 사용하며, 완전 무효화 시 `effective`도 검사한다.
+5. 영속 태그 소유 객체를 추가하면 메모리 `TagCollection`, dirty callback, Prisma/JSON 저장과 이동 snapshot을 함께 연결한다.
+6. 규칙과 대표 데이터는 [systems/tags-effects.md](../systems/tags-effects.md)에 동기화하고 중첩·방향성 테스트를 추가한다.
 
 ## 상태효과/행동 제한 추가
 
