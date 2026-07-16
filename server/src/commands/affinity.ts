@@ -27,6 +27,7 @@ export function initAffinityCommands(): void {
         name: '속성표',
         aliases: ['affinity'],
         showCommandUse: 'private',
+        information: true,
         description: '속성별 단방향 우세·취약·저항·면역 관계를 확인합니다.',
         handler(userId) {
             const message = chat()

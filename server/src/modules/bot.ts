@@ -1,10 +1,15 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
-import { sendMessageToChannel, sendBotMessageToUser, sendMessageToUser } from "./message.js";
+import { sendMessageToChannel, sendBotMessageToUser, sendMessageToUser, sendNotificationToUser } from "./message.js";
 import { getUserChannel } from "./channel.js";
 import { getSession } from "./login.js";
 import type { ChatMessage, CommandInfo, CompletionItem } from "../../../shared/types.js";
 import { parseCommandInput } from "../../../shared/commandInput.js";
+import {
+    isInformationPublicMode,
+    runInformationCommand,
+    setInformationPublicMode,
+} from './informationVisibility.js';
 
 interface CommandArg {
     name: string
@@ -24,12 +29,29 @@ interface CommandConfig {
     description: string
     permission?: number        // 최소 권한 레벨 (미지정 시 0, 누구나 사용 가능)
     showCommandUse?: CommandUseVisibility  // 명령어 사용 채팅 표시 방식 (기본: 'show')
+    /** 정보 열람 명령. 공개 모드이면 입력과 sendBotMessageToUser 결과를 현재 채널에 공개한다. */
+    information?: boolean
     args?: CommandArg[]
-    handler: (userId: number, args: string[], raw: string, msg: ChatMessage | null, permission: number) => void
+    handler: (userId: number, args: string[], raw: string, msg: ChatMessage | null, permission: number) => void | Promise<void>
 }
 
 const commands = new Map<string, CommandConfig>();
 const aliasMap = new Map<string, string>(); // alias → name
+
+/** UI와 명령어가 공유하는 정보 공개 모드 변경 API. 같은 계정의 모든 소켓에 즉시 반영한다. */
+export function setInformationModeForUser(userId: number, isPublic: boolean): void {
+    setInformationPublicMode(userId, isPublic);
+    const io = getIO();
+    for (const [, userSocket] of io.sockets.sockets) {
+        const userSession = userSocket.data.sessionToken ? getSession(userSocket.data.sessionToken) : undefined;
+        if (userSession?.userId === userId) userSocket.emit('informationMode', isPublic);
+    }
+    sendNotificationToUser(userId, {
+        key: 'information-mode',
+        message: `정보 열람이 ${isPublic ? '공개' : '비공개'}모드로 전환되었습니다.`,
+        length: 2500,
+    });
+}
 
 function resolveCommand(name: string, hasSlash: boolean): CommandConfig | undefined {
     if (hasSlash) return commands.get(name) ?? commands.get(aliasMap.get(name) ?? '');
@@ -152,6 +174,12 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
     }
 
     const args = parseArgs(remainder, cmd.args);
+    const hasVisibilityArgument = cmd.args?.[0]?.name === '공개/비공개';
+    const informationPublic = hasVisibilityArgument && args[0] === '공개'
+        ? true
+        : hasVisibilityArgument && args[0] === '비공개'
+            ? false
+            : isInformationPublicMode(userId);
 
     // 필수 인자 검증
     const requiredArgs = cmd.args?.filter(a => a.required) ?? [];
@@ -168,11 +196,15 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
     }
 
     if(msg !== null) {
-        if(cmd.showCommandUse === 'show' || !cmd.showCommandUse) sendMessageToChannel(msg, getUserChannel(userId));
+        if (cmd.information) {
+            if (informationPublic) sendMessageToChannel(msg, getUserChannel(userId));
+            else sendMessageToUser(userId, msg);
+        } else if(cmd.showCommandUse === 'show' || !cmd.showCommandUse) sendMessageToChannel(msg, getUserChannel(userId));
         else if(cmd.showCommandUse == 'private') sendMessageToUser(userId, msg);
     }
 
-    cmd.handler(userId, args, raw, msg, permission);
+    if (cmd.information) runInformationCommand(userId, () => cmd.handler(userId, args, raw, msg, permission), informationPublic);
+    else cmd.handler(userId, args, raw, msg, permission);
 }
 
 /** 봇 모듈 초기화 */
@@ -180,6 +212,17 @@ export const initBot = () => {
     const io = getIO();
 
     io.on('connection', (socket) => {
+        const emitInformationMode = () => {
+            const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            if (session) socket.emit('informationMode', isInformationPublicMode(session.userId));
+        };
+        socket.on('requestInformationMode', emitInformationMode);
+        socket.on('setInformationMode', (isPublic: unknown) => {
+            if (typeof isPublic !== 'boolean') return;
+            const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            if (!session) { socket.emit('sessionInvalid'); return; }
+            setInformationModeForUser(session.userId, isPublic);
+        });
         // 명령어 목록 요청
         socket.on('requestCommandList', () => {
             socket.emit('commandList', getCommandList());

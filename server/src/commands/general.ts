@@ -1,4 +1,4 @@
-import { registerCommand, getCommandListFiltered } from "../modules/bot.js";
+import { registerCommand, getCommandListFiltered, setInformationModeForUser } from "../modules/bot.js";
 import { sendBotMessageToChannel, sendBotMessageToUser, broadcastMessageAll, getFlagsForPermission } from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
 import { getUserChannel } from "../modules/channel.js";
@@ -11,6 +11,7 @@ export function initGeneralCommands(): void {
         name: '도움말',
         aliases: ['help'],
         showCommandUse: 'private',
+        information: true,
         description: '명령어 목록을 표시합니다',
         handler(userId, _args, _raw, _msg, permission) {
             const list = getCommandListFiltered(permission);
@@ -56,6 +57,18 @@ export function initGeneralCommands(): void {
 
             sendBotMessageToUser(userId, node);
         },
+    });
+
+    registerCommand({
+        name: '공개모드', aliases: ['publicmode'], description: '정보 열람 결과를 현재 채널에 공개합니다.',
+        showCommandUse: 'hide',
+        handler(userId) { setInformationModeForUser(userId, true); },
+    });
+
+    registerCommand({
+        name: '비공개모드', aliases: ['privatemode'], description: '정보 열람 결과를 본인에게만 표시합니다.',
+        showCommandUse: 'hide',
+        handler(userId) { setInformationModeForUser(userId, false); },
     });
 
     registerCommand({

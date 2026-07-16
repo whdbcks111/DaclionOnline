@@ -13,6 +13,8 @@ import {
 } from "./playerRegistry.js";
 import { DialogueEndReason, endNpcDialogue } from "../models/NpcDialogue.js";
 import { parseChatMessage } from "../utils/chatParser.js";
+import { partyManager } from './party.js';
+import { clearInformationMode } from './informationVisibility.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -38,6 +40,8 @@ export async function unloadPlayerByUserId(userId: number): Promise<void> {
     endNpcDialogue(player, DialogueEndReason.UNLOADED, false);
     cancelCrafting(player);
     player.skills.finishAll();
+    partyManager.removeDisconnectedPlayer(player);
+    clearInformationMode(userId);
     await player.save();
     unregisterOnlinePlayer(player.userId);
 }
@@ -91,6 +95,7 @@ export function sendPlayerStats(userId: number): void {
             ...effect,
             description: parseChatMessage(effect.description),
         })),
+        party:             partyManager.getHudData(player),
     };
 
     const io = getIO();

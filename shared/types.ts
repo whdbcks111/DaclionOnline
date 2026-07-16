@@ -220,6 +220,24 @@ export interface StatusEffectHudData {
     description: ChatNode[]
 }
 
+export interface PartyMemberHudData {
+    userId: number
+    nickname: string
+    level: number
+    life: number
+    maxLife: number
+    mentality: number
+    maxMentality: number
+    isLeader: boolean
+    sameLocation: boolean
+}
+
+export interface PartyHudData {
+    partyId: string
+    leaderUserId: number
+    members: PartyMemberHudData[]
+}
+
 export interface PlayerStatsData {
     userId: number
     nickname: string
@@ -235,6 +253,7 @@ export interface PlayerStatsData {
     attackCooldown: number
     maxAttackCooldown: number
     statusEffects: StatusEffectHudData[]
+    party: PartyHudData | null
 }
 
 // 알림
@@ -261,6 +280,7 @@ export interface ServerToClientEvents {
     commandList: (commands: CommandInfo[]) => void
     argCompletions: (items: CompletionItem[]) => void
     playerStats: (data: PlayerStatsData) => void
+    informationMode: (isPublic: boolean) => void
     locationInfo: (data: LocationInfoData) => void
     userCount: (data: UserCountData) => void
     channelChanged: (channel: string | null, history: ChatMessage[]) => void
@@ -288,6 +308,8 @@ export interface ClientToServerEvents {
     changeNickname: (nickname: string) => void
     requestLocationInfo: () => void
     requestCompletions: (raw: string) => void
+    requestInformationMode: () => void
+    setInformationMode: (isPublic: boolean) => void
     adminRequestLocations: () => void
     adminSaveLocations: (locations: LocationData[]) => void
 }

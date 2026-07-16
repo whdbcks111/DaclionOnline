@@ -5,6 +5,7 @@ import PlayerStatusHud from './huds/PlayerStatusHud'
 import LocationHud from './huds/LocationHud'
 import MinimapHud from './huds/MinimapHud'
 import QuickSlotHud from './huds/QuickSlotHud'
+import PartyHud from './huds/PartyHud'
 import styles from './HudContainer.module.scss'
 
 const HUD_COMPONENTS: Record<string, React.ComponentType> = {
@@ -12,6 +13,7 @@ const HUD_COMPONENTS: Record<string, React.ComponentType> = {
   'player-location': LocationHud,
   'minimap': MinimapHud,
   'quick-slots': QuickSlotHud,
+  'party-status': PartyHud,
 }
 
 const ANCHOR_DATA: Record<AnchorPoint, { tx: number; ty: number; origin: string }> = {

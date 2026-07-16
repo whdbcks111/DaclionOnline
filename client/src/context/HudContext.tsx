@@ -32,6 +32,7 @@ export const HUD_DEFINITIONS: HudDefinition[] = [
   { id: 'player-location', label: '위치 정보' },
   { id: 'minimap', label: '미니맵' },
   { id: 'quick-slots', label: '퀵 슬롯' },
+  { id: 'party-status', label: '파티원 상태' },
 ]
 
 const DEFAULT_CONFIGS: Record<string, HudConfig> = {
@@ -39,6 +40,7 @@ const DEFAULT_CONFIGS: Record<string, HudConfig> = {
   'player-location': { id: 'player-location', visible: false, x: 5,  y: 30, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight' },
   'minimap':         { id: 'minimap',         visible: false, x: 5,  y: 45, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight' },
   'quick-slots':     { id: 'quick-slots',     visible: false, x: 50, y: 10,  posUnitX: '%', posUnitY: '%', posAnchor: 'bottomLeft',  anchor: 'bottomMiddle' },
+  'party-status':    { id: 'party-status',    visible: true,  x: 5,  y: 23,  posUnitX: '%', posUnitY: '%', posAnchor: 'topLeft',     anchor: 'topLeft' },
 }
 
 interface HudContextType {

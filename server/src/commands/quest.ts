@@ -20,6 +20,7 @@ export function initQuestCommands(): void {
         aliases: ['questlist', 'ql'],
         description: '수락했거나 완료한 퀘스트 목록을 확인합니다.',
         showCommandUse: 'hide',
+        information: true,
         handler(userId) {
             const player = getPlayerByUserId(userId);
             if (!player) return;
@@ -50,6 +51,7 @@ export function initQuestCommands(): void {
         aliases: ['questinfo', 'qi'],
         description: '수락했거나 완료한 퀘스트의 상세 정보를 확인합니다.',
         showCommandUse: 'hide',
+        information: true,
         args: [{
             name: '퀘스트이름',
             description: '확인할 퀘스트 이름',

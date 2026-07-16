@@ -36,6 +36,7 @@
 - [`docs/systems/status-effects.md`](docs/systems/status-effects.md)
 - [`docs/systems/npc-dialogue.md`](docs/systems/npc-dialogue.md)
 - [`docs/systems/progress-skills.md`](docs/systems/progress-skills.md)
+- [`docs/systems/party.md`](docs/systems/party.md)
 - [`docs/systems/careers.md`](docs/systems/careers.md)
 - [`docs/data/database.md`](docs/data/database.md)
 - [`docs/development.md`](docs/development.md)

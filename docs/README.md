@@ -19,6 +19,7 @@
 | 상태효과·행동 제한·지속 피해 | [systems/status-effects.md](systems/status-effects.md) |
 | 이벤트·통계·플래그·스킬 | [systems/progress-skills.md](systems/progress-skills.md) |
 | 메인·서브·엘리트 직업과 전직 | [systems/careers.md](systems/careers.md) |
+| 파티 초대·HUD·몬스터 경험치 공유 | [systems/party.md](systems/party.md) |
 | 아이템·인벤토리·장비·상점 | [systems/items-shop.md](systems/items-shop.md) |
 | 제작법 발견·재료 필터·제작 | [systems/crafting.md](systems/crafting.md) |
 | NPC 배치·조건부 대화·선택지 | [systems/npc-dialogue.md](systems/npc-dialogue.md) |

@@ -212,6 +212,8 @@ export const initLogin = () => {
                 }
 
                 await prisma.user.update({ where: { id: session.userId }, data: { nickname: trimmed } });
+                const player = await loadPlayerByUserId(session.userId);
+                player.name = trimmed;
 
                 // 해당 유저의 모든 세션 닉네임 업데이트
                 for (const token of userSessions.get(session.userId) ?? []) {

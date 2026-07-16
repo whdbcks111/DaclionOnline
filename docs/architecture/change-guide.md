@@ -111,6 +111,13 @@
 3. 서버 데이터가 필요하면 공유 이벤트 payload와 `modules/player.ts` 전송 로직을 추가한다.
 4. 설정 UI가 필요하면 `HudSettings.tsx`를 확장한다.
 
+## 파티 기능 추가
+
+1. 초대·구성 변경·보상 대상 계산은 `modules/party.ts`의 `partyManager`에 목적형 API로 추가하고 내부 Party/초대 Map은 노출하지 않는다.
+2. 온라인 대상은 `playerRegistry.findOnlinePlayerByIdentity/getOnlinePlayerIdentitySnapshots`, 파티원 표시와 전투 보상은 `getHudData/distributeMonsterExp` snapshot API를 사용한다.
+3. 새 사용자 동작은 `commands/party.ts`, 새 HUD 필드는 `PlayerStatsData.party → modules/player.ts → HudContext → PartyHud` 순서로 연결한다.
+4. 정원·초대 만료·파티장 이전·연결 종료와 같은 장소/생존 보상 범위·레벨 차이 감쇠를 테스트하고 [systems/party.md](../systems/party.md)를 갱신한다.
+
 ## 채팅 노드/태그 추가
 
 1. `shared/types.ts`의 `ChatNode` union을 확장한다.

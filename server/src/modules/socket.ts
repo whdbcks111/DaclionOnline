@@ -52,6 +52,22 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
                             endNpcDialogueByUserId(currentSession.userId);
                         }
                     });
+                    void Promise.all([
+                        import('./playerRegistry.js'),
+                        import('./party.js'),
+                        import('./informationVisibility.js'),
+                    ]).then(([registry, party, visibility]) => {
+                        if (isUserOnline(currentSession.userId)) return;
+                        const player = registry.getOnlinePlayer(currentSession.userId);
+                        const result = player ? party.partyManager.removeDisconnectedPlayer(player) : undefined;
+                        visibility.clearInformationMode(currentSession.userId);
+                        for (const affectedUserId of result?.affectedUserIds ?? []) {
+                            if (affectedUserId !== currentSession.userId && registry.getOnlinePlayer(affectedUserId)) {
+                                void import('./message.js').then(({ sendBotMessageToUser }) =>
+                                    sendBotMessageToUser(affectedUserId, `${player?.name ?? '파티원'}님이 접속을 종료해 파티에서 나갔습니다.`));
+                            }
+                        }
+                    });
                 }
                 logger.warn(`로그아웃: ${currentSession.username} (${socket.id})`);
             } else {

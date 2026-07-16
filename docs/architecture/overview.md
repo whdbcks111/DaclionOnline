@@ -11,7 +11,7 @@ Browser
   └─ profile upload ───────────── HTTP ───────┤
                                               v
 Express + Socket.io (`server/src/index.ts`)
-  ├─ modules: 인증, 채팅, 채널, 플레이어, 위치, 게임 루프
+  ├─ modules: 인증, 채팅, 정보 공개 모드, 채널, 플레이어, 파티, 위치, 게임 루프
   ├─ commands: 채팅 명령을 도메인 호출로 변환
   ├─ models: Entity/Player/Monster/Resource/Projectile/Location/NPC/StatusEffect/Inventory/Progress/Skill/Crafting
   ├─ data: 아이템·몬스터·자원·투사체·상점·위치·NPC·통계·스킬·제작법 마스터 데이터
@@ -37,7 +37,9 @@ Express + Socket.io (`server/src/index.ts`)
 | --- | --- | --- |
 | 세션 토큰, 다중 세션, 온라인 소켓 수 | `modules/login.ts` | 프로세스 메모리, 재시작 시 소실 |
 | 현재 채널, 채팅 히스토리 | `modules/channel.ts` | 프로세스 메모리, 채널당 공개 100개 |
+| 정보 열람 공개 모드 | `modules/informationVisibility.ts` | 사용자별 프로세스 메모리, 기본 비공개, 마지막 연결 종료 시 소실 |
 | 온라인 Player 인스턴스 | `modules/player.ts` | 로그인 중 메모리, 30초 자동 저장 및 정상 로그아웃/종료 시 저장 |
+| 파티·초대 | `modules/party.ts` | 최대 5명/초대 60초의 프로세스 메모리, 연결 종료·나가기·강퇴·해산 시 소실 |
 | 위치 런타임, Monster/Resource 통합 오브젝트, 바닥 아이템 | `models/Location.ts` | 프로세스 메모리; 위치 정의만 JSON 저장 |
 | 상점 재고/재입고 타이머 | `models/Shop.ts` | 프로세스 메모리 |
 | Player Progress/Skill | `Player.progress`, `Player.skills` | 로그인 중 메모리, Player와 같은 30초/unload/종료 dirty flush |
@@ -56,7 +58,7 @@ Express + Socket.io (`server/src/index.ts`)
 
 ### 채팅과 명령어
 
-`Home.tsx` → `sendMessage` → `modules/chat.ts`. `/` 또는 슬래시 없는 별칭은 `modules/bot.ts`가 명령을 찾아 `commands/*.ts` 핸들러를 실행한다. 남은 일반 문장은 스킬 message trigger를 먼저 검사하고 일치하지 않을 때 `modules/message.ts`와 `modules/channel.ts`를 통해 현재 room에 저장·전송한다.
+`Home.tsx` → `sendMessage` → `modules/chat.ts`. `/` 또는 슬래시 없는 별칭은 `modules/bot.ts`가 명령을 찾아 `commands/*.ts` 핸들러를 실행한다. `information: true` 명령은 `informationVisibility.ts`의 사용자 모드와 async 문맥에 따라 입력·결과를 현재 room 또는 본인에게 전송한다. 남은 일반 문장은 스킬 message trigger를 먼저 검사하고 일치하지 않을 때 `modules/message.ts`와 `modules/channel.ts`를 통해 현재 room에 저장·전송한다.
 
 ### 게임 루프
 

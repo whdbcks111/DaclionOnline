@@ -11,6 +11,7 @@ import { initQuestCommands } from './quest.js';
 import { initAffinityCommands } from './affinity.js';
 import { initMapCommands } from './map.js';
 import { initCareerCommands } from './career.js';
+import { initPartyCommands } from './party.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -26,4 +27,5 @@ export function initAllCommands(): void {
     initAffinityCommands();
     initMapCommands();
     initCareerCommands();
+    initPartyCommands();
 }

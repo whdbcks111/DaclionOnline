@@ -12,7 +12,9 @@
 
 `useHud()`의 설정 API는 `setVisible`, `setPosition`, `setAnchor`, `setPosUnit`, `setPosAnchor`, `setHudOpacity`, `setHudScale`, `resetPosition`이다. 퀵슬롯은 `addQuickSlot`, `removeQuickSlot`, `moveQuickSlot`, `updateQuickSlot`으로만 변경한다.
 
-`PlayerStatusHud`는 이름 옆에 `playerStats.level`을 표시하고, `playerStats.statusEffects`를 사용해 효과별 아이콘, 레벨, 반시계 방향 duration fill과 hover/focus 설명을 표시한다. 아이콘 URL은 서버가 보낸 key를 `/icons/{key}.png`로 해석하며 효과가 사라지면 다음 0.5초 HUD payload에서 목록에서도 제거된다.
+`PlayerStatusHud`는 이름 옆에 `playerStats.level`을 표시하고, `playerStats.statusEffects`를 사용해 작은 효과별 아이콘, 레벨, 반시계 방향 duration fill과 hover/focus/touch 설명을 표시한다. HUD wrapper는 기본적으로 pointer event를 차단하지만 상태효과 영역은 이를 명시적으로 다시 허용한다. 아이콘 URL은 서버가 보낸 key를 `/icons/{key}.png`로 해석하며 효과가 사라지면 다음 0.5초 HUD payload에서 목록에서도 제거된다.
+
+`PartyHud`는 nullable `playerStats.party`를 사용해 파티원별 레벨·생명력·정신력과 같은 장소 여부를 표시한다. 파티가 없으면 렌더링하지 않으며 HUD 설정 API로 표시·위치·크기를 조절한다. `Home.tsx`의 정보 공개 버튼은 서버 `informationMode` 이벤트만 상태 원본으로 사용한다.
 
 ## 채팅 UI API
 

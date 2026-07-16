@@ -17,6 +17,8 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 
 `Home.tsx`는 메시지 전송 후 입력 내용만 비우고 contenteditable의 포커스와 커서를 유지한다. 전송 버튼의 pointer down도 입력 포커스를 빼앗지 않으므로 모바일 가상 키보드가 매 전송마다 닫히거나 다시 열리며 깜빡이지 않는다.
 
+전송 버튼 옆의 공개/비공개 버튼은 플레이어별 런타임 정보 열람 모드를 `setInformationMode`로 변경한다. 같은 기능을 `/공개모드`, `/비공개모드`로도 사용할 수 있고 서버는 `informationMode`를 같은 계정의 모든 소켓에 동기화한다. 기본값은 비공개이며 마지막 연결 종료 또는 Player unload 때 초기화된다. `registerCommand({ information: true })` 명령은 공개 모드에서 명령 입력과 `sendBotMessageToUser` 결과를 현재 채널에 공개하고, 비공개 모드에서는 기존처럼 본인에게만 보낸다. 상태창·인벤토리·통계의 명시적 `공개/비공개` 인자는 해당 1회 실행에서 모드보다 우선한다. 조작·관리자 명령과 파티 초대 같은 민감한 결과는 정보 공개 모드의 영향을 받지 않는다.
+
 서버는 일반 메시지에서 `ActionType.CHAT`, 명령 입력과 버튼에서 `ActionType.COMMAND`를 검사한다. 상태효과 등 source key 제한이 남아 있으면 메시지/명령을 실행하지 않고 notification으로 안내한다. 스킬 메시지 트리거는 추가로 `ActionType.SKILL`을 SkillBook에서 검사한다.
 
 정식 명령 이름은 기존처럼 `/상태창` 형태로 실행한다. `registerCommand.aliases`에 등록된 값은 `/s`뿐 아니라 `s`, `s 공개`처럼 슬래시 없이 첫 단어로 입력해도 실행된다. 슬래시 없는 입력은 첫 단어 전체가 별칭과 정확히 일치할 때만 명령이며 `상태창`처럼 정식 이름만 쓰거나 별칭의 일부만 쓴 입력은 일반 채팅으로 남는다. 따라서 새 별칭은 일상 대화의 흔한 첫 단어와 충돌하지 않도록 정한다.
@@ -37,6 +39,7 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 | 분류 | 명령(별칭) | 역할 |
 | --- | --- | --- |
 | 일반 | `/도움말` (`help`) | 권한별 명령 목록. 구분선·인자·설명은 라이트/다크 테마별 text/background token으로 표시 |
+| 일반 | `/공개모드` (`publicmode`), `/비공개모드` (`privatemode`) | 이후 정보성 명령의 입력·결과 공개 범위를 전환하고 notification 표시 |
 | 일반 | `/랜덤` (`random`) | 두 정수 사이 난수 |
 | 일반 | `/속성표` (`affinity`) | 전체 화면 스크롤 UI에서 속성 아이콘 아래 공격/방어와 각 우세·열세·무효/취약·저항·면역을 계층별 한 줄로 표시 |
 | 일반 | `/지도` (`map`) | 상세보기의 전용 지도 컴포넌트에서 방문지와 인접 미방문지를 표시 |
@@ -53,6 +56,11 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 | 플레이어 | `/대상지정` (`target`, `t`) | 공격 없이 위치 오브젝트를 현재 스킬/공격 대상으로 지정 |
 | 플레이어 | `/공격` (`attack`, `a`) | 위치 내 Monster/Resource 타게팅/공격; 자동완성은 생존 대상 뒤에 원래 번호의 사망·파괴 대상을 배치 |
 | 플레이어 | `/스탯분배` (`stat`) | 가용 포인트 분배 |
+| 파티 | `/파티초대 대상` (`partyinvite`, `pi`) | 고유번호 또는 닉네임으로 60초 파티 초대 |
+| 파티 | `/파티수락` (`partyaccept`, `pa`), `/파티거절` (`partydecline`, `pd`) | 대기 중인 초대 처리 |
+| 파티 | `/파티정보` (`partyinfo`, `pinfo`) | 파티장·파티원 레벨·위치·HP/MP 표시 |
+| 파티 | `/파티나가기` (`partyleave`, `pl`), `/파티해산` (`partydisband`) | 본인 이탈 또는 파티장 전체 해산 |
+| 파티 | `/파티강퇴 대상` (`partykick`, `pk`) | 파티장이 고유번호 또는 닉네임으로 같은 파티원 강퇴 |
 | 진행 | `/통계` (`statistics`, `stats`) | 공개 통계 counter 표시 |
 | 스킬 | `/스킬목록` (`skilllist`, `sl`) | 표시 가능한 보유 스킬의 아이콘·레벨·발동/쿨다운 상태와 정보/사용 버튼 표시 |
 | 스킬 | `/스킬` (`skill`, `su`) | 보유 스킬을 이름으로 발동; 입력 메시지는 숨김 |

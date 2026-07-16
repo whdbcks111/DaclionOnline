@@ -3,6 +3,7 @@ import { getSession, getSessionByUserId } from "./login.js";
 import { parseChatMessage } from "../utils/chatParser.js";
 import { getChannelRoomKey, addToChannelHistory, addToAllChannelHistories, addToFilteredChannelHistory, getUserChannel, editMessageInHistory, deleteMessageFromHistory } from "./channel.js";
 import type { ChatMessage, ChatFlag, ChatNode, NotificationData } from "../../../shared/types.js";
+import { shouldPublishInformationOutput } from './informationVisibility.js';
 
 const BOT_USER_ID = 0;
 const BOT_NICKNAME = "Daclion System";
@@ -143,6 +144,15 @@ export function sendMessageToUser(userId: number, msg: ChatMessage, privateLabel
 
 /** 특정 유저에게만 봇 메시지 전송 (유저의 현재 채널로 범위 한정) */
 export function sendBotMessageToUser(userId: number, content: string | ChatNode[], privateLabel = true): void {
+    if (shouldPublishInformationOutput(userId)) {
+        sendBotMessageToChannel(getUserChannel(userId), content);
+        return;
+    }
+    sendMessageFiltered(id => id === userId, getUserChannel(userId), makeBotMessage(content), privateLabel);
+}
+
+/** 공개 정보 명령 문맥에서도 반드시 본인에게만 봇 메시지를 보낸다. */
+export function sendPrivateBotMessageToUser(userId: number, content: string | ChatNode[], privateLabel = true): void {
     sendMessageFiltered(id => id === userId, getUserChannel(userId), makeBotMessage(content), privateLabel);
 }
 

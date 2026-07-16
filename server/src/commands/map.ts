@@ -10,6 +10,7 @@ export function initMapCommands(): void {
         aliases: ['map'],
         description: '방문한 장소와 인접한 미방문 장소를 지도로 확인합니다.',
         showCommandUse: 'private',
+        information: true,
         handler(userId) {
             const player = getPlayerByUserId(userId);
             if (!player) return;

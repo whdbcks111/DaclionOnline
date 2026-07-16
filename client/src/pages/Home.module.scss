@@ -89,4 +89,35 @@
     button {
         white-space: nowrap;
     }
+
+    .visibilityButton {
+        min-width: clamp(3.6rem, 9vw, 4.5rem);
+        padding-inline: clamp(0.55rem, 1.8vw, 0.8rem);
+        border: 1px solid $color-border;
+        border-radius: $border-radius-sm;
+        transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .visibilityPrivate {
+        color: $color-text-secondary;
+        background: $color-bg-secondary;
+    }
+
+    .visibilityPublic {
+        color: $color-bg;
+        border-color: $color-primary;
+        background: $color-primary;
+    }
+}
+
+@media (max-width: $breakpoint-mobile) {
+    .chatInput {
+        gap: clamp(0.3rem, 1.5vw, 0.5rem);
+        padding-inline: clamp(0.35rem, 2vw, 0.6rem);
+
+        .chatInputField {
+            min-width: 0;
+            padding-inline: clamp(0.55rem, 3vw, 0.9rem);
+        }
+    }
 }

@@ -24,6 +24,7 @@ export function initShopCommands(): void {
         aliases: ['shop'],
         description: '현재 위치의 상점 정보를 확인합니다.',
         showCommandUse: 'hide',
+        information: true,
         handler(userId) {
             const ctx = getPlayerShop(userId);
             if (!ctx) {

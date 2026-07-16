@@ -35,6 +35,7 @@ export function initSkillCommands(): void {
         aliases: ['skilllist', 'sl'],
         description: '현재 표시 가능한 보유 스킬 목록을 확인합니다.',
         showCommandUse: 'hide',
+        information: true,
         handler(userId) {
             const player = getPlayerByUserId(userId);
             if (!player) return;
@@ -92,6 +93,7 @@ export function initSkillCommands(): void {
         aliases: ['skillinfo', 'si'],
         description: '보유한 스킬의 상세 정보를 확인합니다.',
         showCommandUse: 'hide',
+        information: true,
         args: [{
             name: '스킬이름',
             description: '확인할 스킬 이름',

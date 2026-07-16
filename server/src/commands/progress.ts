@@ -4,6 +4,7 @@ import {
     sendBotMessageFiltered,
     sendBotMessageToChannel,
     sendBotMessageToUser,
+    sendPrivateBotMessageToUser,
 } from '../modules/message.js';
 import { getPlayerByUserId } from '../modules/player.js';
 import { chat } from '../utils/chatBuilder.js';
@@ -13,6 +14,7 @@ export function initProgressCommands(): void {
         name: '통계',
         aliases: ['statistics', 'stats'],
         description: '누적 게임 통계를 확인합니다.',
+        information: true,
         args: [{
             name: '공개/비공개',
             description: '공개 여부를 결정합니다.',
@@ -36,14 +38,16 @@ export function initProgressCommands(): void {
             const channel = getUserChannel(userId);
             if (args[0] === '공개') {
                 sendBotMessageToChannel(channel, nodes);
-            } else {
-                sendBotMessageToUser(userId, nodes);
+            } else if (args[0] === '비공개') {
+                sendPrivateBotMessageToUser(userId, nodes);
                 sendBotMessageFiltered(
                     id => id !== userId,
                     channel,
                     chat().text('[ 통계 ]  비공개 정보입니다.').build(),
                     false,
                 );
+            } else {
+                sendBotMessageToUser(userId, nodes);
             }
         },
     });

@@ -33,6 +33,7 @@ function HomeContent() {
   const [currentChannel, setCurrentChannel] = useState<string | null>(null)
   const [channelList, setChannelList] = useState<ChannelInfo[]>([])
   const [dynamicCompletions, setDynamicCompletions] = useState<CompletionItem[]>([])
+  const [informationPublic, setInformationPublic] = useState(false)
   const inputRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const isComposing = useRef(false)
@@ -58,6 +59,7 @@ function HomeContent() {
       setMessages(prev => prev.filter(msg => msg.id !== id))
     }
     const onArgCompletions = (items: CompletionItem[]) => setDynamicCompletions(items)
+    const onInformationMode = (isPublic: boolean) => setInformationPublic(isPublic)
 
     socket.on('chatHistory', onChatHistory)
     socket.on('chatMessage', onChatMessage)
@@ -70,10 +72,12 @@ function HomeContent() {
     socket.on('editMessage', onEditMessage)
     socket.on('deleteMessage', onDeleteMessage)
     socket.on('argCompletions', onArgCompletions)
+    socket.on('informationMode', onInformationMode)
     socket.emit('requestChatHistory')
     socket.emit('requestCommandList')
     socket.emit('requestUserCount')
     socket.emit('requestChannelList')
+    socket.emit('requestInformationMode')
 
     return () => {
       socket.off('chatHistory', onChatHistory)
@@ -87,6 +91,7 @@ function HomeContent() {
       socket.off('editMessage', onEditMessage)
       socket.off('deleteMessage', onDeleteMessage)
       socket.off('argCompletions', onArgCompletions)
+      socket.off('informationMode', onInformationMode)
     }
   }, [socket, setPlayerStats])
 
@@ -316,6 +321,17 @@ function HomeContent() {
             }}
           />
           <button
+            type="button"
+            className={`${styles.visibilityButton} ${informationPublic ? styles.visibilityPublic : styles.visibilityPrivate}`}
+            aria-pressed={informationPublic}
+            title={`정보 열람 ${informationPublic ? '공개' : '비공개'}모드`}
+            onPointerDown={event => event.preventDefault()}
+            onClick={() => socket?.emit('setInformationMode', !informationPublic)}
+          >
+            {informationPublic ? '공개' : '비공개'}
+          </button>
+          <button
+            type="button"
             onPointerDown={event => event.preventDefault()}
             onClick={sendMessage}
           >전송</button>

@@ -1,5 +1,5 @@
 import { registerCommand } from "../modules/bot.js";
-import { sendBotMessageToUser, sendBotMessageToChannel, sendBotMessageFiltered } from "../modules/message.js";
+import { sendBotMessageToUser, sendBotMessageToChannel, sendBotMessageFiltered, sendPrivateBotMessageToUser } from "../modules/message.js";
 import { getUserChannel } from "../modules/channel.js";
 import { chat } from "../utils/chatBuilder.js";
 import { getPlayerByUserId } from "../modules/player.js";
@@ -67,6 +67,7 @@ export function initPlayerCommands(): void {
             { name: '공개/비공개', description: '공개 여부를 결정합니다.', completions: ['공개', '비공개'] },
         ],
         description: '플레이어 정보를 확인합니다.',
+        information: true,
         async handler(userId, args) {
             try {
                 const player = getPlayerByUserId(userId);
@@ -212,9 +213,11 @@ export function initPlayerCommands(): void {
                 const channel = getUserChannel(userId);
                 if (args[0] === '공개') {
                     sendBotMessageToChannel(channel, chatNode);
+                } else if (args[0] === '비공개') {
+                    sendPrivateBotMessageToUser(userId, chatNode);
+                    sendBotMessageFiltered(uid => uid !== userId, channel, chat().text('[ 상태창 ]  비공개 정보입니다.').build(), false);
                 } else {
                     sendBotMessageToUser(userId, chatNode);
-                    sendBotMessageFiltered(uid => uid !== userId, channel, chat().text('[ 상태창 ]  비공개 정보입니다.').build(), false);
                 }
             } catch (e) {
                 logger.error('상태창 명령어 처리 중 오류:', e);
@@ -227,6 +230,7 @@ export function initPlayerCommands(): void {
         name: '인벤토리',
         aliases: ['inv', 'i'],
         description: '인벤토리를 확인합니다.',
+        information: true,
         args: [
             { name: '공개/비공개', description: '공개 여부를 결정합니다.', completions: ['공개', '비공개'] },
         ],
@@ -270,9 +274,11 @@ export function initPlayerCommands(): void {
             const channel = getUserChannel(userId);
             if (args[0] === '공개') {
                 sendBotMessageToChannel(channel, b.build());
+            } else if (args[0] === '비공개') {
+                sendPrivateBotMessageToUser(userId, b.build());
+                sendBotMessageFiltered(uid => uid !== userId, channel, chat().text('[ 인벤토리 ]  비공개 정보입니다.').build(), false);
             } else {
                 sendBotMessageToUser(userId, b.build());
-                sendBotMessageFiltered(uid => uid !== userId, channel, chat().text('[ 인벤토리 ]  비공개 정보입니다.').build(), false);
             }
         },
     });

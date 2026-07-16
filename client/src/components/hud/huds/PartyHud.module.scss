@@ -1,0 +1,96 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/themes' as *;
+
+.hud {
+    width: clamp(13rem, 24vw, 18rem);
+    padding: clamp(0.45rem, 1.2vw, 0.7rem);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: $border-radius-md;
+    background: rgba(0, 0, 0, 0.58);
+    color: #f4f4f4;
+    font-family: $font-family-base;
+}
+
+.title {
+    margin-bottom: 0.35rem;
+    color: $color-secondary;
+    font-size: clamp(0.7rem, 1.8vw, 0.82rem);
+    font-weight: 700;
+}
+
+.members {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.35rem, 1vw, 0.55rem);
+}
+
+.member {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+}
+
+.remote {
+    opacity: 0.62;
+}
+
+.identity {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    gap: 0.3rem;
+    font-size: clamp(0.65rem, 1.8vw, 0.78rem);
+}
+
+.leader {
+    width: 0.8rem;
+    flex: 0 0 auto;
+    color: $color-secondary;
+}
+
+.name {
+    min-width: 0;
+    overflow: hidden;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.level,
+.distance {
+    flex: 0 0 auto;
+    font-size: 0.88em;
+}
+
+.level {
+    color: $color-secondary;
+}
+
+.distance {
+    margin-left: auto;
+    color: #c7c7c7;
+}
+
+.resourceRow {
+    display: grid;
+    grid-template-columns: 1.6rem minmax(3rem, 1fr) minmax(4.8rem, auto);
+    align-items: center;
+    gap: 0.3rem;
+    font-size: clamp(0.58rem, 1.6vw, 0.68rem);
+}
+
+.track {
+    min-width: 0;
+}
+
+.value {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.78;
+}
+
+@media (max-width: $breakpoint-mobile) {
+    .hud {
+        width: min(14rem, 70vw);
+    }
+}

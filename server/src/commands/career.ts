@@ -10,6 +10,7 @@ export function initCareerCommands(): void {
     registerCommand({
         name: '직업', aliases: ['career', 'job'], description: '현재 직업과 다음 전직 조건을 확인합니다.',
         showCommandUse: 'private',
+        information: true,
         handler(userId) {
             const player = getPlayerByUserId(userId);
             if (!player) return;
@@ -35,6 +36,7 @@ export function initCareerCommands(): void {
     registerCommand({
         name: '직업정보', aliases: ['careerinfo', 'ji'], description: '직업의 설명과 획득 스킬을 확인합니다.',
         showCommandUse: 'private',
+        information: true,
         args: [{
             name: '직업이름', description: '확인할 직업', required: true, isText: true,
             completions: (): CompletionItem[] => getAllJobs().map(job => ({ value: job.name, description: job.tier.label })),

@@ -11,11 +11,14 @@
 | Online | `setUserOnline`, `setUserOffline`, `isUserOnline`, `broadcastUserCount` | 사용자별 연결 수와 접속 인원 |
 | Player | `loadPlayerByUserId`, `unloadPlayerByUserId`, `getPlayerByUserId`, `getOnlinePlayers`, `fetchPlayerByUserId`, `saveAllPlayers` | Player 수명과 저장 |
 | Player registry | `registerOnlinePlayer`, `getOnlinePlayer`, `unregisterOnlinePlayer`, `getOnlinePlayerSnapshot`, `isOnlinePlayerAtLocation` | 내부 Map을 숨긴 온라인 객체 조회와 위치 필터 |
+| Player identity | `findOnlinePlayerByIdentity`, `getOnlinePlayerIdentitySnapshots` | 고유번호/정확한 닉네임 대상 조회와 자동완성 DTO |
 | HUD | `sendPlayerStats`, `sendLocationInfo` | 특정 사용자의 모든 소켓에 HUD payload 전송 |
-| Command | `registerCommand`, `handleCommand`, `isCommandAliasInput`, `getCommandList`, `getCommandListFiltered` | 명령 등록, 슬래시/슬래시 없는 별칭 판정·실행과 목록 |
+| Command | `registerCommand`, `handleCommand`, `isCommandAliasInput`, `getCommandList`, `getCommandListFiltered`, `setInformationModeForUser` | 명령 등록, 별칭 판정·실행, 정보성 명령 공개 모드와 목록 |
+| Information visibility | `set/is/clearInformationPublicMode`, `runInformationCommand`, `shouldPublishInformationOutput` | 사용자별 런타임 정보 공개 설정과 async 출력 문맥 |
+| Party | `partyManager.invite/accept/decline/leave/disband/kick/removeDisconnectedPlayer/getParty/getHudData/distributeMonsterExp`, `calculatePartyExpGrant` | 내부 Map을 숨긴 초대·구성·HUD·같은 장소 몬스터 경험치 공유 |
 | Channel | `getUserChannel`, `setUserChannel`, `getChannelRoomKey`, `getChannelHistory`, `getFilteredHistoryForUser` | room과 히스토리 상태 |
 | Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageFiltered`, `sendMessageToUser`, `sendPlayerTextToCurrentChannel` | 일반 메시지와 시스템이 생성한 플레이어 표시 메시지 전송 |
-| Bot message | `sendBotMessageToChannel`, `broadcastBotMessageAll`, `sendBotMessageFiltered`, `sendBotMessageToUser` | 파싱된 시스템 메시지 전송 |
+| Bot message | `sendBotMessageToChannel`, `broadcastBotMessageAll`, `sendBotMessageFiltered`, `sendBotMessageToUser`, `sendPrivateBotMessageToUser` | 정보 명령 문맥을 반영하거나 강제로 비공개인 시스템 메시지 전송 |
 | Notification | `broadcastNotification`, `sendNotificationFiltered`, `sendNotificationToUser` | 화면 알림 전송 |
 | Message mutation | `editMessage`, `deleteMessage` | 히스토리 수정 후 이벤트 브로드캐스트 |
 | Coroutine | `startCoroutine`, `Wait`, `tickCoroutines` | 게임 루프 기반 지연 작업 |
@@ -94,6 +97,7 @@
 - `name`, `aliases`, `description`: 목록/파싱/자동완성 메타데이터.
 - `permission`: 최소 권한, 기본 0. 실제 실행 시 서버가 검사한다.
 - `showCommandUse`: `show`는 채널, `private`는 본인, `hide`는 입력 메시지를 표시하지 않는다.
+- `information`: 정보 열람 명령 표시. 공개 모드에서는 `showCommandUse`보다 우선해 입력과 결과를 현재 채널에 공개한다.
 - `args`: `required`, `isText`, 정적/동적 `completions`를 지원한다. 한 명령에서 `isText`는 최대 한 개를 전제로 한다.
 - `handler(userId, args, raw, msg, permission)`: 검증된 명령 실행 진입점.
 

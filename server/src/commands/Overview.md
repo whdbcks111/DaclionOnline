@@ -2,7 +2,7 @@
 
 채팅에서 들어온 `/명령어` 또는 첫 단어가 등록된 별칭인 슬래시 없는 입력을 검증된 게임 동작으로 연결한다. 모든 명령은 `modules/bot.ts::registerCommand()`로 등록하고 `index.ts::initAllCommands()`가 분류별 초기화 함수를 호출한다.
 
-- `general.ts`: 도움말, 랜덤, 공지, 관리자 eval. 도움말의 구분선·인자·설명은 light/dark 공용 ChatNode 테마 token으로 출력한다.
+- `general.ts`: 도움말, 정보 열람 공개/비공개 모드, 랜덤, 공지, 관리자 eval. 도움말의 구분선·인자·설명은 light/dark 공용 ChatNode 테마 token으로 출력한다.
 - `player.ts`: 상태/인벤토리/아이템/장비/대상/공격/스탯. `/대상지정`은 공격 없이 `currentTarget`을 정하고, `/공격`은 통합 Location 오브젝트를 대상으로 `Player.performBasicAttack`을 호출한다. 양쪽 자동완성은 생존 대상을 먼저, 원래 번호를 유지한 사망·파괴 대상을 뒤에 표시한다. 상태창 맨 아래는 효과 아이콘·레벨·시간·hover 설명을, 장착 정보와 인벤토리는 `Item.image` 및 내구도 progress를 표시한다.
 - `location.ts`: Monster/Resource 통합 위치 조회, 오브젝트 상호작용, 개별/전체 바닥 아이템 줍기와 coroutine 이동. `/이동`은 `ActionType.LOCATION_TRAVEL` 제한을 검사하고 장소 ID·구분 기호 없는 이름·유일한 부분 이름을 허용하며, 잠긴 길을 실제 시도하면 공개 가능한 잠금 사유를 안내한다. `/위치`의 제압된 오브젝트는 붉은 상태를 표시한다.
 - `shop.ts`: 상점 조회, 구매, 판매.
@@ -15,5 +15,8 @@
 - `affinity.ts`: `/속성표(affinity)`에서 TagEffect 표시 snapshot을 아이콘이 포함된 전체 화면 스크롤 UI로 렌더링한다. 속성 아래 공격/방어를 1단계로, 우세·열세·무효/취약·저항·면역을 각각 별도 한 줄의 2단계로 렌더링한다.
 - `map.ts`: `/지도(map)`에서 플레이어별 방문 장소와 한 단계 인접 미방문 장소 snapshot을 `worldMap` 상세보기 메시지 노드로 전달한다.
 - `career.ts`: `/직업(job, career)` 현재 메인·서브·엘리트 상세 UI와 `/직업정보(ji)` 직업 마스터 정보·지급 스킬 UI.
+- `party.ts`: `/파티초대/수락/거절/정보/나가기/해산/강퇴` 진입점. 고유번호·닉네임 자동완성과 PartyManager 공개 API만 사용하며 구성 변경 알림은 당사자에게 비공개로 보낸다.
+
+도움말·상태창·인벤토리·통계·스킬/퀘스트/직업 정보·목록·상점·제작법·지도·속성표·파티정보는 `information: true`로 등록한다. 공개 모드에서는 입력과 결과가 현재 채널에 보이고, 조작 명령은 이 설정의 영향을 받지 않는다.
 
 명령 이름·인자·권한·자동완성·표시 방식이 바뀌면 이 문서와 [`docs/systems/chat-command.md`](../../../docs/systems/chat-command.md)를 갱신한다.

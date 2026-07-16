@@ -16,6 +16,8 @@
 | `requestChatHistory` | 없음 | 선택 | `modules/chat.ts` | `chatHistory`; 인증 시 private history와 HUD 데이터도 전송 |
 | `requestCommandList` | 없음 | 불필요 | `modules/bot.ts` | `commandList` |
 | `requestCompletions` | `raw: string` | 필요 | `modules/bot.ts` | 슬래시 명령과 슬래시 없는 별칭 입력의 동적 인자 후보 `argCompletions` |
+| `requestInformationMode` | 없음 | 필요 | `modules/bot.ts` | 현재 플레이어의 정보 공개 여부를 `informationMode`로 응답 |
+| `setInformationMode` | `isPublic: boolean` | 필요 | `modules/bot.ts` | 런타임 정보 공개 모드 변경, 같은 계정 소켓 동기화와 notification |
 | `requestUserCount` | 없음 | 불필요 | `modules/login.ts` | `userCount` |
 | `joinChannel` | `string \| null` | 필요 | `modules/chat.ts` | room 변경 후 `channelChanged`; `private_{userId}`는 본인만 |
 | `requestChannelList` | 없음 | 불필요 | `modules/chat.ts` | `channelList` |
@@ -42,7 +44,8 @@
 | `notification` | `NotificationData` | `modules/message.ts` | `components/Notification.tsx` |
 | `commandList` | `CommandInfo[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `argCompletions` | `CompletionItem[]` | `modules/bot.ts` | `pages/Home.tsx` |
-| `playerStats` | `PlayerStatsData` (현재 레벨·자원·공격 cooldown·아이콘/설명/남은 비율의 `statusEffects`) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` → `PlayerStatusHud` |
+| `playerStats` | `PlayerStatsData` (현재 레벨·자원·공격 cooldown·`statusEffects`, nullable 파티원 HP/MP `party`) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` → `PlayerStatusHud`/`PartyHud` |
+| `informationMode` | `isPublic: boolean` | `modules/bot.ts` | `pages/Home.tsx` 입력창 공개/비공개 전환 버튼 |
 | `locationInfo` | `LocationInfoData` (`objects`에 Monster/Resource 공통 체력 DTO) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` |
 | `userCount` | `UserCountData` | `modules/login.ts` | `pages/Home.tsx` |
 | `channelChanged` | `(channel, history)` | `modules/chat.ts` | `pages/Home.tsx` |

@@ -13,6 +13,7 @@ import type { TagId } from "../../../shared/tags.js";
 import { StatusEffectType } from "./StatusEffect.js";
 import SkillBook from "./SkillBook.js";
 import type { RuntimeSkillEntry, SkillActivationOutcome } from "./SkillBook.js";
+import { partyManager } from '../modules/party.js';
 
 /** 드롭 아이템 정보 */
 export interface DropInfo {
@@ -195,12 +196,18 @@ export default class Monster extends Entity {
             }
             const goldGained = this.rollGold();
             if (goldGained > 0) causePlayer.gold += goldGained;
-            const levelsGained = causePlayer.gainExp(this.expReward);
+            const expGrants = partyManager.distributeMonsterExp(causePlayer, this.expReward, this.locationId);
+            const killerGrant = expGrants.find(grant => grant.userId === causePlayer.userId);
+            const levelsGained = killerGrant?.levelsGained ?? [];
 
             const killMsg = chat()
                 .color('gold', b => b.text(`${this.name} 처치 완료!\n`))
                 .weight('bold', b => b.text('[ 보상 ]'))
-                .text(`\nEXP +${this.expReward}`);
+                .text(`\nEXP +${killerGrant?.amount ?? 0}`);
+
+            if ((killerGrant?.multiplier ?? 1) < 1) {
+                killMsg.color('red', b => b.text(` (${Math.round((killerGrant?.multiplier ?? 1) * 100)}% · 레벨 차이 ${killerGrant?.levelGap})`));
+            }
 
             if (goldGained > 0) {
                 killMsg.text(`\nGold +${goldGained}`);
@@ -221,6 +228,20 @@ export default class Monster extends Entity {
             }
 
             sendBotMessageToUser(causePlayer.userId, killMsg.build());
+
+            for (const grant of expGrants) {
+                if (grant.userId === causePlayer.userId) continue;
+                const shared = chat()
+                    .color('gold', b => b.text(`[ 파티 보상 ] ${this.name} 처치`))
+                    .text(`\nEXP +${grant.amount}`);
+                if (grant.multiplier < 1) {
+                    shared.color('red', b => b.text(` (${Math.round(grant.multiplier * 100)}% · 최고 레벨과 ${grant.levelGap} 차이)`));
+                }
+                if (grant.levelsGained.length > 0) {
+                    shared.text('\n').color('aqua', b => b.text(`레벨 업! Lv.${grant.levelsGained[grant.levelsGained.length - 1]}`));
+                }
+                sendBotMessageToUser(grant.userId, shared.build());
+            }
         }
 
         if (this.isOneShot) {

@@ -42,6 +42,7 @@ export function initCraftingCommands(): void {
         aliases: ['recipes'],
         description: '그동안 발견한 제작법을 확인합니다.',
         showCommandUse: 'hide',
+        information: true,
         handler(userId) {
             const player = getPlayerByUserId(userId);
             if (!player) return;

@@ -24,6 +24,23 @@ export function getOnlinePlayerSnapshot(): Player[] {
     return [...onlinePlayers.values()];
 }
 
+/** 고유번호 또는 대소문자를 무시한 정확한 닉네임으로 온라인 Player를 찾는다. */
+export function findOnlinePlayerByIdentity(input: string): Player | undefined {
+    const normalized = input.trim();
+    if (!normalized) return undefined;
+    const userId = Number(normalized.replace(/^#/, ''));
+    if (Number.isSafeInteger(userId) && userId > 0) return onlinePlayers.get(userId);
+    const nickname = normalized.toLocaleLowerCase('ko-KR');
+    return [...onlinePlayers.values()].find(player => player.name.toLocaleLowerCase('ko-KR') === nickname);
+}
+
+/** 파티 초대 등 사용자 선택 UI에 쓸 온라인 신원 DTO를 반환한다. */
+export function getOnlinePlayerIdentitySnapshots(excludeUserId?: number): { userId: number; nickname: string; level: number }[] {
+    return [...onlinePlayers.values()]
+        .filter(player => player.userId !== excludeUserId)
+        .map(player => ({ userId: player.userId, nickname: player.name, level: player.level }));
+}
+
 /** 특정 온라인 유저가 주어진 위치에 있는지 확인한다. */
 export function isOnlinePlayerAtLocation(userId: number, locationId: string): boolean {
     return onlinePlayers.get(userId)?.locationId === locationId;
