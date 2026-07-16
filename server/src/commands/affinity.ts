@@ -4,19 +4,22 @@ import { getTagEffectAffinitySnapshots } from '../models/TagEffect.js'
 import type { TagEffectDisplayRelation } from '../models/TagEffect.js'
 import { chat } from '../utils/chatBuilder.js'
 
-function appendRelations(
+function appendRelationLine(
     builder: ReturnType<typeof chat>,
     label: string,
     color: string,
     relations: readonly TagEffectDisplayRelation[],
 ): void {
-    if (relations.length === 0) return
-    builder.color(color, part => part.text(`${label} `))
+    builder.text('    ').color(color, part => part.text(`${label} `))
+    if (relations.length === 0) {
+        builder.color('$text-tertiary', part => part.text('없음')).text('\n')
+        return
+    }
     relations.forEach((relation, index) => {
         if (index > 0) builder.text(', ')
         builder.icon(relation.icon).text(`${relation.label} x${relation.modifier}`)
     })
-    builder.text('  ')
+    builder.text('\n')
 }
 
 export function initAffinityCommands(): void {
@@ -37,23 +40,15 @@ export function initAffinityCommands(): void {
                             .weight('bold', part => part.text(`${affinity.label} `))
                             .color('$text-tertiary', part => part.text(`(${affinity.tag})\n`))
 
-                        builder.text('  공격  ')
-                        const hasAttackRelation = affinity.attackAdvantages.length
-                            || affinity.attackDisadvantages.length
-                            || affinity.attackImmunities.length
-                        appendRelations(builder, '우세 →', '$warning', affinity.attackAdvantages)
-                        appendRelations(builder, '열세 →', '$danger', affinity.attackDisadvantages)
-                        appendRelations(builder, '무효 →', '$text-tertiary', affinity.attackImmunities)
-                        if (!hasAttackRelation) builder.color('$text-tertiary', part => part.text('중립'))
-                        builder.text('\n  방어  ')
+                        builder.color('$text-secondary', part => part.weight('bold', text => text.text('  공격\n')))
+                        appendRelationLine(builder, '├ 우세 →', '$warning', affinity.attackAdvantages)
+                        appendRelationLine(builder, '├ 열세 →', '$danger', affinity.attackDisadvantages)
+                        appendRelationLine(builder, '└ 무효 →', '$text-tertiary', affinity.attackImmunities)
 
-                        const hasDefenseRelation = affinity.defenseVulnerabilities.length
-                            || affinity.defenseResistances.length
-                            || affinity.defenseImmunities.length
-                        appendRelations(builder, '취약 ←', '$danger', affinity.defenseVulnerabilities)
-                        appendRelations(builder, '저항 ←', '$info', affinity.defenseResistances)
-                        appendRelations(builder, '면역 ←', '$text-tertiary', affinity.defenseImmunities)
-                        if (!hasDefenseRelation) builder.color('$text-tertiary', part => part.text('중립'))
+                        builder.color('$text-secondary', part => part.weight('bold', text => text.text('  방어\n')))
+                        appendRelationLine(builder, '├ 취약 ←', '$danger', affinity.defenseVulnerabilities)
+                        appendRelationLine(builder, '├ 저항 ←', '$info', affinity.defenseResistances)
+                        appendRelationLine(builder, '└ 면역 ←', '$text-tertiary', affinity.defenseImmunities)
                         builder.text('\n')
                     }
 

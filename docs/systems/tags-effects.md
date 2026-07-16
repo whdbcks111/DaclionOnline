@@ -52,7 +52,7 @@ Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만
 
 현재 마스터 테이블은 `server/src/data/tagEffects.ts`에 있다.
 
-같은 파일은 `/속성표`에 필요한 14개 속성과 무생물의 라벨 및 `affinities/*` 아이콘 key도 등록한다. `/속성표`는 내부 Map이나 태그 배열을 직접 읽지 않고 `getTagEffectAffinitySnapshots()`만 사용해 각 속성의 `공격: 우세·열세·무효`, `방어: 취약·저항·면역`을 구분한다. 실제 아이콘은 `client/public/icons/affinities/`의 128×128 투명 PNG다. 새 속성이나 표시 태그는 modifier 행, 표시 메타데이터, 아이콘을 같은 변경에 추가하고 property 태그 누락·PNG 규격 테스트를 통과해야 한다.
+같은 파일은 `/속성표`에 필요한 14개 속성과 무생물의 라벨 및 `affinities/*` 아이콘 key도 등록한다. `/속성표`는 내부 Map이나 태그 배열을 직접 읽지 않고 `getTagEffectAffinitySnapshots()`만 사용하며, 속성 아래 `공격/방어`, 그 아래 `우세·열세·무효/취약·저항·면역`을 각각 독립된 줄로 표시한다. 실제 아이콘은 `client/public/icons/affinities/`의 128×128 투명 PNG다. 새 속성이나 표시 태그는 modifier 행, 표시 메타데이터, 아이콘을 같은 변경에 추가하고 property 태그 누락·PNG 규격 테스트를 통과해야 한다.
 
 | 공격 속성 | 우세 1.5배 | 열세 0.5배 | 무효 0배 |
 | --- | --- | --- | --- |

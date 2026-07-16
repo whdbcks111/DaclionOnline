@@ -12,6 +12,6 @@
 - `crafting.ts`: `/제작법목록`의 발견 제작법·재료·시간·버튼 UI와 `/제작 <이름> [개수]` 파싱/시작. 명령 metadata는 이름과 선택 개수를 두 인자로 표시하되, 실행 시에는 이름 중간 공백을 보존하고 마지막 숫자 token만 개수로 해석한다.
 - `npc.ts`: `/대화 번호`, 선택지 버튼의 session 검증, `/대화종료`. 명령 입력은 숨기며 모든 상태 변경은 NpcDialogue 공개 API를 사용한다.
 - `quest.ts`: `/퀘스트목록(ql)`, `/퀘스트정보(qi)`, `/퀘스트포기(qa)`의 단계 목표·보상·상태 UI와 자동완성. QuestBook snapshot·명령형 API만 사용한다.
-- `affinity.ts`: `/속성표(affinity)`에서 TagEffect 표시 snapshot을 아이콘이 포함된 전체 화면 스크롤 UI로 렌더링한다. 단방향 관계를 공격 우세·열세·무효와 방어 취약·저항·면역으로 분리한다.
+- `affinity.ts`: `/속성표(affinity)`에서 TagEffect 표시 snapshot을 아이콘이 포함된 전체 화면 스크롤 UI로 렌더링한다. 속성 아래 공격/방어를 1단계로, 우세·열세·무효/취약·저항·면역을 각각 별도 한 줄의 2단계로 렌더링한다.
 
 명령 이름·인자·권한·자동완성·표시 방식이 바뀌면 이 문서와 [`docs/systems/chat-command.md`](../../../docs/systems/chat-command.md)를 갱신한다.
