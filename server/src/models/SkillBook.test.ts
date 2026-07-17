@@ -8,6 +8,8 @@ import { AttributeType } from './Attribute.js';
 import { PlayerProgress } from './Progress.js';
 import SkillBook from './SkillBook.js';
 import Inventory from './Inventory.js';
+import { Item } from './Item.js';
+import { getActiveProjectiles, removeProjectile } from './Projectile.js';
 import { getIO, initSocket } from '../modules/socket.js';
 import { getChannelHistory, getFilteredHistoryForUser } from '../modules/channel.js';
 import { createSession, removeSession } from '../modules/login.js';
@@ -16,6 +18,7 @@ import '../data/progress.js';
 import '../data/skills.js';
 import '../data/items.js';
 import '../data/jobs.js';
+import '../data/projectiles.js';
 import CareerProfile, { CareerProgressIds } from './Career.js';
 
 class TestSkillPlayer extends Entity {
@@ -185,6 +188,22 @@ test('몬스터 런타임 스킬은 성공적으로 발동해도 경험치를 �
 
     assert.equal(outcome.activated, true);
     assert.equal(monster.skills.get('seismic_crush')?.experience, 0);
+});
+
+test('마력탄 스킬은 지팡이용 마력 구체와 분리된 전용 투사체를 발사한다', () => {
+    const player = new TestSkillPlayer();
+    const target = new TestTarget();
+    player.progress.setState(CareerProgressIds.MAIN, 'career:mage');
+    player.equipment.equip('mainHand', new Item('apprentice_staff', 1, null, null), player.attribute);
+    player.currentTarget = target;
+    player.skills.grant('magic_bolt', 'test');
+
+    const outcome = player.skills.activateByInput('마력탄');
+    const projectile = getActiveProjectiles().find(candidate => candidate.owner === player);
+
+    assert.equal(outcome.activated, true);
+    assert.equal(projectile?.name, '마력탄');
+    if (projectile) removeProjectile(projectile);
 });
 
 test('버프 스킬은 시전 메시지와 효과 피드백을 모두 본인에게만 남긴다', () => {

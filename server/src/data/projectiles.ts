@@ -23,3 +23,15 @@ defineProjectileData({
     tags: [],
     baseAttribute: { magicPen: 0, critRate: 0 },
 });
+
+// 마법사 기본 스킬 전용 투사체. 지팡이 기본 공격용 마력 구체와 독립적으로 조정한다.
+defineProjectileData({
+    id: 'magic_bolt',
+    name: '마력탄',
+    damageType: 'magic',
+    travelTime: 0.45,
+    damageMultiplier: 1,
+    damageBonus: 0,
+    tags: [],
+    baseAttribute: { magicPen: 0, critRate: 0 },
+});

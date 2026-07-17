@@ -550,7 +550,7 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.mage), weaponRequirement: weaponRequirement('지팡이를 장착해야 합니다.', GameTags.WEAPON_STAFF),
     canActivate: simpleCheck(10), onStart: context => {
         spend(context, 10);
-        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 165, 13) / 100);
+        projectileAttack(context, 'magic_bolt', percentByLevel(context.skill.level, 165, 13) / 100);
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
 });
 
