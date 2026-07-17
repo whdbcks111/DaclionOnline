@@ -19,6 +19,19 @@ const INITIAL_STATE: FishingSimulationState = {
   success: false,
 }
 
+function clampGauge(value: number): number {
+  return Math.max(0, Math.min(1, value))
+}
+
+/** 낮을수록 빨강, 중간은 초록, 성공에 가까울수록 파랑인 현재값 단색. */
+function getGaugeColor(value: number): string {
+  const gauge = clampGauge(value)
+  const hue = gauge <= 0.65
+    ? 4 + (gauge / 0.65) * 126
+    : 130 + ((gauge - 0.65) / 0.35) * 80
+  return `hsl(${hue.toFixed(0)} 68% 48%)`
+}
+
 export default function MiniGameOverlay() {
   const { socket } = useSocket()
   const [game, setGame] = useState<MiniGameStartData | null>(null)
@@ -142,6 +155,8 @@ export default function MiniGameOverlay() {
 
   if (!game) return null
   const config = game.config
+  const gauge = clampGauge(state.gauge)
+  const gaugePercent = Math.floor(gauge * 100)
   const netStyle = {
     left: `${state.netX}%`,
     top: `${state.netY}%`,
@@ -160,9 +175,16 @@ export default function MiniGameOverlay() {
           </div>
           <p>WASD · 방향키 · 모바일 조이스틱</p>
         </header>
-        <div className={styles.gauge} aria-label={`포획 게이지 ${Math.round(state.gauge * 100)}%`}>
-          <span style={{ width: `${state.gauge * 100}%` }} />
-          <b>{Math.round(state.gauge * 100)}%</b>
+        <div
+          className={styles.gauge}
+          role="progressbar"
+          aria-label="포획 게이지"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={gaugePercent}
+        >
+          <span style={{ transform: `scaleX(${gauge})`, backgroundColor: getGaugeColor(gauge) }} />
+          <b>{gaugePercent}%</b>
         </div>
         <div className={styles.board}>
           <div className={`${styles.net} ${state.caught ? styles.caught : ''}`} style={netStyle} />

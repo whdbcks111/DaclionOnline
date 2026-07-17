@@ -41,7 +41,13 @@
   border: 1px solid $color-border;
   border-radius: 999px;
   box-shadow: inset 0 .12rem .3rem rgb(0 0 0 / 28%);
-  > span { display: block; height: 100%; background: linear-gradient(90deg, #39b98a, #8be26e); transition: width .08s linear; }
+  > span {
+    position: absolute;
+    inset: 0;
+    transform-origin: left center;
+    transition: transform .06s linear, background-color .12s linear;
+    will-change: transform, background-color;
+  }
   > b { position: absolute; inset: 0; display: grid; place-items: center; color: white; font-size: .75rem; text-shadow: 0 1px 2px black; }
 }
 

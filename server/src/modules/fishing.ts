@@ -1,5 +1,5 @@
 import { AttributeType } from '../models/Attribute.js';
-import { FishRarity, rollFish, rollFishRarity, rollFishingExp } from '../models/Fishing.js';
+import { FishRarity, rollFish, rollFishRarity, rollFishingExp, rollFishingWaitSeconds } from '../models/Fishing.js';
 import { getItemData } from '../models/Item.js';
 import { getLocation } from '../models/Location.js';
 import type Player from '../models/Player.js';
@@ -33,10 +33,6 @@ export interface StartFishingResult {
 }
 
 const fishingByUser = new Map<number, FishingState>();
-
-function randomBetween(min: number, max: number): number {
-    return min + Math.random() * (max - min);
-}
 
 function normalizeShape(value: unknown): FishingCaptureShape {
     return value === 'circle' || value === 'rectangle' || value === 'square' ? value : 'circle';
@@ -181,7 +177,7 @@ export function startFishing(player: Player): StartFishingResult {
     const netSize = Math.max(8, Math.min(38, player.attribute.get(AttributeType.FISHING_NET_SIZE)));
     const netSpeed = Math.max(12, Math.min(80, player.attribute.get(AttributeType.FISHING_NET_SPEED)));
     const initialGauge = Math.max(0.2, Math.min(0.8, player.attribute.get(AttributeType.FISHING_GAUGE_START)));
-    const waitSeconds = Math.max(1.5, randomBetween(4, 10) / biteSpeed);
+    const waitSeconds = rollFishingWaitSeconds(biteSpeed);
     if (!player.equipment.consumeEquippedItem('offHand', 0, player.attribute)) {
         return { ok: false, message: '장착한 미끼를 소비하지 못했습니다.' };
     }
