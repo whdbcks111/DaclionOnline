@@ -62,19 +62,33 @@ export function sendBotMessageToChannel(channel: string | null, content: string 
     sendMessageToChannel(makeBotMessage(content), channel);
 }
 
-/** 시스템이 플레이어의 실제 채팅처럼 현재 채널에 짧은 텍스트를 전송한다. */
-export function sendPlayerTextToCurrentChannel(userId: number, content: string): boolean {
+function makePlayerTextMessage(userId: number, content: string): ChatMessage | undefined {
     const session = getSessionByUserId(userId);
-    if (!session) return false;
+    if (!session) return undefined;
     const flags = getFlagsForPermission(session.permission);
-    sendMessageToChannel({
+    return {
         userId,
         nickname: session.nickname,
         profileImage: session.profileImage,
         flags: flags.length > 0 ? flags : undefined,
         content: [{ type: 'text', text: content }],
         timestamp: Date.now(),
-    }, getUserChannel(userId));
+    };
+}
+
+/** 시스템이 플레이어의 실제 채팅처럼 현재 채널에 짧은 텍스트를 전송한다. */
+export function sendPlayerTextToCurrentChannel(userId: number, content: string): boolean {
+    const message = makePlayerTextMessage(userId, content);
+    if (!message) return false;
+    sendMessageToChannel(message, getUserChannel(userId));
+    return true;
+}
+
+/** 플레이어 표시 메시지를 현재 채널에서 해당 플레이어 본인에게만 전송한다. */
+export function sendPrivatePlayerTextToCurrentChannel(userId: number, content: string): boolean {
+    const message = makePlayerTextMessage(userId, content);
+    if (!message) return false;
+    sendMessageFiltered(id => id === userId, getUserChannel(userId), message);
     return true;
 }
 

@@ -17,7 +17,7 @@ import { emitGameEvent, GameEventIds } from './GameEvent.js';
 import {
     sendBotMessageToUser,
     sendNotificationToUser,
-    sendPlayerTextToCurrentChannel,
+    sendPrivatePlayerTextToCurrentChannel,
     sendPrivateBotMessageToUser,
 } from '../modules/message.js';
 import { chat } from '../utils/chatBuilder.js';
@@ -335,7 +335,7 @@ export default class SkillBook {
 
         const player = this.getPlayerOwner();
         if (player && skill.data.activationMessage) {
-            sendPlayerTextToCurrentChannel(player.userId, skill.format(skill.data.activationMessage, owner));
+            sendPrivatePlayerTextToCurrentChannel(player.userId, skill.format(skill.data.activationMessage, owner));
         }
 
         let startResult: SkillStartResult | void;
