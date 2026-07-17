@@ -204,3 +204,33 @@ test('자원은 target이 있어도 스스로 공격하지 않는다', () => {
     assert.equal(target.life, target.maxLife);
     assert.equal(target.lastDamageCause, null);
 });
+
+test('바닥 아이템은 인스턴스 상태가 같을 때 최대 스택까지 병합된다', () => {
+    defineItem({
+        id: 'test_floor_stack',
+        name: '시험 묶음',
+        description: '',
+        category: '재료',
+        weight: 0,
+        stackable: true,
+        maxStack: 10,
+        baseMetadata: null,
+        onUse: null,
+        equipSlot: null,
+        modifiers: null,
+        baseDurability: null,
+        tags: [],
+    });
+    const location = new Location({
+        id: 'test_floor_stack_location', name: '바닥 시험', zoneType: 'normal',
+        x: 0, y: 0, z: 0, npcIds: [], objects: [], connections: [], tags: [],
+    });
+    const snapshot = { itemDataId: 'test_floor_stack', count: 7, durability: null, metadataDelta: null, tags: [] };
+
+    location.addDroppedItem(snapshot);
+    location.addDroppedItem({ ...snapshot, count: 6 });
+    location.addDroppedItem({ ...snapshot, count: 2, metadataDelta: { quality: 'special' } });
+
+    assert.deepEqual(location.getDroppedItems().map(item => item.count), [10, 3, 2]);
+    assert.deepEqual(location.getDroppedItems()[2].metadataDelta, { quality: 'special' });
+});

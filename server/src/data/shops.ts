@@ -21,6 +21,22 @@ defineShop({
             restockTime: 30,
         },
         {
+            label: '여행자 빵',
+            create: () => ({ itemDataId: 'traveler_bread', count: 1 }),
+            count: 1,
+            price: 6,
+            stock: 30,
+            restockTime: 20,
+        },
+        {
+            label: '맑은 샘물',
+            create: () => ({ itemDataId: 'fresh_water', count: 1 }),
+            count: 1,
+            price: 5,
+            stock: 30,
+            restockTime: 20,
+        },
+        {
             label: '낡은 검',
             create: () => ({ itemDataId: 'old_sword', count: 1 }),
             count: 1,

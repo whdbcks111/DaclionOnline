@@ -5,6 +5,8 @@ import Entity from '../models/Entity.js';
 import { getAllLocations, getLocation, normalizeLocationInput, reloadAllLocations } from '../models/Location.js';
 import { getAllMonsterData, getMonsterData } from '../models/Monster.js';
 import { getResourceData } from '../models/Resource.js';
+import { getItemData } from '../models/Item.js';
+import { getShop } from '../models/Shop.js';
 import type { LocationData } from '../../../shared/types.js';
 import './items.js';
 import './skills.js';
@@ -12,6 +14,7 @@ import './monsters.js';
 import './resources.js';
 import './npcs.js';
 import './locations.js';
+import './shops.js';
 import { rollTreasureReward } from './resources.js';
 
 const locations = JSON.parse(
@@ -133,4 +136,24 @@ test('보물상자는 1~2시간 쿨타임과 가중치 기반 골드·아이템 
     const rare = rollTreasureReward(() => values.shift() ?? 0);
     assert.equal(rare.itemDataId, 'diamond');
     assert.equal(rare.itemCount, 1);
+});
+
+test('잡화점은 배고픔과 수분을 회복하는 음식과 음료를 판매한다', () => {
+    const bread = getItemData('traveler_bread');
+    const water = getItemData('fresh_water');
+    const store = getShop('general_store');
+
+    assert.equal(bread?.onUse, 'restore_survival');
+    assert.equal(bread?.baseMetadata?.hunger, 35);
+    assert.equal(water?.onUse, 'restore_survival');
+    assert.equal(water?.baseMetadata?.thirst, 40);
+    assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === 'traveler_bread'));
+    assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === 'fresh_water'));
+
+    for (const id of ['traveler_bread', 'fresh_water']) {
+        const png = readFileSync(new URL(`../../../client/public/icons/items/${id}.png`, import.meta.url));
+        assert.equal(png.readUInt32BE(16), 128);
+        assert.equal(png.readUInt32BE(20), 128);
+        assert.equal(png[25], 6, `${id} must be RGBA`);
+    }
 });

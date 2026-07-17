@@ -341,6 +341,18 @@ export default abstract class Entity implements TagReadable {
         return this.mentality;
     }
 
+    restoreHunger(rawAmount: number): number {
+        if (!Number.isFinite(rawAmount) || rawAmount < 0) throw new Error('Hunger recovery must be non-negative');
+        this.hungry = Math.min(this.maxHungry, this.hungry + rawAmount);
+        return this.hungry;
+    }
+
+    restoreThirst(rawAmount: number): number {
+        if (!Number.isFinite(rawAmount) || rawAmount < 0) throw new Error('Thirst recovery must be non-negative');
+        this.thirsty = Math.min(this.maxThirsty, this.thirsty + rawAmount);
+        return this.thirsty;
+    }
+
     /** 능력치에 따라 배고픔과 수분을 감소시킨다. 플레이어 생존 틱에서 호출한다. */
     depleteSurvivalNeeds(dt: number): void {
         if (!Number.isFinite(dt) || dt < 0) {
@@ -594,7 +606,15 @@ export default abstract class Entity implements TagReadable {
         this._maxAttackCooldown = 1 / Math.max(0.01, attackSpeed);
         this._attackCooldown = this._maxAttackCooldown;
         if (consumeMainHandDurability) {
-            this.equipment.decreaseItemDurability(EquipSlotType.MAIN_HAND.key, 0, 1);
+            const weapon = this.equipment.getEquipped(EquipSlotType.MAIN_HAND.key, 0);
+            const durability = this.equipment.decreaseItemDurability(EquipSlotType.MAIN_HAND.key, 0, 1);
+            if (weapon && durability === 0 && this.playerUserId !== undefined) {
+                sendNotificationToUser(this.playerUserId, {
+                    key: `item-broken:${weapon.itemDataId}`,
+                    message: `${weapon.name}의 내구도가 다해 파괴되었습니다.`,
+                    length: 3000,
+                });
+            }
         }
     }
 
@@ -813,6 +833,8 @@ export default abstract class Entity implements TagReadable {
         this.isDead = false;
         this.deathTimer = 0;
         this.life = this.maxLife;
+        this.hungry = this.maxHungry;
+        this.thirsty = this.maxThirsty;
         this.currentTarget = null;
         this.lastDamageCause = null;
     }

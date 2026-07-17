@@ -340,7 +340,7 @@ export function initPlayerCommands(): void {
     registerCommand({
         name: '버리기',
         aliases: ['drop', 'q'],
-        description: '아이템을 1개 현재 장소에 버립니다.',
+        description: '아이템을 지정한 개수만큼 현재 장소에 버립니다.',
         showCommandUse: 'show',
         args: [
             { name: '슬롯ID', description: '버릴 아이템 인벤토리 슬롯 ID', required: true,
@@ -353,6 +353,7 @@ export function initPlayerCommands(): void {
                     }));
                 },
             },
+            { name: '개수', description: '버릴 개수 (기본 1)' },
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
@@ -363,12 +364,26 @@ export function initPlayerCommands(): void {
                 return;
             }
 
-            const idx = parseInt(args[0], 10) - 1;
-            if (isNaN(idx)) return;
+            if (!/^\d+$/.test(args[0] ?? '')) {
+                sendBotMessageToUser(userId, '사용법: /버리기 <슬롯ID> [개수]');
+                return;
+            }
+            const idx = Number(args[0]) - 1;
 
             const item = player.inventory.getItemByIndex(idx);
             if (!item) {
                 sendBotMessageToUser(userId, '인벤토리에 해당 아이템이 없습니다.');
+                return;
+            }
+
+            const countInput = args[1] ?? '1';
+            if (!/^\d+$/.test(countInput) || Number(countInput) <= 0) {
+                sendBotMessageToUser(userId, '버릴 개수는 1 이상의 정수여야 합니다.');
+                return;
+            }
+            const count = Number(countInput);
+            if (!Number.isSafeInteger(count) || count > item.count) {
+                sendBotMessageToUser(userId, `버릴 수량이 부족합니다. (보유 ${item.count}개)`);
                 return;
             }
 
@@ -379,12 +394,15 @@ export function initPlayerCommands(): void {
             }
 
             const itemName = item.name;
-            const snapshot = item.snapshot(1);
+            const snapshot = item.snapshot(count);
 
-            player.inventory.removeItem(item.id, 1);
+            if (!player.inventory.removeItemInstance(item, count)) {
+                sendBotMessageToUser(userId, '아이템을 버리지 못했습니다. 다시 시도해주세요.');
+                return;
+            }
             location.addDroppedItem(snapshot);
 
-            sendBotMessageToUser(userId, `${itemName}을(를) 버렸습니다.`);
+            sendBotMessageToUser(userId, `${itemName} x${count}을(를) 버렸습니다.`);
         },
     });
 

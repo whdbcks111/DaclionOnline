@@ -43,6 +43,10 @@ export default class Inventory {
 
     private track(item: Item, state: ItemState): void {
         const markModified = () => {
+            if (item.isBroken) {
+                this.removeItemInstance(item, item.count);
+                return;
+            }
             if (this._states.get(item) === ItemState.Clean) this._states.set(item, ItemState.Modified);
             this.notifyChange();
         };
@@ -52,6 +56,7 @@ export default class Inventory {
         item.setPersistentChangeHandler(markModified);
         this._items.push(item);
         this._states.set(item, state);
+        if (item.isBroken) this.removeItemInstance(item, item.count);
     }
 
     // -- Getters --
@@ -257,7 +262,8 @@ export default class Inventory {
         let addedWeight = 0;
         for (const snapshot of snapshots) {
             const data = getItemData(snapshot.itemDataId);
-            if (!data || snapshot.count <= 0) return false;
+            if (!data || snapshot.count <= 0
+                || (data.baseDurability !== null && snapshot.durability !== null && snapshot.durability <= 0)) return false;
             addedWeight += data.weight * snapshot.count;
         }
         return this.currentWeight + addedWeight <= this._maxWeight;

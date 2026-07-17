@@ -11,6 +11,7 @@ import {
 import { defineTagEffectModifier } from './TagEffect.js';
 import type { TagId } from '../../../shared/tags.js';
 import { ActionType } from './Action.js';
+import { AttributeType } from './Attribute.js';
 
 class TestStatusEntity extends Entity {
     override readonly name: string;
@@ -19,6 +20,10 @@ class TestStatusEntity extends Entity {
         super(1, 0, 'status_test', { maxLife }, Equipment.createEmpty(), undefined, tags);
         this.name = name;
     }
+}
+
+class TestSurvivalPlayer extends TestStatusEntity {
+    override get isPlayer(): boolean { return true; }
 }
 
 let starts = 0;
@@ -208,4 +213,44 @@ test('마비독 earlyUpdate 제한은 source별로 한 tick만 유지되고 다�
     assert.equal(living.releaseActionDisableSource('test:combined'), true);
     assert.equal(living.canPerformAction(ActionType.SKILL), true);
     assert.equal(living.canPerformAction(ActionType.MOVEMENT), true);
+});
+
+test('공복과 갈증은 상태효과로 생명력 재생을 막고 합산 60초 고갈 피해를 준다', () => {
+    const target = new TestSurvivalPlayer('생존 대상', [GameTags.TRAIT_LIVING], 600);
+    target.life = 300;
+    target.hungry = 0;
+    target.thirsty = 0;
+    target.attribute.addModifiers([{ attribute: 'lifeRegen', op: 'add', value: 100, source: 'test:regen' }]);
+
+    target.applyStatusEffect(StatusEffectType.HUNGER, 1000, 1);
+    target.applyStatusEffect(StatusEffectType.THIRST, 1000, 1);
+    assert.equal(target.attribute.get(AttributeType.LIFE_REGEN), 0);
+
+    target.earlyUpdate(1);
+    assert.equal(target.life, 290);
+    assert.equal(target.hasStatusEffect(StatusEffectType.HUNGER), true);
+    assert.equal(target.hasStatusEffect(StatusEffectType.THIRST), true);
+
+    target.restoreHunger(10);
+    target.removeStatusEffect(StatusEffectType.HUNGER);
+    assert.equal(target.attribute.get(AttributeType.LIFE_REGEN), 0);
+    target.restoreThirst(10);
+    target.removeStatusEffect(StatusEffectType.THIRST);
+    assert.equal(target.attribute.get(AttributeType.LIFE_REGEN), 101);
+});
+
+test('공복 상태가 60초 지속되면 레벨과 생명력 고갈 속도가 상승한다', () => {
+    const target = new TestSurvivalPlayer('장기 공복 대상', [GameTags.TRAIT_LIVING], 600);
+    target.hungry = 0;
+    const effect = target.applyStatusEffect(StatusEffectType.HUNGER, 1000, 1).effect!;
+
+    target.updateStatusEffects(59);
+    target.life = target.maxLife;
+    target.updateStatusEffects(1);
+
+    assert.equal(effect.level, 2);
+    assert.equal(effect.getCalculatedField('damagePercent', target), 2.08);
+    const before = target.life;
+    target.updateStatusEffects(1);
+    assert.equal(before - target.life, 12.5);
 });

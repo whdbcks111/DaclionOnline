@@ -15,6 +15,7 @@ import { PlayerProgress } from "./Progress.js";
 import SkillBook from "./SkillBook.js";
 import { updateCraftingRecipeDiscovery } from "./Crafting.js";
 import { DialogueEndReason, endNpcDialogue } from "./NpcDialogue.js";
+import { StatusEffectRemovalReason, StatusEffectType } from './StatusEffect.js';
 import QuestBook from './QuestBook.js';
 import { markLocationVisited } from './WorldMap.js';
 import CareerProfile from './Career.js';
@@ -171,7 +172,10 @@ export default class Player extends Entity {
 
     override earlyUpdate(dt: number): void {
         super.earlyUpdate(dt);
-        this.depleteSurvivalNeeds(dt);
+        if (!this.isDefeated) {
+            this.depleteSurvivalNeeds(dt);
+            this.syncSurvivalStatusEffects();
+        }
         if (!getLocation(this._locationId)) {
             const respawn = getRespawnLocation();
             if (respawn) this.locationId = respawn.id;
@@ -196,6 +200,18 @@ export default class Player extends Entity {
                 });
             }
         }
+    }
+
+    private syncSurvivalStatusEffects(): void {
+        const sync = (type: StatusEffectType, depleted: boolean) => {
+            if (depleted) {
+                if (!this.hasStatusEffect(type)) this.applyStatusEffect(type, 86_400, 1);
+            } else if (this.hasStatusEffect(type)) {
+                this.removeStatusEffect(type, StatusEffectRemovalReason.INVALID_TARGET);
+            }
+        };
+        sync(StatusEffectType.HUNGER, this.hungry <= 0);
+        sync(StatusEffectType.THIRST, this.thirsty <= 0);
     }
 
     override update(dt: number): void {

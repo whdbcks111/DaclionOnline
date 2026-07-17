@@ -6,6 +6,7 @@ import type { LocationData, LocationObjectSpawnInfo, ConnectionInfo, ZoneType } 
 import logger from "../utils/logger.js";
 import { TagCollection, normalizeTags } from "../../../shared/tags.js";
 import type { TagReadable } from "../../../shared/tags.js";
+import { canStackItemSnapshots, getItemData } from "./Item.js";
 import type { ItemSnapshot } from "./Item.js";
 import NPC, { normalizeNpcId } from "./NPC.js";
 
@@ -139,12 +140,34 @@ export default class Location implements TagReadable {
     hasTag(tag: string): boolean { return this.tags.hasTag(tag); }
 
     addDroppedItem(item: ItemSnapshot): void {
-        this._droppedItems.push({
-            ...item,
-            metadataDelta: item.metadataDelta ? { ...item.metadataDelta } : null,
-            tags: [...item.tags],
-            droppedAt: Date.now(),
-        });
+        if (!Number.isSafeInteger(item.count) || item.count <= 0) return;
+        const data = getItemData(item.itemDataId);
+        const stackable = data?.stackable === true;
+        const maxStack = stackable ? Math.max(1, data.maxStack) : 1;
+        let remaining = item.count;
+
+        if (stackable) {
+            for (const dropped of this._droppedItems) {
+                if (!canStackItemSnapshots(dropped, item)) continue;
+                const added = Math.min(remaining, maxStack - dropped.count);
+                if (added <= 0) continue;
+                dropped.count += added;
+                remaining -= added;
+                if (remaining === 0) return;
+            }
+        }
+
+        while (remaining > 0) {
+            const count = Math.min(remaining, maxStack);
+            this._droppedItems.push({
+                ...item,
+                count,
+                metadataDelta: item.metadataDelta ? { ...item.metadataDelta } : null,
+                tags: [...item.tags],
+                droppedAt: Date.now(),
+            });
+            remaining -= count;
+        }
     }
 
     pickupItem(index: number): DroppedItem | null {

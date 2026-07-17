@@ -81,6 +81,7 @@ interface EquipEntry {
 export default class Equipment implements TagReadable {
     readonly playerId: number;
     private _slots = new Map<string, EquipEntry>();
+    private ownerAttribute?: Attribute;
 
     private constructor(playerId: number) {
         this.playerId = playerId;
@@ -88,6 +89,10 @@ export default class Equipment implements TagReadable {
 
     private setEntry(key: string, entry: EquipEntry): void {
         const markModified = () => {
+            if (entry.item.isBroken) {
+                this.breakEntry(entry);
+                return;
+            }
             if (entry.state === EquipState.Clean) entry.state = EquipState.Modified;
         };
         entry.item.tags.setPersistentChangeHandler(() => {
@@ -95,6 +100,15 @@ export default class Equipment implements TagReadable {
         });
         entry.item.setPersistentChangeHandler(markModified);
         this._slots.set(key, entry);
+    }
+
+    private breakEntry(entry: EquipEntry): boolean {
+        const key = slotKey(entry.slot, entry.slotIndex);
+        if (this._slots.get(key) !== entry || entry.state === EquipState.Deleted) return false;
+        this.ownerAttribute?.removeBySource(modSource(entry.slot, entry.slotIndex));
+        if (entry.state === EquipState.New) this._slots.delete(key);
+        else entry.state = EquipState.Deleted;
+        return true;
     }
 
     /** DB 연동 없이 인메모리 전용 Equipment 생성 (Monster 등) */
@@ -193,7 +207,8 @@ export default class Equipment implements TagReadable {
     /** 아이템 장착. 성공 시 true. slotIndex 미지정 시 빈 슬롯 자동 탐색 (accessory) */
     equip(slot: EquipSlot, item: Item, attribute: Attribute, slotIndex?: number): boolean {
         const data = getItemData(item.itemDataId);
-        if (!data) return false;
+        if (!data || item.isBroken) return false;
+        this.ownerAttribute = attribute;
         if (data.equipSlot !== slot) return false;
 
         const max = SLOT_MAX[slot];
@@ -240,7 +255,8 @@ export default class Equipment implements TagReadable {
     /** 아이템 장착 (슬롯이 가득 찰 경우 마지막 장착 아이템을 해제 후 장착). 해제된 아이템 반환 (빈 슬롯이었으면 null, 유효하지 않으면 undefined) */
     equipSwap(slot: EquipSlot, item: Item, attribute: Attribute, targetSlotIndex?: number): Item | null | undefined {
         const data = getItemData(item.itemDataId);
-        if (!data || data.equipSlot !== slot) return undefined;
+        if (!data || data.equipSlot !== slot || item.isBroken) return undefined;
+        this.ownerAttribute = attribute;
 
         const max = SLOT_MAX[slot];
         let useIndex: number;
@@ -287,6 +303,7 @@ export default class Equipment implements TagReadable {
 
     /** 아이템 해제. 해제된 Item 반환 (인벤토리 복귀용). 없으면 null */
     unequip(slot: EquipSlot, slotIndex: number, attribute: Attribute): Item | null {
+        this.ownerAttribute = attribute;
         const key = slotKey(slot, slotIndex);
         const entry = this._slots.get(key);
         if (!entry || entry.state === EquipState.Deleted) return null;
@@ -310,8 +327,13 @@ export default class Equipment implements TagReadable {
 
     /** 모든 장착 아이템의 modifier를 attribute에 적용 */
     applyModifiers(attribute: Attribute): void {
-        for (const entry of this._slots.values()) {
+        this.ownerAttribute = attribute;
+        for (const entry of [...this._slots.values()]) {
             if (entry.state === EquipState.Deleted) continue;
+            if (entry.item.isBroken) {
+                this.breakEntry(entry);
+                continue;
+            }
 
             const data = getItemData(entry.item.itemDataId);
             if (!data?.modifiers) continue;

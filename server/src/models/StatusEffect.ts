@@ -181,6 +181,34 @@ export class StatusEffectType implements TagReadable {
         aliases: ['마비독', '마비'],
     });
 
+    static readonly HUNGER = StatusEffectType.define({
+        id: 'hunger',
+        label: '공복',
+        icon: 'attributes/maxHungry',
+        maxLevel: 10,
+        descriptionTemplate: '배고픔이 고갈되었습니다. 생명력 재생이 중단되고 초당 최대 생명력의 [color=red]{{calc.damagePercent}}%[/color] 피해를 받습니다. 60초마다 효과 레벨이 상승합니다.',
+        baseMetadata: { tickInterval: 1, tickElapsed: 0, levelElapsed: 0, damageScalePerLevel: 0.25 },
+        calculatedFields: { damagePercent: getSurvivalDepletionDamagePercent },
+        onStart: startSurvivalDepletionEffect,
+        onUpdate: updateSurvivalDepletionEffect,
+        onRemove: removeSurvivalDepletionEffect,
+        aliases: ['공복', '배고픔'],
+    });
+
+    static readonly THIRST = StatusEffectType.define({
+        id: 'thirst',
+        label: '갈증',
+        icon: 'attributes/maxThirsty',
+        maxLevel: 10,
+        descriptionTemplate: '수분이 고갈되었습니다. 생명력 재생이 중단되고 초당 최대 생명력의 [color=red]{{calc.damagePercent}}%[/color] 피해를 받습니다. 60초마다 효과 레벨이 상승합니다.',
+        baseMetadata: { tickInterval: 1, tickElapsed: 0, levelElapsed: 0, damageScalePerLevel: 0.25 },
+        calculatedFields: { damagePercent: getSurvivalDepletionDamagePercent },
+        onStart: startSurvivalDepletionEffect,
+        onUpdate: updateSurvivalDepletionEffect,
+        onRemove: removeSurvivalDepletionEffect,
+        aliases: ['갈증', '목마름'],
+    });
+
     readonly id: string;
     readonly label: string;
     readonly icon: string;
@@ -494,6 +522,77 @@ function updateParalyticPoisonEffect(
         ActionType.MOVEMENT,
         ActionType.LOCATION_TRAVEL,
     ], getStatusModifierSource(effect));
+}
+
+function startSurvivalDepletionEffect({ target, effect }: StatusEffectContext): StatusEffectLifecycleResult | void {
+    if (!target.isPlayer) return 'remove';
+    const valid = effect.type === StatusEffectType.HUNGER ? target.hungry <= 0 : target.thirsty <= 0;
+    if (!valid) return 'remove';
+    target.attribute.addModifiers([{
+        attribute: 'lifeRegen',
+        op: 'multiply',
+        value: 0,
+        source: getStatusModifierSource(effect),
+    }]);
+}
+
+function removeSurvivalDepletionEffect({ target, effect }: StatusEffectContext): void {
+    target.attribute.removeBySource(getStatusModifierSource(effect));
+}
+
+function updateSurvivalDepletionEffect(
+    { target, effect }: StatusEffectContext,
+    dt: number,
+): StatusEffectLifecycleResult | void {
+    const needEmpty = effect.type === StatusEffectType.HUNGER ? target.hungry <= 0 : target.thirsty <= 0;
+    if (!target.isPlayer || !needEmpty) return 'remove';
+    let levelElapsed = (effect.getMetadata<number>('levelElapsed') ?? 0) + dt;
+    while (levelElapsed >= 60 && effect.level < effect.type.maxLevel) {
+        levelElapsed -= 60;
+        target.applyStatusEffect(effect.type, effect.duration, effect.level + 1);
+    }
+    effect.setMetadata('levelElapsed', levelElapsed);
+
+    const interval = Math.max(0.05, effect.getMetadata<number>('tickInterval') ?? 1);
+    let tickElapsed = (effect.getMetadata<number>('tickElapsed') ?? 0) + dt;
+    while (tickElapsed >= interval && !target.isDefeated) {
+        tickElapsed -= interval;
+        const activeCount = Number(target.hasStatusEffect(StatusEffectType.HUNGER))
+            + Number(target.hasStatusEffect(StatusEffectType.THIRST));
+        const damageScale = 1 + (effect.level - 1)
+            * Math.max(0, effect.getMetadata<number>('damageScalePerLevel') ?? 0.25);
+        const damage = target.maxLife / 60 * damageScale / Math.max(1, activeCount);
+        target.damage(damage, 'absolute', {
+            type: effect.type === StatusEffectType.HUNGER ? 'starvation' : 'thirsty',
+            causeEntity: null,
+            effectSource: effect,
+            fixedDamage: true,
+        });
+
+        const shouldNotify = effect.type === StatusEffectType.HUNGER
+            || !target.hasStatusEffect(StatusEffectType.HUNGER);
+        if (shouldNotify && target.playerUserId !== undefined) {
+            const hungry = target.hasStatusEffect(StatusEffectType.HUNGER);
+            const thirsty = target.hasStatusEffect(StatusEffectType.THIRST);
+            const reason = hungry && thirsty ? '배고픔과 갈증' : hungry ? '배고픔' : '갈증';
+            sendNotificationToUser(target.playerUserId, {
+                key: 'status-effect:survival-depletion',
+                message: `${reason}으로 인해 생명력이 고갈되고 있습니다.`,
+                length: 1200,
+                editExists: true,
+            });
+        }
+    }
+    effect.setMetadata('tickElapsed', tickElapsed);
+    return target.isDefeated ? 'remove' : undefined;
+}
+
+function getSurvivalDepletionDamagePercent({ target, effect }: StatusEffectContext): number {
+    const activeCount = Number(target.hasStatusEffect(StatusEffectType.HUNGER))
+        + Number(target.hasStatusEffect(StatusEffectType.THIRST));
+    const scale = 1 + (effect.level - 1)
+        * Math.max(0, effect.getMetadata<number>('damageScalePerLevel') ?? 0.25);
+    return Number((100 / 60 * scale / Math.max(1, activeCount)).toFixed(2));
 }
 
 function getFireDamage(effect: StatusEffect): number {

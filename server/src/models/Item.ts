@@ -70,6 +70,14 @@ export interface ItemSnapshot {
     tags: TagId[];
 }
 
+/** 인벤토리·장비·바닥이 같은 규칙으로 두 아이템 스냅샷의 스택 호환성을 검사한다. */
+export function canStackItemSnapshots(left: ItemSnapshot, right: ItemSnapshot): boolean {
+    return left.itemDataId === right.itemDataId
+        && left.durability === right.durability
+        && isDeepStrictEqual(left.metadataDelta ?? {}, right.metadataDelta ?? {})
+        && JSON.stringify(normalizeTags(left.tags)) === JSON.stringify(normalizeTags(right.tags));
+}
+
 /** `/감정` 등 읽기 전용 UI가 Item 내부 상태를 직접 참조하지 않고 사용하는 스냅샷. */
 export interface ItemInspectionSnapshot {
     readonly itemDataId: string;
@@ -333,10 +341,7 @@ export class Item implements TagReadable {
 
     /** 스택 병합 시 인스턴스별 영속 데이터가 같은지 검사 */
     canStackWith(snapshot: ItemSnapshot): boolean {
-        return this.itemDataId === snapshot.itemDataId
-            && this._durability === snapshot.durability
-            && isDeepStrictEqual(this._metadataDelta, snapshot.metadataDelta ?? {})
-            && JSON.stringify(this.tags.persistentValues()) === JSON.stringify(normalizeTags(snapshot.tags));
+        return canStackItemSnapshots(this.snapshot(), snapshot);
     }
 }
 

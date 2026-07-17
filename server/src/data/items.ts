@@ -86,6 +86,36 @@ registerItemUse('learn_skill', (inv, item, finish) => {
     }
 });
 
+registerItemUse('restore_survival', (inv, item, finish) => {
+    function* restoreRoutine() {
+        try {
+            const player = getPlayerByUserId(inv.playerId);
+            if (!player) return;
+            const hunger = Math.max(0, item.getMetadata<number>('hunger') ?? 0);
+            const thirst = Math.max(0, item.getMetadata<number>('thirst') ?? 0);
+            const time = Math.max(0, item.getMetadata<number>('time') ?? 1);
+            if (!inv.removeItemInstance(item, 1)) return;
+            sendNotificationToUser(player.userId, {
+                key: `item:restore-survival:${item.itemDataId}`,
+                message: item.getMetadata<string>('useMessage') ?? '섭취 중...',
+                length: time * 1000,
+            });
+            yield Wait(time);
+            if (hunger > 0) player.restoreHunger(hunger);
+            if (thirst > 0) player.restoreThirst(thirst);
+            sendNotificationToUser(player.userId, {
+                key: `item:restore-survival:${item.itemDataId}`,
+                message: `${item.name}을(를) 섭취해 ${hunger > 0 ? `배고픔 ${hunger}` : ''}${hunger > 0 && thirst > 0 ? ', ' : ''}${thirst > 0 ? `수분 ${thirst}` : ''}을(를) 회복했습니다.`,
+            });
+        } catch (error) {
+            logger.error('생존 자원 아이템 사용 실패', error);
+        } finally {
+            finish();
+        }
+    }
+    startCoroutine(restoreRoutine());
+});
+
 defineItem({
     id: 'health_potion',
     name: '체력 포션',
@@ -114,6 +144,40 @@ defineItem({
     maxStack: 99,
     baseMetadata: { amount: 50 },
     onUse: 'heal_mp',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER],
+});
+
+defineItem({
+    id: 'traveler_bread',
+    name: '여행자 빵',
+    description: '든든하게 구운 빵. 배고픔을 35 회복한다.',
+    image: 'items/traveler_bread',
+    category: '음식',
+    weight: 0.4,
+    stackable: true,
+    maxStack: 20,
+    baseMetadata: { hunger: 35, thirst: 0, time: 1.5, useMessage: '빵을 먹는 중...' },
+    onUse: 'restore_survival',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_NATURAL],
+});
+
+defineItem({
+    id: 'fresh_water',
+    name: '맑은 샘물',
+    description: '휴대용 물통에 담긴 깨끗한 샘물. 수분을 40 회복한다.',
+    image: 'items/fresh_water',
+    category: '음료',
+    weight: 0.6,
+    stackable: true,
+    maxStack: 20,
+    baseMetadata: { hunger: 0, thirst: 40, time: 1, useMessage: '물을 마시는 중...' },
+    onUse: 'restore_survival',
     equipSlot: null,
     modifiers: null,
     baseDurability: null,
