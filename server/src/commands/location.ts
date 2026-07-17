@@ -1,5 +1,5 @@
 import { registerCommand } from "../modules/bot.js";
-import { sendBotMessageToChannel, sendBotMessageToUser, sendNotificationToUser } from "../modules/message.js";
+import { sendBotMessageToUser, sendNotificationToUser, sendPrivateBotMessageToUser } from "../modules/message.js";
 import { getPlayerByUserId, getOnlinePlayers } from "../modules/player.js";
 import { getSessionByUserId } from "../modules/login.js";
 import { chat } from "../utils/chatBuilder.js";
@@ -9,7 +9,6 @@ import { startCoroutine, Wait } from "../modules/coroutine.js";
 import type { CoroutineGenerator } from "../modules/coroutine.js";
 import type Player from "../models/Player.js";
 import { AttributeType } from "../models/Attribute.js";
-import { getUserChannel } from "../modules/channel.js";
 import type { CompletionItem } from "../../../shared/types.js";
 import { ActionType } from "../models/Action.js";
 
@@ -25,7 +24,7 @@ function* travelCoroutine(player: Player, targetLocationId: string): CoroutineGe
 
     player.moving = true;
 
-    sendBotMessageToChannel(getUserChannel(player.userId), `${to.data.name}(으)로 이동 시작... (${Math.ceil(totalTime)}초)`);
+    sendPrivateBotMessageToUser(player.userId, `${to.data.name}(으)로 이동 시작... (${Math.ceil(totalTime)}초)`);
 
     while (elapsed < totalTime) {
         const waitTime = Math.min(0.5, totalTime - elapsed);
@@ -48,7 +47,7 @@ function* travelCoroutine(player: Player, targetLocationId: string): CoroutineGe
     player.locationId = targetLocationId;
     player.moving = false;
 
-    sendBotMessageToChannel(getUserChannel(player.userId), `${to.data.name}에 도착했습니다.`,);
+    sendPrivateBotMessageToUser(player.userId, `${to.data.name}에 도착했습니다.`);
 }
 
 export function initLocationCommands(): void {
@@ -56,7 +55,7 @@ export function initLocationCommands(): void {
         name: '이동',
         aliases: ['move', 'go', 'mv'],
         description: '다른 장소로 이동합니다.',
-        showCommandUse: 'show',
+        showCommandUse: 'private',
         args: [
             { name: '장소이름', description: '이동할 장소 이름', required: false,
                 completions(userId) {
@@ -278,10 +277,10 @@ export function initLocationCommands(): void {
         name: '위치',
         aliases: ['where', 'loc', 'l', 'm'],
         description: '현재 위치 정보를 확인합니다.',
-        showCommandUse: 'show',
+        showCommandUse: 'private',
+        information: true,
         handler(userId) {
             const player = getPlayerByUserId(userId);
-            const channel = getUserChannel(userId);
             if (!player) return;
 
             const location = getLocation(player.locationId);
@@ -401,7 +400,7 @@ export function initLocationCommands(): void {
                 }
             }
 
-            sendBotMessageToChannel(channel, b.build());
+            sendBotMessageToUser(userId, b.build());
         },
     });
 
