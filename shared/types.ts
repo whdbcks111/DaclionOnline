@@ -346,6 +346,7 @@ export interface AdminPlayerDetailData extends AdminPlayerListItem {
 }
 
 export type AdminPanelAction =
+    | 'broadcast_chat_notice' | 'broadcast_notification' | 'notify_player'
     | 'teleport_admin_to_player' | 'teleport_player_to_admin' | 'teleport_player_location'
     | 'grant_item' | 'remove_item' | 'clear_inventory' | 'set_item_metadata'
     | 'grant_skill' | 'remove_skill' | 'set_jobs'

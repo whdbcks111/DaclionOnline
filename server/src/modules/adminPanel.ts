@@ -25,6 +25,7 @@ import type Player from '../models/Player.js';
 import { fetchPlayerByUserId, getOnlinePlayers, getPlayerByUserId } from './player.js';
 import { getSession } from './login.js';
 import { getIO } from './socket.js';
+import { broadcastBotMessageAll, broadcastNotification, sendNotificationToUser } from './message.js';
 import logger from '../utils/logger.js';
 
 const ADMIN_PERMISSION = 10;
@@ -182,6 +183,17 @@ function numberValue(values: ReturnType<typeof valuesOf>, key: string, options: 
     return value;
 }
 
+function noticeMessage(values: ReturnType<typeof valuesOf>): string {
+    const message = stringValue(values, 'message');
+    if (message.length > 1000) throw new Error('공지 내용은 1000자 이하여야 합니다.');
+    return message;
+}
+
+function notificationLength(values: ReturnType<typeof valuesOf>): number {
+    if (values.duration === undefined || values.duration === null || values.duration === '') return 5000;
+    return numberValue(values, 'duration', { min: 1, max: 60 }) * 1000;
+}
+
 async function targetPlayer(request: AdminPanelActionRequest): Promise<Player> {
     const id = request.targetUserId;
     if (!Number.isSafeInteger(id) || (id ?? 0) <= 0) throw new Error('대상 플레이어가 필요합니다.');
@@ -198,6 +210,16 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
     const values = valuesOf(request);
     const player = await targetPlayer(request);
     switch (request.action) {
+        case 'notify_player': {
+            const online = getPlayerByUserId(player.userId);
+            if (!online) throw new Error('알림은 온라인 플레이어에게만 발송할 수 있습니다.');
+            sendNotificationToUser(online.userId, {
+                key: `admin-notice:${Date.now()}:${online.userId}`,
+                message: noticeMessage(values),
+                length: notificationLength(values),
+            });
+            return `${online.name}에게 알림 공지를 발송했습니다.`;
+        }
         case 'teleport_admin_to_player': {
             const admin = getPlayerByUserId(adminId);
             if (!admin) throw new Error('관리자 캐릭터가 온라인 상태가 아닙니다.');
@@ -357,6 +379,25 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
     }
 }
 
+function executeNoticeAction(request: AdminPanelActionRequest): string {
+    const values = valuesOf(request);
+    const message = noticeMessage(values);
+    switch (request.action) {
+        case 'broadcast_chat_notice':
+            broadcastBotMessageAll(message);
+            return '전체 채팅 공지를 발송했습니다.';
+        case 'broadcast_notification':
+            broadcastNotification({
+                key: `admin-global-notice:${Date.now()}`,
+                message,
+                length: notificationLength(values),
+            });
+            return '전체 알림 공지를 발송했습니다.';
+        default:
+            throw new Error('공지 액션이 아닙니다.');
+    }
+}
+
 function executeWorldAction(request: AdminPanelActionRequest): string {
     const values = valuesOf(request);
     const locationId = stringValue(values, 'locationId');
@@ -395,7 +436,10 @@ function executeWorldAction(request: AdminPanelActionRequest): string {
 export async function executeAdminPanelAction(adminId: number, request: AdminPanelActionRequest): Promise<AdminPanelResult> {
     const result: AdminPanelResult = { action: request.action, targetUserId: request.targetUserId };
     try {
-        const message = request.action === 'spawn_monster'
+        const message = request.action === 'broadcast_chat_notice'
+            || request.action === 'broadcast_notification'
+            ? executeNoticeAction(request)
+            : request.action === 'spawn_monster'
             || request.action === 'respawn_monsters'
             || request.action === 'reset_resource_cooldown'
             ? executeWorldAction(request)

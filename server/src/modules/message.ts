@@ -109,7 +109,7 @@ export function sendWhisperMessage(senderUserId: number, targetUserId: number, c
     return true;
 }
 
-/** 모든 채널에 봇 메시지 브로드캐스트 (히스토리에 저장하지 않음) */
+/** 모든 채널에 봇 메시지 브로드캐스트 (모든 채널 히스토리에 저장) */
 export function broadcastBotMessageAll(content: string | ChatNode[]): void {
     broadcastMessageAll(makeBotMessage(content));
 }

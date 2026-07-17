@@ -13,16 +13,16 @@ import FormDialog from '../components/dialog/FormDialog'
 import type { FormDialogField, FormDialogValues } from '../components/dialog/FormDialog'
 import styles from './AdminPage.module.scss'
 
-type PlayerCategory = 'travel' | 'growth' | 'inventory' | 'skills'
+type PlayerCategory = 'travel' | 'growth' | 'inventory' | 'skills' | 'communication'
 
 interface ActionDefinition {
   action: AdminPanelAction
   label: string
   description: string
-  category: PlayerCategory | 'world'
+  category: PlayerCategory | 'world' | 'notice'
   fields: FormDialogField[]
   danger?: boolean
-  world?: boolean
+  targetless?: boolean
 }
 
 const emptyBootstrap: AdminPanelBootstrapData = {
@@ -36,6 +36,13 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
   const ownedSkills = detail?.skills.map(skill => option(skill.id, `${skill.name} Lv.${skill.level}`)) ?? []
   const locationField = (): FormDialogField => ({ name: 'locationId', label: '장소', type: 'select', options: data.locations, required: true })
   return [
+    { action: 'broadcast_chat_notice', label: '전체 채팅 공지', description: '모든 채널의 채팅창에 시스템 공지를 발송하고 채널 기록에 남깁니다.', category: 'notice', targetless: true, fields: [
+      { name: 'message', label: '공지 내용', type: 'textarea', placeholder: '전체 채팅에 표시할 내용을 입력하세요.', required: true },
+    ] },
+    { action: 'broadcast_notification', label: '전체 알림 공지', description: '현재 접속 중인 모든 플레이어 화면에 알림을 표시합니다.', category: 'notice', targetless: true, fields: [
+      { name: 'message', label: '공지 내용', type: 'textarea', placeholder: '전체 알림 내용을 입력하세요.', required: true },
+      { name: 'duration', label: '표시 시간 (초)', type: 'number', min: 1, max: 60, defaultValue: 5, required: true },
+    ] },
     { action: 'teleport_admin_to_player', label: '대상에게 순간이동', description: '내 캐릭터를 선택한 플레이어 위치로 이동합니다.', category: 'travel', fields: [] },
     { action: 'teleport_player_to_admin', label: '대상을 내게 소환', description: '선택한 플레이어를 내 캐릭터 위치로 이동합니다.', category: 'travel', fields: [] },
     { action: 'teleport_player_location', label: '대상을 지역으로 이동', description: '이동 조건을 무시하고 지정 장소로 이동합니다.', category: 'travel', fields: [locationField()] },
@@ -86,9 +93,13 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
       { name: 'duration', label: '지속시간 (초)', type: 'number', min: .1, max: 86400, step: .1, defaultValue: 30, required: true },
     ] },
     { action: 'clear_status_effects', label: '상태이상 모두 해제', description: '온라인 플레이어의 모든 상태이상을 제거합니다.', category: 'skills', danger: true, fields: [] },
-    { action: 'spawn_monster', label: '몬스터 소환', description: '지정 장소에 새 몬스터 인스턴스를 생성합니다.', category: 'world', world: true, fields: [locationField(), { name: 'monsterDataId', label: '몬스터', type: 'select', options: data.monsters, required: true }, { name: 'count', label: '수량', type: 'number', min: 1, max: 50, defaultValue: 1, required: true }] },
-    { action: 'respawn_monsters', label: '몬스터 리스폰', description: '지정 장소의 죽은 몬스터를 즉시 리스폰합니다. 종류를 비우면 전체를 처리합니다.', category: 'world', world: true, fields: [locationField(), { name: 'monsterDataId', label: '몬스터 종류', type: 'select', options: data.monsters }] },
-    { action: 'reset_resource_cooldown', label: '오브젝트 쿨타임 초기화', description: './위치에 표시되는 1부터 시작하는 오브젝트 번호로 자원의 상호작용 쿨타임을 초기화합니다.', category: 'world', world: true, fields: [locationField(), { name: 'objectNumber', label: '오브젝트 번호', type: 'number', min: 1, required: true }] },
+    { action: 'notify_player', label: '개별 알림 발송', description: '선택한 온라인 플레이어 화면에 관리자 알림을 표시합니다.', category: 'communication', fields: [
+      { name: 'message', label: '알림 내용', type: 'textarea', placeholder: '선택한 플레이어에게 보낼 내용을 입력하세요.', required: true },
+      { name: 'duration', label: '표시 시간 (초)', type: 'number', min: 1, max: 60, defaultValue: 5, required: true },
+    ] },
+    { action: 'spawn_monster', label: '몬스터 소환', description: '지정 장소에 새 몬스터 인스턴스를 생성합니다.', category: 'world', targetless: true, fields: [locationField(), { name: 'monsterDataId', label: '몬스터', type: 'select', options: data.monsters, required: true }, { name: 'count', label: '수량', type: 'number', min: 1, max: 50, defaultValue: 1, required: true }] },
+    { action: 'respawn_monsters', label: '몬스터 리스폰', description: '지정 장소의 죽은 몬스터를 즉시 리스폰합니다. 종류를 비우면 전체를 처리합니다.', category: 'world', targetless: true, fields: [locationField(), { name: 'monsterDataId', label: '몬스터 종류', type: 'select', options: data.monsters }] },
+    { action: 'reset_resource_cooldown', label: '오브젝트 쿨타임 초기화', description: './위치에 표시되는 1부터 시작하는 오브젝트 번호로 자원의 상호작용 쿨타임을 초기화합니다.', category: 'world', targetless: true, fields: [locationField(), { name: 'objectNumber', label: '오브젝트 번호', type: 'number', min: 1, required: true }] },
   ]
 }
 
@@ -104,7 +115,7 @@ export default function AdminPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [detail, setDetail] = useState<AdminPlayerDetailData | null>(null)
   const [search, setSearch] = useState('')
-  const [section, setSection] = useState<'players' | 'world'>('players')
+  const [section, setSection] = useState<'players' | 'world' | 'notice'>('players')
   const [category, setCategory] = useState<PlayerCategory>('travel')
   const [activeAction, setActiveAction] = useState<ActionDefinition | null>(null)
   const [result, setResult] = useState<AdminPanelResult | null>(null)
@@ -145,10 +156,10 @@ export default function AdminPage() {
   const closeDialog = useCallback(() => setActiveAction(null), [])
   const execute = (values: FormDialogValues) => {
     if (!socket || !activeAction) return '서버에 연결되어 있지 않습니다.'
-    if (!activeAction.world && selectedId == null) return '대상 플레이어를 선택해주세요.'
+    if (!activeAction.targetless && selectedId == null) return '대상 플레이어를 선택해주세요.'
     socket.emit('adminPanelExecute', {
       action: activeAction.action,
-      ...(!activeAction.world && selectedId != null ? { targetUserId: selectedId } : {}),
+      ...(!activeAction.targetless && selectedId != null ? { targetUserId: selectedId } : {}),
       values,
     })
   }
@@ -170,6 +181,7 @@ export default function AdminPage() {
       <div className={styles.sectionTabs}>
         <button className={section === 'players' ? styles.activeTab : ''} onClick={() => setSection('players')}>플레이어 관리</button>
         <button className={section === 'world' ? styles.activeTab : ''} onClick={() => setSection('world')}>월드 관리</button>
+        <button className={section === 'notice' ? styles.activeTab : ''} onClick={() => setSection('notice')}>공지 발송</button>
       </div>
 
       {result && <div className={`${styles.result} ${result.ok ? styles.success : styles.failure}`} role="status">
@@ -179,6 +191,10 @@ export default function AdminPage() {
       {section === 'world' ? (
         <section className={styles.worldGrid}>
           {actions.filter(action => action.category === 'world').map(action => <button key={action.action} className={styles.actionCard} onClick={() => setActiveAction(action)}><b>{action.label}</b><span>{action.description}</span></button>)}
+        </section>
+      ) : section === 'notice' ? (
+        <section className={styles.worldGrid}>
+          {actions.filter(action => action.category === 'notice').map(action => <button key={action.action} className={styles.actionCard} onClick={() => setActiveAction(action)}><b>{action.label}</b><span>{action.description}</span></button>)}
         </section>
       ) : (
         <div className={styles.workspace}>
@@ -206,7 +222,7 @@ export default function AdminPage() {
           </section>
 
           <aside className={styles.actionsPanel}>
-            <div className={styles.categoryTabs}>{(['travel', 'growth', 'inventory', 'skills'] as const).map(key => <button key={key} className={category === key ? styles.activeTab : ''} onClick={() => setCategory(key)}>{{ travel: '이동', growth: '성장', inventory: '인벤토리', skills: '스킬·효과' }[key]}</button>)}</div>
+            <div className={styles.categoryTabs}>{(['travel', 'growth', 'inventory', 'skills', 'communication'] as const).map(key => <button key={key} className={category === key ? styles.activeTab : ''} onClick={() => setCategory(key)}>{{ travel: '이동', growth: '성장', inventory: '인벤토리', skills: '스킬·효과', communication: '메시지' }[key]}</button>)}</div>
             <div className={styles.actionList}>{actions.filter(action => action.category === category).map(action => <button key={action.action} className={styles.actionCard} disabled={!detail} onClick={() => setActiveAction(action)}><b>{action.label}</b><span>{action.description}</span></button>)}</div>
           </aside>
         </div>
