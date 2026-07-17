@@ -112,6 +112,12 @@ export default class SkillBook {
         return this.skills.get(skillDataId.trim().toLowerCase());
     }
 
+    /** 관리자·보상 기능이 내부 Map을 직접 다루지 않고 보유 스킬 레벨을 설정한다. */
+    setLevel(skillDataId: string, level: number): number | null {
+        const skill = this.get(skillDataId);
+        return skill ? skill.setLevel(level) : null;
+    }
+
     getAll(): readonly Skill[] {
         return [...this.skills.values()];
     }

@@ -348,7 +348,7 @@ export default function LocationEditor() {
     <div className={styles.root}>
       {/* 상단 툴바 */}
       <div className={styles.toolbar}>
-        <button className={styles.backBtn} onClick={() => navigate('/home')}>← 홈</button>
+        <button className={styles.backBtn} onClick={() => navigate('/admin')}>← 관리자 페이지</button>
         <span className={styles.title}>위치 편집기</span>
         <div className={styles.toolbarRight}>
           {saveStatus !== 'idle' && (

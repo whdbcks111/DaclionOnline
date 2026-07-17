@@ -142,6 +142,16 @@ test('스킬 회수 API는 보유 목록에서 제거하고 저장 전 재지급
     assert.equal(player.skills.has('power_strike'), true);
 });
 
+test('스킬 레벨 설정 API는 보유 스킬만 정의 최대 레벨 안에서 변경한다', () => {
+    const player = new TestSkillPlayer();
+    player.skills.grant('power_strike', 'test');
+
+    assert.equal(player.skills.setLevel('power_strike', 3), 3);
+    assert.equal(player.skills.get('power_strike')?.level, 3);
+    assert.equal(player.skills.setLevel('power_strike', 999), 5);
+    assert.equal(player.skills.setLevel('unknown_skill', 2), null);
+});
+
 test('강타는 일회성 관통을 제거하고 확정 치명타 공격과 비용을 확정한다', () => {
     const player = new TestSkillPlayer();
     const target = new TestTarget();

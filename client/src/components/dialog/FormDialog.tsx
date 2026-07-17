@@ -36,7 +36,15 @@ interface FormDialogProps {
 }
 
 function initialValues(fields: readonly FormDialogField[]): FormDialogValues {
-  return Object.fromEntries(fields.map(field => [field.name, field.defaultValue ?? (field.type === 'checkbox' ? false : '')]))
+  return Object.fromEntries(fields.map(field => [
+    field.name,
+    field.defaultValue
+      ?? (field.type === 'checkbox'
+        ? false
+        : field.type === 'select' && field.required
+          ? field.options?.[0]?.value ?? ''
+          : ''),
+  ]))
 }
 
 export default function FormDialog({ open, title, description, fields = [], submitLabel = '실행', danger, onClose, onSubmit }: FormDialogProps) {

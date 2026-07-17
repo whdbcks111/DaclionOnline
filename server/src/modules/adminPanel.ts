@@ -290,6 +290,16 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
             await save(player);
             return `${player.name}의 ${data.name}을(를) Lv.${result.skill.level}로 설정했습니다.`;
         }
+        case 'set_skill_level': {
+            const skillDataId = stringValue(values, 'skillDataId');
+            const data = getSkillData(skillDataId);
+            if (!data || !player.skills.has(skillDataId)) throw new Error('보유한 스킬을 찾을 수 없습니다.');
+            const level = numberValue(values, 'level', { integer: true, min: 1, max: data.maxLevel });
+            const appliedLevel = player.skills.setLevel(skillDataId, level);
+            if (appliedLevel === null) throw new Error('스킬 레벨을 설정하지 못했습니다.');
+            await save(player);
+            return `${player.name}의 ${data.name} 레벨을 Lv.${appliedLevel}로 설정했습니다.`;
+        }
         case 'remove_skill': {
             const skillDataId = stringValue(values, 'skillDataId');
             if (!player.skills.revoke(skillDataId)) throw new Error('보유한 스킬을 찾을 수 없습니다.');
@@ -472,6 +482,11 @@ export function initAdminPanel(): void {
             if (!request || typeof request !== 'object' || typeof request.action !== 'string') return;
             const result = await executeAdminPanelAction(userId, request);
             socket.emit('adminPanelResult', result);
+            socket.emit('notification', {
+                key: `admin-panel-result:${request.action}:${Date.now()}`,
+                message: result.ok ? result.message ?? '관리자 작업을 완료했습니다.' : result.error ?? '관리자 작업에 실패했습니다.',
+                length: result.ok ? 3500 : 5000,
+            });
             socket.emit('adminPanelPlayers', await getAdminPlayerList());
             if (request.targetUserId) socket.emit('adminPanelPlayer', await getAdminPlayerDetail(request.targetUserId));
         });

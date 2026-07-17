@@ -38,9 +38,9 @@
 | API | 위치 | 용도 |
 | --- | --- | --- |
 | `Dialog` | `components/dialog/Dialog.tsx` | portal 기반 접근 가능한 공용 화면 오버레이, Escape/배경 닫기와 포커스 복원 |
-| `FormDialog` | `components/dialog/FormDialog.tsx` | 필드 정의 배열로 text/number/select/textarea/checkbox 입력 및 비동기 실행 UI 생성 |
+| `FormDialog` | `components/dialog/FormDialog.tsx` | 필드 정의 배열로 text/number/select/textarea/checkbox 입력 및 비동기 실행 UI 생성. 필수 select는 첫 option을 기본 선택 |
 
-`AdminPage`는 이 API로 플레이어·월드 action 입력을 구성한다. PC의 중앙 모달은 모바일에서 viewport 폭의 하단 시트로 바뀐다.
+`AdminPage`는 이 API로 플레이어·월드 action 입력을 구성한다. 상세·검사 목록은 viewport 내부 스크롤을 사용하고 PC의 중앙 모달은 모바일에서 viewport 폭의 하단 시트로 바뀐다.
 
 ## 클라이언트 검증 API
 
