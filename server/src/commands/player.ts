@@ -527,8 +527,9 @@ export function initPlayerCommands(): void {
                 return;
             }
 
-            player.inventory.addItemSnapshot(unequipped.snapshot(1));
-            sendBotMessageToUser(userId, `${getItemData(unequipped.itemDataId)?.name ?? unequipped.itemDataId}을(를) 장착 해제했습니다.`);
+            player.inventory.addItemSnapshot(unequipped.snapshot(unequipped.count));
+            const countText = unequipped.count > 1 ? ` x${unequipped.count}` : '';
+            sendBotMessageToUser(userId, `${getItemData(unequipped.itemDataId)?.name ?? unequipped.itemDataId}${countText}을(를) 장착 해제했습니다.`);
         },
     });
 

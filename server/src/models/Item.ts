@@ -142,6 +142,9 @@ export class Item implements TagReadable {
     /** 아이템 설명 */
     get description(): string { return this.data?.description ?? ''; }
 
+    /** 인벤토리·장비 이동 시 사용하는 스택 가능 여부. */
+    get stackable(): boolean { return this.data?.stackable ?? false; }
+
     /** metadata → 마스터 데이터 → ID 기반 기본 경로 순서로 결정한 이미지 key */
     get image(): string {
         return normalizeItemImage(this.getMetadata('image'))

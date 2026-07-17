@@ -7,7 +7,7 @@ export function initFishingCommands(): void {
     registerCommand({
         name: '낚시',
         aliases: ['fish', 'f'],
-        description: '낚시 가능 구역에서 낚싯대와 장착한 미끼를 사용해 낚시합니다.',
+        description: '낚시 가능 구역에서 낚싯대와 미끼를 사용합니다. 미끼 미장착 시 인벤토리 묶음을 자동 장착합니다.',
         showCommandUse: 'private',
         handler(userId) {
             const player = getPlayerByUserId(userId);

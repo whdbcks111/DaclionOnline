@@ -53,7 +53,14 @@ test('모든 낚시 보상 아이템은 128px 투명 아이콘을 가진다', ()
             assert.ok(getItemData(fish.itemDataId)?.tags.includes(rarity.tag), `${fish.id}: ${rarity.tag}`);
         }
     }
-    const itemIds = ['beginner_fishing_rod', 'earthworm_bait', ...getAllFish().map(fish => fish.itemDataId)];
+    const itemIds = [
+        'beginner_fishing_rod',
+        'refined_fishing_rod',
+        'wide_net_fishing_rod',
+        'swift_current_fishing_rod',
+        'earthworm_bait',
+        ...getAllFish().map(fish => fish.itemDataId),
+    ];
     for (const itemDataId of itemIds) {
         const png = readFileSync(new URL(`../../../client/public/icons/items/${itemDataId}.png`, import.meta.url));
         assert.equal(png.readUInt32BE(16), 128, itemDataId);

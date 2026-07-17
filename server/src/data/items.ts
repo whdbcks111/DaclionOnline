@@ -117,24 +117,6 @@ registerItemUse('restore_survival', (inv, item, finish) => {
     startCoroutine(restoreRoutine());
 });
 
-registerItemUse('equip_bait', (inv, item, finish) => {
-    try {
-        const player = getPlayerByUserId(inv.playerId);
-        if (!player || !item.hasTag(GameTags.ITEM_BAIT)) return;
-        const result = player.equipInventoryItem(item, 0);
-        sendNotificationToUser(player.userId, {
-            key: 'item:equip-bait',
-            message: result
-                ? `${item.name}을(를) 보조 슬롯에 미끼로 장착했습니다.`
-                : '미끼를 보조 슬롯에 장착할 수 없습니다. 인벤토리 중량과 보조 장비를 확인하세요.',
-        });
-    } catch (error) {
-        logger.error('미끼 자동 장착 실패', error);
-    } finally {
-        finish();
-    }
-});
-
 defineItem({
     id: 'health_potion',
     name: '체력 포션',
@@ -458,16 +440,83 @@ defineItem({
 });
 
 defineItem({
+    id: 'refined_fishing_rod',
+    name: '정교한 낚싯대',
+    description: '상점에서 구할 수 있는 균형형 고급 낚싯대. 채집 범위와 속도, 입질과 시작 게이지가 고르게 좋아진다.',
+    image: 'items/refined_fishing_rod',
+    category: '낚시 도구',
+    weight: 1.8,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: { fishingNetShape: 'circle' },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'luck', op: 'add', value: 3, source: '' },
+        { attribute: 'fishingBiteSpeed', op: 'add', value: 0.25, source: '' },
+        { attribute: 'fishingNetSize', op: 'add', value: 10, source: '' },
+        { attribute: 'fishingNetSpeed', op: 'add', value: 16, source: '' },
+        { attribute: 'fishingGaugeStart', op: 'add', value: 0.1, source: '' },
+    ],
+    baseDurability: 260,
+    tags: [GameTags.ITEM_TOOL, GameTags.TOOL_FISHING, GameTags.MATERIAL_IRON],
+});
+
+defineItem({
+    id: 'wide_net_fishing_rod',
+    name: '너울그물 낚싯대',
+    description: '보물상자에서만 발견되는 기묘한 낚싯대. 매우 넓은 직사각형 채집 영역을 펼치지만 움직임이 둔하다.',
+    image: 'items/wide_net_fishing_rod',
+    category: '낚시 도구',
+    weight: 2.4,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: { fishingNetShape: 'rectangle' },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'luck', op: 'add', value: 2, source: '' },
+        { attribute: 'fishingBiteSpeed', op: 'add', value: 0.05, source: '' },
+        { attribute: 'fishingNetSize', op: 'add', value: 20, source: '' },
+        { attribute: 'fishingNetSpeed', op: 'add', value: -6, source: '' },
+    ],
+    baseDurability: 180,
+    tags: [GameTags.ITEM_TOOL, GameTags.TOOL_FISHING, GameTags.MATERIAL_WOOD],
+});
+
+defineItem({
+    id: 'swift_current_fishing_rod',
+    name: '급류바늘 낚싯대',
+    description: '보물상자에서만 발견되는 기묘한 낚싯대. 채집 영역은 작지만 물살을 타듯 극단적으로 빠르게 움직인다.',
+    image: 'items/swift_current_fishing_rod',
+    category: '낚시 도구',
+    weight: 1.2,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: { fishingNetShape: 'circle' },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'luck', op: 'add', value: 2, source: '' },
+        { attribute: 'fishingBiteSpeed', op: 'add', value: 0.1, source: '' },
+        { attribute: 'fishingNetSize', op: 'add', value: -4, source: '' },
+        { attribute: 'fishingNetSpeed', op: 'add', value: 46, source: '' },
+    ],
+    baseDurability: 160,
+    tags: [GameTags.ITEM_TOOL, GameTags.TOOL_FISHING, GameTags.MATERIAL_IRON],
+});
+
+defineItem({
     id: 'earthworm_bait',
     name: '통통한 지렁이 미끼',
-    description: '사용하면 보조 슬롯에 자동 장착된다. 낚시 한 번에 하나를 소비한다.',
+    description: '낚시 한 번에 하나를 소비한다. 보조 슬롯이 비어 있으면 낚시 시작 시 가진 묶음이 자동 장착된다.',
     image: 'items/earthworm_bait',
     category: '미끼',
     weight: 0.05,
     stackable: true,
     maxStack: 99,
     baseMetadata: null,
-    onUse: 'equip_bait',
+    onUse: null,
     equipSlot: 'offHand',
     modifiers: [
         { attribute: 'luck', op: 'add', value: 3, source: '' },

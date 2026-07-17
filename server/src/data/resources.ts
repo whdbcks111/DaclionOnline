@@ -20,13 +20,15 @@ interface TreasureReward {
 }
 
 const TREASURE_REWARDS: readonly TreasureReward[] = [
-    { label: '묵직한 동전 주머니', weight: 35, gold: { min: 35, max: 90 } },
+    { label: '묵직한 동전 주머니', weight: 33.5, gold: { min: 35, max: 90 } },
     { label: '회복 물자', weight: 22, gold: { min: 10, max: 30 }, itemDataId: 'health_potion', itemCount: { min: 1, max: 2 } },
     { label: '정신력 물자', weight: 14, gold: { min: 10, max: 30 }, itemDataId: 'mana_potion', itemCount: { min: 1, max: 2 } },
     { label: '화살 묶음', weight: 14, gold: { min: 5, max: 20 }, itemDataId: 'wooden_arrow', itemCount: { min: 8, max: 18 } },
     { label: '정제 전 철광석', weight: 9, gold: { min: 15, max: 35 }, itemDataId: 'iron_ore', itemCount: { min: 1, max: 3 } },
     { label: '붉은 보석함', weight: 4, gold: { min: 30, max: 60 }, itemDataId: 'ruby', itemCount: { min: 1, max: 1 } },
     { label: '빛나는 보석함', weight: 2, gold: { min: 50, max: 100 }, itemDataId: 'diamond', itemCount: { min: 1, max: 1 } },
+    { label: '너울그물 낚싯대 보관함', weight: 0.75, gold: { min: 20, max: 40 }, itemDataId: 'wide_net_fishing_rod', itemCount: { min: 1, max: 1 } },
+    { label: '급류바늘 낚싯대 보관함', weight: 0.75, gold: { min: 20, max: 40 }, itemDataId: 'swift_current_fishing_rod', itemCount: { min: 1, max: 1 } },
 ];
 
 function randomInt(range: { min: number; max: number }, random: () => number): number {

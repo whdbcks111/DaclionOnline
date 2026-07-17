@@ -112,6 +112,11 @@ export default class Inventory {
         return this._items.find(item => item.itemDataId === itemDataId);
     }
 
+    /** 자동 장착 등 소유 기능이 내부 배열을 참조하지 않고 첫 일치 아이템을 찾는다. */
+    findFirstItem(matches: (item: Item) => boolean): Item | undefined {
+        return this._items.find(matches);
+    }
+
     /** 아이템 정의 ID로 조회 (모든 인스턴스) */
     getItemsByData(itemDataId: string): Item[] {
         return this._items.filter(e => e.itemDataId === itemDataId);

@@ -151,6 +151,7 @@ model Equipment {
   player      Player    @relation(fields: [playerId], references: [userId], onDelete: Cascade)
 
   itemDataId  String    @db.VarChar(100) @map("item_data_id")
+  count       Int       @default(1)
 
   slot        String    @db.VarChar(50)
   slotIndex   Int       @default(0) @map("slot_index")

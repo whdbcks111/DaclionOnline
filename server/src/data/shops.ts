@@ -86,6 +86,14 @@ defineShop({
             restockTime: 120,
         },
         {
+            label: '정교한 낚싯대',
+            create: () => ({ itemDataId: 'refined_fishing_rod', count: 1 }),
+            count: 1,
+            price: 650,
+            stock: 2,
+            restockTime: 600,
+        },
+        {
             label: '통통한 지렁이 미끼 10개',
             create: () => ({ itemDataId: 'earthworm_bait', count: 10 }),
             count: 10,

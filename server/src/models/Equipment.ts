@@ -323,9 +323,17 @@ export default class Equipment implements TagReadable {
         return item;
     }
 
-    /** 장착 아이템 한 개를 소비한다. 반환된 아이템은 인벤토리로 되돌리지 않는다. */
-    consumeEquippedItem(slot: EquipSlot, slotIndex: number, attribute: Attribute): Item | null {
-        return this.unequip(slot, slotIndex, attribute);
+    /** 장착 스택에서 지정 수량을 소비하고 남은 수량은 같은 슬롯에 유지한다. */
+    consumeEquippedItem(slot: EquipSlot, slotIndex: number, attribute: Attribute, count = 1): Item | null {
+        if (!Number.isSafeInteger(count) || count <= 0) return null;
+        const entry = this._slots.get(slotKey(slot, slotIndex));
+        if (!entry || entry.state === EquipState.Deleted || entry.item.count < count) return null;
+        if (entry.item.count === count) return this.unequip(slot, slotIndex, attribute);
+
+        const consumed = Item.fromSnapshot(entry.item.snapshot(count));
+        entry.item.count -= count;
+        if (entry.state === EquipState.Clean) entry.state = EquipState.Modified;
+        return consumed;
     }
 
     // -- Modifier 재적용 (서버 재시작 시) --
@@ -363,7 +371,7 @@ export default class Equipment implements TagReadable {
                 dbId: row.id,
                 item: Item.fromPersistence(
                     row.itemDataId,
-                    1,
+                    row.count,
                     row.durability,
                     row.metadata,
                     0,
@@ -393,6 +401,7 @@ export default class Equipment implements TagReadable {
                                 where: { id: entry.dbId },
                                 data: {
                                     itemDataId: entry.item.itemDataId,
+                                    count: entry.item.count,
                                     durability: entry.item.durability,
                                     metadata: entry.item.getPersistedMetadata(),
                                     tags: entry.item.tags.persistentValues(),
@@ -412,6 +421,7 @@ export default class Equipment implements TagReadable {
                                 create: {
                                     playerId: this.playerId,
                                     itemDataId: entry.item.itemDataId,
+                                    count: entry.item.count,
                                     slot: entry.slot,
                                     slotIndex: entry.slotIndex,
                                     durability: entry.item.durability,
@@ -420,6 +430,7 @@ export default class Equipment implements TagReadable {
                                 },
                                 update: {
                                     itemDataId: entry.item.itemDataId,
+                                    count: entry.item.count,
                                     durability: entry.item.durability,
                                     metadata: entry.item.getPersistedMetadata(),
                                     tags: entry.item.tags.persistentValues(),
@@ -433,6 +444,7 @@ export default class Equipment implements TagReadable {
                         prisma.equipment.update({
                             where: { id: entry.dbId },
                             data: {
+                                count: entry.item.count,
                                 durability: entry.item.durability,
                                 metadata: entry.item.getPersistedMetadata(),
                                 tags: entry.item.tags.persistentValues(),

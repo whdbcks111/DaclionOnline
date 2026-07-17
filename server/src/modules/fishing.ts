@@ -160,9 +160,19 @@ export function startFishing(player: Player): StartFishingResult {
     if (!rod?.hasTag(GameTags.TOOL_FISHING)) {
         return { ok: false, message: '손 슬롯에 낚시 도구를 장착해야 합니다.' };
     }
-    const bait = player.equipment.getEquipped('offHand');
+    let bait = player.equipment.getEquipped('offHand');
     if (!bait?.hasTag(GameTags.ITEM_BAIT)) {
-        return { ok: false, message: '보조 슬롯에 미끼를 장착해야 합니다. 미끼는 /사용으로 자동 장착할 수 있습니다.' };
+        const inventoryBait = player.inventory.findFirstItem(item => item.hasTag(GameTags.ITEM_BAIT));
+        if (inventoryBait && player.equipInventoryItem(inventoryBait, 0)) {
+            bait = player.equipment.getEquipped('offHand');
+            sendNotificationToUser(player.userId, {
+                key: 'fishing:bait-equipped',
+                message: `${bait?.name ?? '미끼'} 묶음을 보조 슬롯에 자동 장착했습니다.`,
+            });
+        }
+    }
+    if (!bait?.hasTag(GameTags.ITEM_BAIT)) {
+        return { ok: false, message: '보조 슬롯이나 인벤토리에 사용할 미끼가 없습니다.' };
     }
 
     const luck = player.attribute.get(AttributeType.LUCK);

@@ -275,17 +275,19 @@ export default class Player extends Entity {
         if (slotIndex < 0 || slotIndex >= SLOT_MAX[slot]) return null;
 
         const current = this.equipment.getEquipped(slot, slotIndex);
-        if (current && this.inventory.currentWeight - item.weight + current.weight > this.inventory.maxWeight) return null;
+        const equipCount = item.stackable ? item.count : 1;
+        if (current && this.inventory.currentWeight - item.weight * equipCount
+            + current.weight * current.count > this.inventory.maxWeight) return null;
 
-        const equippedCopy = Item.fromSnapshot(item.snapshot(1));
+        const equippedCopy = Item.fromSnapshot(item.snapshot(equipCount));
         const displaced = this.equipment.equipSwap(slot, equippedCopy, this.attribute, slotIndex);
         if (displaced === undefined) return null;
-        if (!this.inventory.removeItemInstance(item, 1)) {
+        if (!this.inventory.removeItemInstance(item, equipCount)) {
             this.equipment.unequip(slot, slotIndex, this.attribute);
             if (displaced) this.equipment.equipSwap(slot, displaced, this.attribute, slotIndex);
             return null;
         }
-        if (displaced && !this.inventory.addItemSnapshot(displaced.snapshot(1))) {
+        if (displaced && !this.inventory.addItemSnapshot(displaced.snapshot(displaced.count))) {
             throw new Error(`장착 해제 아이템을 인벤토리에 복원하지 못했습니다: ${displaced.itemDataId}`);
         }
         return { slot, slotIndex, displaced };

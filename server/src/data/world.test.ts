@@ -142,10 +142,15 @@ test('보물상자는 1~2시간 쿨타임과 가중치 기반 골드·아이템 
     assert.equal(coins.label, '묵직한 동전 주머니');
     assert.equal(coins.gold, 35);
 
-    const values = [0.999999, 0, 0];
-    const rare = rollTreasureReward(() => values.shift() ?? 0);
-    assert.equal(rare.itemDataId, 'diamond');
-    assert.equal(rare.itemCount, 1);
+    const wideValues = [0.9875, 0, 0];
+    const wideRod = rollTreasureReward(() => wideValues.shift() ?? 0);
+    assert.equal(wideRod.itemDataId, 'wide_net_fishing_rod');
+    assert.equal(wideRod.itemCount, 1);
+
+    const swiftValues = [0.999999, 0, 0];
+    const swiftRod = rollTreasureReward(() => swiftValues.shift() ?? 0);
+    assert.equal(swiftRod.itemDataId, 'swift_current_fishing_rod');
+    assert.equal(swiftRod.itemCount, 1);
 });
 
 test('잡화점은 배고픔과 수분을 회복하는 음식과 음료를 판매한다', () => {
@@ -170,6 +175,9 @@ test('잡화점은 배고픔과 수분을 회복하는 음식과 음료를 판�
 
 test('잡화점은 낚싯대와 자동 장착 미끼를 판매하고 물고기를 등급별로 매입한다', () => {
     const rod = getItemData('beginner_fishing_rod');
+    const refinedRod = getItemData('refined_fishing_rod');
+    const wideRod = getItemData('wide_net_fishing_rod');
+    const swiftRod = getItemData('swift_current_fishing_rod');
     const bait = getItemData('earthworm_bait');
     const store = getShop('general_store');
 
@@ -177,8 +185,16 @@ test('잡화점은 낚싯대와 자동 장착 미끼를 판매하고 물고기�
     assert.equal(rod?.equipSlot, 'mainHand');
     assert.ok(bait?.tags.includes('item:bait'));
     assert.equal(bait?.equipSlot, 'offHand');
-    assert.equal(bait?.onUse, 'equip_bait');
+    assert.equal(bait?.onUse, null);
     assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === 'beginner_fishing_rod'));
+    assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === 'refined_fishing_rod' && entry.price === 650));
     assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === 'earthworm_bait'));
+    assert.equal(refinedRod?.modifiers?.find(modifier => modifier.attribute === 'fishingNetSize')?.value, 10);
+    assert.equal(refinedRod?.modifiers?.find(modifier => modifier.attribute === 'fishingNetSpeed')?.value, 16);
+    assert.equal(wideRod?.baseMetadata?.fishingNetShape, 'rectangle');
+    assert.equal(wideRod?.modifiers?.find(modifier => modifier.attribute === 'fishingNetSize')?.value, 20);
+    assert.equal(wideRod?.modifiers?.find(modifier => modifier.attribute === 'fishingNetSpeed')?.value, -6);
+    assert.equal(swiftRod?.modifiers?.find(modifier => modifier.attribute === 'fishingNetSize')?.value, -4);
+    assert.equal(swiftRod?.modifiers?.find(modifier => modifier.attribute === 'fishingNetSpeed')?.value, 46);
     assert.equal(store?.data.sellList.find(entry => entry.label === '신화 물고기')?.price, 8000);
 });

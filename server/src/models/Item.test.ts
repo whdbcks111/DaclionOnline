@@ -11,6 +11,7 @@ import {
 import Attribute, { AttributeType } from './Attribute.js';
 import Equipment from './Equipment.js';
 import Inventory from './Inventory.js';
+import Player from './Player.js';
 
 function itemData(
     id: string,
@@ -155,4 +156,28 @@ test('소유 중인 아이템 내구도가 0이 되면 인벤토리 또는 장�
     assert.equal(equipment.decreaseItemDurability('mainHand', 0, 2), 0);
     assert.equal(equipment.getEquipped('mainHand'), undefined);
     assert.equal(attribute.get(AttributeType.ATK), 10);
+});
+
+test('스택형 미끼는 묶음 전체를 장착하고 사용할 때마다 한 개씩 소비한다', () => {
+    defineItem({
+        ...itemData('test_bait_stack'),
+        stackable: true,
+        maxStack: 99,
+        equipSlot: 'offHand',
+    });
+    const inventory = Inventory.createEmpty(1, 100);
+    const equipment = Equipment.createEmpty();
+    const attribute = new Attribute({});
+    inventory.addItem('test_bait_stack', 10);
+    const bait = inventory.getItemByIndex(0)!;
+    const player = { inventory, equipment, attribute } as unknown as Player;
+
+    assert.ok(Player.prototype.equipInventoryItem.call(player, bait, 0));
+    assert.equal(inventory.getCount('test_bait_stack'), 0);
+    assert.equal(equipment.getEquipped('offHand')?.count, 10);
+
+    assert.ok(equipment.consumeEquippedItem('offHand', 0, attribute));
+    assert.equal(equipment.getEquipped('offHand')?.count, 9);
+    assert.ok(equipment.consumeEquippedItem('offHand', 0, attribute, 9));
+    assert.equal(equipment.getEquipped('offHand'), undefined);
 });
