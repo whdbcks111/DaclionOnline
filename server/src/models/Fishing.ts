@@ -49,8 +49,14 @@ export function getFishByRarity(rarity: FishRarity): FishData[] {
     return getAllFish().filter(fish => fish.rarity === rarity);
 }
 
-/** 행운이 높을수록 일반 가중치는 줄고 상위 등급 가중치는 단계적으로 증가한다. */
-export function rollFishRarity(luck: number, random: () => number = Math.random): FishRarity {
+export interface FishRarityChance {
+    rarity: FishRarity
+    weight: number
+    probability: number
+}
+
+/** 실제 추첨과 등급표가 공유하는 현재 행운 기준 등급별 가중치·확률 snapshot. */
+export function getFishRarityChances(luck: number): FishRarityChance[] {
     const safeLuck = Math.max(0, Math.min(100, luck));
     const rarities = FishRarity.values();
     const weights = rarities.map((rarity, index) => {
@@ -58,10 +64,15 @@ export function rollFishRarity(luck: number, random: () => number = Math.random)
         return rarity.baseWeight * (1 + safeLuck * 0.045 * index);
     });
     const total = weights.reduce((sum, weight) => sum + weight, 0);
-    let cursor = random() * total;
-    for (let index = 0; index < rarities.length; index++) {
-        cursor -= weights[index];
-        if (cursor <= 0) return rarities[index];
+    return rarities.map((rarity, index) => ({ rarity, weight: weights[index], probability: weights[index] / total }));
+}
+
+/** 행운이 높을수록 일반 가중치는 줄고 상위 등급 가중치는 단계적으로 증가한다. */
+export function rollFishRarity(luck: number, random: () => number = Math.random): FishRarity {
+    let cursor = Math.max(0, Math.min(1, random()));
+    for (const chance of getFishRarityChances(luck)) {
+        cursor -= chance.probability;
+        if (cursor <= 0) return chance.rarity;
     }
     return FishRarity.COMMON;
 }

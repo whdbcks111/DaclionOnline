@@ -1,12 +1,20 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { simulateFishingCapture, type FishingCaptureConfig } from '../../../shared/minigames.js';
+import {
+    appendMiniGameInputSample,
+    MAX_MINIGAME_INPUT_SAMPLES,
+    MINIGAME_INPUT_SAMPLE_INTERVAL_MS,
+    simulateFishingCapture,
+    snapshotMiniGameInputs,
+    type FishingCaptureConfig,
+} from '../../../shared/minigames.js';
 import { getItemData } from './Item.js';
 import {
     FishRarity,
     getAllFish,
     getFishByRarity,
+    getFishRarityChances,
     rollFishRarity,
     rollFishingWaitSeconds,
 } from './Fishing.js';
@@ -40,6 +48,21 @@ test('낚시 trace 시뮬레이터는 채집 유지와 이탈을 서버에서 �
     assert.equal(escaped.success, false);
 });
 
+test('연속 조작 trace는 20ms 단위로 합쳐지고 전송 시 불변 snapshot이 된다', () => {
+    const inputs = [{ at: 0, x: 0, y: 0 }];
+    for (let at = 1; at <= 1_000; at++) {
+        appendMiniGameInputSample(inputs, { at, x: at % 2, y: 0 });
+    }
+    assert.ok(inputs.length <= 52);
+    assert.ok(MAX_MINIGAME_INPUT_SAMPLES * MINIGAME_INPUT_SAMPLE_INTERVAL_MS > 30_000);
+
+    const snapshot = snapshotMiniGameInputs(inputs, 500);
+    assert.ok(snapshot.every(input => input.at <= 500));
+    const originalX = snapshot[0].x;
+    inputs[0].x = 99;
+    assert.equal(snapshot[0].x, originalX);
+});
+
 test('행운은 상위 물고기 등급의 가중치를 증가시킨다', () => {
     const rolls = Array.from({ length: 10_000 }, (_, index) => (index + 0.5) / 10_000);
     const highTierCount = (luck: number) => rolls
@@ -49,6 +72,11 @@ test('행운은 상위 물고기 등급의 가중치를 증가시킨다', () => 
     assert.ok(highTierCount(30) > highTierCount(0));
     assert.deepEqual(FishRarity.values().map(rarity => rarity.label), ['일반', '고급', '희귀', '서사', '전설', '신화']);
     assert.deepEqual(FishRarity.values().map(rarity => rarity.sellPrice), [5, 20, 90, 400, 1800, 8000]);
+    const baseChances = getFishRarityChances(0);
+    const luckyChances = getFishRarityChances(100);
+    assert.ok(Math.abs(baseChances.reduce((sum, chance) => sum + chance.probability, 0) - 1) < 1e-12);
+    assert.ok(luckyChances[0].probability < baseChances[0].probability);
+    assert.ok(luckyChances.at(-1)!.probability > baseChances.at(-1)!.probability);
 });
 
 test('입질 대기 시간은 45~65초 기본 범위와 입질 속도를 그대로 반영한다', () => {

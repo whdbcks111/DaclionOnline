@@ -4,7 +4,11 @@ import type {
   MiniGameInputSample,
   MiniGameStartData,
 } from '@shared/minigames'
-import { simulateFishingCapture } from '@shared/minigames'
+import {
+  appendMiniGameInputSample,
+  simulateFishingCapture,
+  snapshotMiniGameInputs,
+} from '@shared/minigames'
 import { useSocket } from '../../context/SocketContext'
 import styles from './MiniGameOverlay.module.scss'
 
@@ -46,13 +50,14 @@ export default function MiniGameOverlay() {
   const joystickRef = useRef<HTMLDivElement>(null)
 
   const setDirection = useCallback((x: number, y: number) => {
+    if (submitted.current) return
     const magnitude = Math.hypot(x, y)
     const next = magnitude > 1 ? { x: x / magnitude, y: y / magnitude } : { x, y }
     if (Math.abs(next.x - direction.current.x) < 0.01 && Math.abs(next.y - direction.current.y) < 0.01) return
     direction.current = next
     setJoystickDirection(next)
     const at = Math.max(0, performance.now() - startedAt.current)
-    inputs.current.push({ at, ...next })
+    appendMiniGameInputSample(inputs.current, { at, ...next })
   }, [])
 
   const updateKeyboardDirection = useCallback(() => {
@@ -135,7 +140,7 @@ export default function MiniGameOverlay() {
           sessionId: game.sessionId,
           token: game.token,
           elapsedMs,
-          inputs: inputs.current,
+          inputs: snapshotMiniGameInputs(inputs.current, elapsedMs),
         })
         return
       }

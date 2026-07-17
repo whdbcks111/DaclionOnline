@@ -10,6 +10,36 @@ export interface MiniGameInputSample {
     y: number
 }
 
+/** 서버 20ms 재생 해상도에 맞춰 같은 구간의 연속 입력을 하나로 합친다. */
+export const MINIGAME_INPUT_SAMPLE_INTERVAL_MS = 20
+/** 현재 최장 낚시 미니게임(30초)의 모든 20ms 구간을 충분히 담는 상한이다. */
+export const MAX_MINIGAME_INPUT_SAMPLES = 2_048
+
+export function appendMiniGameInputSample(
+    inputs: MiniGameInputSample[],
+    sample: MiniGameInputSample,
+): void {
+    const lastIndex = inputs.length - 1
+    const previous = inputs[lastIndex]
+    if (previous && Math.floor(previous.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)
+        === Math.floor(sample.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)) {
+        inputs[lastIndex] = sample
+        return
+    }
+    if (inputs.length < MAX_MINIGAME_INPUT_SAMPLES) inputs.push(sample)
+    else inputs[lastIndex] = sample
+}
+
+/** 전송 이후 UI 입력이 원본 배열을 변경해도 payload가 변하지 않는 결과 snapshot. */
+export function snapshotMiniGameInputs(
+    inputs: readonly MiniGameInputSample[],
+    elapsedMs: number,
+): MiniGameInputSample[] {
+    return inputs
+        .filter(input => input.at <= elapsedMs)
+        .map(input => ({ ...input }))
+}
+
 export interface FishingCaptureConfig {
     seed: number
     durationMs: number

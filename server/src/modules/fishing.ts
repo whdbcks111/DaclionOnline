@@ -5,6 +5,7 @@ import { getLocation } from '../models/Location.js';
 import type Player from '../models/Player.js';
 import { GameTags } from '../../../shared/tags.js';
 import {
+    MAX_MINIGAME_INPUT_SAMPLES,
     simulateFishingCapture,
     type FishingCaptureConfig,
     type FishingCaptureShape,
@@ -39,16 +40,27 @@ function normalizeShape(value: unknown): FishingCaptureShape {
     return value === 'circle' || value === 'rectangle' || value === 'square' ? value : 'circle';
 }
 
-function validateInputs(request: MiniGameResultRequest): request is MiniGameResultRequest & { inputs: MiniGameInputSample[] } {
-    if (!Array.isArray(request.inputs) || request.inputs.length === 0 || request.inputs.length > 512) return false;
-    let previousAt = -1;
-    return request.inputs.every(input => {
-        if (!input || typeof input !== 'object') return false;
-        if (!Number.isFinite(input.at) || input.at < previousAt || input.at < 0 || input.at > request.elapsedMs) return false;
-        if (!Number.isFinite(input.x) || !Number.isFinite(input.y) || Math.abs(input.x) > 1 || Math.abs(input.y) > 1) return false;
-        previousAt = input.at;
-        return true;
-    });
+function normalizeInputs(request: MiniGameResultRequest): MiniGameInputSample[] {
+    const elapsedMs = Math.max(0, request.elapsedMs);
+    const normalized = (Array.isArray(request.inputs) ? request.inputs : [])
+        .filter((input): input is MiniGameInputSample => Boolean(input)
+            && typeof input === 'object'
+            && Number.isFinite(input.at)
+            && Number.isFinite(input.x)
+            && Number.isFinite(input.y))
+        .map(input => ({
+            at: Math.max(0, Math.min(elapsedMs, input.at)),
+            x: Math.max(-1, Math.min(1, input.x)),
+            y: Math.max(-1, Math.min(1, input.y)),
+        }))
+        .sort((left, right) => left.at - right.at);
+    if (normalized.length === 0) return [{ at: 0, x: 0, y: 0 }];
+    if (normalized.length <= MAX_MINIGAME_INPUT_SAMPLES) return normalized;
+
+    const last = normalized.length - 1;
+    return Array.from({ length: MAX_MINIGAME_INPUT_SAMPLES }, (_, index) => (
+        normalized[Math.round(index * last / (MAX_MINIGAME_INPUT_SAMPLES - 1))]
+    ));
 }
 
 function finishFishingReward(player: Player, rarity: FishRarity): string {
@@ -150,12 +162,11 @@ function beginFishingMiniGame(userId: number, locationId: string, rarity: FishRa
         config,
         expiresInMs: config.durationMs + 5_000,
         validate: request => {
-            if (!validateInputs(request)) return { success: false, message: '입력 기록이 올바르지 않습니다.' };
             const current = getPlayerByUserId(userId);
             if (!current || current.isDead || current.locationId !== locationId) {
                 return { success: false, message: '낚시 도중 자리를 벗어났습니다.' };
             }
-            const simulation = simulateFishingCapture(config, request.inputs, request.elapsedMs);
+            const simulation = simulateFishingCapture(config, normalizeInputs(request), request.elapsedMs);
             return simulation.finished && simulation.success
                 ? { success: true }
                 : { success: false, message: '물고기가 채집 영역에서 빠져나갔습니다.' };
