@@ -89,6 +89,8 @@ function buffFeedback(name: string, duration: number, effects: string): string {
     return `${name} 발동! ${effects} (${formatNumber(duration)}초)`;
 }
 
+const PROJECTILE_CRITICAL_TEXT = '투사체는 {{icon.critRate}}{{icon.critDmg}} 시전자의 치명타 능력치를 적용합니다.';
+
 defineSkill({
     id: 'power_strike',
     name: '강타',
@@ -388,7 +390,7 @@ defineSkill({
 
 defineSkill({
     id: 'arcane_arrow', name: '마력 화살', icon: 'skills/career_archer', maxLevel: 5,
-    descriptionTemplate: '탄약을 소모하지 않는 빛 속성 화살을 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다.',
+    descriptionTemplate: `탄약을 소모하지 않는 빛 속성 화살을 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 12[/color]',
     activationConditionTemplate: activationGuide('활과 살아 있는 현재 대상이 필요합니다.'), activationMessage: '마력 화살!', baseMetadata: null,
     calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 160, 12) },
@@ -403,7 +405,7 @@ defineSkill({
 
 defineSkill({
     id: 'multishot', name: '다중 사격', icon: 'skills/career_archer', maxLevel: 5,
-    descriptionTemplate: '현재 장소의 공격 가능한 대상 최대 [color=gold]3명[/color]에게 각각 {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 화살을 발사합니다.',
+    descriptionTemplate: `현재 장소의 공격 가능한 대상 최대 [color=gold]3명[/color]에게 각각 {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 화살을 발사합니다. ${PROJECTILE_CRITICAL_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
     activationConditionTemplate: activationGuide('활과 현재 장소의 공격 가능한 오브젝트가 필요합니다.'), activationMessage: '다중 사격!', baseMetadata: null,
     calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.ATK, 100, 10) },
@@ -431,7 +433,7 @@ defineSkill({
 
 defineSkill({
     id: 'stunning_shot', name: '충격 화살', icon: 'skills/career_archer', maxLevel: 5,
-    descriptionTemplate: '{{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 강화 화살을 발사합니다. 적중한 대상은 {{stunDuration}} 동안 기절합니다.',
+    descriptionTemplate: `{{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 강화 화살을 발사합니다. 적중한 대상은 {{stunDuration}} 동안 기절합니다. ${PROJECTILE_CRITICAL_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 20[/color]',
     activationConditionTemplate: activationGuide('활과 살아 있는 현재 대상이 필요합니다.'), activationMessage: '충격 화살!', baseMetadata: null,
     calculatedFields: {
@@ -540,7 +542,7 @@ defineSkill({
 
 defineSkill({
     id: 'magic_bolt', name: '마력탄', icon: 'skills/career_mage', maxLevel: 5,
-    descriptionTemplate: '지팡이로 응축한 정신 에너지를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다.',
+    descriptionTemplate: `지팡이로 응축한 정신 에너지를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 10[/color]',
     activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'), activationMessage: '마력탄!', baseMetadata: null,
     calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 165, 13) },
@@ -577,7 +579,7 @@ defineSkill({
 
 defineSkill({
     id: 'elemental_bind', name: '원소 속박', icon: 'skills/career_mage', maxLevel: 5,
-    descriptionTemplate: '얼음 속성 구체로 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. 적중한 대상은 {{bindDuration}} 동안 공격·스킬·이동·장소 이동을 할 수 없습니다.',
+    descriptionTemplate: `얼음 속성 구체로 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. 적중한 대상은 {{bindDuration}} 동안 공격·스킬·이동·장소 이동을 할 수 없습니다. ${PROJECTILE_CRITICAL_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 24[/color]',
     activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'), activationMessage: '원소 속박!', baseMetadata: null,
     calculatedFields: {
@@ -623,7 +625,7 @@ for (const elemental of [
     { id: 'lightning_orb', name: '뇌전구', icon: 'affinities/electric', tag: GameTags.PROPERTY_ELECTRIC, stat: 'career:mage_electric_kills', effect: StatusEffectType.PARALYTIC_POISON, effectLabel: '마비독', duration: 5, durationPerLevel: 0.75 },
 ] as const) defineSkill({
     id: elemental.id, name: elemental.name, icon: elemental.icon, maxLevel: 5,
-    descriptionTemplate: `${elemental.name}를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 속성 마법 피해를 입히고 Lv.{{level}} ${elemental.effectLabel} 효과를 {{effectDuration}} 동안 부여합니다.`,
+    descriptionTemplate: `${elemental.name}를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 속성 마법 피해를 입히고 Lv.{{level}} ${elemental.effectLabel} 효과를 {{effectDuration}} 동안 부여합니다. ${PROJECTILE_CRITICAL_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 28[/color]',
     activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'),
     activationMessage: `${elemental.name}!`, baseMetadata: null,

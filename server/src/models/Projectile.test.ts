@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { AttributeRecord } from './Attribute.js';
+import { AttributeType, type AttributeRecord } from './Attribute.js';
 import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import { defineItem, Item, ItemMetadataKeys, type ItemData, type ItemMetadata } from './Item.js';
@@ -20,7 +20,7 @@ class TestEntity extends Entity {
     override readonly name: string;
 
     constructor(name: string, tags: readonly TagId[] = [], attributes: Partial<AttributeRecord> = {}) {
-        super(1, 0, 'test', { maxLife: 100, ...attributes }, Equipment.createEmpty(), undefined, tags);
+        super(1, 0, 'test', { maxLife: 100, critRate: 0, ...attributes }, Equipment.createEmpty(), undefined, tags);
         this.name = name;
     }
 }
@@ -89,6 +89,33 @@ test('투사체 데이터는 owner 공격력과 JSON 능력치 오버라이드�
     assert.equal(projectile.attribute.computed.armorPen, 4);
     updateProjectiles(0);
     assert.equal(target.life, 77);
+});
+
+test('투사체는 발사 순간 owner의 치명타 확률과 피해를 동기화한다', () => {
+    defineProjectileData({
+        id: 'test_critical_projectile',
+        name: '치명타 시험탄',
+        damageType: 'magic',
+        travelTime: 0,
+        damageMultiplier: 1,
+        damageBonus: 0,
+        tags: [],
+        baseAttribute: { critRate: 0 },
+    });
+    const owner = new TestEntity('치명타 발사자', [], {
+        magicForce: 10,
+        critRate: 1,
+        critDmg: 2,
+    });
+    const target = new TestEntity('치명타 표적', [], { magicDef: 0 });
+    const projectile = spawnProjectileFromData({ owner, target, dataId: 'test_critical_projectile' });
+
+    assert.ok(projectile);
+    assert.equal(projectile.attribute.get(AttributeType.CRIT_RATE), 1);
+    assert.equal(projectile.attribute.get(AttributeType.CRIT_DMG), 2);
+    updateProjectiles(0);
+    assert.equal(target.life, 80);
+    assert.equal(target.lastDamageCause?.critical, true);
 });
 
 test('탄약 모드는 아이템 한 개를 소비해 투사체를 발사한다', () => {

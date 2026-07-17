@@ -84,7 +84,8 @@ export default class Projectile extends Entity {
                 maxLife: 1,
                 atk: options.damage,
                 magicForce: options.damage,
-                critRate: 0,
+                critRate: options.owner.attribute.get(AttributeType.CRIT_RATE),
+                critDmg: options.owner.attribute.get(AttributeType.CRIT_DMG),
                 ...options.baseAttribute,
             },
             Equipment.createEmpty(),
@@ -273,6 +274,9 @@ export function spawnProjectileFromData(options: SpawnProjectileDataOptions): Pr
         tags: overrides.tags ?? data.tags,
         baseAttribute: {
             ...data.baseAttribute,
+            // 투사체는 발사 순간 owner의 치명타 능력치를 스냅샷으로 가진다.
+            critRate: options.owner.attribute.get(AttributeType.CRIT_RATE),
+            critDmg: options.owner.attribute.get(AttributeType.CRIT_DMG),
             ...overrides.attributeOverrides,
         },
         onHit: options.onHit,
