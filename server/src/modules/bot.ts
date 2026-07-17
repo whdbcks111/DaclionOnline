@@ -78,6 +78,7 @@ export function getCommandListFiltered(permission: number) {
         .filter(cmd => (cmd.permission ?? 0) <= permission)
         .map(cmd => ({
             name: cmd.name,
+            aliases: [...(cmd.aliases ?? [])],
             args: cmd.args,
             description: cmd.description,
             permission: cmd.permission ?? 0,

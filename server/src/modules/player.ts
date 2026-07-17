@@ -117,9 +117,9 @@ export function sendLocationInfo(userId: number): void {
 
     const locationId = player.locationId;
 
-    const adjacentLocations = location.data.connections
-        .map(conn => {
-            const adj = getLocation(conn.locationId);
+    const adjacentLocations = location.getAvailableConnections(player)
+        .map(connection => {
+            const adj = getLocation(connection.locationId);
             if (!adj) return null;
             return {
                 locationId: adj.id,
@@ -127,6 +127,8 @@ export function sendLocationInfo(userId: number): void {
                 x: adj.data.x,
                 y: adj.data.y,
                 z: adj.data.z,
+                status: connection.status,
+                ...(connection.lockReason ? { lockReason: connection.lockReason } : {}),
             };
         })
         .filter((v): v is NonNullable<typeof v> => v !== null);

@@ -10,7 +10,7 @@
 | `useTheme()` | 현재 theme와 theme 변경 API | `ThemeToggle` 및 테마 소비 UI |
 | `useHud()` | HUD 설정/편집 API, playerStats/locationInfo, 표시 옵션, quick slot과 개별 skill button API | Home, HudContainer, HudSettings, 개별 HUD |
 
-`useHud()`의 설정 API는 `setVisible`, `setPosition`, `setAnchor`, `setPosUnit`, `setPosAnchor`, `setHudOpacity`, `setHudScale`, `resetPosition`이다. 퀵슬롯은 `addQuickSlot`, `removeQuickSlot`, `moveQuickSlot`, `updateQuickSlot`으로만 변경한다. 스킬 퀵 버튼은 `setSkillHudVisible`, `setSkillHudPosition`, `resetSkillHudPosition`으로 표시와 개별 viewport `%` 좌표를 바꾸며 `skillHudConfigs`를 직접 수정하지 않는다.
+`useHud()`의 설정 API는 `setVisible`, `setPosition`, `setAnchor`, `setPosUnit`, `setPosAnchor`, `setHudOpacity`, `setHudScale`, `resetPosition`이다. 위치 정보 HUD의 오브젝트 버튼은 `setLocationObjectActionsVisible`, 미니맵의 인접 지역 이동 목록은 `setMinimapTravelActionsVisible`로 표시한다. 퀵슬롯은 `addQuickSlot`, `removeQuickSlot`, `moveQuickSlot`, `updateQuickSlot`으로만 변경한다. 전투 퀵 버튼은 `setSkillHudVisible`, `setSkillHudPosition`, `resetSkillHudPosition`으로 표시와 개별 viewport `%` 좌표를 바꾸며 `skillHudConfigs`를 직접 수정하지 않는다. 전용 크기는 `setQuickButtonScale`로 변경하고 `hud-quick-button-scale` localStorage에 저장한다.
 
 `SkillQuickHud`는 `playerStats.skills`에 현재 표시 가능한 스킬만 렌더링하고 localStorage에 저장된 스킬별 On/Off·좌표를 적용한다. 버튼은 아이콘과 이름을 표시하고 `chatButtonClick`의 숨김 `/스킬 이름` 동작을 호출한다. 쿨다운은 서버의 남은 시간과 `playerStatsReceivedAt`을 기준으로 클라이언트에서 보간해, 어두운 영역이 시계 방향으로 걷히는 conic-gradient와 남은 초를 표시한다. 위치 편집 모드에서는 각 버튼이 묶음 없이 독립적으로 drag된다.
 

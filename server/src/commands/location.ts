@@ -54,7 +54,7 @@ function* travelCoroutine(player: Player, targetLocationId: string): CoroutineGe
 export function initLocationCommands(): void {
     registerCommand({
         name: '이동',
-        aliases: ['move', 'go'],
+        aliases: ['move', 'go', 'mv'],
         description: '다른 장소로 이동합니다.',
         showCommandUse: 'show',
         args: [
@@ -103,7 +103,9 @@ export function initLocationCommands(): void {
                 const msg = chat()
                     .text(`[ ${currentLocation.data.name} ] 이동 가능 장소\n`)
                     .hide('목록 보기', b => {
-                        for (const conn of connections) {
+                        for (let index = 0; index < connections.length; index++) {
+                            const conn = connections[index];
+                            b.text(`${index + 1}. `);
                             if (conn.status === 'locked') {
                                 b.color('gray', b2 => b2.text(`🔒 ${conn.name} (잠김)`)).text('\n');
                             } else {
@@ -146,7 +148,7 @@ export function initLocationCommands(): void {
 
     registerCommand({
         name: '줍기',
-        aliases: ['pickup'],
+        aliases: ['pickup', 'p'],
         description: '현재 위치의 바닥 아이템을 줍습니다.',
         showCommandUse: 'show',
         args: [
@@ -232,7 +234,7 @@ export function initLocationCommands(): void {
 
     registerCommand({
         name: '상호작용',
-        aliases: ['interact'],
+        aliases: ['interact', 'it'],
         description: '현재 위치의 오브젝트와 상호작용합니다.',
         showCommandUse: 'hide',
         args: [
@@ -274,7 +276,7 @@ export function initLocationCommands(): void {
 
     registerCommand({
         name: '위치',
-        aliases: ['where', 'loc'],
+        aliases: ['where', 'loc', 'l', 'm'],
         description: '현재 위치 정보를 확인합니다.',
         showCommandUse: 'show',
         handler(userId) {
@@ -387,11 +389,12 @@ export function initLocationCommands(): void {
             if (connections.length === 0) {
                 b.color('gray', b2 => b2.text('없음\n'));
             } else {
-                for (const conn of connections) {
+                for (let index = 0; index < connections.length; index++) {
+                    const conn = connections[index];
                     if (conn.status === 'locked') {
-                        b.text('- ').color('gray', b2 => b2.text(`🔒 ${conn.name} (잠김)`)).text('\n');
+                        b.text(`${index + 1}. `).color('gray', b2 => b2.text(`🔒 ${conn.name} (잠김)`)).text('\n');
                     } else {
-                        b.text('- ').text(`${conn.name} `)
+                        b.text(`${index + 1}. `).text(`${conn.name} `)
                          .button(`/이동 ${conn.name}`, b2 => b2.text('[이동]'), true)
                          .text('\n');
                     }

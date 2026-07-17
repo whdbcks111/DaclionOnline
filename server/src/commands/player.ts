@@ -293,7 +293,7 @@ export function initPlayerCommands(): void {
 
     registerCommand({
         name: '사용',
-        aliases: ['use'],
+        aliases: ['use', 'u'],
         description: '아이템을 1개 사용합니다.',
         showCommandUse: 'private',
         args: [
@@ -345,7 +345,7 @@ export function initPlayerCommands(): void {
 
     registerCommand({
         name: '버리기',
-        aliases: ['drop'],
+        aliases: ['drop', 'q'],
         description: '아이템을 1개 현재 장소에 버립니다.',
         showCommandUse: 'show',
         args: [
@@ -396,7 +396,7 @@ export function initPlayerCommands(): void {
 
     registerCommand({
         name: '장착',
-        aliases: ['equip'],
+        aliases: ['equip', 'eq'],
         description: '인벤토리의 아이템을 장착합니다.',
         showCommandUse: 'show',
         args: [
@@ -633,7 +633,7 @@ export function initPlayerCommands(): void {
 
     registerCommand({
         name: '스탯분배',
-        aliases: ['stat'],
+        aliases: ['stat', '스탯부여', 'st', 'r'],
         description: '스탯 포인트를 분배합니다. 인자 없이 입력하면 분배 UI를 표시합니다.',
         showCommandUse: 'hide',
         args: [

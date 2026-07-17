@@ -84,7 +84,7 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 ## 스킬 퀵 HUD
 
-`SkillBook.getHudSnapshots()`은 `isVisible`을 만족하는 보유 스킬의 ID, 표시명, 아이콘, 레벨, 발동 상태, 남은/최대 쿨다운만 0.5초 `playerStats.skills`에 싣는다. 클라이언트 HUD 설정에서 각 스킬 버튼을 개별 On/Off할 수 있으며 선택과 viewport `%` 좌표는 `hud-skill-buttons` localStorage에 저장된다. 새 스킬 버튼은 PC 8열·모바일 4열 기본 격자에 놓이고 위치 편집 모드에서 각각 독립적으로 이동하거나 초기화할 수 있다.
+`SkillBook.getHudSnapshots()`은 `isVisible`을 만족하는 보유 스킬의 ID, 표시명, 아이콘, 레벨, 발동 상태, 남은/최대 쿨다운만 0.5초 `playerStats.skills`에 싣는다. 클라이언트 HUD 설정의 `전투 퀵 버튼`에서 기본 공격과 각 스킬 버튼을 개별 On/Off할 수 있으며 선택과 viewport `%` 좌표는 `hud-skill-buttons` localStorage에 저장된다. 설정 목록은 기본 접힘 상태이고 활성/전체 개수를 요약하며, 펼친 목록은 제한된 높이 안에서 별도로 스크롤한다. 제목 옆 톱니 설정은 전투 퀵 버튼에만 적용되는 50~200% 크기를 별도로 저장한다. 새 전투 버튼은 PC 8열·모바일 4열 기본 격자에 놓이고 위치 편집 모드에서 각각 독립적으로 이동하거나 초기화할 수 있다. 공격 버튼은 `playerStats.attackCooldown/maxAttackCooldown`을 같은 시계 방향 overlay로 표시하고 기존 `/공격` 명령을 숨김 실행해 현재 지정 대상과 서버 공격 규칙을 그대로 재사용한다.
 
 활성화된 버튼은 큰 스킬 아이콘과 아래의 작은 표시명을 가진다. 클릭은 공개 채팅을 만들지 않는 `chatButtonClick`의 `/스킬 이름` 동작을 사용하므로 모든 실제 조건 검사는 기존 `SkillBook.activateByInput()` 경로를 그대로 따른다. 쿨다운 중에는 서버 남은 시간을 payload 수신 시각부터 0.1초 단위로 보간하고, 완전히 어두운 상태에서 투명 영역이 시계 방향으로 늘어나는 overlay와 남은 초를 표시한다.
 

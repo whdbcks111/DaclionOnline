@@ -21,7 +21,7 @@ function getPlayerShop(userId: number) {
 export function initShopCommands(): void {
     registerCommand({
         name: '상점',
-        aliases: ['shop'],
+        aliases: ['shop', 'sh'],
         description: '현재 위치의 상점 정보를 확인합니다.',
         showCommandUse: 'hide',
         information: true,
@@ -114,7 +114,7 @@ export function initShopCommands(): void {
 
     registerCommand({
         name: '구매',
-        aliases: ['buy'],
+        aliases: ['buy', 'bu'],
         description: '상점에서 아이템을 구매합니다.',
         showCommandUse: 'private',
         args: [

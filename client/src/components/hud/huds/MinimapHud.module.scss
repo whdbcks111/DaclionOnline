@@ -96,3 +96,68 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
 }
+
+.travelList {
+    display: flex;
+    width: 100%;
+    max-height: min(28vh, 11rem);
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-top: 0.35rem;
+    overflow-y: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    overscroll-behavior: contain;
+    pointer-events: auto;
+    scrollbar-gutter: stable;
+}
+
+.travelTitle {
+    color: rgba(255, 255, 255, 0.52);
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+
+.travelRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+}
+
+.travelName {
+    min-width: 0;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.68rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.travelRow button {
+    flex: 0 0 auto;
+    padding: 0.18em 0.5em;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: $border-radius-sm;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    font-family: $font-family-base;
+    font-size: 0.64rem;
+    font-weight: 700;
+
+    &:hover:not(:disabled) {
+        border-color: rgba(255, 255, 255, 0.55);
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    &:disabled {
+        cursor: default;
+        opacity: 0.35;
+    }
+}
+
+.emptyTravelList {
+    color: rgba(255, 255, 255, 0.42);
+    font-size: 0.64rem;
+    line-height: 1.4;
+}

@@ -39,7 +39,7 @@ function recipeCompletions(userId: number): CompletionItem[] {
 export function initCraftingCommands(): void {
     registerCommand({
         name: '제작법목록',
-        aliases: ['recipes'],
+        aliases: ['recipes', 'cl'],
         description: '그동안 발견한 제작법을 확인합니다.',
         showCommandUse: 'hide',
         information: true,
@@ -74,7 +74,7 @@ export function initCraftingCommands(): void {
 
     registerCommand({
         name: '제작',
-        aliases: ['craft'],
+        aliases: ['craft', 'c'],
         description: '발견한 제작법으로 아이템을 제작합니다. 마지막 숫자는 제작 개수입니다.',
         showCommandUse: 'hide',
         args: [

@@ -67,7 +67,7 @@ export function initSkillCommands(): void {
 
     registerCommand({
         name: '스킬',
-        aliases: ['skill', 'su'],
+        aliases: ['skill', 'su', 'k'],
         description: '보유한 스킬을 이름으로 발동합니다.',
         showCommandUse: 'hide',
         args: [{

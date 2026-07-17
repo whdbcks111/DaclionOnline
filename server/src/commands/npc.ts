@@ -13,7 +13,7 @@ import { getPlayerByUserId } from '../modules/player.js';
 export function initNpcCommands(): void {
     registerCommand({
         name: '대화',
-        aliases: ['talk'],
+        aliases: ['talk', 'tk'],
         description: '현재 위치의 NPC와 대화합니다.',
         showCommandUse: 'hide',
         args: [{

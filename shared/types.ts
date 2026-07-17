@@ -194,6 +194,8 @@ export interface AdjacentLocationData {
     x: number
     y: number
     z: number
+    status: 'visible' | 'locked'
+    lockReason?: string
 }
 
 // 위치 정보 HUD 데이터

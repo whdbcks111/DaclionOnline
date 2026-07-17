@@ -60,6 +60,31 @@ export function initGeneralCommands(): void {
     });
 
     registerCommand({
+        name: '단축키목록',
+        showCommandUse: 'private',
+        information: true,
+        description: '명령어별 등록된 별칭을 표시합니다.',
+        handler(userId, _args, _raw, _msg, permission) {
+            const commandsWithAliases = getCommandListFiltered(permission)
+                .filter(command => command.aliases.length > 0);
+            const node = chat()
+                .text('[ 단축키 목록 ]\n')
+                .color('$text-tertiary', b => b.text('슬래시 없이도 입력할 수 있습니다.\n'))
+                .hide('목록 보기', b => {
+                    for (const command of commandsWithAliases) {
+                        b.weight('bold', title => title.text(`/${command.name}`))
+                            .color('$text-tertiary', arrow => arrow.text(' → '))
+                            .color('$info', aliases => aliases.text(command.aliases.join(', ')))
+                            .text('\n');
+                    }
+                    return b;
+                })
+                .build();
+            sendBotMessageToUser(userId, node);
+        },
+    });
+
+    registerCommand({
         name: '공개모드', aliases: ['publicmode'], description: '정보 열람 결과를 현재 채널에 공개합니다.',
         showCommandUse: 'hide',
         handler(userId) { setInformationModeForUser(userId, true); },

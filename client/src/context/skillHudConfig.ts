@@ -6,6 +6,8 @@ export interface SkillHudConfig {
   y: number
 }
 
+export const BASIC_ATTACK_HUD_ID = 'system:basic_attack'
+
 export function createDefaultSkillHudConfig(skillId: string, index = 0): SkillHudConfig {
   const viewportWidth = typeof window === 'undefined' ? 1024 : window.innerWidth
   const columns = viewportWidth <= 600 ? 4 : 8

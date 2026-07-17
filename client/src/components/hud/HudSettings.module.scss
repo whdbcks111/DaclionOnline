@@ -25,17 +25,104 @@
     gap: $spacing-xs;
 }
 
+.skillSectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: $spacing-xs;
+}
+
+.skillSectionToggle {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    padding: $spacing-xs 0;
+    border: 0;
+    background: transparent;
+    color: $color-text;
+    cursor: pointer;
+    font-family: $font-family-base;
+    text-align: left;
+
+    &:hover .sectionTitle {
+        color: var(--color-primary);
+    }
+}
+
+.quickSettingsBtn {
+    flex: 0 0 auto;
+    padding: 0.3rem 0.4rem;
+    border: 0;
+    border-radius: $border-radius-sm;
+    background: transparent;
+    color: $color-text-tertiary;
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+
+    &:hover,
+    &.quickSettingsBtnActive {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--color-primary);
+    }
+}
+
+.quickButtonSettings {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-xs;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background: rgba(0, 0, 0, 0.16);
+}
+
 .sectionTitle {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
     color: $color-text;
     font-size: $font-size-sm;
     font-weight: 700;
+}
+
+.skillCount {
+    color: $color-text-tertiary;
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+
+.sectionChevron {
+    color: $color-text-tertiary;
+    font-size: 0.85rem;
+    transform: rotate(-90deg);
+    transition: transform 0.15s ease;
+}
+
+.sectionChevronOpen {
+    transform: rotate(0deg);
+}
+
+.skillSectionContent {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    min-height: 0;
 }
 
 .skillList {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
+    max-height: min(36vh, 16rem);
     margin-top: 0.2rem;
+    padding-right: 0.25rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
 }
 
 .skillRow {
@@ -89,12 +176,6 @@
         color: $color-text;
         border-color: var(--color-primary);
     }
-}
-
-.emptySkills {
-    padding: 0.45rem 0;
-    color: $color-text-tertiary;
-    font-size: 0.72rem;
 }
 
 .header {

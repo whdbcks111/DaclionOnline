@@ -1,5 +1,6 @@
 import { useRef, useCallback, useState } from 'react'
 import { useHud, HUD_DEFINITIONS, type AnchorPoint, type PosAnchor } from '../../context/HudContext'
+import { BASIC_ATTACK_HUD_ID } from '../../context/skillHudConfig'
 import styles from './HudSettings.module.scss'
 
 interface Props {
@@ -31,12 +32,29 @@ const POS_ANCHOR_LABELS: Record<PosAnchor, string> = {
 export default function HudSettings({ onClose }: Props) {
   const {
     configs, setVisible, setAnchor, setPosUnit, setPosAnchor, setHudOpacity, setHudScale, resetPosition,
+    setLocationObjectActionsVisible, setMinimapTravelActionsVisible,
     editMode, setEditMode, opacity, setOpacity, scale, setScale,
     playerStats, skillHudConfigs, setSkillHudVisible, resetSkillHudPosition,
+    quickButtonScale, setQuickButtonScale,
   } = useHud()
   const [openSettingsId, setOpenSettingsId] = useState<string | null>(null)
+  const [isSkillListOpen, setIsSkillListOpen] = useState(false)
+  const [isQuickButtonSettingsOpen, setIsQuickButtonSettingsOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
-  const posRef = useRef({ x: Math.max(8, window.innerWidth - 316), y: 60 })
+  const [initialPanelPosition] = useState(() => ({ x: Math.max(8, window.innerWidth - 316), y: 60 }))
+  const posRef = useRef(initialPanelPosition)
+  const skills = playerStats?.skills ?? []
+  const quickButtonSettings = [
+    { id: BASIC_ATTACK_HUD_ID, name: '공격', icon: 'attributes/atk', detail: '현재 대상', defaultIndex: 0 },
+    ...skills.map((skill, index) => ({
+      id: skill.id,
+      name: skill.name,
+      icon: skill.icon,
+      detail: `Lv.${skill.level}`,
+      defaultIndex: index + 1,
+    })),
+  ]
+  const enabledQuickButtonCount = quickButtonSettings.filter(button => skillHudConfigs[button.id]?.visible).length
 
   const handleClose = () => {
     setEditMode(false)
@@ -98,7 +116,7 @@ export default function HudSettings({ onClose }: Props) {
     <div
       ref={panelRef}
       className={styles.panel}
-      style={{ left: posRef.current.x, top: posRef.current.y }}
+      style={{ left: initialPanelPosition.x, top: initialPanelPosition.y }}
     >
       <div
         className={styles.header}
@@ -112,7 +130,7 @@ export default function HudSettings({ onClose }: Props) {
       <div className={styles.editModeRow}>
         <div>
           <div className={styles.rowLabel}>위치 편집 모드</div>
-          <div className={styles.rowDesc}>HUD와 활성화한 스킬 버튼을 개별 드래그합니다</div>
+          <div className={styles.rowDesc}>HUD와 활성화한 전투 퀵 버튼을 개별 드래그합니다</div>
         </div>
         <label className={styles.switch}>
           <input
@@ -159,40 +177,79 @@ export default function HudSettings({ onClose }: Props) {
       <div className={styles.divider} />
 
       <section className={styles.skillSection}>
-        <div className={styles.sectionTitle}>스킬 퀵 버튼</div>
-        <div className={styles.rowDesc}>표시할 스킬을 켠 뒤 위치 편집 모드에서 각각 옮길 수 있습니다.</div>
-        {playerStats?.skills.length ? (
-          <div className={styles.skillList}>
-            {playerStats.skills.map((skill, index) => {
-              const enabled = skillHudConfigs[skill.id]?.visible ?? false
-              return (
-                <div key={skill.id} className={styles.skillRow}>
-                  <img src={`/icons/${skill.icon}.png`} alt="" className={styles.skillIcon} />
-                  <div className={styles.skillInfo}>
-                    <span className={styles.skillLabel}>{skill.name}</span>
-                    <span className={styles.skillLevel}>Lv.{skill.level}</span>
-                  </div>
-                  {enabled && (
-                    <button
-                      className={styles.skillResetBtn}
-                      title="버튼 위치 초기화"
-                      onClick={() => resetSkillHudPosition(skill.id, index)}
-                    >↺</button>
-                  )}
-                  <label className={styles.switch}>
-                    <input
-                      type="checkbox"
-                      checked={enabled}
-                      onChange={event => setSkillHudVisible(skill.id, event.target.checked, index)}
-                    />
-                    <span className={styles.slider} />
-                  </label>
-                </div>
-              )
-            })}
+        <div className={styles.skillSectionHeader}>
+          <button
+            type="button"
+            className={styles.skillSectionToggle}
+            aria-expanded={isSkillListOpen}
+            aria-controls="hud-skill-quick-list"
+            onClick={() => setIsSkillListOpen(open => !open)}
+          >
+            <span className={styles.sectionTitle}>
+              전투 퀵 버튼
+              <span className={styles.skillCount}>{enabledQuickButtonCount}/{quickButtonSettings.length}</span>
+            </span>
+            <span className={`${styles.sectionChevron} ${isSkillListOpen ? styles.sectionChevronOpen : ''}`} aria-hidden>▾</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.quickSettingsBtn} ${isQuickButtonSettingsOpen ? styles.quickSettingsBtnActive : ''}`}
+            aria-expanded={isQuickButtonSettingsOpen}
+            aria-controls="hud-quick-button-settings"
+            title="전투 퀵 버튼 설정"
+            onClick={() => setIsQuickButtonSettingsOpen(open => !open)}
+          >⚙</button>
+        </div>
+        {isQuickButtonSettingsOpen && (
+          <div id="hud-quick-button-settings" className={styles.quickButtonSettings}>
+            <div className={styles.detailSliderLabel}>
+              <span className={styles.detailLabel}>퀵 버튼 크기</span>
+              <span className={styles.detailValue}>{Math.round(quickButtonScale * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min={50}
+              max={200}
+              value={Math.round(quickButtonScale * 100)}
+              onChange={event => setQuickButtonScale(Number(event.target.value) / 100)}
+              className={styles.rangeSlider}
+              style={{ '--fill': fill(Math.round(quickButtonScale * 100), 50, 200) } as React.CSSProperties}
+            />
           </div>
-        ) : (
-          <div className={styles.emptySkills}>현재 표시 가능한 보유 스킬이 없습니다.</div>
+        )}
+        {isSkillListOpen && (
+          <div id="hud-skill-quick-list" className={styles.skillSectionContent}>
+            <div className={styles.rowDesc}>공격과 스킬을 켠 뒤 위치 편집 모드에서 각각 옮길 수 있습니다.</div>
+            <div className={styles.skillList}>
+              {quickButtonSettings.map(button => {
+                const enabled = skillHudConfigs[button.id]?.visible ?? false
+                return (
+                  <div key={button.id} className={styles.skillRow}>
+                    <img src={`/icons/${button.icon}.png`} alt="" className={styles.skillIcon} />
+                    <div className={styles.skillInfo}>
+                      <span className={styles.skillLabel}>{button.name}</span>
+                      <span className={styles.skillLevel}>{button.detail}</span>
+                    </div>
+                    {enabled && (
+                      <button
+                        className={styles.skillResetBtn}
+                        title="버튼 위치 초기화"
+                        onClick={() => resetSkillHudPosition(button.id, button.defaultIndex)}
+                      >↺</button>
+                    )}
+                    <label className={styles.switch}>
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={event => setSkillHudVisible(button.id, event.target.checked, button.defaultIndex)}
+                      />
+                      <span className={styles.slider} />
+                    </label>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         )}
       </section>
 
@@ -335,6 +392,34 @@ export default function HudSettings({ onClose }: Props) {
                       style={{ '--fill': fill(Math.round((hudScale ?? 1) * 100), 50, 200) } as React.CSSProperties}
                     />
                   </div>
+
+                  {def.id === 'player-location' && (
+                    <div className={styles.detailRow}>
+                      <span className={styles.detailLabel}>오브젝트 공격·대상 버튼</span>
+                      <label className={styles.switch}>
+                        <input
+                          type="checkbox"
+                          checked={cfg?.showObjectActions ?? true}
+                          onChange={event => setLocationObjectActionsVisible(event.target.checked)}
+                        />
+                        <span className={styles.slider} />
+                      </label>
+                    </div>
+                  )}
+
+                  {def.id === 'minimap' && (
+                    <div className={styles.detailRow}>
+                      <span className={styles.detailLabel}>이동 버튼 표시</span>
+                      <label className={styles.switch}>
+                        <input
+                          type="checkbox"
+                          checked={cfg?.showTravelActions ?? false}
+                          onChange={event => setMinimapTravelActionsVisible(event.target.checked)}
+                        />
+                        <span className={styles.slider} />
+                      </label>
+                    </div>
+                  )}
 
                 </div>
               )}

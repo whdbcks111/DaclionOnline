@@ -17,12 +17,15 @@ export interface HudConfig {
   anchor: AnchorPoint
   opacity?: number   // undefined = use global
   scale?: number     // undefined = use global
+  showObjectActions?: boolean
+  showTravelActions?: boolean
 }
 
 const OPACITY_KEY = 'hud-opacity'
 const SCALE_KEY = 'hud-scale'
 const QUICK_SLOTS_KEY = 'hud-quick-slots'
 const SKILL_HUD_KEY = 'hud-skill-buttons'
+const QUICK_BUTTON_SCALE_KEY = 'hud-quick-button-scale'
 export const MAX_QUICK_SLOTS = 10
 
 export interface HudDefinition {
@@ -40,8 +43,8 @@ export const HUD_DEFINITIONS: HudDefinition[] = [
 
 const DEFAULT_CONFIGS: Record<string, HudConfig> = {
   'player-status':   { id: 'player-status',   visible: true,  x: 5,  y: 10, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight' },
-  'player-location': { id: 'player-location', visible: false, x: 5,  y: 30, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight' },
-  'minimap':         { id: 'minimap',         visible: false, x: 5,  y: 45, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight' },
+  'player-location': { id: 'player-location', visible: false, x: 5,  y: 30, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight', showObjectActions: true },
+  'minimap':         { id: 'minimap',         visible: false, x: 5,  y: 45, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight', showTravelActions: false },
   'quick-slots':     { id: 'quick-slots',     visible: false, x: 50, y: 10,  posUnitX: '%', posUnitY: '%', posAnchor: 'bottomLeft',  anchor: 'bottomMiddle' },
   'party-status':    { id: 'party-status',    visible: true,  x: 5,  y: 23,  posUnitX: '%', posUnitY: '%', posAnchor: 'topLeft',     anchor: 'topLeft' },
 }
@@ -57,6 +60,8 @@ interface HudContextType {
   setPosAnchor: (id: string, posAnchor: PosAnchor) => void
   setHudOpacity: (id: string, opacity: number | undefined) => void
   setHudScale: (id: string, scale: number | undefined) => void
+  setLocationObjectActionsVisible: (visible: boolean) => void
+  setMinimapTravelActionsVisible: (visible: boolean) => void
   resetPosition: (id: string) => void
   playerStats: PlayerStatsData | null
   setPlayerStats: (data: PlayerStatsData) => void
@@ -76,6 +81,8 @@ interface HudContextType {
   setSkillHudVisible: (skillId: string, visible: boolean, defaultIndex?: number) => void
   setSkillHudPosition: (skillId: string, x: number, y: number) => void
   resetSkillHudPosition: (skillId: string, defaultIndex?: number) => void
+  quickButtonScale: number
+  setQuickButtonScale: (scale: number) => void
 }
 
 const HudContext = createContext<HudContextType | null>(null)
@@ -185,6 +192,20 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(SCALE_KEY, String(clamped))
   }, [])
 
+  const [quickButtonScale, setQuickButtonScaleState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(QUICK_BUTTON_SCALE_KEY)
+      if (saved !== null) return Math.max(0.5, Math.min(2, parseFloat(saved)))
+    } catch { /* ignore */ }
+    return 1
+  })
+
+  const setQuickButtonScale = useCallback((value: number) => {
+    const clamped = Math.max(0.5, Math.min(2, value))
+    setQuickButtonScaleState(clamped)
+    localStorage.setItem(QUICK_BUTTON_SCALE_KEY, String(clamped))
+  }, [])
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(configs))
   }, [configs])
@@ -245,6 +266,12 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   }, [])
   const setHudOpacity = useCallback((id: string, opacity: number | undefined)   => patchConfig(id, { opacity }), [patchConfig])
   const setHudScale   = useCallback((id: string, scale: number | undefined)     => patchConfig(id, { scale }), [patchConfig])
+  const setLocationObjectActionsVisible = useCallback((visible: boolean) => {
+    patchConfig('player-location', { showObjectActions: visible })
+  }, [patchConfig])
+  const setMinimapTravelActionsVisible = useCallback((visible: boolean) => {
+    patchConfig('minimap', { showTravelActions: visible })
+  }, [patchConfig])
 
   const resetPosition = useCallback((id: string) => {
     const def = DEFAULT_CONFIGS[id]
@@ -278,11 +305,13 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   return (
     <HudContext.Provider value={{
       configs, editMode, setEditMode,
-      setVisible, setPosition, setAnchor, setPosUnit, setPosAnchor, setHudOpacity, setHudScale, resetPosition,
+      setVisible, setPosition, setAnchor, setPosUnit, setPosAnchor, setHudOpacity, setHudScale,
+      setLocationObjectActionsVisible, setMinimapTravelActionsVisible, resetPosition,
       playerStats, setPlayerStats, playerStatsReceivedAt, locationInfo, setLocationInfo,
       opacity, setOpacity, scale, setScale,
       quickSlots, addQuickSlot, removeQuickSlot, moveQuickSlot, updateQuickSlot,
       skillHudConfigs, setSkillHudVisible, setSkillHudPosition, resetSkillHudPosition,
+      quickButtonScale, setQuickButtonScale,
     }}>
       {children}
     </HudContext.Provider>

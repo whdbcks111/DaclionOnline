@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useHud } from '../../../context/HudContext'
+import { useSocket } from '../../../context/SocketContext'
 import styles from './MinimapHud.module.scss'
 
 const SIZE = 160
@@ -13,8 +14,10 @@ function fillPct(v: number) {
 }
 
 export default function MinimapHud() {
-  const { locationInfo } = useHud()
+  const { locationInfo, configs, editMode } = useHud()
+  const { socket } = useSocket()
   const [zoom, setZoom] = useState(1)
+  const showTravelActions = configs.minimap?.showTravelActions ?? false
 
   const nodes = useMemo(() => {
     if (!locationInfo) return null
@@ -115,6 +118,28 @@ export default function MinimapHud() {
         />
         <span className={styles.zoomValue}>{Math.round(zoom * 100)}%</span>
       </div>
+
+      {showTravelActions && (
+        <div className={styles.travelList}>
+          <div className={styles.travelTitle}>이동 가능한 지역</div>
+          {locationInfo.adjacentLocations.some(location => location.status === 'visible') ? (
+            locationInfo.adjacentLocations
+              .filter(location => location.status === 'visible')
+              .map(location => (
+                <div key={location.locationId} className={styles.travelRow}>
+                  <span className={styles.travelName}>{location.name}</span>
+                  <button
+                    type="button"
+                    disabled={editMode}
+                    onClick={() => socket?.emit('chatButtonClick', { action: `/이동 ${location.locationId}` })}
+                  >이동</button>
+                </div>
+              ))
+          ) : (
+            <div className={styles.emptyTravelList}>현재 이동 가능한 지역이 없습니다.</div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

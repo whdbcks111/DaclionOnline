@@ -104,7 +104,7 @@ export function initPartyCommands(): void {
     });
 
     registerCommand({
-        name: '파티해산', aliases: ['partydisband'], description: '파티장이 현재 파티를 해산합니다.',
+        name: '파티해산', aliases: ['partydisband', 'pb'], description: '파티장이 현재 파티를 해산합니다.',
         showCommandUse: 'hide',
         handler(userId) {
             const player = getPlayerByUserId(userId);
@@ -134,7 +134,7 @@ export function initPartyCommands(): void {
     });
 
     registerCommand({
-        name: '파티정보', aliases: ['partyinfo', 'pinfo'], description: '현재 파티 구성과 파티원 상태를 확인합니다.',
+        name: '파티정보', aliases: ['partyinfo', 'pinfo', 'pt'], description: '현재 파티 구성과 파티원 상태를 확인합니다.',
         showCommandUse: 'private',
         information: true,
         handler(userId) {

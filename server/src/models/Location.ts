@@ -29,7 +29,7 @@ export interface ConnectionConditionResult {
 export interface AvailableConnection {
     locationId: string;
     name: string;
-    status: ConnectionStatus;
+    status: Exclude<ConnectionStatus, 'hidden'>;
     lockReason?: string;
 }
 
@@ -194,9 +194,14 @@ export default class Location implements TagReadable {
 
     /** 구분 기호·공백 차이와 location ID를 허용하고, 부분 이름은 유일할 때만 찾는다. */
     findAvailableConnection(player: Player, input: string): AvailableConnection | undefined {
-        const normalizedInput = normalizeLocationInput(input);
-        if (!normalizedInput) return undefined;
+        const trimmedInput = input.trim();
+        if (!trimmedInput) return undefined;
         const connections = this.getAvailableConnections(player);
+        if (/^[1-9]\d*$/.test(trimmedInput)) {
+            return connections[Number(trimmedInput) - 1];
+        }
+
+        const normalizedInput = normalizeLocationInput(trimmedInput);
         const exact = connections.find(connection =>
             normalizeLocationInput(connection.name) === normalizedInput
             || normalizeLocationInput(connection.locationId) === normalizedInput,
