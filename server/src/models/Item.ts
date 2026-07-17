@@ -70,6 +70,27 @@ export interface ItemSnapshot {
     tags: TagId[];
 }
 
+/** `/감정` 등 읽기 전용 UI가 Item 내부 상태를 직접 참조하지 않고 사용하는 스냅샷. */
+export interface ItemInspectionSnapshot {
+    readonly itemDataId: string;
+    readonly name: string;
+    readonly description: string;
+    readonly image: string;
+    readonly category: string;
+    readonly count: number;
+    readonly weight: number;
+    readonly totalWeight: number;
+    readonly stackable: boolean;
+    readonly maxStack: number;
+    readonly equipSlot: string | null;
+    readonly durability: number | null;
+    readonly maxDurability: number | null;
+    readonly modifiers: readonly AttributeModifier[];
+    readonly tags: readonly TagId[];
+    readonly metadata: Readonly<ItemMetadata> | null;
+    readonly metadataDelta: Readonly<ItemMetadata> | null;
+}
+
 /** 아이템 인스턴스 (인벤토리/장비 공용) */
 export class Item implements TagReadable {
     id: number;
@@ -245,6 +266,30 @@ export class Item implements TagReadable {
     }
 
     hasTag(tag: TagId): boolean { return this.tags.hasTag(tag); }
+
+    /** 현재 기본 데이터와 인스턴스 delta를 합친 감정용 불변 값 스냅샷. */
+    getInspectionSnapshot(): ItemInspectionSnapshot {
+        const data = this.data;
+        return {
+            itemDataId: this.itemDataId,
+            name: this.name || this.itemDataId,
+            description: this.description,
+            image: this.image,
+            category: this.category,
+            count: this.count,
+            weight: this.weight,
+            totalWeight: this.weight * this.count,
+            stackable: data?.stackable ?? false,
+            maxStack: data?.maxStack ?? 1,
+            equipSlot: this.equipSlot,
+            durability: this.durability,
+            maxDurability: this.baseDurability,
+            modifiers: (this.modifiers ?? []).map(modifier => ({ ...modifier })),
+            tags: this.tags.values(),
+            metadata: this.getMetadataSnapshot(),
+            metadataDelta: this.getMetadataDeltaSnapshot(),
+        };
+    }
 
     snapshot(count = this.count): ItemSnapshot {
         return {

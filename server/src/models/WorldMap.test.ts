@@ -5,6 +5,7 @@ import { PlayerProgress } from './Progress.js';
 import { reloadAllLocations } from './Location.js';
 import {
     getVisitedLocationIds,
+    getFullWorldMapSnapshot,
     getWorldMapSnapshot,
     markLocationVisited,
 } from './WorldMap.js';
@@ -59,4 +60,23 @@ test('지도는 방문 장소와 한 단계 인접 미방문 장소만 공개하
     assert.equal(snapshot.locations.some(node => node.id === 'beyond'), false);
     assert.equal(snapshot.locations.some(node => node.id === 'secret'), false);
     assert.deepEqual(snapshot.connections, [{ from: 'near', to: 'start', discovered: false }]);
+});
+
+test('관리자 전체 지도는 hidden과 고립 장소를 포함한 모든 장소를 공개한다', () => {
+    reloadAllLocations([
+        location('start', 0, ['near', 'secret']),
+        location('near', 100, ['start']),
+        location('secret', -100, ['start'], ['location:hidden']),
+        location('isolated', 400, []),
+    ]);
+    const player = {
+        locationId: 'start',
+        progress: PlayerProgress.createEmpty(11),
+    } as Player;
+
+    const snapshot = getFullWorldMapSnapshot(player);
+    assert.deepEqual(snapshot.locations.map(node => node.id).sort(), ['isolated', 'near', 'secret', 'start']);
+    assert.equal(snapshot.locations.every(node => node.visited), true);
+    assert.equal(snapshot.locations.find(node => node.id === 'start')?.current, true);
+    assert.deepEqual(snapshot.connections.map(edge => `${edge.from}:${edge.to}`).sort(), ['near:start', 'secret:start']);
 });

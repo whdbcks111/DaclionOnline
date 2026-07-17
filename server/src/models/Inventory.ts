@@ -97,6 +97,11 @@ export default class Inventory {
         return this._items[idx];
     }
 
+    /** 명령 자동완성 등 인덱스 기반 UI를 위한 안정적인 아이템 목록 스냅샷. */
+    getIndexedItems(): ReadonlyArray<{ index: number; item: Item }> {
+        return this._items.map((item, index) => ({ index, item }));
+    }
+
     /** 아이템 정의 ID와 일치하는 첫 인스턴스 조회 */
     getFirstItemByData(itemDataId: string): Item | undefined {
         return this._items.find(item => item.itemDataId === itemDataId);

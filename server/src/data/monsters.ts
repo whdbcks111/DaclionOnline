@@ -18,6 +18,7 @@ function defineWorldMonster(data: WorldMonsterData): void {
 defineWorldMonster({
     id: 'slime',
     name: '슬라임',
+    description: '물기와 독성을 함께 머금은 가장 기초적인 슬라임.',
     level: 1,
     baseAttribute: { maxLife: 30, atk: 8, def: 1, speed: 0.7 },
     drops: [{ itemDataId: 'health_potion', minCount: 1, maxCount: 1, chance: 0.18 }],
@@ -28,6 +29,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'grass_slime',
     name: '풀잎 슬라임',
+    description: '초원의 식생을 흡수해 자연의 기운을 띠는 슬라임.',
     level: 4,
     baseAttribute: { maxLife: 70, atk: 15, def: 3, magicDef: 2, speed: 0.9 },
     drops: [{ itemDataId: 'health_potion', minCount: 1, maxCount: 1, chance: 0.22 }],
@@ -38,6 +40,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'cave_slime',
     name: '동굴 슬라임',
+    description: '어두운 갱도에 적응해 단단한 표면을 가진 슬라임.',
     level: 6,
     baseAttribute: { maxLife: 105, atk: 20, def: 7, speed: 0.75 },
     drops: [
@@ -51,6 +54,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'purple_slime',
     name: '퍼플 슬라임',
+    description: '맹독을 농축해 마법 공격에 실어 보내는 보랏빛 슬라임.',
     level: 8,
     baseAttribute: { maxLife: 135, atk: 24, magicForce: 22, def: 6, magicDef: 8, speed: 1 },
     drops: [{ itemDataId: 'mana_potion', minCount: 1, maxCount: 1, chance: 0.25 }],
@@ -65,6 +69,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'spring_slime',
     name: '샘물 슬라임',
+    description: '맑은 샘물을 머금어 마법 저항이 높은 슬라임.',
     level: 11,
     baseAttribute: { maxLife: 180, atk: 29, magicForce: 30, def: 9, magicDef: 14, speed: 1.2 },
     drops: [
@@ -79,6 +84,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'stone_golem',
     name: '갱도 암석지기',
+    description: '갱도의 암석이 뭉쳐 움직이는 느리고 단단한 수호체.',
     level: 12,
     baseAttribute: { maxLife: 260, atk: 38, def: 22, magicDef: 6, speed: 0.55 },
     drops: [
@@ -92,6 +98,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'bog_slime',
     name: '수렁 슬라임',
+    description: '늪의 오염된 물과 맹독이 뒤섞여 태어난 슬라임.',
     level: 14,
     baseAttribute: { maxLife: 235, atk: 38, magicForce: 40, def: 13, magicDef: 18, speed: 1.15 },
     drops: [{ itemDataId: 'mana_potion', minCount: 1, maxCount: 2, chance: 0.28 }],
@@ -106,6 +113,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'sporeling',
     name: '몽롱 포자체',
+    description: '마비 성분을 품은 포자를 흩뿌리는 늪지 원소 생물.',
     level: 18,
     baseAttribute: { maxLife: 285, atk: 46, magicForce: 52, def: 17, magicDef: 24, speed: 1.35 },
     drops: [{ itemDataId: 'health_potion', minCount: 1, maxCount: 2, chance: 0.3 }],
@@ -120,6 +128,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'mire_lurker',
     name: '수렁 포식자',
+    description: '늪 아래 숨어 빠르게 덮치는 독성 포식자.',
     level: 22,
     baseAttribute: { maxLife: 410, atk: 66, def: 26, magicDef: 20, speed: 1.65, attackSpeed: 1.08 },
     drops: [{ itemDataId: 'venom_dagger', minCount: 1, maxCount: 1, chance: 0.04 }],
@@ -133,6 +142,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'swamp_core',
     name: '늪의 응집핵',
+    description: '늪의 물과 독기가 응축되어 만들어진 비생명 핵.',
     level: 27,
     baseAttribute: { maxLife: 620, atk: 76, magicForce: 82, def: 35, magicDef: 38, speed: 1.1 },
     drops: [
@@ -150,6 +160,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'crystal_guardian',
     name: '수정 파수체',
+    description: '얼어붙은 수정으로 이루어진 갱도 수호체.',
     level: 28,
     baseAttribute: { maxLife: 680, atk: 86, magicForce: 76, def: 42, magicDef: 44, speed: 1.05 },
     drops: [
@@ -164,6 +175,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'deep_guardian',
     name: '심층 맥동체',
+    description: '금속성 광맥의 맥동으로 움직이는 심층 수호체.',
     level: 30,
     baseAttribute: { maxLife: 760, atk: 92, magicForce: 90, def: 48, magicDef: 45, speed: 1.2 },
     drops: [{ itemDataId: 'diamond', minCount: 1, maxCount: 1, chance: 0.06 }],
@@ -175,6 +187,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'crystal_vein_overlord',
     name: '수정맥의 군주',
+    description: '피버릭 갱도 깊은 곳의 수정맥을 지배하는 거대 군주.',
     level: 32,
     baseAttribute: {
         // 인접 Lv.30 심층 맥동체(760)의 6배 이상인 보스 체력.
@@ -216,6 +229,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'ember_slime',
     name: '불씨 슬라임',
+    description: '불씨를 삼켜 몸속에서 화염을 끓이는 슬라임.',
     level: 30,
     baseAttribute: { maxLife: 580, atk: 82, magicForce: 94, def: 30, magicDef: 42, speed: 1.55 },
     drops: [{ itemDataId: 'ruby', minCount: 1, maxCount: 1, chance: 0.07 }],
@@ -230,6 +244,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'ash_wraith',
     name: '잿바람 망령',
+    description: '뜨거운 재와 바람이 뒤엉켜 태어난 고속 망령.',
     level: 34,
     baseAttribute: { maxLife: 650, atk: 88, magicForce: 108, def: 27, magicDef: 52, speed: 2.15, attackSpeed: 1.12 },
     drops: [{ itemDataId: 'mana_potion', minCount: 2, maxCount: 3, chance: 0.35 }],
@@ -244,6 +259,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'lava_armor',
     name: '용암 갑주',
+    description: '용암이 식어 굳은 갑주 속에 불꽃이 깃든 수호체.',
     level: 38,
     baseAttribute: { maxLife: 980, atk: 118, magicForce: 100, def: 62, magicDef: 48, speed: 0.85 },
     drops: [
@@ -260,6 +276,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'flame_salamander',
     name: '홍염 도롱뇽',
+    description: '홍염산지의 열기를 먹고 자란 민첩한 화염 도롱뇽.',
     level: 42,
     baseAttribute: { maxLife: 920, atk: 126, magicForce: 122, def: 48, magicDef: 58, speed: 2.45, attackSpeed: 1.18 },
     drops: [{ itemDataId: 'ruby', minCount: 1, maxCount: 2, chance: 0.18 }],
@@ -274,6 +291,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'crater_heart',
     name: '분화구의 심장',
+    description: '분화구의 열과 마력이 심장처럼 맥동하는 원소 핵.',
     level: 46,
     baseAttribute: { maxLife: 1350, atk: 132, magicForce: 144, def: 68, magicDef: 72, speed: 1.25 },
     drops: [
@@ -291,6 +309,7 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'caldera_beast',
     name: '칼데라 화염수',
+    description: '칼데라의 불길을 두른 최상위 화염수.',
     level: 50,
     baseAttribute: {
         maxLife: 1800,

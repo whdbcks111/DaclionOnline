@@ -12,6 +12,7 @@ import { initAffinityCommands } from './affinity.js';
 import { initMapCommands } from './map.js';
 import { initCareerCommands } from './career.js';
 import { initPartyCommands } from './party.js';
+import { initInspectionCommands } from './inspection.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -28,4 +29,5 @@ export function initAllCommands(): void {
     initMapCommands();
     initCareerCommands();
     initPartyCommands();
+    initInspectionCommands();
 }

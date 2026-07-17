@@ -25,9 +25,13 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 내구도는 `baseDurability`가 있는 아이템만 사용한다. `durability/durabilityRatio/isBroken`으로 조회하고 `setDurability/changeDurability/increaseDurability/decreaseDurability`로 0~기본 내구도 범위 안에서 변경한다. 변경 callback이 소유 Inventory/Equipment를 dirty로 표시하며 0이 되어도 현재는 자동 파괴하거나 modifier를 제거하지 않는다.
 
+## 감정 명령
+
+`/감정 <인벤토리 번호 또는 장착칸>`은 감각 50 이상에서 사용할 수 있다. 장착칸은 `손`, `다리`, `보조`, `장신구1` 같은 `EquipSlotType` 이름·별칭을 받는다. 감각 50에서는 설명·분류·수량·무게·속성을, 75에서는 내구도와 능력치 modifier를, 100에서는 ID·전체 태그·유효 metadata와 인스턴스 delta 여부를 추가로 공개한다. 조회는 `Item.getInspectionSnapshot`, 자동완성은 `Inventory.getIndexedItems`와 `Equipment.getAllEquipped`를 사용한다.
+
 ## Inventory API와 규칙
 
-- 조회: `getItem`, `getItemByIndex`, `getFirstItemByData`, `getItemsByData`, `getCount`, predicate 수량용 `countMatching`.
+- 조회: `getItem`, `getItemByIndex`, UI용 인덱스 snapshot `getIndexedItems`, `getFirstItemByData`, `getItemsByData`, `getCount`, predicate 수량용 `countMatching`.
 - 변경 구독: `subscribeChanges`는 수량·metadata·내구도·태그 변화 뒤 호출되며 QuestBook 같은 소유 기능의 현재 보유 조건 갱신에 사용한다. `replaceSelectedItems` 안의 연속 변경은 한 번으로 묶는다.
 - metadata 변경: `setItemMetadata`, `resetItemMetadata`가 대상 Item API를 호출하고 Inventory를 dirty로 표시한다. 조회는 반환된 Item의 `getMetadata`를 사용한다.
 - 내구도 변경: `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`가 Item API를 호출하고 Inventory를 dirty로 표시한다.

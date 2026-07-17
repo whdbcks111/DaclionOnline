@@ -97,6 +97,7 @@ test('Location은 몬스터와 자원을 하나의 오브젝트 API로 제공한
     defineMonster({
         id: 'test_location_monster',
         name: '시험 몬스터',
+        description: '자원 테스트용 몬스터.',
         level: 1,
         exp: 0,
         baseAttribute: { maxLife: 10 },

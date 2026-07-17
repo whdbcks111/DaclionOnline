@@ -58,6 +58,7 @@ export interface MonsterSkillPattern {
 export interface MonsterData {
     id: string;
     name: string;
+    description: string;
     level: number;
     exp: number;
     baseAttribute: Partial<AttributeRecord>;
@@ -69,6 +70,26 @@ export interface MonsterData {
     skills?: RuntimeSkillEntry[];
     skillPattern?: MonsterSkillPattern;
     tags: TagId[];
+}
+
+/** `/몬스터정보`가 런타임 Monster 내부 상태를 직접 참조하지 않고 사용하는 스냅샷. */
+export interface MonsterInspectionSnapshot {
+    readonly monsterDataId: string;
+    readonly name: string;
+    readonly description: string;
+    readonly level: number;
+    readonly defeated: boolean;
+    readonly defeatLabel: string;
+    readonly life: number;
+    readonly attributes: Readonly<AttributeRecord>;
+    readonly tags: readonly TagId[];
+    readonly attack: Readonly<MonsterAttackProfile> | null;
+    readonly skills: readonly { skillDataId: string; name: string; level: number }[];
+    readonly skillPattern: Readonly<MonsterSkillPattern> | null;
+    readonly drops: readonly DropInfo[];
+    readonly expReward: number;
+    readonly goldReward: GoldReward;
+    readonly equipments: readonly { slot: EquipSlot; slotIndex: number; itemDataId: string; name: string }[];
 }
 
 export default class Monster extends Entity {
@@ -138,6 +159,49 @@ export default class Monster extends Entity {
     /** 보유한 실제 SkillData를 몬스터 AI나 외부 패턴 로직에서 직접 발동한다. */
     activateSkill(skillDataId: string): SkillActivationOutcome {
         return this.skills.activateById(skillDataId);
+    }
+
+    /** 현재 능력치와 마스터 설명·공격·보상을 합친 감정용 불변 스냅샷. */
+    getInspectionSnapshot(): MonsterInspectionSnapshot {
+        const data = getMonsterData(this.monsterDataId);
+        if (!data) throw new Error(`MonsterData not found: ${this.monsterDataId}`);
+        const goldReward = typeof this.goldReward === 'number'
+            ? this.goldReward
+            : { ...this.goldReward };
+        return {
+            monsterDataId: this.monsterDataId,
+            name: this.name,
+            description: data.description,
+            level: this.level,
+            defeated: this.isDefeated,
+            defeatLabel: this.defeatLabel,
+            life: this.life,
+            attributes: { ...this.attribute.computed },
+            tags: this.tags.values(),
+            attack: this.attackProfile ? {
+                ...this.attackProfile,
+                effect: this.attackProfile.effect ? { ...this.attackProfile.effect } : undefined,
+            } : null,
+            skills: this.skills.getAll().map(skill => ({
+                skillDataId: skill.skillDataId,
+                name: skill.name,
+                level: skill.level,
+            })),
+            skillPattern: this.skillPattern ? {
+                ...this.skillPattern,
+                sequence: [...this.skillPattern.sequence],
+                interval: { ...this.skillPattern.interval },
+            } : null,
+            drops: this.drops.map(drop => ({ ...drop })),
+            expReward: this.expReward,
+            goldReward,
+            equipments: this.equipment.getAllEquipped().map(entry => ({
+                slot: entry.slot,
+                slotIndex: entry.slotIndex,
+                itemDataId: entry.item.itemDataId,
+                name: entry.item.name || entry.item.itemDataId,
+            })),
+        };
     }
 
     /** 타겟 공격 AI */

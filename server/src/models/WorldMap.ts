@@ -2,7 +2,7 @@ import type { WorldMapConnectionData, WorldMapData, WorldMapLocationData } from 
 import { GameTags } from '../../../shared/tags.js';
 import type Player from './Player.js';
 import { ProgressType, defineProgress } from './Progress.js';
-import { getAllLocations, getLocation } from './Location.js';
+import { getAllLocationData, getAllLocations, getLocation } from './Location.js';
 
 const VISIT_PREFIX = 'world:visited/';
 
@@ -89,6 +89,35 @@ export function getWorldMapSnapshot(player: Player): WorldMapData {
 
     return {
         locations: [...locations.values()],
+        connections: [...connections.values()],
+    };
+}
+
+/** 관리자 도구용으로 hidden을 포함한 전체 장소와 정적 연결을 반환한다. */
+export function getFullWorldMapSnapshot(player: Player): WorldMapData {
+    const locationData = getAllLocationData();
+    const ids = new Set(locationData.map(location => location.id));
+    const connections = new Map<string, WorldMapConnectionData>();
+    for (const location of locationData) {
+        for (const connection of location.connections) {
+            if (!ids.has(connection.locationId)) continue;
+            const [from, to] = [location.id, connection.locationId].sort();
+            connections.set(`${from}:${to}`, { from, to, discovered: true });
+        }
+    }
+    return {
+        locations: locationData.map(location => ({
+            id: location.id,
+            name: location.name,
+            zoneType: location.zoneType,
+            zoneLabel: getZoneLabel(location.zoneType),
+            x: location.x,
+            y: location.y,
+            z: location.z,
+            visited: true,
+            current: location.id === player.locationId,
+            ...(location.mapIcon ? { mapIcon: location.mapIcon } : {}),
+        })),
         connections: [...connections.values()],
     };
 }
