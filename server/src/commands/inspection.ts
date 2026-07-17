@@ -2,6 +2,7 @@ import type Player from '../models/Player.js';
 import Monster from '../models/Monster.js';
 import type { Item, ItemInspectionSnapshot } from '../models/Item.js';
 import { getItemData } from '../models/Item.js';
+import { getSkillData } from '../models/Skill.js';
 import { EquipSlotType } from '../models/Equipment.js';
 import { AttributeType } from '../models/Attribute.js';
 import { StatType } from '../models/Stat.js';
@@ -16,7 +17,7 @@ import type { CompletionItem } from '../../../shared/types.js';
 
 export const ITEM_APPRAISAL_SENSIBILITY = 50;
 export const ITEM_PERFORMANCE_SENSIBILITY = 75;
-export const ITEM_METADATA_SENSIBILITY = 100;
+export const ITEM_SPECIAL_EFFECT_SENSIBILITY = 100;
 export const MONSTER_INFO_SENSIBILITY = 100;
 export const MONSTER_COMBAT_SENSIBILITY = 125;
 export const MONSTER_REWARD_SENSIBILITY = 150;
@@ -40,7 +41,7 @@ export function getSensibilityRequirementReason(player: Player, required: number
 export function getItemInspectionTier(sensibility: number): 0 | 1 | 2 | 3 {
     if (sensibility < ITEM_APPRAISAL_SENSIBILITY) return 0;
     if (sensibility < ITEM_PERFORMANCE_SENSIBILITY) return 1;
-    if (sensibility < ITEM_METADATA_SENSIBILITY) return 2;
+    if (sensibility < ITEM_SPECIAL_EFFECT_SENSIBILITY) return 2;
     return 3;
 }
 
@@ -96,13 +97,13 @@ function itemTargetCompletions(userId: number): CompletionItem[] {
     if (!player) return [];
     const inventory = player.inventory.getIndexedItems().map(({ item, index }) => ({
         value: String(index + 1),
-        description: `인벤토리 · ${item.name || item.itemDataId}`,
+        description: `인벤토리 · ${item.name || '알 수 없는 아이템'}`,
     }));
     const equipment = player.equipment.getAllEquipped().map(({ slot, slotIndex, item }) => {
         const type = EquipSlotType.fromKey(slot)!;
         return {
             value: type.max > 1 ? `${type.label}${slotIndex + 1}` : type.label,
-            description: `장착 · ${item.name || item.itemDataId}`,
+            description: `장착 · ${item.name || '알 수 없는 아이템'}`,
         };
     });
     return [...inventory, ...equipment];
@@ -122,18 +123,55 @@ function formatNumber(value: number): string {
     return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
 }
 
-function formatMetadataValue(value: unknown): string {
-    if (typeof value === 'string') return value;
-    if (typeof value === 'number' || typeof value === 'boolean' || value === null) return String(value);
-    try {
-        return JSON.stringify(value);
-    } catch {
-        return '[표시할 수 없는 값]';
-    }
-}
-
 function appendSection(builder: ReturnType<typeof chat>, title: string): void {
     builder.color('$text-tertiary', b => b.text(`─── ${title} ───\n`));
+}
+
+interface ItemGameplayDetail {
+    label: string;
+    value: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** 내부 metadata key를 사용자에게 노출하지 않고 알려진 게임 효과로만 변환한다. */
+export function getItemGameplayDetails(snapshot: ItemInspectionSnapshot): ItemGameplayDetail[] {
+    const data = getItemData(snapshot.itemDataId);
+    const metadata = snapshot.metadata ?? {};
+    const details: ItemGameplayDetail[] = [];
+    const amount = metadata.amount;
+    if (data?.onUse === 'heal_hp' && typeof amount === 'number') {
+        details.push({ label: '사용 효과', value: `생명력 ${formatNumber(amount)} 회복` });
+    } else if (data?.onUse === 'heal_mp' && typeof amount === 'number') {
+        details.push({ label: '사용 효과', value: `정신력 ${formatNumber(amount)} 회복` });
+    } else if (data?.onUse === 'learn_skill' && typeof metadata.skillDataId === 'string') {
+        const skill = getSkillData(metadata.skillDataId);
+        details.push({ label: '사용 효과', value: skill ? `스킬 [ ${skill.name} ] 획득` : '알 수 없는 스킬 획득' });
+    } else if (data?.onUse) {
+        details.push({ label: '사용 효과', value: '사용 시 고유 효과 발동' });
+    }
+
+    const projectileAttack = metadata.projectileAttack;
+    if (isRecord(projectileAttack)) {
+        const ammunitionId = projectileAttack.ammunitionItemId;
+        if (typeof ammunitionId === 'string') {
+            details.push({
+                label: '기본 공격',
+                value: `${getItemData(ammunitionId)?.name ?? '지정 탄약'} 1개를 소모하는 원거리 공격`,
+            });
+        } else if (isRecord(projectileAttack.projectile)) {
+            details.push({ label: '기본 공격', value: '탄약을 소모하지 않는 원거리 공격' });
+        }
+    }
+    if (isRecord(metadata.projectile)) {
+        details.push({ label: '용도', value: '원거리 무기에 사용하는 투사체 탄약' });
+    }
+    if (data?.onBasicAttackHit) {
+        details.push({ label: '적중 효과', value: '설명에 명시된 고유 효과 발동' });
+    }
+    return details;
 }
 
 function appendLocked(builder: ReturnType<typeof chat>, required: number): void {
@@ -150,7 +188,7 @@ function appendAffinities(builder: ReturnType<typeof chat>, tags: readonly strin
     builder.text('\n');
 }
 
-function buildItemInspection(snapshot: ItemInspectionSnapshot, sourceLabel: string, sensibility: number) {
+export function buildItemInspection(snapshot: ItemInspectionSnapshot, sourceLabel: string, sensibility: number) {
     const tier = getItemInspectionTier(sensibility);
     return chat()
         .text('[ 감정 결과 ] ')
@@ -192,19 +230,15 @@ function buildItemInspection(snapshot: ItemInspectionSnapshot, sourceLabel: stri
                 }
             }
 
-            appendSection(builder, '정밀 분석');
+            appendSection(builder, '특수 효과 분석');
             if (tier < 3) {
-                appendLocked(builder, ITEM_METADATA_SENSIBILITY);
+                appendLocked(builder, ITEM_SPECIAL_EFFECT_SENSIBILITY);
             } else {
-                builder.tab(120, b => b.text('아이템 ID')).text(`${snapshot.itemDataId}\n`)
-                    .tab(120, b => b.text('식별 태그')).text(`${snapshot.tags.join(', ') || '(없음)'}\n`);
-                const metadata = Object.entries(snapshot.metadata ?? {});
-                const deltaKeys = new Set(Object.keys(snapshot.metadataDelta ?? {}));
-                if (metadata.length === 0) builder.tab(120, b => b.text('메타데이터')).text('(없음)\n');
-                for (const [key, value] of metadata) {
-                    builder.tab(120, b => b.text(`${key}${deltaKeys.has(key) ? '*' : ''}`)).text(`${formatMetadataValue(value)}\n`);
+                const details = getItemGameplayDetails(snapshot);
+                if (details.length === 0) builder.color('$text-tertiary', b => b.text('추가로 확인된 특수 효과가 없습니다.\n'));
+                for (const detail of details) {
+                    builder.tab(120, b => b.text(detail.label)).text(`${detail.value}\n`);
                 }
-                if (deltaKeys.size > 0) builder.color('$text-tertiary', b => b.text('* 인스턴스에서 변경된 값\n'));
             }
             return builder;
         })
@@ -225,7 +259,7 @@ const COMBAT_ATTRIBUTES = [
     AttributeType.CRIT_DMG,
 ];
 
-function buildMonsterInspection(monster: Monster, objectNumber: number, sensibility: number) {
+export function buildMonsterInspection(monster: Monster, objectNumber: number, sensibility: number) {
     const snapshot = monster.getInspectionSnapshot();
     const tier = getMonsterInspectionTier(sensibility);
     const maxLife = snapshot.attributes.maxLife;
@@ -273,7 +307,7 @@ function buildMonsterInspection(monster: Monster, objectNumber: number, sensibil
                 for (const drop of snapshot.drops) {
                     const data = getItemData(drop.itemDataId);
                     builder.icon(data?.image ?? `items/${drop.itemDataId}`).text(' ')
-                        .tab(120, b => b.text(data?.name ?? drop.itemDataId))
+                        .tab(120, b => b.text(data?.name ?? '알 수 없는 아이템'))
                         .text(`${formatNumber(drop.chance * 100)}% · ${drop.minCount}${drop.maxCount !== drop.minCount ? `~${drop.maxCount}` : ''}개\n`);
                 }
                 if (snapshot.skills.length > 0) {
@@ -285,7 +319,6 @@ function buildMonsterInspection(monster: Monster, objectNumber: number, sensibil
                 if (snapshot.equipments.length > 0) {
                     builder.tab(120, b => b.text('장비')).text(snapshot.equipments.map(equipment => equipment.name).join(', ')).text('\n');
                 }
-                builder.tab(120, b => b.text('식별 태그')).text(`${snapshot.tags.join(', ') || '(없음)'}\n`);
             }
             builder.text('\n').button(`/대상지정 ${objectNumber}`, b => b.text('대상 지정'));
             return builder;

@@ -272,7 +272,7 @@ export class Item implements TagReadable {
         const data = this.data;
         return {
             itemDataId: this.itemDataId,
-            name: this.name || this.itemDataId,
+            name: this.name || '알 수 없는 아이템',
             description: this.description,
             image: this.image,
             category: this.category,

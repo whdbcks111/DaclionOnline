@@ -27,7 +27,7 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 ## 감정 명령
 
-`/감정 <인벤토리 번호 또는 장착칸>`은 감각 50 이상에서 사용할 수 있다. 장착칸은 `손`, `다리`, `보조`, `장신구1` 같은 `EquipSlotType` 이름·별칭을 받는다. 감각 50에서는 설명·분류·수량·무게·속성을, 75에서는 내구도와 능력치 modifier를, 100에서는 ID·전체 태그·유효 metadata와 인스턴스 delta 여부를 추가로 공개한다. 조회는 `Item.getInspectionSnapshot`, 자동완성은 `Inventory.getIndexedItems`와 `Equipment.getAllEquipped`를 사용한다.
+`/감정 <인벤토리 번호 또는 장착칸>`은 감각 50 이상에서 사용할 수 있다. 장착칸은 `손`, `다리`, `보조`, `장신구1` 같은 `EquipSlotType` 이름·별칭을 받는다. 감각 50에서는 설명·분류·수량·무게·가공된 속성을, 75에서는 내구도와 능력치 보정을, 100에서는 회복량·획득 스킬·탄약 방식·고유 적중 효과처럼 해석된 특수 효과를 추가로 공개한다. 내부 아이템 ID, raw 태그, metadata key/value는 권한과 관계없이 출력하지 않는다. 조회는 `Item.getInspectionSnapshot`, 자동완성은 `Inventory.getIndexedItems`와 `Equipment.getAllEquipped`를 사용한다.
 
 ## Inventory API와 규칙
 

@@ -8,11 +8,26 @@ import Monster, { defineMonster } from '../models/Monster.js';
 import type Player from '../models/Player.js';
 import Stat, { StatType } from '../models/Stat.js';
 import {
+    buildItemInspection,
+    buildMonsterInspection,
     getItemInspectionTier,
     getMonsterInspectionTier,
     getSensibilityRequirementReason,
     resolveItemInspectionTarget,
 } from './inspection.js';
+import { buildAffinityMessage } from './affinity.js';
+import '../data/tagEffects.js';
+
+function collectRenderedText(value: unknown): string {
+    if (Array.isArray(value)) return value.map(collectRenderedText).join('');
+    if (!value || typeof value !== 'object') return '';
+    const record = value as Record<string, unknown>;
+    return (typeof record.text === 'string' ? record.text : '')
+        + Object.entries(record)
+            .filter(([key]) => key !== 'text')
+            .map(([, child]) => collectRenderedText(child))
+            .join('');
+}
 
 defineItem({
     id: 'inspection_test_potion',
@@ -22,8 +37,8 @@ defineItem({
     weight: 0.2,
     stackable: true,
     maxStack: 20,
-    baseMetadata: { power: 10 },
-    onUse: null,
+    baseMetadata: { amount: 10 },
+    onUse: 'heal_hp',
     equipSlot: null,
     modifiers: null,
     baseDurability: null,
@@ -44,6 +59,21 @@ defineItem({
     modifiers: [{ attribute: 'atk', op: 'add', value: 5, source: 'item' }],
     baseDurability: 30,
     tags: ['item:weapon'],
+});
+
+defineMonster({
+    id: 'inspection_test_monster',
+    name: '감정 시험 몬스터',
+    description: '감각으로 분석할 수 있는 시험 몬스터.',
+    level: 10,
+    exp: 0,
+    baseAttribute: { maxLife: 200, atk: 30 },
+    drops: [{ itemDataId: 'inspection_test_potion', minCount: 1, maxCount: 2, chance: 0.5 }],
+    expReward: 100,
+    goldReward: { min: 10, max: 20 },
+    equipments: [],
+    attack: { damageType: 'magic' },
+    tags: ['property:water'],
 });
 
 function createPlayer(): Player {
@@ -93,23 +123,26 @@ test('아이템과 몬스터 감정 스냅샷은 설명과 전투 정보를 복�
     assert.equal(itemSnapshot.durability, 20);
     assert.equal(itemSnapshot.modifiers[0].attribute, 'atk');
 
-    defineMonster({
-        id: 'inspection_test_monster',
-        name: '감정 시험 몬스터',
-        description: '감각으로 분석할 수 있는 시험 몬스터.',
-        level: 10,
-        exp: 0,
-        baseAttribute: { maxLife: 200, atk: 30 },
-        drops: [{ itemDataId: 'inspection_test_potion', minCount: 1, maxCount: 2, chance: 0.5 }],
-        expReward: 100,
-        goldReward: { min: 10, max: 20 },
-        equipments: [],
-        attack: { damageType: 'magic' },
-        tags: ['property:water'],
-    });
     const monsterSnapshot = new Monster('inspection_test_monster').getInspectionSnapshot();
     assert.equal(monsterSnapshot.description, '감각으로 분석할 수 있는 시험 몬스터.');
     assert.equal(monsterSnapshot.attributes.maxLife, 200);
     assert.equal(monsterSnapshot.attack?.damageType, 'magic');
     assert.equal(monsterSnapshot.drops[0].chance, 0.5);
+});
+
+test('사용자용 감정·몬스터정보·속성표에는 내부 ID, raw 태그와 metadata key가 노출되지 않는다', () => {
+    const player = createPlayer();
+    const item = resolveItemInspectionTarget(player, '1')!.item;
+    const itemText = collectRenderedText(buildItemInspection(item.getInspectionSnapshot(), '인벤토리 1번', 100));
+    assert.doesNotMatch(itemText, /inspection_test_potion|property:water|아이템 ID|식별 태그|메타데이터|amount/);
+    assert.match(itemText, /생명력 10 회복/);
+
+    const monster = new Monster('inspection_test_monster');
+    const monsterText = collectRenderedText(buildMonsterInspection(monster, 1, 150));
+    assert.doesNotMatch(monsterText, /inspection_test_monster|property:water|식별 태그/);
+    assert.match(monsterText, /감정 시험 몬스터/);
+
+    const affinityText = collectRenderedText(buildAffinityMessage());
+    assert.doesNotMatch(affinityText, /property:|trait:/);
+    assert.match(affinityText, /불|물/);
 });

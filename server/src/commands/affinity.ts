@@ -30,34 +30,36 @@ export function initAffinityCommands(): void {
         information: true,
         description: '속성별 단방향 우세·취약·저항·면역 관계를 확인합니다.',
         handler(userId) {
-            const message = chat()
-                .text('[ 속성표 ]  ')
-                .hide('상성표 보기', builder => {
-                    builder.text('[ 속성표 ]\n')
-                        .color('$text-tertiary', part => part.text('→ 공격 대상  ·  ← 해당 속성으로부터 피격\n'))
-
-                    for (const affinity of getTagEffectAffinitySnapshots()) {
-                        builder.icon(affinity.icon)
-                            .weight('bold', part => part.text(`${affinity.label} `))
-                            .color('$text-tertiary', part => part.text(`(${affinity.tag})\n`))
-
-                        builder.color('$text-secondary', part => part.weight('bold', text => text.text('  공격\n')))
-                        appendRelationLine(builder, '├ 우세 →', '$warning', affinity.attackAdvantages)
-                        appendRelationLine(builder, '├ 열세 →', '$danger', affinity.attackDisadvantages)
-                        appendRelationLine(builder, '└ 무효 →', '$text-tertiary', affinity.attackImmunities)
-
-                        builder.color('$text-secondary', part => part.weight('bold', text => text.text('  방어\n')))
-                        appendRelationLine(builder, '├ 취약 ←', '$danger', affinity.defenseVulnerabilities)
-                        appendRelationLine(builder, '├ 저항 ←', '$info', affinity.defenseResistances)
-                        appendRelationLine(builder, '└ 면역 ←', '$text-tertiary', affinity.defenseImmunities)
-                        builder.text('\n')
-                    }
-
-                    return builder
-                })
-                .build()
-
-            sendBotMessageToUser(userId, message)
+            sendBotMessageToUser(userId, buildAffinityMessage())
         },
     })
+}
+
+/** 내부 tag key 없이 표시명·아이콘·실제 배율만 담은 사용자용 속성표. */
+export function buildAffinityMessage() {
+    return chat()
+        .text('[ 속성표 ]  ')
+        .hide('상성표 보기', builder => {
+            builder.text('[ 속성표 ]\n')
+                .color('$text-tertiary', part => part.text('→ 공격 대상  ·  ← 해당 속성으로부터 피격\n'))
+
+            for (const affinity of getTagEffectAffinitySnapshots()) {
+                builder.icon(affinity.icon)
+                    .weight('bold', part => part.text(`${affinity.label}\n`))
+
+                builder.color('$text-secondary', part => part.weight('bold', text => text.text('  공격\n')))
+                appendRelationLine(builder, '├ 우세 →', '$warning', affinity.attackAdvantages)
+                appendRelationLine(builder, '├ 열세 →', '$danger', affinity.attackDisadvantages)
+                appendRelationLine(builder, '└ 무효 →', '$text-tertiary', affinity.attackImmunities)
+
+                builder.color('$text-secondary', part => part.weight('bold', text => text.text('  방어\n')))
+                appendRelationLine(builder, '├ 취약 ←', '$danger', affinity.defenseVulnerabilities)
+                appendRelationLine(builder, '├ 저항 ←', '$info', affinity.defenseResistances)
+                appendRelationLine(builder, '└ 면역 ←', '$text-tertiary', affinity.defenseImmunities)
+                builder.text('\n')
+            }
+
+            return builder
+        })
+        .build()
 }
