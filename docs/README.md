@@ -75,6 +75,8 @@ client/src  ── Socket.io / HTTP ──>  server/src/modules
 
 UI 스타일은 고정 px 배치와 크기에 의존하지 않는다. 기존 SCSS token/mixin을 재사용하고 `%`, `rem`, `vh/vw`, `clamp()`, flex/grid와 media query를 적극 사용한다. 고정 px은 border, icon 최소치처럼 의도가 분명한 경우로 제한하며 모바일과 PC viewport에서 overflow, 터치 영역, 가독성, HUD 겹침을 확인한다.
 
+시각 표현은 단색 면, 얇은 경계선, 충분한 여백과 명확한 타이포그래피를 기본으로 한다. 장식성 그라데이션, 네온 glow, 발광 외곽선과 여러 겹의 그림자는 피하고, 상태·속성·마법 효과처럼 의미가 분명할 때만 절제해서 사용한다.
+
 ### 5. 짧고 재사용 중심의 구현
 
 코드는 중복, 우회 계층, 불필요한 boilerplate를 줄여 가능한 한 짧고 명확하게 작성한다. 기능 구현 전 현재 폴더와 상위 폴더의 `Overview.md`, 이 문서의 빠른 탐색 표, `docs/api/`를 먼저 확인한다. 이미 존재하는 모델/manager/정적 API와 UI primitive를 재사용하고, 기존 API 조합으로 해결할 수 없을 때만 가장 작은 새 API를 소유 계층에 추가한다.

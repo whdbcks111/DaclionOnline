@@ -33,7 +33,7 @@ function getGaugeColor(value: number): string {
   const hue = gauge <= 0.65
     ? 4 + (gauge / 0.65) * 126
     : 130 + ((gauge - 0.65) / 0.35) * 80
-  return `hsl(${hue.toFixed(0)} 68% 48%)`
+  return `hsl(${hue.toFixed(0)} 58% 44%)`
 }
 
 export default function MiniGameOverlay() {
