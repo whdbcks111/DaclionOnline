@@ -1,0 +1,106 @@
+@use '../../styles/variables' as *;
+@use '../../styles/themes' as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3500;
+  display: grid;
+  place-items: center;
+  padding: clamp($spacing-sm, 3vw, $spacing-xl);
+  background: rgb(5 12 22 / 76%);
+  backdrop-filter: blur(.25rem);
+}
+
+.panel {
+  display: grid;
+  width: min(94vw, 38rem);
+  max-height: 96vh;
+  box-sizing: border-box;
+  gap: clamp($spacing-sm, 2vh, $spacing-md);
+  padding: clamp($spacing-sm, 3vw, $spacing-lg);
+  overflow: auto;
+  color: $color-text;
+  background: color-mix(in srgb, $color-bg 94%, #4bb8d2 6%);
+  border: 1px solid color-mix(in srgb, #69d7e8 55%, $color-border);
+  border-radius: clamp($border-radius-md, 2vw, $border-radius-lg);
+  box-shadow: 0 1.2rem 4rem rgb(0 0 0 / 45%);
+
+  header { display: flex; align-items: end; justify-content: space-between; gap: $spacing-md; }
+  h2, p { margin: 0; }
+  h2 { font-size: clamp(1.25rem, 4vw, 1.7rem); }
+  p { color: $color-text-secondary; font-size: $font-size-sm; text-align: right; }
+}
+
+.rarity { font-size: $font-size-sm; font-weight: 900; }
+.gauge {
+  position: relative;
+  height: clamp(1.1rem, 3vh, 1.5rem);
+  overflow: hidden;
+  background: color-mix(in srgb, $color-bg-tertiary 85%, black);
+  border: 1px solid $color-border;
+  border-radius: 999px;
+  box-shadow: inset 0 .12rem .3rem rgb(0 0 0 / 28%);
+  > span { display: block; height: 100%; background: linear-gradient(90deg, #39b98a, #8be26e); transition: width .08s linear; }
+  > b { position: absolute; inset: 0; display: grid; place-items: center; color: white; font-size: .75rem; text-shadow: 0 1px 2px black; }
+}
+
+.board {
+  position: relative;
+  width: min(100%, 66vh);
+  aspect-ratio: 1;
+  justify-self: center;
+  overflow: hidden;
+  touch-action: none;
+  background:
+    radial-gradient(circle at 24% 30%, rgb(255 255 255 / 16%) 0 2%, transparent 3%),
+    radial-gradient(circle at 72% 68%, rgb(255 255 255 / 12%) 0 1.5%, transparent 2.5%),
+    linear-gradient(145deg, #237f9e, #164966 70%, #123b54);
+  border: .25rem solid color-mix(in srgb, #77d8e6 50%, $color-border);
+  border-radius: $border-radius-lg;
+  box-shadow: inset 0 0 3rem rgb(0 0 0 / 24%);
+}
+
+.net {
+  position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  background: rgb(104 232 191 / 15%);
+  border: .2rem solid rgb(111 238 195 / 78%);
+  box-shadow: 0 0 1rem rgb(75 237 190 / 28%), inset 0 0 1rem rgb(75 237 190 / 18%);
+  transition: border-color .08s, background .08s;
+}
+.caught { background: rgb(153 255 132 / 28%); border-color: #b6ff91; box-shadow: 0 0 1.4rem rgb(143 255 119 / 58%); }
+.fish { position: absolute; z-index: 2; width: clamp(2rem, 9%, 3.4rem); aspect-ratio: 1; transform: translate(-50%, -50%); object-fit: contain; filter: drop-shadow(0 .18rem .18rem rgb(0 0 0 / 35%)); pointer-events: none; user-select: none; }
+
+.controls { display: flex; min-height: 5rem; align-items: center; justify-content: space-between; gap: $spacing-md; strong { color: $color-text; line-height: 1.45; } }
+.joystick {
+  position: relative;
+  display: none;
+  width: clamp(5rem, 24vw, 7rem);
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  touch-action: none;
+  background: color-mix(in srgb, $color-bg-tertiary 72%, transparent);
+  border: 1px solid $color-border;
+  border-radius: 50%;
+  box-shadow: inset 0 0 1rem rgb(0 0 0 / 18%);
+  &::before, &::after { content: ''; position: absolute; background: $color-border; opacity: .65; }
+  &::before { top: 12%; bottom: 12%; left: 50%; width: 1px; }
+  &::after { left: 12%; right: 12%; top: 50%; height: 1px; }
+  > span { position: absolute; inset: 27%; z-index: 1; background: #57c6d5; border-radius: 50%; box-shadow: 0 .2rem .5rem rgb(0 0 0 / 30%); pointer-events: none; }
+}
+
+@media (hover: none), (max-width: $breakpoint-tablet) {
+  .joystick { display: block; }
+  .panel header p { display: none; }
+  .board { width: min(100%, 56vh); }
+}
+
+@media (max-height: 44rem) {
+  .panel { grid-template-columns: minmax(0, 1fr) auto; width: min(96vw, 52rem); }
+  .panel header, .gauge { grid-column: 1 / -1; }
+  .board { width: min(56vh, 28rem); }
+  .controls { flex-direction: column; justify-content: center; }
+}

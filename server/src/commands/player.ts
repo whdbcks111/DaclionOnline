@@ -458,18 +458,14 @@ export function initPlayerCommands(): void {
                 }
             }
 
-            const equipItem = Item.fromSnapshot(item.snapshot(1));
-            const displaced = player.equipment.equipSwap(slot, equipItem, player.attribute, targetSlotIndex);
+            const equipResult = player.equipInventoryItem(item, targetSlotIndex);
 
-            if (displaced === undefined) {
+            if (!equipResult) {
                 sendBotMessageToUser(userId, `${item.name}을(를) 장착할 수 없습니다.`);
                 return;
             }
-
-            player.inventory.removeItem(item.id, 1);
-
+            const { displaced } = equipResult;
             if (displaced !== null) {
-                player.inventory.addItemSnapshot(displaced.snapshot(1));
                 sendBotMessageToUser(userId, `${item.name}을(를) 장착했습니다. (기존 장착 해제: ${getItemData(displaced.itemDataId)?.name ?? displaced.itemDataId})`);
             } else {
                 sendBotMessageToUser(userId, `${item.name}을(를) 장착했습니다.`);

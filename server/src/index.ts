@@ -24,10 +24,12 @@ import './data/skills.js';
 import './data/crafting.js';
 import './data/quests.js';
 import './data/npcs.js';
+import './data/fishing.js';
 import { initLocation } from './modules/location.js';
 import { uploadRouter } from './modules/upload.js';
 import { initAllCommands } from './commands/index.js';
 import { initAdminPanel } from './modules/adminPanel.js';
+import { initMiniGame } from './modules/minigame.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -42,6 +44,7 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Socket.io 서버 설정
 initSocket(httpServer, CORS_ORIGIN);
+initMiniGame();
 
 // 모듈들 초기화
 initRegister();

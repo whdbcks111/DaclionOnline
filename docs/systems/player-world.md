@@ -30,6 +30,7 @@ Location ── objects[] (Monster | Resource)
 ## 게임 루프와 갱신 주기
 
 - `modules/game.ts`: 20 FPS. 모든 온라인 Player의 `earlyUpdate → update(SkillBook 포함) → lateUpdate`, 활성 Projectile의 전체 Entity lifecycle, Location의 모든 월드 오브젝트, Shop, Coroutine 순으로 갱신한다.
+- 일회성 미니게임과 낚시 대기는 전투 Entity 프레임과 별도의 런타임 세션이다. 마지막 연결 종료·명시적 unload에서는 `cancelFishing()`이 대기 timer와 미니게임을 함께 정리하며 장소/생존/장비 유효성은 입질과 결과 확정 시 다시 검사한다.
 - `modules/player.ts`: 500ms마다 `playerStats`와 `locationInfo`, 30초마다 dirty 상태를 DB에 저장한다.
 - `Entity.earlyUpdate`: tick 행동 제한 초기화 → StatusEffect early/update → 공격 cooldown 감소 → `lifeRegen` 생명력 및 `mentalityRegen` 정신력 자연 회복 → 사망 timer와 respawn. 생명력 재생은 받는 치유량 modifier를 적용하고 정신력 재생은 최대 정신력까지만 직접 회복한다.
 - `Player.earlyUpdate`: Entity 공통 갱신 뒤 생존 중에만 `hungerDrain`과 `thirstDrain`을 초 단위로 적용한다. 두 자원 모두 0 아래로 내려가지 않으며 0이면 공복·갈증 StatusEffect를 적용하고 회복되면 제거한다.

@@ -16,7 +16,23 @@
       { "locationId": "field" },
       { "locationId": "shop_street" },
       { "locationId": "feveric_mine" },
-      { "locationId": "job_hall" }
+      { "locationId": "job_hall" },
+      { "locationId": "luminous_pond" }
+    ]
+  },
+  {
+    "id": "luminous_pond",
+    "name": "루미나르 물빛 연못",
+    "mapColor": "#63a9bf",
+    "zoneType": "safe",
+    "x": 38,
+    "y": -42,
+    "z": 0,
+    "tags": ["location:safe", "location:fishing", "property:water"],
+    "npcIds": [],
+    "objects": [],
+    "connections": [
+      { "locationId": "town_square" }
     ]
   },
   {

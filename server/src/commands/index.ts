@@ -13,6 +13,7 @@ import { initMapCommands } from './map.js';
 import { initCareerCommands } from './career.js';
 import { initPartyCommands } from './party.js';
 import { initInspectionCommands } from './inspection.js';
+import { initFishingCommands } from './fishing.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -30,4 +31,5 @@ export function initAllCommands(): void {
     initCareerCommands();
     initPartyCommands();
     initInspectionCommands();
+    initFishingCommands();
 }

@@ -19,6 +19,8 @@ import { StatusEffectRemovalReason, StatusEffectType } from './StatusEffect.js';
 import QuestBook from './QuestBook.js';
 import { markLocationVisited } from './WorldMap.js';
 import CareerProfile from './Career.js';
+import { Item } from './Item.js';
+import { SLOT_MAX, type EquipSlot } from './Equipment.js';
 
 const DEFAULT_BASE_ATTRIBUTE = {
     maxLife:      100,
@@ -253,6 +255,40 @@ export default class Player extends Entity {
             inventory: this.inventory,
         })) return;
         this.attack(target);
+    }
+
+    /** 인벤토리 아이템을 장착하고 밀려난 장비는 다시 인벤토리로 돌려보낸다. */
+    equipInventoryItem(item: Item, targetSlotIndex?: number): { slot: EquipSlot; slotIndex: number; displaced: Item | null } | null {
+        const slot = item.equipSlot as EquipSlot | null;
+        if (!slot || this.inventory.getItem(item.id) !== item) return null;
+
+        let slotIndex = targetSlotIndex;
+        if (slotIndex === undefined) {
+            let firstEmpty = -1;
+            let lastOccupied = -1;
+            for (let index = 0; index < SLOT_MAX[slot]; index++) {
+                if (this.equipment.getEquipped(slot, index)) lastOccupied = index;
+                else if (firstEmpty === -1) firstEmpty = index;
+            }
+            slotIndex = firstEmpty !== -1 ? firstEmpty : lastOccupied;
+        }
+        if (slotIndex < 0 || slotIndex >= SLOT_MAX[slot]) return null;
+
+        const current = this.equipment.getEquipped(slot, slotIndex);
+        if (current && this.inventory.currentWeight - item.weight + current.weight > this.inventory.maxWeight) return null;
+
+        const equippedCopy = Item.fromSnapshot(item.snapshot(1));
+        const displaced = this.equipment.equipSwap(slot, equippedCopy, this.attribute, slotIndex);
+        if (displaced === undefined) return null;
+        if (!this.inventory.removeItemInstance(item, 1)) {
+            this.equipment.unequip(slot, slotIndex, this.attribute);
+            if (displaced) this.equipment.equipSwap(slot, displaced, this.attribute, slotIndex);
+            return null;
+        }
+        if (displaced && !this.inventory.addItemSnapshot(displaced.snapshot(1))) {
+            throw new Error(`장착 해제 아이템을 인벤토리에 복원하지 못했습니다: ${displaced.itemDataId}`);
+        }
+        return { slot, slotIndex, displaced };
     }
 
     canSpendMentality(amount: number): boolean {

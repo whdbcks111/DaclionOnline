@@ -76,6 +76,22 @@ defineShop({
             stock: 20,
             restockTime: 20,
         },
+        {
+            label: '초보자 낚싯대',
+            create: () => ({ itemDataId: 'beginner_fishing_rod', count: 1 }),
+            count: 1,
+            price: 45,
+            stock: 5,
+            restockTime: 120,
+        },
+        {
+            label: '통통한 지렁이 미끼 10개',
+            create: () => ({ itemDataId: 'earthworm_bait', count: 10 }),
+            count: 10,
+            price: 12,
+            stock: 30,
+            restockTime: 30,
+        },
     ],
     sellList: [
         {
@@ -114,8 +130,16 @@ defineShop({
             count: 99,
             price: 1,
         },
+        { label: '낚시 도구', filter: item => item.hasTag(GameTags.TOOL_FISHING), count: 1, price: 20 },
+        { label: '미끼', filter: item => item.hasTag(GameTags.ITEM_BAIT), count: 99, price: 1 },
+        { label: '일반 물고기', filter: item => ['silver_minnow', 'pond_carp'].includes(item.itemDataId), count: 99, price: 3 },
+        { label: '고급 물고기', filter: item => ['bluefin_dace', 'sunscale_bream'].includes(item.itemDataId), count: 99, price: 8 },
+        { label: '희귀 물고기', filter: item => item.itemDataId === 'mist_eel', count: 99, price: 22 },
+        { label: '서사 물고기', filter: item => item.itemDataId === 'crystal_salmon', count: 99, price: 55 },
+        { label: '전설 물고기', filter: item => item.itemDataId === 'golden_koi', count: 99, price: 140 },
+        { label: '신화 물고기', filter: item => item.itemDataId === 'moonlight_sturgeon', count: 99, price: 360 },
     ],
-    tags: [GameTags.SHOP_GENERAL],
+    tags: [GameTags.SHOP_GENERAL, GameTags.SHOP_FISHING],
 });
 
 defineShop({

@@ -60,11 +60,13 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
                         import('./playerRegistry.js'),
                         import('./party.js'),
                         import('./informationVisibility.js'),
-                    ]).then(([registry, party, visibility]) => {
+                        import('./fishing.js'),
+                    ]).then(([registry, party, visibility, fishing]) => {
                         if (isUserOnline(onlineUserId)) return;
                         const player = registry.getOnlinePlayer(onlineUserId);
                         const result = player ? party.partyManager.removeDisconnectedPlayer(player) : undefined;
                         visibility.clearInformationMode(onlineUserId);
+                        fishing.cancelFishing(onlineUserId, '연결이 종료되어 낚시가 취소되었습니다.');
                         for (const affectedUserId of result?.affectedUserIds ?? []) {
                             if (affectedUserId !== onlineUserId && registry.getOnlinePlayer(affectedUserId)) {
                                 void import('./message.js').then(({ sendBotMessageToUser }) =>

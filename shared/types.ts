@@ -1,5 +1,11 @@
 // 서버-클라이언트 공통 타입 정의
 import type { TagId } from './tags.js'
+import type {
+    MiniGameCancelledData,
+    MiniGameResolvedData,
+    MiniGameResultRequest,
+    MiniGameStartData,
+} from './minigames.js'
 
 // -- 위치 데이터 (서버-클라이언트 공유) --
 
@@ -397,6 +403,9 @@ export interface ServerToClientEvents {
     adminPanelPlayers: (data: AdminPlayerListItem[]) => void
     adminPanelPlayer: (data: AdminPlayerDetailData | null) => void
     adminPanelResult: (result: AdminPanelResult) => void
+    miniGameStart: (data: MiniGameStartData) => void
+    miniGameResolved: (data: MiniGameResolvedData) => void
+    miniGameCancelled: (data: MiniGameCancelledData) => void
 }
 
 export interface ClientToServerEvents {
@@ -424,4 +433,5 @@ export interface ClientToServerEvents {
     adminPanelRequestPlayers: () => void
     adminPanelRequestPlayer: (userId: number) => void
     adminPanelExecute: (request: AdminPanelActionRequest) => void
+    miniGameResult: (request: MiniGameResultRequest) => void
 }

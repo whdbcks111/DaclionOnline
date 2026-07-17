@@ -128,6 +128,41 @@ export class AttributeType {
         v => `${(v * 100).toFixed(0)}%`, 
         v => `치명타 시 ${(v * 100).toFixed(0)}%의 피해를 줍니다.`
     )
+    static readonly LUCK = new AttributeType(
+        'luck',
+        '행운',
+        0,
+        undefined,
+        v => `희귀 보상을 만날 확률에 영향을 줍니다. (현재 ${v.toFixed(1)})`
+    )
+    static readonly FISHING_BITE_SPEED = new AttributeType(
+        'fishingBiteSpeed',
+        '입질 속도',
+        1,
+        v => `${v.toFixed(2)}배`,
+        v => `낚시 입질 대기 시간을 ${v.toFixed(2)}배 빠르게 진행합니다.`
+    )
+    static readonly FISHING_NET_SIZE = new AttributeType(
+        'fishingNetSize',
+        '채집 영역 크기',
+        18,
+        v => v.toFixed(1),
+        v => `낚시 미니게임 채집 영역의 기준 크기가 ${v.toFixed(1)}입니다.`
+    )
+    static readonly FISHING_NET_SPEED = new AttributeType(
+        'fishingNetSpeed',
+        '채집 영역 속도',
+        34,
+        v => v.toFixed(1),
+        v => `낚시 미니게임 채집 영역의 초당 이동량이 ${v.toFixed(1)}입니다.`
+    )
+    static readonly FISHING_GAUGE_START = new AttributeType(
+        'fishingGaugeStart',
+        '낚시 시작 게이지',
+        0.5,
+        v => `${(v * 100).toFixed(0)}%`,
+        v => `낚시 미니게임의 포획 게이지가 ${(v * 100).toFixed(0)}%에서 시작합니다.`
+    )
 
     readonly key: AttributeKey
     readonly label: string
@@ -175,6 +210,7 @@ export type AttributeKey =
     | 'armorPen' | 'magicPen'
     | 'speed' | 'attackSpeed'
     | 'critRate' | 'critDmg'
+    | 'luck' | 'fishingBiteSpeed' | 'fishingNetSize' | 'fishingNetSpeed' | 'fishingGaugeStart'
 
 /** Modifier 적용 방식 */
 export type ModifierOp = 'add' | 'multiply'

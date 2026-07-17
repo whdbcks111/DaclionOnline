@@ -116,6 +116,24 @@ registerItemUse('restore_survival', (inv, item, finish) => {
     startCoroutine(restoreRoutine());
 });
 
+registerItemUse('equip_bait', (inv, item, finish) => {
+    try {
+        const player = getPlayerByUserId(inv.playerId);
+        if (!player || !item.hasTag(GameTags.ITEM_BAIT)) return;
+        const result = player.equipInventoryItem(item, 0);
+        sendNotificationToUser(player.userId, {
+            key: 'item:equip-bait',
+            message: result
+                ? `${item.name}을(를) 보조 슬롯에 미끼로 장착했습니다.`
+                : '미끼를 보조 슬롯에 장착할 수 없습니다. 인벤토리 중량과 보조 장비를 확인하세요.',
+        });
+    } catch (error) {
+        logger.error('미끼 자동 장착 실패', error);
+    } finally {
+        finish();
+    }
+});
+
 defineItem({
     id: 'health_potion',
     name: '체력 포션',
@@ -412,5 +430,75 @@ for (const mineral of mineralItems) {
         modifiers: null,
         baseDurability: null,
         tags: [mineral.tag],
+    });
+}
+
+defineItem({
+    id: 'beginner_fishing_rod',
+    name: '초보자 낚싯대',
+    description: '루미나르 연못에서 쓰기 좋은 가벼운 낚싯대. 원형 채집 영역을 조종한다.',
+    image: 'items/beginner_fishing_rod',
+    category: '낚시 도구',
+    weight: 1.6,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: { fishingNetShape: 'circle' },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'luck', op: 'add', value: 1, source: '' },
+        { attribute: 'fishingBiteSpeed', op: 'add', value: 0.1, source: '' },
+        { attribute: 'fishingNetSize', op: 'add', value: 6, source: '' },
+        { attribute: 'fishingNetSpeed', op: 'add', value: 8, source: '' },
+        { attribute: 'fishingGaugeStart', op: 'add', value: 0.08, source: '' },
+    ],
+    baseDurability: 120,
+    tags: [GameTags.ITEM_TOOL, GameTags.TOOL_FISHING, GameTags.MATERIAL_WOOD],
+});
+
+defineItem({
+    id: 'earthworm_bait',
+    name: '통통한 지렁이 미끼',
+    description: '사용하면 보조 슬롯에 자동 장착된다. 낚시 한 번에 하나를 소비한다.',
+    image: 'items/earthworm_bait',
+    category: '미끼',
+    weight: 0.05,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: 'equip_bait',
+    equipSlot: 'offHand',
+    modifiers: [
+        { attribute: 'luck', op: 'add', value: 3, source: '' },
+        { attribute: 'fishingBiteSpeed', op: 'add', value: 0.35, source: '' },
+    ],
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_BAIT, GameTags.PROPERTY_NATURAL],
+});
+
+const fishItems = [
+    { id: 'silver_minnow', name: '은빛 피라미', description: '연못에서 흔히 잡히는 작고 반짝이는 물고기.', weight: 0.3 },
+    { id: 'pond_carp', name: '연못 잉어', description: '루미나르 연못 바닥을 느긋하게 헤엄치는 잉어.', weight: 1.2 },
+    { id: 'bluefin_dace', name: '푸른지느러미 황어', description: '푸른 지느러미가 선명한 고급 어종.', weight: 0.8 },
+    { id: 'sunscale_bream', name: '햇비늘 도미', description: '햇빛을 받으면 황금빛 비늘이 번쩍인다.', weight: 1.0 },
+    { id: 'mist_eel', name: '안개 장어', description: '물안개 속에서 재빠르게 방향을 바꾸는 희귀 장어.', weight: 1.5 },
+    { id: 'crystal_salmon', name: '수정 연어', description: '수정처럼 맑은 비늘을 지닌 서사 등급 연어.', weight: 2.2 },
+    { id: 'golden_koi', name: '황금 비단잉어', description: '행운을 부른다고 전해지는 전설의 황금 잉어.', weight: 2.8 },
+    { id: 'moonlight_sturgeon', name: '월광 철갑상어', description: '달빛을 머금은 비늘로 밤을 밝히는 신화의 물고기.', weight: 4.5 },
+] as const;
+
+for (const fish of fishItems) {
+    defineItem({
+        ...fish,
+        image: `items/${fish.id}`,
+        category: '물고기',
+        stackable: true,
+        maxStack: 20,
+        baseMetadata: null,
+        onUse: null,
+        equipSlot: null,
+        modifiers: null,
+        baseDurability: null,
+        tags: [GameTags.ITEM_FISH, GameTags.PROPERTY_WATER],
     });
 }

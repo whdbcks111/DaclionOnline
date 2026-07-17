@@ -13,6 +13,7 @@ import Header from '../components/Header'
 import Drawer from '../components/Drawer'
 import HudContainer from '../components/hud/HudContainer'
 import HudSettings from '../components/hud/HudSettings'
+import MiniGameOverlay from '../components/minigame/MiniGameOverlay'
 import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, LocationInfoData, ChannelInfo, UserCountData, CompletionItem } from '@shared/types'
 
 function channelRoomKey(channel: string | null): string {
@@ -403,6 +404,7 @@ function HomeContent() {
         }}
       />
       <HudContainer />
+      <MiniGameOverlay />
       {hudSettingsOpen && <HudSettings onClose={() => setHudSettingsOpen(false)} />}
     </div>
   )

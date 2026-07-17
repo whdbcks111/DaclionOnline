@@ -323,6 +323,11 @@ export default class Equipment implements TagReadable {
         return item;
     }
 
+    /** 장착 아이템 한 개를 소비한다. 반환된 아이템은 인벤토리로 되돌리지 않는다. */
+    consumeEquippedItem(slot: EquipSlot, slotIndex: number, attribute: Attribute): Item | null {
+        return this.unequip(slot, slotIndex, attribute);
+    }
+
     // -- Modifier 재적용 (서버 재시작 시) --
 
     /** 모든 장착 아이템의 modifier를 attribute에 적용 */
