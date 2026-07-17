@@ -39,7 +39,7 @@ npm run db:migrate:deploy
 
 `resolve --applied`는 baseline SQL을 실행하지 않고 `_prisma_migrations`에 적용 완료 이력만 남긴다. 이후 migration은 일반 운영 명령으로 적용한다. 빈 DB에는 `resolve`를 사용하지 않고 `npm run db:migrate:deploy`만 실행한다.
 
-현재 후속 migration은 오브젝트 태그를 추가하는 `20260714000000_add_object_tags`와 진행 상태·스킬 테이블을 추가하는 `20260715000000_add_progress_and_skills`다.
+현재 후속 migration은 오브젝트 태그를 추가하는 `20260714000000_add_object_tags`, 진행 상태·스킬 테이블을 추가하는 `20260715000000_add_progress_and_skills`, 퀘스트 테이블을 추가하는 `20260716000000_add_player_quests`, 스킬 경험치를 추가하는 `20260717000000_add_skill_experience`다.
 
 ## 스키마 정의 (schema.prisma)
 

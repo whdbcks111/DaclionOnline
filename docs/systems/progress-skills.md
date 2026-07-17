@@ -39,12 +39,12 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 ## 스킬 정의와 인스턴스
 
-`data/skills.ts`의 `defineSkill()`이 코드 마스터 데이터를 등록하고, Player별 `Skill`은 레벨·쿨다운 종료 시각·획득 정보·영속 태그·metadata delta만 가진다. `SkillBook`이 보유 목록과 수명주기, 자동 획득·자동 발동, dirty 저장을 소유한다. `SkillContext.owner`는 실제 시전자 Entity이며 `player`는 플레이어 시전자일 때만 존재하므로 같은 `SkillData`를 Monster도 실행할 수 있다. `SkillBook.createRuntime()`은 몬스터 수명 동안만 유지되는 비영속 스킬북을 만든다.
+`data/skills.ts`의 `defineSkill()`이 코드 마스터 데이터를 등록하고, Player별 `Skill`은 레벨·경험치·쿨다운 종료 시각·획득 정보·영속 태그·metadata delta만 가진다. `SkillBook`이 보유 목록과 수명주기, 자동 획득·자동 발동, dirty 저장을 소유한다. `SkillContext.owner`는 실제 시전자 Entity이며 `player`는 플레이어 시전자일 때만 존재하므로 같은 `SkillData`를 Monster도 실행할 수 있다. `SkillBook.createRuntime()`은 몬스터 수명 동안만 유지되는 비영속 스킬북을 만든다.
 
 `SkillData`의 확장 지점은 다음과 같다.
 
 - 표시: `icon`, `descriptionTemplate`, `costTemplate`, `activationConditionTemplate`, `isVisible`.
-- 계산: `baseMetadata`, `calculatedFields`, `calculateMaxCooldown`.
+- 계산: `baseMetadata`, `calculatedFields`, `calculateMaxCooldown`, `calculateExperienceGain`, `calculateRequiredExperience`.
 - 획득/발동: `autoAcquire`, `autoActivate`, `activateOnMessage`, `canUse`, `canActivate`.
 - 수명주기: `onAcquire`, `onStart`, `onUpdate`, `onFinish`, `onPassiveUpdate`.
 - 분류: `tags`, `maxLevel`, `aliases`, `activationMessage`.
@@ -67,6 +67,7 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 - `{{calc.damage}}` 또는 `{{damage}}`: `calculatedFields.damage({ player, skill })` 결과.
 - `{{meta.baseManaCost}}`: metadata 유효값.
 - `{{skill.level}}`, `{{skill.maxLevel}}`, `{{skill.name}}`.
+- `{{skill.experience}}`, `{{skill.requiredExperience}}`: 현재 경험치와 다음 레벨 요구량.
 - `{{maxCooldown}}`, `{{remainingCooldown}}`: 내장 계산값.
 
 설명·소모·발동 조건은 모두 같은 포맷터를 사용한다. 결과 문자열은 `parseChatMessage()`를 거치므로 `[color=orange]{{damage}}[/color]`처럼 기존 채팅 전용 문법을 사용할 수 있다. 공격력/물리 피해는 주황색, 정신력은 상태창과 같은 `$magic` 보라색, 치명타·쿨다운 강조는 금색을 기본 표현으로 사용한다.
@@ -75,12 +76,12 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 - `/스킬목록` 또는 `sl`: 현재 표시 가능한 보유 스킬의 아이콘·레벨·사용 상태와 정보/사용 버튼을 표시한다.
 - `/스킬 스킬이름` 또는 `su 스킬이름`: 명령 입력은 숨기고 `SkillBook.activateByInput()`을 호출한다.
-- `/스킬정보 스킬이름` 또는 `si 스킬이름`: 계산된 상세 정보와 현재 발동 상태를 표시한다.
+- `/스킬정보 스킬이름` 또는 `si 스킬이름`: 계산된 상세 정보, 현재 레벨과 경험치 진행도를 표시한다.
 - 일반 채팅: 명령이 아닌 메시지를 각 스킬의 `activateOnMessage`로 검사하고 일치하면 원문 전송 대신 같은 발동 API를 호출한다.
 - 자동 조건: 0.25초마다 현재 표시 가능한 스킬의 `autoActivate`를 검사한다.
 - 자동 획득: 첫 update와 관련 progress 변경 후 `autoAcquire.watchedProgress`만 다시 검사한다.
 
-발동은 사망·활성 중·쿨다운·`canUse/canActivate`를 먼저 검사한다. 조건을 통과하면 선택적 `activationMessage`를 시전자 본인에게만 보이는 플레이어 메시지로 전송한 뒤 `onStart`를 실행하므로 공격·회복 같은 즉시 효과보다 발동 메시지가 먼저 표시된다. 원래 입력한 일반 채팅 발동어도 공개 채팅으로 전달하지 않는다. `onStart`가 성공하면 활성 상태와 쿨다운을 확정하며, `activationFeedback`이 있으면 계산된 효과를 본인 전용 봇 메시지와 notification으로 함께 보낸다. 지속시간이 있으면 `onUpdate`, 종료 시 `onFinish`, 로그인 중 사용 가능한 패시브에는 `onPassiveUpdate`가 호출된다. 로그아웃 시 활성 스킬을 `UNLOADED` 사유로 종료한 다음 저장한다.
+발동은 사망·활성 중·쿨다운·`canUse/canActivate`를 먼저 검사한다. 조건을 통과하면 선택적 `activationMessage`를 시전자 본인에게만 보이는 플레이어 메시지로 전송한 뒤 `onStart`를 실행하므로 공격·회복 같은 즉시 효과보다 발동 메시지가 먼저 표시된다. 원래 입력한 일반 채팅 발동어도 공개 채팅으로 전달하지 않는다. `onStart`가 성공하면 활성 상태와 쿨다운을 확정하며, `activationFeedback`이 있으면 계산된 효과를 본인 전용 봇 메시지와 notification으로 함께 보낸다. 이 성공 확정 시점에 영속 플레이어 스킬은 기본 10 경험치를 얻고, 몬스터 런타임 스킬은 경험치를 얻지 않는다. 기본 다음 레벨 요구량은 `100 + (현재 레벨 - 1) × 50`이며 두 값 모두 SkillData 계산 함수로 재정의하거나 획득량을 0으로 끌 수 있다. 요구량을 넘긴 잔여 경험치는 다음 레벨에 이월되고 최대 레벨에서는 더 이상 누적하지 않으며, 레벨업 시 본인 메시지와 notification을 보낸다. 지속시간이 있으면 `onUpdate`, 종료 시 `onFinish`, 로그인 중 사용 가능한 패시브에는 `onPassiveUpdate`가 호출된다. 로그아웃 시 활성 스킬을 `UNLOADED` 사유로 종료한 다음 저장한다.
 
 ## 스킬 퀵 HUD
 
@@ -111,4 +112,4 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 ## 영속성
 
-로그인 시 `Player.loadByUserId()`가 `PlayerProgress`와 `SkillBook`을 Inventory/Equipment와 함께 로드한다. 모든 변경은 메모리에 적용하고 versioned dirty key를 남긴다. `Player.save()`가 30초 주기, unload, 종료 시 `player_progress`와 `player_skills`를 upsert/delete한다. 저장 도중 같은 값이 다시 바뀌면 이전 snapshot 완료가 새 dirty version을 지우지 않는다.
+로그인 시 `Player.loadByUserId()`가 `PlayerProgress`와 `SkillBook`을 Inventory/Equipment와 함께 로드한다. 경험치 획득과 레벨업을 포함한 모든 변경은 메모리에 적용하고 versioned dirty key를 남긴다. `Player.save()`가 30초 주기, unload, 종료 시 `player_progress`와 `player_skills`를 upsert/delete한다. 저장 도중 같은 값이 다시 바뀌면 이전 snapshot 완료가 새 dirty version을 지우지 않는다.

@@ -11,7 +11,7 @@ Prisma 스키마는 `server/prisma/schema.prisma`, 런타임 클라이언트 설
 | `Item` / `items` | id, Player N:1 cascade | itemDataId, count, durability, metadata/tags JSON, timestamps |
 | `Equipment` / `equipments` | id, Player N:1 cascade | itemDataId, slot, slotIndex, durability, metadata/tags JSON; `(playerId, slot, slotIndex)` unique |
 | `PlayerProgress` / `player_progress` | `(playerId, key)` 복합 PK, Player N:1 cascade | kind, intValue, textValue, updatedAt |
-| `PlayerSkill` / `player_skills` | `(playerId, skillDataId)` 복합 PK, Player N:1 cascade | level, cooldownEndsAt, metadata/tags JSON, acquisitionSource, timestamps |
+| `PlayerSkill` / `player_skills` | `(playerId, skillDataId)` 복합 PK, Player N:1 cascade | level, experience, cooldownEndsAt, metadata/tags JSON, acquisitionSource, timestamps |
 | `PlayerQuest` / `player_quests` | `(playerId, questDataId)` 복합 PK, Player N:1 cascade | status, currentStageId, objectiveProgress/metadata/tags JSON, completionCount, 수락·보고·완료·반복 시각 |
 
 `itemDataId`는 DB 외래키가 아니라 코드의 `data/items.ts` 마스터 데이터 ID다. `locationId`도 JSON 마스터 데이터 ID다. 마스터 ID 변경 시 기존 DB 레코드 호환을 직접 처리해야 한다.
@@ -70,6 +70,7 @@ login/session restore
 - 태그 JSON 컬럼 추가 migration은 `20260714000000_add_object_tags`다.
 - 통계·플래그와 스킬 인스턴스 테이블 migration은 `20260715000000_add_progress_and_skills`다.
 - 플레이어 퀘스트 인스턴스 테이블 migration은 `20260716000000_add_player_quests`다.
+- 플레이어 스킬 경험치 컬럼 migration은 `20260717000000_add_skill_experience`다.
 - 일반 운영 배포에서는 `cd server && npm run db:migrate:deploy`를 실행한다. 이 명령은 pending schema migration 적용, Prisma Client 생성, 아이템 metadata delta 데이터 마이그레이션을 순서대로 실행한다.
 - metadata 데이터 마이그레이션은 `src/scripts/migrateItemMetadataDeltas.ts`가 담당한다. 이미 버전 1인 행과 `null` 행은 건너뛰므로 재실행할 수 있다. 구형 전체 metadata 중 현재 `baseMetadata`와 같은 값은 기본값으로 간주해 제거하므로, 기본 metadata를 변경하기 전에 서버를 중지한 상태에서 운영 명령을 먼저 실행해야 한다.
 - `migrate reset`은 전체 데이터를 삭제하므로 운영 DB에서 금지한다.

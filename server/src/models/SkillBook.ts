@@ -76,6 +76,7 @@ export default class SkillBook {
                     playerId,
                     skillDataId: row.skillDataId,
                     level: row.level,
+                    experience: row.experience,
                     cooldownEndsAt: row.cooldownEndsAt,
                     metadata: row.metadata,
                     tags: (row.tags as TagId[] | null) ?? [],
@@ -311,6 +312,7 @@ export default class SkillBook {
                 playerId,
                 skillDataId: skill.skillDataId,
                 level: skill.level,
+                experience: skill.experience,
                 cooldownEndsAt: skill.getCooldownEndDate(),
                 metadata: skill.getPersistedMetadata() as never,
                 tags: skill.tags.persistentValues(),
@@ -319,6 +321,7 @@ export default class SkillBook {
             },
             update: {
                 level: skill.level,
+                experience: skill.experience,
                 cooldownEndsAt: skill.getCooldownEndDate(),
                 metadata: skill.getPersistedMetadata() as never,
                 tags: skill.tags.persistentValues(),
@@ -385,6 +388,14 @@ export default class SkillBook {
             }
         }
 
+        if (player) {
+            try {
+                this.awardSuccessfulActivationExperience(player, skill);
+            } catch (error) {
+                logger.error(`스킬 경험치 지급 실패: ${skill.skillDataId}`, error);
+            }
+        }
+
         emitGameEvent(GameEventIds.SKILL_STARTED, {
             actor: owner,
             data: { skillDataId: skill.skillDataId },
@@ -408,6 +419,19 @@ export default class SkillBook {
         const usable = skill.checkUsable(owner);
         if (!usable.accepted) return usable;
         return skill.data.canActivate?.(createSkillContext(owner, skill)) ?? acceptSkill();
+    }
+
+    private awardSuccessfulActivationExperience(player: Player, skill: Skill): void {
+        const result = skill.addExperience(player, skill.getExperienceGain(player));
+        if (result.levelsGained <= 0) return;
+        const message = `스킬 [ ${skill.name} ] 레벨이 올랐습니다! (Lv.${result.level})`;
+        sendBotMessageToUser(player.userId, chat()
+            .color('gold', b => b.weight('bold', b2 => b2.text(message)))
+            .build());
+        sendNotificationToUser(player.userId, {
+            key: `skill-level-up:${skill.skillDataId}`,
+            message,
+        });
     }
 
     private finish(skill: Skill, reason: SkillFinishReason): void {

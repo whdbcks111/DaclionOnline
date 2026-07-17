@@ -110,14 +110,35 @@ export function initSkillCommands(): void {
                 return;
             }
 
+            const requiredExperience = skill.getRequiredExperience(player);
+            const experienceNodes = skill.level >= skill.maxLevel
+                ? chat()
+                    .color('gray', b => b.text('경험치  '))
+                    .weight('bold', b => b.color('gold', b2 => b2.text('MAX')))
+                    .text('\n')
+                    .build()
+                : chat()
+                    .color('gray', b => b.text('경험치  '))
+                    .color('gold', b => b.text(`${skill.experience} / ${requiredExperience}`))
+                    .text('  ')
+                    .progress({
+                        value: requiredExperience > 0 ? skill.experience / requiredExperience : 1,
+                        length: '8em',
+                        color: 'gold',
+                        thickness: 6,
+                    })
+                    .text('\n')
+                    .build();
+
             const nodes = [
                 ...chat()
                     .color('gray', b => b.text('[ 스킬 정보 ]  '))
                     .icon(skill.data.icon)
                     .weight('bold', b => b.color('gold', b2 => b2.text(skill.name)))
                     .text(`  Lv.${skill.level} / ${skill.maxLevel}\n`)
-                    .color('gray', b => b.text('─── 효과 ───\n'))
                     .build(),
+                ...experienceNodes,
+                ...chat().color('gray', b => b.text('─── 효과 ───\n')).build(),
                 ...parseChatMessage(skill.formatDescription(player)),
                 ...chat().text('\n').color('gray', b => b.text('─── 소모값 ───\n')).build(),
                 ...parseChatMessage(skill.formatCost(player)),

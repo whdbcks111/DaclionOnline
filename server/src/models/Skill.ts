@@ -102,6 +102,10 @@ export interface SkillData {
     baseMetadata: SkillMetadata | null;
     calculatedFields?: Readonly<Record<string, (context: SkillContext) => SkillCalculatedValue>>;
     calculateMaxCooldown?: (context: SkillContext) => number;
+    /** 생략 시 성공적인 플레이어 발동 1회마다 10 경험치를 획득한다. 0이면 자동 획득하지 않는다. */
+    calculateExperienceGain?: (context: SkillContext) => number;
+    /** 생략 시 다음 레벨 요구 경험치는 100 + (현재 레벨 - 1) * 50이다. */
+    calculateRequiredExperience?: (context: SkillContext) => number;
     autoAcquire?: SkillAutoAcquire;
     autoActivate?: (context: SkillContext) => boolean;
     activateOnMessage?: (context: SkillMessageContext) => boolean;
@@ -120,7 +124,17 @@ export interface SkillData {
 
 const METADATA_STORAGE_KEY = '__daclionSkillMetadata';
 const METADATA_STORAGE_VERSION = 1;
+const DEFAULT_EXPERIENCE_GAIN = 10;
 const skillDataRegistry = new Map<string, Readonly<SkillData>>();
+
+export interface SkillExperienceResult {
+    gained: number;
+    previousLevel: number;
+    level: number;
+    levelsGained: number;
+    experience: number;
+    requiredExperience: number;
+}
 
 export default class Skill implements TagReadable {
     readonly playerId: number | null;
@@ -130,6 +144,7 @@ export default class Skill implements TagReadable {
     readonly acquisitionSource?: string;
 
     private _level: number;
+    private _experience: number;
     private _cooldownEndsAt: number;
     private _metadataDelta: SkillMetadata;
     private persistentChangeHandler?: () => void;
@@ -143,6 +158,7 @@ export default class Skill implements TagReadable {
         playerId: number | null;
         skillDataId: string;
         level?: number;
+        experience?: number;
         cooldownEndsAt?: Date | number | null;
         metadataDelta?: SkillMetadata | null;
         persistentTags?: readonly TagId[];
@@ -154,6 +170,9 @@ export default class Skill implements TagReadable {
         this.playerId = options.playerId;
         this.skillDataId = data.id;
         this._level = normalizeSkillLevel(options.level ?? 1, data.maxLevel);
+        this._experience = this._level >= data.maxLevel
+            ? 0
+            : normalizeSkillExperience(options.experience ?? 0);
         this._cooldownEndsAt = normalizeCooldownEnd(options.cooldownEndsAt);
         this._metadataDelta = cloneMetadata(options.metadataDelta ?? {}) as SkillMetadata;
         this.tags = new TagCollection({
@@ -174,6 +193,7 @@ export default class Skill implements TagReadable {
     get name(): string { return this.data.name; }
     get level(): number { return this._level; }
     get maxLevel(): number { return this.data.maxLevel; }
+    get experience(): number { return this._experience; }
     get isActive(): boolean { return this._active; }
     get activeElapsed(): number { return this._activeElapsed; }
     get activeDuration(): number | null { return this._activeDuration; }
@@ -184,6 +204,7 @@ export default class Skill implements TagReadable {
         const normalized = normalizeSkillLevel(level, this.maxLevel);
         if (normalized === this._level) return normalized;
         this._level = normalized;
+        if (normalized >= this.maxLevel) this._experience = 0;
         this.persistentChangeHandler?.();
         return normalized;
     }
@@ -191,6 +212,42 @@ export default class Skill implements TagReadable {
     increaseLevel(amount = 1): number {
         if (!Number.isInteger(amount) || amount < 0) throw new Error('Skill level amount must be a non-negative integer');
         return this.setLevel(this._level + amount);
+    }
+
+    getExperienceGain(owner: Entity): number {
+        if (this.level >= this.maxLevel) return 0;
+        return normalizeExperienceAmount(
+            this.data.calculateExperienceGain?.(createSkillContext(owner, this)) ?? DEFAULT_EXPERIENCE_GAIN,
+            'gain',
+        );
+    }
+
+    getRequiredExperience(owner: Entity): number {
+        if (this.level >= this.maxLevel) return 0;
+        return normalizeRequiredExperience(
+            this.data.calculateRequiredExperience?.(createSkillContext(owner, this))
+                ?? 100 + (this.level - 1) * 50,
+        );
+    }
+
+    /** 성공 발동 등 소유 기능이 확정한 경험치를 누적하고 여러 레벨 상승과 잔여 경험치를 처리한다. */
+    addExperience(owner: Entity, amount: number): SkillExperienceResult {
+        const gained = normalizeExperienceAmount(amount, 'gain');
+        const previousLevel = this.level;
+        if (gained === 0 || this.level >= this.maxLevel) {
+            return this.createExperienceResult(0, previousLevel, owner);
+        }
+
+        this._experience += gained;
+        while (this._level < this.maxLevel) {
+            const required = this.getRequiredExperience(owner);
+            if (this._experience < required) break;
+            this._experience -= required;
+            this._level += 1;
+        }
+        if (this._level >= this.maxLevel) this._experience = 0;
+        this.persistentChangeHandler?.();
+        return this.createExperienceResult(gained, previousLevel, owner);
     }
 
     getMetadata<T extends MetadataValue = MetadataValue>(key: string): T | undefined {
@@ -356,6 +413,10 @@ export default class Skill implements TagReadable {
         if (key === 'skill.name' || key === 'name') return this.name;
         if (key === 'skill.level' || key === 'level') return this.level;
         if (key === 'skill.maxLevel' || key === 'maxLevel') return this.maxLevel;
+        if (key === 'skill.experience' || key === 'experience') return this.experience;
+        if (key === 'skill.requiredExperience' || key === 'requiredExperience') {
+            return this.getRequiredExperience(owner);
+        }
         if (key === 'skill.remainingCooldown' || key === 'remainingCooldown') {
             return this.getRemainingCooldown();
         }
@@ -365,10 +426,22 @@ export default class Skill implements TagReadable {
         return this.getCalculatedField(key, owner) ?? this.getMetadata(key);
     }
 
+    private createExperienceResult(gained: number, previousLevel: number, owner: Entity): SkillExperienceResult {
+        return {
+            gained,
+            previousLevel,
+            level: this.level,
+            levelsGained: this.level - previousLevel,
+            experience: this.experience,
+            requiredExperience: this.getRequiredExperience(owner),
+        };
+    }
+
     static fromPersistence(options: {
         playerId: number;
         skillDataId: string;
         level: number;
+        experience: number;
         cooldownEndsAt: Date | null;
         metadata: unknown;
         tags: readonly TagId[];
@@ -449,6 +522,24 @@ function normalizeSkillId(id: string): string {
 function normalizeSkillLevel(level: number, maxLevel: number): number {
     if (!Number.isInteger(level)) throw new Error(`Skill level must be an integer: ${level}`);
     return Math.max(1, Math.min(maxLevel, level));
+}
+
+function normalizeSkillExperience(experience: number): number {
+    return normalizeExperienceAmount(experience, 'stored experience');
+}
+
+function normalizeExperienceAmount(value: number, label: string): number {
+    if (!Number.isFinite(value) || value < 0) {
+        throw new Error(`Skill experience ${label} must be a non-negative finite number: ${value}`);
+    }
+    return Math.floor(value);
+}
+
+function normalizeRequiredExperience(value: number): number {
+    if (!Number.isFinite(value) || value <= 0) {
+        throw new Error(`Skill required experience must be a positive finite number: ${value}`);
+    }
+    return Math.max(1, Math.floor(value));
 }
 
 function normalizeCooldownEnd(value: Date | number | null | undefined): number {
