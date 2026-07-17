@@ -439,8 +439,9 @@ export default function LocationEditor() {
                   <circle
                     cx={loc.x} cy={-loc.y}
                     r={NODE_RADIUS / zoom}
-                    fill={isSelected ? 'var(--color-primary)' : isSafe ? '#4ab8ae99' : '#e74c3c99'}
-                    stroke={isSelected ? 'white' : isSafe ? 'var(--color-primary)' : '#e74c3c'}
+                    fill={isSelected ? 'var(--color-primary)' : loc.mapColor ?? (isSafe ? '#4ab8ae' : '#e74c3c')}
+                    fillOpacity={isSelected ? 1 : 0.65}
+                    stroke={isSelected ? 'white' : loc.mapColor ?? (isSafe ? 'var(--color-primary)' : '#e74c3c')}
                     strokeWidth={1.5 / zoom}
                   />
                   {/* 레이블 */}
@@ -526,6 +527,23 @@ export default function LocationEditor() {
                   value={selectedLoc.mapIcon ?? ''}
                   onChange={e => updateSelected({ mapIcon: e.target.value.trim() || undefined })}
                 />
+              </label>
+
+              <label className={styles.field}>
+                <span>지도 대표색</span>
+                <div className={styles.colorField}>
+                  <input
+                    className={styles.colorInput}
+                    type="color"
+                    value={selectedLoc.mapColor ?? '#607d8b'}
+                    onChange={e => updateSelected({ mapColor: e.target.value })}
+                    aria-label="지도 대표색 선택"
+                  />
+                  <code>{selectedLoc.mapColor ?? '사용 안 함'}</code>
+                  {selectedLoc.mapColor && (
+                    <button type="button" onClick={() => updateSelected({ mapColor: undefined })}>해제</button>
+                  )}
+                </div>
               </label>
 
               <label className={styles.field}>

@@ -87,7 +87,8 @@
 1. `data/locations.json`에 좌표, 연결, 통합 `objects` 배치, 상점 ID를 정의한다. 연결은 필요한 방향마다 명시한다.
 2. 조건부 연결은 `data/locations.ts`에서 `registerConnectionCondition(conditionId, handler)`로 등록한다.
 3. 런타임 동작은 `models/Location.ts`, 소켓 기반 관리자 저장은 `modules/location.ts`, 사용자 명령은 `commands/location.ts`에서 다룬다.
-4. `LocationData` 구조 변경 시 `shared/types.ts`와 `LocationEditor.tsx`도 함께 수정한다. 런타임 오브젝트는 raw 배열 대신 `Location.getObjects/getObject/hasObject/addObject/removeObject`를 사용한다.
+4. 지도에서 장소 주변에 바이옴 색을 표시하려면 `mapColor`에 6자리 HEX 대표색을 지정한다. 일반 지도에는 방문한 장소의 색만 노출되며 `location:hidden` 장소는 방문했더라도 노출되지 않는다.
+5. `LocationData` 구조 변경 시 `shared/types.ts`와 `LocationEditor.tsx`도 함께 수정한다. 런타임 오브젝트는 raw 배열 대신 `Location.getObjects/getObject/hasObject/addObject/removeObject`를 사용한다.
 
 ## NPC/대화 추가
 

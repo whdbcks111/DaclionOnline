@@ -2,6 +2,7 @@
   {
     "id": "town_square",
     "name": "루미나르 개척촌 광장",
+    "mapColor": "#d6a85f",
     "zoneType": "safe",
     "isRespawnLocation": true,
     "x": 0,
@@ -21,6 +22,7 @@
   {
     "id": "job_hall",
     "name": "루미나르 전직소",
+    "mapColor": "#d6a85f",
     "zoneType": "safe",
     "x": 35,
     "y": 42,
@@ -36,6 +38,7 @@
   {
     "id": "shop_street",
     "name": "루미나르 장터",
+    "mapColor": "#d6a85f",
     "zoneType": "safe",
     "x": -55,
     "y": 5,
@@ -51,6 +54,7 @@
   {
     "id": "shop_general",
     "name": "별등불 잡화점",
+    "mapColor": "#d6a85f",
     "zoneType": "safe",
     "x": -80,
     "y": 25,
@@ -67,6 +71,7 @@
   {
     "id": "field",
     "name": "바람결 초원 1 들머리",
+    "mapColor": "#6fa85d",
     "zoneType": "normal",
     "x": 100,
     "y": 0,
@@ -85,6 +90,7 @@
   {
     "id": "meadow_2",
     "name": "바람결 초원 2 낮은 구릉",
+    "mapColor": "#6fa85d",
     "zoneType": "normal",
     "x": 190,
     "y": 25,
@@ -103,6 +109,7 @@
   {
     "id": "meadow_3",
     "name": "바람결 초원 3 맑은 샘터",
+    "mapColor": "#5f9f78",
     "zoneType": "normal",
     "x": 280,
     "y": 50,
@@ -122,6 +129,7 @@
   {
     "id": "swamp_edge",
     "name": "안개수렁 1 물먹은 둑",
+    "mapColor": "#71805a",
     "zoneType": "normal",
     "x": 350,
     "y": 120,
@@ -140,6 +148,7 @@
   {
     "id": "swamp_basin",
     "name": "안개수렁 2 잠든 포자밭",
+    "mapColor": "#66784f",
     "zoneType": "normal",
     "x": 420,
     "y": 180,
@@ -158,6 +167,7 @@
   {
     "id": "swamp_heart",
     "name": "안개수렁 3 가라앉은 심부",
+    "mapColor": "#596b48",
     "zoneType": "normal",
     "x": 485,
     "y": 245,
@@ -177,6 +187,7 @@
   {
     "id": "ember_foothills",
     "name": "홍염산지 1 잿빛 기슭",
+    "mapColor": "#a87845",
     "zoneType": "normal",
     "x": 555,
     "y": 190,
@@ -195,6 +206,7 @@
   {
     "id": "volcanic_slope",
     "name": "홍염산지 2 불티 비탈",
+    "mapColor": "#bb6542",
     "zoneType": "normal",
     "x": 630,
     "y": 130,
@@ -213,6 +225,7 @@
   {
     "id": "volcanic_crater",
     "name": "홍염산지 3 끓는 분화구",
+    "mapColor": "#c9573c",
     "zoneType": "normal",
     "x": 700,
     "y": 70,
@@ -232,6 +245,7 @@
   {
     "id": "volcanic_core",
     "name": "홍염산지 4 칼데라 중심",
+    "mapColor": "#d14932",
     "zoneType": "normal",
     "x": 765,
     "y": 15,
@@ -248,6 +262,7 @@
   {
     "id": "feveric_mine",
     "name": "피버릭 갱도 입구",
+    "mapColor": "#8a7460",
     "zoneType": "normal",
     "x": 0,
     "y": -130,
@@ -268,6 +283,7 @@
   {
     "id": "feveric_mine_shop",
     "name": "은맥 광부 보급소",
+    "mapColor": "#8a7460",
     "zoneType": "safe",
     "x": 28,
     "y": -132,
@@ -284,6 +300,7 @@
   {
     "id": "mine_junction",
     "name": "피버릭 갱도 세 갈래 교차로",
+    "mapColor": "#756858",
     "zoneType": "normal",
     "x": 0,
     "y": -220,
@@ -303,6 +320,7 @@
   {
     "id": "mine_east_tunnel",
     "name": "피버릭 갱도 동쪽 굴절로",
+    "mapColor": "#716558",
     "zoneType": "normal",
     "x": 75,
     "y": -295,
@@ -322,6 +340,7 @@
   {
     "id": "mine_west_tunnel",
     "name": "피버릭 갱도 서쪽 붕락로",
+    "mapColor": "#716558",
     "zoneType": "normal",
     "x": -75,
     "y": -295,
@@ -341,6 +360,7 @@
   {
     "id": "abandoned_rail",
     "name": "피버릭 갱도 버려진 운반로",
+    "mapColor": "#695f55",
     "zoneType": "normal",
     "x": 30,
     "y": -375,
@@ -360,6 +380,7 @@
   {
     "id": "flooded_tunnel",
     "name": "피버릭 갱도 침수 회랑",
+    "mapColor": "#527585",
     "zoneType": "normal",
     "x": -95,
     "y": -390,
@@ -378,6 +399,7 @@
   {
     "id": "crystal_gallery",
     "name": "피버릭 갱도 수정 군락",
+    "mapColor": "#7665a8",
     "zoneType": "normal",
     "x": 110,
     "y": -410,
@@ -397,6 +419,7 @@
   {
     "id": "deep_shaft",
     "name": "피버릭 갱도 맥동하는 심층",
+    "mapColor": "#66567f",
     "zoneType": "normal",
     "x": 5,
     "y": -500,
@@ -417,6 +440,7 @@
   {
     "id": "crystal_throne",
     "name": "피버릭 갱도 수정 왕좌",
+    "mapColor": "#8a6fbd",
     "zoneType": "normal",
     "x": 5,
     "y": -610,

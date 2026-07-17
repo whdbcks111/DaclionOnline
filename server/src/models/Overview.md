@@ -9,13 +9,13 @@
 - `Projectile`: `Entity`를 상속하는 비영속 투사체, 마스터 데이터/JSON 오버라이드 검증, owner·target·비행 시간·적중 수명주기와 정적 레지스트리 API. 발사 순간 owner의 치명타 확률·피해를 스냅샷으로 동기화하고 명시적 `attributeOverrides`를 마지막에 적용한다. 상성은 owner 장비가 아닌 투사체 본체 태그만 사용하며 전체 Entity lifecycle로 상태효과도 갱신한다.
 - `AttributeType`/`Attribute`, `StatType`/`Stat`: 19종 대표색 아이콘과 `{{icon.attributeKey}}`용 markup, 생명력/정신력 재생·배고픔/수분 감소를 포함한 클래스형 enum 메타데이터, 기본 능력치와 Entity 기반 source modifier 계산.
 - `Item`, `Inventory`, `EquipSlotType`/`Equipment`: `baseMetadata`+인스턴스 delta와 내구도의 조회·설정·증가·차감·dirty callback, 기본 공격 오버라이드 key와 피해 성공 후 `onBasicAttackHit`, 이미지 API, 마스터/인스턴스 태그, 손실 없는 snapshot 이동, 무게·스택·슬롯·영속성. 감정 UI는 `Item.getInspectionSnapshot`과 `Inventory.getIndexedItems`로 내부 저장 배열 없이 읽는다. `countMatching/subscribeChanges`가 raw 배열 없는 현재 보유 조건 갱신을 제공하고 `selectItems/replaceSelectedItems`는 겹치는 predicate 재료를 중복 없이 선택해 선검증 교환한다. 신규 장비 슬롯은 복합키 upsert로 저장한다.
-- `Location`: 장소 태그, Monster/Resource 통합 오브젝트 API, ID 기반 `getNpcs/getNpc/hasNpc`, raw 배열을 숨긴 태그 포함 드롭 조회·단일/전체 회수, 공개 가능한 잠금 사유가 포함된 연결 조건, hidden을 제외하고 `visible | locked`만 반환하는 `getAvailableConnections`, 1부터 시작하는 연결 순번·구분 기호를 무시한 이름·ID·유일한 부분 이름을 찾는 `findAvailableConnection`, 월드 레지스트리.
+- `Location`: 장소 태그, 선택적 지도 랜드마크·검증된 `#RRGGBB` 대표색, Monster/Resource 통합 오브젝트 API, ID 기반 `getNpcs/getNpc/hasNpc`, raw 배열을 숨긴 태그 포함 드롭 조회·단일/전체 회수, 공개 가능한 잠금 사유가 포함된 연결 조건, hidden을 제외하고 `visible | locked`만 반환하는 `getAvailableConnections`, 1부터 시작하는 연결 순번·구분 기호를 무시한 이름·ID·유일한 부분 이름을 찾는 `findAvailableConnection`, 월드 레지스트리.
 - `NPC`/`NpcDialogue`: 정적 NPC 정의와 generator 기반 조건부 시나리오, 대사·이벤트·플래그·전이·선택·종료 액션, player별 비영속 대화 세션. 이동·사망·logout/연결 이탈은 공통 종료 API로 정리한다.
 - `Quest`/`QuestBook`: 코드 QuestData 레지스트리, 단계형 이벤트·현재 상태 목표, 제출 조건과 보상, NPC marker/수락/보고, 상태·반복·metadata delta·영속 태그를 가진 플레이어별 versioned dirty 인스턴스. Inventory/Progress 변경과 GameEvent를 공개 API로 받아 진행을 갱신한다.
 - `Shop`: 상점 태그, 구매/판매 정의와 재고 timer.
 - `GameEvent`: 동기식 내부 이벤트 발행/구독과 원시 Entity를 제거한 최근 500개 trace 스냅샷.
 - `ProgressType`/`PlayerProgress`: 통계 counter, NPC/퀘스트 flag, 짧은 state의 목적형 조회·변경·구독과 versioned dirty 저장. `defineProgress/defineStatistic`이 정적 정의와 이벤트 counter를 등록한다.
-- `WorldMap`: `PlayerProgress`의 `world:visited/{locationId}` flag를 숨기는 방문 기록 API와 방문지·한 단계 인접 미방문지만 반환하는 지도 snapshot. `location:hidden`은 일반 지도에서 제외하며 관리자용 전체 snapshot은 hidden과 고립 장소를 포함한다.
+- `WorldMap`: `PlayerProgress`의 `world:visited/{locationId}` flag를 숨기는 방문 기록 API와 방문지·한 단계 인접 미방문지만 반환하는 지도 snapshot. 방문 장소의 대표색만 클라이언트 바이옴 레이어에 전달하고, `location:hidden`은 일반 지도에서 제외하며 관리자용 전체 snapshot은 hidden과 고립 장소를 포함한다.
 - `Job`/`CareerProfile`: 1차·엘리트 직업 정적 레지스트리, 메인→서브 순서 조합, Progress STATE 영속, 동일 직업 이중 선택 금지, 계보 호환·능력치 source modifier·스킬 지급과 Lv.200 자동 전직.
 - `Metadata`: Item과 Skill이 공유하는 JSON-safe clone 및 버전형 top-level delta codec.
 - `Skill`/`SkillBook`: 아이콘을 가진 코드 SkillData 레지스트리, Entity 공용 owner/player context, 직업·무기 조건과 공개 채팅으로 전달하지 않는 메시지 시전어, 본인 전용 시전 메시지 및 성공 후 상세 메시지·notification을 함께 보내는 `activationFeedback`, base metadata+인스턴스 delta, 계산/색상/능력치 아이콘 템플릿과 lifecycle. 플레이어 스킬은 성공 발동 시 경험치를 얻어 잔여값을 이월하며 레벨업하고, 획득량·요구량 계산은 SkillData에서 재정의한다. `getHudSnapshots`은 표시 가능한 스킬의 이름·아이콘·레벨·활성 상태·남은/최대 쿨다운만 반환한다.

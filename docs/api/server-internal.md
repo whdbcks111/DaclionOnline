@@ -48,7 +48,7 @@
 | `Location` | `hasTag`, `getObjects/getObject/getObjectCount/getAttackableObjects/hasObject`, `addObject/removeObject`, `getNpcs/getNpc/hasNpc`, `addDroppedItem`, `getDroppedItems`, `pickupItem/pickupAllItems`, `getAvailableConnections/findAvailableConnection`, `update` | Monster/Resource 통합 오브젝트, 다중 공격 대상 snapshot, ID 기반 NPC, 유연한 장소 입력, 공개 가능한 `lockReason`, 바닥 아이템 조회·회수 |
 | Location registry | `normalizeLocationData`, `defineLocation`, `reloadAllLocations`, `getLocation`, `getAllLocations`, `getRespawnLocation`, `distanceBetween`, `normalizeLocationInput` | 통합 오브젝트 배치 검증·복사, 월드 위치 정의/조회와 사용자 입력 정규화 |
 | Location extension | `registerConnectionCondition`, `registerLocationPassive` | 문자열 상태 또는 공개 잠금 사유가 포함된 `{ status, publicReason }` 이동 조건과 위치별 프레임 콜백 |
-| World map | `markLocationVisited`, `hasVisitedLocation`, `getVisitedLocationIds`, `getWorldMapSnapshot`, `getFullWorldMapSnapshot` | Progress raw key를 숨긴 방문 영속 API, `location:hidden` 및 한 단계 공개 범위를 적용한 일반 지도 DTO, 관리자 전체 지도 DTO |
+| World map | `markLocationVisited`, `hasVisitedLocation`, `getVisitedLocationIds`, `getWorldMapSnapshot`, `getFullWorldMapSnapshot` | Progress raw key를 숨긴 방문 영속 API, `location:hidden` 및 한 단계 공개 범위와 선택 `mapColor`를 적용한 일반 지도 DTO, 관리자 전체 지도 DTO |
 | Job registry | `defineJob/getJob/getAllJobs`, `defineEliteJobRecipe/resolveEliteJob`, `isJobDescendant`, `JobTier/JobSlotType` | 1차·엘리트 정의, 동일 직업 금지 순서 조합과 하위 계보 판정 |
 | `CareerProfile` | `main/sub/elite/effectiveMainJob`, `hasJob`, `canAssign/assign`, `evaluateElitePromotion`, `refreshModifiers` | Progress 영속 직업 상태, Lv.20/50 선택, 스킬·modifier 지급과 Lv.200 자동 전직 |
 | `Shop` | `getStock`, `consumeStock`, `update` | 재고와 재입고 |

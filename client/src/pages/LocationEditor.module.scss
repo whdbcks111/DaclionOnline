@@ -276,6 +276,37 @@
   padding: 5px 4px;
 }
 
+.colorField {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  code {
+    flex: 1;
+    color: #bbb;
+    font-size: 0.72rem;
+  }
+
+  button {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.25rem;
+    background: transparent;
+    color: #aaa;
+    padding: 0.3rem 0.45rem;
+    cursor: pointer;
+  }
+}
+
+.colorInput {
+  width: 2.4rem;
+  height: 2rem;
+  padding: 0.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.25rem;
+  background: #252a2d;
+  cursor: pointer;
+}
+
 // ─── 섹션 ─────────────────────────────────────────
 
 .section {

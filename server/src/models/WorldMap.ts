@@ -58,6 +58,7 @@ function createLocationSnapshot(player: Player, locationId: string, visited: boo
         visited,
         current: location.id === player.locationId,
         ...(location.data.mapIcon ? { mapIcon: location.data.mapIcon } : {}),
+        ...(visited && location.data.mapColor ? { mapColor: location.data.mapColor } : {}),
     };
 }
 
@@ -117,6 +118,7 @@ export function getFullWorldMapSnapshot(player: Player): WorldMapData {
             visited: true,
             current: location.id === player.locationId,
             ...(location.mapIcon ? { mapIcon: location.mapIcon } : {}),
+            ...(location.mapColor ? { mapColor: location.mapColor } : {}),
         })),
         connections: [...connections.values()],
     };

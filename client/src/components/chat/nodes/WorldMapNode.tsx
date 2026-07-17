@@ -21,6 +21,8 @@ interface ViewBox {
 
 const DEFAULT_ASPECT = 16 / 9
 const MIN_SPAN = 180
+const MIN_BIOME_RADIUS = 72
+const MAX_BIOME_RADIUS = 155
 
 function mapY(location: WorldMapLocationData): number {
     return -location.y
@@ -53,6 +55,15 @@ function distance(a: Point, b: Point): number {
     return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
+function getBiomeRadius(location: WorldMapLocationData, locations: readonly WorldMapLocationData[]): number {
+    const nearest = locations.reduce((minimum, candidate) => {
+        if (candidate.id === location.id) return minimum
+        return Math.min(minimum, Math.hypot(candidate.x - location.x, candidate.y - location.y))
+    }, Number.POSITIVE_INFINITY)
+    if (!Number.isFinite(nearest)) return 110
+    return Math.max(MIN_BIOME_RADIUS, Math.min(MAX_BIOME_RADIUS, nearest * 1.45))
+}
+
 function getLocalPoint(svg: SVGSVGElement, point: Point): Point {
     const rect = svg.getBoundingClientRect()
     return { x: point.x - rect.left, y: point.y - rect.top }
@@ -62,6 +73,7 @@ export default function WorldMapNode({ data }: Props) {
     const svgId = useId().replaceAll(':', '')
     const gridId = `world-map-grid-${svgId}`
     const glowId = `world-map-current-glow-${svgId}`
+    const biomeFilterId = `world-map-biome-filter-${svgId}`
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
     const pointers = useRef(new Map<number, Point>())
@@ -76,6 +88,13 @@ export default function WorldMapNode({ data }: Props) {
         [data.locations],
     )
     const activeLocation = locationsById.get(hoveredId ?? selectedId ?? '')
+    const biomeAreas = useMemo(() => data.locations
+        .filter(location => location.visited && location.mapColor)
+        .map((location, index) => ({
+            location,
+            radius: getBiomeRadius(location, data.locations),
+            gradientId: `world-map-biome-${svgId}-${index}`,
+        })), [data.locations, svgId])
 
     useEffect(() => {
         const container = containerRef.current
@@ -221,7 +240,31 @@ export default function WorldMapNode({ data }: Props) {
                         <feGaussianBlur stdDeviation="3" result="blur" />
                         <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                     </filter>
+                    <filter id={biomeFilterId} x="-35%" y="-35%" width="170%" height="170%">
+                        <feTurbulence type="fractalNoise" baseFrequency="0.018 0.024" numOctaves="2" seed="17" result="noise" />
+                        <feDisplacementMap in="SourceGraphic" in2="noise" scale="20" xChannelSelector="R" yChannelSelector="G" />
+                        <feGaussianBlur stdDeviation="4" />
+                    </filter>
+                    {biomeAreas.map(area => (
+                        <radialGradient key={area.gradientId} id={area.gradientId}>
+                            <stop offset="0%" stopColor={area.location.mapColor} stopOpacity="0.54" />
+                            <stop offset="42%" stopColor={area.location.mapColor} stopOpacity="0.34" />
+                            <stop offset="76%" stopColor={area.location.mapColor} stopOpacity="0.14" />
+                            <stop offset="100%" stopColor={area.location.mapColor} stopOpacity="0" />
+                        </radialGradient>
+                    ))}
                 </defs>
+                <g className={styles.biomeLayer} filter={`url(#${biomeFilterId})`} aria-hidden="true">
+                    {biomeAreas.map(area => (
+                        <circle
+                            key={area.location.id}
+                            cx={area.location.x}
+                            cy={mapY(area.location)}
+                            r={area.radius}
+                            fill={`url(#${area.gradientId})`}
+                        />
+                    ))}
+                </g>
                 <rect x={view.x} y={view.y} width={view.width} height={view.height} fill={`url(#${gridId})`} />
 
                 {data.connections.map(connection => {

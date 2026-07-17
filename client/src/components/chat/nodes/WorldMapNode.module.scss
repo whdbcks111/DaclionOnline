@@ -76,6 +76,12 @@
     stroke-width: 1;
 }
 
+.biomeLayer {
+    pointer-events: none;
+    mix-blend-mode: screen;
+    opacity: 0.82;
+}
+
 .discoveredPath, .unknownPath {
     stroke: rgba(189, 221, 238, 0.55);
     stroke-width: 2;

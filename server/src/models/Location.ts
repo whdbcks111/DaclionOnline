@@ -248,9 +248,14 @@ export function normalizeLocationData(data: LocationData): LocationData {
     if (mapIcon && !/^[a-z0-9][a-z0-9_-]*$/.test(mapIcon)) {
         throw new Error(`Invalid location map icon key: ${data.id}/${mapIcon}`);
     }
+    const mapColor = data.mapColor?.trim().toLowerCase();
+    if (mapColor && !/^#[0-9a-f]{6}$/.test(mapColor)) {
+        throw new Error(`Invalid location map color: ${data.id}/${mapColor}`);
+    }
     return {
         ...data,
         ...(mapIcon ? { mapIcon } : { mapIcon: undefined }),
+        ...(mapColor ? { mapColor } : { mapColor: undefined }),
         npcIds,
         objects: data.objects.map(object => {
             if (object.type !== 'monster' && object.type !== 'resource') {
