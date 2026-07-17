@@ -20,6 +20,6 @@
 - `Metadata`: Item과 Skill이 공유하는 JSON-safe clone 및 버전형 top-level delta codec.
 - `Skill`/`SkillBook`: 아이콘을 가진 코드 SkillData 레지스트리, Entity 공용 owner/player context, 직업·무기 조건과 공개 채팅으로 전달하지 않는 메시지 시전어, 본인 전용 시전 메시지 및 성공 후 상세 메시지·notification을 함께 보내는 `activationFeedback`, base metadata+인스턴스 delta, 계산/색상/능력치 아이콘 템플릿과 lifecycle. 플레이어 스킬은 성공 발동 시 경험치를 얻어 잔여값을 이월하며 레벨업하고, 획득량·요구량 계산은 SkillData에서 재정의한다. `setLevel/revoke`는 내부 Map 노출 없이 보유 스킬 레벨 변경·영속 회수를 제공하며 `getHudSnapshots`은 표시 가능한 스킬의 이름·아이콘·레벨·활성 상태·남은/최대 쿨다운만 반환한다.
 - `Crafting`: predicate와 필요 수량을 가진 재료 클래스, `namespace:path` 제작법 레지스트리, 실제 선택된 재료를 받는 결과 factory, Progress flag 발견·관리자용 전체 발견 처리와 coroutine 제작 수명주기.
-- `Fishing`: 클래스형 일반~신화 6등급, 물고기 registry, 행운 보정 가중치와 등급별 보상/경험치 추첨, 입질 속도를 반영한 10~22초 기반·최소 4초 대기 계산 API.
+- `Fishing`: 클래스형 일반~신화 6등급, 물고기 registry, 행운 보정 가중치와 등급별 보상/경험치 추첨, 45~65초 기본 범위를 입질 속도로 나누는 대기 계산 API.
 
 공개 메서드나 모델 관계, 계산식, 저장 경계가 바뀌면 이 문서와 [`docs/api/server-internal.md`](../../../docs/api/server-internal.md), 관련 시스템 문서를 갱신한다.

@@ -76,13 +76,13 @@ export function rollFishingExp(rarity: FishRarity, random: () => number = Math.r
     return Math.floor(min + random() * (max - min + 1));
 }
 
-export const FISHING_BASE_WAIT_RANGE = Object.freeze({ min: 10, max: 22 });
+export const FISHING_BASE_WAIT_RANGE = Object.freeze({ min: 45, max: 65 });
 
-/** 입질 속도를 적용한 대기 시간. 초보 장비도 즉시 입질하지 않도록 최소 4초를 보장한다. */
+/** 기본 대기 시간을 현재 입질 속도로 나눠 실제 대기 시간을 계산한다. */
 export function rollFishingWaitSeconds(biteSpeed: number, random: () => number = Math.random): number {
     const safeSpeed = Number.isFinite(biteSpeed) ? Math.max(0.25, biteSpeed) : 1;
     const roll = Math.max(0, Math.min(1, random()));
     const base = FISHING_BASE_WAIT_RANGE.min
         + (FISHING_BASE_WAIT_RANGE.max - FISHING_BASE_WAIT_RANGE.min) * roll;
-    return Math.max(4, base / safeSpeed);
+    return base / safeSpeed;
 }

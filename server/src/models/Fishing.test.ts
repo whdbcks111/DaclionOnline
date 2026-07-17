@@ -51,11 +51,13 @@ test('행운은 상위 물고기 등급의 가중치를 증가시킨다', () => 
     assert.deepEqual(FishRarity.values().map(rarity => rarity.sellPrice), [5, 20, 90, 400, 1800, 8000]);
 });
 
-test('입질 대기 시간은 10~22초 기본 범위와 입질 속도를 반영한다', () => {
-    assert.equal(rollFishingWaitSeconds(1, () => 0), 10);
-    assert.equal(rollFishingWaitSeconds(1, () => 1), 22);
-    assert.equal(rollFishingWaitSeconds(1.45, () => 0), 10 / 1.45);
-    assert.equal(rollFishingWaitSeconds(100, () => 0), 4);
+test('입질 대기 시간은 45~65초 기본 범위와 입질 속도를 그대로 반영한다', () => {
+    const beginnerBiteSpeed = 1 + 0.1 + 0.35;
+    assert.equal(rollFishingWaitSeconds(1, () => 0), 45);
+    assert.equal(rollFishingWaitSeconds(1, () => 1), 65);
+    assert.equal(rollFishingWaitSeconds(beginnerBiteSpeed, () => 0), 45 / beginnerBiteSpeed);
+    assert.ok(rollFishingWaitSeconds(beginnerBiteSpeed, () => 0) >= 30);
+    assert.equal(rollFishingWaitSeconds(100, () => 0), 45 / 100);
 });
 
 test('모든 낚시 보상 아이템은 128px 투명 아이콘을 가진다', () => {

@@ -68,7 +68,7 @@
 | Crafting | `CraftingRecipeIngredient`, `defineCraftingRecipe`, `get/findCraftingRecipe*`, `updateCraftingRecipeDiscovery`, `getDiscoveredCraftingRecipes`, `discoverAllCraftingRecipes`, `startCrafting`, `executeCrafting`, `cancelCrafting` | predicate 재료, 실제 선택 재료 factory, Progress 기반 제작법 발견/운영 일괄 해제, 지연 제작·취소 |
 | Metadata | `cloneMetadataValue`, `createMetadataDelta`, `encodeMetadataDelta`, `decodeMetadataDelta` | Item/Skill이 공유하는 JSON-safe top-level delta 직렬화 |
 | `StatusEffectType`, `StatusEffect` | `define/values/fromKey/fromInput`, `icon`, `formatDescription`, `get/set/resetMetadata`, `upgrade/refreshDuration`, lifecycle callback | 아이콘 key를 가진 클래스형 효과 정의, 대상별 duration/level/metadata delta와 병합·틱 처리 |
-| Fishing | `FishRarity.values/fromKey`, `FishRarity.tag/sellPrice`, `define/get/getAllFish`, `getFishByRarity`, `rollFishRarity`, `rollFish`, `rollFishingExp`, `rollFishingWaitSeconds` | 6등급 태그·매입가·가중치·행운 보정, 물고기 보상과 10~22초 기반 입질 대기 계산 |
+| Fishing | `FishRarity.values/fromKey`, `FishRarity.tag/sellPrice`, `define/get/getAllFish`, `getFishByRarity`, `rollFishRarity`, `rollFish`, `rollFishingExp`, `rollFishingWaitSeconds` | 6등급 태그·매입가·가중치·행운 보정, 물고기 보상과 45~65초 기본 범위를 입질 속도로 나누는 대기 계산 |
 | `ActionType` | `values/fromKey/fromInput`; `SKILL/CHAT/COMMAND/ATTACK/MOVEMENT/LOCATION_TRAVEL` | 스킬·통신·전투·이동 실행 경계가 공유하는 행동 분류 |
 
 ## 공용 태그 API (`shared/tags.ts`)
