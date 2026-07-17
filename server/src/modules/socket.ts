@@ -36,7 +36,8 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
         logger.socket('클라이언트 연결됨:', socket.id);
         const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
         if (session) {
-            setUserOnline(session.userId);
+            socket.data.onlineUserId = session.userId;
+            setUserOnline(session.userId, socket.id);
             socket.join(getChannelRoomKey(getUserChannel(session.userId)));
             logger.success(`로그인: ${session.username} (${socket.id})`);
         }
@@ -44,12 +45,15 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
         // 클라이언트 연결 해제
         socket.on('disconnect', () => {
             const currentSession = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
-            if (currentSession) {
-                setUserOffline(currentSession.userId);
-                if (!isUserOnline(currentSession.userId)) {
+            const onlineUserId = typeof socket.data.onlineUserId === 'number'
+                ? socket.data.onlineUserId
+                : currentSession?.userId;
+            if (onlineUserId !== undefined) {
+                setUserOffline(onlineUserId, socket.id);
+                if (!isUserOnline(onlineUserId)) {
                     void import('../models/NpcDialogue.js').then(({ endNpcDialogueByUserId }) => {
-                        if (!isUserOnline(currentSession.userId)) {
-                            endNpcDialogueByUserId(currentSession.userId);
+                        if (!isUserOnline(onlineUserId)) {
+                            endNpcDialogueByUserId(onlineUserId);
                         }
                     });
                     void Promise.all([
@@ -57,19 +61,19 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
                         import('./party.js'),
                         import('./informationVisibility.js'),
                     ]).then(([registry, party, visibility]) => {
-                        if (isUserOnline(currentSession.userId)) return;
-                        const player = registry.getOnlinePlayer(currentSession.userId);
+                        if (isUserOnline(onlineUserId)) return;
+                        const player = registry.getOnlinePlayer(onlineUserId);
                         const result = player ? party.partyManager.removeDisconnectedPlayer(player) : undefined;
-                        visibility.clearInformationMode(currentSession.userId);
+                        visibility.clearInformationMode(onlineUserId);
                         for (const affectedUserId of result?.affectedUserIds ?? []) {
-                            if (affectedUserId !== currentSession.userId && registry.getOnlinePlayer(affectedUserId)) {
+                            if (affectedUserId !== onlineUserId && registry.getOnlinePlayer(affectedUserId)) {
                                 void import('./message.js').then(({ sendBotMessageToUser }) =>
                                     sendBotMessageToUser(affectedUserId, `${player?.name ?? '파티원'}님이 접속을 종료해 파티에서 나갔습니다.`));
                             }
                         }
                     });
                 }
-                logger.warn(`로그아웃: ${currentSession.username} (${socket.id})`);
+                logger.warn(`로그아웃: ${currentSession?.username ?? `UID ${onlineUserId}`} (${socket.id})`);
             } else {
                 logger.warn('클라이언트 연결 해제됨:', socket.id);
             }

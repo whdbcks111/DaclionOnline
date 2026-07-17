@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | Socket | `initSocket`, `getIO` | Socket.io 초기화와 전역 서버 접근 |
 | Login | `getSession`, `getSessionByUserId`, `createSession`, `removeSession`, `getUserPermission` | 인메모리 세션/권한 조회 |
-| Online | `setUserOnline`, `setUserOffline`, `isUserOnline`, `broadcastUserCount` | 사용자별 연결 수와 접속 인원 |
+| Online | `setUserOnline`, `setUserOffline`, `isUserOnline`, `getUserCountData`, `broadcastUserCount` | userId별 socket ID Set과 중복 없는 전체/채널 접속 인원 snapshot |
 | Player | `loadPlayerByUserId`, `unloadPlayerByUserId`, `getPlayerByUserId`, `getOnlinePlayers`, `fetchPlayerByUserId`, `saveAllPlayers` | Player 수명과 저장 |
 | Admin panel | `initAdminPanel`, `getAdminPanelBootstrap`, `getAdminPlayerList`, `getAdminPlayerDetail`, `executeAdminPanelAction` | 권한 10 운영 도구의 가공된 조회, 플레이어·월드·전체/개별 공지 action 검증과 실행 |
 | Player registry | `registerOnlinePlayer`, `getOnlinePlayer`, `unregisterOnlinePlayer`, `getOnlinePlayerSnapshot`, `isOnlinePlayerAtLocation` | 내부 Map을 숨긴 온라인 객체 조회와 위치 필터 |

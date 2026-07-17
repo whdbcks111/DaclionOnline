@@ -47,32 +47,38 @@ export function getUserSessionCount(userId: number): number {
     return userSessions.get(userId)?.size ?? 0;
 }
 
-// 온라인 유저 추적: userId -> 연결된 소켓 수
-const onlineUsers = new Map<number, number>()
+// 온라인 유저 추적: userId -> 연결된 socket ID. 같은 소켓의 중복 등록과 다중 탭을 구분한다.
+const onlineUsers = new Map<number, Set<string>>()
 
-function buildUserCountData() {
-    const io = getIO()
+export function getUserCountData() {
     const channelCounts: Record<string, number> = {}
     for (const ch of getAvailableChannels()) {
         const key = getChannelRoomKey(ch.id)
-        channelCounts[key] = io.sockets.adapter.rooms.get(key)?.size ?? 0
+        channelCounts[key] = 0
+    }
+    for (const userId of onlineUsers.keys()) {
+        const key = getChannelRoomKey(getUserChannel(userId))
+        channelCounts[key] = (channelCounts[key] ?? 0) + 1
     }
     return { total: onlineUsers.size, channelCounts }
 }
 
 export function broadcastUserCount(): void {
-    try { getIO().emit('userCount', buildUserCountData()) } catch { /* 소켓 미초기화 시 무시 */ }
+    try { getIO().emit('userCount', getUserCountData()) } catch { /* 소켓 미초기화 시 무시 */ }
 }
 
-export function setUserOnline(userId: number) {
-    onlineUsers.set(userId, (onlineUsers.get(userId) ?? 0) + 1);
+export function setUserOnline(userId: number, connectionId: string) {
+    const connections = onlineUsers.get(userId) ?? new Set<string>();
+    connections.add(connectionId);
+    onlineUsers.set(userId, connections);
     broadcastUserCount();
 }
 
-export function setUserOffline(userId: number) {
-    const count = (onlineUsers.get(userId) ?? 1) - 1;
-    if (count <= 0) onlineUsers.delete(userId);
-    else onlineUsers.set(userId, count);
+export function setUserOffline(userId: number, connectionId: string) {
+    const connections = onlineUsers.get(userId);
+    if (!connections) return;
+    connections.delete(connectionId);
+    if (connections.size === 0) onlineUsers.delete(userId);
     broadcastUserCount();
 }
 
@@ -161,8 +167,17 @@ export const initLogin = () => {
                     ? socket.data.sessionToken
                     : createSession(user);
 
+                const previousUserId = typeof socket.data.onlineUserId === 'number'
+                    ? socket.data.onlineUserId
+                    : undefined;
+                if (previousUserId !== undefined && previousUserId !== user.id) {
+                    socket.leave(getChannelRoomKey(getUserChannel(previousUserId)));
+                    setUserOffline(previousUserId, socket.id);
+                }
+
                 socket.data.sessionToken = sessionToken;
-                setUserOnline(user.id);
+                socket.data.onlineUserId = user.id;
+                setUserOnline(user.id, socket.id);
                 socket.join(getChannelRoomKey(getUserChannel(user.id)));
                 await loadPlayerByUserId(user.id);
                 socket.emit('loginResult', {
@@ -180,7 +195,7 @@ export const initLogin = () => {
         });
 
         socket.on('requestUserCount', () => {
-            socket.emit('userCount', buildUserCountData());
+            socket.emit('userCount', getUserCountData());
         });
 
         socket.on('changeNickname', async (newNickname: unknown) => {
@@ -234,6 +249,19 @@ export const initLogin = () => {
                 const logoutSession = getSession(token);
                 if (logoutSession && getUserSessionCount(logoutSession.userId) <= 1) {
                     await unloadPlayerByUserId(logoutSession.userId);
+                }
+                if (logoutSession) {
+                    for (const [, connectedSocket] of io.sockets.sockets) {
+                        if (connectedSocket.data.sessionToken !== token) continue;
+                        const onlineUserId = typeof connectedSocket.data.onlineUserId === 'number'
+                            ? connectedSocket.data.onlineUserId
+                            : logoutSession.userId;
+                        connectedSocket.leave(getChannelRoomKey(getUserChannel(onlineUserId)));
+                        setUserOffline(onlineUserId, connectedSocket.id);
+                        connectedSocket.data.onlineUserId = undefined;
+                        connectedSocket.data.sessionToken = undefined;
+                        if (connectedSocket.id !== socket.id) connectedSocket.emit('sessionInvalid');
+                    }
                 }
                 removeSession(token);
                 socket.emit('logoutResult', { ok: true });

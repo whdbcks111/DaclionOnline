@@ -35,7 +35,7 @@ Express + Socket.io (`server/src/index.ts`)
 
 | 상태 | 소유 위치 | 수명/저장 |
 | --- | --- | --- |
-| 세션 토큰, 다중 세션, 온라인 소켓 수 | `modules/login.ts` | 프로세스 메모리, 재시작 시 소실 |
+| 세션 토큰, 다중 세션, userId별 온라인 socket ID Set | `modules/login.ts` | 프로세스 메모리, 재시작 시 소실 |
 | 현재 채널, 채팅 히스토리 | `modules/channel.ts` | 프로세스 메모리, 채널당 공개 100개 |
 | 정보 열람 공개 모드 | `modules/informationVisibility.ts` | 사용자별 프로세스 메모리, 기본 비공개, 마지막 연결 종료 시 소실 |
 | 온라인 Player 인스턴스 | `modules/player.ts` | 로그인 중 메모리, 30초 자동 저장 및 정상 로그아웃/종료 시 저장 |

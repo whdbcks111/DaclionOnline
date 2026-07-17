@@ -178,7 +178,7 @@ export interface ChannelInfo {
 // 온라인 유저 수 데이터
 export interface UserCountData {
     total: number
-    channelCounts: Record<string, number>  // room key (e.g. 'channel:main') → 인원수
+    channelCounts: Record<string, number>  // room key (e.g. 'channel:main') → 중복 없는 사용자 수
 }
 
 // 엔티티 HP 바 정보 (위치 HUD용)

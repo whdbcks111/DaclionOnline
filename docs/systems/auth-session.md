@@ -29,11 +29,12 @@
 ## 로그인과 세션 수명
 
 - 세션 토큰은 `randomHex(32)`로 만들며 `sessionMap`에만 저장된다. 서버 재시작 후에는 복원되지 않는다.
-- 사용자 한 명이 여러 토큰/소켓으로 로그인할 수 있다. `userSessions`는 userId별 토큰 Set, `onlineUsers`는 userId별 연결 수를 가진다.
+- 사용자 한 명이 여러 토큰/소켓으로 로그인할 수 있다. `userSessions`는 userId별 토큰 Set, `onlineUsers`는 userId별 socket ID Set을 가진다.
 - 쿠키는 클라이언트 로그인/가입 화면에서 `sessionToken`으로 설정되고 Socket.io와 HTTP upload에서 사용된다.
 - 유효한 쿠키로 연결하면 `sessionRestore`를 보내고 Player를 메모리에 로드한다.
 - 마지막 세션 로그아웃 시 Player를 저장하고 온라인 Player 맵에서 내린다.
 - 연결 해제는 온라인 카운트만 내리며 세션 토큰 자체는 제거하지 않는다.
+- 전체 접속자와 채널별 접속자는 소켓/탭 수가 아니라 중복 없는 userId 수로 계산한다. 명시적 로그아웃은 같은 토큰에 연결된 모든 소켓의 온라인 바인딩을 즉시 해제하므로 이후 disconnect 순서와 무관하게 잔여 인원이 남지 않는다.
 
 ## 권한
 
