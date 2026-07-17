@@ -11,11 +11,12 @@
 | `logout` | `token: string` | 토큰 | `modules/login.ts` | `logoutResult`; 마지막 세션이면 Player 저장/언로드 |
 | `sendVerifyCode` | `email: string` | 불필요 | `modules/register.ts` | `verifyCodeSendResult`; 6자리, 5분 만료, 60초 재전송 제한 |
 | `verifyCode` | `code: string` | 불필요 | `modules/register.ts` | `verifyCodeResult` |
-| `sendMessage` | `content: string` | 필요 | `modules/chat.ts` | 최대 500자; `ActionType.CHAT/COMMAND` 제한 확인 후 일반 채팅 또는 명령 실행 |
+| `sendMessage` | `content: string` | 필요 | `modules/chat.ts` | 최대 500자; `ActionType.CHAT/COMMAND` 제한 확인 후 일반 채팅·`@닉네임 메시지` 귓속말 또는 명령 실행 |
 | `chatButtonClick` | `{ action, showCommand? }` | 필요 | `modules/chat.ts` | `ActionType.COMMAND` 제한 확인 후 `/` action만 `handleCommand()`로 전달 |
 | `requestChatHistory` | 없음 | 선택 | `modules/chat.ts` | `chatHistory`; 인증 시 private history와 HUD 데이터도 전송 |
 | `requestCommandList` | 없음 | 불필요 | `modules/bot.ts` | `commandList` |
 | `requestCompletions` | `raw: string` | 필요 | `modules/bot.ts` | 슬래시 명령과 슬래시 없는 별칭 입력의 동적 인자 후보 `argCompletions` |
+| `requestMentionCompletions` | `query: string` | 필요 | `modules/chat.ts` | 자기 자신을 제외한 온라인 플레이어 닉네임 prefix 후보 `mentionCompletions` |
 | `requestInformationMode` | 없음 | 필요 | `modules/bot.ts` | 현재 플레이어의 정보 공개 여부를 `informationMode`로 응답 |
 | `setInformationMode` | `isPublic: boolean` | 필요 | `modules/bot.ts` | 런타임 정보 공개 모드 변경, 같은 계정 소켓 동기화와 notification |
 | `requestUserCount` | 없음 | 불필요 | `modules/login.ts` | `userCount` |
@@ -44,6 +45,7 @@
 | `notification` | `NotificationData` | `modules/message.ts` | `components/Notification.tsx` |
 | `commandList` | `CommandInfo[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `argCompletions` | `CompletionItem[]` | `modules/bot.ts` | `pages/Home.tsx` |
+| `mentionCompletions` | `CompletionItem[]` | `modules/chat.ts` | `pages/Home.tsx` |
 | `playerStats` | `PlayerStatsData` (현재 레벨·자원·공격 cooldown·`statusEffects`, 표시 가능한 스킬의 `id/name/icon/level/isActive/remainingCooldown/maxCooldown`, nullable 파티원 HP/MP `party`) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` → `PlayerStatusHud`/`PartyHud`/`SkillQuickHud` |
 | `informationMode` | `isPublic: boolean` | `modules/bot.ts` | `pages/Home.tsx` 입력창 공개/비공개 전환 버튼 |
 | `locationInfo` | `LocationInfoData` (`objects`에 Monster/Resource 공통 체력 DTO, `adjacentLocations`에 플레이어 기준 `visible/locked` 상태) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` → Location/Minimap HUD |
@@ -63,6 +65,7 @@
 - 공개 채널 room은 `channel:main` 또는 `channel:{channelId}` 형식이다.
 - `sendMessageToChannel()`은 해당 room에 전송하고 공개 히스토리에 저장한다.
 - `sendMessageFiltered()`는 조건을 통과하고 현재 채널이 같은 소켓에만 보내며 필터 히스토리에 저장한다.
+- `sendWhisperMessage()`는 발신자와 수신자의 서로 다른 현재 채널에 필터 메시지를 각각 저장·전송하며 공개 히스토리에는 넣지 않는다.
 - `broadcastMessageAll()`은 모든 채널 히스토리와 모든 소켓에 전송하며 `[전체]` 플래그를 붙인다.
 - 한 사용자의 여러 소켓은 채널 변경 시 함께 room을 이동하지만 `channelChanged` 응답은 요청한 소켓에 전송된다.
 

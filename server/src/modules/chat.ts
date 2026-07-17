@@ -1,14 +1,32 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
 import { getSession, broadcastUserCount } from "./login.js";
-import { sendMessageToChannel, getFlagsForPermission, sendNotificationToUser } from "./message.js";
+import { sendMessageToChannel, getFlagsForPermission, sendNotificationToUser, sendWhisperMessage } from "./message.js";
 import { getUserChannel, setUserChannel, getChannelHistory, getChannelRoomKey, getAvailableChannels, getFilteredHistoryForUser } from "./channel.js";
 import { sendPlayerStats, sendLocationInfo, getPlayerByUserId } from "./player.js";
 import { handleCommand, isCommandAliasInput } from "./bot.js";
 import type { ChatMessage } from "../../../shared/types.js";
 import { ActionType } from "../models/Action.js";
+import { findOnlinePlayerByIdentity, searchOnlinePlayerIdentitySnapshots } from './playerRegistry.js';
 
 const MAX_MESSAGE_LENGTH = 500;
+
+export interface WhisperInput {
+    target: string;
+    message: string;
+}
+
+/** @닉네임 뒤의 첫 공백을 기준으로 수신자와 본문을 분리한다. @ 입력은 오류 안내를 위해 빈 값도 반환한다. */
+export function parseWhisperInput(content: string): WhisperInput | null {
+    const trimmed = content.trim();
+    if (!trimmed.startsWith('@')) return null;
+    const separator = trimmed.search(/\s/);
+    if (separator < 0) return { target: trimmed.slice(1), message: '' };
+    return {
+        target: trimmed.slice(1, separator),
+        message: trimmed.slice(separator).trim(),
+    };
+}
 
 export const initChat = () => {
     const io = getIO();
@@ -40,6 +58,16 @@ export const initChat = () => {
         // 채널 목록 요청
         socket.on('requestChannelList', () => {
             socket.emit('channelList', getAvailableChannels());
+        });
+
+        socket.on('requestMentionCompletions', (query: unknown) => {
+            if (typeof query !== 'string' || query.length > 12 || /\s/.test(query)) return;
+            const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            if (!session) { socket.emit('sessionInvalid'); return; }
+            socket.emit('mentionCompletions', searchOnlinePlayerIdentitySnapshots(query, session.userId).map(player => ({
+                value: player.nickname,
+                description: `ID ${player.userId} · Lv.${player.level}`,
+            })));
         });
 
         // 채널 변경: 유저의 모든 소켓을 새 채널 room으로 이동하고 히스토리 전송
@@ -155,6 +183,39 @@ export const initChat = () => {
                     key: 'action-disabled:chat',
                     message: '현재 채팅을 사용할 수 없는 상태입니다.',
                 });
+                return;
+            }
+
+            const whisper = parseWhisperInput(trimmed);
+            if (whisper) {
+                if (!whisper.target || !whisper.message) {
+                    sendNotificationToUser(session.userId, {
+                        key: 'whisper-invalid',
+                        message: '@닉네임 뒤에 보낼 메시지를 입력해주세요.',
+                    });
+                    return;
+                }
+                const target = findOnlinePlayerByIdentity(whisper.target);
+                if (!target) {
+                    sendNotificationToUser(session.userId, {
+                        key: 'whisper-target-offline',
+                        message: '해당 닉네임의 온라인 플레이어를 찾을 수 없습니다.',
+                    });
+                    return;
+                }
+                if (target.userId === session.userId) {
+                    sendNotificationToUser(session.userId, {
+                        key: 'whisper-self',
+                        message: '자기 자신에게는 귓속말을 보낼 수 없습니다.',
+                    });
+                    return;
+                }
+                if (!sendWhisperMessage(session.userId, target.userId, whisper.message)) {
+                    sendNotificationToUser(session.userId, {
+                        key: 'whisper-target-offline',
+                        message: '상대가 오프라인이 되어 귓속말을 보내지 못했습니다.',
+                    });
+                }
                 return;
             }
 

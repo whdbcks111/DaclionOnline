@@ -19,6 +19,11 @@ function channelRoomKey(channel: string | null): string {
   return channel === null ? 'channel:main' : `channel:${channel}`
 }
 
+function getMentionQuery(input: string): string | null {
+  const match = /^@([^\s]*)$/.exec(input.trimStart())
+  return match?.[1] ?? null
+}
+
 function HomeContent() {
   const { socket, sessionInfo, updateProfileImage, updateNickname } = useSocket()
   const { playerStats, setPlayerStats, setLocationInfo } = useHud()
@@ -33,6 +38,7 @@ function HomeContent() {
   const [currentChannel, setCurrentChannel] = useState<string | null>(null)
   const [channelList, setChannelList] = useState<ChannelInfo[]>([])
   const [dynamicCompletions, setDynamicCompletions] = useState<CompletionItem[]>([])
+  const [mentionCompletions, setMentionCompletions] = useState<CompletionItem[]>([])
   const [informationPublic, setInformationPublic] = useState(false)
   const inputRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -59,6 +65,7 @@ function HomeContent() {
       setMessages(prev => prev.filter(msg => msg.id !== id))
     }
     const onArgCompletions = (items: CompletionItem[]) => setDynamicCompletions(items)
+    const onMentionCompletions = (items: CompletionItem[]) => setMentionCompletions(items)
     const onInformationMode = (isPublic: boolean) => setInformationPublic(isPublic)
 
     socket.on('chatHistory', onChatHistory)
@@ -72,6 +79,7 @@ function HomeContent() {
     socket.on('editMessage', onEditMessage)
     socket.on('deleteMessage', onDeleteMessage)
     socket.on('argCompletions', onArgCompletions)
+    socket.on('mentionCompletions', onMentionCompletions)
     socket.on('informationMode', onInformationMode)
     socket.emit('requestChatHistory')
     socket.emit('requestCommandList')
@@ -91,9 +99,10 @@ function HomeContent() {
       socket.off('editMessage', onEditMessage)
       socket.off('deleteMessage', onDeleteMessage)
       socket.off('argCompletions', onArgCompletions)
+      socket.off('mentionCompletions', onMentionCompletions)
       socket.off('informationMode', onInformationMode)
     }
-  }, [socket, setPlayerStats])
+  }, [socket, setPlayerStats, setLocationInfo])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -149,14 +158,16 @@ function HomeContent() {
 
   const handleInput = useCallback(() => {
     const text = inputRef.current?.textContent ?? ''
-    if (isCommandAutocompleteInput(commands, text)) {
-      setCommandFilter(text)
+    setCommandFilter(text)
+    if (getMentionQuery(text) !== null || isCommandAutocompleteInput(commands, text)) {
       setShowAutocomplete(true)
       setActiveIndex(0)
     } else {
       setShowAutocomplete(false)
     }
   }, [commands])
+
+  const mentionQuery = useMemo(() => getMentionQuery(commandFilter), [commandFilter])
 
   // 명령어가 완성된 후 파라미터 입력 모드 계산
   const paramMode = useMemo(() => {
@@ -198,12 +209,14 @@ function HomeContent() {
 
   // 동적 자동완성: 파라미터 입력 중 서버에 completions 요청
   useEffect(() => {
-    if (!socket || !paramMode?.isDynamic) {
-      setDynamicCompletions([])
-      return
-    }
+    if (!socket || !paramMode?.isDynamic) return
     socket.emit('requestCompletions', commandFilter)
   }, [socket, paramMode?.isDynamic, commandFilter])
+
+  useEffect(() => {
+    if (!socket || mentionQuery === null) return
+    socket.emit('requestMentionCompletions', mentionQuery)
+  }, [socket, mentionQuery])
 
   // 파라미터 자동완성 선택 시 해당 인자를 완성
   const selectCompletion = useCallback((value: string) => {
@@ -229,10 +242,39 @@ function HomeContent() {
     setActiveIndex(0)
   }, [])
 
+  const selectMention = useCallback((value: string) => {
+    if (!inputRef.current) return
+    inputRef.current.textContent = `@${value} `
+    const range = document.createRange()
+    range.selectNodeContents(inputRef.current)
+    range.collapse(false)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+    inputRef.current.focus()
+    setCommandFilter(inputRef.current.textContent ?? '')
+    setShowAutocomplete(false)
+    setActiveIndex(0)
+  }, [])
+
+  const autocompleteHint = mentionQuery !== null
+    ? {
+        name: '귓속말 대상',
+        description: '귓속말을 보낼 온라인 플레이어',
+        required: true,
+        argIndex: 0,
+        totalArgs: 1,
+      }
+    : paramMode?.arg
+  const autocompleteCompletions = mentionQuery !== null
+    ? mentionCompletions
+    : paramMode?.isDynamic ? dynamicCompletions : paramMode?.completions
+
   const getFilteredCount = useCallback(() => {
+    if (mentionQuery !== null) return mentionCompletions.length
     if (paramMode) return paramMode.isDynamic ? dynamicCompletions.length : paramMode.completions.length
     return getFilteredCommands(commands, commandFilter).length
-  }, [commandFilter, commands, paramMode, dynamicCompletions])
+  }, [commandFilter, commands, paramMode, dynamicCompletions, mentionQuery, mentionCompletions])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (showAutocomplete) {
@@ -241,7 +283,10 @@ function HomeContent() {
       if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(prev => (prev + 1) % Math.max(1, count)); return }
       if (e.key === 'Tab') {
         e.preventDefault()
-        if (paramMode) {
+        if (mentionQuery !== null) {
+          const item = mentionCompletions[activeIndex]
+          if (item) selectMention(typeof item === 'string' ? item : item.value)
+        } else if (paramMode) {
           const items = paramMode.isDynamic ? dynamicCompletions : paramMode.completions
           const item = items[activeIndex]
           if (item) selectCompletion(typeof item === 'string' ? item : item.value)
@@ -254,7 +299,7 @@ function HomeContent() {
       if (e.key === 'Escape') { e.preventDefault(); setShowAutocomplete(false); return }
     }
     if (e.key === 'Enter' && !e.shiftKey && !isComposing.current) { e.preventDefault(); sendMessage() }
-  }, [showAutocomplete, getFilteredCount, commandFilter, commands, activeIndex, selectCommand, selectCompletion, sendMessage, paramMode, dynamicCompletions])
+  }, [showAutocomplete, getFilteredCount, commandFilter, commands, activeIndex, selectCommand, selectCompletion, selectMention, sendMessage, paramMode, dynamicCompletions, mentionQuery, mentionCompletions])
 
   const lifeRatio  = playerStats ? Math.max(0, playerStats.life / playerStats.maxLife) : 1
   const mpRatio    = playerStats ? Math.max(0, playerStats.mentality / playerStats.maxMentality) : 1
@@ -300,9 +345,9 @@ function HomeContent() {
               filter={commandFilter}
               activeIndex={activeIndex}
               onSelect={selectCommand}
-              paramHint={paramMode?.arg}
-              paramCompletions={paramMode?.isDynamic ? dynamicCompletions : paramMode?.completions}
-              onSelectCompletion={selectCompletion}
+              paramHint={autocompleteHint}
+              paramCompletions={autocompleteCompletions}
+              onSelectCompletion={mentionQuery !== null ? selectMention : selectCompletion}
             />
           )}
           <div

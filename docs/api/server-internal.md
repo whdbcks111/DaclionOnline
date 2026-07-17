@@ -11,13 +11,13 @@
 | Online | `setUserOnline`, `setUserOffline`, `isUserOnline`, `broadcastUserCount` | 사용자별 연결 수와 접속 인원 |
 | Player | `loadPlayerByUserId`, `unloadPlayerByUserId`, `getPlayerByUserId`, `getOnlinePlayers`, `fetchPlayerByUserId`, `saveAllPlayers` | Player 수명과 저장 |
 | Player registry | `registerOnlinePlayer`, `getOnlinePlayer`, `unregisterOnlinePlayer`, `getOnlinePlayerSnapshot`, `isOnlinePlayerAtLocation` | 내부 Map을 숨긴 온라인 객체 조회와 위치 필터 |
-| Player identity | `findOnlinePlayerByIdentity`, `getOnlinePlayerIdentitySnapshots` | 고유번호/정확한 닉네임 대상 조회와 자동완성 DTO |
+| Player identity | `findOnlinePlayerByIdentity`, `getOnlinePlayerIdentitySnapshots`, `searchOnlinePlayerIdentitySnapshots` | 고유번호/정확한 닉네임 대상 조회와 prefix 온라인 자동완성 DTO |
 | HUD | `sendPlayerStats`, `sendLocationInfo` | 특정 사용자의 모든 소켓에 HUD payload 전송 |
 | Command | `registerCommand`, `handleCommand`, `isCommandAliasInput`, `getCommandList`, `getCommandListFiltered`, `setInformationModeForUser` | 명령 등록, 별칭 판정·실행, 정보성 명령 공개 모드와 권한별 aliases 포함 목록 snapshot |
 | Information visibility | `set/is/clearInformationPublicMode`, `runInformationCommand`, `shouldPublishInformationOutput` | 사용자별 런타임 정보 공개 설정과 async 출력 문맥 |
 | Party | `partyManager.invite/accept/decline/leave/disband/kick/removeDisconnectedPlayer/getParty/getHudData/distributeMonsterExp`, `calculatePartyExpGrant` | 내부 Map을 숨긴 초대·구성·HUD·같은 장소 몬스터 경험치 공유 |
 | Channel | `getUserChannel`, `setUserChannel`, `getChannelRoomKey`, `getChannelHistory`, `getFilteredHistoryForUser` | room과 히스토리 상태 |
-| Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageFiltered`, `sendMessageToUser`, `sendPlayerTextToCurrentChannel`, `sendPrivatePlayerTextToCurrentChannel` | 일반 메시지와 시스템이 생성한 공개/본인 전용 플레이어 표시 메시지 전송 |
+| Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageFiltered`, `sendMessageToUser`, `sendPlayerTextToCurrentChannel`, `sendPrivatePlayerTextToCurrentChannel`, `sendWhisperMessage` | 일반 메시지, 시스템 생성 플레이어 메시지와 채널을 넘는 양방향 비공개 귓속말 전송 |
 | Bot message | `sendBotMessageToChannel`, `broadcastBotMessageAll`, `sendBotMessageFiltered`, `sendBotMessageToUser`, `sendPrivateBotMessageToUser` | 정보 명령 문맥을 반영하거나 강제로 비공개인 시스템 메시지 전송 |
 | Notification | `broadcastNotification`, `sendNotificationFiltered`, `sendNotificationToUser` | 화면 알림 전송 |
 | Message mutation | `editMessage`, `deleteMessage` | 히스토리 수정 후 이벤트 브로드캐스트 |

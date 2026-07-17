@@ -292,6 +292,7 @@ export interface ServerToClientEvents {
     notification: (data: NotificationData) => void
     commandList: (commands: CommandInfo[]) => void
     argCompletions: (items: CompletionItem[]) => void
+    mentionCompletions: (items: CompletionItem[]) => void
     playerStats: (data: PlayerStatsData) => void
     informationMode: (isPublic: boolean) => void
     locationInfo: (data: LocationInfoData) => void
@@ -321,6 +322,7 @@ export interface ClientToServerEvents {
     changeNickname: (nickname: string) => void
     requestLocationInfo: () => void
     requestCompletions: (raw: string) => void
+    requestMentionCompletions: (query: string) => void
     requestInformationMode: () => void
     setInformationMode: (isPublic: boolean) => void
     adminRequestLocations: () => void

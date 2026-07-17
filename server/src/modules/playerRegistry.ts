@@ -41,6 +41,19 @@ export function getOnlinePlayerIdentitySnapshots(excludeUserId?: number): { user
         .map(player => ({ userId: player.userId, nickname: player.name, level: player.level }));
 }
 
+/** @귓속말 등 온라인 사용자 검색 UI용 prefix 일치 신원 DTO를 반환한다. */
+export function searchOnlinePlayerIdentitySnapshots(
+    query: string,
+    excludeUserId?: number,
+    limit = 20,
+): { userId: number; nickname: string; level: number }[] {
+    const normalized = query.trim().toLocaleLowerCase('ko-KR');
+    return getOnlinePlayerIdentitySnapshots(excludeUserId)
+        .filter(player => !normalized || player.nickname.toLocaleLowerCase('ko-KR').startsWith(normalized))
+        .sort((a, b) => a.nickname.localeCompare(b.nickname, 'ko-KR'))
+        .slice(0, Math.max(0, Math.trunc(limit)));
+}
+
 /** 특정 온라인 유저가 주어진 위치에 있는지 확인한다. */
 export function isOnlinePlayerAtLocation(userId: number, locationId: string): boolean {
     return onlinePlayers.get(userId)?.locationId === locationId;

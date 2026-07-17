@@ -36,6 +36,7 @@ export function sendMessageToChannel(msg: ChatMessage, channel: string | null): 
 }
 
 const FLAG_ALL: ChatFlag = { text: '전체', color: '#08c26e' };
+const FLAG_WHISPER: ChatFlag = { text: '귓속말', color: '#a855f7' };
 
 /** 모든 채널에 브로드캐스트 (모든 채널 히스토리에 저장, [전체] 플래그 자동 부착) */
 export function broadcastMessageAll(msg: ChatMessage): void {
@@ -89,6 +90,22 @@ export function sendPrivatePlayerTextToCurrentChannel(userId: number, content: s
     const message = makePlayerTextMessage(userId, content);
     if (!message) return false;
     sendMessageFiltered(id => id === userId, getUserChannel(userId), message);
+    return true;
+}
+
+/** 서로 다른 채널에 있어도 발신자와 수신자의 각 비공개 히스토리에 귓속말을 남긴다. */
+export function sendWhisperMessage(senderUserId: number, targetUserId: number, content: string): boolean {
+    const sender = getSessionByUserId(senderUserId);
+    const target = getSessionByUserId(targetUserId);
+    const received = makePlayerTextMessage(senderUserId, content);
+    if (!sender || !target || !received) return false;
+
+    received.flags = [FLAG_WHISPER, ...(received.flags ?? [])];
+    sendMessageToUser(targetUserId, received, false);
+    sendMessageToUser(senderUserId, {
+        ...received,
+        content: [{ type: 'text', text: `→ ${target.nickname}: ${content}` }],
+    }, false);
     return true;
 }
 

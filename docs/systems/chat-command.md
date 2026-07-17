@@ -6,7 +6,7 @@
 Home/QuickSlot/ButtonNode
         │ sendMessage / chatButtonClick
         v
-modules/chat.ts ── 일반문장 ──> Skill message trigger 또는 modules/message.ts ──> Socket room
+modules/chat.ts ── 일반문장 ──> 귓속말 / Skill message trigger 또는 modules/message.ts ──> Socket room
         │                              │
         │ '/' 또는 첫 단어=별칭         └─ modules/channel.ts history
         v
@@ -20,6 +20,8 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 전송 버튼 옆의 공개/비공개 버튼은 플레이어별 런타임 정보 열람 모드를 `setInformationMode`로 변경한다. 같은 기능을 `/공개모드`, `/비공개모드`로도 사용할 수 있고 서버는 `informationMode`를 같은 계정의 모든 소켓에 동기화한다. 기본값은 비공개이며 마지막 연결 종료 또는 Player unload 때 초기화된다. `registerCommand({ information: true })` 명령은 공개 모드에서 명령 입력과 `sendBotMessageToUser` 결과를 현재 채널에 공개하고, 비공개 모드에서는 기존처럼 본인에게만 보낸다. 상태창·인벤토리·통계의 명시적 `공개/비공개` 인자는 해당 1회 실행에서 모드보다 우선한다. 조작·관리자 명령과 파티 초대 같은 민감한 결과는 정보 공개 모드의 영향을 받지 않는다.
 
 서버는 일반 메시지에서 `ActionType.CHAT`, 명령 입력과 버튼에서 `ActionType.COMMAND`를 검사한다. 상태효과 등 source key 제한이 남아 있으면 메시지/명령을 실행하지 않고 notification으로 안내한다. 스킬 메시지 트리거는 추가로 `ActionType.SKILL`을 SkillBook에서 검사한다.
+
+`@닉네임 메시지`는 온라인 플레이어에게 보내는 귓속말이다. 발신자와 수신자가 서로 다른 채널에 있어도 각자의 현재 채널 필터 히스토리에 `[귓속말]` 메시지를 따로 남기며 공개 room에는 전송하지 않는다. `@` 뒤에 메시지가 없거나 대상이 없거나 오프라인·자기 자신이면 일반 채팅으로 유출하지 않고 notification으로 거절한다.
 
 정식 명령 이름은 기존처럼 `/상태창` 형태로 실행한다. `registerCommand.aliases`에 등록된 값은 `/s`뿐 아니라 `s`, `s 공개`처럼 슬래시 없이 첫 단어로 입력해도 실행된다. 슬래시 없는 입력은 첫 단어 전체가 별칭과 정확히 일치할 때만 명령이며 `상태창`처럼 정식 이름만 쓰거나 별칭의 일부만 쓴 입력은 일반 채팅으로 남는다. 따라서 새 별칭은 일상 대화의 흔한 첫 단어와 충돌하지 않도록 정한다.
 
@@ -101,6 +103,7 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 3. 정적 `completions`는 클라이언트가 즉시 필터링한다.
 4. 함수형 completion은 `dynamicCompletions: true`로 표시된다.
 5. `Home.tsx`가 입력 중 `requestCompletions(raw)`을 보내고 서버가 현재 사용자 상태를 이용해 `argCompletions`를 응답한다. 서버도 같은 `parseCommandInput` 규칙으로 슬래시 없는 별칭을 해석한다.
+6. 입력의 첫 토큰이 `@닉네임prefix`이면 `requestMentionCompletions`로 자기 자신을 제외한 온라인 플레이어를 조회한다. 선택하면 `@정확한닉네임 `을 입력하고 이후 본문을 작성할 수 있다.
 
 명령 목록 자체는 자동완성을 위해 전체가 전송되지만 실제 실행 권한은 서버에서 다시 검사한다.
 
