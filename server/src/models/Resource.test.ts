@@ -185,6 +185,10 @@ test('공격 불가 자원은 성공한 상호작용 뒤 정의된 범위의 쿨
     assert.equal(interactions, 1);
     assert.ok(resource.interactionCooldownRemaining >= 10);
     assert.ok(resource.interactionCooldownRemaining <= 20);
+    assert.equal(resource.resetInteractionCooldown(), true);
+    assert.equal(resource.interactionCooldownRemaining, 0);
+    assert.equal(resource.resetInteractionCooldown(), false);
+    assert.equal(resource.interact(actor as never), true);
     resource.update(20);
     assert.equal(resource.interactionCooldownRemaining, 0);
 });

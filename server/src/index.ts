@@ -27,6 +27,7 @@ import './data/npcs.js';
 import { initLocation } from './modules/location.js';
 import { uploadRouter } from './modules/upload.js';
 import { initAllCommands } from './commands/index.js';
+import { initAdminPanel } from './modules/adminPanel.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -50,6 +51,7 @@ initBot();
 initAllCommands();
 initPlayer();
 initLocation();
+initAdminPanel();
 initGame();
 
 // 프로필 이미지 등 업로드 파일 정적 서빙

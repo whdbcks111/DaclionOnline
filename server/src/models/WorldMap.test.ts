@@ -7,6 +7,7 @@ import {
     getVisitedLocationIds,
     getFullWorldMapSnapshot,
     getWorldMapSnapshot,
+    markAllLocationsVisited,
     markLocationVisited,
 } from './WorldMap.js';
 import type Player from './Player.js';
@@ -93,4 +94,19 @@ test('관리자 전체 지도는 hidden과 고립 장소를 포함한 모든 장
     assert.equal(snapshot.locations.find(node => node.id === 'start')?.current, true);
     assert.equal(snapshot.locations.find(node => node.id === 'start')?.mapColor, '#6aa6d8');
     assert.deepEqual(snapshot.connections.map(edge => `${edge.from}:${edge.to}`).sort(), ['near:start', 'secret:start']);
+});
+
+test('관리자 전체 지역 잠금 해제는 아직 방문하지 않은 장소만 발견 처리한다', () => {
+    reloadAllLocations([
+        location('start', 0, ['near']),
+        location('near', 100, ['start']),
+        location('secret', 200, [], ['location:hidden']),
+    ]);
+    const player = { locationId: 'start', progress: PlayerProgress.createEmpty(12) } as Player;
+
+    assert.equal(markLocationVisited(player, 'start'), true);
+    assert.equal(markAllLocationsVisited(player), 2);
+    assert.equal(markAllLocationsVisited(player), 0);
+    assert.deepEqual(getVisitedLocationIds(player).sort(), ['near', 'secret', 'start']);
+    assert.equal(getWorldMapSnapshot(player).locations.some(node => node.id === 'secret'), false);
 });

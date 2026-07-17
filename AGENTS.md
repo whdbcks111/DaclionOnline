@@ -39,6 +39,7 @@
 - [`docs/systems/progress-skills.md`](docs/systems/progress-skills.md)
 - [`docs/systems/party.md`](docs/systems/party.md)
 - [`docs/systems/careers.md`](docs/systems/careers.md)
+- [`docs/systems/admin-panel.md`](docs/systems/admin-panel.md)
 - [`docs/data/database.md`](docs/data/database.md)
 - [`docs/development.md`](docs/development.md)
 - 소스 폴더별 `Overview.md`: `server/**/Overview.md`, `client/**/Overview.md`, `shared/**/Overview.md`

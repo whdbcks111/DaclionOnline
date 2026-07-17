@@ -26,6 +26,10 @@
 | `requestLocationInfo` | 없음 | 필요 | `modules/chat.ts` | `locationInfo` |
 | `adminRequestLocations` | 없음 | 권한 10 | `modules/location.ts` | `adminLocations` |
 | `adminSaveLocations` | `LocationData[]` | 권한 10 | `modules/location.ts` | `objects(type/dataId/maxCount/respawnTime)`, `npcIds`, `tags`, 선택 `mapIcon`·`#RRGGBB mapColor`를 검증·정규화한 뒤 JSON 저장 및 런타임 재로드, `adminSaveResult` |
+| `adminPanelRequestBootstrap` | 없음 | 권한 10 | `modules/adminPanel.ts` | `adminPanelBootstrap`; 관리자 form option 목록 |
+| `adminPanelRequestPlayers` | 없음 | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayers`; 온라인 우선 전체 캐릭터 목록 |
+| `adminPanelRequestPlayer` | `userId: number` | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayer`; 가공된 캐릭터 상세 snapshot |
+| `adminPanelExecute` | `AdminPanelActionRequest` | 권한 10 | `modules/adminPanel.ts` | action별 서버 검증·도메인 API 실행 후 result/목록/상세 갱신 |
 
 클라이언트 emit 위치는 주로 `pages/Login.tsx`, `pages/Register.tsx`, `pages/Home.tsx`, `pages/LocationEditor.tsx`, `components/chat/nodes/ButtonNode.tsx`, `components/hud/huds/QuickSlotHud.tsx`다.
 
@@ -57,6 +61,10 @@
 | `deleteMessage` | `id: string` | `modules/message.ts` | `pages/Home.tsx` |
 | `adminLocations` | 태그·통합 `objects`·`npcIds`·선택 `mapIcon/mapColor` 포함 `LocationData[]` | `modules/location.ts` | `pages/LocationEditor.tsx` |
 | `adminSaveResult` | `SimpleResult` | `modules/location.ts` | `pages/LocationEditor.tsx` |
+| `adminPanelBootstrap` | `AdminPanelBootstrapData` | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
+| `adminPanelPlayers` | `AdminPlayerListItem[]` | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
+| `adminPanelPlayer` | `AdminPlayerDetailData \| null` | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
+| `adminPanelResult` | `AdminPanelResult` | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
 
 `ChatMessage`와 `NotificationData` 안의 progress `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다. `/지도` private `ChatMessage`의 worldMap 노드는 별도 socket event 없이 방문지·인접 미방문지로 제한된 `WorldMapData` snapshot을 포함하며, 방문 장소의 검증된 `mapColor`만 바이옴 배경에 사용한다.
 

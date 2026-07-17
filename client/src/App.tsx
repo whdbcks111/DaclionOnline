@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
-import type { SessionRestoreData } from '@shared/types'
 import { SocketProvider, useSocket } from './context/SocketContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ThemeToggle from './components/ThemeToggle'
@@ -9,6 +8,7 @@ import Login from './pages/Login'
 import Home from './pages/Home'
 import Register from './pages/Register'
 import LocationEditor from './pages/LocationEditor'
+import AdminPage from './pages/AdminPage'
 
 function SessionHandler() {
   const { socket } = useSocket();
@@ -31,7 +31,7 @@ function SessionHandler() {
   useEffect(() => {
     if (!socket) return;
 
-    const onSessionRestore = (data: SessionRestoreData) => {
+    const onSessionRestore = () => {
       if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/') {
         navigate('/home');
       }
@@ -68,6 +68,7 @@ function App() {
             <Route path="/home" element={<Home />} />
 
             {/* 어드민 페이지 */}
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/locations" element={<LocationEditor />} />
 
             {/* 404 - 존재하지 않는 경로는 /login으로 */}

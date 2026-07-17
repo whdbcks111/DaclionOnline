@@ -43,6 +43,7 @@ export default class SkillBook {
     private owner?: Entity;
     private readonly skills = new Map<string, Skill>();
     private readonly dirtyVersions = new Map<string, number>();
+    private readonly deletedSkills = new Set<string>();
     private version = 0;
     private autoAcquireTimer = 0;
     private autoActivateTimer = 0;
@@ -174,6 +175,7 @@ export default class SkillBook {
             acquisitionSource,
         });
         this.attach(skill);
+        this.deletedSkills.delete(skill.skillDataId);
         this.markDirty(skill.skillDataId);
 
         const context = createSkillContext(owner, skill);
@@ -199,6 +201,17 @@ export default class SkillBook {
             });
         }
         return { skill, acquired: true };
+    }
+
+    /** 보유 스킬을 제거하고 영속 삭제 대상으로 표시한다. */
+    revoke(skillDataId: string): boolean {
+        const skill = this.get(skillDataId);
+        if (!skill) return false;
+        if (skill.isActive) this.finish(skill, SkillFinishReason.CANCELLED);
+        this.skills.delete(skill.skillDataId);
+        this.dirtyVersions.delete(skill.skillDataId);
+        if (this.playerId !== null) this.deletedSkills.add(skill.skillDataId);
+        return true;
     }
 
     activateByInput(input: string): SkillActivationOutcome {
@@ -301,7 +314,8 @@ export default class SkillBook {
 
     async save(): Promise<void> {
         const playerId = this.playerId;
-        if (playerId === null || !this.dirty) return;
+        if (playerId === null || (!this.dirty && this.deletedSkills.size === 0)) return;
+        const deleted = [...this.deletedSkills];
         const snapshots = [...this.dirtyVersions].flatMap(([id, version]) => {
             const skill = this.skills.get(id);
             return skill ? [{ id, version, skill }] : [];
@@ -328,12 +342,16 @@ export default class SkillBook {
                 acquisitionSource: skill.acquisitionSource,
             },
         }));
-        if (operations.length > 0) await prisma.$transaction(operations);
+        const deletes = deleted.map(skillDataId => prisma.playerSkill.deleteMany({
+            where: { playerId, skillDataId },
+        }));
+        if (operations.length > 0 || deletes.length > 0) await prisma.$transaction([...operations, ...deletes]);
         for (const snapshot of snapshots) {
             if (this.dirtyVersions.get(snapshot.id) === snapshot.version) {
                 this.dirtyVersions.delete(snapshot.id);
             }
         }
+        for (const skillDataId of deleted) this.deletedSkills.delete(skillDataId);
     }
 
     private activate(skill: Skill, notifyDenied: boolean): SkillActivationOutcome {

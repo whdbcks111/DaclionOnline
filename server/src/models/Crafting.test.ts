@@ -9,7 +9,9 @@ import type Player from './Player.js';
 import {
     CraftingRecipeIngredient,
     defineCraftingRecipe,
+    discoverAllCraftingRecipes,
     executeCrafting,
+    isCraftingRecipeDiscovered,
 } from './Crafting.js';
 import { initCraftingCommands, parseCraftingCommandRemainder } from '../commands/crafting.js';
 import { getCommandList } from '../modules/bot.js';
@@ -178,4 +180,46 @@ test('제작 명령 metadata는 제작법 이름과 개수를 두 인자로 표�
         { name: '제작법이름', required: true },
         { name: '개수', required: false },
     ]);
+});
+
+test('관리자 전체 제작법 잠금 해제는 조건과 알림 없이 모든 레시피를 발견 처리한다', () => {
+    const recipe = defineCraftingRecipe({
+        id: 'test:admin_unlock',
+        resultItemDataId: 'craft_test_result',
+        ingredients: [CraftingRecipeIngredient.item('craft_test_repair_kit', 999)],
+        craftTime: 0,
+        create: () => ({ itemDataId: 'craft_test_result', count: 1, durability: null, metadataDelta: null, tags: [] }),
+    });
+    const player = new TestCraftingPlayer();
+
+    assert.equal(isCraftingRecipeDiscovered(player as unknown as Player, recipe), false);
+    assert.ok(discoverAllCraftingRecipes(player as unknown as Player) > 0);
+    assert.equal(isCraftingRecipeDiscovered(player as unknown as Player, recipe), true);
+    assert.equal(discoverAllCraftingRecipes(player as unknown as Player), 0);
+});
+
+test('인벤토리 전체 삭제 API는 실제 수량을 반환하고 변경을 알린다', () => {
+    const inventory = Inventory.createEmpty(3, 100);
+    let changes = 0;
+    inventory.subscribeChanges(() => { changes++; });
+    inventory.addItem('craft_test_repair_kit', 3);
+    inventory.addItem('craft_test_result', 2);
+
+    assert.equal(inventory.clear(), 5);
+    assert.equal(inventory.getIndexedItems().length, 0);
+    assert.ok(changes >= 3);
+    assert.equal(inventory.clear(), 0);
+});
+
+test('인덱스 metadata API는 저장 전 ID가 같은 신규 아이템도 정확히 지정한다', () => {
+    const inventory = Inventory.createEmpty(4, 100);
+    inventory.addItem('craft_test_old_sword', 2);
+
+    assert.equal(inventory.getItemByIndex(0)?.id, 0);
+    assert.equal(inventory.getItemByIndex(1)?.id, 0);
+    assert.equal(inventory.setItemMetadataByIndex(1, 'admin-note', '두 번째'), true);
+    assert.equal(inventory.getItemByIndex(0)?.getMetadata('admin-note'), undefined);
+    assert.equal(inventory.getItemByIndex(1)?.getMetadata('admin-note'), '두 번째');
+    assert.equal(inventory.resetItemMetadataByIndex(1, 'admin-note'), true);
+    assert.equal(inventory.getItemByIndex(1)?.getMetadata('admin-note'), undefined);
 });

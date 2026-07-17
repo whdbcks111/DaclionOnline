@@ -281,6 +281,91 @@ export interface NotificationData {
     editExists?: boolean
 }
 
+export interface AdminOptionData {
+    value: string
+    label: string
+    description?: string
+}
+
+export interface AdminPanelBootstrapData {
+    items: AdminOptionData[]
+    skills: AdminOptionData[]
+    jobs: AdminOptionData[]
+    locations: AdminOptionData[]
+    monsters: AdminOptionData[]
+    resources: AdminOptionData[]
+    statusEffects: AdminOptionData[]
+    stats: AdminOptionData[]
+}
+
+export interface AdminPlayerListItem {
+    userId: number
+    username: string
+    nickname: string
+    permission: number
+    online: boolean
+    level: number
+    locationId: string
+    locationName: string
+}
+
+export interface AdminInventoryItemData {
+    index: number
+    id: number
+    itemDataId: string
+    name: string
+    count: number
+    durability: number | null
+    maxDurability: number | null
+    metadataDelta: Record<string, unknown> | null
+}
+
+export interface AdminPlayerDetailData extends AdminPlayerListItem {
+    exp: number
+    maxExp: number
+    gold: number
+    statPoint: number
+    life: number
+    maxLife: number
+    mentality: number
+    maxMentality: number
+    thirsty: number
+    maxThirsty: number
+    hungry: number
+    maxHungry: number
+    mainJobId: string
+    mainJobName: string
+    subJobId: string
+    subJobName: string
+    eliteJobName: string
+    stats: Array<{ key: string; label: string; value: number }>
+    inventory: AdminInventoryItemData[]
+    equipment: Array<{ slot: string; slotLabel: string; index: number; itemDataId: string; name: string }>
+    skills: Array<{ id: string; name: string; level: number; experience: number }>
+    statusEffects: Array<{ id: string; label: string; level: number; duration: number }>
+}
+
+export type AdminPanelAction =
+    | 'teleport_admin_to_player' | 'teleport_player_to_admin' | 'teleport_player_location'
+    | 'grant_item' | 'remove_item' | 'clear_inventory' | 'set_item_metadata'
+    | 'grant_skill' | 'remove_skill' | 'set_jobs'
+    | 'set_level' | 'set_stat_points' | 'set_stat' | 'set_gold' | 'set_vital'
+    | 'unlock_all_locations' | 'unlock_all_crafting_recipes'
+    | 'apply_status_effect' | 'clear_status_effects' | 'revive_player'
+    | 'spawn_monster' | 'respawn_monsters' | 'reset_resource_cooldown'
+
+export interface AdminPanelActionRequest {
+    action: AdminPanelAction
+    targetUserId?: number
+    values?: Record<string, string | number | boolean | null>
+}
+
+export interface AdminPanelResult extends SimpleResult {
+    action: AdminPanelAction
+    targetUserId?: number
+    message?: string
+}
+
 // 소켓 이벤트 맵
 export interface ServerToClientEvents {
     sessionRestore: (data: SessionRestoreData) => void
@@ -307,6 +392,10 @@ export interface ServerToClientEvents {
     deleteMessage: (id: string) => void
     adminLocations: (data: LocationData[]) => void
     adminSaveResult: (result: SimpleResult) => void
+    adminPanelBootstrap: (data: AdminPanelBootstrapData) => void
+    adminPanelPlayers: (data: AdminPlayerListItem[]) => void
+    adminPanelPlayer: (data: AdminPlayerDetailData | null) => void
+    adminPanelResult: (result: AdminPanelResult) => void
 }
 
 export interface ClientToServerEvents {
@@ -330,4 +419,8 @@ export interface ClientToServerEvents {
     setInformationMode: (isPublic: boolean) => void
     adminRequestLocations: () => void
     adminSaveLocations: (locations: LocationData[]) => void
+    adminPanelRequestBootstrap: () => void
+    adminPanelRequestPlayers: () => void
+    adminPanelRequestPlayer: (userId: number) => void
+    adminPanelExecute: (request: AdminPanelActionRequest) => void
 }

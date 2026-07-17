@@ -33,6 +33,15 @@
 | `TooltipNode` | `components/chat/nodes/TooltipNode.tsx` | hover/touch 위치를 측정해 ChatNode 설명 overlay 표시 |
 | `WorldMapNode` | `components/chat/nodes/WorldMapNode.tsx` | worldMap snapshot의 방문 장소 대표색 바이옴 레이어, SVG 경로·점·랜드마크와 wheel/drag/pinch 카메라, 장소 정보 card 표시 |
 
+## 공용 오버레이 API
+
+| API | 위치 | 용도 |
+| --- | --- | --- |
+| `Dialog` | `components/dialog/Dialog.tsx` | portal 기반 접근 가능한 공용 화면 오버레이, Escape/배경 닫기와 포커스 복원 |
+| `FormDialog` | `components/dialog/FormDialog.tsx` | 필드 정의 배열로 text/number/select/textarea/checkbox 입력 및 비동기 실행 UI 생성 |
+
+`AdminPage`는 이 API로 플레이어·월드 action 입력을 구성한다. PC의 중앙 모달은 모바일에서 viewport 폭의 하단 시트로 바뀐다.
+
 ## 클라이언트 검증 API
 
 `utils/validators.ts`는 `validateId`, `validatePassword`, `validateEmail`, `validateNickname`을 제공한다. 이는 즉시 UI 피드백용이며 서버의 같은 이름 validator가 최종 검증을 수행한다.

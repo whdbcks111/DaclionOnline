@@ -234,6 +234,17 @@ export function getDiscoveredCraftingRecipes(player: Player): CraftingRecipe[] {
     return [...recipes.values()].filter(recipe => isCraftingRecipeDiscovered(player, recipe));
 }
 
+/** 관리자·보상 시스템에서 알림을 연속 발생시키지 않고 모든 제작법을 발견 처리한다. */
+export function discoverAllCraftingRecipes(player: Player): number {
+    let changed = 0;
+    for (const recipe of recipes.values()) {
+        if (isCraftingRecipeDiscovered(player, recipe)) continue;
+        player.progress.setFlag(getRecipeDiscoveryProgressId(recipe.id), true);
+        changed++;
+    }
+    return changed;
+}
+
 export function isCrafting(player: Player): boolean {
     return activeCrafts.has(player.userId);
 }

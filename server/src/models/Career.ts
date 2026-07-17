@@ -69,6 +69,31 @@ export default class CareerProfile {
         return { success: true };
     }
 
+    /** 관리자 도구가 레벨·선행 조건과 무관하게 1차 직업 조합을 교체한다. 빈 ID는 해당 슬롯을 해제한다. */
+    setByAdmin(mainJobId: string, subJobId: string): CareerOperationResult {
+        const main = mainJobId ? getJob(mainJobId) : undefined;
+        const sub = subJobId ? getJob(subJobId) : undefined;
+        if (mainJobId && (!main || main.tier !== JobTier.FIRST)) {
+            return { success: false, reason: '유효한 메인 1차 직업이 아닙니다.' };
+        }
+        if (subJobId && (!sub || sub.tier !== JobTier.FIRST)) {
+            return { success: false, reason: '유효한 서브 1차 직업이 아닙니다.' };
+        }
+        if (main && sub && main.id === sub.id) {
+            return { success: false, reason: '메인과 서브 직업은 서로 달라야 합니다.' };
+        }
+        if (!main && sub) return { success: false, reason: '서브 직업만 단독으로 설정할 수 없습니다.' };
+
+        this.player.progress.setState(CareerProgressIds.MAIN, main?.id ?? '');
+        this.player.progress.setState(CareerProgressIds.SUB, sub?.id ?? '');
+        this.player.progress.setState(CareerProgressIds.ELITE, '');
+        if (main) this.grantSkills(main.id, 'career:admin-main');
+        if (sub) this.grantSkills(sub.id, 'career:admin-sub');
+        this.refreshModifiers();
+        this.evaluateElitePromotion();
+        return { success: true };
+    }
+
     evaluateElitePromotion(): boolean {
         if (this.player.level < 200 || !this.mainJobId || !this.subJobId || this.eliteJobId) return false;
         if (this.mainJobId === this.subJobId) return false;

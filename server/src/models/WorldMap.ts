@@ -40,6 +40,15 @@ export function getVisitedLocationIds(player: Player): string[] {
         .map(location => location.id);
 }
 
+/** 관리자·운영 도구에서 모든 장소를 방문 처리한다. hidden 장소도 기록되지만 일반 지도에는 노출되지 않는다. */
+export function markAllLocationsVisited(player: Player): number {
+    let changed = 0;
+    for (const location of getAllLocations()) {
+        if (markLocationVisited(player, location.id)) changed++;
+    }
+    return changed;
+}
+
 function getZoneLabel(zoneType: WorldMapLocationData['zoneType']): string {
     return zoneType === 'safe' ? '안전 구역' : '일반 구역';
 }

@@ -395,6 +395,12 @@ function HomeContent() {
         channelCounts={userCountData.channelCounts}
         onJoinChannel={(channel) => socket?.emit('joinChannel', channel)}
         onOpenHudSettings={() => { setDrawerOpen(false); setHudSettingsOpen(true) }}
+        permission={sessionInfo?.permission}
+        onOpenAdmin={() => {
+          setDrawerOpen(false)
+          const adminWindow = window.open('/admin', '_blank')
+          if (adminWindow) adminWindow.opener = null
+        }}
       />
       <HudContainer />
       {hudSettingsOpen && <HudSettings onClose={() => setHudSettingsOpen(false)} />}

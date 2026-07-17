@@ -206,9 +206,21 @@ export default class Inventory {
         return true;
     }
 
+    /** 인덱스 기반 관리자/UI 대상의 metadata delta를 변경한다. 아직 DB ID가 없는 신규 아이템도 정확히 지정한다. */
+    setItemMetadataByIndex(index: number, key: string, value: unknown): boolean {
+        const item = this.getItemByIndex(index);
+        if (!item) return false;
+        item.setMetadata(key, value);
+        return true;
+    }
+
     /** 아이템 metadata override를 제거해 최신 기본값을 다시 상속한다. */
     resetItemMetadata(itemId: number, key: string): boolean {
         return this.getItem(itemId)?.resetMetadata(key) ?? false;
+    }
+
+    resetItemMetadataByIndex(index: number, key: string): boolean {
+        return this.getItemByIndex(index)?.resetMetadata(key) ?? false;
     }
 
     setItemDurability(itemId: number, value: number): number | null | undefined {
@@ -460,6 +472,19 @@ export default class Inventory {
         }
         this.notifyChange();
         return true;
+    }
+
+    /** 관리자 초기화 등에서 모든 아이템을 영속 삭제 상태로 전환하고 제거 개수를 반환한다. */
+    clear(): number {
+        if (this._items.length === 0) return 0;
+        const removedCount = this._items.reduce((sum, item) => sum + item.count, 0);
+        for (const item of this._items) {
+            if (this._states.get(item) === ItemState.New) this._states.delete(item);
+            else this._states.set(item, ItemState.Deleted);
+        }
+        this._items = [];
+        this.notifyChange();
+        return removedCount;
     }
 
     private beginChangeBatch(): void { this.changeBatchDepth++; }

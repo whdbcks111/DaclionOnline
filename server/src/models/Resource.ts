@@ -54,6 +54,13 @@ export default class Resource extends Entity {
     }
     get interactionCooldownRemaining(): number { return this._interactionCooldownRemaining; }
 
+    /** 관리자 월드 도구에서 상호작용 대기시간을 즉시 초기화한다. */
+    resetInteractionCooldown(): boolean {
+        if (this._interactionCooldownRemaining <= 0) return false;
+        this._interactionCooldownRemaining = 0;
+        return true;
+    }
+
     constructor(resourceDataId: string, locationId = '', respawnTime = 30) {
         const data = getResourceData(resourceDataId);
         if (!data) throw new Error(`ResourceData not found: ${resourceDataId}`);
