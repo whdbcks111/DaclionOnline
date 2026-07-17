@@ -3,9 +3,8 @@ import type { AttributeRecord } from "./Attribute.js";
 import Equipment, { EquipSlotType } from "./Equipment.js";
 import Stat from "./Stat.js";
 import type { StatRecord } from "./Stat.js";
-import { sendBotMessageToUser, sendNotificationFiltered, sendNotificationToUser } from "../modules/message.js";
+import { sendBotMessageToUser, sendNotificationToUser } from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
-import { isOnlinePlayerAtLocation } from "../modules/playerRegistry.js";
 import { applyCritical, calculateEvasionChance, calculateFinalDamage, rollEvasion } from "./Combat.js";
 import { applyTagEffectValue } from "./TagEffect.js";
 import type { TagEffectReadable } from "./TagEffect.js";
@@ -691,15 +690,18 @@ export default abstract class Entity implements TagReadable {
 
         // 플레이어가 직접 또는 소유한 엔티티를 통해 관여한 전투 알림
         if (attackerUid !== undefined || targetUid !== undefined) {
-            const locId = this.locationId;
-            sendNotificationFiltered(userId => isOnlinePlayerAtLocation(userId, locId), {
+            const userIds = new Set<number>();
+            if (attackerUid !== undefined) userIds.add(attackerUid);
+            if (targetUid !== undefined) userIds.add(targetUid);
+
+            const notification = {
                 key: 'attack',
                 message: chat()
                     .text(`${critical ? '치명타! ' : ''}${effectLabel}${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.\n`)
                     .progress({ value: lifeRatio, length: 150, color: attackerUid !== undefined ? '$enemy' : '$life', thickness: 6 })
                     .text(` ${pct}%`)
                     .build(),
-            });
+            };
 
             const nodes = chat()
                 .color(effectModifier === 0 ? 'gray' : critical ? 'gold' : 'orange', b => b.text(
@@ -712,11 +714,9 @@ export default abstract class Entity implements TagReadable {
                 .text(` ${pct}%`)
                 .build();
 
-            const uids = new Set<number>();
-            if (attackerUid !== undefined) uids.add(attackerUid);
-            if (targetUid !== undefined) uids.add(targetUid);
-            for (const uid of uids) {
-                sendBotMessageToUser(uid, nodes);
+            for (const userId of userIds) {
+                sendNotificationToUser(userId, notification);
+                sendBotMessageToUser(userId, nodes);
             }
         }
 
@@ -729,11 +729,6 @@ export default abstract class Entity implements TagReadable {
         if (attackerUid === undefined && targetUid === undefined) return;
 
         const message = `${target.name}이(가) ${this.name}의 공격을 회피했습니다!`;
-        sendNotificationFiltered(userId => isOnlinePlayerAtLocation(userId, this.locationId), {
-            key: 'attack-evaded',
-            message,
-        });
-
         const nodes = chat()
             .tooltip(`${(evasionChance * 100).toFixed(1)}% 회피 확률`, b => b
                 .color('cyan', b2 => b2.text('[회피] '))
@@ -742,7 +737,10 @@ export default abstract class Entity implements TagReadable {
         const userIds = new Set<number>();
         if (attackerUid !== undefined) userIds.add(attackerUid);
         if (targetUid !== undefined) userIds.add(targetUid);
-        for (const userId of userIds) sendBotMessageToUser(userId, nodes);
+        for (const userId of userIds) {
+            sendNotificationToUser(userId, { key: 'attack-evaded', message });
+            sendBotMessageToUser(userId, nodes);
+        }
     }
 
     // -- 게임 루프 라이프사이클 --
