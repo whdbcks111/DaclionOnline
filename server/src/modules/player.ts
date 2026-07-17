@@ -85,6 +85,7 @@ export function sendPlayerStats(userId: number): void {
         level:             player.level,
         life:              player.life,
         maxLife:           player.maxLife,
+        shields:           player.getShieldBarSegments(),
         mentality:         player.mentality,
         maxMentality:      player.maxMentality,
         thirsty:           player.thirsty,
@@ -146,6 +147,7 @@ export function sendLocationInfo(userId: number): void {
             level: object.level,
             life: object.life,
             maxLife: object.maxLife,
+            shields: object.getShieldBarSegments(),
         })),
         players: getOnlinePlayers()
             .filter(p => p.locationId === locationId)
@@ -154,6 +156,7 @@ export function sendLocationInfo(userId: number): void {
                 level: p.level,
                 life: p.life,
                 maxLife: p.maxLife,
+                shields: p.getShieldBarSegments(),
                 userId: p.userId,
             })),
         adjacentLocations,

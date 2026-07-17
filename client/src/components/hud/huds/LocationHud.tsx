@@ -1,7 +1,7 @@
 import { useHud } from '../../../context/HudContext'
 import { useSocket } from '../../../context/SocketContext'
 import type { EntityBarInfo } from '@shared/types'
-import ProgressNode from '../../chat/nodes/ProgressNode'
+import HealthBarNode from '../../chat/nodes/HealthBarNode'
 import styles from './LocationHud.module.scss'
 
 function EntityRow({
@@ -18,7 +18,6 @@ function EntityRow({
   actionsDisabled?: boolean
 }) {
   const { socket } = useSocket()
-  const ratio = entity.maxLife > 0 ? Math.max(0, Math.min(1, entity.life / entity.maxLife)) : 0
   const label = entity.userId !== undefined ? `#${entity.userId}` : `${index}.`
   const defeated = entity.life <= 0
   const runObjectCommand = (command: '공격' | '대상지정') => {
@@ -29,7 +28,7 @@ function EntityRow({
     <div className={styles.entityRow}>
       <span className={styles.entityIndex}>{label}</span>
       <span className={styles.entityName}>Lv.{entity.level} {entity.name}</span>
-      <ProgressNode value={ratio} length={60} color={color} thickness={5} shape="rounded" />
+      <HealthBarNode life={entity.life} maxLife={entity.maxLife} shields={entity.shields ?? []} length={60} color={color} thickness={5} shape="rounded" />
       {showActions && (
         <span className={styles.entityActions}>
           <button

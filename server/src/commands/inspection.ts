@@ -273,7 +273,7 @@ export function buildMonsterInspection(monster: Monster, objectNumber: number, s
             if (snapshot.defeated) {
                 builder.color('$danger', b => b.text(`(${snapshot.defeatLabel})\n`));
             } else {
-                builder.progress({ value: maxLife > 0 ? snapshot.life / maxLife : 0, length: '7em', color: 'red' })
+                builder.health({ life: snapshot.life, maxLife, shields: snapshot.shields, length: '7em', color: 'red' })
                     .text(` ${formatNumber(snapshot.life)} / ${formatNumber(maxLife)}\n`);
             }
             builder.tab(120, b => b.text('속성'));

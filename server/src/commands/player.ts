@@ -84,7 +84,6 @@ export function initPlayerCommands(): void {
                 const stats = player.stat.points;
 
                 const expRatio = Math.min(1, player.exp / player.maxExp);
-                const lifeRatio = Math.min(1, player.life / player.maxLife);
                 const mentalityRatio = Math.min(1, player.mentality / player.maxMentality);
                 const thirstyRatio = Math.min(1, player.thirsty / player.maxThirsty);
                 const hungryRatio = Math.min(1, player.hungry / player.maxHungry);
@@ -135,8 +134,8 @@ export function initPlayerCommands(): void {
                         .icon(AttributeType.MAX_LIFE.icon).text(' ')
                         .weight('bold',b2 => b2.text('생명력'))
                         .text('  ')
-                        .progress({ value: lifeRatio, length: 120, color: '$life', thickness: 8 })
-                        .text(`  ${player.life.toFixed(1)} / ${player.maxLife.toFixed(1)}\n`)
+                        .health({ life: player.life, maxLife: player.maxLife, shields: player.getShieldBarSegments(), length: 120, color: '$life', thickness: 8 })
+                        .text(`  ${player.life.toFixed(1)} / ${player.maxLife.toFixed(1)}${player.getTotalShield() > 0 ? ` (+${player.getTotalShield().toFixed(1)})` : ''}\n`)
                         .icon(AttributeType.MAX_MENTALITY.icon).text(' ')
                         .weight('bold',b2 => b2.text('정신력'))
                         .text('  ')

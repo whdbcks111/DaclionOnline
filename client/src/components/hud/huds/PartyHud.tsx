@@ -1,5 +1,6 @@
 import { useHud } from '../../../context/HudContext'
 import ProgressNode from '../../chat/nodes/ProgressNode'
+import HealthBarNode from '../../chat/nodes/HealthBarNode'
 import styles from './PartyHud.module.scss'
 
 function ratio(value: number, max: number): number {
@@ -29,7 +30,7 @@ export default function PartyHud() {
             <div className={styles.resourceRow}>
               <span>HP</span>
               <div className={styles.track}>
-                <ProgressNode value={ratio(member.life, member.maxLife)} length="100%" color="$life" thickness={6} shape="rounded" />
+                <HealthBarNode life={member.life} maxLife={member.maxLife} shields={member.shields ?? []} length="100%" color="$life" thickness={6} shape="rounded" />
               </div>
               <span className={styles.value}>{Math.ceil(member.life)}/{Math.ceil(member.maxLife)}</span>
             </div>

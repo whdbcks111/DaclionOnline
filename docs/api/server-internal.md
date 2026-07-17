@@ -34,7 +34,8 @@
 
 | 모델/레지스트리 | 주요 API | 용도 |
 | --- | --- | --- |
-| `Entity` | `attackOwner`, `isDefeated/defeatLabel`, `getAttackDeniedReason`, `grant/remove/consumeGuaranteedEvasion`, `isInteractable/interact`, `hasTag/getTags`, `damage/heal`, `restoreHunger/restoreThirst`, `canAttack/attack(AttackOptions)`, 상태효과·행동 제한·lifecycle API | 속도/일시 확정 회피, 은신 타게팅 거부, 회피 불가·고정 피해 전투, 최대값 내 생명·정신·생존 자원 회복, respawn 자원 복구, source별 상태효과·행동 제한과 공통 생명주기 |
+| `Entity` | `attackOwner`, `isDefeated/defeatLabel`, `getAttackDeniedReason`, `grant/remove/consumeGuaranteedEvasion`, `isInteractable/interact`, `hasTag/getTags`, `damage/heal`, `restoreHunger/restoreThirst`, `canAttack/attack(AttackOptions)`, `set/get/has/remove/clearShield(s)`, `getTotalShield/getShieldDisplaySnapshots/getShieldBarSegments`, 상태효과·행동 제한·lifecycle API | 속도/일시 확정 회피, 은신 타게팅 거부, 회피 불가·고정 피해 전투, 타입별·key 중첩 보호막, 최대값 내 생명·정신·생존 자원 회복, respawn 자원 복구, source별 상태효과·행동 제한과 공통 생명주기 |
+| `ShieldType`, `Shield` | `values/fromKey/fromInput/absorbs`, `advance/absorb/toSnapshot/toBarSegment` | 일반·물리·마법 보호막 클래스형 enum, 지속시간·잔량 갱신과 UI snapshot |
 | Combat | `calculateEvasionChance`, `rollEvasion`, `applyCritical`, `calculateFinalDamage` | 부작용 없는 속도 회피율·치명타·방어/관통 최종 대미지 계산 |
 | Tag effects | `defineTagEffectModifier`, `defineTagEffectTagDisplay`, `resolveTagEffect`, `applyTagEffectValue`, `getAllTagEffectModifiers`, `getTagEffectAffinitySnapshots` | `TagEffectReadable` 문맥 태그를 우선하는 단방향 source→target 배율 등록·판정·수치 적용과 라벨·아이콘이 포함된 공격/방어 관계 표시 DTO |
 | `Player` | `career`, `loadByUserId`, `create`, `save`, `performBasicAttack`, `equipInventoryItem`, `canSpendMentality/spendMentality/restoreMentality`, `gainExp`, `allocateStat` | CareerProfile을 포함한 영속 aggregate, 안전한 인벤토리→장비 교환, 무기 오버라이드·적중 callback 기본 공격과 스킬 자원·성장 |
@@ -86,7 +87,7 @@
 | API | 용도 |
 | --- | --- |
 | `parseCommandInput()` | 공유 채팅 입력에서 첫 명령 토큰, 나머지 인자, 슬래시·구분자 여부 추출 |
-| `chat()` | `text/appendNodes/color/bg/weight/deco/size/tooltip/hide/icon/button/closeButton/progress/tab/worldMap` fluent builder로 `ChatNode[]` 생성; 계산 설명처럼 이미 파싱된 node도 안전하게 합성 |
+| `chat()` | `text/appendNodes/color/bg/weight/deco/size/tooltip/hide/icon/button/closeButton/progress/health/tab/worldMap` fluent builder로 `ChatNode[]` 생성; 계산 설명처럼 이미 파싱된 node도 안전하게 합성 |
 | `parseChatMessage()` | 커스텀 태그 문자열을 `ChatNode[]`로 파싱하고 `$magic` 같은 테마 색상 token을 보존 |
 | `registerChatTag()` | 새 wrap/self-closing 태그 등록 |
 | `mergeTextNodes()` | 인접 텍스트 노드 병합 |

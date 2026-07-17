@@ -51,9 +51,9 @@
 | `commandList` | `CommandInfo[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `argCompletions` | `CompletionItem[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `mentionCompletions` | `CompletionItem[]` | `modules/chat.ts` | `pages/Home.tsx` |
-| `playerStats` | `PlayerStatsData` (현재 레벨·자원·공격 cooldown·`statusEffects`, 표시 가능한 스킬의 `id/name/icon/level/isActive/remainingCooldown/maxCooldown`, nullable 파티원 HP/MP `party`) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` → `PlayerStatusHud`/`PartyHud`/`SkillQuickHud` |
+| `playerStats` | `PlayerStatsData` (현재 레벨·자원·타입색 `shields`·공격 cooldown·`statusEffects`, 표시 가능한 스킬의 `id/name/icon/level/isActive/remainingCooldown/maxCooldown`, nullable 파티원 HP/MP/보호막 `party`) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` → `PlayerStatusHud`/`PartyHud`/`SkillQuickHud` |
 | `informationMode` | `isPublic: boolean` | `modules/bot.ts` | `pages/Home.tsx` 입력창 공개/비공개 전환 버튼 |
-| `locationInfo` | `LocationInfoData` (`objects`에 Monster/Resource 공통 체력 DTO, `adjacentLocations`에 플레이어 기준 `visible/locked` 상태) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` → Location/Minimap HUD |
+| `locationInfo` | `LocationInfoData` (`objects`와 플레이어에 Monster/Resource 공통 생명력·`shields` DTO, `adjacentLocations`에 플레이어 기준 `visible/locked` 상태) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` → Location/Minimap HUD |
 | `userCount` | `UserCountData` (다중 탭을 합친 고유 사용자 기준 전체/채널 인원) | `modules/login.ts` | `pages/Home.tsx` |
 | `channelChanged` | `(channel, history)` | `modules/chat.ts` | `pages/Home.tsx` |
 | `channelList` | `ChannelInfo[]` | `modules/chat.ts` | `pages/Home.tsx` |
@@ -70,7 +70,7 @@
 | `miniGameResolved` | `MiniGameResolvedData` | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 | `miniGameCancelled` | `MiniGameCancelledData` | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 
-`ChatMessage`와 `NotificationData` 안의 progress `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다. `/지도` private `ChatMessage`의 worldMap 노드는 별도 socket event 없이 방문지·인접 미방문지로 제한된 `WorldMapData` snapshot을 포함하며, 방문 장소의 검증된 `mapColor`만 바이옴 배경에 사용한다.
+`ChatMessage`와 `NotificationData` 안의 progress/health `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다. health 노드는 생명력·최대 생명력과 `ShieldBarSegment[]`를 한 snapshot으로 전달한다. `/지도` private `ChatMessage`의 worldMap 노드는 별도 socket event 없이 방문지·인접 미방문지로 제한된 `WorldMapData` snapshot을 포함하며, 방문 장소의 검증된 `mapColor`만 바이옴 배경에 사용한다.
 
 ## Room과 전송 범위
 

@@ -129,6 +129,7 @@ export type ChatNode =
     | { type: 'icon'; name: string }
     | { type: 'button'; action: string; children: ChatNode[]; closeOnClick?: boolean; showCommand?: boolean }
     | { type: 'progress'; value: number; length: number | string; color: string; thickness: number; shape: 'rounded' | 'square' }
+    | { type: 'health'; life: number; maxLife: number; shields: ShieldBarSegment[]; length: number | string; color: string; thickness: number; shape: 'rounded' | 'square' }
     | { type: 'tab'; width: number; children: ChatNode[] }
     | { type: 'tooltip'; description: ChatNode[]; children: ChatNode[] }
     | { type: 'worldMap'; data: WorldMapData }
@@ -193,6 +194,7 @@ export interface EntityBarInfo {
     level: number
     life: number
     maxLife: number
+    shields: ShieldBarSegment[]
     userId?: number  // 플레이어만 존재
 }
 
@@ -237,6 +239,7 @@ export interface PartyMemberHudData {
     level: number
     life: number
     maxLife: number
+    shields: ShieldBarSegment[]
     mentality: number
     maxMentality: number
     isLeader: boolean
@@ -247,6 +250,14 @@ export interface PartyHudData {
     partyId: string
     leaderUserId: number
     members: PartyMemberHudData[]
+}
+
+export type ShieldTypeKey = 'general' | 'physical' | 'magic'
+
+export interface ShieldBarSegment {
+    type: ShieldTypeKey
+    amount: number
+    color: string
 }
 
 export interface SkillHudData {
@@ -265,6 +276,7 @@ export interface PlayerStatsData {
     level: number
     life: number
     maxLife: number
+    shields: ShieldBarSegment[]
     mentality: number
     maxMentality: number
     thirsty: number

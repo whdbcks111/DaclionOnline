@@ -15,6 +15,7 @@
 | 인증·세션·프로필 기능 | [systems/auth-session.md](systems/auth-session.md) |
 | 채팅·채널·명령어 기능 | [systems/chat-command.md](systems/chat-command.md) |
 | 플레이어·전투·위치·게임 루프 | [systems/player-world.md](systems/player-world.md) |
+| 엔티티 보호막·피해 흡수·체력바 표시 | [systems/shields.md](systems/shields.md) |
 | 태그·속성 상성·효과 배율 | [systems/tags-effects.md](systems/tags-effects.md) |
 | 상태효과·행동 제한·지속 피해 | [systems/status-effects.md](systems/status-effects.md) |
 | 이벤트·통계·플래그·스킬 | [systems/progress-skills.md](systems/progress-skills.md) |

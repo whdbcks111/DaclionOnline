@@ -1,4 +1,4 @@
-import type { ChatNode, WorldMapData } from "../../../shared/types.js"
+import type { ChatNode, ShieldBarSegment, WorldMapData } from "../../../shared/types.js"
 import { mergeTextNodes } from "./chatParser.js"
 
 class ChatBuilder {
@@ -100,6 +100,28 @@ class ChatBuilder {
             value: Math.max(0, Math.min(1, options.value)),
             length: options.length ?? 100,
             color: options.color ?? 'green',
+            thickness: options.thickness ?? 8,
+            shape: options.shape ?? 'rounded',
+        })
+        return this
+    }
+
+    health(options: {
+        life: number;
+        maxLife: number;
+        shields?: readonly ShieldBarSegment[];
+        length?: number | string;
+        color?: string;
+        thickness?: number;
+        shape?: 'rounded' | 'square';
+    }): this {
+        this.nodes.push({
+            type: 'health',
+            life: Math.max(0, options.life),
+            maxLife: Math.max(0, options.maxLife),
+            shields: (options.shields ?? []).map(shield => ({ ...shield })),
+            length: options.length ?? 100,
+            color: options.color ?? '$life',
             thickness: options.thickness ?? 8,
             shape: options.shape ?? 'rounded',
         })

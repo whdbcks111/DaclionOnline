@@ -1,5 +1,6 @@
 import { useHud } from '../../../context/HudContext'
 import ProgressNode from '../../chat/nodes/ProgressNode'
+import HealthBarNode from '../../chat/nodes/HealthBarNode'
 import { renderNode } from '../../chat/ChatMessage'
 import type { StatusEffectHudData } from '@shared/types'
 import styles from './PlayerStatusHud.module.scss'
@@ -60,7 +61,7 @@ export default function PlayerStatusHud() {
   const { playerStats } = useHud()
   if (!playerStats) return null
 
-  const { userId, nickname, level, life, maxLife, mentality, maxMentality, thirsty, maxThirsty, hungry, maxHungry, attackCooldown, maxAttackCooldown } = playerStats
+  const { userId, nickname, level, life, maxLife, shields, mentality, maxMentality, thirsty, maxThirsty, hungry, maxHungry, attackCooldown, maxAttackCooldown } = playerStats
   const statusEffects = playerStats.statusEffects ?? []
   const attackReady = maxAttackCooldown > 0 ? pct(maxAttackCooldown - attackCooldown, maxAttackCooldown) : 100
 
@@ -76,7 +77,7 @@ export default function PlayerStatusHud() {
           <div className={styles.row}>
             <span className={styles.label}>HP</span>
             <div className={styles.track}>
-              <ProgressNode value={pct(life, maxLife) / 100} length="100%" color="$life" thickness={6} shape="rounded" />
+              <HealthBarNode life={life} maxLife={maxLife} shields={shields ?? []} length="100%" color="$life" thickness={6} shape="rounded" />
             </div>
             <span className={styles.value}>{Math.floor(pct(life, maxLife))}%</span>
           </div>

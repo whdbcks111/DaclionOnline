@@ -432,9 +432,12 @@ function updateFireEffect({ target, effect }: StatusEffectContext, dt: number): 
             effectSource: effect,
         });
         if (target.isPlayer && target.playerUserId !== undefined) {
+            const shieldText = result.absorbedDamage > 0
+                ? `, 보호막 ${result.absorbedDamage.toFixed(1)} 흡수`
+                : '';
             sendNotificationToUser(target.playerUserId, {
                 key: 'status-effect:fire',
-                message: `당신은 불타고 있습니다. (-${result.finalDamage.toFixed(1)})`,
+                message: `당신은 불타고 있습니다. (-${result.lifeDamage.toFixed(1)}${shieldText})`,
                 length: Math.round(interval * 1000),
                 editExists: true,
             });
@@ -497,9 +500,12 @@ function updateDeadlyPoisonEffect(
             effectSource: effect,
         });
         if (target.isPlayer && target.playerUserId !== undefined) {
+            const shieldText = result.absorbedDamage > 0
+                ? `, 보호막 ${result.absorbedDamage.toFixed(1)} 흡수`
+                : '';
             sendNotificationToUser(target.playerUserId, {
                 key: 'status-effect:deadly-poison',
-                message: `당신은 맹독에 중독되어 있습니다. (-${result.finalDamage.toFixed(1)})`,
+                message: `당신은 맹독에 중독되어 있습니다. (-${result.lifeDamage.toFixed(1)}${shieldText})`,
                 length: Math.round(interval * 1000),
                 editExists: true,
             });

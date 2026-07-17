@@ -1,4 +1,4 @@
-import type { PartyHudData } from '../../../shared/types.js';
+import type { PartyHudData, ShieldBarSegment } from '../../../shared/types.js';
 import { getOnlinePlayer } from './playerRegistry.js';
 import { isUserOnline } from './login.js';
 
@@ -13,6 +13,7 @@ export interface PartyParticipant {
     readonly isDefeated: boolean;
     readonly life: number;
     readonly maxLife: number;
+    getShieldBarSegments?(): ShieldBarSegment[];
     readonly mentality: number;
     readonly maxMentality: number;
     readonly maxExp: number;
@@ -228,6 +229,7 @@ export class PartyManager {
                     level: member.level,
                     life: member.life,
                     maxLife: member.maxLife,
+                    shields: member.getShieldBarSegments?.() ?? [],
                     mentality: member.mentality,
                     maxMentality: member.maxMentality,
                     isLeader: member.userId === party.leaderUserId,

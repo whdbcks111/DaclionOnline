@@ -10,6 +10,7 @@ import { spawnProjectileFromData } from '../models/Projectile.js';
 import { getLocation } from '../models/Location.js';
 import { ActionType } from '../models/Action.js';
 import type Entity from '../models/Entity.js';
+import { ShieldType } from '../models/Shield.js';
 
 const CRITICAL_HIT_STAT = 'combat:critical_hits';
 
@@ -79,6 +80,11 @@ function attributeDamageTooltip(
 
 function cooldownByLevel(context: SkillContext, base: number, perLevelReduction: number, minimum: number): number {
     return Math.max(minimum, base - Math.max(0, context.skill.level - 1) * perLevelReduction);
+}
+
+function manaBarrierShieldAmount(context: SkillContext): number {
+    return valueByLevel(context.skill.level, 45, 15)
+        + context.owner.attribute.get(AttributeType.MAGIC_FORCE) * 0.75;
 }
 
 function activationGuide(requirement: string): string {
@@ -556,16 +562,21 @@ defineSkill({
 
 defineSkill({
     id: 'mana_barrier', name: '마력 보호막', icon: 'skills/career_mage', maxLevel: 5,
-    descriptionTemplate: '{{duration}} 동안 {{icon.def}} 방어력이 [color=yellow]+{{defBonus}}[/color], {{icon.magicDef}} 마법 저항력이 [color=purple]+{{magicDefBonus}}[/color] 증가합니다.',
+    descriptionTemplate: '{{duration}} 동안 [color=#a56de2]{{shieldAmount}}의 마법 보호막[/color]을 얻습니다. '
+        + '{{icon.def}} 방어력이 [color=yellow]+{{defBonus}}[/color], {{icon.magicDef}} 마법 저항력이 [color=purple]+{{magicDefBonus}}[/color] 증가합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 22[/color]',
     activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '마력 보호막!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
         valueByLevel(context.skill.level, 10, 1),
-        `방어력 +${formatNumber(valueByLevel(context.skill.level, 12, 4))}, 마법 저항력 +${formatNumber(valueByLevel(context.skill.level, 20, 5))}`,
+        `마법 보호막 ${formatNumber(manaBarrierShieldAmount(context))}, 방어력 +${formatNumber(valueByLevel(context.skill.level, 12, 4))}, 마법 저항력 +${formatNumber(valueByLevel(context.skill.level, 20, 5))}`,
     ),
     calculatedFields: {
         duration: context => levelValueTooltip(context, '지속시간', 10, 1, '초'),
+        shieldAmount: context => tooltipValue(
+            manaBarrierShieldAmount(context),
+            `기본 ${formatNumber(valueByLevel(context.skill.level, 45, 15))} + 마법력 × 75% · 기본 보호막 스킬 레벨당 +15`,
+        ),
         defBonus: context => levelValueTooltip(context, '방어력 증가', 12, 4),
         magicDefBonus: context => levelValueTooltip(context, '마법 저항력 증가', 20, 5),
     },
@@ -573,7 +584,9 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.mage), canActivate: simpleCheck(22, false),
     onStart: context => {
         spend(context, 22);
-        context.owner.applyStatusEffect(MANA_BARRIER, valueByLevel(context.skill.level, 10, 1), context.skill.level);
+        const duration = valueByLevel(context.skill.level, 10, 1);
+        context.owner.setShield('skill:mana_barrier', manaBarrierShieldAmount(context), ShieldType.MAGIC, duration);
+        context.owner.applyStatusEffect(MANA_BARRIER, duration, context.skill.level);
     }, tags: [GameTags.SKILL_ACTIVE],
 });
 

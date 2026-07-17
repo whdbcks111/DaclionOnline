@@ -8,6 +8,7 @@ import HideNode from './nodes/HideNode'
 import IconNode from './nodes/IconNode'
 import ButtonNode from './nodes/ButtonNode'
 import ProgressNode from './nodes/ProgressNode'
+import HealthBarNode from './nodes/HealthBarNode'
 import TabNode from './nodes/TabNode'
 import WeightNode from './nodes/WeightNode'
 import TooltipNode from './nodes/TooltipNode'
@@ -40,6 +41,8 @@ export function renderNode(node: ChatNode, key: number): React.ReactNode {
             return <ButtonNode key={key} action={node.action} closeOnClick={node.closeOnClick} showCommand={node.showCommand} children={node.children} />
         case 'progress':
             return <ProgressNode key={key} value={node.value} length={node.length} color={node.color} thickness={node.thickness} shape={node.shape} />
+        case 'health':
+            return <HealthBarNode key={key} life={node.life} maxLife={node.maxLife} shields={node.shields} length={node.length} color={node.color} thickness={node.thickness} shape={node.shape} />
         case 'tab':
             return <TabNode key={key} width={node.width} children={node.children} />
         case 'weight':

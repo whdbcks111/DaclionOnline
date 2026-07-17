@@ -14,6 +14,7 @@ import { StatusEffectType } from "./StatusEffect.js";
 import SkillBook from "./SkillBook.js";
 import type { RuntimeSkillEntry, SkillActivationOutcome } from "./SkillBook.js";
 import { partyManager } from '../modules/party.js';
+import type { ShieldBarSegment } from '../../../shared/types.js';
 
 /** 드롭 아이템 정보 */
 export interface DropInfo {
@@ -81,6 +82,7 @@ export interface MonsterInspectionSnapshot {
     readonly defeated: boolean;
     readonly defeatLabel: string;
     readonly life: number;
+    readonly shields: readonly ShieldBarSegment[];
     readonly attributes: Readonly<AttributeRecord>;
     readonly tags: readonly TagId[];
     readonly attack: Readonly<MonsterAttackProfile> | null;
@@ -176,6 +178,7 @@ export default class Monster extends Entity {
             defeated: this.isDefeated,
             defeatLabel: this.defeatLabel,
             life: this.life,
+            shields: this.getShieldBarSegments(),
             attributes: { ...this.attribute.computed },
             tags: this.tags.values(),
             attack: this.attackProfile ? {

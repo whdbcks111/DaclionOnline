@@ -145,11 +145,10 @@ export function initPartyCommands(): void {
             const builder = chat().color('gold', b => b.weight('bold', x => x.text(`[ 파티 정보 ]  ${party.members.length}명`)))
                 .text('\n').hide('파티원 보기', b => {
                     for (const member of party.members) {
-                        const lifeRatio = member.maxLife > 0 ? member.life / member.maxLife : 0;
                         const mentalityRatio = member.maxMentality > 0 ? member.mentality / member.maxMentality : 0;
                         b.text(`${member.isLeader ? '♛ ' : ''}Lv.${member.level} ${member.nickname}  ID ${member.userId}`)
                             .color(member.sameLocation ? 'lime' : 'gray', x => x.text(member.sameLocation ? ' · 같은 장소' : ' · 다른 장소'))
-                            .text('\n  HP ').progress({ value: lifeRatio, length: '8em', color: '$life', thickness: 6 })
+                            .text('\n  HP ').health({ life: member.life, maxLife: member.maxLife, shields: member.shields, length: '8em', color: '$life', thickness: 6 })
                             .text(` ${Math.ceil(member.life)}/${Math.ceil(member.maxLife)}`)
                             .text('\n  MP ').progress({ value: mentalityRatio, length: '8em', color: '$magic', thickness: 6 })
                             .text(` ${Math.ceil(member.mentality)}/${Math.ceil(member.maxMentality)}\n`);

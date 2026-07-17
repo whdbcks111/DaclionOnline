@@ -19,6 +19,8 @@ import StatusEffect, {
 } from "./StatusEffect.js";
 import logger from "../utils/logger.js";
 import { ActionType } from "./Action.js";
+import Shield, { ShieldType, type ShieldDisplaySnapshot } from './Shield.js';
+import type { ShieldBarSegment } from '../../../shared/types.js';
 
 /** 대미지 타입 */
 export type DamageType = 'physical' | 'magic' | 'absolute';
@@ -29,7 +31,10 @@ export interface DamageResult {
     rawAmount: number;
     modifiedAmount: number;
     finalDamage: number;
+    lifeDamage: number;
+    absorbedDamage: number;
     remainingLife: number;
+    remainingShield: number;
     critical: boolean;
     evaded: boolean;
     fixedDamage: boolean;
@@ -96,6 +101,7 @@ export default abstract class Entity implements TagReadable {
     readonly stat: Stat;
     readonly tags: TagCollection;
     private readonly statusEffects = new Map<string, StatusEffect>();
+    private readonly shields = new Map<string, Shield>();
     private readonly healingReceivedModifiers = new Map<string, number>();
     private readonly actionDisableSources = new Map<string, Set<string>>();
     private readonly tickActionDisableSources = new Map<string, Set<string>>();
@@ -387,6 +393,73 @@ export default abstract class Entity implements TagReadable {
         return Math.max(0, result);
     }
 
+    // -- 보호막 --
+
+    /** 같은 key는 교체하고 다른 key는 독립적으로 중첩한다. */
+    setShield(key: string, amount: number, type: ShieldType, duration: number): ShieldDisplaySnapshot | undefined {
+        const normalizedKey = key.trim();
+        if (!normalizedKey) throw new Error('Shield key must not be empty');
+        if (!Number.isFinite(amount) || amount <= 0) throw new Error('Shield amount must be a positive finite number');
+        if (!Number.isFinite(duration) || duration <= 0) throw new Error('Shield duration must be a positive finite number');
+        if (this.isDefeated) return undefined;
+        const shield = new Shield(normalizedKey, amount, type, duration);
+        this.shields.set(normalizedKey, shield);
+        return shield.toSnapshot();
+    }
+
+    getShield(key: string): ShieldDisplaySnapshot | undefined {
+        return this.shields.get(key.trim())?.toSnapshot();
+    }
+
+    hasShield(key: string): boolean { return this.shields.has(key.trim()); }
+    removeShield(key: string): boolean { return this.shields.delete(key.trim()); }
+    clearShields(): void { this.shields.clear(); }
+
+    /** 피해 흡수 순서와 UI 구간 순서를 일치시키기 위해 남은 시간이 짧은 순으로 반환한다. */
+    getShieldDisplaySnapshots(): ShieldDisplaySnapshot[] {
+        return [...this.shields.values()]
+            .sort((left, right) => left.duration - right.duration || left.key.localeCompare(right.key))
+            .map(shield => shield.toSnapshot());
+    }
+
+    getShieldBarSegments(): ShieldBarSegment[] {
+        return [...this.shields.values()]
+            .sort((left, right) => left.duration - right.duration || left.key.localeCompare(right.key))
+            .map(shield => shield.toBarSegment());
+    }
+
+    getTotalShield(type?: DamageType): number {
+        return [...this.shields.values()]
+            .filter(shield => !type || shield.type.absorbs(type))
+            .reduce((total, shield) => total + shield.amount, 0);
+    }
+
+    private absorbShieldDamage(amount: number, type: DamageType): number {
+        let remaining = Math.max(0, amount);
+        let absorbed = 0;
+        const ordered = [...this.shields.values()]
+            .filter(shield => shield.type.absorbs(type))
+            .sort((left, right) => left.duration - right.duration || left.key.localeCompare(right.key));
+        for (const shield of ordered) {
+            const consumed = shield.absorb(remaining);
+            absorbed += consumed;
+            remaining -= consumed;
+            if (shield.amount <= 0) this.shields.delete(shield.key);
+            if (remaining <= 0) break;
+        }
+        return absorbed;
+    }
+
+    private updateShields(dt: number): void {
+        if (this.isDefeated) {
+            this.clearShields();
+            return;
+        }
+        for (const shield of [...this.shields.values()]) {
+            if (shield.advance(dt)) this.shields.delete(shield.key);
+        }
+    }
+
     // -- 상태효과 --
 
     getStatusEffects(): readonly StatusEffect[] {
@@ -532,8 +605,11 @@ export default abstract class Entity implements TagReadable {
         const finalDamage = fixedDamage
             ? Math.max(0, rawAmount)
             : calculateFinalDamage(effect.value, defense, penetration);
+        const absorbedDamage = this.absorbShieldDamage(finalDamage, type);
+        const lifeDamage = Math.max(0, finalDamage - absorbedDamage);
 
-        this.life = this.life - finalDamage;
+        this.life = this.life - lifeDamage;
+        if (this.life <= 0) this.clearShields();
         const remainingLife = this.life;
 
         if (cause) this.lastDamageCause = cause;
@@ -543,7 +619,10 @@ export default abstract class Entity implements TagReadable {
             rawAmount,
             modifiedAmount: effect.value,
             finalDamage,
+            lifeDamage,
+            absorbedDamage,
             remainingLife,
+            remainingShield: this.getTotalShield(),
             critical: cause?.critical === true,
             evaded: false,
             fixedDamage,
@@ -647,7 +726,10 @@ export default abstract class Entity implements TagReadable {
                 rawAmount: Math.max(0, baseAmount),
                 modifiedAmount: 0,
                 finalDamage: 0,
+                lifeDamage: 0,
+                absorbedDamage: 0,
                 remainingLife: target.life,
+                remainingShield: target.getTotalShield(),
                 critical: false,
                 evaded: true,
                 fixedDamage: options.fixedDamage === true,
@@ -704,6 +786,10 @@ export default abstract class Entity implements TagReadable {
 
         const lifeRatio = target.maxLife > 0 ? Math.max(0, target.life) / target.maxLife : 0;
         const pct = Math.floor(lifeRatio * 100);
+        const shieldSegments = target.getShieldBarSegments();
+        const absorbedLabel = damageResult.absorbedDamage > 0
+            ? ` (보호막 ${damageResult.absorbedDamage.toFixed(1)} 흡수)`
+            : '';
 
         const attackerUid = this.playerUserId;
         const targetUid = target.playerUserId;
@@ -717,8 +803,8 @@ export default abstract class Entity implements TagReadable {
             const notification = {
                 key: 'attack',
                 message: chat()
-                    .text(`${critical ? '치명타! ' : ''}${effectLabel}${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.\n`)
-                    .progress({ value: lifeRatio, length: 150, color: attackerUid !== undefined ? '$enemy' : '$life', thickness: 6 })
+                    .text(`${critical ? '치명타! ' : ''}${effectLabel}${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.${absorbedLabel}\n`)
+                    .health({ life: target.life, maxLife: target.maxLife, shields: shieldSegments, length: 150, color: attackerUid !== undefined ? '$enemy' : '$life', thickness: 6 })
                     .text(` ${pct}%`)
                     .build(),
             };
@@ -729,8 +815,8 @@ export default abstract class Entity implements TagReadable {
                 ))
                 .text(`${this.name}이(가) ${target.name}에게 `)
                 .color('red', b => b.text(finalDamage.toFixed(1)))
-                .text(' 피해\n')
-                .progress({ value: lifeRatio, length: 150, color: attackerUid !== undefined ? '$enemy' : '$life', thickness: 6 })
+                .text(` 피해${absorbedLabel}\n`)
+                .health({ life: target.life, maxLife: target.maxLife, shields: shieldSegments, length: 150, color: attackerUid !== undefined ? '$enemy' : '$life', thickness: 6 })
                 .text(` ${pct}%`)
                 .build();
 
@@ -767,6 +853,7 @@ export default abstract class Entity implements TagReadable {
 
     earlyUpdate(dt: number): void {
         this.tickActionDisableSources.clear();
+        this.updateShields(dt);
         this.earlyUpdateStatusEffects(dt);
         this.updateStatusEffects(dt);
         this.clampVitals();
@@ -827,6 +914,7 @@ export default abstract class Entity implements TagReadable {
             data: { causeType: this.lastDamageCause?.type ?? 'unknown' },
         });
         this.clearStatusEffects(StatusEffectRemovalReason.TARGET_DEFEATED);
+        this.clearShields();
     }
 
     respawn(): void {
