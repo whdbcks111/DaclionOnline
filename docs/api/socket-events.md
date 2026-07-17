@@ -44,7 +44,7 @@
 | `notification` | `NotificationData` | `modules/message.ts` | `components/Notification.tsx` |
 | `commandList` | `CommandInfo[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `argCompletions` | `CompletionItem[]` | `modules/bot.ts` | `pages/Home.tsx` |
-| `playerStats` | `PlayerStatsData` (현재 레벨·자원·공격 cooldown·`statusEffects`, nullable 파티원 HP/MP `party`) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` → `PlayerStatusHud`/`PartyHud` |
+| `playerStats` | `PlayerStatsData` (현재 레벨·자원·공격 cooldown·`statusEffects`, 표시 가능한 스킬의 `id/name/icon/level/isActive/remainingCooldown/maxCooldown`, nullable 파티원 HP/MP `party`) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` → `PlayerStatusHud`/`PartyHud`/`SkillQuickHud` |
 | `informationMode` | `isPublic: boolean` | `modules/bot.ts` | `pages/Home.tsx` 입력창 공개/비공개 전환 버튼 |
 | `locationInfo` | `LocationInfoData` (`objects`에 Monster/Resource 공통 체력 DTO) | `modules/player.ts` | `pages/Home.tsx` → `HudContext` |
 | `userCount` | `UserCountData` | `modules/login.ts` | `pages/Home.tsx` |

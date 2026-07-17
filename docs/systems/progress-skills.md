@@ -82,6 +82,12 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 발동은 사망·활성 중·쿨다운·`canUse/canActivate`를 먼저 검사한다. 조건을 통과하면 선택적 `activationMessage`를 시전자 본인에게만 보이는 플레이어 메시지로 전송한 뒤 `onStart`를 실행하므로 공격·회복 같은 즉시 효과보다 발동 메시지가 먼저 표시된다. 원래 입력한 일반 채팅 발동어도 공개 채팅으로 전달하지 않는다. `onStart`가 성공하면 활성 상태와 쿨다운을 확정하며, `activationFeedback`이 있으면 계산된 효과를 본인 전용 봇 메시지와 notification으로 함께 보낸다. 지속시간이 있으면 `onUpdate`, 종료 시 `onFinish`, 로그인 중 사용 가능한 패시브에는 `onPassiveUpdate`가 호출된다. 로그아웃 시 활성 스킬을 `UNLOADED` 사유로 종료한 다음 저장한다.
 
+## 스킬 퀵 HUD
+
+`SkillBook.getHudSnapshots()`은 `isVisible`을 만족하는 보유 스킬의 ID, 표시명, 아이콘, 레벨, 발동 상태, 남은/최대 쿨다운만 0.5초 `playerStats.skills`에 싣는다. 클라이언트 HUD 설정에서 각 스킬 버튼을 개별 On/Off할 수 있으며 선택과 viewport `%` 좌표는 `hud-skill-buttons` localStorage에 저장된다. 새 스킬 버튼은 PC 8열·모바일 4열 기본 격자에 놓이고 위치 편집 모드에서 각각 독립적으로 이동하거나 초기화할 수 있다.
+
+활성화된 버튼은 큰 스킬 아이콘과 아래의 작은 표시명을 가진다. 클릭은 공개 채팅을 만들지 않는 `chatButtonClick`의 `/스킬 이름` 동작을 사용하므로 모든 실제 조건 검사는 기존 `SkillBook.activateByInput()` 경로를 그대로 따른다. 쿨다운 중에는 서버 남은 시간을 payload 수신 시각부터 0.1초 단위로 보간하고, 완전히 어두운 상태에서 투명 영역이 시계 방향으로 늘어나는 overlay와 남은 초를 표시한다.
+
 ## 강타
 
 첫 스킬 `power_strike`(강타)는 치명타 누적 5회에 자동 획득한다.

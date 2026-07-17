@@ -32,10 +32,11 @@ export default function HudSettings({ onClose }: Props) {
   const {
     configs, setVisible, setAnchor, setPosUnit, setPosAnchor, setHudOpacity, setHudScale, resetPosition,
     editMode, setEditMode, opacity, setOpacity, scale, setScale,
+    playerStats, skillHudConfigs, setSkillHudVisible, resetSkillHudPosition,
   } = useHud()
   const [openSettingsId, setOpenSettingsId] = useState<string | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
-  const posRef = useRef({ x: window.innerWidth - 316, y: 60 })
+  const posRef = useRef({ x: Math.max(8, window.innerWidth - 316), y: 60 })
 
   const handleClose = () => {
     setEditMode(false)
@@ -111,7 +112,7 @@ export default function HudSettings({ onClose }: Props) {
       <div className={styles.editModeRow}>
         <div>
           <div className={styles.rowLabel}>위치 편집 모드</div>
-          <div className={styles.rowDesc}>HUD를 드래그해서 위치를 조정합니다</div>
+          <div className={styles.rowDesc}>HUD와 활성화한 스킬 버튼을 개별 드래그합니다</div>
         </div>
         <label className={styles.switch}>
           <input
@@ -154,6 +155,46 @@ export default function HudSettings({ onClose }: Props) {
           style={{ '--fill': fill(Math.round(scale * 100), 30, 100) } as React.CSSProperties}
         />
       </div>
+
+      <div className={styles.divider} />
+
+      <section className={styles.skillSection}>
+        <div className={styles.sectionTitle}>스킬 퀵 버튼</div>
+        <div className={styles.rowDesc}>표시할 스킬을 켠 뒤 위치 편집 모드에서 각각 옮길 수 있습니다.</div>
+        {playerStats?.skills.length ? (
+          <div className={styles.skillList}>
+            {playerStats.skills.map((skill, index) => {
+              const enabled = skillHudConfigs[skill.id]?.visible ?? false
+              return (
+                <div key={skill.id} className={styles.skillRow}>
+                  <img src={`/icons/${skill.icon}.png`} alt="" className={styles.skillIcon} />
+                  <div className={styles.skillInfo}>
+                    <span className={styles.skillLabel}>{skill.name}</span>
+                    <span className={styles.skillLevel}>Lv.{skill.level}</span>
+                  </div>
+                  {enabled && (
+                    <button
+                      className={styles.skillResetBtn}
+                      title="버튼 위치 초기화"
+                      onClick={() => resetSkillHudPosition(skill.id, index)}
+                    >↺</button>
+                  )}
+                  <label className={styles.switch}>
+                    <input
+                      type="checkbox"
+                      checked={enabled}
+                      onChange={event => setSkillHudVisible(skill.id, event.target.checked, index)}
+                    />
+                    <span className={styles.slider} />
+                  </label>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className={styles.emptySkills}>현재 표시 가능한 보유 스킬이 없습니다.</div>
+        )}
+      </section>
 
       <div className={styles.divider} />
 

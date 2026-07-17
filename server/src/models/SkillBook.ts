@@ -23,6 +23,7 @@ import {
 import { chat } from '../utils/chatBuilder.js';
 import logger from '../utils/logger.js';
 import type { TagId } from '../../../shared/tags.js';
+import type { SkillHudData } from '../../../shared/types.js';
 import { ActionType } from './Action.js';
 
 export interface SkillActivationOutcome {
@@ -122,6 +123,23 @@ export default class SkillBook {
                 logger.error(`스킬 표시 조건 실패: ${skill.skillDataId}`, error);
                 return false;
             }
+        });
+    }
+
+    /** HUD가 내부 Skill Map을 읽지 않고 표시 가능한 스킬과 쿨다운을 받는 불변 DTO. */
+    getHudSnapshots(now = Date.now()): SkillHudData[] {
+        const owner = this.requireOwner();
+        return this.getVisible().map(skill => {
+            const remainingCooldown = skill.getRemainingCooldown(now);
+            return {
+                id: skill.skillDataId,
+                name: skill.name,
+                icon: skill.data.icon,
+                level: skill.level,
+                isActive: skill.isActive,
+                remainingCooldown,
+                maxCooldown: skill.getMaxCooldown(owner),
+            };
         });
     }
 

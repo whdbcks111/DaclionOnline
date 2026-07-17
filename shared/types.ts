@@ -238,6 +238,16 @@ export interface PartyHudData {
     members: PartyMemberHudData[]
 }
 
+export interface SkillHudData {
+    id: string
+    name: string
+    icon: string
+    level: number
+    isActive: boolean
+    remainingCooldown: number
+    maxCooldown: number
+}
+
 export interface PlayerStatsData {
     userId: number
     nickname: string
@@ -252,6 +262,7 @@ export interface PlayerStatsData {
     maxHungry: number
     attackCooldown: number
     maxAttackCooldown: number
+    skills: SkillHudData[]
     statusEffects: StatusEffectHudData[]
     party: PartyHudData | null
 }

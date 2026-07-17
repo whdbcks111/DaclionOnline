@@ -6,6 +6,7 @@ import LocationHud from './huds/LocationHud'
 import MinimapHud from './huds/MinimapHud'
 import QuickSlotHud from './huds/QuickSlotHud'
 import PartyHud from './huds/PartyHud'
+import SkillQuickHud from './huds/SkillQuickHud'
 import styles from './HudContainer.module.scss'
 
 const HUD_COMPONENTS: Record<string, React.ComponentType> = {
@@ -115,6 +116,7 @@ export default function HudContainer() {
 
   return (
     <>
+      <SkillQuickHud />
       {HUD_DEFINITIONS.map(def => {
         const cfg = configs[def.id]
         if (!cfg?.visible) return null

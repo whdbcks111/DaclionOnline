@@ -8,9 +8,11 @@
 | --- | --- | --- |
 | `useSocket()` | `socket`, `isConnected`, `sessionInfo`, `updateProfileImage`, `updateNickname` | App, 인증 화면, Home, 알림, 채팅 button, quick slot |
 | `useTheme()` | 현재 theme와 theme 변경 API | `ThemeToggle` 및 테마 소비 UI |
-| `useHud()` | HUD 설정/편집 API, playerStats/locationInfo, 표시 옵션, quick slot API | Home, HudContainer, HudSettings, 개별 HUD |
+| `useHud()` | HUD 설정/편집 API, playerStats/locationInfo, 표시 옵션, quick slot과 개별 skill button API | Home, HudContainer, HudSettings, 개별 HUD |
 
-`useHud()`의 설정 API는 `setVisible`, `setPosition`, `setAnchor`, `setPosUnit`, `setPosAnchor`, `setHudOpacity`, `setHudScale`, `resetPosition`이다. 퀵슬롯은 `addQuickSlot`, `removeQuickSlot`, `moveQuickSlot`, `updateQuickSlot`으로만 변경한다.
+`useHud()`의 설정 API는 `setVisible`, `setPosition`, `setAnchor`, `setPosUnit`, `setPosAnchor`, `setHudOpacity`, `setHudScale`, `resetPosition`이다. 퀵슬롯은 `addQuickSlot`, `removeQuickSlot`, `moveQuickSlot`, `updateQuickSlot`으로만 변경한다. 스킬 퀵 버튼은 `setSkillHudVisible`, `setSkillHudPosition`, `resetSkillHudPosition`으로 표시와 개별 viewport `%` 좌표를 바꾸며 `skillHudConfigs`를 직접 수정하지 않는다.
+
+`SkillQuickHud`는 `playerStats.skills`에 현재 표시 가능한 스킬만 렌더링하고 localStorage에 저장된 스킬별 On/Off·좌표를 적용한다. 버튼은 아이콘과 이름을 표시하고 `chatButtonClick`의 숨김 `/스킬 이름` 동작을 호출한다. 쿨다운은 서버의 남은 시간과 `playerStatsReceivedAt`을 기준으로 클라이언트에서 보간해, 어두운 영역이 시계 방향으로 걷히는 conic-gradient와 남은 초를 표시한다. 위치 편집 모드에서는 각 버튼이 묶음 없이 독립적으로 drag된다.
 
 `PlayerStatusHud`는 이름 옆에 `playerStats.level`을 표시하고, `playerStats.statusEffects`를 사용해 작은 효과별 아이콘, 레벨, 반시계 방향 duration fill과 hover/focus/touch 설명을 표시한다. HUD wrapper는 기본적으로 pointer event를 차단하지만 상태효과 영역은 이를 명시적으로 다시 허용한다. 아이콘 URL은 서버가 보낸 key를 `/icons/{key}.png`로 해석하며 효과가 사라지면 다음 0.5초 HUD payload에서 목록에서도 제거된다.
 

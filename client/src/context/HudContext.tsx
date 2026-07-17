@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import type { PlayerStatsData, LocationInfoData } from '@shared/types'
+import { createDefaultSkillHudConfig } from './skillHudConfig'
+import type { SkillHudConfig } from './skillHudConfig'
 
 export type AnchorPoint = 'topLeft' | 'topMiddle' | 'topRight' | 'middleLeft' | 'center' | 'middleRight' | 'bottomLeft' | 'bottomMiddle' | 'bottomRight'
 export type PosAnchor = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
@@ -20,6 +22,7 @@ export interface HudConfig {
 const OPACITY_KEY = 'hud-opacity'
 const SCALE_KEY = 'hud-scale'
 const QUICK_SLOTS_KEY = 'hud-quick-slots'
+const SKILL_HUD_KEY = 'hud-skill-buttons'
 export const MAX_QUICK_SLOTS = 10
 
 export interface HudDefinition {
@@ -57,6 +60,7 @@ interface HudContextType {
   resetPosition: (id: string) => void
   playerStats: PlayerStatsData | null
   setPlayerStats: (data: PlayerStatsData) => void
+  playerStatsReceivedAt: number
   locationInfo: LocationInfoData | null
   setLocationInfo: (data: LocationInfoData) => void
   opacity: number
@@ -68,6 +72,10 @@ interface HudContextType {
   removeQuickSlot: (index: number) => void
   moveQuickSlot: (from: number, to: number) => void
   updateQuickSlot: (index: number, text: string) => void
+  skillHudConfigs: Record<string, SkillHudConfig>
+  setSkillHudVisible: (skillId: string, visible: boolean, defaultIndex?: number) => void
+  setSkillHudPosition: (skillId: string, x: number, y: number) => void
+  resetSkillHudPosition: (skillId: string, defaultIndex?: number) => void
 }
 
 const HudContext = createContext<HudContextType | null>(null)
@@ -98,7 +106,8 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   })
 
   const [editMode, setEditMode] = useState(false)
-  const [playerStats, setPlayerStats] = useState<PlayerStatsData | null>(null)
+  const [playerStats, setPlayerStatsState] = useState<PlayerStatsData | null>(null)
+  const [playerStatsReceivedAt, setPlayerStatsReceivedAt] = useState(0)
   const [locationInfo, setLocationInfo] = useState<LocationInfoData | null>(null)
   const [quickSlots, setQuickSlots] = useState<string[]>(() => {
     try {
@@ -107,10 +116,32 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     } catch { /* ignore */ }
     return []
   })
+  const [skillHudConfigs, setSkillHudConfigs] = useState<Record<string, SkillHudConfig>>(() => {
+    try {
+      const saved = localStorage.getItem(SKILL_HUD_KEY)
+      if (!saved) return {}
+      const parsed = JSON.parse(saved) as Record<string, Partial<SkillHudConfig>>
+      return Object.fromEntries(Object.entries(parsed).flatMap(([skillId, config]) => {
+        if (!config || !Number.isFinite(config.x) || !Number.isFinite(config.y)) return []
+        return [[skillId, {
+          skillId,
+          visible: config.visible === true,
+          x: Math.max(0, Math.min(100, config.x!)),
+          y: Math.max(0, Math.min(100, config.y!)),
+        } satisfies SkillHudConfig]]
+      }))
+    } catch { /* ignore */ }
+    return {}
+  })
 
   const saveQuickSlots = useCallback((slots: string[]) => {
     setQuickSlots(slots)
     localStorage.setItem(QUICK_SLOTS_KEY, JSON.stringify(slots))
+  }, [])
+
+  const setPlayerStats = useCallback((data: PlayerStatsData) => {
+    setPlayerStatsState(data)
+    setPlayerStatsReceivedAt(Date.now())
   }, [])
 
   const addQuickSlot    = useCallback((text: string) => saveQuickSlots([...quickSlots, text]), [quickSlots, saveQuickSlots])
@@ -157,6 +188,10 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(configs))
   }, [configs])
+
+  useEffect(() => {
+    localStorage.setItem(SKILL_HUD_KEY, JSON.stringify(skillHudConfigs))
+  }, [skillHudConfigs])
 
   const patchConfig = useCallback((id: string, patch: Partial<HudConfig>) => {
     setConfigs(prev => ({
@@ -217,13 +252,37 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     patchConfig(id, { x: def.x, y: def.y, posUnitX: def.posUnitX, posUnitY: def.posUnitY, posAnchor: def.posAnchor })
   }, [patchConfig])
 
+  const patchSkillHudConfig = useCallback((skillId: string, patch: Partial<SkillHudConfig>, defaultIndex = 0) => {
+    setSkillHudConfigs(prev => ({
+      ...prev,
+      [skillId]: { ...(prev[skillId] ?? createDefaultSkillHudConfig(skillId, defaultIndex)), ...patch, skillId },
+    }))
+  }, [])
+
+  const setSkillHudVisible = useCallback((skillId: string, visible: boolean, defaultIndex = 0) => {
+    patchSkillHudConfig(skillId, { visible }, defaultIndex)
+  }, [patchSkillHudConfig])
+
+  const setSkillHudPosition = useCallback((skillId: string, x: number, y: number) => {
+    patchSkillHudConfig(skillId, {
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y)),
+    })
+  }, [patchSkillHudConfig])
+
+  const resetSkillHudPosition = useCallback((skillId: string, defaultIndex = 0) => {
+    const defaults = createDefaultSkillHudConfig(skillId, defaultIndex)
+    patchSkillHudConfig(skillId, { x: defaults.x, y: defaults.y }, defaultIndex)
+  }, [patchSkillHudConfig])
+
   return (
     <HudContext.Provider value={{
       configs, editMode, setEditMode,
       setVisible, setPosition, setAnchor, setPosUnit, setPosAnchor, setHudOpacity, setHudScale, resetPosition,
-      playerStats, setPlayerStats, locationInfo, setLocationInfo,
+      playerStats, setPlayerStats, playerStatsReceivedAt, locationInfo, setLocationInfo,
       opacity, setOpacity, scale, setScale,
       quickSlots, addQuickSlot, removeQuickSlot, moveQuickSlot, updateQuickSlot,
+      skillHudConfigs, setSkillHudVisible, setSkillHudPosition, resetSkillHudPosition,
     }}>
       {children}
     </HudContext.Provider>

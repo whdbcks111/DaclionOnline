@@ -91,6 +91,7 @@ export function sendPlayerStats(userId: number): void {
         maxHungry:         player.maxHungry,
         attackCooldown:    player.attackCooldown,
         maxAttackCooldown: player.maxAttackCooldown,
+        skills:             player.skills.getHudSnapshots(),
         statusEffects:     player.getStatusEffectDisplaySnapshots().map(effect => ({
             ...effect,
             description: parseChatMessage(effect.description),

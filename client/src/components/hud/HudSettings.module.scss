@@ -8,12 +8,93 @@
     border: 1px solid $color-border;
     border-radius: $border-radius-md;
     box-shadow: $shadow-lg;
-    width: 300px;
+    box-sizing: border-box;
+    width: min(18.75rem, calc(100vw - 1rem));
+    max-height: min(88vh, 52rem);
     padding: $spacing-md;
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
     font-family: $font-family-base;
+    overflow-y: auto;
+}
+
+.skillSection {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+}
+
+.sectionTitle {
+    color: $color-text;
+    font-size: $font-size-sm;
+    font-weight: 700;
+}
+
+.skillList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin-top: 0.2rem;
+}
+
+.skillRow {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 0.3rem 0;
+}
+
+.skillIcon {
+    width: clamp(1.65rem, 7vw, 2rem);
+    aspect-ratio: 1;
+    flex: 0 0 auto;
+    border-radius: $border-radius-sm;
+    object-fit: cover;
+    box-shadow: 0 0 0 1px $color-border;
+}
+
+.skillInfo {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+}
+
+.skillLabel {
+    overflow: hidden;
+    color: $color-text;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.skillLevel {
+    color: $color-text-tertiary;
+    font-size: 0.66rem;
+}
+
+.skillResetBtn {
+    flex: 0 0 auto;
+    padding: 0.18rem 0.35rem;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background: transparent;
+    color: $color-text-tertiary;
+    cursor: pointer;
+
+    &:hover {
+        color: $color-text;
+        border-color: var(--color-primary);
+    }
+}
+
+.emptySkills {
+    padding: 0.45rem 0;
+    color: $color-text-tertiary;
+    font-size: 0.72rem;
 }
 
 .header {

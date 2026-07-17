@@ -110,6 +110,24 @@ test('엘리트 직업은 원래 메인 직업 스킬의 표시 조건을 계속
     assert.equal(player.skills.getVisible().some(skill => skill.skillDataId === 'steel_slash'), true);
 });
 
+test('스킬 HUD snapshot은 표시 가능한 스킬의 아이콘과 남은 쿨다운을 제공한다', () => {
+    const player = new TestSkillPlayer();
+    const skill = player.skills.grant('power_strike', 'test', 2).skill;
+    const now = 10_000;
+    skill.startCooldown(5, now);
+
+    const snapshot = player.skills.getHudSnapshots(now);
+    assert.deepEqual(snapshot, [{
+        id: 'power_strike',
+        name: '강타',
+        icon: 'skills/power_strike',
+        level: 2,
+        isActive: false,
+        remainingCooldown: 5,
+        maxCooldown: 7.5,
+    }]);
+});
+
 test('강타는 일회성 관통을 제거하고 확정 치명타 공격과 비용을 확정한다', () => {
     const player = new TestSkillPlayer();
     const target = new TestTarget();
