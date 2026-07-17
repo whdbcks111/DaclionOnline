@@ -32,6 +32,13 @@ export const GameTags = Object.freeze({
     ITEM_FISH: 'item:fish',
     ITEM_SKILL_BOOK: 'item:skill_book',
 
+    FISH_RARITY_COMMON: 'fish_rarity:common',
+    FISH_RARITY_UNCOMMON: 'fish_rarity:uncommon',
+    FISH_RARITY_RARE: 'fish_rarity:rare',
+    FISH_RARITY_EPIC: 'fish_rarity:epic',
+    FISH_RARITY_LEGENDARY: 'fish_rarity:legendary',
+    FISH_RARITY_MYTHIC: 'fish_rarity:mythic',
+
     WEAPON_SWORD: 'weapon:sword',
     WEAPON_AXE: 'weapon:axe',
     WEAPON_BOW: 'weapon:bow',

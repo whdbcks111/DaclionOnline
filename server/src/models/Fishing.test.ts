@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { simulateFishingCapture, type FishingCaptureConfig } from '../../../shared/minigames.js';
-import { FishRarity, getAllFish, rollFishRarity } from './Fishing.js';
+import { getItemData } from './Item.js';
+import { FishRarity, getAllFish, getFishByRarity, rollFishRarity } from './Fishing.js';
 import '../data/items.js';
 import '../data/fishing.js';
 
@@ -41,10 +42,17 @@ test('행운은 상위 물고기 등급의 가중치를 증가시킨다', () => 
         .length;
     assert.ok(highTierCount(30) > highTierCount(0));
     assert.deepEqual(FishRarity.values().map(rarity => rarity.label), ['일반', '고급', '희귀', '서사', '전설', '신화']);
+    assert.deepEqual(FishRarity.values().map(rarity => rarity.sellPrice), [5, 20, 90, 400, 1800, 8000]);
 });
 
 test('모든 낚시 보상 아이템은 128px 투명 아이콘을 가진다', () => {
-    assert.equal(getAllFish().length, 8);
+    assert.equal(getAllFish().length, 36);
+    for (const rarity of FishRarity.values()) {
+        assert.equal(getFishByRarity(rarity).length, 6, rarity.label);
+        for (const fish of getFishByRarity(rarity)) {
+            assert.ok(getItemData(fish.itemDataId)?.tags.includes(rarity.tag), `${fish.id}: ${rarity.tag}`);
+        }
+    }
     const itemIds = ['beginner_fishing_rod', 'earthworm_bait', ...getAllFish().map(fish => fish.itemDataId)];
     for (const itemDataId of itemIds) {
         const png = readFileSync(new URL(`../../../client/public/icons/items/${itemDataId}.png`, import.meta.url));

@@ -1,5 +1,6 @@
 import { defineShop } from '../models/Shop.js';
 import { GameTags } from '../../../shared/tags.js';
+import { FishRarity } from '../models/Fishing.js';
 
 defineShop({
     id: 'general_store',
@@ -132,12 +133,12 @@ defineShop({
         },
         { label: '낚시 도구', filter: item => item.hasTag(GameTags.TOOL_FISHING), count: 1, price: 20 },
         { label: '미끼', filter: item => item.hasTag(GameTags.ITEM_BAIT), count: 99, price: 1 },
-        { label: '일반 물고기', filter: item => ['silver_minnow', 'pond_carp'].includes(item.itemDataId), count: 99, price: 3 },
-        { label: '고급 물고기', filter: item => ['bluefin_dace', 'sunscale_bream'].includes(item.itemDataId), count: 99, price: 8 },
-        { label: '희귀 물고기', filter: item => item.itemDataId === 'mist_eel', count: 99, price: 22 },
-        { label: '서사 물고기', filter: item => item.itemDataId === 'crystal_salmon', count: 99, price: 55 },
-        { label: '전설 물고기', filter: item => item.itemDataId === 'golden_koi', count: 99, price: 140 },
-        { label: '신화 물고기', filter: item => item.itemDataId === 'moonlight_sturgeon', count: 99, price: 360 },
+        { label: '일반 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_COMMON), count: 99, price: FishRarity.COMMON.sellPrice },
+        { label: '고급 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_UNCOMMON), count: 99, price: FishRarity.UNCOMMON.sellPrice },
+        { label: '희귀 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_RARE), count: 99, price: FishRarity.RARE.sellPrice },
+        { label: '서사 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_EPIC), count: 99, price: FishRarity.EPIC.sellPrice },
+        { label: '전설 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_LEGENDARY), count: 99, price: FishRarity.LEGENDARY.sellPrice },
+        { label: '신화 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_MYTHIC), count: 99, price: FishRarity.MYTHIC.sellPrice },
     ],
     tags: [GameTags.SHOP_GENERAL, GameTags.SHOP_FISHING],
 });

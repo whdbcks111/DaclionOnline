@@ -14,7 +14,7 @@
 
 현재 소모품에는 체력·정신력 포션과 배고픔 35를 회복하는 `traveler_bread`, 수분 40을 회복하는 `fresh_water`가 있다. 장비·전투 아이템은 `old_sword`, `old_shield`, `venom_dagger`, `light_bow`, `wooden_arrow`, `basic_pickaxe`, `iron_pickaxe`, `seismic_crush_skillbook`이다. 무기 속성 태그는 아이템 분류·제작 조건에 남지만 직접 물리 공격 상성에는 자동 합산하지 않는다. 독 단검은 물리 피해가 실제로 적중한 뒤 50% 확률로 8초간 1레벨 맹독을 부여하며 무생물은 상태효과 적용만 거부한다. 가벼운 활은 화살 한 발을 소비해 화살 자체의 자연 속성으로 공격한다. 두 곡괭이는 `item:tool + tool:mining` 태그를 가진 주무기이며 광석의 공격 조건을 만족한다. 철 곡괭이는 제작법으로 획득한다.
 
-낚시 장비는 `tool:fishing` 초보자 낚싯대와 `item:bait` 통통한 지렁이 미끼다. 낚싯대는 손 슬롯에서 행운·입질 속도·채집 영역 크기/속도·시작 게이지 modifier와 `fishingNetShape` metadata를 제공한다. 미끼는 `/사용` 시 보조 슬롯에 자동 장착되고 낚시 시작마다 하나가 소비된다. 별등불 잡화점은 두 아이템을 판매하고 일반~신화 물고기를 희귀도에 따라 3~360 Gold에 매입한다. 상세 흐름은 [미니게임·낚시](minigames-fishing.md)를 참고한다.
+낚시 장비는 `tool:fishing` 초보자 낚싯대와 `item:bait` 통통한 지렁이 미끼다. 낚싯대는 손 슬롯에서 행운·입질 속도·채집 영역 크기/속도·시작 게이지 modifier와 `fishingNetShape` metadata를 제공한다. 미끼는 `/사용` 시 보조 슬롯에 자동 장착되고 낚시 시작마다 하나가 소비된다. 별등불 잡화점은 두 아이템을 판매하고 일반~신화 물고기를 등급 태그와 `FishRarity.sellPrice`에 따라 5~8,000 Gold에 매입한다. 상세 흐름은 [미니게임·낚시](minigames-fishing.md)를 참고한다.
 
 광물 아이템은 `stone`, `coal`, `iron_ore`, `gold_ore`, `ruby`, `emerald`, `diamond`이며 모두 99개까지 쌓인다. 피버릭 갱도 입구의 은맥 광부 보급소는 곡괭이를 50 Gold에 판매하고 광물을 희귀도에 따라 각각 2, 5, 10, 25, 55, 60, 180 Gold에 매입한다.
 

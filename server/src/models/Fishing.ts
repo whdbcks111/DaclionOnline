@@ -1,17 +1,21 @@
+import { GameTags, type TagId } from '../../../shared/tags.js';
+
 export class FishRarity {
     private static readonly all: FishRarity[] = [];
 
-    static readonly COMMON = new FishRarity('common', '일반', '#aab4bd', 62, 1, [12, 20]);
-    static readonly UNCOMMON = new FishRarity('uncommon', '고급', '#54b978', 22, 2, [20, 34]);
-    static readonly RARE = new FishRarity('rare', '희귀', '#4f95e8', 9, 3, [35, 55]);
-    static readonly EPIC = new FishRarity('epic', '서사', '#9b67e8', 4.5, 4, [60, 90]);
-    static readonly LEGENDARY = new FishRarity('legendary', '전설', '#efaa35', 2, 5, [110, 160]);
-    static readonly MYTHIC = new FishRarity('mythic', '신화', '#ef5c72', 0.5, 6, [200, 300]);
+    static readonly COMMON = new FishRarity('common', '일반', '#aab4bd', GameTags.FISH_RARITY_COMMON, 5, 62, 1, [12, 20]);
+    static readonly UNCOMMON = new FishRarity('uncommon', '고급', '#54b978', GameTags.FISH_RARITY_UNCOMMON, 20, 22, 2, [20, 34]);
+    static readonly RARE = new FishRarity('rare', '희귀', '#4f95e8', GameTags.FISH_RARITY_RARE, 90, 9, 3, [35, 55]);
+    static readonly EPIC = new FishRarity('epic', '서사', '#9b67e8', GameTags.FISH_RARITY_EPIC, 400, 4.5, 4, [60, 90]);
+    static readonly LEGENDARY = new FishRarity('legendary', '전설', '#efaa35', GameTags.FISH_RARITY_LEGENDARY, 1800, 2, 5, [110, 160]);
+    static readonly MYTHIC = new FishRarity('mythic', '신화', '#ef5c72', GameTags.FISH_RARITY_MYTHIC, 8000, 0.5, 6, [200, 300]);
 
     private constructor(
         readonly key: FishRarityKey,
         readonly label: string,
         readonly color: string,
+        readonly tag: TagId,
+        readonly sellPrice: number,
         readonly baseWeight: number,
         readonly difficulty: number,
         readonly expRange: readonly [number, number],
