@@ -23,7 +23,7 @@ interface FishingState {
     netSpeed: number
     initialGauge: number
     timer: ReturnType<typeof setTimeout>
-    phase: 'waiting' | 'minigame'
+    phase: 'waiting' | 'warning' | 'minigame'
 }
 
 export interface StartFishingResult {
@@ -33,6 +33,7 @@ export interface StartFishingResult {
 }
 
 const fishingByUser = new Map<number, FishingState>();
+const FISHING_BITE_WARNING_MS = 1_000;
 
 function normalizeShape(value: unknown): FishingCaptureShape {
     return value === 'circle' || value === 'rectangle' || value === 'square' ? value : 'circle';
@@ -73,7 +74,7 @@ function finishFishingReward(player: Player, rarity: FishRarity): string {
     return `[${rarity.label}] ${itemData.name}을(를) 낚았습니다! 경험치 +${exp}.${levelText} ${placement}`;
 }
 
-function beginFishingMiniGame(userId: number, locationId: string, rarity: FishRarity): void {
+function getFishingContext(userId: number, locationId: string): { player: Player; state: FishingState } | undefined {
     const player = getPlayerByUserId(userId);
     const state = fishingByUser.get(userId);
     const location = player ? getLocation(player.locationId) : undefined;
@@ -81,10 +82,42 @@ function beginFishingMiniGame(userId: number, locationId: string, rarity: FishRa
     if (!player || !state || player.isDead || player.locationId !== locationId
         || !location?.hasTag(GameTags.LOCATION_FISHING) || !rod?.hasTag(GameTags.TOOL_FISHING)
         || rod.itemDataId !== state.rodItemDataId) {
-        fishingByUser.delete(userId);
-        sendNotificationToUser(userId, { key: 'fishing:cancelled', message: '낚시할 수 있는 상태가 아니어서 입질이 끊겼습니다.' });
+        return undefined;
+    }
+    return { player, state };
+}
+
+function cancelInvalidFishing(userId: number): void {
+    fishingByUser.delete(userId);
+    sendNotificationToUser(userId, { key: 'fishing:cancelled', message: '낚시할 수 있는 상태가 아니어서 입질이 끊겼습니다.' });
+}
+
+function warnFishingBite(userId: number, locationId: string, rarity: FishRarity): void {
+    const context = getFishingContext(userId, locationId);
+    if (!context) {
+        cancelInvalidFishing(userId);
         return;
     }
+    context.state.phase = 'warning';
+    sendNotificationToUser(userId, {
+        key: 'fishing:bite-warning',
+        message: `입질이다! ${rarity.label} 등급 물고기가 미끼를 물었습니다. 준비하세요!`,
+        length: FISHING_BITE_WARNING_MS,
+        showProgress: false,
+    });
+    context.state.timer = setTimeout(
+        () => beginFishingMiniGame(userId, locationId, rarity),
+        FISHING_BITE_WARNING_MS,
+    );
+}
+
+function beginFishingMiniGame(userId: number, locationId: string, rarity: FishRarity): void {
+    const context = getFishingContext(userId, locationId);
+    if (!context) {
+        cancelInvalidFishing(userId);
+        return;
+    }
+    const { player, state } = context;
 
     state.phase = 'minigame';
     const size = state.netSize;
@@ -185,7 +218,7 @@ export function startFishing(player: Player): StartFishingResult {
     const fishingLocationId = player.locationId;
     const timer = setTimeout(() => {
         const rarity = rollFishRarity(luck);
-        beginFishingMiniGame(player.userId, fishingLocationId, rarity);
+        warnFishingBite(player.userId, fishingLocationId, rarity);
     }, waitSeconds * 1000);
     fishingByUser.set(player.userId, {
         locationId: fishingLocationId,
@@ -201,6 +234,7 @@ export function startFishing(player: Player): StartFishingResult {
         key: 'fishing:waiting',
         message: '미끼를 던졌습니다. 입질을 기다리는 중...',
         length: Math.ceil(waitSeconds * 1000),
+        showProgress: false,
     });
     return { ok: true, message: '미끼를 던졌습니다. 입질을 기다립니다.', waitSeconds };
 }
