@@ -9,7 +9,7 @@ import { PlayerProgress } from './Progress.js';
 import SkillBook from './SkillBook.js';
 import Inventory from './Inventory.js';
 import { getIO, initSocket } from '../modules/socket.js';
-import { getChannelHistory } from '../modules/channel.js';
+import { getChannelHistory, getFilteredHistoryForUser } from '../modules/channel.js';
 import { createSession, removeSession } from '../modules/login.js';
 import { registerOnlinePlayer, unregisterOnlinePlayer } from '../modules/playerRegistry.js';
 import '../data/progress.js';
@@ -131,6 +131,38 @@ test('강타는 일회성 관통을 제거하고 확정 치명타 공격과 비�
         assert.equal(player.attribute.get(AttributeType.ARMOR_PEN), 0);
         assert.equal(player.progress.getCounter('combat:critical_hits'), 1n);
         assert.ok(player.attackCooldown > 0);
+    } finally {
+        removeSession(sessionToken);
+    }
+});
+
+test('버프 스킬은 공개 시전 메시지와 본인 전용 효과 피드백을 함께 남긴다', () => {
+    const player = new TestSkillPlayer();
+    player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+    player.skills.grant('battle_rush', 'test', 3);
+    const sessionToken = createSession({
+        id: player.userId,
+        username: 'buff_skill_test',
+        nickname: player.name,
+    });
+
+    try {
+        const outcome = player.skills.activateByInput('전투 질주');
+        assert.equal(outcome.activated, true);
+
+        const publicMessage = getChannelHistory(null).at(-1);
+        assert.equal(publicMessage?.userId, player.userId);
+        assert.ok(Array.isArray(publicMessage?.content));
+        assert.equal(publicMessage.content[0]?.type === 'text' ? publicMessage.content[0].text : '', '전투 질주!');
+
+        const feedback = getFilteredHistoryForUser(player.userId, null).at(-1);
+        assert.equal(feedback?.userId, 0);
+        const feedbackText = Array.isArray(feedback?.content)
+            ? feedback.content.filter(node => node.type === 'text').map(node => node.text).join('')
+            : feedback?.content ?? '';
+        assert.match(feedbackText, /전투 질주 발동/);
+        assert.match(feedbackText, /공격력 \+21%/);
+        assert.match(feedbackText, /10초/);
     } finally {
         removeSession(sessionToken);
     }

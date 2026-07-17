@@ -97,6 +97,8 @@ export interface SkillData {
     activationMessage?: string;
     /** 생략 시 activationMessage와 정확히 같은 `이름!` 메시지로 발동한다. */
     activationPhrase?: string;
+    /** 발동 성공 뒤 플레이어 본인에게 채팅 상세 메시지와 알림으로 함께 보낼 내용. */
+    activationFeedback?: (context: SkillContext) => string;
     baseMetadata: SkillMetadata | null;
     calculatedFields?: Readonly<Record<string, (context: SkillContext) => SkillCalculatedValue>>;
     calculateMaxCooldown?: (context: SkillContext) => number;

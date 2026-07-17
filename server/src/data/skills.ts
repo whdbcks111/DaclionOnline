@@ -85,6 +85,10 @@ function activationGuide(requirement: string): string {
     return `${requirement} \`/스킬 {{name}}\` 또는 채팅에 [color=gold]{{name}}![/color]를 입력해 발동합니다.`;
 }
 
+function buffFeedback(name: string, duration: number, effects: string): string {
+    return `${name} 발동! ${effects} (${formatNumber(duration)}초)`;
+}
+
 defineSkill({
     id: 'power_strike',
     name: '강타',
@@ -337,6 +341,11 @@ defineSkill({
     descriptionTemplate: '{{duration}} 동안 {{icon.atk}} 공격력이 [color=orange]{{attackBonus}}[/color], {{icon.speed}} 이동속도가 [color=cyan]{{speedBonus}}[/color] 증가합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 14[/color]',
     activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '전투 질주!', baseMetadata: null,
+    activationFeedback: context => buffFeedback(
+        context.skill.name,
+        valueByLevel(context.skill.level, 8, 1),
+        `공격력 +${formatNumber(percentByLevel(context.skill.level, 15, 3))}%, 이동속도 +${formatNumber(percentByLevel(context.skill.level, 20, 3))}%`,
+    ),
     calculatedFields: {
         duration: context => levelValueTooltip(context, '지속시간', 8, 1, '초'),
         attackBonus: context => levelValueTooltip(context, '공격력 증가', 15, 3, '%'),
@@ -356,6 +365,11 @@ defineSkill({
     descriptionTemplate: '{{duration}} 동안 {{icon.def}} 방어력이 [color=yellow]+{{defBonus}}[/color], {{icon.maxLife}} 최대 생명력이 [color=green]{{lifeBonus}}[/color] 증가하고 최대 생명력의 [color=green]{{healPercent}}[/color]를 회복합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
     activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '불굴!', baseMetadata: null,
+    activationFeedback: context => buffFeedback(
+        context.skill.name,
+        valueByLevel(context.skill.level, 10, 1),
+        `방어력 +${formatNumber(valueByLevel(context.skill.level, 15, 5))}, 최대 생명력 +${formatNumber(percentByLevel(context.skill.level, 20, 3))}%, 생명력 ${formatNumber(percentByLevel(context.skill.level, 15, 2))}% 회복`,
+    ),
     calculatedFields: {
         duration: context => levelValueTooltip(context, '지속시간', 10, 1, '초'),
         defBonus: context => levelValueTooltip(context, '방어력 증가', 15, 5),
@@ -440,6 +454,11 @@ defineSkill({
     descriptionTemplate: '{{duration}} 동안 {{icon.speed}} 이동 가능한 상태라면 받는 공격을 [color=cyan]확정적으로 회피[/color]합니다. 이동이 금지된 동안에는 발동하지 않습니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 22[/color]',
     activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '바람 회피!', baseMetadata: null,
+    activationFeedback: context => buffFeedback(
+        context.skill.name,
+        valueByLevel(context.skill.level, 4, 0.5),
+        '이동 가능한 동안 공격 확정 회피',
+    ),
     calculatedFields: { duration: context => levelValueTooltip(context, '확정 회피 지속시간', 4, 0.5, '초') },
     calculateMaxCooldown: context => cooldownByLevel(context, 24, 1.5, 18),
     jobRequirement: jobRequirement(JOBS.archer), canActivate: simpleCheck(22, false),
@@ -454,6 +473,11 @@ defineSkill({
     descriptionTemplate: '{{duration}} 동안 다른 대상이 공격 대상으로 지정할 수 없는 은신 상태가 되고 {{icon.speed}} 이동속도가 [color=cyan]{{speedBonus}}[/color] 증가합니다. 암습 사용 시 해제됩니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 16[/color]',
     activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '은신!', baseMetadata: null,
+    activationFeedback: context => buffFeedback(
+        context.skill.name,
+        valueByLevel(context.skill.level, 8, 0.75),
+        `공격 대상 지정 방지, 이동속도 +${formatNumber(percentByLevel(context.skill.level, 25, 5))}%`,
+    ),
     calculatedFields: {
         duration: context => levelValueTooltip(context, '은신 지속시간', 8, 0.75, '초'),
         speedBonus: context => levelValueTooltip(context, '이동속도 증가', 25, 5, '%'),
@@ -533,6 +557,11 @@ defineSkill({
     descriptionTemplate: '{{duration}} 동안 {{icon.def}} 방어력이 [color=yellow]+{{defBonus}}[/color], {{icon.magicDef}} 마법 저항력이 [color=purple]+{{magicDefBonus}}[/color] 증가합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 22[/color]',
     activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '마력 보호막!', baseMetadata: null,
+    activationFeedback: context => buffFeedback(
+        context.skill.name,
+        valueByLevel(context.skill.level, 10, 1),
+        `방어력 +${formatNumber(valueByLevel(context.skill.level, 12, 4))}, 마법 저항력 +${formatNumber(valueByLevel(context.skill.level, 20, 5))}`,
+    ),
     calculatedFields: {
         duration: context => levelValueTooltip(context, '지속시간', 10, 1, '초'),
         defBonus: context => levelValueTooltip(context, '방어력 증가', 12, 4),
@@ -570,6 +599,11 @@ defineSkill({
     descriptionTemplate: '{{duration}} 동안 {{icon.magicForce}} 마법력이 [color=$magic]{{magicBonus}}[/color], {{icon.mentalityRegen}} 정신력 재생이 [color=purple]+{{regenBonus}}/초[/color] 증가합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 16[/color]',
     activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '원소 통찰!', baseMetadata: null,
+    activationFeedback: context => buffFeedback(
+        context.skill.name,
+        valueByLevel(context.skill.level, 12, 1),
+        `마법력 +${formatNumber(percentByLevel(context.skill.level, 20, 4))}%, 정신력 재생 +${formatNumber(valueByLevel(context.skill.level, 2, 0.75))}/초`,
+    ),
     calculatedFields: {
         duration: context => levelValueTooltip(context, '지속시간', 12, 1, '초'),
         magicBonus: context => levelValueTooltip(context, '마법력 증가', 20, 4, '%'),

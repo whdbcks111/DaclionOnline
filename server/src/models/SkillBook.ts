@@ -14,7 +14,12 @@ import type {
     SkillUpdateContext,
 } from './Skill.js';
 import { emitGameEvent, GameEventIds } from './GameEvent.js';
-import { sendBotMessageToUser, sendNotificationToUser, sendPlayerTextToCurrentChannel } from '../modules/message.js';
+import {
+    sendBotMessageToUser,
+    sendNotificationToUser,
+    sendPlayerTextToCurrentChannel,
+    sendPrivateBotMessageToUser,
+} from '../modules/message.js';
 import { chat } from '../utils/chatBuilder.js';
 import logger from '../utils/logger.js';
 import type { TagId } from '../../../shared/tags.js';
@@ -346,6 +351,20 @@ export default class SkillBook {
                 message: reason,
             });
             return { matched: true, activated: false, reason, skill };
+        }
+
+        if (player && skill.data.activationFeedback) {
+            try {
+                const feedback = skill.data.activationFeedback(createSkillContext(owner, skill));
+                sendPrivateBotMessageToUser(player.userId, feedback);
+                sendNotificationToUser(player.userId, {
+                    key: `skill-activated:${skill.skillDataId}`,
+                    message: feedback,
+                    length: 3000,
+                });
+            } catch (error) {
+                logger.error(`스킬 발동 피드백 생성 실패: ${skill.skillDataId}`, error);
+            }
         }
 
         emitGameEvent(GameEventIds.SKILL_STARTED, {
