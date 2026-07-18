@@ -21,7 +21,7 @@ interface ViewBox {
 
 const DEFAULT_ASPECT = 16 / 9
 const MIN_SPAN = 180
-const BIOME_CANVAS_SCALE = 0.45
+const BIOME_CANVAS_SCALE = 0.3
 const BASE_LABEL_SIZE = 11
 const MIN_LABEL_ZOOM = 0.7
 const MAX_LABEL_ZOOM = 1.75
@@ -105,6 +105,7 @@ function getBiomeSofteningDistance(seeds: readonly BiomeSeed[]): number {
 function paintBiomeGradient(
     canvas: HTMLCanvasElement,
     seeds: readonly BiomeSeed[],
+    softeningDistance: number,
     view: ViewBox,
     cssWidth: number,
     cssHeight: number,
@@ -118,17 +119,22 @@ function paintBiomeGradient(
     context.clearRect(0, 0, width, height)
     if (seeds.length === 0) return
 
-    const softeningDistance = getBiomeSofteningDistance(seeds)
+    const softeningDistanceSquared = softeningDistance * softeningDistance
     const image = context.createImageData(width, height)
     const pixels = image.data
+    const worldXs = new Float64Array(width)
+    const worldYs = new Float64Array(height)
+    for (let pixelX = 0; pixelX < width; pixelX += 1) {
+        worldXs[pixelX] = view.x + (pixelX + 0.5) / width * view.width
+    }
     for (let pixelY = 0; pixelY < height; pixelY += 1) {
-        const worldY = view.y + (pixelY + 0.5) / height * view.height
+        worldYs[pixelY] = view.y + (pixelY + 0.5) / height * view.height
+    }
+
+    for (let pixelY = 0; pixelY < height; pixelY += 1) {
+        const worldY = worldYs[pixelY]
         for (let pixelX = 0; pixelX < width; pixelX += 1) {
-            const worldX = view.x + (pixelX + 0.5) / width * view.width
-            let nearestIndex = 0
-            let nearestDistanceSquared = Number.POSITIVE_INFINITY
-            let secondDistanceSquared = Number.POSITIVE_INFINITY
-            let nearestBaseWeight = 0
+            const worldX = worldXs[pixelX]
             let totalWeight = 0
             let red = 0
             let green = 0
@@ -138,34 +144,14 @@ function paintBiomeGradient(
                 const dx = worldX - seeds[seedIndex].point.x
                 const dy = worldY - seeds[seedIndex].point.y
                 const distanceSquared = dx * dx + dy * dy
-                const distance = Math.sqrt(distanceSquared)
-                const weight = 1 / ((distance + softeningDistance) ** 2)
+                const weight = 1 / (distanceSquared + softeningDistanceSquared)
                 const color = seeds[seedIndex].color
                 totalWeight += weight
                 red += color[0] * weight
                 green += color[1] * weight
                 blue += color[2] * weight
-                if (distanceSquared < nearestDistanceSquared) {
-                    secondDistanceSquared = nearestDistanceSquared
-                    nearestDistanceSquared = distanceSquared
-                    nearestIndex = seedIndex
-                    nearestBaseWeight = weight
-                } else if (distanceSquared < secondDistanceSquared) {
-                    secondDistanceSquared = distanceSquared
-                }
             }
 
-            const nearestColor = seeds[nearestIndex].color
-            const nearestDistance = Math.sqrt(nearestDistanceSquared)
-            const secondDistance = Math.sqrt(secondDistanceSquared)
-            const dominance = Number.isFinite(secondDistance)
-                ? Math.max(0, (secondDistance - nearestDistance) / Math.max(0.0001, secondDistance + nearestDistance))
-                : 1
-            const nearestBoost = nearestBaseWeight * dominance * 3
-            totalWeight += nearestBoost
-            red += nearestColor[0] * nearestBoost
-            green += nearestColor[1] * nearestBoost
-            blue += nearestColor[2] * nearestBoost
             const offset = (pixelY * width + pixelX) * 4
             pixels[offset] = Math.round(red / totalWeight)
             pixels[offset + 1] = Math.round(green / totalWeight)
@@ -203,6 +189,7 @@ export default function WorldMapNode({ data }: Props) {
     )
     const activeLocation = locationsById.get(hoveredId ?? selectedId ?? '')
     const biomeSeeds = useMemo(() => createBiomeSeeds(data), [data])
+    const biomeSofteningDistance = useMemo(() => getBiomeSofteningDistance(biomeSeeds), [biomeSeeds])
     const labelViewScale = view.width / Math.max(1, fitViewRef.current.width)
     const labelFontSize = BASE_LABEL_SIZE * labelViewScale * labelZoom
 
@@ -234,12 +221,13 @@ export default function WorldMapNode({ data }: Props) {
         const frame = requestAnimationFrame(() => paintBiomeGradient(
             canvas,
             biomeSeeds,
+            biomeSofteningDistance,
             view,
             viewportSize.width,
             viewportSize.height,
         ))
         return () => cancelAnimationFrame(frame)
-    }, [biomeSeeds, view, viewportSize])
+    }, [biomeSeeds, biomeSofteningDistance, view, viewportSize])
 
     const zoomAt = useCallback((factor: number, localPoint?: Point) => {
         const svg = svgRef.current
