@@ -24,10 +24,10 @@ const MIN_SPAN = 180
 const BIOME_CANVAS_SCALE = 0.3
 const BIOME_SATURATION = 0.62
 const BIOME_BRIGHTNESS = 0.76
-const BASE_LABEL_SIZE = 13
-const MIN_LABEL_ZOOM = 0.7
-const MAX_LABEL_ZOOM = 1.75
-const LABEL_ZOOM_STEP = 0.15
+const BASE_LABEL_SIZE = 15
+const MIN_LABEL_ZOOM = 0.75
+const MAX_LABEL_ZOOM = 2.5
+const LABEL_ZOOM_STEP = 0.25
 
 interface BiomeSeed {
     colorKey: string
@@ -197,8 +197,9 @@ export default function WorldMapNode({ data }: Props) {
     const activeLocation = locationsById.get(hoveredId ?? selectedId ?? '')
     const biomeSeeds = useMemo(() => createBiomeSeeds(data), [data])
     const biomeSofteningDistance = useMemo(() => getBiomeSofteningDistance(biomeSeeds), [biomeSeeds])
-    const labelViewScale = view.width / Math.max(1, fitViewRef.current.width)
-    const labelFontSize = BASE_LABEL_SIZE * labelViewScale * labelZoom
+    const labelFontSize = viewportSize.width > 0
+        ? BASE_LABEL_SIZE * view.width / viewportSize.width * labelZoom
+        : BASE_LABEL_SIZE * labelZoom
 
     useEffect(() => {
         const container = containerRef.current
