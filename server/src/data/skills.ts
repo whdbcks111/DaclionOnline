@@ -13,7 +13,12 @@ import { sendNotificationFiltered } from '../modules/message.js';
 import { isOnlinePlayerAtLocation } from '../modules/playerRegistry.js';
 import { GameTags } from '../../../shared/tags.js';
 import type { TagId } from '../../../shared/tags.js';
-import { spawnProjectileFromData } from '../models/Projectile.js';
+import {
+    calculateProjectileAcceleration,
+    calculateProjectileTravelTime,
+    getProjectileData,
+    spawnProjectileFromData,
+} from '../models/Projectile.js';
 import { getLocation } from '../models/Location.js';
 import { ActionType } from '../models/Action.js';
 import type Entity from '../models/Entity.js';
@@ -105,6 +110,29 @@ function buffFeedback(name: string, duration: number, effects: string): string {
 }
 
 const PROJECTILE_CRITICAL_TEXT = '투사체는 {{icon.critRate}}{{icon.critDmg}} 시전자의 치명타 능력치를 적용합니다.';
+const PROJECTILE_FLIGHT_TEXT = '{{icon.projectileAcceleration}} 현재 도달 시간은 [color=cyan]{{projectileTravelTime}}[/color]입니다.';
+
+function magicSkillAccelerationMultiplier(context: SkillContext): number {
+    const levelBonus = Math.max(0, context.skill.level - 1) * 0.08;
+    const magicForceBonus = Math.min(0.75, Math.max(0, context.owner.attribute.get(AttributeType.MAGIC_FORCE)) * 0.002);
+    return 1 + levelBonus + magicForceBonus;
+}
+
+function projectileTravelTimeTooltip(context: SkillContext, dataId: string, magicSkill: boolean): string {
+    const data = getProjectileData(dataId);
+    if (!data) return '알 수 없음';
+    const multiplier = magicSkill ? magicSkillAccelerationMultiplier(context) : 1;
+    const acceleration = calculateProjectileAcceleration(context.owner, data.accelerationCoefficient, multiplier);
+    const travelTime = calculateProjectileTravelTime(context.owner, data.travelTime, data.accelerationCoefficient, multiplier);
+    const magicDetail = magicSkill
+        ? ` · 스킬 레벨당 가속 +8% · 마법력 1당 가속 +0.2% (마법력 보너스 최대 +75%)`
+        : '';
+    return tooltipValue(
+        travelTime,
+        `기본 ${formatNumber(data.travelTime)}초 ÷ 최종 투사체 가속 ${formatNumber(acceleration)}배${magicDetail}`,
+        '초',
+    );
+}
 
 defineSkill({
     id: 'power_strike',
@@ -762,9 +790,19 @@ function projectileAttack(
 ): void {
     const found = targetOrDeny(context);
     if ('reason' in found) throw new Error(found.reason);
+    const data = getProjectileData(dataId);
+    const damageType = extraOverrides?.damageType ?? data?.damageType;
+    const accelerationMultiplier = extraOverrides?.accelerationMultiplier
+        ?? (damageType === 'magic' ? magicSkillAccelerationMultiplier(context) : 1);
     const projectile = spawnProjectileFromData({
         owner: context.owner, target: found.target, dataId,
-        overrides: { damageMultiplier: multiplier, ...(tags ? { tags } : {}), ...extraOverrides }, onHit,
+        overrides: {
+            damageMultiplier: multiplier,
+            ...(tags ? { tags } : {}),
+            ...extraOverrides,
+            accelerationMultiplier,
+        },
+        onHit,
     });
     if (!projectile) throw new Error('투사체 생성에 실패했습니다.');
     context.owner.commitAttack(false);
@@ -853,10 +891,13 @@ defineSkill({
 
 defineSkill({
     id: 'arcane_arrow', name: '마력 화살', icon: 'skills/career_archer', maxLevel: 5,
-    descriptionTemplate: `탄약을 소모하지 않는 빛 속성 화살을 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT}`,
+    descriptionTemplate: `탄약을 소모하지 않는 빛 속성 화살을 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 12[/color]',
     activationConditionTemplate: activationGuide('활과 살아 있는 현재 대상이 필요합니다.'), activationMessage: '마력 화살!', baseMetadata: null,
-    calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 160, 12) },
+    calculatedFields: {
+        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 160, 12),
+        projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_magic_orb', true),
+    },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
         calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 160, 12) / 100,
@@ -873,10 +914,13 @@ defineSkill({
 
 defineSkill({
     id: 'multishot', name: '다중 사격', icon: 'skills/career_archer', maxLevel: 5,
-    descriptionTemplate: `현재 장소의 공격 가능한 대상 최대 [color=gold]3명[/color]에게 각각 {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 화살을 발사합니다. ${PROJECTILE_CRITICAL_TEXT}`,
+    descriptionTemplate: `현재 장소의 공격 가능한 대상 최대 [color=gold]3명[/color]에게 각각 {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 화살을 발사합니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
     activationConditionTemplate: activationGuide('활과 현재 장소의 공격 가능한 오브젝트가 필요합니다.'), activationMessage: '다중 사격!', baseMetadata: null,
-    calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.ATK, 100, 10) },
+    calculatedFields: {
+        damage: context => attributeDamageTooltip(context, AttributeType.ATK, 100, 10),
+        projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_arrow', false),
+    },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'physical', targetCount: 3,
         calculateDamage: context => context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 100, 10) / 100,
@@ -907,12 +951,13 @@ defineSkill({
 
 defineSkill({
     id: 'stunning_shot', name: '충격 화살', icon: 'skills/career_archer', maxLevel: 5,
-    descriptionTemplate: `{{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 강화 화살을 발사합니다. 적중한 대상은 {{stunDuration}} 동안 기절합니다. ${PROJECTILE_CRITICAL_TEXT}`,
+    descriptionTemplate: `{{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 강화 화살을 발사합니다. 적중한 대상은 {{stunDuration}} 동안 기절합니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 20[/color]',
     activationConditionTemplate: activationGuide('활과 살아 있는 현재 대상이 필요합니다.'), activationMessage: '충격 화살!', baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.ATK, 125, 10),
         stunDuration: context => levelValueTooltip(context, '기절 지속시간', 2, 0.25, '초'),
+        projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_arrow', false),
     },
     balance: {
         role: SkillBalanceRole.CONTROL, damageType: 'physical',
@@ -1043,10 +1088,13 @@ defineSkill({
 
 defineSkill({
     id: 'magic_bolt', name: '마력탄', icon: 'skills/career_mage', maxLevel: 5,
-    descriptionTemplate: `지팡이로 응축한 정신 에너지를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT}`,
+    descriptionTemplate: `지팡이로 응축한 정신 에너지를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 10[/color]',
     activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'), activationMessage: '마력탄!', baseMetadata: null,
-    calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 165, 13) },
+    calculatedFields: {
+        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 165, 13),
+        projectileTravelTime: context => projectileTravelTimeTooltip(context, 'magic_bolt', true),
+    },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
         calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 165, 13) / 100,
@@ -1098,12 +1146,13 @@ defineSkill({
 
 defineSkill({
     id: 'elemental_bind', name: '원소 속박', icon: 'skills/career_mage', maxLevel: 5,
-    descriptionTemplate: `얼음 속성 구체로 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. 적중한 대상은 {{bindDuration}} 동안 공격·스킬·이동·장소 이동을 할 수 없습니다. ${PROJECTILE_CRITICAL_TEXT}`,
+    descriptionTemplate: `얼음 속성 구체로 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. 적중한 대상은 {{bindDuration}} 동안 공격·스킬·이동·장소 이동을 할 수 없습니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 24[/color]',
     activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'), activationMessage: '원소 속박!', baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 115, 10),
         bindDuration: context => levelValueTooltip(context, '속박 지속시간', 1.5, 0.2, '초'),
+        projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_magic_orb', true),
     },
     balance: {
         role: SkillBalanceRole.CONTROL, damageType: 'magic',
@@ -1154,13 +1203,14 @@ for (const elemental of [
     { id: 'lightning_orb', name: '뇌전구', icon: 'affinities/electric', tag: GameTags.PROPERTY_ELECTRIC, stat: 'career:mage_electric_kills', effect: StatusEffectType.PARALYTIC_POISON, effectLabel: '마비독', duration: 5, durationPerLevel: 0.75 },
 ] as const) defineSkill({
     id: elemental.id, name: elemental.name, icon: elemental.icon, maxLevel: 5,
-    descriptionTemplate: `${elemental.name}를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 속성 마법 피해를 입히고 Lv.{{level}} ${elemental.effectLabel} 효과를 {{effectDuration}} 동안 부여합니다. ${PROJECTILE_CRITICAL_TEXT}`,
+    descriptionTemplate: `${elemental.name}를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 속성 마법 피해를 입히고 Lv.{{level}} ${elemental.effectLabel} 효과를 {{effectDuration}} 동안 부여합니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 28[/color]',
     activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'),
     activationMessage: `${elemental.name}!`, baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 185, 15),
         effectDuration: context => levelValueTooltip(context, `${elemental.effectLabel} 지속시간`, elemental.duration, elemental.durationPerLevel, '초'),
+        projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_magic_orb', true),
     },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
@@ -1331,13 +1381,20 @@ for (const technique of eliteTechniques) {
         name: technique.name,
         icon: technique.icon,
         maxLevel: 5,
-        descriptionTemplate: `현재 대상에게 {{icon.${technique.attribute.key}}} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 ${technique.damageType === 'magic' ? '마법' : '물리'} 피해를 입힙니다. ${technique.extraDescription ?? ''}`,
+        descriptionTemplate: `현재 대상에게 {{icon.${technique.attribute.key}}} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 ${technique.damageType === 'magic' ? '마법' : '물리'} 피해를 입힙니다. ${technique.extraDescription ?? ''}${technique.projectile ? ` ${PROJECTILE_FLIGHT_TEXT}` : ''}`,
         costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${technique.manaCost}[/color]`,
         activationConditionTemplate: activationGuide(`${technique.weaponDescription} 살아 있는 현재 대상이 필요합니다.`),
         activationMessage: `${technique.name}!`,
         baseMetadata: null,
         calculatedFields: {
             damage: context => eliteTechniqueDamageTooltip(context, technique),
+            ...(technique.projectile ? {
+                projectileTravelTime: (context: SkillContext) => projectileTravelTimeTooltip(
+                    context,
+                    technique.projectile!,
+                    technique.damageType === 'magic',
+                ),
+            } : {}),
         },
         balance: {
             role: technique.onHit ? SkillBalanceRole.CONTROL : technique.shieldPercent ? SkillBalanceRole.DEFENSE : SkillBalanceRole.DAMAGE,

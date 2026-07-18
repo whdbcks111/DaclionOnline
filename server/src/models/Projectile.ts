@@ -12,6 +12,8 @@ export interface ProjectileData {
     readonly name: string;
     readonly damageType: DamageType;
     readonly travelTime: number;
+    /** owner의 투사체 가속 보너스를 이 투사체에 반영하는 비율. 0이면 고정 비행 시간이다. */
+    readonly accelerationCoefficient: number;
     readonly damageMultiplier: number;
     readonly damageBonus: number;
     readonly tags: readonly TagId[];
@@ -24,6 +26,8 @@ export interface ProjectileDataOverrides {
     damage?: number;
     damageType?: DamageType;
     travelTime?: number;
+    accelerationCoefficient?: number;
+    accelerationMultiplier?: number;
     damageMultiplier?: number;
     damageBonus?: number;
     tags?: TagId[];
@@ -42,6 +46,8 @@ export interface ProjectileOptions {
     damage: number;
     damageType?: DamageType;
     travelTime?: number;
+    accelerationCoefficient?: number;
+    accelerationMultiplier?: number;
     tags?: readonly TagId[];
     baseAttribute?: Partial<AttributeRecord>;
     onHit?: (projectile: Projectile, result: DamageResult) => void;
@@ -62,6 +68,8 @@ export default class Projectile extends Entity {
     override readonly name: string;
     readonly damageAmount: number;
     readonly damageType: DamageType;
+    readonly baseTravelTime: number;
+    readonly projectileAcceleration: number;
 
     private _remainingTravelTime: number;
     private _active = true;
@@ -75,6 +83,19 @@ export default class Projectile extends Entity {
         if (!Number.isFinite(travelTime) || travelTime < 0) {
             throw new Error(`투사체 비행 시간은 0 이상의 유한한 값이어야 합니다: ${travelTime}`);
         }
+        const accelerationCoefficient = options.accelerationCoefficient ?? 1;
+        const accelerationMultiplier = options.accelerationMultiplier ?? 1;
+        if (!Number.isFinite(accelerationCoefficient) || accelerationCoefficient < 0) {
+            throw new Error(`투사체 가속 계수는 0 이상의 유한한 값이어야 합니다: ${accelerationCoefficient}`);
+        }
+        if (!Number.isFinite(accelerationMultiplier) || accelerationMultiplier <= 0) {
+            throw new Error(`투사체 가속 배율은 0보다 큰 유한한 값이어야 합니다: ${accelerationMultiplier}`);
+        }
+        const projectileAcceleration = calculateProjectileAcceleration(
+            options.owner,
+            accelerationCoefficient,
+            accelerationMultiplier,
+        );
 
         super(
             1,
@@ -87,6 +108,7 @@ export default class Projectile extends Entity {
                 critRate: options.owner.attribute.get(AttributeType.CRIT_RATE),
                 critDmg: options.owner.attribute.get(AttributeType.CRIT_DMG),
                 ...options.baseAttribute,
+                projectileAcceleration,
             },
             Equipment.createEmpty(),
             undefined,
@@ -98,7 +120,9 @@ export default class Projectile extends Entity {
         this.name = options.name ?? `${options.owner.name}의 투사체`;
         this.damageAmount = options.damage;
         this.damageType = options.damageType ?? 'physical';
-        this._remainingTravelTime = travelTime;
+        this.baseTravelTime = travelTime;
+        this.projectileAcceleration = projectileAcceleration;
+        this._remainingTravelTime = travelTime / projectileAcceleration;
         this.onHit = options.onHit;
     }
 
@@ -159,6 +183,30 @@ function isFiniteNumber(value: unknown): value is number {
     return typeof value === 'number' && Number.isFinite(value);
 }
 
+function isFinitePositive(value: unknown): value is number {
+    return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+/** owner 능력치와 투사체별 반영 계수로 실제 가속 배율을 계산한다. */
+export function calculateProjectileAcceleration(
+    owner: Entity,
+    coefficient = 1,
+    multiplier = 1,
+): number {
+    const ownerAcceleration = Math.max(0, owner.attribute.get(AttributeType.PROJECTILE_ACCELERATION));
+    return Math.max(0.1, (1 + (ownerAcceleration - 1) * coefficient) * multiplier);
+}
+
+/** UI 설명과 런타임이 공유하는 실제 투사체 비행 시간 계산 API. */
+export function calculateProjectileTravelTime(
+    owner: Entity,
+    baseTravelTime: number,
+    coefficient = 1,
+    multiplier = 1,
+): number {
+    return Math.max(0, baseTravelTime) / calculateProjectileAcceleration(owner, coefficient, multiplier);
+}
+
 function parseAttributeOverrides(value: unknown): Partial<AttributeRecord> | undefined {
     if (value === undefined) return undefined;
     if (!isRecord(value)) return undefined;
@@ -191,10 +239,14 @@ export function parseProjectileReference(value: unknown): ProjectileReference | 
         if (!isDamageType(raw.damageType)) return undefined;
         overrides.damageType = raw.damageType;
     }
-    for (const key of ['travelTime', 'damageMultiplier'] as const) {
+    for (const key of ['travelTime', 'damageMultiplier', 'accelerationCoefficient'] as const) {
         if (raw[key] === undefined) continue;
         if (!isFiniteNonNegative(raw[key])) return undefined;
         overrides[key] = raw[key];
+    }
+    if (raw.accelerationMultiplier !== undefined) {
+        if (!isFinitePositive(raw.accelerationMultiplier)) return undefined;
+        overrides.accelerationMultiplier = raw.accelerationMultiplier;
     }
     if (raw.damageBonus !== undefined) {
         if (!isFiniteNumber(raw.damageBonus)) return undefined;
@@ -223,6 +275,7 @@ export function defineProjectileData(data: ProjectileData): void {
     if (!isDamageType(data.damageType)) throw new Error(`잘못된 투사체 피해 타입: ${data.damageType}`);
     for (const [key, value] of Object.entries({
         travelTime: data.travelTime,
+        accelerationCoefficient: data.accelerationCoefficient,
         damageMultiplier: data.damageMultiplier,
     })) {
         if (!isFiniteNonNegative(value)) throw new Error(`잘못된 투사체 ${key}: ${value}`);
@@ -271,6 +324,8 @@ export function spawnProjectileFromData(options: SpawnProjectileDataOptions): Pr
         damage,
         damageType,
         travelTime: overrides.travelTime ?? data.travelTime,
+        accelerationCoefficient: overrides.accelerationCoefficient ?? data.accelerationCoefficient,
+        accelerationMultiplier: overrides.accelerationMultiplier,
         tags: overrides.tags ?? data.tags,
         baseAttribute: {
             ...data.baseAttribute,

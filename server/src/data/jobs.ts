@@ -12,8 +12,8 @@ const firstJobs = [
         id: 'career:archer', name: '궁수', icon: 'jobs/archer',
         description: '투사체·속성 화살·제어기와 순간적인 확정 회피에 특화된 원거리 직업.',
         skills: ['archer_hawkeye', 'arcane_arrow', 'multishot', 'stunning_shot', 'wind_evasion'],
-        main: [{ attribute: 'speed', op: 'multiply', value: 1.12 }, { attribute: 'critRate', op: 'add', value: 0.05 }, { attribute: 'atk', op: 'multiply', value: 1.05 }],
-        sub: [{ attribute: 'speed', op: 'multiply', value: 1.06 }, { attribute: 'critRate', op: 'add', value: 0.02 }],
+        main: [{ attribute: 'speed', op: 'multiply', value: 1.12 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.15 }, { attribute: 'critRate', op: 'add', value: 0.05 }, { attribute: 'atk', op: 'multiply', value: 1.05 }],
+        sub: [{ attribute: 'speed', op: 'multiply', value: 1.06 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.07 }, { attribute: 'critRate', op: 'add', value: 0.02 }],
     },
     {
         id: 'career:assassin', name: '암살자', icon: 'jobs/assassin',
@@ -26,8 +26,8 @@ const firstJobs = [
         id: 'career:mage', name: '마법사', icon: 'jobs/mage',
         description: '지팡이와 정신력을 사용해 원거리 속성 마법·보호 마법·제어기를 다루는 직업.',
         skills: ['mage_mana_cycle', 'magic_bolt', 'mana_barrier', 'elemental_bind', 'elemental_insight'],
-        main: [{ attribute: 'maxMentality', op: 'multiply', value: 1.2 }, { attribute: 'magicForce', op: 'multiply', value: 1.15 }, { attribute: 'maxLife', op: 'multiply', value: 0.9 }],
-        sub: [{ attribute: 'maxMentality', op: 'multiply', value: 1.1 }, { attribute: 'magicForce', op: 'multiply', value: 1.06 }],
+        main: [{ attribute: 'maxMentality', op: 'multiply', value: 1.2 }, { attribute: 'magicForce', op: 'multiply', value: 1.15 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.12 }, { attribute: 'maxLife', op: 'multiply', value: 0.9 }],
+        sub: [{ attribute: 'maxMentality', op: 'multiply', value: 1.1 }, { attribute: 'magicForce', op: 'multiply', value: 1.06 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.06 }],
     },
 ] as const;
 

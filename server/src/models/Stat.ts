@@ -23,8 +23,9 @@ export class StatType {
         (entity, points, source) => {
             entity.attribute.addModifier({ attribute: 'speed', op: 'add', value: 0.05 * points, source })
             entity.attribute.addModifier({ attribute: 'attackSpeed', op: 'add', value: 0.01 * points, source })
+            entity.attribute.addModifier({ attribute: 'projectileAcceleration', op: 'add', value: 0.003 * points, source })
         },
-        p => `민첩 1 → 이동속도 +0.05, 공격속도 +0.01\n현재 민첩 ${p}: 이동속도 +${(0.05 * p).toFixed(2)}, 공격속도 +${(0.01 * p).toFixed(2)}`
+        p => `민첩 1 → 이동속도 +0.05, 공격속도 +0.01, 투사체 가속 +0.003\n현재 민첩 ${p}: 이동속도 +${(0.05 * p).toFixed(2)}, 공격속도 +${(0.01 * p).toFixed(2)}, 투사체 가속 +${(0.003 * p).toFixed(3)}`
     )
 
     static readonly VITALITY = new StatType('vitality', '체력',
@@ -47,8 +48,9 @@ export class StatType {
         (entity, points, source) => {
             entity.attribute.addModifier({ attribute: 'maxMentality', op: 'add', value: 5 * points, source })
             entity.attribute.addModifier({ attribute: 'magicForce', op: 'add', value: 2 * points, source })
+            entity.attribute.addModifier({ attribute: 'projectileAcceleration', op: 'add', value: 0.002 * points, source })
         },
-        p => `정신력 1 → 최대 정신력 +5, 마법력 +2\n현재 정신력 ${p}: 최대 정신력 +${5 * p}, 마법력 +${2 * p}`
+        p => `정신력 1 → 최대 정신력 +5, 마법력 +2, 투사체 가속 +0.002\n현재 정신력 ${p}: 최대 정신력 +${5 * p}, 마법력 +${2 * p}, 투사체 가속 +${(0.002 * p).toFixed(3)}`
     )
 
     readonly key: StatKey

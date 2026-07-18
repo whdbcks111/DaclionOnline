@@ -114,6 +114,13 @@ export class AttributeType {
         undefined, 
         v => `공격 속도가 ${v.toFixed(2)}배입니다.`
     )
+    static readonly PROJECTILE_ACCELERATION = new AttributeType(
+        'projectileAcceleration',
+        '투사체 가속',
+        1,
+        v => `${v.toFixed(2)}배`,
+        v => `투사체 비행 시간을 기본 시간의 1/${v.toFixed(2)}로 단축합니다.`
+    )
     static readonly CRIT_RATE    = new AttributeType(
         'critRate',     
         '치명타율',    
@@ -208,7 +215,7 @@ export type AttributeKey =
     | 'atk' | 'magicForce'
     | 'def' | 'magicDef'
     | 'armorPen' | 'magicPen'
-    | 'speed' | 'attackSpeed'
+    | 'speed' | 'attackSpeed' | 'projectileAcceleration'
     | 'critRate' | 'critDmg'
     | 'luck' | 'fishingBiteSpeed' | 'fishingNetSize' | 'fishingNetSpeed' | 'fishingGaugeStart'
 

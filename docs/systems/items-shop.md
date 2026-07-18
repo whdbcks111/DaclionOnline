@@ -96,7 +96,7 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 }
 ```
 
-`overrides`는 `name`, 절대 `damage`, `damageType`, `travelTime`, `damageMultiplier`, `damageBonus`, `tags`, `attributeOverrides`를 지원한다. 값은 `parseProjectileReference`가 검증하며 투사체 템플릿은 `data/projectiles.ts`에서 `defineProjectileData`로 등록한다. 피해량을 직접 지정하지 않으면 물리는 owner `atk`, 마법은 `magicForce`에 multiplier와 bonus를 적용한다.
+`overrides`는 `name`, 절대 `damage`, `damageType`, `travelTime`, `accelerationCoefficient`, `accelerationMultiplier`, `damageMultiplier`, `damageBonus`, `tags`, `attributeOverrides`를 지원한다. 값은 `parseProjectileReference`가 검증하며 투사체 템플릿은 `data/projectiles.ts`에서 `defineProjectileData`로 등록한다. 피해량을 직접 지정하지 않으면 물리는 owner `atk`, 마법은 `magicForce`에 multiplier와 bonus를 적용한다. 실제 비행 시간은 owner의 `projectileAcceleration` 보너스를 템플릿 계수만큼 반영하며 활·지팡이 modifier도 같은 능력치 API를 사용한다.
 
 ## Equipment API와 규칙
 

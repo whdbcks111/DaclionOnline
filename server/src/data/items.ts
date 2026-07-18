@@ -495,7 +495,7 @@ defineItem({
 defineItem({
     id: 'light_bow',
     name: '가벼운 활',
-    description: '가벼운 화살을 소모해 원거리 기본 공격을 한다. 화살이 없으면 근접 공격한다.',
+    description: '가벼운 화살을 소모해 원거리 기본 공격을 한다. 투사체 가속이 5% 증가하며 화살이 없으면 근접 공격한다.',
     image: 'items/light_bow',
     category: '활',
     weight: 1.8,
@@ -509,6 +509,7 @@ defineItem({
     equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 2, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.05, source: '' },
     ],
     baseDurability: 80,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_WOOD],
@@ -541,7 +542,7 @@ defineItem({
 defineItem({
     id: 'apprentice_staff',
     name: '견습 마법 지팡이',
-    description: '정신 에너지를 모아 마법 투사체를 안정적으로 발사하는 지팡이.',
+    description: '정신 에너지를 모아 마법 투사체를 안정적으로 발사한다. 투사체 가속이 4% 증가한다.',
     image: 'items/apprentice_staff',
     category: '지팡이',
     weight: 2.2,
@@ -553,7 +554,10 @@ defineItem({
     },
     onUse: null,
     equipSlot: 'mainHand',
-    modifiers: [{ attribute: 'magicForce', op: 'add', value: 8, source: '' }],
+    modifiers: [
+        { attribute: 'magicForce', op: 'add', value: 8, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.04, source: '' },
+    ],
     baseDurability: 100,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_WOOD],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
@@ -584,7 +588,7 @@ defineItem({
 defineItem({
     id: 'stormstring_bow',
     name: '뇌운 시위',
-    description: '팽팽한 전도성 시위가 화살의 속도와 치명적인 궤적을 높이는 장궁.',
+    description: '팽팽한 전도성 시위가 화살의 속도와 치명적인 궤적을 높여 투사체 가속이 18% 증가하는 장궁.',
     // TODO(icons): 전용 아이콘 제작 전까지 가벼운 활 아이콘을 사용한다.
     image: 'items/light_bow',
     category: '활',
@@ -600,6 +604,7 @@ defineItem({
     modifiers: [
         { attribute: 'atk', op: 'add', value: 19, source: '' },
         { attribute: 'critRate', op: 'add', value: 0.04, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.18, source: '' },
     ],
     baseDurability: 210,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.PROPERTY_ELECTRIC, GameTags.PROPERTY_METAL],
@@ -640,7 +645,7 @@ defineItem({
 defineItem({
     id: 'starwood_staff',
     name: '성휘목 지팡이',
-    description: '빛을 머금은 고목 심재로 만든 지팡이. 마법력과 정신력 순환을 강화한다.',
+    description: '빛을 머금은 고목 심재로 만든 지팡이. 마법력과 정신력 순환, 투사체 가속을 12% 강화한다.',
     // TODO(icons): 전용 아이콘 제작 전까지 견습 지팡이 아이콘을 사용한다.
     image: 'items/apprentice_staff',
     category: '지팡이',
@@ -656,6 +661,7 @@ defineItem({
     modifiers: [
         { attribute: 'magicForce', op: 'add', value: 28, source: '' },
         { attribute: 'mentalityRegen', op: 'add', value: 2, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.12, source: '' },
     ],
     baseDurability: 230,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY],
