@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Dialog from './Dialog'
 import styles from './Dialog.module.scss'
+import SearchableSelect from './SearchableSelect'
 
 export interface FormDialogOption {
   value: string
@@ -61,6 +62,11 @@ export default function FormDialog({ open, title, description, fields = [], subm
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
+    const missing = fields.find(field => field.required && (values[field.name] === '' || values[field.name] == null))
+    if (missing) {
+      setError(`${missing.label} 값을 선택하거나 입력해주세요.`)
+      return
+    }
     setSubmitting(true)
     setError('')
     try {
@@ -95,14 +101,13 @@ export default function FormDialog({ open, title, description, fields = [], subm
           <label key={field.name} className={field.type === 'checkbox' ? styles.checkboxField : styles.field}>
             {field.type !== 'checkbox' && <span>{field.label}{field.required && <b aria-hidden="true"> *</b>}</span>}
             {field.type === 'select' ? (
-              <select
+              <SearchableSelect
                 value={String(values[field.name] ?? '')}
-                required={field.required}
-                onChange={event => setValues(current => ({ ...current, [field.name]: event.target.value }))}
-              >
-                {!field.required && <option value="">선택 안 함</option>}
-                {field.options?.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
-              </select>
+                options={field.options ?? []}
+                placeholder={field.placeholder}
+                allowEmpty={!field.required}
+                onChange={value => setValues(current => ({ ...current, [field.name]: value }))}
+              />
             ) : field.type === 'textarea' ? (
               <textarea
                 value={String(values[field.name] ?? '')}

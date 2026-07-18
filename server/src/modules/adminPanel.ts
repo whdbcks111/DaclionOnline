@@ -27,6 +27,7 @@ import { getSession } from './login.js';
 import { getIO } from './socket.js';
 import { broadcastBotMessageAll, broadcastNotification, sendNotificationToUser } from './message.js';
 import logger from '../utils/logger.js';
+import { getMiniGamePresetSummaries, startMiniGamePreset } from './minigamePresets.js';
 
 const ADMIN_PERMISSION = 10;
 const VITAL_TYPES = Object.freeze({
@@ -61,6 +62,7 @@ export function getAdminPanelBootstrap(): AdminPanelBootstrapData {
         resources: getAllResourceData().map(resource => option(resource.id, resource.name, `Lv.${resource.level}`)),
         statusEffects: StatusEffectType.values().map(effect => option(effect.id, effect.label, `최대 Lv.${effect.maxLevel}`)),
         stats: StatType.values().map(stat => option(stat.key, stat.label)),
+        miniGamePresets: getMiniGamePresetSummaries().map(preset => option(preset.id, preset.label, preset.description)),
     };
 }
 
@@ -210,6 +212,15 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
     const values = valuesOf(request);
     const player = await targetPlayer(request);
     switch (request.action) {
+        case 'start_minigame': {
+            const online = getPlayerByUserId(player.userId);
+            if (!online) throw new Error('미니게임은 온라인 플레이어에게만 실행할 수 있습니다.');
+            const presetId = stringValue(values, 'presetId');
+            const preset = getMiniGamePresetSummaries().find(candidate => candidate.id === presetId);
+            if (!preset) throw new Error('미니게임 프리셋을 찾을 수 없습니다.');
+            if (!startMiniGamePreset(online, presetId)) throw new Error('플레이어가 이미 미니게임을 진행 중입니다.');
+            return `${online.name}에게 ${preset.label} 미니게임을 실행했습니다.`;
+        }
         case 'notify_player': {
             const online = getPlayerByUserId(player.userId);
             if (!online) throw new Error('알림은 온라인 플레이어에게만 발송할 수 있습니다.');

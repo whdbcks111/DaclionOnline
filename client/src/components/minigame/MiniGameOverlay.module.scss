@@ -39,6 +39,16 @@
 }
 
 .rarity { font-size: $font-size-sm; font-weight: 900; }
+.timer {
+  padding: $spacing-xs $spacing-sm;
+  color: $color-text;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  text-align: center;
+}
 .gauge {
   position: relative;
   height: clamp(1.1rem, 3vh, 1.5rem);
@@ -90,6 +100,32 @@
   border-color: $color-primary;
 }
 .fish { position: absolute; z-index: 2; width: clamp(2rem, 9%, 3.4rem); aspect-ratio: 1; transform: translate(-50%, -50%); object-fit: contain; pointer-events: none; user-select: none; }
+.dodgeBoard { background: $color-bg-secondary; }
+.hazard {
+  position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.bomb { background: color-mix(in srgb, $color-danger 18%, transparent); border: .12rem dashed $color-danger; border-radius: 50%; }
+.laser { background: color-mix(in srgb, $color-danger 16%, transparent); border: .12rem dashed $color-danger; }
+.hazardActive { background: color-mix(in srgb, $color-danger 75%, transparent); border-style: solid; }
+.playerToken {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  color: $color-text-inverse;
+  background: $color-primary;
+  border: .12rem solid $color-bg;
+  border-radius: 50%;
+  font-size: clamp(.65rem, 2vw, .9rem);
+  font-weight: 900;
+  pointer-events: none;
+}
 
 .controls {
   display: flex;

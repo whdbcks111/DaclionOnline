@@ -4,7 +4,7 @@
 
 - `types.ts`: 태그, `monster | resource` 통합 오브젝트·NPC ID·지도 아이콘·대표색이 포함된 LocationData, 플레이어별 `WorldMapData`와 `worldMap` ChatNode, 타입색 `ShieldBarSegment`와 `health`·원본 표시 치수를 선택적으로 갖는 재사용 `image`·제목 선택형 `divider` ChatNode, 플레이어 레벨·보호막·상태효과·표시 가능한 스킬 쿨다운 및 파티원 HP/MP/보호막 HUD DTO, 이미지 메시지를 포함한 정보 공개 모드·메시지·채널·온라인 mention completion Socket.io 양방향 이벤트 map의 단일 기준. `AdjacentLocationData`는 플레이어 기준 `visible | locked` 상태와 공개 잠금 사유를 선택적으로 포함한다.
 - `commandInput.ts`: 슬래시 명령과 슬래시 없는 별칭 입력을 같은 방식으로 첫 토큰/나머지 인자로 분리하는 공용 parser.
-- `minigames.ts`: 미니게임 세션·입력 trace DTO, 20ms 입력 병합·2,048개 상한·불변 전송 snapshot API와 낚시 물고기 경로/채집 영역/게이지를 서버와 클라이언트가 동일하게 재생하는 결정론 시뮬레이터.
+- `minigames.ts`: 종류별 미니게임 세션·입력 trace DTO, 20ms 입력 병합·2,048개 상한·불변 전송 snapshot API와 낚시 포획 및 폭탄/레이저 위험 회피를 서버와 클라이언트가 동일하게 재생하는 결정론 시뮬레이터.
 - `tags.ts`: `namespace:path` 검증, 검·도끼·활·단검·지팡이 무기 분류, 은신, 투사체/탄약/광맥/보물/채굴·낚시 도구/미끼·물고기·물고기 희귀도/스킬북, 낚시 가능 지역·속성 공용 태그 ID와 raw Set을 숨기는 `TagCollection/TagReadable/TagQuery` API.
 - `package.json`: 서버 빌드와 브라우저 번들에서 공용 런타임 모듈을 ESM으로 일관되게 해석한다.
 - `templates/`: 서버 메일에서 읽는 HTML 템플릿.

@@ -6,8 +6,10 @@ import {
     MAX_MINIGAME_INPUT_SAMPLES,
     MINIGAME_INPUT_SAMPLE_INTERVAL_MS,
     simulateFishingCapture,
+    simulateHazardDodge,
     snapshotMiniGameInputs,
     type FishingCaptureConfig,
+    type HazardDodgeConfig,
 } from '../../../shared/minigames.js';
 import { getItemData } from './Item.js';
 import {
@@ -46,6 +48,27 @@ test('낚시 trace 시뮬레이터는 채집 유지와 이탈을 서버에서 �
     const escaped = simulateFishingCapture({ ...baseConfig, netWidth: 1, netHeight: 1 }, input, 3_000);
     assert.equal(escaped.finished, true);
     assert.equal(escaped.success, false);
+});
+
+test('위험 회피 미니게임은 같은 seed와 입력을 서버에서 결정론적으로 재현한다', () => {
+    const config: HazardDodgeConfig = {
+        seed: 7788,
+        durationMs: 5_000,
+        mode: 'mixed',
+        difficulty: 4,
+        playerLabel: 'T',
+        playerSpeed: 18,
+        playerSize: 6,
+        telegraphMs: 700,
+    };
+    const inputs = [{ at: 0, x: 1, y: 0 }, { at: 900, x: 0, y: -1 }];
+    assert.deepEqual(
+        simulateHazardDodge(config, inputs, 2_000),
+        simulateHazardDodge(config, inputs, 2_000),
+    );
+    const safeShortGame = simulateHazardDodge({ ...config, durationMs: 200 }, [{ at: 0, x: 0, y: 0 }], 200);
+    assert.equal(safeShortGame.finished, true);
+    assert.equal(safeShortGame.success, true);
 });
 
 test('연속 조작 trace는 20ms 단위로 합쳐지고 전송 시 불변 snapshot이 된다', () => {

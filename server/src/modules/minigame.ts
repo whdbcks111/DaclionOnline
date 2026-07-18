@@ -1,5 +1,7 @@
 import type {
+    MiniGameConfigMap,
     MiniGameCancelledData,
+    MiniGameInputSample,
     MiniGameResolvedData,
     MiniGameResultRequest,
     MiniGameStartData,
@@ -14,10 +16,10 @@ export interface MiniGameValidationResult {
     message?: string
 }
 
-interface StartMiniGameOptions {
+export interface StartMiniGameOptions<T extends MiniGameType = MiniGameType> {
     userId: number
-    type: MiniGameType
-    config: MiniGameStartData['config']
+    type: T
+    config: MiniGameConfigMap[T]
     expiresInMs: number
     validate: (request: MiniGameResultRequest) => MiniGameValidationResult
     onResolved: (result: MiniGameValidationResult) => void | Promise<void>
@@ -48,7 +50,30 @@ export function hasActiveMiniGame(userId: number): boolean {
     return activeByUser.has(userId);
 }
 
-export function startMiniGame(options: StartMiniGameOptions): MiniGameStartData | null {
+export function normalizeMiniGameInputs(request: MiniGameResultRequest): MiniGameInputSample[] {
+    const elapsedMs = Math.max(0, request.elapsedMs);
+    const normalized = (Array.isArray(request.inputs) ? request.inputs : [])
+        .filter((input): input is MiniGameInputSample => Boolean(input)
+            && typeof input === 'object'
+            && Number.isFinite(input.at)
+            && Number.isFinite(input.x)
+            && Number.isFinite(input.y))
+        .map(input => ({
+            at: Math.max(0, Math.min(elapsedMs, input.at)),
+            x: Math.max(-1, Math.min(1, input.x)),
+            y: Math.max(-1, Math.min(1, input.y)),
+        }))
+        .sort((left, right) => left.at - right.at);
+    if (normalized.length === 0) return [{ at: 0, x: 0, y: 0 }];
+    const maximum = 2_048;
+    if (normalized.length <= maximum) return normalized;
+    const last = normalized.length - 1;
+    return Array.from({ length: maximum }, (_, index) => (
+        normalized[Math.round(index * last / (maximum - 1))]
+    ));
+}
+
+export function startMiniGame<T extends MiniGameType>(options: StartMiniGameOptions<T>): MiniGameStartData | null {
     if (activeByUser.has(options.userId)) return null;
     const startedAt = Date.now();
     const sessionId = randomHex(12);
@@ -63,7 +88,7 @@ export function startMiniGame(options: StartMiniGameOptions): MiniGameStartData 
         timeout: setTimeout(() => cancelMiniGame(options.userId, '미니게임 제한 시간이 지났습니다.'), options.expiresInMs + 1_000),
     };
     activeByUser.set(options.userId, active);
-    const payload: MiniGameStartData = { sessionId, token, type: options.type, expiresAt, config: options.config };
+    const payload = { sessionId, token, type: options.type, expiresAt, config: options.config } as MiniGameStartData;
     emitToUser(options.userId, 'miniGameStart', payload);
     return payload;
 }

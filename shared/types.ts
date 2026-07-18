@@ -316,6 +316,7 @@ export interface AdminPanelBootstrapData {
     resources: AdminOptionData[]
     statusEffects: AdminOptionData[]
     stats: AdminOptionData[]
+    miniGamePresets: AdminOptionData[]
 }
 
 export interface AdminPlayerListItem {
@@ -373,6 +374,7 @@ export type AdminPanelAction =
     | 'set_level' | 'set_stat_points' | 'set_stat' | 'set_gold' | 'set_vital'
     | 'unlock_all_locations' | 'unlock_all_crafting_recipes'
     | 'apply_status_effect' | 'clear_status_effects' | 'revive_player'
+    | 'start_minigame'
     | 'spawn_monster' | 'respawn_monsters' | 'reset_resource_cooldown'
 
 export interface AdminPanelActionRequest {

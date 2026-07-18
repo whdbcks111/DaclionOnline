@@ -1,5 +1,6 @@
-export type MiniGameType = 'fishing_capture'
+export type MiniGameType = 'fishing_capture' | 'hazard_dodge'
 export type FishingCaptureShape = 'circle' | 'square' | 'rectangle'
+export type HazardDodgeMode = 'bombs' | 'lasers' | 'mixed'
 
 export interface MiniGameInputSample {
     /** 미니게임 시작 후 경과 시간(ms) */
@@ -56,13 +57,34 @@ export interface FishingCaptureConfig {
     drainPerSecond: number
 }
 
-export interface MiniGameStartData {
+export interface HazardDodgeConfig {
+    seed: number
+    durationMs: number
+    mode: HazardDodgeMode
+    difficulty: number
+    playerLabel: string
+    /** 보드 너비 대비 초당 이동 비율. 실제 이동속도 능력치에서 계산한다. */
+    playerSpeed: number
+    playerSize: number
+    telegraphMs: number
+}
+
+export interface MiniGameConfigMap {
+    fishing_capture: FishingCaptureConfig
+    hazard_dodge: HazardDodgeConfig
+}
+
+interface MiniGameStartBase<T extends MiniGameType> {
     sessionId: string
     token: string
-    type: MiniGameType
+    type: T
     expiresAt: number
-    config: FishingCaptureConfig
+    config: MiniGameConfigMap[T]
 }
+
+export type MiniGameStartData = {
+    [T in MiniGameType]: MiniGameStartBase<T>
+}[MiniGameType]
 
 export interface MiniGameResultRequest {
     sessionId: string
@@ -89,6 +111,26 @@ export interface FishingSimulationState {
     fishX: number
     fishY: number
     caught: boolean
+    finished: boolean
+    success: boolean
+}
+
+export interface HazardDodgeHazard {
+    id: string
+    type: 'bomb' | 'laser'
+    x: number
+    y: number
+    width: number
+    height: number
+    active: boolean
+    progress: number
+}
+
+export interface HazardDodgeSimulationState {
+    playerX: number
+    playerY: number
+    hazards: HazardDodgeHazard[]
+    hit: boolean
     finished: boolean
     success: boolean
 }
@@ -173,4 +215,119 @@ export function simulateFishingCapture(
         finished: timedOut,
         success: timedOut && gauge >= 1,
     }
+}
+
+function randomUnit(seed: number, index: number, salt: number): number {
+    let value = (seed ^ Math.imul(index + 1, 0x45d9f3b) ^ Math.imul(salt + 1, 0x119de1f3)) | 0
+    value = Math.imul(value ^ (value >>> 16), 0x45d9f3b)
+    value = Math.imul(value ^ (value >>> 16), 0x45d9f3b)
+    return ((value ^ (value >>> 16)) >>> 0) / 0x1_0000_0000
+}
+
+function hazardInterval(config: HazardDodgeConfig): number {
+    return clamp(1_100 - clamp(config.difficulty, 1, 6) * 105, 470, 995)
+}
+
+/** 현재 시각에 표시할 예고/활성 위험 구역을 seed로 재생성한다. */
+export function getHazardDodgeHazards(config: HazardDodgeConfig, elapsedMs: number): HazardDodgeHazard[] {
+    const interval = hazardInterval(config)
+    const telegraphMs = clamp(config.telegraphMs, 300, 1_800)
+    const firstAt = 250
+    const maximum = Math.ceil(config.durationMs / interval) + 2
+    const hazards: HazardDodgeHazard[] = []
+    for (let index = 0; index < maximum; index++) {
+        const startAt = firstAt + index * interval
+        const type = config.mode === 'mixed'
+            ? (randomUnit(config.seed, index, 0) < 0.52 ? 'bomb' : 'laser')
+            : config.mode === 'bombs' ? 'bomb' : 'laser'
+        const activeMs = type === 'bomb' ? 280 : 380
+        const activeAt = startAt + telegraphMs
+        const endAt = activeAt + activeMs
+        if (elapsedMs < startAt || elapsedMs > endAt) continue
+        const difficulty = clamp(config.difficulty, 1, 6)
+        const active = elapsedMs >= activeAt
+        const progress = active
+            ? clamp((elapsedMs - activeAt) / activeMs, 0, 1)
+            : clamp((elapsedMs - startAt) / telegraphMs, 0, 1)
+        if (type === 'bomb') {
+            const size = 14 + difficulty * 2.2
+            hazards.push({
+                id: `bomb:${index}`,
+                type,
+                x: 10 + randomUnit(config.seed, index, 1) * 80,
+                y: 10 + randomUnit(config.seed, index, 2) * 80,
+                width: size,
+                height: size,
+                active,
+                progress,
+            })
+        } else {
+            const vertical = randomUnit(config.seed, index, 3) < 0.5
+            const thickness = 6 + difficulty * 1.2
+            hazards.push({
+                id: `laser:${index}`,
+                type,
+                x: vertical ? 8 + randomUnit(config.seed, index, 4) * 84 : 50,
+                y: vertical ? 50 : 8 + randomUnit(config.seed, index, 5) * 84,
+                width: vertical ? thickness : 100,
+                height: vertical ? 100 : thickness,
+                active,
+                progress,
+            })
+        }
+    }
+    return hazards
+}
+
+function collidesWithHazard(
+    config: HazardDodgeConfig,
+    playerX: number,
+    playerY: number,
+    hazard: HazardDodgeHazard,
+): boolean {
+    if (!hazard.active) return false
+    const radius = Math.max(1, config.playerSize / 2)
+    if (hazard.type === 'bomb') {
+        return Math.hypot(playerX - hazard.x, playerY - hazard.y) <= radius + hazard.width / 2
+    }
+    return Math.abs(playerX - hazard.x) <= radius + hazard.width / 2
+        && Math.abs(playerY - hazard.y) <= radius + hazard.height / 2
+}
+
+/** 입력 trace로 위험 회피를 재생한다. 피격 여부와 성공 판정은 서버도 같은 함수로 계산한다. */
+export function simulateHazardDodge(
+    config: HazardDodgeConfig,
+    inputs: readonly MiniGameInputSample[],
+    elapsedMs: number,
+): HazardDodgeSimulationState {
+    const end = clamp(elapsedMs, 0, config.durationMs)
+    const playerRadius = Math.max(1, config.playerSize / 2)
+    let playerX = 50
+    let playerY = 50
+    let inputIndex = 0
+    let axisX = 0
+    let axisY = 0
+    const stepMs = MINIGAME_INPUT_SAMPLE_INTERVAL_MS
+
+    for (let at = 0; at < end; at += stepMs) {
+        while (inputIndex < inputs.length && inputs[inputIndex].at <= at) {
+            axisX = inputs[inputIndex].x
+            axisY = inputs[inputIndex].y
+            inputIndex++
+        }
+        const magnitude = Math.hypot(axisX, axisY)
+        const normalizedX = magnitude > 1 ? axisX / magnitude : axisX
+        const normalizedY = magnitude > 1 ? axisY / magnitude : axisY
+        const dt = Math.min(stepMs, end - at) / 1000
+        playerX = clamp(playerX + normalizedX * config.playerSpeed * dt, playerRadius, 100 - playerRadius)
+        playerY = clamp(playerY + normalizedY * config.playerSpeed * dt, playerRadius, 100 - playerRadius)
+        const hazards = getHazardDodgeHazards(config, at + dt * 1000)
+        if (hazards.some(hazard => collidesWithHazard(config, playerX, playerY, hazard))) {
+            return { playerX, playerY, hazards, hit: true, finished: true, success: false }
+        }
+    }
+
+    const hazards = getHazardDodgeHazards(config, end)
+    const finished = elapsedMs >= config.durationMs
+    return { playerX, playerY, hazards, hit: false, finished, success: finished }
 }

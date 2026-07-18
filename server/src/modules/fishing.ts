@@ -5,15 +5,12 @@ import { getLocation } from '../models/Location.js';
 import type Player from '../models/Player.js';
 import { GameTags } from '../../../shared/tags.js';
 import {
-    MAX_MINIGAME_INPUT_SAMPLES,
     simulateFishingCapture,
     type FishingCaptureConfig,
     type FishingCaptureShape,
-    type MiniGameInputSample,
-    type MiniGameResultRequest,
 } from '../../../shared/minigames.js';
 import { sendBotMessageToUser, sendNotificationToUser } from './message.js';
-import { cancelMiniGame, hasActiveMiniGame, startMiniGame } from './minigame.js';
+import { cancelMiniGame, hasActiveMiniGame, normalizeMiniGameInputs, startMiniGame } from './minigame.js';
 import { getPlayerByUserId } from './player.js';
 
 interface FishingState {
@@ -38,29 +35,6 @@ const FISHING_BITE_WARNING_MS = 1_000;
 
 function normalizeShape(value: unknown): FishingCaptureShape {
     return value === 'circle' || value === 'rectangle' || value === 'square' ? value : 'circle';
-}
-
-function normalizeInputs(request: MiniGameResultRequest): MiniGameInputSample[] {
-    const elapsedMs = Math.max(0, request.elapsedMs);
-    const normalized = (Array.isArray(request.inputs) ? request.inputs : [])
-        .filter((input): input is MiniGameInputSample => Boolean(input)
-            && typeof input === 'object'
-            && Number.isFinite(input.at)
-            && Number.isFinite(input.x)
-            && Number.isFinite(input.y))
-        .map(input => ({
-            at: Math.max(0, Math.min(elapsedMs, input.at)),
-            x: Math.max(-1, Math.min(1, input.x)),
-            y: Math.max(-1, Math.min(1, input.y)),
-        }))
-        .sort((left, right) => left.at - right.at);
-    if (normalized.length === 0) return [{ at: 0, x: 0, y: 0 }];
-    if (normalized.length <= MAX_MINIGAME_INPUT_SAMPLES) return normalized;
-
-    const last = normalized.length - 1;
-    return Array.from({ length: MAX_MINIGAME_INPUT_SAMPLES }, (_, index) => (
-        normalized[Math.round(index * last / (MAX_MINIGAME_INPUT_SAMPLES - 1))]
-    ));
 }
 
 function finishFishingReward(player: Player, rarity: FishRarity): string {
@@ -166,7 +140,7 @@ function beginFishingMiniGame(userId: number, locationId: string, rarity: FishRa
             if (!current || current.isDead || current.locationId !== locationId) {
                 return { success: false, message: '낚시 도중 자리를 벗어났습니다.' };
             }
-            const simulation = simulateFishingCapture(config, normalizeInputs(request), request.elapsedMs);
+            const simulation = simulateFishingCapture(config, normalizeMiniGameInputs(request), request.elapsedMs);
             return simulation.finished && simulation.success
                 ? { success: true }
                 : { success: false, message: '물고기가 채집 영역에서 빠져나갔습니다.' };

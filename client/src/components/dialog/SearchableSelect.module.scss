@@ -1,0 +1,73 @@
+@use '../../styles/variables' as *;
+@use '../../styles/themes' as *;
+
+.root { position: relative; min-width: 0; font-weight: 400; }
+.trigger {
+  display: flex;
+  width: 100%;
+  min-height: 2.75rem;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: .7rem .75rem;
+  color: $color-text;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  i { color: $color-text-secondary; font-style: normal; }
+}
+.placeholder { color: $color-text-tertiary; }
+.popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + .25rem);
+  right: 0;
+  left: 0;
+  display: grid;
+  gap: $spacing-xs;
+  min-width: min(22rem, 82vw);
+  padding: $spacing-sm;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  box-shadow: $shadow-md;
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: .65rem .7rem;
+    color: $color-text;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    font: inherit;
+  }
+}
+.options {
+  display: grid;
+  max-height: min(18rem, 42vh);
+  overflow: auto;
+  button {
+    display: grid;
+    gap: .15rem;
+    padding: .6rem .65rem;
+    color: $color-text;
+    background: transparent;
+    border: 0;
+    border-radius: $border-radius-sm;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    &:hover, &.selected { background: $color-bg-tertiary; }
+  }
+  small { color: $color-text-secondary; }
+  p { margin: $spacing-sm; color: $color-text-tertiary; text-align: center; }
+}
+
+@media (max-width: $breakpoint-mobile) {
+  .popover { position: fixed; inset: auto $spacing-sm $spacing-sm; min-width: 0; max-height: 70vh; }
+  .options { max-height: 50vh; }
+}

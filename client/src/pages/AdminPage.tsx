@@ -12,7 +12,7 @@ import FormDialog from '../components/dialog/FormDialog'
 import type { FormDialogField, FormDialogValues } from '../components/dialog/FormDialog'
 import styles from './AdminPage.module.scss'
 
-type PlayerCategory = 'travel' | 'growth' | 'inventory' | 'skills' | 'communication'
+type PlayerCategory = 'travel' | 'growth' | 'inventory' | 'skills' | 'testing' | 'communication'
 
 interface ActionDefinition {
   action: AdminPanelAction
@@ -25,7 +25,7 @@ interface ActionDefinition {
 }
 
 const emptyBootstrap: AdminPanelBootstrapData = {
-  items: [], skills: [], jobs: [], locations: [], monsters: [], resources: [], statusEffects: [], stats: [],
+  items: [], skills: [], jobs: [], locations: [], monsters: [], resources: [], statusEffects: [], stats: [], miniGamePresets: [],
 }
 
 function option(value: string, label: string): AdminOptionData { return { value, label } }
@@ -96,6 +96,9 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
       { name: 'duration', label: '지속시간 (초)', type: 'number', min: .1, max: 86400, step: .1, defaultValue: 30, required: true },
     ] },
     { action: 'clear_status_effects', label: '상태이상 모두 해제', description: '온라인 플레이어의 모든 상태이상을 제거합니다.', category: 'skills', danger: true, fields: [] },
+    { action: 'start_minigame', label: '미니게임 실행', description: '선택한 온라인 플레이어에게 보상 없는 테스트 미니게임을 실행합니다. 회피 게임의 조작 속도는 대상의 현재 이동속도와 동기화됩니다.', category: 'testing', fields: [
+      { name: 'presetId', label: '미니게임 프리셋', type: 'select', options: data.miniGamePresets, required: true },
+    ] },
     { action: 'notify_player', label: '개별 알림 발송', description: '선택한 온라인 플레이어 화면에 관리자 알림을 표시합니다.', category: 'communication', fields: [
       { name: 'message', label: '알림 내용', type: 'textarea', placeholder: '선택한 플레이어에게 보낼 내용을 입력하세요.', required: true },
       { name: 'duration', label: '표시 시간 (초)', type: 'number', min: 1, max: 60, defaultValue: 5, required: true },
@@ -228,7 +231,7 @@ export default function AdminPage() {
           </section>
 
           <aside className={styles.actionsPanel}>
-            <div className={styles.categoryTabs}>{(['travel', 'growth', 'inventory', 'skills', 'communication'] as const).map(key => <button key={key} className={category === key ? styles.activeTab : ''} onClick={() => setCategory(key)}>{{ travel: '이동', growth: '성장', inventory: '인벤토리', skills: '스킬·효과', communication: '메시지' }[key]}</button>)}</div>
+            <div className={styles.categoryTabs}>{(['travel', 'growth', 'inventory', 'skills', 'testing', 'communication'] as const).map(key => <button key={key} className={category === key ? styles.activeTab : ''} onClick={() => setCategory(key)}>{{ travel: '이동', growth: '성장', inventory: '인벤토리', skills: '스킬·효과', testing: '테스트', communication: '메시지' }[key]}</button>)}</div>
             <div className={styles.actionList}>{actions.filter(action => action.category === category).map(action => <button key={action.action} className={styles.actionCard} disabled={!detail} onClick={() => setActiveAction(action)}><b>{action.label}</b><span>{action.description}</span></button>)}</div>
           </aside>
         </div>

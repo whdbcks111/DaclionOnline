@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   FishingSimulationState,
+  HazardDodgeSimulationState,
   MiniGameInputSample,
   MiniGameStartData,
 } from '@shared/minigames'
 import {
   appendMiniGameInputSample,
+  simulateHazardDodge,
   simulateFishingCapture,
   snapshotMiniGameInputs,
 } from '@shared/minigames'
@@ -19,6 +21,15 @@ const INITIAL_STATE: FishingSimulationState = {
   fishX: 50,
   fishY: 50,
   caught: false,
+  finished: false,
+  success: false,
+}
+
+const INITIAL_DODGE_STATE: HazardDodgeSimulationState = {
+  playerX: 50,
+  playerY: 50,
+  hazards: [],
+  hit: false,
   finished: false,
   success: false,
 }
@@ -40,6 +51,8 @@ export default function MiniGameOverlay() {
   const { socket } = useSocket()
   const [game, setGame] = useState<MiniGameStartData | null>(null)
   const [state, setState] = useState(INITIAL_STATE)
+  const [dodgeState, setDodgeState] = useState(INITIAL_DODGE_STATE)
+  const [elapsed, setElapsed] = useState(0)
   const [joystickDirection, setJoystickDirection] = useState({ x: 0, y: 0 })
   const [status, setStatus] = useState('물고기를 채집 영역 안에 유지하세요!')
   const startedAt = useRef(0)
@@ -71,8 +84,14 @@ export default function MiniGameOverlay() {
     if (!socket) return
     const onStart = (data: MiniGameStartData) => {
       setGame(data)
-      setState({ ...INITIAL_STATE, gauge: data.config.initialGauge })
-      setStatus(`${data.config.rarityLabel} 등급 입질!`)
+      if (data.type === 'fishing_capture') {
+        setState({ ...INITIAL_STATE, gauge: data.config.initialGauge })
+        setStatus(`${data.config.rarityLabel} 등급 입질!`)
+      } else {
+        setDodgeState(INITIAL_DODGE_STATE)
+        setElapsed(0)
+        setStatus('위험 구역을 피해 5초 동안 버티세요!')
+      }
       startedAt.current = performance.now()
       inputs.current = [{ at: 0, x: 0, y: 0 }]
       direction.current = { x: 0, y: 0 }
@@ -82,7 +101,7 @@ export default function MiniGameOverlay() {
     }
     const onResolved = (data: { sessionId: string; success: boolean; message?: string }) => {
       if (data.sessionId !== game?.sessionId) return
-      setStatus(data.success ? '낚시 성공!' : (data.message ?? '낚시 실패'))
+      setStatus(data.success ? '미니게임 성공!' : (data.message ?? '미니게임 실패'))
       window.setTimeout(() => setGame(null), 900)
     }
     const onCancelled = (data: { sessionId: string; reason: string }) => {
@@ -131,8 +150,14 @@ export default function MiniGameOverlay() {
     let frame = 0
     const tick = () => {
       const elapsedMs = Math.min(game.config.durationMs, performance.now() - startedAt.current)
-      const next = simulateFishingCapture(game.config, inputs.current, elapsedMs)
-      setState(next)
+      const next = game.type === 'fishing_capture'
+        ? simulateFishingCapture(game.config, inputs.current, elapsedMs)
+        : simulateHazardDodge(game.config, inputs.current, elapsedMs)
+      if (game.type === 'fishing_capture') setState(next as FishingSimulationState)
+      else {
+        setDodgeState(next as HazardDodgeSimulationState)
+        setElapsed(elapsedMs)
+      }
       if (next.finished && !submitted.current) {
         submitted.current = true
         setStatus('결과를 확인하는 중...')
@@ -159,6 +184,50 @@ export default function MiniGameOverlay() {
   }
 
   if (!game) return null
+  const controls = <div className={styles.controls}>
+    <strong>{status}</strong>
+    <div
+      ref={joystickRef}
+      className={styles.joystick}
+      onPointerDown={event => {
+        event.currentTarget.setPointerCapture(event.pointerId)
+        updateJoystick(event.clientX, event.clientY)
+      }}
+      onPointerMove={event => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) updateJoystick(event.clientX, event.clientY)
+      }}
+      onPointerUp={event => {
+        event.currentTarget.releasePointerCapture(event.pointerId)
+        setDirection(0, 0)
+      }}
+      onPointerCancel={() => setDirection(0, 0)}
+    >
+      <span style={{ transform: `translate(${joystickDirection.x * 65}%, ${joystickDirection.y * 65}%)` }} />
+    </div>
+  </div>
+
+  if (game.type === 'hazard_dodge') {
+    const config = game.config
+    const remaining = Math.max(0, config.durationMs - elapsed)
+    return <div className={styles.backdrop} role="dialog" aria-modal="true" aria-label="위험 회피 미니게임">
+      <section className={styles.panel}>
+        <header><div><span className={styles.rarity}>보스 패턴 테스트</span><h2>위험 회피</h2></div><p>WASD · 방향키 · 모바일 조이스틱</p></header>
+        <div className={styles.timer}>{(remaining / 1000).toFixed(1)}초</div>
+        <div className={`${styles.board} ${styles.dodgeBoard}`}>
+          {dodgeState.hazards.map(hazard => <span
+            key={hazard.id}
+            className={`${styles.hazard} ${hazard.type === 'bomb' ? styles.bomb : styles.laser} ${hazard.active ? styles.hazardActive : ''}`}
+            style={{ left: `${hazard.x}%`, top: `${hazard.y}%`, width: `${hazard.width}%`, height: `${hazard.height}%`, opacity: .3 + hazard.progress * .7 }}
+          />)}
+          <span
+            className={styles.playerToken}
+            style={{ left: `${dodgeState.playerX}%`, top: `${dodgeState.playerY}%`, width: `${config.playerSize}%` }}
+          >{config.playerLabel}</span>
+        </div>
+        {controls}
+      </section>
+    </div>
+  }
   const config = game.config
   const gauge = clampGauge(state.gauge)
   const gaugePercent = Math.floor(gauge * 100)
@@ -201,27 +270,7 @@ export default function MiniGameOverlay() {
             style={{ left: `${state.fishX}%`, top: `${state.fishY}%` }}
           />
         </div>
-        <div className={styles.controls}>
-          <strong>{status}</strong>
-          <div
-            ref={joystickRef}
-            className={styles.joystick}
-            onPointerDown={event => {
-              event.currentTarget.setPointerCapture(event.pointerId)
-              updateJoystick(event.clientX, event.clientY)
-            }}
-            onPointerMove={event => {
-              if (event.currentTarget.hasPointerCapture(event.pointerId)) updateJoystick(event.clientX, event.clientY)
-            }}
-            onPointerUp={event => {
-              event.currentTarget.releasePointerCapture(event.pointerId)
-              setDirection(0, 0)
-            }}
-            onPointerCancel={() => setDirection(0, 0)}
-          >
-            <span style={{ transform: `translate(${joystickDirection.x * 65}%, ${joystickDirection.y * 65}%)` }} />
-          </div>
-        </div>
+        {controls}
       </section>
     </div>
   )
