@@ -23,6 +23,10 @@ const DEFAULT_ASPECT = 16 / 9
 const MIN_SPAN = 180
 const MIN_BIOME_RADIUS = 52
 const MAX_BIOME_RADIUS = 108
+const BASE_LABEL_SIZE = 11
+const MIN_LABEL_ZOOM = 0.7
+const MAX_LABEL_ZOOM = 1.75
+const LABEL_ZOOM_STEP = 0.15
 
 interface BiomeNode extends Point {
     id: string
@@ -235,6 +239,7 @@ export default function WorldMapNode({ data }: Props) {
     const [view, setView] = useState(() => createFitView(data))
     const [hoveredId, setHoveredId] = useState<string | null>(null)
     const [selectedId, setSelectedId] = useState<string | null>(null)
+    const [labelZoom, setLabelZoom] = useState(1)
 
     const locationsById = useMemo(
         () => new Map(data.locations.map(location => [location.id, location])),
@@ -242,6 +247,8 @@ export default function WorldMapNode({ data }: Props) {
     )
     const activeLocation = locationsById.get(hoveredId ?? selectedId ?? '')
     const biomeGeometry = useMemo(() => createBiomeGeometry(data), [data])
+    const labelViewScale = view.width / Math.max(1, fitViewRef.current.width)
+    const labelFontSize = BASE_LABEL_SIZE * labelViewScale * labelZoom
 
     useEffect(() => {
         const container = containerRef.current
@@ -356,6 +363,13 @@ export default function WorldMapNode({ data }: Props) {
         setView(fitViewRef.current)
     }
 
+    const adjustLabelZoom = (delta: number) => {
+        setLabelZoom(current => Math.max(
+            MIN_LABEL_ZOOM,
+            Math.min(MAX_LABEL_ZOOM, Math.round((current + delta) * 100) / 100),
+        ))
+    }
+
     return (
         <div className={styles.mapShell} ref={containerRef}>
             <div className={styles.toolbar}>
@@ -365,6 +379,22 @@ export default function WorldMapNode({ data }: Props) {
                 <button type="button" onClick={() => zoomAt(0.8)} aria-label="지도 확대">＋</button>
                 <button type="button" onClick={() => zoomAt(1.25)} aria-label="지도 축소">－</button>
                 <button type="button" onClick={resetView}>전체 보기</button>
+                <span className={styles.labelControls} aria-label="지도 글자 크기">
+                    <button
+                        type="button"
+                        onClick={() => adjustLabelZoom(-LABEL_ZOOM_STEP)}
+                        disabled={labelZoom <= MIN_LABEL_ZOOM}
+                        aria-label="지도 글자 축소"
+                        title="지도 글자 축소"
+                    >A−</button>
+                    <button
+                        type="button"
+                        onClick={() => adjustLabelZoom(LABEL_ZOOM_STEP)}
+                        disabled={labelZoom >= MAX_LABEL_ZOOM}
+                        aria-label="지도 글자 확대"
+                        title="지도 글자 확대"
+                    >A＋</button>
+                </span>
             </div>
             <svg
                 ref={svgRef}
@@ -520,7 +550,13 @@ export default function WorldMapNode({ data }: Props) {
                                 />
                             </>
                         ) : <circle r={location.current ? 8 : 6} className={styles.nodeDot} vectorEffect="non-scaling-stroke" />}
-                        {location.visited && <text y={location.mapIcon ? 28 : 22} className={styles.nodeLabel} textAnchor="middle">{location.name}</text>}
+                        {location.visited && <text
+                            y={location.mapIcon ? 28 : 22}
+                            className={styles.nodeLabel}
+                            textAnchor="middle"
+                            fontSize={labelFontSize}
+                            vectorEffect="non-scaling-stroke"
+                        >{location.name}</text>}
                     </g>
                 })}
             </svg>
