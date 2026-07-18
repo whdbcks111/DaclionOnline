@@ -6,9 +6,11 @@ import {
     MAX_MINIGAME_INPUT_SAMPLES,
     MINIGAME_INPUT_SAMPLE_INTERVAL_MS,
     simulateFishingCapture,
+    simulateForgeRhythm,
     simulateHazardDodge,
     snapshotMiniGameInputs,
     type FishingCaptureConfig,
+    type ForgeRhythmConfig,
     type HazardDodgeConfig,
 } from '../../../shared/minigames.js';
 import { getItemData } from './Item.js';
@@ -69,6 +71,27 @@ test('위험 회피 미니게임은 같은 seed와 입력을 서버에서 결정
     const safeShortGame = simulateHazardDodge({ ...config, durationMs: 200 }, [{ at: 0, x: 0, y: 0 }], 200);
     assert.equal(safeShortGame.finished, true);
     assert.equal(safeShortGame.success, true);
+});
+
+test('단조 리듬 미니게임은 타격 시각을 서버에서 재현해 정확도와 성공을 판정한다', () => {
+    const config: ForgeRhythmConfig = {
+        durationMs: 3_000,
+        label: '시험 단조',
+        beatTimesMs: [500, 1_000, 1_500, 2_000],
+        hitWindowMs: 200,
+        perfectWindowMs: 60,
+        requiredAccuracy: 0.75,
+    };
+    const perfect = simulateForgeRhythm(config, config.beatTimesMs.map(at => ({ at, action: 'strike' as const })), 3_000);
+    assert.equal(perfect.success, true);
+    assert.equal(perfect.perfectCount, 4);
+    assert.equal(perfect.maxCombo, 4);
+    assert.equal(perfect.accuracy, 1);
+
+    const missed = simulateForgeRhythm(config, [{ at: 500, action: 'strike' }], 3_000);
+    assert.equal(missed.success, false);
+    assert.equal(missed.missCount, 3);
+    assert.equal(missed.accuracy, 0.25);
 });
 
 test('연속 조작 trace는 20ms 단위로 합쳐지고 전송 시 불변 snapshot이 된다', () => {

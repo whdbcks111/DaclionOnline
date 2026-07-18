@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   FishingSimulationState,
+  ForgeRhythmSimulationState,
+  MiniGameActionSample,
   HazardDodgeSimulationState,
   MiniGameInputSample,
   MiniGameStartData,
 } from '@shared/minigames'
 import {
   appendMiniGameInputSample,
+  simulateForgeRhythm,
   simulateHazardDodge,
   simulateFishingCapture,
   snapshotMiniGameInputs,
@@ -34,6 +37,16 @@ const INITIAL_DODGE_STATE: HazardDodgeSimulationState = {
   success: false,
 }
 
+const INITIAL_FORGE_STATE: ForgeRhythmSimulationState = {
+  hitCount: 0,
+  perfectCount: 0,
+  missCount: 0,
+  maxCombo: 0,
+  accuracy: 0,
+  finished: false,
+  success: false,
+}
+
 function clampGauge(value: number): number {
   return Math.max(0, Math.min(1, value))
 }
@@ -52,15 +65,23 @@ export default function MiniGameOverlay() {
   const [game, setGame] = useState<MiniGameStartData | null>(null)
   const [state, setState] = useState(INITIAL_STATE)
   const [dodgeState, setDodgeState] = useState(INITIAL_DODGE_STATE)
+  const [forgeState, setForgeState] = useState(INITIAL_FORGE_STATE)
   const [elapsed, setElapsed] = useState(0)
   const [joystickDirection, setJoystickDirection] = useState({ x: 0, y: 0 })
   const [status, setStatus] = useState('물고기를 채집 영역 안에 유지하세요!')
   const startedAt = useRef(0)
   const inputs = useRef<MiniGameInputSample[]>([{ at: 0, x: 0, y: 0 }])
+  const actions = useRef<MiniGameActionSample[]>([])
   const direction = useRef({ x: 0, y: 0 })
   const submitted = useRef(false)
   const pressedKeys = useRef(new Set<string>())
   const joystickRef = useRef<HTMLDivElement>(null)
+
+  const strike = useCallback(() => {
+    if (submitted.current || game?.type !== 'forge_rhythm') return
+    const at = Math.max(0, performance.now() - startedAt.current)
+    actions.current.push({ at, action: 'strike' })
+  }, [game?.type])
 
   const setDirection = useCallback((x: number, y: number) => {
     if (submitted.current) return
@@ -87,13 +108,18 @@ export default function MiniGameOverlay() {
       if (data.type === 'fishing_capture') {
         setState({ ...INITIAL_STATE, gauge: data.config.initialGauge })
         setStatus(`${data.config.rarityLabel} 등급 입질!`)
-      } else {
+      } else if (data.type === 'hazard_dodge') {
         setDodgeState(INITIAL_DODGE_STATE)
         setElapsed(0)
         setStatus('위험 구역을 피해 5초 동안 버티세요!')
+      } else {
+        setForgeState(INITIAL_FORGE_STATE)
+        setElapsed(0)
+        setStatus('박자에 맞춰 망치를 내리치세요!')
       }
       startedAt.current = performance.now()
       inputs.current = [{ at: 0, x: 0, y: 0 }]
+      actions.current = []
       direction.current = { x: 0, y: 0 }
       setJoystickDirection({ x: 0, y: 0 })
       pressedKeys.current.clear()
@@ -124,6 +150,11 @@ export default function MiniGameOverlay() {
     const relevant = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'])
     const onKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase()
+      if (game.type === 'forge_rhythm' && (key === ' ' || key === 'enter')) {
+        event.preventDefault()
+        if (!event.repeat) strike()
+        return
+      }
       if (!relevant.has(key)) return
       event.preventDefault()
       pressedKeys.current.add(key)
@@ -143,7 +174,7 @@ export default function MiniGameOverlay() {
       window.removeEventListener('keyup', onKeyUp)
       setDirection(0, 0)
     }
-  }, [game, setDirection, updateKeyboardDirection])
+  }, [game, setDirection, strike, updateKeyboardDirection])
 
   useEffect(() => {
     if (!game || !socket) return
@@ -152,10 +183,15 @@ export default function MiniGameOverlay() {
       const elapsedMs = Math.min(game.config.durationMs, performance.now() - startedAt.current)
       const next = game.type === 'fishing_capture'
         ? simulateFishingCapture(game.config, inputs.current, elapsedMs)
-        : simulateHazardDodge(game.config, inputs.current, elapsedMs)
+        : game.type === 'hazard_dodge'
+          ? simulateHazardDodge(game.config, inputs.current, elapsedMs)
+          : simulateForgeRhythm(game.config, actions.current, elapsedMs)
       if (game.type === 'fishing_capture') setState(next as FishingSimulationState)
-      else {
+      else if (game.type === 'hazard_dodge') {
         setDodgeState(next as HazardDodgeSimulationState)
+        setElapsed(elapsedMs)
+      } else {
+        setForgeState(next as ForgeRhythmSimulationState)
         setElapsed(elapsedMs)
       }
       if (next.finished && !submitted.current) {
@@ -166,6 +202,7 @@ export default function MiniGameOverlay() {
           token: game.token,
           elapsedMs,
           inputs: snapshotMiniGameInputs(inputs.current, elapsedMs),
+          actions: actions.current.filter(action => action.at <= elapsedMs).map(action => ({ ...action })),
         })
         return
       }
@@ -225,6 +262,29 @@ export default function MiniGameOverlay() {
           >{config.playerLabel}</span>
         </div>
         {controls}
+      </section>
+    </div>
+  }
+  if (game.type === 'forge_rhythm') {
+    const config = game.config
+    const leadMs = 2_000
+    const accuracy = Math.round(forgeState.accuracy * 100)
+    return <div className={styles.backdrop} role="dialog" aria-modal="true" aria-label="단조 리듬 미니게임">
+      <section className={styles.panel}>
+        <header><div><span className={styles.rarity}>{config.label}</span><h2>마력 단조</h2></div><p>Space · Enter · 타격 버튼</p></header>
+        <div className={styles.forgeStats}><span>정확도 <b>{accuracy}%</b></span><span>최대 콤보 <b>{forgeState.maxCombo}</b></span></div>
+        <div className={styles.forgeLane}>
+          <span className={styles.strikeLine} />
+          {config.beatTimesMs.map((beat, index) => {
+            const left = 18 + (beat - elapsed) / leadMs * 82
+            if (left < -8 || left > 108) return null
+            return <span key={`${beat}:${index}`} className={styles.forgeNote} style={{ left: `${left}%` }} />
+          })}
+        </div>
+        <button className={styles.strikeButton} type="button" onPointerDown={event => { event.preventDefault(); strike() }}>
+          망치 내리치기
+        </button>
+        <strong className={styles.forgeStatus}>{status}</strong>
       </section>
     </div>
   }

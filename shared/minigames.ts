@@ -1,4 +1,4 @@
-export type MiniGameType = 'fishing_capture' | 'hazard_dodge'
+export type MiniGameType = 'fishing_capture' | 'hazard_dodge' | 'forge_rhythm'
 export type FishingCaptureShape = 'circle' | 'square' | 'rectangle'
 export type HazardDodgeMode = 'bombs' | 'lasers' | 'mixed'
 
@@ -9,6 +9,12 @@ export interface MiniGameInputSample {
     x: number
     /** -1~1 수직 입력 */
     y: number
+}
+
+export interface MiniGameActionSample {
+    /** 미니게임 시작 후 경과 시간(ms) */
+    at: number
+    action: 'strike'
 }
 
 /** 서버 20ms 재생 해상도에 맞춰 같은 구간의 연속 입력을 하나로 합친다. */
@@ -69,9 +75,20 @@ export interface HazardDodgeConfig {
     telegraphMs: number
 }
 
+export interface ForgeRhythmConfig {
+    durationMs: number
+    label: string
+    /** 망치를 내려쳐야 하는 서버 기준 시각 목록. */
+    beatTimesMs: number[]
+    hitWindowMs: number
+    perfectWindowMs: number
+    requiredAccuracy: number
+}
+
 export interface MiniGameConfigMap {
     fishing_capture: FishingCaptureConfig
     hazard_dodge: HazardDodgeConfig
+    forge_rhythm: ForgeRhythmConfig
 }
 
 interface MiniGameStartBase<T extends MiniGameType> {
@@ -91,6 +108,7 @@ export interface MiniGameResultRequest {
     token: string
     elapsedMs: number
     inputs: MiniGameInputSample[]
+    actions?: MiniGameActionSample[]
 }
 
 export interface MiniGameResolvedData {
@@ -131,6 +149,16 @@ export interface HazardDodgeSimulationState {
     playerY: number
     hazards: HazardDodgeHazard[]
     hit: boolean
+    finished: boolean
+    success: boolean
+}
+
+export interface ForgeRhythmSimulationState {
+    hitCount: number
+    perfectCount: number
+    missCount: number
+    maxCombo: number
+    accuracy: number
     finished: boolean
     success: boolean
 }
@@ -330,4 +358,65 @@ export function simulateHazardDodge(
     const hazards = getHazardDodgeHazards(config, end)
     const finished = elapsedMs >= config.durationMs
     return { playerX, playerY, hazards, hit: false, finished, success: finished }
+}
+
+/** 타격 시각만으로 판정을 재생해 클라이언트 표시와 서버 결과가 같은 값을 사용한다. */
+export function simulateForgeRhythm(
+    config: ForgeRhythmConfig,
+    actions: readonly MiniGameActionSample[],
+    elapsedMs: number,
+): ForgeRhythmSimulationState {
+    const beats = [...config.beatTimesMs].filter(Number.isFinite).sort((left, right) => left - right)
+    const strikes = actions
+        .filter(action => action.action === 'strike' && Number.isFinite(action.at))
+        .map(action => Math.max(0, Math.min(config.durationMs, action.at)))
+        .sort((left, right) => left - right)
+    const used = new Set<number>()
+    let hitCount = 0
+    let perfectCount = 0
+    let missCount = 0
+    let combo = 0
+    let maxCombo = 0
+    let qualityTotal = 0
+
+    for (const beat of beats) {
+        if (beat > elapsedMs + config.hitWindowMs) break
+        let match = -1
+        let closest = Number.POSITIVE_INFINITY
+        for (let index = 0; index < strikes.length; index++) {
+            if (used.has(index)) continue
+            const distance = Math.abs(strikes[index] - beat)
+            if (distance <= config.hitWindowMs && distance < closest) {
+                match = index
+                closest = distance
+            }
+        }
+        if (match < 0) {
+            if (elapsedMs >= beat + config.hitWindowMs) {
+                missCount++
+                combo = 0
+            }
+            continue
+        }
+        used.add(match)
+        hitCount++
+        combo++
+        maxCombo = Math.max(maxCombo, combo)
+        const perfect = closest <= config.perfectWindowMs
+        if (perfect) perfectCount++
+        const falloffRange = Math.max(1, config.hitWindowMs - config.perfectWindowMs)
+        qualityTotal += perfect ? 1 : Math.max(0.5, 1 - (closest - config.perfectWindowMs) / falloffRange * 0.5)
+    }
+
+    const accuracy = beats.length === 0 ? 0 : qualityTotal / beats.length
+    const finished = elapsedMs >= config.durationMs
+    return {
+        hitCount,
+        perfectCount,
+        missCount,
+        maxCombo,
+        accuracy,
+        finished,
+        success: finished && accuracy >= config.requiredAccuracy,
+    }
 }

@@ -1,5 +1,6 @@
 import type {
     MiniGameConfigMap,
+    MiniGameActionSample,
     MiniGameCancelledData,
     MiniGameInputSample,
     MiniGameResolvedData,
@@ -72,6 +73,18 @@ export function normalizeMiniGameInputs(request: MiniGameResultRequest): MiniGam
     return Array.from({ length: maximum }, (_, index) => (
         normalized[Math.round(index * last / (maximum - 1))]
     ));
+}
+
+export function normalizeMiniGameActions(request: MiniGameResultRequest): MiniGameActionSample[] {
+    const elapsedMs = Math.max(0, request.elapsedMs);
+    return (Array.isArray(request.actions) ? request.actions : [])
+        .filter((action): action is MiniGameActionSample => Boolean(action)
+            && typeof action === 'object'
+            && action.action === 'strike'
+            && Number.isFinite(action.at))
+        .map(action => ({ action: action.action, at: Math.max(0, Math.min(elapsedMs, action.at)) }))
+        .sort((left, right) => left.at - right.at)
+        .slice(0, 512);
 }
 
 export function startMiniGame<T extends MiniGameType>(options: StartMiniGameOptions<T>): MiniGameStartData | null {

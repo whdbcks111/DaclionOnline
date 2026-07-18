@@ -127,6 +127,58 @@
   pointer-events: none;
 }
 
+.forgeStats {
+  display: flex;
+  justify-content: space-between;
+  gap: $spacing-md;
+  color: $color-text-secondary;
+  font-variant-numeric: tabular-nums;
+  b { color: $color-text; }
+}
+
+.forgeLane {
+  position: relative;
+  height: clamp(5rem, 16vh, 8rem);
+  overflow: hidden;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+}
+
+.strikeLine {
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  left: 18%;
+  width: .18rem;
+  background: $color-primary;
+}
+
+.forgeNote {
+  position: absolute;
+  top: 50%;
+  width: clamp(1.3rem, 4vw, 2rem);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: $color-warning;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-sm;
+}
+
+.strikeButton {
+  min-height: clamp(3.2rem, 9vh, 4.5rem);
+  color: $color-text-inverse;
+  background: $color-primary;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  font: inherit;
+  font-weight: 900;
+  touch-action: manipulation;
+  &:active { translate: 0 .08rem; }
+}
+
+.forgeStatus { text-align: center; }
+
 .controls {
   display: flex;
   min-height: 5rem;

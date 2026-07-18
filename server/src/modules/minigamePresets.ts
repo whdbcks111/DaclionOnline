@@ -1,14 +1,16 @@
 import {
     simulateFishingCapture,
+    simulateForgeRhythm,
     simulateHazardDodge,
     type FishingCaptureConfig,
+    type ForgeRhythmConfig,
     type HazardDodgeConfig,
     type MiniGameResultRequest,
     type MiniGameType,
 } from '../../../shared/minigames.js';
 import { AttributeType } from '../models/Attribute.js';
 import type Player from '../models/Player.js';
-import { normalizeMiniGameInputs, startMiniGame } from './minigame.js';
+import { normalizeMiniGameActions, normalizeMiniGameInputs, startMiniGame } from './minigame.js';
 
 export interface MiniGamePresetSummary {
     id: string
@@ -112,12 +114,53 @@ function dodgePreset(
     };
 }
 
+function forgePreset(
+    id: string,
+    label: string,
+    description: string,
+    intervalMs: number,
+    requiredAccuracy: number,
+): MiniGamePreset {
+    return {
+        id,
+        label,
+        description,
+        type: 'forge_rhythm',
+        start: player => {
+            const beatTimesMs = Array.from({ length: 12 }, (_, index) => 1_200 + index * intervalMs);
+            const config: ForgeRhythmConfig = {
+                durationMs: beatTimesMs.at(-1)! + 900,
+                label,
+                beatTimesMs,
+                hitWindowMs: 240,
+                perfectWindowMs: 85,
+                requiredAccuracy,
+            };
+            return startMiniGame({
+                userId: player.userId,
+                type: 'forge_rhythm',
+                config,
+                expiresInMs: config.durationMs + 3_000,
+                validate: request => {
+                    const state = simulateForgeRhythm(config, normalizeMiniGameActions(request), request.elapsedMs);
+                    return state.finished && state.success
+                        ? { success: true, message: `단조 테스트 성공 · 정확도 ${Math.round(state.accuracy * 100)}%` }
+                        : { success: false, message: `단조 테스트 실패 · 정확도 ${Math.round(state.accuracy * 100)}%` };
+                },
+                onResolved: () => undefined,
+            }) !== null;
+        },
+    };
+}
+
 const PRESETS: readonly MiniGamePreset[] = Object.freeze([
     fishingPreset('fishing:normal', '낚시 일반', '일반 난이도의 12초 포획 테스트', 2),
     fishingPreset('fishing:legendary', '낚시 전설', '빠르게 움직이는 전설 난이도 포획 테스트', 6),
     dodgePreset('dodge:bombs:easy', '폭탄 회피 쉬움', '이동속도 동기화 · 폭발 범위만 회피', 'bombs', 2),
     dodgePreset('dodge:lasers:normal', '레이저 회피 보통', '이동속도 동기화 · 가로/세로 레이저 회피', 'lasers', 4),
     dodgePreset('dodge:mixed:boss', '복합 보스 패턴', '이동속도 동기화 · 폭탄과 레이저 복합 패턴', 'mixed', 6),
+    forgePreset('forge:steady', '기초 단조', '일정한 박자에 맞춰 망치를 내리치는 단조 테스트', 620, 0.65),
+    forgePreset('forge:rapid', '고속 단조', '빠른 박자와 좁은 판정의 상급 단조 테스트', 420, 0.78),
 ]);
 
 export function getMiniGamePresetSummaries(): MiniGamePresetSummary[] {

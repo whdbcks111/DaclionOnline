@@ -13,7 +13,7 @@ Socket/HTTP 요청, 세션과 온라인 상태, 주기 작업, 도메인 객체 
 - `masterDataValidation.ts`: 아이템·스킬·직업·몬스터·자원·제작·퀘스트·NPC·장소 공개 레지스트리를 사용해 참조와 필수 아이콘 파일을 검증한다.
 - `itemUse.ts`: 아이템 효과 handler 레지스트리.
 - `itemAttack.ts`: `basicAttackOverride` key→함수 레지스트리와 탄약/무탄약 투사체 기본 공격 실행. `false` 반환은 직접 근접 공격 폴백을 뜻한다.
-- `minigame.ts`, `minigamePresets.ts`: 사용자별 단일 일회성 session/token/만료 상태, 공통 입력 정규화, 타입별 서버 validator·완료/취소 callback과 관리자용 보상 없는 낚시/폭탄/레이저/복합 회피 프리셋. 회피 조작 속도는 대상 Player의 `speed`를 보드 이동량으로 변환한다. `fishing.ts`는 낚시 가능 장소·주손 낚싯대를 검사하고, 보조 미끼가 없으면 인벤토리 묶음을 자동 장착해 한 개만 소비한 뒤 남은 시간을 숨긴 입질 timer, 1초 입질 경고, 행운 등급, session/token 확인과 느슨한 입력 정규화 뒤 서버 재현하는 미니게임, 물고기/경험치 보상을 연결한다.
+- `minigame.ts`, `minigamePresets.ts`: 사용자별 단일 일회성 session/token/만료 상태, 공통 축·action 입력 정규화, 타입별 서버 validator·완료/취소 callback과 관리자용 보상 없는 낚시/폭탄/레이저/복합 회피/기초·고속 단조 프리셋. 회피 조작 속도는 대상 Player의 `speed`를 보드 이동량으로 변환하고 단조는 서버 beat 시각과 strike action으로 정확도·콤보를 재현한다. `fishing.ts`는 낚시 가능 장소·주손 낚싯대를 검사하고, 보조 미끼가 없으면 인벤토리 묶음을 자동 장착해 한 개만 소비한 뒤 남은 시간을 숨긴 입질 timer, 1초 입질 경고, 행운 등급, session/token 확인과 느슨한 입력 정규화 뒤 서버 재현하는 미니게임, 물고기/경험치 보상을 연결한다.
 - `adminPanel.ts`: 권한 10 세션을 재검증하고 온라인 우선 플레이어 목록·가공된 상세 snapshot·마스터 option을 제공하며, 플레이어/인벤토리/보유 스킬 레벨·직업/상태효과/월드 운영과 전체 채팅·전체 알림·선택 온라인 플레이어 알림 action을 소유 도메인 API로 실행한다. 액션 결과는 요청 소켓의 기본 notification으로 피드백한다.
 
 이벤트나 공개 함수, 초기화 책임이 바뀌면 이 문서와 [`docs/api/`](../../../docs/api), 관련 [`docs/systems/`](../../../docs/systems) 문서를 갱신한다.

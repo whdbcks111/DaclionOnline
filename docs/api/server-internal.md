@@ -26,7 +26,7 @@
 | Message mutation | `editMessage`, `deleteMessage` | 히스토리 수정 후 이벤트 브로드캐스트 |
 | Coroutine | `startCoroutine`, `Wait`, `tickCoroutines` | 게임 루프 기반 지연 작업 |
 | Scheduler | `scheduleGameTask`, `cancelGameTask`, `cancelGameTasksByPrefix`, `hasGameTask`, `updateGameScheduler` | key 교체·취소·반복을 지원하는 게임 루프 기반 단일 지연 작업 |
-| Minigame | `startMiniGame`, `cancelMiniGame`, `hasActiveMiniGame`, `initMiniGame` | session/token/만료와 타입별 결과 validator를 가진 서버 권위 미니게임 |
+| Minigame | `startMiniGame`, `cancelMiniGame`, `hasActiveMiniGame`, `normalizeMiniGameInputs/Actions`, `initMiniGame` | session/token/만료와 축·단조 타격 trace 정규화, 타입별 결과 validator를 가진 서버 권위 미니게임 |
 | Fishing | `startFishing`, `cancelFishing`, `isFishing` | 장소·낚싯대 검증, 미끼 묶음 자동 장착·한 개 소비, 입질 대기, 등급/미니게임/보상 연결 |
 | Upload media | `encodeChatImage`, `initUploadMaintenance`, `cleanupChatImages`, `getOwnedChatImage` | 이미지 재인코딩, 전체 100장·7일 보관 정리와 채팅 파일 소유권·표시 치수 snapshot 검증 |
 | Location service | `loadLocationsFromJson`, `updateLocations`, `initLocation` | JSON/소켓/프레임 조정 |
