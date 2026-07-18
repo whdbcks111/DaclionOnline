@@ -286,6 +286,8 @@ export interface PlayerStatsData extends SnapshotRevision {
     userId: number
     nickname: string
     level: number
+    exp: number
+    maxExp: number
     life: number
     maxLife: number
     shields: ShieldBarSegment[]

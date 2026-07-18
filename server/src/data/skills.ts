@@ -25,6 +25,7 @@ import type Entity from '../models/Entity.js';
 import { ShieldType } from '../models/Shield.js';
 import { LegacyStatusEffects } from './statusEffects.js';
 import { StatType } from '../models/Stat.js';
+import { calculateSmeltingExperience } from '../modules/forging.js';
 
 const CRITICAL_HIT_STAT = 'combat:critical_hits';
 
@@ -811,7 +812,10 @@ defineSkill({
         batch: context => 2 + context.skill.level + Math.floor((context.owner.attribute?.get?.(AttributeType.FORGING_PRECISION) ?? 0) * 10),
         manaCost: context => numberMeta(context, 'baseManaCost'),
     },
-    activationFeedback: context => `${context.skill.getActiveState<string>('materialLabel') ?? '소재'} ${context.skill.getActiveState<number>('processedCount') ?? 0}개를 마력으로 제련했습니다.`,
+    activationFeedback: context => {
+        const level = context.skill.getActiveState<number>('reachedLevel');
+        return `${context.skill.getActiveState<string>('materialLabel') ?? '소재'} ${context.skill.getActiveState<number>('processedCount') ?? 0}개를 마력으로 제련했습니다. (+${context.skill.getActiveState<number>('characterExperience') ?? 0} EXP${level ? ` · Lv.${level} 달성` : ''})`;
+    },
     calculateMaxCooldown: () => 5,
     isVisible: ({ player }) => hasBlacksmithSkillAccess(player),
     canActivate: context => {
@@ -836,7 +840,14 @@ defineSkill({
         }])) throw new Error('마력 제련 재료 교환에 실패했습니다.');
         const cost = numberMeta(context, 'baseManaCost');
         if (!player.spendMentality(cost)) throw new Error('마력 제련 정신력 소모에 실패했습니다.');
-        return { state: { materialLabel: label, processedCount: count } };
+        const characterExperience = calculateSmeltingExperience(player, count);
+        const levelsGained = player.gainExp(characterExperience);
+        return { state: {
+            materialLabel: label,
+            processedCount: count,
+            characterExperience,
+            ...(levelsGained.length ? { reachedLevel: levelsGained.at(-1)! } : {}),
+        } };
     },
     tags: [GameTags.SKILL_ACTIVE],
 });

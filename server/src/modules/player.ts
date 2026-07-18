@@ -93,6 +93,8 @@ export function sendPlayerStats(userId: number): void {
         userId:            player.userId,
         nickname:          getSessionByUserId(userId)?.nickname ?? '',
         level:             player.level,
+        exp:               player.exp,
+        maxExp:            player.maxExp,
         life:              player.life,
         maxLife:           player.maxLife,
         shields:           player.getShieldBarSegments(),

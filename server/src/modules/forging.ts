@@ -10,6 +10,26 @@ import { AttributeType } from '../models/Attribute.js';
 export const BLACKSMITH_JOB_ID = 'career:blacksmith';
 export const BLACKSMITH_PROFESSION_FLAG = 'profession:blacksmith';
 
+interface BlacksmithExperienceOwner { readonly maxExp: number }
+
+/** 제련은 처리한 원광 수에 비례해 다음 레벨 요구 경험치의 최대 4%를 지급한다. */
+export function calculateSmeltingExperience(player: BlacksmithExperienceOwner, processedCount: number): number {
+    const count = Math.max(0, Math.floor(processedCount));
+    const rate = Math.min(0.04, count * 0.0025);
+    return Math.max(0, Math.round(Math.max(0, player.maxExp) * rate));
+}
+
+/** 단조 성공은 정확도와 재료 난도를 반영해 다음 레벨 요구 경험치의 약 2.8~4%를 지급한다. */
+export function calculateForgingExperience(
+    player: BlacksmithExperienceOwner,
+    material: ForgeMaterial,
+    accuracy: number,
+): number {
+    const normalizedAccuracy = Math.max(0, Math.min(1, accuracy));
+    const rate = Math.min(0.04, 0.02 + normalizedAccuracy * 0.015 + Math.max(0, material.power - 0.9) * 0.01);
+    return Math.max(1, Math.round(Math.max(0, player.maxExp) * rate));
+}
+
 export function hasBlacksmithProfession(player: Player): boolean {
     return player.career.hasJob(BLACKSMITH_JOB_ID)
         || player.progress.getFlag(BLACKSMITH_PROFESSION_FLAG);
@@ -89,13 +109,14 @@ export function startForging(player: Player, form: ForgeForm, material: ForgeMat
             }
             const name = output.metadataDelta?.customName;
             const itemName = typeof name === 'string' ? name : `${material.label} ${form.label}`;
-            const experience = Math.round(40 + accuracy * 80 + material.power * 20);
-            player.gainExp(experience);
+            const experience = calculateForgingExperience(player, material, accuracy);
+            const levelsGained = player.gainExp(experience);
             emitGameEvent(GameEventIds.ITEM_FORGED, {
                 actor: player,
                 data: { form: form.key, material: material.key, accuracy, itemName },
             });
-            sendBotMessageToUser(player.userId, chat().color('gold', b => b.text('[ 단조 완료 ] ')).text(`${itemName} · 정확도 ${Math.round(accuracy * 100)}% · 제련 정밀도 ${Math.round(precision * 100)}% · +${experience} EXP`).build());
+            const levelText = levelsGained.length ? ` · Lv.${levelsGained.at(-1)} 달성` : '';
+            sendBotMessageToUser(player.userId, chat().color('gold', b => b.text('[ 단조 완료 ] ')).text(`${itemName} · 정확도 ${Math.round(accuracy * 100)}% · 제련 정밀도 ${Math.round(precision * 100)}% · +${experience} EXP${levelText}`).build());
             sendNotificationToUser(player.userId, { key: 'forging:complete', message: `${itemName} 단조를 완료했습니다!` });
         },
     });

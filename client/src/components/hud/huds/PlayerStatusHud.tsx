@@ -61,7 +61,7 @@ export default function PlayerStatusHud() {
   const { playerStats } = useHud()
   if (!playerStats) return null
 
-  const { userId, nickname, level, life, maxLife, shields, mentality, maxMentality, thirsty, maxThirsty, hungry, maxHungry, attackCooldown, maxAttackCooldown } = playerStats
+  const { userId, nickname, level, exp, maxExp, life, maxLife, shields, mentality, maxMentality, thirsty, maxThirsty, hungry, maxHungry, attackCooldown, maxAttackCooldown } = playerStats
   const statusEffects = playerStats.statusEffects ?? []
   const attackReady = maxAttackCooldown > 0 ? pct(maxAttackCooldown - attackCooldown, maxAttackCooldown) : 100
 
@@ -73,6 +73,13 @@ export default function PlayerStatusHud() {
         <span className={styles.userId}>ID {userId}</span>
       </div>
       <div className={styles.bars}>
+        <div className={`${styles.row} ${styles.expRow}`}>
+          <span className={styles.label}>EXP</span>
+          <div className={styles.track}>
+            <ProgressNode value={pct(exp, maxExp) / 100} length="100%" color="$secondary" thickness={6} shape="rounded" />
+          </div>
+          <span className={styles.value}>{exp.toLocaleString()} / {maxExp.toLocaleString()}</span>
+        </div>
         <div className={styles.pairedRow}>
           <div className={styles.row}>
             <span className={styles.label}>HP</span>

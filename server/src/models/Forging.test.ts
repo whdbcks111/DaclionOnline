@@ -8,7 +8,11 @@ import Skill from './Skill.js';
 import type Player from './Player.js';
 import type Entity from './Entity.js';
 import Inventory from './Inventory.js';
-import { canUseMetalForging } from '../modules/forging.js';
+import {
+    calculateForgingExperience,
+    calculateSmeltingExperience,
+    canUseMetalForging,
+} from '../modules/forging.js';
 import '../data/items.js';
 import '../data/progress.js';
 import '../data/skills.js';
@@ -47,14 +51,17 @@ test('대장장이 직업의 마력 제련은 원광을 레벨 수량만큼 일�
     const progress = PlayerProgress.createEmpty(77);
     const inventory = Inventory.createEmpty(77, 100);
     let mentality = 100;
+    let characterExperience = 0;
     const player = {
         userId: 77,
+        maxExp: 1_000,
         progress,
         inventory,
         career: { hasJob: (id: string) => id === 'career:blacksmith' },
         skills: { has: () => false },
         canSpendMentality: (amount: number) => mentality >= amount,
         spendMentality: (amount: number) => { if (mentality < amount) return false; mentality -= amount; return true; },
+        gainExp: (amount: number) => { characterExperience += amount; return []; },
     } as unknown as Player;
 
     assert.equal(canUseMetalForging(player), true);
@@ -66,6 +73,19 @@ test('대장장이 직업의 마력 제련은 원광을 레벨 수량만큼 일�
     assert.equal(inventory.getCount('iron_ore'), 1);
     assert.equal(inventory.getCount('refined_iron'), 4);
     assert.equal(mentality, 82);
+    assert.equal(characterExperience, 10);
+});
+
+test('제련과 단조 경험치는 현재 레벨 요구 경험치에 비례해 고레벨에서도 성장한다', () => {
+    const low = { maxExp: 4_000 };
+    const high = { maxExp: 80_000 };
+
+    assert.equal(calculateSmeltingExperience(low, 4), 40);
+    assert.equal(calculateSmeltingExperience(high, 4), 800);
+    assert.equal(calculateSmeltingExperience(high, 100), 3_200);
+    assert.equal(calculateForgingExperience(high, ForgeMaterial.IRON, 1), 2_880);
+    assert.ok(calculateForgingExperience(high, ForgeMaterial.DIAMOND, 1)
+        > calculateForgingExperience(high, ForgeMaterial.IRON, 1));
 });
 
 test('금속 단조 스킬만 보유해도 단조 권한을 가진다', () => {

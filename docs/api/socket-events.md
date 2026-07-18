@@ -53,7 +53,7 @@
 | `commandList` | `CommandInfo[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `argCompletions` | `CompletionItem[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `mentionCompletions` | `CompletionItem[]` | `modules/chat.ts` | `pages/Home.tsx` |
-| `playerStats` | `PlayerStatsData` (`syncId/revision`과 현재 레벨·자원·타입색 `shields`·공격 cooldown·`statusEffects`, 표시 가능한 스킬, nullable 파티 HUD). 내용이 바뀐 완전한 snapshot만 socket별 1회 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 `HudContext` → HUD |
+| `playerStats` | `PlayerStatsData` (`syncId/revision`, 현재 `level/exp/maxExp`·자원·타입색 `shields`·공격 cooldown·`statusEffects`, 표시 가능한 스킬, nullable 파티 HUD). 내용이 바뀐 완전한 snapshot만 socket별 1회 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 `HudContext` → HUD |
 | `informationMode` | `isPublic: boolean` | `modules/bot.ts` | `pages/Home.tsx` 입력창 공개/비공개 전환 버튼 |
 | `locationInfo` | `LocationInfoData` (`syncId/revision`, `zoneType/zoneLabel/pvpAllowed`, objects/플레이어 생명력·`shields`, 플레이어 기준 인접 장소). 내용 변경 시 완전한 snapshot 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 Location/Minimap HUD |
 | `userCount` | `UserCountData` (다중 탭을 합친 고유 사용자 기준 전체/채널 인원) | `modules/login.ts` | `pages/Home.tsx` |
