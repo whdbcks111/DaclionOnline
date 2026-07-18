@@ -6,7 +6,7 @@
 
 ```text
 StatusEffectType
-  ├─ id / label / icon / maxLevel / aliases / tags
+  ├─ id / label / icon / aliases / tags
   ├─ baseMetadata / calculatedFields / descriptionTemplate
   └─ onStart / onEarlyUpdate / onUpdate / onRemove
 
@@ -30,7 +30,7 @@ Entity
 
 ## 적용과 병합 규칙
 
-신규 인스턴스는 `type`, 양수 duration, 1 이상 level 세 값으로 생성한다. level은 타입의 `maxLevel`까지 보정된다.
+신규 인스턴스는 `type`, 양수 duration, 1 이상 level 세 값으로 생성한다. 상태효과는 성장형 보유 객체가 아니므로 타입 공통 최대 레벨을 두지 않는다. 레벨은 1 이상의 정수만 보장하며, 화상 치유 감소처럼 강도 상한이 필요한 효과는 자기 metadata와 계산 함수에서 포화 구간을 정의한다.
 
 | 기존 효과와 비교 | 처리 |
 | --- | --- |
@@ -78,6 +78,8 @@ callback은 대상의 raw 필드를 우회하지 않고 `damage`, `heal`, 상태
 ## 기본 상태효과
 
 `data/statusEffects.ts`는 레거시 게임의 효과 규칙을 현재 Attribute·Action·TagEffect 공개 API로 이식한다. 독·출혈·부패, 회복/방어/마법저항 감소, 마법/근력 강화, 생명력/정신력 재생, 경험 증폭, 둔화/신속, 침묵/속박/기절/제압/멀미/실명/에어본/매혹/공포/수면, 무적/투명화/발각, 화염·빙결 저항/해독/보존/빙결을 제공한다. 레거시 전직 연출 전용 `심연/두 번째 심연`과 현재 능력치가 없는 원거리 공격 강화는 그대로 이식하지 않는다.
+
+`재생`은 자연 생명력 재생 능력치를 몇 % 늘리는 modifier가 아니다. 1초마다 `최대 생명력 × (0.25% + 레벨 × 0.15%)`를 `Entity.heal()`로 직접 회복하므로 고레벨에서도 체감되며, 화상·맹독·회복 효율 감소의 받는 치유량 modifier를 정상 적용받는다.
 
 지속 modifier는 모두 `status-effect:{id}` source로 매 update 교체하고 제거 callback에서 자기 source만 정리한다. 무적은 `Entity`의 source 기반 받는 피해 배율을 0으로 만들고, 경험 증폭은 source 기반 경험치 획득 배율을 적용한다. 독·출혈·부패·빙결은 현재 속성 태그와 피해 API를 사용하므로 보호막·사망 처리·속성 관계를 우회하지 않는다.
 

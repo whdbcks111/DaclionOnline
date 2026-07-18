@@ -74,7 +74,7 @@ export function getAdminPanelBootstrap(): AdminPanelBootstrapData {
         locations: getAllLocations().map(location => option(location.id, location.data.name)),
         monsters: getAllMonsterData().map(monster => option(monster.id, monster.name, `Lv.${monster.level}`)),
         resources: getAllResourceData().map(resource => option(resource.id, resource.name, `Lv.${resource.level}`)),
-        statusEffects: StatusEffectType.values().map(effect => option(effect.id, effect.label, `최대 Lv.${effect.maxLevel}`)),
+        statusEffects: StatusEffectType.values().map(effect => option(effect.id, effect.label, '레벨 상한 없음')),
         stats: StatType.values().map(stat => option(stat.key, stat.label)),
         miniGamePresets: getMiniGamePresetSummaries().map(preset => option(preset.id, preset.label, preset.description)),
     };
@@ -391,7 +391,7 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
             if (!online) throw new Error('상태이상은 온라인 플레이어에게만 부여할 수 있습니다.');
             const type = StatusEffectType.fromKey(stringValue(values, 'statusEffectId'));
             if (!type) throw new Error('상태이상 정의를 찾을 수 없습니다.');
-            const level = numberValue(values, 'level', { integer: true, min: 1, max: type.maxLevel });
+            const level = numberValue(values, 'level', { integer: true, min: 1 });
             const duration = numberValue(values, 'duration', { min: 0.1, max: 86400 });
             const result = online.applyStatusEffect(type, duration, level);
             if (!result.action.changed) throw new Error('기존 효과가 더 강하거나 오래 남아 있어 변경되지 않았습니다.');

@@ -12,6 +12,7 @@ import { defineTagEffectModifier } from './TagEffect.js';
 import type { TagId } from '../../../shared/tags.js';
 import { ActionType } from './Action.js';
 import { AttributeType } from './Attribute.js';
+import '../data/statusEffects.js';
 
 class TestStatusEntity extends Entity {
     override readonly name: string;
@@ -32,7 +33,6 @@ let removes = 0;
 const MERGE_TEST_EFFECT = StatusEffectType.define({
     id: 'test_merge_effect',
     label: '병합 시험',
-    maxLevel: 5,
     descriptionTemplate: '레벨 {{level}}, 값 {{meta.runtimeValue}}, 계산 {{calc.doubled}}',
     baseMetadata: { runtimeValue: 0 },
     calculatedFields: {
@@ -97,6 +97,26 @@ test('같은 상태효과 재적용은 인스턴스와 metadata를 유지하며 
         durationRatio: 0.75,
         description: '레벨 3, 값 7, 계산 6',
     }]);
+});
+
+test('상태효과 레벨은 타입 상한 없이 적용되고 효과별 계산식이 강도를 제어한다', () => {
+    const target = new TestStatusEntity('무제한 레벨 대상');
+    const effect = target.applyStatusEffect(MERGE_TEST_EFFECT, 10, 100).effect!;
+    assert.equal(effect.level, 100);
+    assert.equal(effect.getCalculatedField('doubled', target), 200);
+});
+
+test('재생은 최대 생명력과 레벨에 비례해 직접 회복하고 치유 감소를 적용받는다', () => {
+    const regeneration = StatusEffectType.fromKey('regeneration');
+    assert.ok(regeneration);
+    const target = new TestStatusEntity('재생 대상', [GameTags.TRAIT_LIVING], 1000);
+    target.life = 100;
+    target.setHealingReceivedModifier('test:heal-reduction', 0.5);
+    const effect = target.applyStatusEffect(regeneration, 10, 10).effect!;
+
+    assert.equal(effect.getCalculatedField('healPercent', target), 1.75);
+    target.updateStatusEffects(1);
+    assert.equal(target.life, 108.75);
 });
 
 test('상태효과는 만료·직접 제거 시 callback을 실행하고 Entity 목록에서 제거된다', () => {

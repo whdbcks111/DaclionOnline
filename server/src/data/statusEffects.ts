@@ -57,7 +57,6 @@ function defineAttributeEffect(options: {
     const apply = (context: StatusEffectContext) => refreshModifiers(context, options.modifiers(context.effect.level));
     return StatusEffectType.define({
         ...options,
-        maxLevel: 20,
         onStart: apply,
         onUpdate: apply,
         onRemove: removeModifiers,
@@ -65,7 +64,7 @@ function defineAttributeEffect(options: {
 }
 
 const POISON = StatusEffectType.define({
-    id: 'poison', label: '독', icon: ICON.poison, maxLevel: 20,
+    id: 'poison', label: '독', icon: ICON.poison,
     descriptionTemplate: '초당 [color=purple]{{calc.damage}}[/color]의 독 피해를 받고 공격력과 마법력이 감소합니다.',
     calculatedFields: { damage: ({ effect }) => effect.level * 20 },
     onStart: context => {
@@ -84,7 +83,7 @@ const POISON = StatusEffectType.define({
 });
 
 const BLEEDING = StatusEffectType.define({
-    id: 'bleeding', label: '출혈', icon: ICON.physical, maxLevel: 20,
+    id: 'bleeding', label: '출혈', icon: ICON.physical,
     descriptionTemplate: '초당 최대 생명력에 비례한 [color=red]{{calc.damagePerSecond}}[/color]의 출혈 피해를 받습니다.',
     calculatedFields: {
         damagePerSecond: ({ target, effect }) => effect.level * Math.min(target.maxLife * 0.005, 50),
@@ -99,7 +98,7 @@ const BLEEDING = StatusEffectType.define({
 });
 
 const DECAY = StatusEffectType.define({
-    id: 'decay', label: '부패', icon: ICON.poison, maxLevel: 20,
+    id: 'decay', label: '부패', icon: ICON.poison,
     descriptionTemplate: '최대 생명력이 감소하고 시간이 지날수록 초당 부패 피해가 증가합니다.',
     onStart: context => {
         if (livingOnly(context) === 'remove') return 'remove';
@@ -118,7 +117,7 @@ const DECAY = StatusEffectType.define({
 });
 
 const HEAL_REDUCTION = StatusEffectType.define({
-    id: 'heal_reduction', label: '회복 효율 감소', icon: ICON.life, maxLevel: 20,
+    id: 'heal_reduction', label: '회복 효율 감소', icon: ICON.life,
     descriptionTemplate: '받는 생명력 회복량이 [color=red]{{calc.reductionPercent}}%[/color] 감소합니다.',
     calculatedFields: { reductionPercent: ({ effect }) => Math.round((1 - Math.pow(0.9, effect.level)) * 100) },
     onStart: applyHealingReduction,
@@ -157,10 +156,18 @@ const MENTALITY_REGENERATION = defineAttributeEffect({
     modifiers: level => [{ attribute: AttributeType.MENTALITY_REGEN.key, op: 'multiply', value: 1 + level * 0.05 }],
 });
 
-const REGENERATION = defineAttributeEffect({
+const REGENERATION = StatusEffectType.define({
     id: 'regeneration', label: '재생', icon: 'attributes/lifeRegen',
-    descriptionTemplate: '생명력 재생이 레벨당 5% 증가합니다.', aliases: ['재생'],
-    modifiers: level => [{ attribute: AttributeType.LIFE_REGEN.key, op: 'multiply', value: 1 + level * 0.05 }],
+    descriptionTemplate: '1초마다 최대 생명력의 [color=green]{{calc.healPercent}}%[/color]만큼 회복합니다. 현재 회복 효율의 영향을 받습니다.',
+    baseMetadata: { tickInterval: 1, tickElapsed: 0, baseHealRatio: 0.0025, healRatioPerLevel: 0.0015 },
+    calculatedFields: {
+        healPercent: ({ effect }) => Number((regenerationHealRatio(effect) * 100).toFixed(2)),
+        healAmount: ({ target, effect }) => target.maxLife * regenerationHealRatio(effect),
+    },
+    onStart: livingOnly,
+    onUpdate: updateRegeneration,
+    aliases: ['재생'],
+    tags: [],
 });
 
 const SLOWNESS = defineAttributeEffect({
@@ -176,7 +183,7 @@ const SWIFTNESS = defineAttributeEffect({
 });
 
 const EXPERIENCE_AMPLIFICATION = StatusEffectType.define({
-    id: 'experience_amplification', label: '경험 증폭', icon: 'attributes/luck', maxLevel: 20,
+    id: 'experience_amplification', label: '경험 증폭', icon: 'attributes/luck',
     descriptionTemplate: '획득 경험치가 레벨당 5% 증가합니다.',
     onStart: applyExperienceAmplification,
     onUpdate: applyExperienceAmplification,
@@ -193,7 +200,7 @@ const CHARM = defineActionEffect('charm', '매혹', [ActionType.SKILL, ActionTyp
 const SLEEP = defineActionEffect('sleep', '수면', [ActionType.SKILL, ActionType.ITEM_USE, ActionType.ATTACK, ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['수면', '잠']);
 
 const NAUSEA = StatusEffectType.define({
-    id: 'nausea', label: '멀미', icon: ICON.control, maxLevel: 20,
+    id: 'nausea', label: '멀미', icon: ICON.control,
     descriptionTemplate: '아이템과 스킬을 사용할 수 없고 매 tick 공격이 방해받을 수 있습니다.',
     onEarlyUpdate: ({ target, effect }) => {
         const source = modifierSource(effect);
@@ -205,7 +212,7 @@ const NAUSEA = StatusEffectType.define({
 const BLINDNESS = defineActionEffect('blindness', '실명', [ActionType.ATTACK, ActionType.EVASION], ['실명']);
 
 const FEAR = StatusEffectType.define({
-    id: 'fear', label: '공포', icon: ICON.control, maxLevel: 20,
+    id: 'fear', label: '공포', icon: ICON.control,
     descriptionTemplate: '공격·스킬·회피를 할 수 없고 이동속도가 감소합니다.',
     onStart: applyFear,
     onEarlyUpdate: applyFear,
@@ -219,7 +226,7 @@ const FEAR = StatusEffectType.define({
 });
 
 const INVULNERABLE = StatusEffectType.define({
-    id: 'invulnerable', label: '무적', icon: ICON.protection, maxLevel: 1,
+    id: 'invulnerable', label: '무적', icon: ICON.protection,
     descriptionTemplate: '모든 피해를 받지 않습니다.',
     onStart: applyInvulnerable,
     onUpdate: applyInvulnerable,
@@ -228,7 +235,7 @@ const INVULNERABLE = StatusEffectType.define({
 });
 
 const INVISIBLE = StatusEffectType.define({
-    id: 'invisible', label: '투명화', icon: ICON.stealth, maxLevel: 20,
+    id: 'invisible', label: '투명화', icon: ICON.stealth,
     descriptionTemplate: '다른 대상이 공격 대상으로 지정할 수 없습니다.',
     onStart: applyInvisible,
     onUpdate: applyInvisible,
@@ -237,33 +244,33 @@ const INVISIBLE = StatusEffectType.define({
 });
 
 const EXPOSE = StatusEffectType.define({
-    id: 'expose', label: '발각됨', icon: ICON.stealth, maxLevel: 20,
+    id: 'expose', label: '발각됨', icon: ICON.stealth,
     descriptionTemplate: '투명화할 수 없고 이미 적용된 투명화가 제거됩니다.',
     aliases: ['발각', '노출'], tags: [],
 });
 
 const FIRE_RESISTANCE = StatusEffectType.define({
-    id: 'fire_resistance', label: '화염 저항', icon: ICON.fire, maxLevel: 20,
+    id: 'fire_resistance', label: '화염 저항', icon: ICON.fire,
     descriptionTemplate: '지속 중 화염 효과를 차단합니다.', aliases: ['화염 저항'], tags: [GameTags.PROPERTY_FIRE],
 });
 
 const FROZEN_RESISTANCE = StatusEffectType.define({
-    id: 'frozen_resistance', label: '빙결 저항', icon: ICON.ice, maxLevel: 20,
+    id: 'frozen_resistance', label: '빙결 저항', icon: ICON.ice,
     descriptionTemplate: '지속 중 빙결 효과를 차단합니다.', aliases: ['빙결 저항'], tags: [GameTags.PROPERTY_ICE],
 });
 
 const DETOXIFICATION = StatusEffectType.define({
-    id: 'detoxification', label: '해독', icon: ICON.poison, maxLevel: 20,
+    id: 'detoxification', label: '해독', icon: ICON.poison,
     descriptionTemplate: '독·맹독·마비독을 제거하고 지속 중 새 중독을 차단합니다.', aliases: ['해독'], tags: [],
 });
 
 const PRESERVATION = StatusEffectType.define({
-    id: 'preservation', label: '보존', icon: ICON.life, maxLevel: 20,
+    id: 'preservation', label: '보존', icon: ICON.life,
     descriptionTemplate: '부패를 제거하고 지속 중 새 부패를 차단합니다.', aliases: ['보존'], tags: [],
 });
 
 const FROZEN = StatusEffectType.define({
-    id: 'frozen', label: '빙결', icon: ICON.ice, maxLevel: 20,
+    id: 'frozen', label: '빙결', icon: ICON.ice,
     descriptionTemplate: '초당 [color=cyan]{{calc.damage}}[/color]의 얼음 피해를 받고 이동·공격속도가 감소합니다.',
     calculatedFields: { damage: ({ effect }) => effect.level * 15 },
     onStart: applyFrozen,
@@ -281,7 +288,7 @@ const FROZEN = StatusEffectType.define({
 function defineActionEffect(id: string, label: string, actions: readonly ActionType[], aliases: readonly string[]): StatusEffectType {
     const apply = ({ target, effect }: StatusEffectContext) => target.disableActions(actions, modifierSource(effect));
     return StatusEffectType.define({
-        id, label, icon: ICON.control, maxLevel: 20,
+        id, label, icon: ICON.control,
         descriptionTemplate: `${actions.map(action => action.label).join('·')} 행동을 할 수 없습니다.`,
         onStart: apply,
         onEarlyUpdate: apply,
@@ -309,6 +316,24 @@ function applyDecayModifier(context: StatusEffectContext): void {
 
 function applyHealingReduction({ target, effect }: StatusEffectContext): void {
     target.setHealingReceivedModifier(modifierSource(effect), Math.pow(0.9, effect.level));
+}
+
+function regenerationHealRatio(effect: StatusEffect): number {
+    const base = Math.max(0, effect.getMetadata<number>('baseHealRatio') ?? 0.0025);
+    const perLevel = Math.max(0, effect.getMetadata<number>('healRatioPerLevel') ?? 0.0015);
+    return base + perLevel * effect.level;
+}
+
+function updateRegeneration(context: StatusEffectContext, dt: number): StatusEffectLifecycleResult | void {
+    if (livingOnly(context) === 'remove') return 'remove';
+    const { target, effect } = context;
+    const interval = Math.max(0.05, effect.getMetadata<number>('tickInterval') ?? 1);
+    let elapsed = (effect.getMetadata<number>('tickElapsed') ?? 0) + dt;
+    while (elapsed >= interval && !target.isDefeated) {
+        elapsed -= interval;
+        target.heal(target.maxLife * regenerationHealRatio(effect), target);
+    }
+    effect.setMetadata('tickElapsed', elapsed);
 }
 
 function applyExperienceAmplification({ target, effect }: StatusEffectContext): void {

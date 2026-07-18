@@ -33,7 +33,6 @@ export interface StatusEffectTypeOptions {
     label: string;
     /** `client/public/icons` 아래 PNG 경로에서 확장자를 제외한 key. */
     icon?: string;
-    maxLevel: number;
     descriptionTemplate: string;
     baseMetadata?: StatusEffectMetadata | null;
     calculatedFields?: Readonly<Record<string, (context: StatusEffectContext) => StatusEffectCalculatedValue>>;
@@ -93,7 +92,6 @@ export class StatusEffectType implements TagReadable {
     static readonly FIRE = StatusEffectType.define({
         id: 'fire',
         label: '화염',
-        maxLevel: 10,
         descriptionTemplate: '1초마다 [color=orange]{{calc.damage}}[/color]의 불 속성 피해를 입습니다. 누적 {{calc.burnThreshold}}초 초과 시 화상을 입습니다.',
         baseMetadata: {
             tickInterval: 1,
@@ -117,11 +115,11 @@ export class StatusEffectType implements TagReadable {
     static readonly BURN = StatusEffectType.define({
         id: 'burn',
         label: '화상',
-        maxLevel: 20,
         descriptionTemplate: '받는 생명력 회복량이 [color=red]{{calc.healingReductionPercent}}%[/color] 감소합니다.',
         baseMetadata: {
             minHealingReduction: 0.05,
             maxHealingReduction: 0.5,
+            scalingLevelCap: 20,
         },
         calculatedFields: {
             healingReduction: ({ effect }) => getBurnHealingReduction(effect),
@@ -139,7 +137,6 @@ export class StatusEffectType implements TagReadable {
     static readonly DEADLY_POISON = StatusEffectType.define({
         id: 'deadly_poison',
         label: '맹독',
-        maxLevel: 20,
         descriptionTemplate: '0.5초마다 최대 생명력의 [color=purple]{{calc.damagePercent}}%[/color]만큼 맹독 피해를 입고, 받는 치유량이 50% 감소합니다.',
         baseMetadata: {
             tickInterval: 0.5,
@@ -166,11 +163,11 @@ export class StatusEffectType implements TagReadable {
     static readonly PARALYTIC_POISON = StatusEffectType.define({
         id: 'paralytic_poison',
         label: '마비독',
-        maxLevel: 20,
         descriptionTemplate: '매 tick [color=purple]{{calc.disableChancePercent}}%[/color] 확률로 스킬·공격·이동 행동이 제한됩니다.',
         baseMetadata: {
             minDisableChance: 0.05,
             maxDisableChance: 0.5,
+            scalingLevelCap: 20,
         },
         calculatedFields: {
             disableChance: ({ effect }) => getParalyticPoisonDisableChance(effect),
@@ -186,7 +183,6 @@ export class StatusEffectType implements TagReadable {
         id: 'hunger',
         label: '공복',
         icon: 'attributes/maxHungry',
-        maxLevel: 10,
         descriptionTemplate: '배고픔이 고갈되었습니다. 생명력 재생이 중단되고 초당 최대 생명력의 [color=red]{{calc.damagePercent}}%[/color] 피해를 받습니다. 60초마다 효과 레벨이 상승합니다.',
         baseMetadata: { tickInterval: 1, tickElapsed: 0, levelElapsed: 0, damageScalePerLevel: 0.25 },
         calculatedFields: { damagePercent: getSurvivalDepletionDamagePercent },
@@ -200,7 +196,6 @@ export class StatusEffectType implements TagReadable {
         id: 'thirst',
         label: '갈증',
         icon: 'attributes/maxThirsty',
-        maxLevel: 10,
         descriptionTemplate: '수분이 고갈되었습니다. 생명력 재생이 중단되고 초당 최대 생명력의 [color=red]{{calc.damagePercent}}%[/color] 피해를 받습니다. 60초마다 효과 레벨이 상승합니다.',
         baseMetadata: { tickInterval: 1, tickElapsed: 0, levelElapsed: 0, damageScalePerLevel: 0.25 },
         calculatedFields: { damagePercent: getSurvivalDepletionDamagePercent },
@@ -213,7 +208,6 @@ export class StatusEffectType implements TagReadable {
     readonly id: string;
     readonly label: string;
     readonly icon: string;
-    readonly maxLevel: number;
     readonly descriptionTemplate: string;
     readonly baseMetadata: Readonly<StatusEffectMetadata> | null;
     readonly calculatedFields: Readonly<Record<string, (context: StatusEffectContext) => StatusEffectCalculatedValue>>;
@@ -228,7 +222,6 @@ export class StatusEffectType implements TagReadable {
         this.id = normalizeStatusEffectId(options.id);
         this.label = options.label.trim();
         this.icon = normalizeStatusEffectIcon(options.icon ?? `status-effects/${this.id}`);
-        this.maxLevel = options.maxLevel;
         this.descriptionTemplate = options.descriptionTemplate;
         this.baseMetadata = options.baseMetadata
             ? Object.freeze(cloneMetadata(options.baseMetadata) as StatusEffectMetadata)
@@ -241,9 +234,6 @@ export class StatusEffectType implements TagReadable {
         this.tags = Object.freeze(normalizeTags(options.tags ?? []));
         this.aliases = Object.freeze((options.aliases ?? []).map(alias => alias.trim()).filter(Boolean));
         if (!this.label) throw new Error(`StatusEffectType label must not be empty: ${this.id}`);
-        if (!Number.isInteger(this.maxLevel) || this.maxLevel < 1) {
-            throw new Error(`Invalid StatusEffectType max level: ${this.id}/${this.maxLevel}`);
-        }
     }
 
     static define(options: StatusEffectTypeOptions): StatusEffectType {
@@ -272,7 +262,7 @@ export class StatusEffectType implements TagReadable {
 
     normalizeLevel(level: number): number {
         if (!Number.isInteger(level)) throw new Error(`StatusEffect level must be an integer: ${level}`);
-        return Math.max(1, Math.min(this.maxLevel, level));
+        return Math.max(1, level);
     }
 
     hasTag(tag: TagId): boolean {
@@ -564,7 +554,7 @@ function updateSurvivalDepletionEffect(
     const needEmpty = effect.type === StatusEffectType.HUNGER ? target.hungry <= 0 : target.thirsty <= 0;
     if (!target.isPlayer || !needEmpty) return 'remove';
     let levelElapsed = (effect.getMetadata<number>('levelElapsed') ?? 0) + dt;
-    while (levelElapsed >= 60 && effect.level < effect.type.maxLevel) {
+    while (levelElapsed >= 60) {
         levelElapsed -= 60;
         target.applyStatusEffect(effect.type, effect.duration, effect.level + 1);
     }
@@ -633,7 +623,8 @@ function getBurnDurationFromFire(fireLevel: number): number {
 function getBurnHealingReduction(effect: StatusEffect): number {
     const min = effect.getMetadata<number>('minHealingReduction') ?? 0.05;
     const max = effect.getMetadata<number>('maxHealingReduction') ?? 0.5;
-    const ratio = effect.type.maxLevel <= 1 ? 1 : (effect.level - 1) / (effect.type.maxLevel - 1);
+    const cap = Math.max(2, effect.getMetadata<number>('scalingLevelCap') ?? 20);
+    const ratio = Math.min(1, (effect.level - 1) / (cap - 1));
     return Math.max(0, Math.min(1, min + (max - min) * ratio));
 }
 
@@ -650,7 +641,8 @@ function getDeadlyPoisonDamageRatio(target: Entity, effect: StatusEffect): numbe
 function getParalyticPoisonDisableChance(effect: StatusEffect): number {
     const min = effect.getMetadata<number>('minDisableChance') ?? 0.05;
     const max = effect.getMetadata<number>('maxDisableChance') ?? 0.5;
-    const ratio = effect.type.maxLevel <= 1 ? 1 : (effect.level - 1) / (effect.type.maxLevel - 1);
+    const cap = Math.max(2, effect.getMetadata<number>('scalingLevelCap') ?? 20);
+    const ratio = Math.min(1, (effect.level - 1) / (cap - 1));
     return Math.max(0, Math.min(1, min + (max - min) * ratio));
 }
 
