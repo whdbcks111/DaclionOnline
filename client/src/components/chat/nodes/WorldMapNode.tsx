@@ -27,9 +27,10 @@ const MIN_LABEL_ZOOM = 0.7
 const MAX_LABEL_ZOOM = 1.75
 const LABEL_ZOOM_STEP = 0.15
 
-interface BiomeColorGroup {
+interface BiomeSeed {
+    colorKey: string
     color: readonly [number, number, number]
-    points: Point[]
+    point: Point
 }
 
 function mapY(location: WorldMapLocationData): number {
@@ -71,21 +72,39 @@ function parseHexColor(color: string): readonly [number, number, number] {
     ]
 }
 
-function createBiomeColorGroups(data: WorldMapData): BiomeColorGroup[] {
-    const groups = new Map<string, Point[]>()
-    for (const location of data.locations) {
-        if (!location.visited || !location.mapColor) continue
-        const color = location.mapColor.toLowerCase()
-        const points = groups.get(color) ?? []
-        points.push({ x: location.x, y: mapY(location) })
-        groups.set(color, points)
+function createBiomeSeeds(data: WorldMapData): BiomeSeed[] {
+    return data.locations.flatMap(location => {
+        if (!location.visited || !location.mapColor) return []
+        const colorKey = location.mapColor.toLowerCase()
+        return [{
+            colorKey,
+            color: parseHexColor(colorKey),
+            point: { x: location.x, y: mapY(location) },
+        }]
+    })
+}
+
+function getBiomeSofteningDistance(seeds: readonly BiomeSeed[]): number {
+    const nearestOtherBiomeDistances: number[] = []
+    for (let seedIndex = 0; seedIndex < seeds.length; seedIndex += 1) {
+        let nearestDistanceSquared = Number.POSITIVE_INFINITY
+        for (let otherIndex = 0; otherIndex < seeds.length; otherIndex += 1) {
+            if (otherIndex === seedIndex || seeds[otherIndex].colorKey === seeds[seedIndex].colorKey) continue
+            const dx = seeds[seedIndex].point.x - seeds[otherIndex].point.x
+            const dy = seeds[seedIndex].point.y - seeds[otherIndex].point.y
+            nearestDistanceSquared = Math.min(nearestDistanceSquared, dx * dx + dy * dy)
+        }
+        if (Number.isFinite(nearestDistanceSquared)) nearestOtherBiomeDistances.push(Math.sqrt(nearestDistanceSquared))
     }
-    return [...groups.entries()].map(([color, points]) => ({ color: parseHexColor(color), points }))
+    if (nearestOtherBiomeDistances.length === 0) return 12
+    nearestOtherBiomeDistances.sort((left, right) => left - right)
+    const median = nearestOtherBiomeDistances[Math.floor(nearestOtherBiomeDistances.length / 2)]
+    return Math.max(8, Math.min(48, median * 0.2))
 }
 
 function paintBiomeGradient(
     canvas: HTMLCanvasElement,
-    groups: readonly BiomeColorGroup[],
+    seeds: readonly BiomeSeed[],
     view: ViewBox,
     cssWidth: number,
     cssHeight: number,
@@ -97,8 +116,9 @@ function paintBiomeGradient(
     if (canvas.width !== width) canvas.width = width
     if (canvas.height !== height) canvas.height = height
     context.clearRect(0, 0, width, height)
-    if (groups.length === 0) return
+    if (seeds.length === 0) return
 
+    const softeningDistance = getBiomeSofteningDistance(seeds)
     const image = context.createImageData(width, height)
     const pixels = image.data
     for (let pixelY = 0; pixelY < height; pixelY += 1) {
@@ -107,39 +127,49 @@ function paintBiomeGradient(
             const worldX = view.x + (pixelX + 0.5) / width * view.width
             let nearestIndex = 0
             let nearestDistanceSquared = Number.POSITIVE_INFINITY
-            let secondIndex = 0
             let secondDistanceSquared = Number.POSITIVE_INFINITY
+            let nearestBaseWeight = 0
+            let totalWeight = 0
+            let red = 0
+            let green = 0
+            let blue = 0
 
-            for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
-                let groupDistanceSquared = Number.POSITIVE_INFINITY
-                for (const point of groups[groupIndex].points) {
-                    const dx = worldX - point.x
-                    const dy = worldY - point.y
-                    groupDistanceSquared = Math.min(groupDistanceSquared, dx * dx + dy * dy)
-                }
-                if (groupDistanceSquared < nearestDistanceSquared) {
+            for (let seedIndex = 0; seedIndex < seeds.length; seedIndex += 1) {
+                const dx = worldX - seeds[seedIndex].point.x
+                const dy = worldY - seeds[seedIndex].point.y
+                const distanceSquared = dx * dx + dy * dy
+                const distance = Math.sqrt(distanceSquared)
+                const weight = 1 / ((distance + softeningDistance) ** 2)
+                const color = seeds[seedIndex].color
+                totalWeight += weight
+                red += color[0] * weight
+                green += color[1] * weight
+                blue += color[2] * weight
+                if (distanceSquared < nearestDistanceSquared) {
                     secondDistanceSquared = nearestDistanceSquared
-                    secondIndex = nearestIndex
-                    nearestDistanceSquared = groupDistanceSquared
-                    nearestIndex = groupIndex
-                } else if (groupDistanceSquared < secondDistanceSquared) {
-                    secondDistanceSquared = groupDistanceSquared
-                    secondIndex = groupIndex
+                    nearestDistanceSquared = distanceSquared
+                    nearestIndex = seedIndex
+                    nearestBaseWeight = weight
+                } else if (distanceSquared < secondDistanceSquared) {
+                    secondDistanceSquared = distanceSquared
                 }
             }
 
-            const nearestColor = groups[nearestIndex].color
-            const secondColor = groups.length > 1 ? groups[secondIndex].color : nearestColor
+            const nearestColor = seeds[nearestIndex].color
             const nearestDistance = Math.sqrt(nearestDistanceSquared)
             const secondDistance = Math.sqrt(secondDistanceSquared)
-            const nearestWeight = Number.isFinite(secondDistance)
-                ? secondDistance / Math.max(0.0001, nearestDistance + secondDistance)
+            const dominance = Number.isFinite(secondDistance)
+                ? Math.max(0, (secondDistance - nearestDistance) / Math.max(0.0001, secondDistance + nearestDistance))
                 : 1
-            const secondWeight = 1 - nearestWeight
+            const nearestBoost = nearestBaseWeight * dominance * 3
+            totalWeight += nearestBoost
+            red += nearestColor[0] * nearestBoost
+            green += nearestColor[1] * nearestBoost
+            blue += nearestColor[2] * nearestBoost
             const offset = (pixelY * width + pixelX) * 4
-            pixels[offset] = Math.round(nearestColor[0] * nearestWeight + secondColor[0] * secondWeight)
-            pixels[offset + 1] = Math.round(nearestColor[1] * nearestWeight + secondColor[1] * secondWeight)
-            pixels[offset + 2] = Math.round(nearestColor[2] * nearestWeight + secondColor[2] * secondWeight)
+            pixels[offset] = Math.round(red / totalWeight)
+            pixels[offset + 1] = Math.round(green / totalWeight)
+            pixels[offset + 2] = Math.round(blue / totalWeight)
             pixels[offset + 3] = 255
         }
     }
@@ -172,7 +202,7 @@ export default function WorldMapNode({ data }: Props) {
         [data.locations],
     )
     const activeLocation = locationsById.get(hoveredId ?? selectedId ?? '')
-    const biomeColorGroups = useMemo(() => createBiomeColorGroups(data), [data])
+    const biomeSeeds = useMemo(() => createBiomeSeeds(data), [data])
     const labelViewScale = view.width / Math.max(1, fitViewRef.current.width)
     const labelFontSize = BASE_LABEL_SIZE * labelViewScale * labelZoom
 
@@ -203,13 +233,13 @@ export default function WorldMapNode({ data }: Props) {
         if (!canvas || viewportSize.width <= 0 || viewportSize.height <= 0) return
         const frame = requestAnimationFrame(() => paintBiomeGradient(
             canvas,
-            biomeColorGroups,
+            biomeSeeds,
             view,
             viewportSize.width,
             viewportSize.height,
         ))
         return () => cancelAnimationFrame(frame)
-    }, [biomeColorGroups, view, viewportSize])
+    }, [biomeSeeds, view, viewportSize])
 
     const zoomAt = useCallback((factor: number, localPoint?: Point) => {
         const svg = svgRef.current
