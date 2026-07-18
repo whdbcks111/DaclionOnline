@@ -1,7 +1,7 @@
 @use '../../styles/variables' as *;
 @use '../../styles/themes' as *;
 
-.root { position: relative; min-width: 0; font-weight: 400; }
+.root { position: relative; min-width: 0; min-height: 2.75rem; flex: 0 0 auto; font-weight: 400; }
 .trigger {
   display: flex;
   width: 100%;
@@ -29,7 +29,9 @@
   left: 0;
   display: grid;
   gap: $spacing-xs;
-  min-width: min(22rem, 82vw);
+  width: max(100%, min(30rem, 78vw));
+  min-width: min(26rem, 78vw);
+  max-height: min(32rem, 72vh);
   padding: $spacing-sm;
   background: $color-bg;
   border: 1px solid $color-border;
@@ -48,10 +50,15 @@
 }
 .options {
   display: grid;
-  max-height: min(18rem, 42vh);
+  grid-auto-rows: max-content;
+  align-content: start;
+  min-height: min(14rem, 32vh);
+  max-height: min(26rem, 58vh);
   overflow: auto;
   button {
     display: grid;
+    min-height: 3rem;
+    flex: 0 0 auto;
     gap: .15rem;
     padding: .6rem .65rem;
     color: $color-text;
@@ -68,6 +75,6 @@
 }
 
 @media (max-width: $breakpoint-mobile) {
-  .popover { position: fixed; inset: auto $spacing-sm $spacing-sm; min-width: 0; max-height: 70vh; }
-  .options { max-height: 50vh; }
+  .popover { position: fixed; inset: auto $spacing-sm $spacing-sm; width: auto; min-width: 0; max-height: 82vh; }
+  .options { min-height: min(18rem, 44vh); max-height: 64vh; }
 }
