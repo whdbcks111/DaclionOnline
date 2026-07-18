@@ -4,7 +4,7 @@
 
 ```text
 Home/QuickSlot/ButtonNode
-        │ sendMessage / sendImageMessage / chatButtonClick
+        │ sendMessage / sendImageMessages / chatButtonClick
         v
 modules/chat.ts ── 일반문장 ──> 귓속말 / Skill message trigger 또는 modules/message.ts ──> Socket room
         │                              │
@@ -17,7 +17,7 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 
 `Home.tsx`는 메시지 전송 후 입력 내용만 비우고 contenteditable의 포커스와 커서를 유지한다. 전송 버튼의 pointer down도 입력 포커스를 빼앗지 않으므로 모바일 가상 키보드가 매 전송마다 닫히거나 다시 열리며 깜빡이지 않는다.
 
-입력창 왼쪽 미디어 버튼은 숨은 `accept="image/*"` 파일 입력을 열어 모바일에서는 OS 미디어 선택기, PC에서는 파일 탐색기를 사용한다. 선택한 파일은 먼저 인증 HTTP API에서 최대 1600px·품질 78의 WebP로 재인코딩되고, 성공한 서버 파일명만 `sendImageMessage`로 보낸다. 소켓은 사용자 소유 파일과 `ActionType.CHAT`을 다시 검사한다. 파일은 전체 최신 100장·최대 7일 동안만 보관되며 매시간 정리되므로 이전 채팅의 만료된 이미지는 더 이상 조회되지 않는다.
+입력창 왼쪽 미디어 버튼은 숨은 `accept="image/*"` 다중 파일 입력을 열어 모바일에서는 OS 미디어 선택기, PC에서는 파일 탐색기를 사용한다. contenteditable에 이미지 파일을 `Ctrl+V`로 붙여넣어도 같은 첨부 대기열에 들어간다. 최대 10장의 미리보기를 입력창 위에서 개별 또는 전체 삭제한 뒤 전송하며, 전송 전에는 서버로 업로드하지 않는다. 전송 시 각 파일은 인증 HTTP API에서 최대 1600px·품질 78의 WebP로 재인코딩되고, 성공한 서버 파일명 묶음만 `sendImageMessages`로 보낸다. 소켓은 모든 파일의 사용자 소유권과 `ActionType.CHAT`을 다시 검사한 뒤 한 채팅 메시지에 이미지들을 묶는다. 파일은 전체 최신 100장·최대 7일 동안만 보관되며 매시간 정리되므로 이전 채팅의 만료된 이미지는 더 이상 조회되지 않는다.
 
 전송 버튼 옆의 공개/비공개 버튼은 플레이어별 런타임 정보 열람 모드를 `setInformationMode`로 변경한다. 같은 기능을 `/공개모드`, `/비공개모드`로도 사용할 수 있고 서버는 `informationMode`를 같은 계정의 모든 소켓에 동기화한다. 기본값은 비공개이며 마지막 연결 종료 또는 Player unload 때 초기화된다. `registerCommand({ information: true })` 명령은 공개 모드에서 명령 입력과 `sendBotMessageToUser` 결과를 현재 채널에 공개하고, 비공개 모드에서는 기존처럼 본인에게만 보낸다. `/위치`와 `/지도`도 이 규칙을 따르며, 상태창·인벤토리·통계의 명시적 `공개/비공개` 인자는 해당 1회 실행에서 모드보다 우선한다. `/이동` 같은 조작 명령과 관리자 명령·파티 초대 같은 민감한 결과는 정보 공개 모드의 영향을 받지 않는다.
 

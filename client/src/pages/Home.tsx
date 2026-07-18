@@ -17,6 +17,28 @@ import MiniGameOverlay from '../components/minigame/MiniGameOverlay'
 import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, LocationInfoData, ChannelInfo, UserCountData, CompletionItem } from '@shared/types'
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
+const MAX_PENDING_IMAGES = 10
+
+interface PendingChatImage {
+  id: string
+  file: File
+  previewUrl: string
+}
+
+async function uploadChatImage(file: File): Promise<string> {
+  const formData = new FormData()
+  formData.append('image', file)
+  const response = await fetch(`${SERVER_URL}/api/chat-image`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+  const data = await response.json() as { ok?: boolean; filename?: string; error?: string }
+  if (!response.ok || !data.ok || !data.filename) {
+    throw new Error(data.error ?? '이미지 업로드에 실패했습니다.')
+  }
+  return data.filename
+}
 
 function channelRoomKey(channel: string | null): string {
   return channel === null ? 'channel:main' : `channel:${channel}`
@@ -45,8 +67,11 @@ function HomeContent() {
   const [informationPublic, setInformationPublic] = useState(false)
   const [imageUploading, setImageUploading] = useState(false)
   const [mediaError, setMediaError] = useState<string | null>(null)
+  const [pendingImages, setPendingImages] = useState<PendingChatImage[]>([])
   const inputRef = useRef<HTMLDivElement>(null)
   const mediaInputRef = useRef<HTMLInputElement>(null)
+  const pendingImagesRef = useRef<PendingChatImage[]>([])
+  const imageSendingRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const isComposing = useRef(false)
   const snapshotRevisions = useRef({
@@ -60,6 +85,14 @@ function HomeContent() {
       locationInfo: { syncId: '', revision: 0 },
     }
   }, [sessionInfo?.userId])
+
+  useEffect(() => {
+    pendingImagesRef.current = pendingImages
+  }, [pendingImages])
+
+  useEffect(() => () => {
+    pendingImagesRef.current.forEach(image => URL.revokeObjectURL(image.previewUrl))
+  }, [])
 
   useEffect(() => {
     if (!socket) return
@@ -146,61 +179,99 @@ function HomeContent() {
     })
   }, [socket, updateNickname])
 
-  const sendMessage = useCallback(() => {
-    const inputElement = inputRef.current;
-    const content = inputRef.current?.textContent?.trim();
-    if (!content || !socket) return;
+  const focusComposerEnd = useCallback(() => {
+    const inputElement = inputRef.current
+    if (!inputElement) return
+    if (document.activeElement !== inputElement) inputElement.focus({ preventScroll: true })
+    const range = document.createRange()
+    range.selectNodeContents(inputElement)
+    range.collapse(false)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+  }, [])
 
-    socket.emit('sendMessage', content);
+  const clearPendingImages = useCallback(() => {
+    pendingImagesRef.current.forEach(image => URL.revokeObjectURL(image.previewUrl))
+    setPendingImages([])
+  }, [])
 
-    if(inputElement) {
-      inputElement.textContent = '';
-      if (document.activeElement !== inputElement) {
-        inputElement.focus({ preventScroll: true });
-      }
-      const range = document.createRange();
-      range.selectNodeContents(inputElement);
-      range.collapse(false);
-      const selection = window.getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-    }
-
-    setShowAutocomplete(false)
-  }, [socket])
-
-  const sendImage = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file || !socket) return
-    if (!file.type.startsWith('image/')) {
-      setMediaError('이미지 파일만 전송할 수 있습니다.')
-      event.target.value = ''
+  const enqueueImages = useCallback((files: readonly File[]) => {
+    if (imageSendingRef.current) {
+      setMediaError('이미지를 전송하는 동안에는 새 이미지를 추가할 수 없습니다.')
       return
     }
+    const images = files.filter(file => file.type.startsWith('image/'))
+    if (images.length !== files.length) {
+      setMediaError('이미지 파일만 첨부할 수 있습니다.')
+    } else {
+      setMediaError(null)
+    }
+    setPendingImages(current => {
+      const available = Math.max(0, MAX_PENDING_IMAGES - current.length)
+      const accepted = images.slice(0, available).map((file, index) => ({
+        id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${index}-${Math.random()}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+      }))
+      if (images.length > available) {
+        setMediaError(`이미지는 한 번에 최대 ${MAX_PENDING_IMAGES}장까지 첨부할 수 있습니다.`)
+      }
+      return [...current, ...accepted]
+    })
+  }, [])
 
-    setImageUploading(true)
+  const removePendingImage = useCallback((id: string) => {
+    setPendingImages(current => current.filter(image => {
+      if (image.id !== id) return true
+      URL.revokeObjectURL(image.previewUrl)
+      return false
+    }))
+  }, [])
+
+  const selectImages = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    enqueueImages(Array.from(event.target.files ?? []))
+    event.target.value = ''
+  }, [enqueueImages])
+
+  const handlePaste = useCallback((event: React.ClipboardEvent<HTMLDivElement>) => {
+    const images = Array.from(event.clipboardData.items)
+      .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+      .flatMap(item => item.getAsFile() ?? [])
+    if (images.length === 0) return
+    event.preventDefault()
+    enqueueImages(images)
+  }, [enqueueImages])
+
+  const sendMessage = useCallback(async () => {
+    const inputElement = inputRef.current
+    const content = inputElement?.textContent?.trim() ?? ''
+    const attachments = pendingImages
+    if (!socket || imageSendingRef.current || (!content && attachments.length === 0)) return
+
+    imageSendingRef.current = true
     setMediaError(null)
     try {
-      const formData = new FormData()
-      formData.append('image', file)
-      const response = await fetch(`${SERVER_URL}/api/chat-image`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      })
-      const data = await response.json() as { ok?: boolean; filename?: string; error?: string }
-      if (!response.ok || !data.ok || !data.filename) {
-        setMediaError(data.error ?? '이미지 업로드에 실패했습니다.')
-        return
+      let filenames: string[] = []
+      if (attachments.length > 0) {
+        setImageUploading(true)
+        filenames = await Promise.all(attachments.map(image => uploadChatImage(image.file)))
       }
-      socket.emit('sendImageMessage', { filename: data.filename })
-    } catch {
-      setMediaError('이미지 업로드 중 오류가 발생했습니다.')
+      if (content) socket.emit('sendMessage', content)
+      if (filenames.length > 0) socket.emit('sendImageMessages', { filenames })
+
+      if (inputElement) inputElement.textContent = ''
+      clearPendingImages()
+      setCommandFilter('')
+      setShowAutocomplete(false)
+      focusComposerEnd()
+    } catch (error) {
+      setMediaError(error instanceof Error ? error.message : '이미지 업로드 중 오류가 발생했습니다.')
     } finally {
+      imageSendingRef.current = false
       setImageUploading(false)
-      event.target.value = ''
     }
-  }, [socket])
+  }, [clearPendingImages, focusComposerEnd, pendingImages, socket])
 
   const selectCommand = useCallback((name: string) => {
     if (!inputRef.current) return
@@ -411,60 +482,92 @@ function HomeContent() {
             />
           )}
           {mediaError && <span className={styles.mediaError} role="alert">{mediaError}</span>}
+          {pendingImages.length > 0 && (
+            <div className={styles.mediaPreviewTray} aria-label={`첨부 이미지 ${pendingImages.length}장`}>
+              <div className={styles.mediaPreviewHeader}>
+                <span>이미지 {pendingImages.length}/{MAX_PENDING_IMAGES}</span>
+                <button
+                  type="button"
+                  className={styles.clearMediaButton}
+                  disabled={imageUploading}
+                  onClick={clearPendingImages}
+                >모두 지우기</button>
+              </div>
+              <div className={styles.mediaPreviewList}>
+                {pendingImages.map(image => (
+                  <figure key={image.id} className={styles.mediaPreviewItem}>
+                    <img src={image.previewUrl} alt={image.file.name || '붙여넣은 이미지'} />
+                    <button
+                      type="button"
+                      className={styles.removeMediaButton}
+                      aria-label={`${image.file.name || '이미지'} 첨부 삭제`}
+                      disabled={imageUploading}
+                      onClick={() => removePendingImage(image.id)}
+                    >×</button>
+                  </figure>
+                ))}
+              </div>
+            </div>
+          )}
           <input
             ref={mediaInputRef}
             className={styles.mediaInput}
             type="file"
             accept="image/*"
-            onChange={sendImage}
+            multiple
+            onChange={selectImages}
           />
-          <button
-            type="button"
-            className={styles.mediaButton}
-            aria-label={imageUploading ? '이미지 업로드 중' : '이미지 전송'}
-            title={imageUploading ? '이미지 업로드 중' : '이미지 전송'}
-            disabled={imageUploading}
-            onPointerDown={event => event.preventDefault()}
-            onClick={() => mediaInputRef.current?.click()}
-          >
-            {imageUploading ? (
-              <span className={styles.mediaSpinner} aria-hidden="true" />
-            ) : (
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 5.5h16v13H4zM7 15l3-3 2.5 2.5 2-2 2.5 2.5M8.5 9a1.25 1.25 0 1 0 0 .01" />
-              </svg>
-            )}
-          </button>
-          <div
-            ref={inputRef}
-            className={styles.chatInputField}
-            contentEditable
-            role="textbox"
-            data-placeholder="메시지를 입력하세요"
-            onInput={handleInput}
-            onKeyDown={handleKeyDown}
-            onCompositionStart={() => {
-              isComposing.current = true;
-            }}
-            onCompositionEnd={() => {
-              isComposing.current = false;
-            }}
-          />
-          <button
-            type="button"
-            className={`${styles.visibilityButton} ${informationPublic ? styles.visibilityPublic : styles.visibilityPrivate}`}
-            aria-pressed={informationPublic}
-            title={`정보 열람 ${informationPublic ? '공개' : '비공개'}모드`}
-            onPointerDown={event => event.preventDefault()}
-            onClick={() => socket?.emit('setInformationMode', !informationPublic)}
-          >
-            {informationPublic ? '공개' : '비공개'}
-          </button>
-          <button
-            type="button"
-            onPointerDown={event => event.preventDefault()}
-            onClick={sendMessage}
-          >전송</button>
+          <div className={styles.inputRow}>
+            <button
+              type="button"
+              className={styles.mediaButton}
+              aria-label={imageUploading ? '이미지 업로드 중' : '이미지 첨부'}
+              title={imageUploading ? '이미지 업로드 중' : '이미지 첨부'}
+              disabled={imageUploading || pendingImages.length >= MAX_PENDING_IMAGES}
+              onPointerDown={event => event.preventDefault()}
+              onClick={() => mediaInputRef.current?.click()}
+            >
+              {imageUploading ? (
+                <span className={styles.mediaSpinner} aria-hidden="true" />
+              ) : (
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 5.5h16v13H4zM7 15l3-3 2.5 2.5 2-2 2.5 2.5M8.5 9a1.25 1.25 0 1 0 0 .01" />
+                </svg>
+              )}
+            </button>
+            <div
+              ref={inputRef}
+              className={styles.chatInputField}
+              contentEditable
+              role="textbox"
+              data-placeholder="메시지를 입력하세요"
+              onInput={handleInput}
+              onPaste={handlePaste}
+              onKeyDown={handleKeyDown}
+              onCompositionStart={() => {
+                isComposing.current = true;
+              }}
+              onCompositionEnd={() => {
+                isComposing.current = false;
+              }}
+            />
+            <button
+              type="button"
+              className={`${styles.visibilityButton} ${informationPublic ? styles.visibilityPublic : styles.visibilityPrivate}`}
+              aria-pressed={informationPublic}
+              title={`정보 열람 ${informationPublic ? '공개' : '비공개'}모드`}
+              onPointerDown={event => event.preventDefault()}
+              onClick={() => socket?.emit('setInformationMode', !informationPublic)}
+            >
+              {informationPublic ? '공개' : '비공개'}
+            </button>
+            <button
+              type="button"
+              disabled={imageUploading}
+              onPointerDown={event => event.preventDefault()}
+              onClick={sendMessage}
+            >전송</button>
+          </div>
         </div>
       </div>
       <Drawer

@@ -12,7 +12,8 @@
 | `sendVerifyCode` | `email: string` | 불필요 | `modules/register.ts` | `verifyCodeSendResult`; 6자리, 5분 만료, 60초 재전송 제한 |
 | `verifyCode` | `code: string` | 불필요 | `modules/register.ts` | `verifyCodeResult` |
 | `sendMessage` | `content: string` | 필요 | `modules/chat.ts` | 최대 500자; `ActionType.CHAT/COMMAND` 제한 확인 후 일반 채팅·`@닉네임 메시지` 귓속말 또는 명령 실행 |
-| `sendImageMessage` | `{ filename: string }` | 필요 | `modules/chat.ts` | HTTP 업로드 소유권·보관 기간·`ActionType.CHAT` 확인 후 현재 채널에 image ChatNode 전송 |
+| `sendImageMessages` | `{ filenames: string[] }` (1~10장) | 필요 | `modules/chat.ts` | 모든 HTTP 업로드의 소유권·보관 기간·`ActionType.CHAT`을 확인한 뒤 현재 채널에 하나의 다중 image ChatNode 메시지 전송 |
+| `sendImageMessage` | `{ filename: string }` | 필요 | `modules/chat.ts` | 구형 클라이언트 호환용 단일 이미지 이벤트. `sendImageMessages`와 같은 검증 경계를 사용 |
 | `chatButtonClick` | `{ action, showCommand? }` | 필요 | `modules/chat.ts` | `ActionType.COMMAND` 제한 확인 후 `/` action만 `handleCommand()`로 전달 |
 | `requestChatHistory` | 없음 | 선택 | `modules/chat.ts` | `chatHistory`; 인증 시 private history와 HUD 데이터도 전송 |
 | `requestCommandList` | 없음 | 불필요 | `modules/bot.ts` | `commandList` |

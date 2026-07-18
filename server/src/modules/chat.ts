@@ -12,6 +12,7 @@ import { getOwnedChatImage } from './upload.js';
 import { chat } from '../utils/chatBuilder.js';
 
 const MAX_MESSAGE_LENGTH = 500;
+const MAX_CHAT_IMAGE_BATCH = 10;
 
 export interface WhisperInput {
     target: string;
@@ -28,6 +29,16 @@ export function parseWhisperInput(content: string): WhisperInput | null {
         target: trimmed.slice(1, separator),
         message: trimmed.slice(separator).trim(),
     };
+}
+
+/** 단일 레거시 payload와 다중 이미지 payload를 같은 검증 경계로 정규화한다. */
+export function parseChatImageFilenames(payload: unknown): string[] | undefined {
+    if (typeof payload !== 'object' || payload === null) return undefined;
+    const record = payload as { filename?: unknown; filenames?: unknown };
+    const raw = record.filenames ?? (record.filename === undefined ? undefined : [record.filename]);
+    if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_CHAT_IMAGE_BATCH) return undefined;
+    if (!raw.every(filename => typeof filename === 'string' && filename.length > 0 && filename.length <= 160)) return undefined;
+    return raw as string[];
 }
 
 export const initChat = () => {
@@ -228,11 +239,9 @@ export const initChat = () => {
             sendMessageToChannel(msg, getUserChannel(session.userId));
         });
 
-        socket.on('sendImageMessage', async (payload: unknown) => {
-            if (typeof payload !== 'object' || payload === null) return;
-            const filename = (payload as { filename?: unknown }).filename;
-            if (typeof filename !== 'string' || filename.length > 160) return;
-
+        const sendImageBatch = async (payload: unknown) => {
+            const filenames = parseChatImageFilenames(payload);
+            if (!filenames) return;
             const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
             if (!session) { socket.emit('sessionInvalid'); return; }
             const player = getPlayerByUserId(session.userId);
@@ -244,30 +253,39 @@ export const initChat = () => {
                 return;
             }
 
-            const image = await getOwnedChatImage(session.userId, filename);
-            if (!image) {
+            const images = await Promise.all(filenames.map(filename => getOwnedChatImage(session.userId, filename)));
+            if (images.some(image => !image)) {
                 sendNotificationToUser(session.userId, {
                     key: 'chat-image-invalid',
-                    message: '전송할 이미지를 찾을 수 없거나 보관 기간이 만료되었습니다.',
+                    message: '전송할 이미지 중 찾을 수 없거나 보관 기간이 만료된 항목이 있습니다.',
                 });
                 return;
             }
 
             const flags = getFlagsForPermission(session.permission);
+            const content = chat();
+            images.forEach((image, index) => {
+                if (!image) return;
+                if (index > 0) content.text('\n');
+                content.image({
+                    src: image.url,
+                    alt: `${session.nickname}님이 보낸 이미지 ${index + 1}`,
+                    width: image.width,
+                    height: image.height,
+                });
+            });
             sendMessageToChannel({
                 userId: session.userId,
                 nickname: session.nickname,
                 profileImage: session.profileImage,
                 flags: flags.length > 0 ? flags : undefined,
-                content: chat().image({
-                    src: image.url,
-                    alt: `${session.nickname}님이 보낸 이미지`,
-                    width: image.width,
-                    height: image.height,
-                }).build(),
+                content: content.build(),
                 timestamp: Date.now(),
             }, getUserChannel(session.userId));
-        });
+        };
+
+        socket.on('sendImageMessage', sendImageBatch);
+        socket.on('sendImageMessages', sendImageBatch);
     });
 
     logger.success('채팅 모듈 초기화 완료');

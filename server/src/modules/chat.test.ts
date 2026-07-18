@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import test from 'node:test';
 import type Player from '../models/Player.js';
-import { parseWhisperInput } from './chat.js';
+import { parseChatImageFilenames, parseWhisperInput } from './chat.js';
 import { getChannelHistory, getFilteredHistoryForUser, setUserChannel } from './channel.js';
 import { createSession, removeSession } from './login.js';
 import { sendWhisperMessage } from './message.js';
@@ -25,6 +25,14 @@ test('귓속말 입력은 첫 공백을 기준으로 닉네임과 본문을 분�
     assert.deepEqual(parseWhisperInput('@모험가'), { target: '모험가', message: '' });
     assert.deepEqual(parseWhisperInput('@ 메시지'), { target: '', message: '메시지' });
     assert.equal(parseWhisperInput('일반 메시지'), null);
+});
+
+test('채팅 이미지 payload는 단일 호환 입력과 최대 10장 묶음을 검증한다', () => {
+    assert.deepEqual(parseChatImageFilenames({ filename: 'one.webp' }), ['one.webp']);
+    assert.deepEqual(parseChatImageFilenames({ filenames: ['one.webp', 'two.webp'] }), ['one.webp', 'two.webp']);
+    assert.equal(parseChatImageFilenames({ filenames: [] }), undefined);
+    assert.equal(parseChatImageFilenames({ filenames: Array.from({ length: 11 }, (_, index) => `${index}.webp`) }), undefined);
+    assert.equal(parseChatImageFilenames({ filenames: ['valid.webp', 3] }), undefined);
 });
 
 test('온라인 플레이어 mention 검색은 본인을 제외하고 닉네임 prefix를 정렬해 반환한다', () => {

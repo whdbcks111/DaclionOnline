@@ -446,6 +446,7 @@ export interface ClientToServerEvents {
     verifyCode: (code: string) => void
     sendMessage: (content: string) => void
     sendImageMessage: (payload: { filename: string }) => void
+    sendImageMessages: (payload: { filenames: string[] }) => void
     chatButtonClick: (payload: { action: string; showCommand?: boolean }) => void
     requestChatHistory: () => void
     requestCommandList: () => void
