@@ -70,6 +70,7 @@ for (const [main, sub, eliteId, name] of eliteRecipes) {
         tier: JobTier.ELITE,
         description: `${getFirstName(main)}의 전투 방식을 중심으로 ${getFirstName(sub)}의 장점을 융합한 엘리트 직업.`,
         parentJobIds: [mainId],
+        grantedSkills: [{ skillDataId: `${eliteId}_mastery` }],
         mainModifiers: [
             ...parent.main,
             { attribute: main === 'mage' ? 'magicForce' : 'atk', op: 'multiply', value: 1.22 },

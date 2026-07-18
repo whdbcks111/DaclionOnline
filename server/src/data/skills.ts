@@ -291,27 +291,28 @@ const JOBS = {
 
 function jobRequirement(jobId: string) { return { anyOf: [jobId], slot: undefined }; }
 
-interface CareerPassiveModifier extends Omit<AttributeModifier, 'source'> {
+interface JobPassiveModifier extends Omit<AttributeModifier, 'source'> {
     label: string;
     display: string;
 }
 
 /**
- * 1차 직업의 상시 효과를 일반 스킬과 같은 공개 API로 정의한다.
+ * 직업의 상시 효과를 일반 스킬과 같은 공개 API로 정의한다.
  * 전용 아이콘은 후속 콘텐츠 아트 작업 전까지 직업 아이콘을 임시 사용한다. TODO: 패시브별 아이콘 교체.
  */
-function defineCareerPassive(options: {
+function defineJobPassive(options: {
     id: string;
     name: string;
-    job: keyof typeof JOBS;
+    jobId: string;
+    icon: string;
     description: string;
-    modifiers: readonly CareerPassiveModifier[];
+    modifiers: readonly JobPassiveModifier[];
 }): void {
     const source = `skill:${options.id}:passive`;
     defineSkill({
         id: options.id,
         name: options.name,
-        icon: `jobs/${options.job}`,
+        icon: options.icon,
         maxLevel: 1,
         descriptionTemplate: options.description,
         costTemplate: '소모값 없음',
@@ -323,7 +324,7 @@ function defineCareerPassive(options: {
         ])),
         calculateExperienceGain: () => 0,
         calculateRequiredExperience: () => 0,
-        jobRequirement: jobRequirement(JOBS[options.job]),
+        jobRequirement: jobRequirement(options.jobId),
         canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
         onPassiveUpdate: ({ owner }) => {
             if (owner.attribute.hasSource(source)) return;
@@ -337,10 +338,11 @@ function defineCareerPassive(options: {
     });
 }
 
-defineCareerPassive({
+defineJobPassive({
     id: 'warrior_combat_instinct',
     name: '전투 본능',
-    job: 'warrior',
+    jobId: JOBS.warrior,
+    icon: 'jobs/warrior',
     description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color] 증가합니다.',
     modifiers: [
         { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.06, label: '공격력 증가', display: '+6%' },
@@ -348,10 +350,11 @@ defineCareerPassive({
     ],
 });
 
-defineCareerPassive({
+defineJobPassive({
     id: 'archer_hawkeye',
     name: '매의 눈',
-    job: 'archer',
+    jobId: JOBS.archer,
+    icon: 'jobs/archer',
     description: '{{icon.critRate}} 치명타 확률이 [color=gold]{{critRate}}[/color], {{icon.speed}} 이동속도가 [color=cyan]{{speed}}[/color] 증가합니다.',
     modifiers: [
         { attribute: AttributeType.CRIT_RATE.key, op: 'add', value: 0.04, label: '치명타 확률 증가', display: '+4%p' },
@@ -359,10 +362,11 @@ defineCareerPassive({
     ],
 });
 
-defineCareerPassive({
+defineJobPassive({
     id: 'assassin_lethal_instinct',
     name: '살의 감각',
-    job: 'assassin',
+    jobId: JOBS.assassin,
+    icon: 'jobs/assassin',
     description: '{{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color], {{icon.armorPen}} 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
     modifiers: [
         { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.18, label: '치명타 피해 증가', display: '+18%p' },
@@ -370,16 +374,118 @@ defineCareerPassive({
     ],
 });
 
-defineCareerPassive({
+defineJobPassive({
     id: 'mage_mana_cycle',
     name: '마력 순환',
-    job: 'mage',
+    jobId: JOBS.mage,
+    icon: 'jobs/mage',
     description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.mentalityRegen}} 정신력 재생이 [color=$magic]{{mentalityRegen}}[/color] 증가합니다.',
     modifiers: [
         { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.07, label: '마법력 증가', display: '+7%' },
         { attribute: AttributeType.MENTALITY_REGEN.key, op: 'add', value: 1.5, label: '정신력 재생 증가', display: '+1.5/초' },
     ],
 });
+
+const elitePassives = [
+    {
+        id: 'blade_ranger_mastery', name: '추격의 검로', jobId: 'career:blade_ranger', icon: 'jobs/warrior',
+        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.speed}} 이동속도가 [color=cyan]{{speed}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.1, label: '공격력 증가', display: '+10%' },
+            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.08, label: '이동속도 증가', display: '+8%' },
+        ],
+    },
+    {
+        id: 'shadow_blade_mastery', name: '그림자 칼날', jobId: 'career:shadow_blade', icon: 'jobs/warrior',
+        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.1, label: '공격력 증가', display: '+10%' },
+            { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.2, label: '치명타 피해 증가', display: '+20%p' },
+        ],
+    },
+    {
+        id: 'spellblade_mastery', name: '마력 검로', jobId: 'career:spellblade', icon: 'jobs/warrior',
+        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.07, label: '공격력 증가', display: '+7%' },
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.1, label: '마법력 증가', display: '+10%' },
+        ],
+    },
+    {
+        id: 'siege_bow_mastery', name: '공성 자세', jobId: 'career:siege_bow', icon: 'jobs/archer',
+        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.maxLife}} 최대 생명력이 [color=green]{{maxLife}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.12, label: '공격력 증가', display: '+12%' },
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.08, label: '최대 생명력 증가', display: '+8%' },
+        ],
+    },
+    {
+        id: 'night_hunter_mastery', name: '야간 포착', jobId: 'career:night_hunter', icon: 'jobs/archer',
+        description: '{{icon.critRate}} 치명타 확률이 [color=gold]{{critRate}}[/color], {{icon.speed}} 이동속도가 [color=cyan]{{speed}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.CRIT_RATE.key, op: 'add', value: 0.06, label: '치명타 확률 증가', display: '+6%p' },
+            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.08, label: '이동속도 증가', display: '+8%' },
+        ],
+    },
+    {
+        id: 'elemental_marksman_mastery', name: '원소 조준', jobId: 'career:elemental_marksman', icon: 'jobs/archer',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.magicPen}} 마법 관통력이 [color=$magic]{{magicPen}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.12, label: '마법력 증가', display: '+12%' },
+            { attribute: AttributeType.MAGIC_PEN.key, op: 'add', value: 6, label: '마법 관통력 증가', display: '+6' },
+        ],
+    },
+    {
+        id: 'executioner_mastery', name: '처형 준비', jobId: 'career:executioner', icon: 'jobs/assassin',
+        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.armorPen}} 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.12, label: '공격력 증가', display: '+12%' },
+            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 6, label: '방어 관통력 증가', display: '+6' },
+        ],
+    },
+    {
+        id: 'phantom_shooter_mastery', name: '환영 사격술', jobId: 'career:phantom_shooter', icon: 'jobs/assassin',
+        description: '{{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color], {{icon.speed}} 이동속도가 [color=cyan]{{speed}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.22, label: '치명타 피해 증가', display: '+22%p' },
+            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.08, label: '이동속도 증가', display: '+8%' },
+        ],
+    },
+    {
+        id: 'arcane_reaper_mastery', name: '비전 수확', jobId: 'career:arcane_reaper', icon: 'jobs/assassin',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.1, label: '마법력 증가', display: '+10%' },
+            { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.15, label: '치명타 피해 증가', display: '+15%p' },
+        ],
+    },
+    {
+        id: 'battle_magus_mastery', name: '전투 마력갑', jobId: 'career:battle_magus', icon: 'jobs/mage',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.maxLife}} 최대 생명력이 [color=green]{{maxLife}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.12, label: '마법력 증가', display: '+12%' },
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.1, label: '최대 생명력 증가', display: '+10%' },
+        ],
+    },
+    {
+        id: 'star_weaver_mastery', name: '성좌 유도', jobId: 'career:star_weaver', icon: 'jobs/mage',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.speed}} 이동속도가 [color=cyan]{{speed}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.12, label: '마법력 증가', display: '+12%' },
+            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.08, label: '이동속도 증가', display: '+8%' },
+        ],
+    },
+    {
+        id: 'hexblade_mastery', name: '주술 각인', jobId: 'career:hexblade', icon: 'jobs/mage',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.magicPen}} 마법 관통력이 [color=$magic]{{magicPen}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.1, label: '마법력 증가', display: '+10%' },
+            { attribute: AttributeType.MAGIC_PEN.key, op: 'add', value: 6, label: '마법 관통력 증가', display: '+6' },
+        ],
+    },
+] as const;
+
+for (const passive of elitePassives) defineJobPassive(passive);
 
 function weaponRequirement(description: string, ...tags: string[]) { return { mainHandAnyTags: tags, description }; }
 function targetOrDeny(context: SkillContext): { target: Entity } | { reason: string } {

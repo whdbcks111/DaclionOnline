@@ -39,6 +39,17 @@ test('all first jobs produce finite offensive and defensive baselines', () => {
     }
 });
 
+test('Lv.200 elite profile applies its inherited passive without listing it as active DPM', () => {
+    const scenario = createBalanceScenario(200, 'career:warrior', 'career:mage');
+    const report = analyzeJobBalance(200, 'career:warrior', 'career:mage');
+
+    assert.equal(scenario.effectiveJob.id, 'career:spellblade');
+    assert.equal(scenario.entity.attribute.hasSource('skill:warrior_combat_instinct:passive'), true);
+    assert.equal(scenario.entity.attribute.hasSource('skill:mage_mana_cycle:passive'), true);
+    assert.equal(scenario.entity.attribute.hasSource('skill:spellblade_mastery:passive'), true);
+    assert.equal(report.skillReports.some(skill => skill.skillId === 'spellblade_mastery'), false);
+});
+
 test('item report applies actual equipment modifiers and buff status effects', () => {
     const weapon = analyzeItemBalance(50, 'career:warrior', 'old_sword');
     // 전사 8% 직업 배율과 전투 본능 6% 패시브가 장비의 +5에도 적용되는 실제 연산 순서다.
