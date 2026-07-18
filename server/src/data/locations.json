@@ -126,7 +126,7 @@
   {
     "id": "meadow_3",
     "name": "바람결 초원 3 맑은 샘터",
-    "mapColor": "#5f9f78",
+    "mapColor": "#6fa85d",
     "zoneType": "neutral",
     "x": 280,
     "y": 50,
@@ -146,7 +146,7 @@
   {
     "id": "swamp_edge",
     "name": "안개수렁 1 물먹은 둑",
-    "mapColor": "#71805a",
+    "mapColor": "#66784f",
     "zoneType": "neutral",
     "x": 350,
     "y": 120,
@@ -184,7 +184,7 @@
   {
     "id": "swamp_heart",
     "name": "안개수렁 3 가라앉은 심부",
-    "mapColor": "#596b48",
+    "mapColor": "#66784f",
     "zoneType": "hostile",
     "x": 485,
     "y": 245,
@@ -204,7 +204,7 @@
   {
     "id": "ember_foothills",
     "name": "홍염산지 1 잿빛 기슭",
-    "mapColor": "#a87845",
+    "mapColor": "#bb6542",
     "zoneType": "neutral",
     "x": 555,
     "y": 190,
@@ -242,7 +242,7 @@
   {
     "id": "volcanic_crater",
     "name": "홍염산지 3 끓는 분화구",
-    "mapColor": "#c9573c",
+    "mapColor": "#bb6542",
     "zoneType": "hostile",
     "x": 700,
     "y": 70,
@@ -262,7 +262,7 @@
   {
     "id": "volcanic_core",
     "name": "홍염산지 4 칼데라 중심",
-    "mapColor": "#d14932",
+    "mapColor": "#bb6542",
     "zoneType": "hostile",
     "x": 765,
     "y": 15,
@@ -280,7 +280,7 @@
   {
     "id": "feveric_mine",
     "name": "피버릭 갱도 입구",
-    "mapColor": "#8a7460",
+    "mapColor": "#716558",
     "zoneType": "neutral",
     "x": 0,
     "y": -130,
@@ -301,7 +301,7 @@
   {
     "id": "feveric_mine_shop",
     "name": "은맥 광부 보급소",
-    "mapColor": "#8a7460",
+    "mapColor": "#716558",
     "zoneType": "safe",
     "x": 28,
     "y": -132,
@@ -318,7 +318,7 @@
   {
     "id": "mine_junction",
     "name": "피버릭 갱도 세 갈래 교차로",
-    "mapColor": "#756858",
+    "mapColor": "#716558",
     "zoneType": "neutral",
     "x": 0,
     "y": -220,
@@ -378,7 +378,7 @@
   {
     "id": "abandoned_rail",
     "name": "피버릭 갱도 버려진 운반로",
-    "mapColor": "#695f55",
+    "mapColor": "#716558",
     "zoneType": "neutral",
     "x": 30,
     "y": -375,
@@ -398,7 +398,7 @@
   {
     "id": "flooded_tunnel",
     "name": "피버릭 갱도 침수 회랑",
-    "mapColor": "#527585",
+    "mapColor": "#716558",
     "zoneType": "neutral",
     "x": -95,
     "y": -390,
@@ -417,7 +417,7 @@
   {
     "id": "crystal_gallery",
     "name": "피버릭 갱도 수정 군락",
-    "mapColor": "#7665a8",
+    "mapColor": "#716558",
     "zoneType": "hostile",
     "x": 110,
     "y": -410,
@@ -437,7 +437,7 @@
   {
     "id": "deep_shaft",
     "name": "피버릭 갱도 맥동하는 심층",
-    "mapColor": "#66567f",
+    "mapColor": "#716558",
     "zoneType": "hostile",
     "x": 5,
     "y": -500,
@@ -458,7 +458,7 @@
   {
     "id": "crystal_throne",
     "name": "피버릭 갱도 수정 왕좌",
-    "mapColor": "#8a6fbd",
+    "mapColor": "#716558",
     "zoneType": "hostile",
     "x": 5,
     "y": -610,
@@ -476,7 +476,7 @@
   {
     "id": "tempest_gate",
     "name": "천둥마루 1 폭풍 관문",
-    "mapColor": "#667f91",
+    "mapColor": "#60758a",
     "zoneType": "neutral",
     "x": 850,
     "y": 0,
@@ -513,7 +513,7 @@
   {
     "id": "tempest_peak",
     "name": "천둥마루 3 낙뢰 정상",
-    "mapColor": "#596b82",
+    "mapColor": "#60758a",
     "zoneType": "hostile",
     "x": 1010,
     "y": -90,
@@ -532,7 +532,7 @@
   {
     "id": "nightwood_edge",
     "name": "월영밤숲 1 그늘 들머리",
-    "mapColor": "#46564e",
+    "mapColor": "#3d4845",
     "zoneType": "neutral",
     "x": 1070,
     "y": -20,
@@ -569,7 +569,7 @@
   {
     "id": "nightwood_heart",
     "name": "월영밤숲 3 빛 없는 심재",
-    "mapColor": "#343d3c",
+    "mapColor": "#3d4845",
     "zoneType": "hostile",
     "x": 1210,
     "y": 120,
@@ -587,7 +587,7 @@
   {
     "id": "dawn_border",
     "name": "백광성역 1 여명의 경계",
-    "mapColor": "#d2c58c",
+    "mapColor": "#ddd19a",
     "zoneType": "neutral",
     "x": 1280,
     "y": 50,
@@ -623,7 +623,7 @@
   {
     "id": "dawn_sanctum",
     "name": "백광성역 3 광륜 제단",
-    "mapColor": "#e4d99f",
+    "mapColor": "#ddd19a",
     "zoneType": "hostile",
     "x": 1440,
     "y": -70,
@@ -642,7 +642,7 @@
   {
     "id": "necropolis_gate",
     "name": "망각사령묘 1 봉인 정문",
-    "mapColor": "#666174",
+    "mapColor": "#585365",
     "zoneType": "hostile",
     "x": 1510,
     "y": 0,
@@ -661,7 +661,7 @@
   {
     "id": "necropolis_east_crypt",
     "name": "망각사령묘 2 동쪽 묘실",
-    "mapColor": "#5d586b",
+    "mapColor": "#585365",
     "zoneType": "hostile",
     "x": 1590,
     "y": 70,
@@ -701,7 +701,7 @@
   {
     "id": "ossuary_crossing",
     "name": "망각사령묘 4 뒤엉킨 합류로",
-    "mapColor": "#514d5e",
+    "mapColor": "#585365",
     "zoneType": "hostile",
     "x": 1670,
     "y": 0,
@@ -721,7 +721,7 @@
   {
     "id": "necropolis_depths",
     "name": "망각사령묘 5 불멸의 묘상",
-    "mapColor": "#494654",
+    "mapColor": "#585365",
     "zoneType": "hostile",
     "x": 1750,
     "y": 0,
@@ -740,7 +740,7 @@
   {
     "id": "ironroot_edge",
     "name": "철근황무지 1 솟은 뿌리",
-    "mapColor": "#88765a",
+    "mapColor": "#75644f",
     "zoneType": "neutral",
     "x": 1820,
     "y": 70,
@@ -758,7 +758,7 @@
   {
     "id": "ironroot_labyrinth",
     "name": "철근황무지 2 매몰 미로",
-    "mapColor": "#7d6b52",
+    "mapColor": "#75644f",
     "zoneType": "hostile",
     "x": 1900,
     "y": 0,
@@ -798,7 +798,7 @@
   {
     "id": "ironroot_false_archive",
     "name": "철근미궁 거짓 기록실",
-    "mapColor": "#685c51",
+    "mapColor": "#75644f",
     "zoneType": "hostile",
     "x": 1930,
     "y": 125,
@@ -816,7 +816,7 @@
   {
     "id": "ironroot_echo_vault",
     "name": "철근미궁 메아리 금고",
-    "mapColor": "#665c62",
+    "mapColor": "#75644f",
     "zoneType": "hostile",
     "x": 1990,
     "y": 85,
@@ -836,7 +836,7 @@
   {
     "id": "ironroot_gate_gallery",
     "name": "철근미궁 봉인문 회랑",
-    "mapColor": "#6e5e4a",
+    "mapColor": "#75644f",
     "zoneType": "hostile",
     "x": 2015,
     "y": 15,
@@ -856,7 +856,7 @@
   {
     "id": "ironroot_core",
     "name": "철근황무지 3 뒤집힌 지핵",
-    "mapColor": "#716049",
+    "mapColor": "#75644f",
     "zoneType": "hostile",
     "x": 1980,
     "y": -70,
@@ -876,7 +876,7 @@
   {
     "id": "ironroot_crystal_sanctum",
     "name": "철근미궁 지핵 수정실",
-    "mapColor": "#665d78",
+    "mapColor": "#75644f",
     "zoneType": "hostile",
     "x": 2040,
     "y": -135,
@@ -895,7 +895,7 @@
   {
     "id": "rift_edge",
     "name": "성계균열 1 흔들리는 경계",
-    "mapColor": "#71638f",
+    "mapColor": "#66577f",
     "zoneType": "neutral",
     "x": 2050,
     "y": 0,
@@ -932,7 +932,7 @@
   {
     "id": "astral_nexus",
     "name": "성계균열 3 관문의 중심",
-    "mapColor": "#5b4d75",
+    "mapColor": "#66577f",
     "zoneType": "hostile",
     "x": 2210,
     "y": 0,

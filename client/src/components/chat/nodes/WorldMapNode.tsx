@@ -42,6 +42,16 @@ interface BiomeRegion {
     segments: BiomeSegment[]
 }
 
+interface BiomeTransition extends BiomeSegment {
+    fromColor: string
+    toColor: string
+}
+
+interface BiomeGeometry {
+    regions: BiomeRegion[]
+    transitions: BiomeTransition[]
+}
+
 function mapY(location: WorldMapLocationData): number {
     return -location.y
 }
@@ -82,11 +92,12 @@ function getBiomeRadius(location: WorldMapLocationData, locations: readonly Worl
     return Math.max(MIN_BIOME_RADIUS, Math.min(MAX_BIOME_RADIUS, nearest * 0.82))
 }
 
-function createBiomeRegions(data: WorldMapData): BiomeRegion[] {
+function createBiomeGeometry(data: WorldMapData): BiomeGeometry {
     const visited = data.locations.filter(location => location.visited && location.mapColor)
     const visitedById = new Map(visited.map(location => [location.id, location]))
     const radii = new Map(visited.map(location => [location.id, getBiomeRadius(location, visited)]))
     const regions = new Map<string, BiomeRegion>()
+    const transitions: BiomeTransition[] = []
     const getRegion = (color: string) => {
         const key = color.toLowerCase()
         const existing = regions.get(key)
@@ -122,12 +133,17 @@ function createBiomeRegions(data: WorldMapData): BiomeRegion[] {
             continue
         }
 
-        const middle = midpoint(fromPoint, toPoint)
-        getRegion(from.mapColor).segments.push({ id: `${segmentId}:from`, from: fromPoint, to: middle, width })
-        getRegion(to.mapColor).segments.push({ id: `${segmentId}:to`, from: middle, to: toPoint, width })
+        transitions.push({
+            id: segmentId,
+            from: fromPoint,
+            to: toPoint,
+            width,
+            fromColor: from.mapColor.toLowerCase(),
+            toColor: to.mapColor.toLowerCase(),
+        })
     }
 
-    return [...regions.values()]
+    return { regions: [...regions.values()], transitions }
 }
 
 function getLocalPoint(svg: SVGSVGElement, point: Point): Point {
@@ -154,7 +170,7 @@ export default function WorldMapNode({ data }: Props) {
         [data.locations],
     )
     const activeLocation = locationsById.get(hoveredId ?? selectedId ?? '')
-    const biomeRegions = useMemo(() => createBiomeRegions(data), [data])
+    const biomeGeometry = useMemo(() => createBiomeGeometry(data), [data])
 
     useEffect(() => {
         const container = containerRef.current
@@ -312,13 +328,27 @@ export default function WorldMapNode({ data }: Props) {
                             <feMergeNode in="organicShape" />
                         </feMerge>
                     </filter>
+                    {biomeGeometry.transitions.map((transition, index) => (
+                        <linearGradient
+                            key={transition.id}
+                            id={`${biomeFilterId}-transition-${index}`}
+                            gradientUnits="userSpaceOnUse"
+                            x1={transition.from.x}
+                            y1={transition.from.y}
+                            x2={transition.to.x}
+                            y2={transition.to.y}
+                        >
+                            <stop offset="0%" stopColor={transition.fromColor} />
+                            <stop offset="32%" stopColor={transition.fromColor} />
+                            <stop offset="68%" stopColor={transition.toColor} />
+                            <stop offset="100%" stopColor={transition.toColor} />
+                        </linearGradient>
+                    ))}
                 </defs>
-                <g className={styles.biomeLayer} aria-hidden="true">
-                    {biomeRegions.map(region => (
+                <g className={styles.biomeLayer} filter={`url(#${biomeFilterId})`} aria-hidden="true">
+                    {biomeGeometry.regions.map(region => (
                         <g
                             key={region.color}
-                            className={styles.biomeRegion}
-                            filter={`url(#${biomeFilterId})`}
                             fill={region.color}
                             stroke={region.color}
                         >
@@ -338,6 +368,19 @@ export default function WorldMapNode({ data }: Props) {
                                 <circle key={node.id} cx={node.x} cy={node.y} r={node.radius} stroke="none" />
                             ))}
                         </g>
+                    ))}
+                    {biomeGeometry.transitions.map((transition, index) => (
+                        <line
+                            key={transition.id}
+                            x1={transition.from.x}
+                            y1={transition.from.y}
+                            x2={transition.to.x}
+                            y2={transition.to.y}
+                            stroke={`url(#${biomeFilterId}-transition-${index})`}
+                            strokeWidth={transition.width}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
                     ))}
                 </g>
                 <rect x={view.x} y={view.y} width={view.width} height={view.height} fill={`url(#${gridId})`} />
