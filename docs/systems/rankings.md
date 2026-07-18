@@ -12,7 +12,7 @@
 
 ## 조회 흐름
 
-1. `/순위 [카테고리]`는 생략 시 레벨을 사용한다.
+1. `/순위 [카테고리]`는 생략 시 레벨을 사용하며 `rank`, `ranking`, `rk` 별칭을 지원한다.
 2. DB의 `ranking_metrics`는 플레이어가 마지막으로 저장될 때 계산된 능력치 snapshot이다. 기존 레코드처럼 snapshot이 없으면 Player scalar와 stats JSON으로 장비를 제외한 fallback을 계산한다.
 3. 현재 접속한 플레이어는 DB snapshot 대신 `Player.getRankingMetricSnapshot()`의 최신 메모리 값을 쓰며, DB 캐시 생성 뒤 가입한 온라인 플레이어도 즉시 목록에 합친다.
 4. 값 내림차순으로 정렬하고 같은 값은 공동 순위를 부여한다. 기본 화면은 상위 20명이며 본인이 밖에 있으면 자신의 행을 추가한다.

@@ -77,7 +77,7 @@ function registerVisibilityCommand(isPublic: boolean): void {
 export function initRankingCommands(): void {
     registerCommand({
         name: '순위',
-        aliases: ['rank', 'ranking'],
+        aliases: ['rank', 'ranking', 'rk'],
         description: '레벨·골드·스탯·능력치별 전체 플레이어 순위를 확인합니다.',
         information: true,
         args: [{
