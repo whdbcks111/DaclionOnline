@@ -309,7 +309,7 @@
     "shopId": "feveric_mine_store",
     "mapIcon": "general-shop",
     "tags": ["location:safe", "location:shop", "location:mine", "material:stone"],
-    "npcIds": [],
+    "npcIds": ["blacksmith_master"],
     "objects": [],
     "connections": [
       { "locationId": "feveric_mine" }

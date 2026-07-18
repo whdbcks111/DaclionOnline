@@ -37,6 +37,8 @@ Entity/Resource/SkillBook
 
 제작법 발견은 새 테이블을 추가하지 않고 `crafting:recipe/{namespace}/{path}` 형식의 숨김 FLAG를 사용한다. 정의와 자동 발견 흐름은 [crafting.md](crafting.md)를 참고한다.
 
+`profession:blacksmith` 공개 FLAG는 전투 직업과 독립된 대장장이 생산 전문 직업을 나타낸다. 퀘스트 보상 API가 flag와 전용 스킬 세 개를 함께 지급하고, 마력 제련·단조 명령은 이 flag를 공개 API로 확인한다.
+
 NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 현재 `npc:monster-hunt-question` 숨김 FLAG가 안내인 대화 분기에 쓰이며 자세한 흐름은 [NPC·대화 시스템](npc-dialogue.md)을 참고한다.
 
 ## 스킬 정의와 인스턴스

@@ -2,7 +2,9 @@ import NPC, { Dialogue, DialogueScenario } from '../models/NPC.js';
 import { defineProgress, ProgressType } from '../models/Progress.js';
 import { FIRST_SLIME_HUNT_QUEST_ID } from './quests.js';
 import { CAREER_QUEST_IDS } from './quests.js';
+import { BLACKSMITH_APPRENTICESHIP_QUEST_ID } from './quests.js';
 import { JobSlotType, getAllJobs, JobTier } from '../models/Job.js';
+import { hasBlacksmithProfession } from '../modules/forging.js';
 
 export const MONSTER_HUNT_QUESTION_FLAG = 'npc:monster-hunt-question';
 
@@ -79,6 +81,56 @@ NPC.define({
         new DialogueScenario('quest_complete', function* () {
             yield Dialogue.say('초원의 길이 다시 조용해졌네. 약속한 보상이야. 정말 고마워!');
             yield Dialogue.turnInQuest(FIRST_SLIME_HUNT_QUEST_ID);
+            yield Dialogue.end();
+        }),
+    ],
+});
+
+NPC.define({
+    id: 'blacksmith_master',
+    name: '마도 대장장이 로안',
+    description: '용광로 대신 마력으로 불순물을 밀어내는 간결한 제련법을 가르치는 장인입니다.',
+    tags: ['npc:profession', 'profession:blacksmith'],
+    entryScenario: ({ player }) => {
+        if (player.quests.canTurnIn(BLACKSMITH_APPRENTICESHIP_QUEST_ID, 'blacksmith_master')) return 'complete';
+        if (player.quests.isActive(BLACKSMITH_APPRENTICESHIP_QUEST_ID)) return 'progress';
+        if (hasBlacksmithProfession(player)) return 'trained';
+        return 'greeting';
+    },
+    scenarios: [
+        new DialogueScenario('greeting', function* ({ player }) {
+            if (player.level < 20) {
+                yield Dialogue.say('금속의 결을 읽으려면 아직 경험이 부족하군. 20레벨이 되면 다시 찾아오게.');
+                yield Dialogue.end();
+                return;
+            }
+            yield Dialogue.say('복잡한 용광로와 연료 장부는 잊게. 마력으로 불순물을 걷고, 망치질에는 자네의 박자만 담으면 되지.');
+            yield Dialogue.choice([
+                { label: '대장장이의 제련법을 배우겠습니다.', target: 'accept' },
+                { label: '조금 더 생각해 보겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('accept', function* () {
+            yield Dialogue.acceptQuest(BLACKSMITH_APPRENTICESHIP_QUEST_ID);
+            yield Dialogue.say('피버릭 광맥 여덟 개를 직접 깨 보고 오게. 광물이 갈라지는 방향부터 익혀야 하네.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('progress', function* ({ player }) {
+            const objective = player.quests.getSnapshot(BLACKSMITH_APPRENTICESHIP_QUEST_ID)?.objectives[0];
+            yield Dialogue.say(`광맥의 결을 더 살펴보게. 지금은 ${objective?.progress ?? 0}/${objective?.required ?? 8}개군.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('complete', function* () {
+            yield Dialogue.say('이제 불꽃 없이도 금속 속 불순물이 보이겠군. 마력 제련과 금속 단조를 전수하겠네.');
+            yield Dialogue.turnInQuest(BLACKSMITH_APPRENTICESHIP_QUEST_ID);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('trained', function* () {
+            yield Dialogue.say('마력 제련으로 소재를 만들고, /단조 명령으로 형태와 재료를 골라 보게. 완성도는 망치 박자가 결정하네.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('금속은 도망가지 않으니 준비되면 오게.');
             yield Dialogue.end();
         }),
     ],

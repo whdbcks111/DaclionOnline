@@ -1,6 +1,15 @@
-import { defineStatistic } from '../models/Progress.js';
+import { defineProgress, defineStatistic, ProgressType } from '../models/Progress.js';
 import { GameEventIds } from '../models/GameEvent.js';
 import { GameTags } from '../../../shared/tags.js';
+
+defineProgress({
+    id: 'profession:blacksmith',
+    type: ProgressType.FLAG,
+    label: '대장장이 전문 직업',
+    description: '전투 직업과 별개로 마력 제련과 금속 단조를 사용할 수 있는 생산 전문 직업입니다.',
+    visible: true,
+    tags: ['profession:crafting'],
+});
 
 defineStatistic({
     id: 'combat:critical_hits',

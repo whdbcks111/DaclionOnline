@@ -7,6 +7,7 @@ import {
 } from '../models/Quest.js';
 import { JobSlotType } from '../models/Job.js';
 import './jobs.js';
+import { grantBlacksmithProfession, hasBlacksmithProfession } from '../modules/forging.js';
 
 export const FIRST_SLIME_HUNT_QUEST_ID = 'luminair:first_slime_hunt';
 
@@ -40,6 +41,32 @@ defineQuest({
 });
 
 export const CAREER_QUEST_IDS: Record<string, string> = {};
+export const BLACKSMITH_APPRENTICESHIP_QUEST_ID = 'profession:blacksmith_apprenticeship';
+
+defineQuest({
+    id: BLACKSMITH_APPRENTICESHIP_QUEST_ID,
+    name: '불꽃 없는 제련법',
+    description: '피버릭 갱도의 광맥을 직접 파괴해 소재의 결을 익히고 대장장이 로안에게 보고하세요.',
+    tags: ['quest:profession', 'profession:blacksmith'],
+    giverNpcIds: ['blacksmith_master'],
+    turnInNpcIds: ['blacksmith_master'],
+    visible: player => player.level >= 20 && !hasBlacksmithProfession(player),
+    canAccept: player => player.level >= 20 && !hasBlacksmithProfession(player),
+    stages: [new QuestStage({
+        id: 'read_ore_grain',
+        description: '채굴 도구로 광맥을 파괴해 서로 다른 광물의 결을 관찰하세요.',
+        objectives: [QuestObjective.destroy('ore', '광맥 파괴', 8, target => target.hasTag(GameTags.RESOURCE_ORE))],
+    })],
+    rewards: [
+        QuestReward.exp(600),
+        QuestReward.item('iron_ore', 5, '철'),
+        QuestReward.custom({
+            label: '생산 전문 직업 [ 대장장이 ]',
+            canGrant: player => !hasBlacksmithProfession(player),
+            grant: player => { grantBlacksmithProfession(player); },
+        }),
+    ],
+});
 
 const careerQuestDefinitions = [
     { id: 'warrior', name: '전사', label: '무생물 속성 적 처치', weapon: 'training_axe', matches: (target: { hasTag(tag: string): boolean }) => target.hasTag(GameTags.TRAIT_INANIMATE) },

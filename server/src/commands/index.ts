@@ -16,6 +16,7 @@ import { initInspectionCommands } from './inspection.js';
 import { initFishingCommands } from './fishing.js';
 import { initRankingCommands } from './ranking.js';
 import { initBalanceCommands } from './balance.js';
+import { initForgingCommands } from './forging.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -36,4 +37,5 @@ export function initAllCommands(): void {
     initFishingCommands();
     initRankingCommands();
     initBalanceCommands();
+    initForgingCommands();
 }

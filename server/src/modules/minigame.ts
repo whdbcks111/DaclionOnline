@@ -16,6 +16,8 @@ import { cancelGameTask, scheduleGameTask } from './scheduler.js';
 export interface MiniGameValidationResult {
     success: boolean
     message?: string
+    /** 타입 소유 기능이 보상 계산에 사용하는 0~1 정규화 점수. 클라이언트에는 권위값만 결과로 전달된다. */
+    score?: number
 }
 
 export interface StartMiniGameOptions<T extends MiniGameType = MiniGameType> {

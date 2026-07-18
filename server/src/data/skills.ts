@@ -550,6 +550,94 @@ for (const mastery of weaponMasteries) {
     });
 }
 
+const smeltingMaterials = [
+    ['iron_ore', 'refined_iron', '철'],
+    ['gold_ore', 'refined_gold', '금'],
+    ['ruby', 'refined_ruby', '루비'],
+    ['emerald', 'refined_emerald', '에메랄드'],
+    ['diamond', 'refined_diamond', '다이아몬드'],
+] as const;
+
+defineSkill({
+    id: 'blacksmith_temper',
+    name: '대장장이의 담금질',
+    icon: 'items/iron_pickaxe',
+    maxLevel: 1,
+    descriptionTemplate: '{{icon.maxWeight}} 최대 중량이 [color=gold]10[/color], {{icon.speed}} 이동속도가 [color=gold]4%[/color] 증가합니다.',
+    costTemplate: '소모값 없음',
+    activationConditionTemplate: '대장장이 전문 직업인 동안 항상 적용됩니다.',
+    baseMetadata: null,
+    calculatedFields: {},
+    isVisible: ({ player }) => player?.progress.getFlag('profession:blacksmith') ?? false,
+    canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
+    onPassiveUpdate: ({ owner }) => {
+        const source = 'skill:blacksmith_temper:passive';
+        if (owner.attribute.hasSource(source)) return;
+        owner.attribute.addModifiers([
+            { attribute: AttributeType.MAX_WEIGHT.key, op: 'add', value: 10, source },
+            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.04, source },
+        ]);
+    },
+    onPassiveInactive: ({ owner }) => owner.attribute.removeBySource('skill:blacksmith_temper:passive'),
+    tags: [GameTags.SKILL_PASSIVE],
+});
+
+defineSkill({
+    id: 'arcane_smelting',
+    name: '마력 제련',
+    icon: 'items/iron_ore',
+    maxLevel: 10,
+    descriptionTemplate: '인벤토리에서 가장 앞에 있는 원광을 찾아 불순물을 걷어내고 한 번에 [color=gold]{{batch}}개[/color]까지 제련 소재로 바꿉니다.',
+    costTemplate: '{{manaCost}} 정신력 · 재사용 대기시간 {{maxCooldown}}초',
+    activationConditionTemplate: '/스킬 마력 제련 또는 마력 제련!',
+    activationMessage: '마력 제련!',
+    baseMetadata: { baseManaCost: 18 },
+    calculatedFields: {
+        batch: context => 2 + context.skill.level,
+        manaCost: context => numberMeta(context, 'baseManaCost'),
+    },
+    activationFeedback: context => `${context.skill.getActiveState<string>('materialLabel') ?? '소재'} ${context.skill.getActiveState<number>('processedCount') ?? 0}개를 마력으로 제련했습니다.`,
+    calculateMaxCooldown: () => 5,
+    isVisible: ({ player }) => player?.progress.getFlag('profession:blacksmith') ?? false,
+    canActivate: context => {
+        const player = requirePlayer(context);
+        if (!player.progress.getFlag('profession:blacksmith')) return denySkill('대장장이 전문 직업이 필요합니다.');
+        if (!smeltingMaterials.some(([raw]) => player.inventory.getCount(raw) > 0)) return denySkill('제련할 광물이나 보석이 없습니다.');
+        const cost = numberMeta(context, 'baseManaCost');
+        return player.canSpendMentality(cost) ? { accepted: true } : denySkill(`정신력이 ${cost} 필요합니다.`);
+    },
+    onStart: context => {
+        const player = requirePlayer(context);
+        const material = smeltingMaterials.find(([raw]) => player.inventory.getCount(raw) > 0);
+        if (!material) return;
+        const [raw, refined, label] = material;
+        const count = Math.min(player.inventory.getCount(raw), 2 + context.skill.level);
+        const selections = player.inventory.selectItems([{ count, matches: item => item.itemDataId === raw }]);
+        if (!selections || !player.inventory.replaceSelectedItems(selections, [{
+            itemDataId: refined, count, durability: null, metadataDelta: null, tags: [],
+        }])) throw new Error('마력 제련 재료 교환에 실패했습니다.');
+        const cost = numberMeta(context, 'baseManaCost');
+        if (!player.spendMentality(cost)) throw new Error('마력 제련 정신력 소모에 실패했습니다.');
+        return { state: { materialLabel: label, processedCount: count } };
+    },
+    tags: [GameTags.SKILL_ACTIVE],
+});
+
+defineSkill({
+    id: 'metal_forging',
+    name: '금속 단조',
+    icon: 'items/training_axe',
+    maxLevel: 1,
+    descriptionTemplate: '제련 소재와 장비 형태를 선택해 리듬 단조를 시작할 수 있습니다. 정확도가 완성품의 공격·방어 수치와 내구도를 결정합니다.',
+    costTemplate: '형태별 제련 소재 소모',
+    activationConditionTemplate: '/단조 <형태> <재료> 명령어로 사용합니다.',
+    baseMetadata: null,
+    calculatedFields: {},
+    isVisible: ({ player }) => player?.progress.getFlag('profession:blacksmith') ?? false,
+    canActivate: () => denySkill('/단조 <형태> <재료> 명령어를 사용하세요.'),
+    tags: [GameTags.SKILL_PASSIVE],
+});
+
 function weaponRequirement(description: string, ...tags: string[]) { return { mainHandAnyTags: tags, description }; }
 function targetOrDeny(context: SkillContext): { target: Entity } | { reason: string } {
     const player = requirePlayer(context);
