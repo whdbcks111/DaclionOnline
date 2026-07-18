@@ -31,6 +31,7 @@ export const GameTags = Object.freeze({
     ITEM_BAIT: 'item:bait',
     ITEM_FISH: 'item:fish',
     ITEM_SKILL_BOOK: 'item:skill_book',
+    ITEM_FORGED: 'item:forged',
 
     FISH_RARITY_COMMON: 'fish_rarity:common',
     FISH_RARITY_UNCOMMON: 'fish_rarity:uncommon',
@@ -68,6 +69,7 @@ export const GameTags = Object.freeze({
     MATERIAL_RUBY: 'material:ruby',
     MATERIAL_EMERALD: 'material:emerald',
     MATERIAL_DIAMOND: 'material:diamond',
+    MATERIAL_REFINED: 'material:refined',
 
     TOOL_MINING: 'tool:mining',
     TOOL_FISHING: 'tool:fishing',

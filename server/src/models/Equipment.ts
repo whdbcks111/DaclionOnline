@@ -94,6 +94,12 @@ export default class Equipment implements TagReadable {
                 return;
             }
             if (entry.state === EquipState.Clean) entry.state = EquipState.Modified;
+            if (this.ownerAttribute) {
+                const source = modSource(entry.slot, entry.slotIndex);
+                this.ownerAttribute.removeBySource(source);
+                const modifiers = entry.item.modifiers;
+                if (modifiers) this.ownerAttribute.addModifiers(modifiers.map(modifier => ({ ...modifier, source })));
+            }
         };
         entry.item.tags.setPersistentChangeHandler(() => {
             markModified();
@@ -244,9 +250,9 @@ export default class Equipment implements TagReadable {
         });
 
         // modifier 적용
-        if (data.modifiers) {
+        if (item.modifiers) {
             const source = modSource(slot, slotIndex);
-            attribute.addModifiers(data.modifiers.map(m => ({ ...m, source })));
+            attribute.addModifiers(item.modifiers.map(m => ({ ...m, source })));
         }
 
         return true;
@@ -294,8 +300,8 @@ export default class Equipment implements TagReadable {
             state: EquipState.New,
         });
 
-        if (data.modifiers) {
-            attribute.addModifiers(data.modifiers.map(m => ({ ...m, source: modSource(slot, useIndex) })));
+        if (item.modifiers) {
+            attribute.addModifiers(item.modifiers.map(m => ({ ...m, source: modSource(slot, useIndex) })));
         }
 
         return displaced;
@@ -348,11 +354,11 @@ export default class Equipment implements TagReadable {
                 continue;
             }
 
-            const data = getItemData(entry.item.itemDataId);
-            if (!data?.modifiers) continue;
+            const modifiers = entry.item.modifiers;
+            if (!modifiers) continue;
 
             const source = modSource(entry.slot, entry.slotIndex);
-            attribute.addModifiers(data.modifiers.map(m => ({ ...m, source })));
+            attribute.addModifiers(modifiers.map(m => ({ ...m, source })));
         }
     }
 

@@ -1,4 +1,5 @@
-import type { AttributeModifier } from "./Attribute.js";
+import { AttributeType } from "./Attribute.js";
+import type { AttributeKey, AttributeModifier, ModifierOp } from "./Attribute.js";
 import { TagCollection, normalizeTags } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
 import { isDeepStrictEqual } from "node:util";
@@ -23,6 +24,11 @@ export const ItemMetadataKeys = Object.freeze({
     PROJECTILE_ATTACK: 'projectileAttack',
     PROJECTILE: 'projectile',
     STATUS_EFFECT: 'statusEffect',
+    CUSTOM_NAME: 'customName',
+    CUSTOM_DESCRIPTION: 'customDescription',
+    INSTANCE_MODIFIERS: 'instanceModifiers',
+    MAX_DURABILITY: 'maxDurability',
+    FORGE: 'forge',
 } as const);
 
 const METADATA_STORAGE_KEY = '__daclionItemMetadata';
@@ -151,11 +157,11 @@ export class Item implements TagReadable {
         this.id = id;
         this.itemDataId = itemDataId;
         this.count = count;
+        this._metadataDelta = cloneMetadata(metadataDelta ?? {});
         const maxDurability = this.baseDurability;
         this._durability = maxDurability === null
             ? null
             : normalizeDurability(durability ?? maxDurability, maxDurability);
-        this._metadataDelta = cloneMetadata(metadataDelta ?? {});
         this.tags = new TagCollection({
             definition: getItemData(itemDataId)?.tags,
             persistent: persistentTags,
@@ -168,10 +174,16 @@ export class Item implements TagReadable {
     }
 
     /** 아이템 이름 */
-    get name(): string { return this.data?.name ?? ''; }
+    get name(): string {
+        const custom = this.getMetadata(ItemMetadataKeys.CUSTOM_NAME);
+        return typeof custom === 'string' && custom.trim() ? custom.trim().slice(0, 40) : this.data?.name ?? '';
+    }
 
     /** 아이템 설명 */
-    get description(): string { return this.data?.description ?? ''; }
+    get description(): string {
+        const custom = this.getMetadata(ItemMetadataKeys.CUSTOM_DESCRIPTION);
+        return typeof custom === 'string' && custom.trim() ? custom.trim().slice(0, 300) : this.data?.description ?? '';
+    }
 
     /** 인벤토리·장비 이동 시 사용하는 스택 가능 여부. */
     get stackable(): boolean { return this.data?.stackable ?? false; }
@@ -263,10 +275,18 @@ export class Item implements TagReadable {
     get equipSlot(): string | null { return this.data?.equipSlot ?? null; }
 
     /** 능력치 modifier 목록 */
-    get modifiers(): AttributeModifier[] | null { return this.data?.modifiers ?? null; }
+    get modifiers(): AttributeModifier[] | null {
+        const instance = normalizeInstanceModifiers(this.getMetadata(ItemMetadataKeys.INSTANCE_MODIFIERS));
+        return instance ?? this.data?.modifiers ?? null;
+    }
 
     /** 기본(최대) 내구도. null = 무한 */
-    get baseDurability(): number | null { return this.data?.baseDurability ?? null; }
+    get baseDurability(): number | null {
+        const override = this.getMetadata(ItemMetadataKeys.MAX_DURABILITY);
+        return typeof override === 'number' && Number.isFinite(override) && override > 0
+            ? Math.min(10_000, Math.round(override))
+            : this.data?.baseDurability ?? null;
+    }
 
     /** 현재 내구도. null이면 내구도 시스템을 사용하지 않는다. */
     get durability(): number | null { return this._durability; }
@@ -381,6 +401,25 @@ export class Item implements TagReadable {
 
 // 아이템 마스터 데이터 캐시
 const itemDataCache = new Map<string, ItemData>();
+
+function normalizeInstanceModifiers(value: unknown): AttributeModifier[] | null {
+    if (!Array.isArray(value)) return null;
+    const modifiers: AttributeModifier[] = [];
+    for (const entry of value) {
+        if (!entry || typeof entry !== 'object') continue;
+        const candidate = entry as { attribute?: unknown; op?: unknown; value?: unknown };
+        if (typeof candidate.attribute !== 'string' || !AttributeType.fromKey(candidate.attribute)) continue;
+        if (candidate.op !== 'add' && candidate.op !== 'multiply') continue;
+        if (typeof candidate.value !== 'number' || !Number.isFinite(candidate.value)) continue;
+        modifiers.push({
+            attribute: candidate.attribute as AttributeKey,
+            op: candidate.op as ModifierOp,
+            value: candidate.value,
+            source: '',
+        });
+    }
+    return modifiers.length > 0 ? modifiers : null;
+}
 
 function normalizeDurability(value: number, max: number): number {
     if (!Number.isFinite(value)) throw new Error('Durability must be finite');

@@ -85,6 +85,41 @@ test('metadata setter는 delta만 저장하고 변경 callback을 호출한다',
     assert.equal(changes, 2);
 });
 
+test('제작 장비 metadata는 이름·설명·최대 내구도·인스턴스 능력치를 안전하게 재정의한다', () => {
+    defineItem({
+        ...itemData('test_forged_weapon', 'items/old_sword', null, 50),
+        equipSlot: 'mainHand',
+        modifiers: [{ attribute: 'atk', op: 'add', value: 2, source: '' }],
+    });
+    const item = new Item('test_forged_weapon', 1, null, {
+        customName: '정밀한 철 장검',
+        customDescription: '단조 시험으로 제작된 무기.',
+        maxDurability: 180,
+        instanceModifiers: [
+            { attribute: 'atk', op: 'add', value: 14 },
+            { attribute: 'critRate', op: 'add', value: 0.02 },
+            { attribute: 'unknown', op: 'add', value: 999 },
+        ],
+    });
+    assert.equal(item.name, '정밀한 철 장검');
+    assert.equal(item.description, '단조 시험으로 제작된 무기.');
+    assert.equal(item.baseDurability, 180);
+    assert.equal(item.durability, 180);
+    assert.deepEqual(item.modifiers?.map(({ attribute, op, value }) => ({ attribute, op, value })), [
+        { attribute: 'atk', op: 'add', value: 14 },
+        { attribute: 'critRate', op: 'add', value: 0.02 },
+    ]);
+
+    const equipment = Equipment.createEmpty();
+    const attribute = new Attribute({ atk: 10, critRate: 0 });
+    assert.equal(equipment.equip('mainHand', item, attribute), true);
+    assert.equal(attribute.get(AttributeType.ATK), 24);
+    assert.equal(attribute.get(AttributeType.CRIT_RATE), 0.02);
+    item.setMetadata('instanceModifiers', [{ attribute: 'atk', op: 'add', value: 20 }]);
+    assert.equal(attribute.get(AttributeType.ATK), 30);
+    assert.equal(attribute.get(AttributeType.CRIT_RATE), 0);
+});
+
 test('기본 공격 오버라이드 key는 base metadata와 인스턴스 delta를 따른다', () => {
     defineItem(itemData('test_attack_override', undefined, { basicAttackOverride: 'projectile' }));
     const item = new Item('test_attack_override', 1, null, null);

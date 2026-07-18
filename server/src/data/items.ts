@@ -640,6 +640,66 @@ for (const mineral of mineralItems) {
     });
 }
 
+const refinedMinerals = [
+    { id: 'refined_iron', name: '제련된 철', source: 'iron_ore', tag: GameTags.MATERIAL_IRON },
+    { id: 'refined_gold', name: '제련된 금', source: 'gold_ore', tag: GameTags.MATERIAL_GOLD },
+    { id: 'refined_ruby', name: '제련된 루비', source: 'ruby', tag: GameTags.MATERIAL_RUBY },
+    { id: 'refined_emerald', name: '제련된 에메랄드', source: 'emerald', tag: GameTags.MATERIAL_EMERALD },
+    { id: 'refined_diamond', name: '제련된 다이아몬드', source: 'diamond', tag: GameTags.MATERIAL_DIAMOND },
+] as const;
+
+for (const material of refinedMinerals) defineItem({
+    id: material.id,
+    name: material.name,
+    description: '마력 제련으로 불순물을 걷어내 단조할 수 있게 만든 소재.',
+    // TODO(icons): 전용 제련 소재 아이콘 제작 전까지 원광 아이콘을 사용한다.
+    image: `items/${material.source}`,
+    category: '제련 소재',
+    weight: 0.55,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [material.tag, GameTags.MATERIAL_REFINED],
+});
+
+const forgedTemplates = [
+    { id: 'forged_sword', name: '단조 장검', image: 'items/old_sword', category: '장검', weight: 3.4, slot: 'mainHand', tag: GameTags.WEAPON_SWORD },
+    { id: 'forged_axe', name: '단조 도끼', image: 'items/training_axe', category: '도끼', weight: 3.8, slot: 'mainHand', tag: GameTags.WEAPON_AXE },
+    { id: 'forged_dagger', name: '단조 단검', image: 'items/venom_dagger', category: '단검', weight: 1.7, slot: 'mainHand', tag: GameTags.WEAPON_DAGGER },
+    { id: 'forged_shield', name: '단조 방패', image: 'items/old_shield', category: '방패', weight: 3.2, slot: 'offHand', tag: null },
+    { id: 'forged_pickaxe', name: '단조 곡괭이', image: 'items/iron_pickaxe', category: '곡괭이', weight: 3.5, slot: 'mainHand', tag: null },
+] as const;
+
+for (const template of forgedTemplates) defineItem({
+    id: template.id,
+    name: template.name,
+    description: '재료와 단조 결과에 따라 이름과 능력치가 정해지는 제작 장비.',
+    // TODO(icons): 전용 조합형 장비 아이콘 제작 전까지 같은 형태의 아이콘을 사용한다.
+    image: template.image,
+    category: template.category,
+    weight: template.weight,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: template.slot,
+    modifiers: null,
+    baseDurability: 100,
+    tags: [
+        template.id === 'forged_shield' ? GameTags.ITEM_ARMOR : template.id === 'forged_pickaxe' ? GameTags.ITEM_TOOL : GameTags.ITEM_WEAPON,
+        GameTags.ITEM_FORGED,
+        ...(template.tag ? [template.tag] : []),
+        ...(template.id === 'forged_pickaxe' ? [GameTags.TOOL_MINING] : []),
+    ],
+    balance: template.id === 'forged_shield'
+        ? { role: ItemBalanceRole.DEFENSE }
+        : { role: ItemBalanceRole.WEAPON, attackType: 'physical' },
+});
+
 defineItem({
     id: 'beginner_fishing_rod',
     name: '초보자 낚싯대',
