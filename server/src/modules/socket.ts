@@ -61,7 +61,7 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
                         import('./party.js'),
                         import('./informationVisibility.js'),
                         import('./fishing.js'),
-                    ]).then(([registry, party, visibility, fishing]) => {
+                    ]).then(async ([registry, party, visibility, fishing]) => {
                         if (isUserOnline(onlineUserId)) return;
                         const player = registry.getOnlinePlayer(onlineUserId);
                         const result = player ? party.partyManager.removeDisconnectedPlayer(player) : undefined;
@@ -73,7 +73,11 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
                                     sendBotMessageToUser(affectedUserId, `${player?.name ?? '파티원'}님이 접속을 종료해 파티에서 나갔습니다.`));
                             }
                         }
-                    });
+                        if (!isUserOnline(onlineUserId)) {
+                            const { unloadPlayerByUserId } = await import('./player.js');
+                            await unloadPlayerByUserId(onlineUserId, true);
+                        }
+                    }).catch(error => logger.error(`연결 종료 Player 정리 실패: UID ${onlineUserId}`, error));
                 }
                 logger.warn(`로그아웃: ${currentSession?.username ?? `UID ${onlineUserId}`} (${socket.id})`);
             } else {

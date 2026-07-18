@@ -1,6 +1,6 @@
 import logger from "../utils/logger.js";
 import Player from "../models/Player.js";
-import { getSessionByUserId } from "./login.js";
+import { getSessionByUserId, isUserOnline } from "./login.js";
 import { getLocation } from "../models/Location.js";
 import type { LocationInfoData } from "../../../shared/types.js";
 import { cancelCrafting } from "../models/Crafting.js";
@@ -38,8 +38,9 @@ export async function loadPlayerByUserId(userId: number): Promise<Player> {
     return player;
 }
 
-/** 로그아웃/연결끊김 시 호출: 저장 후 메모리에서 제거 */
-export async function unloadPlayerByUserId(userId: number): Promise<void> {
+/** 로그아웃/연결끊김 시 호출: 저장 후 메모리에서 제거. 연결 종료 경로는 재접속 시 제거를 취소한다. */
+export async function unloadPlayerByUserId(userId: number, requireOffline = false): Promise<void> {
+    if (requireOffline && isUserOnline(userId)) return;
     const player = getOnlinePlayer(userId);
     if (!player) return;
     endNpcDialogue(player, DialogueEndReason.UNLOADED, false);
@@ -51,6 +52,7 @@ export async function unloadPlayerByUserId(userId: number): Promise<void> {
     clearInformationMode(userId);
     clearUserSnapshotStreams(userId);
     await player.save();
+    if (requireOffline && isUserOnline(userId)) return;
     unregisterOnlinePlayer(player.userId);
 }
 
@@ -61,7 +63,7 @@ export function getPlayerByUserId(userId: number): Player | undefined {
 
 /** 온라인 플레이어 목록 반환 */
 export function getOnlinePlayers(): Player[] {
-    return getOnlinePlayerSnapshot();
+    return getOnlinePlayerSnapshot().filter(player => isUserOnline(player.userId));
 }
 
 /** 오프라인 플레이어 조회 (DB에서 직접 로드, 메모리에 올리지 않음) */
