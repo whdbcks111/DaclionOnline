@@ -18,6 +18,7 @@ import { ActionType } from '../models/Action.js';
 import type Entity from '../models/Entity.js';
 import { ShieldType } from '../models/Shield.js';
 import { LegacyStatusEffects } from './statusEffects.js';
+import { StatType } from '../models/Stat.js';
 
 const CRITICAL_HIT_STAT = 'combat:critical_hits';
 
@@ -486,6 +487,86 @@ const elitePassives = [
 ] as const;
 
 for (const passive of elitePassives) defineJobPassive(passive);
+
+const statAwakenings = [
+    {
+        id: 'titan_strength', name: '거인의 힘', stat: StatType.STRENGTH, icon: 'attributes/atk',
+        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.armorPen}} 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.08, label: '공격력 증가', display: '+8%' },
+            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 8, label: '방어 관통력 증가', display: '+8' },
+        ],
+    },
+    {
+        id: 'wind_step', name: '바람걸음', stat: StatType.AGILITY, icon: 'attributes/speed',
+        description: '{{icon.speed}} 이동속도가 [color=cyan]{{speed}}[/color], {{icon.attackSpeed}} 공격속도가 [color=cyan]{{attackSpeed}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.07, label: '이동속도 증가', display: '+7%' },
+            { attribute: AttributeType.ATTACK_SPEED.key, op: 'multiply', value: 1.06, label: '공격속도 증가', display: '+6%' },
+        ],
+    },
+    {
+        id: 'unyielding_body', name: '불굴의 육체', stat: StatType.VITALITY, icon: 'attributes/maxLife',
+        description: '{{icon.maxLife}} 최대 생명력이 [color=green]{{maxLife}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.1, label: '최대 생명력 증가', display: '+10%' },
+            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.06, label: '방어력 증가', display: '+6%' },
+        ],
+    },
+    {
+        id: 'true_sight', name: '심안', stat: StatType.SENSIBILITY, icon: 'attributes/critRate',
+        description: '{{icon.critRate}} 치명타 확률이 [color=gold]{{critRate}}[/color], {{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.CRIT_RATE.key, op: 'add', value: 0.04, label: '치명타 확률 증가', display: '+4%p' },
+            { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.12, label: '치명타 피해 증가', display: '+12%p' },
+        ],
+    },
+    {
+        id: 'mana_spring', name: '마력의 샘', stat: StatType.MENTALITY, icon: 'attributes/maxMentality',
+        description: '{{icon.maxMentality}} 최대 정신력이 [color=$magic]{{maxMentality}}[/color], {{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.mentalityRegen}} 정신력 재생이 [color=$magic]{{mentalityRegen}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAX_MENTALITY.key, op: 'multiply', value: 1.1, label: '최대 정신력 증가', display: '+10%' },
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.08, label: '마법력 증가', display: '+8%' },
+            { attribute: AttributeType.MENTALITY_REGEN.key, op: 'add', value: 1, label: '정신력 재생 증가', display: '+1/초' },
+        ],
+    },
+] as const;
+
+for (const awakening of statAwakenings) {
+    const source = `skill:${awakening.id}:passive`;
+    // TODO: 각 각성의 전용 스킬 아이콘으로 교체. 1차 구현에서는 능력치 카테고리 fallback을 사용한다.
+    defineSkill({
+        id: awakening.id,
+        name: awakening.name,
+        icon: awakening.icon,
+        maxLevel: 1,
+        descriptionTemplate: awakening.description,
+        costTemplate: '소모값 없음',
+        activationConditionTemplate: `${awakening.stat.label} [color=gold]100[/color] 달성 시 자동으로 깨우칩니다.`,
+        baseMetadata: null,
+        calculatedFields: Object.fromEntries(awakening.modifiers.map(modifier => [
+            modifier.attribute,
+            () => `[tooltip=${modifier.label}: ${modifier.display}]${modifier.display}[/tooltip]`,
+        ])),
+        calculateExperienceGain: () => 0,
+        calculateRequiredExperience: () => 0,
+        autoAcquire: {
+            watchedProgress: [],
+            alwaysEvaluate: true,
+            check: ({ player }) => (player?.stat.get(awakening.stat) ?? 0) >= 100,
+        },
+        canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
+        onPassiveUpdate: ({ owner }) => {
+            if (owner.attribute.hasSource(source)) return;
+            owner.attribute.addModifiers(awakening.modifiers.map(({ label: _label, display: _display, ...modifier }) => ({
+                ...modifier,
+                source,
+            })));
+        },
+        onPassiveInactive: ({ owner }) => owner.attribute.removeBySource(source),
+        tags: [GameTags.SKILL_PASSIVE],
+    });
+}
 
 const weaponMasteries = [
     {

@@ -97,6 +97,8 @@ export interface SkillFinishContext extends SkillUpdateContext {
 
 export interface SkillAutoAcquire {
     watchedProgress: readonly string[];
+    /** Progress key가 아닌 현재 상태(스탯 등)를 주기적으로 검사해야 할 때만 사용한다. */
+    alwaysEvaluate?: boolean;
     check: (context: SkillContext) => boolean;
 }
 

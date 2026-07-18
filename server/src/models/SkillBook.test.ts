@@ -21,6 +21,7 @@ import '../data/jobs.js';
 import '../data/projectiles.js';
 import CareerProfile, { CareerProgressIds } from './Career.js';
 import { ShieldType } from './Shield.js';
+import Stat, { StatType } from './Stat.js';
 
 class TestSkillPlayer extends Entity {
     override readonly name = '스킬 시험 플레이어';
@@ -28,6 +29,7 @@ class TestSkillPlayer extends Entity {
     readonly progress = PlayerProgress.createEmpty(this.userId);
     readonly skills = SkillBook.createEmpty(this.userId);
     readonly inventory = Inventory.createEmpty(this.userId, 100);
+    readonly stat = new Stat();
     readonly career: CareerProfile;
 
     constructor() {
@@ -185,6 +187,19 @@ test('무기 반복 적중 통계는 숨겨진 숙련 패시브를 해금하고 
     assert.ok(player.equipment.unequip('mainHand', 0, player.attribute));
     player.skills.update(0.1);
     assert.equal(player.attribute.get(AttributeType.ATK), 10);
+});
+
+test('스탯 달성형 히든 패시브는 Progress 변경 없이도 자동 획득한다', () => {
+    const player = new TestSkillPlayer();
+    player.stat.set(StatType.STRENGTH, 100);
+    player.stat.applyModifiers(player);
+
+    player.skills.update(0.5);
+
+    assert.equal(player.skills.has('titan_strength'), true);
+    assert.ok(Math.abs(player.attribute.get(AttributeType.ATK) - 226.8) < 0.0001);
+    assert.equal(player.attribute.get(AttributeType.ARMOR_PEN), 8);
+    assert.equal(player.skills.getHudSnapshots().some(skill => skill.id === 'titan_strength'), false);
 });
 
 test('스킬 회수 API는 보유 목록에서 제거하고 저장 전 재지급도 허용한다', () => {

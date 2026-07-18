@@ -510,6 +510,7 @@ export default class SkillBook {
         for (const data of getAllSkillData()) {
             if (this.has(data.id) || !data.autoAcquire) continue;
             if (!this.fullAutoAcquireCheck
+                && !data.autoAcquire.alwaysEvaluate
                 && !data.autoAcquire.watchedProgress.some(key => changed.has(key))) continue;
             const preview = new Skill({ playerId: this.playerId, skillDataId: data.id });
             try {
