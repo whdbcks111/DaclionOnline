@@ -2,12 +2,28 @@ import '../data/projectiles.js';
 import '../data/items.js';
 import '../data/jobs.js';
 import '../data/statusEffects.js';
+import '../data/tagEffects.js';
 import '../data/skills.js';
-import { analyzeAllEliteJobs, analyzeAllFirstJobs, analyzeItemBalance } from '../models/Balance.js';
+import '../data/monsters.js';
+import {
+    analyzeAllBalanceProfiles,
+    analyzeAllEliteJobs,
+    analyzeAllFirstJobs,
+    analyzeBalanceProfile,
+    analyzeItemBalance,
+} from '../models/Balance.js';
 
-const requestedLevel = Number.parseInt(process.argv[2] ?? '50', 10);
+const levelInput = process.argv[2] ?? '50';
+const requestedLevel = Number.parseInt(levelInput, 10);
 const level = Number.isInteger(requestedLevel) && requestedLevel > 0 ? requestedLevel : 50;
 const reports = analyzeAllFirstJobs(level);
+
+if (levelInput.toLowerCase() === 'all') {
+    for (const band of [20, 50, 100, 150, 200]) printProfiles(band);
+    process.exit(0);
+}
+
+printProfiles(level);
 
 console.log(`DaclionOnline 직업 밸런스 기준선 · Lv.${level}`);
 console.log('조건: 동일 총 스탯 / 직업별 배분 프리셋 / 무장비 / 동레벨 균형 대상 / 중립 속성 / 60초');
@@ -63,4 +79,28 @@ for (const [jobId, itemId] of itemCases) {
 
 function formatSeconds(value: number): string {
     return Number.isFinite(value) ? `${value.toFixed(2)}초` : '∞';
+}
+
+function printProfiles(profileLevel: number): void {
+    console.log(`\n전투 로테이션 프로파일 · Lv.${profileLevel}`);
+    console.log('조건: 추천 장비 / 동레벨 일반·보스 / 평타 최소 3행동당 1회 / 모든 사용 가능 스킬 / 공유 정신력·쿨다운 / 60초');
+    for (const report of analyzeAllBalanceProfiles(profileLevel)) {
+        console.log([
+            report.name.padEnd(5),
+            `일반=${report.monster.dps.toFixed(2)}DPS/${formatSeconds(report.monster.estimatedKillSeconds)}`,
+            `보스=${report.boss.dps.toFixed(2)}DPS/${formatSeconds(report.boss.estimatedKillSeconds)}`,
+            `평타=${(report.boss.basicDamageShare * 100).toFixed(1)}%`,
+            `스킬=${report.boss.skills.map(skill => `${skill.name}Lv.${skill.skillLevel}x${skill.casts}`).join(',')}`,
+        ].join('  '));
+    }
+    if (profileLevel >= 200) {
+        console.log('엘리트 조합 로테이션');
+        for (const main of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith']) {
+            for (const sub of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith']) {
+                if (main === sub) continue;
+                const report = analyzeBalanceProfile(profileLevel, `career:${main}`, `career:${sub}`);
+                console.log(`${report.name.padEnd(8)} 보스=${report.boss.dps.toFixed(2)}DPS/${formatSeconds(report.boss.estimatedKillSeconds)} 평타=${(report.boss.basicDamageShare * 100).toFixed(1)}%`);
+            }
+        }
+    }
 }

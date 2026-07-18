@@ -49,7 +49,7 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 - 표시: `icon`, `descriptionTemplate`, `costTemplate`, `activationConditionTemplate`, `isVisible`.
 - 계산: `baseMetadata`, `calculatedFields`, `calculateMaxCooldown`, `calculateExperienceGain`, `calculateRequiredExperience`.
-- 밸런스 진단: `balance.role`, 실제 발동식과 공유하는 피해·소모·회복·보호막 callback, 치명타 방식·타격/대상 수.
+- 밸런스 진단: `balance.role`, 실제 발동식과 공유하는 피해·소모·회복·보호막·지속 버프 callback, 직접 피해 속성, 치명타 방식·타격/대상 수.
 - 획득/발동: `autoAcquire`, `autoActivate`, `activateOnMessage`, `canUse`, `canActivate`.
 - 수명주기: `onAcquire`, `onStart`, `onUpdate`, `onFinish`, `onPassiveUpdate`, `onPassiveInactive`.
 - 분류: `tags`, `maxLevel`, `aliases`, `activationMessage`.
@@ -67,11 +67,11 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 ### 밸런스 진단
 
-권한 10 관리자용 `/스킬밸런스 <스킬> [스킬레벨] [캐릭터레벨] [직업]`, `/직업밸런스 [레벨] [메인직업] [서브직업]`, `/아이템밸런스 <아이템> [캐릭터레벨] [직업]`은 `models/Balance.ts`의 같은 공개 분석 API를 사용한다. CLI에서는 `cd server && npm run balance:report -- 50`처럼 레벨을 지정해 같은 직업 기준선을 출력하며, Lv.200 이상은 대장장이를 포함한 20개 엘리트 조합도 함께 비교한다. 아이템 분석은 장비 modifier 또는 버프 아이템 metadata가 가리키는 실제 StatusEffect를 적용해 기본 공격 DPS·물리/마법 생존·능력치의 전후 차이를 표시한다.
+권한 10 관리자용 `/스킬밸런스 <스킬> [스킬레벨] [캐릭터레벨] [직업]`, `/직업밸런스 [레벨] [메인직업] [서브직업]`, `/아이템밸런스 <아이템> [캐릭터레벨] [직업]`, `/밸런스프로파일(bp) [레벨|전체] [메인직업|전체] [서브직업]`은 `models/Balance.ts`의 같은 공개 분석 API를 사용한다. 관리자 페이지의 `전투 로테이션 프로파일`도 동일 API를 호출한다. CLI에서는 `cd server && npm run balance:report -- 50` 또는 `-- all`로 단일/전체 레벨 구간을 출력하며, Lv.200에서는 대장장이를 포함한 20개 엘리트 조합도 비교한다. 아이템 분석은 장비 modifier 또는 버프 아이템 metadata가 가리키는 실제 StatusEffect를 적용해 기본 공격 DPS·물리/마법 생존·능력치의 전후 차이를 표시한다.
 
-분석 조건은 동일 레벨, 레벨업으로 실제 지급되는 총 스탯 포인트, 직업별 공개 배분 프리셋, 무장비, 동레벨 균형형 표준 대상, 중립 속성, 60초 전투다. 직업이 지급하는 패시브는 실제 `onPassiveUpdate` callback으로 기준 능력치에 먼저 적용한다. 기본 공격은 실제 고정 차감 방어·관통·치명타 기대값·공격속도·속도차 회피율을 적용한다. 액티브 스킬은 `SkillData.balance` callback으로 실제 발동 계수와 정신력 소모를 공유하며 쿨다운 제한 횟수와 시작 정신력+60초 재생으로 가능한 횟수 중 작은 값을 사용한다.
+개별 스킬/직업 기준선 외에 전투 프로파일은 실제 레벨 스탯, 직업별 공개 배분, 레벨대 추천 무기, 직업 패시브, 성장 시점에 맞춘 스킬 레벨을 적용한다. 가장 가까운 실제 일반/보스 마스터의 능력치 비율과 태그를 요청 레벨로 정규화해 같은 레벨 적을 만들고 60초 동안 하나의 행동 시간·정신력·쿨다운을 공유한다. 평타를 최소 세 행동마다 한 번 섞고, 보유한 공격·방어·보조 스킬을 모두 순환하며 지속 능력치 버프는 실제 modifier와 지속시간으로 후속 공격에 반영한다. 결과는 평타/스킬 피해 비중, 스킬별 레벨·사용 횟수·피해·회복·보호막, DPS, 예상 처치 시간, 종료 정신력, 대상 기준 90% 회피 요구 속도·민첩을 분리해 표시한다.
 
-제어·은신·확정 회피·광역 상황·대상 생명력 비례 지속 피해는 임의 가중치를 부여해 단일 전투력에 섞지 않는다. 직접 피해, 생존 시간, 회복·보호막, 계산에서 분리한 효과를 별도 표시하며 balance callback이 없는 스킬은 추정하지 않고 `미지원`으로 표시한다. 이 명령의 출력 기준선을 먼저 기록한 다음 계수나 직업 modifier를 바꾸고 다시 측정한다.
+제어·은신·확정 회피·광역의 추가 대상·대상 생명력 비례 지속 피해는 임의 가중치를 부여해 단일 전투력에 섞지 않는다. 직접 피해 속성만 `effectTags`로 명시해 실제 상성을 적용하므로 독을 바른 물리 칼날처럼 후속 효과만 독인 공격은 물리 타격 전체가 무생물 면역으로 사라지지 않는다. balance callback이 없는 스킬은 추정하지 않고 `미지원`으로 표시한다. 계수나 직업 modifier를 바꿀 때는 `-- all` 기준선을 전후 비교한다.
 
 직업 귀속처럼 현재 사용할 수 없는 스킬은 DB에서 제거하지 않는다. `isVisible`과 `canUse`로 표시/사용만 비활성화한다. `SkillBook.grant()`는 신규 획득일 때 채팅과 notification에 `스킬 [ 이름 ] 를 획득했습니다!`를 보내며 이미 보유한 스킬은 중복 생성하지 않는다.
 

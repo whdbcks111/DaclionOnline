@@ -40,8 +40,9 @@ export class StatType {
         (entity, points, source) => {
             entity.attribute.addModifier({ attribute: 'critRate', op: 'add', value: 0.001 * points, source })
             entity.attribute.addModifier({ attribute: 'critDmg', op: 'add', value: 0.01 * points, source })
+            entity.attribute.addModifier({ attribute: 'forgingPrecision', op: 'add', value: 0.0015 * points, source })
         },
-        p => `감각 1 → 치명타율 +0.1%, 치명타 피해 +1%\n현재 감각 ${p}: 치명타율 +${(0.1 * p).toFixed(1)}%, 치명타 피해 +${p}%`
+        p => `감각 1 → 치명타율 +0.1%, 치명타 피해 +1%, 제련 정밀도 +0.15%\n현재 감각 ${p}: 치명타율 +${(0.1 * p).toFixed(1)}%, 치명타 피해 +${p}%, 제련 정밀도 +${(0.15 * p).toFixed(1)}%`
     )
 
     static readonly MENTALITY = new StatType('mentality', '정신력',

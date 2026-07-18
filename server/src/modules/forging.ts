@@ -5,6 +5,7 @@ import type Player from '../models/Player.js';
 import { chat } from '../utils/chatBuilder.js';
 import { sendBotMessageToUser, sendNotificationToUser } from './message.js';
 import { normalizeMiniGameActions, startMiniGame } from './minigame.js';
+import { AttributeType } from '../models/Attribute.js';
 
 export const BLACKSMITH_JOB_ID = 'career:blacksmith';
 export const BLACKSMITH_PROFESSION_FLAG = 'profession:blacksmith';
@@ -47,14 +48,15 @@ export function startForging(player: Player, form: ForgeForm, material: ForgeMat
         return { success: false, reason: `${material.label} 제련 소재가 ${form.materialCount}개 필요합니다.` };
     }
 
+    const precision = Math.max(0, Math.min(0.45, player.attribute.get(AttributeType.FORGING_PRECISION)));
     const interval = Math.max(390, 650 - material.power * 110);
     const beatTimesMs = Array.from({ length: 12 }, (_, index) => Math.round(1_200 + index * interval));
     const config: ForgeRhythmConfig = {
         durationMs: beatTimesMs.at(-1)! + 900,
         label: `${material.label} ${form.label} 단조`,
         beatTimesMs,
-        hitWindowMs: 240,
-        perfectWindowMs: 85,
+        hitWindowMs: Math.round(240 * (1 + precision)),
+        perfectWindowMs: Math.round(85 * (1 + precision * 0.6)),
         requiredAccuracy: 0.55,
     };
     const started = startMiniGame({
@@ -93,7 +95,7 @@ export function startForging(player: Player, form: ForgeForm, material: ForgeMat
                 actor: player,
                 data: { form: form.key, material: material.key, accuracy, itemName },
             });
-            sendBotMessageToUser(player.userId, chat().color('gold', b => b.text('[ 단조 완료 ] ')).text(`${itemName} · 정확도 ${Math.round(accuracy * 100)}% · +${experience} EXP`).build());
+            sendBotMessageToUser(player.userId, chat().color('gold', b => b.text('[ 단조 완료 ] ')).text(`${itemName} · 정확도 ${Math.round(accuracy * 100)}% · 제련 정밀도 ${Math.round(precision * 100)}% · +${experience} EXP`).build());
             sendNotificationToUser(player.userId, { key: 'forging:complete', message: `${itemName} 단조를 완료했습니다!` });
         },
     });

@@ -26,16 +26,16 @@ const firstJobs = [
         id: 'career:mage', name: '마법사', icon: 'jobs/mage',
         description: '지팡이와 정신력을 사용해 원거리 속성 마법·보호 마법·제어기를 다루는 직업.',
         skills: ['mage_mana_cycle', 'magic_bolt', 'mana_barrier', 'elemental_bind', 'elemental_insight'],
-        main: [{ attribute: 'maxMentality', op: 'multiply', value: 1.2 }, { attribute: 'magicForce', op: 'multiply', value: 1.15 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.12 }, { attribute: 'maxLife', op: 'multiply', value: 0.9 }],
+        main: [{ attribute: 'maxMentality', op: 'multiply', value: 1.2 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.12 }, { attribute: 'maxLife', op: 'multiply', value: 0.9 }],
         sub: [{ attribute: 'maxMentality', op: 'multiply', value: 1.1 }, { attribute: 'magicForce', op: 'multiply', value: 1.06 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.06 }],
     },
     {
         // TODO: 대장장이 전용 직업 아트 제작 전까지 채굴 도구 카테고리 아이콘을 사용한다.
         id: 'career:blacksmith', name: '대장장이', icon: 'items/iron_pickaxe',
-        description: '광물을 마력으로 제련하고 리듬 단조로 장비를 제작하는 생산·근접 혼합 직업.',
-        skills: ['blacksmith_temper', 'arcane_smelting', 'metal_forging'],
-        main: [{ attribute: 'maxWeight', op: 'add', value: 20 }, { attribute: 'def', op: 'multiply', value: 1.08 }, { attribute: 'maxLife', op: 'multiply', value: 1.06 }],
-        sub: [{ attribute: 'maxWeight', op: 'add', value: 10 }, { attribute: 'def', op: 'multiply', value: 1.04 }],
+        description: '튼튼한 체력과 예리한 감각으로 적의 결을 파쇄하고, 광물 제련과 리듬 단조로 장비를 제작하는 생산·근접 혼합 직업.',
+        skills: ['blacksmith_temper', 'precision_break', 'arcane_smelting', 'metal_forging'],
+        main: [{ attribute: 'maxWeight', op: 'add', value: 20 }, { attribute: 'def', op: 'multiply', value: 1.1 }, { attribute: 'maxLife', op: 'multiply', value: 1.15 }, { attribute: 'critRate', op: 'add', value: 0.04 }],
+        sub: [{ attribute: 'maxWeight', op: 'add', value: 10 }, { attribute: 'def', op: 'multiply', value: 1.05 }, { attribute: 'maxLife', op: 'multiply', value: 1.08 }],
     },
 ] as const;
 
@@ -92,7 +92,7 @@ for (const [main, sub, eliteId, name] of eliteRecipes) {
         ],
         mainModifiers: [
             ...parent.main,
-            { attribute: main === 'mage' ? 'magicForce' : 'atk', op: 'multiply', value: 1.22 },
+            { attribute: main === 'mage' ? 'magicForce' : 'atk', op: 'multiply', value: 1.15 },
             { attribute: main === 'warrior' ? 'maxLife' : 'speed', op: 'multiply', value: 1.12 },
         ],
         tags: ['career:elite'],

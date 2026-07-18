@@ -1,7 +1,9 @@
 import { registerCommand } from '../modules/bot.js';
 import { sendBotMessageToUser } from '../modules/message.js';
 import {
+    analyzeAllBalanceProfiles,
     analyzeAllFirstJobs,
+    analyzeBalanceProfile,
     analyzeJobBalance,
     analyzeItemBalance,
     analyzeSkillBalance,
@@ -11,6 +13,8 @@ import {
     getAllBalanceItemData,
     type ItemBalanceReport,
     type JobBalanceReport,
+    type BalanceProfileReport,
+    type CombatRotationReport,
     type SkillBalanceReport,
 } from '../models/Balance.js';
 import { getAllJobs, getJob, JobTier } from '../models/Job.js';
@@ -21,6 +25,39 @@ import { chat } from '../utils/chatBuilder.js';
 const DEFAULT_LEVEL = 50;
 
 export function initBalanceCommands(): void {
+    registerCommand({
+        name: '밸런스프로파일',
+        aliases: ['balanceprofile', 'bp'],
+        permission: 10,
+        showCommandUse: 'private',
+        description: '실제 장비와 성장 스킬을 적용해 평타·전체 스킬 로테이션으로 동레벨 일반/보스전을 비교합니다.',
+        args: [
+            { name: '레벨', description: `분석 레벨 또는 전체 (생략 시 Lv.${DEFAULT_LEVEL})`, required: false,
+                completions: [{ value: '전체', description: 'Lv.20/50/100/150/200 구간 비교' }] },
+            { name: '메인직업', description: '생략 또는 전체 입력 시 모든 1차 직업 비교', required: false,
+                completions: [{ value: '전체', description: '모든 1차 직업 비교' }, ...getFirstJobCompletions()] },
+            { name: '서브직업', description: 'Lv.200 엘리트 조합 분석', required: false, completions: getFirstJobCompletions() },
+        ],
+        handler(userId, args) {
+            try {
+                if (args[0] === '전체') {
+                    sendBotMessageToUser(userId, buildLevelBandProfileMessage([20, 50, 100, 150, 200].flatMap(analyzeAllBalanceProfiles)));
+                    return;
+                }
+                const level = parsePositiveInteger(args[0], DEFAULT_LEVEL);
+                const mainJobId = resolveFirstJobId(args[1]);
+                const subJobId = resolveFirstJobId(args[2]);
+                if (!mainJobId || args[1] === '전체') {
+                    sendBotMessageToUser(userId, buildProfileComparisonMessage(analyzeAllBalanceProfiles(level)));
+                    return;
+                }
+                sendBotMessageToUser(userId, buildBalanceProfileMessage(analyzeBalanceProfile(level, mainJobId, subJobId)));
+            } catch (error) {
+                sendBotMessageToUser(userId, error instanceof Error ? error.message : '밸런스 프로파일 분석에 실패했습니다.');
+            }
+        },
+    });
+
     registerCommand({
         name: '스킬밸런스',
         aliases: ['skillbalance', 'sb'],
@@ -142,6 +179,60 @@ export function initBalanceCommands(): void {
             }
         },
     });
+}
+
+function buildBalanceProfileMessage(report: BalanceProfileReport) {
+    const builder = chat()
+        .text(`[ 밸런스 프로파일 ] Lv.${report.level} ${report.name}\n`)
+        .color('$text-tertiary', b => b.text(`${report.allocationLabel} · 추천 장비 · 공유 시간/정신력 · 60초 결정론적 로테이션\n`));
+    appendRotation(builder, report.monster);
+    appendRotation(builder, report.boss);
+    return builder.divider('계산 원칙')
+        .text('평타를 최소 3행동마다 섞고 모든 사용 가능 스킬을 순환합니다. 지속 피해·제어·회피는 직접 피해와 분리됩니다.')
+        .build();
+}
+
+function appendRotation(builder: ReturnType<typeof chat>, rotation: CombatRotationReport): void {
+    const source = rotation.targetNormalized ? ` · 원본 Lv.${rotation.targetSourceLevel} 환산` : '';
+    builder.divider(rotation.encounter.label)
+        .text(`대상 Lv.${rotation.targetLevel} ${rotation.targetName}${source}\n`)
+        .text(`장비 ${rotation.loadoutName} · ${rotation.basicAttackType === 'magic' ? '마법' : '물리'} 평타\n`)
+        .text(`90% 회피 기준 속도 ${format(rotation.evasionCapSpeed)} · 필요 민첩 ${rotation.evasionCapAgility}${rotation.evasionCapReached ? ' (현재 도달)' : ''}\n`)
+        .weight('bold', b => b.text(`DPS ${format(rotation.dps)} · 예상 처치 ${formatSeconds(rotation.estimatedKillSeconds)}\n`))
+        .text(`평타 ${rotation.basicAttacks}회 / 피해 ${format(rotation.basicDamage)} (${format(rotation.basicDamageShare * 100)}%)\n`)
+        .text(`스킬 ${rotation.skillCasts}회 / 피해 ${format(rotation.skillDamage)} / 종료 정신력 ${format(rotation.endingMentality)}\n`);
+    for (const skill of rotation.skills) {
+        builder.text(`- ${skill.name} Lv.${skill.skillLevel}: ${skill.casts}회`)
+            .text(skill.damage > 0 ? ` · 피해 ${format(skill.damage)}` : '')
+            .text(skill.healing > 0 ? ` · 회복 ${format(skill.healing)}` : '')
+            .text(skill.shield > 0 ? ` · 보호막 ${format(skill.shield)}` : '')
+            .text('\n');
+    }
+}
+
+function buildProfileComparisonMessage(reports: readonly BalanceProfileReport[]) {
+    const builder = chat()
+        .text(`[ 밸런스 프로파일 비교 ] Lv.${reports[0]?.level ?? DEFAULT_LEVEL}\n`)
+        .color('$text-tertiary', b => b.text('추천 장비 · 동레벨 일반/보스 · 평타+전체 스킬 60초 로테이션\n'))
+        .divider('직업별 결과');
+    for (const report of reports) {
+        builder.weight('bold', b => b.text(report.name))
+            .text(`  일반 DPS ${format(report.monster.dps)} / ${formatSeconds(report.monster.estimatedKillSeconds)}`)
+            .text(`  보스 DPS ${format(report.boss.dps)} / ${formatSeconds(report.boss.estimatedKillSeconds)}`)
+            .text(`  평타 ${format(report.boss.basicDamageShare * 100)}%\n`);
+    }
+    return builder.build();
+}
+
+function buildLevelBandProfileMessage(reports: readonly BalanceProfileReport[]) {
+    const builder = chat().text('[ 레벨 구간 밸런스 프로파일 ]\n');
+    for (const level of [...new Set(reports.map(report => report.level))]) {
+        builder.divider(`Lv.${level}`);
+        for (const report of reports.filter(value => value.level === level)) {
+            builder.text(`${report.name}: 일반 ${format(report.monster.dps)} DPS · 보스 ${format(report.boss.dps)} DPS · 보스 처치 ${formatSeconds(report.boss.estimatedKillSeconds)}\n`);
+        }
+    }
+    return builder.build();
 }
 
 function buildItemBalanceMessage(report: ItemBalanceReport) {

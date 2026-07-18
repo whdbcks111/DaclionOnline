@@ -44,6 +44,7 @@
 | `ShieldType`, `Shield` | `values/fromKey/fromInput/absorbs`, `advance/absorb/toSnapshot/toBarSegment` | 일반·물리·마법 보호막 클래스형 enum, 지속시간·잔량 갱신과 UI snapshot |
 | Combat | `calculateEvasionChance`, `rollEvasion`, `applyCritical`, `calculateFinalDamage` | 부작용 없는 속도 회피율·치명타·방어/관통 최종 대미지 계산 |
 | Combat pipeline | `CombatStage.values/fromKey`, `register/unregisterCombatHook`, `runCombatStage` | 준비·회피·피해 전후·완료 단계에서 스킬/장비/효과가 전투를 확장하는 key registry |
+| Balance | `createBalanceScenario`, `analyzeSkill/Job/ItemBalance`, `analyzeCombatRotation`, `analyzeBalanceProfile`, `analyzeAllBalanceProfiles` | 레벨·추천 장비·일반/보스 정규화 대상과 평타+전체 스킬 공유 자원 로테이션 진단 |
 | Threat | `ThreatAction.values/fromKey`, `MonsterAiDisposition.values/fromKey`, `normalizeMonsterAiProfile`, `ThreatTable`, `reportSupportThreat` | 마스터 AI 성향·지능·행동 가중치·도발 저항, 대상 선택과 기여도/지원 위협 추적 |
 | Tag effects | `defineTagEffectModifier`, `defineTagEffectTagDisplay`, `resolveTagEffect`, `applyTagEffectValue`, `getAllTagEffectModifiers`, `getTagEffectAffinitySnapshots` | `TagEffectReadable` 문맥 태그를 우선하는 단방향 source→target 배율 등록·판정·수치 적용과 라벨·아이콘이 포함된 공격/방어 관계 표시 DTO |
 | `Player` | `career`, `loadByUserId`, `create`, `save`, `getAttackDeniedReason`, `applyRegionDeathPenalty`, `performBasicAttack`, `equipInventoryItem`, `canSpendMentality/spendMentality/restoreMentality`, `gainExp`, `allocateStat` | CareerProfile을 포함한 영속 aggregate, 지역/파티 PVP 검증과 사망 손실, 안전한 인벤토리→장비 교환, 무기 오버라이드·적중 callback 기본 공격과 스킬 자원·성장 |

@@ -29,6 +29,7 @@ import { broadcastBotMessageAll, broadcastNotification, sendNotificationToUser }
 import logger from '../utils/logger.js';
 import { getMiniGamePresetSummaries, startMiniGamePreset } from './minigamePresets.js';
 import {
+    analyzeBalanceProfile,
     analyzeItemBalance,
     analyzeJobBalance,
     analyzeSkillBalance,
@@ -37,6 +38,7 @@ import {
     type ItemBalanceReport,
     type JobBalanceReport,
     type SkillBalanceReport,
+    type CombatRotationReport,
 } from '../models/Balance.js';
 
 const ADMIN_PERMISSION = 10;
@@ -488,6 +490,21 @@ function executeBalanceAction(request: AdminPanelActionRequest): { message: stri
             const report = analyzeJobBalance(level, mainJob.id, subJobId);
             return { message: `${report.name} 밸런스 분석을 완료했습니다.`, details: formatJobBalanceText(report) };
         }
+        case 'analyze_balance_profile': {
+            const subJobId = typeof values.subJobId === 'string' && values.subJobId.trim() ? values.subJobId.trim() : undefined;
+            const report = analyzeBalanceProfile(level, mainJob.id, subJobId);
+            return {
+                message: `${report.name} 전투 로테이션 프로파일을 완료했습니다.`,
+                details: [
+                    `[밸런스 프로파일] Lv.${report.level} ${report.name}`,
+                    `배분: ${report.allocationLabel}`,
+                    formatRotationText(report.monster),
+                    formatRotationText(report.boss),
+                    '',
+                    '평타 최소 3행동당 1회, 모든 사용 가능 스킬, 공유 행동 시간·정신력·재사용 대기시간 기준입니다.',
+                ].join('\n'),
+            };
+        }
         case 'analyze_item_balance': {
             const itemDataId = stringValue(values, 'itemDataId');
             const report = analyzeItemBalance(level, mainJob.id, itemDataId);
@@ -515,6 +532,19 @@ function formatSkillBalanceText(report: SkillBalanceReport, level: number, jobNa
     if (report.shield > 0) lines.push(`1회 보호막: ${numberText(report.shield)}`);
     if (report.notes.length) lines.push('', '[분리한 효과]', ...report.notes.map(note => `- ${note}`));
     return lines.join('\n');
+}
+
+function formatRotationText(report: CombatRotationReport): string {
+    return [
+        '',
+        `[${report.encounter.label}] Lv.${report.targetLevel} ${report.targetName}${report.targetNormalized ? ` (원본 Lv.${report.targetSourceLevel} 환산)` : ''}`,
+        `장비: ${report.loadoutName} / ${report.basicAttackType === 'magic' ? '마법' : '물리'} 평타`,
+        `90% 회피 기준: 속도 ${numberText(report.evasionCapSpeed)} / 필요 민첩 ${report.evasionCapAgility}${report.evasionCapReached ? ' (현재 도달)' : ''}`,
+        `DPS: ${numberText(report.dps)} / 예상 처치: ${numberText(report.estimatedKillSeconds)}초`,
+        `평타: ${report.basicAttacks}회, 피해 ${numberText(report.basicDamage)} (${numberText(report.basicDamageShare * 100)}%)`,
+        `스킬: ${report.skillCasts}회, 피해 ${numberText(report.skillDamage)} / 종료 정신력 ${numberText(report.endingMentality)}`,
+        ...report.skills.map(skill => `- ${skill.name} Lv.${skill.skillLevel}: ${skill.casts}회 / 피해 ${numberText(skill.damage)} / 회복 ${numberText(skill.healing)} / 보호막 ${numberText(skill.shield)}`),
+    ].join('\n');
 }
 
 function formatJobBalanceText(report: JobBalanceReport): string {
@@ -568,7 +598,8 @@ export async function executeAdminPanelAction(adminId: number, request: AdminPan
     try {
         if (request.action === 'analyze_skill_balance'
             || request.action === 'analyze_job_balance'
-            || request.action === 'analyze_item_balance') {
+            || request.action === 'analyze_item_balance'
+            || request.action === 'analyze_balance_profile') {
             const balance = executeBalanceAction(request);
             return { ...result, ok: true, ...balance };
         }

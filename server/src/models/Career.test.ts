@@ -104,7 +104,7 @@ test('대장장이는 현재 조건에 맞는 메인 또는 서브 직업 슬롯
     assert.equal(mainCase.career.getAssignableSlot('career:blacksmith'), JobSlotType.MAIN);
     assert.equal(mainCase.career.assignAvailable('career:blacksmith').success, true);
     assert.equal(mainCase.career.mainJobId, 'career:blacksmith');
-    assert.deepEqual(mainCase.granted, ['blacksmith_temper', 'arcane_smelting', 'metal_forging']);
+    assert.deepEqual(mainCase.granted, ['blacksmith_temper', 'precision_break', 'arcane_smelting', 'metal_forging']);
 
     const subCase = createCareer(50);
     subCase.player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
@@ -189,7 +189,7 @@ test('직업 스킬 설명은 현재 수치와 계수 hover를 제공하고 두 
         assert.doesNotMatch(activation, /계보|계승/);
     }
 
-    for (const skillDataId of ['blacksmith_temper', 'arcane_smelting', 'metal_forging']) {
+    for (const skillDataId of ['blacksmith_temper', 'precision_break', 'arcane_smelting', 'metal_forging']) {
         const skill = new Skill({ playerId: player.userId, skillDataId, level: 1 });
         assert.doesNotMatch(skill.formatDescription(player), /\{\{/);
         assert.doesNotMatch(skill.formatActivationCondition(player), /\{\{/);

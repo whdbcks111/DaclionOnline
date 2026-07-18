@@ -386,7 +386,7 @@ export type AdminPanelAction =
     | 'unlock_all_locations' | 'unlock_all_crafting_recipes'
     | 'apply_status_effect' | 'clear_status_effects' | 'revive_player'
     | 'start_minigame'
-    | 'analyze_skill_balance' | 'analyze_job_balance' | 'analyze_item_balance'
+    | 'analyze_skill_balance' | 'analyze_job_balance' | 'analyze_item_balance' | 'analyze_balance_profile'
     | 'spawn_monster' | 'respawn_monsters' | 'reset_resource_cooldown'
 
 export interface AdminPanelActionRequest {

@@ -4,7 +4,7 @@ import { AttributeType } from './Attribute.js';
 import type { AttributeModifier } from './Attribute.js';
 import { calculateEvasionChance, calculateFinalDamage } from './Combat.js';
 import { DEFAULT_PLAYER_BASE_ATTRIBUTE } from './PlayerDefaults.js';
-import { getAllJobs, getJob, resolveEliteJob, type JobData } from './Job.js';
+import { getAllJobs, getJob, isJobDescendant, resolveEliteJob, type JobData } from './Job.js';
 import Skill, {
     createSkillContext,
     getAllSkillData,
@@ -21,8 +21,31 @@ import {
 } from './Item.js';
 import { StatusEffectType } from './StatusEffect.js';
 import { GameTags } from '../../../shared/tags.js';
+import Monster, { getAllMonsterData, type MonsterData } from './Monster.js';
+import { applyTagEffectValue } from './TagEffect.js';
+import type { TagId } from '../../../shared/tags.js';
 
 const BALANCE_WINDOW_SECONDS = 60;
+const BALANCE_ACTION_FLOOR_SECONDS = 0.45;
+const PROJECTED_SKILL_UNLOCK_LEVELS = new Map<string, number>([
+    ['power_strike', 10],
+    ['fireball', 40],
+    ['frost_bolt', 70],
+    ['lightning_orb', 100],
+]);
+
+export class BalanceEncounterType {
+    private static readonly all: BalanceEncounterType[] = [];
+    static readonly MONSTER = new BalanceEncounterType('monster', '일반 몬스터', false);
+    static readonly BOSS = new BalanceEncounterType('boss', '보스 몬스터', true);
+    private constructor(readonly key: string, readonly label: string, readonly boss: boolean) {
+        BalanceEncounterType.all.push(this);
+    }
+    static values(): readonly BalanceEncounterType[] { return BalanceEncounterType.all; }
+    static fromKey(key: string): BalanceEncounterType | undefined {
+        return BalanceEncounterType.all.find(value => value.key === key);
+    }
+}
 
 export interface BalanceStatAllocation {
     readonly label: string;
@@ -38,8 +61,8 @@ const JOB_ALLOCATIONS = new Map<string, BalanceStatAllocation>([
     ['career:warrior', freezeAllocation('전사 기준', { strength: 4, vitality: 3, agility: 2, sensibility: 1 })],
     ['career:archer', freezeAllocation('궁수 기준', { agility: 4, sensibility: 3, strength: 2, vitality: 1 })],
     ['career:assassin', freezeAllocation('암살자 기준', { agility: 4, sensibility: 3, strength: 2, vitality: 1 })],
-    ['career:mage', freezeAllocation('마법사 기준', { mentality: 5, sensibility: 2, vitality: 2, agility: 1 })],
-    ['career:blacksmith', freezeAllocation('대장장이 기준', { strength: 4, vitality: 3, sensibility: 2, mentality: 1 })],
+    ['career:mage', freezeAllocation('마법사 기준', { mentality: 4, vitality: 3, sensibility: 2, agility: 1 })],
+    ['career:blacksmith', freezeAllocation('대장장이 기준', { sensibility: 4, vitality: 4, strength: 1, mentality: 1 })],
 ]);
 
 class BalanceEntity extends Entity {
@@ -47,8 +70,9 @@ class BalanceEntity extends Entity {
         readonly balanceName: string,
         level: number,
         stats: Partial<StatRecord>,
+        tags: readonly TagId[] = [],
     ) {
-        super(level, 0, 'balance:void', DEFAULT_PLAYER_BASE_ATTRIBUTE, Equipment.createEmpty(), stats);
+        super(level, 0, 'balance:void', DEFAULT_PLAYER_BASE_ATTRIBUTE, Equipment.createEmpty(), stats, tags);
     }
     get name(): string { return this.balanceName; }
 }
@@ -62,6 +86,63 @@ export interface BalanceScenario {
     readonly stats: Readonly<StatRecord>;
     readonly entity: Entity;
     readonly target: Entity;
+    readonly encounter: BalanceEncounterType;
+    readonly targetDataId: string;
+    readonly targetName: string;
+    readonly targetSourceLevel: number;
+    readonly targetNormalized: boolean;
+    readonly loadoutName: string;
+    readonly basicAttackType: 'physical' | 'magic';
+}
+
+export interface RotationSkillReport {
+    readonly skillId: string;
+    readonly name: string;
+    readonly skillLevel: number;
+    readonly casts: number;
+    readonly damage: number;
+    readonly healing: number;
+    readonly shield: number;
+    readonly manaSpent: number;
+}
+
+export interface CombatRotationReport {
+    readonly encounter: BalanceEncounterType;
+    readonly targetDataId: string;
+    readonly targetName: string;
+    readonly targetLevel: number;
+    readonly targetSourceLevel: number;
+    readonly targetNormalized: boolean;
+    readonly duration: number;
+    readonly loadoutName: string;
+    readonly basicAttackType: 'physical' | 'magic';
+    readonly basicAttacks: number;
+    readonly basicDamage: number;
+    readonly skillCasts: number;
+    readonly skillDamage: number;
+    readonly totalDamage: number;
+    readonly dps: number;
+    readonly basicDamageShare: number;
+    readonly targetMaxLife: number;
+    readonly estimatedKillSeconds: number;
+    readonly currentSpeed: number;
+    readonly evasionCapSpeed: number;
+    readonly evasionCapAgility: number;
+    readonly evasionCapReached: boolean;
+    readonly endingMentality: number;
+    readonly totalHealing: number;
+    readonly totalShield: number;
+    readonly skills: readonly RotationSkillReport[];
+    readonly notes: readonly string[];
+}
+
+export interface BalanceProfileReport {
+    readonly level: number;
+    readonly jobId: string;
+    readonly name: string;
+    readonly allocationLabel: string;
+    readonly monster: CombatRotationReport;
+    readonly boss: CombatRotationReport;
 }
 
 export interface SkillBalanceReport {
@@ -132,7 +213,12 @@ export interface ItemBalanceReport {
     readonly notes: readonly string[];
 }
 
-export function createBalanceScenario(level: number, mainJobId: string, subJobId?: string): BalanceScenario {
+export function createBalanceScenario(
+    level: number,
+    mainJobId: string,
+    subJobId?: string,
+    encounter = BalanceEncounterType.MONSTER,
+): BalanceScenario {
     const normalizedLevel = normalizeLevel(level);
     const mainJob = getJob(mainJobId);
     if (!mainJob) throw new Error(`직업을 찾을 수 없습니다: ${mainJobId}`);
@@ -145,11 +231,28 @@ export function createBalanceScenario(level: number, mainJobId: string, subJobId
     const allocation = JOB_ALLOCATIONS.get(mainJob.id) ?? DEFAULT_ALLOCATION;
     const stats = createProjectedStats(normalizedLevel, allocation);
     const entity = new BalanceEntity(`${effectiveJob.name} 기준 공격자`, normalizedLevel, stats);
+    const loadout = applyProjectedLoadout(entity, mainJob.id, normalizedLevel);
     applyJobModifiers(entity, effectiveJob.mainModifiers, 'balance:main');
     if (subJob) applyJobModifiers(entity, subJob.subModifiers, 'balance:sub');
     applyJobPassives(entity, [mainJob, subJob, effectiveJob]);
-    const target = new BalanceEntity('동레벨 균형형 표준 대상', normalizedLevel, createProjectedStats(normalizedLevel, DEFAULT_ALLOCATION));
-    return { level: normalizedLevel, mainJob, subJob, effectiveJob, allocation, stats, entity, target };
+    const targetProfile = createEncounterTarget(normalizedLevel, encounter);
+    return {
+        level: normalizedLevel,
+        mainJob,
+        subJob,
+        effectiveJob,
+        allocation,
+        stats,
+        entity,
+        target: targetProfile.target,
+        encounter,
+        targetDataId: targetProfile.data.id,
+        targetName: targetProfile.data.name,
+        targetSourceLevel: targetProfile.data.level,
+        targetNormalized: targetProfile.data.level !== normalizedLevel,
+        loadoutName: loadout.name,
+        basicAttackType: loadout.attackType,
+    };
 }
 
 export function analyzeSkillBalance(
@@ -184,7 +287,11 @@ export function analyzeSkillBalance(
             scenario.entity.attribute.get(AttributeType.SPEED),
             scenario.target.attribute.get(AttributeType.SPEED),
         );
-    const expectedDamagePerTarget = defendedDamage * hitCount * (1 - evasion);
+    const affinitySource = balance?.effectTags?.length ? {
+        hasTag: (tag: TagId) => balance.effectTags!.includes(tag),
+    } : scenario.entity;
+    const affinityDamage = applyTagEffectValue(defendedDamage, affinitySource, scenario.target).value;
+    const expectedDamagePerTarget = affinityDamage * hitCount * (1 - evasion);
     const expectedTotalDamage = expectedDamagePerTarget * targetCount;
     const cooldownLimitedCasts = cooldown > 0 ? Math.ceil(BALANCE_WINDOW_SECONDS / cooldown) : 1;
     const availableMentality = scenario.entity.maxMentality
@@ -277,6 +384,164 @@ export function analyzeJobBalance(level: number, mainJobId: string, subJobId?: s
         magicSurvivalSeconds: survivalSeconds(entity.maxLife, incomingMagicDps),
         skillReports,
     };
+}
+
+/** 한 전투의 시간·정신력·쿨다운을 모든 스킬과 평타가 공유하는 결정론적 로테이션 진단. */
+export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALANCE_WINDOW_SECONDS): CombatRotationReport {
+    const window = Math.max(5, Math.min(600, finiteNonNegative(duration) || BALANCE_WINDOW_SECONDS));
+    const entries = getRotationSkills(scenario).map(data => {
+        const level = projectSkillLevel(scenario.level, data, scenario);
+        return {
+            data,
+            skill: new Skill({ playerId: null, skillDataId: data.id, level }),
+            cooldownEndsAt: 0,
+            lastCastAt: Number.NEGATIVE_INFINITY,
+            casts: 0,
+            damage: 0,
+            healing: 0,
+            shield: 0,
+            manaSpent: 0,
+            activeUntil: 0,
+        };
+    });
+    const entity = scenario.entity;
+    const target = scenario.target;
+    const actionInterval = Math.max(BALANCE_ACTION_FLOOR_SECONDS, 1 / Math.max(0.1, entity.attribute.get(AttributeType.ATTACK_SPEED)));
+    // 회피 투자 기준은 로테이션 도중 우연히 남아 있는 짧은 버프가 아니라 상시 장비·직업 modifier로 계산한다.
+    const currentSpeed = entity.attribute.get(AttributeType.SPEED);
+    const evasionCapSpeed = target.attribute.get(AttributeType.SPEED) * 2.8;
+    const speedMultipliers = entity.attribute.modifiers
+        .filter(modifier => modifier.attribute === AttributeType.SPEED.key && modifier.op === 'multiply')
+        .reduce((product, modifier) => product * modifier.value, 1);
+    const fixedSpeed = entity.attribute.getBase(AttributeType.SPEED) + entity.attribute.modifiers
+        .filter(modifier => modifier.attribute === AttributeType.SPEED.key
+            && modifier.op === 'add' && modifier.source !== 'stat:agility')
+        .reduce((sum, modifier) => sum + modifier.value, 0);
+    const evasionCapAgility = Math.max(0, Math.ceil((evasionCapSpeed / Math.max(0.0001, speedMultipliers) - fixedSpeed) / 0.05));
+    let time = 0;
+    let mentality = entity.maxMentality;
+    let basicAttacks = 0;
+    let basicDamage = 0;
+    let skillsSinceBasic = 0;
+    let totalHealing = 0;
+    let totalShield = 0;
+    while (time < window - 0.0001) {
+        for (const entry of entries) {
+            if (entry.activeUntil > 0 && entry.activeUntil <= time + 0.0001) {
+                entity.attribute.removeBySource(`balance:rotation:${entry.data.id}`);
+                entry.activeUntil = 0;
+            }
+        }
+        mentality = Math.min(entity.maxMentality, mentality + entity.attribute.get(AttributeType.MENTALITY_REGEN) * actionInterval);
+        const ready = entries.filter(entry => {
+            const context = createSkillContext(entity, entry.skill);
+            const cost = finiteNonNegative(entry.data.balance?.calculateManaCost?.(context) ?? 0);
+            return entry.cooldownEndsAt <= time + 0.0001 && cost <= mentality + 0.0001;
+        });
+        const shouldBasic = skillsSinceBasic >= 2 || ready.length === 0;
+        if (shouldBasic) {
+            const damage = calculateExpectedBasicHit(scenario);
+            basicDamage += damage;
+            basicAttacks++;
+            skillsSinceBasic = 0;
+        } else {
+            ready.sort((left, right) => {
+                if (left.casts === 0 || right.casts === 0) return Number(left.casts > 0) - Number(right.casts > 0);
+                const leftCooldown = Math.max(0.1, left.skill.getMaxCooldown(entity));
+                const rightCooldown = Math.max(0.1, right.skill.getMaxCooldown(entity));
+                return (left.lastCastAt + leftCooldown - time) / leftCooldown
+                    - (right.lastCastAt + rightCooldown - time) / rightCooldown
+                    || left.data.id.localeCompare(right.data.id);
+            });
+            const entry = ready[0];
+            const context = createSkillContext(entity, entry.skill);
+            const report = analyzeSkillBalance(scenario, entry.data.id, entry.skill.level);
+            const cost = finiteNonNegative(entry.data.balance?.calculateManaCost?.(context) ?? 0);
+            mentality = Math.max(0, mentality - cost);
+            entry.casts++;
+            entry.damage += report.expectedDamagePerTarget;
+            entry.healing += report.healing;
+            entry.shield += report.shield;
+            entry.manaSpent += cost;
+            entry.lastCastAt = time;
+            entry.cooldownEndsAt = time + Math.max(actionInterval, report.cooldown);
+            const modifiers = entry.data.balance?.calculateRotationModifiers?.(context) ?? [];
+            const effectDuration = finiteNonNegative(entry.data.balance?.calculateEffectDuration?.(context) ?? 0);
+            if (modifiers.length && effectDuration > 0) {
+                const source = `balance:rotation:${entry.data.id}`;
+                entity.attribute.removeBySource(source);
+                entity.attribute.addModifiers(modifiers.map(modifier => ({ ...modifier, source })));
+                entry.activeUntil = time + effectDuration;
+            }
+            totalHealing += report.healing;
+            totalShield += report.shield;
+            skillsSinceBasic++;
+        }
+        time += actionInterval;
+    }
+    const skillDamage = entries.reduce((sum, entry) => sum + entry.damage, 0);
+    const totalDamage = basicDamage + skillDamage;
+    const dps = totalDamage / window;
+    for (const entry of entries) entity.attribute.removeBySource(`balance:rotation:${entry.data.id}`);
+    const notes = [
+        '평타 1회 뒤 스킬을 최대 2회까지 사용하며, 모든 스킬은 같은 행동 시간·정신력·재사용 대기시간을 공유합니다.',
+        '제어·확정 회피·은신·지속 피해와 다중 대상 추가 피해는 단일 대상 직접 피해에 임의 점수로 더하지 않습니다.',
+    ];
+    return {
+        encounter: scenario.encounter,
+        targetDataId: scenario.targetDataId,
+        targetName: scenario.targetName,
+        targetLevel: scenario.level,
+        targetSourceLevel: scenario.targetSourceLevel,
+        targetNormalized: scenario.targetNormalized,
+        duration: window,
+        loadoutName: scenario.loadoutName,
+        basicAttackType: scenario.basicAttackType,
+        basicAttacks,
+        basicDamage,
+        skillCasts: entries.reduce((sum, entry) => sum + entry.casts, 0),
+        skillDamage,
+        totalDamage,
+        dps,
+        basicDamageShare: totalDamage > 0 ? basicDamage / totalDamage : 0,
+        targetMaxLife: target.maxLife,
+        estimatedKillSeconds: dps > 0 ? target.maxLife / dps : Number.POSITIVE_INFINITY,
+        currentSpeed,
+        evasionCapSpeed,
+        evasionCapAgility,
+        evasionCapReached: currentSpeed >= evasionCapSpeed,
+        endingMentality: mentality,
+        totalHealing,
+        totalShield,
+        skills: Object.freeze(entries.map(entry => Object.freeze({
+            skillId: entry.data.id,
+            name: entry.data.name,
+            skillLevel: entry.skill.level,
+            casts: entry.casts,
+            damage: entry.damage,
+            healing: entry.healing,
+            shield: entry.shield,
+            manaSpent: entry.manaSpent,
+        }))),
+        notes: Object.freeze(notes),
+    };
+}
+
+export function analyzeBalanceProfile(level: number, mainJobId: string, subJobId?: string): BalanceProfileReport {
+    const monsterScenario = createBalanceScenario(level, mainJobId, subJobId, BalanceEncounterType.MONSTER);
+    const bossScenario = createBalanceScenario(level, mainJobId, subJobId, BalanceEncounterType.BOSS);
+    return {
+        level: monsterScenario.level,
+        jobId: monsterScenario.effectiveJob.id,
+        name: monsterScenario.effectiveJob.name,
+        allocationLabel: monsterScenario.allocation.label,
+        monster: analyzeCombatRotation(monsterScenario),
+        boss: analyzeCombatRotation(bossScenario),
+    };
+}
+
+export function analyzeAllBalanceProfiles(level: number): readonly BalanceProfileReport[] {
+    return getAllJobs().filter(job => job.tier.key === 'first').map(job => analyzeBalanceProfile(level, job.id));
 }
 
 /** 장비 modifier 또는 버프 아이템의 실제 상태효과를 적용한 전후 전투 지표를 계산한다. */
@@ -436,6 +701,112 @@ function createCombatSnapshot(entity: Entity, target: Entity): CombatBalanceSnap
         physicalSurvivalSeconds: survivalSeconds(entity.maxLife, incomingPhysicalDps),
         magicSurvivalSeconds: survivalSeconds(entity.maxLife, incomingMagicDps),
     };
+}
+
+const PROJECTED_WEAPONS = Object.freeze({
+    'career:warrior': [{ level: 1, id: 'training_axe' }, { level: 70, id: 'windsteel_sword' }],
+    'career:archer': [{ level: 1, id: 'light_bow' }, { level: 70, id: 'stormstring_bow' }],
+    'career:assassin': [{ level: 1, id: 'venom_dagger' }, { level: 90, id: 'nightglass_dagger' }],
+    'career:mage': [{ level: 1, id: 'apprentice_staff' }, { level: 120, id: 'starwood_staff' }],
+    'career:blacksmith': [{ level: 1, id: 'iron_pickaxe' }],
+} satisfies Record<string, readonly { level: number; id: string }[]>);
+
+const COMBAT_ATTRIBUTE_TYPES = Object.freeze([
+    AttributeType.MAX_LIFE,
+    AttributeType.MAX_MENTALITY,
+    AttributeType.LIFE_REGEN,
+    AttributeType.MENTALITY_REGEN,
+    AttributeType.ATK,
+    AttributeType.MAGIC_FORCE,
+    AttributeType.DEF,
+    AttributeType.MAGIC_DEF,
+    AttributeType.ARMOR_PEN,
+    AttributeType.MAGIC_PEN,
+    AttributeType.SPEED,
+    AttributeType.ATTACK_SPEED,
+    AttributeType.CRIT_RATE,
+    AttributeType.CRIT_DMG,
+]);
+
+function applyProjectedLoadout(entity: Entity, mainJobId: string, level: number): { name: string; attackType: 'physical' | 'magic' } {
+    const choices = PROJECTED_WEAPONS[mainJobId as keyof typeof PROJECTED_WEAPONS] ?? [];
+    const choice = [...choices].reverse().find(value => level >= value.level);
+    const data = choice ? getItemData(choice.id) : undefined;
+    if (data?.modifiers?.length) {
+        entity.attribute.addModifiers(data.modifiers.map(modifier => ({
+            ...modifier,
+            source: `balance:loadout:${data.id}`,
+        })));
+    }
+    return {
+        name: data?.name ?? '무장비',
+        attackType: data?.balance?.attackType ?? (mainJobId === 'career:mage' ? 'magic' : 'physical'),
+    };
+}
+
+function createEncounterTarget(level: number, encounter: BalanceEncounterType): { target: Entity; data: MonsterData } {
+    const candidates = getAllMonsterData().filter(data => data.tags.includes(GameTags.ENTITY_BOSS) === encounter.boss);
+    const data = candidates.sort((left, right) => Math.abs(left.level - level) - Math.abs(right.level - level)
+        || right.level - left.level
+        || left.id.localeCompare(right.id))[0];
+    if (!data) throw new Error(`${encounter.label} 마스터 데이터가 없습니다.`);
+    const native = new Monster(data.id, 'balance:void');
+    if (data.level === level) return { target: native, data };
+
+    const nativeBaseline = new BalanceEntity('원본 레벨 표준 대상', data.level, createProjectedStats(data.level, DEFAULT_ALLOCATION));
+    const target = new BalanceEntity(
+        `Lv.${level} 환산 ${data.name}`,
+        level,
+        createProjectedStats(level, DEFAULT_ALLOCATION),
+        native.tags.values(),
+    );
+    for (const type of COMBAT_ATTRIBUTE_TYPES) {
+        const baseline = nativeBaseline.attribute.get(type);
+        const ratio = baseline > 0 ? native.attribute.get(type) / baseline : 1;
+        const current = target.attribute.get(type);
+        const desired = current * Math.max(0, ratio);
+        target.attribute.addModifier({ attribute: type.key, op: 'add', value: desired - current, source: 'balance:target-normalization' });
+    }
+    return { target, data };
+}
+
+function getRotationSkills(scenario: BalanceScenario): Readonly<SkillData>[] {
+    const granted = new Set([
+        ...scenario.mainJob.grantedSkills.map(value => value.skillDataId),
+        ...(scenario.subJob?.grantedSkills.map(value => value.skillDataId) ?? []),
+        ...scenario.effectiveJob.grantedSkills.map(value => value.skillDataId),
+    ]);
+    const ownedJobs = [scenario.mainJob.id, scenario.subJob?.id, scenario.effectiveJob.id].filter((id): id is string => Boolean(id));
+    return getAllSkillData().filter(data => {
+        if (!data.balance || data.tags.includes(GameTags.SKILL_PASSIVE)) return false;
+        if (scenario.level < (PROJECTED_SKILL_UNLOCK_LEVELS.get(data.id) ?? 1)) return false;
+        if (granted.has(data.id) || data.id === 'power_strike') return true;
+        return data.jobRequirement?.anyOf.some(required => ownedJobs.some(job => isJobDescendant(job, required))) ?? false;
+    }).sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function projectSkillLevel(characterLevel: number, data: Readonly<SkillData>, scenario: BalanceScenario): number {
+    const requiresElite = data.jobRequirement?.anyOf.some(id => getJob(id)?.tier.key === 'elite') ?? false;
+    const requiresSub = Boolean(scenario.subJob && data.jobRequirement?.anyOf.some(id => isJobDescendant(scenario.subJob!.id, id)));
+    const unlockLevel = requiresElite ? 200 : requiresSub ? 50 : PROJECTED_SKILL_UNLOCK_LEVELS.get(data.id) ?? 20;
+    return Math.max(1, Math.min(data.maxLevel, 1 + Math.floor(Math.max(0, characterLevel - unlockLevel) / 20)));
+}
+
+function calculateExpectedBasicHit(scenario: BalanceScenario): number {
+    const entity = scenario.entity;
+    const target = scenario.target;
+    const magic = scenario.basicAttackType === 'magic';
+    const raw = entity.attribute.get(magic ? AttributeType.MAGIC_FORCE : AttributeType.ATK)
+        * getExpectedCriticalMultiplier(entity, SkillCriticalMode.NORMAL);
+    const defended = calculateFinalDamage(
+        raw,
+        target.attribute.get(magic ? AttributeType.MAGIC_DEF : AttributeType.DEF),
+        entity.attribute.get(magic ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN),
+    );
+    return defended * (1 - calculateEvasionChance(
+        entity.attribute.get(AttributeType.SPEED),
+        target.attribute.get(AttributeType.SPEED),
+    ));
 }
 
 function resolveItemStatusEffect(data: ItemData): {

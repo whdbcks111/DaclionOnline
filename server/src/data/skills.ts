@@ -258,7 +258,7 @@ const MANA_BARRIER = defineAttributeBuff('mana_barrier', '마력 보호막', '�
     { attribute: AttributeType.MAGIC_DEF, op: 'add', value: level => valueByLevel(level, 20, 5) },
 ]);
 const ELEMENTAL_INSIGHT = defineAttributeBuff('elemental_insight', '원소 통찰', '마법력과 정신력 재생이 증가합니다.', [
-    { attribute: AttributeType.MAGIC_FORCE, op: 'multiply', value: level => 1 + percentByLevel(level, 20, 4) / 100 },
+    { attribute: AttributeType.MAGIC_FORCE, op: 'multiply', value: level => 1 + percentByLevel(level, 12, 2) / 100 },
     { attribute: AttributeType.MENTALITY_REGEN, op: 'add', value: level => valueByLevel(level, 2, 0.75) },
 ]);
 
@@ -429,10 +429,11 @@ defineJobPassive({
     name: '대장장이의 담금질',
     jobId: JOBS.blacksmith,
     icon: 'items/iron_pickaxe',
-    description: '{{icon.maxWeight}} 최대 중량이 [color=gold]{{maxWeight}}[/color], {{icon.speed}} 이동속도가 [color=cyan]{{speed}}[/color] 증가합니다.',
+    description: '{{icon.maxWeight}} 최대 중량이 [color=gold]{{maxWeight}}[/color], {{icon.maxLife}} 최대 생명력이 [color=green]{{maxLife}}[/color], {{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color] 증가합니다.',
     modifiers: [
         { attribute: AttributeType.MAX_WEIGHT.key, op: 'add', value: 10, label: '최대 중량 증가', display: '+10' },
-        { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.04, label: '이동속도 증가', display: '+4%' },
+        { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.08, label: '최대 생명력 증가', display: '+8%' },
+        { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.2, label: '치명타 피해 증가', display: '+20%p' },
     ],
     isVisible: hasBlacksmithSkillAccess,
 });
@@ -753,18 +754,61 @@ const smeltingMaterials = [
     ['diamond', 'refined_diamond', '다이아몬드'],
 ] as const;
 
+function precisionBreakDamage(context: SkillContext): number {
+    return context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 135, 10) / 100
+        + context.owner.maxLife * percentByLevel(context.skill.level, 2, 0.25) / 100;
+}
+
+defineSkill({
+    id: 'precision_break',
+    name: '결 파쇄',
+    icon: 'items/iron_pickaxe',
+    maxLevel: 5,
+    descriptionTemplate: '금속의 결을 읽어 현재 대상에게 {{icon.atk}}{{icon.maxLife}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 확정 치명타를 가합니다. 공격력과 최대 생명력, 감각으로 높인 치명타 피해가 함께 반영됩니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 12[/color]',
+    activationConditionTemplate: activationGuide('살아 있는 현재 대상이 필요하며 장착 무기의 종류는 제한하지 않습니다.'),
+    activationMessage: '결 파쇄!',
+    baseMetadata: null,
+    calculatedFields: {
+        damage: context => tooltipValue(
+            precisionBreakDamage(context) * context.owner.attribute.get(AttributeType.CRIT_DMG),
+            `(${AttributeType.ATK.label} × ${formatNumber(percentByLevel(context.skill.level, 135, 10))}% + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 2, 0.25))}%) × 치명타 피해`,
+        ),
+    },
+    balance: {
+        role: SkillBalanceRole.DAMAGE,
+        damageType: 'physical',
+        calculateDamage: precisionBreakDamage,
+        criticalMode: SkillCriticalMode.GUARANTEED,
+        calculateManaCost: () => 12,
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 7, 0.25, 6),
+    jobRequirement: jobRequirement(JOBS.blacksmith),
+    canActivate: simpleCheck(12),
+    onStart: context => {
+        const found = targetOrDeny(context);
+        if ('reason' in found) throw new Error(found.reason);
+        spend(context, 12);
+        context.owner.attack(found.target, 'physical', precisionBreakDamage(context), {
+            criticalRate: 1,
+            consumeMainHandDurability: true,
+        });
+    },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+});
+
 defineSkill({
     id: 'arcane_smelting',
     name: '마력 제련',
     icon: 'items/iron_ore',
     maxLevel: 10,
-    descriptionTemplate: '인벤토리에서 가장 앞에 있는 원광을 찾아 불순물을 걷어내고 한 번에 [color=gold]{{batch}}개[/color]까지 제련 소재로 바꿉니다.',
+    descriptionTemplate: '인벤토리에서 가장 앞에 있는 원광을 찾아 불순물을 걷어내고 스킬 레벨과 {{icon.forgingPrecision}} 제련 정밀도에 따라 한 번에 [color=gold]{{batch}}개[/color]까지 제련 소재로 바꿉니다.',
     costTemplate: '{{manaCost}} 정신력 · 재사용 대기시간 {{maxCooldown}}초',
     activationConditionTemplate: '/스킬 마력 제련 또는 마력 제련!',
     activationMessage: '마력 제련!',
     baseMetadata: { baseManaCost: 18 },
     calculatedFields: {
-        batch: context => 2 + context.skill.level,
+        batch: context => 2 + context.skill.level + Math.floor((context.owner.attribute?.get?.(AttributeType.FORGING_PRECISION) ?? 0) * 10),
         manaCost: context => numberMeta(context, 'baseManaCost'),
     },
     activationFeedback: context => `${context.skill.getActiveState<string>('materialLabel') ?? '소재'} ${context.skill.getActiveState<number>('processedCount') ?? 0}개를 마력으로 제련했습니다.`,
@@ -782,7 +826,10 @@ defineSkill({
         const material = smeltingMaterials.find(([raw]) => player.inventory.getCount(raw) > 0);
         if (!material) return;
         const [raw, refined, label] = material;
-        const count = Math.min(player.inventory.getCount(raw), 2 + context.skill.level);
+        const count = Math.min(
+            player.inventory.getCount(raw),
+            2 + context.skill.level + Math.floor((player.attribute?.get?.(AttributeType.FORGING_PRECISION) ?? 0) * 10),
+        );
         const selections = player.inventory.selectItems([{ count, matches: item => item.itemDataId === raw }]);
         if (!selections || !player.inventory.replaceSelectedItems(selections, [{
             itemDataId: refined, count, durability: null, metadataDelta: null, tags: [],
@@ -905,6 +952,11 @@ defineSkill({
     },
     balance: {
         role: SkillBalanceRole.SUPPORT, calculateManaCost: () => 14,
+        calculateEffectDuration: context => valueByLevel(context.skill.level, 8, 1),
+        calculateRotationModifiers: context => [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1 + percentByLevel(context.skill.level, 15, 3) / 100 },
+            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1 + percentByLevel(context.skill.level, 20, 3) / 100 },
+        ],
         notes: ['지속 중 공격력·이동속도 증가량은 수치로 표시하되 DPM에 임의 환산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 18, 1, 14),
@@ -936,6 +988,11 @@ defineSkill({
         role: SkillBalanceRole.DEFENSE,
         calculateManaCost: () => 18,
         calculateHealing: context => context.owner.maxLife * percentByLevel(context.skill.level, 15, 2) / 100,
+        calculateEffectDuration: context => valueByLevel(context.skill.level, 10, 1),
+        calculateRotationModifiers: context => [
+            { attribute: AttributeType.DEF.key, op: 'add', value: valueByLevel(context.skill.level, 15, 5) },
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1 + percentByLevel(context.skill.level, 20, 3) / 100 },
+        ],
         notes: ['방어력·최대 생명력 증가는 지속형 효과라 단발 회복량과 분리합니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 28, 1.5, 22),
@@ -959,6 +1016,7 @@ defineSkill({
     },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
+        effectTags: [GameTags.PROPERTY_LIGHT],
         calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 160, 12) / 100,
         calculateManaCost: () => 12,
     },
@@ -1074,6 +1132,12 @@ defineSkill({
     },
     balance: {
         role: SkillBalanceRole.SUPPORT, calculateManaCost: () => 16,
+        calculateEffectDuration: context => valueByLevel(context.skill.level, 8, 0.75),
+        calculateRotationModifiers: context => [{
+            attribute: AttributeType.SPEED.key,
+            op: 'multiply',
+            value: 1 + percentByLevel(context.skill.level, 25, 5) / 100,
+        }],
         notes: ['은신과 이동속도는 상황 의존 효과라 DPM에 임의 환산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 20, 1, 16),
@@ -1151,19 +1215,19 @@ defineSkill({
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 10[/color]',
     activationConditionTemplate: activationGuide('살아 있는 현재 대상이 필요합니다. 장착 무기와 관계없이 사용할 수 있습니다.'), activationMessage: '마력탄!', baseMetadata: null,
     calculatedFields: {
-        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 165, 13),
+        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 130, 9),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'magic_bolt', true),
     },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
-        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 165, 13) / 100,
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 130, 9) / 100,
         calculateManaCost: () => 10,
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 4, 0.2, 3.2),
     jobRequirement: jobRequirement(JOBS.mage),
     canActivate: simpleCheck(10), onStart: context => {
         spend(context, 10);
-        projectileAttack(context, 'magic_bolt', percentByLevel(context.skill.level, 165, 13) / 100);
+        projectileAttack(context, 'magic_bolt', percentByLevel(context.skill.level, 130, 9) / 100);
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
 });
 
@@ -1191,6 +1255,11 @@ defineSkill({
         role: SkillBalanceRole.DEFENSE,
         calculateManaCost: () => 22,
         calculateShield: manaBarrierShieldAmount,
+        calculateEffectDuration: context => valueByLevel(context.skill.level, 10, 1),
+        calculateRotationModifiers: context => [
+            { attribute: AttributeType.DEF.key, op: 'add', value: valueByLevel(context.skill.level, 12, 4) },
+            { attribute: AttributeType.MAGIC_DEF.key, op: 'add', value: valueByLevel(context.skill.level, 20, 5) },
+        ],
         notes: ['방어력·마법저항 증가는 지속형 효과라 보호막량과 분리합니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 22, 1, 18),
@@ -1209,13 +1278,13 @@ defineSkill({
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 24[/color]',
     activationConditionTemplate: activationGuide('살아 있는 현재 대상이 필요합니다. 장착 무기와 관계없이 사용할 수 있습니다.'), activationMessage: '원소 속박!', baseMetadata: null,
     calculatedFields: {
-        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 115, 10),
+        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 105, 8),
         bindDuration: context => levelValueTooltip(context, '속박 지속시간', 1.5, 0.2, '초'),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_magic_orb', true),
     },
     balance: {
         role: SkillBalanceRole.CONTROL, damageType: 'magic',
-        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 115, 10) / 100,
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 105, 8) / 100,
         calculateManaCost: () => 24,
         notes: ['속박의 가치는 적 패턴에 따라 달라 피해량에 임의 합산하지 않습니다.'],
     },
@@ -1223,7 +1292,7 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.mage),
     canActivate: simpleCheck(24), onStart: context => {
         spend(context, 24);
-        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 115, 10) / 100, [GameTags.PROPERTY_ICE], (_p, result) => {
+        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 105, 8) / 100, [GameTags.PROPERTY_ICE], (_p, result) => {
             if (!result.evaded) _p.target.applyStatusEffect(STUN, valueByLevel(context.skill.level, 1.5, 0.2), context.skill.level);
         });
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
@@ -1237,15 +1306,20 @@ defineSkill({
     activationFeedback: context => buffFeedback(
         context.skill.name,
         valueByLevel(context.skill.level, 12, 1),
-        `마법력 +${formatNumber(percentByLevel(context.skill.level, 20, 4))}%, 정신력 재생 +${formatNumber(valueByLevel(context.skill.level, 2, 0.75))}/초`,
+        `마법력 +${formatNumber(percentByLevel(context.skill.level, 12, 2))}%, 정신력 재생 +${formatNumber(valueByLevel(context.skill.level, 2, 0.75))}/초`,
     ),
     calculatedFields: {
         duration: context => levelValueTooltip(context, '지속시간', 12, 1, '초'),
-        magicBonus: context => levelValueTooltip(context, '마법력 증가', 20, 4, '%'),
+        magicBonus: context => levelValueTooltip(context, '마법력 증가', 12, 2, '%'),
         regenBonus: context => levelValueTooltip(context, '정신력 재생 증가', 2, 0.75),
     },
     balance: {
         role: SkillBalanceRole.SUPPORT, calculateManaCost: () => 16,
+        calculateEffectDuration: context => valueByLevel(context.skill.level, 12, 1),
+        calculateRotationModifiers: context => [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1 + percentByLevel(context.skill.level, 12, 2) / 100 },
+            { attribute: AttributeType.MENTALITY_REGEN.key, op: 'add', value: valueByLevel(context.skill.level, 2, 0.75) },
+        ],
         notes: ['마법력·정신력 재생 증가는 지속형 효과라 단일 스킬 DPM에 임의 합산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 25, 1.25, 20),
@@ -1267,13 +1341,14 @@ for (const elemental of [
     activationConditionTemplate: activationGuide('살아 있는 현재 대상이 필요합니다. 장착 무기와 관계없이 사용할 수 있습니다.'),
     activationMessage: `${elemental.name}!`, baseMetadata: null,
     calculatedFields: {
-        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 185, 15),
+        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 140, 10),
         effectDuration: context => levelValueTooltip(context, `${elemental.effectLabel} 지속시간`, elemental.duration, elemental.durationPerLevel, '초'),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_magic_orb', true),
     },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
-        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 185, 15) / 100,
+        effectTags: [elemental.tag],
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 140, 10) / 100,
         calculateManaCost: () => 28,
         notes: [`${elemental.effectLabel} 효과는 대상 상태에 따라 달라 직접 타격 DPM과 분리합니다.`],
     },
@@ -1282,7 +1357,7 @@ for (const elemental of [
     autoAcquire: { watchedProgress: [elemental.stat], check: ({ player }) => Boolean(player?.career?.hasJob(JOBS.mage) && player.progress.getCounter(elemental.stat) >= 5n) },
     canActivate: simpleCheck(28), onStart: context => {
         spend(context, 28);
-        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 185, 15) / 100, [elemental.tag], (_p, result) => {
+        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 140, 10) / 100, [elemental.tag], (_p, result) => {
             if (!result.evaded) {
                 _p.target.applyStatusEffect(
                     elemental.effect,
@@ -1513,6 +1588,9 @@ for (const technique of eliteTechniques) {
         balance: {
             role: technique.onHit ? SkillBalanceRole.CONTROL : technique.shieldPercent ? SkillBalanceRole.DEFENSE : SkillBalanceRole.DAMAGE,
             damageType: technique.damageType,
+            // 독을 바른 물리 칼날은 직접 타격까지 독 피해로 바꾸지 않는다.
+            effectTags: technique.propertyTag && !(technique.damageType === 'physical' && technique.propertyTag === GameTags.PROPERTY_POISON)
+                ? [technique.propertyTag] : undefined,
             calculateDamage: context => eliteTechniqueDamage(context, technique),
             criticalMode: technique.guaranteedCritical ? SkillCriticalMode.GUARANTEED : SkillCriticalMode.NORMAL,
             calculateManaCost: () => technique.manaCost,

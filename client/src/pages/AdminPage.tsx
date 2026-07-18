@@ -55,6 +55,11 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
       { name: 'mainJobId', label: '메인 직업', type: 'select', options: data.jobs, required: true },
       { name: 'subJobId', label: '서브 직업 (Lv.200 분석용)', type: 'select', options: data.jobs },
     ] },
+    { action: 'analyze_balance_profile', label: '전투 로테이션 프로파일', description: '추천 장비로 평타와 모든 성장 스킬을 섞어 동레벨 일반·보스전 60초 로테이션을 비교합니다.', category: 'balance', targetless: true, fields: [
+      { name: 'level', label: '캐릭터 레벨', type: 'number', min: 1, max: 10000, defaultValue: 50, required: true },
+      { name: 'mainJobId', label: '메인 직업', type: 'select', options: data.jobs, required: true },
+      { name: 'subJobId', label: '서브 직업 (Lv.200 분석용)', type: 'select', options: data.jobs },
+    ] },
     { action: 'analyze_item_balance', label: '장비·버프 아이템 분석', description: '실제 장비 modifier 또는 버프 상태효과를 적용해 전후 DPS·생존 차이를 확인합니다.', category: 'balance', targetless: true, fields: [
       { name: 'itemDataId', label: '아이템', type: 'select', options: data.balanceItems, required: true },
       { name: 'level', label: '캐릭터 레벨', type: 'number', min: 1, max: 10000, defaultValue: 50, required: true },

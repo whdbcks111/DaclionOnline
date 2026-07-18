@@ -135,6 +135,13 @@ export class AttributeType {
         v => `${(v * 100).toFixed(0)}%`, 
         v => `치명타 시 ${(v * 100).toFixed(0)}%의 피해를 줍니다.`
     )
+    static readonly FORGING_PRECISION = new AttributeType(
+        'forgingPrecision',
+        '제련 정밀도',
+        0,
+        v => `${(v * 100).toFixed(1)}%`,
+        v => `단조 리듬 판정 범위와 마력 제련 처리량을 최대한 안정시킵니다. (현재 ${(v * 100).toFixed(1)}%)`
+    )
     static readonly LUCK = new AttributeType(
         'luck',
         '행운',
@@ -217,6 +224,7 @@ export type AttributeKey =
     | 'armorPen' | 'magicPen'
     | 'speed' | 'attackSpeed' | 'projectileAcceleration'
     | 'critRate' | 'critDmg'
+    | 'forgingPrecision'
     | 'luck' | 'fishingBiteSpeed' | 'fishingNetSize' | 'fishingNetSpeed' | 'fishingGaugeStart'
 
 /** Modifier 적용 방식 */

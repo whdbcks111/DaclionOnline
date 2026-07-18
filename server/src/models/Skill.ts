@@ -132,6 +132,8 @@ export interface SkillData {
     balance?: {
         role: SkillBalanceRole;
         damageType?: 'physical' | 'magic' | 'absolute';
+        /** 직접 피해 자체에 적용할 속성 태그. 무기 태그나 후속 상태효과 태그는 넣지 않는다. */
+        effectTags?: readonly TagId[];
         calculateDamage?: (context: SkillContext) => number;
         criticalMode?: SkillCriticalMode;
         hitCount?: number;
@@ -139,6 +141,9 @@ export interface SkillData {
         calculateManaCost?: (context: SkillContext) => number;
         calculateHealing?: (context: SkillContext) => number;
         calculateShield?: (context: SkillContext) => number;
+        /** 로테이션 진단에서 실제 지속 버프의 능력치 변화를 재현한다. */
+        calculateEffectDuration?: (context: SkillContext) => number;
+        calculateRotationModifiers?: (context: SkillContext) => readonly Omit<import('./Attribute.js').AttributeModifier, 'source'>[];
         notes?: readonly string[];
     };
     calculateMaxCooldown?: (context: SkillContext) => number;
@@ -521,6 +526,7 @@ export function defineSkill(data: SkillData): void {
         calculatedFields,
         balance: data.balance ? Object.freeze({
             ...data.balance,
+            effectTags: Object.freeze([...(data.balance.effectTags ?? [])]),
             notes: Object.freeze([...(data.balance.notes ?? [])]),
         }) : undefined,
         autoAcquire: data.autoAcquire ? Object.freeze({

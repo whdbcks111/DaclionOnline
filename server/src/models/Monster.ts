@@ -169,7 +169,12 @@ export default class Monster extends Entity {
 
         const equipment = Equipment.createEmpty();
         const traitTags = data.tags.includes(GameTags.TRAIT_INANIMATE) ? [] : [GameTags.TRAIT_LIVING];
-        super(data.level, data.exp, locationId, data.baseAttribute, equipment, undefined, [GameTags.ENTITY_MONSTER, ...traitTags, ...data.tags]);
+        const scaledBaseAttribute = {
+            ...data.baseAttribute,
+            // 플레이어 이동속도는 민첩과 함께 선형 성장하므로 몬스터 원형의 상대 속도도 레벨에 맞춰 보존한다.
+            speed: (data.baseAttribute.speed ?? 1) * (1 + Math.max(0, data.level - 1) / 50),
+        };
+        super(data.level, data.exp, locationId, scaledBaseAttribute, equipment, undefined, [GameTags.ENTITY_MONSTER, ...traitTags, ...data.tags]);
 
         this.monsterDataId = monsterDataId;
         this.name = data.name;

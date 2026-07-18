@@ -4,8 +4,13 @@ import '../data/projectiles.js';
 import '../data/items.js';
 import '../data/jobs.js';
 import '../data/statusEffects.js';
+import '../data/tagEffects.js';
 import '../data/skills.js';
+import '../data/monsters.js';
 import {
+    analyzeAllBalanceProfiles,
+    analyzeBalanceProfile,
+    analyzeCombatRotation,
     analyzeAllEliteJobs,
     analyzeAllFirstJobs,
     analyzeItemBalance,
@@ -83,4 +88,42 @@ test('high-level job weapons expose measurable role-specific gains', () => {
     assert.ok(reports[2].after.physicalBasicDps > reports[2].before.physicalBasicDps);
     assert.ok(reports[3].after.magicForce > reports[3].before.magicForce);
     assert.ok(reports.every(report => report.notes.every(note => !note.includes('추정'))));
+});
+
+test('combat profiles share resources while mixing basics and every available job skill', () => {
+    const profiles = analyzeAllBalanceProfiles(100);
+    assert.equal(profiles.length, 5);
+    for (const profile of profiles) {
+        for (const rotation of [profile.monster, profile.boss]) {
+            assert.ok(rotation.basicAttacks > 0);
+            assert.ok(rotation.skillCasts > 0);
+            assert.ok(rotation.basicDamageShare > 0 && rotation.basicDamageShare < 1);
+            assert.ok(rotation.skills.every(skill => skill.casts > 0));
+            assert.ok(rotation.endingMentality >= 0);
+            assert.ok(rotation.dps > 0);
+        }
+    }
+});
+
+test('combat rotation removes temporary balance modifiers after analysis', () => {
+    const scenario = createBalanceScenario(100, 'career:mage');
+    analyzeCombatRotation(scenario);
+    assert.equal(scenario.entity.attribute.modifiers.some(modifier => modifier.source.startsWith('balance:rotation:')), false);
+});
+
+test('boss profile normalizes a real boss archetype to the requested level', () => {
+    const profile = analyzeAllBalanceProfiles(100)[0];
+    assert.equal(profile.boss.encounter.key, 'boss');
+    assert.equal(profile.boss.targetLevel, 100);
+    assert.notEqual(profile.boss.targetSourceLevel, 100);
+    assert.equal(profile.boss.targetNormalized, true);
+    assert.ok(profile.boss.targetMaxLife > profile.monster.targetMaxLife);
+});
+
+test('elite profile starts new elite technique at level one and keeps inherited skills', () => {
+    const { boss } = analyzeBalanceProfile(200, 'career:mage', 'career:archer');
+    const technique = boss.skills.find(skill => skill.skillId === 'star_weaver_technique');
+    assert.equal(technique?.skillLevel, 1);
+    assert.ok(boss.skills.some(skill => skill.skillId === 'magic_bolt' && skill.skillLevel === 5));
+    assert.ok(boss.skills.some(skill => skill.skillId === 'arcane_arrow' && skill.skillLevel === 5));
 });
