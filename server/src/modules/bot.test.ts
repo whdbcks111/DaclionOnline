@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getCommandListFiltered, handleCommand, isCommandAliasInput, registerCommand } from './bot.js';
 import { parseCommandInput } from '../../../shared/commandInput.js';
+import { initLocationCommands } from '../commands/location.js';
 
 test('공용 명령 파서는 슬래시 유무와 첫 단어 이후 인자를 분리한다', () => {
     assert.deepEqual(parseCommandInput('/status 공개'), {
@@ -46,4 +47,11 @@ test('권한별 명령 스냅샷은 등록된 별칭을 복사해 제공한다',
     });
     const snapshot = getCommandListFiltered(0).find(command => command.name === 'test_alias_snapshot');
     assert.deepEqual(snapshot?.aliases, ['tas', 'TAS2']);
+});
+
+test('이동 명령은 단일 키 v를 별칭과 단축키 목록 snapshot에 제공한다', () => {
+    initLocationCommands();
+    const movement = getCommandListFiltered(0).find(command => command.name === '이동');
+    assert.equal(movement?.aliases.includes('v'), true);
+    assert.equal(isCommandAliasInput('v 1'), true);
 });

@@ -53,7 +53,7 @@ function* travelCoroutine(player: Player, targetLocationId: string): CoroutineGe
 export function initLocationCommands(): void {
     registerCommand({
         name: '이동',
-        aliases: ['move', 'go', 'mv'],
+        aliases: ['move', 'go', 'mv', 'v'],
         description: '다른 장소로 이동합니다.',
         showCommandUse: 'private',
         args: [
