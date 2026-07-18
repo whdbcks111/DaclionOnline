@@ -22,7 +22,7 @@ interface ViewBox {
 const DEFAULT_ASPECT = 16 / 9
 const MIN_SPAN = 180
 const BIOME_CANVAS_SCALE = 0.3
-const BASE_LABEL_SIZE = 11
+const BASE_LABEL_SIZE = 13
 const MIN_LABEL_ZOOM = 0.7
 const MAX_LABEL_ZOOM = 1.75
 const LABEL_ZOOM_STEP = 0.15
