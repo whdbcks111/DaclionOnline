@@ -56,6 +56,32 @@ export default class CareerProfile {
         return { success: true };
     }
 
+    /** 현재 레벨과 슬롯 상태에서 해당 1차 직업을 받을 수 있는 첫 슬롯을 반환한다. */
+    getAssignableSlot(jobId: string): JobSlotType | undefined {
+        return JobSlotType.values().find(slot => this.canAssign(slot, jobId).success);
+    }
+
+    assignAvailable(jobId: string): CareerOperationResult {
+        const slot = this.getAssignableSlot(jobId);
+        return slot ? this.assign(slot, jobId) : { success: false, reason: '사용 가능한 직업 슬롯이 없습니다.' };
+    }
+
+    /** 구형 독립 직업 데이터를 기존 직업을 덮어쓰지 않고 비어 있는 슬롯으로 옮긴다. */
+    migrateLegacyFirstJob(jobId: string): CareerOperationResult {
+        const job = getJob(jobId);
+        if (!job || job.tier !== JobTier.FIRST) return { success: false, reason: '이전할 수 없는 1차 직업입니다.' };
+        if (this.hasJob(job.id)) return { success: true };
+        const slot = !this.mainJobId
+            ? JobSlotType.MAIN
+            : !this.subJobId && this.mainJobId !== job.id ? JobSlotType.SUB : undefined;
+        if (!slot) return { success: false, reason: '기존 메인·서브 직업이 모두 사용 중입니다.' };
+        this.player.progress.setState(slot === JobSlotType.MAIN ? CareerProgressIds.MAIN : CareerProgressIds.SUB, job.id);
+        this.grantSkills(job.id, 'career:legacy-migration');
+        this.refreshModifiers();
+        this.evaluateElitePromotion();
+        return { success: true };
+    }
+
     assign(slot: JobSlotType, jobId: string): CareerOperationResult {
         const checked = this.canAssign(slot, jobId);
         if (!checked.success) return checked;

@@ -4,7 +4,7 @@ import { FIRST_SLIME_HUNT_QUEST_ID } from './quests.js';
 import { CAREER_QUEST_IDS } from './quests.js';
 import { BLACKSMITH_APPRENTICESHIP_QUEST_ID } from './quests.js';
 import { JobSlotType, getAllJobs, JobTier } from '../models/Job.js';
-import { hasBlacksmithProfession } from '../modules/forging.js';
+import { canAcquireBlacksmithProfession, hasBlacksmithProfession } from '../modules/forging.js';
 
 export const MONSTER_HUNT_QUESTION_FLAG = 'npc:monster-hunt-question';
 
@@ -95,6 +95,7 @@ NPC.define({
         if (player.quests.canTurnIn(BLACKSMITH_APPRENTICESHIP_QUEST_ID, 'blacksmith_master')) return 'complete';
         if (player.quests.isActive(BLACKSMITH_APPRENTICESHIP_QUEST_ID)) return 'progress';
         if (hasBlacksmithProfession(player)) return 'trained';
+        if (player.level >= 20 && !canAcquireBlacksmithProfession(player)) return 'slot_unavailable';
         return 'greeting';
     },
     scenarios: [
@@ -129,6 +130,15 @@ NPC.define({
             yield Dialogue.say('마력 제련으로 소재를 만들고, /단조 명령으로 형태와 재료를 골라 보게. 완성도는 망치 박자가 결정하네.');
             yield Dialogue.end();
         }),
+        new DialogueScenario('slot_unavailable', function* ({ player }) {
+            const reason = !player.career.mainJobId
+                ? '메인 직업 슬롯을 사용할 수 있는 20레벨이 필요하네.'
+                : !player.career.subJobId
+                    ? '이미 메인 직업이 있으니 50레벨에 서브 직업 슬롯이 열리면 다시 찾아오게.'
+                    : '메인과 서브 직업 슬롯이 모두 차 있군. 대장장이도 정식 직업이니 빈 슬롯 없이는 전직할 수 없네.';
+            yield Dialogue.say(reason);
+            yield Dialogue.end();
+        }),
         new DialogueScenario('end', function* () {
             yield Dialogue.say('금속은 도망가지 않으니 준비되면 오게.');
             yield Dialogue.end();
@@ -137,12 +147,10 @@ NPC.define({
 });
 
 const careerJobs = getAllJobs().filter(job => job.tier === JobTier.FIRST);
-const careerQuestEntries = JobSlotType.values().flatMap(slot => careerJobs.map(job => ({
-    slot,
-    job,
-    questId: CAREER_QUEST_IDS[`${slot.key}:${job.id}`],
-    key: `${slot.key}_${job.id.split(':')[1]}`,
-})));
+const careerQuestEntries = JobSlotType.values().flatMap(slot => careerJobs.flatMap(job => {
+    const questId = CAREER_QUEST_IDS[`${slot.key}:${job.id}`];
+    return questId ? [{ slot, job, questId, key: `${slot.key}_${job.id.split(':')[1]}` }] : [];
+}));
 
 NPC.define({
     id: 'job_master',

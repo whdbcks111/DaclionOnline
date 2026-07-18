@@ -6,23 +6,34 @@ import { chat } from '../utils/chatBuilder.js';
 import { sendBotMessageToUser, sendNotificationToUser } from './message.js';
 import { normalizeMiniGameActions, startMiniGame } from './minigame.js';
 
+export const BLACKSMITH_JOB_ID = 'career:blacksmith';
 export const BLACKSMITH_PROFESSION_FLAG = 'profession:blacksmith';
 
 export function hasBlacksmithProfession(player: Player): boolean {
-    return player.progress.getFlag(BLACKSMITH_PROFESSION_FLAG);
+    return player.career.hasJob(BLACKSMITH_JOB_ID)
+        || player.progress.getFlag(BLACKSMITH_PROFESSION_FLAG);
 }
 
-/** 전직 플래그 또는 기능 해금 스킬 중 하나로 금속 단조 사용 권한을 판정한다. */
+export function canAcquireBlacksmithProfession(player: Player): boolean {
+    return !hasBlacksmithProfession(player) && Boolean(player.career.getAssignableSlot(BLACKSMITH_JOB_ID));
+}
+
+/** 정식 대장장이 계보 또는 별도 기능 해금 스킬로 금속 단조 사용 권한을 판정한다. */
 export function canUseMetalForging(player: Player): boolean {
     return hasBlacksmithProfession(player) || player.skills.has('metal_forging');
 }
 
 export function grantBlacksmithProfession(player: Player): boolean {
     if (hasBlacksmithProfession(player)) return false;
-    player.progress.setFlag(BLACKSMITH_PROFESSION_FLAG, true);
-    player.skills.grant('blacksmith_temper', 'profession:blacksmith');
-    player.skills.grant('arcane_smelting', 'profession:blacksmith');
-    player.skills.grant('metal_forging', 'profession:blacksmith');
+    return player.career.assignAvailable(BLACKSMITH_JOB_ID).success;
+}
+
+/** 구형 독립 플래그를 빈 메인/서브 슬롯으로 이전한다. 두 슬롯이 차 있으면 덮어쓰지 않는다. */
+export function migrateLegacyBlacksmithProfession(player: Player): boolean {
+    if (!player.progress.getFlag(BLACKSMITH_PROFESSION_FLAG)) return false;
+    const migrated = player.career.migrateLegacyFirstJob(BLACKSMITH_JOB_ID);
+    if (!migrated.success) return false;
+    player.progress.setFlag(BLACKSMITH_PROFESSION_FLAG, false);
     return true;
 }
 

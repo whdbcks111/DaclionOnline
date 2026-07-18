@@ -5,10 +5,10 @@ import { GameTags } from '../../../shared/tags.js';
 defineProgress({
     id: 'profession:blacksmith',
     type: ProgressType.FLAG,
-    label: '대장장이 전문 직업',
-    description: '전투 직업과 별개로 마력 제련과 금속 단조를 사용할 수 있는 생산 전문 직업입니다.',
-    visible: true,
-    tags: ['profession:crafting'],
+    label: '구형 대장장이 전직 데이터',
+    description: '정식 직업 슬롯으로 자동 이전하기 위한 호환 플래그입니다.',
+    visible: false,
+    tags: ['migration:legacy'],
 });
 
 defineStatistic({

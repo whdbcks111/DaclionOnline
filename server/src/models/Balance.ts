@@ -39,6 +39,7 @@ const JOB_ALLOCATIONS = new Map<string, BalanceStatAllocation>([
     ['career:archer', freezeAllocation('궁수 기준', { agility: 4, sensibility: 3, strength: 2, vitality: 1 })],
     ['career:assassin', freezeAllocation('암살자 기준', { agility: 4, sensibility: 3, strength: 2, vitality: 1 })],
     ['career:mage', freezeAllocation('마법사 기준', { mentality: 5, sensibility: 2, vitality: 2, agility: 1 })],
+    ['career:blacksmith', freezeAllocation('대장장이 기준', { strength: 4, vitality: 3, sensibility: 2, mentality: 1 })],
 ]);
 
 class BalanceEntity extends Entity {
@@ -322,16 +323,14 @@ export function analyzeItemBalance(level: number, mainJobId: string, itemDataId:
 
 export function analyzeAllFirstJobs(level: number): readonly JobBalanceReport[] {
     return getAllJobs()
-        .filter(job => job.id === 'career:warrior' || job.id === 'career:archer'
-            || job.id === 'career:assassin' || job.id === 'career:mage')
+        .filter(job => job.tier.key === 'first')
         .map(job => analyzeJobBalance(level, job.id));
 }
 
 /** Lv.200 이상에서 가능한 서로 다른 모든 메인→서브 조합을 실제 엘리트 직업으로 분석한다. */
 export function analyzeAllEliteJobs(level: number): readonly JobBalanceReport[] {
     if (normalizeLevel(level) < 200) return [];
-    const firstJobs = getAllJobs().filter(job => job.id === 'career:warrior' || job.id === 'career:archer'
-        || job.id === 'career:assassin' || job.id === 'career:mage');
+    const firstJobs = getAllJobs().filter(job => job.tier.key === 'first');
     return firstJobs.flatMap(main => firstJobs
         .filter(sub => sub.id !== main.id)
         .map(sub => analyzeJobBalance(level, main.id, sub.id)));

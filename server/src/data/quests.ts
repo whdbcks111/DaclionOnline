@@ -7,7 +7,7 @@ import {
 } from '../models/Quest.js';
 import { JobSlotType } from '../models/Job.js';
 import './jobs.js';
-import { grantBlacksmithProfession, hasBlacksmithProfession } from '../modules/forging.js';
+import { canAcquireBlacksmithProfession, grantBlacksmithProfession } from '../modules/forging.js';
 
 export const FIRST_SLIME_HUNT_QUEST_ID = 'luminair:first_slime_hunt';
 
@@ -50,8 +50,8 @@ defineQuest({
     tags: ['quest:profession', 'profession:blacksmith'],
     giverNpcIds: ['blacksmith_master'],
     turnInNpcIds: ['blacksmith_master'],
-    visible: player => player.level >= 20 && !hasBlacksmithProfession(player),
-    canAccept: player => player.level >= 20 && !hasBlacksmithProfession(player),
+    visible: player => player.level >= 20 && canAcquireBlacksmithProfession(player),
+    canAccept: player => player.level >= 20 && canAcquireBlacksmithProfession(player),
     stages: [new QuestStage({
         id: 'read_ore_grain',
         description: '채굴 도구로 광맥을 파괴해 서로 다른 광물의 결을 관찰하세요.',
@@ -61,9 +61,11 @@ defineQuest({
         QuestReward.exp(600),
         QuestReward.item('iron_ore', 5, '철'),
         QuestReward.custom({
-            label: '생산 전문 직업 [ 대장장이 ]',
-            canGrant: player => !hasBlacksmithProfession(player),
-            grant: player => { grantBlacksmithProfession(player); },
+            label: '비어 있는 직업 슬롯 [ 대장장이 ] 전직',
+            canGrant: canAcquireBlacksmithProfession,
+            grant: player => {
+                if (!grantBlacksmithProfession(player)) throw new Error('대장장이 직업 슬롯 배정에 실패했습니다.');
+            },
         }),
     ],
 });

@@ -32,7 +32,7 @@ test('skill report uses real cooldown, resource and damage callbacks', () => {
 
 test('all first jobs produce finite offensive and defensive baselines', () => {
     const reports = analyzeAllFirstJobs(50);
-    assert.equal(reports.length, 4);
+    assert.equal(reports.length, 5);
     for (const report of reports) {
         assert.ok(Number.isFinite(report.basicPhysicalDps));
         assert.ok(report.physicalSurvivalSeconds > 0);
@@ -52,10 +52,10 @@ test('Lv.200 elite profile applies its inherited passive and reports its active 
     assert.equal(report.skillReports.some(skill => skill.skillId === 'spellblade_technique'), true);
 });
 
-test('all twelve ordered elite combinations produce measurable balance reports', () => {
+test('all twenty ordered elite combinations produce measurable balance reports', () => {
     const reports = analyzeAllEliteJobs(200);
-    assert.equal(reports.length, 12);
-    assert.equal(new Set(reports.map(report => report.jobId)).size, 12);
+    assert.equal(reports.length, 20);
+    assert.equal(new Set(reports.map(report => report.jobId)).size, 20);
     assert.ok(reports.every(report => report.skillReports.some(skill => skill.skillId.endsWith('_technique'))));
     assert.ok(reports.every(report => report.skillReports.some(skill => skill.sustainableDpm > 0)));
 });

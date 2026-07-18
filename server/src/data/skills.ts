@@ -317,9 +317,15 @@ function applyStealth(target: import('../models/Entity.js').default, id: string,
 
 const JOBS = {
     warrior: 'career:warrior', archer: 'career:archer', assassin: 'career:assassin', mage: 'career:mage',
+    blacksmith: 'career:blacksmith',
 } as const;
 
 function jobRequirement(jobId: string) { return { anyOf: [jobId], slot: undefined }; }
+
+function hasBlacksmithSkillAccess(player?: Player | null): boolean {
+    return Boolean(player && (player.career.hasJob(JOBS.blacksmith)
+        || player.progress.getFlag('profession:blacksmith')));
+}
 
 interface JobPassiveModifier extends Omit<AttributeModifier, 'source'> {
     label: string;
@@ -337,6 +343,7 @@ function defineJobPassive(options: {
     icon: string;
     description: string;
     modifiers: readonly JobPassiveModifier[];
+    isVisible?: (player?: Player | null) => boolean;
 }): void {
     const source = `skill:${options.id}:passive`;
     defineSkill({
@@ -354,7 +361,8 @@ function defineJobPassive(options: {
         ])),
         calculateExperienceGain: () => 0,
         calculateRequiredExperience: () => 0,
-        jobRequirement: jobRequirement(options.jobId),
+        jobRequirement: options.isVisible ? undefined : jobRequirement(options.jobId),
+        isVisible: options.isVisible ? ({ player }) => options.isVisible!(player) : undefined,
         canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
         onPassiveUpdate: ({ owner }) => {
             if (owner.attribute.hasSource(source)) return;
@@ -414,6 +422,19 @@ defineJobPassive({
         { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.07, label: '마법력 증가', display: '+7%' },
         { attribute: AttributeType.MENTALITY_REGEN.key, op: 'add', value: 1.5, label: '정신력 재생 증가', display: '+1.5/초' },
     ],
+});
+
+defineJobPassive({
+    id: 'blacksmith_temper',
+    name: '대장장이의 담금질',
+    jobId: JOBS.blacksmith,
+    icon: 'items/iron_pickaxe',
+    description: '{{icon.maxWeight}} 최대 중량이 [color=gold]{{maxWeight}}[/color], {{icon.speed}} 이동속도가 [color=cyan]{{speed}}[/color] 증가합니다.',
+    modifiers: [
+        { attribute: AttributeType.MAX_WEIGHT.key, op: 'add', value: 10, label: '최대 중량 증가', display: '+10' },
+        { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.04, label: '이동속도 증가', display: '+4%' },
+    ],
+    isVisible: hasBlacksmithSkillAccess,
 });
 
 const elitePassives = [
@@ -511,6 +532,70 @@ const elitePassives = [
         modifiers: [
             { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.1, label: '마법력 증가', display: '+10%' },
             { attribute: AttributeType.MAGIC_PEN.key, op: 'add', value: 6, label: '마법 관통력 증가', display: '+6' },
+        ],
+    },
+    {
+        id: 'weapon_master_mastery', name: '장인의 무기술', jobId: 'career:weapon_master', icon: 'jobs/warrior',
+        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.1, label: '공격력 증가', display: '+10%' },
+            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.08, label: '방어력 증가', display: '+8%' },
+        ],
+    },
+    {
+        id: 'machinist_archer_mastery', name: '정밀 기공', jobId: 'career:machinist_archer', icon: 'jobs/archer',
+        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.projectileAcceleration}} 투사체 가속이 [color=cyan]{{projectileAcceleration}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.1, label: '공격력 증가', display: '+10%' },
+            { attribute: AttributeType.PROJECTILE_ACCELERATION.key, op: 'multiply', value: 1.1, label: '투사체 가속 증가', display: '+10%' },
+        ],
+    },
+    {
+        id: 'steel_shadow_mastery', name: '연마된 살의', jobId: 'career:steel_shadow', icon: 'jobs/assassin',
+        description: '{{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color], {{icon.armorPen}} 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.2, label: '치명타 피해 증가', display: '+20%p' },
+            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 7, label: '방어 관통력 증가', display: '+7' },
+        ],
+    },
+    {
+        id: 'runeforger_mastery', name: '전투 룬각', jobId: 'career:runeforger', icon: 'jobs/mage',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.12, label: '마법력 증가', display: '+12%' },
+            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.08, label: '방어력 증가', display: '+8%' },
+        ],
+    },
+    {
+        id: 'battle_smith_mastery', name: '전장의 담금질', jobId: 'career:battle_smith', icon: 'items/iron_pickaxe',
+        description: '{{icon.maxLife}} 최대 생명력이 [color=green]{{maxLife}}[/color], {{icon.atk}} 공격력이 [color=orange]{{atk}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.1, label: '최대 생명력 증가', display: '+10%' },
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.1, label: '공격력 증가', display: '+10%' },
+        ],
+    },
+    {
+        id: 'artificer_mastery', name: '자동 조준 장치', jobId: 'career:artificer', icon: 'items/iron_pickaxe',
+        description: '{{icon.projectileAcceleration}} 투사체 가속이 [color=cyan]{{projectileAcceleration}}[/color], {{icon.critRate}} 치명타 확률이 [color=gold]{{critRate}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.PROJECTILE_ACCELERATION.key, op: 'multiply', value: 1.12, label: '투사체 가속 증가', display: '+12%' },
+            { attribute: AttributeType.CRIT_RATE.key, op: 'add', value: 0.05, label: '치명타 확률 증가', display: '+5%p' },
+        ],
+    },
+    {
+        id: 'venom_smith_mastery', name: '독금 연마', jobId: 'career:venom_smith', icon: 'items/iron_pickaxe',
+        description: '{{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color], {{icon.armorPen}} 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.2, label: '치명타 피해 증가', display: '+20%p' },
+            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 6, label: '방어 관통력 증가', display: '+6' },
+        ],
+    },
+    {
+        id: 'arcane_smith_mastery', name: '마도 제련', jobId: 'career:arcane_smith', icon: 'items/iron_pickaxe',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.magicDef}} 마법 저항력이 [color=$magic]{{magicDef}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.12, label: '마법력 증가', display: '+12%' },
+            { attribute: AttributeType.MAGIC_DEF.key, op: 'multiply', value: 1.1, label: '마법 저항력 증가', display: '+10%' },
         ],
     },
 ] as const;
@@ -669,30 +754,6 @@ const smeltingMaterials = [
 ] as const;
 
 defineSkill({
-    id: 'blacksmith_temper',
-    name: '대장장이의 담금질',
-    icon: 'items/iron_pickaxe',
-    maxLevel: 1,
-    descriptionTemplate: '{{icon.maxWeight}} 최대 중량이 [color=gold]10[/color], {{icon.speed}} 이동속도가 [color=gold]4%[/color] 증가합니다.',
-    costTemplate: '소모값 없음',
-    activationConditionTemplate: '대장장이 전문 직업인 동안 항상 적용됩니다.',
-    baseMetadata: null,
-    calculatedFields: {},
-    isVisible: ({ player }) => player?.progress.getFlag('profession:blacksmith') ?? false,
-    canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
-    onPassiveUpdate: ({ owner }) => {
-        const source = 'skill:blacksmith_temper:passive';
-        if (owner.attribute.hasSource(source)) return;
-        owner.attribute.addModifiers([
-            { attribute: AttributeType.MAX_WEIGHT.key, op: 'add', value: 10, source },
-            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.04, source },
-        ]);
-    },
-    onPassiveInactive: ({ owner }) => owner.attribute.removeBySource('skill:blacksmith_temper:passive'),
-    tags: [GameTags.SKILL_PASSIVE],
-});
-
-defineSkill({
     id: 'arcane_smelting',
     name: '마력 제련',
     icon: 'items/iron_ore',
@@ -708,10 +769,10 @@ defineSkill({
     },
     activationFeedback: context => `${context.skill.getActiveState<string>('materialLabel') ?? '소재'} ${context.skill.getActiveState<number>('processedCount') ?? 0}개를 마력으로 제련했습니다.`,
     calculateMaxCooldown: () => 5,
-    isVisible: ({ player }) => player?.progress.getFlag('profession:blacksmith') ?? false,
+    isVisible: ({ player }) => hasBlacksmithSkillAccess(player),
     canActivate: context => {
         const player = requirePlayer(context);
-        if (!player.progress.getFlag('profession:blacksmith')) return denySkill('대장장이 전문 직업이 필요합니다.');
+        if (!hasBlacksmithSkillAccess(player)) return denySkill('대장장이 직업이 필요합니다.');
         if (!smeltingMaterials.some(([raw]) => player.inventory.getCount(raw) > 0)) return denySkill('제련할 광물이나 보석이 없습니다.');
         const cost = numberMeta(context, 'baseManaCost');
         return player.canSpendMentality(cost) ? { accepted: true } : denySkill(`정신력이 ${cost} 필요합니다.`);
@@ -743,8 +804,6 @@ defineSkill({
     activationConditionTemplate: '/단조 <형태> <재료> 명령어로 사용합니다.',
     baseMetadata: null,
     calculatedFields: {},
-    isVisible: ({ player }) => Boolean(player
-        && (player.progress.getFlag('profession:blacksmith') || player.skills.has('metal_forging'))),
     canActivate: () => denySkill('/단조 <형태> <재료> 명령어를 사용하세요.'),
     tags: [GameTags.SKILL_PASSIVE],
 });
@@ -1350,6 +1409,63 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         weaponTags: [GameTags.WEAPON_STAFF, GameTags.WEAPON_DAGGER], propertyTag: GameTags.PROPERTY_DARK,
         extraDescription: '적중 시 같은 레벨의 마비독을 3초 동안 부여합니다.',
         onHit: (target, level) => target.applyStatusEffect(StatusEffectType.PARALYTIC_POISON, 3, level),
+    },
+    {
+        id: 'weapon_master_technique', name: '완성의 일격', jobId: 'career:weapon_master', icon: 'jobs/warrior',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 305, perLevelPercent: 18,
+        manaCost: 28, cooldown: 13, weaponDescription: '검 또는 도끼를 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE], unavoidable: true,
+        extraDescription: '무기의 무게 중심을 완전히 제어해 이 공격은 회피할 수 없습니다.', propertyTag: GameTags.PROPERTY_METAL,
+    },
+    {
+        id: 'machinist_archer_technique', name: '철우 연사', jobId: 'career:machinist_archer', icon: 'jobs/archer',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 285, perLevelPercent: 17,
+        manaCost: 27, cooldown: 12, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', propertyTag: GameTags.PROPERTY_METAL,
+        extraDescription: '정밀 가공한 금속 화살을 고속으로 발사합니다.',
+    },
+    {
+        id: 'steel_shadow_technique', name: '톱날 급습', jobId: 'career:steel_shadow', icon: 'jobs/assassin',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 255, perLevelPercent: 16,
+        manaCost: 25, cooldown: 11, weaponDescription: '단검 또는 검을 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_DAGGER, GameTags.WEAPON_SWORD], guaranteedCritical: true,
+        extraDescription: '연마한 날로 급소를 파고들어 확정적으로 치명타가 발생합니다.', propertyTag: GameTags.PROPERTY_METAL,
+    },
+    {
+        id: 'runeforger_technique', name: '폭발 룬', jobId: 'career:runeforger', icon: 'jobs/mage',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 300, perLevelPercent: 18,
+        manaCost: 34, cooldown: 14, weaponDescription: '지팡이를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_STAFF],
+        projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_FIRE,
+        extraDescription: '금속에 새긴 룬을 폭발시켜 불 속성 마법 피해를 입힙니다.',
+    },
+    {
+        id: 'battle_smith_technique', name: '모루 강타', jobId: 'career:battle_smith', icon: 'items/iron_pickaxe',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 330, perLevelPercent: 19,
+        manaCost: 30, cooldown: 15, weaponDescription: '도끼 또는 검을 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_AXE, GameTags.WEAPON_SWORD], unavoidable: true,
+        extraDescription: '모루를 내리치듯 무겁게 찍어 이 공격은 회피할 수 없습니다.', propertyTag: GameTags.PROPERTY_METAL,
+    },
+    {
+        id: 'artificer_technique', name: '자동 추적탄', jobId: 'career:artificer', icon: 'items/iron_pickaxe',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 275, perLevelPercent: 17,
+        manaCost: 27, cooldown: 11, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', propertyTag: GameTags.PROPERTY_ELECTRIC,
+        extraDescription: '기계식 유도 장치가 달린 전기 속성 탄환을 발사합니다.',
+    },
+    {
+        id: 'venom_smith_technique', name: '독금 천공', jobId: 'career:venom_smith', icon: 'items/iron_pickaxe',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 250, perLevelPercent: 16,
+        manaCost: 26, cooldown: 12, weaponDescription: '단검을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_DAGGER],
+        propertyTag: GameTags.PROPERTY_POISON,
+        extraDescription: '적중 시 같은 레벨의 맹독을 7초 동안 부여합니다.',
+        onHit: (target, level) => target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 7, level),
+    },
+    {
+        id: 'arcane_smith_technique', name: '마도 용융탄', jobId: 'career:arcane_smith', icon: 'items/iron_pickaxe',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 310, perLevelPercent: 18,
+        manaCost: 35, cooldown: 14, weaponDescription: '지팡이를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_STAFF],
+        projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_FIRE, shieldPercent: 10,
+        extraDescription: '용융 마력을 발사하고 공격 후 최대 생명력의 10%만큼 일반 보호막을 8초 동안 얻습니다.',
     },
 ];
 

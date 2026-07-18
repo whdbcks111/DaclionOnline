@@ -29,6 +29,14 @@ const firstJobs = [
         main: [{ attribute: 'maxMentality', op: 'multiply', value: 1.2 }, { attribute: 'magicForce', op: 'multiply', value: 1.15 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.12 }, { attribute: 'maxLife', op: 'multiply', value: 0.9 }],
         sub: [{ attribute: 'maxMentality', op: 'multiply', value: 1.1 }, { attribute: 'magicForce', op: 'multiply', value: 1.06 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.06 }],
     },
+    {
+        // TODO: 대장장이 전용 직업 아트 제작 전까지 채굴 도구 카테고리 아이콘을 사용한다.
+        id: 'career:blacksmith', name: '대장장이', icon: 'items/iron_pickaxe',
+        description: '광물을 마력으로 제련하고 리듬 단조로 장비를 제작하는 생산·근접 혼합 직업.',
+        skills: ['blacksmith_temper', 'arcane_smelting', 'metal_forging'],
+        main: [{ attribute: 'maxWeight', op: 'add', value: 20 }, { attribute: 'def', op: 'multiply', value: 1.08 }, { attribute: 'maxLife', op: 'multiply', value: 1.06 }],
+        sub: [{ attribute: 'maxWeight', op: 'add', value: 10 }, { attribute: 'def', op: 'multiply', value: 1.04 }],
+    },
 ] as const;
 
 for (const job of firstJobs) defineJob({
@@ -56,6 +64,14 @@ const eliteRecipes = [
     ['mage', 'warrior', 'battle_magus', '전투 마도사'],
     ['mage', 'archer', 'star_weaver', '별의 직조사'],
     ['mage', 'assassin', 'hexblade', '주술 단검사'],
+    ['warrior', 'blacksmith', 'weapon_master', '무기대가'],
+    ['archer', 'blacksmith', 'machinist_archer', '기공 사수'],
+    ['assassin', 'blacksmith', 'steel_shadow', '강철 그림자'],
+    ['mage', 'blacksmith', 'runeforger', '룬 제련사'],
+    ['blacksmith', 'warrior', 'battle_smith', '전투 대장장이'],
+    ['blacksmith', 'archer', 'artificer', '기계 장인'],
+    ['blacksmith', 'assassin', 'venom_smith', '독금 장인'],
+    ['blacksmith', 'mage', 'arcane_smith', '마도 대장장이'],
 ] as const;
 
 for (const [main, sub, eliteId, name] of eliteRecipes) {
@@ -66,7 +82,7 @@ for (const [main, sub, eliteId, name] of eliteRecipes) {
     defineJob({
         id,
         name,
-        icon: `jobs/${main}`,
+        icon: parent.icon,
         tier: JobTier.ELITE,
         description: `${getFirstName(main)}의 전투 방식을 중심으로 ${getFirstName(sub)}의 장점을 융합한 엘리트 직업.`,
         parentJobIds: [mainId],

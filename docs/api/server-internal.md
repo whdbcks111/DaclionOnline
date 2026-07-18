@@ -29,7 +29,7 @@
 | Minigame | `startMiniGame`, `cancelMiniGame`, `hasActiveMiniGame`, `normalizeMiniGameInputs/Actions`, `initMiniGame` | session/token/만료와 축·단조 타격 trace 정규화, 타입별 결과 validator를 가진 서버 권위 미니게임 |
 | Fishing | `startFishing`, `cancelFishing`, `isFishing` | 장소·낚싯대 검증, 미끼 묶음 자동 장착·한 개 소비, 입질 대기, 등급/미니게임/보상 연결 |
 | Forging | `ForgeForm.values/fromInput`, `ForgeMaterial.values/fromInput`, `createForgedItemSnapshot` | 형태·재료·리듬 정확도·난수 trait를 조합한 영속 장비 snapshot 생성 |
-| Forging flow | `has/grantBlacksmithProfession`, `startForging` | 생산 직업 해금, 제련 소재 검증, 서버 단조 score와 소비·보상 연결 |
+| Forging flow | `has/canAcquire/grant/migrateLegacyBlacksmithProfession`, `canUseMetalForging`, `startForging` | 정식 대장장이 직업 슬롯 획득·구형 flag 이전, 별도 금속 단조 스킬 권한, 제련 소재 검증과 서버 단조 score·소비·보상 연결 |
 | Upload media | `encodeChatImage`, `initUploadMaintenance`, `cleanupChatImages`, `getOwnedChatImage` | 이미지 재인코딩, 전체 100장·7일 보관 정리와 채팅 파일 소유권·표시 치수 snapshot 검증 |
 | Location service | `loadLocationsFromJson`, `updateLocations`, `initLocation` | JSON/소켓/프레임 조정 |
 | Item use | `registerItemUse`, `executeItemUse`, `hasItemUseHandler` | 아이템 효과 ID와 실행 함수 연결 |
@@ -63,7 +63,7 @@
 | Dungeon puzzle | `defineQuestionPuzzle`, `beginQuestionPuzzle`, `submitQuestionPuzzle`, `clearDungeonPuzzleSession`, `defineTeleportArtifact`, `activateTeleportArtifact` | 만료 질문 세션·정답 정규화·Progress 해답과 현재 장소별 순간이동 유물 등록/실행 |
 | World map | `markLocationVisited`, `markAllLocationsVisited`, `hasVisitedLocation`, `getVisitedLocationIds`, `getWorldMapSnapshot`, `getFullWorldMapSnapshot` | Progress raw key를 숨긴 방문 영속·운영 일괄 발견 API, `location:hidden` 및 한 단계 공개 범위와 선택 `mapColor`를 적용한 일반 지도 DTO, 관리자 전체 지도 DTO |
 | Job registry | `defineJob/getJob/getAllJobs`, `defineEliteJobRecipe/resolveEliteJob`, `isJobDescendant`, `JobTier/JobSlotType` | 1차·엘리트 정의, 동일 직업 금지 순서 조합과 하위 계보 판정 |
-| `CareerProfile` | `main/sub/elite/effectiveMainJob`, `hasJob`, `canAssign/assign`, `setByAdmin`, `evaluateElitePromotion`, `refreshModifiers` | Progress 영속 직업 상태, Lv.20/50 선택, 운영 조합 교체, 스킬·modifier 지급과 Lv.200 자동 전직 |
+| `CareerProfile` | `main/sub/elite/effectiveMainJob`, `hasJob`, `canAssign/assign`, `getAssignableSlot/assignAvailable`, `migrateLegacyFirstJob`, `setByAdmin`, `evaluateElitePromotion`, `refreshModifiers` | Progress 영속 직업 상태, Lv.20/50 선택과 현재 가용 슬롯 배정, 기존 직업을 덮어쓰지 않는 구형 직업 이전, 운영 조합 교체, 스킬·modifier 지급과 Lv.200 자동 전직 |
 | `Shop` | `getStock`, `consumeStock`, `update` | 재고와 재입고 |
 | Shop registry | `defineShop`, `getShop`, `updateAllShops` | 상점 정의/조회/프레임 갱신 |
 | Game events | `emitGameEvent`, `subscribeGameEvent`, `subscribeAllGameEvents`, `getRecentGameEvents` | 동기식 내부 이벤트와 원시 Entity 없는 최근 trace 스냅샷. 성공한 공격은 최종 피해·피해 타입·장착 무기 분류를 primitive data로 제공 |

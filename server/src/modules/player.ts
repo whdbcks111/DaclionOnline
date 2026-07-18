@@ -17,6 +17,7 @@ import { clearInformationMode } from './informationVisibility.js';
 import { cancelFishing } from './fishing.js';
 import { clearUserSnapshotStreams, publishUserSnapshot } from './stateSync.js';
 import { clearDungeonPuzzleSession } from '../models/DungeonPuzzle.js';
+import { migrateLegacyBlacksmithProfession } from './forging.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -30,6 +31,8 @@ export async function loadPlayerByUserId(userId: number): Promise<Player> {
     if (!player) {
         player = await Player.create(userId);
     }
+
+    if (migrateLegacyBlacksmithProfession(player)) await player.save();
 
     registerOnlinePlayer(player);
     return player;
@@ -65,7 +68,9 @@ export function getOnlinePlayers(): Player[] {
 export async function fetchPlayerByUserId(userId: number): Promise<Player | null> {
     const online = getOnlinePlayer(userId);
     if (online) return online;
-    return Player.loadByUserId(userId);
+    const player = await Player.loadByUserId(userId);
+    if (player && migrateLegacyBlacksmithProfession(player)) await player.save();
+    return player;
 }
 
 /** 모든 온라인 플레이어 저장 */

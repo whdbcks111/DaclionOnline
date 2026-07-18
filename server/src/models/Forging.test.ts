@@ -8,7 +8,7 @@ import Skill from './Skill.js';
 import type Player from './Player.js';
 import type Entity from './Entity.js';
 import Inventory from './Inventory.js';
-import { canUseMetalForging, grantBlacksmithProfession } from '../modules/forging.js';
+import { canUseMetalForging } from '../modules/forging.js';
 import '../data/items.js';
 import '../data/progress.js';
 import '../data/skills.js';
@@ -43,22 +43,21 @@ test('재료 속성과 랜덤 단조 trait는 결과 태그와 보조 능력치�
     assert.equal(item.getMetadata<{ creatorUserId: number }>('forge')?.creatorUserId, 77);
 });
 
-test('대장장이 전문 직업은 세 스킬을 지급하고 마력 제련이 원광을 일괄 교환한다', () => {
+test('대장장이 직업의 마력 제련은 원광을 레벨 수량만큼 일괄 교환한다', () => {
     const progress = PlayerProgress.createEmpty(77);
-    const granted: string[] = [];
     const inventory = Inventory.createEmpty(77, 100);
     let mentality = 100;
     const player = {
         userId: 77,
         progress,
         inventory,
-        skills: { grant: (id: string) => { granted.push(id); return { acquired: true }; } },
+        career: { hasJob: (id: string) => id === 'career:blacksmith' },
+        skills: { has: () => false },
         canSpendMentality: (amount: number) => mentality >= amount,
         spendMentality: (amount: number) => { if (mentality < amount) return false; mentality -= amount; return true; },
     } as unknown as Player;
 
-    assert.equal(grantBlacksmithProfession(player), true);
-    assert.deepEqual(granted, ['blacksmith_temper', 'arcane_smelting', 'metal_forging']);
+    assert.equal(canUseMetalForging(player), true);
     inventory.addItem('iron_ore', 5);
     const skill = new Skill({ playerId: 77, skillDataId: 'arcane_smelting', level: 2 });
     const context = { owner: player as unknown as Entity, player, skill };
@@ -74,6 +73,7 @@ test('금속 단조 스킬만 보유해도 단조 권한을 가진다', () => {
     const owned = new Set(['metal_forging']);
     const player = {
         progress,
+        career: { hasJob: () => false },
         skills: { has: (id: string) => owned.has(id) },
     } as unknown as Player;
 
