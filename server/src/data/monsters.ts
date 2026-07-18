@@ -1,3 +1,5 @@
+// 공격 부가효과 ID를 등록 시점에 검증하므로 레지스트리를 먼저 초기화한다.
+import './statusEffects.js';
 import { defineMonster } from '../models/Monster.js';
 import type { MonsterData } from '../models/Monster.js';
 import { GameTags } from '../../../shared/tags.js';
