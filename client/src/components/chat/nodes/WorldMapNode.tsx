@@ -22,6 +22,8 @@ interface ViewBox {
 const DEFAULT_ASPECT = 16 / 9
 const MIN_SPAN = 180
 const BIOME_CANVAS_SCALE = 0.3
+const BIOME_SATURATION = 0.62
+const BIOME_BRIGHTNESS = 0.76
 const BASE_LABEL_SIZE = 13
 const MIN_LABEL_ZOOM = 0.7
 const MAX_LABEL_ZOOM = 1.75
@@ -65,11 +67,16 @@ function distance(a: Point, b: Point): number {
 }
 
 function parseHexColor(color: string): readonly [number, number, number] {
-    return [
+    const [red, green, blue] = [
         Number.parseInt(color.slice(1, 3), 16),
         Number.parseInt(color.slice(3, 5), 16),
         Number.parseInt(color.slice(5, 7), 16),
     ]
+    const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722
+    const neutralize = (channel: number) => Math.round(
+        (luminance + (channel - luminance) * BIOME_SATURATION) * BIOME_BRIGHTNESS,
+    )
+    return [neutralize(red), neutralize(green), neutralize(blue)]
 }
 
 function createBiomeSeeds(data: WorldMapData): BiomeSeed[] {
