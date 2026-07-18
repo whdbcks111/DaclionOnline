@@ -13,8 +13,8 @@
 5. 구현 전에 관련 `Overview.md`와 `docs/`를 탐색해 기존 코드/API를 재사용하고, 중복과 불필요한 계층 없이 가장 짧고 명확하게 작성한다.
 6. 슬롯·스탯·능력치처럼 열거 가능한 도메인 타입은 `values/fromKey/fromInput`과 메타데이터를 가진 Java 스타일 클래스형 enum을 사용하고 문자열 key는 직렬화 경계에만 둔다.
 7. 의미 있는 작업 완료 후 관련 변경을 커밋하며 메시지는 `name(scope): message` 형식을 따른다. 예: `chore(format): formatted code structure`, `feat(inventory): add item remove API`.
-8. 아이템·스킬·상태이상 등 게임 아이콘은 밝은 색상, 단순한 형태, 굵고 명확한 실루엣의 캐주얼 모바일 게임 스타일로 통일한다. 새 아이콘 필드를 가진 데이터를 추가할 때 대응하는 128×128 투명 PNG도 같은 작업에 만든다.
-9. 아이템 마스터 데이터를 추가할 때는 같은 변경에 `client/public/icons/items/{itemDataId}.png` 128×128 투명 배경 아이콘도 함께 추가한다.
+8. 전용 아이콘 제작 단계의 게임 아이콘은 밝은 색상, 단순한 형태, 굵고 명확한 실루엣의 캐주얼 모바일 게임 스타일과 128×128 규격으로 통일한다.
+9. 1차 콘텐츠 확장 기간에는 아이템·스킬마다 ImageGen 에셋을 만들지 않고 카테고리가 맞는 기존 128×128 아이콘을 명시적 fallback으로 재사용하며 교체 TODO를 남긴다. 존재하지 않는 경로는 금지한다. 전용 아트 제작 단계가 시작되면 아이템 마스터 데이터와 `client/public/icons/items/{itemDataId}.png`를 같은 변경에 추가한다.
 10. 새 `AttributeType` 능력치를 추가할 때는 대표색 1색과 무채색/포인트색 1~2색 이하로 구성한 `client/public/icons/attributes/{attributeKey}.png` 128×128 투명 아이콘을 함께 추가하고, 상태창·스킬 계수 표기는 `AttributeType.icon/iconMarkup`을 재사용한다.
 10. 새 `property:*` 속성 또는 속성표에 노출할 태그를 추가할 때는 `defineTagEffectTagDisplay` 표시 메타데이터와 `client/public/icons/affinities/{icon}.png` 128×128 투명 배경 아이콘을 같은 변경에 추가한다.
 11. 장소에 `mapIcon`을 추가할 때는 `client/public/icons/map/{mapIcon}.png` 128×128 투명 배경 랜드마크 아이콘을 같은 변경에 추가한다.

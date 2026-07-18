@@ -273,7 +273,8 @@
       { "type": "monster", "dataId": "caldera_beast", "maxCount": 1, "respawnTime": 150 }
     ],
     "connections": [
-      { "locationId": "volcanic_crater" }
+      { "locationId": "volcanic_crater" },
+      { "locationId": "tempest_gate", "condition": "level_50" }
     ]
   },
   {
@@ -470,6 +471,382 @@
     ],
     "connections": [
       { "locationId": "deep_shaft" }
+    ]
+  },
+  {
+    "id": "tempest_gate",
+    "name": "천둥마루 1 폭풍 관문",
+    "mapColor": "#667f91",
+    "zoneType": "neutral",
+    "x": 850,
+    "y": 0,
+    "z": 70,
+    "tags": ["location:wilderness", "location:storm", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "spark_moth", "maxCount": 4, "respawnTime": 65 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "volcanic_core" },
+      { "locationId": "conductor_ridge" }
+    ]
+  },
+  {
+    "id": "conductor_ridge",
+    "name": "천둥마루 2 전도 능선",
+    "mapColor": "#60758a",
+    "zoneType": "neutral",
+    "x": 930,
+    "y": -45,
+    "z": 100,
+    "tags": ["location:wilderness", "location:storm", "property:electric", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ironwing_raptor", "maxCount": 3, "respawnTime": 72 }
+    ],
+    "connections": [
+      { "locationId": "tempest_gate" },
+      { "locationId": "tempest_peak" }
+    ]
+  },
+  {
+    "id": "tempest_peak",
+    "name": "천둥마루 3 낙뢰 정상",
+    "mapColor": "#596b82",
+    "zoneType": "hostile",
+    "x": 1010,
+    "y": -90,
+    "z": 130,
+    "tags": ["location:wilderness", "location:storm", "property:electric", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "thunder_colossus", "maxCount": 2, "respawnTime": 95 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "conductor_ridge" },
+      { "locationId": "nightwood_edge", "condition": "level_70" }
+    ]
+  },
+  {
+    "id": "nightwood_edge",
+    "name": "월영밤숲 1 그늘 들머리",
+    "mapColor": "#46564e",
+    "zoneType": "neutral",
+    "x": 1070,
+    "y": -20,
+    "z": 90,
+    "tags": ["location:wilderness", "location:forest", "property:dark", "property:insect"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "gloom_beetle", "maxCount": 4, "respawnTime": 75 }
+    ],
+    "connections": [
+      { "locationId": "tempest_peak" },
+      { "locationId": "nightwood_maze" }
+    ]
+  },
+  {
+    "id": "nightwood_maze",
+    "name": "월영밤숲 2 뒤틀린 오솔길",
+    "mapColor": "#3d4845",
+    "zoneType": "hostile",
+    "x": 1140,
+    "y": 50,
+    "z": 75,
+    "tags": ["location:wilderness", "location:forest", "property:dark", "property:insect"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "shade_mantis", "maxCount": 3, "respawnTime": 82 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "nightwood_edge" },
+      { "locationId": "nightwood_heart" }
+    ]
+  },
+  {
+    "id": "nightwood_heart",
+    "name": "월영밤숲 3 빛 없는 심재",
+    "mapColor": "#343d3c",
+    "zoneType": "hostile",
+    "x": 1210,
+    "y": 120,
+    "z": 60,
+    "tags": ["location:wilderness", "location:forest", "property:dark", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "nightwood_core", "maxCount": 2, "respawnTime": 110 }
+    ],
+    "connections": [
+      { "locationId": "nightwood_maze" },
+      { "locationId": "dawn_border", "condition": "level_90" }
+    ]
+  },
+  {
+    "id": "dawn_border",
+    "name": "백광성역 1 여명의 경계",
+    "mapColor": "#d2c58c",
+    "zoneType": "neutral",
+    "x": 1280,
+    "y": 50,
+    "z": 75,
+    "tags": ["location:wilderness", "location:sanctum", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "dawn_wisp", "maxCount": 4, "respawnTime": 78 }
+    ],
+    "connections": [
+      { "locationId": "nightwood_heart" },
+      { "locationId": "dawn_cloister" }
+    ]
+  },
+  {
+    "id": "dawn_cloister",
+    "name": "백광성역 2 고요한 회랑",
+    "mapColor": "#ddd19a",
+    "zoneType": "neutral",
+    "x": 1360,
+    "y": -10,
+    "z": 90,
+    "tags": ["location:wilderness", "location:sanctum", "property:light", "property:holy"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "sanctum_keeper", "maxCount": 3, "respawnTime": 92 }
+    ],
+    "connections": [
+      { "locationId": "dawn_border" },
+      { "locationId": "dawn_sanctum" }
+    ]
+  },
+  {
+    "id": "dawn_sanctum",
+    "name": "백광성역 3 광륜 제단",
+    "mapColor": "#e4d99f",
+    "zoneType": "hostile",
+    "x": 1440,
+    "y": -70,
+    "z": 110,
+    "tags": ["location:wilderness", "location:sanctum", "property:light", "property:holy"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "halo_beast", "maxCount": 2, "respawnTime": 115 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "dawn_cloister" },
+      { "locationId": "necropolis_gate", "condition": "level_120" }
+    ]
+  },
+  {
+    "id": "necropolis_gate",
+    "name": "망각사령묘 1 봉인 정문",
+    "mapColor": "#666174",
+    "zoneType": "hostile",
+    "x": 1510,
+    "y": 0,
+    "z": 50,
+    "tags": ["location:wilderness", "location:dungeon", "property:undead", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "grave_sentinel", "maxCount": 3, "respawnTime": 90 }
+    ],
+    "connections": [
+      { "locationId": "dawn_sanctum" },
+      { "locationId": "necropolis_east_crypt" },
+      { "locationId": "necropolis_west_crypt" }
+    ]
+  },
+  {
+    "id": "necropolis_east_crypt",
+    "name": "망각사령묘 2 동쪽 묘실",
+    "mapColor": "#5d586b",
+    "zoneType": "hostile",
+    "x": 1590,
+    "y": 70,
+    "z": 20,
+    "tags": ["location:wilderness", "location:dungeon", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "grave_sentinel", "maxCount": 2, "respawnTime": 92 },
+      { "type": "monster", "dataId": "bone_oracle", "maxCount": 1, "respawnTime": 105 }
+    ],
+    "connections": [
+      { "locationId": "necropolis_gate" },
+      { "locationId": "necropolis_west_crypt" },
+      { "locationId": "ossuary_crossing" }
+    ]
+  },
+  {
+    "id": "necropolis_west_crypt",
+    "name": "망각사령묘 3 서쪽 납골실",
+    "mapColor": "#585365",
+    "zoneType": "hostile",
+    "x": 1590,
+    "y": -70,
+    "z": 20,
+    "tags": ["location:wilderness", "location:dungeon", "property:undead", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "bone_oracle", "maxCount": 2, "respawnTime": 105 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "necropolis_gate" },
+      { "locationId": "necropolis_east_crypt" },
+      { "locationId": "ossuary_crossing" }
+    ]
+  },
+  {
+    "id": "ossuary_crossing",
+    "name": "망각사령묘 4 뒤엉킨 합류로",
+    "mapColor": "#514d5e",
+    "zoneType": "hostile",
+    "x": 1670,
+    "y": 0,
+    "z": -20,
+    "tags": ["location:wilderness", "location:dungeon", "property:undead", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "bone_oracle", "maxCount": 2, "respawnTime": 108 },
+      { "type": "monster", "dataId": "deathless_colossus", "maxCount": 1, "respawnTime": 140 }
+    ],
+    "connections": [
+      { "locationId": "necropolis_east_crypt" },
+      { "locationId": "necropolis_west_crypt" },
+      { "locationId": "necropolis_depths" }
+    ]
+  },
+  {
+    "id": "necropolis_depths",
+    "name": "망각사령묘 5 불멸의 묘상",
+    "mapColor": "#494654",
+    "zoneType": "hostile",
+    "x": 1750,
+    "y": 0,
+    "z": -60,
+    "tags": ["location:wilderness", "location:dungeon", "property:undead", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "deathless_colossus", "maxCount": 2, "respawnTime": 145 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "ossuary_crossing" },
+      { "locationId": "ironroot_edge", "condition": "level_150" }
+    ]
+  },
+  {
+    "id": "ironroot_edge",
+    "name": "철근황무지 1 솟은 뿌리",
+    "mapColor": "#88765a",
+    "zoneType": "neutral",
+    "x": 1820,
+    "y": 70,
+    "z": -30,
+    "tags": ["location:wilderness", "location:wastes", "property:earth", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ironroot_beast", "maxCount": 3, "respawnTime": 105 }
+    ],
+    "connections": [
+      { "locationId": "necropolis_depths" },
+      { "locationId": "ironroot_labyrinth" }
+    ]
+  },
+  {
+    "id": "ironroot_labyrinth",
+    "name": "철근황무지 2 매몰 미로",
+    "mapColor": "#7d6b52",
+    "zoneType": "hostile",
+    "x": 1900,
+    "y": 0,
+    "z": -60,
+    "tags": ["location:wilderness", "location:wastes", "location:dungeon", "property:earth", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ironroot_beast", "maxCount": 2, "respawnTime": 108 },
+      { "type": "monster", "dataId": "buried_titan", "maxCount": 1, "respawnTime": 145 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "ironroot_edge" },
+      { "locationId": "ironroot_core" }
+    ]
+  },
+  {
+    "id": "ironroot_core",
+    "name": "철근황무지 3 뒤집힌 지핵",
+    "mapColor": "#716049",
+    "zoneType": "hostile",
+    "x": 1980,
+    "y": -70,
+    "z": -100,
+    "tags": ["location:wilderness", "location:wastes", "property:earth", "property:metal", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "buried_titan", "maxCount": 1, "respawnTime": 150 },
+      { "type": "monster", "dataId": "corebreaker", "maxCount": 2, "respawnTime": 132 }
+    ],
+    "connections": [
+      { "locationId": "ironroot_labyrinth" },
+      { "locationId": "rift_edge", "condition": "level_180" }
+    ]
+  },
+  {
+    "id": "rift_edge",
+    "name": "성계균열 1 흔들리는 경계",
+    "mapColor": "#71638f",
+    "zoneType": "neutral",
+    "x": 2050,
+    "y": 0,
+    "z": -40,
+    "tags": ["location:wilderness", "location:rift", "property:light", "property:dark", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "rift_spark", "maxCount": 4, "respawnTime": 115 }
+    ],
+    "connections": [
+      { "locationId": "ironroot_core" },
+      { "locationId": "eclipse_crossroads" }
+    ]
+  },
+  {
+    "id": "eclipse_crossroads",
+    "name": "성계균열 2 일식 교차점",
+    "mapColor": "#66577f",
+    "zoneType": "hostile",
+    "x": 2130,
+    "y": 0,
+    "z": 20,
+    "tags": ["location:wilderness", "location:rift", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "eclipse_watcher", "maxCount": 3, "respawnTime": 130 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "rift_edge" },
+      { "locationId": "astral_nexus", "condition": "level_200" }
+    ]
+  },
+  {
+    "id": "astral_nexus",
+    "name": "성계균열 3 관문의 중심",
+    "mapColor": "#5b4d75",
+    "zoneType": "hostile",
+    "x": 2210,
+    "y": 0,
+    "z": 80,
+    "tags": ["location:wilderness", "location:rift", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "astral_gatekeeper", "maxCount": 1, "respawnTime": 900 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_crossroads" }
     ]
   }
 ]

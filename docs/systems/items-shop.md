@@ -14,6 +14,8 @@
 
 현재 소모품에는 체력·정신력 포션과 배고픔 35를 회복하는 `traveler_bread`, 수분 40을 회복하는 `fresh_water`가 있다. 장비·전투 아이템은 `old_sword`, `old_shield`, `venom_dagger`, `light_bow`, `wooden_arrow`, `basic_pickaxe`, `iron_pickaxe`, `seismic_crush_skillbook`이다. 무기 속성 태그는 아이템 분류·제작 조건에 남지만 직접 물리 공격 상성에는 자동 합산하지 않는다. 독 단검은 물리 피해가 실제로 적중한 뒤 50% 확률로 8초간 1레벨 맹독을 부여하며 무생물은 상태효과 적용만 거부한다. 가벼운 활은 화살 한 발을 소비해 화살 자체의 자연 속성으로 공격한다. 두 곡괭이는 `item:tool + tool:mining` 태그를 가진 주무기이며 광석의 공격 조건을 만족한다. 철 곡괭이는 제작법으로 획득한다.
 
+Lv.50 이후 지역에서는 직업별 고레벨 무기 `풍뢰강 검`, `뇌운 시위`, `밤유리 단검`, `성휘목 지팡이`를 낮은 확률로 획득한다. 각각 공격력+속도, 공격력+치명타율, 공격력+관통과 부패 적중 효과, 마법력+정신력 재생을 제공하며 `ItemData.balance`로 실제 전후 전투 지표를 비교할 수 있다.
+
 낚시 장비는 모두 `tool:fishing` 태그를 가지며 손 슬롯에서 행운·입질 속도·채집 영역 크기/속도·시작 게이지 modifier와 `fishingNetShape` metadata를 제공한다. 루미나르 물빛 연못의 낚시상점은 기본 미끼 조합에서 입질까지 약 31~45초가 걸리는 초보자 낚싯대와 범위·속도가 고르게 강화된 650 Gold의 `정교한 낚싯대`를 판매한다. 보물상자 전용 `너울그물 낚싯대`는 매우 넓지만 느린 직사각형 영역, `급류바늘 낚싯대`는 작지만 매우 빠른 원형 영역을 제공한다.
 
 `item:bait` 통통한 지렁이 미끼는 `/낚시` 시 보조 슬롯에 미끼가 없으면 인벤토리 묶음 전체가 자동 장착되고, 낚시 시작마다 장착 스택에서 하나만 소비된다. 직접 장착할 때도 스택형 장비는 묶음 전체가 이동한다. 물빛 연못 낚시상점은 미끼를 판매하고 일반~신화 물고기를 등급 태그와 `FishRarity.sellPrice`에 따라 5~8,000 Gold에 매입한다. 상세 흐름은 [미니게임·낚시](minigames-fishing.md)를 참고한다.
@@ -23,7 +25,7 @@
 metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-level key 단위로 합쳐 계산한다. `getMetadata/getMetadataSnapshot`으로 읽고 `setMetadata/resetMetadata`로 변경한다. 기본값과 같은 값을 설정하면 delta가 제거되며, override가 없는 필드는 실행 중 `ItemData.baseMetadata`가 바뀌어도 즉시 최신 값을 상속한다. 객체·배열 같은 중첩 값은 해당 top-level 필드 전체가 하나의 override다.
 
 아이템 이미지는 `Item.image` 공개 API로 조회한다. `/icons` 아래의 확장자 없는 key를 사용하며 `getMetadata('image')` → `ItemData.image` → `items/{itemDataId}` 순서로 결정된다. 따라서 일반 아이템은 `client/public/icons/items/{id}.png`를 자동으로 사용하고, 동일 정의의 개별 인스턴스만 다른 외형이 필요하면 `setMetadata('image', 'items/variant_key')`를 호출한다. 경로 이탈이나 URL 형태의 값은 무시되어 기본 이미지로 대체된다.
-새 `ItemData`를 등록할 때는 동일 변경에 128×128 투명 PNG 아이콘을 함께 추가하며, 기본 파일명은 `{itemDataId}.png`다. 임시 placeholder나 없는 경로를 마스터 데이터에 남기지 않는다.
+1차 콘텐츠 확장 기간에는 새 데이터마다 ImageGen 에셋을 만들지 않고 검·활·단검·지팡이·소모품처럼 카테고리가 맞는 기존 128×128 폴백 아이콘을 `image`에 명시한다. 존재하지 않는 경로는 허용하지 않으며 코드에 전용 아이콘 교체 TODO를 남긴다. 콘텐츠 규모와 밸런스가 확정된 뒤 전용 이미지를 일괄 제작한다.
 
 `learn_skill` 사용 handler는 아이템 metadata의 `skillDataId`를 `Player.skills.grant()`에 전달한다. 신규 획득 성공 시에만 해당 아이템 인스턴스 한 개를 제거하며 이미 보유했거나 데이터가 잘못된 경우 소비하지 않는다. 현재 `seismic_crush_skillbook`이 이 계약을 사용하는 첫 스킬북이다.
 

@@ -428,6 +428,109 @@ defineItem({
 });
 
 defineItem({
+    id: 'windsteel_sword',
+    name: '풍뢰강 검',
+    description: '폭풍 절벽의 전도성 금속으로 벼린 검. 공격과 발놀림을 함께 끌어올린다.',
+    // TODO(icons): 전용 아이콘 제작 전까지 낡은 검 아이콘을 사용한다.
+    image: 'items/old_sword',
+    category: '장검',
+    weight: 3.6,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 24, source: '' },
+        { attribute: 'speed', op: 'multiply', value: 1.05, source: '' },
+    ],
+    baseDurability: 220,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.PROPERTY_ELECTRIC, GameTags.PROPERTY_METAL],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+});
+
+defineItem({
+    id: 'stormstring_bow',
+    name: '뇌운 시위',
+    description: '팽팽한 전도성 시위가 화살의 속도와 치명적인 궤적을 높이는 장궁.',
+    // TODO(icons): 전용 아이콘 제작 전까지 가벼운 활 아이콘을 사용한다.
+    image: 'items/light_bow',
+    category: '활',
+    weight: 2.3,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 19, source: '' },
+        { attribute: 'critRate', op: 'add', value: 0.04, source: '' },
+    ],
+    baseDurability: 210,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.PROPERTY_ELECTRIC, GameTags.PROPERTY_METAL],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+});
+
+defineItem({
+    id: 'nightglass_dagger',
+    name: '밤유리 단검',
+    description: '빛을 삼키는 유리질 칼날. 적중 시 25% 확률로 8초간 부패를 남긴다.',
+    // TODO(icons): 전용 아이콘 제작 전까지 독 단검 아이콘을 사용한다.
+    image: 'items/venom_dagger',
+    category: '단검',
+    weight: 1.4,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 21, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 7, source: '' },
+    ],
+    baseDurability: 180,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.PROPERTY_DARK],
+    onBasicAttackHit: ({ target }) => {
+        const decay = StatusEffectType.fromKey('decay');
+        if (decay && Math.random() < 0.25) target.applyStatusEffect(decay, 8, 3);
+    },
+    balance: {
+        role: ItemBalanceRole.WEAPON,
+        attackType: 'physical',
+        recommendedJobIds: ['career:assassin'],
+        notes: ['부패의 대상 비례 효과는 기본 DPS와 분리합니다.'],
+    },
+});
+
+defineItem({
+    id: 'starwood_staff',
+    name: '성휘목 지팡이',
+    description: '빛을 머금은 고목 심재로 만든 지팡이. 마법력과 정신력 순환을 강화한다.',
+    // TODO(icons): 전용 아이콘 제작 전까지 견습 지팡이 아이콘을 사용한다.
+    image: 'items/apprentice_staff',
+    category: '지팡이',
+    weight: 2.6,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: { projectile: { dataId: 'basic_magic_orb', overrides: { tags: [GameTags.PROPERTY_LIGHT] } } },
+    },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'magicForce', op: 'add', value: 28, source: '' },
+        { attribute: 'mentalityRegen', op: 'add', value: 2, source: '' },
+    ],
+    baseDurability: 230,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+});
+
+defineItem({
     id: 'wooden_arrow',
     name: '화살',
     description: '투사체 기본 공격에 한 발씩 소모되는 가벼운 나무 화살.',

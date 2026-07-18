@@ -351,3 +351,132 @@ defineWorldMonster({
     },
     tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_NATURAL],
 });
+
+const advancedWorldMonsters: WorldMonsterData[] = [
+    {
+        id: 'spark_moth', name: '섬광나방', description: '폭풍 전류를 날개에 모아 번쩍이며 달려드는 거대 곤충.', level: 52,
+        baseAttribute: { maxLife: 1950, atk: 158, magicForce: 176, def: 72, magicDef: 88, speed: 3, attackSpeed: 1.3 },
+        drops: [{ itemDataId: 'mana_potion', minCount: 2, maxCount: 4, chance: 0.35 }], goldReward: { min: 125, max: 230 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'paralytic_poison', chance: 0.18, duration: 4, level: 3 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_ELECTRIC, GameTags.PROPERTY_INSECT],
+    },
+    {
+        id: 'ironwing_raptor', name: '철익 사냥새', description: '금속 깃털로 상승기류를 가르며 급강하하는 절벽의 포식자.', level: 60,
+        baseAttribute: { maxLife: 2450, atk: 190, def: 105, magicDef: 76, armorPen: 14, speed: 3.25, attackSpeed: 1.35 },
+        drops: [{ itemDataId: 'stormstring_bow', minCount: 1, maxCount: 1, chance: 0.03 }], goldReward: { min: 150, max: 270 },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_METAL, GameTags.PROPERTY_ELECTRIC],
+    },
+    {
+        id: 'thunder_colossus', name: '뇌정 거상', description: '낙뢰를 동력으로 삼는 고대 금속 거상.', level: 68,
+        baseAttribute: { maxLife: 3600, atk: 218, magicForce: 225, def: 138, magicDef: 122, speed: 1.15, attackSpeed: 0.75 },
+        drops: [{ itemDataId: 'windsteel_sword', minCount: 1, maxCount: 1, chance: 0.03 }, { itemDataId: 'gold_ore', minCount: 2, maxCount: 5, chance: 0.3 }],
+        goldReward: { min: 180, max: 320 }, attack: { damageType: 'magic' },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_ELECTRIC, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'gloom_beetle', name: '암영 딱정벌레', description: '밤숲의 빛을 등껍질 아래 빨아들인 대형 벌레.', level: 75,
+        baseAttribute: { maxLife: 3900, atk: 230, def: 145, magicDef: 118, speed: 2.35 },
+        drops: [{ itemDataId: 'emerald', minCount: 1, maxCount: 2, chance: 0.18 }], goldReward: { min: 195, max: 345 },
+        attack: { effect: { statusEffectId: 'fear', chance: 0.15, duration: 4, level: 3 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_DARK, GameTags.PROPERTY_INSECT],
+    },
+    {
+        id: 'shade_mantis', name: '그늘사마귀', description: '미로 같은 밤숲에서 그림자 사이를 뛰어넘는 칼날 벌레.', level: 85,
+        baseAttribute: { maxLife: 4700, atk: 275, def: 125, magicDef: 135, armorPen: 22, speed: 3.7, attackSpeed: 1.5, critRate: 0.16 },
+        drops: [{ itemDataId: 'nightglass_dagger', minCount: 1, maxCount: 1, chance: 0.025 }], goldReward: { min: 225, max: 390 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.28, duration: 8, level: 4 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_DARK, GameTags.PROPERTY_INSECT],
+    },
+    {
+        id: 'nightwood_core', name: '밤숲의 검은 심재', description: '어둠과 뿌리가 엉겨 스스로 걷기 시작한 숲의 핵.', level: 95,
+        baseAttribute: { maxLife: 6500, atk: 290, magicForce: 315, def: 165, magicDef: 175, speed: 1.4 },
+        drops: [{ itemDataId: 'diamond', minCount: 1, maxCount: 2, chance: 0.15 }], goldReward: { min: 260, max: 445 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'decay', chance: 0.3, duration: 10, level: 5 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_DARK, GameTags.PROPERTY_NATURAL],
+    },
+    {
+        id: 'dawn_wisp', name: '새벽빛 정령', description: '성역 외곽에 흩어진 부드러운 빛이 의지를 얻은 정령.', level: 105,
+        baseAttribute: { maxLife: 7200, atk: 285, magicForce: 345, def: 150, magicDef: 205, speed: 3.2 },
+        drops: [{ itemDataId: 'mana_potion', minCount: 3, maxCount: 6, chance: 0.45 }], goldReward: { min: 285, max: 480 },
+        attack: { damageType: 'magic' }, tags: [GameTags.ENTITY_ELEMENTAL, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'sanctum_keeper', name: '성역 수문장', description: '침입자를 가려내는 신성 금속 갑주.', level: 115,
+        baseAttribute: { maxLife: 8800, atk: 360, magicForce: 330, def: 225, magicDef: 220, speed: 1.65 },
+        drops: [{ itemDataId: 'starwood_staff', minCount: 1, maxCount: 1, chance: 0.025 }], goldReward: { min: 320, max: 530 },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_HOLY, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'halo_beast', name: '광륜수', description: '성역 중심의 빛을 수호하는 거대한 신성 짐승.', level: 125,
+        baseAttribute: { maxLife: 11000, atk: 385, magicForce: 405, def: 235, magicDef: 255, speed: 2.8, critRate: 0.13 },
+        drops: [{ itemDataId: 'diamond', minCount: 2, maxCount: 3, chance: 0.22 }], goldReward: { min: 360, max: 600 },
+        attack: { damageType: 'magic' }, tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY],
+    },
+    {
+        id: 'grave_sentinel', name: '묘문 파수병', description: '사령묘의 명령만 남아 갑옷 속에서 움직이는 언데드.', level: 135,
+        baseAttribute: { maxLife: 12500, atk: 430, def: 270, magicDef: 215, speed: 1.9 },
+        drops: [{ itemDataId: 'gold_ore', minCount: 3, maxCount: 6, chance: 0.3 }], goldReward: { min: 395, max: 650 },
+        attack: { effect: { statusEffectId: 'decay', chance: 0.25, duration: 9, level: 6 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'bone_oracle', name: '백골 예언자', description: '갈림길마다 거짓 속삭임을 흘리는 사령묘의 술사.', level: 145,
+        baseAttribute: { maxLife: 13800, atk: 390, magicForce: 475, def: 220, magicDef: 285, speed: 2.25 },
+        drops: [{ itemDataId: 'ruby', minCount: 2, maxCount: 4, chance: 0.22 }], goldReward: { min: 430, max: 710 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'fear', chance: 0.28, duration: 5, level: 6 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'deathless_colossus', name: '불멸의 묘상', description: '수많은 유해와 묘석이 하나로 엉겨 붙은 거대한 불사체.', level: 155,
+        baseAttribute: { maxLife: 18500, atk: 505, magicForce: 430, def: 330, magicDef: 295, speed: 1.05, attackSpeed: 0.7 },
+        drops: [{ itemDataId: 'diamond', minCount: 2, maxCount: 5, chance: 0.28 }], goldReward: { min: 480, max: 790 },
+        attack: { effect: { statusEffectId: 'decay', chance: 0.35, duration: 12, level: 8 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_STONE],
+    },
+    {
+        id: 'ironroot_beast', name: '철근수', description: '금속 뿌리와 흙덩이가 짐승의 형태로 굳은 황무지 생물.', level: 165,
+        baseAttribute: { maxLife: 21000, atk: 535, def: 345, magicDef: 265, speed: 2.4 },
+        drops: [{ itemDataId: 'iron_ore', minCount: 5, maxCount: 10, chance: 0.5 }], goldReward: { min: 520, max: 850 },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_EARTH, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'buried_titan', name: '매몰 거인', description: '오래된 대지층을 어깨에 이고 일어선 석질 거인.', level: 175,
+        baseAttribute: { maxLife: 25500, atk: 590, magicForce: 510, def: 405, magicDef: 330, speed: 0.95, attackSpeed: 0.65 },
+        drops: [{ itemDataId: 'stone', minCount: 8, maxCount: 15, chance: 0.7 }], goldReward: { min: 570, max: 920 },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_EARTH, GameTags.PROPERTY_STONE],
+    },
+    {
+        id: 'corebreaker', name: '지핵 파쇄자', description: '땅속 금속맥을 찢으며 전진하는 황무지의 최상위 포식체.', level: 185,
+        baseAttribute: { maxLife: 31000, atk: 650, magicForce: 560, def: 430, magicDef: 365, armorPen: 35, speed: 2.1 },
+        drops: [{ itemDataId: 'diamond', minCount: 3, maxCount: 6, chance: 0.35 }], goldReward: { min: 630, max: 1020 },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_EARTH, GameTags.PROPERTY_METAL, GameTags.PROPERTY_STONE],
+    },
+    {
+        id: 'rift_spark', name: '균열 섬광체', description: '빛과 어둠 사이에서 불안정하게 번쩍이는 차원 생명.', level: 190,
+        baseAttribute: { maxLife: 33000, atk: 625, magicForce: 690, def: 380, magicDef: 445, speed: 3.8, attackSpeed: 1.35 },
+        drops: [{ itemDataId: 'mana_potion', minCount: 5, maxCount: 9, chance: 0.55 }], goldReward: { min: 670, max: 1080 },
+        attack: { damageType: 'magic' }, tags: [GameTags.ENTITY_ELEMENTAL, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK, GameTags.PROPERTY_ELECTRIC],
+    },
+    {
+        id: 'eclipse_watcher', name: '일식의 감시자', description: '균열의 길목에서 빛과 그림자의 균형을 감시하는 인형.', level: 200,
+        baseAttribute: { maxLife: 39000, atk: 690, magicForce: 735, def: 455, magicDef: 485, speed: 2.5, critRate: 0.15, critDmg: 1.8 },
+        drops: [{ itemDataId: 'diamond', minCount: 4, maxCount: 8, chance: 0.4 }], goldReward: { min: 730, max: 1180 },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'astral_gatekeeper', name: '성계 문지기', description: '서로 반대되는 속성을 안정시켜 성계 관문을 붙드는 초월 거상.', level: 210,
+        baseAttribute: { maxLife: 240000, atk: 880, magicForce: 920, def: 560, magicDef: 590, speed: 1.4, attackSpeed: 0.32, critRate: 0.18, critDmg: 1.9 },
+        expReward: 210 * 20 * 7,
+        drops: [{ itemDataId: 'diamond', minCount: 8, maxCount: 14, chance: 0.55 }], goldReward: { min: 1800, max: 2800 },
+        skills: [{ skillDataId: 'seismic_crush', level: 5 }],
+        skillPattern: { sequence: ['seismic_crush'], initialDelay: 4, interval: { min: 9, max: 12 } },
+        ai: {
+            intelligence: 98, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.15, damage: 1, healing: 1.6, shielding: 1.2, control: 1.3, taunt: 3 },
+            tauntResistance: 0.9, switchThreshold: 0.3, decayPerSecond: 0.005,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    },
+];
+
+for (const monster of advancedWorldMonsters) defineWorldMonster(monster);

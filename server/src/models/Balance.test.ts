@@ -60,3 +60,17 @@ test('item report applies actual equipment modifiers and buff status effects', (
     assert.equal(tonic.statusEffect?.id, 'strength_enhancement');
     assert.ok(tonic.after.attack > tonic.before.attack);
 });
+
+test('high-level job weapons expose measurable role-specific gains', () => {
+    const reports = [
+        analyzeItemBalance(70, 'career:warrior', 'windsteel_sword'),
+        analyzeItemBalance(70, 'career:archer', 'stormstring_bow'),
+        analyzeItemBalance(90, 'career:assassin', 'nightglass_dagger'),
+        analyzeItemBalance(120, 'career:mage', 'starwood_staff'),
+    ];
+    assert.ok(reports[0].after.attack > reports[0].before.attack);
+    assert.ok(reports[1].after.physicalBasicDps > reports[1].before.physicalBasicDps);
+    assert.ok(reports[2].after.physicalBasicDps > reports[2].before.physicalBasicDps);
+    assert.ok(reports[3].after.magicForce > reports[3].before.magicForce);
+    assert.ok(reports.every(report => report.notes.every(note => !note.includes('추정'))));
+});
