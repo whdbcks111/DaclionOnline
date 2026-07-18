@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
     appendMiniGameInputSample,
+    getHazardDodgeHazards,
     MAX_MINIGAME_INPUT_SAMPLES,
     MINIGAME_INPUT_SAMPLE_INTERVAL_MS,
     simulateFishingCapture,
@@ -56,6 +57,7 @@ test('위험 회피 미니게임은 같은 seed와 입력을 서버에서 결정
     const config: HazardDodgeConfig = {
         seed: 7788,
         durationMs: 5_000,
+        label: '결정론 시험',
         mode: 'mixed',
         difficulty: 4,
         playerLabel: 'T',
@@ -71,6 +73,45 @@ test('위험 회피 미니게임은 같은 seed와 입력을 서버에서 결정
     const safeShortGame = simulateHazardDodge({ ...config, durationMs: 200 }, [{ at: 0, x: 0, y: 0 }], 200);
     assert.equal(safeShortGame.finished, true);
     assert.equal(safeShortGame.success, true);
+});
+
+test('후반 보스용 위험 회피 난이도는 6을 넘어 위험 구역 크기까지 확장된다', () => {
+    const config: HazardDodgeConfig = {
+        seed: 7788,
+        durationMs: 7_000,
+        label: '후반 난이도 시험',
+        mode: 'mixed',
+        difficulty: 6,
+        playerLabel: 'T',
+        playerSpeed: 18,
+        playerSize: 7,
+        telegraphMs: 300,
+    };
+    const normal = getHazardDodgeHazards(config, 600)[0];
+    const endgame = getHazardDodgeHazards({ ...config, difficulty: 10 }, 600)[0];
+    assert.ok(normal && endgame);
+    assert.equal(endgame.type, normal.type);
+    assert.ok(Math.min(endgame.width, endgame.height) > Math.min(normal.width, normal.height));
+});
+
+test('공명 폭주는 같은 seed로 예고 후 세 줄 레이저 연사를 재현한다', () => {
+    const config: HazardDodgeConfig = {
+        seed: 7788,
+        durationMs: 10_000,
+        label: '지핵 공명 폭주',
+        mode: 'resonance',
+        difficulty: 10,
+        playerLabel: 'T',
+        playerSpeed: 18,
+        playerSize: 7,
+        telegraphMs: 300,
+    };
+    const barrage = getHazardDodgeHazards(config, 1_350)
+        .filter(hazard => hazard.id.startsWith('laser-barrage:3:'));
+    assert.equal(barrage.length, 3);
+    assert.equal(barrage.every(hazard => hazard.type === 'laser'), true);
+    assert.ok(barrage.some(hazard => hazard.active));
+    assert.ok(barrage.some(hazard => !hazard.active));
 });
 
 test('단조 리듬 미니게임은 타격 시각을 서버에서 재현해 정확도와 성공을 판정한다', () => {

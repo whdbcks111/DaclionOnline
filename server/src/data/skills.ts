@@ -1684,3 +1684,82 @@ defineSkill({
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
 });
+
+// TODO(icons): 철근 심장수호자 전용 아이콘 제작 전까지 지각 붕괴 fallback을 공유한다.
+defineSkill({
+    id: 'ironroot_lockdown',
+    name: '철근 압살',
+    icon: 'skills/seismic_crush',
+    aliases: ['ironrootlockdown'],
+    maxLevel: 5,
+    descriptionTemplate:
+        '[color=gold]{{castTime}}초[/color] 동안 현재 위협 대상을 고정한 뒤 '
+        + '회피할 수 없고 방어력을 무시하는 [color=red]최대 생명력 비례 고정 피해[/color]를 입힙니다. '
+        + '적중한 대상은 [color=violet]{{controlDuration}}초 동안 제압[/color]됩니다.',
+    costTemplate: '소모값 없음',
+    activationConditionTemplate: '살아 있는 현재 대상이 필요합니다. 몬스터 전용 스킬입니다.',
+    activationMessage: '철근 압살!',
+    baseMetadata: {
+        castTime: 1.4,
+        fixedLifeRatio: 0.25,
+        magicForceMultiplier: 1.2,
+        controlDuration: 3,
+        baseCooldown: 8,
+    },
+    calculatedFields: {
+        castTime: context => numberMeta(context, 'castTime'),
+        controlDuration: context => numberMeta(context, 'controlDuration'),
+    },
+    calculateMaxCooldown: context => numberMeta(context, 'baseCooldown'),
+    canActivate: context => {
+        if (context.player) return denySkill('철근 심장수호자만 사용할 수 있는 스킬입니다.');
+        const target = context.owner.currentTarget;
+        if (!target) return denySkill('현재 위협 대상이 없습니다.');
+        if (target.locationId !== context.owner.locationId || target.isDefeated) {
+            return denySkill('현재 위협 대상을 공격할 수 없습니다.');
+        }
+        const attackDenied = target.getAttackDeniedReason(context.owner.attackOwner);
+        return attackDenied ? denySkill(attackDenied) : { accepted: true };
+    },
+    onStart: context => {
+        const castTime = numberMeta(context, 'castTime');
+        sendNotificationFiltered(
+            userId => isOnlinePlayerAtLocation(userId, context.owner.locationId),
+            {
+                key: `skill-telegraph:${context.owner.name}:ironroot-lockdown`,
+                message: `${context.owner.name}이(가) 한 명을 철근으로 고정합니다! (${castTime.toFixed(1)}초)`,
+                length: castTime * 1_000,
+            },
+        );
+        return { duration: castTime, state: { released: false } };
+    },
+    onUpdate: context => {
+        const castTime = numberMeta(context, 'castTime');
+        if (context.elapsed < castTime || context.skill.getActiveState<boolean>('released')) return 'continue';
+        context.skill.setActiveState('released', true);
+        const target = context.owner.currentTarget;
+        if (!target || target.isDefeated || target.locationId !== context.owner.locationId) return 'finish';
+        const fixedDamage = Math.max(
+            target.maxLife * numberMeta(context, 'fixedLifeRatio'),
+            context.owner.attribute.get(AttributeType.MAGIC_FORCE) * numberMeta(context, 'magicForceMultiplier'),
+        );
+        const result = context.owner.attack(target, 'magic', fixedDamage, {
+            unavoidable: true,
+            fixedDamage: true,
+            consumeMainHandDurability: false,
+            triggerMainHandHitEffects: false,
+        });
+        if (result) {
+            target.applyStatusEffect(
+                LegacyStatusEffects.OVERMASTER,
+                numberMeta(context, 'controlDuration'),
+                Math.max(1, context.skill.level * 2),
+            );
+        }
+        return 'finish';
+    },
+    tags: [
+        GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT,
+        GameTags.PROPERTY_EARTH, GameTags.PROPERTY_METAL,
+    ],
+});

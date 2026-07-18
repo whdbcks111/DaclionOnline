@@ -80,6 +80,7 @@ function dodgePreset(
     mode: HazardDodgeConfig['mode'],
     difficulty: number,
 ): MiniGamePreset {
+    const endgame = difficulty > 6;
     return {
         id,
         label,
@@ -89,13 +90,14 @@ function dodgePreset(
             const movementSpeed = Math.max(0.1, player.attribute.get(AttributeType.SPEED));
             const config: HazardDodgeConfig = {
                 seed: seed(),
-                durationMs: 5_000,
+                durationMs: endgame ? 10_000 : 5_000,
+                label,
                 mode,
                 difficulty,
                 playerLabel: player.name.slice(0, 1) || 'P',
                 playerSpeed: Math.max(10, Math.min(48, movementSpeed * 18)),
-                playerSize: 6,
-                telegraphMs: Math.max(480, 1_050 - difficulty * 85),
+                playerSize: endgame ? 7 : 6,
+                telegraphMs: Math.max(endgame ? 300 : 480, 1_050 - difficulty * 85),
             };
             return startMiniGame({
                 userId: player.userId,
@@ -159,6 +161,7 @@ const PRESETS: readonly MiniGamePreset[] = Object.freeze([
     dodgePreset('dodge:bombs:easy', '폭탄 회피 쉬움', '이동속도 동기화 · 폭발 범위만 회피', 'bombs', 2),
     dodgePreset('dodge:lasers:normal', '레이저 회피 보통', '이동속도 동기화 · 가로/세로 레이저 회피', 'lasers', 4),
     dodgePreset('dodge:mixed:boss', '복합 보스 패턴', '이동속도 동기화 · 폭탄과 레이저 복합 패턴', 'mixed', 6),
+    dodgePreset('dodge:resonance:endgame', '후반 공명 폭주', '10초 · 레이저 연사 · 심장수호자 수정 생존 기준 난이도 10', 'resonance', 10),
     forgePreset('forge:steady', '기초 단조', '일정한 박자에 맞춰 망치를 내리치는 단조 테스트', 620, 0.65),
     forgePreset('forge:rapid', '고속 단조', '빠른 박자와 좁은 판정의 상급 단조 테스트', 420, 0.78),
 ]);

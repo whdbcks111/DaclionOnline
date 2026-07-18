@@ -1,6 +1,6 @@
 export type MiniGameType = 'fishing_capture' | 'hazard_dodge' | 'forge_rhythm'
 export type FishingCaptureShape = 'circle' | 'square' | 'rectangle'
-export type HazardDodgeMode = 'bombs' | 'lasers' | 'mixed'
+export type HazardDodgeMode = 'bombs' | 'lasers' | 'mixed' | 'resonance'
 
 export interface MiniGameInputSample {
     /** 미니게임 시작 후 경과 시간(ms) */
@@ -21,6 +21,8 @@ export interface MiniGameActionSample {
 export const MINIGAME_INPUT_SAMPLE_INTERVAL_MS = 20
 /** 현재 최장 낚시 미니게임(30초)의 모든 20ms 구간을 충분히 담는 상한이다. */
 export const MAX_MINIGAME_INPUT_SAMPLES = 2_048
+/** 보스 위험 회피가 사용하는 공용 난이도 상한. 7~10은 후반 보스 전용 밀도다. */
+export const MAX_HAZARD_DODGE_DIFFICULTY = 10
 
 export function appendMiniGameInputSample(
     inputs: MiniGameInputSample[],
@@ -66,6 +68,8 @@ export interface FishingCaptureConfig {
 export interface HazardDodgeConfig {
     seed: number
     durationMs: number
+    /** 실제 보스 패턴명 또는 관리자 테스트 프리셋명. */
+    label: string
     mode: HazardDodgeMode
     difficulty: number
     playerLabel: string
@@ -253,7 +257,11 @@ function randomUnit(seed: number, index: number, salt: number): number {
 }
 
 function hazardInterval(config: HazardDodgeConfig): number {
-    return clamp(1_100 - clamp(config.difficulty, 1, 6) * 105, 470, 995)
+    const difficulty = clamp(config.difficulty, 1, MAX_HAZARD_DODGE_DIFFICULTY)
+    // 기존 1~6 구간의 체감은 유지하고, 후반 보스 구간만 더 촘촘하게 확장한다.
+    return difficulty <= 6
+        ? clamp(1_100 - difficulty * 105, 470, 995)
+        : Math.max(260, 470 - (difficulty - 6) * 52.5)
 }
 
 /** 현재 시각에 표시할 예고/활성 위험 구역을 seed로 재생성한다. */
@@ -265,14 +273,42 @@ export function getHazardDodgeHazards(config: HazardDodgeConfig, elapsedMs: numb
     const hazards: HazardDodgeHazard[] = []
     for (let index = 0; index < maximum; index++) {
         const startAt = firstAt + index * interval
-        const type = config.mode === 'mixed'
+        const laserBarrage = config.mode === 'resonance' && index % 5 === 3
+        const type = config.mode === 'mixed' || config.mode === 'resonance'
             ? (randomUnit(config.seed, index, 0) < 0.52 ? 'bomb' : 'laser')
             : config.mode === 'bombs' ? 'bomb' : 'laser'
-        const activeMs = type === 'bomb' ? 280 : 380
+        const activeMs = laserBarrage ? 300 : type === 'bomb' ? 280 : 380
         const activeAt = startAt + telegraphMs
-        const endAt = activeAt + activeMs
+        const barrageStepMs = 110
+        const endAt = activeAt + activeMs + (laserBarrage ? barrageStepMs * 2 : 0)
         if (elapsedMs < startAt || elapsedMs > endAt) continue
-        const difficulty = clamp(config.difficulty, 1, 6)
+        const difficulty = clamp(config.difficulty, 1, MAX_HAZARD_DODGE_DIFFICULTY)
+        if (laserBarrage) {
+            const vertical = randomUnit(config.seed, index, 3) < 0.5
+            const thickness = 6 + difficulty * 1.2
+            const center = 30 + randomUnit(config.seed, index, 4) * 40
+            for (let shot = 0; shot < 3; shot++) {
+                const shotActiveAt = activeAt + shot * barrageStepMs
+                const shotEndAt = shotActiveAt + activeMs
+                if (elapsedMs > shotEndAt) continue
+                const active = elapsedMs >= shotActiveAt
+                const progress = active
+                    ? clamp((elapsedMs - shotActiveAt) / activeMs, 0, 1)
+                    : clamp((elapsedMs - startAt) / Math.max(1, shotActiveAt - startAt), 0, 1)
+                const position = clamp(center + (shot - 1) * 26, 7, 93)
+                hazards.push({
+                    id: `laser-barrage:${index}:${shot}`,
+                    type: 'laser',
+                    x: vertical ? position : 50,
+                    y: vertical ? 50 : position,
+                    width: vertical ? thickness : 100,
+                    height: vertical ? 100 : thickness,
+                    active,
+                    progress,
+                })
+            }
+            continue
+        }
         const active = elapsedMs >= activeAt
         const progress = active
             ? clamp((elapsedMs - activeAt) / activeMs, 0, 1)

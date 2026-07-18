@@ -460,7 +460,7 @@ const advancedWorldMonsters: WorldMonsterData[] = [
     },
     {
         id: 'ironroot_heartwarden', name: '철근 심장수호자',
-        description: '세 공명 수정의 진동으로 몸을 보호하는 철근미궁의 수호자. 수정이 남아 있으면 받는 피해가 85% 감소하고 공명 폭주가 강화된다.',
+        description: '세 공명 수정의 진동으로 몸을 보호하는 철근미궁의 수호자. 수정이 남아 있으면 받는 피해가 85% 감소하고 공명 폭주가 강화된다. 가장 위협적인 한 명을 철근으로 고정해 방어를 무시하고 압살한다.',
         level: 180,
         baseAttribute: {
             maxLife: 185000, atk: 680, magicForce: 710, def: 455, magicDef: 470,
@@ -474,9 +474,16 @@ const advancedWorldMonsters: WorldMonsterData[] = [
         ],
         goldReward: { min: 1450, max: 2300 },
         attack: { damageType: 'magic' },
-        skills: [{ skillDataId: 'seismic_crush', level: 5 }],
-        skillPattern: { sequence: ['seismic_crush'], initialDelay: 5, interval: { min: 10, max: 14 } },
-        challengePattern: { handler: 'ironroot:resonance-storm', initialDelay: 8, interval: { min: 18, max: 24 } },
+        skills: [
+            { skillDataId: 'ironroot_lockdown', level: 5 },
+            { skillDataId: 'seismic_crush', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['ironroot_lockdown', 'seismic_crush'],
+            initialDelay: 4,
+            interval: { min: 7, max: 10 },
+        },
+        challengePattern: { handler: 'ironroot:resonance-storm', initialDelay: 7, interval: { min: 15, max: 20 } },
         ai: {
             intelligence: 96, disposition: MonsterAiDisposition.THREAT,
             weights: { attack: 0.15, damage: 1, healing: 1.55, shielding: 1.25, control: 1.2, taunt: 2.8 },

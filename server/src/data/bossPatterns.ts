@@ -8,6 +8,7 @@ import { AttributeType } from '../models/Attribute.js';
 import type Player from '../models/Player.js';
 import { getLocation, registerLocationPassive } from '../models/Location.js';
 import { registerMonsterChallengePattern } from '../models/Monster.js';
+import { StatusEffectType } from '../models/StatusEffect.js';
 import { cancelMiniGame, normalizeMiniGameInputs, startMiniGame } from '../modules/minigame.js';
 import { sendBotMessageToUser, sendNotificationToUser } from '../modules/message.js';
 import { chat } from '../utils/chatBuilder.js';
@@ -19,6 +20,14 @@ interface HazardBossPatternData {
     difficulty: number;
     failureLifeRatio: number;
     activeCrystalDifficulty?: number;
+    activeCrystalFailureLifeRatio?: number;
+    durationMs?: number;
+    playerSize?: number;
+    failureEffect?: {
+        statusEffectId: string;
+        duration: number;
+        level: number;
+    };
 }
 
 function seed(): number {
@@ -29,13 +38,14 @@ function createHazardConfig(player: Player, data: HazardBossPatternData, difficu
     const movementSpeed = Math.max(0.1, player.attribute.get(AttributeType.SPEED));
     return {
         seed: seed(),
-        durationMs: 5_000,
+        durationMs: data.durationMs ?? 5_000,
+        label: data.label,
         mode: data.mode,
         difficulty,
         playerLabel: player.name.slice(0, 1) || 'P',
         playerSpeed: Math.max(10, Math.min(48, movementSpeed * 18)),
-        playerSize: 6,
-        telegraphMs: Math.max(420, 1_030 - difficulty * 85),
+        playerSize: data.playerSize ?? 6,
+        telegraphMs: Math.max(300, 1_030 - difficulty * 85),
     };
 }
 
@@ -66,15 +76,26 @@ function registerHazardBossPattern(data: HazardBossPatternData): void {
                 try {
                     if (result.success || monster.isDefeated || player.isDefeated
                         || monster.locationId !== player.locationId) return;
-                    const rawDamage = player.maxLife * data.failureLifeRatio;
+                    const failureLifeRatio = activeCrystals > 0 && data.activeCrystalFailureLifeRatio
+                        ? data.activeCrystalFailureLifeRatio
+                        : data.failureLifeRatio;
+                    const rawDamage = player.maxLife * failureLifeRatio;
                     const damage = player.damage(rawDamage, 'magic', {
                         type: 'attack',
                         causeEntity: monster,
                         fixedDamage: true,
                     });
+                    const failureEffect = data.failureEffect;
+                    const effectType = failureEffect
+                        ? StatusEffectType.fromKey(failureEffect.statusEffectId)
+                        : undefined;
+                    if (failureEffect && effectType) {
+                        player.applyStatusEffect(effectType, failureEffect.duration, failureEffect.level);
+                    }
                     sendNotificationToUser(player.userId, {
                         key: `boss-pattern-hit:${data.id}`,
-                        message: `${data.label}에 피격되어 ${damage.lifeDamage.toFixed(1)} 피해를 입었습니다.`,
+                        message: `${data.label}에 피격되어 ${damage.lifeDamage.toFixed(1)} 피해를 입었습니다.`
+                            + (effectType ? ` ${effectType.label} 상태가 적용됩니다.` : ''),
                     });
                 } finally {
                     complete();
@@ -86,7 +107,7 @@ function registerHazardBossPattern(data: HazardBossPatternData): void {
 
         sendBotMessageToUser(player.userId, chat()
             .color('red', builder => builder.weight('bold', nested => nested.text(`[ ${data.label} ]`)))
-            .text('\n5초 동안 위험 구역을 피하세요!')
+            .text(`\n${(config.durationMs / 1_000).toFixed(0)}초 동안 위험 구역을 피하세요!`)
             .build());
         return {
             cancel: () => { cancelMiniGame(player.userId, `${monster.name}의 패턴이 중단되었습니다.`); },
@@ -105,10 +126,14 @@ registerHazardBossPattern({
 registerHazardBossPattern({
     id: 'ironroot:resonance-storm',
     label: '지핵 공명 폭주',
-    mode: 'mixed',
-    difficulty: 4,
-    activeCrystalDifficulty: 6,
-    failureLifeRatio: 0.26,
+    mode: 'resonance',
+    difficulty: 8,
+    activeCrystalDifficulty: 10,
+    failureLifeRatio: 0.45,
+    activeCrystalFailureLifeRatio: 0.6,
+    durationMs: 10_000,
+    playerSize: 7,
+    failureEffect: { statusEffectId: 'overmaster', duration: 4, level: 10 },
 });
 
 registerHazardBossPattern({
