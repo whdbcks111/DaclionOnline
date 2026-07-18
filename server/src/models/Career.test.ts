@@ -74,6 +74,31 @@ test('5개 1차 직업은 최소 3개 스킬을 지급하고 서로 다른 20개
     }
 });
 
+test('마법 주문과 자체 생성 투사체는 장착 무기를 요구하지 않는다', () => {
+    for (const skillId of [
+        'magic_bolt', 'elemental_bind', 'fireball', 'frost_bolt', 'lightning_orb',
+        'phantom_shooter_technique', 'arcane_reaper_technique', 'battle_magus_technique',
+        'star_weaver_technique', 'hexblade_technique', 'runeforger_technique',
+        'artificer_technique', 'arcane_smith_technique',
+    ]) {
+        assert.equal(getSkillData(skillId)?.weaponRequirement, undefined, skillId);
+    }
+
+    assert.deepEqual(getSkillData('spellblade_technique')?.weaponRequirement?.mainHandAnyTags, ['weapon:sword']);
+    assert.ok(getSkillData('steel_slash')?.weaponRequirement);
+    assert.ok(getSkillData('multishot')?.weaponRequirement);
+    assert.ok(getSkillData('venom_blade')?.weaponRequirement);
+});
+
+test('엘리트 직업의 계승 패시브와 액티브는 서로 다른 표시 이름을 가진다', () => {
+    for (const job of getAllJobs().filter(candidate => candidate.tier === JobTier.ELITE)) {
+        const names = job.grantedSkills.map(grant => getSkillData(grant.skillDataId)?.name);
+        assert.equal(new Set(names).size, names.length, job.name);
+    }
+    assert.equal(getSkillData('arcane_reaper_mastery')?.name, '영혼 포식');
+    assert.equal(getSkillData('arcane_reaper_technique')?.name, '비전 수확');
+});
+
 test('대장장이는 현재 조건에 맞는 메인 또는 서브 직업 슬롯을 실제로 차지한다', () => {
     const mainCase = createCareer(20);
     assert.equal(mainCase.career.getAssignableSlot('career:blacksmith'), JobSlotType.MAIN);

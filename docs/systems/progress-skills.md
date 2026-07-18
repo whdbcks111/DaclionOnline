@@ -53,9 +53,11 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 - 획득/발동: `autoAcquire`, `autoActivate`, `activateOnMessage`, `canUse`, `canActivate`.
 - 수명주기: `onAcquire`, `onStart`, `onUpdate`, `onFinish`, `onPassiveUpdate`, `onPassiveInactive`.
 - 분류: `tags`, `maxLevel`, `aliases`, `activationMessage`.
-- 직업/장비: `jobRequirement`, `weaponRequirement`, 공통 메시지 시전어 `activationPhrase`.
+- 직업/장비: `jobRequirement`, 선택적 `weaponRequirement`, 공통 메시지 시전어 `activationPhrase`.
 
 `activationPhrase`가 없으면 `activationMessage`를 일반 채팅의 정확 일치 시전어로도 사용한다. 직업 요구 조건은 [직업·전직 시스템](careers.md)의 `CareerProfile.hasJob`을 사용해 엘리트 하위 계보를 자동 호환한다.
+
+`weaponRequirement`는 검으로 베기, 활로 사격하기처럼 장착 무기 자체가 기술 동작에 필요한 경우에만 둔다. 주문·자체 생성 투사체·마도 장치처럼 스킬이 효과 매개체를 직접 만드는 경우에는 무기 조건을 두지 않으며 주무기 내구도도 소모하지 않는다. 지팡이는 마법력과 투사체 가속을 높이고 마법 기본 공격을 제공하는 선택 장비이지, 마법사 스킬의 시전 자격이 아니다.
 
 스킬 템플릿은 `{{icon.atk}}`, `{{icon.magicForce}}`, `{{icon.projectileAcceleration}}`처럼 `icon.{AttributeKey}`를 사용하면 해당 `AttributeType.iconMarkup`으로 치환된다. 공격력·마법력 계수, 관통, 방어, 속도, 투사체 가속, 치명타와 정신력 소모 표기는 이 문법을 사용해 상태창과 같은 대표색 아이콘을 재사용한다.
 

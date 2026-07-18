@@ -503,7 +503,7 @@ const elitePassives = [
         ],
     },
     {
-        id: 'arcane_reaper_mastery', name: '비전 수확', jobId: 'career:arcane_reaper', icon: 'jobs/assassin',
+        id: 'arcane_reaper_mastery', name: '영혼 포식', jobId: 'career:arcane_reaper', icon: 'jobs/assassin',
         description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color] 증가합니다.',
         modifiers: [
             { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.1, label: '마법력 증가', display: '+10%' },
@@ -1147,9 +1147,9 @@ defineSkill({
 
 defineSkill({
     id: 'magic_bolt', name: '마력탄', icon: 'skills/career_mage', maxLevel: 5,
-    descriptionTemplate: `지팡이로 응축한 정신 에너지를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
+    descriptionTemplate: `응축한 정신 에너지를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 10[/color]',
-    activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'), activationMessage: '마력탄!', baseMetadata: null,
+    activationConditionTemplate: activationGuide('살아 있는 현재 대상이 필요합니다. 장착 무기와 관계없이 사용할 수 있습니다.'), activationMessage: '마력탄!', baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 165, 13),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'magic_bolt', true),
@@ -1160,7 +1160,7 @@ defineSkill({
         calculateManaCost: () => 10,
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 4, 0.2, 3.2),
-    jobRequirement: jobRequirement(JOBS.mage), weaponRequirement: weaponRequirement('지팡이를 장착해야 합니다.', GameTags.WEAPON_STAFF),
+    jobRequirement: jobRequirement(JOBS.mage),
     canActivate: simpleCheck(10), onStart: context => {
         spend(context, 10);
         projectileAttack(context, 'magic_bolt', percentByLevel(context.skill.level, 165, 13) / 100);
@@ -1207,7 +1207,7 @@ defineSkill({
     id: 'elemental_bind', name: '원소 속박', icon: 'skills/career_mage', maxLevel: 5,
     descriptionTemplate: `얼음 속성 구체로 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. 적중한 대상은 {{bindDuration}} 동안 공격·스킬·이동·장소 이동을 할 수 없습니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 24[/color]',
-    activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'), activationMessage: '원소 속박!', baseMetadata: null,
+    activationConditionTemplate: activationGuide('살아 있는 현재 대상이 필요합니다. 장착 무기와 관계없이 사용할 수 있습니다.'), activationMessage: '원소 속박!', baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 115, 10),
         bindDuration: context => levelValueTooltip(context, '속박 지속시간', 1.5, 0.2, '초'),
@@ -1220,7 +1220,7 @@ defineSkill({
         notes: ['속박의 가치는 적 패턴에 따라 달라 피해량에 임의 합산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 15, 0.75, 12),
-    jobRequirement: jobRequirement(JOBS.mage), weaponRequirement: weaponRequirement('지팡이를 장착해야 합니다.', GameTags.WEAPON_STAFF),
+    jobRequirement: jobRequirement(JOBS.mage),
     canActivate: simpleCheck(24), onStart: context => {
         spend(context, 24);
         projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 115, 10) / 100, [GameTags.PROPERTY_ICE], (_p, result) => {
@@ -1264,7 +1264,7 @@ for (const elemental of [
     id: elemental.id, name: elemental.name, icon: elemental.icon, maxLevel: 5,
     descriptionTemplate: `${elemental.name}를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 속성 마법 피해를 입히고 Lv.{{level}} ${elemental.effectLabel} 효과를 {{effectDuration}} 동안 부여합니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 28[/color]',
-    activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'),
+    activationConditionTemplate: activationGuide('살아 있는 현재 대상이 필요합니다. 장착 무기와 관계없이 사용할 수 있습니다.'),
     activationMessage: `${elemental.name}!`, baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 185, 15),
@@ -1278,7 +1278,7 @@ for (const elemental of [
         notes: [`${elemental.effectLabel} 효과는 대상 상태에 따라 달라 직접 타격 DPM과 분리합니다.`],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 9, 0.5, 7),
-    jobRequirement: jobRequirement(JOBS.mage), weaponRequirement: weaponRequirement('지팡이를 장착해야 합니다.', GameTags.WEAPON_STAFF),
+    jobRequirement: jobRequirement(JOBS.mage),
     autoAcquire: { watchedProgress: [elemental.stat], check: ({ player }) => Boolean(player?.career?.hasJob(JOBS.mage) && player.progress.getCounter(elemental.stat) >= 5n) },
     canActivate: simpleCheck(28), onStart: context => {
         spend(context, 28);
@@ -1309,8 +1309,9 @@ interface EliteTechniqueDefinition {
     secondaryPerLevelPercent?: number;
     manaCost: number;
     cooldown: number;
-    weaponDescription: string;
-    weaponTags: readonly TagId[];
+    /** 실제 무기를 휘두르거나 발사하는 기술에만 지정한다. 자체 생성 투사체·주문에는 생략한다. */
+    weaponDescription?: string;
+    weaponTags?: readonly TagId[];
     projectile?: 'basic_arrow' | 'magic_bolt';
     propertyTag?: TagId;
     guaranteedCritical?: boolean;
@@ -1339,8 +1340,8 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         id: 'spellblade_technique', name: '마력 검파', jobId: 'career:spellblade', icon: 'jobs/warrior',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 255, perLevelPercent: 16,
         secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 120, secondaryPerLevelPercent: 8,
-        manaCost: 30, cooldown: 11, weaponDescription: '검 또는 지팡이를 장착해야 합니다.',
-        weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_STAFF],
+        manaCost: 30, cooldown: 11, weaponDescription: '검을 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_SWORD],
         extraDescription: '칼날에 실은 마력을 폭발시켜 마법 피해를 입힙니다.',
     },
     {
@@ -1375,38 +1376,33 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     {
         id: 'phantom_shooter_technique', name: '환영 추적탄', jobId: 'career:phantom_shooter', icon: 'jobs/assassin',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 250, perLevelPercent: 16,
-        manaCost: 25, cooldown: 11, weaponDescription: '활 또는 단검을 장착해야 합니다.',
-        weaponTags: [GameTags.WEAPON_BOW, GameTags.WEAPON_DAGGER], projectile: 'basic_arrow',
-        extraDescription: '환영이 적의 움직임을 따라가는 물리 투사체를 발사합니다.', propertyTag: GameTags.PROPERTY_DARK,
+        manaCost: 25, cooldown: 11, projectile: 'basic_arrow',
+        extraDescription: '장착 무기와 관계없이 환영 단검을 투척해 적의 움직임을 추적합니다.', propertyTag: GameTags.PROPERTY_DARK,
     },
     {
         id: 'arcane_reaper_technique', name: '비전 수확', jobId: 'career:arcane_reaper', icon: 'jobs/assassin',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 275, perLevelPercent: 17,
         secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 100, secondaryPerLevelPercent: 6,
-        manaCost: 30, cooldown: 12, weaponDescription: '단검 또는 지팡이를 장착해야 합니다.',
-        weaponTags: [GameTags.WEAPON_DAGGER, GameTags.WEAPON_STAFF], propertyTag: GameTags.PROPERTY_POISON,
+        manaCost: 30, cooldown: 12, propertyTag: GameTags.PROPERTY_POISON,
         extraDescription: '적중 시 같은 레벨의 맹독을 6초 동안 부여합니다.',
         onHit: (target, level) => target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 6, level),
     },
     {
         id: 'battle_magus_technique', name: '마력갑 돌진', jobId: 'career:battle_magus', icon: 'jobs/mage',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 225, perLevelPercent: 14,
-        manaCost: 30, cooldown: 13, weaponDescription: '지팡이 또는 검을 장착해야 합니다.',
-        weaponTags: [GameTags.WEAPON_STAFF, GameTags.WEAPON_SWORD], shieldPercent: 12,
+        manaCost: 30, cooldown: 13, shieldPercent: 12,
         extraDescription: '공격 후 최대 생명력의 12%만큼 일반 보호막을 8초 동안 얻습니다.',
     },
     {
         id: 'star_weaver_technique', name: '낙성', jobId: 'career:star_weaver', icon: 'jobs/mage',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 315, perLevelPercent: 18,
-        manaCost: 34, cooldown: 15, weaponDescription: '지팡이 또는 활을 장착해야 합니다.',
-        weaponTags: [GameTags.WEAPON_STAFF, GameTags.WEAPON_BOW], projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_LIGHT,
+        manaCost: 34, cooldown: 15, projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_LIGHT,
         extraDescription: '별빛을 낙하시켜 강한 빛 속성 마법 피해를 입힙니다.',
     },
     {
         id: 'hexblade_technique', name: '저주 각인', jobId: 'career:hexblade', icon: 'jobs/mage',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 245, perLevelPercent: 16,
-        manaCost: 29, cooldown: 11, weaponDescription: '지팡이 또는 단검을 장착해야 합니다.',
-        weaponTags: [GameTags.WEAPON_STAFF, GameTags.WEAPON_DAGGER], propertyTag: GameTags.PROPERTY_DARK,
+        manaCost: 29, cooldown: 11, propertyTag: GameTags.PROPERTY_DARK,
         extraDescription: '적중 시 같은 레벨의 마비독을 3초 동안 부여합니다.',
         onHit: (target, level) => target.applyStatusEffect(StatusEffectType.PARALYTIC_POISON, 3, level),
     },
@@ -1434,7 +1430,7 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     {
         id: 'runeforger_technique', name: '폭발 룬', jobId: 'career:runeforger', icon: 'jobs/mage',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 300, perLevelPercent: 18,
-        manaCost: 34, cooldown: 14, weaponDescription: '지팡이를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_STAFF],
+        manaCost: 34, cooldown: 14,
         projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_FIRE,
         extraDescription: '금속에 새긴 룬을 폭발시켜 불 속성 마법 피해를 입힙니다.',
     },
@@ -1448,7 +1444,7 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     {
         id: 'artificer_technique', name: '자동 추적탄', jobId: 'career:artificer', icon: 'items/iron_pickaxe',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 275, perLevelPercent: 17,
-        manaCost: 27, cooldown: 11, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        manaCost: 27, cooldown: 11,
         projectile: 'basic_arrow', propertyTag: GameTags.PROPERTY_ELECTRIC,
         extraDescription: '기계식 유도 장치가 달린 전기 속성 탄환을 발사합니다.',
     },
@@ -1463,7 +1459,7 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     {
         id: 'arcane_smith_technique', name: '마도 용융탄', jobId: 'career:arcane_smith', icon: 'items/iron_pickaxe',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 310, perLevelPercent: 18,
-        manaCost: 35, cooldown: 14, weaponDescription: '지팡이를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_STAFF],
+        manaCost: 35, cooldown: 14,
         projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_FIRE, shieldPercent: 10,
         extraDescription: '용융 마력을 발사하고 공격 후 최대 생명력의 10%만큼 일반 보호막을 8초 동안 얻습니다.',
     },
@@ -1499,7 +1495,9 @@ for (const technique of eliteTechniques) {
         maxLevel: 5,
         descriptionTemplate: `현재 대상에게 {{icon.${technique.attribute.key}}} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 ${technique.damageType === 'magic' ? '마법' : '물리'} 피해를 입힙니다. ${technique.extraDescription ?? ''}${technique.projectile ? ` ${PROJECTILE_FLIGHT_TEXT}` : ''}`,
         costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${technique.manaCost}[/color]`,
-        activationConditionTemplate: activationGuide(`${technique.weaponDescription} 살아 있는 현재 대상이 필요합니다.`),
+        activationConditionTemplate: activationGuide(
+            `${technique.weaponDescription ? `${technique.weaponDescription} ` : '장착 무기와 관계없이 '}살아 있는 현재 대상이 필요합니다.`,
+        ),
         activationMessage: `${technique.name}!`,
         baseMetadata: null,
         calculatedFields: {
@@ -1525,7 +1523,9 @@ for (const technique of eliteTechniques) {
         },
         calculateMaxCooldown: () => technique.cooldown,
         jobRequirement: jobRequirement(technique.jobId),
-        weaponRequirement: weaponRequirement(technique.weaponDescription, ...technique.weaponTags),
+        ...(technique.weaponDescription && technique.weaponTags?.length ? {
+            weaponRequirement: weaponRequirement(technique.weaponDescription, ...technique.weaponTags),
+        } : {}),
         canActivate: simpleCheck(technique.manaCost),
         onStart: context => {
             const found = targetOrDeny(context);
@@ -1552,7 +1552,7 @@ for (const technique of eliteTechniques) {
                     damage, {
                         criticalRate: technique.guaranteedCritical ? 1 : undefined,
                         unavoidable: technique.unavoidable,
-                        consumeMainHandDurability: true,
+                        consumeMainHandDurability: Boolean(technique.weaponTags?.length),
                     });
                 if (!result) throw new Error(`${technique.name} 공격이 확정되지 않았습니다.`);
                 if (!result.evaded && result.finalDamage > 0) technique.onHit?.(found.target, context.skill.level);
