@@ -21,14 +21,17 @@ import { markLocationVisited } from './WorldMap.js';
 import CareerProfile from './Career.js';
 import { Item } from './Item.js';
 import { SLOT_MAX, type EquipSlot } from './Equipment.js';
-
-const DEFAULT_BASE_ATTRIBUTE = {
-    maxLife:      100,
-    maxMentality: 50,
-    maxWeight:    50,
-    atk:          10,
-    def:          5,
-} as const;
+import {
+    RankingVisibility,
+    createRankingMetricRecord,
+    createStoredPlayerRankingMetricRecord,
+    isCompleteRankingMetricRecord,
+    parseRankingMetricRecord,
+    parseRankingVisibility,
+    type RankingMetricRecord,
+    type StoredPlayerRankingSnapshot,
+} from './Ranking.js';
+import { DEFAULT_PLAYER_BASE_ATTRIBUTE } from './PlayerDefaults.js';
 
 export default class Player extends Entity {
     readonly userId: number;
@@ -37,6 +40,7 @@ export default class Player extends Entity {
     readonly skills: SkillBook;
     readonly quests: QuestBook;
     readonly career: CareerProfile;
+    readonly rankingVisibility: RankingVisibility;
 
     private _nickname: string;
     private _gold = 0;
@@ -56,12 +60,14 @@ export default class Player extends Entity {
         life?: number, mentality?: number, thirsty?: number, hungry?: number,
         statPoint = 0, gold = 0,
         persistentTags: readonly TagId[] = [],
+        rankingMetrics?: unknown,
+        rankingVisibility?: unknown,
     ) {
         super(
             level,
             exp,
             locationId,
-            { ...DEFAULT_BASE_ATTRIBUTE, maxWeight },
+            { ...DEFAULT_PLAYER_BASE_ATTRIBUTE, maxWeight },
             equipment,
             statPoints,
             [GameTags.ENTITY_PLAYER, GameTags.TRAIT_LIVING],
@@ -82,6 +88,8 @@ export default class Player extends Entity {
         this.progress.subscribeChanges(() => this.quests.refreshSnapshotObjectives());
         this._statPoint = statPoint;
         this._gold = gold;
+        this.rankingVisibility = new RankingVisibility(rankingVisibility);
+        if (!isCompleteRankingMetricRecord(rankingMetrics)) this._dirty = true;
 
         // inventory에 계산된 maxWeight 동기화
         this.inventory.maxWeight = this.attribute.get(AttributeType.MAX_WEIGHT);
@@ -154,8 +162,13 @@ export default class Player extends Entity {
     get gold() { return this._gold; }
     set gold(val: number) { this._gold = Math.max(0, val); this._dirty = true; }
 
+    /** 순위 서비스가 raw Player 상태에 접근하지 않도록 제공하는 불변 계산값 snapshot. */
+    getRankingMetricSnapshot(): Readonly<RankingMetricRecord> {
+        return Object.freeze(createRankingMetricRecord(this));
+    }
+
     get dirty() {
-        return this._dirty || this.stat.dirty || this.inventory.dirty
+        return this._dirty || this.stat.dirty || this.inventory.dirty || this.rankingVisibility.dirty
             || this.equipment.dirty || this.progress.dirty || this.skills.dirty || this.quests.dirty;
     }
 
@@ -353,7 +366,7 @@ export default class Player extends Entity {
             QuestBook.load(data.userId),
         ]);
         const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, progress, skills, quests, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint, data.gold, (data.tags as TagId[] | null) ?? []);
+        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, progress, skills, quests, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint, data.gold, (data.tags as TagId[] | null) ?? [], data.rankingMetrics, data.rankingVisibility);
     }
 
     /** 새 플레이어 생성 */
@@ -368,6 +381,37 @@ export default class Player extends Entity {
         const skills = SkillBook.createEmpty(data.userId);
         const quests = QuestBook.createEmpty(data.userId);
         return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, progress, skills, quests);
+    }
+
+    /** 순위 서비스에 Player DB row를 노출하지 않고 마지막 저장 snapshot DTO만 반환한다. */
+    static async getPersistedRankingSnapshots(): Promise<StoredPlayerRankingSnapshot[]> {
+        const rows = await prisma.player.findMany({
+            select: {
+                userId: true,
+                level: true,
+                gold: true,
+                maxWeight: true,
+                stats: true,
+                rankingMetrics: true,
+                rankingVisibility: true,
+                user: { select: { nickname: true } },
+            },
+        });
+        return rows.map(row => {
+            const fallback = createStoredPlayerRankingMetricRecord({
+                level: row.level,
+                gold: row.gold,
+                maxWeight: row.maxWeight,
+                stats: (row.stats as Partial<StatRecord> | null) ?? undefined,
+                baseAttribute: DEFAULT_PLAYER_BASE_ATTRIBUTE,
+            });
+            return {
+                userId: row.userId,
+                nickname: row.user.nickname,
+                metrics: parseRankingMetricRecord(row.rankingMetrics, fallback),
+                visibility: parseRankingVisibility(row.rankingVisibility),
+            };
+        });
     }
 
     /** 변경된 데이터 DB에 저장 */
@@ -388,7 +432,7 @@ export default class Player extends Entity {
     }
 
     private async saveDirtyState(): Promise<void> {
-        if (this._dirty || this.stat.dirty) {
+        if (this._dirty || this.stat.dirty || this.equipment.dirty || this.skills.dirty || this.rankingVisibility.dirty) {
             await prisma.player.update({
                 where: { userId: this.userId },
                 data: {
@@ -404,10 +448,13 @@ export default class Player extends Entity {
                     statPoint: this._statPoint,
                     gold: this._gold,
                     tags: this.tags.persistentValues(),
+                    rankingMetrics: this.getRankingMetricSnapshot() as any,
+                    rankingVisibility: this.rankingVisibility.toPersistence() as any,
                 } as any,
             });
             this._dirty = false;
             this.stat.resetDirty();
+            this.rankingVisibility.resetDirty();
         }
         await this.inventory.save();
         await this.equipment.save();

@@ -62,6 +62,9 @@
 | `NPC`, `DialogueScenario`, `Dialogue` | `NPC.define/getNpc/getAll`, `getEntryScenario/getScenario`, `say/event/setFlag/acceptQuest/turnInQuest/goto/choice/end` | NPC 정적 정의, 조건부 generator 장면과 타입별 대화·퀘스트 액션 생성 |
 | NPC dialogue | `startNpcDialogue`, `chooseNpcDialogue`, `endNpcDialogue/endNpcDialogueByUserId`, `is/getActiveNpcDialogue`, `updateNpcDialogues` | player별 비영속 대화 세션 시작·선택·종료와 이탈 안전망 |
 | `ProgressType`, `PlayerProgress` | `values/fromKey`, `getCounter/setCounter/increment`, `getFlag/setFlag`, `getState/setState`, `reset`, `getSnapshots`, `subscribeChanges`, `load/save` | 통계·NPC 플래그·분기 상태의 메모리 dirty 영속 API |
+| `RankingCategory`, `RankingVisibility` | `values/fromKey/fromInput`, `isPublic/setAll/setCategory/snapshot`, `createRankingMetricRecord` | 레벨·골드·스탯·능력치 순위 정의와 기본 공개+카테고리 예외 dirty 설정 |
+| Ranking service | `getRankingEntries`, `rankPlayerSnapshots` | DB 저장 snapshot과 온라인 메모리 값을 합성해 공동 순위와 수치 공개 여부 반환 |
+| Player ranking snapshot | `Player.getRankingMetricSnapshot`, `Player.getPersistedRankingSnapshots` | 온라인 계산값과 가공된 오프라인 DTO를 제공해 Ranking이 raw Player/DB row를 참조하지 않게 함 |
 | Progress registry | `defineProgress`, `defineStatistic`, `getProgressDefinition`, `getAllProgressDefinitions` | `namespace:path` 상태 정의와 이벤트 기반 counter 등록 |
 | `QuestStatus`, `QuestMarker`, `QuestObjective`, `QuestStage`, `QuestReward`, `QuestData` | `values/fromKey`, 목표 `event/kill/destroy/talk/craft/possess/item/visit/custom`, 보상 `exp/gold/item/skill/flag/custom`, `define/get/findQuestData` | 퀘스트 정의, 단계형 목표·제출 조건·보상과 NPC marker |
 | `Quest`, `QuestBook` | `get/set/resetMetadata`, `get/getByInput/getStatus/isActive/isCompleted`, `canAccept/accept`, `canTurnIn/turnIn`, `abandon`, `getSnapshot(s)/getNpcMarker`, `handleGameEvent/refreshSnapshotObjectives`, `load/save` | 플레이어별 진행·반복·보상, GameEvent/현재 상태 목표 갱신과 versioned dirty 영속화 |

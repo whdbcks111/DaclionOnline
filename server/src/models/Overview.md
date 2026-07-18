@@ -16,6 +16,7 @@
 - `Shop`: 상점 태그, 구매/판매 정의와 재고 timer.
 - `GameEvent`: 동기식 내부 이벤트 발행/구독과 원시 Entity를 제거한 최근 500개 trace 스냅샷.
 - `ProgressType`/`PlayerProgress`: 통계 counter, NPC/퀘스트 flag, 짧은 state의 목적형 조회·변경·구독과 versioned dirty 저장. `defineProgress/defineStatistic`이 정적 정의와 이벤트 counter를 등록한다.
+- `RankingCategory`/`RankingVisibility`: 레벨·골드와 모든 StatType/AttributeType을 자동 등록하는 순위 클래스형 enum, 계산 지표 snapshot과 기본 공개 여부에 대한 카테고리별 예외 dirty 상태. Player는 raw 내부 상태 대신 온라인 `getRankingMetricSnapshot`과 DB row를 가공한 `getPersistedRankingSnapshots` DTO를 제공하고 마지막 계산 지표·공개 설정을 함께 저장한다.
 - `WorldMap`: `PlayerProgress`의 `world:visited/{locationId}` flag를 숨기는 방문 기록·관리자용 전체 방문 처리 API와 방문지·한 단계 인접 미방문지만 반환하는 지도 snapshot. 방문 장소의 대표색만 클라이언트 바이옴 레이어에 전달하고, `location:hidden`은 일반 지도에서 제외하며 관리자용 전체 snapshot은 hidden과 고립 장소를 포함한다.
 - `Job`/`CareerProfile`: 1차·엘리트 직업 정적 레지스트리, 메인→서브 순서 조합, Progress STATE 영속, 동일 직업 이중 선택 금지, 계보 호환·능력치 source modifier·스킬 지급과 Lv.200 자동 전직.
 - `Metadata`: Item과 Skill이 공유하는 JSON-safe clone 및 버전형 top-level delta codec.

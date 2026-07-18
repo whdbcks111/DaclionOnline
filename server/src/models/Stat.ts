@@ -1,9 +1,11 @@
-import type Entity from "./Entity.js"
+import type Attribute from './Attribute.js'
+
+interface AttributeOwner { attribute: Attribute }
 
 // ── StatType 클래스 열거형 ──
 
 /** 스탯 → 능력치 변환 함수. entity의 attribute에 직접 접근해 modifier를 추가함 */
-export type StatModifyFn = (entity: Entity, points: number, source: string) => void
+export type StatModifyFn = (entity: AttributeOwner, points: number, source: string) => void
 
 /** 스탯 종류 — Java 클래스 열거형 패턴 */
 export class StatType {
@@ -131,7 +133,7 @@ export default class Stat {
     }
 
     /** 스탯 기반 modifier를 attribute에 적용 (기존 stat modifier 제거 후 재적용) */
-    applyModifiers(entity: Entity): void {
+    applyModifiers(entity: AttributeOwner): void {
         for (const stat of StatType.values()) {
             entity.attribute.removeBySource(`stat:${stat.key}`)
         }

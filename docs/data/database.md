@@ -7,7 +7,7 @@ Prisma 스키마는 `server/prisma/schema.prisma`, 런타임 클라이언트 설
 | 모델/테이블 | 키와 관계 | 주요 필드 |
 | --- | --- | --- |
 | `User` / `users` | `id`, Player 1:0..1 | username, email, passwordHash/salt, nickname, profileImage, permission, timestamps |
-| `Player` / `players` | `userId` PK/FK | level, exp, maxWeight, stats/tags JSON, locationId, life/mentality/thirsty/hungry, statPoint, gold |
+| `Player` / `players` | `userId` PK/FK | level, exp, maxWeight, stats/tags JSON, locationId, life/mentality/thirsty/hungry, statPoint, gold, rankingMetrics/rankingVisibility JSON |
 | `Item` / `items` | id, Player N:1 cascade | itemDataId, count, durability, metadata/tags JSON, timestamps |
 | `Equipment` / `equipments` | id, Player N:1 cascade | itemDataId, count, slot, slotIndex, durability, metadata/tags JSON; `(playerId, slot, slotIndex)` unique |
 | `PlayerProgress` / `player_progress` | `(playerId, key)` 복합 PK, Player N:1 cascade | kind, intValue, textValue, updatedAt |
@@ -28,6 +28,8 @@ NPC 대화 결과 flag/state도 같은 `player_progress`에 저장한다. 진행
 StatusEffect 인스턴스와 ActionType 제한도 Entity의 런타임 메모리에만 존재한다. 상태효과 metadata delta는 실행 중 누적값을 기본 metadata와 분리하기 위한 구조이며 DB에 flush하지 않으므로 스키마 변경은 없다.
 퀘스트는 코드 `QuestData`를 원본으로 삼고 `player_quests`에는 플레이어별 인스턴스만 저장한다. 목표 진행 JSON key는 `{stageId}/{objectiveId}`이며 metadata는 Item/Skill과 같은 versioned top-level delta다. 반복 완료 횟수와 재수락 가능 시각을 같은 행에 유지한다.
 
+`players.ranking_metrics`는 마지막 Player 저장 시 레벨·골드와 모든 스탯·계산 능력치를 저장한 순위 전용 snapshot이다. 온라인 순위는 이 값 대신 현재 메모리 Player snapshot을 사용한다. `ranking_visibility`는 `{ defaultPublic, overrides }` 구조이며 기본 전체 공개와 반대되는 카테고리 예외만 보관한다. 두 필드는 Player/RankingVisibility dirty 상태를 기존 30초·unload 경로에서 함께 flush한다.
+
 ## 로드와 저장
 
 ```text
@@ -43,6 +45,7 @@ login/session restore
 30초 / logout / process signal
   -> Player.save
      -> player row + stats JSON
+        + ranking metrics/visibility JSON
      -> Inventory.save
      -> Equipment.save
      -> PlayerProgress.save
@@ -73,6 +76,8 @@ login/session restore
 - 통계·플래그와 스킬 인스턴스 테이블 migration은 `20260715000000_add_progress_and_skills`다.
 - 플레이어 퀘스트 인스턴스 테이블 migration은 `20260716000000_add_player_quests`다.
 - 플레이어 스킬 경험치 컬럼 migration은 `20260717000000_add_skill_experience`다.
+- 장착 스택 수량 컬럼 migration은 `20260718000000_add_equipment_count`다.
+- 순위 지표·공개 설정 JSON migration은 `20260718010000_add_player_rankings`다.
 - 일반 운영 배포에서는 `cd server && npm run db:migrate:deploy`를 실행한다. 이 명령은 pending schema migration 적용, Prisma Client 생성, 아이템 metadata delta 데이터 마이그레이션을 순서대로 실행한다.
 - metadata 데이터 마이그레이션은 `src/scripts/migrateItemMetadataDeltas.ts`가 담당한다. 이미 버전 1인 행과 `null` 행은 건너뛰므로 재실행할 수 있다. 구형 전체 metadata 중 현재 `baseMetadata`와 같은 값은 기본값으로 간주해 제거하므로, 기본 metadata를 변경하기 전에 서버를 중지한 상태에서 운영 명령을 먼저 실행해야 한다.
 - `migrate reset`은 전체 데이터를 삭제하므로 운영 DB에서 금지한다.
