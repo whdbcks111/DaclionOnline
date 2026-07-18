@@ -21,45 +21,14 @@ interface ViewBox {
 
 const DEFAULT_ASPECT = 16 / 9
 const MIN_SPAN = 180
-const MIN_BIOME_RADIUS = 52
-const MAX_BIOME_RADIUS = 108
+const BIOME_CANVAS_SCALE = 0.45
 const BASE_LABEL_SIZE = 11
 const MIN_LABEL_ZOOM = 0.7
 const MAX_LABEL_ZOOM = 1.75
 const LABEL_ZOOM_STEP = 0.15
 
-interface BiomeNode extends Point {
-    id: string
-    radius: number
-}
-
-interface BiomeSegment {
-    id: string
-    from: Point
-    to: Point
-    width: number
-}
-
-interface BiomeRegion {
-    color: string
-    nodes: BiomeNode[]
-    segments: BiomeSegment[]
-}
-
-interface BiomeTransition extends BiomeSegment {
-    fromColor: string
-    toColor: string
-}
-
-interface BiomeGeometry {
-    regions: BiomeRegion[]
-    transitions: BiomeTransition[]
-    spreadCells: BiomeSpreadCell[]
-}
-
-interface BiomeSpreadCell {
-    id: string
-    color: string
+interface BiomeColorGroup {
+    color: readonly [number, number, number]
     points: Point[]
 }
 
@@ -94,130 +63,87 @@ function distance(a: Point, b: Point): number {
     return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
-function getBiomeRadius(location: WorldMapLocationData, locations: readonly WorldMapLocationData[]): number {
-    const nearest = locations.reduce((minimum, candidate) => {
-        if (candidate.id === location.id) return minimum
-        return Math.min(minimum, Math.hypot(candidate.x - location.x, candidate.y - location.y))
-    }, Number.POSITIVE_INFINITY)
-    if (!Number.isFinite(nearest)) return 78
-    return Math.max(MIN_BIOME_RADIUS, Math.min(MAX_BIOME_RADIUS, nearest * 0.82))
-}
-
-function clipPolygonToNearestSeed(polygon: readonly Point[], seed: Point, competitor: Point): Point[] {
-    const normalX = competitor.x - seed.x
-    const normalY = competitor.y - seed.y
-    if (normalX === 0 && normalY === 0) return [...polygon]
-    const boundary = (competitor.x ** 2 + competitor.y ** 2 - seed.x ** 2 - seed.y ** 2) / 2
-    const signedDistance = (point: Point) => normalX * point.x + normalY * point.y - boundary
-    const clipped: Point[] = []
-
-    for (let index = 0; index < polygon.length; index += 1) {
-        const start = polygon[index]
-        const end = polygon[(index + 1) % polygon.length]
-        const startDistance = signedDistance(start)
-        const endDistance = signedDistance(end)
-        const startInside = startDistance <= 0
-        const endInside = endDistance <= 0
-
-        if (startInside) clipped.push(start)
-        if (startInside === endInside) continue
-        const ratio = startDistance / (startDistance - endDistance)
-        clipped.push({
-            x: start.x + (end.x - start.x) * ratio,
-            y: start.y + (end.y - start.y) * ratio,
-        })
-    }
-
-    return clipped
-}
-
-function createBiomeSpreadCells(data: WorldMapData, visited: readonly WorldMapLocationData[]): BiomeSpreadCell[] {
-    if (visited.length === 0) return []
-    const fit = createFitView(data)
-    const extent = {
-        left: fit.x - fit.width,
-        top: fit.y - fit.height,
-        right: fit.x + fit.width * 2,
-        bottom: fit.y + fit.height * 2,
-    }
-    const bounds: Point[] = [
-        { x: extent.left, y: extent.top },
-        { x: extent.right, y: extent.top },
-        { x: extent.right, y: extent.bottom },
-        { x: extent.left, y: extent.bottom },
+function parseHexColor(color: string): readonly [number, number, number] {
+    return [
+        Number.parseInt(color.slice(1, 3), 16),
+        Number.parseInt(color.slice(3, 5), 16),
+        Number.parseInt(color.slice(5, 7), 16),
     ]
-    const seeds = visited.map(location => ({
-        id: location.id,
-        color: location.mapColor!.toLowerCase(),
-        point: { x: location.x, y: mapY(location) },
-    }))
-
-    return seeds.map(seed => {
-        let points = [...bounds]
-        for (const competitor of seeds) {
-            if (competitor.id === seed.id || points.length === 0) continue
-            points = clipPolygonToNearestSeed(points, seed.point, competitor.point)
-        }
-        return { id: seed.id, color: seed.color, points }
-    }).filter(cell => cell.points.length >= 3)
 }
 
-function createBiomeGeometry(data: WorldMapData): BiomeGeometry {
-    const visited = data.locations.filter(location => location.visited && location.mapColor)
-    const visitedById = new Map(visited.map(location => [location.id, location]))
-    const radii = new Map(visited.map(location => [location.id, getBiomeRadius(location, visited)]))
-    const regions = new Map<string, BiomeRegion>()
-    const transitions: BiomeTransition[] = []
-    const getRegion = (color: string) => {
-        const key = color.toLowerCase()
-        const existing = regions.get(key)
-        if (existing) return existing
-        const region: BiomeRegion = { color: key, nodes: [], segments: [] }
-        regions.set(key, region)
-        return region
+function createBiomeColorGroups(data: WorldMapData): BiomeColorGroup[] {
+    const groups = new Map<string, Point[]>()
+    for (const location of data.locations) {
+        if (!location.visited || !location.mapColor) continue
+        const color = location.mapColor.toLowerCase()
+        const points = groups.get(color) ?? []
+        points.push({ x: location.x, y: mapY(location) })
+        groups.set(color, points)
     }
+    return [...groups.entries()].map(([color, points]) => ({ color: parseHexColor(color), points }))
+}
 
-    for (const location of visited) {
-        getRegion(location.mapColor!).nodes.push({
-            id: location.id,
-            x: location.x,
-            y: mapY(location),
-            radius: radii.get(location.id) ?? MIN_BIOME_RADIUS,
-        })
-    }
+function paintBiomeGradient(
+    canvas: HTMLCanvasElement,
+    groups: readonly BiomeColorGroup[],
+    view: ViewBox,
+    cssWidth: number,
+    cssHeight: number,
+): void {
+    const context = canvas.getContext('2d')
+    if (!context || cssWidth <= 0 || cssHeight <= 0) return
+    const width = Math.max(1, Math.round(cssWidth * BIOME_CANVAS_SCALE))
+    const height = Math.max(1, Math.round(cssHeight * BIOME_CANVAS_SCALE))
+    if (canvas.width !== width) canvas.width = width
+    if (canvas.height !== height) canvas.height = height
+    context.clearRect(0, 0, width, height)
+    if (groups.length === 0) return
 
-    for (const connection of data.connections) {
-        if (!connection.discovered) continue
-        const from = visitedById.get(connection.from)
-        const to = visitedById.get(connection.to)
-        if (!from?.mapColor || !to?.mapColor) continue
-        const fromPoint = { x: from.x, y: mapY(from) }
-        const toPoint = { x: to.x, y: mapY(to) }
-        const fromRadius = radii.get(from.id) ?? MIN_BIOME_RADIUS
-        const toRadius = radii.get(to.id) ?? MIN_BIOME_RADIUS
-        const width = Math.max(MIN_BIOME_RADIUS * 1.35, Math.min(fromRadius, toRadius) * 1.7)
-        const segmentId = `${connection.from}:${connection.to}`
+    const image = context.createImageData(width, height)
+    const pixels = image.data
+    for (let pixelY = 0; pixelY < height; pixelY += 1) {
+        const worldY = view.y + (pixelY + 0.5) / height * view.height
+        for (let pixelX = 0; pixelX < width; pixelX += 1) {
+            const worldX = view.x + (pixelX + 0.5) / width * view.width
+            let nearestIndex = 0
+            let nearestDistanceSquared = Number.POSITIVE_INFINITY
+            let secondIndex = 0
+            let secondDistanceSquared = Number.POSITIVE_INFINITY
 
-        if (from.mapColor.toLowerCase() === to.mapColor.toLowerCase()) {
-            getRegion(from.mapColor).segments.push({ id: segmentId, from: fromPoint, to: toPoint, width })
-            continue
+            for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+                let groupDistanceSquared = Number.POSITIVE_INFINITY
+                for (const point of groups[groupIndex].points) {
+                    const dx = worldX - point.x
+                    const dy = worldY - point.y
+                    groupDistanceSquared = Math.min(groupDistanceSquared, dx * dx + dy * dy)
+                }
+                if (groupDistanceSquared < nearestDistanceSquared) {
+                    secondDistanceSquared = nearestDistanceSquared
+                    secondIndex = nearestIndex
+                    nearestDistanceSquared = groupDistanceSquared
+                    nearestIndex = groupIndex
+                } else if (groupDistanceSquared < secondDistanceSquared) {
+                    secondDistanceSquared = groupDistanceSquared
+                    secondIndex = groupIndex
+                }
+            }
+
+            const nearestColor = groups[nearestIndex].color
+            const secondColor = groups.length > 1 ? groups[secondIndex].color : nearestColor
+            const nearestDistance = Math.sqrt(nearestDistanceSquared)
+            const secondDistance = Math.sqrt(secondDistanceSquared)
+            const nearestWeight = Number.isFinite(secondDistance)
+                ? secondDistance / Math.max(0.0001, nearestDistance + secondDistance)
+                : 1
+            const secondWeight = 1 - nearestWeight
+            const offset = (pixelY * width + pixelX) * 4
+            pixels[offset] = Math.round(nearestColor[0] * nearestWeight + secondColor[0] * secondWeight)
+            pixels[offset + 1] = Math.round(nearestColor[1] * nearestWeight + secondColor[1] * secondWeight)
+            pixels[offset + 2] = Math.round(nearestColor[2] * nearestWeight + secondColor[2] * secondWeight)
+            pixels[offset + 3] = 255
         }
-
-        transitions.push({
-            id: segmentId,
-            from: fromPoint,
-            to: toPoint,
-            width,
-            fromColor: from.mapColor.toLowerCase(),
-            toColor: to.mapColor.toLowerCase(),
-        })
     }
-
-    return {
-        regions: [...regions.values()],
-        transitions,
-        spreadCells: createBiomeSpreadCells(data, visited),
-    }
+    context.putImageData(image, 0, 0)
 }
 
 function getLocalPoint(svg: SVGSVGElement, point: Point): Point {
@@ -229,9 +155,8 @@ export default function WorldMapNode({ data }: Props) {
     const svgId = useId().replaceAll(':', '')
     const gridId = `world-map-grid-${svgId}`
     const glowId = `world-map-current-glow-${svgId}`
-    const biomeFilterId = `world-map-biome-boundary-${svgId}`
-    const biomeSpreadFilterId = `world-map-biome-spread-${svgId}`
     const containerRef = useRef<HTMLDivElement>(null)
+    const canvasRef = useRef<HTMLCanvasElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
     const pointers = useRef(new Map<number, Point>())
     const fitViewRef = useRef(createFitView(data))
@@ -240,13 +165,14 @@ export default function WorldMapNode({ data }: Props) {
     const [hoveredId, setHoveredId] = useState<string | null>(null)
     const [selectedId, setSelectedId] = useState<string | null>(null)
     const [labelZoom, setLabelZoom] = useState(1)
+    const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 })
 
     const locationsById = useMemo(
         () => new Map(data.locations.map(location => [location.id, location])),
         [data.locations],
     )
     const activeLocation = locationsById.get(hoveredId ?? selectedId ?? '')
-    const biomeGeometry = useMemo(() => createBiomeGeometry(data), [data])
+    const biomeColorGroups = useMemo(() => createBiomeColorGroups(data), [data])
     const labelViewScale = view.width / Math.max(1, fitViewRef.current.width)
     const labelFontSize = BASE_LABEL_SIZE * labelViewScale * labelZoom
 
@@ -257,6 +183,12 @@ export default function WorldMapNode({ data }: Props) {
             const rect = container.getBoundingClientRect()
             if (rect.width <= 0 || rect.height <= 0) return
             const nextFit = createFitView(data, rect.width / rect.height)
+            const svgRect = svgRef.current?.getBoundingClientRect()
+            if (svgRect && svgRect.width > 0 && svgRect.height > 0) {
+                setViewportSize(current => current.width === svgRect.width && current.height === svgRect.height
+                    ? current
+                    : { width: svgRect.width, height: svgRect.height })
+            }
             fitViewRef.current = nextFit
             if (!hasInteracted.current) setView(nextFit)
         }
@@ -265,6 +197,19 @@ export default function WorldMapNode({ data }: Props) {
         observer.observe(container)
         return () => observer.disconnect()
     }, [data])
+
+    useEffect(() => {
+        const canvas = canvasRef.current
+        if (!canvas || viewportSize.width <= 0 || viewportSize.height <= 0) return
+        const frame = requestAnimationFrame(() => paintBiomeGradient(
+            canvas,
+            biomeColorGroups,
+            view,
+            viewportSize.width,
+            viewportSize.height,
+        ))
+        return () => cancelAnimationFrame(frame)
+    }, [biomeColorGroups, view, viewportSize])
 
     const zoomAt = useCallback((factor: number, localPoint?: Point) => {
         const svg = svgRef.current
@@ -396,19 +341,21 @@ export default function WorldMapNode({ data }: Props) {
                     >A＋</button>
                 </span>
             </div>
-            <svg
-                ref={svgRef}
-                className={styles.map}
-                viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
-                onWheel={handleWheel}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={releasePointer}
-                onPointerCancel={releasePointer}
-                onPointerLeave={() => setHoveredId(null)}
-                role="img"
-                aria-label="방문 장소 지도"
-            >
+            <div className={styles.mapViewport}>
+                <canvas ref={canvasRef} className={styles.biomeCanvas} aria-hidden="true" />
+                <svg
+                    ref={svgRef}
+                    className={styles.map}
+                    viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
+                    onWheel={handleWheel}
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={releasePointer}
+                    onPointerCancel={releasePointer}
+                    onPointerLeave={() => setHoveredId(null)}
+                    role="img"
+                    aria-label="방문 장소 지도"
+                >
                 <defs>
                     <pattern id={gridId} width="50" height="50" patternUnits="userSpaceOnUse">
                         <path d="M 50 0 L 0 0 0 50" className={styles.gridLine} fill="none" />
@@ -417,89 +364,7 @@ export default function WorldMapNode({ data }: Props) {
                         <feGaussianBlur stdDeviation="3" result="blur" />
                         <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                     </filter>
-                    <filter id={biomeFilterId} x="-55%" y="-55%" width="210%" height="210%" colorInterpolationFilters="sRGB">
-                        <feTurbulence type="fractalNoise" baseFrequency="0.014 0.019" numOctaves="2" seed="17" result="boundaryNoise" />
-                        <feDisplacementMap in="SourceGraphic" in2="boundaryNoise" scale="18" xChannelSelector="R" yChannelSelector="G" result="organicShape" />
-                        <feGaussianBlur in="organicShape" stdDeviation="34" result="wideFade" />
-                        <feComponentTransfer in="wideFade" result="softWideFade">
-                            <feFuncA type="linear" slope="0.58" />
-                        </feComponentTransfer>
-                        <feGaussianBlur in="organicShape" stdDeviation="11" result="softCore" />
-                        <feComponentTransfer in="softCore" result="fadedCore">
-                            <feFuncA type="linear" slope="0.72" />
-                        </feComponentTransfer>
-                        <feMerge>
-                            <feMergeNode in="softWideFade" />
-                            <feMergeNode in="fadedCore" />
-                        </feMerge>
-                    </filter>
-                    <filter id={biomeSpreadFilterId} x="-12%" y="-12%" width="124%" height="124%" colorInterpolationFilters="sRGB">
-                        <feTurbulence type="fractalNoise" baseFrequency="0.006 0.009" numOctaves="2" seed="29" result="terrainNoise" />
-                        <feDisplacementMap in="SourceGraphic" in2="terrainNoise" scale="34" xChannelSelector="R" yChannelSelector="G" result="organicBiomes" />
-                        <feGaussianBlur in="organicBiomes" stdDeviation="46" />
-                    </filter>
-                    {biomeGeometry.transitions.map((transition, index) => (
-                        <linearGradient
-                            key={transition.id}
-                            id={`${biomeFilterId}-transition-${index}`}
-                            gradientUnits="userSpaceOnUse"
-                            x1={transition.from.x}
-                            y1={transition.from.y}
-                            x2={transition.to.x}
-                            y2={transition.to.y}
-                        >
-                            <stop offset="0%" stopColor={transition.fromColor} />
-                            <stop offset="100%" stopColor={transition.toColor} />
-                        </linearGradient>
-                    ))}
                 </defs>
-                <g className={styles.biomeSpreadLayer} filter={`url(#${biomeSpreadFilterId})`} aria-hidden="true">
-                    {biomeGeometry.spreadCells.map(cell => (
-                        <polygon
-                            key={cell.id}
-                            points={cell.points.map(point => `${point.x},${point.y}`).join(' ')}
-                            fill={cell.color}
-                        />
-                    ))}
-                </g>
-                <g className={styles.biomeLayer} filter={`url(#${biomeFilterId})`} aria-hidden="true">
-                    {biomeGeometry.regions.map(region => (
-                        <g
-                            key={region.color}
-                            fill={region.color}
-                            stroke={region.color}
-                        >
-                            {region.segments.map(segment => (
-                                <line
-                                    key={segment.id}
-                                    x1={segment.from.x}
-                                    y1={segment.from.y}
-                                    x2={segment.to.x}
-                                    y2={segment.to.y}
-                                    strokeWidth={segment.width}
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                            ))}
-                            {region.nodes.map(node => (
-                                <circle key={node.id} cx={node.x} cy={node.y} r={node.radius} stroke="none" />
-                            ))}
-                        </g>
-                    ))}
-                    {biomeGeometry.transitions.map((transition, index) => (
-                        <line
-                            key={transition.id}
-                            x1={transition.from.x}
-                            y1={transition.from.y}
-                            x2={transition.to.x}
-                            y2={transition.to.y}
-                            stroke={`url(#${biomeFilterId}-transition-${index})`}
-                            strokeWidth={transition.width}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                    ))}
-                </g>
                 <rect x={view.x} y={view.y} width={view.width} height={view.height} fill={`url(#${gridId})`} />
 
                 {data.connections.map(connection => {
@@ -559,7 +424,8 @@ export default function WorldMapNode({ data }: Props) {
                         >{location.name}</text>}
                     </g>
                 })}
-            </svg>
+                </svg>
+            </div>
 
             {activeLocation && (
                 <aside className={styles.infoCard} aria-live="polite">

@@ -3,6 +3,8 @@
 
 .mapShell {
     position: relative;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     height: clamp(22rem, 68vh, 52rem);
     min-height: 0;
@@ -14,10 +16,28 @@
     white-space: normal;
 }
 
+.mapViewport {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.biomeCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.56;
+    pointer-events: none;
+}
+
 .map {
+    position: relative;
+    z-index: 1;
     display: block;
     width: 100%;
-    height: calc(100% - 2.75rem);
+    height: 100%;
     cursor: grab;
     touch-action: none;
     user-select: none;
@@ -28,6 +48,7 @@
 .toolbar {
     position: relative;
     z-index: 2;
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     min-height: 2.75rem;
@@ -85,16 +106,6 @@
 .gridLine {
     stroke: rgba(255, 255, 255, 0.035);
     stroke-width: 1;
-}
-
-.biomeLayer {
-    pointer-events: none;
-    opacity: 0.32;
-}
-
-.biomeSpreadLayer {
-    pointer-events: none;
-    opacity: 0.35;
 }
 
 .discoveredPath, .unknownPath {
