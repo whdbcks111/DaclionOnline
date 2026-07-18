@@ -71,15 +71,18 @@ export default function PlayerStatusHud() {
         <span>{nickname}</span>
         <span className={styles.level}>Lv.{level}</span>
         <span className={styles.userId}>ID {userId}</span>
+        <div
+          className={styles.compactExp}
+          aria-label={`경험치 ${exp.toLocaleString()} / ${maxExp.toLocaleString()}`}
+        >
+          <span className={styles.expLabel}>EXP</span>
+          <div className={styles.expTrack}>
+            <ProgressNode value={pct(exp, maxExp) / 100} length="100%" color="$secondary" thickness={4} shape="rounded" />
+          </div>
+          <span className={styles.expValue}>{exp.toLocaleString()}/{maxExp.toLocaleString()}</span>
+        </div>
       </div>
       <div className={styles.bars}>
-        <div className={`${styles.row} ${styles.expRow}`}>
-          <span className={styles.label}>EXP</span>
-          <div className={styles.track}>
-            <ProgressNode value={pct(exp, maxExp) / 100} length="100%" color="$secondary" thickness={6} shape="rounded" />
-          </div>
-          <span className={styles.value}>{exp.toLocaleString()} / {maxExp.toLocaleString()}</span>
-        </div>
         <div className={styles.pairedRow}>
           <div className={styles.row}>
             <span className={styles.label}>HP</span>

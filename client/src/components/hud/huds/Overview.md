@@ -1,6 +1,6 @@
 # HUD Views Overview
 
-- `PlayerStatusHud`: 이름 옆 현재 레벨, 경험치/다음 레벨 요구량 진행 막대, 타입색 보호막을 포함한 생명력·정신력·허기·갈증·공격 cooldown과 작은 상태효과 아이콘 목록. 일반 HUD drag 차단 상태에서도 효과 영역만 pointer event를 받아 hover/focus/touch로 레벨·계산 설명·남은 시간을 표시한다.
+- `PlayerStatusHud`: 이름·현재 레벨·고유번호 옆의 작은 경험치/다음 레벨 요구량 진행 표시, 타입색 보호막을 포함한 생명력·정신력·허기·갈증·공격 cooldown과 작은 상태효과 아이콘 목록. 일반 HUD drag 차단 상태에서도 효과 영역만 pointer event를 받아 hover/focus/touch로 레벨·계산 설명·남은 시간을 표시한다.
 - `LocationHud`: 현재 위치의 Monster/Resource 통합 오브젝트와 플레이어의 보호막 포함 체력. 오브젝트 행에는 설정으로 숨길 수 있는 `공격`/`대상` 버튼이 있고 기존 명령을 숨김 실행한다.
 - `MinimapHud`: 현재 및 인접 위치 좌표. 세부 설정을 켜면 잠금 상태가 아닌 인접 지역만 아래 목록으로 표시하고 `이동` 버튼으로 기존 `/이동 ID` 명령을 숨김 실행한다.
 - `QuickSlotHud`: 저장한 채팅/명령 문자열을 즉시 전송.
