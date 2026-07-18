@@ -23,6 +23,7 @@
 
 ## 문서 경로
 
+- [`docs/legacy-reference.md`](docs/legacy-reference.md)
 - [`docs/architecture/overview.md`](docs/architecture/overview.md)
 - [`docs/architecture/change-guide.md`](docs/architecture/change-guide.md)
 - [`docs/architecture/runtime-foundations.md`](docs/architecture/runtime-foundations.md)

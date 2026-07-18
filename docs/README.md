@@ -7,6 +7,7 @@
 | 목적 | 먼저 볼 문서 |
 | --- | --- |
 | 전체 구조와 실행 흐름 파악 | [architecture/overview.md](architecture/overview.md) |
+| 이전 텍스트 RPG 버전의 기획·UX 참고 | [legacy-reference.md](legacy-reference.md) |
 | 기능을 추가할 때 수정 지점 찾기 | [architecture/change-guide.md](architecture/change-guide.md) |
 | 게임 타이머·메모리 작업 트랜잭션 | [architecture/runtime-foundations.md](architecture/runtime-foundations.md) |
 | Socket.io 이벤트 찾기 | [api/socket-events.md](api/socket-events.md) |

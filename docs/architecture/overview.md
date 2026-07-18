@@ -1,5 +1,9 @@
 # 아키텍처 개요
 
+## 프로젝트 계보
+
+[LucadionTextRpg-React](../legacy-reference.md)는 DaclionOnline의 이전 세대 텍스트 RPG 프로젝트로 취급한다. 과거의 콘텐츠와 채팅 중심 UX를 참고할 수 있지만, 현재 아키텍처와 API의 기준은 이 저장소의 문서와 코드다. 레거시 구현을 그대로 이식하지 않고 현재 서버 권위형 구조와 개발 원칙에 맞게 재설계한다.
+
 ## 런타임 구성
 
 루트 개발 명령은 React/Vite 클라이언트와 Express/Socket.io 서버를 함께 실행한다. 서버는 MariaDB를 Prisma로 접근하며, 프로덕션에서는 빌드된 클라이언트 정적 파일도 제공한다.
