@@ -19,6 +19,13 @@ interface ViewBox {
     height: number
 }
 
+interface ScreenRect {
+    left: number
+    top: number
+    right: number
+    bottom: number
+}
+
 const DEFAULT_ASPECT = 16 / 9
 const MIN_SPAN = 180
 const BIOME_CANVAS_SCALE = 0.3
@@ -90,6 +97,61 @@ function createBiomeSeeds(data: WorldMapData): BiomeSeed[] {
             point: { x: location.x, y: mapY(location) },
         }]
     })
+}
+
+function estimateLabelWidth(label: string, fontSize: number): number {
+    let units = 0
+    for (const character of label) {
+        if (/\s/.test(character)) units += 0.35
+        else units += character.charCodeAt(0) <= 0x7f ? 0.62 : 1
+    }
+    return units * fontSize + 6
+}
+
+function intersects(left: ScreenRect, right: ScreenRect): boolean {
+    return left.left < right.right
+        && left.right > right.left
+        && left.top < right.bottom
+        && left.bottom > right.top
+}
+
+function getVisibleLabelIds(
+    locations: readonly WorldMapLocationData[],
+    view: ViewBox,
+    viewport: { width: number; height: number },
+    fontSize: number,
+): ReadonlySet<string> {
+    const visited = locations.filter(location => location.visited)
+    if (viewport.width <= 0 || viewport.height <= 0) {
+        return new Set(visited.map(location => location.id))
+    }
+
+    const candidates = visited.map((location, index) => {
+        const screenX = (location.x - view.x) / view.width * viewport.width
+        const screenY = (mapY(location) - view.y) / view.height * viewport.height
+            + (location.mapIcon ? 28 : 22) / view.height * viewport.height
+        const width = estimateLabelWidth(location.name, fontSize)
+        return {
+            id: location.id,
+            index,
+            priority: location.current ? 2 : location.mapIcon ? 1 : 0,
+            bounds: {
+                left: screenX - width / 2,
+                right: screenX + width / 2,
+                top: screenY - fontSize - 3,
+                bottom: screenY + 4,
+            },
+        }
+    }).sort((left, right) => right.priority - left.priority || left.index - right.index)
+
+    const visibleIds = new Set<string>()
+    const occupied: ScreenRect[] = []
+    for (const candidate of candidates) {
+        if (occupied.some(bounds => intersects(bounds, candidate.bounds))) continue
+        occupied.push(candidate.bounds)
+        visibleIds.add(candidate.id)
+    }
+    return visibleIds
 }
 
 function getBiomeSofteningDistance(seeds: readonly BiomeSeed[]): number {
@@ -202,6 +264,10 @@ export default function WorldMapNode({ data }: Props) {
     const labelFontSize = viewportSize.width > 0
         ? BASE_LABEL_SIZE * view.width / viewportSize.width * labelZoom
         : BASE_LABEL_SIZE * labelZoom
+    const visibleLabelIds = useMemo(
+        () => getVisibleLabelIds(data.locations, view, viewportSize, BASE_LABEL_SIZE * labelZoom),
+        [data.locations, view, viewportSize, labelZoom],
+    )
 
     useEffect(() => {
         const container = containerRef.current
@@ -449,7 +515,7 @@ export default function WorldMapNode({ data }: Props) {
                                 />
                             </>
                         ) : <circle r={location.current ? 8 : 6} className={styles.nodeDot} vectorEffect="non-scaling-stroke" />}
-                        {location.visited && showLabels && <text
+                        {location.visited && showLabels && visibleLabelIds.has(location.id) && <text
                             y={location.mapIcon ? 28 : 22}
                             className={styles.nodeLabel}
                             textAnchor="middle"
