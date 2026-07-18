@@ -13,6 +13,7 @@ import { registerCommand } from '../modules/bot.js';
 import { sendBotMessageToUser } from '../modules/message.js';
 import { getPlayerByUserId } from '../modules/player.js';
 import { chat } from '../utils/chatBuilder.js';
+import { formatWeight } from '../utils/format.js';
 import type { CompletionItem } from '../../../shared/types.js';
 
 export const ITEM_APPRAISAL_SENSIBILITY = 50;
@@ -200,7 +201,7 @@ export function buildItemInspection(snapshot: ItemInspectionSnapshot, sourceLabe
             builder.tab(120, b => b.text('확인 위치')).text(`${sourceLabel}\n`)
                 .tab(120, b => b.text('분류')).text(`${snapshot.category || '기타'}\n`)
                 .tab(120, b => b.text('수량')).text(`${snapshot.count}${snapshot.stackable ? ` / 스택당 ${snapshot.maxStack}` : ''}\n`)
-                .tab(120, b => b.text('무게')).text(`${formatNumber(snapshot.totalWeight)} (${formatNumber(snapshot.weight)} × ${snapshot.count})\n`);
+                .tab(120, b => b.text('무게')).text(`${formatWeight(snapshot.totalWeight)} (${formatWeight(snapshot.weight)} × ${snapshot.count})\n`);
             if (snapshot.equipSlot) {
                 builder.tab(120, b => b.text('장착 부위')).text(`${EquipSlotType.fromInput(snapshot.equipSlot)?.label ?? snapshot.equipSlot}\n`);
             }

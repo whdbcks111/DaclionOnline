@@ -14,6 +14,7 @@ import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
 import { CompletionItem } from "../../../shared/types.js";
 import { parseChatMessage } from "../utils/chatParser.js";
+import { formatWeight } from "../utils/format.js";
 
 function formatStatusDuration(seconds: number): string {
     const totalSeconds = Math.max(0, Math.ceil(seconds));
@@ -240,10 +241,9 @@ export function initPlayerCommands(): void {
 
             const inv = player.inventory;
             const items = inv.items;
-            const fmtW = (w: number) => Number.isInteger(w) ? String(w) : w.toFixed(1);
 
             const b = chat()
-                .text(`[ 인벤토리 (${fmtW(inv.currentWeight)} / ${fmtW(inv.maxWeight)}) ]`);
+                .text(`[ 인벤토리 (${formatWeight(inv.currentWeight)} / ${formatWeight(inv.maxWeight)}) ]`);
 
             const SLOT = 35;
             const CAT  = 90;
