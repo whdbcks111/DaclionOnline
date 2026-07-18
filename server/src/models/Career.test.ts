@@ -14,6 +14,7 @@ import { getAllQuestData } from './Quest.js';
 import '../data/quests.js';
 import '../data/items.js';
 import { getIO, initSocket } from '../modules/socket.js';
+import { GameEventIds } from './GameEvent.js';
 
 initSocket(createServer(), 'http://localhost');
 test.after(() => { getIO().close(); });
@@ -53,10 +54,15 @@ test('5개 1차 직업은 최소 3개 스킬을 지급하고 서로 다른 20개
         assert.equal(png.readUInt32BE(16), 128);
         assert.equal(png.readUInt32BE(20), 128);
     }
-    assert.equal(getAllQuestData().filter(quest => quest.tags.includes('quest:career')).length, 8);
+    assert.equal(getAllQuestData().filter(quest => quest.tags.includes('quest:career')).length, 10);
     const mageTrial = getAllQuestData().find(quest => quest.id === 'career:main_mage_promotion');
     assert.equal(mageTrial?.stages[0].objectives[0].label, '불·얼음·독·자연 속성 적 처치');
     assert.ok(mageTrial?.rewards.some(reward => reward.label === '견습 마법 지팡이 x1'));
+    const blacksmithTrials = getAllQuestData().filter(quest => /^career:(main|sub)_blacksmith_promotion$/.test(quest.id));
+    assert.equal(blacksmithTrials.length, 2);
+    assert.ok(blacksmithTrials.every(quest => quest.giverNpcIds.includes('job_master')));
+    assert.ok(blacksmithTrials.every(quest => quest.stages[0].objectives[0].eventId === GameEventIds.RESOURCE_DESTROYED));
+    assert.ok(blacksmithTrials.find(quest => quest.id.includes(':main_'))?.rewards.some(reward => reward.label === '철 곡괭이 x1'));
     for (const main of firstJobs) for (const sub of firstJobs) {
         assert.equal(Boolean(resolveEliteJob(main.id, sub.id)), main.id !== sub.id, `${main.id}>${sub.id}`);
     }

@@ -8,6 +8,8 @@ import {
 import { JobSlotType } from '../models/Job.js';
 import './jobs.js';
 import { canAcquireBlacksmithProfession, grantBlacksmithProfession } from '../modules/forging.js';
+import type Entity from '../models/Entity.js';
+import type Player from '../models/Player.js';
 
 export const FIRST_SLIME_HUNT_QUEST_ID = 'luminair:first_slime_hunt';
 
@@ -43,6 +45,18 @@ defineQuest({
 export const CAREER_QUEST_IDS: Record<string, string> = {};
 export const BLACKSMITH_APPRENTICESHIP_QUEST_ID = 'profession:blacksmith_apprenticeship';
 
+function hasStandardBlacksmithTrial(player: Player): boolean {
+    return JobSlotType.values().some(slot => {
+        const id = CAREER_QUEST_IDS[`${slot.key}:career:blacksmith`];
+        return Boolean(id && (player.quests.isActive(id) || player.quests.canTurnIn(id)));
+    });
+}
+
+function hasLegacyBlacksmithTrial(player: Player): boolean {
+    return player.quests.isActive(BLACKSMITH_APPRENTICESHIP_QUEST_ID)
+        || player.quests.canTurnIn(BLACKSMITH_APPRENTICESHIP_QUEST_ID);
+}
+
 defineQuest({
     id: BLACKSMITH_APPRENTICESHIP_QUEST_ID,
     name: '불꽃 없는 제련법',
@@ -50,8 +64,8 @@ defineQuest({
     tags: ['quest:profession', 'profession:blacksmith'],
     giverNpcIds: ['blacksmith_master'],
     turnInNpcIds: ['blacksmith_master'],
-    visible: player => player.level >= 20 && canAcquireBlacksmithProfession(player),
-    canAccept: player => player.level >= 20 && canAcquireBlacksmithProfession(player),
+    visible: player => player.level >= 20 && canAcquireBlacksmithProfession(player) && !hasStandardBlacksmithTrial(player),
+    canAccept: player => player.level >= 20 && canAcquireBlacksmithProfession(player) && !hasStandardBlacksmithTrial(player),
     stages: [new QuestStage({
         id: 'read_ore_grain',
         description: '채굴 도구로 광맥을 파괴해 서로 다른 광물의 결을 관찰하세요.',
@@ -70,12 +84,39 @@ defineQuest({
     ],
 });
 
-const careerQuestDefinitions = [
-    { id: 'warrior', name: '전사', label: '무생물 속성 적 처치', weapon: 'training_axe', matches: (target: { hasTag(tag: string): boolean }) => target.hasTag(GameTags.TRAIT_INANIMATE) },
-    { id: 'archer', name: '궁수', label: '자연 속성 적 처치', weapon: 'light_bow', matches: (target: { hasTag(tag: string): boolean }) => target.hasTag(GameTags.PROPERTY_NATURAL) },
-    { id: 'assassin', name: '암살자', label: '생명체 속성 적 처치', weapon: 'venom_dagger', matches: (target: { hasTag(tag: string): boolean }) => target.hasTag(GameTags.TRAIT_LIVING) },
-    { id: 'mage', name: '마법사', label: '불·얼음·독·자연 속성 적 처치', weapon: 'apprentice_staff', matches: (target: { hasTag(tag: string): boolean }) => [GameTags.PROPERTY_FIRE, GameTags.PROPERTY_ICE, GameTags.PROPERTY_POISON, GameTags.PROPERTY_NATURAL].some(tag => target.hasTag(tag)) },
-] as const;
+interface CareerQuestDefinition {
+    readonly id: string;
+    readonly name: string;
+    readonly weapon: string;
+    readonly stageDescription: string;
+    readonly createObjective: (slot: JobSlotType) => QuestObjective;
+}
+
+function killTrial(
+    label: string,
+    matches: (target: Entity) => boolean,
+): (slot: JobSlotType) => QuestObjective {
+    return slot => QuestObjective.kill('defeat', label, slot === JobSlotType.MAIN ? 5 : 10, matches);
+}
+
+const careerQuestDefinitions: readonly CareerQuestDefinition[] = [
+    { id: 'warrior', name: '전사', weapon: 'training_axe', stageDescription: '전사의 방식에 맞는 전투 경험을 쌓으세요.', createObjective: killTrial('무생물 속성 적 처치', target => target.hasTag(GameTags.TRAIT_INANIMATE)) },
+    { id: 'archer', name: '궁수', weapon: 'light_bow', stageDescription: '궁수의 방식에 맞는 전투 경험을 쌓으세요.', createObjective: killTrial('자연 속성 적 처치', target => target.hasTag(GameTags.PROPERTY_NATURAL)) },
+    { id: 'assassin', name: '암살자', weapon: 'venom_dagger', stageDescription: '암살자의 방식에 맞는 전투 경험을 쌓으세요.', createObjective: killTrial('생명체 속성 적 처치', target => target.hasTag(GameTags.TRAIT_LIVING)) },
+    { id: 'mage', name: '마법사', weapon: 'apprentice_staff', stageDescription: '마법사의 방식에 맞는 전투 경험을 쌓으세요.', createObjective: killTrial('불·얼음·독·자연 속성 적 처치', target => [GameTags.PROPERTY_FIRE, GameTags.PROPERTY_ICE, GameTags.PROPERTY_POISON, GameTags.PROPERTY_NATURAL].some(tag => target.hasTag(tag))) },
+    {
+        id: 'blacksmith',
+        name: '대장장이',
+        weapon: 'iron_pickaxe',
+        stageDescription: '광맥을 직접 파괴하며 소재의 결을 읽는 감각과 단단한 체력을 증명하세요.',
+        createObjective: slot => QuestObjective.destroy(
+            'ore',
+            '광맥 파괴',
+            slot === JobSlotType.MAIN ? 5 : 10,
+            target => target.hasTag(GameTags.RESOURCE_ORE),
+        ),
+    },
+];
 
 for (const slot of JobSlotType.values()) for (const job of careerQuestDefinitions) {
     const questId = `career:${slot.key}_${job.id}_promotion`;
@@ -88,12 +129,15 @@ for (const slot of JobSlotType.values()) for (const job of careerQuestDefinition
         tags: ['quest:career', `career:${slot.key}`],
         giverNpcIds: ['job_master'],
         turnInNpcIds: ['job_master'],
-        visible: player => player.level >= slot.requiredLevel && player.career.canAssign(slot, jobId).success,
-        canAccept: player => player.career.canAssign(slot, jobId).success,
+        visible: player => player.level >= slot.requiredLevel
+            && player.career.canAssign(slot, jobId).success
+            && (job.id !== 'blacksmith' || !hasLegacyBlacksmithTrial(player)),
+        canAccept: player => player.career.canAssign(slot, jobId).success
+            && (job.id !== 'blacksmith' || !hasLegacyBlacksmithTrial(player)),
         stages: [new QuestStage({
             id: 'trial',
-            description: `${job.name}의 방식에 맞는 전투 경험을 쌓으세요.`,
-            objectives: [QuestObjective.kill('defeat', job.label, slot === JobSlotType.MAIN ? 5 : 10, job.matches)],
+            description: job.stageDescription,
+            objectives: [job.createObjective(slot)],
         })],
         rewards: [
             ...(slot === JobSlotType.MAIN ? [QuestReward.item(job.weapon, 1)] : []),
