@@ -715,7 +715,8 @@ defineSkill({
     activationConditionTemplate: '/단조 <형태> <재료> 명령어로 사용합니다.',
     baseMetadata: null,
     calculatedFields: {},
-    isVisible: ({ player }) => player?.progress.getFlag('profession:blacksmith') ?? false,
+    isVisible: ({ player }) => Boolean(player
+        && (player.progress.getFlag('profession:blacksmith') || player.skills.has('metal_forging'))),
     canActivate: () => denySkill('/단조 <형태> <재료> 명령어를 사용하세요.'),
     tags: [GameTags.SKILL_PASSIVE],
 });

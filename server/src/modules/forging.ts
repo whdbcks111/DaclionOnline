@@ -12,6 +12,11 @@ export function hasBlacksmithProfession(player: Player): boolean {
     return player.progress.getFlag(BLACKSMITH_PROFESSION_FLAG);
 }
 
+/** 전직 플래그 또는 기능 해금 스킬 중 하나로 금속 단조 사용 권한을 판정한다. */
+export function canUseMetalForging(player: Player): boolean {
+    return hasBlacksmithProfession(player) || player.skills.has('metal_forging');
+}
+
 export function grantBlacksmithProfession(player: Player): boolean {
     if (hasBlacksmithProfession(player)) return false;
     player.progress.setFlag(BLACKSMITH_PROFESSION_FLAG, true);
@@ -22,7 +27,9 @@ export function grantBlacksmithProfession(player: Player): boolean {
 }
 
 export function startForging(player: Player, form: ForgeForm, material: ForgeMaterial): { success: boolean; reason?: string } {
-    if (!hasBlacksmithProfession(player)) return { success: false, reason: '대장장이 전문 직업을 먼저 획득해야 합니다.' };
+    if (!canUseMetalForging(player)) {
+        return { success: false, reason: '대장장이 전문 직업 또는 금속 단조 스킬이 필요합니다.' };
+    }
     if (player.isDefeated) return { success: false, reason: '사망 상태에서는 단조할 수 없습니다.' };
     const requirement = [{ count: form.materialCount, matches: (item: { itemDataId: string }) => item.itemDataId === material.itemDataId }];
     if (!player.inventory.selectItems(requirement)) {

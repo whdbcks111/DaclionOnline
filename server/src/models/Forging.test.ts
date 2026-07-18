@@ -8,7 +8,7 @@ import Skill from './Skill.js';
 import type Player from './Player.js';
 import type Entity from './Entity.js';
 import Inventory from './Inventory.js';
-import { grantBlacksmithProfession } from '../modules/forging.js';
+import { canUseMetalForging, grantBlacksmithProfession } from '../modules/forging.js';
 import '../data/items.js';
 import '../data/progress.js';
 import '../data/skills.js';
@@ -67,4 +67,18 @@ test('대장장이 전문 직업은 세 스킬을 지급하고 마력 제련이 
     assert.equal(inventory.getCount('iron_ore'), 1);
     assert.equal(inventory.getCount('refined_iron'), 4);
     assert.equal(mentality, 82);
+});
+
+test('금속 단조 스킬만 보유해도 단조 권한을 가진다', () => {
+    const progress = PlayerProgress.createEmpty(78);
+    const owned = new Set(['metal_forging']);
+    const player = {
+        progress,
+        skills: { has: (id: string) => owned.has(id) },
+    } as unknown as Player;
+
+    assert.equal(progress.getFlag('profession:blacksmith'), false);
+    assert.equal(canUseMetalForging(player), true);
+    owned.clear();
+    assert.equal(canUseMetalForging(player), false);
 });
