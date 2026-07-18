@@ -9,9 +9,7 @@
     overflow: hidden;
     border: 1px solid $color-border;
     border-radius: $border-radius-md;
-    background:
-        radial-gradient(circle at 50% 45%, rgba(75, 103, 125, 0.2), transparent 55%),
-        rgba(10, 17, 23, 0.94);
+    background: #0a1117;
     color: rgba(255, 255, 255, 0.88);
     white-space: normal;
 }
@@ -78,8 +76,10 @@
 
 .biomeLayer {
     pointer-events: none;
-    mix-blend-mode: screen;
-    opacity: 0.82;
+}
+
+.biomeRegion {
+    opacity: 0.34;
 }
 
 .discoveredPath, .unknownPath {

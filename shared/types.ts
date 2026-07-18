@@ -40,7 +40,7 @@ export interface LocationData {
     tags: TagId[]
     /** 지도에서 점 대신 표시할 /icons/map/{key}.png 랜드마크 아이콘 */
     mapIcon?: string
-    /** 지도 배경에서 장소 주변으로 번지는 대표 바이옴 색상 (#RRGGBB) */
+    /** 지도 배경에서 방문 장소와 연결 경로를 하나의 영역으로 묶는 대표 바이옴 색상 (#RRGGBB) */
     mapColor?: string
 }
 

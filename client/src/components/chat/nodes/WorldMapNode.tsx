@@ -21,8 +21,26 @@ interface ViewBox {
 
 const DEFAULT_ASPECT = 16 / 9
 const MIN_SPAN = 180
-const MIN_BIOME_RADIUS = 72
-const MAX_BIOME_RADIUS = 155
+const MIN_BIOME_RADIUS = 52
+const MAX_BIOME_RADIUS = 108
+
+interface BiomeNode extends Point {
+    id: string
+    radius: number
+}
+
+interface BiomeSegment {
+    id: string
+    from: Point
+    to: Point
+    width: number
+}
+
+interface BiomeRegion {
+    color: string
+    nodes: BiomeNode[]
+    segments: BiomeSegment[]
+}
 
 function mapY(location: WorldMapLocationData): number {
     return -location.y
@@ -60,8 +78,56 @@ function getBiomeRadius(location: WorldMapLocationData, locations: readonly Worl
         if (candidate.id === location.id) return minimum
         return Math.min(minimum, Math.hypot(candidate.x - location.x, candidate.y - location.y))
     }, Number.POSITIVE_INFINITY)
-    if (!Number.isFinite(nearest)) return 110
-    return Math.max(MIN_BIOME_RADIUS, Math.min(MAX_BIOME_RADIUS, nearest * 1.45))
+    if (!Number.isFinite(nearest)) return 78
+    return Math.max(MIN_BIOME_RADIUS, Math.min(MAX_BIOME_RADIUS, nearest * 0.82))
+}
+
+function createBiomeRegions(data: WorldMapData): BiomeRegion[] {
+    const visited = data.locations.filter(location => location.visited && location.mapColor)
+    const visitedById = new Map(visited.map(location => [location.id, location]))
+    const radii = new Map(visited.map(location => [location.id, getBiomeRadius(location, visited)]))
+    const regions = new Map<string, BiomeRegion>()
+    const getRegion = (color: string) => {
+        const key = color.toLowerCase()
+        const existing = regions.get(key)
+        if (existing) return existing
+        const region: BiomeRegion = { color: key, nodes: [], segments: [] }
+        regions.set(key, region)
+        return region
+    }
+
+    for (const location of visited) {
+        getRegion(location.mapColor!).nodes.push({
+            id: location.id,
+            x: location.x,
+            y: mapY(location),
+            radius: radii.get(location.id) ?? MIN_BIOME_RADIUS,
+        })
+    }
+
+    for (const connection of data.connections) {
+        if (!connection.discovered) continue
+        const from = visitedById.get(connection.from)
+        const to = visitedById.get(connection.to)
+        if (!from?.mapColor || !to?.mapColor) continue
+        const fromPoint = { x: from.x, y: mapY(from) }
+        const toPoint = { x: to.x, y: mapY(to) }
+        const fromRadius = radii.get(from.id) ?? MIN_BIOME_RADIUS
+        const toRadius = radii.get(to.id) ?? MIN_BIOME_RADIUS
+        const width = Math.max(MIN_BIOME_RADIUS * 1.35, Math.min(fromRadius, toRadius) * 1.7)
+        const segmentId = `${connection.from}:${connection.to}`
+
+        if (from.mapColor.toLowerCase() === to.mapColor.toLowerCase()) {
+            getRegion(from.mapColor).segments.push({ id: segmentId, from: fromPoint, to: toPoint, width })
+            continue
+        }
+
+        const middle = midpoint(fromPoint, toPoint)
+        getRegion(from.mapColor).segments.push({ id: `${segmentId}:from`, from: fromPoint, to: middle, width })
+        getRegion(to.mapColor).segments.push({ id: `${segmentId}:to`, from: middle, to: toPoint, width })
+    }
+
+    return [...regions.values()]
 }
 
 function getLocalPoint(svg: SVGSVGElement, point: Point): Point {
@@ -73,7 +139,7 @@ export default function WorldMapNode({ data }: Props) {
     const svgId = useId().replaceAll(':', '')
     const gridId = `world-map-grid-${svgId}`
     const glowId = `world-map-current-glow-${svgId}`
-    const biomeFilterId = `world-map-biome-filter-${svgId}`
+    const biomeFilterId = `world-map-biome-boundary-${svgId}`
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
     const pointers = useRef(new Map<number, Point>())
@@ -88,13 +154,7 @@ export default function WorldMapNode({ data }: Props) {
         [data.locations],
     )
     const activeLocation = locationsById.get(hoveredId ?? selectedId ?? '')
-    const biomeAreas = useMemo(() => data.locations
-        .filter(location => location.visited && location.mapColor)
-        .map((location, index) => ({
-            location,
-            radius: getBiomeRadius(location, data.locations),
-            gradientId: `world-map-biome-${svgId}-${index}`,
-        })), [data.locations, svgId])
+    const biomeRegions = useMemo(() => createBiomeRegions(data), [data])
 
     useEffect(() => {
         const container = containerRef.current
@@ -240,29 +300,44 @@ export default function WorldMapNode({ data }: Props) {
                         <feGaussianBlur stdDeviation="3" result="blur" />
                         <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                     </filter>
-                    <filter id={biomeFilterId} x="-35%" y="-35%" width="170%" height="170%">
-                        <feTurbulence type="fractalNoise" baseFrequency="0.018 0.024" numOctaves="2" seed="17" result="noise" />
-                        <feDisplacementMap in="SourceGraphic" in2="noise" scale="20" xChannelSelector="R" yChannelSelector="G" />
-                        <feGaussianBlur stdDeviation="4" />
+                    <filter id={biomeFilterId} x="-25%" y="-25%" width="150%" height="150%" colorInterpolationFilters="sRGB">
+                        <feTurbulence type="fractalNoise" baseFrequency="0.014 0.019" numOctaves="2" seed="17" result="boundaryNoise" />
+                        <feDisplacementMap in="SourceGraphic" in2="boundaryNoise" scale="11" xChannelSelector="R" yChannelSelector="G" result="organicShape" />
+                        <feGaussianBlur in="organicShape" stdDeviation="7" result="softEdge" />
+                        <feComponentTransfer in="softEdge" result="fadedEdge">
+                            <feFuncA type="linear" slope="0.32" />
+                        </feComponentTransfer>
+                        <feMerge>
+                            <feMergeNode in="fadedEdge" />
+                            <feMergeNode in="organicShape" />
+                        </feMerge>
                     </filter>
-                    {biomeAreas.map(area => (
-                        <radialGradient key={area.gradientId} id={area.gradientId}>
-                            <stop offset="0%" stopColor={area.location.mapColor} stopOpacity="0.54" />
-                            <stop offset="42%" stopColor={area.location.mapColor} stopOpacity="0.34" />
-                            <stop offset="76%" stopColor={area.location.mapColor} stopOpacity="0.14" />
-                            <stop offset="100%" stopColor={area.location.mapColor} stopOpacity="0" />
-                        </radialGradient>
-                    ))}
                 </defs>
-                <g className={styles.biomeLayer} filter={`url(#${biomeFilterId})`} aria-hidden="true">
-                    {biomeAreas.map(area => (
-                        <circle
-                            key={area.location.id}
-                            cx={area.location.x}
-                            cy={mapY(area.location)}
-                            r={area.radius}
-                            fill={`url(#${area.gradientId})`}
-                        />
+                <g className={styles.biomeLayer} aria-hidden="true">
+                    {biomeRegions.map(region => (
+                        <g
+                            key={region.color}
+                            className={styles.biomeRegion}
+                            filter={`url(#${biomeFilterId})`}
+                            fill={region.color}
+                            stroke={region.color}
+                        >
+                            {region.segments.map(segment => (
+                                <line
+                                    key={segment.id}
+                                    x1={segment.from.x}
+                                    y1={segment.from.y}
+                                    x2={segment.to.x}
+                                    y2={segment.to.y}
+                                    strokeWidth={segment.width}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            ))}
+                            {region.nodes.map(node => (
+                                <circle key={node.id} cx={node.x} cy={node.y} r={node.radius} stroke="none" />
+                            ))}
+                        </g>
                     ))}
                 </g>
                 <rect x={view.x} y={view.y} width={view.width} height={view.height} fill={`url(#${gridId})`} />
