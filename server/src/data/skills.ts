@@ -389,7 +389,7 @@ defineSkill({
     onStart: context => {
         spend(context, 18);
         context.owner.applyStatusEffect(INDOMITABLE, valueByLevel(context.skill.level, 10, 1), context.skill.level);
-        context.owner.heal(context.owner.maxLife * percentByLevel(context.skill.level, 15, 2) / 100);
+        context.owner.heal(context.owner.maxLife * percentByLevel(context.skill.level, 15, 2) / 100, context.owner);
     },
     tags: [GameTags.SKILL_ACTIVE],
 });
@@ -585,7 +585,7 @@ defineSkill({
     onStart: context => {
         spend(context, 22);
         const duration = valueByLevel(context.skill.level, 10, 1);
-        context.owner.setShield('skill:mana_barrier', manaBarrierShieldAmount(context), ShieldType.MAGIC, duration);
+        context.owner.setShield('skill:mana_barrier', manaBarrierShieldAmount(context), ShieldType.MAGIC, duration, context.owner);
         context.owner.applyStatusEffect(MANA_BARRIER, duration, context.skill.level);
     }, tags: [GameTags.SKILL_ACTIVE],
 });

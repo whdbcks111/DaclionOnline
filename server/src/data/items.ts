@@ -24,7 +24,7 @@ registerItemUse('heal_hp', (inv, item, finish) => {
             inv.removeItem(item.id, 1);
             sendNotificationToUser(player.userId, { key: 'item:heal_hp', message: '꿀꺽꿀꺽...', length: time * 1000 });
             yield Wait(time);
-            const result = player.heal(amount);
+            const result = player.heal(amount, player);
             sendNotificationToUser(player.userId, { key: 'item:heal_hp', message: `생명력을 ${result.healedAmount.toFixed(0)}만큼 회복했습니다!` });
         }
         catch(e) {

@@ -33,6 +33,7 @@
 - [`docs/systems/auth-session.md`](docs/systems/auth-session.md)
 - [`docs/systems/chat-command.md`](docs/systems/chat-command.md)
 - [`docs/systems/player-world.md`](docs/systems/player-world.md)
+- [`docs/systems/combat-ai.md`](docs/systems/combat-ai.md)
 - [`docs/systems/shields.md`](docs/systems/shields.md)
 - [`docs/systems/items-shop.md`](docs/systems/items-shop.md)
 - [`docs/systems/crafting.md`](docs/systems/crafting.md)

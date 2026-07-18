@@ -1,6 +1,7 @@
 import { defineMonster } from '../models/Monster.js';
 import type { MonsterData } from '../models/Monster.js';
 import { GameTags } from '../../../shared/tags.js';
+import { MonsterAiDisposition } from '../models/Threat.js';
 
 type WorldMonsterData = Omit<MonsterData, 'exp' | 'expReward' | 'equipments'>
     & Partial<Pick<MonsterData, 'expReward' | 'equipments'>>;
@@ -9,6 +10,13 @@ type WorldMonsterData = Omit<MonsterData, 'exp' | 'expReward' | 'equipments'>
 function defineWorldMonster(data: WorldMonsterData): void {
     defineMonster({
         ...data,
+        ai: data.ai ?? (data.tags.includes(GameTags.ENTITY_SLIME) ? {
+            intelligence: 5,
+            disposition: MonsterAiDisposition.LAST_ATTACKER,
+            weights: { attack: 1, damage: 1, healing: 0, shielding: 0, control: 0.1, taunt: 1 },
+            tauntResistance: 0,
+            switchThreshold: 0,
+        } : undefined),
         exp: 0,
         expReward: data.expReward ?? data.level * 20,
         equipments: data.equipments ?? [],
@@ -215,6 +223,14 @@ defineWorldMonster({
         sequence: ['seismic_crush'],
         initialDelay: 5,
         interval: { min: 10, max: 13 },
+    },
+    ai: {
+        intelligence: 92,
+        disposition: MonsterAiDisposition.THREAT,
+        weights: { attack: 0.2, damage: 1, healing: 1.4, shielding: 0.8, control: 1.1, taunt: 2.5 },
+        tauntResistance: 0.78,
+        switchThreshold: 0.24,
+        decayPerSecond: 0.008,
     },
     tags: [
         GameTags.ENTITY_BOSS,

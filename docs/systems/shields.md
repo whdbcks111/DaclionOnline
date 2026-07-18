@@ -12,7 +12,7 @@
 | `PHYSICAL` | 주황색 | 물리 피해 |
 | `MAGIC` | 보라색 | 마법 피해 |
 
-`Entity.setShield(key, amount, type, duration)`은 source key 하나에 보호막 하나를 등록한다. 같은 key를 다시 쓰면 기존 보호막의 양·타입·시간을 새 값으로 교체하고, 다른 key는 제한 없이 중첩한다. 현재 보호막은 DB에 저장하지 않으며 사망·파괴, 지속시간 만료 또는 전량 소모 시 제거된다.
+`Entity.setShield(key, amount, type, duration, source?)`은 source key 하나에 보호막 하나를 등록한다. 같은 key를 다시 쓰면 기존 보호막의 양·타입·시간을 새 값으로 교체하고, 다른 key는 제한 없이 중첩한다. 교전 중인 아군에게 보호막을 주는 기능은 source Entity를 넘겨 관련 몬스터의 지원 위협도에 반영한다. 현재 보호막은 DB에 저장하지 않으며 사망·파괴, 지속시간 만료 또는 전량 소모 시 제거된다.
 
 ## 피해 처리
 

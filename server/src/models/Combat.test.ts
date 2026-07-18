@@ -5,6 +5,7 @@ import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import { ActionType } from './Action.js';
 import { calculateEvasionChance, rollEvasion } from './Combat.js';
+import { CombatStage, registerCombatHook } from './CombatPipeline.js';
 
 class TestEntity extends Entity {
     override readonly name: string;
@@ -95,4 +96,29 @@ test('고정 피해 옵션은 치명타·속성 타입별 방어·관통 계산 
     assert.equal(result.rawAmount, 25);
     assert.equal(result.finalDamage, 25);
     assert.equal(target.life, 75);
+});
+
+test('전투 pipeline은 계산 전 피해 수정과 준비 단계 취소를 key 기반으로 등록·해제한다', () => {
+    const attacker = new TestEntity('pipeline 공격자', { critRate: 0, speed: 100 });
+    const target = new TestEntity('pipeline 피격자', { speed: 100 });
+    const removeBonus = registerCombatHook({
+        key: 'test:double-damage',
+        stage: CombatStage.BEFORE_DAMAGE,
+        filter: context => context.attacker === attacker,
+        run: context => { context.amount *= 2; },
+    });
+    const doubled = attacker.attack(target, 'physical', 10, { unavoidable: true, consumeMainHandDurability: false });
+    assert.equal(doubled?.finalDamage, 20);
+    assert.equal(removeBonus(), true);
+
+    const blockedAttacker = new TestEntity('blocked 공격자', { speed: 100 });
+    const removeBlock = registerCombatHook({
+        key: 'test:block-attack',
+        stage: CombatStage.PREPARE,
+        filter: context => context.attacker === blockedAttacker,
+        run: context => { context.cancelled = true; context.cancelReason = '테스트 취소'; },
+    });
+    assert.equal(blockedAttacker.attack(target, 'physical', 10, { unavoidable: true }), null);
+    assert.equal(target.life, 80);
+    assert.equal(removeBlock(), true);
 });

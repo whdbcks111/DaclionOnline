@@ -15,6 +15,14 @@ import SkillBook from "./SkillBook.js";
 import type { RuntimeSkillEntry, SkillActivationOutcome } from "./SkillBook.js";
 import { partyManager } from '../modules/party.js';
 import type { ShieldBarSegment } from '../../../shared/types.js';
+import { CombatStage, registerCombatHook } from './CombatPipeline.js';
+import {
+    MonsterAiDisposition,
+    normalizeMonsterAiProfile,
+    ThreatAction,
+    ThreatTable,
+    type MonsterAiProfileInput,
+} from './Threat.js';
 
 /** 드롭 아이템 정보 */
 export interface DropInfo {
@@ -70,6 +78,8 @@ export interface MonsterData {
     attack?: MonsterAttackProfile;
     skills?: RuntimeSkillEntry[];
     skillPattern?: MonsterSkillPattern;
+    /** 지능·행동별 위협 가중치·도발 저항을 포함한 AI 마스터 설정. */
+    ai?: MonsterAiProfileInput;
     tags: TagId[];
 }
 
@@ -107,6 +117,7 @@ export default class Monster extends Entity {
     readonly skills: SkillBook;
     private readonly attackProfile?: Readonly<MonsterAttackProfile>;
     private readonly skillPattern?: Readonly<MonsterSkillPattern>;
+    private readonly threat: ThreatTable;
     private skillPatternIndex = 0;
     private skillPatternTimer = 0;
 
@@ -138,6 +149,7 @@ export default class Monster extends Entity {
         } : undefined;
         this.skillPatternTimer = this.skillPattern?.initialDelay ?? 0;
         this.skills = SkillBook.createRuntime(this, data.skills ?? []);
+        this.threat = new ThreatTable(this, normalizeMonsterAiProfile(data.ai));
 
         // 기본 장비 장착
         for (const eq of data.equipments) {
@@ -151,6 +163,26 @@ export default class Monster extends Entity {
     /** 보유한 실제 SkillData를 몬스터 AI나 외부 패턴 로직에서 직접 발동한다. */
     activateSkill(skillDataId: string): SkillActivationOutcome {
         return this.skills.activateById(skillDataId);
+    }
+
+    /** 스킬·상태효과가 raw threat table 없이 행동별 위협도를 기록하는 공개 API. */
+    recordThreat(actor: Entity, action: ThreatAction, amount: number): void {
+        this.threat.record(actor, action, amount);
+        this.currentTarget = this.threat.selectTarget(this.currentTarget);
+    }
+
+    taunt(actor: Entity, power: number): void {
+        this.recordThreat(actor, ThreatAction.TAUNT, power);
+    }
+
+    getThreatContributions() {
+        return this.threat.getContributionSnapshots();
+    }
+
+    override acquireCombatTarget(attacker: Entity): boolean {
+        const previous = this.currentTarget;
+        this.recordThreat(attacker, ThreatAction.ATTACK, 1);
+        return previous !== this.currentTarget;
     }
 
     /** 현재 능력치와 마스터 설명·공격·보상을 합친 감정용 불변 스냅샷. */
@@ -204,6 +236,8 @@ export default class Monster extends Entity {
         const location = getLocation(this.locationId);
         if(!location) return;
 
+        this.threat.update(dt);
+        this.currentTarget = this.threat.selectTarget(this.currentTarget);
         const target = this.currentTarget;
         if (!target || target.isDefeated || target.locationId !== this.locationId) {
             this.currentTarget = null;
@@ -241,7 +275,8 @@ export default class Monster extends Entity {
         this.skills.finishAll();
         super.onDeath();
 
-        const attackOwner = this.lastDamageCause?.causeEntity?.attackOwner;
+        const attackOwner = this.threat.getPrimaryContributor()
+            ?? this.lastDamageCause?.causeEntity?.attackOwner;
         if(attackOwner?.isPlayer) {
             const causePlayer = attackOwner as Player;
 
@@ -303,12 +338,15 @@ export default class Monster extends Entity {
 
         if (this.isOneShot) {
             this.deathTimer = 0;
+            this.threat.dispose();
             getLocation(this.locationId)?.removeObject(this);
         }
+        this.threat.clear();
     }
 
     override respawn(): void {
         super.respawn();
+        this.threat.clear();
         this.skillPatternTimer = this.skillPattern?.initialDelay ?? 0;
         this.skillPatternIndex = 0;
     }
@@ -336,6 +374,16 @@ export default class Monster extends Entity {
         return result;
     }
 }
+
+registerCombatHook({
+    key: 'monster:threat:damage',
+    stage: CombatStage.AFTER_DAMAGE,
+    filter: context => context.target instanceof Monster && Boolean(context.result),
+    run: context => {
+        const amount = (context.result?.lifeDamage ?? 0) + (context.result?.absorbedDamage ?? 0);
+        if (amount > 0) (context.target as Monster).recordThreat(context.attacker, ThreatAction.DAMAGE, amount);
+    },
+});
 
 // -- MonsterData 캐시 --
 
@@ -375,6 +423,10 @@ export function defineMonster(data: MonsterData): void {
             ...pattern,
             sequence: [...pattern.sequence],
             interval: { ...pattern.interval },
+        } : undefined,
+        ai: data.ai ? {
+            ...data.ai,
+            weights: data.ai.weights ? { ...data.ai.weights } : undefined,
         } : undefined,
         tags: normalizeTags(data.tags),
     });

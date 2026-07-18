@@ -17,6 +17,7 @@ import './locations.js';
 import './shops.js';
 import './fishing.js';
 import { rollTreasureReward } from './resources.js';
+import { MonsterAiDisposition } from '../models/Threat.js';
 
 const locations = JSON.parse(
     readFileSync(new URL('./locations.json', import.meta.url), 'utf-8'),
@@ -131,6 +132,10 @@ test('광산 보스는 높은 체력과 느린 공격, 실제 스킬 패턴과 �
     assert.deepEqual(boss.skillPattern?.sequence, ['seismic_crush']);
     assert.ok(boss.drops.some(drop => drop.itemDataId === 'seismic_crush_skillbook' && drop.chance <= 0.05));
     assert.ok(bossLocation?.objects.some(object => object.dataId === boss.id && object.maxCount === 1));
+    assert.equal(getMonsterData('slime')?.ai?.disposition, MonsterAiDisposition.LAST_ATTACKER);
+    assert.equal(boss.ai?.disposition, MonsterAiDisposition.THREAT);
+    assert.ok((boss.ai?.weights?.healing ?? 0) > (boss.ai?.weights?.damage ?? 0));
+    assert.ok((boss.ai?.tauntResistance ?? 0) >= 0.75);
 });
 
 test('보물상자는 1~2시간 쿨타임과 가중치 기반 골드·아이템 보상을 가진다', () => {

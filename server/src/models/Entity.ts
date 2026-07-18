@@ -21,6 +21,8 @@ import logger from "../utils/logger.js";
 import { ActionType } from "./Action.js";
 import Shield, { ShieldType, type ShieldDisplaySnapshot } from './Shield.js';
 import type { ShieldBarSegment } from '../../../shared/types.js';
+import { CombatStage, createCombatContext, runCombatStage } from './CombatPipeline.js';
+import { reportSupportThreat, ThreatAction } from './Threat.js';
 
 /** 대미지 타입 */
 export type DamageType = 'physical' | 'magic' | 'absolute';
@@ -319,7 +321,7 @@ export default abstract class Entity implements TagReadable {
     // -- 회복 --
 
     /** 현재 치유량 modifier를 적용해 생명력을 회복한다. */
-    heal(rawAmount: number): HealingResult {
+    heal(rawAmount: number, source?: Entity): HealingResult {
         if (!Number.isFinite(rawAmount) || rawAmount < 0) {
             throw new Error(`Healing amount must be a non-negative finite number: ${rawAmount}`);
         }
@@ -329,6 +331,7 @@ export default abstract class Entity implements TagReadable {
             ? 0
             : Math.max(0, Math.min(modifiedAmount, this.maxLife - this.life));
         this.life += healedAmount;
+        if (source && healedAmount > 0) reportSupportThreat(source, this, ThreatAction.HEALING, healedAmount);
         return {
             rawAmount,
             modifiedAmount,
@@ -396,7 +399,7 @@ export default abstract class Entity implements TagReadable {
     // -- 보호막 --
 
     /** 같은 key는 교체하고 다른 key는 독립적으로 중첩한다. */
-    setShield(key: string, amount: number, type: ShieldType, duration: number): ShieldDisplaySnapshot | undefined {
+    setShield(key: string, amount: number, type: ShieldType, duration: number, source?: Entity): ShieldDisplaySnapshot | undefined {
         const normalizedKey = key.trim();
         if (!normalizedKey) throw new Error('Shield key must not be empty');
         if (!Number.isFinite(amount) || amount <= 0) throw new Error('Shield amount must be a positive finite number');
@@ -404,6 +407,7 @@ export default abstract class Entity implements TagReadable {
         if (this.isDefeated) return undefined;
         const shield = new Shield(normalizedKey, amount, type, duration);
         this.shields.set(normalizedKey, shield);
+        if (source) reportSupportThreat(source, this, ThreatAction.SHIELDING, amount);
         return shield.toSnapshot();
     }
 
@@ -717,26 +721,36 @@ export default abstract class Entity implements TagReadable {
         options: AttackOptions = {},
     ): DamageResult | null {
         if (!this.canAttack(target)) return null;
-        target.acquireCombatTarget(this);
-
         // 기본 공격력: 물리 → atk, 마법 → magicForce
         const baseAmount = amount ?? (type === 'physical'
             ? this.attribute.get(AttributeType.ATK)
             : this.attribute.get(AttributeType.MAGIC_FORCE));
+        const combat = createCombatContext(this, target, type, baseAmount, options);
+        runCombatStage(CombatStage.PREPARE, combat);
+        if (combat.cancelled) {
+            if (this.playerUserId !== undefined && combat.cancelReason) {
+                sendNotificationToUser(this.playerUserId, { key: 'attack-cancelled', message: combat.cancelReason });
+            }
+            return null;
+        }
+        target.acquireCombatTarget(this);
+        const combatType = combat.damageType;
+        const combatOptions = combat.options;
 
-        const guaranteedEvasion = !options.unavoidable && target.canPerformAction(ActionType.MOVEMENT)
+        const guaranteedEvasion = !combatOptions.unavoidable && target.canPerformAction(ActionType.MOVEMENT)
             && target.consumeGuaranteedEvasion();
-        const evasionChance = options.unavoidable || !target.canPerformAction(ActionType.MOVEMENT)
+        const evasionChance = combatOptions.unavoidable || !target.canPerformAction(ActionType.MOVEMENT)
             ? 0
             : guaranteedEvasion ? 1 : calculateEvasionChance(
                 this.attribute.get(AttributeType.SPEED),
                 target.attribute.get(AttributeType.SPEED),
             );
+        combat.evasionChance = evasionChance;
         if (rollEvasion(evasionChance)) {
-            this.commitAttack(options.consumeMainHandDurability ?? type === 'physical');
+            this.commitAttack(combatOptions.consumeMainHandDurability ?? combatType === 'physical');
             const result: DamageResult = {
-                type,
-                rawAmount: Math.max(0, baseAmount),
+                type: combatType,
+                rawAmount: Math.max(0, combat.amount),
                 modifiedAmount: 0,
                 finalDamage: 0,
                 lifeDamage: 0,
@@ -745,44 +759,53 @@ export default abstract class Entity implements TagReadable {
                 remainingShield: target.getTotalShield(),
                 critical: false,
                 evaded: true,
-                fixedDamage: options.fixedDamage === true,
+                fixedDamage: combatOptions.fixedDamage === true,
                 effectModifier: 1,
             };
+            combat.result = result;
+            runCombatStage(CombatStage.EVADED, combat);
             this.notifyEvadedAttack(target, evasionChance);
             emitGameEvent(GameEventIds.ATTACK_EVADED, {
                 actor: this,
                 subject: target,
-                data: { evasionChance, damageType: type },
+                data: { evasionChance, damageType: combatType },
             });
+            runCombatStage(CombatStage.COMPLETE, combat);
             return result;
         }
 
-        const criticalResult = options.fixedDamage
-            ? { rawAmount: Math.max(0, baseAmount), critical: false }
+        const criticalResult = combatOptions.fixedDamage
+            ? { rawAmount: Math.max(0, combat.amount), critical: false }
             : applyCritical(
-                baseAmount,
-                options.criticalRate ?? this.attribute.get(AttributeType.CRIT_RATE),
-                options.criticalDamage ?? this.attribute.get(AttributeType.CRIT_DMG),
+                combat.amount,
+                combatOptions.criticalRate ?? this.attribute.get(AttributeType.CRIT_RATE),
+                combatOptions.criticalDamage ?? this.attribute.get(AttributeType.CRIT_DMG),
             );
-        const { rawAmount, critical } = criticalResult;
+        combat.amount = criticalResult.rawAmount;
+        combat.critical = criticalResult.critical;
+        runCombatStage(CombatStage.BEFORE_DAMAGE, combat);
+        const rawAmount = Math.max(0, combat.amount);
+        const critical = combat.critical;
 
-        const damageResult = target.damage(rawAmount, type, {
+        const damageResult = target.damage(rawAmount, combatType, {
             type: 'attack',
             causeEntity: this,
             critical,
-            fixedDamage: options.fixedDamage,
+            fixedDamage: combatOptions.fixedDamage,
         });
+        combat.result = damageResult;
+        runCombatStage(CombatStage.AFTER_DAMAGE, combat);
         if (critical) {
             emitGameEvent(GameEventIds.CRITICAL_HIT, {
                 actor: this,
                 subject: target,
                 data: {
-                    damageType: type,
+                    damageType: combatType,
                     finalDamage: damageResult.finalDamage,
                 },
             });
         }
-        if (damageResult.finalDamage > 0 && (options.triggerMainHandHitEffects ?? type === 'physical')) {
+        if (damageResult.finalDamage > 0 && (combatOptions.triggerMainHandHitEffects ?? combatType === 'physical')) {
             const weapon = this.equipment.getEquipped(EquipSlotType.MAIN_HAND.key);
             try {
                 weapon?.data?.onBasicAttackHit?.({ attacker: this, target, weapon, result: damageResult });
@@ -791,7 +814,7 @@ export default abstract class Entity implements TagReadable {
             }
         }
         // 즉시 피해를 적용하는 물리 직접 공격은 근접 공격으로 취급한다.
-        this.commitAttack(options.consumeMainHandDurability ?? type === 'physical');
+        this.commitAttack(combatOptions.consumeMainHandDurability ?? combatType === 'physical');
         const { finalDamage, effectModifier } = damageResult;
         const effectLabel = effectModifier === 0
             ? '효과 없음! '
@@ -839,6 +862,7 @@ export default abstract class Entity implements TagReadable {
             }
         }
 
+        runCombatStage(CombatStage.COMPLETE, combat);
         return damageResult;
     }
 
