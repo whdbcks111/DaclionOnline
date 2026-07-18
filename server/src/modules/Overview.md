@@ -1,12 +1,12 @@
 # Modules Overview
 
-`partyManager.areInSameParty()`는 내부 멤버 Map을 노출하지 않고 PVP 아군 공격을 차단한다. `sendLocationInfo()`는 위험도 표시명과 PVP 허용 여부를 가공된 HUD snapshot으로 제공한다.
+`partyManager.areInSameParty()`는 내부 멤버 Map을 노출하지 않고 PVP 아군 공격을 차단하며, `getEventAudienceUserIds()`는 스킬·공격·회피 파티 피드 수신자 snapshot을 제공한다. `sendLocationInfo()`는 위험도 표시명과 PVP 허용 여부를 가공된 HUD snapshot으로 제공한다.
 
 Socket/HTTP 요청, 세션과 온라인 상태, 주기 작업, 도메인 객체 수명처럼 애플리케이션 수준의 조정을 담당한다.
 
 - `login.ts`, `socket.ts`: Socket.io 초기화·세션 쿠키 바인딩과 인메모리 세션·userId별 socket ID Set을 관리한다. 전체/채널 접속자는 다중 탭을 합친 고유 사용자 기준이며, 명시적 로그아웃과 disconnect 모두 socket ID 바인딩을 안전하게 해제한다. 마지막 연결 종료 시 활성 NPC 대화도 unload 사유로 종료한다.
 - `register.ts`, `mail.ts`, `upload.ts`: 계정 등록·메일·프로필과 채팅 이미지 업로드. 채팅 이미지는 Sharp로 최대 1600px WebP에 재인코딩하고 소유권·표시 치수 snapshot API, 전체 100장·7일 보관 및 시작/매시간 정리를 제공한다.
-- `chat.ts`, `channel.ts`, `message.ts`, `bot.ts`, `informationVisibility.ts`: 채팅 room, 히스토리, `/명령` 및 슬래시 없는 별칭 입력의 라우팅과 출력. `getCommandListFiltered(permission)`은 권한에 맞는 명령과 복사된 aliases snapshot을 제공한다. CHAT/COMMAND 행동 제한, 최대 10장 묶음 전체의 소유권을 재검증해 하나의 메시지로 만드는 이미지 전송, 온라인 닉네임 `@` 자동완성과 채널을 넘는 양방향 필터 히스토리 귓속말, 공개하지 않는 일반 문장 SkillBook trigger와 본인 전용 플레이어 표시 메시지, 플레이어별 정보성 명령 공개/비공개 모드와 async 출력 문맥을 담당한다.
+- `chat.ts`, `channel.ts`, `message.ts`, `bot.ts`, `informationVisibility.ts`: 채팅 room, 히스토리, `/명령` 및 슬래시 없는 별칭 입력의 라우팅과 출력. `getCommandListFiltered(permission)`은 권한에 맞는 명령과 복사된 aliases snapshot을 제공한다. CHAT/COMMAND 행동 제한, 최대 10장 묶음 전체의 소유권을 재검증해 하나의 메시지로 만드는 이미지 전송, 온라인 닉네임 `@` 자동완성과 채널을 넘는 양방향 필터 히스토리 귓속말, 공개하지 않는 일반 문장 SkillBook trigger, 본인 전용 플레이어 표시 메시지와 `[파티]` 스킬·전투 필터 피드, 플레이어별 정보성 명령 공개/비공개 모드와 async 출력 문맥을 담당한다.
 - `playerRegistry.ts`, `player.ts`, `party.ts`, `location.ts`, `game.ts`, `coroutine.ts`, `scheduler.ts`: 온라인 Player와 고유번호/닉네임 목적형 조회·prefix 검색, 최대 5명 런타임 파티·60초 초대·파티 HUD·같은 장소 몬스터 경험치 공유, 현재 Entity 보호막 구간과 표시 가능한 스킬 쿨다운이 포함된 0.5초 Player/Location HUD payload, Player/Progress/SkillBook 수명·dirty 저장, 통합 Location 오브젝트/NPC ID 검증·JSON 저장, 월드 프레임/제작 대기 실행을 담당한다. scheduler는 스킬·무기·아이템 효과가 재사용하는 key 교체/취소/반복 지연 API이며 미니게임 만료와 낚시 타이머가 사용한다. `player.ts`의 인접 위치 snapshot은 `Location.getAvailableConnections(player)`를 사용해 hidden을 제외하고 visible/locked 상태를 전송한다. 마지막 연결 종료와 Player unload는 파티·정보 공개 모드·제작·NPC 대화·질문 퍼즐 세션을 정리한다.
 - `ranking.ts`: `Player.getPersistedRankingSnapshots`의 가공된 DTO를 10초 캐시하고 온라인 Player의 현재 공개 API snapshot으로 덮어쓴 뒤, 값 내림차순 공동 순위와 수치 공개 여부를 반환한다.
 - `stateSync.ts`: `playerStats/locationInfo`의 내용 변경 시에만 revision을 올리고 socket별 전달 stamp를 비교해 완전한 snapshot을 전송한다. `syncId`가 바뀌면 낮은 revision도 새 stream으로 인정해 재접속·다중 탭의 부분 병합 오류를 피한다.

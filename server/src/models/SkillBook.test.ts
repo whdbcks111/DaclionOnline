@@ -12,7 +12,7 @@ import { Item } from './Item.js';
 import { getActiveProjectiles, removeProjectile } from './Projectile.js';
 import { getIO, initSocket } from '../modules/socket.js';
 import { getChannelHistory, getFilteredHistoryForUser } from '../modules/channel.js';
-import { createSession, removeSession } from '../modules/login.js';
+import { createSession, removeSession, setUserOffline, setUserOnline } from '../modules/login.js';
 import { registerOnlinePlayer, unregisterOnlinePlayer } from '../modules/playerRegistry.js';
 import '../data/progress.js';
 import '../data/skills.js';
@@ -22,18 +22,24 @@ import '../data/projectiles.js';
 import CareerProfile, { CareerProgressIds } from './Career.js';
 import { ShieldType } from './Shield.js';
 import Stat, { StatType } from './Stat.js';
+import { partyManager } from '../modules/party.js';
 
 class TestSkillPlayer extends Entity {
     override readonly name = '스킬 시험 플레이어';
-    readonly userId = 9301;
-    readonly progress = PlayerProgress.createEmpty(this.userId);
-    readonly skills = SkillBook.createEmpty(this.userId);
-    readonly inventory = Inventory.createEmpty(this.userId, 100);
-    readonly stat = new Stat();
+    readonly userId: number;
+    readonly progress: PlayerProgress;
+    readonly skills: SkillBook;
+    readonly inventory: Inventory;
+    readonly stat: Stat;
     readonly career: CareerProfile;
 
-    constructor() {
+    constructor(userId = 9301) {
         super(1, 0, 'test', { maxLife: 100 }, Equipment.createEmpty());
+        this.userId = userId;
+        this.progress = PlayerProgress.createEmpty(userId);
+        this.skills = SkillBook.createEmpty(userId);
+        this.inventory = Inventory.createEmpty(userId, 100);
+        this.stat = new Stat();
         this.career = new CareerProfile(this as unknown as Player);
         this.skills.bindOwner(this as unknown as Player);
     }
@@ -351,7 +357,7 @@ test('마력 보호막 스킬은 방어 버프와 같은 시간의 마법 보호
     assert.ok((shield?.amount ?? 0) > 0);
 });
 
-test('버프 스킬은 시전 메시지와 효과 피드백을 모두 본인에게만 남긴다', () => {
+test('솔로 버프 스킬은 시전 메시지와 효과 피드백을 모두 본인에게만 남긴다', () => {
     const player = new TestSkillPlayer();
     player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
     player.skills.grant('battle_rush', 'test', 3);
@@ -388,6 +394,65 @@ test('버프 스킬은 시전 메시지와 효과 피드백을 모두 본인에�
         assert.match(feedbackText, /10초/);
     } finally {
         removeSession(sessionToken);
+    }
+});
+
+test('파티원은 스킬 시전·효과 피드백과 공격 결과를 파티 피드로 받는다', () => {
+    const player = new TestSkillPlayer(9391);
+    const memberId = 9392;
+    const member = {
+        userId: memberId,
+        name: '전투 관전자',
+        level: 1,
+        locationId: 'test',
+        isDefeated: false,
+        life: 100,
+        maxLife: 100,
+        mentality: 100,
+        maxMentality: 100,
+        maxExp: 100,
+        gainExp: () => [],
+    } as unknown as Player;
+    player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+    player.skills.grant('battle_rush', 'test', 1);
+    const playerToken = createSession({ id: player.userId, username: 'party_skill_source', nickname: player.name });
+    const memberToken = createSession({ id: memberId, username: 'party_skill_member', nickname: member.name });
+    setUserOnline(player.userId, 'party-skill-source');
+    setUserOnline(memberId, 'party-skill-member');
+    registerOnlinePlayer(player as unknown as Player);
+    registerOnlinePlayer(member);
+
+    try {
+        assert.equal(partyManager.invite(player as unknown as Player, member).success, true);
+        const accepted = partyManager.accept(member);
+        assert.equal(accepted.success, true, accepted.reason);
+        const before = getFilteredHistoryForUser(memberId, null).length;
+
+        assert.equal(player.skills.activateByInput('전투 질주').activated, true);
+        const skillMessages = getFilteredHistoryForUser(memberId, null).slice(before);
+        assert.equal(skillMessages.length, 2);
+        assert.ok(skillMessages.every(message => message.flags?.some(flag => flag.text === '파티')));
+
+        const target = new TestTarget();
+        const result = player.attack(target, 'physical', 10, {
+            unavoidable: true,
+            consumeMainHandDurability: false,
+        });
+        assert.ok(result);
+        const attackMessage = getFilteredHistoryForUser(memberId, null).at(-1);
+        assert.ok(attackMessage?.flags?.some(flag => flag.text === '파티'));
+        const attackText = Array.isArray(attackMessage?.content)
+            ? attackMessage.content.filter(node => node.type === 'text').map(node => node.text).join('')
+            : attackMessage?.content ?? '';
+        assert.match(attackText, /피해/);
+    } finally {
+        partyManager.leave(player as unknown as Player);
+        unregisterOnlinePlayer(player.userId);
+        unregisterOnlinePlayer(memberId);
+        setUserOffline(player.userId, 'party-skill-source');
+        setUserOffline(memberId, 'party-skill-member');
+        removeSession(playerToken);
+        removeSession(memberToken);
     }
 });
 

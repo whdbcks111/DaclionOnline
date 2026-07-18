@@ -15,8 +15,11 @@ import type {
 } from './Skill.js';
 import { emitGameEvent, GameEventIds } from './GameEvent.js';
 import {
+    sendBotMessageToPartyMembers,
     sendBotMessageToUser,
     sendNotificationToUser,
+    sendNotificationToUsers,
+    sendPlayerTextToPartyMembers,
     sendPrivatePlayerTextToCurrentChannel,
     sendPrivateBotMessageToUser,
 } from '../modules/message.js';
@@ -25,6 +28,7 @@ import logger from '../utils/logger.js';
 import type { TagId } from '../../../shared/tags.js';
 import type { SkillHudData } from '../../../shared/types.js';
 import { ActionType } from './Action.js';
+import { partyManager } from '../modules/party.js';
 
 export interface SkillActivationOutcome {
     matched: boolean;
@@ -402,8 +406,15 @@ export default class SkillBook {
         }
 
         const player = this.getPlayerOwner();
+        const partyObservers = player
+            ? partyManager.getEventAudienceUserIds(player.userId).filter(userId => userId !== player.userId)
+            : [];
         if (player && skill.data.activationMessage) {
-            sendPrivatePlayerTextToCurrentChannel(player.userId, skill.format(skill.data.activationMessage, owner));
+            const activationMessage = skill.format(skill.data.activationMessage, owner);
+            sendPrivatePlayerTextToCurrentChannel(player.userId, activationMessage);
+            if (partyObservers.length > 0) {
+                sendPlayerTextToPartyMembers(player.userId, partyObservers, activationMessage);
+            }
         }
 
         let startResult: SkillStartResult | void;
@@ -425,11 +436,16 @@ export default class SkillBook {
             try {
                 const feedback = skill.data.activationFeedback(createSkillContext(owner, skill));
                 sendPrivateBotMessageToUser(player.userId, feedback);
-                sendNotificationToUser(player.userId, {
+                const notification = {
                     key: `skill-activated:${skill.skillDataId}`,
                     message: feedback,
                     length: 3000,
-                });
+                };
+                sendNotificationToUser(player.userId, notification);
+                if (partyObservers.length > 0) {
+                    sendBotMessageToPartyMembers(partyObservers, feedback);
+                    sendNotificationToUsers(partyObservers, notification);
+                }
             } catch (error) {
                 logger.error(`스킬 발동 피드백 생성 실패: ${skill.skillDataId}`, error);
             }

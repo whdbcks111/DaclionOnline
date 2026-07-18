@@ -87,6 +87,12 @@ export class PartyManager {
         return Boolean(partyId && partyId === this.partyIdByMember.get(rightUserId));
     }
 
+    /** 전투·스킬 피드를 공유할 audience. 파티가 없으면 본인만 반환한다. */
+    getEventAudienceUserIds(userId: number): number[] {
+        const party = this.getPartyState(userId);
+        return party ? [...party.memberUserIds] : [userId];
+    }
+
     getInvitation(targetUserId: number, now = Date.now()): PartyInvitationSnapshot | undefined {
         this.pruneExpiredInvitations(now);
         const invitation = this.invitationsByTarget.get(targetUserId);

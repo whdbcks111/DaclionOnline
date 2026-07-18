@@ -37,6 +37,7 @@ export function sendMessageToChannel(msg: ChatMessage, channel: string | null): 
 
 const FLAG_ALL: ChatFlag = { text: '전체', color: '#08c26e' };
 const FLAG_WHISPER: ChatFlag = { text: '귓속말', color: '#a855f7' };
+const FLAG_PARTY: ChatFlag = { text: '파티', color: '#38bdf8' };
 
 /** 모든 채널에 브로드캐스트 (모든 채널 히스토리에 저장, [전체] 플래그 자동 부착) */
 export function broadcastMessageAll(msg: ChatMessage): void {
@@ -90,6 +91,19 @@ export function sendPrivatePlayerTextToCurrentChannel(userId: number, content: s
     const message = makePlayerTextMessage(userId, content);
     if (!message) return false;
     sendMessageFiltered(id => id === userId, getUserChannel(userId), message);
+    return true;
+}
+
+/** 시전자의 플레이어 메시지를 각 파티원의 현재 채널에 파티 피드로 남긴다. */
+export function sendPlayerTextToPartyMembers(
+    sourceUserId: number,
+    memberUserIds: readonly number[],
+    content: string,
+): boolean {
+    const message = makePlayerTextMessage(sourceUserId, content);
+    if (!message) return false;
+    message.flags = [FLAG_PARTY, ...(message.flags ?? [])];
+    for (const userId of new Set(memberUserIds)) sendMessageToUser(userId, message, false);
     return true;
 }
 
@@ -187,6 +201,13 @@ export function sendPrivateBotMessageToUser(userId: number, content: string | Ch
     sendMessageFiltered(id => id === userId, getUserChannel(userId), makeBotMessage(content), privateLabel);
 }
 
+/** 전투·스킬 봇 메시지를 각 파티원의 현재 채널에 파티 피드로 남긴다. */
+export function sendBotMessageToPartyMembers(memberUserIds: readonly number[], content: string | ChatNode[]): void {
+    const message = makeBotMessage(content);
+    message.flags = [FLAG_PARTY, ...(message.flags ?? [])];
+    for (const userId of new Set(memberUserIds)) sendMessageToUser(userId, message, false);
+}
+
 /** 전체 알림 브로드캐스트 */
 export function broadcastNotification(data: NotificationData): void {
     getIO().emit('notification', data);
@@ -195,6 +216,12 @@ export function broadcastNotification(data: NotificationData): void {
 /** 특정 유저에게만 알림 전송 */
 export function sendNotificationToUser(userId: number, data: NotificationData): void {
     sendNotificationFiltered(id => id === userId, data);
+}
+
+/** 동일한 실시간 알림을 중복을 제거한 여러 사용자에게 전송한다. */
+export function sendNotificationToUsers(userIds: readonly number[], data: NotificationData): void {
+    const recipients = new Set(userIds);
+    if (recipients.size > 0) sendNotificationFiltered(userId => recipients.has(userId), data);
 }
 
 // ── 메시지 편집 / 삭제 ──

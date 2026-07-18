@@ -3,7 +3,12 @@ import type { AttributeRecord } from "./Attribute.js";
 import Equipment, { EquipSlotType } from "./Equipment.js";
 import Stat from "./Stat.js";
 import type { StatRecord } from "./Stat.js";
-import { sendBotMessageToUser, sendNotificationToUser } from "../modules/message.js";
+import {
+    sendBotMessageToPartyMembers,
+    sendBotMessageToUser,
+    sendNotificationToUser,
+    sendNotificationToUsers,
+} from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
 import { applyCritical, calculateEvasionChance, calculateFinalDamage, rollEvasion } from "./Combat.js";
 import { applyTagEffectValue } from "./TagEffect.js";
@@ -24,6 +29,7 @@ import type { ShieldBarSegment } from '../../../shared/types.js';
 import { CombatStage, createCombatContext, runCombatStage } from './CombatPipeline.js';
 import { reportSupportThreat, ThreatAction } from './Threat.js';
 import { resolveStatusEffectInteractions } from './StatusEffectInteraction.js';
+import { partyManager } from '../modules/party.js';
 
 /** 대미지 타입 */
 export type DamageType = 'physical' | 'magic' | 'absolute';
@@ -918,6 +924,11 @@ export default abstract class Entity implements TagReadable {
                 sendNotificationToUser(userId, notification);
                 sendBotMessageToUser(userId, nodes);
             }
+            const partyObservers = this.getPartyCombatObservers(userIds);
+            if (partyObservers.length > 0) {
+                sendNotificationToUsers(partyObservers, notification);
+                sendBotMessageToPartyMembers(partyObservers, nodes);
+            }
         }
 
         runCombatStage(CombatStage.COMPLETE, combat);
@@ -942,6 +953,22 @@ export default abstract class Entity implements TagReadable {
             sendNotificationToUser(userId, { key: 'attack-evaded', message });
             sendBotMessageToUser(userId, nodes);
         }
+        const partyObservers = this.getPartyCombatObservers(userIds);
+        if (partyObservers.length > 0) {
+            sendNotificationToUsers(partyObservers, { key: 'attack-evaded', message });
+            sendBotMessageToPartyMembers(partyObservers, nodes);
+        }
+    }
+
+    /** 직접 공격 당사자를 제외한 양쪽 파티의 전투 피드 audience를 반환한다. */
+    private getPartyCombatObservers(principals: ReadonlySet<number>): number[] {
+        const observers = new Set<number>();
+        for (const userId of principals) {
+            for (const memberUserId of partyManager.getEventAudienceUserIds(userId)) {
+                if (!principals.has(memberUserId)) observers.add(memberUserId);
+            }
+        }
+        return [...observers];
     }
 
     // -- 게임 루프 라이프사이클 --
