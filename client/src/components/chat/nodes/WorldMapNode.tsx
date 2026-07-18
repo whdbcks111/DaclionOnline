@@ -50,6 +50,13 @@ interface BiomeTransition extends BiomeSegment {
 interface BiomeGeometry {
     regions: BiomeRegion[]
     transitions: BiomeTransition[]
+    spreadCells: BiomeSpreadCell[]
+}
+
+interface BiomeSpreadCell {
+    id: string
+    color: string
+    points: Point[]
 }
 
 function mapY(location: WorldMapLocationData): number {
@@ -90,6 +97,65 @@ function getBiomeRadius(location: WorldMapLocationData, locations: readonly Worl
     }, Number.POSITIVE_INFINITY)
     if (!Number.isFinite(nearest)) return 78
     return Math.max(MIN_BIOME_RADIUS, Math.min(MAX_BIOME_RADIUS, nearest * 0.82))
+}
+
+function clipPolygonToNearestSeed(polygon: readonly Point[], seed: Point, competitor: Point): Point[] {
+    const normalX = competitor.x - seed.x
+    const normalY = competitor.y - seed.y
+    if (normalX === 0 && normalY === 0) return [...polygon]
+    const boundary = (competitor.x ** 2 + competitor.y ** 2 - seed.x ** 2 - seed.y ** 2) / 2
+    const signedDistance = (point: Point) => normalX * point.x + normalY * point.y - boundary
+    const clipped: Point[] = []
+
+    for (let index = 0; index < polygon.length; index += 1) {
+        const start = polygon[index]
+        const end = polygon[(index + 1) % polygon.length]
+        const startDistance = signedDistance(start)
+        const endDistance = signedDistance(end)
+        const startInside = startDistance <= 0
+        const endInside = endDistance <= 0
+
+        if (startInside) clipped.push(start)
+        if (startInside === endInside) continue
+        const ratio = startDistance / (startDistance - endDistance)
+        clipped.push({
+            x: start.x + (end.x - start.x) * ratio,
+            y: start.y + (end.y - start.y) * ratio,
+        })
+    }
+
+    return clipped
+}
+
+function createBiomeSpreadCells(data: WorldMapData, visited: readonly WorldMapLocationData[]): BiomeSpreadCell[] {
+    if (visited.length === 0) return []
+    const fit = createFitView(data)
+    const extent = {
+        left: fit.x - fit.width,
+        top: fit.y - fit.height,
+        right: fit.x + fit.width * 2,
+        bottom: fit.y + fit.height * 2,
+    }
+    const bounds: Point[] = [
+        { x: extent.left, y: extent.top },
+        { x: extent.right, y: extent.top },
+        { x: extent.right, y: extent.bottom },
+        { x: extent.left, y: extent.bottom },
+    ]
+    const seeds = visited.map(location => ({
+        id: location.id,
+        color: location.mapColor!.toLowerCase(),
+        point: { x: location.x, y: mapY(location) },
+    }))
+
+    return seeds.map(seed => {
+        let points = [...bounds]
+        for (const competitor of seeds) {
+            if (competitor.id === seed.id || points.length === 0) continue
+            points = clipPolygonToNearestSeed(points, seed.point, competitor.point)
+        }
+        return { id: seed.id, color: seed.color, points }
+    }).filter(cell => cell.points.length >= 3)
 }
 
 function createBiomeGeometry(data: WorldMapData): BiomeGeometry {
@@ -143,7 +209,11 @@ function createBiomeGeometry(data: WorldMapData): BiomeGeometry {
         })
     }
 
-    return { regions: [...regions.values()], transitions }
+    return {
+        regions: [...regions.values()],
+        transitions,
+        spreadCells: createBiomeSpreadCells(data, visited),
+    }
 }
 
 function getLocalPoint(svg: SVGSVGElement, point: Point): Point {
@@ -156,6 +226,7 @@ export default function WorldMapNode({ data }: Props) {
     const gridId = `world-map-grid-${svgId}`
     const glowId = `world-map-current-glow-${svgId}`
     const biomeFilterId = `world-map-biome-boundary-${svgId}`
+    const biomeSpreadFilterId = `world-map-biome-spread-${svgId}`
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
     const pointers = useRef(new Map<number, Point>())
@@ -328,6 +399,11 @@ export default function WorldMapNode({ data }: Props) {
                             <feMergeNode in="organicShape" />
                         </feMerge>
                     </filter>
+                    <filter id={biomeSpreadFilterId} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
+                        <feTurbulence type="fractalNoise" baseFrequency="0.006 0.009" numOctaves="2" seed="29" result="terrainNoise" />
+                        <feDisplacementMap in="SourceGraphic" in2="terrainNoise" scale="24" xChannelSelector="R" yChannelSelector="G" result="organicBiomes" />
+                        <feGaussianBlur in="organicBiomes" stdDeviation="3" />
+                    </filter>
                     {biomeGeometry.transitions.map((transition, index) => (
                         <linearGradient
                             key={transition.id}
@@ -345,6 +421,15 @@ export default function WorldMapNode({ data }: Props) {
                         </linearGradient>
                     ))}
                 </defs>
+                <g className={styles.biomeSpreadLayer} filter={`url(#${biomeSpreadFilterId})`} aria-hidden="true">
+                    {biomeGeometry.spreadCells.map(cell => (
+                        <polygon
+                            key={cell.id}
+                            points={cell.points.map(point => `${point.x},${point.y}`).join(' ')}
+                            fill={cell.color}
+                        />
+                    ))}
+                </g>
                 <g className={styles.biomeLayer} filter={`url(#${biomeFilterId})`} aria-hidden="true">
                     {biomeGeometry.regions.map(region => (
                         <g

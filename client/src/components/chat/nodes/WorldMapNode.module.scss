@@ -79,6 +79,11 @@
     opacity: 0.34;
 }
 
+.biomeSpreadLayer {
+    pointer-events: none;
+    opacity: 0.22;
+}
+
 .discoveredPath, .unknownPath {
     stroke: rgba(189, 221, 238, 0.55);
     stroke-width: 2;
