@@ -1,7 +1,6 @@
 import logger from "../utils/logger.js";
 import Player from "../models/Player.js";
-import { getIO } from "./socket.js";
-import { getSession, getSessionByUserId } from "./login.js";
+import { getSessionByUserId } from "./login.js";
 import { getLocation } from "../models/Location.js";
 import type { LocationInfoData } from "../../../shared/types.js";
 import { cancelCrafting } from "../models/Crafting.js";
@@ -16,6 +15,7 @@ import { parseChatMessage } from "../utils/chatParser.js";
 import { partyManager } from './party.js';
 import { clearInformationMode } from './informationVisibility.js';
 import { cancelFishing } from './fishing.js';
+import { clearUserSnapshotStreams, publishUserSnapshot } from './stateSync.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -44,6 +44,7 @@ export async function unloadPlayerByUserId(userId: number): Promise<void> {
     player.skills.finishAll();
     partyManager.removeDisconnectedPlayer(player);
     clearInformationMode(userId);
+    clearUserSnapshotStreams(userId);
     await player.save();
     unregisterOnlinePlayer(player.userId);
 }
@@ -102,12 +103,7 @@ export function sendPlayerStats(userId: number): void {
         party:             partyManager.getHudData(player),
     };
 
-    const io = getIO();
-    for (const [, socket] of io.sockets.sockets) {
-        if (socket.data.sessionToken && getSession(socket.data.sessionToken)?.userId === userId) {
-            socket.emit('playerStats', data);
-        }
-    }
+    publishUserSnapshot(userId, 'playerStats', data, (socket, payload) => socket.emit('playerStats', payload));
 }
 
 /** 특정 유저의 위치 정보(몬스터·플레이어 목록)를 해당 유저 소켓에 전송 */
@@ -136,7 +132,7 @@ export function sendLocationInfo(userId: number): void {
         })
         .filter((v): v is NonNullable<typeof v> => v !== null);
 
-    const data: LocationInfoData = {
+    const data: Omit<LocationInfoData, 'revision' | 'syncId'> = {
         locationId,
         name: location.data.name,
         x: location.data.x,
@@ -162,12 +158,7 @@ export function sendLocationInfo(userId: number): void {
         adjacentLocations,
     };
 
-    const io = getIO();
-    for (const [, socket] of io.sockets.sockets) {
-        if (socket.data.sessionToken && getSession(socket.data.sessionToken)?.userId === userId) {
-            socket.emit('locationInfo', data);
-        }
-    }
+    publishUserSnapshot(userId, 'locationInfo', data, (socket, payload) => socket.emit('locationInfo', payload));
 }
 
 /** 플레이어 모듈 초기화 */

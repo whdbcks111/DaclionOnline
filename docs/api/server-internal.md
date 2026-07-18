@@ -14,6 +14,8 @@
 | Player registry | `registerOnlinePlayer`, `getOnlinePlayer`, `unregisterOnlinePlayer`, `getOnlinePlayerSnapshot`, `isOnlinePlayerAtLocation` | 내부 Map을 숨긴 온라인 객체 조회와 위치 필터 |
 | Player identity | `findOnlinePlayerByIdentity`, `getOnlinePlayerIdentitySnapshots`, `searchOnlinePlayerIdentitySnapshots` | 고유번호/정확한 닉네임 대상 조회와 prefix 온라인 자동완성 DTO |
 | HUD | `sendPlayerStats`, `sendLocationInfo` | 특정 사용자의 모든 소켓에 HUD payload 전송 |
+| State sync | `publishUserSnapshot`, `clearUserSnapshotStreams`, `RevisionedSnapshot` | 내용 변경 revision·stream syncId와 socket별 전달 stamp로 완전한 HUD snapshot 중복/역순 방지 |
+| Master validation | `validateMasterData` | 마스터 레지스트리 상호 참조와 아이템·스킬·직업·지도 아이콘 파일 검사 |
 | Command | `registerCommand`, `handleCommand`, `isCommandAliasInput`, `getCommandList`, `getCommandListFiltered`, `setInformationModeForUser` | 명령 등록, 별칭 판정·실행, 정보성 명령 공개 모드와 권한별 aliases 포함 목록 snapshot |
 | Information visibility | `set/is/clearInformationPublicMode`, `runInformationCommand`, `shouldPublishInformationOutput` | 사용자별 런타임 정보 공개 설정과 async 출력 문맥 |
 | Party | `partyManager.invite/accept/decline/leave/disband/kick/removeDisconnectedPlayer/getParty/getHudData/distributeMonsterExp`, `calculatePartyExpGrant` | 내부 Map을 숨긴 초대·구성·HUD·같은 장소 몬스터 경험치 공유 |

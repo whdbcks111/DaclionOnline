@@ -15,11 +15,13 @@ npm run dev:server    # tsx watch 서버
 npm run dev:client    # Vite 클라이언트
 npm run build         # .nvmrc 적용 후 서버와 클라이언트 빌드
 npm run build:window  # 현재 셸 Node로 양쪽 빌드
+npm run verify        # 서버 빌드·전체 테스트·마스터 참조/아이콘 검증·클라이언트 빌드
 npm start             # 빌드된 서버 실행
 cd client && npm run lint
 cd server && npm run db:migrate:deploy  # 운영 schema migration + Client 생성 + metadata 데이터 변환
 cd server && npm run db:migrate:item-metadata  # 아이템 metadata 데이터 변환만 재실행
 cd server && npm run db:migrate:item-metadata -- --dry-run  # 변경 대상 수만 확인
+cd server && npm run data:validate  # 코드 마스터 상호 참조와 필수 아이콘 검사
 ```
 
 기본 포트는 서버 `3001`, Vite `5173`이다.

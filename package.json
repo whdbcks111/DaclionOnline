@@ -11,6 +11,7 @@
     "build:server": "cd server && npm run build",
     "build:client": "cd client && npm run build",
     "build": "bash -c 'unset npm_config_prefix && . $HOME/.nvm/nvm.sh && nvm use && npm run build:server && npm run build:client'",
+    "verify": "npm run build:server && cd server && npm test && npm run data:validate && cd ../client && npm run build",
     "build:window": "npm run build:server && npm run build:client",
     "start": "cd server && npm start"
   },

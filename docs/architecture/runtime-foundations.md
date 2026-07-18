@@ -30,3 +30,18 @@ const result = gameAction('아이템 구매')
 ```
 
 모든 `require`가 먼저 통과한 뒤 `step`을 순서대로 실행한다. 적용 도중 예외가 나면 완료된 step의 rollback을 역순으로 실행한다. 이 API는 Prisma 트랜잭션을 대신하지 않으며, 메모리 aggregate 여러 개를 함께 바꿀 때만 쓴다. 단일 Inventory/Equipment/SkillBook 변경은 각 소유 모델의 목적형 원자 API를 우선한다.
+
+## Revision 기반 완전한 HUD Snapshot
+
+`modules/stateSync.ts`는 `playerStats`와 `locationInfo` 내용을 직렬화해 이전 내용과 다를 때만 revision을 증가시킨다. 각 socket별 마지막 전달 stamp를 따로 저장하므로 기존 탭에는 중복 전송하지 않지만 새 탭은 현재 전체 snapshot을 즉시 받는다.
+
+- payload는 항상 전체 DTO다. 클라이언트에서 부분 delta를 병합하지 않는다.
+- 클라이언트는 같은 `syncId`의 더 낮거나 같은 revision을 버리고, 새 `syncId`는 revision이 낮아도 전체 교체한다.
+- Player unload 시 stream을 제거한다. 같은 socket에서 다시 로그인해도 새 syncId가 발급된다.
+- 서버 재시작, 재접속, 다중 탭에서 누락된 delta를 복원하는 별도 요청이 필요하지 않다.
+
+이 방식은 필드별 delta보다 전송량 절감 폭은 작지만, 병합 순서·삭제 필드·새 socket 초기화로 인한 동기화 오류를 피하는 현재 기준 안전 경계다.
+
+## 마스터 데이터 검증
+
+`npm run data:validate`는 아이템·스킬·직업·몬스터·자원·제작·퀘스트·NPC·장소 레지스트리의 참조와 필수 아이콘 파일을 검사한다. 루트 `npm run verify`는 서버 빌드/전체 테스트/마스터 검증/클라이언트 빌드를 순서대로 실행하므로 에이전트의 의미 있는 작업 마무리 검증에 사용한다.

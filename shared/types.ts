@@ -212,7 +212,14 @@ export interface AdjacentLocationData {
 }
 
 // 위치 정보 HUD 데이터
-export interface LocationInfoData {
+export interface SnapshotRevision {
+    /** 같은 syncId 안에서 내용이 바뀔 때만 증가한다. */
+    revision: number
+    /** 서버 stream 재생성·재시작 시 바뀌어 낮은 revision도 새 snapshot으로 인정하게 한다. */
+    syncId: string
+}
+
+export interface LocationInfoData extends SnapshotRevision {
     locationId: string
     name: string
     x: number
@@ -272,7 +279,7 @@ export interface SkillHudData {
     maxCooldown: number
 }
 
-export interface PlayerStatsData {
+export interface PlayerStatsData extends SnapshotRevision {
     userId: number
     nickname: string
     level: number

@@ -49,6 +49,17 @@ function HomeContent() {
   const mediaInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const isComposing = useRef(false)
+  const snapshotRevisions = useRef({
+    playerStats: { syncId: '', revision: 0 },
+    locationInfo: { syncId: '', revision: 0 },
+  })
+
+  useEffect(() => {
+    snapshotRevisions.current = {
+      playerStats: { syncId: '', revision: 0 },
+      locationInfo: { syncId: '', revision: 0 },
+    }
+  }, [sessionInfo?.userId])
 
   useEffect(() => {
     if (!socket) return
@@ -57,8 +68,18 @@ function HomeContent() {
     const onChatMessage = (msg: ChatMessageType) => setMessages(prev => [...prev, msg])
     const onCommandList = (list: CommandInfo[]) => setCommands(list)
     const onUserCount = (data: UserCountData) => setUserCountData(data)
-    const onPlayerStats = (data: PlayerStatsData) => setPlayerStats(data)
-    const onLocationInfo = (data: LocationInfoData) => setLocationInfo(data)
+    const onPlayerStats = (data: PlayerStatsData) => {
+      const current = snapshotRevisions.current.playerStats
+      if (current.syncId === data.syncId && data.revision <= current.revision) return
+      snapshotRevisions.current.playerStats = { syncId: data.syncId, revision: data.revision }
+      setPlayerStats(data)
+    }
+    const onLocationInfo = (data: LocationInfoData) => {
+      const current = snapshotRevisions.current.locationInfo
+      if (current.syncId === data.syncId && data.revision <= current.revision) return
+      snapshotRevisions.current.locationInfo = { syncId: data.syncId, revision: data.revision }
+      setLocationInfo(data)
+    }
     const onChannelChanged = (channel: string | null, history: ChatMessageType[]) => {
       setCurrentChannel(channel)
       setMessages(history)
