@@ -6,6 +6,7 @@ import '../data/jobs.js';
 import '../data/statusEffects.js';
 import '../data/skills.js';
 import {
+    analyzeAllEliteJobs,
     analyzeAllFirstJobs,
     analyzeItemBalance,
     analyzeJobBalance,
@@ -39,7 +40,7 @@ test('all first jobs produce finite offensive and defensive baselines', () => {
     }
 });
 
-test('Lv.200 elite profile applies its inherited passive without listing it as active DPM', () => {
+test('Lv.200 elite profile applies its inherited passive and reports its active technique', () => {
     const scenario = createBalanceScenario(200, 'career:warrior', 'career:mage');
     const report = analyzeJobBalance(200, 'career:warrior', 'career:mage');
 
@@ -48,6 +49,15 @@ test('Lv.200 elite profile applies its inherited passive without listing it as a
     assert.equal(scenario.entity.attribute.hasSource('skill:mage_mana_cycle:passive'), true);
     assert.equal(scenario.entity.attribute.hasSource('skill:spellblade_mastery:passive'), true);
     assert.equal(report.skillReports.some(skill => skill.skillId === 'spellblade_mastery'), false);
+    assert.equal(report.skillReports.some(skill => skill.skillId === 'spellblade_technique'), true);
+});
+
+test('all twelve ordered elite combinations produce measurable balance reports', () => {
+    const reports = analyzeAllEliteJobs(200);
+    assert.equal(reports.length, 12);
+    assert.equal(new Set(reports.map(report => report.jobId)).size, 12);
+    assert.ok(reports.every(report => report.skillReports.some(skill => skill.skillId.endsWith('_technique'))));
+    assert.ok(reports.every(report => report.skillReports.some(skill => skill.sustainableDpm > 0)));
 });
 
 test('item report applies actual equipment modifiers and buff status effects', () => {

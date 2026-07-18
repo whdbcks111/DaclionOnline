@@ -3,7 +3,7 @@ import '../data/items.js';
 import '../data/jobs.js';
 import '../data/statusEffects.js';
 import '../data/skills.js';
-import { analyzeAllFirstJobs, analyzeItemBalance } from '../models/Balance.js';
+import { analyzeAllEliteJobs, analyzeAllFirstJobs, analyzeItemBalance } from '../models/Balance.js';
 
 const requestedLevel = Number.parseInt(process.argv[2] ?? '50', 10);
 const level = Number.isInteger(requestedLevel) && requestedLevel > 0 ? requestedLevel : 50;
@@ -20,6 +20,23 @@ for (const report of reports) {
         `마법생존=${formatSeconds(report.magicSurvivalSeconds)}`,
         `최고스킬=${best ? `${best.name}:${best.sustainableDpm.toFixed(2)}` : '없음'}`,
     ].join('  '));
+}
+
+const eliteReports = analyzeAllEliteJobs(level);
+if (eliteReports.length > 0) {
+    console.log('\n엘리트 조합 실측');
+    for (const report of eliteReports) {
+        const best = report.skillReports[0];
+        const technique = report.skillReports.find(skill => skill.skillId.endsWith('_technique'));
+        console.log([
+            report.name.padEnd(7),
+            `기본DPS=${report.basicPhysicalDps.toFixed(2)}`,
+            `물리생존=${formatSeconds(report.physicalSurvivalSeconds)}`,
+            `마법생존=${formatSeconds(report.magicSurvivalSeconds)}`,
+            `전용=${technique ? `${technique.name}:${technique.sustainableDpm.toFixed(2)}` : '없음'}`,
+            `최고스킬=${best ? `${best.name}:${best.sustainableDpm.toFixed(2)}` : '없음'}`,
+        ].join('  '));
+    }
 }
 
 console.log('\n주력 장비·버프 아이템 실측');

@@ -116,6 +116,22 @@ test('엘리트 직업은 원래 메인 직업 스킬의 표시 조건을 계속
     assert.equal(player.skills.getVisible().some(skill => skill.skillDataId === 'steel_slash'), true);
 });
 
+test('모든 엘리트 직업은 계승 패시브와 조합 전용 액티브를 정의한다', () => {
+    const eliteIds = [
+        'blade_ranger', 'shadow_blade', 'spellblade', 'siege_bow', 'night_hunter', 'elemental_marksman',
+        'executioner', 'phantom_shooter', 'arcane_reaper', 'battle_magus', 'star_weaver', 'hexblade',
+    ];
+    const player = new TestSkillPlayer();
+    for (const eliteId of eliteIds) {
+        player.progress.setState(CareerProgressIds.ELITE, `career:${eliteId}`);
+        const passive = player.skills.grant(`${eliteId}_mastery`, 'test').skill;
+        const active = player.skills.grant(`${eliteId}_technique`, 'test').skill;
+        assert.equal(passive.isPassive, true, eliteId);
+        assert.equal(active.isPassive, false, eliteId);
+        assert.equal(active.isVisibleTo(player), true, eliteId);
+    }
+});
+
 test('스킬 HUD snapshot은 표시 가능한 스킬의 아이콘과 남은 쿨다운을 제공한다', () => {
     const player = new TestSkillPlayer();
     const skill = player.skills.grant('power_strike', 'test', 2).skill;

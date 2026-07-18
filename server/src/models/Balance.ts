@@ -327,6 +327,16 @@ export function analyzeAllFirstJobs(level: number): readonly JobBalanceReport[] 
         .map(job => analyzeJobBalance(level, job.id));
 }
 
+/** Lv.200 이상에서 가능한 서로 다른 모든 메인→서브 조합을 실제 엘리트 직업으로 분석한다. */
+export function analyzeAllEliteJobs(level: number): readonly JobBalanceReport[] {
+    if (normalizeLevel(level) < 200) return [];
+    const firstJobs = getAllJobs().filter(job => job.id === 'career:warrior' || job.id === 'career:archer'
+        || job.id === 'career:assassin' || job.id === 'career:mage');
+    return firstJobs.flatMap(main => firstJobs
+        .filter(sub => sub.id !== main.id)
+        .map(sub => analyzeJobBalance(level, main.id, sub.id)));
+}
+
 export function findSkillDataForBalance(input: string): Readonly<SkillData> | undefined {
     const normalized = input.trim().toLowerCase();
     return getAllSkillData().find(skill => skill.id === normalized

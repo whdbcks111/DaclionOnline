@@ -12,6 +12,7 @@ import { StatusEffectType } from '../models/StatusEffect.js';
 import { sendNotificationFiltered } from '../modules/message.js';
 import { isOnlinePlayerAtLocation } from '../modules/playerRegistry.js';
 import { GameTags } from '../../../shared/tags.js';
+import type { TagId } from '../../../shared/tags.js';
 import { spawnProjectileFromData } from '../models/Projectile.js';
 import { getLocation } from '../models/Location.js';
 import { ActionType } from '../models/Action.js';
@@ -750,12 +751,19 @@ function directAttack(context: SkillContext, multiplier: number, options: Parame
     if (!result) throw new Error('공격이 확정되지 않았습니다.');
     return result;
 }
-function projectileAttack(context: SkillContext, dataId: string, multiplier: number, tags?: string[], onHit?: Parameters<typeof spawnProjectileFromData>[0]['onHit']): void {
+function projectileAttack(
+    context: SkillContext,
+    dataId: string,
+    multiplier: number,
+    tags?: string[],
+    onHit?: Parameters<typeof spawnProjectileFromData>[0]['onHit'],
+    extraOverrides?: NonNullable<Parameters<typeof spawnProjectileFromData>[0]['overrides']>,
+): void {
     const found = targetOrDeny(context);
     if ('reason' in found) throw new Error(found.reason);
     const projectile = spawnProjectileFromData({
         owner: context.owner, target: found.target, dataId,
-        overrides: { damageMultiplier: multiplier, ...(tags ? { tags } : {}) }, onHit,
+        overrides: { damageMultiplier: multiplier, ...(tags ? { tags } : {}), ...extraOverrides }, onHit,
     });
     if (!projectile) throw new Error('투사체 생성에 실패했습니다.');
     context.owner.commitAttack(false);
@@ -1176,6 +1184,218 @@ for (const elemental of [
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, elemental.tag],
 });
+
+interface EliteTechniqueDefinition {
+    id: string;
+    name: string;
+    jobId: string;
+    icon: string;
+    damageType: 'physical' | 'magic';
+    attribute: AttributeType;
+    secondaryAttribute?: AttributeType;
+    basePercent: number;
+    perLevelPercent: number;
+    secondaryBasePercent?: number;
+    secondaryPerLevelPercent?: number;
+    manaCost: number;
+    cooldown: number;
+    weaponDescription: string;
+    weaponTags: readonly TagId[];
+    projectile?: 'basic_arrow' | 'magic_bolt';
+    propertyTag?: TagId;
+    guaranteedCritical?: boolean;
+    unavoidable?: boolean;
+    extraDescription?: string;
+    onHit?: (target: Entity, level: number) => void;
+    shieldPercent?: number;
+}
+
+const eliteTechniques: readonly EliteTechniqueDefinition[] = [
+    {
+        id: 'blade_ranger_technique', name: '질풍 추격', jobId: 'career:blade_ranger', icon: 'jobs/warrior',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 250, perLevelPercent: 15,
+        manaCost: 24, cooldown: 10, weaponDescription: '검 또는 도끼를 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE], unavoidable: true,
+        extraDescription: '바람을 가르며 파고들어 이 공격은 회피할 수 없습니다.', propertyTag: GameTags.PROPERTY_NATURAL,
+    },
+    {
+        id: 'shadow_blade_technique', name: '그림자 참수', jobId: 'career:shadow_blade', icon: 'jobs/warrior',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 225, perLevelPercent: 15,
+        manaCost: 26, cooldown: 12, weaponDescription: '검 또는 단검을 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_DAGGER], guaranteedCritical: true,
+        extraDescription: '그림자에서 급소를 베어 확정적으로 치명타가 발생합니다.', propertyTag: GameTags.PROPERTY_DARK,
+    },
+    {
+        id: 'spellblade_technique', name: '마력 검파', jobId: 'career:spellblade', icon: 'jobs/warrior',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 255, perLevelPercent: 16,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 120, secondaryPerLevelPercent: 8,
+        manaCost: 30, cooldown: 11, weaponDescription: '검 또는 지팡이를 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_STAFF],
+        extraDescription: '칼날에 실은 마력을 폭발시켜 마법 피해를 입힙니다.',
+    },
+    {
+        id: 'siege_bow_technique', name: '성벽 관통사격', jobId: 'career:siege_bow', icon: 'jobs/archer',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 310, perLevelPercent: 18,
+        manaCost: 28, cooldown: 15, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', extraDescription: '무거운 한 발로 큰 피해를 입힙니다.', propertyTag: GameTags.PROPERTY_METAL,
+    },
+    {
+        id: 'night_hunter_technique', name: '월영 사격', jobId: 'career:night_hunter', icon: 'jobs/archer',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 235, perLevelPercent: 15,
+        manaCost: 24, cooldown: 10, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', guaranteedCritical: true,
+        extraDescription: '달빛 아래 급소를 겨냥해 확정적으로 치명타가 발생합니다.', propertyTag: GameTags.PROPERTY_DARK,
+    },
+    {
+        id: 'elemental_marksman_technique', name: '뇌광 관통화살', jobId: 'career:elemental_marksman', icon: 'jobs/archer',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 270, perLevelPercent: 17,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 100, secondaryPerLevelPercent: 6,
+        manaCost: 32, cooldown: 12, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_ELECTRIC,
+        extraDescription: '적중 시 같은 레벨의 마비독을 4초 동안 부여합니다.',
+        onHit: (target, level) => target.applyStatusEffect(StatusEffectType.PARALYTIC_POISON, 4, level),
+    },
+    {
+        id: 'executioner_technique', name: '최후 집행', jobId: 'career:executioner', icon: 'jobs/assassin',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 300, perLevelPercent: 18,
+        manaCost: 28, cooldown: 14, weaponDescription: '도끼 또는 단검을 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_AXE, GameTags.WEAPON_DAGGER], unavoidable: true,
+        extraDescription: '도망칠 틈을 주지 않는 집행으로 이 공격은 회피할 수 없습니다.',
+    },
+    {
+        id: 'phantom_shooter_technique', name: '환영 추적탄', jobId: 'career:phantom_shooter', icon: 'jobs/assassin',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 250, perLevelPercent: 16,
+        manaCost: 25, cooldown: 11, weaponDescription: '활 또는 단검을 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_BOW, GameTags.WEAPON_DAGGER], projectile: 'basic_arrow',
+        extraDescription: '환영이 적의 움직임을 따라가는 물리 투사체를 발사합니다.', propertyTag: GameTags.PROPERTY_DARK,
+    },
+    {
+        id: 'arcane_reaper_technique', name: '비전 수확', jobId: 'career:arcane_reaper', icon: 'jobs/assassin',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 275, perLevelPercent: 17,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 100, secondaryPerLevelPercent: 6,
+        manaCost: 30, cooldown: 12, weaponDescription: '단검 또는 지팡이를 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_DAGGER, GameTags.WEAPON_STAFF], propertyTag: GameTags.PROPERTY_POISON,
+        extraDescription: '적중 시 같은 레벨의 맹독을 6초 동안 부여합니다.',
+        onHit: (target, level) => target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 6, level),
+    },
+    {
+        id: 'battle_magus_technique', name: '마력갑 돌진', jobId: 'career:battle_magus', icon: 'jobs/mage',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 225, perLevelPercent: 14,
+        manaCost: 30, cooldown: 13, weaponDescription: '지팡이 또는 검을 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_STAFF, GameTags.WEAPON_SWORD], shieldPercent: 12,
+        extraDescription: '공격 후 최대 생명력의 12%만큼 일반 보호막을 8초 동안 얻습니다.',
+    },
+    {
+        id: 'star_weaver_technique', name: '낙성', jobId: 'career:star_weaver', icon: 'jobs/mage',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 315, perLevelPercent: 18,
+        manaCost: 34, cooldown: 15, weaponDescription: '지팡이 또는 활을 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_STAFF, GameTags.WEAPON_BOW], projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_LIGHT,
+        extraDescription: '별빛을 낙하시켜 강한 빛 속성 마법 피해를 입힙니다.',
+    },
+    {
+        id: 'hexblade_technique', name: '저주 각인', jobId: 'career:hexblade', icon: 'jobs/mage',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 245, perLevelPercent: 16,
+        manaCost: 29, cooldown: 11, weaponDescription: '지팡이 또는 단검을 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_STAFF, GameTags.WEAPON_DAGGER], propertyTag: GameTags.PROPERTY_DARK,
+        extraDescription: '적중 시 같은 레벨의 마비독을 3초 동안 부여합니다.',
+        onHit: (target, level) => target.applyStatusEffect(StatusEffectType.PARALYTIC_POISON, 3, level),
+    },
+];
+
+function eliteTechniqueDamage(context: SkillContext, technique: EliteTechniqueDefinition): number {
+    const primary = context.owner.attribute.get(technique.attribute)
+        * percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent) / 100;
+    if (!technique.secondaryAttribute) return primary;
+    return primary + context.owner.attribute.get(technique.secondaryAttribute)
+        * percentByLevel(
+            context.skill.level,
+            technique.secondaryBasePercent ?? 0,
+            technique.secondaryPerLevelPercent ?? 0,
+        ) / 100;
+}
+
+function eliteTechniqueDamageTooltip(context: SkillContext, technique: EliteTechniqueDefinition): string {
+    const damage = eliteTechniqueDamage(context, technique);
+    const primaryPercent = percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent);
+    const secondary = technique.secondaryAttribute
+        ? ` + ${technique.secondaryAttribute.label} × ${formatNumber(percentByLevel(context.skill.level, technique.secondaryBasePercent ?? 0, technique.secondaryPerLevelPercent ?? 0))}%`
+        : '';
+    return tooltipValue(damage, `${technique.attribute.label} × ${formatNumber(primaryPercent)}%${secondary}`);
+}
+
+for (const technique of eliteTechniques) {
+    // TODO: 엘리트 전용 스킬 아트로 교체. 1차 구현에서는 주계열 직업 아이콘을 사용한다.
+    defineSkill({
+        id: technique.id,
+        name: technique.name,
+        icon: technique.icon,
+        maxLevel: 5,
+        descriptionTemplate: `현재 대상에게 {{icon.${technique.attribute.key}}} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 ${technique.damageType === 'magic' ? '마법' : '물리'} 피해를 입힙니다. ${technique.extraDescription ?? ''}`,
+        costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${technique.manaCost}[/color]`,
+        activationConditionTemplate: activationGuide(`${technique.weaponDescription} 살아 있는 현재 대상이 필요합니다.`),
+        activationMessage: `${technique.name}!`,
+        baseMetadata: null,
+        calculatedFields: {
+            damage: context => eliteTechniqueDamageTooltip(context, technique),
+        },
+        balance: {
+            role: technique.onHit ? SkillBalanceRole.CONTROL : technique.shieldPercent ? SkillBalanceRole.DEFENSE : SkillBalanceRole.DAMAGE,
+            damageType: technique.damageType,
+            calculateDamage: context => eliteTechniqueDamage(context, technique),
+            criticalMode: technique.guaranteedCritical ? SkillCriticalMode.GUARANTEED : SkillCriticalMode.NORMAL,
+            calculateManaCost: () => technique.manaCost,
+            calculateShield: technique.shieldPercent
+                ? context => context.owner.maxLife * technique.shieldPercent! / 100
+                : undefined,
+            notes: technique.onHit ? ['상태효과의 가치는 대상과 패턴에 따라 달라 직접 피해와 분리합니다.'] : undefined,
+        },
+        calculateMaxCooldown: () => technique.cooldown,
+        jobRequirement: jobRequirement(technique.jobId),
+        weaponRequirement: weaponRequirement(technique.weaponDescription, ...technique.weaponTags),
+        canActivate: simpleCheck(technique.manaCost),
+        onStart: context => {
+            const found = targetOrDeny(context);
+            if ('reason' in found) throw new Error(found.reason);
+            spend(context, technique.manaCost);
+            const multiplier = percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent) / 100;
+            const damage = eliteTechniqueDamage(context, technique);
+            if (technique.projectile) {
+                projectileAttack(
+                    context,
+                    technique.projectile,
+                    multiplier,
+                    technique.propertyTag ? [technique.propertyTag] : undefined,
+                    (_projectile, result) => {
+                        if (!result.evaded && result.finalDamage > 0) technique.onHit?.(_projectile.target, context.skill.level);
+                    },
+                    {
+                        ...(technique.secondaryAttribute ? { damage } : {}),
+                        ...(technique.guaranteedCritical ? { attributeOverrides: { critRate: 1 } } : {}),
+                    },
+                );
+            } else {
+                const result = context.owner.attack(found.target, technique.damageType,
+                    damage, {
+                        criticalRate: technique.guaranteedCritical ? 1 : undefined,
+                        unavoidable: technique.unavoidable,
+                        consumeMainHandDurability: true,
+                    });
+                if (!result) throw new Error(`${technique.name} 공격이 확정되지 않았습니다.`);
+                if (!result.evaded && result.finalDamage > 0) technique.onHit?.(found.target, context.skill.level);
+            }
+            if (technique.shieldPercent) {
+                context.owner.setShield(
+                    `skill:${technique.id}`,
+                    context.owner.maxLife * technique.shieldPercent / 100,
+                    ShieldType.GENERAL,
+                    8,
+                    context.owner,
+                );
+            }
+        },
+        tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, ...(technique.propertyTag ? [technique.propertyTag] : [])],
+    });
+}
 
 function seismicManaCost(context: SkillContext): number {
     if (!context.player) return 0;
