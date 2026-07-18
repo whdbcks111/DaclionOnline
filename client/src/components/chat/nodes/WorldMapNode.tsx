@@ -387,22 +387,26 @@ export default function WorldMapNode({ data }: Props) {
                         <feGaussianBlur stdDeviation="3" result="blur" />
                         <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                     </filter>
-                    <filter id={biomeFilterId} x="-25%" y="-25%" width="150%" height="150%" colorInterpolationFilters="sRGB">
+                    <filter id={biomeFilterId} x="-55%" y="-55%" width="210%" height="210%" colorInterpolationFilters="sRGB">
                         <feTurbulence type="fractalNoise" baseFrequency="0.014 0.019" numOctaves="2" seed="17" result="boundaryNoise" />
-                        <feDisplacementMap in="SourceGraphic" in2="boundaryNoise" scale="11" xChannelSelector="R" yChannelSelector="G" result="organicShape" />
-                        <feGaussianBlur in="organicShape" stdDeviation="7" result="softEdge" />
-                        <feComponentTransfer in="softEdge" result="fadedEdge">
-                            <feFuncA type="linear" slope="0.32" />
+                        <feDisplacementMap in="SourceGraphic" in2="boundaryNoise" scale="18" xChannelSelector="R" yChannelSelector="G" result="organicShape" />
+                        <feGaussianBlur in="organicShape" stdDeviation="34" result="wideFade" />
+                        <feComponentTransfer in="wideFade" result="softWideFade">
+                            <feFuncA type="linear" slope="0.58" />
+                        </feComponentTransfer>
+                        <feGaussianBlur in="organicShape" stdDeviation="11" result="softCore" />
+                        <feComponentTransfer in="softCore" result="fadedCore">
+                            <feFuncA type="linear" slope="0.72" />
                         </feComponentTransfer>
                         <feMerge>
-                            <feMergeNode in="fadedEdge" />
-                            <feMergeNode in="organicShape" />
+                            <feMergeNode in="softWideFade" />
+                            <feMergeNode in="fadedCore" />
                         </feMerge>
                     </filter>
-                    <filter id={biomeSpreadFilterId} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
+                    <filter id={biomeSpreadFilterId} x="-12%" y="-12%" width="124%" height="124%" colorInterpolationFilters="sRGB">
                         <feTurbulence type="fractalNoise" baseFrequency="0.006 0.009" numOctaves="2" seed="29" result="terrainNoise" />
-                        <feDisplacementMap in="SourceGraphic" in2="terrainNoise" scale="24" xChannelSelector="R" yChannelSelector="G" result="organicBiomes" />
-                        <feGaussianBlur in="organicBiomes" stdDeviation="3" />
+                        <feDisplacementMap in="SourceGraphic" in2="terrainNoise" scale="34" xChannelSelector="R" yChannelSelector="G" result="organicBiomes" />
+                        <feGaussianBlur in="organicBiomes" stdDeviation="46" />
                     </filter>
                     {biomeGeometry.transitions.map((transition, index) => (
                         <linearGradient
@@ -415,8 +419,6 @@ export default function WorldMapNode({ data }: Props) {
                             y2={transition.to.y}
                         >
                             <stop offset="0%" stopColor={transition.fromColor} />
-                            <stop offset="32%" stopColor={transition.fromColor} />
-                            <stop offset="68%" stopColor={transition.toColor} />
                             <stop offset="100%" stopColor={transition.toColor} />
                         </linearGradient>
                     ))}
