@@ -128,12 +128,20 @@ class ChatBuilder {
         return this
     }
 
-    image(options: { src: string; alt?: string; maxHeight?: number | string }): this {
+    image(options: {
+        src: string
+        alt?: string
+        maxHeight?: number | string
+        width?: number
+        height?: number
+    }): this {
         this.nodes.push({
             type: 'image',
             src: options.src,
             alt: options.alt ?? '',
-            maxHeight: options.maxHeight ?? 'min(52vh, 32rem)',
+            maxHeight: options.maxHeight ?? 'min(34vh, 320px)',
+            width: options.width && options.width > 0 ? options.width : undefined,
+            height: options.height && options.height > 0 ? options.height : undefined,
         })
         return this
     }

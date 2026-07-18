@@ -114,14 +114,25 @@ export function initUploadMaintenance(): void {
     timer.unref()
 }
 
-/** 소켓이 업로드 소유권과 보관 기간을 검증한 뒤 메시지 URL로 사용한다. */
-export async function getOwnedChatImageUrl(userId: number, filename: string): Promise<string | undefined> {
+export interface OwnedChatImageSnapshot {
+    url: string
+    width: number
+    height: number
+}
+
+/** 소켓이 업로드 소유권·보관 기간과 표시 치수를 검증한 뒤 메시지 snapshot으로 사용한다. */
+export async function getOwnedChatImage(userId: number, filename: string): Promise<OwnedChatImageSnapshot | undefined> {
     if (path.basename(filename) !== filename) return undefined
     const info = parseStoredChatImageFilename(filename)
     if (!info || info.userId !== userId || Date.now() - info.createdAt >= CHAT_IMAGE_MAX_AGE_MS) return undefined
     const filePath = path.join(CHAT_IMAGE_DIR, filename)
     const stat = await fsPromises.stat(filePath).catch(() => undefined)
-    return stat?.isFile() ? `/uploads/chat/${filename}` : undefined
+    if (!stat?.isFile()) return undefined
+    const metadata = await sharp(filePath, { animated: true }).metadata().catch(() => undefined)
+    const width = metadata?.width
+    const height = metadata?.pageHeight ?? metadata?.height
+    if (!width || !height) return undefined
+    return { url: `/uploads/chat/${filename}`, width, height }
 }
 
 export async function encodeChatImage(buffer: Buffer): Promise<Buffer> {

@@ -46,7 +46,7 @@ export function renderNode(node: ChatNode, key: number): React.ReactNode {
         case 'health':
             return <HealthBarNode key={key} life={node.life} maxLife={node.maxLife} shields={node.shields} length={node.length} color={node.color} thickness={node.thickness} shape={node.shape} />
         case 'image':
-            return <ImageNode key={key} src={node.src} alt={node.alt} maxHeight={node.maxHeight} />
+            return <ImageNode key={key} src={node.src} alt={node.alt} maxHeight={node.maxHeight} width={node.width} height={node.height} />
         case 'divider':
             return <DividerNode key={key} title={node.title} />
         case 'tab':

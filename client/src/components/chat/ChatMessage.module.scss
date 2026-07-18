@@ -36,7 +36,8 @@ $avatar-size: 40px;
 }
 
 .mediaBodyWrap {
-    width: min(100%, 42rem);
+    width: fit-content;
+    max-width: 100%;
 }
 
 .header {
@@ -71,8 +72,10 @@ $avatar-size: 40px;
 }
 
 .body.mediaBody {
-    width: 100%;
+    width: fit-content;
+    max-width: 100%;
     box-sizing: border-box;
+    padding: $spacing-xs;
 }
 
 .flag {

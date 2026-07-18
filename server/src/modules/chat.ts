@@ -8,7 +8,7 @@ import { handleCommand, isCommandAliasInput } from "./bot.js";
 import type { ChatMessage } from "../../../shared/types.js";
 import { ActionType } from "../models/Action.js";
 import { findOnlinePlayerByIdentity, searchOnlinePlayerIdentitySnapshots } from './playerRegistry.js';
-import { getOwnedChatImageUrl } from './upload.js';
+import { getOwnedChatImage } from './upload.js';
 import { chat } from '../utils/chatBuilder.js';
 
 const MAX_MESSAGE_LENGTH = 500;
@@ -244,8 +244,8 @@ export const initChat = () => {
                 return;
             }
 
-            const src = await getOwnedChatImageUrl(session.userId, filename);
-            if (!src) {
+            const image = await getOwnedChatImage(session.userId, filename);
+            if (!image) {
                 sendNotificationToUser(session.userId, {
                     key: 'chat-image-invalid',
                     message: '전송할 이미지를 찾을 수 없거나 보관 기간이 만료되었습니다.',
@@ -260,8 +260,10 @@ export const initChat = () => {
                 profileImage: session.profileImage,
                 flags: flags.length > 0 ? flags : undefined,
                 content: chat().image({
-                    src,
+                    src: image.url,
                     alt: `${session.nickname}님이 보낸 이미지`,
+                    width: image.width,
+                    height: image.height,
                 }).build(),
                 timestamp: Date.now(),
             }, getUserChannel(session.userId));

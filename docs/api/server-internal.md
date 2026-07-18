@@ -25,7 +25,7 @@
 | Coroutine | `startCoroutine`, `Wait`, `tickCoroutines` | 게임 루프 기반 지연 작업 |
 | Minigame | `startMiniGame`, `cancelMiniGame`, `hasActiveMiniGame`, `initMiniGame` | session/token/만료와 타입별 결과 validator를 가진 서버 권위 미니게임 |
 | Fishing | `startFishing`, `cancelFishing`, `isFishing` | 장소·낚싯대 검증, 미끼 묶음 자동 장착·한 개 소비, 입질 대기, 등급/미니게임/보상 연결 |
-| Upload media | `encodeChatImage`, `initUploadMaintenance`, `cleanupChatImages`, `getOwnedChatImageUrl` | 이미지 재인코딩, 전체 100장·7일 보관 정리와 채팅 파일 소유권 검증 |
+| Upload media | `encodeChatImage`, `initUploadMaintenance`, `cleanupChatImages`, `getOwnedChatImage` | 이미지 재인코딩, 전체 100장·7일 보관 정리와 채팅 파일 소유권·표시 치수 snapshot 검증 |
 | Location service | `loadLocationsFromJson`, `updateLocations`, `initLocation` | JSON/소켓/프레임 조정 |
 | Item use | `registerItemUse`, `executeItemUse`, `hasItemUseHandler` | 아이템 효과 ID와 실행 함수 연결 |
 | Item attack | `registerItemAttackOverride`, `executeItemAttackOverride`, `hasItemAttackOverride`, `executeProjectileItemAttack` | `basicAttackOverride` key와 기본 공격 함수 연결, 탄약/무탄약 투사체 발사와 근접 폴백 신호 |

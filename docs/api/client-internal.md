@@ -34,7 +34,7 @@
 | `HideCloseContext` | `components/chat/nodes/HideNode.tsx` | close button이 상위 hide UI를 닫는 callback |
 | `TooltipNode` | `components/chat/nodes/TooltipNode.tsx` | hover/touch 위치를 측정해 ChatNode 설명 overlay 표시 |
 | `HealthBarNode` | `components/chat/nodes/HealthBarNode.tsx` | 생명력 뒤부터 타입색 보호막을 쌓고 최대 생명력 초과분은 상단 띠로 표시하는 공용 체력바 |
-| `ImageNode` | `components/chat/nodes/ImageNode.tsx` | 업로드·스킬 연출 이미지를 메시지 너비 안에서 가운데 정렬하고 최대 높이로 제한 |
+| `ImageNode` | `components/chat/nodes/ImageNode.tsx` | 원본 비율 snapshot으로 이미지와 말풍선 너비를 맞추고 높이를 `34vh`, `320px`, 노드 제한 중 최솟값으로 제한 |
 | `DividerNode` | `components/chat/nodes/DividerNode.tsx` | 선택적 가운데 제목을 가진 반응형 구분선 |
 | `WorldMapNode` | `components/chat/nodes/WorldMapNode.tsx` | worldMap snapshot의 방문 장소 대표색 바이옴 레이어, SVG 경로·점·랜드마크와 wheel/drag/pinch 카메라, 장소 정보 card 표시 |
 

@@ -130,7 +130,7 @@ export type ChatNode =
     | { type: 'button'; action: string; children: ChatNode[]; closeOnClick?: boolean; showCommand?: boolean }
     | { type: 'progress'; value: number; length: number | string; color: string; thickness: number; shape: 'rounded' | 'square' }
     | { type: 'health'; life: number; maxLife: number; shields: ShieldBarSegment[]; length: number | string; color: string; thickness: number; shape: 'rounded' | 'square' }
-    | { type: 'image'; src: string; alt: string; maxHeight: number | string }
+    | { type: 'image'; src: string; alt: string; maxHeight: number | string; width?: number; height?: number }
     | { type: 'divider'; title?: string }
     | { type: 'tab'; width: number; children: ChatNode[] }
     | { type: 'tooltip'; description: ChatNode[]; children: ChatNode[] }

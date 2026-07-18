@@ -1,15 +1,16 @@
 .frame {
-  display: flex;
-  width: 100%;
+  display: inline-flex;
+  max-width: 100%;
   min-width: 0;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  vertical-align: top;
 }
 
 .image {
   display: block;
-  width: auto;
+  width: 100%;
   max-width: 100%;
   height: auto;
   max-height: inherit;
