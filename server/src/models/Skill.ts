@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import type Entity from './Entity.js';
 import type Player from './Player.js';
-import { TagCollection, normalizeTags } from '../../../shared/tags.js';
+import { GameTags, TagCollection, normalizeTags } from '../../../shared/tags.js';
 import type { TagId, TagReadable } from '../../../shared/tags.js';
 import {
     cloneMetadata,
@@ -157,6 +157,8 @@ export interface SkillData {
     onUpdate?: (context: SkillUpdateContext, dt: number) => SkillUpdateResult | void;
     onFinish?: (context: SkillFinishContext) => void;
     onPassiveUpdate?: (context: SkillContext, dt: number) => void;
+    /** 직업·무기 조건을 잃은 패시브가 자신의 runtime modifier를 정리한다. */
+    onPassiveInactive?: (context: SkillContext) => void;
     tags: readonly TagId[];
 }
 
@@ -235,6 +237,7 @@ export default class Skill implements TagReadable {
     get isActive(): boolean { return this._active; }
     get activeElapsed(): number { return this._activeElapsed; }
     get activeDuration(): number | null { return this._activeDuration; }
+    get isPassive(): boolean { return this.hasTag(GameTags.SKILL_PASSIVE); }
 
     hasTag(tag: TagId): boolean { return this.tags.hasTag(tag); }
 

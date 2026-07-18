@@ -41,8 +41,8 @@ test('all first jobs produce finite offensive and defensive baselines', () => {
 
 test('item report applies actual equipment modifiers and buff status effects', () => {
     const weapon = analyzeItemBalance(50, 'career:warrior', 'old_sword');
-    // 전사 8% 직업 배율이 장비의 +5에도 적용되는 실제 Attribute 연산 순서를 따른다.
-    assert.ok(Math.abs((weapon.after.attack - weapon.before.attack) - 5.4) < 0.0001);
+    // 전사 8% 직업 배율과 전투 본능 6% 패시브가 장비의 +5에도 적용되는 실제 연산 순서다.
+    assert.ok(Math.abs((weapon.after.attack - weapon.before.attack) - (5 * 1.08 * 1.06)) < 0.0001);
     assert.ok(weapon.after.physicalBasicDps > weapon.before.physicalBasicDps);
 
     const tonic = analyzeItemBalance(50, 'career:warrior', 'battle_tonic');

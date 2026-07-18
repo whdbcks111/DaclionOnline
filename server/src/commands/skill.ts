@@ -11,7 +11,7 @@ interface SkillListStatus {
     color: string;
 }
 
-function skillCompletions(userId: number): CompletionItem[] {
+function visibleSkillCompletions(userId: number): CompletionItem[] {
     const player = getPlayerByUserId(userId);
     if (!player) return [];
     return player.skills.getVisible().map(skill => ({
@@ -20,7 +20,19 @@ function skillCompletions(userId: number): CompletionItem[] {
     }));
 }
 
+function activeSkillCompletions(userId: number): CompletionItem[] {
+    const player = getPlayerByUserId(userId);
+    if (!player) return [];
+    return player.skills.getVisible()
+        .filter(skill => !skill.isPassive)
+        .map(skill => ({
+            value: skill.name,
+            description: `Lv.${skill.level} · ${skill.formatCost(player).replace(/\[[^\]]+\]/g, '')}`,
+        }));
+}
+
 function getSkillListStatus(skill: Skill): SkillListStatus | null {
+    if (skill.isPassive) return { label: '패시브', color: 'cyan' };
     if (skill.isActive) return { label: '발동 중', color: 'gold' };
     const remaining = skill.getRemainingCooldown();
     if (remaining > 0) {
@@ -56,8 +68,8 @@ export function initSkillCommands(): void {
                     if (status) {
                         builder.text('  ').color(status.color, b => b.text(status.label));
                     }
-                    builder.text('  ').closeButton(`/스킬정보 ${skill.name}`, b => b.text('[정보]'))
-                        .text(' ')
+                    builder.text('  ').closeButton(`/스킬정보 ${skill.name}`, b => b.text('[정보]'));
+                    if (!skill.isPassive) builder.text(' ')
                         .closeButton(`/스킬 ${skill.name}`, b => b.color('gold', b2 => b2.text('[사용]')));
                 }
             }
@@ -75,7 +87,7 @@ export function initSkillCommands(): void {
             description: '발동할 스킬 이름',
             required: true,
             isText: true,
-            completions: skillCompletions,
+            completions: activeSkillCompletions,
         }],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
@@ -99,7 +111,7 @@ export function initSkillCommands(): void {
             description: '확인할 스킬 이름',
             required: true,
             isText: true,
-            completions: skillCompletions,
+            completions: visibleSkillCompletions,
         }],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
@@ -144,14 +156,14 @@ export function initSkillCommands(): void {
                 ...parseChatMessage(skill.formatCost(player)),
                 ...chat()
                     .divider('재사용 대기시간')
-                    .color('gold', b => b.text(skill.format('{{maxCooldown}}초', player)))
+                    .color('gold', b => b.text(skill.isPassive ? '없음' : skill.format('{{maxCooldown}}초', player)))
                     .build(),
                 ...chat().divider('발동 조건').build(),
                 ...parseChatMessage(skill.formatActivationCondition(player)),
-                ...chat()
+                ...(!skill.isPassive ? chat()
                     .text('\n')
                     .closeButton(`/스킬 ${skill.name}`, b => b.color('gold', b2 => b2.text('[사용]')))
-                    .build(),
+                    .build() : []),
             ];
             sendBotMessageToUser(userId, nodes);
         },

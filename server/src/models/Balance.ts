@@ -20,6 +20,7 @@ import {
     type ItemData,
 } from './Item.js';
 import { StatusEffectType } from './StatusEffect.js';
+import { GameTags } from '../../../shared/tags.js';
 
 const BALANCE_WINDOW_SECONDS = 60;
 
@@ -145,6 +146,7 @@ export function createBalanceScenario(level: number, mainJobId: string, subJobId
     const entity = new BalanceEntity(`${effectiveJob.name} 기준 공격자`, normalizedLevel, stats);
     applyJobModifiers(entity, effectiveJob.mainModifiers, 'balance:main');
     if (subJob) applyJobModifiers(entity, subJob.subModifiers, 'balance:sub');
+    applyJobPassives(entity, [mainJob, subJob, effectiveJob]);
     const target = new BalanceEntity('동레벨 균형형 표준 대상', normalizedLevel, createProjectedStats(normalizedLevel, DEFAULT_ALLOCATION));
     return { level: normalizedLevel, mainJob, subJob, effectiveJob, allocation, stats, entity, target };
 }
@@ -235,7 +237,10 @@ export function analyzeJobBalance(level: number, mainJobId: string, subJobId?: s
         ...scenario.effectiveJob.grantedSkills.map(value => value.skillDataId),
     ]);
     const skillReports = [...skillIds]
-        .filter(id => getSkillData(id))
+        .filter(id => {
+            const skill = getSkillData(id);
+            return skill && !skill.tags.includes(GameTags.SKILL_PASSIVE);
+        })
         .map(id => analyzeSkillBalance(scenario, id, getSkillData(id)!.maxLevel))
         .sort((a, b) => b.sustainableDpm - a.sustainableDpm || a.name.localeCompare(b.name));
     const targetExpectedCrit = getExpectedCriticalMultiplier(target, SkillCriticalMode.NORMAL);
@@ -363,6 +368,17 @@ function createProjectedStats(level: number, allocation: BalanceStatAllocation):
 
 function applyJobModifiers(entity: Entity, modifiers: readonly Omit<AttributeModifier, 'source'>[], source: string): void {
     entity.attribute.addModifiers(modifiers.map(modifier => ({ ...modifier, source })));
+}
+
+/** 실제 패시브 callback을 적용해 런타임과 밸런스 진단의 계산식을 동일하게 유지한다. */
+function applyJobPassives(entity: Entity, jobs: readonly (Readonly<JobData> | undefined)[]): void {
+    const skillIds = new Set(jobs.flatMap(job => job?.grantedSkills.map(grant => grant.skillDataId) ?? []));
+    for (const skillDataId of skillIds) {
+        const data = getSkillData(skillDataId);
+        if (!data?.tags.includes(GameTags.SKILL_PASSIVE) || !data.onPassiveUpdate) continue;
+        const skill = new Skill({ playerId: null, skillDataId, level: 1 });
+        data.onPassiveUpdate(createSkillContext(entity, skill), 0);
+    }
 }
 
 function createCombatSnapshot(entity: Entity, target: Entity): CombatBalanceSnapshot {

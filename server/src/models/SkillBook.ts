@@ -137,7 +137,7 @@ export default class SkillBook {
     /** HUD가 내부 Skill Map을 읽지 않고 표시 가능한 스킬과 쿨다운을 받는 불변 DTO. */
     getHudSnapshots(now = Date.now()): SkillHudData[] {
         const owner = this.requireOwner();
-        return this.getVisible().map(skill => {
+        return this.getVisible().filter(skill => !skill.isPassive).map(skill => {
             const remainingCooldown = skill.getRemainingCooldown(now);
             return {
                 id: skill.skillDataId,
@@ -214,6 +214,11 @@ export default class SkillBook {
         const skill = this.get(skillDataId);
         if (!skill) return false;
         if (skill.isActive) this.finish(skill, SkillFinishReason.CANCELLED);
+        try {
+            skill.data.onPassiveInactive?.(createSkillContext(this.requireOwner(), skill));
+        } catch (error) {
+            logger.error(`스킬 패시브 제거 정리 실패: ${skill.skillDataId}`, error);
+        }
         this.skills.delete(skill.skillDataId);
         this.dirtyVersions.delete(skill.skillDataId);
         if (this.playerId !== null) this.deletedSkills.add(skill.skillDataId);
@@ -280,19 +285,21 @@ export default class SkillBook {
         }
 
         for (const skill of this.getAll()) {
-            let usable: SkillCheckResult;
             try {
-                usable = skill.checkUsable(owner);
-            } catch (error) {
-                logger.error(`스킬 사용 조건 실패: ${skill.skillDataId}`, error);
-                continue;
-            }
-            if (usable.accepted) {
-                try {
+                const visible = skill.isVisibleTo(owner);
+                const usable = skill.checkUsable(owner);
+                if (visible && usable.accepted) {
                     skill.data.onPassiveUpdate?.(createSkillContext(owner, skill), dt);
-                } catch (error) {
-                    logger.error(`스킬 패시브 업데이트 실패: ${skill.skillDataId}`, error);
+                } else {
+                    skill.data.onPassiveInactive?.(createSkillContext(owner, skill));
                 }
+            } catch (error) {
+                try {
+                    skill.data.onPassiveInactive?.(createSkillContext(owner, skill));
+                } catch (cleanupError) {
+                    logger.error(`스킬 패시브 오류 정리 실패: ${skill.skillDataId}`, cleanupError);
+                }
+                logger.error(`스킬 패시브 조건 또는 업데이트 실패: ${skill.skillDataId}`, error);
             }
 
             if (!skill.isActive) continue;

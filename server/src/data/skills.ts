@@ -1,4 +1,5 @@
 import { AttributeType } from '../models/Attribute.js';
+import type { AttributeModifier } from '../models/Attribute.js';
 import {
     defineSkill,
     denySkill,
@@ -289,6 +290,97 @@ const JOBS = {
 } as const;
 
 function jobRequirement(jobId: string) { return { anyOf: [jobId], slot: undefined }; }
+
+interface CareerPassiveModifier extends Omit<AttributeModifier, 'source'> {
+    label: string;
+    display: string;
+}
+
+/**
+ * 1차 직업의 상시 효과를 일반 스킬과 같은 공개 API로 정의한다.
+ * 전용 아이콘은 후속 콘텐츠 아트 작업 전까지 직업 아이콘을 임시 사용한다. TODO: 패시브별 아이콘 교체.
+ */
+function defineCareerPassive(options: {
+    id: string;
+    name: string;
+    job: keyof typeof JOBS;
+    description: string;
+    modifiers: readonly CareerPassiveModifier[];
+}): void {
+    const source = `skill:${options.id}:passive`;
+    defineSkill({
+        id: options.id,
+        name: options.name,
+        icon: `jobs/${options.job}`,
+        maxLevel: 1,
+        descriptionTemplate: options.description,
+        costTemplate: '소모값 없음',
+        activationConditionTemplate: '해당 직업이 활성화되어 있는 동안 항상 적용됩니다.',
+        baseMetadata: null,
+        calculatedFields: Object.fromEntries(options.modifiers.map(modifier => [
+            modifier.attribute,
+            () => `[tooltip=${modifier.label}: ${modifier.display}]${modifier.display}[/tooltip]`,
+        ])),
+        calculateExperienceGain: () => 0,
+        calculateRequiredExperience: () => 0,
+        jobRequirement: jobRequirement(JOBS[options.job]),
+        canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
+        onPassiveUpdate: ({ owner }) => {
+            if (owner.attribute.hasSource(source)) return;
+            owner.attribute.addModifiers(options.modifiers.map(({ label: _label, display: _display, ...modifier }) => ({
+                ...modifier,
+                source,
+            })));
+        },
+        onPassiveInactive: ({ owner }) => owner.attribute.removeBySource(source),
+        tags: [GameTags.SKILL_PASSIVE],
+    });
+}
+
+defineCareerPassive({
+    id: 'warrior_combat_instinct',
+    name: '전투 본능',
+    job: 'warrior',
+    description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color] 증가합니다.',
+    modifiers: [
+        { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.06, label: '공격력 증가', display: '+6%' },
+        { attribute: AttributeType.DEF.key, op: 'add', value: 6, label: '방어력 증가', display: '+6' },
+    ],
+});
+
+defineCareerPassive({
+    id: 'archer_hawkeye',
+    name: '매의 눈',
+    job: 'archer',
+    description: '{{icon.critRate}} 치명타 확률이 [color=gold]{{critRate}}[/color], {{icon.speed}} 이동속도가 [color=cyan]{{speed}}[/color] 증가합니다.',
+    modifiers: [
+        { attribute: AttributeType.CRIT_RATE.key, op: 'add', value: 0.04, label: '치명타 확률 증가', display: '+4%p' },
+        { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.05, label: '이동속도 증가', display: '+5%' },
+    ],
+});
+
+defineCareerPassive({
+    id: 'assassin_lethal_instinct',
+    name: '살의 감각',
+    job: 'assassin',
+    description: '{{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color], {{icon.armorPen}} 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+    modifiers: [
+        { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.18, label: '치명타 피해 증가', display: '+18%p' },
+        { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 4, label: '방어 관통력 증가', display: '+4' },
+    ],
+});
+
+defineCareerPassive({
+    id: 'mage_mana_cycle',
+    name: '마력 순환',
+    job: 'mage',
+    description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.mentalityRegen}} 정신력 재생이 [color=$magic]{{mentalityRegen}}[/color] 증가합니다.',
+    modifiers: [
+        { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.07, label: '마법력 증가', display: '+7%' },
+        { attribute: AttributeType.MENTALITY_REGEN.key, op: 'add', value: 1.5, label: '정신력 재생 증가', display: '+1.5/초' },
+    ],
+});
+
 function weaponRequirement(description: string, ...tags: string[]) { return { mainHandAnyTags: tags, description }; }
 function targetOrDeny(context: SkillContext): { target: Entity } | { reason: string } {
     const player = requirePlayer(context);

@@ -47,7 +47,7 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 - 계산: `baseMetadata`, `calculatedFields`, `calculateMaxCooldown`, `calculateExperienceGain`, `calculateRequiredExperience`.
 - 밸런스 진단: `balance.role`, 실제 발동식과 공유하는 피해·소모·회복·보호막 callback, 치명타 방식·타격/대상 수.
 - 획득/발동: `autoAcquire`, `autoActivate`, `activateOnMessage`, `canUse`, `canActivate`.
-- 수명주기: `onAcquire`, `onStart`, `onUpdate`, `onFinish`, `onPassiveUpdate`.
+- 수명주기: `onAcquire`, `onStart`, `onUpdate`, `onFinish`, `onPassiveUpdate`, `onPassiveInactive`.
 - 분류: `tags`, `maxLevel`, `aliases`, `activationMessage`.
 - 직업/장비: `jobRequirement`, `weaponRequirement`, 공통 메시지 시전어 `activationPhrase`.
 
@@ -61,7 +61,7 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 권한 10 관리자용 `/스킬밸런스 <스킬> [스킬레벨] [캐릭터레벨] [직업]`, `/직업밸런스 [레벨] [메인직업] [서브직업]`, `/아이템밸런스 <아이템> [캐릭터레벨] [직업]`은 `models/Balance.ts`의 같은 공개 분석 API를 사용한다. CLI에서는 `cd server && npm run balance:report -- 50`처럼 레벨을 지정해 같은 직업 기준선을 출력한다. 아이템 분석은 장비 modifier 또는 버프 아이템 metadata가 가리키는 실제 StatusEffect를 적용해 기본 공격 DPS·물리/마법 생존·능력치의 전후 차이를 표시한다.
 
-분석 조건은 동일 레벨, 레벨업으로 실제 지급되는 총 스탯 포인트, 직업별 공개 배분 프리셋, 무장비, 동레벨 균형형 표준 대상, 중립 속성, 60초 전투다. 기본 공격은 실제 고정 차감 방어·관통·치명타 기대값·공격속도·속도차 회피율을 적용한다. 스킬은 `SkillData.balance` callback으로 실제 발동 계수와 정신력 소모를 공유하며 쿨다운 제한 횟수와 시작 정신력+60초 재생으로 가능한 횟수 중 작은 값을 사용한다.
+분석 조건은 동일 레벨, 레벨업으로 실제 지급되는 총 스탯 포인트, 직업별 공개 배분 프리셋, 무장비, 동레벨 균형형 표준 대상, 중립 속성, 60초 전투다. 직업이 지급하는 패시브는 실제 `onPassiveUpdate` callback으로 기준 능력치에 먼저 적용한다. 기본 공격은 실제 고정 차감 방어·관통·치명타 기대값·공격속도·속도차 회피율을 적용한다. 액티브 스킬은 `SkillData.balance` callback으로 실제 발동 계수와 정신력 소모를 공유하며 쿨다운 제한 횟수와 시작 정신력+60초 재생으로 가능한 횟수 중 작은 값을 사용한다.
 
 제어·은신·확정 회피·광역 상황·대상 생명력 비례 지속 피해는 임의 가중치를 부여해 단일 전투력에 섞지 않는다. 직접 피해, 생존 시간, 회복·보호막, 계산에서 분리한 효과를 별도 표시하며 balance callback이 없는 스킬은 추정하지 않고 `미지원`으로 표시한다. 이 명령의 출력 기준선을 먼저 기록한 다음 계수나 직업 modifier를 바꾸고 다시 측정한다.
 
@@ -83,16 +83,18 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 ## 발동 경로와 수명주기
 
-- `/스킬목록` 또는 `sl`: 현재 표시 가능한 보유 스킬의 아이콘·레벨·사용 상태와 정보/사용 버튼을 표시한다.
+- `/스킬목록` 또는 `sl`: 현재 표시 가능한 보유 스킬의 아이콘·레벨·사용 상태와 정보 버튼을 표시한다. 패시브는 `패시브` 상태로 구분하며 사용 버튼을 만들지 않는다.
 - `/스킬 스킬이름` 또는 `su 스킬이름`: 명령 입력은 숨기고 `SkillBook.activateByInput()`을 호출한다.
 - `/스킬정보 스킬이름` 또는 `si 스킬이름`: 계산된 상세 정보, 현재 레벨과 경험치 진행도를 표시한다.
 - 일반 채팅: 명령이 아닌 메시지를 각 스킬의 `activateOnMessage`로 검사하고 일치하면 원문 전송 대신 같은 발동 API를 호출한다.
 - 자동 조건: 0.25초마다 현재 표시 가능한 스킬의 `autoActivate`를 검사한다.
 - 자동 획득: 첫 update와 관련 progress 변경 후 `autoAcquire.watchedProgress`만 다시 검사한다.
 
-발동은 사망·활성 중·쿨다운·`canUse/canActivate`를 먼저 검사한다. 조건을 통과하면 선택적 `activationMessage`를 시전자 본인에게만 보이는 플레이어 메시지로 전송한 뒤 `onStart`를 실행하므로 공격·회복 같은 즉시 효과보다 발동 메시지가 먼저 표시된다. 원래 입력한 일반 채팅 발동어도 공개 채팅으로 전달하지 않는다. `onStart`가 성공하면 활성 상태와 쿨다운을 확정하며, `activationFeedback`이 있으면 계산된 효과를 본인 전용 봇 메시지와 notification으로 함께 보낸다. 이 성공 확정 시점에 영속 플레이어 스킬은 기본 10 경험치를 얻고, 몬스터 런타임 스킬은 경험치를 얻지 않는다. 기본 다음 레벨 요구량은 `100 + (현재 레벨 - 1) × 50`이며 두 값 모두 SkillData 계산 함수로 재정의하거나 획득량을 0으로 끌 수 있다. 요구량을 넘긴 잔여 경험치는 다음 레벨에 이월되고 최대 레벨에서는 더 이상 누적하지 않으며, 레벨업 시 본인 메시지와 notification을 보낸다. 지속시간이 있으면 `onUpdate`, 종료 시 `onFinish`, 로그인 중 사용 가능한 패시브에는 `onPassiveUpdate`가 호출된다. 로그아웃 시 활성 스킬을 `UNLOADED` 사유로 종료한 다음 저장한다.
+발동은 사망·활성 중·쿨다운·`canUse/canActivate`를 먼저 검사한다. 조건을 통과하면 선택적 `activationMessage`를 시전자 본인에게만 보이는 플레이어 메시지로 전송한 뒤 `onStart`를 실행하므로 공격·회복 같은 즉시 효과보다 발동 메시지가 먼저 표시된다. 원래 입력한 일반 채팅 발동어도 공개 채팅으로 전달하지 않는다. `onStart`가 성공하면 활성 상태와 쿨다운을 확정하며, `activationFeedback`이 있으면 계산된 효과를 본인 전용 봇 메시지와 notification으로 함께 보낸다. 이 성공 확정 시점에 영속 플레이어 스킬은 기본 10 경험치를 얻고, 몬스터 런타임 스킬은 경험치를 얻지 않는다. 기본 다음 레벨 요구량은 `100 + (현재 레벨 - 1) × 50`이며 두 값 모두 SkillData 계산 함수로 재정의하거나 획득량을 0으로 끌 수 있다. 요구량을 넘긴 잔여 경험치는 다음 레벨에 이월되고 최대 레벨에서는 더 이상 누적하지 않으며, 레벨업 시 본인 메시지와 notification을 보낸다. 지속시간이 있으면 `onUpdate`, 종료 시 `onFinish`를 호출한다. 로그인 중 표시·사용 조건을 만족하는 패시브에는 `onPassiveUpdate`, 조건을 잃거나 회수될 때는 `onPassiveInactive`를 호출해 runtime modifier를 source 단위로 정리한다. 로그아웃 시 활성 스킬을 `UNLOADED` 사유로 종료한 다음 저장한다.
 
 ## 스킬 퀵 HUD
+
+`skill:passive` 태그가 있는 패시브는 스킬 목록과 정보창에는 노출하지만 직접 누를 수 있는 퀵 HUD payload와 사용 자동완성에서는 제외한다.
 
 `SkillBook.getHudSnapshots()`은 `isVisible`을 만족하는 보유 스킬의 ID, 표시명, 아이콘, 레벨, 발동 상태, 남은/최대 쿨다운만 0.5초 `playerStats.skills`에 싣는다. 클라이언트 HUD 설정의 `전투 퀵 버튼`에서 기본 공격과 각 스킬 버튼을 개별 On/Off할 수 있으며 선택과 viewport `%` 좌표는 `hud-skill-buttons` localStorage에 저장된다. 설정 목록은 기본 접힘 상태이고 활성/전체 개수를 요약하며, 펼친 목록은 제한된 높이 안에서 별도로 스크롤한다. 제목 옆 톱니 설정은 전투 퀵 버튼에만 적용되는 50~200% 크기를 별도로 저장한다. 새 전투 버튼은 PC 8열·모바일 4열 기본 격자에 놓이고 위치 편집 모드에서 각각 독립적으로 이동하거나 초기화할 수 있다. 공격 버튼은 `playerStats.attackCooldown/maxAttackCooldown`을 같은 시계 방향 overlay로 표시하고 기존 `/공격` 명령을 숨김 실행해 현재 지정 대상과 서버 공격 규칙을 그대로 재사용한다.
 
