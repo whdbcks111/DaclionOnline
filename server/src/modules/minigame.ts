@@ -10,6 +10,7 @@ import type {
 import { randomHex } from '../utils/random.js';
 import { getSession } from './login.js';
 import { getIO } from './socket.js';
+import { cancelGameTask, scheduleGameTask } from './scheduler.js';
 
 export interface MiniGameValidationResult {
     success: boolean
@@ -31,7 +32,7 @@ interface ActiveMiniGame extends StartMiniGameOptions {
     token: string
     startedAt: number
     expiresAt: number
-    timeout: ReturnType<typeof setTimeout>
+    timeoutKey: string
 }
 
 const activeByUser = new Map<number, ActiveMiniGame>();
@@ -79,15 +80,19 @@ export function startMiniGame<T extends MiniGameType>(options: StartMiniGameOpti
     const sessionId = randomHex(12);
     const token = randomHex(24);
     const expiresAt = startedAt + Math.max(1_000, options.expiresInMs);
+    const timeoutKey = `minigame:${options.userId}:${sessionId}`;
     const active: ActiveMiniGame = {
         ...options,
         sessionId,
         token,
         startedAt,
         expiresAt,
-        timeout: setTimeout(() => cancelMiniGame(options.userId, '미니게임 제한 시간이 지났습니다.'), options.expiresInMs + 1_000),
+        timeoutKey,
     };
     activeByUser.set(options.userId, active);
+    scheduleGameTask(timeoutKey, options.expiresInMs / 1000 + 1, () => {
+        cancelMiniGame(options.userId, '미니게임 제한 시간이 지났습니다.');
+    });
     const payload = { sessionId, token, type: options.type, expiresAt, config: options.config } as MiniGameStartData;
     emitToUser(options.userId, 'miniGameStart', payload);
     return payload;
@@ -96,7 +101,7 @@ export function startMiniGame<T extends MiniGameType>(options: StartMiniGameOpti
 export function cancelMiniGame(userId: number, reason = '미니게임이 취소되었습니다.'): boolean {
     const active = activeByUser.get(userId);
     if (!active) return false;
-    clearTimeout(active.timeout);
+    cancelGameTask(active.timeoutKey);
     activeByUser.delete(userId);
     active.onCancelled?.(reason);
     emitToUser(userId, 'miniGameCancelled', { sessionId: active.sessionId, reason });
@@ -120,7 +125,7 @@ export function initMiniGame(): void {
                 return;
             }
 
-            clearTimeout(active.timeout);
+            cancelGameTask(active.timeoutKey);
             activeByUser.delete(session.userId);
             let result: MiniGameValidationResult;
             try {

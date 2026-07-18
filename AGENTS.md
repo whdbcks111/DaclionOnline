@@ -25,6 +25,7 @@
 
 - [`docs/architecture/overview.md`](docs/architecture/overview.md)
 - [`docs/architecture/change-guide.md`](docs/architecture/change-guide.md)
+- [`docs/architecture/runtime-foundations.md`](docs/architecture/runtime-foundations.md)
 - [`docs/api/socket-events.md`](docs/api/socket-events.md)
 - [`docs/api/http.md`](docs/api/http.md)
 - [`docs/api/server-internal.md`](docs/api/server-internal.md)

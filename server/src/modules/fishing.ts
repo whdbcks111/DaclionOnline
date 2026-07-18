@@ -12,6 +12,7 @@ import {
 import { sendBotMessageToUser, sendNotificationToUser } from './message.js';
 import { cancelMiniGame, hasActiveMiniGame, normalizeMiniGameInputs, startMiniGame } from './minigame.js';
 import { getPlayerByUserId } from './player.js';
+import { cancelGameTask, scheduleGameTask } from './scheduler.js';
 
 interface FishingState {
     locationId: string
@@ -20,7 +21,7 @@ interface FishingState {
     netSize: number
     netSpeed: number
     initialGauge: number
-    timer: ReturnType<typeof setTimeout>
+    timerKey: string
     phase: 'waiting' | 'warning' | 'minigame'
 }
 
@@ -91,9 +92,10 @@ function warnFishingBite(userId: number, locationId: string, rarity: FishRarity)
         length: FISHING_BITE_WARNING_MS,
         showProgress: false,
     });
-    context.state.timer = setTimeout(
+    scheduleGameTask(
+        context.state.timerKey,
+        FISHING_BITE_WARNING_MS / 1000,
         () => beginFishingMiniGame(userId, locationId, rarity),
-        FISHING_BITE_WARNING_MS,
     );
 }
 
@@ -201,10 +203,11 @@ export function startFishing(player: Player): StartFishingResult {
     }
 
     const fishingLocationId = player.locationId;
-    const timer = setTimeout(() => {
+    const timerKey = `fishing:${player.userId}`;
+    scheduleGameTask(timerKey, waitSeconds, () => {
         const rarity = rollFishRarity(luck);
         warnFishingBite(player.userId, fishingLocationId, rarity);
-    }, waitSeconds * 1000);
+    });
     fishingByUser.set(player.userId, {
         locationId: fishingLocationId,
         rodItemDataId: rod.itemDataId,
@@ -212,7 +215,7 @@ export function startFishing(player: Player): StartFishingResult {
         netSize,
         netSpeed,
         initialGauge,
-        timer,
+        timerKey,
         phase: 'waiting',
     });
     sendNotificationToUser(player.userId, {
@@ -227,7 +230,7 @@ export function startFishing(player: Player): StartFishingResult {
 export function cancelFishing(userId: number, reason = '낚시가 취소되었습니다.'): boolean {
     const state = fishingByUser.get(userId);
     if (!state) return cancelMiniGame(userId, reason);
-    clearTimeout(state.timer);
+    cancelGameTask(state.timerKey);
     fishingByUser.delete(userId);
     if (state.phase === 'minigame') cancelMiniGame(userId, reason);
     return true;

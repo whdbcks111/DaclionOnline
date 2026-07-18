@@ -5,6 +5,7 @@ import { updateLocations } from "./location.js";
 import { updateAllShops } from "../models/Shop.js";
 import { updateProjectiles } from "../models/Projectile.js";
 import { updateNpcDialogues } from "../models/NpcDialogue.js";
+import { updateGameScheduler } from './scheduler.js';
 
 const TARGET_FPS = 20;
 const FRAME_TIME = 1000 / TARGET_FPS;
@@ -33,6 +34,7 @@ function tick(): void {
     updateAllShops(dt);
     tickCoroutines(dt);
     updateNpcDialogues();
+    updateGameScheduler(dt);
 }
 
 /** 게임 루프 시작 */
