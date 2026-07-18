@@ -26,6 +26,15 @@
     white-space: nowrap;
 }
 
+.zone {
+    padding: 0.12em 0.35em;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: $border-radius-sm;
+    font-size: 0.62rem;
+    opacity: 0.8;
+    white-space: nowrap;
+}
+
 .coords {
     font-size: 0.68rem;
     opacity: 0.55;

@@ -422,7 +422,7 @@ export default function LocationEditor() {
             {/* 노드 */}
             {locations.map(loc => {
               const isSelected = loc.id === selectedId
-              const isSafe = loc.zoneType === 'safe'
+              const zoneColor = loc.zoneType === 'safe' ? '#4ab8ae' : loc.zoneType === 'neutral' ? '#d19a3a' : '#e74c3c'
               return (
                 <g key={loc.id} onMouseDown={e => onNodeMouseDown(e, loc.id)} onClick={e => selectLocation(e, loc.id)} style={{ cursor: 'grab' }}>
                   {/* 선택 헤일로 */}
@@ -439,9 +439,9 @@ export default function LocationEditor() {
                   <circle
                     cx={loc.x} cy={-loc.y}
                     r={NODE_RADIUS / zoom}
-                    fill={isSelected ? 'var(--color-primary)' : loc.mapColor ?? (isSafe ? '#4ab8ae' : '#e74c3c')}
+                    fill={isSelected ? 'var(--color-primary)' : loc.mapColor ?? zoneColor}
                     fillOpacity={isSelected ? 1 : 0.65}
-                    stroke={isSelected ? 'white' : loc.mapColor ?? (isSafe ? 'var(--color-primary)' : '#e74c3c')}
+                    stroke={isSelected ? 'white' : loc.mapColor ?? zoneColor}
                     strokeWidth={1.5 / zoom}
                   />
                   {/* 레이블 */}
@@ -554,7 +554,8 @@ export default function LocationEditor() {
                   onChange={e => updateSelected({ zoneType: e.target.value as ZoneType })}
                 >
                   <option value="safe">safe (안전 구역)</option>
-                  <option value="normal">normal (일반 구역)</option>
+                  <option value="neutral">neutral (중립 구역)</option>
+                  <option value="hostile">hostile (적대 구역)</option>
                 </select>
               </label>
 

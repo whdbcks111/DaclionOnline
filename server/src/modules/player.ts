@@ -135,6 +135,9 @@ export function sendLocationInfo(userId: number): void {
     const data: Omit<LocationInfoData, 'revision' | 'syncId'> = {
         locationId,
         name: location.data.name,
+        zoneType: location.data.zoneType,
+        zoneLabel: location.riskPolicy.label,
+        pvpAllowed: location.riskPolicy.pvpAllowed,
         x: location.data.x,
         y: location.data.y,
         z: location.data.z,

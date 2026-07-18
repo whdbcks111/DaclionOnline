@@ -22,7 +22,10 @@ function EntityRow({
   const defeated = entity.life <= 0
   const runObjectCommand = (command: '공격' | '대상지정') => {
     if (actionsDisabled || defeated) return
-    socket?.emit('chatButtonClick', { action: `/${command} ${index}` })
+    const action = entity.userId !== undefined
+      ? `/대상지정p #${entity.userId}`
+      : `/${command} ${index}`
+    socket?.emit('chatButtonClick', { action })
   }
   return (
     <div className={styles.entityRow}>
@@ -31,18 +34,18 @@ function EntityRow({
       <HealthBarNode life={entity.life} maxLife={entity.maxLife} shields={entity.shields ?? []} length={60} color={color} thickness={5} shape="rounded" />
       {showActions && (
         <span className={styles.entityActions}>
-          <button
+          {entity.userId === undefined && <button
             type="button"
             disabled={actionsDisabled || defeated}
             title={`${index}번 오브젝트 공격`}
             onClick={() => runObjectCommand('공격')}
-          >공격</button>
+          >공격</button>}
           <button
             type="button"
             disabled={actionsDisabled || defeated}
-            title={`${index}번 오브젝트 대상 지정`}
+            title={entity.userId !== undefined ? `${entity.name} PVP 대상 지정` : `${index}번 오브젝트 대상 지정`}
             onClick={() => runObjectCommand('대상지정')}
-          >대상 지정</button>
+          >{entity.userId !== undefined ? 'PVP 대상' : '대상 지정'}</button>
         </span>
       )}
     </div>
@@ -50,7 +53,7 @@ function EntityRow({
 }
 
 export default function LocationHud() {
-  const { locationInfo, configs, editMode } = useHud()
+  const { locationInfo, playerStats, configs, editMode } = useHud()
   if (!locationInfo) return null
   const showObjectActions = configs['player-location']?.showObjectActions ?? true
 
@@ -58,6 +61,7 @@ export default function LocationHud() {
     <div className={styles.container}>
       <div className={styles.header}>
         <span className={styles.locationName}>{locationInfo.name}</span>
+        <span className={styles.zone}>{locationInfo.zoneLabel}</span>
         <span className={styles.coords}>({locationInfo.x}, {locationInfo.y}, {locationInfo.z})</span>
       </div>
       {locationInfo.objects.length > 0 && (
@@ -79,7 +83,14 @@ export default function LocationHud() {
         <div className={styles.section}>
           <div className={styles.sectionTitle}>플레이어</div>
           {locationInfo.players.map((p, i) => (
-            <EntityRow key={i} entity={p} index={i + 1} color="$life" />
+            <EntityRow
+              key={p.userId ?? i}
+              entity={p}
+              index={i + 1}
+              color="$life"
+              showActions={showObjectActions && locationInfo.pvpAllowed && p.userId !== playerStats?.userId}
+              actionsDisabled={editMode}
+            />
           ))}
         </div>
       )}

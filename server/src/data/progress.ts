@@ -11,6 +11,25 @@ defineStatistic({
     format: value => `${value}회`,
 });
 
+defineStatistic({
+    id: 'combat:pvp_kills',
+    eventId: GameEventIds.PVP_KILL,
+    label: '플레이어 처치',
+    description: 'PVP에서 다른 플레이어를 처치한 누적 횟수입니다.',
+    visible: true,
+    format: value => `${value}회`,
+});
+
+defineStatistic({
+    id: 'combat:neutral_pvp_kills',
+    eventId: GameEventIds.PVP_KILL,
+    label: '중립 구역 플레이어 처치',
+    description: '중립 구역에서 다른 플레이어를 처치한 누적 횟수입니다. 추후 평판·현상금 판정에 사용됩니다.',
+    visible: true,
+    amount: event => event.data.zoneType === 'neutral' ? 1 : 0,
+    format: value => `${value}회`,
+});
+
 for (const statistic of [
     { id: 'career:mage_fire_kills', label: '불 속성 몬스터 처치', tag: GameTags.PROPERTY_FIRE },
     { id: 'career:mage_ice_kills', label: '얼음 속성 몬스터 처치', tag: GameTags.PROPERTY_ICE },

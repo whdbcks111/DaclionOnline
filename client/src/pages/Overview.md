@@ -1,5 +1,7 @@
 # Pages Overview
 
+`LocationEditor.tsx`의 장소 위험도는 `safe | neutral | hostile`를 모두 편집하며 중립/적대 노드를 서로 다른 평면 색으로 구분한다.
+
 라우트 단위 화면과 해당 화면의 이벤트 wiring을 담당한다.
 
 - `Login.tsx`, `Register.tsx`: 인증/이메일 인증 UI.

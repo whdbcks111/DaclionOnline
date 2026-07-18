@@ -27,6 +27,7 @@ export const GameEventIds = Object.freeze({
     CRITICAL_HIT: 'combat:critical_hit',
     ATTACK_EVADED: 'combat:attack_evaded',
     ENTITY_DEFEATED: 'combat:entity_defeated',
+    PVP_KILL: 'combat:pvp_kill',
     RESOURCE_DESTROYED: 'resource:destroyed',
     SKILL_ACQUIRED: 'skill:acquired',
     SKILL_STARTED: 'skill:started',

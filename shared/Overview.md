@@ -1,5 +1,7 @@
 # Shared Overview
 
+`ZoneType`은 `safe | neutral | hostile`이며 `LocationInfoData` 위험도는 `zoneType/zoneLabel/pvpAllowed`의 가공된 HUD 계약으로 전달된다. `tags.ts`는 각 위험도에 대응하는 지역 태그를 소유한다.
+
 서버와 클라이언트가 함께 사용하는 네트워크 계약과 리소스를 둔다.
 
 - `types.ts`: 태그, `monster | resource` 통합 오브젝트·NPC ID·지도 아이콘·대표색이 포함된 LocationData, 플레이어별 `WorldMapData`와 `worldMap` ChatNode, 타입색 `ShieldBarSegment`와 재사용 채팅 노드, 플레이어/위치 HUD DTO, 이미지 메시지·정보 공개·채널·온라인 mention Socket.io 이벤트 map의 단일 기준. Player/Location HUD는 `syncId/revision`을 포함해 중복·역순 snapshot을 거르며, `AdjacentLocationData`는 플레이어 기준 `visible | locked`와 공개 잠금 사유를 포함한다.

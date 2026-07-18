@@ -1,6 +1,7 @@
 import type { WorldMapConnectionData, WorldMapData, WorldMapLocationData } from '../../../shared/types.js';
 import { GameTags } from '../../../shared/tags.js';
 import type Player from './Player.js';
+import { RegionRiskPolicy } from './RegionRisk.js';
 import { ProgressType, defineProgress } from './Progress.js';
 import { getAllLocationData, getAllLocations, getLocation } from './Location.js';
 
@@ -50,7 +51,7 @@ export function markAllLocationsVisited(player: Player): number {
 }
 
 function getZoneLabel(zoneType: WorldMapLocationData['zoneType']): string {
-    return zoneType === 'safe' ? '안전 구역' : '일반 구역';
+    return RegionRiskPolicy.require(zoneType).label;
 }
 
 function createLocationSnapshot(player: Player, locationId: string, visited: boolean): WorldMapLocationData | undefined {

@@ -110,7 +110,7 @@ test('Location은 몬스터와 자원을 하나의 오브젝트 API로 제공한
     const location = new Location({
         id: 'test_location',
         name: '시험 장소',
-        zoneType: 'normal',
+        zoneType: 'neutral',
         x: 0,
         y: 0,
         z: 0,
@@ -222,7 +222,7 @@ test('바닥 아이템은 인스턴스 상태가 같을 때 최대 스택까지 
         tags: [],
     });
     const location = new Location({
-        id: 'test_floor_stack_location', name: '바닥 시험', zoneType: 'normal',
+        id: 'test_floor_stack_location', name: '바닥 시험', zoneType: 'neutral',
         x: 0, y: 0, z: 0, npcIds: [], objects: [], connections: [], tags: [],
     });
     const snapshot = { itemDataId: 'test_floor_stack', count: 7, durability: null, metadataDelta: null, tags: [] };

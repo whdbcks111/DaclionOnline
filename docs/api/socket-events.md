@@ -26,7 +26,7 @@
 | `changeNickname` | `nickname: string` | 필요 | `modules/login.ts` | `nicknameResult`; DB와 모든 메모리 세션 갱신 |
 | `requestLocationInfo` | 없음 | 필요 | `modules/chat.ts` | `locationInfo` |
 | `adminRequestLocations` | 없음 | 권한 10 | `modules/location.ts` | `adminLocations` |
-| `adminSaveLocations` | `LocationData[]` | 권한 10 | `modules/location.ts` | `objects(type/dataId/maxCount/respawnTime)`, `npcIds`, `tags`, 선택 `mapIcon`·`#RRGGBB mapColor`를 검증·정규화한 뒤 JSON 저장 및 런타임 재로드, `adminSaveResult` |
+| `adminSaveLocations` | `LocationData[]` | 권한 10 | `modules/location.ts` | `safe/neutral/hostile zoneType`, `objects(type/dataId/maxCount/respawnTime)`, `npcIds`, `tags`, 선택 `mapIcon`·`#RRGGBB mapColor`를 검증·정규화한 뒤 JSON 저장 및 런타임 재로드, `adminSaveResult` |
 | `adminPanelRequestBootstrap` | 없음 | 권한 10 | `modules/adminPanel.ts` | `adminPanelBootstrap`; 관리자 form option 목록 |
 | `adminPanelRequestPlayers` | 없음 | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayers`; 온라인 우선 전체 캐릭터 목록 |
 | `adminPanelRequestPlayer` | `userId: number` | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayer`; 가공된 캐릭터 상세 snapshot |
@@ -54,7 +54,7 @@
 | `mentionCompletions` | `CompletionItem[]` | `modules/chat.ts` | `pages/Home.tsx` |
 | `playerStats` | `PlayerStatsData` (`syncId/revision`과 현재 레벨·자원·타입색 `shields`·공격 cooldown·`statusEffects`, 표시 가능한 스킬, nullable 파티 HUD). 내용이 바뀐 완전한 snapshot만 socket별 1회 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 `HudContext` → HUD |
 | `informationMode` | `isPublic: boolean` | `modules/bot.ts` | `pages/Home.tsx` 입력창 공개/비공개 전환 버튼 |
-| `locationInfo` | `LocationInfoData` (`syncId/revision`, objects/플레이어 생명력·`shields`, 플레이어 기준 인접 장소). 내용 변경 시 완전한 snapshot 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 Location/Minimap HUD |
+| `locationInfo` | `LocationInfoData` (`syncId/revision`, `zoneType/zoneLabel/pvpAllowed`, objects/플레이어 생명력·`shields`, 플레이어 기준 인접 장소). 내용 변경 시 완전한 snapshot 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 Location/Minimap HUD |
 | `userCount` | `UserCountData` (다중 탭을 합친 고유 사용자 기준 전체/채널 인원) | `modules/login.ts` | `pages/Home.tsx` |
 | `channelChanged` | `(channel, history)` | `modules/chat.ts` | `pages/Home.tsx` |
 | `channelList` | `ChannelInfo[]` | `modules/chat.ts` | `pages/Home.tsx` |

@@ -32,6 +32,14 @@ import {
     type StoredPlayerRankingSnapshot,
 } from './Ranking.js';
 import { DEFAULT_PLAYER_BASE_ATTRIBUTE } from './PlayerDefaults.js';
+import { partyManager } from '../modules/party.js';
+import { emitGameEvent, GameEventIds } from './GameEvent.js';
+
+export interface PlayerDeathPenaltySnapshot {
+    readonly zoneLabel: string;
+    readonly experienceLost: number;
+    readonly goldLost: number;
+}
 
 export default class Player extends Entity {
     readonly userId: number;
@@ -180,7 +188,21 @@ export default class Player extends Entity {
         if(this.level >= 50) baseDuration = 60 * 5;
         else if(this.level >= 10) baseDuration = 30;
 
-        return baseDuration;
+        const location = getLocation(this.locationId);
+        return location ? location.riskPolicy.calculateRespawnDuration(baseDuration) : baseDuration;
+    }
+
+    override getAttackDeniedReason(attacker: Entity): string | undefined {
+        const baseReason = super.getAttackDeniedReason(attacker);
+        if (baseReason) return baseReason;
+        if (!attacker.isPlayer || attacker.playerUserId === undefined) return undefined;
+        if (attacker === this) return '자기 자신은 공격할 수 없습니다.';
+        if (attacker.locationId !== this.locationId) return '같은 장소의 플레이어만 공격할 수 있습니다.';
+        const location = getLocation(this.locationId);
+        if (!location) return '현재 장소의 PVP 규칙을 확인할 수 없습니다.';
+        if (!location.riskPolicy.pvpAllowed) return `${location.riskPolicy.label}에서는 플레이어를 공격할 수 없습니다.`;
+        if (partyManager.areInSameParty(attacker.playerUserId, this.userId)) return '같은 파티원은 공격할 수 없습니다.';
+        return undefined;
     }
 
     // -- 게임 루프 --
@@ -241,11 +263,42 @@ export default class Player extends Entity {
 
     override onDeath(): void {
         super.onDeath();
+        const location = getLocation(this.locationId);
+        const killer = this.lastDamageCause?.causeEntity?.attackOwner;
+        if (killer?.isPlayer && killer !== this) {
+            emitGameEvent(GameEventIds.PVP_KILL, {
+                actor: killer,
+                subject: this,
+                data: { zoneType: location?.data.zoneType ?? 'unknown' },
+            });
+        }
         endNpcDialogue(this, DialogueEndReason.DEFEATED);
         this._deathNotifTimer = 0;
-        sendBotMessageToUser(this.userId,
-            chat().color('red', b => b.text('사망했습니다.')).text(` ${this.deathTimer.toFixed(0)}초 후 리스폰됩니다.`).build()
-        );
+        const penalty = this.applyRegionDeathPenalty();
+        const message = chat()
+            .color('red', b => b.text('사망했습니다.'))
+            .text(` ${penalty.zoneLabel} 규칙이 적용됩니다.\n`);
+        if (penalty.experienceLost > 0 || penalty.goldLost > 0) {
+            message.text('손실: ')
+                .text(penalty.experienceLost > 0 ? `경험치 ${penalty.experienceLost.toLocaleString()}` : '')
+                .text(penalty.experienceLost > 0 && penalty.goldLost > 0 ? ' · ' : '')
+                .text(penalty.goldLost > 0 ? `${penalty.goldLost.toLocaleString()}G` : '')
+                .text('\n');
+        } else {
+            message.color('$text-tertiary', b => b.text('사망 재화 손실은 없습니다.\n'));
+        }
+        message.text(`${this.deathTimer.toFixed(0)}초 후 리스폰됩니다.`);
+        sendBotMessageToUser(this.userId, message.build());
+    }
+
+    applyRegionDeathPenalty(): PlayerDeathPenaltySnapshot {
+        const policy = getLocation(this.locationId)?.riskPolicy;
+        if (!policy) return { zoneLabel: '알 수 없는 구역', experienceLost: 0, goldLost: 0 };
+        const experienceLost = policy.calculateExperienceLoss(this.exp, this.maxExp, this.level);
+        const goldLost = policy.calculateGoldLoss(this.gold, this.level);
+        if (experienceLost > 0) this.exp = this.exp - experienceLost;
+        if (goldLost > 0) this.gold = this.gold - goldLost;
+        return { zoneLabel: policy.label, experienceLost, goldLost };
     }
 
     override respawn(): void {

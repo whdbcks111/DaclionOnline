@@ -1,5 +1,7 @@
 # Modules Overview
 
+`partyManager.areInSameParty()`는 내부 멤버 Map을 노출하지 않고 PVP 아군 공격을 차단한다. `sendLocationInfo()`는 위험도 표시명과 PVP 허용 여부를 가공된 HUD snapshot으로 제공한다.
+
 Socket/HTTP 요청, 세션과 온라인 상태, 주기 작업, 도메인 객체 수명처럼 애플리케이션 수준의 조정을 담당한다.
 
 - `login.ts`, `socket.ts`: Socket.io 초기화·세션 쿠키 바인딩과 인메모리 세션·userId별 socket ID Set을 관리한다. 전체/채널 접속자는 다중 탭을 합친 고유 사용자 기준이며, 명시적 로그아웃과 disconnect 모두 socket ID 바인딩을 안전하게 해제한다. 마지막 연결 종료 시 활성 NPC 대화도 unload 사유로 종료한다.

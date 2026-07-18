@@ -82,6 +82,11 @@ export class PartyManager {
         return party ? this.toSnapshot(party) : undefined;
     }
 
+    areInSameParty(leftUserId: number, rightUserId: number): boolean {
+        const partyId = this.partyIdByMember.get(leftUserId);
+        return Boolean(partyId && partyId === this.partyIdByMember.get(rightUserId));
+    }
+
     getInvitation(targetUserId: number, now = Date.now()): PartyInvitationSnapshot | undefined {
         this.pruneExpiredInvitations(now);
         const invitation = this.invitationsByTarget.get(targetUserId);

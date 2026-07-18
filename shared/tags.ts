@@ -83,6 +83,8 @@ export const GameTags = Object.freeze({
     TRAIT_STEALTH: 'trait:stealth',
 
     LOCATION_SAFE: 'location:safe',
+    LOCATION_NEUTRAL: 'location:neutral',
+    LOCATION_HOSTILE: 'location:hostile',
     LOCATION_WILDERNESS: 'location:wilderness',
     LOCATION_SHOP: 'location:shop',
     LOCATION_MINE: 'location:mine',

@@ -293,6 +293,7 @@ export function initLocationCommands(): void {
                 .text('[ 현재 위치 ]\n')
                 .color('yellow', b2 => b2.text('장소')).text(` ${location.data.name}\n`)
                 .color('yellow', b2 => b2.text('좌표')).text(` (${location.data.x}, ${location.data.y}, ${location.data.z})\n`)
+                .color('yellow', b2 => b2.text('구역')).text(` ${location.riskPolicy.label} · PVP ${location.riskPolicy.pvpAllowed ? '허용' : '금지'}\n`)
                 .text('\n')
                 .color('gray', b2 => b2.text('[ 오브젝트 ]\n'));
 
@@ -361,7 +362,11 @@ export function initLocationCommands(): void {
                      .text(`Lv.${p.level}`)
                      .text(` ${nickname} `)
                      .health({ life: p.life, maxLife: p.maxLife, shields: p.getShieldBarSegments(), length: 80, color: '$life', thickness: 6 })
-                     .text(` ${pct}%\n`);
+                     .text(` ${pct}%`);
+                    if (p.userId !== player.userId && location.riskPolicy.pvpAllowed && !p.isDefeated) {
+                        b.text(' ').button(`/대상지정p #${p.userId}`, b2 => b2.text('[PVP 대상]'), true);
+                    }
+                    b.text('\n');
                 }
             }
 

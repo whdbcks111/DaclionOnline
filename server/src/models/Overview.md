@@ -1,5 +1,7 @@
 # Models Overview
 
+`Player.getAttackDeniedReason()`은 지역 PVP·같은 파티·동일 장소 제한을 모든 직접/투사체 공격에 공통 적용한다. `RegionRiskPolicy` 클래스형 enum은 안전·중립·적대 장소의 PVP 허용, 사망 경험치/골드 손실, 부활 시간 배율을 소유한다.
+
 서버가 권위를 갖는 게임 상태와 규칙을 표현한다.
 
 - `Combat`, `CombatPipeline`, `Threat`, `TagEffect`, `Entity`, `Player`, `Monster`: 공격자/피격자 속도 비율 회피·치명타·공격/피격 문맥 태그·단방향 배율·방어/관통 계산과 준비/회피/피해 전후/완료 key hook, 회피 불가/고정 피해 `AttackOptions`, 치유 modifier와 source 기반 지원 위협, 최대 자원 보정·공격 쿨다운·경험치 곡선을 담당한다. Monster는 마스터 `ai`의 클래스형 성향·지능·행동 가중치·도발 저항·전환 임계값으로 자기 ThreatTable에서 대상을 선택한다. 슬라임은 마지막 공격자를, 지능형 보스는 피해·치유·보호막·제어·도발 위협을 비교한다. `DamageResult`의 생명력/보호막 피해와 지원량을 기여도로 누적해 최고 플레이어 기여자를 드롭·골드·파티 경험치 기준으로 삼고 사망/리스폰 시 초기화한다.

@@ -1,5 +1,7 @@
 # Commands Overview
 
+PVP 조작은 `player.ts`의 `/대상지정p`(`tgp`)와 `/공격p`(`ap`)에서 순번·닉네임·`#고유번호`를 받고 Player의 지역/파티 공격 검증 API를 사용한다. `location.ts`의 `/위치`는 위험도·PVP 여부·대상 버튼을 함께 표시한다.
+
 채팅에서 들어온 `/명령어` 또는 첫 단어가 등록된 별칭인 슬래시 없는 입력을 검증된 게임 동작으로 연결한다. 모든 명령은 `modules/bot.ts::registerCommand()`로 등록하고 `index.ts::initAllCommands()`가 분류별 초기화 함수를 호출한다.
 
 - `general.ts`: 도움말, 권한별 등록 별칭을 보여주는 `/단축키목록`, 정보 열람 공개/비공개 모드, 랜덤, 공지, 관리자 eval. 도움말의 구분선은 공용 divider ChatNode, 인자·설명은 light/dark 공용 테마 token으로 출력한다.

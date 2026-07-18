@@ -4,11 +4,12 @@ import type Entity from "./Entity.js";
 import type Player from "./Player.js";
 import type { LocationData, LocationObjectSpawnInfo, ConnectionInfo, ZoneType } from "../../../shared/types.js";
 import logger from "../utils/logger.js";
-import { TagCollection, normalizeTags } from "../../../shared/tags.js";
+import { GameTags, TagCollection, normalizeTags } from "../../../shared/tags.js";
 import type { TagReadable } from "../../../shared/tags.js";
 import { canStackItemSnapshots, getItemData } from "./Item.js";
 import type { ItemSnapshot } from "./Item.js";
 import NPC, { normalizeNpcId } from "./NPC.js";
+import { RegionRiskPolicy } from './RegionRisk.js';
 
 export type { LocationData, LocationObjectSpawnInfo, ConnectionInfo, ZoneType };
 
@@ -64,7 +65,10 @@ export default class Location implements TagReadable {
     constructor(data: LocationData) {
         this.id = data.id;
         this.data = data;
-        this.tags = new TagCollection({ definition: data.tags });
+        const riskTag = data.zoneType === 'safe'
+            ? GameTags.LOCATION_SAFE
+            : data.zoneType === 'neutral' ? GameTags.LOCATION_NEUTRAL : GameTags.LOCATION_HOSTILE;
+        this.tags = new TagCollection({ definition: [...data.tags, riskTag] });
 
         // 서버 로드 시 즉시 전부 스폰
         for (const spawn of data.objects) {
@@ -81,6 +85,8 @@ export default class Location implements TagReadable {
             }
         }
     }
+
+    get riskPolicy(): RegionRiskPolicy { return RegionRiskPolicy.require(this.data.zoneType); }
 
     // -- 월드 오브젝트 관리 --
 
@@ -263,6 +269,7 @@ export function normalizeLocationData(data: LocationData): LocationData {
     if (!Array.isArray(data.objects)) {
         throw new Error(`Location objects must be an array: ${data.id}`);
     }
+    RegionRiskPolicy.require(data.zoneType);
     const npcIds = [...new Set((data.npcIds ?? []).map(normalizeNpcId))];
     for (const npcId of npcIds) {
         if (!NPC.getNpc(npcId)) throw new Error(`Location NPC definition not found: ${data.id}/${npcId}`);

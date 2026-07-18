@@ -10,6 +10,7 @@
 - `leave/disband/kick`: 나가기, 파티장 전용 해산, 파티장 전용 강퇴. 파티장이 나가면 가입 순서상 다음 멤버가 파티장이 되고 1명만 남으면 파티를 종료한다.
 - `removeDisconnectedPlayer`: 마지막 소켓이 끊기거나 Player가 unload될 때 파티와 초대를 정리한다.
 - `getParty/getHudData`: 변경 불가능한 구성 snapshot과 현재 생명력·정신력 HUD DTO를 반환한다.
+- `areInSameParty`: 두 userId가 같은 파티인지만 반환해 PVP에서 아군 공격을 차단한다.
 - `distributeMonsterExp`: 같은 장소의 생존 파티원에게 몬스터 경험치를 지급하고 개인별 적용 결과를 반환한다.
 
 닉네임 또는 고유번호 대상 조회는 `playerRegistry.findOnlinePlayerByIdentity()`를 사용한다. 닉네임은 대소문자를 무시한 정확한 일치이고 고유번호는 양의 정수 또는 `#번호` 형식을 허용한다.

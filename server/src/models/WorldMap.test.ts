@@ -21,7 +21,7 @@ function location(
     return {
         id,
         name: id,
-        zoneType: id === 'start' ? 'safe' : 'normal',
+        zoneType: id === 'start' ? 'safe' : 'neutral',
         x,
         y: 0,
         z: 0,

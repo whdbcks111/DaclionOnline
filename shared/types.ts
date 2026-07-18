@@ -9,7 +9,7 @@ import type {
 
 // -- 위치 데이터 (서버-클라이언트 공유) --
 
-export type ZoneType = 'safe' | 'normal'
+export type ZoneType = 'safe' | 'neutral' | 'hostile'
 
 export type LocationObjectType = 'monster' | 'resource'
 
@@ -222,6 +222,9 @@ export interface SnapshotRevision {
 export interface LocationInfoData extends SnapshotRevision {
     locationId: string
     name: string
+    zoneType: ZoneType
+    zoneLabel: string
+    pvpAllowed: boolean
     x: number
     y: number
     z: number

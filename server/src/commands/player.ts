@@ -2,7 +2,8 @@ import { registerCommand } from "../modules/bot.js";
 import { sendBotMessageToUser, sendBotMessageToChannel, sendBotMessageFiltered, sendPrivateBotMessageToUser } from "../modules/message.js";
 import { getUserChannel } from "../modules/channel.js";
 import { chat } from "../utils/chatBuilder.js";
-import { getPlayerByUserId } from "../modules/player.js";
+import { getOnlinePlayers, getPlayerByUserId } from "../modules/player.js";
+import { findOnlinePlayerByIdentity } from '../modules/playerRegistry.js';
 import { getLocation } from "../models/Location.js";
 import { getItemData, Item } from "../models/Item.js";
 import type { EquipSlot } from "../models/Equipment.js";
@@ -59,6 +60,28 @@ function getObjectTargetCompletions(userId: number): CompletionItem[] {
             value: String(index + 1),
             description: `Lv.${object.level} ${object.name}${object.isDefeated ? ` (${object.defeatLabel})` : ''}`,
         }));
+}
+
+function getPvpTargets(userId: number) {
+    const player = getPlayerByUserId(userId);
+    if (!player) return [];
+    return getOnlinePlayers()
+        .filter(candidate => candidate.userId !== userId && candidate.locationId === player.locationId)
+        .sort((left, right) => Number(left.isDefeated) - Number(right.isDefeated) || left.userId - right.userId);
+}
+
+function getPvpTargetCompletions(userId: number): CompletionItem[] {
+    return getPvpTargets(userId).map((target, index) => ({
+        value: `#${target.userId}`,
+        description: `${index + 1}. Lv.${target.level} ${target.name}${target.isDefeated ? ' (사망)' : ''}`,
+    }));
+}
+
+function resolvePvpTarget(userId: number, input: string | undefined) {
+    if (!input?.trim()) return undefined;
+    const indexed = Number(input);
+    if (Number.isInteger(indexed) && indexed > 0) return getPvpTargets(userId)[indexed - 1];
+    return findOnlinePlayerByIdentity(input);
 }
 
 export function initPlayerCommands(): void {
@@ -586,6 +609,87 @@ export function initPlayerCommands(): void {
     });
 
     registerCommand({
+        name: '대상지정p',
+        aliases: ['타겟p', '대상p', 'targetp', 'tgp'],
+        description: '같은 장소의 플레이어를 PVP 대상으로 지정합니다.',
+        showCommandUse: 'hide',
+        args: [
+            {
+                name: '번호/닉네임/고유번호',
+                description: '위치 목록 순번, 닉네임 또는 #고유번호',
+                required: true,
+                completions: getPvpTargetCompletions,
+            },
+        ],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            if (player.isDefeated) {
+                sendBotMessageToUser(userId, '사망 상태에서는 대상을 지정할 수 없습니다.');
+                return;
+            }
+            const target = resolvePvpTarget(userId, args[0]);
+            if (!target || target.userId === userId || target.locationId !== player.locationId) {
+                sendBotMessageToUser(userId, '같은 장소에서 해당 플레이어를 찾을 수 없습니다.');
+                return;
+            }
+            if (target.isDefeated) {
+                sendBotMessageToUser(userId, '사망한 플레이어는 대상으로 지정할 수 없습니다.');
+                return;
+            }
+            const deniedReason = target.getAttackDeniedReason(player);
+            if (deniedReason) {
+                sendBotMessageToUser(userId, deniedReason);
+                return;
+            }
+            player.currentTarget = target;
+            sendBotMessageToUser(userId, chat()
+                .color('$enemy', b => b.text('[PVP 대상 지정] '))
+                .text(`Lv.${target.level} ${target.name} (#${target.userId})`)
+                .build());
+        },
+    });
+
+    registerCommand({
+        name: '공격p',
+        aliases: ['attackp', 'ap'],
+        description: '같은 장소의 플레이어를 직접 공격합니다.',
+        showCommandUse: 'hide',
+        args: [
+            {
+                name: '번호/닉네임/고유번호',
+                description: '대상 순번, 닉네임 또는 #고유번호',
+                required: true,
+                completions: getPvpTargetCompletions,
+            },
+        ],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            if (player.isDefeated) {
+                sendBotMessageToUser(userId, '사망 상태에서는 공격할 수 없습니다.');
+                return;
+            }
+            const target = resolvePvpTarget(userId, args[0]);
+            if (!target || target.userId === userId || target.locationId !== player.locationId) {
+                sendBotMessageToUser(userId, '같은 장소에서 해당 플레이어를 찾을 수 없습니다.');
+                return;
+            }
+            if (target.isDefeated) {
+                sendBotMessageToUser(userId, '사망한 플레이어는 공격할 수 없습니다.');
+                return;
+            }
+            const deniedReason = target.getAttackDeniedReason(player);
+            if (deniedReason) {
+                sendBotMessageToUser(userId, deniedReason);
+                return;
+            }
+            player.currentTarget = target;
+            player.performBasicAttack(target);
+        },
+    });
+
+    registerCommand({
         name: '공격',
         aliases: ['attack', 'a'],
         description: '장소의 오브젝트를 공격합니다.',
@@ -618,7 +722,10 @@ export function initPlayerCommands(): void {
                     sendBotMessageToUser(userId, '공격할 대상이 없습니다. 번호를 지정해주세요.');
                     return;
                 }
-                if (!location.hasObject(ct)) {
+                const onlinePlayerTarget = ct.isPlayer && ct.playerUserId !== undefined
+                    && getPlayerByUserId(ct.playerUserId) === ct
+                    && ct.locationId === player.locationId;
+                if (!location.hasObject(ct) && !onlinePlayerTarget) {
                     player.currentTarget = null;
                     sendBotMessageToUser(userId, '현재 타겟이 이 장소에 없습니다.');
                     return;
