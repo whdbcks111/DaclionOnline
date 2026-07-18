@@ -107,11 +107,11 @@ UI 스타일은 고정 px 배치와 크기에 의존하지 않는다. 기존 SCS
 - 예: `chore(format): formatted code structure`
 - 예: `feat(inventory): add item remove API`
 
-### 8. 콘텐츠 확장 중에는 카테고리 아이콘을 재사용
+### 8. 확정 콘텐츠는 전용 아이콘을 사용
 
-현재 1차 콘텐츠 확장 기간에는 아이템·스킬마다 ImageGen 에셋을 만들지 않는다. 검·활·단검·지팡이·직업·소모품처럼 카테고리가 맞는 기존 128×128 아이콘을 `image/icon`에 명시적으로 재사용하고 전용 에셋 교체 TODO를 남긴다. 없는 경로나 의미가 다른 임의 placeholder는 금지한다. 콘텐츠와 밸런스가 확정되어 전용 아트 제작 단계가 시작되면 아이템 정의와 `client/public/icons/items/{itemDataId}.png`를 같은 변경에 추가한다.
+전용 아트 제작 단계에 들어간 아이템·스킬은 카테고리 fallback이나 다른 데이터의 아이콘을 중복 사용하지 않는다. 아이템 정의와 `client/public/icons/items/{itemDataId}.png`, 액티브·패시브 스킬 정의와 `client/public/icons/skills/{skillDataId}.png`를 같은 변경에 추가한다. 시전 메시지가 있는 스킬은 `client/public/icons/skill-headers/{skillDataId}.png` 256×64 배너도 함께 둔다. 아직 기획이 확정되지 않은 대량 콘텐츠만 의미가 맞는 카테고리 아이콘을 임시 사용할 수 있으며 TODO를 명시한다.
 
-전용 아트를 만드는 단계에서는 아이템·스킬·상태이상 아이콘을 밝은 색상, 단순한 형태와 굵고 명확한 실루엣의 캐주얼 모바일 게임 스타일로 통일한다. 작은 HUD 크기에서도 즉시 구분되어야 하며 사실적인 질감이나 오래된 정통 RPG풍의 과도한 묘사는 피한다. 아이템과 상태이상은 128×128 투명 PNG를 기본으로 하고, 스킬은 속성 분위기를 전달하는 불투명 정사각형 카드형 배경을 허용한다.
+아이템·스킬·상태이상 아이콘은 밝은 색상, 단순한 형태와 굵고 명확한 실루엣의 캐주얼 모바일 게임 스타일로 통일한다. 작은 HUD 크기에서도 즉시 구분되어야 하며 사실적인 질감이나 오래된 정통 RPG풍의 과도한 묘사는 피한다. 아이템과 상태이상은 128×128 투명 PNG를 기본으로 하고, 스킬은 속성 분위기를 전달하는 불투명 정사각형 카드형 배경을 허용한다.
 
 새 `property:*` 속성 또는 `/속성표`에 노출할 태그를 추가하면 `defineTagEffectTagDisplay`의 라벨·아이콘 key와 `client/public/icons/affinities/{icon}.png` 128×128 투명 PNG를 같은 변경에 추가한다. 속성 상성은 `defineTagEffectModifier` 단방향 행으로 등록하며, 표시 정보와 실제 상성 관계가 함께 테스트되어야 한다.
 

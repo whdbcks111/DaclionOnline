@@ -20,7 +20,7 @@
 | Information visibility | `set/is/clearInformationPublicMode`, `runInformationCommand`, `shouldPublishInformationOutput` | 사용자별 런타임 정보 공개 설정과 async 출력 문맥 |
 | Party | `partyManager.invite/accept/decline/leave/disband/kick/removeDisconnectedPlayer/getParty/areInSameParty/getHudData/distributeMonsterExp`, `calculatePartyExpGrant` | 내부 Map을 숨긴 초대·구성·PVP 아군 판정·HUD·같은 장소 몬스터 경험치 공유 |
 | Channel | `getUserChannel`, `setUserChannel`, `getChannelRoomKey`, `getChannelHistory`, `getFilteredHistoryForUser` | room과 히스토리 상태 |
-| Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageFiltered`, `sendMessageToUser`, `sendPlayerTextToCurrentChannel`, `sendPrivatePlayerTextToCurrentChannel`, `sendPlayerTextToPartyMembers`, `sendWhisperMessage` | 일반 메시지, 시스템 생성 플레이어 메시지, `[파티]` 필터 피드와 채널을 넘는 양방향 비공개 귓속말 전송 |
+| Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageFiltered`, `sendMessageToUser`, `sendPlayerTextToCurrentChannel`, `sendPrivatePlayerTextToCurrentChannel`, `sendPrivatePlayerContentToCurrentChannel`, `sendPlayerTextToPartyMembers`, `sendPlayerContentToPartyMembers`, `sendWhisperMessage` | 텍스트 또는 이미지 등 구조화 노드를 가진 시스템 생성 플레이어 메시지, `[파티]` 필터 피드와 채널을 넘는 양방향 비공개 귓속말 전송 |
 | Bot message | `sendBotMessageToChannel`, `broadcastBotMessageAll`, `sendBotMessageFiltered`, `sendBotMessageToUser`, `sendPrivateBotMessageToUser`, `sendBotMessageToPartyMembers`, `sendNotificationToUsers` | 정보 명령 문맥을 반영하거나 강제로 비공개인 시스템 메시지 및 파티 전투 피드 전송 |
 | Notification | `broadcastNotification`, `sendNotificationFiltered`, `sendNotificationToUser` | 화면 알림 전송 |
 | Message mutation | `editMessage`, `deleteMessage` | 히스토리 수정 후 이벤트 브로드캐스트 |
@@ -29,7 +29,7 @@
 | Minigame | `startMiniGame`, `cancelMiniGame`, `hasActiveMiniGame`, `normalizeMiniGameInputs/Actions`, `initMiniGame` | session/token/만료와 축·단조 타격 trace 정규화, 타입별 결과 validator를 가진 서버 권위 미니게임 |
 | Fishing | `startFishing`, `cancelFishing`, `isFishing` | 장소·낚싯대 검증, 미끼 묶음 자동 장착·한 개 소비, 입질 대기, 등급/미니게임/보상 연결 |
 | Forging | `ForgeForm.values/fromInput`, `ForgeMaterial.values/fromInput`, `createForgedItemSnapshot` | 형태·재료·리듬 정확도·난수 trait를 조합한 영속 장비 snapshot 생성 |
-| Forging flow | `has/canAcquire/grant/migrateLegacyBlacksmithProfession`, `canUseMetalForging`, `startForging` | 정식 대장장이 직업 슬롯 획득·구형 flag 이전, 별도 금속 단조 스킬 권한, 제련 소재 검증과 서버 단조 score·소비·보상 연결 |
+| Forging flow | `has/canAcquire/grant/migrateLegacyBlacksmithProfession`, `canUseMetalForging`, `calculateSmeltingExperience`, `calculateForgingExperience`, `startForging` | 정식 대장장이 직업 슬롯 획득·구형 flag 이전, 별도 금속 단조 스킬 권한, 현재 maxExp 비례 생산 경험치, 제련 소재 검증과 서버 단조 score·소비·보상 연결 |
 | Upload media | `encodeChatImage`, `initUploadMaintenance`, `cleanupChatImages`, `getOwnedChatImage` | 이미지 재인코딩, 전체 100장·7일 보관 정리와 채팅 파일 소유권·표시 치수 snapshot 검증 |
 | Location service | `loadLocationsFromJson`, `updateLocations`, `initLocation` | JSON/소켓/프레임 조정 |
 | Item use | `registerItemUse`, `executeItemUse`, `hasItemUseHandler` | 아이템 효과 ID와 실행 함수 연결 |
@@ -82,7 +82,7 @@
 | Skill registry | `defineSkill`, `getSkillData`, `getAllSkillData`, `acceptSkill/denySkill` | 정적 SkillData와 조건 결과 등록/조회 |
 | Crafting | `CraftingRecipeIngredient`, `defineCraftingRecipe`, `get/findCraftingRecipe*`, `updateCraftingRecipeDiscovery`, `getDiscoveredCraftingRecipes`, `discoverAllCraftingRecipes`, `startCrafting`, `executeCrafting`, `cancelCrafting` | predicate 재료, 실제 선택 재료 factory, Progress 기반 제작법 발견/운영 일괄 해제, 지연 제작·취소 |
 | Metadata | `cloneMetadataValue`, `createMetadataDelta`, `encodeMetadataDelta`, `decodeMetadataDelta` | Item/Skill이 공유하는 JSON-safe top-level delta 직렬화 |
-| `StatusEffectType`, `StatusEffect` | `define/values/fromKey/fromInput`, `icon`, `formatDescription`, `get/set/resetMetadata`, `upgrade/refreshDuration`, lifecycle callback | 아이콘 key를 가진 클래스형 효과 정의, 대상별 duration/level/metadata delta와 병합·틱 처리 |
+| `StatusEffectType`, `StatusEffect` | `define/values/fromKey/fromInput`, `icon`, `formatDescription`, `get/set/resetMetadata`, `upgrade/refreshDuration`, lifecycle callback | 공통 레벨 상한 없는 아이콘 key 효과 정의, 대상별 duration/level/metadata delta와 병합·틱 처리 |
 | Fishing | `FishRarity.values/fromKey`, `FishRarity.tag/sellPrice`, `define/get/getAllFish`, `getFishByRarity`, `getFishRarityChances`, `rollFishRarity`, `rollFish`, `rollFishingExp`, `rollFishingWaitSeconds` | 6등급 태그·매입가·가중치·행운별 실제 확률 snapshot, 물고기 보상과 45~65초 기본 범위를 입질 속도로 나누는 대기 계산 |
 | `ActionType` | `values/fromKey/fromInput`; `SKILL/ITEM_USE/CHAT/COMMAND/ATTACK/MOVEMENT/EVASION/LOCATION_TRAVEL` | 스킬·아이템·통신·전투·필드 이동·회피·장소 이동 실행 경계가 공유하는 행동 분류 |
 

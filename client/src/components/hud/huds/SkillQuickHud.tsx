@@ -129,7 +129,6 @@ export default function SkillQuickHud() {
               aria-disabled={coolingDown}
               onClick={() => activate(skill)}
             >
-              <span className={styles.fallbackIcon}>{skill.name.slice(0, 1)}</span>
               <img src={`/icons/${skill.icon}.png`} alt="" draggable={false} />
               {coolingDown && (
                 <span

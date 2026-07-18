@@ -77,7 +77,7 @@ class TestTarget extends Entity {
         this.activationMessageSeenBeforeDamage = lastMessage?.userId === 9301
             && (content === '강타!'
                 || (Array.isArray(content)
-                    && content.some(node => node.type === 'text' && node.text === '강타!')));
+                    && content.some(node => node.type === 'text' && node.text.trim() === '강타!')));
         return super.damage(...args);
     }
 }
@@ -377,9 +377,20 @@ test('솔로 버프 스킬은 시전 메시지와 효과 피드백을 모두 본
         const activationMessage = privateMessages.at(-2);
         assert.equal(activationMessage?.userId, player.userId);
         assert.ok(Array.isArray(activationMessage?.content));
+        assert.deepEqual(
+            Array.isArray(activationMessage?.content) ? activationMessage.content[0] : null,
+            {
+                type: 'image',
+                src: '/icons/skill-headers/battle_rush.png',
+                alt: '전투 질주 시전',
+                maxHeight: 64,
+                width: 256,
+                height: 64,
+            },
+        );
         assert.equal(
-            Array.isArray(activationMessage?.content) && activationMessage.content[0]?.type === 'text'
-                ? activationMessage.content[0].text
+            Array.isArray(activationMessage?.content) && activationMessage.content[1]?.type === 'text'
+                ? activationMessage.content[1].text.trim()
                 : '',
             '전투 질주!',
         );

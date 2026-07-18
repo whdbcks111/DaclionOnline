@@ -122,6 +122,8 @@ export interface SkillData {
     costTemplate: string;
     activationConditionTemplate: string;
     activationMessage?: string;
+    /** 시전 메시지 상단에 표시할 4:1 배너. 생략 시 시전 메시지에는 이미지를 붙이지 않는다. */
+    activationHeader?: string;
     /** 생략 시 activationMessage와 정확히 같은 `이름!` 메시지로 발동한다. */
     activationPhrase?: string;
     /** 발동 성공 뒤 플레이어 본인에게 채팅 상세 메시지와 알림으로 함께 보낼 내용. */
@@ -512,8 +514,12 @@ export default class Skill implements TagReadable {
 
 export function defineSkill(data: SkillData): void {
     const id = normalizeSkillId(data.id);
+    const activationHeader = data.activationMessage ? (data.activationHeader ?? id) : data.activationHeader;
     if (!data.name.trim()) throw new Error(`Skill name must not be empty: ${id}`);
     if (!data.icon.trim()) throw new Error(`Skill icon must not be empty: ${id}`);
+    if (activationHeader && !/^[a-z0-9][a-z0-9_-]*$/i.test(activationHeader)) {
+        throw new Error(`Invalid skill activation header: ${id}/${activationHeader}`);
+    }
     if (!Number.isInteger(data.maxLevel) || data.maxLevel < 1) {
         throw new Error(`Invalid skill max level: ${id}`);
     }
@@ -521,6 +527,7 @@ export function defineSkill(data: SkillData): void {
     skillDataRegistry.set(id, Object.freeze({
         ...data,
         id,
+        activationHeader,
         aliases: Object.freeze([...(data.aliases ?? [])]),
         baseMetadata: data.baseMetadata ? Object.freeze(cloneMetadata(data.baseMetadata)) : null,
         calculatedFields,

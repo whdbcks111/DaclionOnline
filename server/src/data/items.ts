@@ -268,8 +268,7 @@ defineItem({
     id: 'battle_tonic',
     name: '전투 강장제',
     description: '60초 동안 공격력이 10% 증가한다.',
-    // TODO(icons): 전용 아이콘 제작 전까지 체력 포션 아이콘을 사용한다.
-    image: 'items/health_potion',
+    image: 'items/battle_tonic',
     category: '버프 소모품',
     weight: 0.4,
     stackable: true,
@@ -291,8 +290,7 @@ defineItem({
     id: 'arcane_tonic',
     name: '비전 영약',
     description: '60초 동안 마법력이 10% 증가한다.',
-    // TODO(icons): 전용 아이콘 제작 전까지 마나 포션 아이콘을 사용한다.
-    image: 'items/mana_potion',
+    image: 'items/arcane_tonic',
     category: '버프 소모품',
     weight: 0.4,
     stackable: true,
@@ -310,8 +308,7 @@ defineItem({
     id: 'swift_tonic',
     name: '신속의 물약',
     description: '60초 동안 이동속도가 10% 증가한다.',
-    // TODO(icons): 전용 아이콘 제작 전까지 마나 포션 아이콘을 사용한다.
-    image: 'items/mana_potion',
+    image: 'items/swift_tonic',
     category: '버프 소모품',
     weight: 0.4,
     stackable: true,
@@ -368,8 +365,7 @@ defineItem({
     id: 'echo_hourglass',
     name: '메아리 모래시계',
     description: '깨뜨리면 이미 사용한 모든 스킬의 재사용 대기시간을 최대 15초 되돌리는 미궁 유물.',
-    // TODO(icons): 전용 유물 아이콘 제작 전까지 마법 소모품 카테고리 fallback을 사용한다.
-    image: 'items/mana_potion',
+    image: 'items/echo_hourglass',
     category: '유물 소모품',
     weight: 0.3,
     stackable: true,
@@ -386,8 +382,7 @@ defineItem({
     id: 'twisted_labyrinth_compass',
     name: '뒤틀린 미궁 나침반',
     description: '현재 장소에서 잠기지 않은 길 하나를 무작위로 골라 즉시 이동시키는 불안정한 유물.',
-    // TODO(icons): 전용 유물 아이콘 제작 전까지 마법 소모품 카테고리 fallback을 사용한다.
-    image: 'items/mana_potion',
+    image: 'items/twisted_labyrinth_compass',
     category: '유물 소모품',
     weight: 0.4,
     stackable: true,
@@ -404,8 +399,7 @@ defineItem({
     id: 'resonance_evasion_shard',
     name: '공명 회피 파편',
     description: '사용하면 다음 회피 가능한 공격 한 번을 반드시 피하게 만드는 수정 파편.',
-    // TODO(icons): 전용 수정 아이콘 제작 전까지 보석 소재 카테고리 fallback을 사용한다.
-    image: 'items/diamond',
+    image: 'items/resonance_evasion_shard',
     category: '유물 소모품',
     weight: 0.2,
     stackable: true,
@@ -567,8 +561,7 @@ defineItem({
     id: 'windsteel_sword',
     name: '풍뢰강 검',
     description: '폭풍 절벽의 전도성 금속으로 벼린 검. 공격과 발놀림을 함께 끌어올린다.',
-    // TODO(icons): 전용 아이콘 제작 전까지 낡은 검 아이콘을 사용한다.
-    image: 'items/old_sword',
+    image: 'items/windsteel_sword',
     category: '장검',
     weight: 3.6,
     stackable: false,
@@ -589,8 +582,7 @@ defineItem({
     id: 'stormstring_bow',
     name: '뇌운 시위',
     description: '팽팽한 전도성 시위가 화살의 속도와 치명적인 궤적을 높여 투사체 가속이 18% 증가하는 장궁.',
-    // TODO(icons): 전용 아이콘 제작 전까지 가벼운 활 아이콘을 사용한다.
-    image: 'items/light_bow',
+    image: 'items/stormstring_bow',
     category: '활',
     weight: 2.3,
     stackable: false,
@@ -615,8 +607,7 @@ defineItem({
     id: 'nightglass_dagger',
     name: '밤유리 단검',
     description: '빛을 삼키는 유리질 칼날. 적중 시 25% 확률로 8초간 부패를 남긴다.',
-    // TODO(icons): 전용 아이콘 제작 전까지 독 단검 아이콘을 사용한다.
-    image: 'items/venom_dagger',
+    image: 'items/nightglass_dagger',
     category: '단검',
     weight: 1.4,
     stackable: false,
@@ -646,8 +637,7 @@ defineItem({
     id: 'starwood_staff',
     name: '성휘목 지팡이',
     description: '빛을 머금은 고목 심재로 만든 지팡이. 마법력과 정신력 순환, 투사체 가속을 12% 강화한다.',
-    // TODO(icons): 전용 아이콘 제작 전까지 견습 지팡이 아이콘을 사용한다.
-    image: 'items/apprentice_staff',
+    image: 'items/starwood_staff',
     category: '지팡이',
     weight: 2.6,
     stackable: false,
@@ -790,8 +780,7 @@ for (const material of refinedMinerals) defineItem({
     id: material.id,
     name: material.name,
     description: '마력 제련으로 불순물을 걷어내 단조할 수 있게 만든 소재.',
-    // TODO(icons): 전용 제련 소재 아이콘 제작 전까지 원광 아이콘을 사용한다.
-    image: `items/${material.source}`,
+    image: `items/${material.id}`,
     category: '제련 소재',
     weight: 0.55,
     stackable: true,
@@ -805,18 +794,17 @@ for (const material of refinedMinerals) defineItem({
 });
 
 const forgedTemplates = [
-    { id: 'forged_sword', name: '단조 장검', image: 'items/old_sword', category: '장검', weight: 3.4, slot: 'mainHand', tag: GameTags.WEAPON_SWORD },
-    { id: 'forged_axe', name: '단조 도끼', image: 'items/training_axe', category: '도끼', weight: 3.8, slot: 'mainHand', tag: GameTags.WEAPON_AXE },
-    { id: 'forged_dagger', name: '단조 단검', image: 'items/venom_dagger', category: '단검', weight: 1.7, slot: 'mainHand', tag: GameTags.WEAPON_DAGGER },
-    { id: 'forged_shield', name: '단조 방패', image: 'items/old_shield', category: '방패', weight: 3.2, slot: 'offHand', tag: null },
-    { id: 'forged_pickaxe', name: '단조 곡괭이', image: 'items/iron_pickaxe', category: '곡괭이', weight: 3.5, slot: 'mainHand', tag: null },
+    { id: 'forged_sword', name: '단조 장검', image: 'items/forged_sword', category: '장검', weight: 3.4, slot: 'mainHand', tag: GameTags.WEAPON_SWORD },
+    { id: 'forged_axe', name: '단조 도끼', image: 'items/forged_axe', category: '도끼', weight: 3.8, slot: 'mainHand', tag: GameTags.WEAPON_AXE },
+    { id: 'forged_dagger', name: '단조 단검', image: 'items/forged_dagger', category: '단검', weight: 1.7, slot: 'mainHand', tag: GameTags.WEAPON_DAGGER },
+    { id: 'forged_shield', name: '단조 방패', image: 'items/forged_shield', category: '방패', weight: 3.2, slot: 'offHand', tag: null },
+    { id: 'forged_pickaxe', name: '단조 곡괭이', image: 'items/forged_pickaxe', category: '곡괭이', weight: 3.5, slot: 'mainHand', tag: null },
 ] as const;
 
 for (const template of forgedTemplates) defineItem({
     id: template.id,
     name: template.name,
     description: '재료와 단조 결과에 따라 이름과 능력치가 정해지는 제작 장비.',
-    // TODO(icons): 전용 조합형 장비 아이콘 제작 전까지 같은 형태의 아이콘을 사용한다.
     image: template.image,
     category: template.category,
     weight: template.weight,

@@ -6,7 +6,7 @@
 
 - `Combat`, `CombatPipeline`, `Threat`, `TagEffect`, `Entity`, `Player`, `Monster`: 공격자/피격자 속도 비율 회피·치명타·공격/피격 문맥 태그·단방향 배율·방어/관통 계산과 준비/회피/피해 전후/완료 key hook, 회피 불가/고정 피해 `AttackOptions`, 치유 modifier와 source 기반 지원 위협, 최대 자원 보정·공격 쿨다운·경험치 곡선을 담당한다. Monster는 마스터 속도 성향에 레벨 성장 배율을 적용하고 `ai`의 클래스형 성향·지능·행동 가중치·도발 저항·전환 임계값으로 자기 ThreatTable에서 대상을 선택한다. 슬라임은 마지막 공격자를, 지능형 보스는 피해·치유·보호막·제어·도발 위협을 비교한다. `challengePattern`은 registry handler가 대상 플레이어에게 서버 검증 미니게임을 실행하는 동안 일반 행동을 멈추고 이탈·사망·리스폰 시 취소한다. `DamageResult`의 생명력/보호막 피해와 지원량을 기여도로 누적해 최고 플레이어 기여자를 드롭·골드·파티 경험치 기준으로 삼고 사망/리스폰 시 초기화한다.
 - `ShieldType`/`Shield`: 흰색 일반·주황색 물리·보라색 마법 타입 클래스형 enum과 key별 비영속 보호막. 모든 Entity가 공개 등록/조회/제거/합계/UI snapshot API를 제공하고, 피해 타입이 맞는 보호막을 남은 시간이 짧은 순으로 흡수하며 만료·제압 시 제거한다.
-- `StatusEffectType`/`StatusEffect`/`StatusEffectInteraction`: 아이콘 key를 가진 클래스형 효과 정의와 Entity별 비영속 duration/level/metadata delta. 동일 타입은 기존 인스턴스를 유지해 레벨·시간만 병합하고, 단방향 차단/제거 또는 `레벨 × 남은 시간` 중화 표를 먼저 적용한다. 화염·화상·맹독·마비독과 Player 생존 자원 0에서 자동 적용되는 공복·갈증, start/early/update/remove callback, 설명 template과 UI용 표시 snapshot을 제공한다. 지속 피해 알림은 보호막 적용 뒤 실제 생명력 피해와 흡수량을 구분한다.
+- `StatusEffectType`/`StatusEffect`/`StatusEffectInteraction`: 아이콘 key를 가진 클래스형 효과 정의와 Entity별 비영속 duration/level/metadata delta. 상태효과 레벨은 공통 최대값 없이 1 이상의 정수를 유지하고 효과별 계산 함수가 필요한 강도 포화를 소유한다. 동일 타입은 기존 인스턴스를 유지해 레벨·시간만 병합하고, 단방향 차단/제거 또는 `레벨 × 남은 시간` 중화 표를 먼저 적용한다. 재생은 최대 생명력·레벨 비례 직접 치유를 제공하며 화염·화상·맹독·마비독과 Player 생존 자원 0에서 자동 적용되는 공복·갈증, start/early/update/remove callback, 설명 template과 UI용 표시 snapshot을 제공한다.
 - `ActionType`: 스킬·아이템·채팅·명령·공격·필드 이동·회피·장소 이동 분류와 Entity의 source key 기반 지속/한 tick 제한 API. 필드 이동과 자동 회피를 독립 제한하며 한 source 해제가 다른 기절·속박 제한을 제거하지 않는다.
 - `Resource`: 공격 AI가 없는 Entity 자원. `defeatLabel=파괴됨`, 공격 가능 여부, 주무기 태그 제한, key 기반 상호작용, 성공 시 고정/범위 쿨타임, 관리자용 `resetInteractionCooldown`, 단일 가중치 드롭, 범위 경험치와 리스폰을 제공한다.
 - `Projectile`: `Entity`를 상속하는 비영속 투사체, 마스터 데이터/JSON 오버라이드 검증, owner·target·비행 시간·적중 수명주기와 정적 레지스트리 API. 발사 순간 owner의 치명타 확률·피해와 `projectileAcceleration`을 스냅샷하고 데이터 반영 계수·발사원 배율로 실제 비행 시간을 계산한다. 상성은 owner 장비가 아닌 투사체 본체 태그만 사용하며 전체 Entity lifecycle로 상태효과도 갱신한다.
@@ -29,5 +29,6 @@
 - `Crafting`: predicate와 필요 수량을 가진 재료 클래스, `namespace:path` 제작법 레지스트리, 실제 선택된 재료를 받는 결과 factory, Progress flag 발견·관리자용 전체 발견 처리와 coroutine 제작 수명주기.
 - `Fishing`: 클래스형 일반~신화 6등급, 물고기 registry, 추첨과 `/낚시등급표`가 공유하는 행운별 가중치·확률 snapshot, 등급별 보상/경험치 추첨, 45~65초 기본 범위를 입질 속도로 나누는 대기 계산 API.
 - `Forging`: 클래스형 장비 형태·제련 재료, 리듬 정확도 효율과 서버 난수 trait를 조합해 이름·설명·내구도·인스턴스 modifier·재료 속성 태그가 담긴 장비 snapshot을 생성한다.
+- 스킬 시전 아트: `SkillData.activationHeader`는 기본적으로 시전 메시지가 있는 스킬 ID를 사용하며, `SkillBook`은 해당 256×64 이미지를 시전어와 같은 구조화 플레이어 메시지로 솔로 본인 또는 파티에 전송한다.
 
 공개 메서드나 모델 관계, 계산식, 저장 경계가 바뀌면 이 문서와 [`docs/api/server-internal.md`](../../../docs/api/server-internal.md), 관련 시스템 문서를 갱신한다.

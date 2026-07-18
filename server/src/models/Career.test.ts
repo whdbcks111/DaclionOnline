@@ -9,7 +9,7 @@ import { PlayerProgress } from './Progress.js';
 import type Player from './Player.js';
 import '../data/jobs.js';
 import '../data/skills.js';
-import Skill, { getSkillData } from './Skill.js';
+import Skill, { getAllSkillData, getSkillData } from './Skill.js';
 import { getAllQuestData } from './Quest.js';
 import '../data/quests.js';
 import '../data/items.js';
@@ -47,12 +47,19 @@ test('5개 1차 직업은 최소 3개 스킬을 지급하고 서로 다른 20개
     assert.ok(eliteJobs.every(job => job.grantedSkills.length === 2
         && job.grantedSkills.filter(grant => getSkillData(grant.skillDataId)?.tags.includes('skill:passive')).length === 1
         && job.grantedSkills.filter(grant => getSkillData(grant.skillDataId)?.tags.includes('skill:active')).length === 1));
-    for (const grant of firstJobs.flatMap(job => job.grantedSkills)) {
-        const skill = getSkillData(grant.skillDataId);
-        assert.ok(skill, grant.skillDataId);
+    for (const skill of getAllSkillData()) {
         const png = readFileSync(new URL(`../../../client/public/icons/${skill.icon}.png`, import.meta.url));
-        assert.equal(png.readUInt32BE(16), 128);
-        assert.equal(png.readUInt32BE(20), 128);
+        assert.equal(png.readUInt32BE(16), 128, `${skill.id} icon width`);
+        assert.equal(png.readUInt32BE(20), 128, `${skill.id} icon height`);
+    }
+    for (const skill of getAllSkillData().filter(data => data.activationMessage)) {
+        assert.equal(skill.activationHeader, skill.id);
+        const icon = readFileSync(new URL(`../../../client/public/icons/${skill.icon}.png`, import.meta.url));
+        assert.equal(icon.readUInt32BE(16), 128, `${skill.id} icon width`);
+        assert.equal(icon.readUInt32BE(20), 128, `${skill.id} icon height`);
+        const banner = readFileSync(new URL(`../../../client/public/icons/skill-headers/${skill.activationHeader}.png`, import.meta.url));
+        assert.equal(banner.readUInt32BE(16), 256, `${skill.id} cast header width`);
+        assert.equal(banner.readUInt32BE(20), 64, `${skill.id} cast header height`);
     }
     assert.equal(getAllQuestData().filter(quest => quest.tags.includes('quest:career')).length, 10);
     const mageTrial = getAllQuestData().find(quest => quest.id === 'career:main_mage_promotion');

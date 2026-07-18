@@ -19,8 +19,8 @@ import {
     sendBotMessageToUser,
     sendNotificationToUser,
     sendNotificationToUsers,
-    sendPlayerTextToPartyMembers,
-    sendPrivatePlayerTextToCurrentChannel,
+    sendPlayerContentToPartyMembers,
+    sendPrivatePlayerContentToCurrentChannel,
     sendPrivateBotMessageToUser,
 } from '../modules/message.js';
 import { chat } from '../utils/chatBuilder.js';
@@ -411,9 +411,21 @@ export default class SkillBook {
             : [];
         if (player && skill.data.activationMessage) {
             const activationMessage = skill.format(skill.data.activationMessage, owner);
-            sendPrivatePlayerTextToCurrentChannel(player.userId, activationMessage);
+            const activationContent = skill.data.activationHeader
+                ? chat()
+                    .image({
+                        src: `/icons/skill-headers/${skill.data.activationHeader}.png`,
+                        alt: `${skill.name} 시전`,
+                        maxHeight: 64,
+                        width: 256,
+                        height: 64,
+                    })
+                    .text(`\n${activationMessage}`)
+                    .build()
+                : activationMessage;
+            sendPrivatePlayerContentToCurrentChannel(player.userId, activationContent);
             if (partyObservers.length > 0) {
-                sendPlayerTextToPartyMembers(player.userId, partyObservers, activationMessage);
+                sendPlayerContentToPartyMembers(player.userId, partyObservers, activationContent);
             }
         }
 

@@ -52,7 +52,7 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 - 밸런스 진단: `balance.role`, 실제 발동식과 공유하는 피해·소모·회복·보호막·지속 버프 callback, 직접 피해 속성, 치명타 방식·타격/대상 수.
 - 획득/발동: `autoAcquire`, `autoActivate`, `activateOnMessage`, `canUse`, `canActivate`.
 - 수명주기: `onAcquire`, `onStart`, `onUpdate`, `onFinish`, `onPassiveUpdate`, `onPassiveInactive`.
-- 분류: `tags`, `maxLevel`, `aliases`, `activationMessage`.
+- 분류: `tags`, `maxLevel`, `aliases`, `activationMessage`, 선택적 `activationHeader`.
 - 직업/장비: `jobRequirement`, 선택적 `weaponRequirement`, 공통 메시지 시전어 `activationPhrase`.
 
 `activationPhrase`가 없으면 `activationMessage`를 일반 채팅의 정확 일치 시전어로도 사용한다. 직업 요구 조건은 [직업·전직 시스템](careers.md)의 `CareerProfile.hasJob`을 사용해 엘리트 하위 계보를 자동 호환한다.
@@ -100,6 +100,8 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 발동은 사망·활성 중·쿨다운·`canUse/canActivate`를 먼저 검사한다. 조건을 통과하면 선택적 `activationMessage`를 솔로에서는 시전자 본인에게만, 파티 중에는 시전자와 파티원에게 `[파티]` 필터 메시지로 전송한 뒤 `onStart`를 실행하므로 공격·회복 같은 즉시 효과보다 발동 메시지가 먼저 표시된다. 원래 입력한 일반 채팅 발동어는 공개 채팅으로 전달하지 않는다. `onStart`가 성공하면 활성 상태와 쿨다운을 확정하며, `activationFeedback`이 있으면 계산된 효과를 같은 audience의 봇 메시지와 notification으로 보낸다. 이 성공 확정 시점에 영속 플레이어 스킬은 기본 10 경험치를 얻고, 몬스터 런타임 스킬은 경험치를 얻지 않는다. 기본 다음 레벨 요구량은 `100 + (현재 레벨 - 1) × 50`이며 두 값 모두 SkillData 계산 함수로 재정의하거나 획득량을 0으로 끌 수 있다. 요구량을 넘긴 잔여 경험치는 다음 레벨에 이월되고 최대 레벨에서는 더 이상 누적하지 않으며, 레벨업 시 본인 메시지와 notification을 보낸다. 지속시간이 있으면 `onUpdate`, 종료 시 `onFinish`를 호출한다. 로그인 중 표시·사용 조건을 만족하는 패시브에는 `onPassiveUpdate`, 조건을 잃거나 회수될 때는 `onPassiveInactive`를 호출해 runtime modifier를 source 단위로 정리한다. 로그아웃 시 활성 스킬을 `UNLOADED` 사유로 종료한 다음 저장한다.
 
+시전 메시지가 있는 스킬은 기본적으로 `skill-headers/{skillId}.png` 256×64 배너를 같은 플레이어 메시지 상단에 붙이며, `activationHeader`로 다른 이미지 key를 지정할 수 있다. 배너와 시전어는 솔로 본인 또는 현재 파티라는 기존 audience 규칙을 함께 따른다.
+
 ## 스킬 퀵 HUD
 
 `skill:passive` 태그가 있는 패시브는 스킬 목록과 정보창에는 노출하지만 직접 누를 수 있는 퀵 HUD payload와 사용 자동완성에서는 제외한다.
@@ -129,9 +131,9 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 스킬 정의에는 `/icons/{SkillData.icon}.png` 에셋이 필수다. 스킬 목록과 정보창은 아이콘을 이름 앞에 표시하며, 스킬 아이콘은 아이템과 달리 속성색을 담은 불투명 카드형 배경을 사용할 수 있다.
 
-현재 스탯 100 달성 시 각각 `거인의 힘`, `바람걸음`, `불굴의 육체`, `심안`, `마력의 샘`을 자동 획득한다. 모두 항상 적용되는 숨김 패시브이며, 전용 아트 제작 전까지 관련 능력치 아이콘을 카테고리 fallback으로 사용한다.
+현재 스탯 100 달성 시 각각 `거인의 힘`, `바람걸음`, `불굴의 육체`, `심안`, `마력의 샘`을 자동 획득한다. 모두 항상 적용되는 숨김 패시브이며 각 스킬 ID의 전용 아이콘을 사용한다.
 
-Lv.200 엘리트 직업 20개는 계승 패시브와 별도로 조합 전용 액티브 1종을 지급한다. 기존 네 전투 계열에 대장장이 메인/서브 조합의 금속 물리 공격·기공 투사체·독금·룬 마법·보호막 계열을 추가한다. 피해·정신력·쿨다운은 모두 `SkillData.balance`와 실제 발동 계산을 공유하며, 전용 아트 전에는 주계열 직업 또는 채굴 도구 카테고리 아이콘을 fallback으로 쓴다.
+Lv.200 엘리트 직업 20개는 계승 패시브와 별도로 조합 전용 액티브 1종을 지급한다. 기존 네 전투 계열에 대장장이 메인/서브 조합의 금속 물리 공격·기공 투사체·독금·룬 마법·보호막 계열을 추가한다. 피해·정신력·쿨다운은 모두 `SkillData.balance`와 실제 발동 계산을 공유하며 계승 패시브와 액티브 모두 스킬 ID별 전용 아이콘을 사용한다.
 
 ## 영속성
 

@@ -64,7 +64,7 @@ export function sendBotMessageToChannel(channel: string | null, content: string 
     sendMessageToChannel(makeBotMessage(content), channel);
 }
 
-function makePlayerTextMessage(userId: number, content: string): ChatMessage | undefined {
+function makePlayerMessage(userId: number, content: string | ChatNode[]): ChatMessage | undefined {
     const session = getSessionByUserId(userId);
     if (!session) return undefined;
     const flags = getFlagsForPermission(session.permission);
@@ -73,14 +73,14 @@ function makePlayerTextMessage(userId: number, content: string): ChatMessage | u
         nickname: session.nickname,
         profileImage: session.profileImage,
         flags: flags.length > 0 ? flags : undefined,
-        content: [{ type: 'text', text: content }],
+        content: typeof content === 'string' ? [{ type: 'text', text: content }] : content,
         timestamp: Date.now(),
     };
 }
 
 /** 시스템이 플레이어의 실제 채팅처럼 현재 채널에 짧은 텍스트를 전송한다. */
 export function sendPlayerTextToCurrentChannel(userId: number, content: string): boolean {
-    const message = makePlayerTextMessage(userId, content);
+    const message = makePlayerMessage(userId, content);
     if (!message) return false;
     sendMessageToChannel(message, getUserChannel(userId));
     return true;
@@ -88,7 +88,12 @@ export function sendPlayerTextToCurrentChannel(userId: number, content: string):
 
 /** 플레이어 표시 메시지를 현재 채널에서 해당 플레이어 본인에게만 전송한다. */
 export function sendPrivatePlayerTextToCurrentChannel(userId: number, content: string): boolean {
-    const message = makePlayerTextMessage(userId, content);
+    return sendPrivatePlayerContentToCurrentChannel(userId, content);
+}
+
+/** 이미지 등 구조화 노드를 포함한 플레이어 표시 메시지를 본인에게만 전송한다. */
+export function sendPrivatePlayerContentToCurrentChannel(userId: number, content: string | ChatNode[]): boolean {
+    const message = makePlayerMessage(userId, content);
     if (!message) return false;
     sendMessageFiltered(id => id === userId, getUserChannel(userId), message);
     return true;
@@ -100,7 +105,16 @@ export function sendPlayerTextToPartyMembers(
     memberUserIds: readonly number[],
     content: string,
 ): boolean {
-    const message = makePlayerTextMessage(sourceUserId, content);
+    return sendPlayerContentToPartyMembers(sourceUserId, memberUserIds, content);
+}
+
+/** 구조화 노드를 포함한 시전자 표시 메시지를 파티 피드로 전송한다. */
+export function sendPlayerContentToPartyMembers(
+    sourceUserId: number,
+    memberUserIds: readonly number[],
+    content: string | ChatNode[],
+): boolean {
+    const message = makePlayerMessage(sourceUserId, content);
     if (!message) return false;
     message.flags = [FLAG_PARTY, ...(message.flags ?? [])];
     for (const userId of new Set(memberUserIds)) sendMessageToUser(userId, message, false);
@@ -111,7 +125,7 @@ export function sendPlayerTextToPartyMembers(
 export function sendWhisperMessage(senderUserId: number, targetUserId: number, content: string): boolean {
     const sender = getSessionByUserId(senderUserId);
     const target = getSessionByUserId(targetUserId);
-    const received = makePlayerTextMessage(senderUserId, content);
+    const received = makePlayerMessage(senderUserId, content);
     if (!sender || !target || !received) return false;
 
     received.flags = [FLAG_WHISPER, ...(received.flags ?? [])];
