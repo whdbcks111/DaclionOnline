@@ -78,28 +78,12 @@ defineShop({
             restockTime: 20,
         },
         {
-            label: '초보자 낚싯대',
-            create: () => ({ itemDataId: 'beginner_fishing_rod', count: 1 }),
+            label: '견습 마법 지팡이',
+            create: () => ({ itemDataId: 'apprentice_staff', count: 1 }),
             count: 1,
-            price: 45,
-            stock: 5,
-            restockTime: 120,
-        },
-        {
-            label: '정교한 낚싯대',
-            create: () => ({ itemDataId: 'refined_fishing_rod', count: 1 }),
-            count: 1,
-            price: 650,
             stock: 2,
-            restockTime: 600,
-        },
-        {
-            label: '통통한 지렁이 미끼 10개',
-            create: () => ({ itemDataId: 'earthworm_bait', count: 10 }),
-            count: 10,
-            price: 12,
-            stock: 30,
-            restockTime: 30,
+            price: 55,
+            restockTime: 180,
         },
     ],
     sellList: [
@@ -139,6 +123,45 @@ defineShop({
             count: 99,
             price: 1,
         },
+        {
+            label: '견습 마법 지팡이',
+            filter: (item) => item.itemDataId === 'apprentice_staff',
+            count: 1,
+            price: 25,
+        },
+    ],
+    tags: [GameTags.SHOP_GENERAL],
+});
+
+defineShop({
+    id: 'fishing_store',
+    buyList: [
+        {
+            label: '초보자 낚싯대',
+            create: () => ({ itemDataId: 'beginner_fishing_rod', count: 1 }),
+            count: 1,
+            price: 45,
+            stock: 5,
+            restockTime: 120,
+        },
+        {
+            label: '정교한 낚싯대',
+            create: () => ({ itemDataId: 'refined_fishing_rod', count: 1 }),
+            count: 1,
+            price: 650,
+            stock: 2,
+            restockTime: 600,
+        },
+        {
+            label: '통통한 지렁이 미끼 10개',
+            create: () => ({ itemDataId: 'earthworm_bait', count: 10 }),
+            count: 10,
+            price: 12,
+            stock: 30,
+            restockTime: 30,
+        },
+    ],
+    sellList: [
         { label: '낚시 도구', filter: item => item.hasTag(GameTags.TOOL_FISHING), count: 1, price: 20 },
         { label: '미끼', filter: item => item.hasTag(GameTags.ITEM_BAIT), count: 99, price: 1 },
         { label: '일반 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_COMMON), count: 99, price: FishRarity.COMMON.sellPrice },
@@ -148,7 +171,7 @@ defineShop({
         { label: '전설 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_LEGENDARY), count: 99, price: FishRarity.LEGENDARY.sellPrice },
         { label: '신화 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_MYTHIC), count: 99, price: FishRarity.MYTHIC.sellPrice },
     ],
-    tags: [GameTags.SHOP_GENERAL, GameTags.SHOP_FISHING],
+    tags: [GameTags.SHOP_FISHING],
 });
 
 defineShop({

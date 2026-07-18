@@ -28,7 +28,8 @@
     "x": 38,
     "y": -42,
     "z": 0,
-    "tags": ["location:safe", "location:fishing", "property:water"],
+    "shopId": "fishing_store",
+    "tags": ["location:safe", "location:shop", "location:fishing", "property:water"],
     "npcIds": [],
     "objects": [],
     "connections": [
