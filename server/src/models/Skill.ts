@@ -17,6 +17,31 @@ import { AttributeType } from './Attribute.js';
 export type SkillMetadata = MetadataRecord;
 export type SkillCalculatedValue = string | number | boolean;
 
+export class SkillBalanceRole {
+    private static readonly all: SkillBalanceRole[] = [];
+    static readonly DAMAGE = new SkillBalanceRole('damage', '피해');
+    static readonly DEFENSE = new SkillBalanceRole('defense', '방어');
+    static readonly SUPPORT = new SkillBalanceRole('support', '보조');
+    static readonly CONTROL = new SkillBalanceRole('control', '제어');
+    private constructor(readonly key: string, readonly label: string) { SkillBalanceRole.all.push(this); }
+    static values(): readonly SkillBalanceRole[] { return SkillBalanceRole.all; }
+    static fromKey(key: string): SkillBalanceRole | undefined {
+        return SkillBalanceRole.all.find(value => value.key === key);
+    }
+}
+
+export class SkillCriticalMode {
+    private static readonly all: SkillCriticalMode[] = [];
+    static readonly NORMAL = new SkillCriticalMode('normal', '일반 치명타');
+    static readonly GUARANTEED = new SkillCriticalMode('guaranteed', '확정 치명타');
+    static readonly DISABLED = new SkillCriticalMode('disabled', '치명타 불가');
+    private constructor(readonly key: string, readonly label: string) { SkillCriticalMode.all.push(this); }
+    static values(): readonly SkillCriticalMode[] { return SkillCriticalMode.all; }
+    static fromKey(key: string): SkillCriticalMode | undefined {
+        return SkillCriticalMode.all.find(value => value.key === key);
+    }
+}
+
 export interface SkillContext {
     /** 스킬을 실제로 발동하는 Entity. 플레이어와 몬스터가 같은 SkillData를 공유한다. */
     owner: Entity;
@@ -101,6 +126,19 @@ export interface SkillData {
     activationFeedback?: (context: SkillContext) => string;
     baseMetadata: SkillMetadata | null;
     calculatedFields?: Readonly<Record<string, (context: SkillContext) => SkillCalculatedValue>>;
+    /** 실제 전투식과 같은 callback을 사용하는 밸런스 진단 전용 수치. 임의 효용 점수는 만들지 않는다. */
+    balance?: {
+        role: SkillBalanceRole;
+        damageType?: 'physical' | 'magic' | 'absolute';
+        calculateDamage?: (context: SkillContext) => number;
+        criticalMode?: SkillCriticalMode;
+        hitCount?: number;
+        targetCount?: number;
+        calculateManaCost?: (context: SkillContext) => number;
+        calculateHealing?: (context: SkillContext) => number;
+        calculateShield?: (context: SkillContext) => number;
+        notes?: readonly string[];
+    };
     calculateMaxCooldown?: (context: SkillContext) => number;
     /** 생략 시 성공적인 플레이어 발동 1회마다 10 경험치를 획득한다. 0이면 자동 획득하지 않는다. */
     calculateExperienceGain?: (context: SkillContext) => number;
@@ -476,6 +514,10 @@ export function defineSkill(data: SkillData): void {
         aliases: Object.freeze([...(data.aliases ?? [])]),
         baseMetadata: data.baseMetadata ? Object.freeze(cloneMetadata(data.baseMetadata)) : null,
         calculatedFields,
+        balance: data.balance ? Object.freeze({
+            ...data.balance,
+            notes: Object.freeze([...(data.balance.notes ?? [])]),
+        }) : undefined,
         autoAcquire: data.autoAcquire ? Object.freeze({
             ...data.autoAcquire,
             watchedProgress: Object.freeze([...data.autoAcquire.watchedProgress]),

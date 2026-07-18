@@ -45,6 +45,7 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 - 표시: `icon`, `descriptionTemplate`, `costTemplate`, `activationConditionTemplate`, `isVisible`.
 - 계산: `baseMetadata`, `calculatedFields`, `calculateMaxCooldown`, `calculateExperienceGain`, `calculateRequiredExperience`.
+- 밸런스 진단: `balance.role`, 실제 발동식과 공유하는 피해·소모·회복·보호막 callback, 치명타 방식·타격/대상 수.
 - 획득/발동: `autoAcquire`, `autoActivate`, `activateOnMessage`, `canUse`, `canActivate`.
 - 수명주기: `onAcquire`, `onStart`, `onUpdate`, `onFinish`, `onPassiveUpdate`.
 - 분류: `tags`, `maxLevel`, `aliases`, `activationMessage`.
@@ -55,6 +56,14 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 스킬 템플릿은 `{{icon.atk}}`, `{{icon.magicForce}}`, `{{icon.maxMentality}}`처럼 `icon.{AttributeKey}`를 사용하면 해당 `AttributeType.iconMarkup`으로 치환된다. 공격력·마법력 계수, 관통, 방어, 속도, 치명타와 정신력 소모 표기는 이 문법을 사용해 상태창과 같은 대표색 아이콘을 재사용한다.
 
 계산 필드는 `[tooltip=산식]현재값[/tooltip]`을 반환할 수 있다. 스킬 정보 본문은 현재 적용될 결과 숫자만 보여주고 hover에서 능력치 계수·기본값·레벨당 증가량을 설명한다. 실제 발동과 표시 계산은 같은 함수와 상수를 사용해 밸런스 변경 시 서로 어긋나지 않게 한다.
+
+### 밸런스 진단
+
+권한 10 관리자용 `/스킬밸런스 <스킬> [스킬레벨] [캐릭터레벨] [직업]`과 `/직업밸런스 [레벨] [메인직업] [서브직업]`은 `models/Balance.ts`의 같은 공개 분석 API를 사용한다. CLI에서는 `cd server && npm run balance:report -- 50`처럼 레벨을 지정해 같은 직업 기준선을 출력한다.
+
+분석 조건은 동일 레벨, 레벨업으로 실제 지급되는 총 스탯 포인트, 직업별 공개 배분 프리셋, 무장비, 동레벨 균형형 표준 대상, 중립 속성, 60초 전투다. 기본 공격은 실제 고정 차감 방어·관통·치명타 기대값·공격속도·속도차 회피율을 적용한다. 스킬은 `SkillData.balance` callback으로 실제 발동 계수와 정신력 소모를 공유하며 쿨다운 제한 횟수와 시작 정신력+60초 재생으로 가능한 횟수 중 작은 값을 사용한다.
+
+제어·은신·확정 회피·광역 상황·대상 생명력 비례 지속 피해는 임의 가중치를 부여해 단일 전투력에 섞지 않는다. 직접 피해, 생존 시간, 회복·보호막, 계산에서 분리한 효과를 별도 표시하며 balance callback이 없는 스킬은 추정하지 않고 `미지원`으로 표시한다. 이 명령의 출력 기준선을 먼저 기록한 다음 계수나 직업 modifier를 바꾸고 다시 측정한다.
 
 직업 귀속처럼 현재 사용할 수 없는 스킬은 DB에서 제거하지 않는다. `isVisible`과 `canUse`로 표시/사용만 비활성화한다. `SkillBook.grant()`는 신규 획득일 때 채팅과 notification에 `스킬 [ 이름 ] 를 획득했습니다!`를 보내며 이미 보유한 스킬은 중복 생성하지 않는다.
 

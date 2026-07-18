@@ -22,6 +22,7 @@
 - `Job`/`CareerProfile`: 1차·엘리트 직업 정적 레지스트리, 메인→서브 순서 조합, Progress STATE 영속, 동일 직업 이중 선택 금지, 계보 호환·능력치 source modifier·스킬 지급과 Lv.200 자동 전직.
 - `Metadata`: Item과 Skill이 공유하는 JSON-safe clone 및 버전형 top-level delta codec.
 - `Skill`/`SkillBook`: 아이콘을 가진 코드 SkillData 레지스트리, Entity 공용 owner/player context, 직업·무기 조건과 공개 채팅으로 전달하지 않는 메시지 시전어, 본인 전용 시전 메시지 및 성공 후 상세 메시지·notification을 함께 보내는 `activationFeedback`, base metadata+인스턴스 delta, 계산/색상/능력치 아이콘 템플릿과 lifecycle. 플레이어 스킬은 성공 발동 시 경험치를 얻어 잔여값을 이월하며 레벨업하고, 획득량·요구량 계산은 SkillData에서 재정의한다. `setLevel/revoke`는 내부 Map 노출 없이 보유 스킬 레벨 변경·영속 회수를 제공하며 `getHudSnapshots`은 표시 가능한 스킬의 이름·아이콘·레벨·활성 상태·남은/최대 쿨다운만 반환한다.
+- `Balance`: 레벨업의 실제 스탯 지급량과 직업별 공개 배분 프리셋으로 무장비 투영 Entity/동레벨 균형 대상을 만들고, 실제 방어·관통·치명타·회피·공격속도와 `SkillData.balance` callback을 사용해 기본 DPS, 표준 공격 생존 시간, 60초 자원 제한 스킬 DPM을 계산한다. 제어·은신·회피 같은 상황 의존 효과는 임의 점수로 합산하지 않는다.
 - `Crafting`: predicate와 필요 수량을 가진 재료 클래스, `namespace:path` 제작법 레지스트리, 실제 선택된 재료를 받는 결과 factory, Progress flag 발견·관리자용 전체 발견 처리와 coroutine 제작 수명주기.
 - `Fishing`: 클래스형 일반~신화 6등급, 물고기 registry, 추첨과 `/낚시등급표`가 공유하는 행운별 가중치·확률 snapshot, 등급별 보상/경험치 추첨, 45~65초 기본 범위를 입질 속도로 나누는 대기 계산 API.
 

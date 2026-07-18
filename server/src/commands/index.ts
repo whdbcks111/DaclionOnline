@@ -15,6 +15,7 @@ import { initPartyCommands } from './party.js';
 import { initInspectionCommands } from './inspection.js';
 import { initFishingCommands } from './fishing.js';
 import { initRankingCommands } from './ranking.js';
+import { initBalanceCommands } from './balance.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -34,4 +35,5 @@ export function initAllCommands(): void {
     initInspectionCommands();
     initFishingCommands();
     initRankingCommands();
+    initBalanceCommands();
 }

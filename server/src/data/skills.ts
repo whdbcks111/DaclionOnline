@@ -1,5 +1,10 @@
 import { AttributeType } from '../models/Attribute.js';
-import { defineSkill, denySkill } from '../models/Skill.js';
+import {
+    defineSkill,
+    denySkill,
+    SkillBalanceRole,
+    SkillCriticalMode,
+} from '../models/Skill.js';
 import type { SkillContext } from '../models/Skill.js';
 import type Player from '../models/Player.js';
 import { StatusEffectType } from '../models/StatusEffect.js';
@@ -138,6 +143,14 @@ defineSkill({
         },
         armorPenFlat: context => numberMeta(context, 'armorPenFlat'),
         armorPenPercent: context => numberMeta(context, 'armorPenPercent'),
+    },
+    balance: {
+        role: SkillBalanceRole.DAMAGE,
+        damageType: 'physical',
+        calculateDamage: attackPower,
+        criticalMode: SkillCriticalMode.GUARANTEED,
+        calculateManaCost: manaCost,
+        notes: ['관통력 증가분은 대상 방어력에 따라 달라져 예상 피해에 별도 합산하지 않습니다.'],
     },
     calculateMaxCooldown: context => Math.max(
         1,
@@ -335,6 +348,11 @@ defineSkill({
     activationConditionTemplate: activationGuide('검 또는 도끼와 살아 있는 현재 대상이 필요합니다.'),
     activationMessage: '강철 베기!', activationPhrase: '강철 베기!', baseMetadata: null,
     calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.ATK, 175, 12) },
+    balance: {
+        role: SkillBalanceRole.DAMAGE, damageType: 'physical',
+        calculateDamage: context => context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 175, 12) / 100,
+        calculateManaCost: () => 10,
+    },
     calculateMaxCooldown: context => cooldownByLevel(context, 5, 0.2, 4.2),
     jobRequirement: jobRequirement(JOBS.warrior), weaponRequirement: weaponRequirement('검 또는 도끼를 장착해야 합니다.', GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE),
     canActivate: simpleCheck(10), onStart: context => {
@@ -358,6 +376,10 @@ defineSkill({
         duration: context => levelValueTooltip(context, '지속시간', 8, 1, '초'),
         attackBonus: context => levelValueTooltip(context, '공격력 증가', 15, 3, '%'),
         speedBonus: context => levelValueTooltip(context, '이동속도 증가', 20, 3, '%'),
+    },
+    balance: {
+        role: SkillBalanceRole.SUPPORT, calculateManaCost: () => 14,
+        notes: ['지속 중 공격력·이동속도 증가량은 수치로 표시하되 DPM에 임의 환산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 18, 1, 14),
     jobRequirement: jobRequirement(JOBS.warrior), canActivate: simpleCheck(14, false),
@@ -384,6 +406,12 @@ defineSkill({
         lifeBonus: context => levelValueTooltip(context, '최대 생명력 증가', 20, 3, '%'),
         healPercent: context => levelValueTooltip(context, '즉시 회복량', 15, 2, '%'),
     },
+    balance: {
+        role: SkillBalanceRole.DEFENSE,
+        calculateManaCost: () => 18,
+        calculateHealing: context => context.owner.maxLife * percentByLevel(context.skill.level, 15, 2) / 100,
+        notes: ['방어력·최대 생명력 증가는 지속형 효과라 단발 회복량과 분리합니다.'],
+    },
     calculateMaxCooldown: context => cooldownByLevel(context, 28, 1.5, 22),
     jobRequirement: jobRequirement(JOBS.warrior), canActivate: simpleCheck(18, false),
     onStart: context => {
@@ -400,6 +428,11 @@ defineSkill({
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 12[/color]',
     activationConditionTemplate: activationGuide('활과 살아 있는 현재 대상이 필요합니다.'), activationMessage: '마력 화살!', baseMetadata: null,
     calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 160, 12) },
+    balance: {
+        role: SkillBalanceRole.DAMAGE, damageType: 'magic',
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 160, 12) / 100,
+        calculateManaCost: () => 12,
+    },
     calculateMaxCooldown: context => cooldownByLevel(context, 5, 0.2, 4.2),
     jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
     canActivate: simpleCheck(12), onStart: context => {
@@ -415,6 +448,12 @@ defineSkill({
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
     activationConditionTemplate: activationGuide('활과 현재 장소의 공격 가능한 오브젝트가 필요합니다.'), activationMessage: '다중 사격!', baseMetadata: null,
     calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.ATK, 100, 10) },
+    balance: {
+        role: SkillBalanceRole.DAMAGE, damageType: 'physical', targetCount: 3,
+        calculateDamage: context => context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 100, 10) / 100,
+        calculateManaCost: () => 18,
+        notes: ['대상이 3명 있다고 가정한 총 피해와 대상 1명 피해를 함께 표시합니다.'],
+    },
     calculateMaxCooldown: context => cooldownByLevel(context, 11, 0.5, 9),
     jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
     canActivate: context => {
@@ -446,6 +485,12 @@ defineSkill({
         damage: context => attributeDamageTooltip(context, AttributeType.ATK, 125, 10),
         stunDuration: context => levelValueTooltip(context, '기절 지속시간', 2, 0.25, '초'),
     },
+    balance: {
+        role: SkillBalanceRole.CONTROL, damageType: 'physical',
+        calculateDamage: context => context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 125, 10) / 100,
+        calculateManaCost: () => 20,
+        notes: ['기절의 가치는 적 패턴에 따라 달라 피해량에 임의 합산하지 않습니다.'],
+    },
     calculateMaxCooldown: context => cooldownByLevel(context, 16, 0.75, 13),
     jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
     canActivate: simpleCheck(20), onStart: context => {
@@ -468,6 +513,10 @@ defineSkill({
         '이동 가능한 동안 공격 확정 회피',
     ),
     calculatedFields: { duration: context => levelValueTooltip(context, '확정 회피 지속시간', 4, 0.5, '초') },
+    balance: {
+        role: SkillBalanceRole.DEFENSE, calculateManaCost: () => 22,
+        notes: ['확정 회피는 적 공격 빈도에 의존하므로 고정 전투력으로 환산하지 않습니다.'],
+    },
     calculateMaxCooldown: context => cooldownByLevel(context, 24, 1.5, 18),
     jobRequirement: jobRequirement(JOBS.archer), canActivate: simpleCheck(22, false),
     onStart: context => {
@@ -489,6 +538,10 @@ defineSkill({
     calculatedFields: {
         duration: context => levelValueTooltip(context, '은신 지속시간', 8, 0.75, '초'),
         speedBonus: context => levelValueTooltip(context, '이동속도 증가', 25, 5, '%'),
+    },
+    balance: {
+        role: SkillBalanceRole.SUPPORT, calculateManaCost: () => 16,
+        notes: ['은신과 이동속도는 상황 의존 효과라 DPM에 임의 환산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 20, 1, 16),
     jobRequirement: jobRequirement(JOBS.assassin), canActivate: simpleCheck(16, false),
@@ -512,6 +565,13 @@ defineSkill({
             `공격력 × ${formatNumber(percent)}% × 치명타 피해 ${formatNumber(context.owner.attribute.get(AttributeType.CRIT_DMG) * 100)}% · 스킬 레벨당 계수 +15%p`,
         );
     } },
+    balance: {
+        role: SkillBalanceRole.DAMAGE, damageType: 'physical',
+        calculateDamage: context => context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 180, 15) / 100,
+        criticalMode: SkillCriticalMode.GUARANTEED,
+        calculateManaCost: () => 18,
+        notes: ['선행 은신의 재사용 대기시간과 정신력 소모는 별도이며, 이 명령은 암습 단독 사용량을 계산합니다.'],
+    },
     calculateMaxCooldown: context => cooldownByLevel(context, 10, 0.5, 8),
     jobRequirement: jobRequirement(JOBS.assassin), weaponRequirement: weaponRequirement('단검을 장착해야 합니다.', GameTags.WEAPON_DAGGER),
     canActivate: context => context.owner.getStatusEffect(STEALTH) ? simpleCheck(18)(context) : denySkill('은신 상태에서만 사용할 수 있습니다.'),
@@ -531,6 +591,12 @@ defineSkill({
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.ATK, 145, 10),
         poisonDuration: context => levelValueTooltip(context, '맹독 지속시간', 8, 1, '초'),
+    },
+    balance: {
+        role: SkillBalanceRole.DAMAGE, damageType: 'physical',
+        calculateDamage: context => context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 145, 10) / 100,
+        calculateManaCost: () => 14,
+        notes: ['맹독 지속 피해는 대상의 최대·현재 생명력에 의존하므로 직접 타격 DPM과 분리합니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 9, 0.5, 7),
     jobRequirement: jobRequirement(JOBS.assassin), weaponRequirement: weaponRequirement('단검을 장착해야 합니다.', GameTags.WEAPON_DAGGER),
@@ -552,6 +618,11 @@ defineSkill({
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 10[/color]',
     activationConditionTemplate: activationGuide('지팡이와 살아 있는 현재 대상이 필요합니다.'), activationMessage: '마력탄!', baseMetadata: null,
     calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 165, 13) },
+    balance: {
+        role: SkillBalanceRole.DAMAGE, damageType: 'magic',
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 165, 13) / 100,
+        calculateManaCost: () => 10,
+    },
     calculateMaxCooldown: context => cooldownByLevel(context, 4, 0.2, 3.2),
     jobRequirement: jobRequirement(JOBS.mage), weaponRequirement: weaponRequirement('지팡이를 장착해야 합니다.', GameTags.WEAPON_STAFF),
     canActivate: simpleCheck(10), onStart: context => {
@@ -580,6 +651,12 @@ defineSkill({
         defBonus: context => levelValueTooltip(context, '방어력 증가', 12, 4),
         magicDefBonus: context => levelValueTooltip(context, '마법 저항력 증가', 20, 5),
     },
+    balance: {
+        role: SkillBalanceRole.DEFENSE,
+        calculateManaCost: () => 22,
+        calculateShield: manaBarrierShieldAmount,
+        notes: ['방어력·마법저항 증가는 지속형 효과라 보호막량과 분리합니다.'],
+    },
     calculateMaxCooldown: context => cooldownByLevel(context, 22, 1, 18),
     jobRequirement: jobRequirement(JOBS.mage), canActivate: simpleCheck(22, false),
     onStart: context => {
@@ -598,6 +675,12 @@ defineSkill({
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 115, 10),
         bindDuration: context => levelValueTooltip(context, '속박 지속시간', 1.5, 0.2, '초'),
+    },
+    balance: {
+        role: SkillBalanceRole.CONTROL, damageType: 'magic',
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 115, 10) / 100,
+        calculateManaCost: () => 24,
+        notes: ['속박의 가치는 적 패턴에 따라 달라 피해량에 임의 합산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 15, 0.75, 12),
     jobRequirement: jobRequirement(JOBS.mage), weaponRequirement: weaponRequirement('지팡이를 장착해야 합니다.', GameTags.WEAPON_STAFF),
@@ -624,6 +707,10 @@ defineSkill({
         magicBonus: context => levelValueTooltip(context, '마법력 증가', 20, 4, '%'),
         regenBonus: context => levelValueTooltip(context, '정신력 재생 증가', 2, 0.75),
     },
+    balance: {
+        role: SkillBalanceRole.SUPPORT, calculateManaCost: () => 16,
+        notes: ['마법력·정신력 재생 증가는 지속형 효과라 단일 스킬 DPM에 임의 합산하지 않습니다.'],
+    },
     calculateMaxCooldown: context => cooldownByLevel(context, 25, 1.25, 20),
     jobRequirement: jobRequirement(JOBS.mage), canActivate: simpleCheck(16, false),
     onStart: context => {
@@ -645,6 +732,12 @@ for (const elemental of [
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 185, 15),
         effectDuration: context => levelValueTooltip(context, `${elemental.effectLabel} 지속시간`, elemental.duration, elemental.durationPerLevel, '초'),
+    },
+    balance: {
+        role: SkillBalanceRole.DAMAGE, damageType: 'magic',
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 185, 15) / 100,
+        calculateManaCost: () => 28,
+        notes: [`${elemental.effectLabel} 효과는 대상 상태에 따라 달라 직접 타격 DPM과 분리합니다.`],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 9, 0.5, 7),
     jobRequirement: jobRequirement(JOBS.mage), weaponRequirement: weaponRequirement('지팡이를 장착해야 합니다.', GameTags.WEAPON_STAFF),
@@ -708,6 +801,16 @@ defineSkill({
         damage: seismicDamage,
         castTime: context => numberMeta(context, 'castTime'),
         paralysisChance: context => numberMeta(context, 'paralysisChance'),
+    },
+    balance: {
+        role: SkillBalanceRole.CONTROL,
+        damageType: 'magic',
+        calculateDamage: seismicDamage,
+        calculateManaCost: context => Math.max(0, Math.round(
+            numberMeta(context, 'baseManaCost')
+            + (context.skill.level - 1) * numberMeta(context, 'manaCostPerLevel'),
+        )),
+        notes: ['마비독 부여 기대값은 대상 생명체 여부와 확률에 의존해 직접 타격 DPM과 분리합니다.'],
     },
     calculateMaxCooldown: context => Math.max(
         5,
