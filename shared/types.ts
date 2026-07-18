@@ -316,6 +316,7 @@ export interface AdminOptionData {
 
 export interface AdminPanelBootstrapData {
     items: AdminOptionData[]
+    balanceItems: AdminOptionData[]
     skills: AdminOptionData[]
     jobs: AdminOptionData[]
     locations: AdminOptionData[]
@@ -382,6 +383,7 @@ export type AdminPanelAction =
     | 'unlock_all_locations' | 'unlock_all_crafting_recipes'
     | 'apply_status_effect' | 'clear_status_effects' | 'revive_player'
     | 'start_minigame'
+    | 'analyze_skill_balance' | 'analyze_job_balance' | 'analyze_item_balance'
     | 'spawn_monster' | 'respawn_monsters' | 'reset_resource_cooldown'
 
 export interface AdminPanelActionRequest {
@@ -394,6 +396,8 @@ export interface AdminPanelResult extends SimpleResult {
     action: AdminPanelAction
     targetUserId?: number
     message?: string
+    /** 별도 결과 다이얼로그로 표시할 긴 읽기 전용 보고서. */
+    details?: string
 }
 
 // 소켓 이벤트 맵

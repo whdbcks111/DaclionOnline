@@ -4,11 +4,13 @@ import type {
   AdminOptionData,
   AdminPanelAction,
   AdminPanelBootstrapData,
+  AdminPanelResult,
   AdminPlayerDetailData,
   AdminPlayerListItem,
 } from '@shared/types'
 import { useSocket } from '../context/SocketContext'
 import FormDialog from '../components/dialog/FormDialog'
+import Dialog from '../components/dialog/Dialog'
 import type { FormDialogField, FormDialogValues } from '../components/dialog/FormDialog'
 import styles from './AdminPage.module.scss'
 
@@ -18,14 +20,14 @@ interface ActionDefinition {
   action: AdminPanelAction
   label: string
   description: string
-  category: PlayerCategory | 'world' | 'notice'
+  category: PlayerCategory | 'world' | 'notice' | 'balance'
   fields: FormDialogField[]
   danger?: boolean
   targetless?: boolean
 }
 
 const emptyBootstrap: AdminPanelBootstrapData = {
-  items: [], skills: [], jobs: [], locations: [], monsters: [], resources: [], statusEffects: [], stats: [], miniGamePresets: [],
+  items: [], balanceItems: [], skills: [], jobs: [], locations: [], monsters: [], resources: [], statusEffects: [], stats: [], miniGamePresets: [],
 }
 
 function option(value: string, label: string): AdminOptionData { return { value, label } }
@@ -41,6 +43,22 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
     { action: 'broadcast_notification', label: '전체 알림 공지', description: '현재 접속 중인 모든 플레이어 화면에 알림을 표시합니다.', category: 'notice', targetless: true, fields: [
       { name: 'message', label: '공지 내용', type: 'textarea', placeholder: '전체 알림 내용을 입력하세요.', required: true },
       { name: 'duration', label: '표시 시간 (초)', type: 'number', min: 1, max: 60, defaultValue: 5, required: true },
+    ] },
+    { action: 'analyze_skill_balance', label: '스킬 밸런스 분석', description: '실제 스킬 계산식으로 60초 피해·회복·보호막과 자원 한계를 확인합니다.', category: 'balance', targetless: true, fields: [
+      { name: 'skillDataId', label: '스킬', type: 'select', options: data.skills, required: true },
+      { name: 'skillLevel', label: '스킬 레벨', type: 'number', min: 1, max: 100, defaultValue: 1, required: true },
+      { name: 'level', label: '캐릭터 레벨', type: 'number', min: 1, max: 10000, defaultValue: 50, required: true },
+      { name: 'mainJobId', label: '기준 직업', type: 'select', options: data.jobs, required: true },
+    ] },
+    { action: 'analyze_job_balance', label: '직업 밸런스 분석', description: '동일 총 스탯·무장비 조건에서 직업 능력치와 스킬 전투 지표를 확인합니다.', category: 'balance', targetless: true, fields: [
+      { name: 'level', label: '캐릭터 레벨', type: 'number', min: 1, max: 10000, defaultValue: 50, required: true },
+      { name: 'mainJobId', label: '메인 직업', type: 'select', options: data.jobs, required: true },
+      { name: 'subJobId', label: '서브 직업 (Lv.200 분석용)', type: 'select', options: data.jobs },
+    ] },
+    { action: 'analyze_item_balance', label: '장비·버프 아이템 분석', description: '실제 장비 modifier 또는 버프 상태효과를 적용해 전후 DPS·생존 차이를 확인합니다.', category: 'balance', targetless: true, fields: [
+      { name: 'itemDataId', label: '아이템', type: 'select', options: data.balanceItems, required: true },
+      { name: 'level', label: '캐릭터 레벨', type: 'number', min: 1, max: 10000, defaultValue: 50, required: true },
+      { name: 'mainJobId', label: '기준 직업', type: 'select', options: data.jobs, required: true },
     ] },
     { action: 'teleport_admin_to_player', label: '대상에게 순간이동', description: '내 캐릭터를 선택한 플레이어 위치로 이동합니다.', category: 'travel', fields: [] },
     { action: 'teleport_player_to_admin', label: '대상을 내게 소환', description: '선택한 플레이어를 내 캐릭터 위치로 이동합니다.', category: 'travel', fields: [] },
@@ -128,9 +146,10 @@ export default function AdminPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [detail, setDetail] = useState<AdminPlayerDetailData | null>(null)
   const [search, setSearch] = useState('')
-  const [section, setSection] = useState<'players' | 'world' | 'notice'>('players')
+  const [section, setSection] = useState<'players' | 'world' | 'notice' | 'balance'>('players')
   const [category, setCategory] = useState<PlayerCategory>('travel')
   const [activeAction, setActiveAction] = useState<ActionDefinition | null>(null)
+  const [report, setReport] = useState<AdminPanelResult | null>(null)
 
   useEffect(() => {
     if (!socket || (sessionInfo?.permission ?? 0) < 10) return
@@ -140,15 +159,20 @@ export default function AdminPage() {
       setSelectedId(current => current ?? value[0]?.userId ?? null)
     }
     const onPlayer = (value: AdminPlayerDetailData | null) => setDetail(value)
+    const onResult = (value: AdminPanelResult) => {
+      if (value.details) setReport(value)
+    }
     socket.on('adminPanelBootstrap', onBootstrap)
     socket.on('adminPanelPlayers', onPlayers)
     socket.on('adminPanelPlayer', onPlayer)
+    socket.on('adminPanelResult', onResult)
     socket.emit('adminPanelRequestBootstrap')
     socket.emit('adminPanelRequestPlayers')
     return () => {
       socket.off('adminPanelBootstrap', onBootstrap)
       socket.off('adminPanelPlayers', onPlayers)
       socket.off('adminPanelPlayer', onPlayer)
+      socket.off('adminPanelResult', onResult)
     }
   }, [socket, sessionInfo?.permission])
 
@@ -191,6 +215,7 @@ export default function AdminPage() {
         <button className={section === 'players' ? styles.activeTab : ''} onClick={() => setSection('players')}>플레이어 관리</button>
         <button className={section === 'world' ? styles.activeTab : ''} onClick={() => setSection('world')}>월드 관리</button>
         <button className={section === 'notice' ? styles.activeTab : ''} onClick={() => setSection('notice')}>공지 발송</button>
+        <button className={section === 'balance' ? styles.activeTab : ''} onClick={() => setSection('balance')}>밸런스 분석</button>
       </div>
 
       {section === 'world' ? (
@@ -200,6 +225,10 @@ export default function AdminPage() {
       ) : section === 'notice' ? (
         <section className={styles.worldGrid}>
           {actions.filter(action => action.category === 'notice').map(action => <button key={action.action} className={styles.actionCard} onClick={() => setActiveAction(action)}><b>{action.label}</b><span>{action.description}</span></button>)}
+        </section>
+      ) : section === 'balance' ? (
+        <section className={styles.worldGrid}>
+          {actions.filter(action => action.category === 'balance').map(action => <button key={action.action} className={styles.actionCard} onClick={() => setActiveAction(action)}><b>{action.label}</b><span>{action.description}</span></button>)}
         </section>
       ) : (
         <div className={styles.workspace}>
@@ -238,6 +267,15 @@ export default function AdminPage() {
       )}
 
       {activeAction && <FormDialog open title={activeAction.label} description={activeAction.description} fields={activeAction.fields} danger={activeAction.danger} submitLabel={activeAction.danger ? '확인 후 실행' : '실행'} onClose={closeDialog} onSubmit={execute} />}
+      <Dialog
+        open={Boolean(report?.details)}
+        title={report?.message ?? '밸런스 분석 결과'}
+        onClose={() => setReport(null)}
+        className={styles.reportDialog}
+        footer={<button className={styles.reportClose} type="button" onClick={() => setReport(null)}>확인</button>}
+      >
+        <pre className={styles.balanceReport}>{report?.details}</pre>
+      </Dialog>
     </main>
   )
 }

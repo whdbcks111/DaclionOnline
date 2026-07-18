@@ -13,6 +13,13 @@ import Skill, {
     type SkillData,
 } from './Skill.js';
 import { StatType, type StatKey, type StatRecord } from './Stat.js';
+import {
+    getAllItemData,
+    getItemData,
+    ItemMetadataKeys,
+    type ItemData,
+} from './Item.js';
+import { StatusEffectType } from './StatusEffect.js';
 
 const BALANCE_WINDOW_SECONDS = 60;
 
@@ -92,6 +99,35 @@ export interface JobBalanceReport {
     readonly physicalSurvivalSeconds: number;
     readonly magicSurvivalSeconds: number;
     readonly skillReports: readonly SkillBalanceReport[];
+}
+
+export interface CombatBalanceSnapshot {
+    readonly attack: number;
+    readonly magicForce: number;
+    readonly maxLife: number;
+    readonly defense: number;
+    readonly magicDefense: number;
+    readonly speed: number;
+    readonly attackSpeed: number;
+    readonly physicalBasicDps: number;
+    readonly magicBasicDps: number;
+    readonly physicalSurvivalSeconds: number;
+    readonly magicSurvivalSeconds: number;
+}
+
+export interface ItemBalanceReport {
+    readonly itemId: string;
+    readonly name: string;
+    readonly role: string;
+    readonly level: number;
+    readonly jobId: string;
+    readonly jobName: string;
+    readonly recommendedJobNames: readonly string[];
+    readonly attackType?: 'physical' | 'magic';
+    readonly statusEffect?: { readonly id: string; readonly label: string; readonly level: number; readonly duration: number };
+    readonly before: CombatBalanceSnapshot;
+    readonly after: CombatBalanceSnapshot;
+    readonly notes: readonly string[];
 }
 
 export function createBalanceScenario(level: number, mainJobId: string, subJobId?: string): BalanceScenario {
@@ -237,6 +273,48 @@ export function analyzeJobBalance(level: number, mainJobId: string, subJobId?: s
     };
 }
 
+/** 장비 modifier 또는 버프 아이템의 실제 상태효과를 적용한 전후 전투 지표를 계산한다. */
+export function analyzeItemBalance(level: number, mainJobId: string, itemDataId: string): ItemBalanceReport {
+    const data = getItemData(itemDataId);
+    if (!data) throw new Error(`아이템을 찾을 수 없습니다: ${itemDataId}`);
+    if (!data.balance) throw new Error(`${data.name}은(는) 전투 밸런스 분석 대상이 아닙니다.`);
+    const baseline = createBalanceScenario(level, mainJobId);
+    const modified = createBalanceScenario(level, mainJobId);
+    if (data.modifiers?.length) {
+        modified.entity.attribute.addModifiers(data.modifiers.map(modifier => ({
+            ...modifier,
+            source: `balance:item:${data.id}`,
+        })));
+    }
+    const statusEffect = resolveItemStatusEffect(data);
+    if (statusEffect) {
+        modified.entity.applyStatusEffect(statusEffect.type, statusEffect.duration, statusEffect.level);
+    }
+    const recommendedJobNames = (data.balance.recommendedJobIds ?? [])
+        .map(id => getJob(id)?.name ?? id);
+    const notes = [...(data.balance.notes ?? [])];
+    if (data.onBasicAttackHit) notes.push('적중 후 확률 효과는 기본 DPS에 합산하지 않고 별도 효과로 표시합니다.');
+    return {
+        itemId: data.id,
+        name: data.name,
+        role: data.balance.role.label,
+        level: baseline.level,
+        jobId: baseline.mainJob.id,
+        jobName: baseline.mainJob.name,
+        recommendedJobNames: Object.freeze(recommendedJobNames),
+        attackType: data.balance.attackType,
+        statusEffect: statusEffect ? {
+            id: statusEffect.type.id,
+            label: statusEffect.type.label,
+            level: statusEffect.level,
+            duration: statusEffect.duration,
+        } : undefined,
+        before: createCombatSnapshot(baseline.entity, baseline.target),
+        after: createCombatSnapshot(modified.entity, modified.target),
+        notes: Object.freeze(notes),
+    };
+}
+
 export function analyzeAllFirstJobs(level: number): readonly JobBalanceReport[] {
     return getAllJobs()
         .filter(job => job.id === 'career:warrior' || job.id === 'career:archer'
@@ -249,6 +327,16 @@ export function findSkillDataForBalance(input: string): Readonly<SkillData> | un
     return getAllSkillData().find(skill => skill.id === normalized
         || skill.name === input.trim()
         || skill.aliases?.some(alias => alias.toLowerCase() === normalized));
+}
+
+export function findItemDataForBalance(input: string): Readonly<ItemData> | undefined {
+    const normalized = input.trim().toLowerCase();
+    return getAllItemData().find(item => item.balance
+        && (item.id.toLowerCase() === normalized || item.name === input.trim()));
+}
+
+export function getAllBalanceItemData(): readonly Readonly<ItemData>[] {
+    return getAllItemData().filter(item => item.balance);
 }
 
 function createProjectedStats(level: number, allocation: BalanceStatAllocation): StatRecord {
@@ -275,6 +363,70 @@ function createProjectedStats(level: number, allocation: BalanceStatAllocation):
 
 function applyJobModifiers(entity: Entity, modifiers: readonly Omit<AttributeModifier, 'source'>[], source: string): void {
     entity.attribute.addModifiers(modifiers.map(modifier => ({ ...modifier, source })));
+}
+
+function createCombatSnapshot(entity: Entity, target: Entity): CombatBalanceSnapshot {
+    const expectedCrit = getExpectedCriticalMultiplier(entity, SkillCriticalMode.NORMAL);
+    const hitChance = 1 - calculateEvasionChance(
+        entity.attribute.get(AttributeType.SPEED),
+        target.attribute.get(AttributeType.SPEED),
+    );
+    const attacksPerSecond = entity.attribute.get(AttributeType.ATTACK_SPEED);
+    const physicalBasicDps = calculateFinalDamage(
+        entity.attribute.get(AttributeType.ATK) * expectedCrit,
+        target.attribute.get(AttributeType.DEF),
+        entity.attribute.get(AttributeType.ARMOR_PEN),
+    ) * hitChance * attacksPerSecond;
+    const magicBasicDps = calculateFinalDamage(
+        entity.attribute.get(AttributeType.MAGIC_FORCE) * expectedCrit,
+        target.attribute.get(AttributeType.MAGIC_DEF),
+        entity.attribute.get(AttributeType.MAGIC_PEN),
+    ) * hitChance * attacksPerSecond;
+    const targetCrit = getExpectedCriticalMultiplier(target, SkillCriticalMode.NORMAL);
+    const targetHitChance = 1 - calculateEvasionChance(
+        target.attribute.get(AttributeType.SPEED),
+        entity.attribute.get(AttributeType.SPEED),
+    );
+    const targetAttackSpeed = target.attribute.get(AttributeType.ATTACK_SPEED);
+    const incomingPhysicalDps = calculateFinalDamage(
+        target.attribute.get(AttributeType.ATK) * targetCrit,
+        entity.attribute.get(AttributeType.DEF),
+        target.attribute.get(AttributeType.ARMOR_PEN),
+    ) * targetHitChance * targetAttackSpeed;
+    const incomingMagicDps = calculateFinalDamage(
+        target.attribute.get(AttributeType.MAGIC_FORCE) * targetCrit,
+        entity.attribute.get(AttributeType.MAGIC_DEF),
+        target.attribute.get(AttributeType.MAGIC_PEN),
+    ) * targetHitChance * targetAttackSpeed;
+    return {
+        attack: entity.attribute.get(AttributeType.ATK),
+        magicForce: entity.attribute.get(AttributeType.MAGIC_FORCE),
+        maxLife: entity.maxLife,
+        defense: entity.attribute.get(AttributeType.DEF),
+        magicDefense: entity.attribute.get(AttributeType.MAGIC_DEF),
+        speed: entity.attribute.get(AttributeType.SPEED),
+        attackSpeed: attacksPerSecond,
+        physicalBasicDps,
+        magicBasicDps,
+        physicalSurvivalSeconds: survivalSeconds(entity.maxLife, incomingPhysicalDps),
+        magicSurvivalSeconds: survivalSeconds(entity.maxLife, incomingMagicDps),
+    };
+}
+
+function resolveItemStatusEffect(data: ItemData): {
+    type: StatusEffectType;
+    level: number;
+    duration: number;
+} | undefined {
+    const value = data.baseMetadata?.[ItemMetadataKeys.STATUS_EFFECT];
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const id = value.id;
+    const type = typeof id === 'string' ? StatusEffectType.fromKey(id) : undefined;
+    const rawLevel = value.level;
+    const rawDuration = value.duration;
+    if (!type || typeof rawDuration !== 'number' || !Number.isFinite(rawDuration) || rawDuration <= 0) return undefined;
+    const level = typeof rawLevel === 'number' && Number.isFinite(rawLevel) ? type.normalizeLevel(rawLevel) : 1;
+    return { type, level, duration: rawDuration };
 }
 
 function getExpectedCriticalMultiplier(entity: Entity, mode = SkillCriticalMode.NORMAL): number {

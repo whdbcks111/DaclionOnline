@@ -37,6 +37,9 @@
 .actionCard { display: grid; width: 100%; gap: $spacing-xs; margin-bottom: $spacing-sm; padding: $spacing-sm $spacing-md; text-align: left; color: $color-text; background: $color-bg-secondary; border: 1px solid $color-border; border-radius: $border-radius-md; cursor: pointer; span { color: $color-text-secondary; font-size: $font-size-sm; line-height: 1.4; } &:hover:not(:disabled) { border-color: $color-primary; } &:disabled { opacity: .45; cursor: not-allowed; } }
 .worldGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: $spacing-md; padding: $spacing-md; .actionCard { margin: 0; min-height: 7rem; } }
 .denied { display: grid; min-height: 100vh; place-content: center; text-align: center; color: $color-text; background: $color-bg; }
+.reportDialog { width: min(48rem, calc(100vw - 2rem)); }
+.balanceReport { max-height: min(62vh, 38rem); margin: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: $color-text; font: 500 .9rem/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.reportClose { padding: .6rem 1rem; color: $color-text-inverse; background: $color-primary; border: 1px solid $color-primary; border-radius: $border-radius-md; font: inherit; font-weight: 700; cursor: pointer; }
 
 @media (max-width: 1200px) {
   .workspace { grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr); }

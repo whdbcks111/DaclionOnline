@@ -3,9 +3,13 @@ import { sendBotMessageToUser } from '../modules/message.js';
 import {
     analyzeAllFirstJobs,
     analyzeJobBalance,
+    analyzeItemBalance,
     analyzeSkillBalance,
     createBalanceScenario,
     findSkillDataForBalance,
+    findItemDataForBalance,
+    getAllBalanceItemData,
+    type ItemBalanceReport,
     type JobBalanceReport,
     type SkillBalanceReport,
 } from '../models/Balance.js';
@@ -67,6 +71,41 @@ export function initBalanceCommands(): void {
     });
 
     registerCommand({
+        name: '아이템밸런스',
+        aliases: ['itembalance', 'ib'],
+        permission: 10,
+        showCommandUse: 'private',
+        description: '무기·방어구·버프 아이템을 실제 능력치와 전투식으로 적용해 전후 차이를 분석합니다.',
+        args: [
+            {
+                name: '아이템', description: '분석할 장비 또는 버프 아이템', required: true,
+                completions: getAllBalanceItemData().map(item => ({ value: item.name, description: item.id })),
+            },
+            { name: '캐릭터레벨', description: `생략 시 Lv.${DEFAULT_LEVEL}`, required: false },
+            {
+                name: '직업', description: '계산에 사용할 1차 직업', required: false,
+                completions: getFirstJobCompletions(),
+            },
+        ],
+        handler(userId, args) {
+            const data = findItemDataForBalance(args[0] ?? '');
+            if (!data) {
+                sendBotMessageToUser(userId, '분석 가능한 아이템을 찾을 수 없습니다.');
+                return;
+            }
+            const level = parsePositiveInteger(args[1], DEFAULT_LEVEL);
+            const mainJobId = resolveFirstJobId(args[2])
+                ?? data.balance?.recommendedJobIds?.[0]
+                ?? 'career:warrior';
+            try {
+                sendBotMessageToUser(userId, buildItemBalanceMessage(analyzeItemBalance(level, mainJobId, data.id)));
+            } catch (error) {
+                sendBotMessageToUser(userId, error instanceof Error ? error.message : '아이템 밸런스 분석에 실패했습니다.');
+            }
+        },
+    });
+
+    registerCommand({
         name: '직업밸런스',
         aliases: ['jobbalance', 'jb'],
         permission: 10,
@@ -103,6 +142,32 @@ export function initBalanceCommands(): void {
             }
         },
     });
+}
+
+function buildItemBalanceMessage(report: ItemBalanceReport) {
+    const attackDps = report.attackType === 'magic' ? 'magicBasicDps' : 'physicalBasicDps';
+    const builder = chat()
+        .text(`[ 아이템 밸런스 ] ${report.name}\n`)
+        .color('$text-tertiary', b => b.text(`Lv.${report.level} ${report.jobName} · 동레벨 균형형 대상 · 실제 modifier/상태효과 적용\n`))
+        .divider('분석 조건')
+        .text(`분류 ${report.role}`)
+        .text(report.recommendedJobNames.length ? `  |  추천 ${report.recommendedJobNames.join(', ')}` : '')
+        .text('\n');
+    if (report.statusEffect) {
+        builder.text(`적용 효과 ${report.statusEffect.label} Lv.${report.statusEffect.level} · ${format(report.statusEffect.duration)}초\n`);
+    }
+    builder.divider('전후 실측')
+        .text(`공격력 ${formatPair(report.before.attack, report.after.attack)}  마법력 ${formatPair(report.before.magicForce, report.after.magicForce)}\n`)
+        .text(`방어 ${formatPair(report.before.defense, report.after.defense)}  마법저항 ${formatPair(report.before.magicDefense, report.after.magicDefense)}\n`)
+        .text(`생명력 ${formatPair(report.before.maxLife, report.after.maxLife)}  이동속도 ${formatPair(report.before.speed, report.after.speed)}\n`)
+        .text(`${report.attackType === 'magic' ? '마법' : '물리'} 기본 DPS ${formatPair(report.before[attackDps], report.after[attackDps])}\n`)
+        .text(`물리 생존 ${formatPair(report.before.physicalSurvivalSeconds, report.after.physicalSurvivalSeconds, '초')}\n`)
+        .text(`마법 생존 ${formatPair(report.before.magicSurvivalSeconds, report.after.magicSurvivalSeconds, '초')}\n`);
+    if (report.notes.length) {
+        builder.divider('분리한 효과');
+        for (const note of report.notes) builder.text(`- ${note}\n`);
+    }
+    return builder.build();
 }
 
 function buildSkillBalanceMessage(report: SkillBalanceReport, jobName: string, characterLevel: number) {
@@ -198,3 +263,9 @@ function format(value: number): string {
 }
 
 function formatSeconds(value: number): string { return `${format(value)}초`; }
+
+function formatPair(before: number, after: number, suffix = ''): string {
+    const delta = after - before;
+    const deltaText = Math.abs(delta) < 0.0001 ? '변화 없음' : `${delta > 0 ? '+' : ''}${format(delta)}${suffix}`;
+    return `${format(before)}${suffix} → ${format(after)}${suffix} (${deltaText})`;
+}

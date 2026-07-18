@@ -22,6 +22,7 @@ export const ItemMetadataKeys = Object.freeze({
     BASIC_ATTACK_OVERRIDE: 'basicAttackOverride',
     PROJECTILE_ATTACK: 'projectileAttack',
     PROJECTILE: 'projectile',
+    STATUS_EFFECT: 'statusEffect',
 } as const);
 
 const METADATA_STORAGE_KEY = '__daclionItemMetadata';
@@ -31,6 +32,34 @@ export interface PersistedItemMetadataDelta {
     [key: string]: ItemMetadataValue;
     [METADATA_STORAGE_KEY]: typeof METADATA_STORAGE_VERSION;
     values: ItemMetadata;
+}
+
+/** 밸런스 리포트에서 아이템의 용도를 구분하는 클래스형 enum. */
+export class ItemBalanceRole {
+    private static readonly all: ItemBalanceRole[] = [];
+
+    static readonly WEAPON = new ItemBalanceRole('weapon', '무기');
+    static readonly DEFENSE = new ItemBalanceRole('defense', '방어 장비');
+    static readonly BUFF = new ItemBalanceRole('buff', '버프 소모품');
+    static readonly RECOVERY = new ItemBalanceRole('recovery', '회복 소모품');
+    static readonly UTILITY = new ItemBalanceRole('utility', '기능 아이템');
+
+    private constructor(readonly key: string, readonly label: string) {
+        ItemBalanceRole.all.push(this);
+    }
+
+    static values(): readonly ItemBalanceRole[] { return ItemBalanceRole.all; }
+    static fromKey(key: string): ItemBalanceRole | undefined {
+        return ItemBalanceRole.all.find(role => role.key === key);
+    }
+}
+
+/** 아이템이 전투식에 기여하는 방식을 명시하는 진단용 메타데이터. */
+export interface ItemBalanceProfile {
+    readonly role: ItemBalanceRole;
+    readonly attackType?: 'physical' | 'magic';
+    readonly recommendedJobIds?: readonly string[];
+    readonly notes?: readonly string[];
 }
 
 /** 아이템 정의 (마스터 데이터, 코드에서 직접 정의) */
@@ -50,6 +79,8 @@ export interface ItemData {
     modifiers: AttributeModifier[] | null;
     baseDurability: number | null;
     tags: TagId[];
+    /** 실제 modifier/onUse 데이터로 계산할 밸런스 리포트의 분류 정보. */
+    balance?: ItemBalanceProfile;
     /** 직접 공격이 회피되지 않고 피해를 준 뒤 실행되는 무기별 후처리. */
     onBasicAttackHit?: (context: ItemBasicAttackHitContext) => void;
 }

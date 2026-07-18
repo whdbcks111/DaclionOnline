@@ -1,4 +1,8 @@
-import { defineItem } from '../models/Item.js';
+import {
+    defineItem,
+    ItemBalanceRole,
+    ItemMetadataKeys,
+} from '../models/Item.js';
 import { startCoroutine, Wait } from '../modules/coroutine.js';
 import { registerItemUse } from '../modules/itemUse.js';
 import { sendNotificationToUser } from '../modules/message.js';
@@ -117,6 +121,37 @@ registerItemUse('restore_survival', (inv, item, finish) => {
     startCoroutine(restoreRoutine());
 });
 
+registerItemUse('apply_status_effect', (inv, item, finish) => {
+    try {
+        const player = getPlayerByUserId(inv.playerId);
+        if (!player) return;
+        const config = item.getMetadata<{ id?: string; level?: number; duration?: number }>(
+            ItemMetadataKeys.STATUS_EFFECT,
+        );
+        const effect = config?.id ? StatusEffectType.fromKey(config.id) : undefined;
+        if (!effect || !Number.isFinite(config?.duration) || (config?.duration ?? 0) <= 0) {
+            sendNotificationToUser(player.userId, {
+                key: `item:status-effect:invalid:${item.itemDataId}`,
+                message: '이 아이템의 효과 정보가 올바르지 않습니다.',
+            });
+            return;
+        }
+        if (!inv.removeItemInstance(item, 1)) return;
+        const level = Math.max(1, Math.floor(config?.level ?? 1));
+        const result = player.applyStatusEffect(effect, config!.duration!, level);
+        sendNotificationToUser(player.userId, {
+            key: `item:status-effect:${effect.id}`,
+            message: result.action.changed
+                ? `${effect.label} Lv.${effect.normalizeLevel(level)} 효과를 얻었습니다. (${config!.duration}초)`
+                : `${effect.label} 효과가 이미 더 강하게 적용되어 있습니다.`,
+        });
+    } catch (error) {
+        logger.error('버프 아이템 사용 실패', error);
+    } finally {
+        finish();
+    }
+});
+
 defineItem({
     id: 'health_potion',
     name: '체력 포션',
@@ -149,6 +184,72 @@ defineItem({
     modifiers: null,
     baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER],
+});
+
+defineItem({
+    id: 'battle_tonic',
+    name: '전투 강장제',
+    description: '60초 동안 공격력이 10% 증가한다.',
+    // TODO(icons): 전용 아이콘 제작 전까지 체력 포션 아이콘을 사용한다.
+    image: 'items/health_potion',
+    category: '버프 소모품',
+    weight: 0.4,
+    stackable: true,
+    maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'strength_enhancement', level: 2, duration: 60 } },
+    onUse: 'apply_status_effect',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE],
+    balance: {
+        role: ItemBalanceRole.BUFF,
+        attackType: 'physical',
+        recommendedJobIds: ['career:warrior', 'career:archer', 'career:assassin'],
+    },
+});
+
+defineItem({
+    id: 'arcane_tonic',
+    name: '비전 영약',
+    description: '60초 동안 마법력이 10% 증가한다.',
+    // TODO(icons): 전용 아이콘 제작 전까지 마나 포션 아이콘을 사용한다.
+    image: 'items/mana_potion',
+    category: '버프 소모품',
+    weight: 0.4,
+    stackable: true,
+    maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'magic_enhancement', level: 2, duration: 60 } },
+    onUse: 'apply_status_effect',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE],
+    balance: { role: ItemBalanceRole.BUFF, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+});
+
+defineItem({
+    id: 'swift_tonic',
+    name: '신속의 물약',
+    description: '60초 동안 이동속도가 10% 증가한다.',
+    // TODO(icons): 전용 아이콘 제작 전까지 마나 포션 아이콘을 사용한다.
+    image: 'items/mana_potion',
+    category: '버프 소모품',
+    weight: 0.4,
+    stackable: true,
+    maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'swiftness', level: 2, duration: 60 } },
+    onUse: 'apply_status_effect',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE],
+    balance: {
+        role: ItemBalanceRole.BUFF,
+        attackType: 'physical',
+        recommendedJobIds: ['career:archer', 'career:assassin'],
+        notes: ['이동속도 상승은 회피율 변화까지 실제 전투식으로 환산합니다.'],
+    },
 });
 
 defineItem({
@@ -202,6 +303,11 @@ defineItem({
     ],
     baseDurability: 50,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.PROPERTY_FIRE],
+    balance: {
+        role: ItemBalanceRole.WEAPON,
+        attackType: 'physical',
+        recommendedJobIds: ['career:warrior'],
+    },
 });
 
 defineItem({
@@ -221,6 +327,7 @@ defineItem({
     ],
     baseDurability: 60,
     tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_WOOD],
+    balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior'] },
 });
 
 defineItem({
@@ -245,6 +352,12 @@ defineItem({
             target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 8, 1);
         }
     },
+    balance: {
+        role: ItemBalanceRole.WEAPON,
+        attackType: 'physical',
+        recommendedJobIds: ['career:assassin'],
+        notes: ['맹독 부여의 기대 피해는 대상 생명력과 현재 잃은 생명력에 따라 달라져 기본 DPS와 분리합니다.'],
+    },
 });
 
 defineItem({
@@ -267,6 +380,12 @@ defineItem({
     ],
     baseDurability: 80,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_WOOD],
+    balance: {
+        role: ItemBalanceRole.WEAPON,
+        attackType: 'physical',
+        recommendedJobIds: ['career:archer'],
+        notes: ['화살의 damageBonus와 개별 투사체 override는 별도 탄약 기여로 분리됩니다.'],
+    },
 });
 
 defineItem({
@@ -284,6 +403,7 @@ defineItem({
     modifiers: [{ attribute: 'atk', op: 'add', value: 7, source: '' }],
     baseDurability: 90,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_AXE, GameTags.MATERIAL_IRON],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
 });
 
 defineItem({
@@ -304,6 +424,7 @@ defineItem({
     modifiers: [{ attribute: 'magicForce', op: 'add', value: 8, source: '' }],
     baseDurability: 100,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_WOOD],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
 });
 
 defineItem({

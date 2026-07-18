@@ -1,7 +1,9 @@
 import '../data/projectiles.js';
+import '../data/items.js';
 import '../data/jobs.js';
+import '../data/statusEffects.js';
 import '../data/skills.js';
-import { analyzeAllFirstJobs } from '../models/Balance.js';
+import { analyzeAllFirstJobs, analyzeItemBalance } from '../models/Balance.js';
 
 const requestedLevel = Number.parseInt(process.argv[2] ?? '50', 10);
 const level = Number.isInteger(requestedLevel) && requestedLevel > 0 ? requestedLevel : 50;
@@ -17,6 +19,28 @@ for (const report of reports) {
         `물리생존=${formatSeconds(report.physicalSurvivalSeconds)}`,
         `마법생존=${formatSeconds(report.magicSurvivalSeconds)}`,
         `최고스킬=${best ? `${best.name}:${best.sustainableDpm.toFixed(2)}` : '없음'}`,
+    ].join('  '));
+}
+
+console.log('\n주력 장비·버프 아이템 실측');
+const itemCases = [
+    ['career:warrior', 'old_sword'],
+    ['career:warrior', 'old_shield'],
+    ['career:archer', 'light_bow'],
+    ['career:assassin', 'venom_dagger'],
+    ['career:mage', 'apprentice_staff'],
+    ['career:warrior', 'battle_tonic'],
+    ['career:mage', 'arcane_tonic'],
+    ['career:archer', 'swift_tonic'],
+] as const;
+for (const [jobId, itemId] of itemCases) {
+    const report = analyzeItemBalance(level, jobId, itemId);
+    const dpsKey = report.attackType === 'magic' ? 'magicBasicDps' : 'physicalBasicDps';
+    console.log([
+        `${report.jobName}/${report.name}`,
+        `DPS=${report.before[dpsKey].toFixed(2)}→${report.after[dpsKey].toFixed(2)}`,
+        `물리생존=${formatSeconds(report.before.physicalSurvivalSeconds)}→${formatSeconds(report.after.physicalSurvivalSeconds)}`,
+        `마법생존=${formatSeconds(report.before.magicSurvivalSeconds)}→${formatSeconds(report.after.magicSurvivalSeconds)}`,
     ].join('  '));
 }
 

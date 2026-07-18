@@ -28,6 +28,16 @@ import { getIO } from './socket.js';
 import { broadcastBotMessageAll, broadcastNotification, sendNotificationToUser } from './message.js';
 import logger from '../utils/logger.js';
 import { getMiniGamePresetSummaries, startMiniGamePreset } from './minigamePresets.js';
+import {
+    analyzeItemBalance,
+    analyzeJobBalance,
+    analyzeSkillBalance,
+    createBalanceScenario,
+    type CombatBalanceSnapshot,
+    type ItemBalanceReport,
+    type JobBalanceReport,
+    type SkillBalanceReport,
+} from '../models/Balance.js';
 
 const ADMIN_PERMISSION = 10;
 const VITAL_TYPES = Object.freeze({
@@ -55,6 +65,8 @@ function option(value: string, label: string, description?: string): AdminOption
 export function getAdminPanelBootstrap(): AdminPanelBootstrapData {
     return {
         items: getAllItemData().map(data => option(data.id, data.name, data.description)),
+        balanceItems: getAllItemData().filter(data => data.balance)
+            .map(data => option(data.id, data.name, data.balance?.role.label)),
         skills: getAllSkillData().map(data => option(data.id, data.name, `최대 Lv.${data.maxLevel}`)),
         jobs: getAllJobs().filter(job => job.tier === JobTier.FIRST).map(job => option(job.id, job.name, job.description)),
         locations: getAllLocations().map(location => option(location.id, location.data.name)),
@@ -454,9 +466,112 @@ function executeWorldAction(request: AdminPanelActionRequest): string {
     }
 }
 
+function executeBalanceAction(request: AdminPanelActionRequest): { message: string; details: string } {
+    const values = valuesOf(request);
+    const level = values.level === undefined ? 50 : numberValue(values, 'level', { integer: true, min: 1, max: 10000 });
+    const mainJobId = stringValue(values, 'mainJobId');
+    const mainJob = getAllJobs().find(job => job.id === mainJobId && job.tier === JobTier.FIRST);
+    if (!mainJob) throw new Error('1차 직업을 찾을 수 없습니다.');
+    switch (request.action) {
+        case 'analyze_skill_balance': {
+            const skillDataId = stringValue(values, 'skillDataId');
+            const data = getSkillData(skillDataId);
+            if (!data) throw new Error('스킬을 찾을 수 없습니다.');
+            const skillLevel = values.skillLevel === undefined
+                ? data.maxLevel
+                : numberValue(values, 'skillLevel', { integer: true, min: 1, max: data.maxLevel });
+            const report = analyzeSkillBalance(createBalanceScenario(level, mainJob.id), data.id, skillLevel);
+            return { message: `${data.name} 밸런스 분석을 완료했습니다.`, details: formatSkillBalanceText(report, level, mainJob.name) };
+        }
+        case 'analyze_job_balance': {
+            const subJobId = typeof values.subJobId === 'string' && values.subJobId.trim() ? values.subJobId.trim() : undefined;
+            const report = analyzeJobBalance(level, mainJob.id, subJobId);
+            return { message: `${report.name} 밸런스 분석을 완료했습니다.`, details: formatJobBalanceText(report) };
+        }
+        case 'analyze_item_balance': {
+            const itemDataId = stringValue(values, 'itemDataId');
+            const report = analyzeItemBalance(level, mainJob.id, itemDataId);
+            return { message: `${report.name} 밸런스 분석을 완료했습니다.`, details: formatItemBalanceText(report) };
+        }
+        default:
+            throw new Error('밸런스 분석 액션이 아닙니다.');
+    }
+}
+
+function formatSkillBalanceText(report: SkillBalanceReport, level: number, jobName: string): string {
+    const lines = [
+        `[스킬 밸런스] ${report.name} Lv.${report.skillLevel}`,
+        `조건: Lv.${level} ${jobName} / 무장비 / 동레벨 균형형 대상 / 60초`,
+        `분류: ${report.role} / 계산 지원: ${report.coverage}`,
+        `재사용: ${numberText(report.cooldown)}초 / 정신력: ${numberText(report.manaCost)}`,
+    ];
+    if (report.rawDamage > 0) lines.push(
+        `방어 전 1타: ${numberText(report.rawDamage)}`,
+        `대상 1명 기대 피해: ${numberText(report.expectedDamagePerTarget)}`,
+        `1회 총 기대 피해: ${numberText(report.expectedTotalDamage)}`,
+        `60초 시전: ${report.sustainableCasts}회 / 기대 피해: ${numberText(report.sustainableDpm)}`,
+    );
+    if (report.healing > 0) lines.push(`1회 회복: ${numberText(report.healing)}`);
+    if (report.shield > 0) lines.push(`1회 보호막: ${numberText(report.shield)}`);
+    if (report.notes.length) lines.push('', '[분리한 효과]', ...report.notes.map(note => `- ${note}`));
+    return lines.join('\n');
+}
+
+function formatJobBalanceText(report: JobBalanceReport): string {
+    return [
+        `[직업 밸런스] Lv.${report.level} ${report.name}`,
+        `배분: ${report.allocationLabel}`,
+        `스탯: 근력 ${report.stats.strength} / 민첩 ${report.stats.agility} / 체력 ${report.stats.vitality} / 감각 ${report.stats.sensibility} / 정신력 ${report.stats.mentality}`,
+        `능력치: 공격력 ${numberText(report.attack)} / 마법력 ${numberText(report.magicForce)} / 생명력 ${numberText(report.maxLife)}`,
+        `방어: 물리 ${numberText(report.defense)} / 마법 ${numberText(report.magicDefense)} / 속도 ${numberText(report.speed)}`,
+        `기본 물리 DPS: ${numberText(report.basicPhysicalDps)}`,
+        `표준 공격 생존: 물리 ${numberText(report.physicalSurvivalSeconds)}초 / 마법 ${numberText(report.magicSurvivalSeconds)}초`,
+        '',
+        '[직업 스킬]',
+        ...report.skillReports.map(skill => `- ${skill.name}: 60초 피해 ${numberText(skill.sustainableDpm)} (${skill.coverage})`),
+    ].join('\n');
+}
+
+function formatItemBalanceText(report: ItemBalanceReport): string {
+    const attackKey: keyof CombatBalanceSnapshot = report.attackType === 'magic' ? 'magicBasicDps' : 'physicalBasicDps';
+    const lines = [
+        `[아이템 밸런스] ${report.name}`,
+        `조건: Lv.${report.level} ${report.jobName} / 동레벨 균형형 대상`,
+        `분류: ${report.role}${report.recommendedJobNames.length ? ` / 추천: ${report.recommendedJobNames.join(', ')}` : ''}`,
+    ];
+    if (report.statusEffect) lines.push(`효과: ${report.statusEffect.label} Lv.${report.statusEffect.level} / ${report.statusEffect.duration}초`);
+    lines.push(
+        '', '[전후 실측]',
+        `공격력: ${pairText(report.before.attack, report.after.attack)} / 마법력: ${pairText(report.before.magicForce, report.after.magicForce)}`,
+        `방어: ${pairText(report.before.defense, report.after.defense)} / 마법저항: ${pairText(report.before.magicDefense, report.after.magicDefense)}`,
+        `생명력: ${pairText(report.before.maxLife, report.after.maxLife)} / 이동속도: ${pairText(report.before.speed, report.after.speed)}`,
+        `${report.attackType === 'magic' ? '마법' : '물리'} 기본 DPS: ${pairText(report.before[attackKey], report.after[attackKey])}`,
+        `물리 생존: ${pairText(report.before.physicalSurvivalSeconds, report.after.physicalSurvivalSeconds, '초')}`,
+        `마법 생존: ${pairText(report.before.magicSurvivalSeconds, report.after.magicSurvivalSeconds, '초')}`,
+    );
+    if (report.notes.length) lines.push('', '[분리한 효과]', ...report.notes.map(note => `- ${note}`));
+    return lines.join('\n');
+}
+
+function numberText(value: number): string {
+    if (!Number.isFinite(value)) return '∞';
+    return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, '');
+}
+
+function pairText(before: number, after: number, suffix = ''): string {
+    const delta = after - before;
+    return `${numberText(before)}${suffix} → ${numberText(after)}${suffix} (${Math.abs(delta) < 0.0001 ? '변화 없음' : `${delta > 0 ? '+' : ''}${numberText(delta)}${suffix}`})`;
+}
+
 export async function executeAdminPanelAction(adminId: number, request: AdminPanelActionRequest): Promise<AdminPanelResult> {
     const result: AdminPanelResult = { action: request.action, targetUserId: request.targetUserId };
     try {
+        if (request.action === 'analyze_skill_balance'
+            || request.action === 'analyze_job_balance'
+            || request.action === 'analyze_item_balance') {
+            const balance = executeBalanceAction(request);
+            return { ...result, ok: true, ...balance };
+        }
         const message = request.action === 'broadcast_chat_notice'
             || request.action === 'broadcast_notification'
             ? executeNoticeAction(request)
