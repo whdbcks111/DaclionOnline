@@ -10,6 +10,7 @@
 - `fishingCatalog.ts`: 일반~신화 각 6종, 총 36종 물고기의 ID·이름·설명·중량·등급 단일 원본.
 - `fishing.ts`: 공용 물고기 카탈로그를 낚시 보상 registry에 등록한다.
 - `tagEffects.ts`: `source tag → target tag → modifier` 단방향 효과 테이블과 `/속성표`용 라벨·`affinities/*` 아이콘 key. 불·물·얼음·자연·독·전기·돌·어둠·빛·언데드·신성·벌레·금속·땅과 무생물을 모두 매핑한다.
+- `statusEffects.ts`: 레거시 상태이상을 현재 source modifier·행동 제한·피해 API로 이식한 마스터 정의와 화염/빙결·둔화/신속 중화, 저항·해독·보존·발각 단방향 상호작용 표. 전용 아이콘 제작 전에는 의미가 가까운 기존 아이콘을 명시적으로 공유한다.
 - `locations.json`: 루미나르 개척촌 광장·전직소·물빛 연못 낚시터, 바람결 초원, 안개수렁, 홍염산지, 보스 수정 왕좌를 포함한 미로형 피버릭 갱도의 좌표·연결·지도 랜드마크 `mapIcon`·지역별 대표 `mapColor`·통합 오브젝트·NPC ID·상점 배치 원본.
 - `locations.ts`: Lv.10/20/28/36/45 연결 condition handler와 실제 이동 실패 시 공개할 필요 레벨 설명 등록.
 - `progress.ts`: 게임 이벤트에 연결되는 공개 통계 정의. 현재 치명타 누적 횟수가 있다.

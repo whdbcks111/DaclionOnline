@@ -10,6 +10,7 @@ import { SLOT_MAX, EquipSlotType } from "../models/Equipment.js";
 import type Entity from "../models/Entity.js";
 import { StatType } from "../models/Stat.js";
 import { AttributeType } from "../models/Attribute.js";
+import { ActionType } from "../models/Action.js";
 import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
 import { CompletionItem } from "../../../shared/types.js";
@@ -306,6 +307,11 @@ export function initPlayerCommands(): void {
 
             if (player.isDead) {
                 sendBotMessageToUser(userId, '사망 상태에서는 행동할 수 없습니다.');
+                return;
+            }
+
+            if (!player.canPerformAction(ActionType.ITEM_USE)) {
+                sendBotMessageToUser(userId, '현재 아이템을 사용할 수 없는 상태입니다.');
                 return;
             }
 

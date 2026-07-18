@@ -49,7 +49,7 @@ test('일반 공격은 회피되지만 회피 불가 옵션과 이동 제한은 
         assert.equal(target.life, 90);
 
         attacker.earlyUpdate(attacker.maxAttackCooldown);
-        target.disableActionForTick(ActionType.MOVEMENT, 'test:paralysis');
+        target.disableActionForTick(ActionType.EVASION, 'test:paralysis');
         const movementDisabled = attacker.attack(target, 'physical', 10, {
             consumeMainHandDurability: false,
         });

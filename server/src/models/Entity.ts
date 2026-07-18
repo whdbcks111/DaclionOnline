@@ -23,6 +23,7 @@ import Shield, { ShieldType, type ShieldDisplaySnapshot } from './Shield.js';
 import type { ShieldBarSegment } from '../../../shared/types.js';
 import { CombatStage, createCombatContext, runCombatStage } from './CombatPipeline.js';
 import { reportSupportThreat, ThreatAction } from './Threat.js';
+import { resolveStatusEffectInteractions } from './StatusEffectInteraction.js';
 
 /** 대미지 타입 */
 export type DamageType = 'physical' | 'magic' | 'absolute';
@@ -61,7 +62,7 @@ export interface AttackOptions {
     triggerMainHandHitEffects?: boolean;
 }
 
-export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fire' | 'poison' | 'suffocation'
+export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fire' | 'poison' | 'bleeding' | 'decay' | 'frozen' | 'suffocation'
 
 export interface DamageCause {
     type: DamageCauseType;
@@ -105,6 +106,8 @@ export default abstract class Entity implements TagReadable {
     private readonly statusEffects = new Map<string, StatusEffect>();
     private readonly shields = new Map<string, Shield>();
     private readonly healingReceivedModifiers = new Map<string, number>();
+    private readonly damageReceivedModifiers = new Map<string, number>();
+    private readonly experienceGainModifiers = new Map<string, number>();
     private readonly actionDisableSources = new Map<string, Set<string>>();
     private readonly tickActionDisableSources = new Map<string, Set<string>>();
     private readonly guaranteedEvasionSources = new Set<string>();
@@ -396,6 +399,42 @@ export default abstract class Entity implements TagReadable {
         return Math.max(0, result);
     }
 
+    setDamageReceivedModifier(source: string, multiplier: number): void {
+        if (!source.trim()) throw new Error('Damage modifier source must not be empty');
+        if (!Number.isFinite(multiplier) || multiplier < 0) {
+            throw new Error(`Damage modifier must be a non-negative finite number: ${multiplier}`);
+        }
+        this.damageReceivedModifiers.set(source, multiplier);
+    }
+
+    removeDamageReceivedModifier(source: string): boolean {
+        return this.damageReceivedModifiers.delete(source);
+    }
+
+    getDamageReceivedModifier(): number {
+        let result = 1;
+        for (const modifier of this.damageReceivedModifiers.values()) result *= modifier;
+        return Math.max(0, result);
+    }
+
+    setExperienceGainModifier(source: string, multiplier: number): void {
+        if (!source.trim()) throw new Error('Experience modifier source must not be empty');
+        if (!Number.isFinite(multiplier) || multiplier < 0) {
+            throw new Error(`Experience modifier must be a non-negative finite number: ${multiplier}`);
+        }
+        this.experienceGainModifiers.set(source, multiplier);
+    }
+
+    removeExperienceGainModifier(source: string): boolean {
+        return this.experienceGainModifiers.delete(source);
+    }
+
+    getExperienceGainModifier(): number {
+        let result = 1;
+        for (const modifier of this.experienceGainModifiers.values()) result *= modifier;
+        return Math.max(0, result);
+    }
+
     // -- 보호막 --
 
     /** 같은 key는 교체하고 다른 key는 독립적으로 중첩한다. */
@@ -498,6 +537,9 @@ export default abstract class Entity implements TagReadable {
             throw new Error(`StatusEffect duration must be a positive finite number: ${duration}`);
         }
         const normalizedLevel = type.normalizeLevel(level);
+        const interaction = resolveStatusEffectInteractions(this, type, duration, normalizedLevel);
+        if (!interaction.accepted) return { action: StatusEffectApplyAction.REJECTED };
+        duration = interaction.duration;
         const existing = this.statusEffects.get(type.id);
         if (existing) {
             let action = StatusEffectApplyAction.IGNORED;
@@ -618,13 +660,15 @@ export default abstract class Entity implements TagReadable {
             penetration = attacker?.attribute.get(AttributeType.MAGIC_PEN) ?? 0;
         }
 
-        const finalDamage = fixedDamage
+        const receivedModifier = this.getDamageReceivedModifier();
+        const finalDamage = (fixedDamage
             ? Math.max(0, rawAmount)
-            : calculateFinalDamage(effect.value, defense, penetration);
+            : calculateFinalDamage(effect.value, defense, penetration)) * receivedModifier;
         const absorbedDamage = this.absorbShieldDamage(finalDamage, type);
         const lifeDamage = Math.max(0, finalDamage - absorbedDamage);
 
         this.life = this.life - lifeDamage;
+        if (lifeDamage > 0) this.removeStatusEffect('sleep', StatusEffectRemovalReason.INTERACTION);
         if (this.life <= 0) this.clearShields();
         const remainingLife = this.life;
 
@@ -633,7 +677,7 @@ export default abstract class Entity implements TagReadable {
         return {
             type,
             rawAmount,
-            modifiedAmount: effect.value,
+            modifiedAmount: effect.value * receivedModifier,
             finalDamage,
             lifeDamage,
             absorbedDamage,
@@ -642,7 +686,7 @@ export default abstract class Entity implements TagReadable {
             critical: cause?.critical === true,
             evaded: false,
             fixedDamage,
-            effectModifier: effect.modifier,
+            effectModifier: effect.modifier * receivedModifier,
             effectSourceTag: effect.sourceTag || undefined,
             effectTargetTag: effect.targetTag || undefined,
         };
@@ -737,9 +781,9 @@ export default abstract class Entity implements TagReadable {
         const combatType = combat.damageType;
         const combatOptions = combat.options;
 
-        const guaranteedEvasion = !combatOptions.unavoidable && target.canPerformAction(ActionType.MOVEMENT)
+        const guaranteedEvasion = !combatOptions.unavoidable && target.canPerformAction(ActionType.EVASION)
             && target.consumeGuaranteedEvasion();
-        const evasionChance = combatOptions.unavoidable || !target.canPerformAction(ActionType.MOVEMENT)
+        const evasionChance = combatOptions.unavoidable || !target.canPerformAction(ActionType.EVASION)
             ? 0
             : guaranteedEvasion ? 1 : calculateEvasionChance(
                 this.attribute.get(AttributeType.SPEED),

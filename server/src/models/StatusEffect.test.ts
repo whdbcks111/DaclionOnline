@@ -194,6 +194,7 @@ test('마비독 earlyUpdate 제한은 source별로 한 tick만 유지되고 다�
     assert.equal(living.canPerformAction(ActionType.SKILL), false);
     assert.equal(living.canPerformAction(ActionType.ATTACK), false);
     assert.equal(living.canPerformAction(ActionType.MOVEMENT), false);
+    assert.equal(living.canPerformAction(ActionType.EVASION), false);
     assert.equal(living.canPerformAction(ActionType.LOCATION_TRAVEL), false);
     assert.equal(living.canPerformAction(ActionType.CHAT), true);
     assert.equal(living.canPerformAction(ActionType.COMMAND), true);

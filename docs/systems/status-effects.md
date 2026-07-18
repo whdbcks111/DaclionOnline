@@ -26,6 +26,7 @@ Entity
 - 적용: `applyStatusEffect(type, duration, level)`
 - 제거: `removeStatusEffect`, `clearStatusEffects`
 - lifecycle: `updateStatusEffects`는 일반적으로 게임 루프가 호출한다.
+- 상쇄 정의: `defineStatusEffectInteraction`, `defineStatusEffectNeutralization`, 조회용 `getStatusEffectInteractionSnapshots`.
 
 ## 적용과 병합 규칙
 
@@ -39,6 +40,19 @@ Entity
 | 신규 level이 낮음 | duration과 관계없이 무시 |
 
 모든 갱신은 기존 `StatusEffect` 객체를 유지한다. `onStart`를 재실행하지 않고 `metadataDelta`, 누적 틱 시간과 기존 `onUpdate` 흐름이 이어진다. 결과는 클래스형 enum `StatusEffectApplyAction`의 `ADDED/UPGRADED/REFRESHED/IGNORED/REJECTED`로 확인할 수 있다.
+
+### 효과 상호작용
+
+같은 타입 병합보다 먼저 `StatusEffectInteraction`의 단방향 표를 적용한다. `REJECT_INCOMING`은 저항 효과가 신규 디버프를 막고, `REMOVE_EXISTING`은 해독·노출처럼 새 효과가 기존 효과를 지운다. `NEUTRALIZE`는 양쪽의 `레벨 × 남은 시간`을 세기로 계산해 약한 쪽을 제거하고 강한 쪽 duration만 차이만큼 남긴다. 동일 세기는 둘 다 제거된다. 시간만 줄일 때는 기존 인스턴스와 metadata를 유지하는 `StatusEffect.reduceDuration()`을 사용한다.
+
+현재 표준 상호작용은 다음과 같다.
+
+- 화염 ↔ 빙결, 둔화 ↔ 신속: 세기 상쇄.
+- 화염 저항 → 화염, 빙결 저항 → 빙결: 기존 효과 제거 후 지속 중 신규 효과 차단.
+- 해독 → 독·맹독·마비독, 보존 → 부패: 기존 효과 제거 후 지속 중 신규 효과 차단.
+- 발각됨 → 투명화: 투명화 제거 및 재적용 차단.
+- 화염 → 투명화: 투명화 제거, 불타는 동안 투명화 차단.
+- 수면: 실제 생명력 피해를 받으면 `INTERACTION` 사유로 즉시 해제.
 
 Metadata는 Skill/Item과 같은 원본+top-level delta 방식이다. `getMetadata/getMetadataSnapshot/getMetadataDeltaSnapshot/setMetadata/resetMetadata`를 사용한다. 설명 문자열은 `{{level}}`, `{{duration}}`, `{{meta.key}}`, `{{calc.key}}`를 치환하며 기존 채팅 색상 문법을 보존한다.
 
@@ -62,6 +76,10 @@ Metadata는 Skill/Item과 같은 원본+top-level delta 방식이다. `getMetada
 callback은 대상의 raw 필드를 우회하지 않고 `damage`, `heal`, 상태효과, 태그, 행동 제한 같은 Entity 공개 API를 사용한다.
 
 ## 기본 상태효과
+
+`data/statusEffects.ts`는 레거시 게임의 효과 규칙을 현재 Attribute·Action·TagEffect 공개 API로 이식한다. 독·출혈·부패, 회복/방어/마법저항 감소, 마법/근력 강화, 생명력/정신력 재생, 경험 증폭, 둔화/신속, 침묵/속박/기절/제압/멀미/실명/에어본/매혹/공포/수면, 무적/투명화/발각, 화염·빙결 저항/해독/보존/빙결을 제공한다. 레거시 전직 연출 전용 `심연/두 번째 심연`과 현재 능력치가 없는 원거리 공격 강화는 그대로 이식하지 않는다.
+
+지속 modifier는 모두 `status-effect:{id}` source로 매 update 교체하고 제거 callback에서 자기 source만 정리한다. 무적은 `Entity`의 source 기반 받는 피해 배율을 0으로 만들고, 경험 증폭은 source 기반 경험치 획득 배율을 적용한다. 독·출혈·부패·빙결은 현재 속성 태그와 피해 API를 사용하므로 보호막·사망 처리·속성 관계를 우회하지 않는다.
 
 ### 화염 (`StatusEffectType.FIRE`)
 
@@ -103,7 +121,7 @@ callback은 대상의 raw 필드를 우회하지 않고 `damage`, `heal`, 상태
 
 ## 행동 제한 API
 
-`ActionType`은 `SKILL`, `CHAT`, `COMMAND`, `ATTACK`, `MOVEMENT`, `LOCATION_TRAVEL`을 가진 클래스형 enum이다. SkillBook, 채팅 입력, 명령 버튼/입력, Entity 공격, 속도 기반 자동 회피, `/이동`이 각각 소유 action을 검사한다. `MOVEMENT`가 제한된 피격자는 속도 차이가 나더라도 회피율이 0%가 된다.
+`ActionType`은 `SKILL`, `ITEM_USE`, `CHAT`, `COMMAND`, `ATTACK`, `MOVEMENT`, `EVASION`, `LOCATION_TRAVEL`을 가진 클래스형 enum이다. SkillBook, 아이템 사용, 채팅 입력, 명령 버튼/입력, Entity 공격, 속도 기반 자동 회피, 필드 이동과 `/이동`이 각각 소유 action을 검사한다. 자동 회피는 `EVASION`만 검사하므로 실명처럼 회피만 막거나 속박처럼 이동과 회피를 함께 막는 효과를 구분할 수 있다.
 
 - 지속 제한: `disableAction/disableActions(action, source)`, `enableAction`, `clearActionDisableSource`
 - 한 tick 제한: `disableActionForTick/disableActionsForTick`, `clearTickActionDisableSource`

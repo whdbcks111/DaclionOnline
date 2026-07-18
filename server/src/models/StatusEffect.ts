@@ -54,6 +54,7 @@ export class StatusEffectRemovalReason {
     static readonly INVALID_TARGET = new StatusEffectRemovalReason('invalidTarget', '대상 조건 불충족');
     static readonly TARGET_DEFEATED = new StatusEffectRemovalReason('targetDefeated', '대상 제압');
     static readonly ERROR = new StatusEffectRemovalReason('error', '오류');
+    static readonly INTERACTION = new StatusEffectRemovalReason('interaction', '다른 효과와 상쇄');
 
     private constructor(readonly key: string, readonly label: string) {
         StatusEffectRemovalReason.all.push(this);
@@ -379,6 +380,15 @@ export default class StatusEffect implements TagReadable {
         return true;
     }
 
+    /** 상쇄 규칙이 인스턴스와 metadata를 유지한 채 남은 시간만 소모한다. */
+    reduceDuration(duration: number): number {
+        if (!Number.isFinite(duration) || duration < 0) {
+            throw new Error(`StatusEffect duration reduction must be non-negative: ${duration}`);
+        }
+        this._duration = Math.max(0, this._duration - duration);
+        return this._duration;
+    }
+
     start(target: Entity): StatusEffectLifecycleResult | void {
         return this.type.onStart?.({ target, effect: this });
     }
@@ -526,6 +536,7 @@ function updateParalyticPoisonEffect(
         ActionType.SKILL,
         ActionType.ATTACK,
         ActionType.MOVEMENT,
+        ActionType.EVASION,
         ActionType.LOCATION_TRAVEL,
     ], getStatusModifierSource(effect));
 }

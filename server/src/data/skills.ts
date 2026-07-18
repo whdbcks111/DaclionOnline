@@ -16,6 +16,7 @@ import { getLocation } from '../models/Location.js';
 import { ActionType } from '../models/Action.js';
 import type Entity from '../models/Entity.js';
 import { ShieldType } from '../models/Shield.js';
+import { LegacyStatusEffects } from './statusEffects.js';
 
 const CRITICAL_HIT_STAT = 'combat:critical_hits';
 
@@ -230,14 +231,7 @@ const ELEMENTAL_INSIGHT = defineAttributeBuff('elemental_insight', '원소 통�
     { attribute: AttributeType.MENTALITY_REGEN, op: 'add', value: level => valueByLevel(level, 2, 0.75) },
 ]);
 
-const STUN = StatusEffectType.define({
-    id: 'stun', label: '기절', icon: 'status-effects/paralytic_poison', maxLevel: 5,
-    descriptionTemplate: '공격·스킬·이동·장소 이동 행동을 할 수 없습니다.',
-    onStart: ({ target, effect }) => applyStun(target, effect.type.id),
-    onEarlyUpdate: ({ target, effect }) => applyStun(target, effect.type.id),
-    onRemove: ({ target, effect }) => target.clearActionDisableSource(`status:${effect.type.id}`),
-    aliases: ['기절'], tags: [],
-});
+const STUN = LegacyStatusEffects.STUN;
 
 const WIND_EVASION = StatusEffectType.define({
     id: 'wind_evasion', label: '바람 회피', icon: 'skills/career_archer', maxLevel: 5,
@@ -276,10 +270,6 @@ function defineAttributeBuff(id: string, label: string, description: string, mod
         onRemove: ({ target }) => target.attribute.removeBySource(`status:${id}`),
         tags: [],
     });
-}
-
-function applyStun(target: import('../models/Entity.js').default, id: string): void {
-    target.disableActions([ActionType.SKILL, ActionType.ATTACK, ActionType.MOVEMENT, ActionType.LOCATION_TRAVEL], `status:${id}`);
 }
 
 function applyStealth(target: import('../models/Entity.js').default, id: string, level = 1): void {

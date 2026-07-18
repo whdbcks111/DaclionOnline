@@ -318,7 +318,7 @@ export default class Player extends Entity {
 
     /** 경험치 획득 및 레벨업 처리. 레벨업한 레벨 목록을 반환 */
     gainExp(amount: number): number[] {
-        this._exp += amount;
+        this._exp += Math.floor(amount * this.getExperienceGainModifier());
         this._dirty = true;
 
         const levelsGained: number[] = [];
