@@ -584,7 +584,19 @@ export default abstract class Entity implements TagReadable {
 
     // -- 전투 --
 
+    /** 현재 대상이 비어 있으면 공격자의 최종 owner를 전투 대상으로 획득한다. */
+    acquireCombatTarget(attacker: Entity): boolean {
+        const owner = attacker.attackOwner;
+        if (this.currentTarget || owner === this || owner.isDefeated) return false;
+        this.currentTarget = owner;
+        return true;
+    }
+
     damage(rawAmount: number, type: DamageType = 'physical', cause: DamageCause | null = null): DamageResult {
+        if (cause?.type === 'attack' && cause.causeEntity) {
+            this.acquireCombatTarget(cause.causeEntity);
+        }
+
         let defense = 0;
         let penetration = 0;
         const fixedDamage = cause?.fixedDamage === true;
@@ -705,6 +717,7 @@ export default abstract class Entity implements TagReadable {
         options: AttackOptions = {},
     ): DamageResult | null {
         if (!this.canAttack(target)) return null;
+        target.acquireCombatTarget(this);
 
         // 기본 공격력: 물리 → atk, 마법 → magicForce
         const baseAmount = amount ?? (type === 'physical'

@@ -1,5 +1,5 @@
 import Entity from "./Entity.js";
-import type { DamageResult, DamageType, DamageCause } from "./Entity.js";
+import type { DamageType } from "./Entity.js";
 import Equipment from "./Equipment.js";
 import { Item, getItemData } from "./Item.js";
 import type { AttributeRecord } from "./Attribute.js";
@@ -146,16 +146,6 @@ export default class Monster extends Entity {
             const item = new Item(eq.itemDataId, 1, itemData.baseDurability, null);
             this.equipment.equip(eq.slot, item, this.attribute, eq.slotIndex);
         }
-    }
-
-    /** 피격 시 공격자를 자동 타게팅 (타겟 없을 때만) */
-    override damage(rawAmount: number, type: DamageType = 'physical', cause: DamageCause | null = null): DamageResult {
-        const result = super.damage(rawAmount, type, cause);
-        const attacker = cause?.causeEntity?.attackOwner;
-        if (attacker && !this.currentTarget) {
-            this.currentTarget = attacker;
-        }
-        return result;
     }
 
     /** 보유한 실제 SkillData를 몬스터 AI나 외부 패턴 로직에서 직접 발동한다. */

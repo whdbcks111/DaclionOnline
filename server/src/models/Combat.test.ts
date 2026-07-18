@@ -36,6 +36,7 @@ test('일반 공격은 회피되지만 회피 불가 옵션과 이동 제한은 
         assert.equal(evaded.evaded, true);
         assert.equal(evaded.finalDamage, 0);
         assert.equal(target.life, 100);
+        assert.equal(target.currentTarget, attacker);
 
         attacker.earlyUpdate(attacker.maxAttackCooldown);
         const unavoidable = attacker.attack(target, 'physical', 10, {
@@ -57,6 +58,26 @@ test('일반 공격은 회피되지만 회피 불가 옵션과 이동 제한은 
     } finally {
         Math.random = originalRandom;
     }
+});
+
+test('피격자는 대상이 없을 때 공격자를 자동 타게팅하고 기존 대상은 유지한다', () => {
+    const firstAttacker = new TestEntity('첫 공격자', { atk: 10, speed: 100 });
+    const secondAttacker = new TestEntity('두 번째 공격자', { atk: 10, speed: 100 });
+    const target = new TestEntity('피격자', { speed: 100 });
+
+    const firstResult = firstAttacker.attack(target, 'physical', 10, {
+        unavoidable: true,
+        consumeMainHandDurability: false,
+    });
+    assert.ok(firstResult);
+    assert.equal(target.currentTarget, firstAttacker);
+
+    const secondResult = secondAttacker.attack(target, 'physical', 10, {
+        unavoidable: true,
+        consumeMainHandDurability: false,
+    });
+    assert.ok(secondResult);
+    assert.equal(target.currentTarget, firstAttacker);
 });
 
 test('고정 피해 옵션은 치명타·속성 타입별 방어·관통 계산 없이 정확한 피해를 준다', () => {
