@@ -857,6 +857,17 @@ export default abstract class Entity implements TagReadable {
                 logger.error(`아이템 공격 적중 효과 실패: ${weapon?.itemDataId ?? 'unknown'}`, error);
             }
         }
+        if (damageResult.finalDamage > 0) {
+            emitGameEvent(GameEventIds.ATTACK_HIT, {
+                actor: this,
+                subject: target,
+                data: {
+                    damageType: combatType,
+                    finalDamage: damageResult.finalDamage,
+                    weaponType: getAttackWeaponType(this.attackOwner),
+                },
+            });
+        }
         // 즉시 피해를 적용하는 물리 직접 공격은 근접 공격으로 취급한다.
         this.commitAttack(combatOptions.consumeMainHandDurability ?? combatType === 'physical');
         const { finalDamage, effectModifier } = damageResult;
@@ -1007,6 +1018,19 @@ export default abstract class Entity implements TagReadable {
         this.currentTarget = null;
         this.lastDamageCause = null;
     }
+}
+
+function getAttackWeaponType(owner: Entity): string {
+    const weapon = owner.equipment.getEquipped(EquipSlotType.MAIN_HAND.key);
+    if (!weapon) return '';
+    for (const [type, tag] of [
+        ['sword', GameTags.WEAPON_SWORD],
+        ['axe', GameTags.WEAPON_AXE],
+        ['bow', GameTags.WEAPON_BOW],
+        ['dagger', GameTags.WEAPON_DAGGER],
+        ['staff', GameTags.WEAPON_STAFF],
+    ] as const) if (weapon.hasTag(tag)) return type;
+    return '';
 }
 
 function addActionDisableSource(

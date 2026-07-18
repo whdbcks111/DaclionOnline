@@ -487,6 +487,69 @@ const elitePassives = [
 
 for (const passive of elitePassives) defineJobPassive(passive);
 
+const weaponMasteries = [
+    {
+        id: 'sword_mastery', name: '검 숙련', weapon: 'sword', label: '검', tag: GameTags.WEAPON_SWORD, icon: 'items/old_sword',
+        description: '{{icon.atk}} 검 장착 중 공격력이 [color=orange]{{atk}}[/color] 증가합니다.',
+        modifiers: [{ attribute: AttributeType.ATK.key, op: 'multiply', value: 1.05, label: '공격력 증가', display: '+5%' }],
+    },
+    {
+        id: 'axe_mastery', name: '도끼 숙련', weapon: 'axe', label: '도끼', tag: GameTags.WEAPON_AXE, icon: 'items/training_axe',
+        description: '{{icon.atk}} 도끼 장착 중 공격력이 [color=orange]{{atk}}[/color] 증가합니다.',
+        modifiers: [{ attribute: AttributeType.ATK.key, op: 'multiply', value: 1.08, label: '공격력 증가', display: '+8%' }],
+    },
+    {
+        id: 'bow_mastery', name: '활 숙련', weapon: 'bow', label: '활', tag: GameTags.WEAPON_BOW, icon: 'items/light_bow',
+        description: '{{icon.critRate}} 활 장착 중 치명타 확률이 [color=gold]{{critRate}}[/color] 증가합니다.',
+        modifiers: [{ attribute: AttributeType.CRIT_RATE.key, op: 'add', value: 0.03, label: '치명타 확률 증가', display: '+3%p' }],
+    },
+    {
+        id: 'dagger_mastery', name: '단검 숙련', weapon: 'dagger', label: '단검', tag: GameTags.WEAPON_DAGGER, icon: 'items/venom_dagger',
+        description: '{{icon.armorPen}} 단검 장착 중 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+        modifiers: [{ attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 5, label: '방어 관통력 증가', display: '+5' }],
+    },
+    {
+        id: 'staff_mastery', name: '지팡이 숙련', weapon: 'staff', label: '지팡이', tag: GameTags.WEAPON_STAFF, icon: 'items/apprentice_staff',
+        description: '{{icon.magicForce}} 지팡이 장착 중 마법력이 [color=$magic]{{magicForce}}[/color] 증가합니다.',
+        modifiers: [{ attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.07, label: '마법력 증가', display: '+7%' }],
+    },
+] as const;
+
+for (const mastery of weaponMasteries) {
+    const source = `skill:${mastery.id}:passive`;
+    defineSkill({
+        id: mastery.id,
+        name: mastery.name,
+        icon: mastery.icon,
+        maxLevel: 1,
+        descriptionTemplate: mastery.description,
+        costTemplate: '소모값 없음',
+        activationConditionTemplate: `${mastery.label}을(를) 장착한 동안 항상 적용됩니다.`,
+        baseMetadata: null,
+        calculatedFields: Object.fromEntries(mastery.modifiers.map(modifier => [
+            modifier.attribute,
+            () => `[tooltip=${modifier.label}: ${modifier.display}]${modifier.display}[/tooltip]`,
+        ])),
+        calculateExperienceGain: () => 0,
+        calculateRequiredExperience: () => 0,
+        autoAcquire: {
+            watchedProgress: [`combat:weapon_hits/${mastery.weapon}`],
+            check: ({ player }) => (player?.progress.getCounter(`combat:weapon_hits/${mastery.weapon}`) ?? 0n) >= 200n,
+        },
+        weaponRequirement: weaponRequirement(`${mastery.label}을(를) 장착해야 합니다.`, mastery.tag),
+        canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
+        onPassiveUpdate: ({ owner }) => {
+            if (owner.attribute.hasSource(source)) return;
+            owner.attribute.addModifiers(mastery.modifiers.map(({ label: _label, display: _display, ...modifier }) => ({
+                ...modifier,
+                source,
+            })));
+        },
+        onPassiveInactive: ({ owner }) => owner.attribute.removeBySource(source),
+        tags: [GameTags.SKILL_PASSIVE],
+    });
+}
+
 function weaponRequirement(description: string, ...tags: string[]) { return { mainHandAnyTags: tags, description }; }
 function targetOrDeny(context: SkillContext): { target: Entity } | { reason: string } {
     const player = requirePlayer(context);

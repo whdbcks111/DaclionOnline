@@ -63,7 +63,7 @@
 | `CareerProfile` | `main/sub/elite/effectiveMainJob`, `hasJob`, `canAssign/assign`, `setByAdmin`, `evaluateElitePromotion`, `refreshModifiers` | Progress 영속 직업 상태, Lv.20/50 선택, 운영 조합 교체, 스킬·modifier 지급과 Lv.200 자동 전직 |
 | `Shop` | `getStock`, `consumeStock`, `update` | 재고와 재입고 |
 | Shop registry | `defineShop`, `getShop`, `updateAllShops` | 상점 정의/조회/프레임 갱신 |
-| Game events | `emitGameEvent`, `subscribeGameEvent`, `subscribeAllGameEvents`, `getRecentGameEvents` | 동기식 내부 이벤트와 원시 Entity 없는 최근 trace 스냅샷 |
+| Game events | `emitGameEvent`, `subscribeGameEvent`, `subscribeAllGameEvents`, `getRecentGameEvents` | 동기식 내부 이벤트와 원시 Entity 없는 최근 trace 스냅샷. 성공한 공격은 최종 피해·피해 타입·장착 무기 분류를 primitive data로 제공 |
 | `GameAction` | `gameAction(name).require(...).step(apply, rollback).run()` | 사전 검증 뒤 메모리 변경을 적용하고 실패한 경우 완료 step을 역순 롤백 |
 | `NPC`, `DialogueScenario`, `Dialogue` | `NPC.define/getNpc/getAll`, `getEntryScenario/getScenario`, `say/event/setFlag/acceptQuest/turnInQuest/goto/choice/end` | NPC 정적 정의, 조건부 generator 장면과 타입별 대화·퀘스트 액션 생성 |
 | NPC dialogue | `startNpcDialogue`, `chooseNpcDialogue`, `endNpcDialogue/endNpcDialogueByUserId`, `is/getActiveNpcDialogue`, `updateNpcDialogues` | player별 비영속 대화 세션 시작·선택·종료와 이탈 안전망 |

@@ -17,7 +17,7 @@ Entity/Resource/SkillBook
 
 `GameEvent`는 도메인 동작을 직접 DB나 스킬에 결합하지 않는 동기식 내부 이벤트다. handler에서는 DB I/O를 하지 않고 Player가 소유한 메모리 상태만 변경한다. 운영 진단용 trace는 최근 500개만 유지하며 `getRecentGameEvents()`가 ID·사용자 ID·이름·primitive data 스냅샷만 반환한다. 프로세스를 재시작하면 trace는 사라진다.
 
-현재 표준 이벤트 ID는 치명타, 공격 회피, Entity 제압, Resource 파괴, 스킬 획득·시작·종료, 제작법 발견·아이템 제작, NPC 대화, 상태효과, 퀘스트, 직업 배정·엘리트 전직이다. 새 이벤트는 `GameEventIds`에 넣고 실제 상태가 확정되는 모델 API에서 `emitGameEvent()`를 호출한다. 퀘스트 목표 추적은 [퀘스트 시스템](quests.md)을 참고한다.
+현재 표준 이벤트 ID는 치명타, 공격 적중, 공격 회피, Entity 제압, Resource 파괴, 스킬 획득·시작·종료, 제작법 발견·아이템 제작, NPC 대화, 상태효과, 퀘스트, 직업 배정·엘리트 전직이다. 새 이벤트는 `GameEventIds`에 넣고 실제 상태가 확정되는 모델 API에서 `emitGameEvent()`를 호출한다. 퀘스트 목표 추적은 [퀘스트 시스템](quests.md)을 참고한다.
 
 ## 진행 상태와 통계
 
@@ -32,6 +32,8 @@ Entity/Resource/SkillBook
 모든 key는 `namespace:path` 형식이고 사용 전에 `defineProgress()` 또는 `defineStatistic()`으로 등록한다. 다른 기능은 내부 Map이나 Prisma row를 참조하지 않고 위 목적형 API와 `getSnapshots()`, `subscribeChanges()`만 사용한다. 기본값인 `0/false/빈 문자열`은 DB row를 만들지 않는다.
 
 `defineStatistic()`은 하나의 게임 이벤트를 구독하고 최종 `attackOwner`가 Player일 때 해당 counter를 증가시킨다. 현재 `combat:critical_hits`가 공개 통계로 등록되어 `/통계`에 표시된다.
+
+성공한 공격은 `combat:attack_hit` 이벤트에 직렬화 가능한 `weaponType`과 최종 피해량을 담는다. 검·도끼·활·단검·지팡이 적중 통계는 숨김 counter로 누적되며 각 200회에 해당 무기 숙련 패시브를 자동 획득한다. 숙련 효과는 올바른 주무기를 장착한 동안에만 적용되고, 투사체 공격은 최종 `attackOwner`의 장착 무기를 기준으로 분류한다.
 
 제작법 발견은 새 테이블을 추가하지 않고 `crafting:recipe/{namespace}/{path}` 형식의 숨김 FLAG를 사용한다. 정의와 자동 발견 흐름은 [crafting.md](crafting.md)를 참고한다.
 

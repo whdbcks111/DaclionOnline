@@ -11,6 +11,22 @@ defineStatistic({
     format: value => `${value}회`,
 });
 
+for (const weapon of [
+    { key: 'sword', label: '검' },
+    { key: 'axe', label: '도끼' },
+    { key: 'bow', label: '활' },
+    { key: 'dagger', label: '단검' },
+    { key: 'staff', label: '지팡이' },
+] as const) defineStatistic({
+    id: `combat:weapon_hits/${weapon.key}`,
+    eventId: GameEventIds.ATTACK_HIT,
+    label: `${weapon.label} 적중 횟수`,
+    description: `${weapon.label} 숙련 스킬의 숨겨진 획득 조건입니다.`,
+    visible: false,
+    amount: event => event.data.weaponType === weapon.key ? 1 : 0,
+    format: value => `${value}회`,
+});
+
 defineStatistic({
     id: 'combat:pvp_kills',
     eventId: GameEventIds.PVP_KILL,
