@@ -246,11 +246,14 @@ export default function MiniGameOverlay() {
   if (game.type === 'hazard_dodge') {
     const config = game.config
     const remaining = Math.max(0, config.durationMs - elapsed)
+    const themeClass = config.theme === 'crystal' ? styles.crystalDodgeBoard
+      : config.theme === 'ironroot' ? styles.ironrootDodgeBoard
+        : config.theme === 'astral' ? styles.astralDodgeBoard : ''
     return <div className={styles.backdrop} role="dialog" aria-modal="true" aria-label="위험 회피 미니게임">
       <section className={styles.panel}>
         <header><div><span className={styles.rarity}>{config.label}</span><h2>위험 회피</h2></div><p>WASD · 방향키 · 모바일 조이스틱</p></header>
         <div className={styles.timer}>{(remaining / 1000).toFixed(1)}초</div>
-        <div className={`${styles.board} ${styles.dodgeBoard}`}>
+        <div className={`${styles.board} ${styles.dodgeBoard} ${themeClass}`}>
           {dodgeState.hazards.map(hazard => <span
             key={hazard.id}
             className={`${styles.hazard} ${hazard.type === 'bomb' ? styles.bomb : styles.laser} ${hazard.active ? styles.hazardActive : ''}`}

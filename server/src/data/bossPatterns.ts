@@ -17,6 +17,7 @@ interface HazardBossPatternData {
     id: string;
     label: string;
     mode: HazardDodgeMode;
+    theme: HazardDodgeConfig['theme'];
     difficulty: number;
     failureLifeRatio: number;
     activeCrystalDifficulty?: number;
@@ -41,6 +42,7 @@ function createHazardConfig(player: Player, data: HazardBossPatternData, difficu
         durationMs: data.durationMs ?? 5_000,
         label: data.label,
         mode: data.mode,
+        theme: data.theme,
         difficulty,
         playerLabel: player.name.slice(0, 1) || 'P',
         playerSpeed: Math.max(10, Math.min(48, movementSpeed * 18)),
@@ -118,7 +120,8 @@ function registerHazardBossPattern(data: HazardBossPatternData): void {
 registerHazardBossPattern({
     id: 'crystal:cave-in',
     label: '수정 낙석',
-    mode: 'bombs',
+    mode: 'chain_bombs',
+    theme: 'crystal',
     difficulty: 3,
     failureLifeRatio: 0.18,
 });
@@ -127,6 +130,7 @@ registerHazardBossPattern({
     id: 'ironroot:resonance-storm',
     label: '지핵 공명 폭주',
     mode: 'resonance',
+    theme: 'ironroot',
     difficulty: 8,
     activeCrystalDifficulty: 10,
     failureLifeRatio: 0.45,
@@ -139,9 +143,13 @@ registerHazardBossPattern({
 registerHazardBossPattern({
     id: 'astral:crossfire',
     label: '성계 교차포화',
-    mode: 'mixed',
-    difficulty: 6,
-    failureLifeRatio: 0.3,
+    mode: 'crossfire',
+    theme: 'astral',
+    difficulty: 8,
+    failureLifeRatio: 0.5,
+    durationMs: 10_000,
+    playerSize: 7,
+    failureEffect: { statusEffectId: 'blindness', duration: 5, level: 10 },
 });
 
 const CRYSTAL_PROTECTION_SOURCE = 'boss:ironroot:resonance-crystals';

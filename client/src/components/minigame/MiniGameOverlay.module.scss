@@ -100,7 +100,13 @@
   border-color: $color-primary;
 }
 .fish { position: absolute; z-index: 2; width: clamp(2rem, 9%, 3.4rem); aspect-ratio: 1; transform: translate(-50%, -50%); object-fit: contain; pointer-events: none; user-select: none; }
-.dodgeBoard { background: $color-bg-secondary; }
+.dodgeBoard {
+  --hazard-color: #c94f52;
+  background: $color-bg-secondary;
+}
+.crystalDodgeBoard { --hazard-color: #4ba7c0; background: color-mix(in srgb, #4ba7c0 8%, $color-bg-secondary); }
+.ironrootDodgeBoard { --hazard-color: #c7783f; background: color-mix(in srgb, #c7783f 8%, $color-bg-secondary); }
+.astralDodgeBoard { --hazard-color: #8070cf; background: color-mix(in srgb, #8070cf 9%, $color-bg-secondary); }
 .hazard {
   position: absolute;
   z-index: 1;
@@ -108,9 +114,9 @@
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
-.bomb { background: color-mix(in srgb, $color-danger 18%, transparent); border: .12rem dashed $color-danger; border-radius: 50%; }
-.laser { background: color-mix(in srgb, $color-danger 16%, transparent); border: .12rem dashed $color-danger; }
-.hazardActive { background: color-mix(in srgb, $color-danger 75%, transparent); border-style: solid; }
+.bomb { background: color-mix(in srgb, var(--hazard-color) 18%, transparent); border: .12rem dashed var(--hazard-color); border-radius: 50%; }
+.laser { background: color-mix(in srgb, var(--hazard-color) 16%, transparent); border: .12rem dashed var(--hazard-color); }
+.hazardActive { background: color-mix(in srgb, var(--hazard-color) 75%, transparent); border-style: solid; }
 .playerToken {
   position: absolute;
   z-index: 3;

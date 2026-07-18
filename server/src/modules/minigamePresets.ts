@@ -93,6 +93,9 @@ function dodgePreset(
                 durationMs: endgame ? 10_000 : 5_000,
                 label,
                 mode,
+                theme: mode === 'chain_bombs' || mode === 'bombs' ? 'crystal'
+                    : mode === 'resonance' ? 'ironroot'
+                        : mode === 'crossfire' ? 'astral' : 'neutral',
                 difficulty,
                 playerLabel: player.name.slice(0, 1) || 'P',
                 playerSpeed: Math.max(10, Math.min(48, movementSpeed * 18)),
@@ -162,6 +165,8 @@ const PRESETS: readonly MiniGamePreset[] = Object.freeze([
     dodgePreset('dodge:lasers:normal', '레이저 회피 보통', '이동속도 동기화 · 가로/세로 레이저 회피', 'lasers', 4),
     dodgePreset('dodge:mixed:boss', '복합 보스 패턴', '이동속도 동기화 · 폭탄과 레이저 복합 패턴', 'mixed', 6),
     dodgePreset('dodge:resonance:endgame', '후반 공명 폭주', '10초 · 레이저 연사 · 심장수호자 수정 생존 기준 난이도 10', 'resonance', 10),
+    dodgePreset('dodge:crossfire:astral', '성계 교차포화', '10초 · 가로/세로 시간차 교차 레이저 · 난이도 8', 'crossfire', 8),
+    dodgePreset('dodge:chain-bombs:crystal', '수정 연쇄 낙석', '중앙에서 커진 뒤 상하좌우로 이어지는 연쇄 폭발', 'chain_bombs', 4),
     forgePreset('forge:steady', '기초 단조', '일정한 박자에 맞춰 망치를 내리치는 단조 테스트', 620, 0.65),
     forgePreset('forge:rapid', '고속 단조', '빠른 박자와 좁은 판정의 상급 단조 테스트', 420, 0.78),
 ]);

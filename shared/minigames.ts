@@ -1,6 +1,7 @@
 export type MiniGameType = 'fishing_capture' | 'hazard_dodge' | 'forge_rhythm'
 export type FishingCaptureShape = 'circle' | 'square' | 'rectangle'
-export type HazardDodgeMode = 'bombs' | 'lasers' | 'mixed' | 'resonance'
+export type HazardDodgeMode = 'bombs' | 'lasers' | 'mixed' | 'chain_bombs' | 'resonance' | 'crossfire'
+export type HazardDodgeTheme = 'neutral' | 'crystal' | 'ironroot' | 'astral'
 
 export interface MiniGameInputSample {
     /** 미니게임 시작 후 경과 시간(ms) */
@@ -71,6 +72,7 @@ export interface HazardDodgeConfig {
     /** 실제 보스 패턴명 또는 관리자 테스트 프리셋명. */
     label: string
     mode: HazardDodgeMode
+    theme: HazardDodgeTheme
     difficulty: number
     playerLabel: string
     /** 보드 너비 대비 초당 이동 비율. 실제 이동속도 능력치에서 계산한다. */
@@ -274,15 +276,44 @@ export function getHazardDodgeHazards(config: HazardDodgeConfig, elapsedMs: numb
     for (let index = 0; index < maximum; index++) {
         const startAt = firstAt + index * interval
         const laserBarrage = config.mode === 'resonance' && index % 5 === 3
-        const type = config.mode === 'mixed' || config.mode === 'resonance'
+        const chainBomb = config.mode === 'chain_bombs'
+        const crossfire = config.mode === 'crossfire'
+        const type = chainBomb ? 'bomb' : crossfire ? 'laser' : config.mode === 'mixed' || config.mode === 'resonance'
             ? (randomUnit(config.seed, index, 0) < 0.52 ? 'bomb' : 'laser')
             : config.mode === 'bombs' ? 'bomb' : 'laser'
-        const activeMs = laserBarrage ? 300 : type === 'bomb' ? 280 : 380
+        const activeMs = laserBarrage ? 300 : crossfire ? 350 : chainBomb ? 350 : type === 'bomb' ? 280 : 380
         const activeAt = startAt + telegraphMs
         const barrageStepMs = 110
-        const endAt = activeAt + activeMs + (laserBarrage ? barrageStepMs * 2 : 0)
+        const crossfireStepMs = 140
+        const endAt = activeAt + activeMs
+            + (laserBarrage ? barrageStepMs * 2 : crossfire ? crossfireStepMs : 0)
         if (elapsedMs < startAt || elapsedMs > endAt) continue
         const difficulty = clamp(config.difficulty, 1, MAX_HAZARD_DODGE_DIFFICULTY)
+        if (crossfire) {
+            const thickness = 6 + difficulty * 1.2
+            for (let shot = 0; shot < 2; shot++) {
+                const vertical = shot === 0
+                const shotActiveAt = activeAt + shot * crossfireStepMs
+                const shotEndAt = shotActiveAt + activeMs
+                if (elapsedMs > shotEndAt) continue
+                const active = elapsedMs >= shotActiveAt
+                const progress = active
+                    ? clamp((elapsedMs - shotActiveAt) / activeMs, 0, 1)
+                    : clamp((elapsedMs - startAt) / Math.max(1, shotActiveAt - startAt), 0, 1)
+                const position = 12 + randomUnit(config.seed, index, 4 + shot) * 76
+                hazards.push({
+                    id: `crossfire:${index}:${shot}`,
+                    type: 'laser',
+                    x: vertical ? position : 50,
+                    y: vertical ? 50 : position,
+                    width: vertical ? thickness : 100,
+                    height: vertical ? 100 : thickness,
+                    active,
+                    progress,
+                })
+            }
+            continue
+        }
         if (laserBarrage) {
             const vertical = randomUnit(config.seed, index, 3) < 0.5
             const thickness = 6 + difficulty * 1.2
@@ -313,6 +344,29 @@ export function getHazardDodgeHazards(config: HazardDodgeConfig, elapsedMs: numb
         const progress = active
             ? clamp((elapsedMs - activeAt) / activeMs, 0, 1)
             : clamp((elapsedMs - startAt) / telegraphMs, 0, 1)
+        if (chainBomb) {
+            const phase = index % 5
+            const group = Math.floor(index / 5)
+            const offset = 24 + randomUnit(config.seed, group, 8) * 12
+            const horizontalFirst = randomUnit(config.seed, group, 9) < 0.5
+            const positions = horizontalFirst
+                ? [[50, 50], [50 - offset, 50], [50 + offset, 50], [50, 50 - offset], [50, 50 + offset]]
+                : [[50, 50], [50, 50 - offset], [50, 50 + offset], [50 - offset, 50], [50 + offset, 50]]
+            const [x, y] = positions[phase]
+            const finalSize = 14 + difficulty * 2.2
+            const size = finalSize * (active ? 1 : 0.3 + progress * 0.7)
+            hazards.push({
+                id: `chain-bomb:${index}`,
+                type: 'bomb',
+                x,
+                y,
+                width: size,
+                height: size,
+                active,
+                progress,
+            })
+            continue
+        }
         if (type === 'bomb') {
             const size = 14 + difficulty * 2.2
             hazards.push({

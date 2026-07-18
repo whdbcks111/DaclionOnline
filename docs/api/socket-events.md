@@ -69,7 +69,7 @@
 | `adminPanelPlayer` | `AdminPlayerDetailData \| null` | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
 | `adminPanelResult` | `AdminPanelResult` (밸런스 분석 시 `details` 포함) | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
 | `adminPanelResult` | `AdminPanelResult` | `modules/adminPanel.ts` | 요청 소켓 호환용 결과. 사용자 피드백은 같은 요청 소켓의 `notification`으로 표시 |
-| `miniGameStart` | `MiniGameStartData` (session/token/type/만료/config, 위험 회피 config의 실제 패턴 `label`) | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
+| `miniGameStart` | `MiniGameStartData` (session/token/type/만료/config, 위험 회피 config의 실제 패턴 `label`과 단색 `theme`) | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 | `miniGameResolved` | `MiniGameResolvedData` | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 | `miniGameCancelled` | `MiniGameCancelledData` | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 
