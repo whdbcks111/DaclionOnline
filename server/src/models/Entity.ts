@@ -191,6 +191,9 @@ export default abstract class Entity implements TagReadable {
     }
 
     grantGuaranteedEvasion(source: string): void { if (source.trim()) this.guaranteedEvasionSources.add(source); }
+    hasGuaranteedEvasion(source?: string): boolean {
+        return source ? this.guaranteedEvasionSources.has(source.trim()) : this.guaranteedEvasionSources.size > 0;
+    }
     removeGuaranteedEvasion(source: string): boolean { return this.guaranteedEvasionSources.delete(source); }
     consumeGuaranteedEvasion(): boolean {
         const source = this.guaranteedEvasionSources.values().next().value as string | undefined;

@@ -787,7 +787,7 @@
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "ironroot_beast", "maxCount": 2, "respawnTime": 112 },
-      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "echo_treasure_chest", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "ironroot_labyrinth" },
@@ -884,8 +884,9 @@
     "tags": ["location:wilderness", "location:wastes", "location:dungeon", "property:earth", "property:metal"],
     "npcIds": [],
     "objects": [
+      { "type": "monster", "dataId": "ironroot_heartwarden", "maxCount": 1, "respawnTime": 900 },
       { "type": "resource", "dataId": "ironroot_resonance_crystal", "maxCount": 3, "respawnTime": 900 },
-      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "crystal_treasure_chest", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "ironroot_core" }

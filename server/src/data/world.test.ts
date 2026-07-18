@@ -15,10 +15,12 @@ import './resources.js';
 import './npcs.js';
 import './locations.js';
 import './dungeonPuzzles.js';
+import './bossPatterns.js';
 import './shops.js';
 import './fishing.js';
-import { rollTreasureReward } from './resources.js';
+import { rollLabyrinthCacheReward, rollTreasureReward } from './resources.js';
 import { MonsterAiDisposition } from '../models/Threat.js';
+import { getIronrootCrystalProtectionMultiplier } from './bossPatterns.js';
 
 const locations = JSON.parse(
     readFileSync(new URL('./locations.json', import.meta.url), 'utf-8'),
@@ -180,6 +182,19 @@ test('철근미궁은 질문문·공간전이·파괴문·보스 수정 기믹�
     ), 3);
     assert.equal(getResourceData('ironroot_riddle_door')?.attackable, false);
     assert.ok((getResourceData('ironroot_breakable_gate')?.baseAttribute.maxLife ?? 0) >= 18_000);
+
+    reloadAllLocations(locations);
+    const runtimeSanctum = getLocation('ironroot_crystal_sanctum');
+    runtimeSanctum?.update(0.05);
+    const heartwarden = runtimeSanctum?.getMonstersByDataId('ironroot_heartwarden')[0];
+    assert.equal(getIronrootCrystalProtectionMultiplier(), 0.15);
+    assert.equal(heartwarden?.getDamageReceivedModifier(), 0.15);
+    for (const crystal of runtimeSanctum?.getResourcesByDataId('ironroot_resonance_crystal') ?? []) {
+        crystal.damage(crystal.maxLife, 'absolute', { type: 'void', causeEntity: null, fixedDamage: true });
+    }
+    runtimeSanctum?.update(0.05);
+    assert.equal(getIronrootCrystalProtectionMultiplier(), 1);
+    assert.equal(heartwarden?.getDamageReceivedModifier(), 1);
 });
 
 test('광산 보스는 높은 체력과 느린 공격, 실제 스킬 패턴과 스킬북 보상을 가진다', () => {
@@ -193,12 +208,15 @@ test('광산 보스는 높은 체력과 느린 공격, 실제 스킬 패턴과 �
     assert.ok((boss.baseAttribute.attackSpeed ?? 1) <= 0.25);
     assert.deepEqual(boss.skills, [{ skillDataId: 'seismic_crush', level: 3 }]);
     assert.deepEqual(boss.skillPattern?.sequence, ['seismic_crush']);
+    assert.equal(boss.challengePattern?.handler, 'crystal:cave-in');
     assert.ok(boss.drops.some(drop => drop.itemDataId === 'seismic_crush_skillbook' && drop.chance <= 0.05));
     assert.ok(bossLocation?.objects.some(object => object.dataId === boss.id && object.maxCount === 1));
     assert.equal(getMonsterData('slime')?.ai?.disposition, MonsterAiDisposition.LAST_ATTACKER);
     assert.equal(boss.ai?.disposition, MonsterAiDisposition.THREAT);
     assert.ok((boss.ai?.weights?.healing ?? 0) > (boss.ai?.weights?.damage ?? 0));
     assert.ok((boss.ai?.tauntResistance ?? 0) >= 0.75);
+    assert.equal(getMonsterData('ironroot_heartwarden')?.challengePattern?.handler, 'ironroot:resonance-storm');
+    assert.equal(getMonsterData('astral_gatekeeper')?.challengePattern?.handler, 'astral:crossfire');
 });
 
 test('보물상자는 1~2시간 쿨타임과 가중치 기반 골드·아이템 보상을 가진다', () => {
@@ -219,6 +237,21 @@ test('보물상자는 1~2시간 쿨타임과 가중치 기반 골드·아이템 
     const swiftRod = rollTreasureReward(() => swiftValues.shift() ?? 0);
     assert.equal(swiftRod.itemDataId, 'swift_current_fishing_rod');
     assert.equal(swiftRod.itemCount, 1);
+});
+
+test('미궁 보물함은 전용 로직 아이템을 가중치로 지급하고 카테고리 fallback을 쓴다', () => {
+    assert.equal(rollLabyrinthCacheReward('echo_treasure_chest', () => 0), 'echo_hourglass');
+    assert.equal(rollLabyrinthCacheReward('echo_treasure_chest', () => 0.46), 'twisted_labyrinth_compass');
+    assert.equal(rollLabyrinthCacheReward('crystal_treasure_chest', () => 0.99), 'twisted_labyrinth_compass');
+    assert.deepEqual(getResourceData('echo_treasure_chest')?.interactionCooldown, { min: 7200, max: 10800 });
+    assert.deepEqual(getResourceData('crystal_treasure_chest')?.interactionCooldown, { min: 10800, max: 18000 });
+
+    assert.equal(getItemData('echo_hourglass')?.image, 'items/mana_potion');
+    assert.equal(getItemData('echo_hourglass')?.onUse, 'reduce_skill_cooldowns');
+    assert.equal(getItemData('twisted_labyrinth_compass')?.image, 'items/mana_potion');
+    assert.equal(getItemData('twisted_labyrinth_compass')?.onUse, 'labyrinth_compass');
+    assert.equal(getItemData('resonance_evasion_shard')?.image, 'items/diamond');
+    assert.equal(getItemData('resonance_evasion_shard')?.onUse, 'grant_single_evasion');
 });
 
 test('잡화점은 배고픔과 수분을 회복하는 음식과 음료를 판매한다', () => {

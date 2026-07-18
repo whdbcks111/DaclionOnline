@@ -122,6 +122,22 @@ export default class SkillBook {
         return [...this.skills.values()];
     }
 
+    /** 아이템·버프가 raw Skill 목록을 수정하지 않고 모든 진행 중 쿨다운을 감소시킨다. */
+    reduceCooldowns(seconds: number, now = Date.now()): { affected: number; reducedSeconds: number } {
+        if (!Number.isFinite(seconds) || seconds <= 0) throw new Error('Cooldown reduction must be positive');
+        let affected = 0;
+        let reducedSeconds = 0;
+        for (const skill of this.skills.values()) {
+            const remaining = skill.getRemainingCooldown(now);
+            if (remaining <= 0) continue;
+            const reduced = Math.min(remaining, seconds);
+            skill.startCooldown(remaining - reduced, now);
+            affected++;
+            reducedSeconds += reduced;
+        }
+        return { affected, reducedSeconds };
+    }
+
     getVisible(): readonly Skill[] {
         const owner = this.requireOwner();
         return this.getAll().filter(skill => {

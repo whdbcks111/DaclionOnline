@@ -53,6 +53,8 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 사용 효과는 `registerItemUse(id, handler)`로 등록한다. handler는 성공·실패를 포함한 모든 비동기 종료 경로에서 `finish()`를 호출해야 Inventory의 사용 잠금이 풀린다. HP/MP 포션은 coroutine으로 지연 후 회복하며 HP 포션은 `Entity.heal()`을 사용해 화상·맹독 등 받는 치유량 modifier를 반영한다. 음식·음료는 `restore_survival` handler가 선택 인스턴스를 한 개 소비하고 `Entity.restoreHunger/restoreThirst`로 최대값 안에서 생존 자원을 회복한다.
 
+미궁 보물함의 특수 소모품도 같은 handler 경계를 사용한다. `메아리 모래시계`는 `SkillBook.reduceCooldowns(15)`로 진행 중인 모든 쿨다운을 줄이고, `뒤틀린 미궁 나침반`은 `Location.getAvailableConnections()`의 `visible` 연결만 추첨해 즉시 이동한다. `공명 회피 파편`은 source key로 다음 회피 가능한 공격 한 번을 보장하며 같은 source가 이미 준비되어 있으면 소비하지 않는다. 전용 아트 전까지 마법 소모품은 `items/mana_potion`, 수정 파편은 `items/diamond` 카테고리 fallback을 사용한다.
+
 직접 공격 후처리는 선택형 `ItemData.onBasicAttackHit(context)`를 사용한다. 회피되지 않고 최종 피해가 0보다 큰 물리 공격이면 `Entity.attack`이 실행하므로 일반 공격과 강타 같은 물리 스킬이 같은 무기 효과를 쓴다. 필요하면 `AttackOptions.triggerMainHandHitEffects`로 해당 공격만 끌 수 있다. 투사체는 발사자 장비가 아닌 자체 Entity가 공격하므로 발사 무기의 적중 callback을 실행하지 않는다. 물리 피해와 상태효과·추가 속성 피해를 한 상성값으로 섞지 않는다.
 
 ## 기본 공격 오버라이드와 투사체 아이템

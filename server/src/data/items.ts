@@ -16,6 +16,7 @@ import {
 } from '../modules/itemAttack.js';
 import { StatusEffectType } from '../models/StatusEffect.js';
 import { getFishCatalog } from './fishingCatalog.js';
+import { getLocation } from '../models/Location.js';
 
 registerItemAttackOverride(ItemAttackOverrideKeys.PROJECTILE, executeProjectileItemAttack);
 
@@ -147,6 +148,83 @@ registerItemUse('apply_status_effect', (inv, item, finish) => {
         });
     } catch (error) {
         logger.error('버프 아이템 사용 실패', error);
+    } finally {
+        finish();
+    }
+});
+
+registerItemUse('reduce_skill_cooldowns', (inv, item, finish) => {
+    try {
+        const player = getPlayerByUserId(inv.playerId);
+        if (!player) return;
+        const seconds = Math.max(0, item.getMetadata<number>('seconds') ?? 0);
+        const result = player.skills.reduceCooldowns(seconds);
+        if (result.affected === 0) {
+            sendNotificationToUser(player.userId, {
+                key: 'item:cooldown:no-target',
+                message: '줄일 수 있는 스킬 재사용 대기시간이 없습니다.',
+            });
+            return;
+        }
+        if (!inv.removeItemInstance(item, 1)) return;
+        sendNotificationToUser(player.userId, {
+            key: 'item:cooldown:reduced',
+            message: `${result.affected}개 스킬의 재사용 대기시간을 최대 ${seconds}초 되돌렸습니다.`,
+        });
+    } catch (error) {
+        logger.error('스킬 쿨다운 감소 아이템 사용 실패', error);
+    } finally {
+        finish();
+    }
+});
+
+registerItemUse('labyrinth_compass', (inv, item, finish) => {
+    try {
+        const player = getPlayerByUserId(inv.playerId);
+        const location = player ? getLocation(player.locationId) : undefined;
+        if (!player || !location || player.moving) return;
+        const destinations = location.getAvailableConnections(player).filter(connection => connection.status === 'visible');
+        const destination = destinations[Math.floor(Math.random() * destinations.length)];
+        if (!destination) {
+            sendNotificationToUser(player.userId, {
+                key: 'item:labyrinth-compass:no-path',
+                message: '나침반이 갈 수 있는 길을 찾지 못했습니다.',
+            });
+            return;
+        }
+        if (!inv.removeItemInstance(item, 1)) return;
+        player.locationId = destination.locationId;
+        sendNotificationToUser(player.userId, {
+            key: 'item:labyrinth-compass:moved',
+            message: `뒤틀린 바늘이 가리킨 ${destination.name}(으)로 순간이동했습니다.`,
+        });
+    } catch (error) {
+        logger.error('미궁 나침반 사용 실패', error);
+    } finally {
+        finish();
+    }
+});
+
+registerItemUse('grant_single_evasion', (inv, item, finish) => {
+    try {
+        const player = getPlayerByUserId(inv.playerId);
+        const source = `item:${item.itemDataId}`;
+        if (!player) return;
+        if (player.hasGuaranteedEvasion(source)) {
+            sendNotificationToUser(player.userId, {
+                key: 'item:guaranteed-evasion:active',
+                message: '이미 같은 공명 파편의 회피 효과가 준비되어 있습니다.',
+            });
+            return;
+        }
+        if (!inv.removeItemInstance(item, 1)) return;
+        player.grantGuaranteedEvasion(source);
+        sendNotificationToUser(player.userId, {
+            key: 'item:guaranteed-evasion',
+            message: '다음 회피 가능한 공격을 확정적으로 피합니다.',
+        });
+    } catch (error) {
+        logger.error('확정 회피 아이템 사용 실패', error);
     } finally {
         finish();
     }
@@ -284,6 +362,60 @@ defineItem({
     modifiers: null,
     baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER],
+});
+
+defineItem({
+    id: 'echo_hourglass',
+    name: '메아리 모래시계',
+    description: '깨뜨리면 이미 사용한 모든 스킬의 재사용 대기시간을 최대 15초 되돌리는 미궁 유물.',
+    // TODO(icons): 전용 유물 아이콘 제작 전까지 마법 소모품 카테고리 fallback을 사용한다.
+    image: 'items/mana_potion',
+    category: '유물 소모품',
+    weight: 0.3,
+    stackable: true,
+    maxStack: 5,
+    baseMetadata: { seconds: 15 },
+    onUse: 'reduce_skill_cooldowns',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_DARK],
+});
+
+defineItem({
+    id: 'twisted_labyrinth_compass',
+    name: '뒤틀린 미궁 나침반',
+    description: '현재 장소에서 잠기지 않은 길 하나를 무작위로 골라 즉시 이동시키는 불안정한 유물.',
+    // TODO(icons): 전용 유물 아이콘 제작 전까지 마법 소모품 카테고리 fallback을 사용한다.
+    image: 'items/mana_potion',
+    category: '유물 소모품',
+    weight: 0.4,
+    stackable: true,
+    maxStack: 5,
+    baseMetadata: null,
+    onUse: 'labyrinth_compass',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_DARK],
+});
+
+defineItem({
+    id: 'resonance_evasion_shard',
+    name: '공명 회피 파편',
+    description: '사용하면 다음 회피 가능한 공격 한 번을 반드시 피하게 만드는 수정 파편.',
+    // TODO(icons): 전용 수정 아이콘 제작 전까지 보석 소재 카테고리 fallback을 사용한다.
+    image: 'items/diamond',
+    category: '유물 소모품',
+    weight: 0.2,
+    stackable: true,
+    maxStack: 10,
+    baseMetadata: null,
+    onUse: 'grant_single_evasion',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_DIAMOND, GameTags.PROPERTY_ELECTRIC],
 });
 
 defineItem({

@@ -114,6 +114,22 @@ export default class Location implements TagReadable {
             && object.isDefeated);
     }
 
+    getActiveResourceCount(resourceDataId: string): number {
+        return this._objects.filter(object => object instanceof Resource
+            && object.resourceDataId === resourceDataId
+            && !object.isDefeated).length;
+    }
+
+    getResourcesByDataId(resourceDataId: string): readonly Resource[] {
+        return this._objects.filter((object): object is Resource => object instanceof Resource
+            && object.resourceDataId === resourceDataId);
+    }
+
+    getMonstersByDataId(monsterDataId: string): readonly Monster[] {
+        return this._objects.filter((object): object is Monster => object instanceof Monster
+            && object.monsterDataId === monsterDataId);
+    }
+
     addObject(object: Entity): void {
         object.locationId = this.id;
         this._objects.push(object);

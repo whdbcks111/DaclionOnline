@@ -14,6 +14,7 @@ import '../data/crafting.js';
 import '../data/quests.js';
 import '../data/npcs.js';
 import '../data/monsters.js';
+import '../data/bossPatterns.js';
 import '../data/fishing.js';
 import { validateMasterData } from './masterDataValidation.js';
 

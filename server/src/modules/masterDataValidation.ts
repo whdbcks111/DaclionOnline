@@ -4,7 +4,7 @@ import type { LocationData } from '../../../shared/types.js';
 import { getAllCraftingRecipes } from '../models/Crafting.js';
 import { getAllItemData, getItemData } from '../models/Item.js';
 import { getAllJobs, getJob } from '../models/Job.js';
-import { getAllMonsterData, getMonsterData } from '../models/Monster.js';
+import { getAllMonsterData, getMonsterData, hasMonsterChallengePattern } from '../models/Monster.js';
 import NPC from '../models/NPC.js';
 import { getAllQuestData, getQuestData } from '../models/Quest.js';
 import { getAllResourceData, getResourceData } from '../models/Resource.js';
@@ -49,6 +49,9 @@ export function validateMasterData(options: MasterDataValidationOptions = {}): M
         if (effectId && !StatusEffectType.fromKey(effectId)) issue('monster', monster.id, `상태이상이 없습니다: ${effectId}`);
         if (monster.ai?.intelligence !== undefined && (monster.ai.intelligence < 0 || monster.ai.intelligence > 100)) {
             issue('monster', monster.id, 'AI 지능은 0~100이어야 합니다.');
+        }
+        if (monster.challengePattern && !hasMonsterChallengePattern(monster.challengePattern.handler)) {
+            issue('monster', monster.id, `보스 미니게임 패턴이 없습니다: ${monster.challengePattern.handler}`);
         }
     }
     for (const resource of getAllResourceData()) {

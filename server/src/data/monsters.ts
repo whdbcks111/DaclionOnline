@@ -224,6 +224,11 @@ defineWorldMonster({
         initialDelay: 5,
         interval: { min: 10, max: 13 },
     },
+    challengePattern: {
+        handler: 'crystal:cave-in',
+        initialDelay: 8,
+        interval: { min: 17, max: 22 },
+    },
     ai: {
         intelligence: 92,
         disposition: MonsterAiDisposition.THREAT,
@@ -452,6 +457,35 @@ const advancedWorldMonsters: WorldMonsterData[] = [
         tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_EARTH, GameTags.PROPERTY_METAL, GameTags.PROPERTY_STONE],
     },
     {
+        id: 'ironroot_heartwarden', name: '철근 심장수호자',
+        description: '세 공명 수정의 진동으로 몸을 보호하는 철근미궁의 수호자. 수정이 남아 있으면 받는 피해가 85% 감소하고 공명 폭주가 강화된다.',
+        level: 180,
+        baseAttribute: {
+            maxLife: 185000, atk: 680, magicForce: 710, def: 455, magicDef: 470,
+            speed: 1.35, attackSpeed: 0.38, critRate: 0.12, critDmg: 1.75,
+        },
+        expReward: 180 * 20 * 7,
+        drops: [
+            { itemDataId: 'diamond', minCount: 6, maxCount: 10, chance: 0.5 },
+            { itemDataId: 'ruby', minCount: 5, maxCount: 8, chance: 0.4 },
+            { itemDataId: 'emerald', minCount: 5, maxCount: 8, chance: 0.4 },
+        ],
+        goldReward: { min: 1450, max: 2300 },
+        attack: { damageType: 'magic' },
+        skills: [{ skillDataId: 'seismic_crush', level: 5 }],
+        skillPattern: { sequence: ['seismic_crush'], initialDelay: 5, interval: { min: 10, max: 14 } },
+        challengePattern: { handler: 'ironroot:resonance-storm', initialDelay: 8, interval: { min: 18, max: 24 } },
+        ai: {
+            intelligence: 96, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.15, damage: 1, healing: 1.55, shielding: 1.25, control: 1.2, taunt: 2.8 },
+            tauntResistance: 0.88, switchThreshold: 0.28, decayPerSecond: 0.006,
+        },
+        tags: [
+            GameTags.ENTITY_BOSS, GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE,
+            GameTags.PROPERTY_EARTH, GameTags.PROPERTY_METAL, GameTags.PROPERTY_STONE,
+        ],
+    },
+    {
         id: 'rift_spark', name: '균열 섬광체', description: '빛과 어둠 사이에서 불안정하게 번쩍이는 차원 생명.', level: 190,
         baseAttribute: { maxLife: 33000, atk: 625, magicForce: 690, def: 380, magicDef: 445, speed: 3.8, attackSpeed: 1.35 },
         drops: [{ itemDataId: 'mana_potion', minCount: 5, maxCount: 9, chance: 0.55 }], goldReward: { min: 670, max: 1080 },
@@ -470,6 +504,7 @@ const advancedWorldMonsters: WorldMonsterData[] = [
         drops: [{ itemDataId: 'diamond', minCount: 8, maxCount: 14, chance: 0.55 }], goldReward: { min: 1800, max: 2800 },
         skills: [{ skillDataId: 'seismic_crush', level: 5 }],
         skillPattern: { sequence: ['seismic_crush'], initialDelay: 4, interval: { min: 9, max: 12 } },
+        challengePattern: { handler: 'astral:crossfire', initialDelay: 7, interval: { min: 16, max: 21 } },
         ai: {
             intelligence: 98, disposition: MonsterAiDisposition.THREAT,
             weights: { attack: 0.15, damage: 1, healing: 1.6, shielding: 1.2, control: 1.3, taunt: 3 },

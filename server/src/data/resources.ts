@@ -78,6 +78,48 @@ registerResourceInteraction('open_treasure_chest', (_resource, player) => {
     return true;
 });
 
+const LABYRINTH_CACHE_REWARDS = Object.freeze({
+    echo_treasure_chest: [
+        { itemDataId: 'echo_hourglass', weight: 45 },
+        { itemDataId: 'twisted_labyrinth_compass', weight: 35 },
+        { itemDataId: 'resonance_evasion_shard', weight: 20 },
+    ],
+    crystal_treasure_chest: [
+        { itemDataId: 'resonance_evasion_shard', weight: 50 },
+        { itemDataId: 'echo_hourglass', weight: 30 },
+        { itemDataId: 'twisted_labyrinth_compass', weight: 20 },
+    ],
+} as const);
+
+export function rollLabyrinthCacheReward(
+    resourceDataId: keyof typeof LABYRINTH_CACHE_REWARDS,
+    random = Math.random,
+): string {
+    const rewards = LABYRINTH_CACHE_REWARDS[resourceDataId];
+    let cursor = random() * rewards.reduce((sum, reward) => sum + reward.weight, 0);
+    return rewards.find(reward => (cursor -= reward.weight) < 0)?.itemDataId ?? rewards[0].itemDataId;
+}
+
+registerResourceInteraction('open_labyrinth_cache', (resource, player) => {
+    if (resource.resourceDataId !== 'echo_treasure_chest'
+        && resource.resourceDataId !== 'crystal_treasure_chest') return false;
+    const itemDataId = rollLabyrinthCacheReward(resource.resourceDataId);
+    if (!player.inventory.canAdd(itemDataId, 1)) {
+        sendNotificationToUser(player.userId, {
+            key: 'labyrinth-cache-full',
+            message: '유물을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem(itemDataId, 1);
+    const itemName = getItemData(itemDataId)?.name ?? itemDataId;
+    sendBotMessageToUser(player.userId, chat()
+        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 미궁의 보물 ]')))
+        .text(`\n${itemName} x1을(를) 발견했습니다.`)
+        .build());
+    return true;
+});
+
 defineResource({
     id: 'ore_deposit',
     name: '광석',
@@ -158,6 +200,23 @@ defineResource({
     attackable: false,
     interactionCooldown: { min: 60 * 60, max: 2 * 60 * 60 },
     tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_WOOD],
+});
+
+for (const cache of [
+    { id: 'echo_treasure_chest', name: '메아리 유물함', cooldown: { min: 2 * 60 * 60, max: 3 * 60 * 60 } },
+    { id: 'crystal_treasure_chest', name: '공명 수정 보물함', cooldown: { min: 3 * 60 * 60, max: 5 * 60 * 60 } },
+] as const) defineResource({
+    id: cache.id,
+    name: cache.name,
+    level: 150,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [],
+    drops: [],
+    expReward: { min: 0, max: 0 },
+    interaction: 'open_labyrinth_cache',
+    attackable: false,
+    interactionCooldown: cache.cooldown,
+    tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_IRON],
 });
 
 defineResource({
