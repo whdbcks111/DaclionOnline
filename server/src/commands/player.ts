@@ -96,7 +96,7 @@ export function initPlayerCommands(): void {
                     .text('  Lv.')
                     .text(String(player.level))
                     .text('\n')
-                    .color('gray', b => b.text('─── 기본 정보 ───\n'))
+                    .divider('기본 정보')
                     .weight('bold', b => b.text('EXP'))
                     .text('  ')
                     .progress({ value: expRatio, length: 120, color: '#a855f7', thickness: 8 })
@@ -114,7 +114,7 @@ export function initPlayerCommands(): void {
                     .weight('bold', b => b.text('서브 직업'))
                     .text(` ${player.career.subJob?.name ?? '(미선택)'}\n`)
                     .hide('상세 보기', b => {
-                        b.color('gray', b2 => b2.text('─── 장착 정보 ───\n'));
+                        b.divider('장착 정보');
 
                         for (const slotType of EquipSlotType.values()) {
                             for (let i = 0; i < slotType.max; i++) {
@@ -130,7 +130,7 @@ export function initPlayerCommands(): void {
                         }
 
                         b
-                        .color('gray', b2 => b2.text('─── 상태 ───\n'))
+                        .divider('상태')
                         .icon(AttributeType.MAX_LIFE.icon).text(' ')
                         .weight('bold',b2 => b2.text('생명력'))
                         .text('  ')
@@ -151,8 +151,7 @@ export function initPlayerCommands(): void {
                         .text('  ')
                         .progress({ value: thirstyRatio, length: 120, color: '$thirsty', thickness: 8 })
                         .text(`  ${player.thirsty.toFixed(1)} / ${player.maxThirsty.toFixed(1)}\n`)
-
-                        .color('gray', b2 => b2.text('─── 능력치 ───\n'));
+                        .divider('능력치');
 
                         const stateMaximums = new Set([
                             AttributeType.MAX_LIFE,
@@ -172,7 +171,7 @@ export function initPlayerCommands(): void {
                                 .text(`${attribute.format(attr[attribute.key])}\n`);
                         }
 
-                        b.color('gray', b2 => b2.text('─── 스탯 ───\n'))
+                        b.divider('스탯')
                          .tab(L, b2 => b2.weight('bold',b3 => b3.text('스탯포인트'))).text(`${player.statPoint}\n`);
 
                         const statTypes = StatType.values();
@@ -190,7 +189,7 @@ export function initPlayerCommands(): void {
                         }
 
                         const statusEffects = player.getStatusEffectDisplaySnapshots();
-                        b.color('gray', b2 => b2.text('─── 상태이상 ───\n'));
+                        b.divider('상태이상');
                         if (statusEffects.length === 0) {
                             b.color('gray', b2 => b2.text('(없음)\n'));
                         } else {

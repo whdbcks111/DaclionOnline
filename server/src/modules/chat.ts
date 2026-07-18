@@ -8,6 +8,8 @@ import { handleCommand, isCommandAliasInput } from "./bot.js";
 import type { ChatMessage } from "../../../shared/types.js";
 import { ActionType } from "../models/Action.js";
 import { findOnlinePlayerByIdentity, searchOnlinePlayerIdentitySnapshots } from './playerRegistry.js';
+import { getOwnedChatImageUrl } from './upload.js';
+import { chat } from '../utils/chatBuilder.js';
 
 const MAX_MESSAGE_LENGTH = 500;
 
@@ -224,6 +226,45 @@ export const initChat = () => {
             if (skillActivation?.matched) return;
 
             sendMessageToChannel(msg, getUserChannel(session.userId));
+        });
+
+        socket.on('sendImageMessage', async (payload: unknown) => {
+            if (typeof payload !== 'object' || payload === null) return;
+            const filename = (payload as { filename?: unknown }).filename;
+            if (typeof filename !== 'string' || filename.length > 160) return;
+
+            const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            if (!session) { socket.emit('sessionInvalid'); return; }
+            const player = getPlayerByUserId(session.userId);
+            if (player && !player.canPerformAction(ActionType.CHAT)) {
+                sendNotificationToUser(session.userId, {
+                    key: 'action-disabled:chat',
+                    message: '현재 채팅을 사용할 수 없는 상태입니다.',
+                });
+                return;
+            }
+
+            const src = await getOwnedChatImageUrl(session.userId, filename);
+            if (!src) {
+                sendNotificationToUser(session.userId, {
+                    key: 'chat-image-invalid',
+                    message: '전송할 이미지를 찾을 수 없거나 보관 기간이 만료되었습니다.',
+                });
+                return;
+            }
+
+            const flags = getFlagsForPermission(session.permission);
+            sendMessageToChannel({
+                userId: session.userId,
+                nickname: session.nickname,
+                profileImage: session.profileImage,
+                flags: flags.length > 0 ? flags : undefined,
+                content: chat().image({
+                    src,
+                    alt: `${session.nickname}님이 보낸 이미지`,
+                }).build(),
+                timestamp: Date.now(),
+            }, getUserChannel(session.userId));
         });
     });
 

@@ -138,16 +138,15 @@ export function initSkillCommands(): void {
                     .text(`  Lv.${skill.level} / ${skill.maxLevel}\n`)
                     .build(),
                 ...experienceNodes,
-                ...chat().color('gray', b => b.text('─── 효과 ───\n')).build(),
+                ...chat().divider('효과').build(),
                 ...parseChatMessage(skill.formatDescription(player)),
-                ...chat().text('\n').color('gray', b => b.text('─── 소모값 ───\n')).build(),
+                ...chat().divider('소모값').build(),
                 ...parseChatMessage(skill.formatCost(player)),
                 ...chat()
-                    .text('\n')
-                    .color('gray', b => b.text('─── 재사용 대기시간 ───\n'))
+                    .divider('재사용 대기시간')
                     .color('gold', b => b.text(skill.format('{{maxCooldown}}초', player)))
                     .build(),
-                ...chat().text('\n').color('gray', b => b.text('─── 발동 조건 ───\n')).build(),
+                ...chat().divider('발동 조건').build(),
                 ...parseChatMessage(skill.formatActivationCondition(player)),
                 ...chat()
                     .text('\n')

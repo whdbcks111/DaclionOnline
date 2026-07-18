@@ -17,14 +17,14 @@ export function initCareerCommands(): void {
             const career = player.career;
             const main = career.effectiveMainJob;
             const builder = chat().text('[ 직업 ]\n').hide('상세 보기', b => {
-                b.color('gray', x => x.text('─── 메인 직업 ───\n'));
+                b.divider('메인 직업');
                 if (main) b.icon(main.icon).weight('bold', x => x.color('gold', y => y.text(main.name)))
                     .text(career.eliteJob ? ` · ${career.mainJob?.name} 계보` : '').text('\n').text(`${main.description}\n`);
                 else b.color('gray', x => x.text(`(미선택 · Lv.20부터 전직소에서 선택)\n`));
-                b.color('gray', x => x.text('─── 서브 직업 ───\n'));
+                b.divider('서브 직업');
                 if (career.subJob) b.icon(career.subJob.icon).weight('bold', x => x.text(career.subJob!.name)).text(`\n${career.subJob.description}\n`);
                 else b.color('gray', x => x.text(`(미선택 · Lv.50부터 메인과 다른 직업 선택)\n`));
-                b.color('gray', x => x.text('─── 엘리트 전직 ───\n'));
+                b.divider('엘리트 전직');
                 if (career.eliteJob) b.icon(career.eliteJob.icon).color('gold', x => x.weight('bold', y => y.text(career.eliteJob!.name))).text('\n');
                 else b.text('Lv.200에 메인·서브 조합에 따라 자동 전직\n');
                 return b;
@@ -48,7 +48,7 @@ export function initCareerCommands(): void {
             if (!job) { sendBotMessageToUser(userId, '직업을 찾을 수 없습니다.'); return; }
             const builder = chat().text('[ 직업 정보 ]  ').icon(job.icon).color('gold', b => b.weight('bold', x => x.text(job.name)))
                 .text(` · ${job.tier.label}\n`).text(`${job.description}\n`)
-                .color('gray', b => b.text('─── 획득 스킬 ───\n'));
+                .divider('획득 스킬');
             if (job.grantedSkills.length === 0) builder.color('gray', b => b.text('(별도 엘리트 전용 스킬 없음)'));
             else for (const grant of job.grantedSkills) builder.text(`• ${getSkillData(grant.skillDataId)?.name ?? grant.skillDataId} Lv.${grant.level ?? 1}\n`);
             sendBotMessageToUser(userId, builder.build());

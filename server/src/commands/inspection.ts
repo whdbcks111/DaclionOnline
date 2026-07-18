@@ -124,7 +124,7 @@ function formatNumber(value: number): string {
 }
 
 function appendSection(builder: ReturnType<typeof chat>, title: string): void {
-    builder.color('$text-tertiary', b => b.text(`─── ${title} ───\n`));
+    builder.divider(title);
 }
 
 interface ItemGameplayDetail {

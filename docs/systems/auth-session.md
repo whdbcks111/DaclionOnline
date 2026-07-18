@@ -8,7 +8,7 @@
 | 서버 | `modules/register.ts` | 이메일 코드, 입력 중복 검사, PBKDF2 해시, 계정 생성 |
 | 서버 | `modules/login.ts` | 로그인, 세션, 접속자 수, 닉네임, 로그아웃 |
 | 서버 | `modules/socket.ts` | 연결 handshake 쿠키를 `socket.data.sessionToken`에 바인딩 |
-| 서버 | `modules/upload.ts` | 인증된 프로필 이미지 업로드 |
+| 서버 | `modules/upload.ts` | 인증된 프로필·채팅 이미지 업로드와 임시 미디어 정리 |
 | 서버 | `modules/mail.ts` | Gmail 전송과 HTML 템플릿 치환 |
 | 클라이언트 | `context/SocketContext.tsx` | 소켓 연결과 현재 `SessionInfo` 보관 |
 | 클라이언트 | `pages/Login.tsx`, `pages/Register.tsx` | 인증 UI와 이벤트 호출 |

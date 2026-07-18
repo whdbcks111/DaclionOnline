@@ -35,6 +35,10 @@ $avatar-size: 40px;
     min-width: 0;
 }
 
+.mediaBodyWrap {
+    width: min(100%, 42rem);
+}
+
 .header {
     margin-left: $spacing-xs;
     display: flex;
@@ -64,6 +68,11 @@ $avatar-size: 40px;
             background-color: rgba(255, 255, 255, 0.08);
         }
     }
+}
+
+.body.mediaBody {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .flag {

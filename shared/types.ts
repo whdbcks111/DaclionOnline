@@ -130,6 +130,8 @@ export type ChatNode =
     | { type: 'button'; action: string; children: ChatNode[]; closeOnClick?: boolean; showCommand?: boolean }
     | { type: 'progress'; value: number; length: number | string; color: string; thickness: number; shape: 'rounded' | 'square' }
     | { type: 'health'; life: number; maxLife: number; shields: ShieldBarSegment[]; length: number | string; color: string; thickness: number; shape: 'rounded' | 'square' }
+    | { type: 'image'; src: string; alt: string; maxHeight: number | string }
+    | { type: 'divider'; title?: string }
     | { type: 'tab'; width: number; children: ChatNode[] }
     | { type: 'tooltip'; description: ChatNode[]; children: ChatNode[] }
     | { type: 'worldMap'; data: WorldMapData }
@@ -427,6 +429,7 @@ export interface ClientToServerEvents {
     sendVerifyCode: (email: string) => void
     verifyCode: (code: string) => void
     sendMessage: (content: string) => void
+    sendImageMessage: (payload: { filename: string }) => void
     chatButtonClick: (payload: { action: string; showCommand?: boolean }) => void
     requestChatHistory: () => void
     requestCommandList: () => void

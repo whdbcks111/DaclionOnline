@@ -4,7 +4,7 @@
 
 ```text
 Home/QuickSlot/ButtonNode
-        │ sendMessage / chatButtonClick
+        │ sendMessage / sendImageMessage / chatButtonClick
         v
 modules/chat.ts ── 일반문장 ──> 귓속말 / Skill message trigger 또는 modules/message.ts ──> Socket room
         │                              │
@@ -16,6 +16,8 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 `ChatMessage.content`는 사용자 일반 입력에서는 text node 배열이고, 시스템 메시지는 `chat()` 빌더 또는 `parseChatMessage()`로 만든 `ChatNode[]`다. 클라이언트 `ChatMessage.tsx`가 노드 트리를 재귀 렌더링한다.
 
 `Home.tsx`는 메시지 전송 후 입력 내용만 비우고 contenteditable의 포커스와 커서를 유지한다. 전송 버튼의 pointer down도 입력 포커스를 빼앗지 않으므로 모바일 가상 키보드가 매 전송마다 닫히거나 다시 열리며 깜빡이지 않는다.
+
+입력창 왼쪽 미디어 버튼은 숨은 `accept="image/*"` 파일 입력을 열어 모바일에서는 OS 미디어 선택기, PC에서는 파일 탐색기를 사용한다. 선택한 파일은 먼저 인증 HTTP API에서 최대 1600px·품질 78의 WebP로 재인코딩되고, 성공한 서버 파일명만 `sendImageMessage`로 보낸다. 소켓은 사용자 소유 파일과 `ActionType.CHAT`을 다시 검사한다. 파일은 전체 최신 100장·최대 7일 동안만 보관되며 매시간 정리되므로 이전 채팅의 만료된 이미지는 더 이상 조회되지 않는다.
 
 전송 버튼 옆의 공개/비공개 버튼은 플레이어별 런타임 정보 열람 모드를 `setInformationMode`로 변경한다. 같은 기능을 `/공개모드`, `/비공개모드`로도 사용할 수 있고 서버는 `informationMode`를 같은 계정의 모든 소켓에 동기화한다. 기본값은 비공개이며 마지막 연결 종료 또는 Player unload 때 초기화된다. `registerCommand({ information: true })` 명령은 공개 모드에서 명령 입력과 `sendBotMessageToUser` 결과를 현재 채널에 공개하고, 비공개 모드에서는 기존처럼 본인에게만 보낸다. `/위치`와 `/지도`도 이 규칙을 따르며, 상태창·인벤토리·통계의 명시적 `공개/비공개` 인자는 해당 1회 실행에서 모드보다 우선한다. `/이동` 같은 조작 명령과 관리자 명령·파티 초대 같은 민감한 결과는 정보 공개 모드의 영향을 받지 않는다.
 
@@ -113,6 +115,6 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 
 ## ChatNode 확장 지점
 
-현재 노드는 text, color, bg, deco, weight, size, tooltip, hide, icon, button, progress, tab, worldMap이다. 문자열 태그는 color/icon/button/closebutton/bg/deco/size/weight/tooltip/hide/tab/progress를 지원하며 worldMap은 검증된 서버 snapshot만 `chat().worldMap()`으로 생성한다. icon의 name은 `/icons/{name}.png`로 해석되며 없는 에셋은 숨긴다. 안전한 기본 icon 이름 외에 `attributes/{AttributeKey}` 경로를 허용해 스킬의 `{{icon.atk}}` 같은 계수 표기가 상태창 아이콘을 재사용한다. progress length는 숫자 px와 `em` 같은 CSS 길이를 지원한다. tooltip은 hover와 touch에서 설명 ChatNode overlay를 표시한다. `$primary`, `$life`, `$magic` 같은 테마 token은 빌더와 문자열 태그에서 해석된다.
+현재 노드는 text, color, bg, deco, weight, size, tooltip, hide, icon, button, progress, health, image, divider, tab, worldMap이다. 문자열 태그는 color/icon/button/closebutton/bg/deco/size/weight/tooltip/hide/tab/progress를 지원하며 image/divider/worldMap은 서버 `chat()` 빌더로 생성한다. `chat().divider()`는 제목 없는 마크다운식 선, `chat().divider('능력치')`는 가운데 제목을 둔 선이다. image는 메시지 너비 안에서 가운데 정렬되고 최대 높이를 제한해 채팅 업로드와 향후 스킬 상단 연출에 재사용한다. icon의 name은 `/icons/{name}.png`로 해석되며 없는 에셋은 숨긴다. 안전한 기본 icon 이름 외에 `attributes/{AttributeKey}` 경로를 허용해 스킬의 `{{icon.atk}}` 같은 계수 표기가 상태창 아이콘을 재사용한다. progress length는 숫자 px와 `em` 같은 CSS 길이를 지원한다. tooltip은 hover와 touch에서 설명 ChatNode overlay를 표시한다. `$primary`, `$life`, `$magic` 같은 테마 token은 빌더와 문자열 태그에서 해석된다.
 
 새 노드는 공유 union, 서버 parser/builder, 클라이언트 node renderer 세 곳을 함께 변경한다.

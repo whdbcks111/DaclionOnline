@@ -16,6 +16,8 @@ import HudSettings from '../components/hud/HudSettings'
 import MiniGameOverlay from '../components/minigame/MiniGameOverlay'
 import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, LocationInfoData, ChannelInfo, UserCountData, CompletionItem } from '@shared/types'
 
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
+
 function channelRoomKey(channel: string | null): string {
   return channel === null ? 'channel:main' : `channel:${channel}`
 }
@@ -41,7 +43,10 @@ function HomeContent() {
   const [dynamicCompletions, setDynamicCompletions] = useState<CompletionItem[]>([])
   const [mentionCompletions, setMentionCompletions] = useState<CompletionItem[]>([])
   const [informationPublic, setInformationPublic] = useState(false)
+  const [imageUploading, setImageUploading] = useState(false)
+  const [mediaError, setMediaError] = useState<string | null>(null)
   const inputRef = useRef<HTMLDivElement>(null)
+  const mediaInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const isComposing = useRef(false)
 
@@ -141,6 +146,39 @@ function HomeContent() {
     }
 
     setShowAutocomplete(false)
+  }, [socket])
+
+  const sendImage = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !socket) return
+    if (!file.type.startsWith('image/')) {
+      setMediaError('이미지 파일만 전송할 수 있습니다.')
+      event.target.value = ''
+      return
+    }
+
+    setImageUploading(true)
+    setMediaError(null)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      const response = await fetch(`${SERVER_URL}/api/chat-image`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+      const data = await response.json() as { ok?: boolean; filename?: string; error?: string }
+      if (!response.ok || !data.ok || !data.filename) {
+        setMediaError(data.error ?? '이미지 업로드에 실패했습니다.')
+        return
+      }
+      socket.emit('sendImageMessage', { filename: data.filename })
+    } catch {
+      setMediaError('이미지 업로드 중 오류가 발생했습니다.')
+    } finally {
+      setImageUploading(false)
+      event.target.value = ''
+    }
   }, [socket])
 
   const selectCommand = useCallback((name: string) => {
@@ -351,6 +389,31 @@ function HomeContent() {
               onSelectCompletion={mentionQuery !== null ? selectMention : selectCompletion}
             />
           )}
+          {mediaError && <span className={styles.mediaError} role="alert">{mediaError}</span>}
+          <input
+            ref={mediaInputRef}
+            className={styles.mediaInput}
+            type="file"
+            accept="image/*"
+            onChange={sendImage}
+          />
+          <button
+            type="button"
+            className={styles.mediaButton}
+            aria-label={imageUploading ? '이미지 업로드 중' : '이미지 전송'}
+            title={imageUploading ? '이미지 업로드 중' : '이미지 전송'}
+            disabled={imageUploading}
+            onPointerDown={event => event.preventDefault()}
+            onClick={() => mediaInputRef.current?.click()}
+          >
+            {imageUploading ? (
+              <span className={styles.mediaSpinner} aria-hidden="true" />
+            ) : (
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 5.5h16v13H4zM7 15l3-3 2.5 2.5 2-2 2.5 2.5M8.5 9a1.25 1.25 0 1 0 0 .01" />
+              </svg>
+            )}
+          </button>
           <div
             ref={inputRef}
             className={styles.chatInputField}

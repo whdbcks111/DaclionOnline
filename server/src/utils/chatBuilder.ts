@@ -128,6 +128,21 @@ class ChatBuilder {
         return this
     }
 
+    image(options: { src: string; alt?: string; maxHeight?: number | string }): this {
+        this.nodes.push({
+            type: 'image',
+            src: options.src,
+            alt: options.alt ?? '',
+            maxHeight: options.maxHeight ?? 'min(52vh, 32rem)',
+        })
+        return this
+    }
+
+    divider(title?: string): this {
+        this.nodes.push({ type: 'divider', title: title?.trim() || undefined })
+        return this
+    }
+
     tab(width: number, build: (b: ChatBuilder) => ChatBuilder): this {
         const inner = new ChatBuilder()
         build(inner)

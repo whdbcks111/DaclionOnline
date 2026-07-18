@@ -1,6 +1,6 @@
 # HTTP API
 
-게임 상호작용 대부분은 Socket.io를 사용한다. 현재 애플리케이션 HTTP API는 프로필 이미지 업로드 하나다.
+게임 상호작용 대부분은 Socket.io를 사용한다. 파일 본문은 HTTP로 업로드하고 실제 채팅 전송은 Socket.io가 소유권과 행동 제한을 다시 검증한다.
 
 ## `POST /api/profile-image`
 
@@ -24,6 +24,24 @@
 ```
 
 파일은 서버 작업 디렉터리의 `uploads/profiles/`에 저장되고 User의 `profileImage` 및 현재 메모리 세션이 갱신된다. 정적 조회 URL은 `GET /uploads/profiles/{filename}`이다.
+
+## `POST /api/chat-image`
+
+- 구현: `server/src/modules/upload.ts`
+- 호출: `client/src/pages/Home.tsx`
+- 인증: `sessionToken` 쿠키
+- Content-Type: `multipart/form-data`
+- 필드: `image` 파일 1개
+- 입력 제한: 최대 15MB, `image/*` MIME, Sharp가 실제 이미지로 해석할 수 있는 형식, 최대 4천만 입력 pixel
+- 저장 규격: 최대 1600×1600, WebP 품질 78. 애니메이션 입력은 프레임을 유지한다.
+
+성공 응답:
+
+```json
+{ "ok": true, "filename": "사용자ID-시각-UUID.webp", "url": "/uploads/chat/파일명.webp" }
+```
+
+클라이언트는 성공한 `filename`만 `sendImageMessage`로 전달한다. 서버는 파일명의 사용자 ID, 실제 파일 존재 여부와 7일 보관 기간을 확인한 뒤 현재 채널에 이미지 ChatNode를 보낸다. 업로드 파일은 `uploads/chat/`에서 전체 최신 100장, 생성 후 최대 7일만 유지하며 서버 시작과 매시간 정리한다.
 
 ## 기타 HTTP 동작
 

@@ -9,6 +9,8 @@ import IconNode from './nodes/IconNode'
 import ButtonNode from './nodes/ButtonNode'
 import ProgressNode from './nodes/ProgressNode'
 import HealthBarNode from './nodes/HealthBarNode'
+import ImageNode from './nodes/ImageNode'
+import DividerNode from './nodes/DividerNode'
 import TabNode from './nodes/TabNode'
 import WeightNode from './nodes/WeightNode'
 import TooltipNode from './nodes/TooltipNode'
@@ -43,6 +45,10 @@ export function renderNode(node: ChatNode, key: number): React.ReactNode {
             return <ProgressNode key={key} value={node.value} length={node.length} color={node.color} thickness={node.thickness} shape={node.shape} />
         case 'health':
             return <HealthBarNode key={key} life={node.life} maxLife={node.maxLife} shields={node.shields} length={node.length} color={node.color} thickness={node.thickness} shape={node.shape} />
+        case 'image':
+            return <ImageNode key={key} src={node.src} alt={node.alt} maxHeight={node.maxHeight} />
+        case 'divider':
+            return <DividerNode key={key} title={node.title} />
         case 'tab':
             return <TabNode key={key} width={node.width} children={node.children} />
         case 'weight':
@@ -86,6 +92,7 @@ export default function ChatMessage({ message, showHeader }: Props) {
     const nodes: ChatNode[] = typeof(message.content) === 'string' ?
         [{ type: 'text', text: message.content }] :
         message.content;
+    const hasTopLevelImage = nodes.some(node => node.type === 'image')
 
     return (
         <ChatMessageContext.Provider value={{ nickname: message.nickname, timestamp: message.timestamp }}>
@@ -100,7 +107,7 @@ export default function ChatMessage({ message, showHeader }: Props) {
                         />
                     )}
                 </div>
-                <div className={styles.bodyWrap}>
+                <div className={`${styles.bodyWrap} ${hasTopLevelImage ? styles.mediaBodyWrap : ''}`}>
                     {showHeader && (
                         <div className={styles.header}>
                             {message.flags?.map((flag, i) => (
@@ -112,7 +119,7 @@ export default function ChatMessage({ message, showHeader }: Props) {
                             <span className={styles.timestamp}>{formatTime(message.timestamp)}</span>
                         </div>
                     )}
-                    <div className={styles.body}>
+                    <div className={`${styles.body} ${hasTopLevelImage ? styles.mediaBody : ''}`}>
                         <div className={styles.content}>
                             {nodes.map((node, i) => renderNode(node, i))}
                         </div>

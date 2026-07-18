@@ -33,7 +33,7 @@ export function initGeneralCommands(): void {
                         if (gi > 0) b.text('\n');
 
                         const header = perm === 0 ? '일반 명령어' : `권한 ${perm} 이상`;
-                        b.color('$text-tertiary', b2 => b2.text(`─── ${header} ───\n`));
+                        b.divider(header);
 
                         for (const cmd of cmds) {
                             b.weight('bold', b2 => b2.text(`/${cmd.name}`));
