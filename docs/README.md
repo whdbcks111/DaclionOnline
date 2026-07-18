@@ -31,6 +31,7 @@
 | 서버 검증 미니게임·낚시 | [systems/minigames-fishing.md](systems/minigames-fishing.md) |
 | NPC 배치·조건부 대화·선택지 | [systems/npc-dialogue.md](systems/npc-dialogue.md) |
 | NPC 퀘스트·목표 추적·보상 | [systems/quests.md](systems/quests.md) |
+| 질문문·순간이동 유물·파괴문 던전 퍼즐 | [systems/dungeon-puzzles.md](systems/dungeon-puzzles.md) |
 | 관리자 플레이어·월드 운영 도구 | [systems/admin-panel.md](systems/admin-panel.md) |
 | DB 모델과 저장 경계 | [data/database.md](data/database.md) |
 | 실행·빌드·환경 설정 | [development.md](development.md) |

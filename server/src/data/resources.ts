@@ -159,3 +159,51 @@ defineResource({
     interactionCooldown: { min: 60 * 60, max: 2 * 60 * 60 },
     tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_WOOD],
 });
+
+defineResource({
+    id: 'ironroot_riddle_door',
+    name: '질문을 새긴 뿌리문',
+    level: 155,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [],
+    drops: [],
+    expReward: { min: 0, max: 0 },
+    interaction: 'ironroot_riddle_door',
+    attackable: false,
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_IRON, GameTags.PROPERTY_EARTH],
+});
+
+defineResource({
+    id: 'ironroot_relay_artifact',
+    name: '뒤집힌 고리 유물',
+    level: 160,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [],
+    drops: [],
+    expReward: { min: 0, max: 0 },
+    interaction: 'ironroot_relay_artifact',
+    attackable: false,
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_IRON, GameTags.PROPERTY_DARK],
+});
+
+defineResource({
+    id: 'ironroot_breakable_gate',
+    name: '녹슨 봉인문',
+    level: 165,
+    baseAttribute: { maxLife: 18_000, def: 210, magicDef: 95 },
+    requiredToolTags: [],
+    drops: [],
+    expReward: { min: 3_800, max: 4_600 },
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_IRON, GameTags.PROPERTY_EARTH],
+});
+
+defineResource({
+    id: 'ironroot_resonance_crystal',
+    name: '지핵 공명 수정',
+    level: 175,
+    baseAttribute: { maxLife: 9_500, def: 85, magicDef: 260 },
+    requiredToolTags: [],
+    drops: [],
+    expReward: { min: 2_200, max: 3_000 },
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_DIAMOND, GameTags.PROPERTY_EARTH],
+});

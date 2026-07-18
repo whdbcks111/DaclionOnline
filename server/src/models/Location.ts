@@ -107,6 +107,13 @@ export default class Location implements TagReadable {
         return this._objects.includes(object);
     }
 
+    /** 문·수정 기믹이 raw 오브젝트 배열을 순회하지 않고 파괴 여부를 확인한다. */
+    isResourceDefeated(resourceDataId: string): boolean {
+        return this._objects.some(object => object instanceof Resource
+            && object.resourceDataId === resourceDataId
+            && object.isDefeated);
+    }
+
     addObject(object: Entity): void {
         object.locationId = this.id;
         this._objects.push(object);

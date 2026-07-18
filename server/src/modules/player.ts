@@ -16,6 +16,7 @@ import { partyManager } from './party.js';
 import { clearInformationMode } from './informationVisibility.js';
 import { cancelFishing } from './fishing.js';
 import { clearUserSnapshotStreams, publishUserSnapshot } from './stateSync.js';
+import { clearDungeonPuzzleSession } from '../models/DungeonPuzzle.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -41,6 +42,7 @@ export async function unloadPlayerByUserId(userId: number): Promise<void> {
     endNpcDialogue(player, DialogueEndReason.UNLOADED, false);
     cancelCrafting(player);
     cancelFishing(userId, '접속 종료로 낚시가 취소되었습니다.');
+    clearDungeonPuzzleSession(userId);
     player.skills.finishAll();
     partyManager.removeDisconnectedPlayer(player);
     clearInformationMode(userId);

@@ -768,11 +768,89 @@
     "objects": [
       { "type": "monster", "dataId": "ironroot_beast", "maxCount": 2, "respawnTime": 108 },
       { "type": "monster", "dataId": "buried_titan", "maxCount": 1, "respawnTime": 145 },
-      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "ironroot_riddle_door", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "ironroot_edge" },
-      { "locationId": "ironroot_core" }
+      { "locationId": "ironroot_question_hall", "condition": "ironroot_riddle_solved" }
+    ]
+  },
+  {
+    "id": "ironroot_question_hall",
+    "name": "철근미궁 뿌리 회랑",
+    "mapColor": "#75644f",
+    "zoneType": "hostile",
+    "x": 1940,
+    "y": 55,
+    "z": -85,
+    "tags": ["location:wilderness", "location:wastes", "location:dungeon", "property:earth", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ironroot_beast", "maxCount": 2, "respawnTime": 112 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "ironroot_labyrinth" },
+      { "locationId": "ironroot_echo_vault" },
+      { "locationId": "ironroot_false_archive" }
+    ]
+  },
+  {
+    "id": "ironroot_false_archive",
+    "name": "철근미궁 거짓 기록실",
+    "mapColor": "#685c51",
+    "zoneType": "hostile",
+    "x": 1930,
+    "y": 125,
+    "z": -105,
+    "tags": ["location:wilderness", "location:wastes", "location:dungeon", "property:dark", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "buried_titan", "maxCount": 2, "respawnTime": 145 }
+    ],
+    "connections": [
+      { "locationId": "ironroot_question_hall" },
+      { "locationId": "ironroot_echo_vault" }
+    ]
+  },
+  {
+    "id": "ironroot_echo_vault",
+    "name": "철근미궁 메아리 금고",
+    "mapColor": "#665c62",
+    "zoneType": "hostile",
+    "x": 1990,
+    "y": 85,
+    "z": -125,
+    "tags": ["location:wilderness", "location:wastes", "location:dungeon", "property:dark", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "corebreaker", "maxCount": 2, "respawnTime": 132 },
+      { "type": "resource", "dataId": "ironroot_relay_artifact", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "ironroot_question_hall" },
+      { "locationId": "ironroot_false_archive" },
+      { "locationId": "ironroot_gate_gallery", "condition": "ironroot_artifact_route" }
+    ]
+  },
+  {
+    "id": "ironroot_gate_gallery",
+    "name": "철근미궁 봉인문 회랑",
+    "mapColor": "#6e5e4a",
+    "zoneType": "hostile",
+    "x": 2015,
+    "y": 15,
+    "z": -135,
+    "tags": ["location:wilderness", "location:wastes", "location:dungeon", "property:earth", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "corebreaker", "maxCount": 1, "respawnTime": 132 },
+      { "type": "resource", "dataId": "ironroot_breakable_gate", "maxCount": 1, "respawnTime": 600 },
+      { "type": "resource", "dataId": "ironroot_relay_artifact", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "ironroot_echo_vault", "condition": "ironroot_artifact_route" },
+      { "locationId": "ironroot_core", "condition": "ironroot_gate_destroyed" }
     ]
   },
   {
@@ -790,8 +868,27 @@
       { "type": "monster", "dataId": "corebreaker", "maxCount": 2, "respawnTime": 132 }
     ],
     "connections": [
-      { "locationId": "ironroot_labyrinth" },
+      { "locationId": "ironroot_gate_gallery" },
+      { "locationId": "ironroot_crystal_sanctum" },
       { "locationId": "rift_edge", "condition": "level_180" }
+    ]
+  },
+  {
+    "id": "ironroot_crystal_sanctum",
+    "name": "철근미궁 지핵 수정실",
+    "mapColor": "#665d78",
+    "zoneType": "hostile",
+    "x": 2040,
+    "y": -135,
+    "z": -145,
+    "tags": ["location:wilderness", "location:wastes", "location:dungeon", "property:earth", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "ironroot_resonance_crystal", "maxCount": 3, "respawnTime": 900 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "ironroot_core" }
     ]
   },
   {
