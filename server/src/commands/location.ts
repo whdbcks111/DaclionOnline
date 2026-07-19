@@ -4,7 +4,7 @@ import { getPlayerByUserId, getOnlinePlayers } from "../modules/player.js";
 import { getSessionByUserId } from "../modules/login.js";
 import { chat } from "../utils/chatBuilder.js";
 import { getLocation, distanceBetween } from "../models/Location.js";
-import { getItemData } from "../models/Item.js";
+import { getItemSnapshotDisplay } from "../models/Item.js";
 import { startCoroutine, Wait } from "../modules/coroutine.js";
 import type { CoroutineGenerator } from "../modules/coroutine.js";
 import type Player from "../models/Player.js";
@@ -157,11 +157,11 @@ export function initLocationCommands(): void {
                     if (!player) return [];
                     const location = getLocation(player.locationId);
                     if (!location) return [];
-                    const items = location.getDroppedItems();
+                    const items = location.getDroppedItemDisplays();
                     return [
                         ...items.map((item, index): CompletionItem => ({
                             value: String(index + 1),
-                            description: `${getItemData(item.itemDataId)?.name ?? item.itemDataId} x${item.count}`,
+                            description: `${item.name} x${item.count}`,
                         })),
                         ...(items.length > 0 ? [{ value: '전체', description: '바닥 아이템 모두 줍기' }] : []),
                     ];
@@ -226,7 +226,7 @@ export function initLocationCommands(): void {
                 return;
             }
 
-            const itemName = getItemData(picked.itemDataId)?.name ?? picked.itemDataId;
+            const itemName = getItemSnapshotDisplay(picked).name;
             sendBotMessageToUser(userId, `${itemName} x${picked.count}을(를) 주웠습니다.`);
         },
     });
@@ -372,15 +372,14 @@ export function initLocationCommands(): void {
 
             b.text('\n').color('gray', b2 => b2.text('[ 바닥 아이템 ]\n'));
 
-            const droppedItems = location.getDroppedItems();
+            const droppedItems = location.getDroppedItemDisplays();
             if (droppedItems.length === 0) {
                 b.color('gray', b2 => b2.text('없음\n'));
             } else {
                 for (let index = 0; index < droppedItems.length; index++) {
                     const item = droppedItems[index];
-                    const name = getItemData(item.itemDataId)?.name ?? item.itemDataId;
                     b.color('gray', b2 => b2.text(`[${index + 1}] `))
-                     .text(`${name} x${item.count} `)
+                     .text(`${item.name} x${item.count} `)
                      .button(`/줍기 ${index + 1}`, b2 => b2.text('[줍기]'), true)
                      .text('\n');
                 }

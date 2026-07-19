@@ -234,3 +234,21 @@ test('바닥 아이템은 인스턴스 상태가 같을 때 최대 스택까지 
     assert.deepEqual(location.getDroppedItems().map(item => item.count), [10, 3, 2]);
     assert.deepEqual(location.getDroppedItems()[2].metadataDelta, { quality: 'special' });
 });
+
+test('바닥 아이템 표시는 인스턴스의 커스텀 이름 metadata를 적용한다', () => {
+    defineItem({
+        id: 'test_floor_named_weapon', name: '기본 장검', description: '', category: '검',
+        weight: 1, stackable: false, maxStack: 1, baseMetadata: null, onUse: null,
+        equipSlot: null, modifiers: null, baseDurability: 100, tags: [],
+    });
+    const location = new Location({
+        id: 'test_floor_named_location', name: '명명 시험', zoneType: 'neutral',
+        x: 0, y: 0, z: 0, npcIds: [], objects: [], connections: [], tags: [],
+    });
+    location.addDroppedItem({
+        itemDataId: 'test_floor_named_weapon', count: 1, durability: 100,
+        metadataDelta: { customName: '익스클리프 다이아몬드 액스' }, tags: [],
+    });
+
+    assert.equal(location.getDroppedItemDisplays()[0].name, '익스클리프 다이아몬드 액스');
+});

@@ -6,7 +6,7 @@ import type { LocationData, LocationObjectSpawnInfo, ConnectionInfo, ZoneType } 
 import logger from "../utils/logger.js";
 import { GameTags, TagCollection, normalizeTags } from "../../../shared/tags.js";
 import type { TagReadable } from "../../../shared/tags.js";
-import { canStackItemSnapshots, getItemData } from "./Item.js";
+import { canStackItemSnapshots, getItemData, getItemSnapshotDisplay } from "./Item.js";
 import type { ItemSnapshot } from "./Item.js";
 import NPC, { normalizeNpcId } from "./NPC.js";
 import { RegionRiskPolicy } from './RegionRisk.js';
@@ -16,6 +16,13 @@ export type { LocationData, LocationObjectSpawnInfo, ConnectionInfo, ZoneType };
 /** 바닥 아이템 */
 export interface DroppedItem extends ItemSnapshot {
     droppedAt: number;  // timestamp
+}
+
+export interface DroppedItemDisplay {
+    index: number;
+    name: string;
+    image: string;
+    count: number;
 }
 
 /** 이동 조건 결과 */
@@ -163,6 +170,15 @@ export default class Location implements TagReadable {
             ...item,
             metadataDelta: item.metadataDelta ? { ...item.metadataDelta } : null,
             tags: [...item.tags],
+        }));
+    }
+
+    /** metadata delta를 적용한 바닥 아이템 이름·아이콘을 순번과 함께 반환한다. */
+    getDroppedItemDisplays(): DroppedItemDisplay[] {
+        return this._droppedItems.map((item, index) => ({
+            index,
+            ...getItemSnapshotDisplay(item),
+            count: item.count,
         }));
     }
 

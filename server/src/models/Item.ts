@@ -116,12 +116,24 @@ export interface ItemSnapshot {
     tags: TagId[];
 }
 
+/** 인스턴스 metadata를 합친 이름·아이콘만 UI 계층에 노출하는 경량 표시 스냅샷. */
+export interface ItemDisplaySnapshot {
+    readonly name: string;
+    readonly image: string;
+}
+
 /** 인벤토리·장비·바닥이 같은 규칙으로 두 아이템 스냅샷의 스택 호환성을 검사한다. */
 export function canStackItemSnapshots(left: ItemSnapshot, right: ItemSnapshot): boolean {
     return left.itemDataId === right.itemDataId
         && left.durability === right.durability
         && isDeepStrictEqual(left.metadataDelta ?? {}, right.metadataDelta ?? {})
         && JSON.stringify(normalizeTags(left.tags)) === JSON.stringify(normalizeTags(right.tags));
+}
+
+/** 바닥·거래 등 Item 객체를 직접 보관하지 않는 소유 기능의 표시용 API. */
+export function getItemSnapshotDisplay(snapshot: ItemSnapshot): ItemDisplaySnapshot {
+    const item = Item.fromSnapshot(snapshot);
+    return { name: item.name, image: item.image };
 }
 
 /** `/감정` 등 읽기 전용 UI가 Item 내부 상태를 직접 참조하지 않고 사용하는 스냅샷. */
