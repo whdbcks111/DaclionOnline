@@ -153,7 +153,7 @@ function selectNamePart(values: readonly string[], random: () => number): string
     return values[Math.min(values.length - 1, Math.floor(value * values.length))];
 }
 
-/** 형태·소재·품질은 사용할 어휘군을 결정하고, 같은 어휘군 안의 변형만 난수로 고른다. */
+/** 대부분은 읽기 쉬운 일반명을 쓰고, 높은 품질이나 희귀 난수에서만 조합형 고유명을 만든다. */
 export function createForgedItemName(
     form: ForgeForm,
     material: ForgeMaterial,
@@ -162,6 +162,12 @@ export function createForgedItemName(
     random: () => number,
 ): string {
     if (accuracy >= 0.98) return `${form.perfectPrefix} ${material.label} ${form.nameNouns[0]}`;
+    const ordinaryChance = trait.key === 'balanced' ? 0.78 : 0.65;
+    if (random() < ordinaryChance) {
+        return trait.key === 'balanced'
+            ? `${material.label} ${form.label}`
+            : `${trait.label} ${material.label} ${form.label}`;
+    }
     const prefixPool = accuracy >= 0.92
         ? forgeNamePrefixes.masterwork
         : accuracy < 0.62
