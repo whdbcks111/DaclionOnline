@@ -1,10 +1,35 @@
-import { ItemMetadataKeys, type ItemMetadata, type ItemSnapshot } from './Item.js';
+import { ItemMetadataKeys, type Item, type ItemMetadata, type ItemSnapshot } from './Item.js';
 import type { AttributeKey, ModifierOp } from './Attribute.js';
 import type { MetadataValue } from './Metadata.js';
 import { GameTags } from '../../../shared/tags.js';
 import type { TagId } from '../../../shared/tags.js';
 
 interface ForgeModifierSeed { attribute: AttributeKey; op: ModifierOp; value: number }
+
+export const FORGED_ITEM_NAMING_SENSIBILITY = 250;
+
+export interface ForgedItemRenameResult {
+    success: boolean;
+    name?: string;
+    reason?: string;
+}
+
+/** Forge metadata 소유권을 검사해 다른 제작자의 결과물이나 일반 아이템 이름 변경을 막는다. */
+export function renameForgedItem(item: Item, creatorUserId: number, requestedName: string): ForgedItemRenameResult {
+    const forge = item.getMetadata<Record<string, unknown>>(ItemMetadataKeys.FORGE);
+    if (!forge || forge.creatorUserId !== creatorUserId) {
+        return { success: false, reason: '직접 단조한 장비에만 이름을 붙일 수 있습니다.' };
+    }
+    const name = requestedName.replace(/\s+/g, ' ').trim();
+    if (name.length < 2 || name.length > 24) {
+        return { success: false, reason: '장비 이름은 공백 포함 2~24자로 입력해주세요.' };
+    }
+    if (/[\u0000-\u001f\u007f\[\]]/.test(name)) {
+        return { success: false, reason: '장비 이름에는 제어 문자나 대괄호를 사용할 수 없습니다.' };
+    }
+    item.setMetadata(ItemMetadataKeys.CUSTOM_NAME, name);
+    return { success: true, name };
+}
 
 export class ForgeForm {
     private static readonly all: ForgeForm[] = [];

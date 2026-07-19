@@ -93,7 +93,7 @@ export function resolveItemInspectionTarget(player: Player, rawInput: string): I
     return undefined;
 }
 
-function itemTargetCompletions(userId: number): CompletionItem[] {
+export function itemTargetCompletions(userId: number): CompletionItem[] {
     const player = getPlayerByUserId(userId);
     if (!player) return [];
     const inventory = player.inventory.getIndexedItems().map(({ item, index }) => ({

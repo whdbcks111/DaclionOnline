@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { GameTags } from '../../../shared/tags.js';
 import { Item } from './Item.js';
-import { createForgedItemSnapshot, ForgeForm, ForgeMaterial } from './Forging.js';
+import { createForgedItemSnapshot, ForgeForm, ForgeMaterial, renameForgedItem } from './Forging.js';
 import { PlayerProgress } from './Progress.js';
 import Skill from './Skill.js';
 import type Player from './Player.js';
@@ -115,6 +115,24 @@ test('완벽한 다이아몬드 도끼는 형태 고유 명명 규칙을 사용�
         random: () => 0.42,
     });
     assert.equal(Item.fromSnapshot(snapshot).name, '익스클리프 다이아몬드 액스');
+});
+
+test('장인의 명명은 직접 만든 단조품만 안전한 이름으로 변경한다', () => {
+    const own = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SWORD, ForgeMaterial.IRON, {
+        accuracy: 0.8,
+        random: () => 0,
+        creatorUserId: 77,
+    }));
+    const other = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SWORD, ForgeMaterial.IRON, {
+        accuracy: 0.8,
+        random: () => 0,
+        creatorUserId: 88,
+    }));
+
+    assert.deepEqual(renameForgedItem(own, 77, '  별을 벼린 검  '), { success: true, name: '별을 벼린 검' });
+    assert.equal(own.name, '별을 벼린 검');
+    assert.equal(renameForgedItem(other, 77, '도둑 이름').success, false);
+    assert.equal(renameForgedItem(own, 77, '[color=red]검').success, false);
 });
 
 test('고레벨 제작자의 감각과 제련 정밀도는 단조 장비를 고레벨 드롭 이상으로 성장시킨다', () => {

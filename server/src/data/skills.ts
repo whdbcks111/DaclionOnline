@@ -26,6 +26,7 @@ import { ShieldType } from '../models/Shield.js';
 import { LegacyStatusEffects } from './statusEffects.js';
 import { StatType } from '../models/Stat.js';
 import { calculateSmeltingExperience } from '../modules/forging.js';
+import { FORGED_ITEM_NAMING_SENSIBILITY } from '../models/Forging.js';
 
 const CRITICAL_HIT_STAT = 'combat:critical_hits';
 
@@ -859,6 +860,30 @@ defineSkill({
     baseMetadata: null,
     calculatedFields: {},
     canActivate: () => denySkill('/단조 <형태> <재료> 명령어를 사용하세요.'),
+    tags: [GameTags.SKILL_PASSIVE],
+});
+
+defineSkill({
+    id: 'artisan_naming',
+    name: '장인의 명명',
+    // TODO: 후가공 스킬 전용 아이콘 제작 전까지 단조 장검 아이콘을 사용한다.
+    icon: 'items/forged_sword',
+    maxLevel: 1,
+    descriptionTemplate: '직접 단조한 장비에 장인이 정한 고유한 이름을 새깁니다. 이름은 장비 인스턴스에 영속되며 같은 마스터 아이템의 다른 장비에는 영향을 주지 않습니다.',
+    costTemplate: '소모값 없음',
+    activationConditionTemplate: `/장비명명 <아이템 번호 또는 장착칸> <새 이름> · 감각 ${FORGED_ITEM_NAMING_SENSIBILITY} 이상`,
+    baseMetadata: null,
+    calculateExperienceGain: () => 0,
+    calculateRequiredExperience: () => 0,
+    autoAcquire: {
+        watchedProgress: [],
+        alwaysEvaluate: true,
+        check: ({ player }) => Boolean(player
+            && hasBlacksmithSkillAccess(player)
+            && player.stat.get(StatType.SENSIBILITY) >= FORGED_ITEM_NAMING_SENSIBILITY),
+    },
+    isVisible: ({ player }) => hasBlacksmithSkillAccess(player),
+    canActivate: () => denySkill('/장비명명 <아이템 번호 또는 장착칸> <새 이름> 명령어를 사용하세요.'),
     tags: [GameTags.SKILL_PASSIVE],
 });
 
