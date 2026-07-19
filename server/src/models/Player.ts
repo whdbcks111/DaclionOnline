@@ -35,6 +35,81 @@ import { DEFAULT_PLAYER_BASE_ATTRIBUTE } from './PlayerDefaults.js';
 import { partyManager } from '../modules/party.js';
 import { emitGameEvent, GameEventIds } from './GameEvent.js';
 
+export const LEVEL_UP_FREE_STAT_POINTS = 3;
+
+export interface PlayerLevelAdjustmentResult {
+    readonly previousLevel: number;
+    readonly level: number;
+    readonly levelDelta: number;
+    readonly statPointDelta: number;
+    readonly statDeltas: Readonly<StatRecord>;
+}
+
+interface PlayerLevelAdjustmentPlan extends PlayerLevelAdjustmentResult {
+    readonly stats: Readonly<StatRecord>;
+    readonly statPoint: number;
+}
+
+/** 레벨업 지급 규칙을 역산해 하락 시 분배 비율을 최대한 보존하는 순수 계산 API. */
+export function calculatePlayerLevelAdjustment(
+    currentLevel: number,
+    targetLevel: number,
+    currentStats: Readonly<StatRecord>,
+    currentStatPoint: number,
+): PlayerLevelAdjustmentPlan {
+    if (!Number.isInteger(targetLevel) || targetLevel < 1 || targetLevel > 10_000) {
+        throw new Error('조정할 레벨은 1~10000 사이의 정수여야 합니다.');
+    }
+    const levelDelta = targetLevel - currentLevel;
+    const stats = { ...currentStats };
+    const beforeStats = { ...currentStats };
+    let statPoint = Math.max(0, Math.floor(currentStatPoint));
+
+    if (levelDelta > 0) {
+        for (const stat of StatType.values()) stats[stat.key] += levelDelta;
+        statPoint += levelDelta * LEVEL_UP_FREE_STAT_POINTS;
+    } else if (levelDelta < 0) {
+        const lostLevels = -levelDelta;
+        for (const stat of StatType.values()) stats[stat.key] = Math.max(0, stats[stat.key] - lostLevels);
+
+        let remaining = lostLevels * LEVEL_UP_FREE_STAT_POINTS;
+        const availableRemoval = Math.min(statPoint, remaining);
+        statPoint -= availableRemoval;
+        remaining -= availableRemoval;
+        const automaticFloor = Math.max(0, targetLevel - 1);
+        while (remaining > 0) {
+            const removable = StatType.values().map(stat => ({
+                stat,
+                amount: Math.max(0, stats[stat.key] - automaticFloor),
+            }));
+            const total = removable.reduce((sum, entry) => sum + entry.amount, 0);
+            if (total <= 0) break;
+            let removedThisPass = 0;
+            for (const entry of removable) {
+                if (entry.amount <= 0 || remaining <= 0) continue;
+                const share = Math.max(1, Math.floor(remaining * entry.amount / total));
+                const amount = Math.min(entry.amount, share, remaining);
+                stats[entry.stat.key] -= amount;
+                remaining -= amount;
+                removedThisPass += amount;
+            }
+            if (removedThisPass === 0) break;
+        }
+    }
+
+    const statDeltas = {} as StatRecord;
+    for (const stat of StatType.values()) statDeltas[stat.key] = stats[stat.key] - beforeStats[stat.key];
+    return {
+        previousLevel: currentLevel,
+        level: targetLevel,
+        levelDelta,
+        statPointDelta: statPoint - currentStatPoint,
+        statDeltas,
+        stats,
+        statPoint,
+    };
+}
+
 export interface PlayerDeathPenaltySnapshot {
     readonly zoneLabel: string;
     readonly experienceLost: number;
@@ -169,6 +244,26 @@ export default class Player extends Entity {
 
     get gold() { return this._gold; }
     set gold(val: number) { this._gold = Math.max(0, val); this._dirty = true; }
+
+    /** 관리자 레벨 조정: 실제 레벨업 지급분과 분배 포인트를 함께 증감한다. */
+    adjustLevel(targetLevel: number, expPercent = 0): PlayerLevelAdjustmentResult {
+        if (!Number.isFinite(expPercent) || expPercent < 0 || expPercent >= 100) {
+            throw new Error('경험치 비율은 0 이상 100 미만이어야 합니다.');
+        }
+        const plan = calculatePlayerLevelAdjustment(
+            this.level,
+            targetLevel,
+            this.stat.points,
+            this.statPoint,
+        );
+        for (const stat of StatType.values()) this.stat.set(stat, plan.stats[stat.key]);
+        this._statPoint = plan.statPoint;
+        this.level = targetLevel;
+        this.exp = Math.floor(this.maxExp * expPercent / 100);
+        this.stat.applyModifiers(this);
+        this._dirty = true;
+        return plan;
+    }
 
     /** 순위 서비스가 raw Player 상태에 접근하지 않도록 제공하는 불변 계산값 snapshot. */
     getRankingMetricSnapshot(): Readonly<RankingMetricRecord> {

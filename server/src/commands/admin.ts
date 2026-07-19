@@ -149,6 +149,56 @@ export function initAdminCommands(): void {
     });
 
     registerCommand({
+        name: '레벨조정',
+        aliases: ['leveladjust'],
+        description: '레벨 차이만큼 실제 성장 규칙의 모든 스탯과 스탯 포인트를 함께 증감합니다. 소수점은 경험치 진행률입니다.',
+        permission: 10,
+        showCommandUse: 'private',
+        args: [
+            { name: '대상', description: '플레이어 userId 또는 me', required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((p): CompletionItem => ({ value: String(p.userId), description: p.name })),
+                    ];
+                },
+            },
+            { name: '레벨', description: '조정할 레벨 (1 이상, 소수점 가능)', required: true },
+        ],
+        async handler(userId, args) {
+            try {
+                const targetId = args[0] === 'me' ? userId : Number.parseInt(args[0], 10);
+                const rawLevel = Number.parseFloat(args[1]);
+                if (!Number.isSafeInteger(targetId) || !Number.isFinite(rawLevel) || rawLevel < 1 || rawLevel >= 10_001) {
+                    sendBotMessageToUser(userId, '유효한 대상과 1~10000 범위의 레벨을 입력해주세요.');
+                    return;
+                }
+                const level = Math.floor(rawLevel);
+                const expPercent = Math.round((rawLevel - level) * 100_000) / 1_000;
+                const player = await fetchPlayerByUserId(targetId);
+                if (!player) {
+                    sendBotMessageToUser(userId, '플레이어를 찾을 수 없습니다.');
+                    return;
+                }
+                const result = player.adjustLevel(level, expPercent);
+                await player.save();
+                const levelDelta = `${result.levelDelta >= 0 ? '+' : ''}${result.levelDelta}`;
+                const pointDelta = `${result.statPointDelta >= 0 ? '+' : ''}${result.statPointDelta}`;
+                const stats = StatType.values().map(stat => {
+                    const delta = result.statDeltas[stat.key];
+                    return `${stat.label} ${delta >= 0 ? '+' : ''}${delta}`;
+                }).join(', ');
+                const message = `${player.name}의 레벨을 ${level}로 조정했습니다. (레벨 ${levelDelta}, ${stats}, 가용 포인트 ${pointDelta})`;
+                sendBotMessageToUser(userId, message);
+                if (targetId !== userId) sendBotMessageToUser(targetId, `관리자에 의해 ${message}`);
+            } catch (error) {
+                logger.error('레벨조정 명령어 처리 중 오류:', error);
+                sendBotMessageToUser(userId, error instanceof Error ? error.message : '레벨 조정 중 오류가 발생했습니다.');
+            }
+        },
+    });
+
+    registerCommand({
         name: '상태변경',
         description: '플레이어의 상태(life, mentality, thirsty, hungry)를 설정합니다.',
         permission: 10,

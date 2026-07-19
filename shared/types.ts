@@ -384,7 +384,7 @@ export type AdminPanelAction =
     | 'teleport_admin_to_player' | 'teleport_player_to_admin' | 'teleport_player_location'
     | 'grant_item' | 'remove_item' | 'clear_inventory' | 'set_item_metadata'
     | 'grant_skill' | 'set_skill_level' | 'remove_skill' | 'set_jobs'
-    | 'set_level' | 'set_stat_points' | 'set_stat' | 'set_gold' | 'set_vital'
+    | 'set_level' | 'adjust_level' | 'set_stat_points' | 'set_stat' | 'set_gold' | 'set_vital'
     | 'unlock_all_locations' | 'unlock_all_crafting_recipes'
     | 'apply_status_effect' | 'clear_status_effects' | 'revive_player'
     | 'start_minigame'

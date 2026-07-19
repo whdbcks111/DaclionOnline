@@ -73,6 +73,10 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
       { name: 'level', label: '레벨', type: 'number', min: 1, max: 10000, defaultValue: detail?.level ?? 1, required: true },
       { name: 'expPercent', label: '경험치 비율 (%)', type: 'number', min: 0, max: 99.999, step: .1, defaultValue: 0, required: true },
     ] },
+    { action: 'adjust_level', label: '레벨 조정', description: '레벨 차이만큼 모든 기본 스탯과 가용·분배 스탯 포인트를 실제 성장 규칙으로 함께 증감합니다.', category: 'growth', fields: [
+      { name: 'level', label: '조정할 레벨', type: 'number', min: 1, max: 10000, defaultValue: detail?.level ?? 1, required: true },
+      { name: 'expPercent', label: '경험치 비율 (%)', type: 'number', min: 0, max: 99.999, step: .1, defaultValue: 0, required: true },
+    ] },
     { action: 'set_stat_points', label: '스탯 포인트 설정', description: '사용 가능한 스탯 포인트를 덮어씁니다.', category: 'growth', fields: [{ name: 'value', label: '스탯 포인트', type: 'number', min: 0, defaultValue: detail?.statPoint ?? 0, required: true }] },
     { action: 'set_stat', label: '기본 스탯 설정', description: '선택한 기본 스탯의 값을 덮어씁니다.', category: 'growth', fields: [
       { name: 'statKey', label: '스탯', type: 'select', options: data.stats, required: true },

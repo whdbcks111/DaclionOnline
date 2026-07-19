@@ -348,6 +348,17 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
             await save(player);
             return `${player.name}의 레벨을 Lv.${level} (${expPercent}% EXP)로 설정했습니다.`;
         }
+        case 'adjust_level': {
+            const level = numberValue(values, 'level', { integer: true, min: 1, max: 10000 });
+            const expPercent = numberValue(values, 'expPercent', { min: 0, max: 99.999 });
+            const result = player.adjustLevel(level, expPercent);
+            await save(player);
+            const stats = StatType.values().map(stat => {
+                const delta = result.statDeltas[stat.key];
+                return `${stat.label} ${delta >= 0 ? '+' : ''}${delta}`;
+            }).join(', ');
+            return `${player.name}의 레벨을 Lv.${level}로 조정했습니다. (레벨 ${result.levelDelta >= 0 ? '+' : ''}${result.levelDelta}, ${stats}, 가용 포인트 ${result.statPointDelta >= 0 ? '+' : ''}${result.statPointDelta})`;
+        }
         case 'set_stat_points': {
             player.statPoint = numberValue(values, 'value', { integer: true, min: 0, max: 1_000_000 });
             await save(player);
