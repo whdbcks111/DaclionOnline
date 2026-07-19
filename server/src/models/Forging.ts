@@ -91,6 +91,50 @@ const forgeTraits = [
 ] as const;
 
 type ForgeTrait = typeof forgeTraits[number];
+type ForgeCraftsmanshipModifierFactory = (craftsmanship: ForgeCraftsmanship) => readonly ForgeModifierSeed[];
+
+interface ForgeQuirk {
+    readonly key: string;
+    readonly label: string;
+    readonly nameWord: string;
+    readonly power: number;
+    readonly durability: number;
+    readonly createModifiers: ForgeCraftsmanshipModifierFactory;
+}
+
+const forgeQuirks: readonly ForgeQuirk[] = [
+    {
+        key: 'overdrive', label: '과부하', nameWord: '오버드라이브', power: 1.28, durability: 0.9,
+        createModifiers: () => [{ attribute: 'speed', op: 'multiply', value: 0.86 }],
+    },
+    {
+        key: 'armor_rend', label: '파갑', nameWord: '아머렌드', power: 0.8, durability: 1,
+        createModifiers: craftsmanship => [{
+            attribute: 'armorPen', op: 'add', value: round(12 + craftsmanship.creatorLevel * 0.08, 2),
+        }],
+    },
+    {
+        key: 'fatal_oath', label: '필살', nameWord: '데스오스', power: 0.94, durability: 0.92,
+        createModifiers: () => [
+            { attribute: 'critRate', op: 'add', value: -0.08 },
+            { attribute: 'critDmg', op: 'add', value: 0.55 },
+        ],
+    },
+    {
+        key: 'life_bound', label: '생명 결속', nameWord: '라이프본', power: 0.86, durability: 1.08,
+        createModifiers: craftsmanship => [
+            { attribute: 'maxLife', op: 'add', value: round(100 + craftsmanship.creatorLevel * 4, 2) },
+            { attribute: 'def', op: 'add', value: round(4 + craftsmanship.creatorLevel * 0.04, 2) },
+        ],
+    },
+    {
+        key: 'spell_bound', label: '마도 결속', nameWord: '아케인', power: 0.78, durability: 0.88,
+        createModifiers: craftsmanship => [
+            { attribute: 'magicForce', op: 'add', value: round(20 + craftsmanship.sensibility * 0.06, 2) },
+            { attribute: 'magicPen', op: 'add', value: round(6 + craftsmanship.creatorLevel * 0.04, 2) },
+        ],
+    },
+];
 
 const forgeNamePrefixes = Object.freeze({
     masterwork: ['아스트레온', '발크리온', '에버폴', '룬크레스트'],
@@ -171,19 +215,28 @@ export function createForgedItemSnapshot(
     const trait = availableTraits[Math.min(availableTraits.length - 1, Math.floor(
         Math.max(0, Math.min(0.999999, random())) * availableTraits.length,
     ))];
+    const quirkRoll = Math.max(0, Math.min(0.999999, random()));
+    const quirk = quirkRoll > 0.84
+        ? forgeQuirks[Math.min(forgeQuirks.length - 1, Math.floor(random() * forgeQuirks.length))]
+        : undefined;
     const craftsmanship = calculateForgeCraftsmanship(options);
-    const power = round(form.basePower * material.power * efficiency * trait.power * craftsmanship.multiplier, 2);
+    const power = round(
+        form.basePower * material.power * efficiency * trait.power * craftsmanship.multiplier * (quirk?.power ?? 1),
+        2,
+    );
     const durabilityCraftsmanship = 1 + (craftsmanship.multiplier - 1) * 0.4;
     const maxDurability = Math.max(1, Math.round(
-        form.baseDurability * material.power * efficiency * trait.durability * durabilityCraftsmanship,
+        form.baseDurability * material.power * efficiency * trait.durability * durabilityCraftsmanship * (quirk?.durability ?? 1),
     ));
     const instanceModifiers: ForgeModifierSeed[] = [
         { attribute: form.powerAttribute, op: 'add', value: power },
         ...material.bonusModifiers,
         ...trait.modifiers,
+        ...(quirk?.createModifiers(craftsmanship) ?? []),
     ];
     const quality = accuracy >= 0.92 ? '명품' : accuracy >= 0.78 ? '우수' : accuracy >= 0.62 ? '양호' : '거친';
-    const customName = createForgedItemName(form, material, accuracy, trait, random);
+    const baseName = createForgedItemName(form, material, accuracy, trait, random);
+    const customName = quirk ? `${quirk.nameWord} ${baseName}` : baseName;
     const storedModifiers: MetadataValue[] = instanceModifiers.map(modifier => ({
         attribute: modifier.attribute,
         op: modifier.op,
@@ -191,13 +244,14 @@ export function createForgedItemSnapshot(
     }));
     const metadata: ItemMetadata = {
         [ItemMetadataKeys.CUSTOM_NAME]: customName,
-        [ItemMetadataKeys.CUSTOM_DESCRIPTION]: `${quality} 단조품. ${material.label}의 성질과 ${form.label}의 형태가 결합되었다. 단조 정확도 ${Math.round(accuracy * 100)}%, 제작 숙련 배율 ${craftsmanship.multiplier.toFixed(2)}배.`,
+        [ItemMetadataKeys.CUSTOM_DESCRIPTION]: `${quality} 단조품. ${material.label}의 성질과 ${form.label}의 형태가 결합되었다. 단조 정확도 ${Math.round(accuracy * 100)}%, 제작 숙련 배율 ${craftsmanship.multiplier.toFixed(2)}배.${quirk ? ` 특이 각인 [ ${quirk.label} ].` : ''}`,
         [ItemMetadataKeys.MAX_DURABILITY]: maxDurability,
         [ItemMetadataKeys.INSTANCE_MODIFIERS]: storedModifiers,
         [ItemMetadataKeys.FORGE]: {
             form: form.key,
             material: material.key,
             trait: trait.key,
+            quirk: quirk?.key ?? '',
             generatedName: customName,
             accuracy: round(accuracy, 4),
             efficiency: round(efficiency, 4),
