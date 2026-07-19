@@ -303,6 +303,8 @@ export interface ForgeCraftsmanship {
     creatorLevel: number;
     sensibility: number;
     forgingPrecision: number;
+    /** 형태별 기준 화력으로 환산하기 전 제작자의 성장 기여값. */
+    primaryPower: number;
     multiplier: number;
 }
 
@@ -314,10 +316,14 @@ export function calculateForgeCraftsmanship(options: ForgeResultOptions): ForgeC
     const levelGrowth = Math.min(1.5, creatorLevel / 150);
     const senseGrowth = Math.min(2.25, Math.max(0, sensibility - 100) * 0.0015);
     const precisionGrowth = Math.min(0.4, forgingPrecision * 0.2);
+    const primaryPower = Math.max(0, creatorLevel - 10) * 0.45
+        + Math.max(0, sensibility - 50) * 0.22
+        + Math.min(2, forgingPrecision) * 15;
     return {
         creatorLevel,
         sensibility,
         forgingPrecision,
+        primaryPower: round(primaryPower, 4),
         multiplier: round(1 + levelGrowth + senseGrowth + precisionGrowth, 4),
     };
 }
@@ -340,8 +346,10 @@ export function createForgedItemSnapshot(
         ? forgeQuirks[Math.min(forgeQuirks.length - 1, Math.floor(random() * forgeQuirks.length))]
         : undefined;
     const craftsmanship = calculateForgeCraftsmanship(options);
+    const formPowerScale = form.basePower / ForgeForm.SWORD.basePower;
     const power = round(
-        form.basePower * material.power * efficiency * trait.power * craftsmanship.multiplier * (quirk?.power ?? 1),
+        (form.basePower + craftsmanship.primaryPower * formPowerScale)
+            * material.power * efficiency * trait.power * (quirk?.power ?? 1),
         2,
     );
     const durabilityCraftsmanship = 1 + (craftsmanship.multiplier - 1) * 0.4;
@@ -379,6 +387,7 @@ export function createForgedItemSnapshot(
             sensibility: round(craftsmanship.sensibility, 2),
             forgingPrecision: round(craftsmanship.forgingPrecision, 4),
             craftsmanshipMultiplier: craftsmanship.multiplier,
+            craftsmanshipPower: craftsmanship.primaryPower,
             creatorUserId: options.creatorUserId ?? 0,
         },
     };
