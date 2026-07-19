@@ -15,6 +15,7 @@ import { getPlayerByUserId } from '../modules/player.js';
 import { chat } from '../utils/chatBuilder.js';
 import { formatWeight } from '../utils/format.js';
 import type { CompletionItem } from '../../../shared/types.js';
+import { ItemAttackEffectType } from '../models/ItemAttackEffect.js';
 
 export const ITEM_APPRAISAL_SENSIBILITY = 50;
 export const ITEM_PERFORMANCE_SENSIBILITY = 75;
@@ -171,6 +172,14 @@ export function getItemGameplayDetails(snapshot: ItemInspectionSnapshot): ItemGa
     }
     if (data?.onBasicAttackHit) {
         details.push({ label: '적중 효과', value: '설명에 명시된 고유 효과 발동' });
+    }
+    for (const effect of snapshot.attackEffects) {
+        const type = ItemAttackEffectType.fromKey(effect.type);
+        if (!type) continue;
+        details.push({
+            label: '마법 적중 효과',
+            value: `${type.label} · ${formatNumber(effect.chance * 100)}% · Lv.${effect.level} · ${formatNumber(effect.duration)}초`,
+        });
     }
     return details;
 }

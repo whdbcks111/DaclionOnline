@@ -3,8 +3,14 @@ import { registerCommand } from '../modules/bot.js';
 import { startForging } from '../modules/forging.js';
 import { sendBotMessageToUser } from '../modules/message.js';
 import { getPlayerByUserId } from '../modules/player.js';
-import { ForgeForm, ForgeMaterial } from '../models/Forging.js';
-import { FORGED_ITEM_NAMING_SENSIBILITY, renameForgedItem } from '../models/Forging.js';
+import {
+    ARCANE_ENCHANT_MENTALITY_COST,
+    FORGED_ITEM_NAMING_SENSIBILITY,
+    ForgeForm,
+    ForgeMaterial,
+    enchantWeapon,
+    renameForgedItem,
+} from '../models/Forging.js';
 import { StatType } from '../models/Stat.js';
 import { itemTargetCompletions, resolveItemInspectionTarget } from './inspection.js';
 
@@ -72,6 +78,46 @@ export function initForgingCommands(): void {
                 return;
             }
             sendBotMessageToUser(userId, `[ ${previousName} ]에 [ ${result.name} ]이라는 이름을 새겼습니다.`);
+        },
+    });
+
+    registerCommand({
+        name: '마법부여', aliases: ['enchant', 'enc'], description: '무기에 속성 연관 적중 마법을 한 번 부여합니다.',
+        showCommandUse: 'private',
+        args: [{
+            name: '아이템 번호 또는 장착칸', description: '인벤토리 번호 또는 손 같은 장착칸', required: true,
+            completions: itemTargetCompletions,
+        }],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            const skill = player.skills.get('arcane_enchanting');
+            if (!skill || !player.career.hasJob('career:arcane_smith')) {
+                sendBotMessageToUser(userId, '대장장이를 메인, 마법사를 서브로 선택해 마도 대장장이로 전직해야 합니다.');
+                return;
+            }
+            const target = resolveItemInspectionTarget(player, args[0] ?? '');
+            if (!target) {
+                sendBotMessageToUser(userId, '유효한 인벤토리 번호 또는 장착칸을 입력해주세요.');
+                return;
+            }
+            if (!player.canSpendMentality(ARCANE_ENCHANT_MENTALITY_COST)) {
+                sendBotMessageToUser(userId, `정신력이 ${ARCANE_ENCHANT_MENTALITY_COST} 필요합니다.`);
+                return;
+            }
+            const result = enchantWeapon(target.item, {
+                enchanterUserId: userId,
+                skillLevel: skill.level,
+                sensibility: player.stat.get(StatType.SENSIBILITY),
+            });
+            if (!result.success || !result.effect) {
+                sendBotMessageToUser(userId, result.reason ?? '마법 부여에 실패했습니다.');
+                return;
+            }
+            player.spendMentality(ARCANE_ENCHANT_MENTALITY_COST);
+            skill.addExperience(player, skill.getExperienceGain(player));
+            sendBotMessageToUser(userId,
+                `[ ${target.item.name} ]에 [ ${result.label} ]을 새겼습니다. 적중 시 ${(result.effect.chance * 100).toFixed(1)}% 확률로 Lv.${result.effect.level} 효과가 ${result.effect.duration}초간 발동합니다.`);
         },
     });
 }

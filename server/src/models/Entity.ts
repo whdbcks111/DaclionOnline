@@ -862,6 +862,7 @@ export default abstract class Entity implements TagReadable {
             const weapon = this.equipment.getEquipped(EquipSlotType.MAIN_HAND.key);
             try {
                 weapon?.data?.onBasicAttackHit?.({ attacker: this, target, weapon, result: damageResult });
+                weapon?.triggerInstanceAttackEffects(target);
             } catch (error) {
                 logger.error(`아이템 공격 적중 효과 실패: ${weapon?.itemDataId ?? 'unknown'}`, error);
             }

@@ -14,6 +14,12 @@ import {
 import type { MetadataRecord, MetadataValue } from './Metadata.js';
 import type Entity from './Entity.js';
 import type { DamageResult } from './Entity.js';
+import {
+    applyItemAttackEffects,
+    ItemAttackEffectType,
+    normalizeItemAttackEffects,
+    type ItemAttackEffectSnapshot,
+} from './ItemAttackEffect.js';
 
 export type ItemMetadataValue = MetadataValue;
 export interface ItemMetadata extends MetadataRecord {}
@@ -29,6 +35,8 @@ export const ItemMetadataKeys = Object.freeze({
     INSTANCE_MODIFIERS: 'instanceModifiers',
     MAX_DURABILITY: 'maxDurability',
     FORGE: 'forge',
+    ENCHANTMENT: 'enchantment',
+    ATTACK_EFFECTS: 'attackEffects',
 } as const);
 
 const METADATA_STORAGE_KEY = '__daclionItemMetadata';
@@ -134,6 +142,7 @@ export interface ItemInspectionSnapshot {
     readonly tags: readonly TagId[];
     readonly metadata: Readonly<ItemMetadata> | null;
     readonly metadataDelta: Readonly<ItemMetadata> | null;
+    readonly attackEffects: readonly ItemAttackEffectSnapshot[];
 }
 
 /** 아이템 인스턴스 (인벤토리/장비 공용) */
@@ -208,6 +217,16 @@ export class Item implements TagReadable {
     get basicAttackOverrideKey(): string | undefined {
         const value = this.getMetadata(ItemMetadataKeys.BASIC_ATTACK_OVERRIDE);
         return typeof value === 'string' && value.trim() ? value : undefined;
+    }
+
+    /** 인스턴스 metadata의 공격 효과를 검증·정규화한 불변 목록. */
+    get attackEffects(): readonly ItemAttackEffectSnapshot[] {
+        return normalizeItemAttackEffects(this.getMetadata(ItemMetadataKeys.ATTACK_EFFECTS));
+    }
+
+    /** Entity 공격 경계가 호출하는 인스턴스 적중 효과 실행 API. */
+    triggerInstanceAttackEffects(target: Entity, random: () => number = Math.random): readonly ItemAttackEffectType[] {
+        return applyItemAttackEffects(this.attackEffects, target, random);
     }
 
     /** 기본 metadata와 delta를 합친 읽기 전용 스냅샷 */
@@ -350,6 +369,7 @@ export class Item implements TagReadable {
             tags: this.tags.values(),
             metadata: this.getMetadataSnapshot(),
             metadataDelta: this.getMetadataDeltaSnapshot(),
+            attackEffects: this.attackEffects,
         };
     }
 

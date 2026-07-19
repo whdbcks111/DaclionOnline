@@ -3,6 +3,7 @@ import type { AttributeKey, ModifierOp } from './Attribute.js';
 import type { MetadataValue } from './Metadata.js';
 import { GameTags } from '../../../shared/tags.js';
 import type { TagId } from '../../../shared/tags.js';
+import { generateItemEnchantment, type ItemAttackEffectSnapshot } from './ItemAttackEffect.js';
 
 interface ForgeModifierSeed { attribute: AttributeKey; op: ModifierOp; value: number }
 
@@ -12,6 +13,43 @@ export interface ForgedItemRenameResult {
     success: boolean;
     name?: string;
     reason?: string;
+}
+
+export const ARCANE_ENCHANT_MENTALITY_COST = 80;
+
+export interface WeaponEnchantResult {
+    success: boolean;
+    effect?: ItemAttackEffectSnapshot;
+    label?: string;
+    reason?: string;
+}
+
+/** 마도 대장장이의 무기 후가공. 한 인스턴스에는 한 번만 마법 각인을 확정한다. */
+export function enchantWeapon(item: Item, options: {
+    enchanterUserId: number;
+    skillLevel: number;
+    sensibility: number;
+    random?: () => number;
+}): WeaponEnchantResult {
+    if (!item.hasTag(GameTags.ITEM_WEAPON)) return { success: false, reason: '무기 아이템에만 마법을 부여할 수 있습니다.' };
+    if (item.getMetadata(ItemMetadataKeys.ENCHANTMENT)) return { success: false, reason: '이미 마법이 부여된 무기입니다.' };
+    const forge = item.getMetadata<Record<string, unknown>>(ItemMetadataKeys.FORGE);
+    const signature = [item.itemDataId, forge?.material ?? '', forge?.trait ?? '', forge?.generatedName ?? item.name].join(':');
+    const generated = generateItemEnchantment(
+        item,
+        signature,
+        options.skillLevel,
+        options.sensibility,
+        options.random,
+    );
+    item.setMetadata(ItemMetadataKeys.ATTACK_EFFECTS, [generated.effect]);
+    item.setMetadata(ItemMetadataKeys.ENCHANTMENT, {
+        type: generated.type.id,
+        label: generated.type.label,
+        enchanterUserId: options.enchanterUserId,
+    });
+    item.tags.addPersistent(generated.type.propertyTag);
+    return { success: true, effect: generated.effect, label: generated.type.label };
 }
 
 /** Forge metadata 소유권을 검사해 다른 제작자의 결과물이나 일반 아이템 이름 변경을 막는다. */

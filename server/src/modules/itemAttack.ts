@@ -78,6 +78,17 @@ export function executeProjectileItemAttack(context: ItemAttackOverrideContext):
         target: context.target,
         dataId: reference.dataId,
         overrides: reference.overrides,
+        onHit: (_projectile, result) => {
+            if (!result.evaded && result.finalDamage > 0) {
+                context.weapon.data?.onBasicAttackHit?.({
+                    attacker: context.attacker,
+                    target: context.target,
+                    weapon: context.weapon,
+                    result,
+                });
+                context.weapon.triggerInstanceAttackEffects(context.target);
+            }
+        },
     });
     if (!projectile) return false;
 

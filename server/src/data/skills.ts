@@ -887,6 +887,22 @@ defineSkill({
     tags: [GameTags.SKILL_PASSIVE],
 });
 
+defineSkill({
+    id: 'arcane_enchanting',
+    name: '마법 부여',
+    // TODO: 후가공 스킬 전용 아이콘 제작 전까지 마법력 능력치 아이콘을 사용한다.
+    icon: 'attributes/magicForce',
+    maxLevel: 5,
+    descriptionTemplate: '무기의 재료·속성과 장비 고유 signature를 읽어 적중 시 발동하는 마법 효과를 한 번 부여합니다. 후보는 장비 속성에 편향되지만 효과 종류·발동률·레벨·지속시간은 높은 서버 난수의 영향을 받습니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 80[/color]',
+    activationConditionTemplate: '/마법부여 <아이템 번호 또는 장착칸> · 마도 대장장이 전용 · 아직 마법이 없는 무기',
+    baseMetadata: null,
+    calculateExperienceGain: () => 25,
+    jobRequirement: jobRequirement('career:arcane_smith'),
+    canActivate: () => denySkill('/마법부여 <아이템 번호 또는 장착칸> 명령어를 사용하세요.'),
+    tags: [GameTags.SKILL_PASSIVE],
+});
+
 function weaponRequirement(description: string, ...tags: string[]) { return { mainHandAnyTags: tags, description }; }
 function targetOrDeny(context: SkillContext): { target: Entity } | { reason: string } {
     const player = requirePlayer(context);
