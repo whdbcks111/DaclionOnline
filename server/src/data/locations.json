@@ -886,6 +886,7 @@
     "objects": [
       { "type": "monster", "dataId": "ironroot_heartwarden", "maxCount": 1, "respawnTime": 900 },
       { "type": "resource", "dataId": "ironroot_resonance_crystal", "maxCount": 3, "respawnTime": 900 },
+      { "type": "resource", "dataId": "enhancement_crystal_vein", "maxCount": 2, "respawnTime": 600 },
       { "type": "resource", "dataId": "crystal_treasure_chest", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [

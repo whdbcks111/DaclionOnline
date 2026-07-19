@@ -37,6 +37,7 @@ export const ItemMetadataKeys = Object.freeze({
     FORGE: 'forge',
     ENCHANTMENT: 'enchantment',
     ATTACK_EFFECTS: 'attackEffects',
+    REINFORCEMENT: 'reinforcement',
 } as const);
 
 const METADATA_STORAGE_KEY = '__daclionItemMetadata';
@@ -185,7 +186,8 @@ export class Item implements TagReadable {
     /** 아이템 이름 */
     get name(): string {
         const custom = this.getMetadata(ItemMetadataKeys.CUSTOM_NAME);
-        return typeof custom === 'string' && custom.trim() ? custom.trim().slice(0, 40) : this.data?.name ?? '';
+        const baseName = typeof custom === 'string' && custom.trim() ? custom.trim().slice(0, 40) : this.data?.name ?? '';
+        return this.reinforcementLevel > 0 ? `${baseName} +${this.reinforcementLevel}` : baseName;
     }
 
     /** 아이템 설명 */
@@ -296,7 +298,18 @@ export class Item implements TagReadable {
     /** 능력치 modifier 목록 */
     get modifiers(): AttributeModifier[] | null {
         const instance = normalizeInstanceModifiers(this.getMetadata(ItemMetadataKeys.INSTANCE_MODIFIERS));
-        return instance ?? this.data?.modifiers ?? null;
+        const base = instance ?? this.data?.modifiers ?? [];
+        const reinforcement = normalizeReinforcementModifiers(this.getMetadata(ItemMetadataKeys.REINFORCEMENT));
+        const combined = [...base, ...reinforcement];
+        return combined.length > 0 ? combined : null;
+    }
+
+    /** 후가공 강화 단계. 잘못된 저장값은 안전하게 0으로 취급한다. */
+    get reinforcementLevel(): number {
+        const value = this.getMetadata<{ level?: unknown }>(ItemMetadataKeys.REINFORCEMENT)?.level;
+        return typeof value === 'number' && Number.isFinite(value)
+            ? Math.max(0, Math.min(5, Math.floor(value)))
+            : 0;
     }
 
     /** 기본(최대) 내구도. null = 무한 */
@@ -439,6 +452,11 @@ function normalizeInstanceModifiers(value: unknown): AttributeModifier[] | null 
         });
     }
     return modifiers.length > 0 ? modifiers : null;
+}
+
+function normalizeReinforcementModifiers(value: unknown): AttributeModifier[] {
+    if (!value || typeof value !== 'object') return [];
+    return normalizeInstanceModifiers((value as { modifiers?: unknown }).modifiers) ?? [];
 }
 
 function normalizeDurability(value: number, max: number): number {

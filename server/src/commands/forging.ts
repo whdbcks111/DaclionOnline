@@ -5,14 +5,18 @@ import { sendBotMessageToUser } from '../modules/message.js';
 import { getPlayerByUserId } from '../modules/player.js';
 import {
     ARCANE_ENCHANT_MENTALITY_COST,
+    ENHANCEMENT_STONE_ITEM_ID,
     FORGED_ITEM_NAMING_SENSIBILITY,
     ForgeForm,
     ForgeMaterial,
     enchantWeapon,
+    reinforceWeapon,
     renameForgedItem,
 } from '../models/Forging.js';
 import { StatType } from '../models/Stat.js';
+import { AttributeType } from '../models/Attribute.js';
 import { itemTargetCompletions, resolveItemInspectionTarget } from './inspection.js';
+import { GameTags } from '../../../shared/tags.js';
 
 export function initForgingCommands(): void {
     registerCommand({
@@ -118,6 +122,59 @@ export function initForgingCommands(): void {
             skill.addExperience(player, skill.getExperienceGain(player));
             sendBotMessageToUser(userId,
                 `[ ${target.item.name} ]에 [ ${result.label} ]을 새겼습니다. 적중 시 ${(result.effect.chance * 100).toFixed(1)}% 확률로 Lv.${result.effect.level} 효과가 ${result.effect.duration}초간 발동합니다.`);
+        },
+    });
+
+    registerCommand({
+        name: '무기강화', aliases: ['reinforce', 'rf'], description: '지핵 강화석으로 무기를 최대 +5까지 확정 강화합니다.',
+        showCommandUse: 'private',
+        args: [{
+            name: '아이템 번호 또는 장착칸', description: '인벤토리 번호 또는 손 같은 장착칸', required: true,
+            completions: itemTargetCompletions,
+        }],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            const skill = player.skills.get('weapon_reinforcement');
+            if (!skill || !player.career.hasJob('career:battle_smith')) {
+                sendBotMessageToUser(userId, '대장장이를 메인, 전사를 서브로 선택해 전투 대장장이로 전직해야 합니다.');
+                return;
+            }
+            const target = resolveItemInspectionTarget(player, args[0] ?? '');
+            if (!target) {
+                sendBotMessageToUser(userId, '유효한 인벤토리 번호 또는 장착칸을 입력해주세요.');
+                return;
+            }
+            if (player.inventory.getCount(ENHANCEMENT_STONE_ITEM_ID) < 1) {
+                sendBotMessageToUser(userId, '철근미궁 지핵 수정실의 강화 수정맥에서 얻는 지핵 강화석이 1개 필요합니다.');
+                return;
+            }
+            const before = target.item.reinforcementLevel;
+            const preview = before >= 5 || !target.item.hasTag(GameTags.ITEM_WEAPON);
+            if (preview) {
+                sendBotMessageToUser(userId, before >= 5 ? '이미 최대 강화 단계(+5)입니다.' : '무기 아이템만 강화할 수 있습니다.');
+                return;
+            }
+            if (!player.inventory.removeItemByData(ENHANCEMENT_STONE_ITEM_ID, 1)) return;
+            const result = reinforceWeapon(target.item, {
+                creatorLevel: player.level,
+                sensibility: player.stat.get(StatType.SENSIBILITY),
+                skillLevel: skill.level,
+            });
+            if (!result.success || !result.level) {
+                player.inventory.addItem(ENHANCEMENT_STONE_ITEM_ID, 1);
+                sendBotMessageToUser(userId, result.reason ?? '무기 강화에 실패했습니다.');
+                return;
+            }
+            skill.addExperience(player, skill.getExperienceGain(player));
+            const bonus = (result.addedModifiers ?? []).map(modifier => {
+                const label = AttributeType.fromKey(modifier.attribute)?.label ?? modifier.attribute;
+                const value = modifier.op === 'multiply'
+                    ? `+${((modifier.value - 1) * 100).toFixed(1)}%`
+                    : `+${modifier.value}`;
+                return `${label} ${value}`;
+            }).join(', ');
+            sendBotMessageToUser(userId, `[ ${target.item.name} ] 강화 성공! (${bonus})`);
         },
     });
 }

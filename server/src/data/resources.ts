@@ -266,3 +266,19 @@ defineResource({
     expReward: { min: 2_200, max: 3_000 },
     tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_DIAMOND, GameTags.PROPERTY_EARTH],
 });
+
+defineResource({
+    id: 'enhancement_crystal_vein',
+    name: '강화 수정맥',
+    level: 185,
+    baseAttribute: { maxLife: 14_000, def: 130, magicDef: 230 },
+    requiredToolTags: [GameTags.TOOL_MINING],
+    drops: [{ itemDataId: 'enhancement_stone', weight: 1, minCount: 1, maxCount: 1 }],
+    expReward: { min: 3_400, max: 4_600 },
+    tags: [
+        GameTags.RESOURCE_ORE,
+        GameTags.TRAIT_INANIMATE,
+        GameTags.MATERIAL_ENHANCEMENT_STONE,
+        GameTags.PROPERTY_EARTH,
+    ],
+});

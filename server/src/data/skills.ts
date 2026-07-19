@@ -26,7 +26,7 @@ import { ShieldType } from '../models/Shield.js';
 import { LegacyStatusEffects } from './statusEffects.js';
 import { StatType } from '../models/Stat.js';
 import { calculateSmeltingExperience } from '../modules/forging.js';
-import { FORGED_ITEM_NAMING_SENSIBILITY } from '../models/Forging.js';
+import { FORGED_ITEM_NAMING_SENSIBILITY, MAX_WEAPON_REINFORCEMENT } from '../models/Forging.js';
 
 const CRITICAL_HIT_STAT = 'combat:critical_hits';
 
@@ -900,6 +900,22 @@ defineSkill({
     calculateExperienceGain: () => 25,
     jobRequirement: jobRequirement('career:arcane_smith'),
     canActivate: () => denySkill('/마법부여 <아이템 번호 또는 장착칸> 명령어를 사용하세요.'),
+    tags: [GameTags.SKILL_PASSIVE],
+});
+
+defineSkill({
+    id: 'weapon_reinforcement',
+    name: '무기 강화',
+    // TODO: 후가공 스킬 전용 아이콘 제작 전까지 공격력 능력치 아이콘을 사용한다.
+    icon: 'attributes/atk',
+    maxLevel: 5,
+    descriptionTemplate: `지핵 강화석을 소모해 무기를 최대 +${MAX_WEAPON_REINFORCEMENT}까지 강화합니다. 강화는 실패하거나 하락하지 않으며, 매 단계 공격 계열 능력치와 무기 종류에 맞는 긍정 효과가 영구적으로 누적됩니다.`,
+    costTemplate: '지핵 강화석 1개',
+    activationConditionTemplate: '/무기강화 <아이템 번호 또는 장착칸> · 전투 대장장이 전용 · +5 미만 무기',
+    baseMetadata: null,
+    calculateExperienceGain: () => 28,
+    jobRequirement: jobRequirement('career:battle_smith'),
+    canActivate: () => denySkill('/무기강화 <아이템 번호 또는 장착칸> 명령어를 사용하세요.'),
     tags: [GameTags.SKILL_PASSIVE],
 });
 

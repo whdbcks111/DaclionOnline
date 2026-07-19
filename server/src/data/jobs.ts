@@ -89,6 +89,7 @@ for (const [main, sub, eliteId, name] of eliteRecipes) {
         grantedSkills: [
             { skillDataId: `${eliteId}_mastery` },
             { skillDataId: `${eliteId}_technique` },
+            ...(eliteId === 'battle_smith' ? [{ skillDataId: 'weapon_reinforcement' }] : []),
             ...(eliteId === 'arcane_smith' ? [{ skillDataId: 'arcane_enchanting' }] : []),
         ],
         mainModifiers: [

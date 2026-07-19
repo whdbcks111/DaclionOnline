@@ -69,6 +69,7 @@ export const GameTags = Object.freeze({
     MATERIAL_RUBY: 'material:ruby',
     MATERIAL_EMERALD: 'material:emerald',
     MATERIAL_DIAMOND: 'material:diamond',
+    MATERIAL_ENHANCEMENT_STONE: 'material:enhancement_stone',
     MATERIAL_REFINED: 'material:refined',
 
     TOOL_MINING: 'tool:mining',

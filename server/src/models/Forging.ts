@@ -16,12 +16,58 @@ export interface ForgedItemRenameResult {
 }
 
 export const ARCANE_ENCHANT_MENTALITY_COST = 80;
+export const MAX_WEAPON_REINFORCEMENT = 5;
+export const ENHANCEMENT_STONE_ITEM_ID = 'enhancement_stone';
 
 export interface WeaponEnchantResult {
     success: boolean;
     effect?: ItemAttackEffectSnapshot;
     label?: string;
     reason?: string;
+}
+
+export interface WeaponReinforcementResult {
+    success: boolean;
+    level?: number;
+    addedModifiers?: readonly ForgeModifierSeed[];
+    reason?: string;
+}
+
+/** 전투 대장장이의 무기 강화. 실패·하락 없이 +5까지 긍정 modifier만 누적한다. */
+export function reinforceWeapon(item: Item, options: {
+    creatorLevel: number;
+    sensibility: number;
+    skillLevel: number;
+}): WeaponReinforcementResult {
+    if (!item.hasTag(GameTags.ITEM_WEAPON)) return { success: false, reason: '무기 아이템만 강화할 수 있습니다.' };
+    const current = item.reinforcementLevel;
+    if (current >= MAX_WEAPON_REINFORCEMENT) return { success: false, reason: `이미 최대 강화 단계(+${MAX_WEAPON_REINFORCEMENT})입니다.` };
+
+    const level = current + 1;
+    const creatorLevel = Math.max(1, Math.floor(options.creatorLevel));
+    const sensibility = Math.max(0, options.sensibility);
+    const skillLevel = Math.max(1, Math.floor(options.skillLevel));
+    const primaryAttribute: AttributeKey = item.hasTag(GameTags.WEAPON_STAFF) ? 'magicForce' : 'atk';
+    const primaryValue = round(5 + creatorLevel * 0.075 + sensibility * 0.012 + skillLevel * 2.5, 2);
+    const added: ForgeModifierSeed[] = [{ attribute: primaryAttribute, op: 'add', value: primaryValue }];
+
+    if (level >= 2) {
+        if (item.hasTag(GameTags.WEAPON_AXE)) added.push({ attribute: 'critDmg', op: 'add', value: round(0.035 + skillLevel * 0.005, 4) });
+        else if (item.hasTag(GameTags.WEAPON_DAGGER)) added.push({ attribute: 'armorPen', op: 'add', value: round(2 + skillLevel * 0.5, 2) });
+        else if (item.hasTag(GameTags.WEAPON_BOW)) added.push({ attribute: 'critRate', op: 'add', value: round(0.008 + skillLevel * 0.002, 4) });
+        else if (item.hasTag(GameTags.WEAPON_STAFF)) added.push({ attribute: 'magicPen', op: 'add', value: round(2 + skillLevel * 0.5, 2) });
+        else added.push({ attribute: 'attackSpeed', op: 'multiply', value: round(1.008 + skillLevel * 0.002, 4) });
+    }
+    if (level >= 4) added.push({ attribute: 'critDmg', op: 'add', value: round(0.025 + skillLevel * 0.005, 4) });
+    if (level === MAX_WEAPON_REINFORCEMENT) added.push({ attribute: primaryAttribute, op: 'multiply', value: round(1.03 + skillLevel * 0.01, 4) });
+
+    const previous = item.getMetadata<{ modifiers?: unknown[] }>(ItemMetadataKeys.REINFORCEMENT);
+    const stored = [...(Array.isArray(previous?.modifiers) ? previous.modifiers : []), ...added].map(modifier => {
+        const value = modifier as ForgeModifierSeed;
+        return { attribute: value.attribute, op: value.op, value: value.value };
+    });
+    item.setMetadata(ItemMetadataKeys.REINFORCEMENT, { level, modifiers: stored });
+    return { success: true, level, addedModifiers: added };
 }
 
 /** 마도 대장장이의 무기 후가공. 한 인스턴스에는 한 번만 마법 각인을 확정한다. */
