@@ -6,6 +6,7 @@ import { chat } from '../utils/chatBuilder.js';
 import { sendBotMessageToUser, sendNotificationToUser } from './message.js';
 import { normalizeMiniGameActions, startMiniGame } from './minigame.js';
 import { AttributeType } from '../models/Attribute.js';
+import { StatType } from '../models/Stat.js';
 
 export const BLACKSMITH_JOB_ID = 'career:blacksmith';
 export const BLACKSMITH_PROFESSION_FLAG = 'profession:blacksmith';
@@ -102,7 +103,13 @@ export function startForging(player: Player, form: ForgeForm, material: ForgeMat
                 return;
             }
             const accuracy = Math.max(0, Math.min(1, result.score ?? 0));
-            const output = createForgedItemSnapshot(form, material, { accuracy, creatorUserId: player.userId });
+            const output = createForgedItemSnapshot(form, material, {
+                accuracy,
+                creatorUserId: player.userId,
+                creatorLevel: player.level,
+                sensibility: player.stat.get(StatType.SENSIBILITY),
+                forgingPrecision: player.attribute.get(AttributeType.FORGING_PRECISION),
+            });
             if (!player.inventory.replaceSelectedItems(selections, [output])) {
                 sendNotificationToUser(player.userId, { key: 'forging:no-space', message: '완성품을 보관할 중량 공간이 부족해 단조가 취소되었습니다.' });
                 return;

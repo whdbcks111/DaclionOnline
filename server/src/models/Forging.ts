@@ -66,9 +66,28 @@ export class ForgeMaterial {
 
 const forgeTraits = [
     { key: 'balanced', label: '균형 잡힌', power: 1, durability: 1, modifiers: [] },
-    { key: 'keen', label: '날 선', power: 1.02, durability: 0.95, modifiers: [{ attribute: 'critRate', op: 'add', value: 0.015 }] },
-    { key: 'heavy', label: '묵직한', power: 1.08, durability: 1.15, modifiers: [{ attribute: 'attackSpeed', op: 'multiply', value: 0.97 }] },
-    { key: 'precise', label: '정밀한', power: 0.98, durability: 1.03, modifiers: [{ attribute: 'armorPen', op: 'add', value: 3 }] },
+    { key: 'keen', label: '예리한', power: 0.9, durability: 0.84, weaponOnly: true, modifiers: [
+        { attribute: 'critRate', op: 'add', value: 0.07 },
+        { attribute: 'critDmg', op: 'add', value: 0.18 },
+    ] },
+    { key: 'heavy', label: '묵직한', power: 1.2, durability: 1.28, modifiers: [
+        { attribute: 'attackSpeed', op: 'multiply', value: 0.86 },
+        { attribute: 'speed', op: 'multiply', value: 0.96 },
+    ] },
+    { key: 'precise', label: '정밀한', power: 0.88, durability: 0.94, modifiers: [
+        { attribute: 'armorPen', op: 'add', value: 14 },
+        { attribute: 'attackSpeed', op: 'multiply', value: 1.06 },
+    ] },
+    { key: 'resilient', label: '질긴', power: 0.8, durability: 1.7, modifiers: [
+        { attribute: 'def', op: 'add', value: 12 },
+    ] },
+    { key: 'arcane', label: '마도적인', power: 0.84, durability: 0.9, modifiers: [
+        { attribute: 'magicForce', op: 'add', value: 18 },
+        { attribute: 'magicPen', op: 'add', value: 8 },
+    ] },
+    { key: 'volatile', label: '불안정한', power: 1.32, durability: 0.62, weaponOnly: true, modifiers: [
+        { attribute: 'critDmg', op: 'add', value: 0.32 },
+    ] },
 ] as const;
 
 type ForgeTrait = typeof forgeTraits[number];
@@ -79,6 +98,9 @@ const forgeNamePrefixes = Object.freeze({
     keen: ['레이저윈드', '실버엣지', '킨베일', '샤프리스'],
     heavy: ['그라비톤', '아이언폴', '브레이크혼', '타이탄록'],
     precise: ['아큐리스', '트루사이트', '핀포인트', '클리어런스'],
+    resilient: ['듀라하임', '포트리스', '스톤가드', '언브로큰'],
+    arcane: ['아르카눔', '룬베일', '마나크레스트', '에테리온'],
+    volatile: ['카오스브링어', '와일드코어', '리프트엣지', '브레이크제로'],
     rough: ['애시본', '러스트혼', '그릿폴', '스톤바이트'],
 } satisfies Record<string, readonly string[]>);
 
@@ -108,6 +130,32 @@ export interface ForgeResultOptions {
     accuracy: number;
     random?: () => number;
     creatorUserId?: number;
+    creatorLevel?: number;
+    sensibility?: number;
+    forgingPrecision?: number;
+}
+
+export interface ForgeCraftsmanship {
+    creatorLevel: number;
+    sensibility: number;
+    forgingPrecision: number;
+    multiplier: number;
+}
+
+/** 레거시의 감각 100 초과분 기반 효율을 현재 장비 수치 규모에 맞춰 완만한 배율로 환산한다. */
+export function calculateForgeCraftsmanship(options: ForgeResultOptions): ForgeCraftsmanship {
+    const creatorLevel = Math.max(1, Math.floor(options.creatorLevel ?? 1));
+    const sensibility = Math.max(0, options.sensibility ?? 0);
+    const forgingPrecision = Math.max(0, options.forgingPrecision ?? 0);
+    const levelGrowth = Math.min(1.5, creatorLevel / 150);
+    const senseGrowth = Math.min(2.25, Math.max(0, sensibility - 100) * 0.0015);
+    const precisionGrowth = Math.min(0.4, forgingPrecision * 0.2);
+    return {
+        creatorLevel,
+        sensibility,
+        forgingPrecision,
+        multiplier: round(1 + levelGrowth + senseGrowth + precisionGrowth, 4),
+    };
 }
 
 /** 형태·재료는 결과를 결정하고, 단조 trait만 주입 가능한 random에 따라 달라진다. */
@@ -119,9 +167,16 @@ export function createForgedItemSnapshot(
     const accuracy = Math.max(0, Math.min(1, options.accuracy));
     const efficiency = 0.7 + accuracy * 0.9;
     const random = options.random ?? Math.random;
-    const trait = forgeTraits[Math.min(forgeTraits.length - 1, Math.floor(Math.max(0, Math.min(0.999999, random())) * forgeTraits.length))];
-    const power = round(form.basePower * material.power * efficiency * trait.power, 2);
-    const maxDurability = Math.max(1, Math.round(form.baseDurability * material.power * efficiency * trait.durability));
+    const availableTraits = forgeTraits.filter(trait => !('weaponOnly' in trait) || form.powerAttribute === 'atk');
+    const trait = availableTraits[Math.min(availableTraits.length - 1, Math.floor(
+        Math.max(0, Math.min(0.999999, random())) * availableTraits.length,
+    ))];
+    const craftsmanship = calculateForgeCraftsmanship(options);
+    const power = round(form.basePower * material.power * efficiency * trait.power * craftsmanship.multiplier, 2);
+    const durabilityCraftsmanship = 1 + (craftsmanship.multiplier - 1) * 0.4;
+    const maxDurability = Math.max(1, Math.round(
+        form.baseDurability * material.power * efficiency * trait.durability * durabilityCraftsmanship,
+    ));
     const instanceModifiers: ForgeModifierSeed[] = [
         { attribute: form.powerAttribute, op: 'add', value: power },
         ...material.bonusModifiers,
@@ -136,7 +191,7 @@ export function createForgedItemSnapshot(
     }));
     const metadata: ItemMetadata = {
         [ItemMetadataKeys.CUSTOM_NAME]: customName,
-        [ItemMetadataKeys.CUSTOM_DESCRIPTION]: `${quality} 단조품. ${material.label}의 성질과 ${form.label}의 형태가 결합되었다. 단조 정확도 ${Math.round(accuracy * 100)}%.`,
+        [ItemMetadataKeys.CUSTOM_DESCRIPTION]: `${quality} 단조품. ${material.label}의 성질과 ${form.label}의 형태가 결합되었다. 단조 정확도 ${Math.round(accuracy * 100)}%, 제작 숙련 배율 ${craftsmanship.multiplier.toFixed(2)}배.`,
         [ItemMetadataKeys.MAX_DURABILITY]: maxDurability,
         [ItemMetadataKeys.INSTANCE_MODIFIERS]: storedModifiers,
         [ItemMetadataKeys.FORGE]: {
@@ -146,6 +201,10 @@ export function createForgedItemSnapshot(
             generatedName: customName,
             accuracy: round(accuracy, 4),
             efficiency: round(efficiency, 4),
+            creatorLevel: craftsmanship.creatorLevel,
+            sensibility: round(craftsmanship.sensibility, 2),
+            forgingPrecision: round(craftsmanship.forgingPrecision, 4),
+            craftsmanshipMultiplier: craftsmanship.multiplier,
             creatorUserId: options.creatorUserId ?? 0,
         },
     };
