@@ -24,6 +24,8 @@ export const MINIGAME_INPUT_SAMPLE_INTERVAL_MS = 20
 export const MAX_MINIGAME_INPUT_SAMPLES = 2_048
 /** 보스 위험 회피가 사용하는 공용 난이도 상한. 7~10은 후반 보스 전용 밀도다. */
 export const MAX_HAZARD_DODGE_DIFFICULTY = 10
+/** 저사양 터치 화면에서 마지막으로 그려진 note와 입력 시각 차이를 허용하는 최대 보정값. */
+export const MAX_FORGE_TOUCH_VISUAL_LAG_MS = 140
 
 export function appendMiniGameInputSample(
     inputs: MiniGameInputSample[],
@@ -121,6 +123,22 @@ export function createForgeBeatTimesMs(
 
 export function calculateForgeQualityScore(config: ForgeRhythmConfig, accuracy: number): number {
     return clamp(accuracy + Math.max(0, config.qualityBonus), 0, 1)
+}
+
+/**
+ * 터치 사용자는 마지막으로 화면에 그려진 note를 보고 누르므로 한두 frame의 표시 지연을 보정한다.
+ * 오래 멈춘 화면이나 비정상 입력은 현재 시각을 사용해 action trace를 과도하게 되감지 않는다.
+ */
+export function resolveForgeStrikeTime(
+    currentElapsedMs: number,
+    displayedElapsedMs: number,
+    compensateVisualLag: boolean,
+): number {
+    const current = Math.max(0, currentElapsedMs)
+    if (!compensateVisualLag || !Number.isFinite(displayedElapsedMs)) return current
+    const displayed = Math.max(0, Math.min(current, displayedElapsedMs))
+    const lag = current - displayed
+    return lag <= MAX_FORGE_TOUCH_VISUAL_LAG_MS ? displayed : current
 }
 
 export interface MiniGameConfigMap {
@@ -493,7 +511,7 @@ export function simulateForgeRhythm(
         .filter(action => action.action === 'strike' && Number.isFinite(action.at))
         .map(action => Math.max(0, Math.min(config.durationMs, action.at)))
         .sort((left, right) => left - right)
-    const used = new Set<number>()
+    const matchedBeatDistance = new Map<number, number>()
     let hitCount = 0
     let perfectCount = 0
     let missCount = 0
@@ -501,26 +519,33 @@ export function simulateForgeRhythm(
     let maxCombo = 0
     let qualityTotal = 0
 
-    for (const beat of beats) {
-        if (beat > elapsedMs + config.hitWindowMs) break
+    // 각 타격을 가장 가까운 note에 먼저 배정한다. 앞 note를 놓친 연타 구간에서
+    // 다음 note의 정확한 타격이 넓은 판정창 때문에 앞 note에 빼앗기는 것을 막는다.
+    for (const strike of strikes) {
         let match = -1
         let closest = Number.POSITIVE_INFINITY
-        for (let index = 0; index < strikes.length; index++) {
-            if (used.has(index)) continue
-            const distance = Math.abs(strikes[index] - beat)
+        for (let index = 0; index < beats.length; index++) {
+            if (matchedBeatDistance.has(index)) continue
+            const distance = Math.abs(strike - beats[index])
             if (distance <= config.hitWindowMs && distance < closest) {
                 match = index
                 closest = distance
             }
         }
-        if (match < 0) {
+        if (match >= 0) matchedBeatDistance.set(match, closest)
+    }
+
+    for (let index = 0; index < beats.length; index++) {
+        const beat = beats[index]
+        if (beat > elapsedMs + config.hitWindowMs) break
+        const closest = matchedBeatDistance.get(index)
+        if (closest === undefined) {
             if (elapsedMs >= beat + config.hitWindowMs) {
                 missCount++
                 combo = 0
             }
             continue
         }
-        used.add(match)
         hitCount++
         combo++
         maxCombo = Math.max(maxCombo, combo)
@@ -530,7 +555,10 @@ export function simulateForgeRhythm(
         qualityTotal += perfect ? 1 : Math.max(0.5, 1 - (closest - config.perfectWindowMs) / falloffRange * 0.5)
     }
 
-    const accuracy = beats.length === 0 ? 0 : qualityTotal / beats.length
+    // 진행 중에는 아직 판정되지 않은 미래 note를 분모에 넣지 않는다. 종료 시에는
+    // 모든 note가 hit 또는 miss로 확정되므로 서버 최종 성공 판정 값은 동일하다.
+    const resolvedCount = hitCount + missCount
+    const accuracy = resolvedCount === 0 ? 0 : qualityTotal / resolvedCount
     const finished = elapsedMs >= config.durationMs
     return {
         hitCount,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type {
   FishingSimulationState,
   ForgeRhythmSimulationState,
@@ -10,6 +10,7 @@ import type {
 import {
   appendMiniGameInputSample,
   calculateForgeQualityScore,
+  resolveForgeStrikeTime,
   simulateForgeRhythm,
   simulateHazardDodge,
   simulateFishingCapture,
@@ -61,6 +62,14 @@ function getGaugeColor(value: number): string {
   return `hsl(${hue.toFixed(0)} 58% 44%)`
 }
 
+function blurActiveTextEntry(): void {
+  const active = document.activeElement
+  if (!(active instanceof HTMLElement)) return
+  if (active.isContentEditable || active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+    active.blur()
+  }
+}
+
 export default function MiniGameOverlay() {
   const { socket } = useSocket()
   const [game, setGame] = useState<MiniGameStartData | null>(null)
@@ -79,6 +88,7 @@ export default function MiniGameOverlay() {
   const joystickRef = useRef<HTMLDivElement>(null)
   const forgeAudioRef = useRef<AudioContext | null>(null)
   const nextForgeCueRef = useRef(0)
+  const displayedElapsedRef = useRef(0)
 
   const playForgeSound = useCallback((kind: 'cue' | 'strike') => {
     const AudioContextClass = window.AudioContext
@@ -105,12 +115,17 @@ export default function MiniGameOverlay() {
     forgeAudioRef.current = null
   }, [])
 
-  const strike = useCallback(() => {
+  const strike = useCallback((compensateVisualLag = false) => {
     if (submitted.current || game?.type !== 'forge_rhythm') return
-    const at = Math.max(0, performance.now() - startedAt.current)
+    const currentElapsed = Math.max(0, performance.now() - startedAt.current)
+    const at = resolveForgeStrikeTime(currentElapsed, displayedElapsedRef.current, compensateVisualLag)
     actions.current.push({ at, action: 'strike' })
     playForgeSound('strike')
   }, [game?.type, playForgeSound])
+
+  useLayoutEffect(() => {
+    displayedElapsedRef.current = elapsed
+  }, [elapsed])
 
   const setDirection = useCallback((x: number, y: number) => {
     if (submitted.current) return
@@ -133,6 +148,7 @@ export default function MiniGameOverlay() {
   useEffect(() => {
     if (!socket) return
     const onStart = (data: MiniGameStartData) => {
+      blurActiveTextEntry()
       setGame(data)
       if (data.type === 'fishing_capture') {
         setState({ ...INITIAL_STATE, gauge: data.config.initialGauge })
@@ -147,6 +163,7 @@ export default function MiniGameOverlay() {
         setStatus('박자에 맞춰 망치를 내리치세요!')
       }
       startedAt.current = performance.now()
+      displayedElapsedRef.current = 0
       inputs.current = [{ at: 0, x: 0, y: 0 }]
       actions.current = []
       nextForgeCueRef.current = 0
@@ -311,10 +328,18 @@ export default function MiniGameOverlay() {
   }
   if (game.type === 'forge_rhythm') {
     const config = game.config
-    const leadMs = 2_000
+    const compactTimeline = window.matchMedia('(hover: none), (max-width: 48rem)').matches
+    const leadMs = compactTimeline ? 1_250 : 1_650
+    const guideStepMs = compactTimeline ? 250 : 330
     const accuracy = Math.round(forgeState.accuracy * 100)
     const quality = Math.round(calculateForgeQualityScore(config, forgeState.accuracy) * 100)
-    return <div className={styles.backdrop} role="dialog" aria-modal="true" aria-label="단조 리듬 미니게임">
+    return <div
+      className={styles.backdrop}
+      role="dialog"
+      aria-modal="true"
+      aria-label="단조 리듬 미니게임"
+      onPointerDownCapture={blurActiveTextEntry}
+    >
       <section className={styles.panel}>
         <header><div><span className={styles.rarity}>{config.label}</span><h2>마력 단조</h2></div><p>Space · Enter · 타격 버튼</p></header>
         <div className={styles.forgeStats}>
@@ -325,13 +350,32 @@ export default function MiniGameOverlay() {
         </div>
         <div className={styles.forgeLane}>
           <span className={styles.strikeLine} />
+          {Array.from({ length: Math.floor(leadMs / guideStepMs) }, (_, index) => {
+            const offsetMs = (index + 1) * guideStepMs
+            return <span
+              key={`guide:${offsetMs}`}
+              className={styles.forgeGuide}
+              style={{ left: `${18 + offsetMs / leadMs * 82}%` }}
+            />
+          })}
           {config.beatTimesMs.map((beat, index) => {
             const left = 18 + (beat - elapsed) / leadMs * 82
             if (left < -8 || left > 108) return null
-            return <span key={`${beat}:${index}`} className={styles.forgeNote} style={{ left: `${left}%` }} />
+            return <span key={`${beat}:${index}`} className={styles.forgeNote} style={{ left: `${left}%` }}>
+              <i>{index + 1}</i>
+            </span>
           })}
         </div>
-        <button className={styles.strikeButton} type="button" onPointerDown={event => { event.preventDefault(); strike() }}>
+        <button
+          className={styles.strikeButton}
+          type="button"
+          onPointerDown={event => {
+            event.preventDefault()
+            event.stopPropagation()
+            blurActiveTextEntry()
+            strike(event.pointerType === 'touch')
+          }}
+        >
           망치 내리치기
         </button>
         <strong className={styles.forgeStatus}>{status}</strong>

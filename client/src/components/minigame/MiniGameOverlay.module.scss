@@ -159,17 +159,39 @@
   left: 18%;
   width: .18rem;
   background: $color-primary;
+  z-index: 2;
+}
+
+.forgeGuide {
+  position: absolute;
+  top: 22%;
+  bottom: 22%;
+  width: 1px;
+  background: color-mix(in srgb, $color-border 72%, transparent);
+  pointer-events: none;
 }
 
 .forgeNote {
   position: absolute;
   top: 50%;
-  width: clamp(1.3rem, 4vw, 2rem);
+  z-index: 3;
+  display: grid;
+  width: clamp(1.1rem, 3.3vw, 1.65rem);
   aspect-ratio: 1;
+  place-items: center;
   transform: translate(-50%, -50%) rotate(45deg);
   background: $color-warning;
   border: 1px solid $color-border;
   border-radius: $border-radius-sm;
+
+  i {
+    transform: rotate(-45deg);
+    color: #2b2418;
+    font-size: clamp(.55rem, 1.8vw, .72rem);
+    font-style: normal;
+    font-weight: 900;
+    line-height: 1;
+  }
 }
 
 .strikeButton {
@@ -217,6 +239,8 @@
   .joystick { display: block; }
   .panel header p { display: none; }
   .board { width: min(100%, 56vh); }
+  .forgeLane { height: clamp(5.5rem, 17vh, 7rem); }
+  .forgeNote { width: clamp(1rem, 5vw, 1.35rem); }
 }
 
 @media (max-height: 44rem) {
