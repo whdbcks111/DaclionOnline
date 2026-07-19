@@ -46,6 +46,7 @@
 - [`docs/systems/dungeon-puzzles.md`](docs/systems/dungeon-puzzles.md)
 - [`docs/systems/progress-skills.md`](docs/systems/progress-skills.md)
 - [`docs/systems/party.md`](docs/systems/party.md)
+- [`docs/systems/trading.md`](docs/systems/trading.md)
 - [`docs/systems/rankings.md`](docs/systems/rankings.md)
 - [`docs/systems/careers.md`](docs/systems/careers.md)
 - [`docs/systems/admin-panel.md`](docs/systems/admin-panel.md)

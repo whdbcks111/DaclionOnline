@@ -71,6 +71,13 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 | 파티 | `/파티정보` (`partyinfo`, `pinfo`, `pt`) | 파티장·파티원 레벨·위치·HP/MP 표시 |
 | 파티 | `/파티나가기` (`partyleave`, `pl`), `/파티해산` (`partydisband`, `pb`) | 본인 이탈 또는 파티장 전체 해산 |
 | 파티 | `/파티강퇴 대상` (`partykick`, `pk`) | 파티장이 고유번호 또는 닉네임으로 같은 파티원 강퇴 |
+| 거래 | `/거래요청 대상` (`traderequest`, `tr`) | 같은 장소의 생존한 온라인 플레이어에게 30초 거래 요청 |
+| 거래 | `/거래수락` (`tradeaccept`, `ta`), `/거래거절` (`tradedecline`, `td`) | 받은 거래 요청 처리 |
+| 거래 | `/거래정보` (`tradeinfo`, `ti`) | 현재 거래 카드를 최신 정보로 다시 표시 |
+| 거래 | `/거래아이템추가 번호 [개수]` (`tradeitemadd`, `tia`), `/거래아이템회수 번호 [개수]` (`tradeitemremove`, `tir`) | 인벤토리와 런타임 거래 에스크로 사이에서 아이템 이동 |
+| 거래 | `/거래골드 총액` (`tradegold`, `tg`) | 추가/차감이 아니라 현재 제안할 골드 총액을 설정; 0이면 전부 회수 |
+| 거래 | `/거래확인` (`tradeconfirm`, `tc`), `/거래확인취소` (`tradeunconfirm`, `tcc`) | 현재 제안을 확인하거나 철회; 양쪽 확인 시 교환 완료 |
+| 거래 | `/거래취소` (`tradecancel`, `tx`) | 거래를 끝내고 에스크로 아이템·골드를 원래 소유자에게 복원 |
 | 진행 | `/통계` (`statistics`, `stats`) | 공개 통계 counter 표시 |
 | 진행 | `/순위 [카테고리]` (`rank`, `ranking`, `rk`) | 기본 레벨 또는 골드·스탯·능력치 순위. 상위 20명과 목록 밖 본인 순위를 고정 열 너비로 표시 |
 | 진행 | `/순위공개`, `/순위비공개` (`rankpublic`, `rankprivate`) | 생략 시 전체, 카테고리 지정 시 해당 순위 수치 공개 여부 변경 |

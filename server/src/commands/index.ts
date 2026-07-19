@@ -18,6 +18,7 @@ import { initRankingCommands } from './ranking.js';
 import { initBalanceCommands } from './balance.js';
 import { initForgingCommands } from './forging.js';
 import { initPuzzleCommands } from './puzzle.js';
+import { initTradeCommands } from './trade.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -40,4 +41,5 @@ export function initAllCommands(): void {
     initBalanceCommands();
     initForgingCommands();
     initPuzzleCommands();
+    initTradeCommands();
 }

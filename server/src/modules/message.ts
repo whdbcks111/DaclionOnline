@@ -169,7 +169,7 @@ export function sendMessageFiltered(
     channel: string | null,
     msg: ChatMessage,
     privateLabel = true,
-): void {
+): string {
     const emitMsg = withId(privateLabel ? { ...msg, private: true } : msg);
     addToFilteredChannelHistory(channel, filter, emitMsg);
     // 해당 채널에 현재 접속 중인 유저에게만 실시간 전달
@@ -177,6 +177,7 @@ export function sendMessageFiltered(
         userId => filter(userId) && getUserChannel(userId) === channel,
         socket => socket.emit('chatMessage', emitMsg)
     );
+    return emitMsg.id!;
 }
 
 /** filter를 통과한 유저들에게 봇 메시지 전송 (채널 범위 한정) */
@@ -211,8 +212,8 @@ export function sendBotMessageToUser(userId: number, content: string | ChatNode[
 }
 
 /** 공개 정보 명령 문맥에서도 반드시 본인에게만 봇 메시지를 보낸다. */
-export function sendPrivateBotMessageToUser(userId: number, content: string | ChatNode[], privateLabel = true): void {
-    sendMessageFiltered(id => id === userId, getUserChannel(userId), makeBotMessage(content), privateLabel);
+export function sendPrivateBotMessageToUser(userId: number, content: string | ChatNode[], privateLabel = true): string {
+    return sendMessageFiltered(id => id === userId, getUserChannel(userId), makeBotMessage(content), privateLabel);
 }
 
 /** 전투·스킬 봇 메시지를 각 파티원의 현재 채널에 파티 피드로 남긴다. */

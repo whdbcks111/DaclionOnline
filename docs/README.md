@@ -25,6 +25,7 @@
 | 이벤트·통계·플래그·스킬 | [systems/progress-skills.md](systems/progress-skills.md) |
 | 메인·서브·엘리트 직업과 전직 | [systems/careers.md](systems/careers.md) |
 | 파티 초대·HUD·몬스터 경험치 공유 | [systems/party.md](systems/party.md) |
+| 플레이어 거래·에스크로·확인 카드 | [systems/trading.md](systems/trading.md) |
 | 플레이어 순위·수치 공개 설정 | [systems/rankings.md](systems/rankings.md) |
 | 아이템·인벤토리·장비·상점 | [systems/items-shop.md](systems/items-shop.md) |
 | 제작법 발견·재료 필터·제작 | [systems/crafting.md](systems/crafting.md) |

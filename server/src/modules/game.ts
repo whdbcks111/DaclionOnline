@@ -6,6 +6,7 @@ import { updateAllShops } from "../models/Shop.js";
 import { updateProjectiles } from "../models/Projectile.js";
 import { updateNpcDialogues } from "../models/NpcDialogue.js";
 import { updateGameScheduler } from './scheduler.js';
+import { tradeManager } from './trade.js';
 
 const TARGET_FPS = 20;
 const FRAME_TIME = 1000 / TARGET_FPS;
@@ -28,6 +29,7 @@ function tick(): void {
     for (const player of players) {
         player.lateUpdate(dt);
     }
+    tradeManager.update(players);
 
     updateProjectiles(dt);
     updateLocations(dt);

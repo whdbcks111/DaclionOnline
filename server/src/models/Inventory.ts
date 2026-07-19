@@ -294,9 +294,18 @@ export default class Inventory {
 
     /** 아이템 이동 시 metadata/내구도/영속 태그를 보존해 추가 */
     addItemSnapshot(snapshot: ItemSnapshot): boolean {
+        return this.addItemSnapshotInternal(snapshot, true);
+    }
+
+    /** 거래 에스크로 취소처럼 소유자에게 반드시 돌려줘야 하는 아이템을 중량 초과 상태로도 복구한다. */
+    restoreItemSnapshot(snapshot: ItemSnapshot): boolean {
+        return this.addItemSnapshotInternal(snapshot, false);
+    }
+
+    private addItemSnapshotInternal(snapshot: ItemSnapshot, enforceWeight: boolean): boolean {
         const data = getItemData(snapshot.itemDataId);
         if (!data || snapshot.count <= 0) return false;
-        if (!this.canAddSnapshot(snapshot)) return false;
+        if (enforceWeight && !this.canAddSnapshot(snapshot)) return false;
 
         let remaining = snapshot.count;
 
