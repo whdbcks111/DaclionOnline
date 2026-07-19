@@ -50,7 +50,7 @@ interface PlayerLevelAdjustmentPlan extends PlayerLevelAdjustmentResult {
     readonly statPoint: number;
 }
 
-/** 레벨업 지급 규칙을 역산해 하락 시 분배 비율을 최대한 보존하는 순수 계산 API. */
+/** 상승은 현재 분배를 건드리지 않고 지급분만 더하며, 하락만 성장 규칙을 역산하는 순수 계산 API. */
 export function calculatePlayerLevelAdjustment(
     currentLevel: number,
     targetLevel: number,
@@ -61,14 +61,30 @@ export function calculatePlayerLevelAdjustment(
         throw new Error('조정할 레벨은 1~10000 사이의 정수여야 합니다.');
     }
     const levelDelta = targetLevel - currentLevel;
-    const stats = { ...currentStats };
     const beforeStats = { ...currentStats };
-    let statPoint = Math.max(0, Math.floor(currentStatPoint));
 
     if (levelDelta > 0) {
-        for (const stat of StatType.values()) stats[stat.key] += levelDelta;
-        statPoint += levelDelta * LEVEL_UP_FREE_STAT_POINTS;
-    } else if (levelDelta < 0) {
+        const stats = { ...currentStats };
+        const statDeltas = {} as StatRecord;
+        for (const stat of StatType.values()) {
+            statDeltas[stat.key] = levelDelta;
+            stats[stat.key] = currentStats[stat.key] + levelDelta;
+        }
+        const statPointDelta = levelDelta * LEVEL_UP_FREE_STAT_POINTS;
+        return {
+            previousLevel: currentLevel,
+            level: targetLevel,
+            levelDelta,
+            statPointDelta,
+            statDeltas,
+            stats,
+            statPoint: currentStatPoint + statPointDelta,
+        };
+    }
+
+    const stats = { ...currentStats };
+    let statPoint = Math.max(0, Math.floor(currentStatPoint));
+    if (levelDelta < 0) {
         const lostLevels = -levelDelta;
         for (const stat of StatType.values()) stats[stat.key] = Math.max(0, stats[stat.key] - lostLevels);
 

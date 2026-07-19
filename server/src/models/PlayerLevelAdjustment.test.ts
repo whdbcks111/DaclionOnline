@@ -4,20 +4,27 @@ import { calculatePlayerLevelAdjustment } from './Player.js';
 
 test('관리자 레벨 상승 조정은 실제 레벨업처럼 모든 스탯과 가용 포인트를 지급한다', () => {
     const result = calculatePlayerLevelAdjustment(10, 13, {
-        strength: 9,
-        agility: 9,
+        strength: 29,
+        agility: 19,
         vitality: 9,
-        sensibility: 9,
-        mentality: 9,
+        sensibility: 101,
+        mentality: 3,
     }, 4);
 
     assert.equal(result.levelDelta, 3);
     assert.deepEqual(result.stats, {
-        strength: 12,
-        agility: 12,
+        strength: 32,
+        agility: 22,
         vitality: 12,
-        sensibility: 12,
-        mentality: 12,
+        sensibility: 104,
+        mentality: 6,
+    });
+    assert.deepEqual(result.statDeltas, {
+        strength: 3,
+        agility: 3,
+        vitality: 3,
+        sensibility: 3,
+        mentality: 3,
     });
     assert.equal(result.statPoint, 13);
     assert.equal(result.statPointDelta, 9);

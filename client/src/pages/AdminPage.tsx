@@ -73,7 +73,7 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
       { name: 'level', label: '레벨', type: 'number', min: 1, max: 10000, defaultValue: detail?.level ?? 1, required: true },
       { name: 'expPercent', label: '경험치 비율 (%)', type: 'number', min: 0, max: 99.999, step: .1, defaultValue: 0, required: true },
     ] },
-    { action: 'adjust_level', label: '레벨 조정', description: '레벨 차이만큼 모든 기본 스탯과 가용·분배 스탯 포인트를 실제 성장 규칙으로 함께 증감합니다.', category: 'growth', fields: [
+    { action: 'adjust_level', label: '레벨 조정', description: '상승 시 기존 분배를 유지하고 레벨마다 모든 스탯 +1과 가용 포인트 +3만 지급합니다.', category: 'growth', fields: [
       { name: 'level', label: '조정할 레벨', type: 'number', min: 1, max: 10000, defaultValue: detail?.level ?? 1, required: true },
       { name: 'expPercent', label: '경험치 비율 (%)', type: 'number', min: 0, max: 99.999, step: .1, defaultValue: 0, required: true },
     ] },
