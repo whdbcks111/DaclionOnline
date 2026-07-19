@@ -332,10 +332,10 @@ defineWorldMonster({
 defineWorldMonster({
     id: 'caldera_beast',
     name: '칼데라 화염수',
-    description: '칼데라의 불길을 두른 최상위 화염수.',
+    description: '칼데라의 불길을 두른 홍염산지의 구간 보스. 느린 분출을 예고한 뒤 화염과 화상을 누적한다.',
     level: 50,
     baseAttribute: {
-        maxLife: 1800,
+        maxLife: 8200,
         atk: 155,
         magicForce: 168,
         def: 76,
@@ -347,6 +347,7 @@ defineWorldMonster({
         critRate: 0.12,
         critDmg: 1.7,
     },
+    expReward: 50 * 20 * 5,
     drops: [
         { itemDataId: 'ruby', minCount: 2, maxCount: 4, chance: 0.35 },
         { itemDataId: 'diamond', minCount: 1, maxCount: 2, chance: 0.15 },
@@ -356,7 +357,14 @@ defineWorldMonster({
         damageType: 'magic',
         effect: { statusEffectId: 'fire', chance: 0.48, duration: 16, level: 6 },
     },
-    tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_NATURAL],
+    skills: [{ skillDataId: 'caldera_eruption', level: 3 }],
+    skillPattern: { sequence: ['caldera_eruption'], initialDelay: 5, interval: { min: 9, max: 13 } },
+    ai: {
+        intelligence: 62, disposition: MonsterAiDisposition.THREAT,
+        weights: { attack: 0.5, damage: 1, healing: 0.8, shielding: 0.6, control: 0.8, taunt: 1.3 },
+        tauntResistance: 0.35, switchThreshold: 0.12,
+    },
+    tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_BEAST, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_NATURAL],
 });
 
 const advancedWorldMonsters: WorldMonsterData[] = [
@@ -374,11 +382,22 @@ const advancedWorldMonsters: WorldMonsterData[] = [
         tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_METAL, GameTags.PROPERTY_ELECTRIC],
     },
     {
-        id: 'thunder_colossus', name: '뇌정 거상', description: '낙뢰를 동력으로 삼는 고대 금속 거상.', level: 68,
-        baseAttribute: { maxLife: 3600, atk: 218, magicForce: 225, def: 138, magicDef: 122, speed: 1.15, attackSpeed: 0.75 },
+        id: 'thunder_colossus', name: '뇌정 거상', description: '낙뢰를 동력으로 삼는 천둥마루의 구간 보스. 지각 충격과 회피 불가 뇌정 과부하를 무작위로 사용한다.', level: 68,
+        baseAttribute: { maxLife: 16800, atk: 218, magicForce: 225, def: 138, magicDef: 122, speed: 1.15, attackSpeed: 0.62 },
+        expReward: 68 * 20 * 5,
         drops: [{ itemDataId: 'windsteel_sword', minCount: 1, maxCount: 1, chance: 0.03 }, { itemDataId: 'gold_ore', minCount: 2, maxCount: 5, chance: 0.3 }],
         goldReward: { min: 180, max: 320 }, attack: { damageType: 'magic' },
-        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_ELECTRIC, GameTags.PROPERTY_METAL],
+        skills: [{ skillDataId: 'tempest_overload', level: 3 }, { skillDataId: 'seismic_crush', level: 3 }],
+        skillPattern: {
+            sequence: ['tempest_overload', 'seismic_crush'], randomOrder: true,
+            initialDelay: 4, interval: { min: 7, max: 11 },
+        },
+        ai: {
+            intelligence: 76, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.35, damage: 1, healing: 1.15, shielding: 0.8, control: 1.1, taunt: 1.8 },
+            tauntResistance: 0.58, switchThreshold: 0.18,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_ELECTRIC, GameTags.PROPERTY_METAL],
     },
     {
         id: 'gloom_beetle', name: '암영 딱정벌레', description: '밤숲의 빛을 등껍질 아래 빨아들인 대형 벌레.', level: 75,
@@ -395,11 +414,22 @@ const advancedWorldMonsters: WorldMonsterData[] = [
         tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_DARK, GameTags.PROPERTY_INSECT],
     },
     {
-        id: 'nightwood_core', name: '밤숲의 검은 심재', description: '어둠과 뿌리가 엉겨 스스로 걷기 시작한 숲의 핵.', level: 95,
-        baseAttribute: { maxLife: 6500, atk: 290, magicForce: 315, def: 165, magicDef: 175, speed: 1.4 },
+        id: 'nightwood_core', name: '밤숲의 검은 심재', description: '어둠과 뿌리가 엉겨 움직이는 월영밤숲의 구간 보스. 공격 사이에 주변 뿌리에서 생명력을 다시 끌어온다.', level: 95,
+        baseAttribute: { maxLife: 29000, atk: 290, magicForce: 315, def: 165, magicDef: 175, speed: 1.4 },
+        expReward: 95 * 20 * 5,
         drops: [{ itemDataId: 'diamond', minCount: 1, maxCount: 2, chance: 0.15 }], goldReward: { min: 260, max: 445 },
         attack: { damageType: 'magic', effect: { statusEffectId: 'decay', chance: 0.3, duration: 10, level: 5 } },
-        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_DARK, GameTags.PROPERTY_NATURAL],
+        skills: [{ skillDataId: 'nightwood_lash', level: 3 }, { skillDataId: 'nightwood_regrowth', level: 3 }],
+        skillPattern: {
+            sequence: ['nightwood_lash', 'nightwood_regrowth'], randomOrder: true,
+            initialDelay: 5, interval: { min: 8, max: 12 },
+        },
+        ai: {
+            intelligence: 84, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.25, damage: 1, healing: 1.35, shielding: 0.9, control: 1.2, taunt: 2.1 },
+            tauntResistance: 0.66, switchThreshold: 0.2,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_DARK, GameTags.PROPERTY_NATURAL],
     },
     {
         id: 'dawn_wisp', name: '새벽빛 정령', description: '성역 외곽에 흩어진 부드러운 빛이 의지를 얻은 정령.', level: 105,
@@ -414,10 +444,19 @@ const advancedWorldMonsters: WorldMonsterData[] = [
         tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_HOLY, GameTags.PROPERTY_METAL],
     },
     {
-        id: 'halo_beast', name: '광륜수', description: '성역 중심의 빛을 수호하는 거대한 신성 짐승.', level: 125,
-        baseAttribute: { maxLife: 11000, atk: 385, magicForce: 405, def: 235, magicDef: 255, speed: 2.8, critRate: 0.13 },
+        id: 'halo_beast', name: '광륜수', description: '성역 중심의 빛을 수호하는 구간 보스. 회피할 수 없는 광륜 심판으로 한 명의 시야를 봉쇄한다.', level: 125,
+        baseAttribute: { maxLife: 55000, atk: 385, magicForce: 405, def: 235, magicDef: 255, speed: 2.8, critRate: 0.13 },
+        expReward: 125 * 20 * 5,
         drops: [{ itemDataId: 'diamond', minCount: 2, maxCount: 3, chance: 0.22 }], goldReward: { min: 360, max: 600 },
-        attack: { damageType: 'magic' }, tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY],
+        attack: { damageType: 'magic' },
+        skills: [{ skillDataId: 'sanctum_judgment', level: 4 }],
+        skillPattern: { sequence: ['sanctum_judgment'], initialDelay: 4, interval: { min: 8, max: 12 } },
+        ai: {
+            intelligence: 90, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.2, damage: 1, healing: 1.45, shielding: 1.05, control: 1.25, taunt: 2.3 },
+            tauntResistance: 0.74, switchThreshold: 0.22,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_BEAST, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY],
     },
     {
         id: 'grave_sentinel', name: '묘문 파수병', description: '사령묘의 명령만 남아 갑옷 속에서 움직이는 언데드.', level: 135,
@@ -434,11 +473,22 @@ const advancedWorldMonsters: WorldMonsterData[] = [
         tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'deathless_colossus', name: '불멸의 묘상', description: '수많은 유해와 묘석이 하나로 엉겨 붙은 거대한 불사체.', level: 155,
-        baseAttribute: { maxLife: 18500, atk: 505, magicForce: 430, def: 330, magicDef: 295, speed: 1.05, attackSpeed: 0.7 },
+        id: 'deathless_colossus', name: '불멸의 묘상', description: '수많은 유해와 묘석이 하나로 엉겨 붙은 사령묘의 구간 보스. 지각 붕괴와 공포를 부르는 진혼을 불규칙하게 반복한다.', level: 155,
+        baseAttribute: { maxLife: 86000, atk: 505, magicForce: 430, def: 330, magicDef: 295, speed: 1.05, attackSpeed: 0.58 },
+        expReward: 155 * 20 * 5,
         drops: [{ itemDataId: 'diamond', minCount: 2, maxCount: 5, chance: 0.28 }], goldReward: { min: 480, max: 790 },
         attack: { effect: { statusEffectId: 'decay', chance: 0.35, duration: 12, level: 8 } },
-        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_STONE],
+        skills: [{ skillDataId: 'deathless_requiem', level: 4 }, { skillDataId: 'seismic_crush', level: 4 }],
+        skillPattern: {
+            sequence: ['deathless_requiem', 'seismic_crush'], randomOrder: true,
+            initialDelay: 5, interval: { min: 8, max: 13 },
+        },
+        ai: {
+            intelligence: 91, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.2, damage: 1, healing: 1.5, shielding: 1, control: 1.3, taunt: 2.5 },
+            tauntResistance: 0.8, switchThreshold: 0.24,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_ELEMENTAL, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_STONE],
     },
     {
         id: 'ironroot_beast', name: '철근수', description: '금속 뿌리와 흙덩이가 짐승의 형태로 굳은 황무지 생물.', level: 165,

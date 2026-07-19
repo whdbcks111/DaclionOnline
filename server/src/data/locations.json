@@ -159,7 +159,8 @@
     ],
     "connections": [
       { "locationId": "meadow_3" },
-      { "locationId": "swamp_basin" }
+      { "locationId": "swamp_basin" },
+      { "locationId": "swamp_reedway" }
     ]
   },
   {
@@ -178,6 +179,27 @@
     ],
     "connections": [
       { "locationId": "swamp_edge" },
+      { "locationId": "swamp_reedway" },
+      { "locationId": "swamp_heart" }
+    ]
+  },
+  {
+    "id": "swamp_reedway",
+    "name": "안개수렁 숨죽인 갈대길",
+    "mapColor": "#66784f",
+    "zoneType": "hostile",
+    "x": 445,
+    "y": 95,
+    "z": -12,
+    "tags": ["location:wilderness", "location:swamp", "property:water", "property:natural", "property:poison"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "bog_slime", "maxCount": 2, "respawnTime": 42 },
+      { "type": "monster", "dataId": "mire_lurker", "maxCount": 2, "respawnTime": 58 }
+    ],
+    "connections": [
+      { "locationId": "swamp_edge" },
+      { "locationId": "swamp_basin" },
       { "locationId": "swamp_heart" }
     ]
   },
@@ -198,6 +220,7 @@
     ],
     "connections": [
       { "locationId": "swamp_basin" },
+      { "locationId": "swamp_reedway" },
       { "locationId": "ember_foothills", "condition": "level_28" }
     ]
   },
@@ -217,7 +240,8 @@
     ],
     "connections": [
       { "locationId": "swamp_heart" },
-      { "locationId": "volcanic_slope" }
+      { "locationId": "volcanic_slope" },
+      { "locationId": "ember_ravine" }
     ]
   },
   {
@@ -236,7 +260,47 @@
     ],
     "connections": [
       { "locationId": "ember_foothills" },
+      { "locationId": "obsidian_shelf" },
       { "locationId": "volcanic_crater", "condition": "level_36" }
+    ]
+  },
+  {
+    "id": "ember_ravine",
+    "name": "홍염산지 재바람 협곡",
+    "mapColor": "#bb6542",
+    "zoneType": "neutral",
+    "x": 625,
+    "y": 250,
+    "z": 35,
+    "tags": ["location:wilderness", "location:volcanic", "property:fire"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ash_wraith", "maxCount": 3, "respawnTime": 54 },
+      { "type": "monster", "dataId": "flame_salamander", "maxCount": 1, "respawnTime": 62 }
+    ],
+    "connections": [
+      { "locationId": "ember_foothills" },
+      { "locationId": "volcanic_crater", "condition": "level_36" }
+    ]
+  },
+  {
+    "id": "obsidian_shelf",
+    "name": "홍염산지 흑요 선반",
+    "mapColor": "#bb6542",
+    "zoneType": "hostile",
+    "x": 720,
+    "y": 150,
+    "z": 66,
+    "tags": ["location:wilderness", "location:volcanic", "property:fire", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "lava_armor", "maxCount": 2, "respawnTime": 78 },
+      { "type": "monster", "dataId": "crater_heart", "maxCount": 1, "respawnTime": 95 }
+    ],
+    "connections": [
+      { "locationId": "volcanic_slope" },
+      { "locationId": "volcanic_crater" },
+      { "locationId": "volcanic_core", "condition": "level_45" }
     ]
   },
   {
@@ -256,6 +320,8 @@
     ],
     "connections": [
       { "locationId": "volcanic_slope" },
+      { "locationId": "ember_ravine" },
+      { "locationId": "obsidian_shelf" },
       { "locationId": "volcanic_core", "condition": "level_45" }
     ]
   },
@@ -274,6 +340,7 @@
     ],
     "connections": [
       { "locationId": "volcanic_crater" },
+      { "locationId": "obsidian_shelf" },
       { "locationId": "tempest_gate", "condition": "level_50" }
     ]
   },
@@ -489,7 +556,8 @@
     ],
     "connections": [
       { "locationId": "volcanic_core" },
-      { "locationId": "conductor_ridge" }
+      { "locationId": "conductor_ridge" },
+      { "locationId": "storm_nest" }
     ]
   },
   {
@@ -507,6 +575,47 @@
     ],
     "connections": [
       { "locationId": "tempest_gate" },
+      { "locationId": "storm_nest" },
+      { "locationId": "lightning_spur" },
+      { "locationId": "tempest_peak" }
+    ]
+  },
+  {
+    "id": "storm_nest",
+    "name": "천둥마루 소용돌이 둥지",
+    "mapColor": "#60758a",
+    "zoneType": "neutral",
+    "x": 920,
+    "y": 65,
+    "z": 96,
+    "tags": ["location:wilderness", "location:storm", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "spark_moth", "maxCount": 3, "respawnTime": 68 },
+      { "type": "monster", "dataId": "ironwing_raptor", "maxCount": 1, "respawnTime": 76 }
+    ],
+    "connections": [
+      { "locationId": "tempest_gate" },
+      { "locationId": "conductor_ridge" },
+      { "locationId": "tempest_peak" }
+    ]
+  },
+  {
+    "id": "lightning_spur",
+    "name": "천둥마루 갈라진 피뢰봉",
+    "mapColor": "#60758a",
+    "zoneType": "hostile",
+    "x": 1015,
+    "y": 15,
+    "z": 118,
+    "tags": ["location:wilderness", "location:storm", "property:electric", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ironwing_raptor", "maxCount": 2, "respawnTime": 76 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "conductor_ridge" },
       { "locationId": "tempest_peak" }
     ]
   },
@@ -521,11 +630,13 @@
     "tags": ["location:wilderness", "location:storm", "property:electric", "property:metal"],
     "npcIds": [],
     "objects": [
-      { "type": "monster", "dataId": "thunder_colossus", "maxCount": 2, "respawnTime": 95 },
+      { "type": "monster", "dataId": "thunder_colossus", "maxCount": 1, "respawnTime": 300 },
       { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "conductor_ridge" },
+      { "locationId": "storm_nest" },
+      { "locationId": "lightning_spur" },
       { "locationId": "nightwood_edge", "condition": "level_70" }
     ]
   },
@@ -577,7 +688,7 @@
     "tags": ["location:wilderness", "location:forest", "property:dark", "property:natural"],
     "npcIds": [],
     "objects": [
-      { "type": "monster", "dataId": "nightwood_core", "maxCount": 2, "respawnTime": 110 }
+      { "type": "monster", "dataId": "nightwood_core", "maxCount": 1, "respawnTime": 360 }
     ],
     "connections": [
       { "locationId": "nightwood_maze" },
@@ -631,7 +742,7 @@
     "tags": ["location:wilderness", "location:sanctum", "property:light", "property:holy"],
     "npcIds": [],
     "objects": [
-      { "type": "monster", "dataId": "halo_beast", "maxCount": 2, "respawnTime": 115 },
+      { "type": "monster", "dataId": "halo_beast", "maxCount": 1, "respawnTime": 420 },
       { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
@@ -710,7 +821,7 @@
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "bone_oracle", "maxCount": 2, "respawnTime": 108 },
-      { "type": "monster", "dataId": "deathless_colossus", "maxCount": 1, "respawnTime": 140 }
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "necropolis_east_crypt" },
@@ -729,7 +840,7 @@
     "tags": ["location:wilderness", "location:dungeon", "property:undead", "property:stone"],
     "npcIds": [],
     "objects": [
-      { "type": "monster", "dataId": "deathless_colossus", "maxCount": 2, "respawnTime": 145 },
+      { "type": "monster", "dataId": "deathless_colossus", "maxCount": 1, "respawnTime": 480 },
       { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [

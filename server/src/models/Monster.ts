@@ -57,6 +57,8 @@ export interface MonsterAttackProfile {
 export interface MonsterSkillPattern {
     /** 등록된 스킬 ID를 이 순서대로 반복한다. */
     sequence: string[];
+    /** true면 매 발동마다 sequence 후보 중 하나를 무작위로 고른다. */
+    randomOrder?: boolean;
     /** 전투를 시작한 뒤 첫 패턴까지 기다리는 시간(초). */
     initialDelay: number;
     /** 각 패턴 사이의 무작위 대기 범위(초). */
@@ -309,10 +311,20 @@ export default class Monster extends Entity {
         if (this.skillPattern) {
             this.skillPatternTimer -= dt;
             if (this.skillPatternTimer <= 0) {
-                const skillId = this.skillPattern.sequence[this.skillPatternIndex];
-                const outcome = skillId ? this.activateSkill(skillId) : undefined;
+                const sequence = this.skillPattern.sequence;
+                const startIndex = this.skillPattern.randomOrder
+                    ? Math.floor(Math.random() * sequence.length)
+                    : this.skillPatternIndex;
+                let outcome: SkillActivationOutcome | undefined;
+                for (let offset = 0; offset < (this.skillPattern.randomOrder ? sequence.length : 1); offset++) {
+                    const skillId = sequence[(startIndex + offset) % sequence.length];
+                    outcome = skillId ? this.activateSkill(skillId) : undefined;
+                    if (outcome?.activated) break;
+                }
                 if (outcome?.activated) {
-                    this.skillPatternIndex = (this.skillPatternIndex + 1) % this.skillPattern.sequence.length;
+                    if (!this.skillPattern.randomOrder) {
+                        this.skillPatternIndex = (this.skillPatternIndex + 1) % this.skillPattern.sequence.length;
+                    }
                     this.skillPatternTimer = rollRange(this.skillPattern.interval);
                     return;
                 }

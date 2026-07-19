@@ -1903,3 +1903,141 @@ defineSkill({
         GameTags.PROPERTY_EARTH, GameTags.PROPERTY_METAL,
     ],
 });
+
+interface BossStrikeSkillDefinition {
+    id: string;
+    name: string;
+    icon: string;
+    damageType: 'physical' | 'magic';
+    attribute: AttributeType;
+    baseMultiplier: number;
+    perLevelMultiplier: number;
+    castTime: number;
+    cooldown: number;
+    propertyTag: TagId;
+    statusEffectId?: string;
+    statusDuration?: number;
+    unavoidable?: boolean;
+}
+
+function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): void {
+    const damage = (context: SkillContext) => context.owner.attribute.get(definition.attribute)
+        * (definition.baseMultiplier + Math.max(0, context.skill.level - 1) * definition.perLevelMultiplier);
+    defineSkill({
+        id: definition.id,
+        name: definition.name,
+        // TODO: 구간 보스 전용 스킬 아트 제작 전까지 속성 아이콘을 사용한다.
+        icon: definition.icon,
+        maxLevel: 5,
+        descriptionTemplate: `${definition.castTime}초 예고 후 현재 대상에게 {{damage}}의 ${definition.damageType === 'magic' ? '마법' : '물리'} 피해를 입힙니다.${definition.statusEffectId ? ' 적중하면 보스 고유 상태효과를 부여합니다.' : ''}`,
+        costTemplate: '소모값 없음',
+        activationConditionTemplate: '살아 있는 현재 위협 대상이 필요합니다. 몬스터 전용 스킬입니다.',
+        activationMessage: `${definition.name}!`,
+        activationHeader: definition.id,
+        baseMetadata: null,
+        calculatedFields: { damage },
+        calculateMaxCooldown: () => definition.cooldown,
+        canActivate: context => {
+            if (context.player) return denySkill('구간 보스만 사용할 수 있는 스킬입니다.');
+            const target = context.owner.currentTarget;
+            if (!target || target.isDefeated || target.locationId !== context.owner.locationId) {
+                return denySkill('현재 위협 대상을 공격할 수 없습니다.');
+            }
+            const denied = target.getAttackDeniedReason(context.owner.attackOwner);
+            return denied ? denySkill(denied) : { accepted: true };
+        },
+        onStart: context => {
+            sendNotificationFiltered(
+                userId => isOnlinePlayerAtLocation(userId, context.owner.locationId),
+                {
+                    key: `boss-skill:${context.owner.name}:${definition.id}`,
+                    message: `${context.owner.name}이(가) ${definition.name}을(를) 준비합니다! (${definition.castTime.toFixed(1)}초)`,
+                    length: definition.castTime * 1_000,
+                },
+            );
+            return { duration: definition.castTime, state: { released: false } };
+        },
+        onUpdate: context => {
+            if (context.elapsed < definition.castTime || context.skill.getActiveState<boolean>('released')) return 'continue';
+            context.skill.setActiveState('released', true);
+            const target = context.owner.currentTarget;
+            if (!target || target.isDefeated || target.locationId !== context.owner.locationId) return 'finish';
+            const result = context.owner.attack(target, definition.damageType, damage(context), {
+                unavoidable: definition.unavoidable,
+                consumeMainHandDurability: false,
+                triggerMainHandHitEffects: false,
+            });
+            if (result && !result.evaded && definition.statusEffectId) {
+                const effect = StatusEffectType.fromKey(definition.statusEffectId);
+                if (effect) target.applyStatusEffect(effect, definition.statusDuration ?? 5, context.skill.level);
+            }
+            return 'finish';
+        },
+        tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, definition.propertyTag],
+    });
+}
+
+for (const skill of [
+    {
+        id: 'caldera_eruption', name: '칼데라 분출', icon: 'affinities/fire', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.4, perLevelMultiplier: 0.12,
+        castTime: 1.6, cooldown: 9, propertyTag: GameTags.PROPERTY_FIRE, statusEffectId: 'fire', statusDuration: 10,
+    },
+    {
+        id: 'tempest_overload', name: '뇌정 과부하', icon: 'affinities/electric', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.5, perLevelMultiplier: 0.14,
+        castTime: 1.3, cooldown: 8, propertyTag: GameTags.PROPERTY_ELECTRIC,
+        statusEffectId: 'paralytic_poison', statusDuration: 4, unavoidable: true,
+    },
+    {
+        id: 'nightwood_lash', name: '심재의 속박', icon: 'affinities/dark', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.35, perLevelMultiplier: 0.13,
+        castTime: 1.2, cooldown: 8, propertyTag: GameTags.PROPERTY_DARK, statusEffectId: 'decay', statusDuration: 8,
+    },
+    {
+        id: 'sanctum_judgment', name: '광륜 심판', icon: 'affinities/holy', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.55, perLevelMultiplier: 0.15,
+        castTime: 1.5, cooldown: 9, propertyTag: GameTags.PROPERTY_HOLY, statusEffectId: 'blindness', statusDuration: 4,
+        unavoidable: true,
+    },
+    {
+        id: 'deathless_requiem', name: '불멸의 진혼', icon: 'affinities/undead', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.5, perLevelMultiplier: 0.15,
+        castTime: 1.8, cooldown: 10, propertyTag: GameTags.PROPERTY_UNDEAD, statusEffectId: 'fear', statusDuration: 5,
+    },
+] satisfies readonly BossStrikeSkillDefinition[]) defineBossStrikeSkill(skill);
+
+defineSkill({
+    id: 'nightwood_regrowth',
+    name: '검은 심재 재생',
+    // TODO: 구간 보스 전용 스킬 아트 제작 전까지 자연 속성 아이콘을 사용한다.
+    icon: 'affinities/natural',
+    maxLevel: 5,
+    descriptionTemplate: '2초 동안 뿌리를 내린 뒤 잃은 생명력 일부를 회복합니다.',
+    costTemplate: '소모값 없음',
+    activationConditionTemplate: '월영밤숲 구간 보스 전용 회복 패턴입니다.',
+    activationMessage: '검은 심재 재생!',
+    activationHeader: 'nightwood_regrowth',
+    baseMetadata: null,
+    calculatedFields: {},
+    calculateMaxCooldown: () => 16,
+    canActivate: context => context.player
+        ? denySkill('밤숲의 검은 심재만 사용할 수 있습니다.')
+        : context.owner.life < context.owner.maxLife * 0.92
+            ? { accepted: true }
+            : denySkill('아직 재생할 필요가 없습니다.'),
+    onStart: context => {
+        sendNotificationFiltered(
+            userId => isOnlinePlayerAtLocation(userId, context.owner.locationId),
+            { key: `boss-skill:${context.owner.name}:regrowth`, message: `${context.owner.name}이(가) 주변 뿌리에서 생명력을 끌어옵니다!`, length: 2_000 },
+        );
+        return { duration: 2, state: { released: false } };
+    },
+    onUpdate: context => {
+        if (context.elapsed < 2 || context.skill.getActiveState<boolean>('released')) return 'continue';
+        context.skill.setActiveState('released', true);
+        context.owner.heal(context.owner.maxLife * (0.06 + context.skill.level * 0.015), context.owner);
+        return 'finish';
+    },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.PROPERTY_NATURAL],
+});
