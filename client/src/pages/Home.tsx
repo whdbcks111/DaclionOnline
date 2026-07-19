@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
 import styles from './Home.module.scss'
 import { useSocket } from '../context/SocketContext'
 import { HudProvider, useHud } from '../context/HudContext'
@@ -18,6 +18,7 @@ import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, Loca
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
 const MAX_PENDING_IMAGES = 10
+const CHAT_FOLLOW_THRESHOLD_PX = 48
 
 interface PendingChatImage {
   id: string
@@ -72,7 +73,9 @@ function HomeContent() {
   const mediaInputRef = useRef<HTMLInputElement>(null)
   const pendingImagesRef = useRef<PendingChatImage[]>([])
   const imageSendingRef = useRef(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null)
+  const followLatestMessageRef = useRef(true)
+  const forceLatestMessageRef = useRef(true)
   const isComposing = useRef(false)
   const snapshotRevisions = useRef({
     playerStats: { syncId: '', revision: 0 },
@@ -97,7 +100,11 @@ function HomeContent() {
   useEffect(() => {
     if (!socket) return
 
-    const onChatHistory = (history: ChatMessageType[]) => setMessages(history)
+    const onChatHistory = (history: ChatMessageType[]) => {
+      forceLatestMessageRef.current = true
+      followLatestMessageRef.current = true
+      setMessages(history)
+    }
     const onChatMessage = (msg: ChatMessageType) => setMessages(prev => [...prev, msg])
     const onCommandList = (list: CommandInfo[]) => setCommands(list)
     const onUserCount = (data: UserCountData) => setUserCountData(data)
@@ -114,6 +121,8 @@ function HomeContent() {
       setLocationInfo(data)
     }
     const onChannelChanged = (channel: string | null, history: ChatMessageType[]) => {
+      forceLatestMessageRef.current = true
+      followLatestMessageRef.current = true
       setCurrentChannel(channel)
       setMessages(history)
     }
@@ -164,9 +173,19 @@ function HomeContent() {
     }
   }, [socket, setPlayerStats, setLocationInfo])
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  useLayoutEffect(() => {
+    const container = messagesRef.current
+    if (!container || (!forceLatestMessageRef.current && !followLatestMessageRef.current)) return
+    container.scrollTop = container.scrollHeight
+    forceLatestMessageRef.current = false
   }, [messages])
+
+  const trackChatScroll = useCallback(() => {
+    const container = messagesRef.current
+    if (!container) return
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+    followLatestMessageRef.current = distanceFromBottom <= CHAT_FOLLOW_THRESHOLD_PX
+  }, [])
 
   const changeNickname = useCallback((nickname: string): Promise<{ ok?: boolean; error?: string }> => {
     return new Promise((resolve) => {
@@ -448,7 +467,7 @@ function HomeContent() {
               : channelList.find(ch => ch.id === currentChannel)?.name ?? '메인'
           }
         />
-        <div className={styles.chatMessages}>
+        <div ref={messagesRef} className={styles.chatMessages} onScroll={trackChatScroll}>
           {messages.map((msg, i) => {
             const prev = messages[i - 1]
             const showHeader = i === 0
@@ -459,7 +478,6 @@ function HomeContent() {
               || Math.floor(prev.timestamp / 60000) !== Math.floor(msg.timestamp / 60000)
             return <ChatMessage key={msg.id ?? i} message={msg} showHeader={showHeader} />
           })}
-          <div ref={messagesEndRef} />
         </div>
         <div className={styles.statusBars}>
           <div className={styles.hpBar}>
