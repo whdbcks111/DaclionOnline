@@ -202,6 +202,15 @@ test('안개수렁·홍염산지·천둥마루는 일자 대신 분기와 재합
     }
 });
 
+test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {
+    const emberLocations = locations.filter(location => location.objects.some(object => object.dataId === 'ember_ore_vein'));
+    assert.ok(emberLocations.length >= 3);
+    assert.ok(emberLocations.every(location => location.tags.includes('location:volcanic')));
+    assert.equal(getItemData('ember_ore')?.image, 'items/ember_ore');
+    assert.equal(getItemData('ember_alloy')?.image, 'items/ember_alloy');
+    assert.ok(getResourceData('ember_ore_vein')?.requiredToolTags.includes('tool:mining'));
+});
+
 test('사령묘는 분기·순환·합류 경로를 가지며 고레벨 직업 무기는 전용 아이콘을 사용한다', () => {
     const gate = locations.find(location => location.id === 'necropolis_gate');
     const east = locations.find(location => location.id === 'necropolis_east_crypt');

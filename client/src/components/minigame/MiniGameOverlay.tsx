@@ -9,6 +9,7 @@ import type {
 } from '@shared/minigames'
 import {
   appendMiniGameInputSample,
+  calculateForgeQualityScore,
   simulateForgeRhythm,
   simulateHazardDodge,
   simulateFishingCapture,
@@ -76,12 +77,40 @@ export default function MiniGameOverlay() {
   const submitted = useRef(false)
   const pressedKeys = useRef(new Set<string>())
   const joystickRef = useRef<HTMLDivElement>(null)
+  const forgeAudioRef = useRef<AudioContext | null>(null)
+  const nextForgeCueRef = useRef(0)
+
+  const playForgeSound = useCallback((kind: 'cue' | 'strike') => {
+    const AudioContextClass = window.AudioContext
+      ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!AudioContextClass) return
+    const context = forgeAudioRef.current ?? new AudioContextClass()
+    forgeAudioRef.current = context
+    if (context.state === 'suspended') void context.resume()
+    const now = context.currentTime
+    const oscillator = context.createOscillator()
+    const gain = context.createGain()
+    oscillator.type = kind === 'cue' ? 'square' : 'triangle'
+    oscillator.frequency.setValueAtTime(kind === 'cue' ? 720 : 210, now)
+    if (kind === 'strike') oscillator.frequency.exponentialRampToValueAtTime(72, now + 0.09)
+    gain.gain.setValueAtTime(kind === 'cue' ? 0.025 : 0.11, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + (kind === 'cue' ? 0.045 : 0.12))
+    oscillator.connect(gain).connect(context.destination)
+    oscillator.start(now)
+    oscillator.stop(now + (kind === 'cue' ? 0.05 : 0.13))
+  }, [])
+
+  useEffect(() => () => {
+    if (forgeAudioRef.current) void forgeAudioRef.current.close()
+    forgeAudioRef.current = null
+  }, [])
 
   const strike = useCallback(() => {
     if (submitted.current || game?.type !== 'forge_rhythm') return
     const at = Math.max(0, performance.now() - startedAt.current)
     actions.current.push({ at, action: 'strike' })
-  }, [game?.type])
+    playForgeSound('strike')
+  }, [game?.type, playForgeSound])
 
   const setDirection = useCallback((x: number, y: number) => {
     if (submitted.current) return
@@ -120,6 +149,7 @@ export default function MiniGameOverlay() {
       startedAt.current = performance.now()
       inputs.current = [{ at: 0, x: 0, y: 0 }]
       actions.current = []
+      nextForgeCueRef.current = 0
       direction.current = { x: 0, y: 0 }
       setJoystickDirection({ x: 0, y: 0 })
       pressedKeys.current.clear()
@@ -144,6 +174,17 @@ export default function MiniGameOverlay() {
       socket.off('miniGameCancelled', onCancelled)
     }
   }, [socket, game?.sessionId])
+
+  useEffect(() => {
+    if (game?.type !== 'forge_rhythm' || !forgeAudioRef.current) return
+    const cueLeadMs = 180
+    while (nextForgeCueRef.current < game.config.beatTimesMs.length
+      && game.config.beatTimesMs[nextForgeCueRef.current] - cueLeadMs <= elapsed) {
+      const cueAt = game.config.beatTimesMs[nextForgeCueRef.current] - cueLeadMs
+      if (elapsed - cueAt < 100) playForgeSound('cue')
+      nextForgeCueRef.current++
+    }
+  }, [elapsed, game, playForgeSound])
 
   useEffect(() => {
     if (!game) return
@@ -272,10 +313,16 @@ export default function MiniGameOverlay() {
     const config = game.config
     const leadMs = 2_000
     const accuracy = Math.round(forgeState.accuracy * 100)
+    const quality = Math.round(calculateForgeQualityScore(config, forgeState.accuracy) * 100)
     return <div className={styles.backdrop} role="dialog" aria-modal="true" aria-label="단조 리듬 미니게임">
       <section className={styles.panel}>
         <header><div><span className={styles.rarity}>{config.label}</span><h2>마력 단조</h2></div><p>Space · Enter · 타격 버튼</p></header>
-        <div className={styles.forgeStats}><span>정확도 <b>{accuracy}%</b></span><span>최대 콤보 <b>{forgeState.maxCombo}</b></span></div>
+        <div className={styles.forgeStats}>
+          <span>난이도 <b>{config.difficulty}</b></span>
+          <span>정확도 <b>{accuracy}%</b></span>
+          <span>예상 품질 <b>{quality}%</b></span>
+          <span>최대 콤보 <b>{forgeState.maxCombo}</b></span>
+        </div>
         <div className={styles.forgeLane}>
           <span className={styles.strikeLine} />
           {config.beatTimesMs.map((beat, index) => {

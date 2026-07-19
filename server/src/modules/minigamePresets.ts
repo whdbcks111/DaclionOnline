@@ -1,4 +1,5 @@
 import {
+    createForgeBeatTimesMs,
     simulateFishingCapture,
     simulateForgeRhythm,
     simulateHazardDodge,
@@ -132,10 +133,13 @@ function forgePreset(
         description,
         type: 'forge_rhythm',
         start: player => {
-            const beatTimesMs = Array.from({ length: 12 }, (_, index) => 1_200 + index * intervalMs);
+            const difficulty = requiredAccuracy >= 0.75 ? 7 : 3;
+            const beatTimesMs = createForgeBeatTimesMs(intervalMs, difficulty, 12 + difficulty);
             const config: ForgeRhythmConfig = {
                 durationMs: beatTimesMs.at(-1)! + 900,
                 label,
+                difficulty,
+                qualityBonus: Math.max(0, (difficulty - 3) * 0.025),
                 beatTimesMs,
                 hitWindowMs: 240,
                 perfectWindowMs: 85,

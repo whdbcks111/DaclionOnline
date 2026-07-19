@@ -153,6 +153,11 @@ export class ForgeMaterial {
     static readonly RUBY = new ForgeMaterial('ruby', '루비', 'refined_ruby', 1.12, [GameTags.MATERIAL_RUBY, GameTags.PROPERTY_FIRE], [{ attribute: 'magicForce', op: 'add', value: 4 }]);
     static readonly EMERALD = new ForgeMaterial('emerald', '에메랄드', 'refined_emerald', 1.08, [GameTags.MATERIAL_EMERALD, GameTags.PROPERTY_NATURAL], [{ attribute: 'speed', op: 'multiply', value: 1.03 }]);
     static readonly DIAMOND = new ForgeMaterial('diamond', '다이아몬드', 'refined_diamond', 1.3, [GameTags.MATERIAL_DIAMOND, GameTags.PROPERTY_STONE], [{ attribute: 'armorPen', op: 'add', value: 4 }]);
+    static readonly EMBER_ALLOY = new ForgeMaterial('ember_alloy', '홍염강', 'ember_alloy', 1.5,
+        [GameTags.MATERIAL_EMBER, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_METAL], [
+            { attribute: 'magicForce', op: 'add', value: 16 },
+            { attribute: 'critDmg', op: 'add', value: 0.12 },
+        ]);
 
     private constructor(
         readonly key: string,

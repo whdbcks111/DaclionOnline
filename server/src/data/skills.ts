@@ -750,6 +750,7 @@ const smeltingMaterials = [
     ['ruby', 'refined_ruby', '루비'],
     ['emerald', 'refined_emerald', '에메랄드'],
     ['diamond', 'refined_diamond', '다이아몬드'],
+    ['ember_ore', 'ember_alloy', '홍염강'],
 ] as const;
 
 function precisionBreakDamage(context: SkillContext): number {

@@ -769,6 +769,40 @@ for (const mineral of mineralItems) {
     });
 }
 
+defineItem({
+    id: 'ember_ore',
+    name: '화맥 광석',
+    description: '홍염산지의 깊은 지층에서만 굳어지는 불꽃 맥석. 마력 제련으로 홍염강을 만들 수 있다.',
+    image: 'items/ember_ore',
+    category: '광물',
+    weight: 0.85,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.MATERIAL_EMBER, GameTags.PROPERTY_FIRE, GameTags.MATERIAL_STONE],
+});
+
+defineItem({
+    id: 'ember_alloy',
+    name: '홍염강',
+    description: '화맥 광석의 열과 금속 성분을 함께 붙잡아 제련한 화염 합금. 고급 단조 소재로 사용한다.',
+    image: 'items/ember_alloy',
+    category: '제련 소재',
+    weight: 0.65,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.MATERIAL_EMBER, GameTags.MATERIAL_REFINED, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_METAL],
+});
+
 const refinedMinerals = [
     { id: 'refined_iron', name: '제련된 철', source: 'iron_ore', tag: GameTags.MATERIAL_IRON },
     { id: 'refined_gold', name: '제련된 금', source: 'gold_ore', tag: GameTags.MATERIAL_GOLD },

@@ -1,4 +1,9 @@
-import { simulateForgeRhythm, type ForgeRhythmConfig } from '../../../shared/minigames.js';
+import {
+    calculateForgeQualityScore,
+    createForgeBeatTimesMs,
+    simulateForgeRhythm,
+    type ForgeRhythmConfig,
+} from '../../../shared/minigames.js';
 import { emitGameEvent, GameEventIds } from '../models/GameEvent.js';
 import { createForgedItemSnapshot, ForgeForm, ForgeMaterial } from '../models/Forging.js';
 import type Player from '../models/Player.js';
@@ -50,6 +55,28 @@ export function grantBlacksmithProfession(player: Player): boolean {
     return player.career.assignAvailable(BLACKSMITH_JOB_ID).success;
 }
 
+/** 재료 난도와 장비 크기로 엇박·연속박자와 성공 품질 보정을 함께 확정한다. */
+export function createForgingRhythmConfig(
+    form: ForgeForm,
+    material: ForgeMaterial,
+    forgingPrecision: number,
+): ForgeRhythmConfig {
+    const precision = Math.max(0, Math.min(0.45, forgingPrecision));
+    const difficulty = Math.max(1, Math.min(10, Math.round(1 + material.power * 2 + form.materialCount * 0.3)));
+    const interval = Math.max(390, 680 - material.power * 115);
+    const beatTimesMs = createForgeBeatTimesMs(interval, difficulty, 12 + difficulty);
+    return {
+        durationMs: beatTimesMs.at(-1)! + 900,
+        label: `${material.label} ${form.label} 단조`,
+        difficulty,
+        qualityBonus: Math.max(0, (difficulty - 3) * 0.025),
+        beatTimesMs,
+        hitWindowMs: Math.round(230 * (1 + precision)),
+        perfectWindowMs: Math.round(82 * (1 + precision * 0.6)),
+        requiredAccuracy: Math.min(0.7, 0.52 + difficulty * 0.015),
+    };
+}
+
 /** 구형 독립 플래그를 빈 메인/서브 슬롯으로 이전한다. 두 슬롯이 차 있으면 덮어쓰지 않는다. */
 export function migrateLegacyBlacksmithProfession(player: Player): boolean {
     if (!player.progress.getFlag(BLACKSMITH_PROFESSION_FLAG)) return false;
@@ -70,16 +97,7 @@ export function startForging(player: Player, form: ForgeForm, material: ForgeMat
     }
 
     const precision = Math.max(0, Math.min(0.45, player.attribute.get(AttributeType.FORGING_PRECISION)));
-    const interval = Math.max(390, 650 - material.power * 110);
-    const beatTimesMs = Array.from({ length: 12 }, (_, index) => Math.round(1_200 + index * interval));
-    const config: ForgeRhythmConfig = {
-        durationMs: beatTimesMs.at(-1)! + 900,
-        label: `${material.label} ${form.label} 단조`,
-        beatTimesMs,
-        hitWindowMs: Math.round(240 * (1 + precision)),
-        perfectWindowMs: Math.round(85 * (1 + precision * 0.6)),
-        requiredAccuracy: 0.55,
-    };
+    const config = createForgingRhythmConfig(form, material, precision);
     const started = startMiniGame({
         userId: player.userId,
         type: 'forge_rhythm',
@@ -87,9 +105,10 @@ export function startForging(player: Player, form: ForgeForm, material: ForgeMat
         expiresInMs: config.durationMs + 3_000,
         validate: request => {
             const state = simulateForgeRhythm(config, normalizeMiniGameActions(request), request.elapsedMs);
+            const quality = calculateForgeQualityScore(config, state.accuracy);
             return state.finished && state.success
-                ? { success: true, score: state.accuracy, message: `단조 성공 · 정확도 ${Math.round(state.accuracy * 100)}%` }
-                : { success: false, score: state.accuracy, message: `단조 실패 · 정확도 ${Math.round(state.accuracy * 100)}%` };
+                ? { success: true, score: quality, message: `단조 성공 · 정확도 ${Math.round(state.accuracy * 100)}% · 난도 보정 품질 ${Math.round(quality * 100)}%` }
+                : { success: false, score: quality, message: `단조 실패 · 정확도 ${Math.round(state.accuracy * 100)}%` };
         },
         onResolved: result => {
             const selections = player.inventory.selectItems(requirement);

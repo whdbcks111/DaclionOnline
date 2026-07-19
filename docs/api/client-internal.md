@@ -20,7 +20,7 @@
 
 `PartyHud`는 nullable `playerStats.party`를 사용해 파티원별 레벨·생명력·정신력과 같은 장소 여부를 표시한다. 파티가 없으면 렌더링하지 않으며 HUD 설정 API로 표시·위치·크기를 조절한다. `Home.tsx`의 정보 공개 버튼은 서버 `informationMode` 이벤트만 상태 원본으로 사용한다. 채팅 첫 토큰이 `@`로 시작하면 온라인 플레이어 mention completion을 요청하고 선택한 닉네임을 `@닉네임 ` 형식으로 입력한다.
 
-`components/minigame/MiniGameOverlay`는 서버 `miniGameStart`를 전체 화면 overlay로 렌더링한다. 낚시·위험 회피는 키보드와 pointer 조이스틱의 축 변경을 20ms 단위로 합치고, 단조 리듬은 Space·Enter·터치 버튼의 `strike` 시각을 별도 action trace로 기록한다. 화면은 공용 결정론 시뮬레이터로 미리 계산하지만 성공 권한은 서버에 있으며 전송 시점의 불변 trace snapshot만 `miniGameResult`로 반환한다.
+`components/minigame/MiniGameOverlay`는 서버 `miniGameStart`를 전체 화면 overlay로 렌더링한다. 낚시·위험 회피는 키보드와 pointer 조이스틱의 축 변경을 20ms 단위로 합치고, 단조 리듬은 Space·Enter·터치 버튼의 `strike` 시각을 별도 action trace로 기록한다. 단조는 난이도·원 정확도·보정 품질을 표시하고 첫 사용자 타격 이후 Web Audio 접근 cue와 충격음을 재생한다. 화면은 공용 결정론 시뮬레이터로 미리 계산하지만 성공 권한은 서버에 있으며 전송 시점의 불변 trace snapshot만 `miniGameResult`로 반환한다.
 
 ## 채팅 UI API
 

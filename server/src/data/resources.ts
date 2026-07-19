@@ -189,6 +189,27 @@ defineResource({
 });
 
 defineResource({
+    id: 'ember_ore_vein',
+    name: '화맥 광맥',
+    level: 42,
+    baseAttribute: {
+        maxLife: 1_100,
+        def: 62,
+        magicDef: 48,
+    },
+    requiredToolTags: [GameTags.TOOL_MINING],
+    drops: [
+        { itemDataId: 'ember_ore', weight: 100, minCount: 1, maxCount: 2 },
+    ],
+    expReward: { min: 820, max: 1_150 },
+    interaction: 'inspect_ore',
+    tags: [
+        GameTags.RESOURCE_ORE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_EMBER,
+        GameTags.MATERIAL_STONE, GameTags.PROPERTY_FIRE,
+    ],
+});
+
+defineResource({
     id: 'treasure_chest',
     name: '낡은 보물상자',
     level: 1,

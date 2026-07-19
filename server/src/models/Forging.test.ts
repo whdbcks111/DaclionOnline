@@ -19,6 +19,7 @@ import {
     calculateForgingExperience,
     calculateSmeltingExperience,
     canUseMetalForging,
+    createForgingRhythmConfig,
 } from '../modules/forging.js';
 import '../data/items.js';
 import '../data/progress.js';
@@ -239,6 +240,23 @@ test('제련과 단조 경험치는 현재 레벨 요구 경험치에 비례해 
     assert.equal(calculateForgingExperience(high, ForgeMaterial.IRON, 1), 2_880);
     assert.ok(calculateForgingExperience(high, ForgeMaterial.DIAMOND, 1)
         > calculateForgingExperience(high, ForgeMaterial.IRON, 1));
+});
+
+test('홍염강은 화산 전용 화염 합금이며 일반 철보다 어려운 리듬과 높은 보정을 가진다', () => {
+    const item = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.AXE, ForgeMaterial.EMBER_ALLOY, {
+        accuracy: 0.85,
+        random: () => 0,
+    }));
+    assert.equal(ForgeMaterial.fromInput('홍염강'), ForgeMaterial.EMBER_ALLOY);
+    assert.equal(ForgeMaterial.fromInput('ember_alloy'), ForgeMaterial.EMBER_ALLOY);
+    assert.equal(item.hasTag(GameTags.MATERIAL_EMBER), true);
+    assert.equal(item.hasTag(GameTags.PROPERTY_FIRE), true);
+
+    const iron = createForgingRhythmConfig(ForgeForm.AXE, ForgeMaterial.IRON, 0);
+    const ember = createForgingRhythmConfig(ForgeForm.AXE, ForgeMaterial.EMBER_ALLOY, 0);
+    assert.ok(ember.difficulty > iron.difficulty);
+    assert.ok(ember.qualityBonus > iron.qualityBonus);
+    assert.ok(ember.beatTimesMs.length > iron.beatTimesMs.length);
 });
 
 test('금속 단조 스킬만 보유해도 단조 권한을 가진다', () => {

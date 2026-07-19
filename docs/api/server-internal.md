@@ -29,7 +29,7 @@
 | Minigame | `startMiniGame`, `cancelMiniGame`, `hasActiveMiniGame`, `normalizeMiniGameInputs/Actions`, `initMiniGame` | session/token/만료와 축·단조 타격 trace 정규화, 타입별 결과 validator를 가진 서버 권위 미니게임 |
 | Fishing | `startFishing`, `cancelFishing`, `isFishing` | 장소·낚싯대 검증, 미끼 묶음 자동 장착·한 개 소비, 입질 대기, 등급/미니게임/보상 연결 |
 | Forging | `ForgeForm.values/fromInput`, `ForgeMaterial.values/fromInput`, `createForgedItemSnapshot`, `renameForgedItem`, `enchantWeapon`, `reinforceWeapon` | 형태·재료·리듬 정확도·난수 trait를 조합한 영속 장비 snapshot, 제작자 한정 이름 변경, 속성/signature 편향 마법 부여와 실패 없는 +5 무기 강화 |
-| Forging flow | `has/canAcquire/grant/migrateLegacyBlacksmithProfession`, `canUseMetalForging`, `calculateSmeltingExperience`, `calculateForgingExperience`, `startForging` | 정식 대장장이 직업 슬롯 획득·구형 flag 이전, 별도 금속 단조 스킬 권한, 현재 maxExp 비례 생산 경험치, 제련 소재 검증과 서버 단조 score·소비·보상 연결 |
+| Forging flow | `has/canAcquire/grant/migrateLegacyBlacksmithProfession`, `canUseMetalForging`, `createForgingRhythmConfig`, `calculateSmeltingExperience`, `calculateForgingExperience`, `startForging` | 정식 대장장이 직업 슬롯 획득·구형 flag 이전, 별도 금속 단조 스킬 권한, 재료/형태 기반 엇박·연타 난도와 품질 보정, 현재 maxExp 비례 생산 경험치, 제련 소재 검증과 서버 단조 score·소비·보상 연결 |
 | Upload media | `encodeChatImage`, `initUploadMaintenance`, `cleanupChatImages`, `getOwnedChatImage` | 이미지 재인코딩, 전체 100장·7일 보관 정리와 채팅 파일 소유권·표시 치수 snapshot 검증 |
 | Location service | `loadLocationsFromJson`, `updateLocations`, `initLocation` | JSON/소켓/프레임 조정 |
 | Item use | `registerItemUse`, `executeItemUse`, `hasItemUseHandler` | 아이템 효과 ID와 실행 함수 연결 |

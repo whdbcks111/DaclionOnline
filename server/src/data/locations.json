@@ -276,7 +276,8 @@
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "ash_wraith", "maxCount": 3, "respawnTime": 54 },
-      { "type": "monster", "dataId": "flame_salamander", "maxCount": 1, "respawnTime": 62 }
+      { "type": "monster", "dataId": "flame_salamander", "maxCount": 1, "respawnTime": 62 },
+      { "type": "resource", "dataId": "ember_ore_vein", "maxCount": 2, "respawnTime": 150 }
     ],
     "connections": [
       { "locationId": "ember_foothills" },
@@ -295,7 +296,8 @@
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "lava_armor", "maxCount": 2, "respawnTime": 78 },
-      { "type": "monster", "dataId": "crater_heart", "maxCount": 1, "respawnTime": 95 }
+      { "type": "monster", "dataId": "crater_heart", "maxCount": 1, "respawnTime": 95 },
+      { "type": "resource", "dataId": "ember_ore_vein", "maxCount": 2, "respawnTime": 165 }
     ],
     "connections": [
       { "locationId": "volcanic_slope" },
@@ -316,6 +318,7 @@
     "objects": [
       { "type": "monster", "dataId": "flame_salamander", "maxCount": 3, "respawnTime": 58 },
       { "type": "monster", "dataId": "crater_heart", "maxCount": 1, "respawnTime": 90 },
+      { "type": "resource", "dataId": "ember_ore_vein", "maxCount": 3, "respawnTime": 180 },
       { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
