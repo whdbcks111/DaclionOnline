@@ -894,7 +894,7 @@ defineSkill({
     // TODO: 후가공 스킬 전용 아이콘 제작 전까지 마법력 능력치 아이콘을 사용한다.
     icon: 'attributes/magicForce',
     maxLevel: 5,
-    descriptionTemplate: '무기의 재료·속성과 장비 고유 signature를 읽어 적중 시 발동하는 마법 효과를 한 번 부여합니다. 후보는 장비 속성에 편향되지만 효과 종류·발동률·레벨·지속시간은 높은 서버 난수의 영향을 받습니다.',
+    descriptionTemplate: '무기의 재료·속성을 읽어 다음 적중 효과 중 하나를 영구히 각인합니다. [tooltip=1초마다 불 속성 피해를 주며 오래 지속되면 화상을 남깁니다.][color=orange]화염[/color][/tooltip] · [tooltip=0.5초마다 최대 생명력과 잃은 생명력에 비례한 피해를 주고 받는 치유량을 50% 감소시킵니다.][color=purple]맹독[/color][/tooltip] · [tooltip=스킬·아이템 사용·공격·이동·회피·장소 이동을 모두 막습니다.][color=yellow]기절[/color][/tooltip] · [tooltip=초당 얼음 피해를 주고 이동속도와 공격속도를 낮춥니다. 화염과 만나면 서로 상쇄됩니다.][color=skyblue]빙결[/color][/tooltip] · [tooltip=공격과 회피를 할 수 없게 만듭니다.][color=darkgray]실명[/color][/tooltip]. 장비 속성과 고유 특성이 후보를 편향하며 발동률(18~68%)·효과 레벨·지속시간은 감각과 서버 난수에 따라 결정됩니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 80[/color]',
     activationConditionTemplate: '/마법부여 <아이템 번호 또는 장착칸> · 마도 대장장이 전용 · 아직 마법이 없는 무기',
     baseMetadata: null,

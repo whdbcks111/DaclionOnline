@@ -15,23 +15,28 @@ export class ItemAttackEffectType {
     private static readonly all: ItemAttackEffectType[] = [];
 
     static readonly FIRE = new ItemAttackEffectType(
-        'fire_brand', '화염 각인', 'fire', GameTags.PROPERTY_FIRE,
+        'fire_brand', '화염 각인', 'fire', '화염',
+        '1초마다 불 속성 피해를 주며, 오래 지속되면 화상까지 남깁니다.', GameTags.PROPERTY_FIRE,
         [GameTags.PROPERTY_FIRE], 7,
     );
     static readonly VENOM = new ItemAttackEffectType(
-        'venom_edge', '맹독 칼날', 'deadly_poison', GameTags.PROPERTY_POISON,
+        'venom_edge', '맹독 칼날', 'deadly_poison', '맹독',
+        '0.5초마다 최대 생명력과 잃은 생명력에 비례한 피해를 주고, 받는 치유량을 50% 감소시킵니다.', GameTags.PROPERTY_POISON,
         [GameTags.PROPERTY_POISON, GameTags.PROPERTY_NATURAL], 7,
     );
     static readonly SHOCK = new ItemAttackEffectType(
-        'shock_rune', '충격 룬', 'stun', GameTags.PROPERTY_ELECTRIC,
+        'shock_rune', '충격 룬', 'stun', '기절',
+        '스킬·아이템 사용·공격·이동·회피·장소 이동을 모두 막습니다.', GameTags.PROPERTY_ELECTRIC,
         [GameTags.PROPERTY_ELECTRIC, GameTags.PROPERTY_METAL], 5,
     );
     static readonly FROST = new ItemAttackEffectType(
-        'frost_seal', '빙결 인장', 'frozen', GameTags.PROPERTY_ICE,
+        'frost_seal', '빙결 인장', 'frozen', '빙결',
+        '초당 얼음 피해를 주고 이동속도와 공격속도를 낮춥니다. 화염 상태와 만나면 서로 상쇄됩니다.', GameTags.PROPERTY_ICE,
         [GameTags.PROPERTY_ICE, GameTags.PROPERTY_WATER], 6,
     );
     static readonly SHADOW = new ItemAttackEffectType(
-        'shadow_hex', '암흑 주박', 'blindness', GameTags.PROPERTY_DARK,
+        'shadow_hex', '암흑 주박', 'blindness', '실명',
+        '공격과 회피를 할 수 없게 만듭니다.', GameTags.PROPERTY_DARK,
         [GameTags.PROPERTY_DARK], 6,
     );
 
@@ -39,6 +44,8 @@ export class ItemAttackEffectType {
         readonly id: string,
         readonly label: string,
         readonly statusEffectId: string,
+        readonly statusEffectLabel: string,
+        readonly statusEffectSummary: string,
         readonly propertyTag: TagId,
         readonly affinityTags: readonly TagId[],
         readonly affinityWeight: number,

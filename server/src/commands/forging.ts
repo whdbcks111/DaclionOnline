@@ -17,6 +17,8 @@ import { StatType } from '../models/Stat.js';
 import { AttributeType } from '../models/Attribute.js';
 import { itemTargetCompletions, resolveItemInspectionTarget } from './inspection.js';
 import { GameTags } from '../../../shared/tags.js';
+import { ItemAttackEffectType } from '../models/ItemAttackEffect.js';
+import { chat } from '../utils/chatBuilder.js';
 
 export function initForgingCommands(): void {
     registerCommand({
@@ -120,8 +122,13 @@ export function initForgingCommands(): void {
             }
             player.spendMentality(ARCANE_ENCHANT_MENTALITY_COST);
             skill.addExperience(player, skill.getExperienceGain(player));
-            sendBotMessageToUser(userId,
-                `[ ${target.item.name} ]에 [ ${result.label} ]을 새겼습니다. 적중 시 ${(result.effect.chance * 100).toFixed(1)}% 확률로 Lv.${result.effect.level} 효과가 ${result.effect.duration}초간 발동합니다.`);
+            const effectType = ItemAttackEffectType.fromKey(result.effect.type);
+            if (!effectType) return;
+            sendBotMessageToUser(userId, chat()
+                .text(`[ ${target.item.name} ]에 [ ${effectType.label} ]을 새겼습니다. 적중 시 ${(result.effect.chance * 100).toFixed(1)}% 확률로 Lv.${result.effect.level} `)
+                .tooltip(effectType.statusEffectSummary, b => b.weight('bold', b2 => b2.text(effectType.statusEffectLabel)))
+                .text(` 효과를 ${result.effect.duration}초간 부여합니다.`)
+                .build());
         },
     });
 

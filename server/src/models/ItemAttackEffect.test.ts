@@ -57,3 +57,11 @@ test('마법 부여는 방어구와 소비 아이템을 거부한다', () => {
         enchanterUserId: 77, skillLevel: 1, sensibility: 500, random: () => 0,
     }).success, false);
 });
+
+test('마법 부여 각인은 사용자에게 표시할 상태이상 이름과 상세 설명을 제공한다', () => {
+    for (const type of ItemAttackEffectType.values()) {
+        assert.ok(type.statusEffectLabel.length > 0);
+        assert.ok(type.statusEffectSummary.length > 10);
+        assert.equal(StatusEffectType.fromKey(type.statusEffectId)?.label, type.statusEffectLabel);
+    }
+});
