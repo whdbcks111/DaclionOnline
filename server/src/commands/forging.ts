@@ -25,7 +25,9 @@ export function initForgingCommands(): void {
             const form = ForgeForm.fromInput(args[0] ?? '');
             const material = ForgeMaterial.fromInput(args[1] ?? '');
             if (!form || !material) {
-                sendBotMessageToUser(userId, '사용법: /단조 <장검|도끼|단검|방패|곡괭이> <철|황금|홍염|녹영|금강>');
+                const forms = ForgeForm.values().map(value => value.label).join('|');
+                const materials = ForgeMaterial.values().map(value => value.label).join('|');
+                sendBotMessageToUser(userId, `사용법: /단조 <${forms}> <${materials}>`);
                 return;
             }
             const result = startForging(player, form, material);
