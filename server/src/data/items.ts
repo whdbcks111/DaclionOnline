@@ -516,6 +516,55 @@ defineItem({
 });
 
 defineItem({
+    id: 'silverweb_hunter_bow',
+    name: '은빛그물 사냥활',
+    description: '숨을 줄인 시위와 가벼운 나무 탄성으로 명중점을 빠르게 잡는 사냥활. 투사체 가속이 8% 증가한다.',
+    // TODO: 은빛그물 사냥활 전용 아트 제작 전까지 활 카테고리 fallback을 사용한다.
+    image: 'items/light_bow',
+    category: '활',
+    weight: 2,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 6, source: '' },
+        { attribute: 'critRate', op: 'add', value: 0.02, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.08, source: '' },
+    ],
+    baseDurability: 120,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_WOOD, GameTags.PROPERTY_NATURAL],
+    balance: {
+        role: ItemBalanceRole.WEAPON,
+        attackType: 'physical',
+        recommendedJobIds: ['career:archer'],
+        notes: ['은빛그물 숲 Lv.10~20 구간의 사냥꾼 성장 장비입니다.'],
+    },
+});
+
+defineItem({
+    id: 'forest_antidote',
+    name: '은이파리 해독제',
+    description: '독·맹독·마비독을 제거하고 30초 동안 새 중독을 막는 숲의 해독제.',
+    // TODO: 해독제 전용 아트 제작 전까지 포션 카테고리 fallback을 사용한다.
+    image: 'items/health_potion',
+    category: '소모품',
+    weight: 0.25,
+    stackable: true,
+    maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'detoxification', level: 1, duration: 30 } },
+    onUse: 'apply_status_effect',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_NATURAL],
+});
+
+defineItem({
     id: 'training_axe',
     name: '훈련용 도끼',
     description: '전직소에서 지급하는 균형 잡힌 한손 도끼.',
@@ -768,6 +817,40 @@ for (const mineral of mineralItems) {
         tags: [mineral.tag],
     });
 }
+
+for (const material of [
+    {
+        id: 'wolf_pelt', name: '적갈색 늑대 가죽',
+        description: '은빛그물 숲의 늑대에게서 얻는 질긴 가죽.',
+        image: 'items/earthworm_bait', tags: [GameTags.PROPERTY_NATURAL], weight: 0.7,
+    },
+    {
+        id: 'silverweb_silk', name: '은빛 거미실',
+        description: '빛을 받으면 은빛으로 반사하는 강인한 숲거미의 실.',
+        image: 'items/earthworm_bait', tags: [GameTags.PROPERTY_INSECT], weight: 0.15,
+    },
+    {
+        id: 'venom_gland', name: '자빛 독샘',
+        description: '독그물을 짜내는 데 쓰는 농축된 거미 독샘.',
+        image: 'items/mana_potion', tags: [GameTags.PROPERTY_POISON, GameTags.PROPERTY_INSECT], weight: 0.2,
+    },
+] as const) defineItem({
+    id: material.id,
+    name: material.name,
+    description: material.description,
+    // TODO: 숲 전용 소재 아트 제작 전까지 유기물/포션 카테고리 fallback을 사용한다.
+    image: material.image,
+    category: '몬스터 소재',
+    weight: material.weight,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [...material.tags],
+});
 
 defineItem({
     id: 'ember_ore',

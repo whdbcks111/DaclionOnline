@@ -120,7 +120,8 @@
     ],
     "connections": [
       { "locationId": "field" },
-      { "locationId": "meadow_3" }
+      { "locationId": "meadow_3" },
+      { "locationId": "silverweb_trail" }
     ]
   },
   {
@@ -141,6 +142,125 @@
     "connections": [
       { "locationId": "meadow_2" },
       { "locationId": "swamp_edge", "condition": "level_10" }
+    ]
+  },
+  {
+    "id": "silverweb_trail",
+    "name": "은빛그물 숲 가시오름길",
+    "mapColor": "#4f7857",
+    "zoneType": "neutral",
+    "x": 205,
+    "y": -65,
+    "z": 7,
+    "tags": ["location:wilderness", "location:forest", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "silverweb_briar_wolf", "maxCount": 4, "respawnTime": 34 },
+      { "type": "monster", "dataId": "silverweb_spider", "maxCount": 2, "respawnTime": 38 }
+    ],
+    "connections": [
+      { "locationId": "meadow_2" },
+      { "locationId": "silverweb_outpost" },
+      { "locationId": "red_mane_hill" },
+      { "locationId": "silverweb_grove" }
+    ]
+  },
+  {
+    "id": "silverweb_outpost",
+    "name": "은빛그물 숲 사냥꾼 거점",
+    "mapColor": "#4f7857",
+    "zoneType": "neutral",
+    "x": 145,
+    "y": -125,
+    "z": 11,
+    "shopId": "silverweb_hunter_store",
+    "tags": ["location:wilderness", "location:forest", "location:shop", "property:natural"],
+    "npcIds": [],
+    "objects": [],
+    "connections": [
+      { "locationId": "silverweb_trail" },
+      { "locationId": "silverweb_grove" }
+    ]
+  },
+  {
+    "id": "red_mane_hill",
+    "name": "은빛그물 숲 적갈기 언덕",
+    "mapColor": "#4f7857",
+    "zoneType": "hostile",
+    "x": 250,
+    "y": -145,
+    "z": 24,
+    "tags": ["location:wilderness", "location:forest", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "red_mane_wolf", "maxCount": 3, "respawnTime": 48 },
+      { "type": "monster", "dataId": "red_mane_wolf_king", "maxCount": 1, "respawnTime": 300 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "silverweb_trail" },
+      { "locationId": "silverweb_grove" }
+    ]
+  },
+  {
+    "id": "silverweb_grove",
+    "name": "은빛그물 숲 거미줄 숲터",
+    "mapColor": "#4f7857",
+    "zoneType": "neutral",
+    "x": 305,
+    "y": -70,
+    "z": 3,
+    "tags": ["location:wilderness", "location:forest", "property:natural", "property:insect"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "silverweb_spider", "maxCount": 3, "respawnTime": 40 },
+      { "type": "monster", "dataId": "venom_web_spinner", "maxCount": 2, "respawnTime": 52 }
+    ],
+    "connections": [
+      { "locationId": "silverweb_trail" },
+      { "locationId": "silverweb_outpost" },
+      { "locationId": "red_mane_hill" },
+      { "locationId": "silverweb_cavern", "condition": "level_20" }
+    ]
+  },
+  {
+    "id": "silverweb_cavern",
+    "name": "은빛그물 숲 독실 동굴",
+    "mapColor": "#4f7857",
+    "zoneType": "hostile",
+    "x": 365,
+    "y": -25,
+    "z": -18,
+    "tags": ["location:wilderness", "location:forest", "property:insect", "property:poison"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "venom_web_spinner", "maxCount": 3, "respawnTime": 52 },
+      { "type": "monster", "dataId": "silverweb_matriarch", "maxCount": 2, "respawnTime": 66 },
+      { "type": "resource", "dataId": "silverweb_egg_cluster", "maxCount": 2, "respawnTime": 100 }
+    ],
+    "connections": [
+      { "locationId": "silverweb_grove" },
+      { "locationId": "silverweb_queen_nest" }
+    ]
+  },
+  {
+    "id": "silverweb_queen_nest",
+    "name": "은빛그물 숲 여왕의 산란실",
+    "mapColor": "#4f7857",
+    "zoneType": "hostile",
+    "x": 415,
+    "y": 35,
+    "z": -32,
+    "tags": ["location:wilderness", "location:forest", "property:insect", "property:poison"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "silverweb_spider_queen", "maxCount": 1, "respawnTime": 480 },
+      { "type": "resource", "dataId": "silverweb_egg_cluster", "maxCount": 3, "respawnTime": 150 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "silverweb_cavern" },
+      { "locationId": "swamp_basin" }
     ]
   },
   {
@@ -180,7 +300,8 @@
     "connections": [
       { "locationId": "swamp_edge" },
       { "locationId": "swamp_reedway" },
-      { "locationId": "swamp_heart" }
+      { "locationId": "swamp_heart" },
+      { "locationId": "silverweb_queen_nest" }
     ]
   },
   {

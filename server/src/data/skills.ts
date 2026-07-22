@@ -2006,6 +2006,7 @@ interface BossStrikeSkillDefinition {
     castTime: number;
     cooldown: number;
     propertyTag: TagId;
+    activationHeader?: string;
     statusEffectId?: string;
     statusDuration?: number;
     unavoidable?: boolean;
@@ -2024,7 +2025,7 @@ function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): void {
         costTemplate: '소모값 없음',
         activationConditionTemplate: '살아 있는 현재 위협 대상이 필요합니다. 몬스터 전용 스킬입니다.',
         activationMessage: `${definition.name}!`,
-        activationHeader: definition.id,
+        activationHeader: definition.activationHeader ?? definition.id,
         baseMetadata: null,
         calculatedFields: { damage },
         calculateMaxCooldown: () => definition.cooldown,
@@ -2069,6 +2070,25 @@ function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): void {
 }
 
 for (const skill of [
+    // TODO: 은빛그물 보스 3종 전용 배너 제작 전까지 돌진·제어·독 계열 기존 헤더를 fallback으로 사용한다.
+    {
+        id: 'red_mane_pounce', name: '적갈기 도약', icon: 'affinities/natural', damageType: 'physical' as const,
+        attribute: AttributeType.ATK, baseMultiplier: 1.35, perLevelMultiplier: 0.12,
+        castTime: 0.9, cooldown: 8, propertyTag: GameTags.PROPERTY_NATURAL,
+        statusEffectId: 'bleeding', statusDuration: 7, activationHeader: 'battle_rush',
+    },
+    {
+        id: 'silverweb_bind', name: '은실 포박', icon: 'affinities/insect', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.15, perLevelMultiplier: 0.1,
+        castTime: 1.15, cooldown: 8, propertyTag: GameTags.PROPERTY_INSECT,
+        statusEffectId: 'paralytic_poison', statusDuration: 4, activationHeader: 'stunning_shot',
+    },
+    {
+        id: 'brood_venom', name: '유충의 맹독', icon: 'affinities/poison', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.25, perLevelMultiplier: 0.11,
+        castTime: 1.35, cooldown: 9, propertyTag: GameTags.PROPERTY_POISON,
+        statusEffectId: 'deadly_poison', statusDuration: 7, activationHeader: 'venom_blade',
+    },
     {
         id: 'caldera_eruption', name: '칼데라 분출', icon: 'affinities/fire', damageType: 'magic' as const,
         attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.4, perLevelMultiplier: 0.12,

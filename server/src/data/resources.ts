@@ -223,6 +223,23 @@ defineResource({
     tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_WOOD],
 });
 
+defineResource({
+    id: 'silverweb_egg_cluster',
+    name: '은빛그물 알주머니',
+    level: 18,
+    baseAttribute: { maxLife: 240, def: 18, magicDef: 10 },
+    requiredToolTags: [],
+    drops: [
+        { itemDataId: 'silverweb_silk', weight: 72, minCount: 1, maxCount: 2 },
+        { itemDataId: 'venom_gland', weight: 28, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 70, max: 110 },
+    tags: [
+        GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_INSECT,
+        GameTags.PROPERTY_POISON, GameTags.PROPERTY_NATURAL,
+    ],
+});
+
 for (const cache of [
     { id: 'echo_treasure_chest', name: '메아리 유물함', cooldown: { min: 2 * 60 * 60, max: 3 * 60 * 60 } },
     { id: 'crystal_treasure_chest', name: '공명 수정 보물함', cooldown: { min: 3 * 60 * 60, max: 5 * 60 * 60 } },

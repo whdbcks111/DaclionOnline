@@ -103,6 +103,7 @@ export const GameTags = Object.freeze({
     LOCATION_WILDERNESS: 'location:wilderness',
     LOCATION_SHOP: 'location:shop',
     LOCATION_MINE: 'location:mine',
+    LOCATION_FOREST: 'location:forest',
     LOCATION_SWAMP: 'location:swamp',
     LOCATION_VOLCANIC: 'location:volcanic',
     LOCATION_HIDDEN: 'location:hidden',
@@ -110,6 +111,7 @@ export const GameTags = Object.freeze({
     SHOP_GENERAL: 'shop:general',
     SHOP_MINING: 'shop:mining',
     SHOP_FISHING: 'shop:fishing',
+    SHOP_HUNTER: 'shop:hunter',
 } satisfies Record<string, TagId>)
 
 const TAG_PATTERN = /^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9/._-]*$/

@@ -222,3 +222,40 @@ defineShop({
     ],
     tags: [GameTags.SHOP_MINING],
 });
+
+defineShop({
+    id: 'silverweb_hunter_store',
+    buyList: [
+        {
+            label: '은빛그물 사냥활',
+            create: () => ({ itemDataId: 'silverweb_hunter_bow', count: 1 }),
+            count: 1,
+            price: 180,
+            stock: 3,
+            restockTime: 240,
+        },
+        {
+            label: '화살 20개',
+            create: () => ({ itemDataId: 'wooden_arrow', count: 20 }),
+            count: 20,
+            price: 18,
+            stock: 20,
+            restockTime: 30,
+        },
+        {
+            label: '은이파리 해독제',
+            create: () => ({ itemDataId: 'forest_antidote', count: 1 }),
+            count: 1,
+            price: 24,
+            stock: 12,
+            restockTime: 75,
+        },
+    ],
+    sellList: [
+        { label: '적갈색 늑대 가죽', filter: item => item.itemDataId === 'wolf_pelt', count: 99, price: 8 },
+        { label: '은빛 거미실', filter: item => item.itemDataId === 'silverweb_silk', count: 99, price: 11 },
+        { label: '자빛 독샘', filter: item => item.itemDataId === 'venom_gland', count: 99, price: 18 },
+        { label: '활', filter: item => item.hasTag(GameTags.WEAPON_BOW), count: 1, price: 45 },
+    ],
+    tags: [GameTags.SHOP_HUNTER],
+});

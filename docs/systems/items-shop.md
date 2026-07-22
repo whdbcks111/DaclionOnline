@@ -31,6 +31,8 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 내구도는 `baseDurability`가 있는 아이템만 사용한다. `durability/durabilityRatio/isBroken`으로 조회하고 `setDurability/changeDurability/increaseDurability/decreaseDurability`로 0~기본 내구도 범위 안에서 변경한다. 소유 중인 아이템이 0이 되면 Inventory는 해당 인스턴스를 삭제하고 Equipment는 슬롯 modifier를 즉시 제거한 뒤 삭제 상태로 저장한다. 주무기가 공격으로 파괴되면 소유 플레이어에게 알림을 보낸다.
 
+은빛그물 숲의 `forest_antidote`는 30초 해독 상태로 독·맹독·마비독을 제거하고 재적용을 막는다. `silverweb_hunter_bow`는 공격력 6·치명타율 2%·투사체 가속 8%를 제공하는 초반 성장 활이다. 전용 아트 제작 전에는 기존 활·포션·유기물 카테고리 아이콘을 명시적 fallback으로 사용한다.
+
 ## 감정 명령
 
 `/감정 <인벤토리 번호 또는 장착칸>`은 감각 50 이상에서 사용할 수 있다. 장착칸은 `손`, `다리`, `보조`, `장신구1` 같은 `EquipSlotType` 이름·별칭을 받는다. 감각 50에서는 설명·분류·수량·무게·가공된 속성을, 75에서는 내구도와 능력치 보정을, 100에서는 회복량·획득 스킬·탄약 방식·고유 적중 효과처럼 해석된 특수 효과를 추가로 공개한다. 내부 아이템 ID, raw 태그, metadata key/value는 권한과 관계없이 출력하지 않는다. 조회는 `Item.getInspectionSnapshot`, 자동완성은 `Inventory.getIndexedItems`와 `Equipment.getAllEquipped`를 사용한다.
@@ -114,6 +116,8 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 장비 modifier의 `source`는 데이터 정의 값 대신 실제 슬롯 기반 source로 치환되어, 특정 장비 해제 시 정확히 제거된다.
 
 ## 상점
+
+은빛그물 숲 사냥꾼 거점의 `silverweb_hunter_store`는 사냥활·화살·해독제를 판매하고 `wolf_pelt`, `silverweb_silk`, `venom_gland`를 희귀도에 따라 매입한다.
 
 `data/shops.ts`가 `ShopData`를 등록하고 Location의 `shopId`가 상점을 노출한다. `BuyEntry`는 생성 함수·가격·1회 수량·최대 재고·재입고 시간을, `SellEntry`는 필터·가격을 가진다.
 

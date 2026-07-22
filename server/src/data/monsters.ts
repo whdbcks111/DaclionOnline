@@ -106,6 +106,145 @@ defineWorldMonster({
 });
 
 defineWorldMonster({
+    id: 'silverweb_briar_wolf',
+    name: '가시털 늑대',
+    description: '은빛그물 숲의 얕은 가시덩굴 사이를 무리 지어 달리는 사냥짐승.',
+    level: 7,
+    baseAttribute: { maxLife: 120, atk: 24, def: 7, magicDef: 4, speed: 1.55, attackSpeed: 1.08 },
+    drops: [{ itemDataId: 'wolf_pelt', minCount: 1, maxCount: 1, chance: 0.42 }],
+    goldReward: { min: 8, max: 17 },
+    tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_NATURAL],
+});
+
+defineWorldMonster({
+    id: 'silverweb_spider',
+    name: '은실 숲거미',
+    description: '은은한 실을 사이에 늘어뜨려 행인의 발을 묶는 숲거미.',
+    level: 10,
+    baseAttribute: { maxLife: 175, atk: 31, def: 10, magicDef: 12, speed: 1.7, attackSpeed: 1.12 },
+    drops: [
+        { itemDataId: 'silverweb_silk', minCount: 1, maxCount: 2, chance: 0.48 },
+        { itemDataId: 'venom_gland', minCount: 1, maxCount: 1, chance: 0.12 },
+    ],
+    goldReward: { min: 12, max: 23 },
+    attack: { effect: { statusEffectId: 'poison', chance: 0.12, duration: 6, level: 1 } },
+    tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_INSECT, GameTags.PROPERTY_NATURAL],
+});
+
+defineWorldMonster({
+    id: 'red_mane_wolf',
+    name: '적갈기 늑대',
+    description: '숨을 죽인 후 옆구리를 파고드는 붉은 갈기의 숲 포식자.',
+    level: 12,
+    baseAttribute: { maxLife: 235, atk: 39, def: 13, magicDef: 9, speed: 1.95, attackSpeed: 1.18, critRate: 0.07 },
+    drops: [{ itemDataId: 'wolf_pelt', minCount: 1, maxCount: 2, chance: 0.58 }],
+    goldReward: { min: 17, max: 31 },
+    attack: { effect: { statusEffectId: 'bleeding', chance: 0.16, duration: 7, level: 1 } },
+    tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_NATURAL],
+});
+
+defineWorldMonster({
+    id: 'red_mane_wolf_king',
+    name: '적갈기 늑대왕',
+    description: '상처 날 일이 많은 앞발과 짧은 포효로 무리의 사냥을 지휘하는 은빛그물 숲의 필드 보스.',
+    level: 15,
+    baseAttribute: {
+        maxLife: 1_650, atk: 58, def: 24, magicDef: 18, armorPen: 5,
+        speed: 2.15, attackSpeed: 0.78, critRate: 0.1, critDmg: 1.65,
+    },
+    expReward: 15 * 20 * 5,
+    drops: [
+        { itemDataId: 'wolf_pelt', minCount: 2, maxCount: 4, chance: 0.85 },
+        { itemDataId: 'silverweb_hunter_bow', minCount: 1, maxCount: 1, chance: 0.04 },
+    ],
+    goldReward: { min: 65, max: 105 },
+    attack: { effect: { statusEffectId: 'bleeding', chance: 0.25, duration: 8, level: 2 } },
+    skills: [{ skillDataId: 'red_mane_pounce', level: 2 }],
+    skillPattern: { sequence: ['red_mane_pounce'], initialDelay: 4, interval: { min: 8, max: 11 } },
+    ai: {
+        intelligence: 28, disposition: MonsterAiDisposition.THREAT,
+        weights: { attack: 0.8, damage: 1, healing: 0.2, shielding: 0.2, control: 0.5, taunt: 0.8 },
+        tauntResistance: 0.12, switchThreshold: 0.06,
+    },
+    tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_BEAST, GameTags.PROPERTY_NATURAL],
+});
+
+defineWorldMonster({
+    id: 'venom_web_spinner',
+    name: '독그물 짜기',
+    description: '자빛 독액을 실에 발라 먼저 움직임을 둔화시키는 성체 숲거미.',
+    level: 17,
+    baseAttribute: { maxLife: 315, atk: 49, magicForce: 45, def: 18, magicDef: 24, speed: 1.65 },
+    drops: [
+        { itemDataId: 'silverweb_silk', minCount: 1, maxCount: 3, chance: 0.55 },
+        { itemDataId: 'venom_gland', minCount: 1, maxCount: 2, chance: 0.28 },
+    ],
+    goldReward: { min: 24, max: 43 },
+    attack: {
+        damageType: 'magic',
+        effect: { statusEffectId: 'paralytic_poison', chance: 0.16, duration: 4, level: 1 },
+    },
+    tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_INSECT, GameTags.PROPERTY_POISON],
+});
+
+defineWorldMonster({
+    id: 'silverweb_matriarch',
+    name: '은백 어미거미',
+    description: '유충을 지키며 두터운 거미줄과 맹독을 함께 쏟아내는 어미거미.',
+    level: 21,
+    baseAttribute: { maxLife: 455, atk: 61, magicForce: 63, def: 28, magicDef: 34, speed: 1.45 },
+    drops: [
+        { itemDataId: 'silverweb_silk', minCount: 2, maxCount: 4, chance: 0.62 },
+        { itemDataId: 'venom_gland', minCount: 1, maxCount: 2, chance: 0.4 },
+    ],
+    goldReward: { min: 32, max: 57 },
+    attack: {
+        damageType: 'magic',
+        effect: { statusEffectId: 'deadly_poison', chance: 0.2, duration: 7, level: 2 },
+    },
+    tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_INSECT, GameTags.PROPERTY_POISON],
+});
+
+defineWorldMonster({
+    id: 'silverweb_spider_queen',
+    name: '은빛그물 거미여왕',
+    description: '숲 아래 독그물을 확장해 온 지배자. 알주머니가 남아 있는 동안 거미실이 피해를 흡수한다.',
+    level: 24,
+    baseAttribute: {
+        maxLife: 3_450, atk: 76, magicForce: 82, def: 40, magicDef: 48,
+        magicPen: 7, speed: 1.7, attackSpeed: 0.72, critRate: 0.08, critDmg: 1.6,
+    },
+    expReward: 24 * 20 * 5,
+    drops: [
+        { itemDataId: 'silverweb_silk', minCount: 4, maxCount: 7, chance: 0.9 },
+        { itemDataId: 'venom_gland', minCount: 2, maxCount: 4, chance: 0.7 },
+        { itemDataId: 'venom_dagger', minCount: 1, maxCount: 1, chance: 0.035 },
+    ],
+    goldReward: { min: 95, max: 155 },
+    attack: {
+        damageType: 'magic',
+        effect: { statusEffectId: 'deadly_poison', chance: 0.3, duration: 9, level: 3 },
+    },
+    skills: [
+        { skillDataId: 'silverweb_bind', level: 2 },
+        { skillDataId: 'brood_venom', level: 2 },
+    ],
+    skillPattern: {
+        sequence: ['silverweb_bind', 'brood_venom'], randomOrder: true,
+        initialDelay: 4, interval: { min: 7, max: 10 },
+    },
+    ai: {
+        intelligence: 72, disposition: MonsterAiDisposition.THREAT,
+        weights: { attack: 0.35, damage: 1, healing: 1.2, shielding: 0.9, control: 1.3, taunt: 1.7 },
+        tauntResistance: 0.52, switchThreshold: 0.16,
+    },
+    tags: [
+        GameTags.ENTITY_BOSS, GameTags.ENTITY_BEAST,
+        GameTags.PROPERTY_INSECT, GameTags.PROPERTY_POISON, GameTags.PROPERTY_NATURAL,
+    ],
+});
+
+defineWorldMonster({
     id: 'bog_slime',
     name: '수렁 슬라임',
     description: '늪의 오염된 물과 맹독이 뒤섞여 태어난 슬라임.',
