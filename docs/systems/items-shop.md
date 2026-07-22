@@ -27,7 +27,7 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 아이템 이미지는 `Item.image` 공개 API로 조회한다. `/icons` 아래의 확장자 없는 key를 사용하며 `getMetadata('image')` → `ItemData.image` → `items/{itemDataId}` 순서로 결정된다. 따라서 일반 아이템은 `client/public/icons/items/{id}.png`를 자동으로 사용하고, 동일 정의의 개별 인스턴스만 다른 외형이 필요하면 `setMetadata('image', 'items/variant_key')`를 호출한다. 경로 이탈이나 URL 형태의 값은 무시되어 기본 이미지로 대체된다.
 1차 콘텐츠 확장 기간에는 새 데이터마다 ImageGen 에셋을 만들지 않고 검·활·단검·지팡이·소모품처럼 카테고리가 맞는 기존 128×128 폴백 아이콘을 `image`에 명시한다. 존재하지 않는 경로는 허용하지 않으며 코드에 전용 아이콘 교체 TODO를 남긴다. 콘텐츠 규모와 밸런스가 확정된 뒤 전용 이미지를 일괄 제작한다.
 
-`learn_skill` 사용 handler는 아이템 metadata의 `skillDataId`를 `Player.skills.grant()`에 전달한다. 신규 획득 성공 시에만 해당 아이템 인스턴스 한 개를 제거하며 이미 보유했거나 데이터가 잘못된 경우 소비하지 않는다. 현재 `seismic_crush_skillbook`이 이 계약을 사용하는 첫 스킬북이다.
+`learn_skill` 사용 handler는 아이템 metadata의 `skillDataId`를 `Player.skills.grant()`에 전달한다. 신규 획득 성공 시에만 해당 아이템 인스턴스 한 개를 제거하며 이미 보유했거나 데이터가 잘못된 경우 소비하지 않는다. `seismic_crush_skillbook`과 은빛그물 보스의 `predator_pounce_skillbook`, `silverweb_snare_skillbook`이 같은 계약을 사용한다. 콘텐츠 확장 중인 두 전승서는 전용 아트 전까지 기존 스킬북 카테고리 아이콘을 명시적 fallback으로 사용한다.
 
 내구도는 `baseDurability`가 있는 아이템만 사용한다. `durability/durabilityRatio/isBroken`으로 조회하고 `setDurability/changeDurability/increaseDurability/decreaseDurability`로 0~기본 내구도 범위 안에서 변경한다. 소유 중인 아이템이 0이 되면 Inventory는 해당 인스턴스를 삭제하고 Equipment는 슬롯 modifier를 즉시 제거한 뒤 삭제 상태로 저장한다. 주무기가 공격으로 파괴되면 소유 플레이어에게 알림을 보낸다.
 

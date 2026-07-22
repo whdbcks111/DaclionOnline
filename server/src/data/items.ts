@@ -788,6 +788,39 @@ defineItem({
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_DIAMOND],
 });
 
+// TODO(icons): 보스 전승서 전용 아이콘 제작 전까지 기존 스킬북 카테고리 아이콘을 재사용한다.
+for (const book of [
+    {
+        id: 'predator_pounce_skillbook',
+        name: '포식자의 도약 스킬북',
+        description: '적갈기 늑대왕의 사냥 감각이 각인된 전승서. 사용하면 스킬 [ 포식자의 도약 ] 을 획득합니다.',
+        skillDataId: 'predator_pounce',
+        propertyTag: GameTags.PROPERTY_NATURAL,
+    },
+    {
+        id: 'silverweb_snare_skillbook',
+        name: '은실 사냥망 스킬북',
+        description: '은빛그물 거미여왕의 포박술이 기록된 전승서. 사용하면 스킬 [ 은실 사냥망 ] 을 획득합니다.',
+        skillDataId: 'silverweb_snare',
+        propertyTag: GameTags.PROPERTY_INSECT,
+    },
+] as const) defineItem({
+    id: book.id,
+    name: book.name,
+    description: book.description,
+    image: 'items/seismic_crush_skillbook',
+    category: '스킬북',
+    weight: 0.3,
+    stackable: true,
+    maxStack: 10,
+    baseMetadata: { skillDataId: book.skillDataId },
+    onUse: 'learn_skill',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, book.propertyTag],
+});
+
 const mineralItems = [
     { id: 'stone', name: '돌', description: '가장 흔한 광물 자원.', weight: 0.8, tag: GameTags.MATERIAL_STONE },
     { id: 'coal', name: '석탄', description: '연료로 사용할 수 있는 검은 광물.', weight: 0.5, tag: GameTags.MATERIAL_COAL },

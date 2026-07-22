@@ -124,6 +124,46 @@ test('엘리트 직업은 원래 메인 직업 스킬의 표시 조건을 계속
     assert.equal(player.skills.getVisible().some(skill => skill.skillDataId === 'steel_slash'), true);
 });
 
+test('각 1차 직업은 Lv.30과 Lv.50 성장 기술을 해당 레벨에 자동 획득한다', () => {
+    for (const [jobId, level30Skill, level50Skills] of [
+        ['career:warrior', 'fracture_slash', ['iron_tempest']],
+        ['career:archer', 'piercing_arrow', ['arrow_storm']],
+        ['career:assassin', 'rupture_cut', ['shadow_dagger']],
+        ['career:mage', 'mana_lance', ['flame_wave']],
+        ['career:blacksmith', 'fault_finder', ['anvil_resonance', 'tempered_aegis']],
+    ] as const) {
+        const player = new TestSkillPlayer();
+        player.progress.setState(CareerProgressIds.MAIN, jobId);
+        player.level = 29;
+        player.skills.update(0.5);
+        assert.equal(player.skills.has(level30Skill), false, `${jobId} Lv.29`);
+
+        player.level = 30;
+        player.skills.update(0.5);
+        assert.equal(player.skills.has(level30Skill), true, `${jobId} Lv.30`);
+        assert.ok(level50Skills.every(skillId => !player.skills.has(skillId)), `${jobId} Lv.30`);
+
+        player.level = 50;
+        player.skills.update(0.5);
+        assert.ok(level50Skills.every(skillId => player.skills.has(skillId)), `${jobId} Lv.50`);
+    }
+});
+
+test('성장 기술 정보는 내부 태그 대신 속성·계열·공유 쿨다운 표시명을 제공한다', () => {
+    const player = new TestSkillPlayer();
+    player.progress.setState(CareerProgressIds.MAIN, 'career:mage');
+    const skill = player.skills.grant('flame_wave', 'test').skill;
+    const tags = skill.getInformationTagsSnapshot();
+
+    assert.deepEqual(tags.groups.map(value => value.label), ['마법', '화염 계열']);
+    assert.deepEqual(tags.affinities.map(value => value.label), ['불']);
+    assert.deepEqual(tags.sharedCooldowns.map(value => [value.label, value.seconds]), [
+        ['마법', 1],
+        ['화염 계열', 2],
+    ]);
+    assert.equal(JSON.stringify(tags).includes('skill:group'), false);
+});
+
 test('모든 엘리트 직업은 계승 패시브와 조합 전용 액티브를 정의한다', () => {
     const eliteIds = [
         'blade_ranger', 'shadow_blade', 'spellblade', 'siege_bow', 'night_hunter', 'elemental_marksman',

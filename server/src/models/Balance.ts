@@ -339,17 +339,8 @@ export function analyzeJobBalance(level: number, mainJobId: string, subJobId?: s
         entity.attribute.get(AttributeType.SPEED),
         target.attribute.get(AttributeType.SPEED),
     );
-    const skillIds = new Set([
-        ...scenario.mainJob.grantedSkills.map(value => value.skillDataId),
-        ...(scenario.subJob?.grantedSkills.map(value => value.skillDataId) ?? []),
-        ...scenario.effectiveJob.grantedSkills.map(value => value.skillDataId),
-    ]);
-    const skillReports = [...skillIds]
-        .filter(id => {
-            const skill = getSkillData(id);
-            return skill && !skill.tags.includes(GameTags.SKILL_PASSIVE);
-        })
-        .map(id => analyzeSkillBalance(scenario, id, getSkillData(id)!.maxLevel))
+    const skillReports = getRotationSkills(scenario)
+        .map(data => analyzeSkillBalance(scenario, data.id, projectSkillLevel(level, data, scenario)))
         .sort((a, b) => b.sustainableDpm - a.sustainableDpm || a.name.localeCompare(b.name));
     const targetExpectedCrit = getExpectedCriticalMultiplier(target, SkillCriticalMode.NORMAL);
     const targetHitChance = 1 - calculateEvasionChance(
@@ -786,7 +777,7 @@ function getRotationSkills(scenario: BalanceScenario): Readonly<SkillData>[] {
     const ownedJobs = [scenario.mainJob.id, scenario.subJob?.id, scenario.effectiveJob.id].filter((id): id is string => Boolean(id));
     return getAllSkillData().filter(data => {
         if (!data.balance || data.tags.includes(GameTags.SKILL_PASSIVE)) return false;
-        if (scenario.level < (PROJECTED_SKILL_UNLOCK_LEVELS.get(data.id) ?? 1)) return false;
+        if (scenario.level < (data.unlockLevel ?? PROJECTED_SKILL_UNLOCK_LEVELS.get(data.id) ?? 1)) return false;
         if (granted.has(data.id) || data.id === 'power_strike') return true;
         return data.jobRequirement?.anyOf.some(required => ownedJobs.some(job => isJobDescendant(job, required))) ?? false;
     }).sort((left, right) => left.id.localeCompare(right.id));
@@ -795,7 +786,8 @@ function getRotationSkills(scenario: BalanceScenario): Readonly<SkillData>[] {
 function projectSkillLevel(characterLevel: number, data: Readonly<SkillData>, scenario: BalanceScenario): number {
     const requiresElite = data.jobRequirement?.anyOf.some(id => getJob(id)?.tier.key === 'elite') ?? false;
     const requiresSub = Boolean(scenario.subJob && data.jobRequirement?.anyOf.some(id => isJobDescendant(scenario.subJob!.id, id)));
-    const unlockLevel = requiresElite ? 200 : requiresSub ? 50 : PROJECTED_SKILL_UNLOCK_LEVELS.get(data.id) ?? 20;
+    const unlockLevel = requiresElite ? 200 : requiresSub ? 50
+        : data.unlockLevel ?? PROJECTED_SKILL_UNLOCK_LEVELS.get(data.id) ?? 20;
     return Math.max(1, Math.min(data.maxLevel, 1 + Math.floor(Math.max(0, characterLevel - unlockLevel) / 20)));
 }
 

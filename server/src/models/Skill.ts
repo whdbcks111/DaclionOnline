@@ -150,6 +150,8 @@ export interface SkillData {
     icon: string;
     aliases?: readonly string[];
     maxLevel: number;
+    /** 자동 획득·밸런스 프로파일에서 사용하는 권장 해금 레벨. 직접 지급 스킬은 생략할 수 있다. */
+    unlockLevel?: number;
     descriptionTemplate: string;
     costTemplate: string;
     activationConditionTemplate: string;
@@ -580,6 +582,9 @@ export function defineSkill(data: SkillData): void {
     }
     if (!Number.isInteger(data.maxLevel) || data.maxLevel < 1) {
         throw new Error(`Invalid skill max level: ${id}`);
+    }
+    if (data.unlockLevel !== undefined && (!Number.isInteger(data.unlockLevel) || data.unlockLevel < 1)) {
+        throw new Error(`Invalid skill unlock level: ${id}/${data.unlockLevel}`);
     }
     const calculatedFields = Object.freeze({ ...(data.calculatedFields ?? {}) });
     const sharedCooldowns = (data.sharedCooldowns ?? []).map(rule => {

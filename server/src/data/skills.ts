@@ -1494,6 +1494,310 @@ for (const elemental of [
         ...combatSkillGroups(GameTags.SKILL_GROUP_MAGIC, elemental.tag)],
 });
 
+interface GrowthTechniqueDefinition {
+    id: string;
+    name: string;
+    icon: string;
+    activationHeader: string;
+    damageType: 'physical' | 'magic';
+    attribute: AttributeType;
+    basePercent: number;
+    perLevelPercent: number;
+    manaCost: number;
+    cooldown: number;
+    jobId?: string;
+    groupTag?: TagId;
+    unlockLevel?: number;
+    weaponDescription?: string;
+    weaponTags?: readonly TagId[];
+    projectile?: 'basic_arrow' | 'basic_magic_orb' | 'magic_bolt';
+    projectileName?: string;
+    propertyTag?: TagId;
+    hitCount?: number;
+    guaranteedCritical?: boolean;
+    unavoidable?: boolean;
+    penetration?: { attribute: AttributeType; base: number; perLevel: number };
+    statusEffect?: StatusEffectType;
+    statusLabel?: string;
+    statusDuration?: number;
+    statusDurationPerLevel?: number;
+    statusLevel?: (skillLevel: number) => number;
+    shieldPercent?: number;
+    extraDescription: string;
+    acquisitionDescription?: string;
+}
+
+function growthTechniqueDamage(context: SkillContext, definition: GrowthTechniqueDefinition): number {
+    return context.owner.attribute.get(definition.attribute)
+        * percentByLevel(context.skill.level, definition.basePercent, definition.perLevelPercent) / 100;
+}
+
+function careerLevelAutoAcquire(jobId: string, unlockLevel: number) {
+    return {
+        watchedProgress: [] as readonly string[],
+        alwaysEvaluate: true,
+        check: ({ player }: SkillContext) => Boolean(
+            player && player.level >= unlockLevel && player.career.hasJob(jobId),
+        ),
+    };
+}
+
+// TODO(icons): 1차 성장기·보스 전승 기술은 전용 아트 제작 전까지 같은 직업/효과의 기존 아이콘과 배너를 재사용한다.
+const growthTechniques: readonly GrowthTechniqueDefinition[] = [
+    {
+        id: 'fracture_slash', name: '파쇄 베기', icon: 'skills/steel_slash', activationHeader: 'steel_slash',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 210, perLevelPercent: 14,
+        manaCost: 18, cooldown: 8, jobId: JOBS.warrior, groupTag: GameTags.SKILL_GROUP_WARRIOR, unlockLevel: 30,
+        weaponDescription: '검 또는 도끼를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
+        statusEffect: LegacyStatusEffects.DEFENSE_REDUCTION, statusLabel: '방어력 감소', statusDuration: 8,
+        statusDurationPerLevel: 0.5, extraDescription: '적중한 대상의 방어력을 약화시켜 이어지는 물리 공격의 길을 엽니다.',
+    },
+    {
+        id: 'iron_tempest', name: '철풍 돌파', icon: 'skills/battle_rush', activationHeader: 'battle_rush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 265, perLevelPercent: 17,
+        manaCost: 26, cooldown: 13, jobId: JOBS.warrior, groupTag: GameTags.SKILL_GROUP_WARRIOR, unlockLevel: 50,
+        weaponDescription: '검 또는 도끼를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
+        unavoidable: true, shieldPercent: 8,
+        extraDescription: '회피할 수 없는 돌파 공격 뒤 최대 생명력에 비례한 일반 보호막을 얻습니다.',
+    },
+    {
+        id: 'piercing_arrow', name: '관통 화살', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 205, perLevelPercent: 14,
+        manaCost: 18, cooldown: 8, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 30,
+        weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW], projectile: 'basic_arrow',
+        propertyTag: GameTags.PROPERTY_METAL,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 20, perLevel: 5 },
+        extraDescription: '발사 순간의 방어 관통력을 따로 보정한 금속 화살입니다.',
+    },
+    {
+        id: 'arrow_storm', name: '화살 폭우', icon: 'skills/multishot', activationHeader: 'multishot',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 92, perLevelPercent: 7,
+        manaCost: 30, cooldown: 15, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 50,
+        weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW], projectile: 'basic_arrow',
+        hitCount: 4, extraDescription: '현재 대상 한 명에게 네 발을 연속으로 발사하며 각 화살은 별도로 치명타가 발생합니다.',
+    },
+    {
+        id: 'rupture_cut', name: '혈맥 절단', icon: 'skills/ambush', activationHeader: 'ambush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 190, perLevelPercent: 13,
+        manaCost: 18, cooldown: 8, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 30,
+        weaponDescription: '단검을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_DAGGER], guaranteedCritical: true,
+        statusEffect: LegacyStatusEffects.BLEEDING, statusLabel: '출혈', statusDuration: 7, statusDurationPerLevel: 0.75,
+        extraDescription: '급소를 베어 확정 치명타를 가하고 출혈을 남깁니다.',
+    },
+    {
+        id: 'shadow_dagger', name: '그림자 단검', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 235, perLevelPercent: 15,
+        manaCost: 24, cooldown: 11, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 50,
+        projectile: 'basic_arrow', projectileName: '그림자 단검', propertyTag: GameTags.PROPERTY_DARK,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 16, perLevel: 4 },
+        extraDescription: '무기 종류와 관계없이 암흑으로 빚은 단검을 투척합니다.',
+    },
+    {
+        id: 'mana_lance', name: '마력 창', icon: 'skills/magic_bolt', activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 205, perLevelPercent: 14,
+        manaCost: 24, cooldown: 8, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 30,
+        projectile: 'magic_bolt', projectileName: '마력 창',
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 20, perLevel: 5 },
+        extraDescription: '지팡이 없이도 사용할 수 있으며 마법 저항을 꿰뚫는 응축탄을 발사합니다.',
+    },
+    {
+        id: 'flame_wave', name: '홍염 파동', icon: 'skills/fireball', activationHeader: 'fireball',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 235, perLevelPercent: 16,
+        manaCost: 32, cooldown: 12, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 50,
+        projectile: 'basic_magic_orb', projectileName: '홍염 파동', propertyTag: GameTags.PROPERTY_FIRE,
+        statusEffect: StatusEffectType.FIRE, statusLabel: '화염', statusDuration: 8, statusDurationPerLevel: 1,
+        extraDescription: '지팡이 없이도 사용할 수 있으며 적중한 대상을 오래 불태웁니다.',
+    },
+    {
+        id: 'fault_finder', name: '결함 간파', icon: 'skills/precision_break', activationHeader: 'precision_break',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 165, perLevelPercent: 12,
+        manaCost: 18, cooldown: 9, jobId: JOBS.blacksmith, groupTag: GameTags.SKILL_GROUP_BLACKSMITH, unlockLevel: 30,
+        guaranteedCritical: true, statusEffect: LegacyStatusEffects.DEFENSE_REDUCTION,
+        statusLabel: '방어력 감소', statusDuration: 9, statusDurationPerLevel: 0.5,
+        extraDescription: '감각으로 성장하는 치명타 피해를 확정적으로 적용하고 대상 장비의 결함을 드러냅니다.',
+    },
+    {
+        id: 'anvil_resonance', name: '모루의 공명', icon: 'skills/precision_break', activationHeader: 'precision_break',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 550, perLevelPercent: 35,
+        manaCost: 32, cooldown: 14, jobId: JOBS.blacksmith, groupTag: GameTags.SKILL_GROUP_BLACKSMITH, unlockLevel: 50,
+        guaranteedCritical: true, unavoidable: true,
+        extraDescription: '금속의 결을 공명시켜 감각으로 성장하는 치명타 피해를 확정 적용하며 회피를 무시합니다.',
+    },
+    {
+        id: 'predator_pounce', name: '포식자의 도약', icon: 'skills/battle_rush', activationHeader: 'battle_rush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 220, perLevelPercent: 15,
+        manaCost: 20, cooldown: 10, unavoidable: true,
+        statusEffect: LegacyStatusEffects.BLEEDING, statusLabel: '출혈', statusDuration: 8, statusDurationPerLevel: 1,
+        extraDescription: '대상을 놓치지 않는 도약으로 회피를 무시하고 깊은 상처를 남깁니다.',
+        acquisitionDescription: '적갈기 늑대왕이 남기는 스킬북으로 전승받아야 합니다.',
+    },
+    {
+        id: 'silverweb_snare', name: '은실 사냥망', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 180, perLevelPercent: 13,
+        manaCost: 24, cooldown: 12, projectile: 'basic_magic_orb', projectileName: '은실 사냥망',
+        propertyTag: GameTags.PROPERTY_INSECT, statusEffect: LegacyStatusEffects.BIND,
+        statusLabel: '속박', statusDuration: 2.5, statusDurationPerLevel: 0.25,
+        extraDescription: '은빛 거미실을 펼쳐 이동과 회피를 봉쇄합니다.',
+        acquisitionDescription: '은빛그물 거미여왕이 남기는 스킬북으로 전승받아야 합니다.',
+    },
+];
+
+for (const technique of growthTechniques) defineSkill({
+    id: technique.id,
+    name: technique.name,
+    icon: technique.icon,
+    activationHeader: technique.activationHeader,
+    maxLevel: 5,
+    unlockLevel: technique.unlockLevel,
+    descriptionTemplate: `${technique.hitCount && technique.hitCount > 1 ? `각 타격마다 ` : ''}`
+        + `{{icon.${technique.attribute.key}}} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 `
+        + `${technique.damageType === 'magic' ? '마법' : '물리'} 피해${technique.hitCount && technique.hitCount > 1 ? `를 {{hitCount}}회` : ''} 입힙니다. `
+        + `${technique.penetration ? `{{icon.${technique.penetration.attribute.key}}} {{penetration}}을 적용합니다. ` : ''}`
+        + `${technique.statusEffect ? `적중 시 Lv.{{statusLevel}} ${technique.statusLabel}을 {{statusDuration}} 동안 부여합니다. ` : ''}`
+        + `${technique.shieldPercent ? `공격 후 최대 생명력의 {{shieldPercent}}만큼 일반 보호막을 8초 동안 얻습니다. ` : ''}`
+        + `${technique.projectile ? `${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT} ` : ''}`
+        + technique.extraDescription,
+    costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${technique.manaCost}[/color]`,
+    activationConditionTemplate: activationGuide(
+        `${technique.weaponDescription ? `${technique.weaponDescription} ` : '장착 무기와 관계없이 '}`
+        + `살아 있는 현재 대상이 필요합니다.${technique.acquisitionDescription ? ` ${technique.acquisitionDescription}` : ''}`,
+    ),
+    activationMessage: `${technique.name}!`,
+    baseMetadata: null,
+    calculatedFields: {
+        damage: context => attributeDamageTooltip(context, technique.attribute, technique.basePercent, technique.perLevelPercent),
+        hitCount: () => technique.hitCount ?? 1,
+        penetration: context => technique.penetration
+            ? levelValueTooltip(context, technique.penetration.attribute.label, technique.penetration.base, technique.penetration.perLevel)
+            : 0,
+        statusLevel: context => technique.statusLevel?.(context.skill.level) ?? context.skill.level,
+        statusDuration: context => levelValueTooltip(
+            context,
+            `${technique.statusLabel ?? '효과'} 지속시간`,
+            technique.statusDuration ?? 0,
+            technique.statusDurationPerLevel ?? 0,
+            '초',
+        ),
+        shieldPercent: () => technique.shieldPercent ? `${formatNumber(technique.shieldPercent)}%` : '0%',
+        projectileTravelTime: context => technique.projectile
+            ? projectileTravelTimeTooltip(context, technique.projectile, technique.damageType === 'magic')
+            : 0,
+    },
+    balance: {
+        role: technique.statusEffect ? SkillBalanceRole.CONTROL
+            : technique.shieldPercent ? SkillBalanceRole.DEFENSE : SkillBalanceRole.DAMAGE,
+        damageType: technique.damageType,
+        effectTags: technique.propertyTag ? [technique.propertyTag] : undefined,
+        calculateDamage: context => growthTechniqueDamage(context, technique),
+        criticalMode: technique.guaranteedCritical ? SkillCriticalMode.GUARANTEED : SkillCriticalMode.NORMAL,
+        hitCount: technique.hitCount,
+        calculateManaCost: () => technique.manaCost,
+        calculateShield: technique.shieldPercent
+            ? context => context.owner.maxLife * technique.shieldPercent! / 100 : undefined,
+        notes: technique.statusEffect ? [`${technique.statusLabel}의 전술 가치는 직접 피해와 분리합니다.`] : undefined,
+    },
+    calculateMaxCooldown: () => technique.cooldown,
+    sharedCooldowns: technique.groupTag
+        ? combatSharedCooldowns(technique.groupTag, technique.propertyTag) : undefined,
+    jobRequirement: technique.jobId ? jobRequirement(technique.jobId) : undefined,
+    autoAcquire: technique.jobId && technique.unlockLevel
+        ? careerLevelAutoAcquire(technique.jobId, technique.unlockLevel) : undefined,
+    ...(technique.weaponDescription && technique.weaponTags?.length ? {
+        weaponRequirement: weaponRequirement(technique.weaponDescription, ...technique.weaponTags),
+    } : {}),
+    canActivate: simpleCheck(technique.manaCost),
+    onStart: context => {
+        const found = targetOrDeny(context);
+        if ('reason' in found) throw new Error(found.reason);
+        spend(context, technique.manaCost);
+        const multiplier = percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent) / 100;
+        const hit = (result: ReturnType<Entity['attack']>) => {
+            if (!result || result.evaded || result.finalDamage <= 0 || !technique.statusEffect) return;
+            found.target.applyStatusEffect(
+                technique.statusEffect,
+                valueByLevel(context.skill.level, technique.statusDuration ?? 0, technique.statusDurationPerLevel ?? 0),
+                technique.statusLevel?.(context.skill.level) ?? context.skill.level,
+            );
+        };
+        if (technique.projectile) {
+            for (let index = 0; index < (technique.hitCount ?? 1); index++) {
+                const penetration = technique.penetration
+                    ? valueByLevel(context.skill.level, technique.penetration.base, technique.penetration.perLevel)
+                    : undefined;
+                projectileAttack(
+                    context,
+                    technique.projectile,
+                    multiplier,
+                    technique.propertyTag ? [technique.propertyTag] : undefined,
+                    (_projectile, result) => hit(result),
+                    {
+                        ...(technique.projectileName ? { name: technique.projectileName } : {}),
+                        ...(penetration !== undefined && technique.penetration ? {
+                            attributeOverrides: { [technique.penetration.attribute.key]: penetration },
+                        } : {}),
+                    },
+                );
+            }
+        } else {
+            hit(directAttack(context, multiplier, {
+                criticalRate: technique.guaranteedCritical ? 1 : undefined,
+                unavoidable: technique.unavoidable,
+                consumeMainHandDurability: Boolean(technique.weaponTags?.length),
+            }));
+        }
+        if (technique.shieldPercent) {
+            context.owner.setShield(
+                `skill:${technique.id}`,
+                context.owner.maxLife * technique.shieldPercent / 100,
+                ShieldType.GENERAL,
+                8,
+                context.owner,
+            );
+        }
+    },
+    tags: [
+        GameTags.SKILL_ACTIVE,
+        GameTags.SKILL_COMBAT,
+        ...(technique.propertyTag ? [technique.propertyTag] : []),
+        ...(technique.groupTag ? combatSkillGroups(technique.groupTag, technique.propertyTag) : []),
+    ],
+});
+
+defineSkill({
+    id: 'tempered_aegis', name: '담금질 방벽', icon: 'skills/indomitable', activationHeader: 'indomitable',
+    maxLevel: 5, unlockLevel: 50,
+    descriptionTemplate: '{{icon.maxLife}} 최대 생명력의 [color=green]{{lifeShield}}[/color]와 {{icon.atk}} 공격력의 [color=orange]{{attackShield}}[/color]을 합친 일반 보호막을 {{duration}} 동안 얻습니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 26[/color]',
+    activationConditionTemplate: activationGuide('대장장이 계보이며 Lv.50 이상이어야 합니다. 별도의 대상이나 무기가 필요하지 않습니다.'),
+    activationMessage: '담금질 방벽!', baseMetadata: null,
+    calculatedFields: {
+        lifeShield: context => tooltipValue(context.owner.maxLife * percentByLevel(context.skill.level, 12, 1.5) / 100,
+            `최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 12, 1.5))}%`),
+        attackShield: context => tooltipValue(context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 45, 5) / 100,
+            `공격력 × ${formatNumber(percentByLevel(context.skill.level, 45, 5))}%`),
+        duration: context => levelValueTooltip(context, '보호막 지속시간', 10, 1, '초'),
+    },
+    balance: {
+        role: SkillBalanceRole.DEFENSE,
+        calculateManaCost: () => 26,
+        calculateShield: context => context.owner.maxLife * percentByLevel(context.skill.level, 12, 1.5) / 100
+            + context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 45, 5) / 100,
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 22, 1, 18),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_BLACKSMITH),
+    jobRequirement: jobRequirement(JOBS.blacksmith),
+    autoAcquire: careerLevelAutoAcquire(JOBS.blacksmith, 50),
+    canActivate: simpleCheck(26, false),
+    onStart: context => {
+        spend(context, 26);
+        const amount = context.owner.maxLife * percentByLevel(context.skill.level, 12, 1.5) / 100
+            + context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 45, 5) / 100;
+        context.owner.setShield('skill:tempered_aegis', amount, ShieldType.GENERAL,
+            valueByLevel(context.skill.level, 10, 1), context.owner);
+    },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_BLACKSMITH],
+});
+
 interface EliteTechniqueDefinition {
     id: string;
     name: string;

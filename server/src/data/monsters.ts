@@ -156,6 +156,7 @@ defineWorldMonster({
     drops: [
         { itemDataId: 'wolf_pelt', minCount: 2, maxCount: 4, chance: 0.85 },
         { itemDataId: 'silverweb_hunter_bow', minCount: 1, maxCount: 1, chance: 0.04 },
+        { itemDataId: 'predator_pounce_skillbook', minCount: 1, maxCount: 1, chance: 0.035 },
     ],
     goldReward: { min: 65, max: 105 },
     attack: { effect: { statusEffectId: 'bleeding', chance: 0.25, duration: 8, level: 2 } },
@@ -219,6 +220,7 @@ defineWorldMonster({
         { itemDataId: 'silverweb_silk', minCount: 4, maxCount: 7, chance: 0.9 },
         { itemDataId: 'venom_gland', minCount: 2, maxCount: 4, chance: 0.7 },
         { itemDataId: 'venom_dagger', minCount: 1, maxCount: 1, chance: 0.035 },
+        { itemDataId: 'silverweb_snare_skillbook', minCount: 1, maxCount: 1, chance: 0.03 },
     ],
     goldReward: { min: 95, max: 155 },
     attack: {
