@@ -11,7 +11,7 @@ import { chat } from "../utils/chatBuilder.js";
 import { GameTags } from "../../../shared/tags.js";
 import type { TagId } from "../../../shared/tags.js";
 import { executeItemAttackOverride } from "../modules/itemAttack.js";
-import { PlayerProgress } from "./Progress.js";
+import { defineProgress, PlayerProgress, ProgressType } from "./Progress.js";
 import SkillBook from "./SkillBook.js";
 import { updateCraftingRecipeDiscovery } from "./Crafting.js";
 import { DialogueEndReason, endNpcDialogue } from "./NpcDialogue.js";
@@ -36,6 +36,19 @@ import { partyManager } from '../modules/party.js';
 import { emitGameEvent, GameEventIds } from './GameEvent.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
+
+export const PlayerRuntimeProgressIds = Object.freeze({
+    /** 사망 패널티 적용 완료 여부와 오프라인 동안 정지할 남은 부활 시간을 함께 나타낸다. */
+    DEATH_REMAINING: 'runtime:death_remaining_seconds',
+});
+
+defineProgress({
+    id: PlayerRuntimeProgressIds.DEATH_REMAINING,
+    type: ProgressType.STATE,
+    label: '남은 부활 대기시간',
+    description: '재접속 시 사망 처리를 반복하지 않고 남은 부활 대기시간을 복원하는 내부 상태입니다.',
+    visible: false,
+});
 
 export interface PlayerLevelAdjustmentResult {
     readonly previousLevel: number;
@@ -197,6 +210,7 @@ export default class Player extends Entity {
         if (mentality !== undefined) this._mentality = mentality;
         if (thirsty   !== undefined) this._thirsty   = thirsty;
         if (hungry    !== undefined) this._hungry    = hungry;
+        this.restorePersistedDeathState();
     }
 
     override get name() { return this._nickname; }
@@ -374,6 +388,7 @@ export default class Player extends Entity {
 
     override onDeath(): void {
         super.onDeath();
+        this.persistDeathState();
         const location = getLocation(this.locationId);
         const killer = this.lastDamageCause?.causeEntity?.attackOwner;
         if (killer?.isPlayer && killer !== this) {
@@ -414,6 +429,7 @@ export default class Player extends Entity {
 
     override respawn(): void {
         super.respawn();
+        this.progress.reset(PlayerRuntimeProgressIds.DEATH_REMAINING);
         const respawnLoc = getRespawnLocation();
         if (respawnLoc) this.locationId = respawnLoc.id;
         sendBotMessageToUser(this.userId, '리스폰했습니다.');
@@ -596,6 +612,8 @@ export default class Player extends Entity {
     }
 
     private async saveDirtyState(): Promise<void> {
+        // 오프라인 동안 카운트하지 않을 정확한 잔여 시간을 unload/주기 저장 시점에 스냅샷한다.
+        if (this.isDead) this.persistDeathState();
         if (this._dirty || this.stat.dirty || this.equipment.dirty || this.skills.dirty || this.rankingVisibility.dirty) {
             await prisma.player.update({
                 where: { userId: this.userId },
@@ -625,5 +643,36 @@ export default class Player extends Entity {
         await this.progress.save();
         await this.skills.save();
         await this.quests.save();
+    }
+
+    /** DB에서 life=0을 읽은 뒤 이미 처리된 사망이라면 onDeath를 다시 호출하지 않도록 런타임 상태를 복원한다. */
+    restorePersistedDeathState(): boolean {
+        const stored = this.progress.getState(PlayerRuntimeProgressIds.DEATH_REMAINING);
+        const parsedRemaining = Number(stored);
+        if (this.life > 0) {
+            if (stored) this.progress.reset(PlayerRuntimeProgressIds.DEATH_REMAINING);
+            return false;
+        }
+        // 구버전 저장에는 death state가 없으므로 life=0 자체를 이미 처리된 사망으로 간주한다.
+        // 이 편이 재접속 시 패널티를 중복 부과하는 것보다 안전하다.
+        const remaining = stored && Number.isFinite(parsedRemaining) && parsedRemaining > 0
+            ? parsedRemaining
+            : this.deathDuration;
+        this.isDead = true;
+        this.deathTimer = remaining;
+        this._deathNotifTimer = 0;
+        this.persistDeathState();
+        return true;
+    }
+
+    private persistDeathState(): void {
+        if (!this.isDead || !Number.isFinite(this.deathTimer) || this.deathTimer <= 0) {
+            this.progress.reset(PlayerRuntimeProgressIds.DEATH_REMAINING);
+            return;
+        }
+        this.progress.setState(
+            PlayerRuntimeProgressIds.DEATH_REMAINING,
+            Math.max(0.001, this.deathTimer).toFixed(3),
+        );
     }
 }

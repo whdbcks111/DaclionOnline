@@ -21,6 +21,8 @@ Item/Equipment의 `metadata` JSON은 전체 유효값이 아니라 `{ "__daclion
 `Equipment.count`는 미끼처럼 장착 가능한 스택 아이템의 남은 묶음 수량을 저장한다. 장착 시 인벤토리 스택 전체가 이동하고 `consumeEquippedItem(count)`는 필요한 수량만 차감해 남은 스택을 슬롯에 유지한다. 기존 장비 행은 `20260718000000_add_equipment_count` 마이그레이션의 기본값 1로 이행한다.
 
 `player_progress`는 counter/flag를 `int_value`, state를 `text_value`에 저장한다. 등록된 기본값 `0/false/빈 문자열`은 row를 삭제하거나 만들지 않는다. `kind`가 직렬화 타입 경계이며 기능 코드는 Prisma row 대신 `PlayerProgress` API만 사용한다.
+
+사망한 Player의 `runtime:death_remaining_seconds` 숨김 STATE는 이미 지역 사망 패널티가 적용됐다는 표식과 남은 부활 대기시간을 겸한다. 주기 저장 및 unload에서 현재 남은 초를 갱신하고 재접속 시 그대로 복원하므로 별도 컬럼·migration 없이 중복 사망 처리와 중복 손실을 막는다. 부활하면 row를 삭제한다.
 제작법 발견 여부도 `crafting:recipe/{namespace}/{path}` FLAG로 이 테이블에 저장되므로 제작 시스템 추가에 따른 별도 스키마 마이그레이션은 없다.
 NPC 대화 결과 flag/state도 같은 `player_progress`에 저장한다. 진행 중인 대화 세션은 접속 중 메모리에만 존재하며 이동·사망·로그아웃·연결 이탈 시 폐기되므로 별도 NPC 마이그레이션은 없다.
 지도 방문 기록은 `world:visited/{locationId}` FLAG로 같은 `player_progress`에 저장한다. Player가 로드된 현재 위치와 이후 도착 위치를 메모리에서 dirty 표시해 기존 30초/unload 저장 경로로 flush하므로 별도 지도 테이블이나 migration은 없다.
