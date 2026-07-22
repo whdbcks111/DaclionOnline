@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import type Entity from './Entity.js';
 import type Player from './Player.js';
-import { GameTags, TagCollection, normalizeTags } from '../../../shared/tags.js';
+import { GameTags, TagCollection, normalizeTag, normalizeTags } from '../../../shared/tags.js';
 import type { TagId, TagReadable } from '../../../shared/tags.js';
 import {
     cloneMetadata,
@@ -13,6 +13,7 @@ import {
 import type { MetadataRecord, MetadataValue } from './Metadata.js';
 import { JobSlotType } from './Job.js';
 import { AttributeType } from './Attribute.js';
+import { getTagEffectTagDisplay } from './TagEffect.js';
 
 export type SkillMetadata = MetadataRecord;
 export type SkillCalculatedValue = string | number | boolean;
@@ -112,6 +113,37 @@ export interface SkillWeaponRequirement {
     description: string;
 }
 
+/** 발동한 스킬이 특정 표시 계열의 보유 스킬에 보장할 최소 재사용 대기시간. */
+export interface SkillSharedCooldownRule {
+    targetTag: TagId;
+    seconds: number;
+}
+
+export interface SkillDisplayTagSnapshot {
+    label: string;
+    icon: string;
+}
+
+export interface SkillSharedCooldownDisplaySnapshot extends SkillDisplayTagSnapshot {
+    seconds: number;
+}
+
+export interface SkillInformationTagsSnapshot {
+    groups: SkillDisplayTagSnapshot[];
+    affinities: SkillDisplayTagSnapshot[];
+    sharedCooldowns: SkillSharedCooldownDisplaySnapshot[];
+}
+
+const skillTagDisplays = new Map<TagId, SkillDisplayTagSnapshot>();
+
+/** 구현용 태그는 숨기고 스킬 정보에 공개할 기술 계열만 명시적으로 등록한다. */
+export function defineSkillTagDisplay(tag: TagId, label: string, icon: string): void {
+    const normalized = normalizeTag(tag);
+    if (!label.trim()) throw new Error(`스킬 태그 표시 라벨은 비어 있을 수 없습니다: ${normalized}`);
+    if (!icon.trim()) throw new Error(`스킬 태그 표시 아이콘은 비어 있을 수 없습니다: ${normalized}`);
+    skillTagDisplays.set(normalized, { label: label.trim(), icon: icon.trim() });
+}
+
 export interface SkillData {
     id: string;
     name: string;
@@ -149,6 +181,8 @@ export interface SkillData {
         notes?: readonly string[];
     };
     calculateMaxCooldown?: (context: SkillContext) => number;
+    /** 발동 성공 시 targetTag를 가진 보유 스킬의 남은 쿨다운을 최소 seconds로 맞춘다. */
+    sharedCooldowns?: readonly SkillSharedCooldownRule[];
     /** 생략 시 성공적인 플레이어 발동 1회마다 10 경험치를 획득한다. 0이면 자동 획득하지 않는다. */
     calculateExperienceGain?: (context: SkillContext) => number;
     /** 생략 시 다음 레벨 요구 경험치는 100 + (현재 레벨 - 1) * 50이다. */
@@ -368,6 +402,30 @@ export default class Skill implements TagReadable {
         this.persistentChangeHandler?.();
     }
 
+    /** 개인 쿨다운을 줄이지 않으면서 공유 쿨다운의 최소 남은 시간을 보장한다. */
+    ensureCooldown(seconds: number, now = Date.now()): void {
+        if (!Number.isFinite(seconds) || seconds < 0) throw new Error('Skill cooldown must be non-negative');
+        if (this.getRemainingCooldown(now) >= seconds) return;
+        this.startCooldown(seconds, now);
+    }
+
+    /** 정보창이 raw tags를 참조하지 않고 표시 등록된 분류·속성·공유 쿨다운만 받는다. */
+    getInformationTagsSnapshot(): SkillInformationTagsSnapshot {
+        const tagValues = this.tags.values();
+        const tagSet = new Set(tagValues);
+        const groups = [...skillTagDisplays.entries()].flatMap(([tag, display]) =>
+            tagSet.has(tag) ? [{ ...display }] : []);
+        const affinities = tagValues.flatMap(tag => {
+            const display = getTagEffectTagDisplay(tag);
+            return display ? [{ ...display }] : [];
+        });
+        const sharedCooldowns = (this.data.sharedCooldowns ?? []).flatMap(rule => {
+            const display = skillTagDisplays.get(rule.targetTag) ?? getTagEffectTagDisplay(rule.targetTag);
+            return display ? [{ ...display, seconds: rule.seconds }] : [];
+        });
+        return { groups, affinities, sharedCooldowns };
+    }
+
     getCooldownEndDate(): Date | null {
         return this._cooldownEndsAt > Date.now() ? new Date(this._cooldownEndsAt) : null;
     }
@@ -524,6 +582,16 @@ export function defineSkill(data: SkillData): void {
         throw new Error(`Invalid skill max level: ${id}`);
     }
     const calculatedFields = Object.freeze({ ...(data.calculatedFields ?? {}) });
+    const sharedCooldowns = (data.sharedCooldowns ?? []).map(rule => {
+        const targetTag = normalizeTag(rule.targetTag);
+        if (!Number.isFinite(rule.seconds) || rule.seconds <= 0) {
+            throw new Error(`Invalid shared skill cooldown: ${id}/${targetTag}/${rule.seconds}`);
+        }
+        return Object.freeze({ targetTag, seconds: rule.seconds });
+    });
+    if (new Set(sharedCooldowns.map(rule => rule.targetTag)).size !== sharedCooldowns.length) {
+        throw new Error(`Duplicate shared skill cooldown target: ${id}`);
+    }
     skillDataRegistry.set(id, Object.freeze({
         ...data,
         id,
@@ -531,6 +599,7 @@ export function defineSkill(data: SkillData): void {
         aliases: Object.freeze([...(data.aliases ?? [])]),
         baseMetadata: data.baseMetadata ? Object.freeze(cloneMetadata(data.baseMetadata)) : null,
         calculatedFields,
+        sharedCooldowns: Object.freeze(sharedCooldowns),
         balance: data.balance ? Object.freeze({
             ...data.balance,
             effectTags: Object.freeze([...(data.balance.effectTags ?? [])]),

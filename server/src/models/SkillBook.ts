@@ -142,6 +142,20 @@ export default class SkillBook {
         return { affected, reducedSeconds };
     }
 
+    /** 발동 스킬 정의의 태그 규칙을 보유 스킬 전체에 적용하되 더 긴 개인 쿨다운은 보존한다. */
+    applySharedCooldowns(source: Skill, now = Date.now()): number {
+        if (this.skills.get(source.skillDataId) !== source) return 0;
+        const affected = new Set<string>();
+        for (const rule of source.data.sharedCooldowns ?? []) {
+            for (const skill of this.skills.values()) {
+                if (!skill.hasTag(rule.targetTag) || skill.getRemainingCooldown(now) >= rule.seconds) continue;
+                skill.ensureCooldown(rule.seconds, now);
+                affected.add(skill.skillDataId);
+            }
+        }
+        return affected.size;
+    }
+
     getVisible(): readonly Skill[] {
         const owner = this.requireOwner();
         return this.getAll().filter(skill => {
@@ -433,7 +447,9 @@ export default class SkillBook {
         try {
             startResult = skill.data.onStart?.(createSkillContext(owner, skill));
             skill.beginActive(startResult ?? {});
-            skill.startCooldown(skill.getMaxCooldown(owner));
+            const cooldownStartedAt = Date.now();
+            skill.startCooldown(skill.getMaxCooldown(owner), cooldownStartedAt);
+            this.applySharedCooldowns(skill, cooldownStartedAt);
         } catch (error) {
             logger.error(`스킬 시작 실패: ${skill.skillDataId}`, error);
             const reason = '스킬 발동 중 오류가 발생했습니다.';

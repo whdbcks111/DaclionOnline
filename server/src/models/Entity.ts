@@ -606,6 +606,13 @@ export default abstract class Entity implements TagReadable {
         return true;
     }
 
+    /** 직접 공격·투사체 발사가 확정되면 은신 계열 상태를 즉시 해제한다. */
+    revealForOffensiveAction(): boolean {
+        const stealthRemoved = this.removeStatusEffect('stealth', StatusEffectRemovalReason.INTERACTION);
+        const invisibilityRemoved = this.removeStatusEffect('invisible', StatusEffectRemovalReason.INTERACTION);
+        return stealthRemoved || invisibilityRemoved;
+    }
+
     clearStatusEffects(reason = StatusEffectRemovalReason.MANUAL): void {
         for (const effect of [...this.statusEffects.values()]) {
             this.removeStatusEffect(effect.type, reason);
@@ -786,6 +793,7 @@ export default abstract class Entity implements TagReadable {
             }
             return null;
         }
+        this.attackOwner.revealForOffensiveAction();
         target.acquireCombatTarget(this);
         const combatType = combat.damageType;
         const combatOptions = combat.options;

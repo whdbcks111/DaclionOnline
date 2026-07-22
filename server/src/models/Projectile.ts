@@ -301,6 +301,7 @@ export function getAllProjectileData(): ProjectileData[] {
 /** 투사체를 생성하고 게임 루프 관리 대상으로 등록한다. */
 export function spawnProjectile(options: ProjectileOptions): Projectile {
     const projectile = new Projectile(options);
+    options.owner.attackOwner.revealForOffensiveAction();
     activeProjectiles.add(projectile);
     return projectile;
 }

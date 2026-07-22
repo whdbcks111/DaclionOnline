@@ -111,6 +111,14 @@ test('combat rotation removes temporary balance modifiers after analysis', () =>
     assert.equal(scenario.entity.attribute.modifiers.some(modifier => modifier.source.startsWith('balance:rotation:')), false);
 });
 
+test('combat rotation applies tag-based shared cooldowns between magic skills', () => {
+    const scenario = createBalanceScenario(100, 'career:mage');
+    const report = analyzeCombatRotation(scenario, 5);
+    // 마법 계열은 전체 1초 공유 쿨타임이므로 5초 창에서 5회를 초과해 발동할 수 없다.
+    assert.ok(report.skillCasts <= 5);
+    assert.ok(report.notes.some(note => note.includes('태그 공유')));
+});
+
 test('boss profile normalizes a real boss archetype to the requested level', () => {
     const profile = analyzeAllBalanceProfiles(100)[0];
     assert.equal(profile.boss.encounter.key, 'boss');

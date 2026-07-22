@@ -48,6 +48,12 @@ export function defineTagEffectTagDisplay(tag: TagId, label: string, icon: strin
     tagDisplays.set(normalized, { tag: normalized, label: label.trim(), icon: icon.trim() })
 }
 
+/** 스킬·감정 UI가 등록된 속성만 내부 tag key 없이 표시하도록 반환한다. */
+export function getTagEffectTagDisplay(tag: TagId): Omit<TagEffectTagDisplay, 'tag'> | undefined {
+    const display = tagDisplays.get(normalizeTag(tag))
+    return display ? { label: display.label, icon: display.icon } : undefined
+}
+
 /** 단방향 태그 효과 배율을 등록한다. 같은 쌍을 다시 등록하면 교체한다. */
 export function defineTagEffectModifier(sourceTag: TagId, targetTag: TagId, modifier: number): void {
     if (!Number.isFinite(modifier) || modifier < 0) {

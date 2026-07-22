@@ -48,7 +48,7 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 `SkillData`의 확장 지점은 다음과 같다.
 
 - 표시: `icon`, `descriptionTemplate`, `costTemplate`, `activationConditionTemplate`, `isVisible`.
-- 계산: `baseMetadata`, `calculatedFields`, `calculateMaxCooldown`, `calculateExperienceGain`, `calculateRequiredExperience`.
+- 계산: `baseMetadata`, `calculatedFields`, `calculateMaxCooldown`, 태그별 `sharedCooldowns`, `calculateExperienceGain`, `calculateRequiredExperience`.
 - 밸런스 진단: `balance.role`, 실제 발동식과 공유하는 피해·소모·회복·보호막·지속 버프 callback, 직접 피해 속성, 치명타 방식·타격/대상 수.
 - 획득/발동: `autoAcquire`, `autoActivate`, `activateOnMessage`, `canUse`, `canActivate`.
 - 수명주기: `onAcquire`, `onStart`, `onUpdate`, `onFinish`, `onPassiveUpdate`, `onPassiveInactive`.
@@ -64,6 +64,12 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 투사체 스킬 정보는 현재 능력치로 계산한 도달 시간을 표시한다. 모든 투사체는 owner의 `projectileAcceleration`을 마스터 데이터 계수만큼 반영하며, 마법 피해 투사체 스킬은 여기에 스킬 레벨당 8%와 마법력 1당 0.2%(마법력 기여 최대 75%)의 가속 배율을 추가한다. 표시 tooltip과 실제 발사는 `calculateProjectileAcceleration/calculateProjectileTravelTime`을 공유한다.
 
 계산 필드는 `[tooltip=산식]현재값[/tooltip]`을 반환할 수 있다. 스킬 정보 본문은 현재 적용될 결과 숫자만 보여주고 hover에서 능력치 계수·기본값·레벨당 증가량을 설명한다. 실제 발동과 표시 계산은 같은 함수와 상수를 사용해 밸런스 변경 시 서로 어긋나지 않게 한다.
+
+`SkillData.sharedCooldowns`는 `{ targetTag, seconds }` 목록이다. 발동 성공 시 `SkillBook.applySharedCooldowns()`가 해당 표시 계열 태그를 가진 보유 스킬의 남은 쿨다운을 최소 시간까지 올리며, 이미 더 긴 개인 쿨다운은 줄이지 않는다. 현재 전사·궁수·암살자·대장장이 계열은 0.75초, 마법 계열은 1초를 공유하고 화염·빙결·전격 계열은 같은 원소끼리 2초를 공유한다. 엘리트 액티브도 메인 계보와 속성 계열을 동일하게 적용한다.
+
+관리자 밸런스 프로파일의 전투 로테이션도 동일한 `sharedCooldowns`를 적용해 실제 전투보다 연계 화력을 과대평가하지 않는다.
+
+`/스킬정보`는 raw tag key를 노출하지 않는다. `defineSkillTagDisplay()`에 등록된 직업·기술 계열과 `TagEffect`에 표시 metadata가 등록된 속성만 `계열`과 `속성`으로 나눠 보여주며, 공유 쿨다운도 `마법 보유 스킬 최소 1초`처럼 표시명·아이콘·시간만 출력한다.
 
 ### 밸런스 진단
 
@@ -99,6 +105,8 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 - 자동 획득: 첫 update와 관련 progress 변경 후 `autoAcquire.watchedProgress`만 다시 검사한다. Progress key가 없는 현재 상태 조건은 `alwaysEvaluate`를 명시한 정의만 0.5초 주기로 검사하며, 근력·민첩·체력·감각·정신력 100 달성형 히든 패시브가 이 경로를 사용한다.
 
 발동은 사망·활성 중·쿨다운·`canUse/canActivate`를 먼저 검사한다. 조건을 통과하면 선택적 `activationMessage`를 솔로에서는 시전자 본인에게만, 파티 중에는 시전자와 파티원에게 `[파티]` 필터 메시지로 전송한 뒤 `onStart`를 실행하므로 공격·회복 같은 즉시 효과보다 발동 메시지가 먼저 표시된다. 원래 입력한 일반 채팅 발동어는 공개 채팅으로 전달하지 않는다. `onStart`가 성공하면 활성 상태와 쿨다운을 확정하며, `activationFeedback`이 있으면 계산된 효과를 같은 audience의 봇 메시지와 notification으로 보낸다. 이 성공 확정 시점에 영속 플레이어 스킬은 기본 10 경험치를 얻고, 몬스터 런타임 스킬은 경험치를 얻지 않는다. 기본 다음 레벨 요구량은 `100 + (현재 레벨 - 1) × 50`이며 두 값 모두 SkillData 계산 함수로 재정의하거나 획득량을 0으로 끌 수 있다. 요구량을 넘긴 잔여 경험치는 다음 레벨에 이월되고 최대 레벨에서는 더 이상 누적하지 않으며, 레벨업 시 본인 메시지와 notification을 보낸다. 지속시간이 있으면 `onUpdate`, 종료 시 `onFinish`를 호출한다. 로그인 중 표시·사용 조건을 만족하는 패시브에는 `onPassiveUpdate`, 조건을 잃거나 회수될 때는 `onPassiveInactive`를 호출해 runtime modifier를 source 단위로 정리한다. 로그아웃 시 활성 스킬을 `UNLOADED` 사유로 종료한 다음 저장한다.
+
+은신은 대상 지정 방지와 이동속도 증가를 제공하지만 공격 준비가 실제로 통과한 직접 공격 또는 투사체 생성 순간 즉시 해제된다. 빗나가거나 상대가 회피해도 공격 행동 자체가 확정됐으므로 다시 숨지 않는다. 궁수의 `바람 회피`는 Lv.1 7초에서 레벨당 0.75초씩 증가하며, 이동·회피 행동이 허용되는 동안 들어오는 공격을 확정 회피한다.
 
 시전 메시지가 있는 스킬은 기본적으로 `skill-headers/{skillId}.png` 256×64 배너를 같은 플레이어 메시지 상단에 붙이며, `activationHeader`로 다른 이미지 key를 지정할 수 있다. 배너와 시전어는 솔로 본인 또는 현재 파티라는 기존 audience 규칙을 함께 따른다.
 

@@ -123,6 +123,25 @@ export function initSkillCommands(): void {
             }
 
             const requiredExperience = skill.getRequiredExperience(player);
+            const tagInfo = skill.getInformationTagsSnapshot();
+            const classificationBuilder = chat();
+            if (tagInfo.groups.length > 0) {
+                classificationBuilder.color('gray', b => b.text('계열  '));
+                for (const tag of tagInfo.groups) classificationBuilder.icon(tag.icon).text(` ${tag.label}  `);
+                classificationBuilder.text('\n');
+            }
+            if (tagInfo.affinities.length > 0) {
+                classificationBuilder.color('gray', b => b.text('속성  '));
+                for (const tag of tagInfo.affinities) classificationBuilder.icon(tag.icon).text(` ${tag.label}  `);
+                classificationBuilder.text('\n');
+            }
+            const sharedCooldownBuilder = chat();
+            for (const [index, cooldown] of tagInfo.sharedCooldowns.entries()) {
+                if (index > 0) sharedCooldownBuilder.text('\n');
+                sharedCooldownBuilder.icon(cooldown.icon)
+                    .text(` ${cooldown.label} 보유 스킬  `)
+                    .color('gold', b => b.text(`최소 ${cooldown.seconds}초`));
+            }
             const experienceNodes = skill.level >= skill.maxLevel
                 ? chat()
                     .color('gray', b => b.text('경험치  '))
@@ -150,6 +169,11 @@ export function initSkillCommands(): void {
                     .text(`  Lv.${skill.level} / ${skill.maxLevel}\n`)
                     .build(),
                 ...experienceNodes,
+                ...(tagInfo.groups.length > 0 || tagInfo.affinities.length > 0
+                    ? [
+                        ...chat().divider('스킬 분류').build(),
+                        ...classificationBuilder.build(),
+                    ] : []),
                 ...chat().divider('효과').build(),
                 ...parseChatMessage(skill.formatDescription(player)),
                 ...chat().divider('소모값').build(),
@@ -158,6 +182,10 @@ export function initSkillCommands(): void {
                     .divider('재사용 대기시간')
                     .color('gold', b => b.text(skill.isPassive ? '없음' : skill.format('{{maxCooldown}}초', player)))
                     .build(),
+                ...(tagInfo.sharedCooldowns.length > 0 ? [
+                    ...chat().divider('공유 재사용 대기시간').build(),
+                    ...sharedCooldownBuilder.build(),
+                ] : []),
                 ...chat().divider('발동 조건').build(),
                 ...parseChatMessage(skill.formatActivationCondition(player)),
                 ...(!skill.isPassive ? chat()

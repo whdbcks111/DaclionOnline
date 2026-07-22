@@ -83,6 +83,16 @@ export const GameTags = Object.freeze({
     SKILL_PASSIVE: 'skill:passive',
     SKILL_COMBAT: 'skill:combat',
 
+    /** 태그 기반 공유 재사용 대기시간과 스킬 정보 표시가 함께 사용하는 기술 계열. */
+    SKILL_GROUP_WARRIOR: 'skill_group:warrior',
+    SKILL_GROUP_ARCHER: 'skill_group:archer',
+    SKILL_GROUP_ASSASSIN: 'skill_group:assassin',
+    SKILL_GROUP_MAGIC: 'skill_group:magic',
+    SKILL_GROUP_BLACKSMITH: 'skill_group:blacksmith',
+    SKILL_GROUP_FIRE: 'skill_group:fire',
+    SKILL_GROUP_ICE: 'skill_group:ice',
+    SKILL_GROUP_ELECTRIC: 'skill_group:electric',
+
     TRAIT_INANIMATE: 'trait:inanimate',
     TRAIT_LIVING: 'trait:living',
     TRAIT_STEALTH: 'trait:stealth',

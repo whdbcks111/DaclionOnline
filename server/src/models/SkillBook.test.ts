@@ -15,6 +15,7 @@ import { getChannelHistory, getFilteredHistoryForUser } from '../modules/channel
 import { createSession, removeSession, setUserOffline, setUserOnline } from '../modules/login.js';
 import { registerOnlinePlayer, unregisterOnlinePlayer } from '../modules/playerRegistry.js';
 import '../data/progress.js';
+import '../data/tagEffects.js';
 import '../data/skills.js';
 import '../data/items.js';
 import '../data/jobs.js';
@@ -23,6 +24,7 @@ import CareerProfile, { CareerProgressIds } from './Career.js';
 import { ShieldType } from './Shield.js';
 import Stat, { StatType } from './Stat.js';
 import { partyManager } from '../modules/party.js';
+import { StatusEffectType } from './StatusEffect.js';
 
 class TestSkillPlayer extends Entity {
     override readonly name = '스킬 시험 플레이어';
@@ -167,6 +169,61 @@ test('스킬북 쿨다운 감소 API는 진행 중인 모든 스킬을 지정 �
     assert.deepEqual(player.skills.reduceCooldowns(10, now), { affected: 2, reducedSeconds: 18 });
     assert.equal(first.getRemainingCooldown(now), 10);
     assert.equal(second.getRemainingCooldown(now), 0);
+});
+
+test('공유 쿨다운은 보유 스킬의 표시 계열 태그에 최소 시간만 적용하고 개인 쿨다운은 줄이지 않는다', () => {
+    const player = new TestSkillPlayer();
+    const fireball = player.skills.grant('fireball', 'test').skill;
+    const magicBolt = player.skills.grant('magic_bolt', 'test').skill;
+    const runeforger = player.skills.grant('runeforger_technique', 'test').skill;
+    const now = 30_000;
+    fireball.startCooldown(7, now);
+
+    assert.equal(player.skills.applySharedCooldowns(fireball, now), 2);
+    assert.equal(fireball.getRemainingCooldown(now), 7);
+    assert.equal(magicBolt.getRemainingCooldown(now), 1);
+    assert.equal(runeforger.getRemainingCooldown(now), 2);
+
+    const info = fireball.getInformationTagsSnapshot();
+    assert.deepEqual(info.groups.map(tag => tag.label), ['마법', '화염 계열']);
+    assert.deepEqual(info.affinities.map(tag => tag.label), ['불']);
+    assert.deepEqual(info.sharedCooldowns.map(rule => [rule.label, rule.seconds]), [
+        ['마법', 1],
+        ['화염 계열', 2],
+    ]);
+});
+
+test('직접 공격과 투사체 발사는 적중 여부를 기다리지 않고 기존 은신을 해제한다', () => {
+    const stealth = StatusEffectType.fromKey('stealth');
+    assert.ok(stealth);
+
+    const meleePlayer = new TestSkillPlayer(9311);
+    const meleeTarget = new TestTarget();
+    meleePlayer.applyStatusEffect(stealth, 10, 1);
+    assert.equal(meleePlayer.attack(meleeTarget)?.evaded, false);
+    assert.equal(meleePlayer.hasStatusEffect(stealth), false);
+
+    const caster = new TestSkillPlayer(9312);
+    const rangedTarget = new TestTarget();
+    caster.progress.setState(CareerProgressIds.MAIN, 'career:mage');
+    caster.currentTarget = rangedTarget;
+    caster.skills.grant('magic_bolt', 'test');
+    caster.applyStatusEffect(stealth, 10, 1);
+    assert.equal(caster.skills.activateByInput('마력탄').activated, true);
+    assert.equal(caster.hasStatusEffect(stealth), false);
+    const projectile = getActiveProjectiles().find(candidate => candidate.owner === caster);
+    if (projectile) removeProjectile(projectile);
+});
+
+test('바람 회피는 Lv.1부터 7초 동안 확정 회피 상태를 유지한다', () => {
+    const player = new TestSkillPlayer(9313);
+    player.progress.setState(CareerProgressIds.MAIN, 'career:archer');
+    player.skills.grant('wind_evasion', 'test');
+
+    assert.equal(player.skills.activateByInput('바람 회피').activated, true);
+    const effect = player.getStatusEffect('wind_evasion');
+    assert.equal(effect?.duration, 7);
+    assert.equal(effect?.maxDuration, 7);
 });
 
 test('직업 패시브는 유효한 직업에서만 적용되고 사용형 HUD에서 제외된다', () => {

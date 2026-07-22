@@ -2,6 +2,7 @@ import { AttributeType } from '../models/Attribute.js';
 import type { AttributeModifier } from '../models/Attribute.js';
 import {
     defineSkill,
+    defineSkillTagDisplay,
     denySkill,
     SkillBalanceRole,
     SkillCriticalMode,
@@ -29,6 +30,45 @@ import { calculateSmeltingExperience } from '../modules/forging.js';
 import { FORGED_ITEM_NAMING_SENSIBILITY, MAX_WEAPON_REINFORCEMENT } from '../models/Forging.js';
 
 const CRITICAL_HIT_STAT = 'combat:critical_hits';
+
+defineSkillTagDisplay(GameTags.SKILL_GROUP_WARRIOR, '전사 기술', 'skills/career_warrior');
+defineSkillTagDisplay(GameTags.SKILL_GROUP_ARCHER, '궁술', 'skills/career_archer');
+defineSkillTagDisplay(GameTags.SKILL_GROUP_ASSASSIN, '암살 기술', 'skills/career_assassin');
+defineSkillTagDisplay(GameTags.SKILL_GROUP_MAGIC, '마법', 'skills/career_mage');
+// TODO(icons): 대장장이 직업 전용 아이콘 제작 전까지 금속 단조 아이콘을 사용한다.
+defineSkillTagDisplay(GameTags.SKILL_GROUP_BLACKSMITH, '단조 기술', 'skills/metal_forging');
+defineSkillTagDisplay(GameTags.SKILL_GROUP_FIRE, '화염 계열', 'affinities/fire');
+defineSkillTagDisplay(GameTags.SKILL_GROUP_ICE, '빙결 계열', 'affinities/ice');
+defineSkillTagDisplay(GameTags.SKILL_GROUP_ELECTRIC, '전격 계열', 'affinities/electric');
+
+const CAREER_SHARED_COOLDOWN_SECONDS = 0.75;
+const MAGIC_SHARED_COOLDOWN_SECONDS = 1;
+const ELEMENT_SHARED_COOLDOWN_SECONDS = 2;
+
+function careerSharedCooldown(targetTag: TagId, seconds = CAREER_SHARED_COOLDOWN_SECONDS) {
+    return [{ targetTag, seconds }] as const;
+}
+
+function elementalSkillGroup(tag?: TagId): TagId | undefined {
+    if (tag === GameTags.PROPERTY_FIRE) return GameTags.SKILL_GROUP_FIRE;
+    if (tag === GameTags.PROPERTY_ICE) return GameTags.SKILL_GROUP_ICE;
+    if (tag === GameTags.PROPERTY_ELECTRIC) return GameTags.SKILL_GROUP_ELECTRIC;
+    return undefined;
+}
+
+function combatSkillGroups(primary: TagId, propertyTag?: TagId): TagId[] {
+    const elemental = elementalSkillGroup(propertyTag);
+    return elemental ? [primary, elemental] : [primary];
+}
+
+function combatSharedCooldowns(primary: TagId, propertyTag?: TagId) {
+    const elemental = elementalSkillGroup(propertyTag);
+    return [
+        { targetTag: primary, seconds: primary === GameTags.SKILL_GROUP_MAGIC
+            ? MAGIC_SHARED_COOLDOWN_SECONDS : CAREER_SHARED_COOLDOWN_SECONDS },
+        ...(elemental ? [{ targetTag: elemental, seconds: ELEMENT_SHARED_COOLDOWN_SECONDS }] : []),
+    ];
+}
 
 function numberMeta(context: SkillContext, key: string): number {
     const value = context.skill.getMetadata(key);
@@ -782,6 +822,7 @@ defineSkill({
         calculateManaCost: () => 12,
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 7, 0.25, 6),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_BLACKSMITH),
     jobRequirement: jobRequirement(JOBS.blacksmith),
     canActivate: simpleCheck(12),
     onStart: context => {
@@ -793,7 +834,7 @@ defineSkill({
             consumeMainHandDurability: true,
         });
     },
-    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_BLACKSMITH],
 });
 
 defineSkill({
@@ -815,6 +856,7 @@ defineSkill({
         return `${context.skill.getActiveState<string>('materialLabel') ?? '소재'} ${context.skill.getActiveState<number>('processedCount') ?? 0}개를 마력으로 제련했습니다. (+${context.skill.getActiveState<number>('characterExperience') ?? 0} EXP${level ? ` · Lv.${level} 달성` : ''})`;
     },
     calculateMaxCooldown: () => 5,
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_BLACKSMITH, 1),
     isVisible: ({ player }) => hasBlacksmithSkillAccess(player),
     canActivate: context => {
         const player = requirePlayer(context);
@@ -847,7 +889,7 @@ defineSkill({
             ...(levelsGained.length ? { reachedLevel: levelsGained.at(-1)! } : {}),
         } };
     },
-    tags: [GameTags.SKILL_ACTIVE],
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_BLACKSMITH],
 });
 
 defineSkill({
@@ -992,12 +1034,13 @@ defineSkill({
         calculateManaCost: () => 10,
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 5, 0.2, 4.2),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_WARRIOR),
     jobRequirement: jobRequirement(JOBS.warrior), weaponRequirement: weaponRequirement('검 또는 도끼를 장착해야 합니다.', GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE),
     canActivate: simpleCheck(10), onStart: context => {
         spend(context, 10);
         directAttack(context, percentByLevel(context.skill.level, 175, 12) / 100, { consumeMainHandDurability: true });
     },
-    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_WARRIOR],
 });
 
 defineSkill({
@@ -1025,12 +1068,13 @@ defineSkill({
         notes: ['지속 중 공격력·이동속도 증가량은 수치로 표시하되 DPM에 임의 환산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 18, 1, 14),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_WARRIOR),
     jobRequirement: jobRequirement(JOBS.warrior), canActivate: simpleCheck(14, false),
     onStart: context => {
         spend(context, 14);
         context.owner.applyStatusEffect(BATTLE_RUSH, valueByLevel(context.skill.level, 8, 1), context.skill.level);
     },
-    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_WARRIOR],
 });
 
 defineSkill({
@@ -1061,13 +1105,14 @@ defineSkill({
         notes: ['방어력·최대 생명력 증가는 지속형 효과라 단발 회복량과 분리합니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 28, 1.5, 22),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_WARRIOR),
     jobRequirement: jobRequirement(JOBS.warrior), canActivate: simpleCheck(18, false),
     onStart: context => {
         spend(context, 18);
         context.owner.applyStatusEffect(INDOMITABLE, valueByLevel(context.skill.level, 10, 1), context.skill.level);
         context.owner.heal(context.owner.maxLife * percentByLevel(context.skill.level, 15, 2) / 100, context.owner);
     },
-    tags: [GameTags.SKILL_ACTIVE],
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_WARRIOR],
 });
 
 defineSkill({
@@ -1086,12 +1131,13 @@ defineSkill({
         calculateManaCost: () => 12,
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 5, 0.2, 4.2),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ARCHER),
     jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
     canActivate: simpleCheck(12), onStart: context => {
         spend(context, 12);
         projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 160, 12) / 100, [GameTags.PROPERTY_LIGHT]);
     },
-    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ARCHER],
 });
 
 defineSkill({
@@ -1110,6 +1156,7 @@ defineSkill({
         notes: ['대상이 3명 있다고 가정한 총 피해와 대상 1명 피해를 함께 표시합니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 11, 0.5, 9),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ARCHER),
     jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
     canActivate: context => {
         const checked = simpleCheck(18, false, true)(context);
@@ -1128,7 +1175,7 @@ defineSkill({
             });
         }
         player.commitAttack(false);
-    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ARCHER],
 });
 
 defineSkill({
@@ -1148,6 +1195,7 @@ defineSkill({
         notes: ['기절의 가치는 적 패턴에 따라 달라 피해량에 임의 합산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 16, 0.75, 13),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ARCHER),
     jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
     canActivate: simpleCheck(20), onStart: context => {
         spend(context, 20);
@@ -1155,7 +1203,7 @@ defineSkill({
             if (!result.evaded) _p.target.applyStatusEffect(STUN, valueByLevel(context.skill.level, 2, 0.25), context.skill.level);
         });
     },
-    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ARCHER],
 });
 
 defineSkill({
@@ -1165,25 +1213,26 @@ defineSkill({
     activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '바람 회피!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
-        valueByLevel(context.skill.level, 4, 0.5),
+        valueByLevel(context.skill.level, 7, 0.75),
         '이동 가능한 동안 공격 확정 회피',
     ),
-    calculatedFields: { duration: context => levelValueTooltip(context, '확정 회피 지속시간', 4, 0.5, '초') },
+    calculatedFields: { duration: context => levelValueTooltip(context, '확정 회피 지속시간', 7, 0.75, '초') },
     balance: {
         role: SkillBalanceRole.DEFENSE, calculateManaCost: () => 22,
         notes: ['확정 회피는 적 공격 빈도에 의존하므로 고정 전투력으로 환산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 24, 1.5, 18),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ARCHER),
     jobRequirement: jobRequirement(JOBS.archer), canActivate: simpleCheck(22, false),
     onStart: context => {
         spend(context, 22);
-        context.owner.applyStatusEffect(WIND_EVASION, valueByLevel(context.skill.level, 4, 0.5), context.skill.level);
-    }, tags: [GameTags.SKILL_ACTIVE],
+        context.owner.applyStatusEffect(WIND_EVASION, valueByLevel(context.skill.level, 7, 0.75), context.skill.level);
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_ARCHER],
 });
 
 defineSkill({
     id: 'stealth', name: '은신', icon: 'skills/stealth', maxLevel: 5,
-    descriptionTemplate: '{{duration}} 동안 다른 대상이 공격 대상으로 지정할 수 없는 은신 상태가 되고 {{icon.speed}} 이동속도가 [color=cyan]{{speedBonus}}[/color] 증가합니다. 암습 사용 시 해제됩니다.',
+    descriptionTemplate: '{{duration}} 동안 다른 대상이 공격 대상으로 지정할 수 없는 은신 상태가 되고 {{icon.speed}} 이동속도가 [color=cyan]{{speedBonus}}[/color] 증가합니다. 직접 공격하거나 투사체를 발사하면 즉시 해제됩니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 16[/color]',
     activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '은신!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
@@ -1206,11 +1255,12 @@ defineSkill({
         notes: ['은신과 이동속도는 상황 의존 효과라 DPM에 임의 환산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 20, 1, 16),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ASSASSIN),
     jobRequirement: jobRequirement(JOBS.assassin), canActivate: simpleCheck(16, false),
     onStart: context => {
         spend(context, 16);
         context.owner.applyStatusEffect(STEALTH, valueByLevel(context.skill.level, 8, 0.75), context.skill.level);
-    }, tags: [GameTags.SKILL_ACTIVE],
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_ASSASSIN],
 });
 
 defineSkill({
@@ -1235,6 +1285,7 @@ defineSkill({
         notes: ['선행 은신의 재사용 대기시간과 정신력 소모는 별도이며, 이 명령은 암습 단독 사용량을 계산합니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 10, 0.5, 8),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ASSASSIN),
     jobRequirement: jobRequirement(JOBS.assassin), weaponRequirement: weaponRequirement('단검을 장착해야 합니다.', GameTags.WEAPON_DAGGER),
     canActivate: context => context.owner.getStatusEffect(STEALTH) ? simpleCheck(18)(context) : denySkill('은신 상태에서만 사용할 수 있습니다.'),
     onStart: context => {
@@ -1242,7 +1293,7 @@ defineSkill({
         context.owner.removeStatusEffect(STEALTH);
         directAttack(context, percentByLevel(context.skill.level, 180, 15) / 100, { criticalRate: 1, unavoidable: true, consumeMainHandDurability: true });
     },
-    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ASSASSIN],
 });
 
 defineSkill({
@@ -1261,6 +1312,7 @@ defineSkill({
         notes: ['맹독 지속 피해는 대상의 최대·현재 생명력에 의존하므로 직접 타격 DPM과 분리합니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 9, 0.5, 7),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ASSASSIN),
     jobRequirement: jobRequirement(JOBS.assassin), weaponRequirement: weaponRequirement('단검을 장착해야 합니다.', GameTags.WEAPON_DAGGER),
     canActivate: simpleCheck(14), onStart: context => {
         const found = targetOrDeny(context);
@@ -1271,7 +1323,7 @@ defineSkill({
             found.target.applyStatusEffect(StatusEffectType.DEADLY_POISON, valueByLevel(context.skill.level, 8, 1), context.skill.level);
         }
     },
-    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.PROPERTY_POISON],
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.PROPERTY_POISON, GameTags.SKILL_GROUP_ASSASSIN],
 });
 
 defineSkill({
@@ -1289,11 +1341,12 @@ defineSkill({
         calculateManaCost: () => 10,
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 4, 0.2, 3.2),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_MAGIC, MAGIC_SHARED_COOLDOWN_SECONDS),
     jobRequirement: jobRequirement(JOBS.mage),
     canActivate: simpleCheck(10), onStart: context => {
         spend(context, 10);
         projectileAttack(context, 'magic_bolt', percentByLevel(context.skill.level, 130, 9) / 100);
-    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC],
 });
 
 defineSkill({
@@ -1328,13 +1381,14 @@ defineSkill({
         notes: ['방어력·마법저항 증가는 지속형 효과라 보호막량과 분리합니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 22, 1, 18),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_MAGIC, MAGIC_SHARED_COOLDOWN_SECONDS),
     jobRequirement: jobRequirement(JOBS.mage), canActivate: simpleCheck(22, false),
     onStart: context => {
         spend(context, 22);
         const duration = valueByLevel(context.skill.level, 10, 1);
         context.owner.setShield('skill:mana_barrier', manaBarrierShieldAmount(context), ShieldType.MAGIC, duration, context.owner);
         context.owner.applyStatusEffect(MANA_BARRIER, duration, context.skill.level);
-    }, tags: [GameTags.SKILL_ACTIVE],
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_MAGIC],
 });
 
 defineSkill({
@@ -1354,13 +1408,15 @@ defineSkill({
         notes: ['속박의 가치는 적 패턴에 따라 달라 피해량에 임의 합산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 15, 0.75, 12),
+    sharedCooldowns: combatSharedCooldowns(GameTags.SKILL_GROUP_MAGIC, GameTags.PROPERTY_ICE),
     jobRequirement: jobRequirement(JOBS.mage),
     canActivate: simpleCheck(24), onStart: context => {
         spend(context, 24);
         projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 105, 8) / 100, [GameTags.PROPERTY_ICE], (_p, result) => {
             if (!result.evaded) _p.target.applyStatusEffect(STUN, valueByLevel(context.skill.level, 1.5, 0.2), context.skill.level);
         });
-    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.PROPERTY_ICE,
+        ...combatSkillGroups(GameTags.SKILL_GROUP_MAGIC, GameTags.PROPERTY_ICE)],
 });
 
 defineSkill({
@@ -1388,11 +1444,12 @@ defineSkill({
         notes: ['마법력·정신력 재생 증가는 지속형 효과라 단일 스킬 DPM에 임의 합산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 25, 1.25, 20),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_MAGIC, MAGIC_SHARED_COOLDOWN_SECONDS),
     jobRequirement: jobRequirement(JOBS.mage), canActivate: simpleCheck(16, false),
     onStart: context => {
         spend(context, 16);
         context.owner.applyStatusEffect(ELEMENTAL_INSIGHT, valueByLevel(context.skill.level, 12, 1), context.skill.level);
-    }, tags: [GameTags.SKILL_ACTIVE],
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_MAGIC],
 });
 
 for (const elemental of [
@@ -1418,6 +1475,7 @@ for (const elemental of [
         notes: [`${elemental.effectLabel} 효과는 대상 상태에 따라 달라 직접 타격 DPM과 분리합니다.`],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 9, 0.5, 7),
+    sharedCooldowns: combatSharedCooldowns(GameTags.SKILL_GROUP_MAGIC, elemental.tag),
     jobRequirement: jobRequirement(JOBS.mage),
     autoAcquire: { watchedProgress: [elemental.stat], check: ({ player }) => Boolean(player?.career?.hasJob(JOBS.mage) && player.progress.getCounter(elemental.stat) >= 5n) },
     canActivate: simpleCheck(28), onStart: context => {
@@ -1432,7 +1490,8 @@ for (const elemental of [
             }
         });
     },
-    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, elemental.tag],
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, elemental.tag,
+        ...combatSkillGroups(GameTags.SKILL_GROUP_MAGIC, elemental.tag)],
 });
 
 interface EliteTechniqueDefinition {
@@ -1605,6 +1664,29 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     },
 ];
 
+const eliteTechniqueGroupByJobId: Readonly<Record<string, TagId>> = Object.freeze({
+    'career:blade_ranger': GameTags.SKILL_GROUP_WARRIOR,
+    'career:shadow_blade': GameTags.SKILL_GROUP_WARRIOR,
+    'career:spellblade': GameTags.SKILL_GROUP_WARRIOR,
+    'career:battle_smith': GameTags.SKILL_GROUP_WARRIOR,
+    'career:siege_bow': GameTags.SKILL_GROUP_ARCHER,
+    'career:night_hunter': GameTags.SKILL_GROUP_ARCHER,
+    'career:elemental_marksman': GameTags.SKILL_GROUP_ARCHER,
+    'career:artificer': GameTags.SKILL_GROUP_ARCHER,
+    'career:executioner': GameTags.SKILL_GROUP_ASSASSIN,
+    'career:phantom_shooter': GameTags.SKILL_GROUP_ASSASSIN,
+    'career:arcane_reaper': GameTags.SKILL_GROUP_ASSASSIN,
+    'career:venom_smith': GameTags.SKILL_GROUP_ASSASSIN,
+    'career:battle_magus': GameTags.SKILL_GROUP_MAGIC,
+    'career:star_weaver': GameTags.SKILL_GROUP_MAGIC,
+    'career:hexblade': GameTags.SKILL_GROUP_MAGIC,
+    'career:arcane_smith': GameTags.SKILL_GROUP_MAGIC,
+    'career:weapon_master': GameTags.SKILL_GROUP_BLACKSMITH,
+    'career:machinist_archer': GameTags.SKILL_GROUP_BLACKSMITH,
+    'career:steel_shadow': GameTags.SKILL_GROUP_BLACKSMITH,
+    'career:runeforger': GameTags.SKILL_GROUP_BLACKSMITH,
+});
+
 function eliteTechniqueDamage(context: SkillContext, technique: EliteTechniqueDefinition): number {
     const primary = context.owner.attribute.get(technique.attribute)
         * percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent) / 100;
@@ -1627,6 +1709,8 @@ function eliteTechniqueDamageTooltip(context: SkillContext, technique: EliteTech
 }
 
 for (const technique of eliteTechniques) {
+    const groupTag = eliteTechniqueGroupByJobId[technique.jobId];
+    if (!groupTag) throw new Error(`엘리트 스킬 공유 쿨다운 계열이 없습니다: ${technique.jobId}`);
     defineSkill({
         id: technique.id,
         name: technique.name,
@@ -1664,6 +1748,7 @@ for (const technique of eliteTechniques) {
             notes: technique.onHit ? ['상태효과의 가치는 대상과 패턴에 따라 달라 직접 피해와 분리합니다.'] : undefined,
         },
         calculateMaxCooldown: () => technique.cooldown,
+        sharedCooldowns: combatSharedCooldowns(groupTag, technique.propertyTag),
         jobRequirement: jobRequirement(technique.jobId),
         ...(technique.weaponDescription && technique.weaponTags?.length ? {
             weaponRequirement: weaponRequirement(technique.weaponDescription, ...technique.weaponTags),
@@ -1709,7 +1794,12 @@ for (const technique of eliteTechniques) {
                 );
             }
         },
-        tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, ...(technique.propertyTag ? [technique.propertyTag] : [])],
+        tags: [
+            GameTags.SKILL_ACTIVE,
+            GameTags.SKILL_COMBAT,
+            ...(technique.propertyTag ? [technique.propertyTag] : []),
+            ...combatSkillGroups(groupTag, technique.propertyTag),
+        ],
     });
 }
 

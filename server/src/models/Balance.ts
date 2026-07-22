@@ -465,6 +465,13 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
             entry.manaSpent += cost;
             entry.lastCastAt = time;
             entry.cooldownEndsAt = time + Math.max(actionInterval, report.cooldown);
+            for (const rule of entry.data.sharedCooldowns ?? []) {
+                const sharedCooldownEndsAt = time + rule.seconds;
+                for (const targetEntry of entries) {
+                    if (!targetEntry.data.tags.includes(rule.targetTag)) continue;
+                    targetEntry.cooldownEndsAt = Math.max(targetEntry.cooldownEndsAt, sharedCooldownEndsAt);
+                }
+            }
             const modifiers = entry.data.balance?.calculateRotationModifiers?.(context) ?? [];
             const effectDuration = finiteNonNegative(entry.data.balance?.calculateEffectDuration?.(context) ?? 0);
             if (modifiers.length && effectDuration > 0) {
@@ -484,7 +491,7 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
     const dps = totalDamage / window;
     for (const entry of entries) entity.attribute.removeBySource(`balance:rotation:${entry.data.id}`);
     const notes = [
-        '평타 1회 뒤 스킬을 최대 2회까지 사용하며, 모든 스킬은 같은 행동 시간·정신력·재사용 대기시간을 공유합니다.',
+        '평타 1회 뒤 스킬을 최대 2회까지 사용하며, 모든 스킬은 같은 행동 시간·정신력·개별 및 태그 공유 재사용 대기시간을 사용합니다.',
         '제어·확정 회피·은신·지속 피해와 다중 대상 추가 피해는 단일 대상 직접 피해에 임의 점수로 더하지 않습니다.',
     ];
     return {
