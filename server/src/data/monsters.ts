@@ -508,6 +508,134 @@ defineWorldMonster({
     tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_BEAST, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_NATURAL],
 });
 
+const twilightTombMonsters: readonly WorldMonsterData[] = [
+    {
+        id: 'dusk_grave_moth', name: '황혼 무덤나방',
+        description: '묘지기 천과 애도의 꽃가루를 갉아 먹으며 자란 잿빛 나방.', level: 31,
+        baseAttribute: { maxLife: 610, atk: 76, magicForce: 88, def: 28, magicDef: 46, speed: 2.2, attackSpeed: 1.18 },
+        drops: [
+            { itemDataId: 'gravecloth', minCount: 1, maxCount: 2, chance: 0.48 },
+            { itemDataId: 'mourning_lily', minCount: 1, maxCount: 1, chance: 0.16 },
+        ],
+        goldReward: { min: 44, max: 82 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'slowness', chance: 0.16, duration: 5, level: 2 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_INSECT, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'bone_hound', name: '백골 사냥개',
+        description: '왕릉을 벗어나는 혼을 쫓도록 뼈와 어둠으로 다시 엮은 사냥개.', level: 35,
+        baseAttribute: { maxLife: 760, atk: 102, def: 41, magicDef: 30, speed: 2.65, attackSpeed: 1.28 },
+        drops: [{ itemDataId: 'weathered_bone', minCount: 1, maxCount: 3, chance: 0.62 }],
+        goldReward: { min: 52, max: 96 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.2, duration: 7, level: 2 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'hollow_sentry', name: '빈 갑주의 보초',
+        description: '몸은 사라졌지만 순찰 명령만 남아 묘문 앞을 걷는 왕릉 보초.', level: 39,
+        baseAttribute: { maxLife: 1_080, atk: 116, def: 66, magicDef: 50, armorPen: 8, speed: 1.25, attackSpeed: 0.88 },
+        drops: [
+            { itemDataId: 'broken_oath_badge', minCount: 1, maxCount: 2, chance: 0.34 },
+            { itemDataId: 'weathered_bone', minCount: 1, maxCount: 2, chance: 0.28 },
+        ],
+        goldReward: { min: 61, max: 112 },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'crypt_whisperer', name: '묘실의 속삭임',
+        description: '벽화에 남은 장송문이 검은 형체를 이루어 침입자의 기억을 갉아먹는다.', level: 42,
+        baseAttribute: { maxLife: 940, atk: 98, magicForce: 134, def: 42, magicDef: 72, magicPen: 10, speed: 1.85 },
+        drops: [
+            { itemDataId: 'soul_ember', minCount: 1, maxCount: 2, chance: 0.44 },
+            { itemDataId: 'mourning_lily', minCount: 1, maxCount: 2, chance: 0.2 },
+        ],
+        goldReward: { min: 70, max: 128 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'decay', chance: 0.24, duration: 8, level: 3 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'hollow_skeleton_king', name: '공허한 해골왕',
+        description: '왕관의 명령만 기억하는 황혼왕릉의 첫 군주. 공격보다 치유와 보호를 행한 침입자를 먼저 꺾으려 한다.', level: 45,
+        baseAttribute: {
+            maxLife: 7_600, atk: 132, magicForce: 152, def: 78, magicDef: 91,
+            magicPen: 16, speed: 1.35, attackSpeed: 0.72, critRate: 0.1, critDmg: 1.65,
+        },
+        expReward: 45 * 20 * 6,
+        drops: [
+            { itemDataId: 'weathered_bone', minCount: 5, maxCount: 9, chance: 0.9 },
+            { itemDataId: 'soul_ember', minCount: 2, maxCount: 4, chance: 0.7 },
+            { itemDataId: 'mourning_staff', minCount: 1, maxCount: 1, chance: 0.035 },
+            { itemDataId: 'gravekeeper_shield', minCount: 1, maxCount: 1, chance: 0.03 },
+        ],
+        goldReward: { min: 165, max: 290 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'fear', chance: 0.28, duration: 4, level: 4 } },
+        skills: [{ skillDataId: 'bone_crown_decree', level: 3 }],
+        skillPattern: { sequence: ['bone_crown_decree'], initialDelay: 4, interval: { min: 8, max: 11 } },
+        ai: {
+            intelligence: 82, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.25, damage: 1, healing: 1.45, shielding: 1.2, control: 1.1, taunt: 2 },
+            tauntResistance: 0.62, switchThreshold: 0.19,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'ossuary_armor', name: '납골 갑주',
+        description: '수많은 뼛조각을 철판 사이에 채워 충격을 흘려보내는 무거운 수호체.', level: 46,
+        baseAttribute: { maxLife: 1_480, atk: 142, def: 88, magicDef: 64, speed: 0.82, attackSpeed: 0.72 },
+        drops: [
+            { itemDataId: 'weathered_bone', minCount: 2, maxCount: 4, chance: 0.58 },
+            { itemDataId: 'broken_oath_badge', minCount: 1, maxCount: 2, chance: 0.3 },
+        ],
+        goldReward: { min: 84, max: 150 },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'oathbreaker_knight', name: '배신한 왕릉기사',
+        description: '왕을 지키겠다는 맹세와 왕을 베었다는 기억 사이에서 끝없이 검을 휘두르는 기사.', level: 51,
+        baseAttribute: { maxLife: 1_780, atk: 168, def: 92, magicDef: 71, armorPen: 15, speed: 1.85, attackSpeed: 1.02, critRate: 0.08 },
+        drops: [
+            { itemDataId: 'broken_oath_badge', minCount: 1, maxCount: 3, chance: 0.5 },
+            { itemDataId: 'gravecloth', minCount: 1, maxCount: 2, chance: 0.28 },
+        ],
+        goldReward: { min: 103, max: 184 },
+        attack: { effect: { statusEffectId: 'defense_reduction', chance: 0.22, duration: 8, level: 4 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'fallen_knight_king', name: '타락한 기사왕',
+        description: '죽은 왕을 지키려다 스스로 왕좌를 차지한 두 번째 군주. 도발보다 치유와 제어를 더 큰 위협으로 판단한다.', level: 58,
+        baseAttribute: {
+            maxLife: 14_600, atk: 202, magicForce: 156, def: 126, magicDef: 98,
+            armorPen: 28, speed: 1.75, attackSpeed: 0.68, critRate: 0.12, critDmg: 1.75,
+        },
+        expReward: 58 * 20 * 6,
+        drops: [
+            { itemDataId: 'broken_oath_badge', minCount: 5, maxCount: 8, chance: 0.9 },
+            { itemDataId: 'soul_ember', minCount: 3, maxCount: 5, chance: 0.65 },
+            { itemDataId: 'oathiron_sword', minCount: 1, maxCount: 1, chance: 0.04 },
+            { itemDataId: 'requiem_bow', minCount: 1, maxCount: 1, chance: 0.03 },
+        ],
+        goldReward: { min: 225, max: 390 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.34, duration: 9, level: 5 } },
+        skills: [
+            { skillDataId: 'fallen_oath_execution', level: 3 },
+            { skillDataId: 'bone_crown_decree', level: 3 },
+        ],
+        skillPattern: {
+            sequence: ['fallen_oath_execution', 'bone_crown_decree'], randomOrder: true,
+            initialDelay: 4, interval: { min: 7, max: 10 },
+        },
+        ai: {
+            intelligence: 93, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.18, damage: 1, healing: 1.6, shielding: 1.15, control: 1.35, taunt: 2.8 },
+            tauntResistance: 0.84, switchThreshold: 0.26, decayPerSecond: 0.007,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
+    },
+];
+
+for (const monster of twilightTombMonsters) defineWorldMonster(monster);
+
 const advancedWorldMonsters: WorldMonsterData[] = [
     {
         id: 'spark_moth', name: '섬광나방', description: '폭풍 전류를 날개에 모아 번쩍이며 달려드는 거대 곤충.', level: 52,

@@ -126,9 +126,14 @@ export interface CombatRotationReport {
     readonly targetMaxLife: number;
     readonly estimatedKillSeconds: number;
     readonly currentSpeed: number;
+    readonly targetSpeed: number;
+    readonly evasionChance: number;
     readonly evasionCapSpeed: number;
     readonly evasionCapAgility: number;
     readonly evasionCapReached: boolean;
+    readonly penetration: number;
+    readonly targetDefense: number;
+    readonly effectiveDefense: number;
     readonly endingMentality: number;
     readonly totalHealing: number;
     readonly totalShield: number;
@@ -400,7 +405,14 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
     const actionInterval = Math.max(BALANCE_ACTION_FLOOR_SECONDS, 1 / Math.max(0.1, entity.attribute.get(AttributeType.ATTACK_SPEED)));
     // 회피 투자 기준은 로테이션 도중 우연히 남아 있는 짧은 버프가 아니라 상시 장비·직업 modifier로 계산한다.
     const currentSpeed = entity.attribute.get(AttributeType.SPEED);
-    const evasionCapSpeed = target.attribute.get(AttributeType.SPEED) * 2.8;
+    const targetSpeed = target.attribute.get(AttributeType.SPEED);
+    const evasionChance = calculateEvasionChance(currentSpeed, targetSpeed);
+    const evasionCapSpeed = targetSpeed * 2.8;
+    const defenseAttribute = scenario.basicAttackType === 'magic' ? AttributeType.MAGIC_DEF : AttributeType.DEF;
+    const penetrationAttribute = scenario.basicAttackType === 'magic' ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN;
+    const targetDefense = target.attribute.get(defenseAttribute);
+    const penetration = entity.attribute.get(penetrationAttribute);
+    const effectiveDefense = Math.max(0, targetDefense - penetration);
     const speedMultipliers = entity.attribute.modifiers
         .filter(modifier => modifier.attribute === AttributeType.SPEED.key && modifier.op === 'multiply')
         .reduce((product, modifier) => product * modifier.value, 1);
@@ -505,9 +517,14 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
         targetMaxLife: target.maxLife,
         estimatedKillSeconds: dps > 0 ? target.maxLife / dps : Number.POSITIVE_INFINITY,
         currentSpeed,
+        targetSpeed,
+        evasionChance,
         evasionCapSpeed,
         evasionCapAgility,
         evasionCapReached: currentSpeed >= evasionCapSpeed,
+        penetration,
+        targetDefense,
+        effectiveDefense,
         endingMentality: mentality,
         totalHealing,
         totalShield,

@@ -885,6 +885,162 @@ for (const material of [
     tags: [...material.tags],
 });
 
+// TODO(icons): 황혼왕릉 소재·장비 전용 아트 제작 전까지 의미가 가까운 기존 카테고리 아이콘을 재사용한다.
+for (const material of [
+    {
+        id: 'weathered_bone', name: '풍화된 뼛조각', image: 'items/stone', weight: 0.25,
+        description: '황혼왕릉의 망자에게서 떨어진 단단한 뼛조각.',
+        tags: [GameTags.PROPERTY_UNDEAD],
+    },
+    {
+        id: 'gravecloth', name: '묘지기 천', image: 'items/earthworm_bait', weight: 0.15,
+        description: '오래된 의복에서 풀어낸 질긴 검푸른 천.',
+        tags: [GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'broken_oath_badge', name: '깨진 맹세 휘장', image: 'items/gold_ore', weight: 0.2,
+        description: '왕릉 기사단의 맹세가 반쪽만 남은 금속 휘장.',
+        tags: [GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'mourning_lily', name: '애도의 백합', image: 'items/earthworm_bait', weight: 0.1,
+        description: '죽은 자의 마력이 짙은 곳에서만 피어나는 창백한 꽃.',
+        tags: [GameTags.PROPERTY_DARK, GameTags.PROPERTY_NATURAL],
+    },
+    {
+        id: 'soul_ember', name: '혼불 조각', image: 'items/mana_potion', weight: 0.12,
+        description: '꺼지지 않은 망자의 의지가 차갑게 응축된 마력 조각.',
+        tags: [GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_DARK],
+    },
+] as const) defineItem({
+    id: material.id,
+    name: material.name,
+    description: material.description,
+    image: material.image,
+    category: '몬스터 소재',
+    weight: material.weight,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [...material.tags],
+});
+
+defineItem({
+    id: 'graveward_tonic',
+    name: '묘지기 향약',
+    description: '왕릉의 혼불을 가라앉혀 45초 동안 독·출혈·부패의 지속시간을 빠르게 줄이는 향약.',
+    image: 'items/health_potion',
+    category: '소모품',
+    weight: 0.25,
+    stackable: true,
+    maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'preservation', level: 2, duration: 45 } },
+    onUse: 'apply_status_effect',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_HOLY],
+});
+
+defineItem({
+    id: 'oathiron_sword',
+    name: '맹세철 장검',
+    description: '깨진 기사 휘장을 다시 접어 벼린 장검. 정면의 갑주를 파고드는 데 알맞다.',
+    image: 'items/old_sword',
+    category: '장검',
+    weight: 3.5,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 16, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 6, source: '' },
+    ],
+    baseDurability: 175,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.PROPERTY_METAL],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+});
+
+defineItem({
+    id: 'requiem_bow',
+    name: '진혼 시위',
+    description: '묘지기 천으로 감아 소리를 죽인 장궁. 화살의 비행 속도와 급소 포착을 함께 높인다.',
+    image: 'items/light_bow',
+    category: '활',
+    weight: 2.15,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 13, source: '' },
+        { attribute: 'critRate', op: 'add', value: 0.025, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.13, source: '' },
+    ],
+    baseDurability: 165,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.PROPERTY_DARK],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+});
+
+defineItem({
+    id: 'mourning_staff',
+    name: '애도목 지팡이',
+    description: '애도의 백합과 혼불을 매달아 망자의 마력을 멀리 쏘아 보내는 지팡이.',
+    image: 'items/apprentice_staff',
+    category: '지팡이',
+    weight: 2.45,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: {
+            projectile: { dataId: 'basic_magic_orb', overrides: { tags: [GameTags.PROPERTY_DARK] } },
+        },
+    },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'magicForce', op: 'add', value: 18, source: '' },
+        { attribute: 'mentalityRegen', op: 'add', value: 1, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.1, source: '' },
+    ],
+    baseDurability: 170,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.PROPERTY_DARK, GameTags.PROPERTY_UNDEAD],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+});
+
+defineItem({
+    id: 'gravekeeper_shield',
+    name: '묘문 수호방패',
+    description: '왕릉 봉인문을 떼어 다시 다듬은 방패. 물리 충격과 망자의 마력을 함께 막는다.',
+    image: 'items/old_shield',
+    category: '방패',
+    weight: 3.4,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'offHand',
+    modifiers: [
+        { attribute: 'def', op: 'add', value: 8, source: '' },
+        { attribute: 'magicDef', op: 'add', value: 8, source: '' },
+        { attribute: 'maxLife', op: 'add', value: 80, source: '' },
+    ],
+    baseDurability: 210,
+    tags: [GameTags.ITEM_ARMOR, GameTags.PROPERTY_METAL, GameTags.PROPERTY_HOLY],
+    balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
+});
+
 defineItem({
     id: 'ember_ore',
     name: '화맥 광석',

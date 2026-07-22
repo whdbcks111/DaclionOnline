@@ -12,6 +12,10 @@ import type Entity from '../models/Entity.js';
 import type Player from '../models/Player.js';
 
 export const FIRST_SLIME_HUNT_QUEST_ID = 'luminair:first_slime_hunt';
+export const TWILIGHT_TOMB_QUEST_IDS = Object.freeze({
+    RESTLESS_DEAD: 'twilight-tomb:restless-dead',
+    BROKEN_OATH: 'twilight-tomb:broken-oath',
+} as const);
 
 defineQuest({
     id: FIRST_SLIME_HUNT_QUEST_ID,
@@ -39,6 +43,63 @@ defineQuest({
         QuestReward.exp(80),
         QuestReward.gold(100),
         QuestReward.item('health_potion', 2, '체력 포션'),
+    ],
+});
+
+defineQuest({
+    id: TWILIGHT_TOMB_QUEST_IDS.RESTLESS_DEAD,
+    name: '꺼지지 않는 장송행렬',
+    aliases: ['장송행렬', '왕릉 의뢰'],
+    description: '황혼왕릉의 언데드 8기를 쓰러뜨리고 마지막 등불의 묘지기에게 보고하세요.',
+    tags: ['quest:side', 'region:twilight-tombs'],
+    giverNpcIds: ['twilight_keeper'],
+    turnInNpcIds: ['twilight_keeper'],
+    visible: player => player.level >= 28,
+    canAccept: player => player.level >= 28,
+    stages: [new QuestStage({
+        id: 'quiet-procession',
+        description: '황혼왕릉을 떠도는 언데드를 쓰러뜨려 장송행렬을 멈추세요.',
+        objectives: [QuestObjective.kill(
+            'undead',
+            '언데드 처치',
+            8,
+            target => target.hasTag(GameTags.PROPERTY_UNDEAD),
+        )],
+    })],
+    rewards: [
+        QuestReward.exp(1_800),
+        QuestReward.gold(320),
+        QuestReward.item('graveward_tonic', 3, '묘지기 향약'),
+    ],
+});
+
+defineQuest({
+    id: TWILIGHT_TOMB_QUEST_IDS.BROKEN_OATH,
+    name: '왕좌를 훔친 맹세',
+    aliases: ['파계 기사왕', '왕좌의 맹세'],
+    description: '황혼왕릉 깊은 곳에서 왕좌를 차지한 언데드 기사왕을 쓰러뜨리세요.',
+    tags: ['quest:side', 'quest:boss', 'region:twilight-tombs'],
+    giverNpcIds: ['twilight_keeper'],
+    turnInNpcIds: ['twilight_keeper'],
+    prerequisiteQuestIds: [TWILIGHT_TOMB_QUEST_IDS.RESTLESS_DEAD],
+    visible: player => player.level >= 45,
+    canAccept: player => player.level >= 45,
+    stages: [new QuestStage({
+        id: 'end-usurper',
+        description: '파계의 왕좌에서 타락한 기사왕을 쓰러뜨리세요.',
+        objectives: [QuestObjective.kill(
+            'knight-king',
+            '언데드 기사왕 처치',
+            1,
+            target => target.hasTag(GameTags.ENTITY_BOSS)
+                && target.hasTag(GameTags.PROPERTY_UNDEAD)
+                && target.hasTag(GameTags.PROPERTY_METAL),
+        )],
+    })],
+    rewards: [
+        QuestReward.exp(5_200),
+        QuestReward.gold(780),
+        QuestReward.item('gravekeeper_shield', 1, '묘문 수호방패'),
     ],
 });
 

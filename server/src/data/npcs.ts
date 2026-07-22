@@ -1,6 +1,6 @@
 import NPC, { Dialogue, DialogueScenario } from '../models/NPC.js';
 import { defineProgress, ProgressType } from '../models/Progress.js';
-import { FIRST_SLIME_HUNT_QUEST_ID } from './quests.js';
+import { FIRST_SLIME_HUNT_QUEST_ID, TWILIGHT_TOMB_QUEST_IDS } from './quests.js';
 import { CAREER_QUEST_IDS } from './quests.js';
 import { BLACKSMITH_APPRENTICESHIP_QUEST_ID } from './quests.js';
 import { JobSlotType, getAllJobs, JobTier } from '../models/Job.js';
@@ -81,6 +81,75 @@ NPC.define({
         new DialogueScenario('quest_complete', function* () {
             yield Dialogue.say('초원의 길이 다시 조용해졌네. 약속한 보상이야. 정말 고마워!');
             yield Dialogue.turnInQuest(FIRST_SLIME_HUNT_QUEST_ID);
+            yield Dialogue.end();
+        }),
+    ],
+});
+
+NPC.define({
+    id: 'twilight_keeper',
+    name: '마지막 묘지기 이벤',
+    description: '황혼왕릉 밖에서 꺼지지 않는 등불을 지키며 망자들의 이름을 기록하는 묘지기입니다.',
+    tags: ['npc:guide', 'npc:quest', 'region:twilight-tombs'],
+    entryScenario: ({ player }) => {
+        if (player.quests.canTurnIn(TWILIGHT_TOMB_QUEST_IDS.BROKEN_OATH, 'twilight_keeper')) return 'boss_complete';
+        if (player.quests.isActive(TWILIGHT_TOMB_QUEST_IDS.BROKEN_OATH)) return 'boss_progress';
+        if (player.quests.canTurnIn(TWILIGHT_TOMB_QUEST_IDS.RESTLESS_DEAD, 'twilight_keeper')) return 'hunt_complete';
+        if (player.quests.isActive(TWILIGHT_TOMB_QUEST_IDS.RESTLESS_DEAD)) return 'hunt_progress';
+        if (player.quests.canAccept(TWILIGHT_TOMB_QUEST_IDS.BROKEN_OATH, 'twilight_keeper')) return 'boss_offer';
+        return player.quests.canAccept(TWILIGHT_TOMB_QUEST_IDS.RESTLESS_DEAD, 'twilight_keeper') ? 'greeting' : 'lore';
+    },
+    scenarios: [
+        new DialogueScenario('greeting', function* () {
+            yield Dialogue.say('등불 너머는 황혼왕릉이오. 백골왕과 기사왕이 서로 다른 왕좌에서 같은 망자들을 부르고 있지. 먼저 바깥의 장송행렬부터 잠재워 주겠소?');
+            yield Dialogue.choice([
+                { label: '망자들을 잠재우겠습니다.', target: 'hunt_accept' },
+                { label: '두 왕에 대해 알려주세요.', target: 'lore' },
+                { label: '지금은 지나가겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('hunt_accept', function* () {
+            yield Dialogue.acceptQuest(TWILIGHT_TOMB_QUEST_IDS.RESTLESS_DEAD);
+            yield Dialogue.say('왕릉의 언데드 여덟을 쓰러뜨리고 돌아오시오. 묘지기 향약을 준비해 두겠소.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('hunt_progress', function* ({ player }) {
+            const objective = player.quests.getSnapshot(TWILIGHT_TOMB_QUEST_IDS.RESTLESS_DEAD)?.objectives[0];
+            yield Dialogue.say(`장송의 발소리가 아직 들리는군. 지금까지 ${objective?.progress ?? 0}/${objective?.required ?? 8}기를 잠재웠소.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('hunt_complete', function* () {
+            yield Dialogue.say('등불의 흔들림이 한결 잦아들었소. 약속한 향약이오. 하지만 더 깊은 곳의 파계 기사왕이 다시 망자들을 일으킬 거요.');
+            yield Dialogue.turnInQuest(TWILIGHT_TOMB_QUEST_IDS.RESTLESS_DEAD);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('boss_offer', function* () {
+            yield Dialogue.say('기사왕은 죽은 왕을 지키겠다 맹세하고는 그 왕을 베어 왕좌를 훔쳤소. 파계의 왕좌에서 그 맹세를 끝내 주겠소?');
+            yield Dialogue.choice([
+                { label: '기사왕을 쓰러뜨리겠습니다.', target: 'boss_accept' },
+                { label: '조금 더 준비하겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('boss_accept', function* () {
+            yield Dialogue.acceptQuest(TWILIGHT_TOMB_QUEST_IDS.BROKEN_OATH);
+            yield Dialogue.say('금 간 묘문에서 기사묘 쪽 길을 택하시오. 속삭임 지하묘를 지나면 파계의 왕좌가 나올 거요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('boss_progress', function* () {
+            yield Dialogue.say('기사왕은 도발보다 아군을 살리는 자를 더 먼저 노리오. 치유와 제어를 쓰는 동료를 지킬 준비를 하시오.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('boss_complete', function* () {
+            yield Dialogue.say('파계의 맹세가 마침내 끝났군. 왕릉의 봉인문으로 만든 이 방패를 받아 주시오.');
+            yield Dialogue.turnInQuest(TWILIGHT_TOMB_QUEST_IDS.BROKEN_OATH);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('lore', function* () {
+            yield Dialogue.say('백골왕은 왕관의 명령만 남아 치유사와 수호자를 먼저 노리고, 기사왕은 도발에도 쉽게 흔들리지 않소. 백골 왕좌의 석문에 답하면 숨은 납골당도 열릴 거요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('등불이 보이는 동안은 돌아올 길을 잃지 않을 거요.');
             yield Dialogue.end();
         }),
     ],

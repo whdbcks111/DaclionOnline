@@ -100,6 +100,24 @@ export function rollLabyrinthCacheReward(
     return rewards.find(reward => (cursor -= reward.weight) < 0)?.itemDataId ?? rewards[0].itemDataId;
 }
 
+const TWILIGHT_RELIQUARY_REWARDS = Object.freeze([
+    { itemDataId: 'graveward_tonic', count: 2, weight: 34 },
+    { itemDataId: 'weathered_bone', count: 5, weight: 18 },
+    { itemDataId: 'broken_oath_badge', count: 3, weight: 16 },
+    { itemDataId: 'soul_ember', count: 3, weight: 16 },
+    { itemDataId: 'oathiron_sword', count: 1, weight: 4 },
+    { itemDataId: 'requiem_bow', count: 1, weight: 4 },
+    { itemDataId: 'mourning_staff', count: 1, weight: 4 },
+    { itemDataId: 'gravekeeper_shield', count: 1, weight: 4 },
+]);
+
+export function rollTwilightReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
+    let cursor = random() * TWILIGHT_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
+    const reward = TWILIGHT_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
+        ?? TWILIGHT_RELIQUARY_REWARDS[0];
+    return { itemDataId: reward.itemDataId, count: reward.count };
+}
+
 registerResourceInteraction('open_labyrinth_cache', (resource, player) => {
     if (resource.resourceDataId !== 'echo_treasure_chest'
         && resource.resourceDataId !== 'crystal_treasure_chest') return false;
@@ -116,6 +134,24 @@ registerResourceInteraction('open_labyrinth_cache', (resource, player) => {
     sendBotMessageToUser(player.userId, chat()
         .color('purple', builder => builder.weight('bold', nested => nested.text('[ 미궁의 보물 ]')))
         .text(`\n${itemName} x1을(를) 발견했습니다.`)
+        .build());
+    return true;
+});
+
+registerResourceInteraction('open_twilight_reliquary', (_resource, player) => {
+    const reward = rollTwilightReliquaryReward();
+    if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'twilight-reliquary-full',
+            message: '왕가의 유물을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem(reward.itemDataId, reward.count);
+    const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
+    sendBotMessageToUser(player.userId, chat()
+        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 황혼왕릉의 유물 ]')))
+        .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
         .build());
     return true;
 });
@@ -221,6 +257,33 @@ defineResource({
     attackable: false,
     interactionCooldown: { min: 60 * 60, max: 2 * 60 * 60 },
     tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_WOOD],
+});
+
+defineResource({
+    id: 'twilight_riddle_door',
+    name: '왕명을 새긴 석문',
+    level: 40,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [],
+    drops: [],
+    expReward: { min: 0, max: 0 },
+    interaction: 'twilight_tomb_riddle',
+    attackable: false,
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_STONE, GameTags.PROPERTY_UNDEAD],
+});
+
+defineResource({
+    id: 'twilight_reliquary',
+    name: '황혼 왕가의 유물함',
+    level: 45,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [],
+    drops: [],
+    expReward: { min: 0, max: 0 },
+    interaction: 'open_twilight_reliquary',
+    attackable: false,
+    interactionCooldown: { min: 4 * 60 * 60, max: 6 * 60 * 60 },
+    tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_GOLD, GameTags.PROPERTY_DARK],
 });
 
 defineResource({

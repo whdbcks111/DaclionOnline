@@ -15,6 +15,11 @@ export const IronrootPuzzleIds = Object.freeze({
     BREAKABLE_GATE_RESOURCE: 'ironroot_breakable_gate',
 } as const);
 
+export const TwilightTombPuzzleIds = Object.freeze({
+    RIDDLE: 'twilight-tomb:crown-riddle',
+    RIDDLE_FLAG: 'dungeon:twilight-tomb/crown-riddle-solved',
+} as const);
+
 defineProgress({
     id: IronrootPuzzleIds.RIDDLE_FLAG,
     type: ProgressType.FLAG,
@@ -38,6 +43,29 @@ defineQuestionPuzzle({
     failureMessage: '철제 뿌리가 거칠게 떨리며 답을 거부합니다.',
 });
 
+defineProgress({
+    id: TwilightTombPuzzleIds.RIDDLE_FLAG,
+    type: ProgressType.FLAG,
+    label: '황혼왕릉 왕명 해독',
+    description: '황혼왕릉의 왕명을 새긴 석문을 해독했습니다.',
+    visible: true,
+});
+
+defineQuestionPuzzle({
+    id: TwilightTombPuzzleIds.RIDDLE,
+    title: '마지막 왕명',
+    prompt: '주인이 숨을 거두어도 머리 위에 남고, 충성한 자와 배신한 자가 모두 탐한 것은 무엇인가?',
+    answers: ['왕관', '관', '왕의 왕관'],
+    choices: [
+        { label: '왕관', answer: '왕관' },
+        { label: '검', answer: '검' },
+        { label: '왕좌', answer: '왕좌' },
+    ],
+    successFlag: TwilightTombPuzzleIds.RIDDLE_FLAG,
+    successMessage: '석문의 뼈 장식이 양옆으로 물러나며 숨은 납골당으로 가는 계단이 드러납니다.',
+    failureMessage: '왕관 문양의 눈구멍에서 찬바람이 새어 나오며 답을 거부합니다.',
+});
+
 defineTeleportArtifact({
     id: IronrootPuzzleIds.RELAY_ARTIFACT,
     destinations: {
@@ -53,6 +81,9 @@ registerResourceInteraction('ironroot_riddle_door', (_resource, player) =>
 registerResourceInteraction('ironroot_relay_artifact', (_resource, player) =>
     activateTeleportArtifact(player, IronrootPuzzleIds.RELAY_ARTIFACT));
 
+registerResourceInteraction('twilight_tomb_riddle', (_resource, player) =>
+    beginQuestionPuzzle(player, TwilightTombPuzzleIds.RIDDLE));
+
 registerConnectionCondition('ironroot_riddle_solved', player =>
     player.progress.getFlag(IronrootPuzzleIds.RIDDLE_FLAG)
         ? 'visible'
@@ -62,6 +93,11 @@ registerConnectionCondition('ironroot_gate_destroyed', () =>
     getLocation('ironroot_gate_gallery')?.isResourceDefeated(IronrootPuzzleIds.BREAKABLE_GATE_RESOURCE)
         ? 'visible'
         : { status: 'locked', publicReason: '녹슨 봉인문 파괴 필요' });
+
+registerConnectionCondition('twilight_tomb_riddle_solved', player =>
+    player.progress.getFlag(TwilightTombPuzzleIds.RIDDLE_FLAG)
+        ? 'visible'
+        : { status: 'locked', publicReason: '왕명을 새긴 석문의 해답 필요' });
 
 // 지도 연결성은 유지하되 일반 이동·지도에는 노출하지 않고 유물 상호작용만 통과시킨다.
 registerConnectionCondition('ironroot_artifact_route', () => 'hidden');

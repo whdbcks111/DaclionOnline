@@ -197,7 +197,9 @@ function appendRotation(builder: ReturnType<typeof chat>, rotation: CombatRotati
     builder.divider(rotation.encounter.label)
         .text(`대상 Lv.${rotation.targetLevel} ${rotation.targetName}${source}\n`)
         .text(`장비 ${rotation.loadoutName} · ${rotation.basicAttackType === 'magic' ? '마법' : '물리'} 평타\n`)
+        .text(`속도 ${format(rotation.currentSpeed)} : ${format(rotation.targetSpeed)} · 대상 회피 ${format(rotation.evasionChance * 100)}%\n`)
         .text(`90% 회피 기준 속도 ${format(rotation.evasionCapSpeed)} · 필요 민첩 ${rotation.evasionCapAgility}${rotation.evasionCapReached ? ' (현재 도달)' : ''}\n`)
+        .text(`${rotation.basicAttackType === 'magic' ? '마법 관통' : '방어 관통'} ${format(rotation.penetration)} · 대상 방어 ${format(rotation.targetDefense)} → 유효 ${format(rotation.effectiveDefense)}\n`)
         .weight('bold', b => b.text(`DPS ${format(rotation.dps)} · 예상 처치 ${formatSeconds(rotation.estimatedKillSeconds)}\n`))
         .text(`평타 ${rotation.basicAttacks}회 / 피해 ${format(rotation.basicDamage)} (${format(rotation.basicDamageShare * 100)}%)\n`)
         .text(`스킬 ${rotation.skillCasts}회 / 피해 ${format(rotation.skillDamage)} / 종료 정신력 ${format(rotation.endingMentality)}\n`);

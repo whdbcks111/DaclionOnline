@@ -101,6 +101,9 @@ test('combat profiles share resources while mixing basics and every available jo
             assert.ok(rotation.skills.every(skill => skill.casts > 0));
             assert.ok(rotation.endingMentality >= 0);
             assert.ok(rotation.dps > 0);
+            assert.ok(rotation.evasionChance >= 0 && rotation.evasionChance <= 0.9);
+            assert.equal(rotation.effectiveDefense, Math.max(0, rotation.targetDefense - rotation.penetration));
+            assert.ok(rotation.currentSpeed > 0 && rotation.targetSpeed > 0);
         }
     }
 });

@@ -259,3 +259,65 @@ defineShop({
     ],
     tags: [GameTags.SHOP_HUNTER],
 });
+
+defineShop({
+    id: 'twilight_memorial_store',
+    buyList: [
+        {
+            label: '묘지기 향약',
+            create: () => ({ itemDataId: 'graveward_tonic', count: 1 }),
+            count: 1,
+            price: 38,
+            stock: 12,
+            restockTime: 90,
+        },
+        {
+            label: '화살 20개',
+            create: () => ({ itemDataId: 'wooden_arrow', count: 20 }),
+            count: 20,
+            price: 20,
+            stock: 18,
+            restockTime: 35,
+        },
+        {
+            label: '맹세철 장검',
+            create: () => ({ itemDataId: 'oathiron_sword', count: 1 }),
+            count: 1,
+            price: 280,
+            stock: 2,
+            restockTime: 480,
+        },
+        {
+            label: '진혼 시위',
+            create: () => ({ itemDataId: 'requiem_bow', count: 1 }),
+            count: 1,
+            price: 270,
+            stock: 2,
+            restockTime: 480,
+        },
+        {
+            label: '애도목 지팡이',
+            create: () => ({ itemDataId: 'mourning_staff', count: 1 }),
+            count: 1,
+            price: 300,
+            stock: 2,
+            restockTime: 480,
+        },
+        {
+            label: '묘문 수호방패',
+            create: () => ({ itemDataId: 'gravekeeper_shield', count: 1 }),
+            count: 1,
+            price: 290,
+            stock: 2,
+            restockTime: 480,
+        },
+    ],
+    sellList: [
+        { label: '풍화된 뼛조각', filter: item => item.itemDataId === 'weathered_bone', count: 99, price: 4 },
+        { label: '묘지기 천', filter: item => item.itemDataId === 'gravecloth', count: 99, price: 7 },
+        { label: '깨진 맹세 휘장', filter: item => item.itemDataId === 'broken_oath_badge', count: 99, price: 16 },
+        { label: '애도의 백합', filter: item => item.itemDataId === 'mourning_lily', count: 99, price: 13 },
+        { label: '혼불 조각', filter: item => item.itemDataId === 'soul_ember', count: 99, price: 22 },
+    ],
+    tags: [GameTags.SHOP_GENERAL],
+});

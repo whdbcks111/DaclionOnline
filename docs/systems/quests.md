@@ -65,6 +65,8 @@ GameEvent + Inventory/Progress 변경
 
 첫 데이터 `luminair:first_slime_hunt`는 안내인 리아가 제안한다. `entity:slime` 태그 대상 3마리를 처치하고 리아에게 보고하면 경험치 80, 골드 100, 체력 포션 2개를 받는다.
 
+황혼왕릉의 `꺼지지 않는 장송행렬`은 Lv.28부터 `property:undead` 대상 8기를 추적한다. 완료 뒤 Lv.45부터 선행 퀘스트가 필요한 `왕좌를 훔친 맹세`가 열리며, 개별 구현 ID 대신 `entity:boss + property:undead + property:metal` 조합으로 타락한 기사왕을 판정한다. 두 퀘스트는 마지막 묘지기 이벤에게 수락·보고하고 향약·골드·경험치와 지역 방패를 보상한다.
+
 ## 추가 체크리스트
 
 1. `data/quests.ts`에 stable ID와 단계/목표/보상을 정의한다.

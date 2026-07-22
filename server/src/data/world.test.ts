@@ -7,6 +7,9 @@ import { getAllMonsterData, getMonsterData } from '../models/Monster.js';
 import { getResourceData } from '../models/Resource.js';
 import { getItemData } from '../models/Item.js';
 import { getShop } from '../models/Shop.js';
+import { getAllCraftingRecipes } from '../models/Crafting.js';
+import { getAllQuestData } from '../models/Quest.js';
+import NPC from '../models/NPC.js';
 import type { LocationData } from '../../../shared/types.js';
 import './items.js';
 import './skills.js';
@@ -18,7 +21,8 @@ import './dungeonPuzzles.js';
 import './bossPatterns.js';
 import './shops.js';
 import './fishing.js';
-import { rollLabyrinthCacheReward, rollTreasureReward } from './resources.js';
+import './crafting.js';
+import { rollLabyrinthCacheReward, rollTreasureReward, rollTwilightReliquaryReward } from './resources.js';
 import { MonsterAiDisposition } from '../models/Threat.js';
 import {
     getIronrootCrystalProtectionMultiplier,
@@ -32,7 +36,7 @@ const locations = JSON.parse(
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, 61);
+    assert.equal(locations.length, 70);
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -60,7 +64,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 6, neutral: 25, hostile: 30 },
+        { safe: 7, neutral: 27, hostile: 36 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -69,7 +73,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     assert.ok(locations.every(location => /^#[0-9a-f]{6}$/i.test(location.mapColor ?? '')));
     assert.deepEqual(
         locations.filter(location => location.mapIcon).map(location => location.mapIcon).sort(),
-        ['general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
+        ['general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
     );
     for (const icon of new Set(locations.flatMap(location => location.mapIcon ? [location.mapIcon] : []))) {
         const png = readFileSync(new URL(`../../../client/public/icons/map/${icon}.png`, import.meta.url));
@@ -136,6 +140,9 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
         ['ironroot_edge', 'ironroot_labyrinth', 'ironroot_question_hall', 'ironroot_false_archive',
             'ironroot_echo_vault', 'ironroot_gate_gallery', 'ironroot_core', 'ironroot_crystal_sanctum'],
         ['rift_edge', 'eclipse_crossroads', 'astral_nexus'],
+        ['twilight_memorial_road', 'twilight_lantern_camp', 'twilight_tomb_gate',
+            'twilight_bone_gallery', 'twilight_knight_crypt', 'twilight_whisper_catacomb',
+            'twilight_crown_hall', 'twilight_oath_hall', 'twilight_secret_ossuary'],
     ];
 
     for (const ids of regions) {
@@ -247,6 +254,47 @@ test('은빛그물 보스는 모든 직업이 배울 수 있는 전승 스킬북
         assert.equal(book?.baseMetadata?.skillDataId, skillDataId, bookId);
         assert.equal(book?.image, 'items/seismic_crush_skillbook', bookId);
     }
+});
+
+test('황혼왕릉은 두 왕좌·질문문·유물함·상점·연속 퀘스트를 가진 중레벨 우회 권역이다', () => {
+    const region = locations.filter(location => location.id.startsWith('twilight_'));
+    const skeletonKing = getMonsterData('hollow_skeleton_king');
+    const knightKing = getMonsterData('fallen_knight_king');
+    const store = getShop('twilight_memorial_store');
+    const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('twilight:'));
+    const quests = getAllQuestData().filter(quest => quest.id.startsWith('twilight-tomb:'));
+
+    assert.equal(region.length, 9);
+    assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
+    assert.ok(region.every(location => location.tags.includes('location:tomb')));
+    assert.equal(skeletonKing?.level, 45);
+    assert.equal(knightKing?.level, 58);
+    assert.ok(skeletonKing?.tags.includes(GameTags.ENTITY_BOSS));
+    assert.ok(knightKing?.skillPattern?.randomOrder);
+    assert.ok((skeletonKing?.ai?.weights?.healing ?? 0) > (skeletonKing?.ai?.weights?.damage ?? 0));
+    assert.ok((knightKing?.ai?.tauntResistance ?? 0) >= 0.8);
+    assert.deepEqual(skeletonKing?.skillPattern?.sequence, ['bone_crown_decree']);
+    assert.deepEqual(knightKing?.skillPattern?.sequence, ['fallen_oath_execution', 'bone_crown_decree']);
+
+    const crownHall = locations.find(location => location.id === 'twilight_crown_hall');
+    const oathHall = locations.find(location => location.id === 'twilight_oath_hall');
+    assert.ok(crownHall?.objects.some(object => object.dataId === 'twilight_riddle_door'));
+    assert.ok(crownHall?.connections.some(connection => connection.condition === 'twilight_tomb_riddle_solved'));
+    assert.ok(oathHall?.connections.some(connection => connection.locationId === 'tempest_gate'));
+    assert.deepEqual(getResourceData('twilight_reliquary')?.interactionCooldown, {
+        min: 4 * 60 * 60,
+        max: 6 * 60 * 60,
+    });
+    assert.equal(rollTwilightReliquaryReward(() => 0).itemDataId, 'graveward_tonic');
+    assert.equal(rollTwilightReliquaryReward(() => 0.999).itemDataId, 'gravekeeper_shield');
+
+    for (const itemId of ['oathiron_sword', 'requiem_bow', 'mourning_staff', 'gravekeeper_shield']) {
+        assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === itemId), itemId);
+        assert.ok(getItemData(itemId)?.balance, `${itemId} balance`);
+    }
+    assert.equal(recipes.length, 5);
+    assert.equal(quests.length, 2);
+    assert.equal(NPC.getNpc('twilight_keeper')?.name, '마지막 묘지기 이벤');
 });
 
 test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {

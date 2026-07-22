@@ -342,7 +342,8 @@
     "connections": [
       { "locationId": "swamp_basin" },
       { "locationId": "swamp_reedway" },
-      { "locationId": "ember_foothills", "condition": "level_28" }
+      { "locationId": "ember_foothills", "condition": "level_28" },
+      { "locationId": "twilight_memorial_road", "condition": "level_28" }
     ]
   },
   {
@@ -681,7 +682,8 @@
     "connections": [
       { "locationId": "volcanic_core" },
       { "locationId": "conductor_ridge" },
-      { "locationId": "storm_nest" }
+      { "locationId": "storm_nest" },
+      { "locationId": "twilight_oath_hall", "condition": "level_50" }
     ]
   },
   {
@@ -1181,6 +1183,185 @@
     ],
     "connections": [
       { "locationId": "eclipse_crossroads" }
+    ]
+  },
+  {
+    "id": "twilight_memorial_road",
+    "name": "황혼왕릉 1 추모 가도",
+    "mapColor": "#655f73",
+    "zoneType": "neutral",
+    "x": 500,
+    "y": 335,
+    "z": -8,
+    "tags": ["location:wilderness", "location:tomb", "property:dark", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "dusk_grave_moth", "maxCount": 3, "respawnTime": 48 },
+      { "type": "monster", "dataId": "bone_hound", "maxCount": 1, "respawnTime": 58 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "swamp_heart" },
+      { "locationId": "twilight_lantern_camp" },
+      { "locationId": "twilight_tomb_gate" }
+    ]
+  },
+  {
+    "id": "twilight_lantern_camp",
+    "name": "황혼왕릉 마지막 등불 야영지",
+    "mapColor": "#655f73",
+    "zoneType": "safe",
+    "x": 535,
+    "y": 410,
+    "z": -4,
+    "shopId": "twilight_memorial_store",
+    "mapIcon": "general-shop",
+    "tags": ["location:safe", "location:shop", "location:tomb", "property:dark"],
+    "npcIds": ["twilight_keeper"],
+    "objects": [],
+    "connections": [
+      { "locationId": "twilight_memorial_road" }
+    ]
+  },
+  {
+    "id": "twilight_tomb_gate",
+    "name": "황혼왕릉 2 금 간 묘문",
+    "mapColor": "#655f73",
+    "zoneType": "neutral",
+    "x": 585,
+    "y": 335,
+    "z": -22,
+    "tags": ["location:wilderness", "location:tomb", "property:dark", "property:undead", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "hollow_sentry", "maxCount": 2, "respawnTime": 62 },
+      { "type": "monster", "dataId": "bone_hound", "maxCount": 2, "respawnTime": 56 }
+    ],
+    "connections": [
+      { "locationId": "twilight_memorial_road" },
+      { "locationId": "twilight_bone_gallery" },
+      { "locationId": "twilight_knight_crypt" }
+    ]
+  },
+  {
+    "id": "twilight_bone_gallery",
+    "name": "황혼왕릉 백골 회랑",
+    "mapColor": "#655f73",
+    "zoneType": "hostile",
+    "x": 650,
+    "y": 280,
+    "z": -38,
+    "tags": ["location:wilderness", "location:tomb", "property:undead", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "bone_hound", "maxCount": 3, "respawnTime": 58 },
+      { "type": "monster", "dataId": "dusk_grave_moth", "maxCount": 2, "respawnTime": 50 }
+    ],
+    "connections": [
+      { "locationId": "twilight_tomb_gate" },
+      { "locationId": "twilight_whisper_catacomb" },
+      { "locationId": "twilight_crown_hall" }
+    ]
+  },
+  {
+    "id": "twilight_knight_crypt",
+    "name": "황혼왕릉 파계 기사묘",
+    "mapColor": "#655f73",
+    "zoneType": "hostile",
+    "x": 650,
+    "y": 390,
+    "z": -42,
+    "tags": ["location:wilderness", "location:tomb", "property:undead", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "hollow_sentry", "maxCount": 2, "respawnTime": 64 },
+      { "type": "monster", "dataId": "ossuary_armor", "maxCount": 2, "respawnTime": 76 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "twilight_tomb_gate" },
+      { "locationId": "twilight_whisper_catacomb" },
+      { "locationId": "twilight_oath_hall" }
+    ]
+  },
+  {
+    "id": "twilight_whisper_catacomb",
+    "name": "황혼왕릉 3 속삭임 지하묘",
+    "mapColor": "#655f73",
+    "zoneType": "hostile",
+    "x": 725,
+    "y": 335,
+    "z": -64,
+    "tags": ["location:wilderness", "location:tomb", "property:undead", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "crypt_whisperer", "maxCount": 3, "respawnTime": 72 },
+      { "type": "monster", "dataId": "ossuary_armor", "maxCount": 1, "respawnTime": 82 },
+      { "type": "monster", "dataId": "oathbreaker_knight", "maxCount": 1, "respawnTime": 88 }
+    ],
+    "connections": [
+      { "locationId": "twilight_bone_gallery" },
+      { "locationId": "twilight_knight_crypt" },
+      { "locationId": "twilight_crown_hall" },
+      { "locationId": "twilight_oath_hall" }
+    ]
+  },
+  {
+    "id": "twilight_crown_hall",
+    "name": "황혼왕릉 백골 왕좌",
+    "mapColor": "#655f73",
+    "zoneType": "hostile",
+    "x": 805,
+    "y": 275,
+    "z": -82,
+    "tags": ["location:wilderness", "location:tomb", "location:dungeon", "property:undead", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "hollow_skeleton_king", "maxCount": 1, "respawnTime": 480 },
+      { "type": "resource", "dataId": "twilight_riddle_door", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "twilight_bone_gallery" },
+      { "locationId": "twilight_whisper_catacomb" },
+      { "locationId": "twilight_secret_ossuary", "condition": "twilight_tomb_riddle_solved" }
+    ]
+  },
+  {
+    "id": "twilight_oath_hall",
+    "name": "황혼왕릉 파계의 왕좌",
+    "mapColor": "#655f73",
+    "zoneType": "hostile",
+    "x": 805,
+    "y": 395,
+    "z": -86,
+    "tags": ["location:wilderness", "location:tomb", "location:dungeon", "property:undead", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "oathbreaker_knight", "maxCount": 2, "respawnTime": 90 },
+      { "type": "monster", "dataId": "fallen_knight_king", "maxCount": 1, "respawnTime": 600 }
+    ],
+    "connections": [
+      { "locationId": "twilight_knight_crypt" },
+      { "locationId": "twilight_whisper_catacomb" },
+      { "locationId": "tempest_gate" }
+    ]
+  },
+  {
+    "id": "twilight_secret_ossuary",
+    "name": "황혼왕릉 숨은 납골당",
+    "mapColor": "#655f73",
+    "zoneType": "hostile",
+    "x": 885,
+    "y": 295,
+    "z": -108,
+    "tags": ["location:wilderness", "location:tomb", "location:dungeon", "property:undead", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "crypt_whisperer", "maxCount": 2, "respawnTime": 76 },
+      { "type": "resource", "dataId": "twilight_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "twilight_crown_hall" }
     ]
   }
 ]

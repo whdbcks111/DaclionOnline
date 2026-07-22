@@ -2399,6 +2399,18 @@ for (const skill of [
         castTime: 1.6, cooldown: 9, propertyTag: GameTags.PROPERTY_FIRE, statusEffectId: 'fire', statusDuration: 10,
     },
     {
+        id: 'bone_crown_decree', name: '백골 왕명', icon: 'affinities/undead', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.42, perLevelMultiplier: 0.13,
+        castTime: 1.4, cooldown: 9, propertyTag: GameTags.PROPERTY_UNDEAD,
+        statusEffectId: 'fear', statusDuration: 4, activationHeader: 'deathless_requiem',
+    },
+    {
+        id: 'fallen_oath_execution', name: '파계 처형', icon: 'affinities/metal', damageType: 'physical' as const,
+        attribute: AttributeType.ATK, baseMultiplier: 1.65, perLevelMultiplier: 0.15,
+        castTime: 1.25, cooldown: 9, propertyTag: GameTags.PROPERTY_METAL,
+        statusEffectId: 'bleeding', statusDuration: 8, unavoidable: true, activationHeader: 'steel_slash',
+    },
+    {
         id: 'tempest_overload', name: '뇌정 과부하', icon: 'affinities/electric', damageType: 'magic' as const,
         attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.5, perLevelMultiplier: 0.14,
         castTime: 1.3, cooldown: 8, propertyTag: GameTags.PROPERTY_ELECTRIC,
