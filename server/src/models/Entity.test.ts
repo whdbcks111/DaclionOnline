@@ -4,7 +4,11 @@ import { readFileSync } from 'node:fs';
 import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import { AttributeType } from './Attribute.js';
-import Stat, { StatType } from './Stat.js';
+import Stat, {
+    calculateSensibilityCritRateBonus,
+    SENSIBILITY_CRIT_RATE_CAP,
+    StatType,
+} from './Stat.js';
 
 class VitalEntity extends Entity {
     override readonly name = '자원 상한 시험체';
@@ -81,10 +85,24 @@ test('감각은 치명타 능력치와 대장장이용 제련 정밀도를 함�
     const stat = new Stat({ sensibility: 100 });
     stat.applyModifiers(entity);
 
-    assert.ok(Math.abs(entity.attribute.get(AttributeType.CRIT_RATE) - 0.15) < 1e-10);
+    assert.ok(Math.abs(entity.attribute.get(AttributeType.CRIT_RATE) - (0.05 + calculateSensibilityCritRateBonus(100))) < 1e-10);
     assert.equal(entity.attribute.get(AttributeType.CRIT_DMG), 2.5);
     assert.ok(Math.abs(entity.attribute.get(AttributeType.FORGING_PRECISION) - 0.15) < 1e-10);
+    assert.match(StatType.SENSIBILITY.getDescription(100), /치명타율 \+9\.1%p/);
     assert.match(StatType.SENSIBILITY.getDescription(100), /제련 정밀도 \+15\.0%/);
+});
+
+test('감각 치명타율은 낮은 구간의 기울기를 보존하면서 50%p에 점근한다', () => {
+    assert.equal(calculateSensibilityCritRateBonus(0), 0);
+    assert.ok(Math.abs(calculateSensibilityCritRateBonus(100) - 0.09063462346100909) < 1e-12);
+    assert.ok(calculateSensibilityCritRateBonus(500) < SENSIBILITY_CRIT_RATE_CAP);
+    assert.ok(calculateSensibilityCritRateBonus(10_000) <= SENSIBILITY_CRIT_RATE_CAP);
+
+    const earlyGain = calculateSensibilityCritRateBonus(100) - calculateSensibilityCritRateBonus(0);
+    const lateGain = calculateSensibilityCritRateBonus(1_000) - calculateSensibilityCritRateBonus(900);
+    assert.ok(lateGain < earlyGain);
+    assert.match(StatType.SENSIBILITY.getDescription(1_000), /치명타율 \+43\.2%p/);
+    assert.match(StatType.SENSIBILITY.getDescription(1_000), /최대 \+50%p/);
 });
 
 test('모든 능력치는 고유한 128px 투명 아이콘과 스킬 포맷 문법을 제공한다', () => {

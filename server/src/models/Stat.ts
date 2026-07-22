@@ -2,6 +2,18 @@ import type Attribute from './Attribute.js'
 
 interface AttributeOwner { attribute: Attribute }
 
+/** 감각에서 파생되는 치명타율 기여 상한. 장비·스킬·기본 치명타율에는 적용하지 않는다. */
+export const SENSIBILITY_CRIT_RATE_CAP = 0.5
+/** 0 근처에서 기존 1포인트당 0.1%p 기울기를 유지하는 지수 포화 척도. */
+export const SENSIBILITY_CRIT_RATE_SCALE = SENSIBILITY_CRIT_RATE_CAP / 0.001
+
+/** 감각이 높아질수록 한 포인트의 효율이 감소하며 50%p에 점근하는 치명타율 기여분. */
+export function calculateSensibilityCritRateBonus(points: number): number {
+    if (points === Number.POSITIVE_INFINITY) return SENSIBILITY_CRIT_RATE_CAP
+    if (!Number.isFinite(points) || points <= 0) return 0
+    return SENSIBILITY_CRIT_RATE_CAP * (1 - Math.exp(-points / SENSIBILITY_CRIT_RATE_SCALE))
+}
+
 // ── StatType 클래스 열거형 ──
 
 /** 스탯 → 능력치 변환 함수. entity의 attribute에 직접 접근해 modifier를 추가함 */
@@ -38,11 +50,11 @@ export class StatType {
 
     static readonly SENSIBILITY = new StatType('sensibility', '감각',
         (entity, points, source) => {
-            entity.attribute.addModifier({ attribute: 'critRate', op: 'add', value: 0.001 * points, source })
+            entity.attribute.addModifier({ attribute: 'critRate', op: 'add', value: calculateSensibilityCritRateBonus(points), source })
             entity.attribute.addModifier({ attribute: 'critDmg', op: 'add', value: 0.01 * points, source })
             entity.attribute.addModifier({ attribute: 'forgingPrecision', op: 'add', value: 0.0015 * points, source })
         },
-        p => `감각 1 → 치명타율 +0.1%, 치명타 피해 +1%, 제련 정밀도 +0.15%\n현재 감각 ${p}: 치명타율 +${(0.1 * p).toFixed(1)}%, 치명타 피해 +${p}%, 제련 정밀도 +${(0.15 * p).toFixed(1)}%`
+        p => `감각 치명타율 → 낮은 구간에서 1당 최대 +0.1%p, 높을수록 효율 감소, 최대 +${(SENSIBILITY_CRIT_RATE_CAP * 100).toFixed(0)}%p\n현재 감각 ${p}: 치명타율 +${(calculateSensibilityCritRateBonus(p) * 100).toFixed(1)}%p, 치명타 피해 +${p}%, 제련 정밀도 +${(0.15 * p).toFixed(1)}%`
     )
 
     static readonly MENTALITY = new StatType('mentality', '정신력',
