@@ -321,3 +321,51 @@ defineShop({
     ],
     tags: [GameTags.SHOP_GENERAL],
 });
+
+defineShop({
+    id: 'glassdune_caravan_store',
+    buyList: [
+        {
+            label: '오아시스 대추야자',
+            create: () => ({ itemDataId: 'oasis_date', count: 1 }),
+            count: 1, price: 42, stock: 24, restockTime: 45,
+        },
+        {
+            label: '그늘 수통',
+            create: () => ({ itemDataId: 'shade_canteen', count: 1 }),
+            count: 1, price: 58, stock: 20, restockTime: 55,
+        },
+        {
+            label: '은이파리 해독제',
+            create: () => ({ itemDataId: 'forest_antidote', count: 1 }),
+            count: 1, price: 65, stock: 12, restockTime: 90,
+        },
+        {
+            label: '화살 30개',
+            create: () => ({ itemDataId: 'wooden_arrow', count: 30 }),
+            count: 30, price: 45, stock: 20, restockTime: 35,
+        },
+        ...[
+            ['모래맥 파검', 'dunebreaker_sword', 2_900],
+            ['태양사 장궁', 'sunwire_bow', 2_850],
+            ['신기루 독아', 'mirage_fang_dagger', 3_050],
+            ['태양유리 지팡이', 'helioglass_staff', 3_150],
+            ['태양거울 방패', 'sunmirror_shield', 3_000],
+        ].map(([label, itemDataId, price]) => ({
+            label: label as string,
+            create: () => ({ itemDataId: itemDataId as string, count: 1 }),
+            count: 1,
+            price: price as number,
+            stock: 1,
+            restockTime: 900,
+        })),
+    ],
+    sellList: [
+        { label: '유리모래', filter: item => item.itemDataId === 'glass_sand', count: 99, price: 12 },
+        { label: '황금갑 성충갑', filter: item => item.itemDataId === 'sunscarab_shell', count: 99, price: 28 },
+        { label: '모래전갈 독수', filter: item => item.itemDataId === 'dune_scorpion_venom', count: 99, price: 42 },
+        { label: '신기루 수정', filter: item => item.itemDataId === 'mirage_crystal', count: 99, price: 75 },
+        { label: '태양 문양 파편', filter: item => item.itemDataId === 'sun_glyph_fragment', count: 99, price: 110 },
+    ],
+    tags: [GameTags.SHOP_CARAVAN],
+});

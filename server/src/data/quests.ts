@@ -16,6 +16,10 @@ export const TWILIGHT_TOMB_QUEST_IDS = Object.freeze({
     RESTLESS_DEAD: 'twilight-tomb:restless-dead',
     BROKEN_OATH: 'twilight-tomb:broken-oath',
 } as const);
+export const GLASSDUNE_QUEST_IDS = Object.freeze({
+    CARAPACE_ROUTE: 'glassdune:carapace-route',
+    SILENCE_SUN_VAULT: 'glassdune:silence-sun-vault',
+} as const);
 
 defineQuest({
     id: FIRST_SLIME_HUNT_QUEST_ID,
@@ -100,6 +104,59 @@ defineQuest({
         QuestReward.exp(5_200),
         QuestReward.gold(780),
         QuestReward.item('gravekeeper_shield', 1, '묘문 수호방패'),
+    ],
+});
+
+defineQuest({
+    id: GLASSDUNE_QUEST_IDS.CARAPACE_ROUTE,
+    name: '황금갑으로 이은 길',
+    aliases: ['사막 성충갑', '대상단 의뢰'],
+    description: '유리모래 사막의 황금갑 성충을 사냥해 성충갑 6개를 모아 대상단 기록관에게 가져가세요.',
+    tags: ['quest:side', 'region:glassdune'],
+    giverNpcIds: ['glassdune_chronicler'],
+    turnInNpcIds: ['glassdune_chronicler'],
+    visible: player => player.level >= 70,
+    canAccept: player => player.level >= 70,
+    stages: [new QuestStage({
+        id: 'collect-carapace',
+        description: '유리모래 사해와 열기 능선에서 황금갑 태양충을 찾으세요.',
+        objectives: [QuestObjective.item('sunscarab-shell', '황금갑 성충갑 수집', 6, 'sunscarab_shell', true)],
+    })],
+    rewards: [
+        QuestReward.exp(8_000),
+        QuestReward.gold(1_250),
+        QuestReward.item('shade_canteen', 3, '그늘 수통'),
+        QuestReward.item('oasis_date', 4, '오아시스 대추야자'),
+    ],
+});
+
+defineQuest({
+    id: GLASSDUNE_QUEST_IDS.SILENCE_SUN_VAULT,
+    name: '빛을 먹는 유리거상',
+    aliases: ['태양고 거상', '유리거상'],
+    description: '태양거울 기둥을 먼저 파괴한 뒤 태양고의 유리거상을 멈추세요.',
+    tags: ['quest:side', 'quest:boss', 'region:glassdune'],
+    giverNpcIds: ['glassdune_chronicler'],
+    turnInNpcIds: ['glassdune_chronicler'],
+    prerequisiteQuestIds: [GLASSDUNE_QUEST_IDS.CARAPACE_ROUTE],
+    visible: player => player.level >= 100,
+    canAccept: player => player.level >= 100,
+    stages: [new QuestStage({
+        id: 'break-glass-colossus',
+        description: '태양고 내부의 거울 기둥을 정리하고 유리거상을 제압하세요.',
+        objectives: [QuestObjective.kill(
+            'sun-vault-colossus',
+            '태양고의 유리거상 처치',
+            1,
+            target => target.hasTag(GameTags.ENTITY_BOSS)
+                && target.hasTag(GameTags.PROPERTY_LIGHT)
+                && target.hasTag(GameTags.PROPERTY_STONE),
+        )],
+    })],
+    rewards: [
+        QuestReward.exp(18_000),
+        QuestReward.gold(3_200),
+        QuestReward.item('sunmirror_shield', 1, '태양거울 방패'),
     ],
 });
 

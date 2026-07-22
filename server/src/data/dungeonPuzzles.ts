@@ -20,6 +20,11 @@ export const TwilightTombPuzzleIds = Object.freeze({
     RIDDLE_FLAG: 'dungeon:twilight-tomb/crown-riddle-solved',
 } as const);
 
+export const GlassdunePuzzleIds = Object.freeze({
+    SUNDIAL: 'glassdune:shadowless-sundial',
+    SUNDIAL_FLAG: 'dungeon:glassdune/shadowless-sundial-solved',
+} as const);
+
 defineProgress({
     id: IronrootPuzzleIds.RIDDLE_FLAG,
     type: ProgressType.FLAG,
@@ -66,6 +71,29 @@ defineQuestionPuzzle({
     failureMessage: '왕관 문양의 눈구멍에서 찬바람이 새어 나오며 답을 거부합니다.',
 });
 
+defineProgress({
+    id: GlassdunePuzzleIds.SUNDIAL_FLAG,
+    type: ProgressType.FLAG,
+    label: '그림자 없는 해시계 해독',
+    description: '유리모래 사막의 해시계가 숨긴 오아시스를 가리키게 했습니다.',
+    visible: true,
+});
+
+defineQuestionPuzzle({
+    id: GlassdunePuzzleIds.SUNDIAL,
+    title: '그림자 없는 해시계',
+    prompt: '낮에는 내가 길을 가리키지만, 정오에는 사라진다. 해가 지면 내 대신 별이 길을 가리킨다. 나는 무엇인가?',
+    answers: ['그림자', '해의 그림자', '그늘'],
+    choices: [
+        { label: '그림자', answer: '그림자' },
+        { label: '모래바람', answer: '모래바람' },
+        { label: '신기루', answer: '신기루' },
+    ],
+    successFlag: GlassdunePuzzleIds.SUNDIAL_FLAG,
+    successMessage: '해시계의 바늘이 누워 멀리 숨은 오아시스로 이어지는 빛의 길을 그립니다.',
+    failureMessage: '모래 아래의 톱니바퀴만 돌아가고 해시계는 아무 길도 가리키지 않습니다.',
+});
+
 defineTeleportArtifact({
     id: IronrootPuzzleIds.RELAY_ARTIFACT,
     destinations: {
@@ -84,6 +112,9 @@ registerResourceInteraction('ironroot_relay_artifact', (_resource, player) =>
 registerResourceInteraction('twilight_tomb_riddle', (_resource, player) =>
     beginQuestionPuzzle(player, TwilightTombPuzzleIds.RIDDLE));
 
+registerResourceInteraction('glassdune_sundial_riddle', (_resource, player) =>
+    beginQuestionPuzzle(player, GlassdunePuzzleIds.SUNDIAL));
+
 registerConnectionCondition('ironroot_riddle_solved', player =>
     player.progress.getFlag(IronrootPuzzleIds.RIDDLE_FLAG)
         ? 'visible'
@@ -98,6 +129,11 @@ registerConnectionCondition('twilight_tomb_riddle_solved', player =>
     player.progress.getFlag(TwilightTombPuzzleIds.RIDDLE_FLAG)
         ? 'visible'
         : { status: 'locked', publicReason: '왕명을 새긴 석문의 해답 필요' });
+
+registerConnectionCondition('glassdune_sundial_solved', player =>
+    player.progress.getFlag(GlassdunePuzzleIds.SUNDIAL_FLAG)
+        ? 'visible'
+        : { status: 'locked', publicReason: '그림자 없는 해시계의 해답 필요' });
 
 // 지도 연결성은 유지하되 일반 이동·지도에는 노출하지 않고 유물 상호작용만 통과시킨다.
 registerConnectionCondition('ironroot_artifact_route', () => 'hidden');

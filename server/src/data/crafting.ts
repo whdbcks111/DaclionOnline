@@ -69,3 +69,56 @@ for (const recipe of [
         tags: recipe.tags,
     });
 }
+
+for (const recipe of [
+    {
+        id: 'glassdune:shade_canteen', result: 'shade_canteen', time: 3,
+        description: '유리모래로 수통 안감을 만들고 맑은 물을 담아 사막용 음료를 만듭니다.',
+        ingredients: [['glass_sand', 2], ['fresh_water', 1]],
+        tags: ['crafting:consumable', 'region:glassdune'],
+    },
+    {
+        id: 'glassdune:dunebreaker_sword', result: 'dunebreaker_sword', time: 10,
+        description: '제련된 철 사이에 유리모래를 접어 넣어 모래맥 파검을 만듭니다.',
+        ingredients: [['glass_sand', 8], ['refined_iron', 4], ['sun_glyph_fragment', 1]],
+        tags: ['crafting:weapon', 'region:glassdune'],
+    },
+    {
+        id: 'glassdune:sunwire_bow', result: 'sunwire_bow', time: 9,
+        description: '황금갑 성충갑을 가는 섬유로 풀어 화살의 비행을 잡는 태양사 장궁을 만듭니다.',
+        ingredients: [['sunscarab_shell', 6], ['silverweb_silk', 3], ['refined_gold', 2]],
+        tags: ['crafting:weapon', 'region:glassdune'],
+    },
+    {
+        id: 'glassdune:mirage_fang_dagger', result: 'mirage_fang_dagger', time: 9,
+        description: '신기루 수정을 단검 형태로 깨고 전갈 독을 결정 사이에 봉합니다.',
+        ingredients: [['mirage_crystal', 3], ['dune_scorpion_venom', 4], ['refined_iron', 2]],
+        tags: ['crafting:weapon', 'region:glassdune'],
+    },
+    {
+        id: 'glassdune:helioglass_staff', result: 'helioglass_staff', time: 11,
+        description: '신기루 수정과 태양 문양을 결합해 마력 굴절경을 가진 지팡이를 만듭니다.',
+        ingredients: [['mirage_crystal', 4], ['sun_glyph_fragment', 3], ['refined_gold', 2]],
+        tags: ['crafting:weapon', 'region:glassdune'],
+    },
+    {
+        id: 'glassdune:sunmirror_shield', result: 'sunmirror_shield', time: 12,
+        description: '성충갑과 태양 문양을 유리모래 판 위에 고정해 태양거울 방패를 만듭니다.',
+        ingredients: [['sunscarab_shell', 5], ['glass_sand', 7], ['sun_glyph_fragment', 2]],
+        tags: ['crafting:armor', 'region:glassdune'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});

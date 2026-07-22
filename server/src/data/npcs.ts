@@ -1,6 +1,6 @@
 import NPC, { Dialogue, DialogueScenario } from '../models/NPC.js';
 import { defineProgress, ProgressType } from '../models/Progress.js';
-import { FIRST_SLIME_HUNT_QUEST_ID, TWILIGHT_TOMB_QUEST_IDS } from './quests.js';
+import { FIRST_SLIME_HUNT_QUEST_ID, GLASSDUNE_QUEST_IDS, TWILIGHT_TOMB_QUEST_IDS } from './quests.js';
 import { CAREER_QUEST_IDS } from './quests.js';
 import { BLACKSMITH_APPRENTICESHIP_QUEST_ID } from './quests.js';
 import { JobSlotType, getAllJobs, JobTier } from '../models/Job.js';
@@ -150,6 +150,75 @@ NPC.define({
         }),
         new DialogueScenario('end', function* () {
             yield Dialogue.say('등불이 보이는 동안은 돌아올 길을 잃지 않을 거요.');
+            yield Dialogue.end();
+        }),
+    ],
+});
+
+NPC.define({
+    id: 'glassdune_chronicler',
+    name: '대상단 기록관 마온',
+    description: '유리모래 사막의 바람길과 신기루를 지도에 기록하는 대상단 기록관입니다.',
+    tags: ['npc:guide', 'npc:quest', 'region:glassdune'],
+    entryScenario: ({ player }) => {
+        if (player.quests.canTurnIn(GLASSDUNE_QUEST_IDS.SILENCE_SUN_VAULT, 'glassdune_chronicler')) return 'boss_complete';
+        if (player.quests.isActive(GLASSDUNE_QUEST_IDS.SILENCE_SUN_VAULT)) return 'boss_progress';
+        if (player.quests.canTurnIn(GLASSDUNE_QUEST_IDS.CARAPACE_ROUTE, 'glassdune_chronicler')) return 'carapace_complete';
+        if (player.quests.isActive(GLASSDUNE_QUEST_IDS.CARAPACE_ROUTE)) return 'carapace_progress';
+        if (player.quests.canAccept(GLASSDUNE_QUEST_IDS.SILENCE_SUN_VAULT, 'glassdune_chronicler')) return 'boss_offer';
+        return player.quests.canAccept(GLASSDUNE_QUEST_IDS.CARAPACE_ROUTE, 'glassdune_chronicler') ? 'greeting' : 'lore';
+    },
+    scenarios: [
+        new DialogueScenario('greeting', function* () {
+            yield Dialogue.say('이 사막은 모래가 아니라 잘게 쪼개진 유리로 움직이오. 황금갑 태양충의 등껑질이 있으면 바람길을 안전하게 표시할 수 있는데, 여섯 개를 구해 주겠소?');
+            yield Dialogue.choice([
+                { label: '성충갑을 모아 오겠습니다.', target: 'carapace_accept' },
+                { label: '사막의 길을 알려주세요.', target: 'lore' },
+                { label: '지금은 쉬겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('carapace_accept', function* () {
+            yield Dialogue.acceptQuest(GLASSDUNE_QUEST_IDS.CARAPACE_ROUTE);
+            yield Dialogue.say('황금갑 태양충은 사해와 열기 능선에 많소. 성충갑 여섯 개를 가져오면 식량과 물을 나누지.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('carapace_progress', function* ({ player }) {
+            const objective = player.quests.getSnapshot(GLASSDUNE_QUEST_IDS.CARAPACE_ROUTE)?.objectives[0];
+            yield Dialogue.say(`반사 표식을 만들려면 ${objective?.required ?? 6}개가 필요하오. 지금은 ${objective?.progress ?? 0}개군.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('carapace_complete', function* () {
+            yield Dialogue.say('이정도면 바람에도 반사광이 잘 보이겠군. 이제 당신도 태양고로 향하는 길을 잊지 않을 거요.');
+            yield Dialogue.turnInQuest(GLASSDUNE_QUEST_IDS.CARAPACE_ROUTE);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('boss_offer', function* () {
+            yield Dialogue.say('태양고의 유리거상이 다시 움직이기 시작했소. 거울 기둥이 하나라도 남아 있으면 빛이 상처를 되돌리니, 기둥부터 깨야 하오.');
+            yield Dialogue.choice([
+                { label: '태양고의 거상을 멈추겠습니다.', target: 'boss_accept' },
+                { label: '더 준비하겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('boss_accept', function* () {
+            yield Dialogue.acceptQuest(GLASSDUNE_QUEST_IDS.SILENCE_SUN_VAULT);
+            yield Dialogue.say('유리골을 지나면 태양고요. 석화의 태양안은 회피할 수 없으니 아이템으로 회복할 준비도 하시오.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('boss_progress', function* () {
+            yield Dialogue.say('거울 기둥 세 개를 먼저 깨시오. 기둥이 사라지면 유리거상에게 온전한 피해를 줄 수 있소.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('boss_complete', function* () {
+            yield Dialogue.say('태양고의 빛이 조용해졌군. 거상의 거울 파편으로 만든 이 방패를 받으시오.');
+            yield Dialogue.turnInQuest(GLASSDUNE_QUEST_IDS.SILENCE_SUN_VAULT);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('lore', function* () {
+            yield Dialogue.say('바람문을 넘어 사해에서 두 길로 나뉘오. 신기루길은 전갈여왕에게, 잠긴 열주로는 해시계에게 이어지지. 해시계의 답을 찾으면 숨은 오아시스도 드러난다오.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('그늘이 짧아지면 길도 짧게 잡으시오.');
             yield Dialogue.end();
         }),
     ],

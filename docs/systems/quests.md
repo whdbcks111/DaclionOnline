@@ -67,6 +67,8 @@ GameEvent + Inventory/Progress 변경
 
 황혼왕릉의 `꺼지지 않는 장송행렬`은 Lv.28부터 `property:undead` 대상 8기를 추적한다. 완료 뒤 Lv.45부터 선행 퀘스트가 필요한 `왕좌를 훔친 맹세`가 열리며, 개별 구현 ID 대신 `entity:boss + property:undead + property:metal` 조합으로 타락한 기사왕을 판정한다. 두 퀘스트는 마지막 묘지기 이벤에게 수락·보고하고 향약·골드·경험치와 지역 방패를 보상한다.
 
+유리모래 사막의 `갑각으로 찾는 길`은 태양갑각 6개를 실제 제출하며, 완료 뒤 `태양고의 침묵`이 열린다. 두 번째 퀘스트는 `entity:boss + property:light + property:stone` 조합으로 태양고 거신 제압을 추적한다. 둘 모두 대상단 기록관 마온에게 수락·보고하며 경험치·골드·생존품과 태양거울 방패를 보상한다.
+
 ## 추가 체크리스트
 
 1. `data/quests.ts`에 stable ID와 단계/목표/보상을 정의한다.

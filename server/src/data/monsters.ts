@@ -636,6 +636,155 @@ const twilightTombMonsters: readonly WorldMonsterData[] = [
 
 for (const monster of twilightTombMonsters) defineWorldMonster(monster);
 
+const glassduneMonsters: readonly WorldMonsterData[] = [
+    {
+        id: 'glassdune_skitterer', name: '유리모래 종종걸이',
+        description: '뜨거운 모래 아래를 수영하듯 달리다 유리 파편으로 발목을 베는 사막 벌레.', level: 70,
+        baseAttribute: { maxLife: 2_850, atk: 212, def: 118, magicDef: 82, speed: 3.15, attackSpeed: 1.38 },
+        drops: [
+            { itemDataId: 'glass_sand', minCount: 1, maxCount: 3, chance: 0.62 },
+            { itemDataId: 'sunscarab_shell', minCount: 1, maxCount: 1, chance: 0.14 },
+        ],
+        goldReward: { min: 168, max: 295 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.18, duration: 7, level: 4 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_INSECT, GameTags.PROPERTY_EARTH, GameTags.PROPERTY_STONE],
+    },
+    {
+        id: 'sunscarab', name: '황금갑 태양충',
+        description: '태양빛을 등껑질에 모았다 한번에 터뜨리는 금빛 성충.', level: 74,
+        baseAttribute: { maxLife: 3_450, atk: 218, magicForce: 232, def: 152, magicDef: 125, speed: 2.15 },
+        drops: [
+            { itemDataId: 'sunscarab_shell', minCount: 1, maxCount: 3, chance: 0.58 },
+            { itemDataId: 'glass_sand', minCount: 1, maxCount: 2, chance: 0.34 },
+        ],
+        goldReward: { min: 182, max: 318 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'sun_fever', chance: 0.2, duration: 8, level: 3 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_INSECT, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_FIRE],
+    },
+    {
+        id: 'mirage_jackal', name: '신기루 자칼',
+        description: '열기에 비친 잔상을 실제 몸처럼 바꾸며 약해진 대상의 사각을 파고든다.', level: 78,
+        baseAttribute: { maxLife: 3_720, atk: 248, magicForce: 220, def: 112, magicDef: 138, armorPen: 18, speed: 3.85, attackSpeed: 1.42, critRate: 0.13 },
+        drops: [{ itemDataId: 'mirage_crystal', minCount: 1, maxCount: 2, chance: 0.22 }],
+        goldReward: { min: 198, max: 342 },
+        attack: { effect: { statusEffectId: 'curse', chance: 0.22, duration: 9, level: 4 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_NATURAL],
+    },
+    {
+        id: 'dune_scorpion_queen', name: '황사 전갈여왕',
+        description: '유리모래 아래 독수 호수를 지키는 필드 보스. 끝없이 독침을 쏟아내며 치유와 제어를 사용한 적을 먼저 노린다.', level: 82,
+        baseAttribute: {
+            maxLife: 23_500, atk: 265, magicForce: 248, def: 168, magicDef: 146,
+            armorPen: 24, speed: 2.35, attackSpeed: 0.82, critRate: 0.11, critDmg: 1.7,
+        },
+        expReward: 82 * 20 * 6,
+        drops: [
+            { itemDataId: 'dune_scorpion_venom', minCount: 3, maxCount: 6, chance: 0.9 },
+            { itemDataId: 'mirage_crystal', minCount: 1, maxCount: 3, chance: 0.55 },
+            { itemDataId: 'mirage_fang_dagger', minCount: 1, maxCount: 1, chance: 0.035 },
+            { itemDataId: 'sunwire_bow', minCount: 1, maxCount: 1, chance: 0.025 },
+        ],
+        goldReward: { min: 330, max: 560 },
+        attack: { effect: { statusEffectId: 'deadly_poison', chance: 0.34, duration: 10, level: 5 } },
+        skills: [
+            { skillDataId: 'dune_venom_barrage', level: 3 },
+            { skillDataId: 'seismic_crush', level: 3 },
+        ],
+        skillPattern: {
+            sequence: ['dune_venom_barrage', 'seismic_crush'], randomOrder: true,
+            initialDelay: 4, interval: { min: 7, max: 10 },
+        },
+        ai: {
+            intelligence: 79, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.3, damage: 1, healing: 1.35, shielding: 0.9, control: 1.25, taunt: 2 },
+            tauntResistance: 0.6, switchThreshold: 0.2,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_BEAST, GameTags.PROPERTY_INSECT, GameTags.PROPERTY_POISON, GameTags.PROPERTY_EARTH],
+    },
+    {
+        id: 'salt_husk', name: '소금바람 건시',
+        description: '오래전 사막을 건너던 순례자가 소금과 모래에 굳어 남은 것.', level: 86,
+        baseAttribute: { maxLife: 4_850, atk: 272, magicForce: 258, def: 166, magicDef: 155, speed: 1.45, attackSpeed: 0.88 },
+        drops: [
+            { itemDataId: 'glass_sand', minCount: 2, maxCount: 4, chance: 0.46 },
+            { itemDataId: 'sun_glyph_fragment', minCount: 1, maxCount: 1, chance: 0.12 },
+        ],
+        goldReward: { min: 218, max: 375 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'curse', chance: 0.24, duration: 9, level: 5 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_EARTH, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'sun_shard_elemental', name: '태양파편 정령',
+        description: '태양 문양의 파편에 낮의 열기가 깃들어 떠다니는 마력체.', level: 91,
+        baseAttribute: { maxLife: 5_150, atk: 260, magicForce: 305, def: 142, magicDef: 184, magicPen: 20, speed: 2.75, attackSpeed: 1.14 },
+        drops: [
+            { itemDataId: 'sun_glyph_fragment', minCount: 1, maxCount: 2, chance: 0.38 },
+            { itemDataId: 'mirage_crystal', minCount: 1, maxCount: 1, chance: 0.18 },
+        ],
+        goldReward: { min: 242, max: 410 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'sun_fever', chance: 0.28, duration: 10, level: 5 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'glass_canyon_basilisk', name: '유리골 바실리스크',
+        description: '눈을 마주친 생명체의 피부를 유리질 갑피로 굳히는 협곡의 포식자.', level: 97,
+        baseAttribute: { maxLife: 6_150, atk: 318, magicForce: 292, def: 198, magicDef: 158, armorPen: 25, speed: 2.45, attackSpeed: 1.02 },
+        drops: [
+            { itemDataId: 'glass_sand', minCount: 3, maxCount: 5, chance: 0.65 },
+            { itemDataId: 'mirage_crystal', minCount: 1, maxCount: 2, chance: 0.26 },
+        ],
+        goldReward: { min: 268, max: 452 },
+        attack: { effect: { statusEffectId: 'petrification', chance: 0.14, duration: 2.5, level: 4 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_STONE, GameTags.PROPERTY_EARTH],
+    },
+    {
+        id: 'solar_vault_sentinel', name: '태양고 금면수호자',
+        description: '반사경에 새긴 태양 문양만을 따라 침입자를 재단하는 고대 금속 인형.', level: 103,
+        baseAttribute: { maxLife: 7_250, atk: 335, magicForce: 328, def: 225, magicDef: 214, armorPen: 28, magicPen: 24, speed: 1.65, attackSpeed: 0.92 },
+        drops: [
+            { itemDataId: 'sun_glyph_fragment', minCount: 1, maxCount: 3, chance: 0.54 },
+            { itemDataId: 'sunscarab_shell', minCount: 1, maxCount: 2, chance: 0.24 },
+        ],
+        goldReward: { min: 292, max: 495 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'sun_fever', chance: 0.25, duration: 11, level: 6 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_FIRE],
+    },
+    {
+        id: 'sun_vault_colossus', name: '태양고의 유리거상',
+        description: '태양거울 기둥에서 빛을 공급받는 사막의 관문 보스. 기둥이 남아 있으면 받는 피해가 70% 감소하며 석화와 열병을 무작위로 겹친다.', level: 110,
+        baseAttribute: {
+            maxLife: 43_000, atk: 352, magicForce: 388, def: 238, magicDef: 248,
+            armorPen: 30, magicPen: 34, speed: 1.25, attackSpeed: 0.58, critRate: 0.12, critDmg: 1.75,
+        },
+        expReward: 110 * 20 * 6,
+        drops: [
+            { itemDataId: 'sun_glyph_fragment', minCount: 4, maxCount: 7, chance: 0.92 },
+            { itemDataId: 'mirage_crystal', minCount: 2, maxCount: 4, chance: 0.68 },
+            { itemDataId: 'helioglass_staff', minCount: 1, maxCount: 1, chance: 0.035 },
+            { itemDataId: 'sunmirror_shield', minCount: 1, maxCount: 1, chance: 0.035 },
+            { itemDataId: 'dunebreaker_sword', minCount: 1, maxCount: 1, chance: 0.025 },
+        ],
+        goldReward: { min: 470, max: 790 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'sun_fever', chance: 0.36, duration: 13, level: 7 } },
+        skills: [
+            { skillDataId: 'petrifying_sun_gaze', level: 4 },
+            { skillDataId: 'sun_vault_flare', level: 4 },
+        ],
+        skillPattern: {
+            sequence: ['petrifying_sun_gaze', 'sun_vault_flare'], randomOrder: true,
+            initialDelay: 4, interval: { min: 7, max: 10 },
+        },
+        ai: {
+            intelligence: 91, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.2, damage: 1, healing: 1.45, shielding: 1.15, control: 1.4, taunt: 2.6 },
+            tauntResistance: 0.82, switchThreshold: 0.25, decayPerSecond: 0.007,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_STONE, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_LIGHT],
+    },
+];
+
+for (const monster of glassduneMonsters) defineWorldMonster(monster);
+
 const advancedWorldMonsters: WorldMonsterData[] = [
     {
         id: 'spark_moth', name: '섬광나방', description: '폭풍 전류를 날개에 모아 번쩍이며 달려드는 거대 곤충.', level: 52,

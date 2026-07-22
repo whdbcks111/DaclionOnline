@@ -2394,6 +2394,24 @@ for (const skill of [
         statusEffectId: 'deadly_poison', statusDuration: 7, activationHeader: 'venom_blade',
     },
     {
+        id: 'dune_venom_barrage', name: '독모래 일제사', icon: 'affinities/poison', damageType: 'physical' as const,
+        attribute: AttributeType.ATK, baseMultiplier: 1.45, perLevelMultiplier: 0.14,
+        castTime: 1.1, cooldown: 8, propertyTag: GameTags.PROPERTY_POISON,
+        statusEffectId: 'deadly_poison', statusDuration: 9, activationHeader: 'venom_blade',
+    },
+    {
+        id: 'petrifying_sun_gaze', name: '석화의 태양안', icon: 'affinities/stone', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.35, perLevelMultiplier: 0.12,
+        castTime: 1.65, cooldown: 11, propertyTag: GameTags.PROPERTY_STONE,
+        statusEffectId: 'petrification', statusDuration: 3, unavoidable: true, activationHeader: 'sanctum_judgment',
+    },
+    {
+        id: 'sun_vault_flare', name: '태양고 섬광', icon: 'affinities/fire', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.55, perLevelMultiplier: 0.15,
+        castTime: 1.35, cooldown: 9, propertyTag: GameTags.PROPERTY_FIRE,
+        statusEffectId: 'sun_fever', statusDuration: 12, activationHeader: 'fireball',
+    },
+    {
         id: 'caldera_eruption', name: '칼데라 분출', icon: 'affinities/fire', damageType: 'magic' as const,
         attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.4, perLevelMultiplier: 0.12,
         castTime: 1.6, cooldown: 9, propertyTag: GameTags.PROPERTY_FIRE, statusEffectId: 'fire', statusDuration: 10,

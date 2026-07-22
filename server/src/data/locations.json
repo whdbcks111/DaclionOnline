@@ -763,7 +763,8 @@
       { "locationId": "conductor_ridge" },
       { "locationId": "storm_nest" },
       { "locationId": "lightning_spur" },
-      { "locationId": "nightwood_edge", "condition": "level_70" }
+      { "locationId": "nightwood_edge", "condition": "level_70" },
+      { "locationId": "glassdune_border", "condition": "level_70" }
     ]
   },
   {
@@ -854,7 +855,8 @@
     ],
     "connections": [
       { "locationId": "dawn_border" },
-      { "locationId": "dawn_sanctum" }
+      { "locationId": "dawn_sanctum" },
+      { "locationId": "glassdune_glass_canyon" }
     ]
   },
   {
@@ -1362,6 +1364,207 @@
     ],
     "connections": [
       { "locationId": "twilight_crown_hall" }
+    ]
+  },
+  {
+    "id": "glassdune_border",
+    "name": "유리모래 사막 1 바람문",
+    "mapColor": "#756344",
+    "zoneType": "neutral",
+    "x": 1085,
+    "y": -175,
+    "z": 92,
+    "tags": ["location:wilderness", "location:desert", "property:earth", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "glassdune_skitterer", "maxCount": 3, "respawnTime": 72 },
+      { "type": "monster", "dataId": "sunscarab", "maxCount": 1, "respawnTime": 78 }
+    ],
+    "connections": [
+      { "locationId": "tempest_peak" },
+      { "locationId": "glassdune_caravan" },
+      { "locationId": "glassdune_sea" }
+    ]
+  },
+  {
+    "id": "glassdune_caravan",
+    "name": "유리모래 오아시스 대상단",
+    "mapColor": "#756344",
+    "zoneType": "safe",
+    "x": 1030,
+    "y": -250,
+    "z": 84,
+    "shopId": "glassdune_caravan_store",
+    "mapIcon": "general-shop",
+    "tags": ["location:safe", "location:shop", "location:desert", "property:water", "property:natural"],
+    "npcIds": ["glassdune_chronicler"],
+    "objects": [
+      { "type": "resource", "dataId": "oasis_date_palm", "maxCount": 2, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "glassdune_border" }
+    ]
+  },
+  {
+    "id": "glassdune_sea",
+    "name": "유리모래 사막 2 빛나는 사해",
+    "mapColor": "#756344",
+    "zoneType": "neutral",
+    "x": 1170,
+    "y": -180,
+    "z": 76,
+    "tags": ["location:wilderness", "location:desert", "property:earth", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "glassdune_skitterer", "maxCount": 3, "respawnTime": 72 },
+      { "type": "monster", "dataId": "sunscarab", "maxCount": 2, "respawnTime": 78 },
+      { "type": "resource", "dataId": "glass_sand_vein", "maxCount": 2, "respawnTime": 150 }
+    ],
+    "connections": [
+      { "locationId": "glassdune_border" },
+      { "locationId": "glassdune_mirage_path" },
+      { "locationId": "glassdune_sunken_colonnade" }
+    ]
+  },
+  {
+    "id": "glassdune_mirage_path",
+    "name": "유리모래 신기루길",
+    "mapColor": "#756344",
+    "zoneType": "hostile",
+    "x": 1235,
+    "y": -255,
+    "z": 62,
+    "tags": ["location:wilderness", "location:desert", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "mirage_jackal", "maxCount": 3, "respawnTime": 82 },
+      { "type": "resource", "dataId": "glass_sand_vein", "maxCount": 1, "respawnTime": 155 }
+    ],
+    "connections": [
+      { "locationId": "glassdune_sea" },
+      { "locationId": "glassdune_scorpion_nest" },
+      { "locationId": "glassdune_observatory" }
+    ]
+  },
+  {
+    "id": "glassdune_sunken_colonnade",
+    "name": "유리모래 잠긴 열주로",
+    "mapColor": "#756344",
+    "zoneType": "hostile",
+    "x": 1235,
+    "y": -105,
+    "z": 48,
+    "tags": ["location:wilderness", "location:desert", "location:ruins", "property:undead", "property:earth"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "salt_husk", "maxCount": 2, "respawnTime": 88 },
+      { "type": "monster", "dataId": "sun_shard_elemental", "maxCount": 1, "respawnTime": 92 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "glassdune_sea" },
+      { "locationId": "glassdune_scorpion_nest" },
+      { "locationId": "glassdune_observatory" }
+    ]
+  },
+  {
+    "id": "glassdune_scorpion_nest",
+    "name": "유리모래 황사 독수굴",
+    "mapColor": "#756344",
+    "zoneType": "hostile",
+    "x": 1320,
+    "y": -285,
+    "z": 34,
+    "tags": ["location:wilderness", "location:desert", "location:cave", "property:poison", "property:insect"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "glassdune_skitterer", "maxCount": 2, "respawnTime": 74 },
+      { "type": "monster", "dataId": "dune_scorpion_queen", "maxCount": 1, "respawnTime": 480 }
+    ],
+    "connections": [
+      { "locationId": "glassdune_mirage_path" },
+      { "locationId": "glassdune_sunken_colonnade" },
+      { "locationId": "glassdune_observatory" }
+    ]
+  },
+  {
+    "id": "glassdune_observatory",
+    "name": "유리모래 3 그림자 관측소",
+    "mapColor": "#756344",
+    "zoneType": "neutral",
+    "x": 1320,
+    "y": -180,
+    "z": 46,
+    "tags": ["location:wilderness", "location:desert", "location:ruins", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "sun_shard_elemental", "maxCount": 2, "respawnTime": 92 },
+      { "type": "resource", "dataId": "glassdune_sundial", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "glassdune_mirage_path" },
+      { "locationId": "glassdune_sunken_colonnade" },
+      { "locationId": "glassdune_scorpion_nest" },
+      { "locationId": "glassdune_glass_canyon" },
+      { "locationId": "glassdune_hidden_oasis", "condition": "glassdune_sundial_solved" }
+    ]
+  },
+  {
+    "id": "glassdune_glass_canyon",
+    "name": "유리모래 유리골 협곡",
+    "mapColor": "#756344",
+    "zoneType": "hostile",
+    "x": 1395,
+    "y": -105,
+    "z": 58,
+    "tags": ["location:wilderness", "location:desert", "property:stone", "property:earth"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "glass_canyon_basilisk", "maxCount": 2, "respawnTime": 98 },
+      { "type": "monster", "dataId": "solar_vault_sentinel", "maxCount": 1, "respawnTime": 105 },
+      { "type": "resource", "dataId": "glass_sand_vein", "maxCount": 2, "respawnTime": 165 }
+    ],
+    "connections": [
+      { "locationId": "glassdune_observatory" },
+      { "locationId": "glassdune_sun_vault" },
+      { "locationId": "dawn_cloister", "condition": "level_90" }
+    ]
+  },
+  {
+    "id": "glassdune_sun_vault",
+    "name": "유리모래 태양고",
+    "mapColor": "#756344",
+    "zoneType": "hostile",
+    "x": 1470,
+    "y": -175,
+    "z": 40,
+    "tags": ["location:wilderness", "location:desert", "location:dungeon", "property:fire", "property:light", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "solar_vault_sentinel", "maxCount": 2, "respawnTime": 105 },
+      { "type": "monster", "dataId": "sun_vault_colossus", "maxCount": 1, "respawnTime": 660 },
+      { "type": "resource", "dataId": "sun_mirror_pillar", "maxCount": 3, "respawnTime": 660 }
+    ],
+    "connections": [
+      { "locationId": "glassdune_glass_canyon" }
+    ]
+  },
+  {
+    "id": "glassdune_hidden_oasis",
+    "name": "유리모래 숨은 별빛 오아시스",
+    "mapColor": "#756344",
+    "zoneType": "neutral",
+    "x": 1400,
+    "y": -265,
+    "z": 28,
+    "tags": ["location:wilderness", "location:desert", "property:water", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "oasis_date_palm", "maxCount": 3, "respawnTime": 0 },
+      { "type": "resource", "dataId": "glassdune_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "glassdune_observatory" }
     ]
   }
 ]

@@ -1041,6 +1041,186 @@ defineItem({
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });
 
+// TODO(icons): 유리모래 사막 전용 아트 제작 전까지 존재하는 광물·보석 카테고리 아이콘을 재사용한다.
+for (const material of [
+    {
+        id: 'glass_sand', name: '유리모래', image: 'items/stone', weight: 0.35,
+        description: '낮의 열기에 녹았다 밤의 냉기에 깨진 사막의 유리 알갱이.',
+        tags: [GameTags.MATERIAL_GLASS, GameTags.PROPERTY_STONE],
+    },
+    {
+        id: 'sunscarab_shell', name: '황금갑 성충갑', image: 'items/gold_ore', weight: 0.55,
+        description: '태양빛을 반사하는 두꺼운 성충 등껑질. 방어구와 활장식에 쓴다.',
+        tags: [GameTags.PROPERTY_INSECT, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'dune_scorpion_venom', name: '모래전갈 독수', image: 'items/ruby', weight: 0.25,
+        description: '모래 전갈이 충격에 맞춰 결정화한 독. 맹독 조합과 단검 제작에 쓴다.',
+        tags: [GameTags.PROPERTY_POISON],
+    },
+    {
+        id: 'mirage_crystal', name: '신기루 수정', image: 'items/diamond', weight: 0.4,
+        description: '사막의 빛과 그림자를 함께 굴절시키는 투명한 수정.',
+        tags: [GameTags.MATERIAL_GLASS, GameTags.MATERIAL_DIAMOND, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'sun_glyph_fragment', name: '태양 문양 파편', image: 'items/refined_gold', weight: 0.45,
+        description: '태양의 고 내부에서 떼어낸 금속 파편. 뜨거운 마력이 흐른다.',
+        tags: [GameTags.MATERIAL_GOLD, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_LIGHT],
+    },
+] as const) defineItem({
+    id: material.id,
+    name: material.name,
+    description: material.description,
+    image: material.image,
+    category: '사막 소재',
+    weight: material.weight,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [...material.tags],
+});
+
+defineItem({
+    id: 'oasis_date',
+    name: '오아시스 대추야자',
+    description: '대상단이 머나먼 사막길을 건널 때 챙기는 달콤한 열매. 배고픔을 45 회복한다.',
+    image: 'items/traveler_bread',
+    category: '음식',
+    weight: 0.2,
+    stackable: true,
+    maxStack: 30,
+    baseMetadata: { hunger: 45, thirst: 5, time: 1, useMessage: '대추야자를 먹는 중...' },
+    onUse: 'restore_survival',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_NATURAL],
+});
+
+defineItem({
+    id: 'shade_canteen',
+    name: '그늘 수통',
+    description: '기화 열을 낮추는 유리모래 안감을 대어 두어 시원한 물. 수분을 70 회복한다.',
+    image: 'items/fresh_water',
+    category: '음료',
+    weight: 0.65,
+    stackable: true,
+    maxStack: 20,
+    baseMetadata: { hunger: 0, thirst: 70, time: 1, useMessage: '그늘 수통의 물을 마시는 중...' },
+    onUse: 'restore_survival',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER],
+});
+
+// TODO(icons): 사막 장비는 전용 아트 전까지 같은 무기 종류의 기존 아이콘을 폴백으로 사용한다.
+defineItem({
+    id: 'dunebreaker_sword',
+    name: '모래맥 파검',
+    description: '유리모래를 겹겹이 접어 만든 넓은 장검. 단단한 갑주와 모래바위를 같이 가른다.',
+    image: 'items/windsteel_sword', category: '장검', weight: 3.7, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 70, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 14, source: '' },
+    ],
+    baseDurability: 290,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_GLASS, GameTags.PROPERTY_EARTH],
+    onBasicAttackHit: ({ target }) => {
+        const fever = StatusEffectType.fromKey('sun_fever');
+        if (fever && Math.random() < 0.16) target.applyStatusEffect(fever, 7, 3);
+    },
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+});
+
+defineItem({
+    id: 'sunwire_bow',
+    name: '태양사 장궁',
+    description: '황금갑 섬유를 꼬아 화살의 비행을 안정시킨 장궁. 투사체 가속이 25% 증가한다.',
+    image: 'items/stormstring_bow', category: '활', weight: 2.45, stackable: false, maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 58, source: '' },
+        { attribute: 'critRate', op: 'add', value: 0.06, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.25, source: '' },
+    ],
+    baseDurability: 275,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.PROPERTY_LIGHT],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+});
+
+defineItem({
+    id: 'mirage_fang_dagger',
+    name: '신기루 독아',
+    description: '빛을 굴절시켜 칼날의 끝을 숨기는 독단검. 적중 시 22% 확률로 8초간 쇠약의 저주를 남긴다.',
+    image: 'items/nightglass_dagger', category: '단검', weight: 1.45, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 62, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 18, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.12, source: '' },
+    ],
+    baseDurability: 245,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.PROPERTY_POISON, GameTags.PROPERTY_DARK],
+    onBasicAttackHit: ({ target }) => {
+        const curse = StatusEffectType.fromKey('curse');
+        if (curse && Math.random() < 0.22) target.applyStatusEffect(curse, 8, 4);
+    },
+    balance: {
+        role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'],
+        notes: ['쇠약의 저주 효과는 기본 DPS와 분리해 평가합니다.'],
+    },
+});
+
+defineItem({
+    id: 'helioglass_staff',
+    name: '태양유리 지팡이',
+    description: '태양의 고에서 회수한 굴절경으로 마력을 압축하는 지팡이.',
+    image: 'items/starwood_staff', category: '지팡이', weight: 2.7, stackable: false, maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: {
+            projectile: { dataId: 'basic_magic_orb', overrides: { tags: [GameTags.PROPERTY_FIRE, GameTags.PROPERTY_LIGHT] } },
+        },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'magicForce', op: 'add', value: 76, source: '' },
+        { attribute: 'mentalityRegen', op: 'add', value: 4, source: '' },
+        { attribute: 'magicPen', op: 'add', value: 12, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.22, source: '' },
+    ],
+    baseDurability: 285,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_GLASS, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_LIGHT],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+});
+
+defineItem({
+    id: 'sunmirror_shield',
+    name: '태양거울 방패',
+    description: '태양의 고를 지키던 거울 기둥을 작게 다듬은 방패. 물리 충격과 마법 열기를 고르게 흘린다.',
+    image: 'items/forged_shield', category: '방패', weight: 3.6, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'offHand',
+    modifiers: [
+        { attribute: 'def', op: 'add', value: 22, source: '' },
+        { attribute: 'magicDef', op: 'add', value: 24, source: '' },
+        { attribute: 'maxLife', op: 'add', value: 280, source: '' },
+    ],
+    baseDurability: 330,
+    tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_GLASS, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_STONE],
+    balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
+});
+
 defineItem({
     id: 'ember_ore',
     name: '화맥 광석',

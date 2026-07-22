@@ -154,6 +154,7 @@ registerHazardBossPattern({
 
 const CRYSTAL_PROTECTION_SOURCE = 'boss:ironroot:resonance-crystals';
 const SILVERWEB_BROOD_PROTECTION_SOURCE = 'boss:silverweb:egg-clusters';
+const SUN_MIRROR_PROTECTION_SOURCE = 'boss:glassdune:sun-mirrors';
 
 registerLocationPassive('silverweb_queen_nest', location => {
     const protectedByBrood = location.getActiveResourceCount('silverweb_egg_cluster') > 0;
@@ -171,6 +172,14 @@ registerLocationPassive('ironroot_crystal_sanctum', location => {
     }
 });
 
+registerLocationPassive('glassdune_sun_vault', location => {
+    const protectedByMirrors = location.getActiveResourceCount('sun_mirror_pillar') > 0;
+    for (const boss of location.getMonstersByDataId('sun_vault_colossus')) {
+        if (protectedByMirrors) boss.setDamageReceivedModifier(SUN_MIRROR_PROTECTION_SOURCE, 0.3);
+        else boss.removeDamageReceivedModifier(SUN_MIRROR_PROTECTION_SOURCE);
+    }
+});
+
 /** 테스트·운영 진단에서 수정 보호가 적용됐는지 같은 계산식으로 확인한다. */
 export function getIronrootCrystalProtectionMultiplier(locationId = 'ironroot_crystal_sanctum'): number {
     return (getLocation(locationId)?.getActiveResourceCount('ironroot_resonance_crystal') ?? 0) > 0 ? 0.15 : 1;
@@ -179,4 +188,9 @@ export function getIronrootCrystalProtectionMultiplier(locationId = 'ironroot_cr
 /** 알주머니를 먼저 제거해야 여왕의 35% 피해 경감이 해제되는지 진단한다. */
 export function getSilverwebBroodProtectionMultiplier(locationId = 'silverweb_queen_nest'): number {
     return (getLocation(locationId)?.getActiveResourceCount('silverweb_egg_cluster') ?? 0) > 0 ? 0.65 : 1;
+}
+
+/** 태양거울 기둥이 하나라도 남아 있을 때 거상의 70% 피해 감소가 유지되는지 확인한다. */
+export function getGlassduneMirrorProtectionMultiplier(locationId = 'glassdune_sun_vault'): number {
+    return (getLocation(locationId)?.getActiveResourceCount('sun_mirror_pillar') ?? 0) > 0 ? 0.3 : 1;
 }

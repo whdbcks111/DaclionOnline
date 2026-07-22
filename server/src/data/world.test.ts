@@ -22,10 +22,16 @@ import './bossPatterns.js';
 import './shops.js';
 import './fishing.js';
 import './crafting.js';
-import { rollLabyrinthCacheReward, rollTreasureReward, rollTwilightReliquaryReward } from './resources.js';
+import {
+    rollGlassduneReliquaryReward,
+    rollLabyrinthCacheReward,
+    rollTreasureReward,
+    rollTwilightReliquaryReward,
+} from './resources.js';
 import { MonsterAiDisposition } from '../models/Threat.js';
 import {
     getIronrootCrystalProtectionMultiplier,
+    getGlassduneMirrorProtectionMultiplier,
     getSilverwebBroodProtectionMultiplier,
 } from './bossPatterns.js';
 import { GameTags } from '../../../shared/tags.js';
@@ -36,7 +42,7 @@ const locations = JSON.parse(
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, 70);
+    assert.equal(locations.length, 80);
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -64,7 +70,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 7, neutral: 27, hostile: 36 },
+        { safe: 8, neutral: 31, hostile: 41 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -73,7 +79,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     assert.ok(locations.every(location => /^#[0-9a-f]{6}$/i.test(location.mapColor ?? '')));
     assert.deepEqual(
         locations.filter(location => location.mapIcon).map(location => location.mapIcon).sort(),
-        ['general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
+        ['general-shop', 'general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
     );
     for (const icon of new Set(locations.flatMap(location => location.mapIcon ? [location.mapIcon] : []))) {
         const png = readFileSync(new URL(`../../../client/public/icons/map/${icon}.png`, import.meta.url));
@@ -143,6 +149,9 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
         ['twilight_memorial_road', 'twilight_lantern_camp', 'twilight_tomb_gate',
             'twilight_bone_gallery', 'twilight_knight_crypt', 'twilight_whisper_catacomb',
             'twilight_crown_hall', 'twilight_oath_hall', 'twilight_secret_ossuary'],
+        ['glassdune_border', 'glassdune_caravan', 'glassdune_sea', 'glassdune_mirage_path',
+            'glassdune_sunken_colonnade', 'glassdune_scorpion_nest', 'glassdune_observatory',
+            'glassdune_glass_canyon', 'glassdune_sun_vault', 'glassdune_hidden_oasis'],
     ];
 
     for (const ids of regions) {
@@ -295,6 +304,61 @@ test('황혼왕릉은 두 왕좌·질문문·유물함·상점·연속 퀘스트
     assert.equal(recipes.length, 5);
     assert.equal(quests.length, 2);
     assert.equal(NPC.getNpc('twilight_keeper')?.name, '마지막 묘지기 이벤');
+});
+
+test('유리모래 사막은 분기·필드 보스·해시계·거울 기둥·대상단 경제를 연결한다', () => {
+    const region = locations.filter(location => location.id.startsWith('glassdune_'));
+    const scorpionQueen = getMonsterData('dune_scorpion_queen');
+    const colossus = getMonsterData('sun_vault_colossus');
+    const store = getShop('glassdune_caravan_store');
+    const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('glassdune:'));
+    const quests = getAllQuestData().filter(quest => quest.id.startsWith('glassdune:'));
+
+    assert.equal(region.length, 10);
+    assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
+    assert.ok(region.every(location => location.tags.includes('location:desert')));
+    assert.equal(scorpionQueen?.level, 82);
+    assert.equal(colossus?.level, 110);
+    assert.ok(scorpionQueen?.skillPattern?.randomOrder);
+    assert.deepEqual(colossus?.skillPattern?.sequence, ['petrifying_sun_gaze', 'sun_vault_flare']);
+    assert.ok((colossus?.ai?.tauntResistance ?? 0) >= 0.8);
+
+    const sea = locations.find(location => location.id === 'glassdune_sea');
+    const observatory = locations.find(location => location.id === 'glassdune_observatory');
+    const canyon = locations.find(location => location.id === 'glassdune_glass_canyon');
+    assert.ok(sea?.connections.some(connection => connection.locationId === 'glassdune_mirage_path'));
+    assert.ok(sea?.connections.some(connection => connection.locationId === 'glassdune_sunken_colonnade'));
+    assert.ok(observatory?.connections.some(connection => connection.condition === 'glassdune_sundial_solved'));
+    assert.ok(canyon?.connections.some(connection => connection.locationId === 'dawn_cloister'));
+    assert.deepEqual(getResourceData('glassdune_reliquary')?.interactionCooldown, {
+        min: 3 * 60 * 60,
+        max: 5 * 60 * 60,
+    });
+    assert.equal(rollGlassduneReliquaryReward(() => 0).itemDataId, 'shade_canteen');
+    assert.equal(rollGlassduneReliquaryReward(() => 0.999).itemDataId, 'sunmirror_shield');
+
+    for (const itemId of [
+        'dunebreaker_sword', 'sunwire_bow', 'mirage_fang_dagger', 'helioglass_staff', 'sunmirror_shield',
+    ]) {
+        assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === itemId), itemId);
+        assert.ok(getItemData(itemId)?.balance, `${itemId} balance`);
+    }
+    assert.equal(recipes.length, 6);
+    assert.equal(quests.length, 2);
+    assert.equal(NPC.getNpc('glassdune_chronicler')?.name, '대상단 기록관 마온');
+
+    reloadAllLocations(locations);
+    const vault = getLocation('glassdune_sun_vault');
+    vault?.update(0.05);
+    const boss = vault?.getMonstersByDataId('sun_vault_colossus')[0];
+    assert.equal(getGlassduneMirrorProtectionMultiplier(), 0.3);
+    assert.equal(boss?.getDamageReceivedModifier(), 0.3);
+    for (const mirror of vault?.getResourcesByDataId('sun_mirror_pillar') ?? []) {
+        mirror.damage(mirror.maxLife, 'absolute', { type: 'void', causeEntity: null, fixedDamage: true });
+    }
+    vault?.update(0.05);
+    assert.equal(getGlassduneMirrorProtectionMultiplier(), 1);
+    assert.equal(boss?.getDamageReceivedModifier(), 1);
 });
 
 test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {

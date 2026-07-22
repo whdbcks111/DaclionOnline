@@ -111,10 +111,30 @@ const TWILIGHT_RELIQUARY_REWARDS = Object.freeze([
     { itemDataId: 'gravekeeper_shield', count: 1, weight: 4 },
 ]);
 
+const GLASSDUNE_RELIQUARY_REWARDS = Object.freeze([
+    { itemDataId: 'shade_canteen', count: 3, weight: 26 },
+    { itemDataId: 'glass_sand', count: 8, weight: 20 },
+    { itemDataId: 'sunscarab_shell', count: 5, weight: 16 },
+    { itemDataId: 'mirage_crystal', count: 3, weight: 14 },
+    { itemDataId: 'sun_glyph_fragment', count: 2, weight: 12 },
+    { itemDataId: 'dunebreaker_sword', count: 1, weight: 2.4 },
+    { itemDataId: 'sunwire_bow', count: 1, weight: 2.4 },
+    { itemDataId: 'mirage_fang_dagger', count: 1, weight: 2.4 },
+    { itemDataId: 'helioglass_staff', count: 1, weight: 2.4 },
+    { itemDataId: 'sunmirror_shield', count: 1, weight: 2.4 },
+]);
+
 export function rollTwilightReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
     let cursor = random() * TWILIGHT_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = TWILIGHT_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
         ?? TWILIGHT_RELIQUARY_REWARDS[0];
+    return { itemDataId: reward.itemDataId, count: reward.count };
+}
+
+export function rollGlassduneReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
+    let cursor = random() * GLASSDUNE_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
+    const reward = GLASSDUNE_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
+        ?? GLASSDUNE_RELIQUARY_REWARDS[0];
     return { itemDataId: reward.itemDataId, count: reward.count };
 }
 
@@ -153,6 +173,41 @@ registerResourceInteraction('open_twilight_reliquary', (_resource, player) => {
         .color('purple', builder => builder.weight('bold', nested => nested.text('[ 황혼왕릉의 유물 ]')))
         .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
         .build());
+    return true;
+});
+
+registerResourceInteraction('open_glassdune_reliquary', (_resource, player) => {
+    const reward = rollGlassduneReliquaryReward();
+    if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'glassdune-reliquary-full',
+            message: '태양고의 유물을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem(reward.itemDataId, reward.count);
+    const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
+    sendBotMessageToUser(player.userId, chat()
+        .color('gold', builder => builder.weight('bold', nested => nested.text('[ 태양고의 유물 ]')))
+        .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
+        .build());
+    return true;
+});
+
+registerResourceInteraction('harvest_oasis_palm', (_resource, player) => {
+    const count = randomInt({ min: 2, max: 4 }, Math.random);
+    if (!player.inventory.canAdd('oasis_date', count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'oasis-palm-full',
+            message: '대추야자를 담을 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem('oasis_date', count);
+    sendNotificationToUser(player.userId, {
+        key: 'oasis-palm-harvested',
+        message: `오아시스 대추야자 ${count}개를 따냈습니다.`,
+    });
     return true;
 });
 
@@ -284,6 +339,77 @@ defineResource({
     attackable: false,
     interactionCooldown: { min: 4 * 60 * 60, max: 6 * 60 * 60 },
     tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_GOLD, GameTags.PROPERTY_DARK],
+});
+
+defineResource({
+    id: 'glass_sand_vein',
+    name: '굳은 유리모래맥',
+    level: 78,
+    baseAttribute: { maxLife: 3_800, def: 148, magicDef: 118 },
+    requiredToolTags: [GameTags.TOOL_MINING],
+    drops: [
+        { itemDataId: 'glass_sand', weight: 72, minCount: 2, maxCount: 5 },
+        { itemDataId: 'mirage_crystal', weight: 22, minCount: 1, maxCount: 2 },
+        { itemDataId: 'sun_glyph_fragment', weight: 6, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 1_450, max: 2_050 },
+    interaction: 'inspect_ore',
+    tags: [GameTags.RESOURCE_ORE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_GLASS, GameTags.PROPERTY_STONE],
+});
+
+defineResource({
+    id: 'sun_mirror_pillar',
+    name: '태양거울 기둥',
+    level: 104,
+    baseAttribute: { maxLife: 5_800, def: 195, magicDef: 145 },
+    requiredToolTags: [],
+    drops: [
+        { itemDataId: 'sun_glyph_fragment', weight: 65, minCount: 1, maxCount: 2 },
+        { itemDataId: 'mirage_crystal', weight: 35, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 1_800, max: 2_500 },
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_GLASS, GameTags.MATERIAL_GOLD, GameTags.PROPERTY_LIGHT],
+});
+
+defineResource({
+    id: 'glassdune_sundial',
+    name: '그림자 없는 해시계',
+    level: 84,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [],
+    drops: [],
+    expReward: { min: 0, max: 0 },
+    interaction: 'glassdune_sundial_riddle',
+    attackable: false,
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_STONE, GameTags.PROPERTY_LIGHT],
+});
+
+defineResource({
+    id: 'glassdune_reliquary',
+    name: '태양고 반사경 유물함',
+    level: 100,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [],
+    drops: [],
+    expReward: { min: 0, max: 0 },
+    interaction: 'open_glassdune_reliquary',
+    attackable: false,
+    interactionCooldown: { min: 3 * 60 * 60, max: 5 * 60 * 60 },
+    tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_GLASS, GameTags.PROPERTY_LIGHT],
+});
+
+defineResource({
+    id: 'oasis_date_palm',
+    name: '오아시스 대추야자나무',
+    level: 70,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [],
+    drops: [],
+    expReward: { min: 0, max: 0 },
+    interaction: 'harvest_oasis_palm',
+    attackable: false,
+    interactionCooldown: { min: 30 * 60, max: 45 * 60 },
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_WOOD, GameTags.PROPERTY_NATURAL],
 });
 
 defineResource({
