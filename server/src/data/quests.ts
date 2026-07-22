@@ -24,6 +24,10 @@ export const FROSTVEIL_QUEST_IDS = Object.freeze({
     WINTER_SUPPLY: 'frostveil:winter-supply',
     BREAK_FROZEN_THRONE: 'frostveil:break-frozen-throne',
 } as const);
+export const MISTTIDE_QUEST_IDS = Object.freeze({
+    REPAIR_SALT_BEACON: 'misttide:repair-salt-beacon',
+    END_DROWNED_COMMAND: 'misttide:end-drowned-command',
+} as const);
 
 defineQuest({
     id: FIRST_SLIME_HUNT_QUEST_ID,
@@ -215,6 +219,66 @@ defineQuest({
         QuestReward.gold(6_800),
         QuestReward.item('auroraprism_staff', 1, '극광분광 지팡이'),
         QuestReward.item('aurora_recovery_draught', 3, '극광 회복약'),
+    ],
+});
+
+defineQuest({
+    id: MISTTIDE_QUEST_IDS.REPAIR_SALT_BEACON,
+    name: '안개를 가르는 염등',
+    aliases: ['염등 수리', '해안 보급'],
+    description: '안개파도 해안의 흑산호 8개를 모아 염등 항구의 항로지기에게 가져가세요.',
+    tags: ['quest:side', 'region:misttide'],
+    giverNpcIds: ['misttide_navigator'],
+    turnInNpcIds: ['misttide_navigator'],
+    visible: player => player.level >= 150,
+    canAccept: player => player.level >= 150,
+    stages: [new QuestStage({
+        id: 'gather-black-coral',
+        description: '난파 해변과 흑산호 암초에서 흑산호를 모으세요.',
+        objectives: [QuestObjective.item('black-coral', '흑산호 수집', 8, 'black_coral', true)],
+    })],
+    rewards: [
+        QuestReward.exp(38_000),
+        QuestReward.gold(6_200),
+        QuestReward.item('brine_trail_ration', 5, '염풍 행군식'),
+        QuestReward.item('seafoam_tonic', 3, '해포말 영약'),
+    ],
+});
+
+defineQuest({
+    id: MISTTIDE_QUEST_IDS.END_DROWNED_COMMAND,
+    name: '가라앉지 않은 마지막 명령',
+    aliases: ['침몰제독', '세이렌과 제독'],
+    description: '해안의 해무 세이렌 군주와 침몰왕도의 제독 아르켄을 쓰러뜨려 끊어진 항로를 되찾으세요.',
+    tags: ['quest:side', 'quest:boss', 'region:misttide'],
+    giverNpcIds: ['misttide_navigator'],
+    turnInNpcIds: ['misttide_navigator'],
+    prerequisiteQuestIds: [MISTTIDE_QUEST_IDS.REPAIR_SALT_BEACON],
+    visible: player => player.level >= 170,
+    canAccept: player => player.level >= 170,
+    stages: [new QuestStage({
+        id: 'silence-siren-and-admiral',
+        description: '세이렌 원형암초와 가라앉은 함대왕좌의 두 지휘자를 제압하세요.',
+        objectives: [
+            QuestObjective.kill(
+                'siren-matriarch',
+                '해무 세이렌 군주 처치',
+                1,
+                target => target.hasTag('monster:mist-siren-matriarch'),
+            ),
+            QuestObjective.kill(
+                'drowned-admiral',
+                '침몰제독 아르켄 처치',
+                1,
+                target => target.hasTag('monster:drowned-admiral'),
+            ),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(68_000),
+        QuestReward.gold(10_500),
+        QuestReward.item('drowned_admiral_shield', 1, '침몰제독 방패'),
+        QuestReward.item('tideheart_draught', 4, '조류심장 회복약'),
     ],
 });
 

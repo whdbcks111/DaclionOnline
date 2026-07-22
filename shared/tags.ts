@@ -72,6 +72,7 @@ export const GameTags = Object.freeze({
     MATERIAL_EMBER: 'material:ember',
     MATERIAL_GLASS: 'material:glass',
     MATERIAL_RIME: 'material:rime',
+    MATERIAL_CORAL: 'material:coral',
     MATERIAL_ENHANCEMENT_STONE: 'material:enhancement_stone',
     MATERIAL_REFINED: 'material:refined',
 
@@ -110,6 +111,8 @@ export const GameTags = Object.freeze({
     LOCATION_VOLCANIC: 'location:volcanic',
     LOCATION_DESERT: 'location:desert',
     LOCATION_FROZEN: 'location:frozen',
+    LOCATION_COAST: 'location:coast',
+    LOCATION_SUBMERGED: 'location:submerged',
     LOCATION_HIDDEN: 'location:hidden',
     LOCATION_FISHING: 'location:fishing',
     SHOP_GENERAL: 'shop:general',
@@ -118,6 +121,7 @@ export const GameTags = Object.freeze({
     SHOP_HUNTER: 'shop:hunter',
     SHOP_CARAVAN: 'shop:caravan',
     SHOP_FROST: 'shop:frost',
+    SHOP_TIDAL: 'shop:tidal',
 } satisfies Record<string, TagId>)
 
 const TAG_PATTERN = /^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9/._-]*$/

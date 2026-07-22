@@ -137,6 +137,20 @@ const FROSTVEIL_RELIQUARY_REWARDS = Object.freeze([
     { itemDataId: 'frostglass_bulwark', count: 1, weight: 3.2 },
 ]);
 
+const MISTTIDE_RELIQUARY_REWARDS = Object.freeze([
+    { itemDataId: 'brine_trail_ration', count: 5, weight: 20 },
+    { itemDataId: 'seafoam_tonic', count: 3, weight: 16 },
+    { itemDataId: 'black_coral', count: 7, weight: 16 },
+    { itemDataId: 'abyssal_iron', count: 5, weight: 14 },
+    { itemDataId: 'tide_pearl', count: 4, weight: 12 },
+    { itemDataId: 'leviathan_bone', count: 3, weight: 10 },
+    { itemDataId: 'tidebreaker_sword', count: 1, weight: 2.4 },
+    { itemDataId: 'mistcurrent_bow', count: 1, weight: 2.4 },
+    { itemDataId: 'blackcoral_sting', count: 1, weight: 2.4 },
+    { itemDataId: 'deeppearl_staff', count: 1, weight: 2.4 },
+    { itemDataId: 'drowned_admiral_shield', count: 1, weight: 2.4 },
+]);
+
 export function rollTwilightReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
     let cursor = random() * TWILIGHT_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = TWILIGHT_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
@@ -155,6 +169,13 @@ export function rollFrostveilReliquaryReward(random = Math.random): { itemDataId
     let cursor = random() * FROSTVEIL_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = FROSTVEIL_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
         ?? FROSTVEIL_RELIQUARY_REWARDS[0];
+    return { itemDataId: reward.itemDataId, count: reward.count };
+}
+
+export function rollMisttideReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
+    let cursor = random() * MISTTIDE_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
+    const reward = MISTTIDE_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
+        ?? MISTTIDE_RELIQUARY_REWARDS[0];
     return { itemDataId: reward.itemDataId, count: reward.count };
 }
 
@@ -232,6 +253,24 @@ registerResourceInteraction('open_frostveil_reliquary', (_resource, player) => {
     return true;
 });
 
+registerResourceInteraction('open_misttide_reliquary', (_resource, player) => {
+    const reward = rollMisttideReliquaryReward();
+    if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'misttide-reliquary-full',
+            message: '침몰왕도의 유물을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem(reward.itemDataId, reward.count);
+    const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
+    sendBotMessageToUser(player.userId, chat()
+        .color('aqua', builder => builder.weight('bold', nested => nested.text('[ 침몰왕도의 유산 ]')))
+        .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
+        .build());
+    return true;
+});
+
 registerResourceInteraction('harvest_oasis_palm', (_resource, player) => {
     const count = randomInt({ min: 2, max: 4 }, Math.random);
     if (!player.inventory.canAdd('oasis_date', count)) {
@@ -262,6 +301,23 @@ registerResourceInteraction('harvest_snowmoss', (_resource, player) => {
     sendNotificationToUser(player.userId, {
         key: 'snowmoss-harvested',
         message: `눈 아래에서 눈솔이끼 ${count}개를 채집했습니다.`,
+    });
+    return true;
+});
+
+registerResourceInteraction('harvest_kelp_resin', (_resource, player) => {
+    const count = randomInt({ min: 2, max: 5 }, Math.random);
+    if (!player.inventory.canAdd('kelp_resin', count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'kelp-resin-full',
+            message: '청해초 수지를 담을 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem('kelp_resin', count);
+    sendNotificationToUser(player.userId, {
+        key: 'kelp-resin-harvested',
+        message: `청해초 줄기에서 수지 ${count}개를 채집했습니다.`,
     });
     return true;
 });
@@ -499,6 +555,54 @@ defineResource({
     interaction: 'open_frostveil_reliquary', attackable: false,
     interactionCooldown: { min: 4 * 60 * 60, max: 6 * 60 * 60 },
     tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_LIGHT],
+});
+
+defineResource({
+    id: 'black_coral_outcrop',
+    name: '흑산호 암초',
+    level: 162,
+    baseAttribute: { maxLife: 11_500, def: 385, magicDef: 335 },
+    requiredToolTags: [GameTags.TOOL_MINING],
+    drops: [
+        { itemDataId: 'black_coral', weight: 58, minCount: 1, maxCount: 3 },
+        { itemDataId: 'mist_salt', weight: 24, minCount: 2, maxCount: 5 },
+        { itemDataId: 'abyssal_iron', weight: 13, minCount: 1, maxCount: 2 },
+        { itemDataId: 'tide_pearl', weight: 5, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 2_600, max: 3_600 },
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_STONE],
+});
+
+defineResource({
+    id: 'kelp_resin_patch',
+    name: '청해초 군락',
+    level: 158,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'harvest_kelp_resin', attackable: false,
+    interactionCooldown: { min: 40 * 60, max: 60 * 60 },
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_NATURAL],
+});
+
+defineResource({
+    id: 'misttide_clock',
+    name: '멈춘 조류시계',
+    level: 170,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'misttide_clock_riddle', attackable: false,
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_METAL],
+});
+
+defineResource({
+    id: 'misttide_reliquary',
+    name: '침몰왕도 항해 유물함',
+    level: 178,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'open_misttide_reliquary', attackable: false,
+    interactionCooldown: { min: 5 * 60 * 60, max: 7 * 60 * 60 },
+    tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_UNDEAD],
 });
 
 defineResource({

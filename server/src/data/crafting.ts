@@ -125,6 +125,71 @@ for (const recipe of [
 
 for (const recipe of [
     {
+        id: 'misttide:brine_trail_ration', result: 'brine_trail_ration', time: 4,
+        description: '여행자 빵과 말린 식재료에 해무 소금을 더해 오래 보관되는 염풍 행군식을 만듭니다.',
+        ingredients: [['mist_salt', 3], ['traveler_bread', 1], ['fresh_water', 1]],
+        tags: ['crafting:consumable', 'region:misttide'],
+    },
+    {
+        id: 'misttide:seafoam_tonic', result: 'seafoam_tonic', time: 5,
+        description: '해무 소금과 청해초 수지를 정신력 물약에 안정시켜 해포말 영약을 만듭니다.',
+        ingredients: [['mist_salt', 3], ['kelp_resin', 3], ['mana_potion', 1]],
+        tags: ['crafting:consumable', 'region:misttide'],
+    },
+    {
+        id: 'misttide:tideheart_draught', result: 'tideheart_draught', time: 6,
+        description: '조류진주의 박동을 청해초 수지로 붙잡아 조류심장 회복약을 만듭니다.',
+        ingredients: [['tide_pearl', 2], ['kelp_resin', 4], ['health_potion', 1]],
+        tags: ['crafting:consumable', 'region:misttide'],
+    },
+    {
+        id: 'misttide:tidebreaker_sword', result: 'tidebreaker_sword', time: 14,
+        description: '심해철과 침수 군단 휘장을 겹쳐 파도를 가르는 파식 조류검을 만듭니다.',
+        ingredients: [['abyssal_iron', 8], ['drowned_insignia', 5], ['black_coral', 4]],
+        tags: ['crafting:weapon', 'region:misttide'],
+    },
+    {
+        id: 'misttide:mistcurrent_bow', result: 'mistcurrent_bow', time: 13,
+        description: '해무비늘을 청해초 수지로 겹쳐 화살의 흔들림을 지우는 해무 조류궁을 만듭니다.',
+        ingredients: [['siren_scale', 7], ['kelp_resin', 6], ['tide_pearl', 3]],
+        tags: ['crafting:weapon', 'region:misttide'],
+    },
+    {
+        id: 'misttide:blackcoral_sting', result: 'blackcoral_sting', time: 12,
+        description: '흑산호를 얇은 날로 갈아 심해철 자루에 고정해 흑산호 침을 만듭니다.',
+        ingredients: [['black_coral', 9], ['abyssal_iron', 4], ['kelp_resin', 3]],
+        tags: ['crafting:weapon', 'region:misttide'],
+    },
+    {
+        id: 'misttide:deeppearl_staff', result: 'deeppearl_staff', time: 15,
+        description: '조류진주와 해수룡 골편을 결합해 심해의 마력을 압축하는 지팡이를 만듭니다.',
+        ingredients: [['tide_pearl', 7], ['leviathan_bone', 5], ['siren_scale', 5]],
+        tags: ['crafting:weapon', 'region:misttide'],
+    },
+    {
+        id: 'misttide:drowned_admiral_shield', result: 'drowned_admiral_shield', time: 16,
+        description: '해수룡 골편과 심해철을 침수 군단 휘장으로 묶어 침몰제독 방패를 만듭니다.',
+        ingredients: [['leviathan_bone', 8], ['abyssal_iron', 9], ['drowned_insignia', 7]],
+        tags: ['crafting:armor', 'region:misttide'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
         id: 'frostveil:frostward_tonic', result: 'frostward_tonic', time: 4,
         description: '눈솔이끼와 상고 수정을 맑은 물에 달여 상고막이 영약을 만듭니다.',
         ingredients: [['snowmoss', 3], ['rime_crystal', 1], ['fresh_water', 1]],

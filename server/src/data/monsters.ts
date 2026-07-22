@@ -949,6 +949,183 @@ const frostveilMonsters: readonly WorldMonsterData[] = [
 
 for (const monster of frostveilMonsters) defineWorldMonster(monster);
 
+const misttideMonsters: readonly WorldMonsterData[] = [
+    {
+        id: 'saltplate_crab', name: '염갑 바위게',
+        description: '해무 소금과 검은 산호가 등껍질에 굳어 작은 성벽처럼 된 해안 갑각류.', level: 156,
+        baseAttribute: { maxLife: 18_600, atk: 515, def: 388, magicDef: 275, armorPen: 32, speed: 1.05, attackSpeed: 0.72 },
+        drops: [
+            { itemDataId: 'mist_salt', minCount: 2, maxCount: 5, chance: 0.64 },
+            { itemDataId: 'black_coral', minCount: 1, maxCount: 2, chance: 0.28 },
+        ],
+        goldReward: { min: 490, max: 810 },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_WATER, GameTags.PROPERTY_STONE],
+    },
+    {
+        id: 'fogwing_ray', name: '해무날개 가오리',
+        description: '젖은 안개 사이를 날아다니며 그림자처럼 내려앉는 바다 마력체.', level: 159,
+        baseAttribute: { maxLife: 15_800, atk: 468, magicForce: 525, def: 270, magicDef: 345, magicPen: 38, speed: 3.1, attackSpeed: 1.25 },
+        drops: [
+            { itemDataId: 'mist_salt', minCount: 1, maxCount: 3, chance: 0.45 },
+            { itemDataId: 'tide_pearl', minCount: 1, maxCount: 1, chance: 0.13 },
+        ],
+        goldReward: { min: 505, max: 835 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'blindness', chance: 0.2, duration: 4, level: 7 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'kelp_stalker', name: '청해초 추적자',
+        description: '떠다니는 해초처럼 위장했다가 수지 덩굴로 발목을 묶는 연안 포식자.', level: 162,
+        baseAttribute: { maxLife: 17_900, atk: 530, magicForce: 498, def: 315, magicDef: 330, speed: 2.2, attackSpeed: 1.02 },
+        drops: [
+            { itemDataId: 'kelp_resin', minCount: 1, maxCount: 4, chance: 0.62 },
+            { itemDataId: 'siren_scale', minCount: 1, maxCount: 1, chance: 0.12 },
+        ],
+        goldReward: { min: 520, max: 860 },
+        attack: { effect: { statusEffectId: 'bind', chance: 0.22, duration: 3, level: 7 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_WATER, GameTags.PROPERTY_NATURAL],
+    },
+    {
+        id: 'wreck_diver_revenant', name: '난파 잠수망자',
+        description: '부서진 항구에서 마지막 인양 명령을 반복하는 녹슨 잠수복의 망자.', level: 165,
+        baseAttribute: { maxLife: 20_400, atk: 558, def: 382, magicDef: 325, armorPen: 40, speed: 1.45, attackSpeed: 0.82 },
+        drops: [
+            { itemDataId: 'drowned_insignia', minCount: 1, maxCount: 3, chance: 0.5 },
+            { itemDataId: 'abyssal_iron', minCount: 1, maxCount: 2, chance: 0.3 },
+        ],
+        goldReward: { min: 540, max: 895 },
+        attack: { effect: { statusEffectId: 'decay', chance: 0.26, duration: 10, level: 8 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
+    },
+    {
+        id: 'blackcoral_golem', name: '흑산호 수호체',
+        description: '침몰왕도의 벽을 덮은 흑산호가 수압과 명령 마력에 뭉쳐진 수호체.', level: 168,
+        baseAttribute: { maxLife: 25_800, atk: 585, def: 465, magicDef: 340, armorPen: 44, speed: 0.9, attackSpeed: 0.58 },
+        drops: [
+            { itemDataId: 'black_coral', minCount: 2, maxCount: 5, chance: 0.68 },
+            { itemDataId: 'leviathan_bone', minCount: 1, maxCount: 2, chance: 0.2 },
+        ],
+        goldReward: { min: 560, max: 925 },
+        attack: { effect: { statusEffectId: 'slowness', chance: 0.28, duration: 8, level: 8 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_WATER, GameTags.PROPERTY_STONE],
+    },
+    {
+        id: 'mist_siren_cantor', name: '해무 세이렌 창가',
+        description: '안개 속에서 여러 방향으로 노래를 반사해 사냥감의 판단을 흐리는 세이렌.', level: 169,
+        baseAttribute: { maxLife: 18_500, atk: 475, magicForce: 590, def: 295, magicDef: 390, magicPen: 44, speed: 2.45, attackSpeed: 1 },
+        drops: [
+            { itemDataId: 'siren_scale', minCount: 1, maxCount: 3, chance: 0.58 },
+            { itemDataId: 'tide_pearl', minCount: 1, maxCount: 2, chance: 0.2 },
+        ],
+        goldReward: { min: 570, max: 945 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'charm', chance: 0.22, duration: 3, level: 8 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'mist_siren_matriarch', name: '해무 세이렌 군주',
+        description: '노래와 역조로 암초만 전체를 사냥터로 바꾼 필드 보스. 치유와 제어를 사용하는 대상을 합창의 중심으로 삼는다.', level: 171,
+        baseAttribute: {
+            maxLife: 93_000, atk: 525, magicForce: 655, def: 365, magicDef: 425,
+            magicPen: 52, speed: 2.4, attackSpeed: 0.76, critRate: 0.14, critDmg: 1.8,
+        },
+        expReward: 171 * 20 * 6,
+        drops: [
+            { itemDataId: 'siren_scale', minCount: 5, maxCount: 9, chance: 0.92 },
+            { itemDataId: 'tide_pearl', minCount: 2, maxCount: 5, chance: 0.64 },
+            { itemDataId: 'mistcurrent_bow', minCount: 1, maxCount: 1, chance: 0.035 },
+            { itemDataId: 'siren_wave_skillbook', minCount: 1, maxCount: 1, chance: 0.025 },
+        ],
+        goldReward: { min: 880, max: 1_420 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'charm', chance: 0.3, duration: 3.5, level: 9 } },
+        skills: [
+            { skillDataId: 'siren_fog_chorus', level: 5 },
+            { skillDataId: 'undertow_silence', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['siren_fog_chorus', 'undertow_silence'], randomOrder: true,
+            initialDelay: 4, interval: { min: 7, max: 10 },
+        },
+        ai: {
+            intelligence: 88, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.18, damage: 1.05, healing: 1.55, shielding: 1.15, control: 1.5, taunt: 2.45 },
+            tauntResistance: 0.76, switchThreshold: 0.23,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT, 'monster:mist-siren-matriarch'],
+    },
+    {
+        id: 'deepwater_sentinel', name: '심수 성문수호자',
+        description: '침수된 성문의 수압을 방패처럼 끌어와 통로를 막는 고대 수호병.', level: 174,
+        baseAttribute: { maxLife: 23_800, atk: 610, magicForce: 540, def: 420, magicDef: 380, armorPen: 48, speed: 1.25, attackSpeed: 0.72 },
+        drops: [
+            { itemDataId: 'abyssal_iron', minCount: 1, maxCount: 4, chance: 0.58 },
+            { itemDataId: 'drowned_insignia', minCount: 1, maxCount: 3, chance: 0.42 },
+        ],
+        goldReward: { min: 595, max: 985 },
+        attack: { effect: { statusEffectId: 'defense_reduction', chance: 0.25, duration: 9, level: 8 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
+    },
+    {
+        id: 'drowned_archivist', name: '침수 기록술사',
+        description: '젖어 지워진 왕국 기록을 망자의 기억으로 다시 쓰는 침몰왕도의 술사.', level: 178,
+        baseAttribute: { maxLife: 20_700, atk: 505, magicForce: 645, def: 325, magicDef: 430, magicPen: 50, speed: 1.9, attackSpeed: 0.9 },
+        drops: [
+            { itemDataId: 'drowned_insignia', minCount: 2, maxCount: 4, chance: 0.55 },
+            { itemDataId: 'tide_pearl', minCount: 1, maxCount: 3, chance: 0.34 },
+        ],
+        goldReward: { min: 620, max: 1_025 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'silence', chance: 0.25, duration: 4, level: 8 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_WATER, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'abyssal_knight', name: '심연 닻기사',
+        description: '심해철 닻을 끌며 도망치는 침입자를 바닥에 고정하는 침수 군단의 기사.', level: 182,
+        baseAttribute: { maxLife: 25_400, atk: 675, def: 438, magicDef: 392, armorPen: 56, speed: 1.55, attackSpeed: 0.76, critRate: 0.11 },
+        drops: [
+            { itemDataId: 'abyssal_iron', minCount: 2, maxCount: 5, chance: 0.62 },
+            { itemDataId: 'leviathan_bone', minCount: 1, maxCount: 3, chance: 0.35 },
+        ],
+        goldReward: { min: 650, max: 1_075 },
+        attack: { effect: { statusEffectId: 'bind', chance: 0.28, duration: 3.5, level: 9 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
+    },
+    {
+        id: 'drowned_admiral', name: '침몰제독 아르켄',
+        description: '왕도가 가라앉은 뒤에도 함대 명령을 끝내지 않은 군주. 도발에 거의 흔들리지 않고 치유·보호·제어의 중심을 노린다.', level: 186,
+        baseAttribute: {
+            maxLife: 128_000, atk: 720, magicForce: 655, def: 455, magicDef: 445,
+            armorPen: 62, magicPen: 54, speed: 1.55, attackSpeed: 0.64, critRate: 0.15, critDmg: 1.85,
+        },
+        expReward: 186 * 20 * 7,
+        drops: [
+            { itemDataId: 'drowned_insignia', minCount: 6, maxCount: 10, chance: 0.95 },
+            { itemDataId: 'abyssal_iron', minCount: 5, maxCount: 9, chance: 0.82 },
+            { itemDataId: 'leviathan_bone', minCount: 3, maxCount: 6, chance: 0.62 },
+            { itemDataId: 'tidebreaker_sword', minCount: 1, maxCount: 1, chance: 0.035 },
+            { itemDataId: 'drowned_admiral_shield', minCount: 1, maxCount: 1, chance: 0.03 },
+            { itemDataId: 'abyss_anchor_skillbook', minCount: 1, maxCount: 1, chance: 0.022 },
+        ],
+        goldReward: { min: 1_050, max: 1_700 },
+        attack: { effect: { statusEffectId: 'decay', chance: 0.34, duration: 12, level: 10 } },
+        skills: [
+            { skillDataId: 'admiral_abyss_anchor', level: 5 },
+            { skillDataId: 'drowned_fleet_command', level: 5 },
+            { skillDataId: 'undertow_silence', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['admiral_abyss_anchor', 'drowned_fleet_command', 'undertow_silence'], randomOrder: true,
+            initialDelay: 4, interval: { min: 6, max: 9 },
+        },
+        ai: {
+            intelligence: 97, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.1, damage: 1, healing: 1.75, shielding: 1.5, control: 1.65, taunt: 3.2 },
+            tauntResistance: 0.9, switchThreshold: 0.3, decayPerSecond: 0.006,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER, 'monster:drowned-admiral'],
+    },
+];
+
+for (const monster of misttideMonsters) defineWorldMonster(monster);
+
 const advancedWorldMonsters: WorldMonsterData[] = [
     {
         id: 'spark_moth', name: '섬광나방', description: '폭풍 전류를 날개에 모아 번쩍이며 달려드는 거대 곤충.', level: 52,

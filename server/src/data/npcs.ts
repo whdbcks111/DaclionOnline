@@ -4,6 +4,7 @@ import {
     FIRST_SLIME_HUNT_QUEST_ID,
     FROSTVEIL_QUEST_IDS,
     GLASSDUNE_QUEST_IDS,
+    MISTTIDE_QUEST_IDS,
     TWILIGHT_TOMB_QUEST_IDS,
 } from './quests.js';
 import { CAREER_QUEST_IDS } from './quests.js';
@@ -293,6 +294,78 @@ NPC.define({
         }),
         new DialogueScenario('end', function* () {
             yield Dialogue.say('눈보라 속에서는 발자국보다 바람이 끊기는 곳을 보시오.');
+            yield Dialogue.end();
+        }),
+    ],
+});
+
+NPC.define({
+    id: 'misttide_navigator',
+    name: '염등 항로지기 소마',
+    description: '안개 속 항로를 밝히는 염등을 지키며 침몰왕도의 조류를 기록하는 항로지기입니다.',
+    tags: ['npc:guide', 'npc:quest', 'region:misttide'],
+    entryScenario: ({ player }) => {
+        if (player.quests.canTurnIn(MISTTIDE_QUEST_IDS.END_DROWNED_COMMAND, 'misttide_navigator')) return 'boss_complete';
+        if (player.quests.isActive(MISTTIDE_QUEST_IDS.END_DROWNED_COMMAND)) return 'boss_progress';
+        if (player.quests.canTurnIn(MISTTIDE_QUEST_IDS.REPAIR_SALT_BEACON, 'misttide_navigator')) return 'beacon_complete';
+        if (player.quests.isActive(MISTTIDE_QUEST_IDS.REPAIR_SALT_BEACON)) return 'beacon_progress';
+        if (player.quests.canAccept(MISTTIDE_QUEST_IDS.END_DROWNED_COMMAND, 'misttide_navigator')) return 'boss_offer';
+        return player.quests.canAccept(MISTTIDE_QUEST_IDS.REPAIR_SALT_BEACON, 'misttide_navigator') ? 'greeting' : 'lore';
+    },
+    scenarios: [
+        new DialogueScenario('greeting', function* () {
+            yield Dialogue.say('염등의 유리가 안개와 소금에 깎여 빛이 멀리 닿지 않아요. 흑산호 여덟 조각이면 등잔 테두리를 다시 세울 수 있는데, 구해 주실래요?');
+            yield Dialogue.choice([
+                { label: '흑산호를 모아 오겠습니다.', target: 'beacon_accept' },
+                { label: '해안의 항로를 알려주세요.', target: 'lore' },
+                { label: '지금은 쉬겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('beacon_accept', function* () {
+            yield Dialogue.acceptQuest(MISTTIDE_QUEST_IDS.REPAIR_SALT_BEACON);
+            yield Dialogue.say('난파 해변 너머의 흑산호 암초를 살펴보세요. 채굴 도구가 있으면 암초에서도 직접 캘 수 있어요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('beacon_progress', function* ({ player }) {
+            const objective = player.quests.getSnapshot(MISTTIDE_QUEST_IDS.REPAIR_SALT_BEACON)?.objectives[0];
+            yield Dialogue.say(`염등을 고치려면 흑산호가 ${objective?.required ?? 8}개 필요해요. 지금은 ${objective?.progress ?? 0}개가 모였네요.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('beacon_complete', function* () {
+            yield Dialogue.say('염등이 다시 안개 너머까지 비치기 시작했어요. 하지만 세이렌의 노래와 침몰제독의 명령이 남아 있는 한 항로는 곧 다시 닫힐 거예요.');
+            yield Dialogue.turnInQuest(MISTTIDE_QUEST_IDS.REPAIR_SALT_BEACON);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('boss_offer', function* () {
+            yield Dialogue.say('세이렌 군주가 해안의 안개를 모으고, 침몰제독 아르켄은 바닷속 왕도에서 망자 함대를 일으키고 있어요. 두 지휘자를 모두 멈춰 주세요.');
+            yield Dialogue.choice([
+                { label: '끊어진 항로를 되찾겠습니다.', target: 'boss_accept' },
+                { label: '더 준비하겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('boss_accept', function* () {
+            yield Dialogue.acceptQuest(MISTTIDE_QUEST_IDS.END_DROWNED_COMMAND);
+            yield Dialogue.say('겹안개 물길에서 북쪽은 세이렌 원형암초, 남쪽은 침몰왕도 성문으로 이어져요. 조망 절벽의 조류시계를 풀면 숨은 조류동도 찾을 수 있고요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('boss_progress', function* ({ player }) {
+            const objectives = player.quests.getSnapshot(MISTTIDE_QUEST_IDS.END_DROWNED_COMMAND)?.objectives ?? [];
+            const siren = objectives.find(objective => objective.id === 'siren-matriarch');
+            const admiral = objectives.find(objective => objective.id === 'drowned-admiral');
+            yield Dialogue.say(`세이렌 군주 ${siren?.progress ?? 0}/1, 침몰제독 ${admiral?.progress ?? 0}/1. 세이렌은 치유와 제어를 쓰는 이를 노리고, 제독은 도발에 거의 흔들리지 않아요.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('boss_complete', function* () {
+            yield Dialogue.say('안개가 걷히고 침몰왕도의 함대기도 가라앉았어요. 아르켄의 방패를 손봐 두었으니, 다음 항로에서 당신을 지켜 줄 거예요.');
+            yield Dialogue.turnInQuest(MISTTIDE_QUEST_IDS.END_DROWNED_COMMAND);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('lore', function* () {
+            yield Dialogue.say('청해초 물목과 흑산호 암초가 겹안개 물길에서 합쳐져요. 북쪽 여울 끝에는 세이렌 군주가, 남쪽 성문 아래에는 침몰왕도가 있어요. 왕도 안에서는 시장과 기록원 두 길이 함대왕좌에서 다시 만나요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('안개 속에서는 파도 소리보다 염등의 방향을 믿으세요.');
             yield Dialogue.end();
         }),
     ],

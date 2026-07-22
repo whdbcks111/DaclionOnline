@@ -26,6 +26,7 @@ import {
     rollFrostveilReliquaryReward,
     rollGlassduneReliquaryReward,
     rollLabyrinthCacheReward,
+    rollMisttideReliquaryReward,
     rollTreasureReward,
     rollTwilightReliquaryReward,
 } from './resources.js';
@@ -43,7 +44,7 @@ const locations = JSON.parse(
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, 94);
+    assert.equal(locations.length, 113);
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -71,7 +72,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 9, neutral: 34, hostile: 51 },
+        { safe: 10, neutral: 38, hostile: 65 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -80,7 +81,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     assert.ok(locations.every(location => /^#[0-9a-f]{6}$/i.test(location.mapColor ?? '')));
     assert.deepEqual(
         locations.filter(location => location.mapIcon).map(location => location.mapIcon).sort(),
-        ['general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
+        ['general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
     );
     for (const icon of new Set(locations.flatMap(location => location.mapIcon ? [location.mapIcon] : []))) {
         const png = readFileSync(new URL(`../../../client/public/icons/map/${icon}.png`, import.meta.url));
@@ -157,6 +158,12 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
             'frostveil_frozen_lake', 'frostveil_ravine', 'frostveil_spider_nest', 'frostveil_palace_gate',
             'frostveil_mirror_hall', 'frostveil_arsenal', 'frostveil_oracle_gallery', 'frostveil_throne',
             'frostveil_hidden_grotto', 'frostveil_aurora_bridge'],
+        ['misttide_headland', 'misttide_harbor', 'misttide_saltwind_flats', 'misttide_wreckshore',
+            'misttide_kelp_inlet', 'misttide_blackcoral_reef', 'misttide_fogbank_channel',
+            'misttide_siren_shallows', 'misttide_siren_amphitheater', 'misttide_tidewatch_cliffs',
+            'misttide_clock_cove', 'misttide_hidden_grotto', 'misttide_drowned_gate',
+            'misttide_drowned_causeway', 'misttide_drowned_market', 'misttide_drowned_archive',
+            'misttide_abyssal_barracks', 'misttide_leviathan_trench', 'misttide_drowned_throne'],
     ];
 
     for (const ids of regions) {
@@ -407,6 +414,53 @@ test('서리잔향 설원과 빙경궁은 두 보스·분광 퍼즐·왕실 유�
     assert.equal(recipes.length, 7);
     assert.equal(quests.length, 2);
     assert.equal(NPC.getNpc('frostveil_warden')?.name, '설원 파수대장 베른');
+});
+
+test('안개파도 해안과 침몰왕도는 분기 항로·두 지휘자·조류시계·항구 경제를 연결한다', () => {
+    const region = locations.filter(location => location.id.startsWith('misttide_'));
+    const siren = getMonsterData('mist_siren_matriarch');
+    const admiral = getMonsterData('drowned_admiral');
+    const store = getShop('misttide_harbor_store');
+    const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('misttide:'));
+    const quests = getAllQuestData().filter(quest => quest.id.startsWith('misttide:'));
+
+    assert.equal(region.length, 19);
+    assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
+    assert.ok(region.every(location => location.tags.includes(GameTags.LOCATION_COAST)));
+    assert.equal(siren?.level, 171);
+    assert.equal(admiral?.level, 186);
+    assert.ok(siren?.skillPattern?.randomOrder);
+    assert.deepEqual(admiral?.skillPattern?.sequence, [
+        'admiral_abyss_anchor', 'drowned_fleet_command', 'undertow_silence',
+    ]);
+    assert.ok((admiral?.ai?.tauntResistance ?? 0) >= 0.9);
+
+    const channel = locations.find(location => location.id === 'misttide_fogbank_channel');
+    const causeway = locations.find(location => location.id === 'misttide_drowned_causeway');
+    const clockCove = locations.find(location => location.id === 'misttide_clock_cove');
+    const throne = locations.find(location => location.id === 'misttide_drowned_throne');
+    assert.ok(channel?.connections.some(connection => connection.locationId === 'misttide_siren_shallows'));
+    assert.ok(channel?.connections.some(connection => connection.locationId === 'misttide_tidewatch_cliffs'));
+    assert.ok(causeway?.connections.some(connection => connection.locationId === 'misttide_drowned_market'));
+    assert.ok(causeway?.connections.some(connection => connection.locationId === 'misttide_drowned_archive'));
+    assert.ok(clockCove?.connections.some(connection => connection.condition === 'misttide_clock_solved'));
+    assert.ok(throne?.objects.some(object => object.dataId === 'drowned_admiral' && object.maxCount === 1));
+    assert.deepEqual(getResourceData('misttide_reliquary')?.interactionCooldown, {
+        min: 5 * 60 * 60,
+        max: 7 * 60 * 60,
+    });
+    assert.equal(rollMisttideReliquaryReward(() => 0).itemDataId, 'brine_trail_ration');
+    assert.equal(rollMisttideReliquaryReward(() => 0.999).itemDataId, 'drowned_admiral_shield');
+
+    for (const itemId of [
+        'tidebreaker_sword', 'mistcurrent_bow', 'blackcoral_sting', 'deeppearl_staff', 'drowned_admiral_shield',
+    ]) {
+        assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === itemId), itemId);
+        assert.ok(getItemData(itemId)?.balance, `${itemId} balance`);
+    }
+    assert.equal(recipes.length, 8);
+    assert.equal(quests.length, 2);
+    assert.equal(NPC.getNpc('misttide_navigator')?.name, '염등 항로지기 소마');
 });
 
 test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {

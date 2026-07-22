@@ -1432,6 +1432,208 @@ for (const book of [
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.PROPERTY_ICE],
 });
 
+// TODO(icons): 안개파도 해안·침몰왕도 전용 아트 제작 전까지 광물/유기물/동일 무기 카테고리 아이콘을 사용한다.
+for (const material of [
+    {
+        id: 'mist_salt', name: '해무 소금', image: 'items/stone', weight: 0.18,
+        description: '안개파도 해안의 차가운 물보라가 바위에 남긴 푸른 소금.',
+        tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER],
+    },
+    {
+        id: 'black_coral', name: '흑산호', image: 'items/coal', weight: 0.45,
+        description: '빛이 닿지 않는 조류굴에서 자라 금속처럼 단단해진 검은 산호.',
+        tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_STONE],
+    },
+    {
+        id: 'siren_scale', name: '해무비늘', image: 'items/earthworm_bait', weight: 0.22,
+        description: '노랫소리에 맞춰 빛을 굴절시키는 세이렌의 얇은 비늘.',
+        tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'tide_pearl', name: '조류진주', image: 'items/diamond', weight: 0.2,
+        description: '밀물과 썰물의 마력이 겹친 순간에만 굳어지는 푸른 진주.',
+        tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'drowned_insignia', name: '침수 군단 휘장', image: 'items/gold_ore', weight: 0.24,
+        description: '침몰왕도를 지키던 군단의 녹슨 휘장. 아직 명령 마력이 남아 있다.',
+        tags: [GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
+    },
+    {
+        id: 'abyssal_iron', name: '심해철', image: 'items/iron_ore', weight: 0.72,
+        description: '수압과 마력을 오랫동안 받아 검푸르게 변한 침몰왕도의 금속.',
+        tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
+    },
+    {
+        id: 'kelp_resin', name: '청해초 수지', image: 'items/earthworm_bait', weight: 0.12,
+        description: '바닷물에서도 접착력을 잃지 않는 청해초의 농축 수지.',
+        tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_WATER],
+    },
+    {
+        id: 'leviathan_bone', name: '해수룡 골편', image: 'items/stone', weight: 0.85,
+        description: '거대한 해수룡의 뼈가 파도와 마력에 깎여 남은 단단한 골편.',
+        tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_STONE],
+    },
+] as const) defineItem({
+    id: material.id,
+    name: material.name,
+    description: material.description,
+    image: material.image,
+    category: '해안 소재',
+    weight: material.weight,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [...material.tags],
+});
+
+defineItem({
+    id: 'brine_trail_ration', name: '염풍 행군식',
+    description: '해무 소금으로 간한 말린 생선과 빵. 배고픔 75와 수분 20을 회복한다.',
+    image: 'items/traveler_bread', category: '음식', weight: 0.45, stackable: true, maxStack: 30,
+    baseMetadata: { hunger: 75, thirst: 20, time: 1.2, useMessage: '염풍 행군식을 먹는 중...' },
+    onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER, GameTags.PROPERTY_NATURAL],
+});
+
+defineItem({
+    id: 'seafoam_tonic', name: '해포말 영약',
+    description: '차가운 포말이 몸을 감싸 70초 동안 화염을 밀어내는 영약.',
+    image: 'items/fresh_water', category: '소모품', weight: 0.3, stackable: true, maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'fire_resistance', level: 6, duration: 70 } },
+    onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER],
+});
+
+defineItem({
+    id: 'tideheart_draught', name: '조류심장 회복약',
+    description: '조류진주의 박동을 안정시켜 40초 동안 강한 생명력 재생을 제공한다.',
+    image: 'items/mana_potion', category: '소모품', weight: 0.3, stackable: true, maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'regeneration', level: 10, duration: 40 } },
+    onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
+});
+
+defineItem({
+    id: 'tidebreaker_sword', name: '파식 조류검',
+    description: '심해철의 무게를 파도처럼 전진시키는 장검. 방어를 깎고 출혈을 남긴다.',
+    image: 'items/windsteel_sword', category: '장검', weight: 4, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 150, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 32, source: '' },
+    ],
+    baseDurability: 455,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.PROPERTY_WATER, GameTags.PROPERTY_METAL],
+    onBasicAttackHit: ({ target }) => {
+        const bleeding = StatusEffectType.fromKey('bleeding');
+        if (bleeding && Math.random() < 0.2) target.applyStatusEffect(bleeding, 8, 8);
+    },
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+});
+
+defineItem({
+    id: 'mistcurrent_bow', name: '해무 조류궁',
+    description: '청해초 수지와 세이렌 비늘로 화살의 흔들림을 지운 장궁.',
+    image: 'items/stormstring_bow', category: '활', weight: 2.6, stackable: false, maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 112, source: '' },
+        { attribute: 'critRate', op: 'add', value: 0.075, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.34, source: '' },
+    ],
+    baseDurability: 430,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.PROPERTY_WATER, GameTags.PROPERTY_NATURAL],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+});
+
+defineItem({
+    id: 'blackcoral_sting', name: '흑산호 침',
+    description: '부러지는 대신 살점을 붙잡는 흑산호 단검. 관통과 치명타 피해에 집중한다.',
+    image: 'items/nightglass_dagger', category: '단검', weight: 1.55, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 125, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 38, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.2, source: '' },
+    ],
+    baseDurability: 390,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_STONE],
+    onBasicAttackHit: ({ target }) => {
+        const defenseReduction = StatusEffectType.fromKey('defense_reduction');
+        if (defenseReduction && Math.random() < 0.17) target.applyStatusEffect(defenseReduction, 8, 7);
+    },
+    balance: {
+        role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'],
+        notes: ['방어력 감소 부가효과는 기본 DPS와 분리해 평가합니다.'],
+    },
+});
+
+defineItem({
+    id: 'deeppearl_staff', name: '심해진주 지팡이',
+    description: '조류진주가 심해의 수압처럼 마력을 한 점으로 압축하는 지팡이.',
+    image: 'items/starwood_staff', category: '지팡이', weight: 2.9, stackable: false, maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: {
+            projectile: { dataId: 'basic_magic_orb', overrides: { tags: [GameTags.PROPERTY_WATER, GameTags.PROPERTY_DARK] } },
+        },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'magicForce', op: 'add', value: 178, source: '' },
+        { attribute: 'magicPen', op: 'add', value: 42, source: '' },
+        { attribute: 'mentalityRegen', op: 'add', value: 7, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.32, source: '' },
+    ],
+    baseDurability: 465,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_DARK],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+});
+
+defineItem({
+    id: 'drowned_admiral_shield', name: '침몰제독 방패',
+    description: '해수룡 골편과 심해철을 포갠 방패. 수압 같은 충격과 망자의 주문을 함께 견딘다.',
+    image: 'items/forged_shield', category: '방패', weight: 4.2, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'offHand',
+    modifiers: [
+        { attribute: 'def', op: 'add', value: 48, source: '' },
+        { attribute: 'magicDef', op: 'add', value: 50, source: '' },
+        { attribute: 'maxLife', op: 'add', value: 620, source: '' },
+    ],
+    baseDurability: 530,
+    tags: [GameTags.ITEM_ARMOR, GameTags.PROPERTY_WATER, GameTags.PROPERTY_METAL, GameTags.PROPERTY_UNDEAD],
+    balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
+});
+
+for (const book of [
+    {
+        id: 'siren_wave_skillbook', name: '해무 파가 전승서', skillDataId: 'siren_wave',
+        description: '해무 세이렌의 파가가 기록된 전승서. 사용하면 스킬 [ 해무 파가 ] 를 획득합니다.',
+    },
+    {
+        id: 'abyss_anchor_skillbook', name: '심해 닻 전승서', skillDataId: 'abyss_anchor',
+        description: '침몰제독의 무거운 닻술이 기록된 전승서. 사용하면 스킬 [ 심해 닻 ] 을 획득합니다.',
+    },
+] as const) defineItem({
+    id: book.id,
+    name: book.name,
+    description: book.description,
+    image: 'items/seismic_crush_skillbook',
+    category: '스킬북', weight: 0.3, stackable: true, maxStack: 10,
+    baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
+    modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.PROPERTY_WATER],
+});
+
 defineItem({
     id: 'ember_ore',
     name: '화맥 광석',

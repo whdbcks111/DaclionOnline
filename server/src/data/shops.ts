@@ -415,3 +415,50 @@ defineShop({
     ],
     tags: [GameTags.SHOP_FROST],
 });
+
+defineShop({
+    id: 'misttide_harbor_store',
+    buyList: [
+        {
+            label: '염풍 행군식', create: () => ({ itemDataId: 'brine_trail_ration', count: 1 }),
+            count: 1, price: 115, stock: 24, restockTime: 50,
+        },
+        {
+            label: '해포말 영약', create: () => ({ itemDataId: 'seafoam_tonic', count: 1 }),
+            count: 1, price: 185, stock: 14, restockTime: 100,
+        },
+        {
+            label: '조류심장 회복약', create: () => ({ itemDataId: 'tideheart_draught', count: 1 }),
+            count: 1, price: 240, stock: 10, restockTime: 130,
+        },
+        {
+            label: '화살 60개', create: () => ({ itemDataId: 'wooden_arrow', count: 60 }),
+            count: 60, price: 130, stock: 20, restockTime: 40,
+        },
+        ...[
+            ['파식 조류검', 'tidebreaker_sword', 8_100],
+            ['해무 조류궁', 'mistcurrent_bow', 7_900],
+            ['흑산호 침', 'blackcoral_sting', 8_250],
+            ['심해진주 지팡이', 'deeppearl_staff', 8_500],
+            ['침몰제독 방패', 'drowned_admiral_shield', 8_350],
+        ].map(([label, itemDataId, price]) => ({
+            label: label as string,
+            create: () => ({ itemDataId: itemDataId as string, count: 1 }),
+            count: 1,
+            price: price as number,
+            stock: 1,
+            restockTime: 1_500,
+        })),
+    ],
+    sellList: [
+        { label: '해무 소금', filter: item => item.itemDataId === 'mist_salt', count: 99, price: 52 },
+        { label: '흑산호', filter: item => item.itemDataId === 'black_coral', count: 99, price: 88 },
+        { label: '해무비늘', filter: item => item.itemDataId === 'siren_scale', count: 99, price: 112 },
+        { label: '조류진주', filter: item => item.itemDataId === 'tide_pearl', count: 99, price: 180 },
+        { label: '침수 군단 휘장', filter: item => item.itemDataId === 'drowned_insignia', count: 99, price: 128 },
+        { label: '심해철', filter: item => item.itemDataId === 'abyssal_iron', count: 99, price: 148 },
+        { label: '청해초 수지', filter: item => item.itemDataId === 'kelp_resin', count: 99, price: 70 },
+        { label: '해수룡 골편', filter: item => item.itemDataId === 'leviathan_bone', count: 99, price: 205 },
+    ],
+    tags: [GameTags.SHOP_TIDAL],
+});

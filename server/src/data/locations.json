@@ -1844,7 +1844,393 @@
     ],
     "connections": [
       { "locationId": "frostveil_oracle_gallery" },
-      { "locationId": "necropolis_gate" }
+      { "locationId": "necropolis_gate" },
+      { "locationId": "misttide_headland", "condition": "level_150" }
+    ]
+  },
+  {
+    "id": "misttide_headland",
+    "name": "안개파도 해안 1 염풍 곶",
+    "mapColor": "#42666a",
+    "zoneType": "neutral",
+    "x": 2010,
+    "y": 420,
+    "z": 12,
+    "tags": ["location:wilderness", "location:coast", "property:water", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "saltplate_crab", "maxCount": 3, "respawnTime": 112 },
+      { "type": "resource", "dataId": "kelp_resin_patch", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_aurora_bridge", "condition": "level_150" },
+      { "locationId": "misttide_harbor" },
+      { "locationId": "misttide_saltwind_flats" }
+    ]
+  },
+  {
+    "id": "misttide_harbor",
+    "name": "안개파도 해안 염등 항구",
+    "mapColor": "#42666a",
+    "zoneType": "safe",
+    "x": 2085,
+    "y": 420,
+    "z": 8,
+    "mapIcon": "general-shop",
+    "shopId": "misttide_harbor_store",
+    "tags": ["location:town", "location:coast", "property:water", "shop:tidal"],
+    "npcIds": ["misttide_navigator"],
+    "objects": [],
+    "connections": [
+      { "locationId": "misttide_headland" },
+      { "locationId": "misttide_wreckshore" },
+      { "locationId": "misttide_kelp_inlet" }
+    ]
+  },
+  {
+    "id": "misttide_saltwind_flats",
+    "name": "안개파도 해안 2 염풍 갯벌",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2145,
+    "y": 350,
+    "z": 3,
+    "tags": ["location:wilderness", "location:coast", "property:water", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "saltplate_crab", "maxCount": 3, "respawnTime": 112 },
+      { "type": "monster", "dataId": "fogwing_ray", "maxCount": 2, "respawnTime": 116 },
+      { "type": "resource", "dataId": "black_coral_outcrop", "maxCount": 2, "respawnTime": 210 }
+    ],
+    "connections": [
+      { "locationId": "misttide_headland" },
+      { "locationId": "misttide_kelp_inlet" },
+      { "locationId": "misttide_wreckshore" }
+    ]
+  },
+  {
+    "id": "misttide_wreckshore",
+    "name": "안개파도 해안 3 난파 해변",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2145,
+    "y": 490,
+    "z": -4,
+    "tags": ["location:wilderness", "location:coast", "property:water", "property:undead", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "wreck_diver_revenant", "maxCount": 3, "respawnTime": 122 },
+      { "type": "monster", "dataId": "fogwing_ray", "maxCount": 2, "respawnTime": 116 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "misttide_harbor" },
+      { "locationId": "misttide_saltwind_flats" },
+      { "locationId": "misttide_blackcoral_reef" }
+    ]
+  },
+  {
+    "id": "misttide_kelp_inlet",
+    "name": "안개파도 해안 4 청해초 물목",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2220,
+    "y": 385,
+    "z": -10,
+    "tags": ["location:wilderness", "location:coast", "property:water", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "kelp_stalker", "maxCount": 3, "respawnTime": 120 },
+      { "type": "monster", "dataId": "saltplate_crab", "maxCount": 2, "respawnTime": 112 },
+      { "type": "resource", "dataId": "kelp_resin_patch", "maxCount": 2, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "misttide_harbor" },
+      { "locationId": "misttide_saltwind_flats" },
+      { "locationId": "misttide_blackcoral_reef" },
+      { "locationId": "misttide_fogbank_channel" }
+    ]
+  },
+  {
+    "id": "misttide_blackcoral_reef",
+    "name": "안개파도 해안 5 흑산호 암초",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2225,
+    "y": 500,
+    "z": -18,
+    "tags": ["location:wilderness", "location:coast", "property:water", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "blackcoral_golem", "maxCount": 2, "respawnTime": 132 },
+      { "type": "monster", "dataId": "wreck_diver_revenant", "maxCount": 2, "respawnTime": 122 },
+      { "type": "resource", "dataId": "black_coral_outcrop", "maxCount": 3, "respawnTime": 210 }
+    ],
+    "connections": [
+      { "locationId": "misttide_wreckshore" },
+      { "locationId": "misttide_kelp_inlet" },
+      { "locationId": "misttide_fogbank_channel" },
+      { "locationId": "misttide_tidewatch_cliffs" }
+    ]
+  },
+  {
+    "id": "misttide_fogbank_channel",
+    "name": "안개파도 해안 6 겹안개 물길",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2300,
+    "y": 440,
+    "z": -25,
+    "tags": ["location:wilderness", "location:coast", "property:water", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "fogwing_ray", "maxCount": 3, "respawnTime": 116 },
+      { "type": "monster", "dataId": "mist_siren_cantor", "maxCount": 2, "respawnTime": 126 }
+    ],
+    "connections": [
+      { "locationId": "misttide_kelp_inlet" },
+      { "locationId": "misttide_blackcoral_reef" },
+      { "locationId": "misttide_siren_shallows" },
+      { "locationId": "misttide_tidewatch_cliffs" }
+    ]
+  },
+  {
+    "id": "misttide_siren_shallows",
+    "name": "안개파도 해안 7 세이렌 여울",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2370,
+    "y": 350,
+    "z": -30,
+    "tags": ["location:wilderness", "location:coast", "property:water", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "mist_siren_cantor", "maxCount": 3, "respawnTime": 126 },
+      { "type": "monster", "dataId": "kelp_stalker", "maxCount": 2, "respawnTime": 120 }
+    ],
+    "connections": [
+      { "locationId": "misttide_fogbank_channel" },
+      { "locationId": "misttide_siren_amphitheater" },
+      { "locationId": "misttide_drowned_gate" }
+    ]
+  },
+  {
+    "id": "misttide_siren_amphitheater",
+    "name": "안개파도 해안 세이렌 원형암초",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2450,
+    "y": 350,
+    "z": -34,
+    "tags": ["location:wilderness", "location:coast", "property:water", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "mist_siren_matriarch", "maxCount": 1, "respawnTime": 840 },
+      { "type": "resource", "dataId": "kelp_resin_patch", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "misttide_siren_shallows" }
+    ]
+  },
+  {
+    "id": "misttide_tidewatch_cliffs",
+    "name": "안개파도 해안 8 조망 절벽",
+    "mapColor": "#42666a",
+    "zoneType": "neutral",
+    "x": 2380,
+    "y": 510,
+    "z": 6,
+    "tags": ["location:wilderness", "location:coast", "property:water", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "blackcoral_golem", "maxCount": 2, "respawnTime": 132 },
+      { "type": "resource", "dataId": "black_coral_outcrop", "maxCount": 1, "respawnTime": 210 }
+    ],
+    "connections": [
+      { "locationId": "misttide_blackcoral_reef" },
+      { "locationId": "misttide_fogbank_channel" },
+      { "locationId": "misttide_clock_cove" },
+      { "locationId": "misttide_drowned_gate" }
+    ]
+  },
+  {
+    "id": "misttide_clock_cove",
+    "name": "안개파도 해안 멈춘 조류만",
+    "mapColor": "#42666a",
+    "zoneType": "neutral",
+    "x": 2450,
+    "y": 500,
+    "z": -2,
+    "tags": ["location:wilderness", "location:coast", "property:water", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "misttide_clock", "maxCount": 1, "respawnTime": 0 },
+      { "type": "monster", "dataId": "wreck_diver_revenant", "maxCount": 2, "respawnTime": 122 }
+    ],
+    "connections": [
+      { "locationId": "misttide_tidewatch_cliffs" },
+      { "locationId": "misttide_hidden_grotto", "condition": "misttide_clock_solved" }
+    ]
+  },
+  {
+    "id": "misttide_hidden_grotto",
+    "name": "안개파도 해안 숨은 조류동",
+    "mapColor": "#42666a",
+    "zoneType": "neutral",
+    "x": 2520,
+    "y": 550,
+    "z": -20,
+    "tags": ["location:wilderness", "location:coast", "location:hidden", "property:water", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "misttide_reliquary", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "black_coral_outcrop", "maxCount": 2, "respawnTime": 210 }
+    ],
+    "connections": [
+      { "locationId": "misttide_clock_cove", "condition": "misttide_clock_solved" }
+    ]
+  },
+  {
+    "id": "misttide_drowned_gate",
+    "name": "침몰왕도 1 가라앉은 성문",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2450,
+    "y": 425,
+    "z": -55,
+    "tags": ["location:wilderness", "location:coast", "location:submerged", "location:dungeon", "property:water", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "deepwater_sentinel", "maxCount": 3, "respawnTime": 134 },
+      { "type": "monster", "dataId": "blackcoral_golem", "maxCount": 1, "respawnTime": 132 }
+    ],
+    "connections": [
+      { "locationId": "misttide_siren_shallows" },
+      { "locationId": "misttide_tidewatch_cliffs" },
+      { "locationId": "misttide_drowned_causeway" }
+    ]
+  },
+  {
+    "id": "misttide_drowned_causeway",
+    "name": "침몰왕도 2 수몰 대로",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2520,
+    "y": 425,
+    "z": -72,
+    "tags": ["location:wilderness", "location:coast", "location:submerged", "location:dungeon", "property:water", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "deepwater_sentinel", "maxCount": 2, "respawnTime": 134 },
+      { "type": "monster", "dataId": "drowned_archivist", "maxCount": 2, "respawnTime": 138 },
+      { "type": "resource", "dataId": "black_coral_outcrop", "maxCount": 1, "respawnTime": 220 }
+    ],
+    "connections": [
+      { "locationId": "misttide_drowned_gate" },
+      { "locationId": "misttide_drowned_market" },
+      { "locationId": "misttide_drowned_archive" }
+    ]
+  },
+  {
+    "id": "misttide_drowned_market",
+    "name": "침몰왕도 3 비어버린 시장",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2595,
+    "y": 360,
+    "z": -86,
+    "tags": ["location:wilderness", "location:coast", "location:submerged", "location:dungeon", "property:water", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "wreck_diver_revenant", "maxCount": 2, "respawnTime": 122 },
+      { "type": "monster", "dataId": "deepwater_sentinel", "maxCount": 2, "respawnTime": 134 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "misttide_drowned_causeway" },
+      { "locationId": "misttide_abyssal_barracks" },
+      { "locationId": "misttide_drowned_archive" }
+    ]
+  },
+  {
+    "id": "misttide_drowned_archive",
+    "name": "침몰왕도 4 침수 기록원",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2595,
+    "y": 490,
+    "z": -94,
+    "tags": ["location:wilderness", "location:coast", "location:submerged", "location:dungeon", "property:water", "property:dark", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "drowned_archivist", "maxCount": 3, "respawnTime": 138 },
+      { "type": "monster", "dataId": "deepwater_sentinel", "maxCount": 1, "respawnTime": 134 },
+      { "type": "resource", "dataId": "misttide_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "misttide_drowned_causeway" },
+      { "locationId": "misttide_drowned_market" },
+      { "locationId": "misttide_leviathan_trench" }
+    ]
+  },
+  {
+    "id": "misttide_abyssal_barracks",
+    "name": "침몰왕도 5 심연 병영",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2670,
+    "y": 360,
+    "z": -110,
+    "tags": ["location:wilderness", "location:coast", "location:submerged", "location:dungeon", "property:water", "property:metal", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "abyssal_knight", "maxCount": 3, "respawnTime": 144 },
+      { "type": "monster", "dataId": "deepwater_sentinel", "maxCount": 2, "respawnTime": 134 }
+    ],
+    "connections": [
+      { "locationId": "misttide_drowned_market" },
+      { "locationId": "misttide_leviathan_trench" },
+      { "locationId": "misttide_drowned_throne" }
+    ]
+  },
+  {
+    "id": "misttide_leviathan_trench",
+    "name": "침몰왕도 6 해수룡 골짜기",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2670,
+    "y": 490,
+    "z": -126,
+    "tags": ["location:wilderness", "location:coast", "location:submerged", "location:dungeon", "property:water", "property:stone", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "abyssal_knight", "maxCount": 2, "respawnTime": 144 },
+      { "type": "monster", "dataId": "drowned_archivist", "maxCount": 2, "respawnTime": 138 },
+      { "type": "resource", "dataId": "black_coral_outcrop", "maxCount": 2, "respawnTime": 220 }
+    ],
+    "connections": [
+      { "locationId": "misttide_drowned_archive" },
+      { "locationId": "misttide_abyssal_barracks" },
+      { "locationId": "misttide_drowned_throne" }
+    ]
+  },
+  {
+    "id": "misttide_drowned_throne",
+    "name": "침몰왕도 7 가라앉은 함대왕좌",
+    "mapColor": "#42666a",
+    "zoneType": "hostile",
+    "x": 2750,
+    "y": 425,
+    "z": -145,
+    "tags": ["location:wilderness", "location:coast", "location:submerged", "location:dungeon", "property:water", "property:metal", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "drowned_admiral", "maxCount": 1, "respawnTime": 960 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "misttide_abyssal_barracks" },
+      { "locationId": "misttide_leviathan_trench" }
     ]
   }
 ]

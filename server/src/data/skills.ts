@@ -1663,6 +1663,22 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         penetration: { attribute: AttributeType.MAGIC_PEN, base: 28, perLevel: 6 },
         descriptionIntro: '흩어진 극광을 하나의 얼음 창으로 압축해 발사합니다.',
     },
+    {
+        id: 'siren_wave', name: '해무 파가', icon: 'affinities/water', activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 235, perLevelPercent: 16,
+        manaCost: 34, cooldown: 13, projectile: 'basic_magic_orb', projectileName: '해무 파가',
+        propertyTag: GameTags.PROPERTY_WATER, statusEffect: LegacyStatusEffects.CHARM,
+        statusLabel: '매혹', statusDuration: 2, statusDurationPerLevel: 0.25,
+        descriptionIntro: '해무에 세이렌의 노래를 실어 거센 파도로 밀어냅니다.',
+    },
+    {
+        id: 'abyss_anchor', name: '심해 닻', icon: 'affinities/metal', activationHeader: 'steel_slash',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 285, perLevelPercent: 19,
+        manaCost: 40, cooldown: 14, unavoidable: true, propertyTag: GameTags.PROPERTY_METAL,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 34, perLevel: 7 },
+        statusEffect: LegacyStatusEffects.BIND, statusLabel: '속박', statusDuration: 2.5, statusDurationPerLevel: 0.25,
+        descriptionIntro: '심해철로 벼린 거대한 닻을 대상에게 내리꽂습니다.',
+    },
 ];
 
 function growthTechniqueDescription(technique: GrowthTechniqueDefinition): string {
@@ -2526,6 +2542,30 @@ for (const skill of [
         attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.48, perLevelMultiplier: 0.13,
         castTime: 1.6, cooldown: 11, propertyTag: GameTags.PROPERTY_LIGHT,
         statusEffectId: 'silence', statusDuration: 4.5, activationHeader: 'sanctum_judgment',
+    },
+    {
+        id: 'siren_fog_chorus', name: '해무 합창', icon: 'affinities/water', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.58, perLevelMultiplier: 0.14,
+        castTime: 1.35, cooldown: 9, propertyTag: GameTags.PROPERTY_WATER,
+        statusEffectId: 'charm', statusDuration: 4, activationHeader: 'magic_bolt',
+    },
+    {
+        id: 'undertow_silence', name: '역조의 침묵', icon: 'affinities/water', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.68, perLevelMultiplier: 0.15,
+        castTime: 1.5, cooldown: 10, propertyTag: GameTags.PROPERTY_WATER,
+        statusEffectId: 'silence', statusDuration: 4.5, unavoidable: true, activationHeader: 'elemental_bind',
+    },
+    {
+        id: 'admiral_abyss_anchor', name: '제독의 심해 닻', icon: 'affinities/metal', damageType: 'physical' as const,
+        attribute: AttributeType.ATK, baseMultiplier: 1.85, perLevelMultiplier: 0.17,
+        castTime: 1.25, cooldown: 9, propertyTag: GameTags.PROPERTY_METAL,
+        statusEffectId: 'bind', statusDuration: 4, unavoidable: true, activationHeader: 'steel_slash',
+    },
+    {
+        id: 'drowned_fleet_command', name: '침수함대 왕명', icon: 'affinities/undead', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.62, perLevelMultiplier: 0.15,
+        castTime: 1.7, cooldown: 11, propertyTag: GameTags.PROPERTY_UNDEAD,
+        statusEffectId: 'fear', statusDuration: 5, activationHeader: 'deathless_requiem',
     },
     {
         id: 'caldera_eruption', name: '칼데라 분출', icon: 'affinities/fire', damageType: 'magic' as const,

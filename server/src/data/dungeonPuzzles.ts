@@ -30,6 +30,11 @@ export const FrostveilPuzzleIds = Object.freeze({
     PRISM_FLAG: 'dungeon:frostveil/white-prism-solved',
 } as const);
 
+export const MisttidePuzzleIds = Object.freeze({
+    TIDE_CLOCK: 'misttide:stopped-tide-clock',
+    TIDE_CLOCK_FLAG: 'dungeon:misttide/stopped-tide-clock-solved',
+} as const);
+
 defineProgress({
     id: IronrootPuzzleIds.RIDDLE_FLAG,
     type: ProgressType.FLAG,
@@ -122,6 +127,29 @@ defineQuestionPuzzle({
     failureMessage: '색이 서로 밀어내며 흩어지고, 얼음벽은 아무 반응도 보이지 않습니다.',
 });
 
+defineProgress({
+    id: MisttidePuzzleIds.TIDE_CLOCK_FLAG,
+    type: ProgressType.FLAG,
+    label: '멈춘 조류시계 복원',
+    description: '안개파도 해안의 조류시계를 움직여 숨은 조류동으로 가는 물길을 열었습니다.',
+    visible: true,
+});
+
+defineQuestionPuzzle({
+    id: MisttidePuzzleIds.TIDE_CLOCK,
+    title: '멈춘 조류시계',
+    prompt: '달이 바다를 끌어당길 때 나는 해안을 덮고, 달이 멀어지면 다시 물러난다. 하루에도 되풀이되는 나는 무엇인가?',
+    answers: ['밀물과 썰물', '밀물 썰물', '조수', '조석'],
+    choices: [
+        { label: '밀물과 썰물', answer: '밀물과 썰물' },
+        { label: '파도와 바람', answer: '파도와 바람' },
+        { label: '안개와 비', answer: '안개와 비' },
+    ],
+    successFlag: MisttidePuzzleIds.TIDE_CLOCK_FLAG,
+    successMessage: '조류시계의 두 바늘이 반대 방향으로 돌며 절벽 아래 숨은 물길을 드러냅니다.',
+    failureMessage: '바늘 하나만 잠시 떨리고, 바위틈의 물길은 열리지 않습니다.',
+});
+
 defineTeleportArtifact({
     id: IronrootPuzzleIds.RELAY_ARTIFACT,
     destinations: {
@@ -145,6 +173,9 @@ registerResourceInteraction('glassdune_sundial_riddle', (_resource, player) =>
 
 registerResourceInteraction('frostveil_prism_riddle', (_resource, player) =>
     beginQuestionPuzzle(player, FrostveilPuzzleIds.PRISM));
+
+registerResourceInteraction('misttide_clock_riddle', (_resource, player) =>
+    beginQuestionPuzzle(player, MisttidePuzzleIds.TIDE_CLOCK));
 
 registerConnectionCondition('ironroot_riddle_solved', player =>
     player.progress.getFlag(IronrootPuzzleIds.RIDDLE_FLAG)
@@ -170,6 +201,11 @@ registerConnectionCondition('frostveil_prism_solved', player =>
     player.progress.getFlag(FrostveilPuzzleIds.PRISM_FLAG)
         ? 'visible'
         : { status: 'locked', publicReason: '백광 분광대의 해답 필요' });
+
+registerConnectionCondition('misttide_clock_solved', player =>
+    player.progress.getFlag(MisttidePuzzleIds.TIDE_CLOCK_FLAG)
+        ? 'visible'
+        : { status: 'locked', publicReason: '멈춘 조류시계의 해답 필요' });
 
 // 지도 연결성은 유지하되 일반 이동·지도에는 노출하지 않고 유물 상호작용만 통과시킨다.
 registerConnectionCondition('ironroot_artifact_route', () => 'hidden');
