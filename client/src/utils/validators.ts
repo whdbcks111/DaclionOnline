@@ -32,6 +32,6 @@ export function validateEmail(email: string): string | null {
 export function validateNickname(nickname: string): string | null {
   if (!nickname || nickname.trim().length === 0) return '닉네임을 입력해주세요.'
   if (nickname.length > 12) return '닉네임은 12자 이하여야 합니다.'
-  if (!/^[가-힣a-zA-Z0-9_]+$/.test(nickname)) return '닉네임은 한글, 영문, 숫자, 언더스코어만 가능합니다.'
+  if (!/^[ㄱ-ㅎ가-힣a-zA-Z0-9_]+$/.test(nickname)) return '닉네임은 한글(초성 포함), 영문, 숫자, 언더스코어만 가능합니다.'
   return null
 }
