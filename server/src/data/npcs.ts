@@ -1,6 +1,11 @@
 import NPC, { Dialogue, DialogueScenario } from '../models/NPC.js';
 import { defineProgress, ProgressType } from '../models/Progress.js';
-import { FIRST_SLIME_HUNT_QUEST_ID, GLASSDUNE_QUEST_IDS, TWILIGHT_TOMB_QUEST_IDS } from './quests.js';
+import {
+    FIRST_SLIME_HUNT_QUEST_ID,
+    FROSTVEIL_QUEST_IDS,
+    GLASSDUNE_QUEST_IDS,
+    TWILIGHT_TOMB_QUEST_IDS,
+} from './quests.js';
 import { CAREER_QUEST_IDS } from './quests.js';
 import { BLACKSMITH_APPRENTICESHIP_QUEST_ID } from './quests.js';
 import { JobSlotType, getAllJobs, JobTier } from '../models/Job.js';
@@ -219,6 +224,75 @@ NPC.define({
         }),
         new DialogueScenario('end', function* () {
             yield Dialogue.say('그늘이 짧아지면 길도 짧게 잡으시오.');
+            yield Dialogue.end();
+        }),
+    ],
+});
+
+NPC.define({
+    id: 'frostveil_warden',
+    name: '설원 파수대장 베른',
+    description: '빙경궁으로 이어지는 길과 설원 보급로를 지키는 파수대장입니다.',
+    tags: ['npc:guide', 'npc:quest', 'region:frostveil'],
+    entryScenario: ({ player }) => {
+        if (player.quests.canTurnIn(FROSTVEIL_QUEST_IDS.BREAK_FROZEN_THRONE, 'frostveil_warden')) return 'boss_complete';
+        if (player.quests.isActive(FROSTVEIL_QUEST_IDS.BREAK_FROZEN_THRONE)) return 'boss_progress';
+        if (player.quests.canTurnIn(FROSTVEIL_QUEST_IDS.WINTER_SUPPLY, 'frostveil_warden')) return 'supply_complete';
+        if (player.quests.isActive(FROSTVEIL_QUEST_IDS.WINTER_SUPPLY)) return 'supply_progress';
+        if (player.quests.canAccept(FROSTVEIL_QUEST_IDS.BREAK_FROZEN_THRONE, 'frostveil_warden')) return 'boss_offer';
+        return player.quests.canAccept(FROSTVEIL_QUEST_IDS.WINTER_SUPPLY, 'frostveil_warden') ? 'greeting' : 'lore';
+    },
+    scenarios: [
+        new DialogueScenario('greeting', function* () {
+            yield Dialogue.say('상고바람이 보급 천막까지 찢고 있소. 빙실 거미줄이라면 가볍고 얼어도 끊어지지 않지. 일곱 타래를 구해 줄 수 있겠소?');
+            yield Dialogue.choice([
+                { label: '빙실 거미줄을 모아 오겠습니다.', target: 'supply_accept' },
+                { label: '빙경궁으로 가는 길을 알려주세요.', target: 'lore' },
+                { label: '지금은 쉬겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('supply_accept', function* () {
+            yield Dialogue.acceptQuest(FROSTVEIL_QUEST_IDS.WINTER_SUPPLY);
+            yield Dialogue.say('상고송 숲과 얼어붙은 호수에 빙실 발톱거미가 많소. 일곱 타래면 파수대의 천막을 모두 고칠 수 있지.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('supply_progress', function* ({ player }) {
+            const objective = player.quests.getSnapshot(FROSTVEIL_QUEST_IDS.WINTER_SUPPLY)?.objectives[0];
+            yield Dialogue.say(`필요한 빙실은 ${objective?.required ?? 7}타래요. 지금은 ${objective?.progress ?? 0}타래를 모았군.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('supply_complete', function* () {
+            yield Dialogue.say('이 정도면 다음 눈보라도 버틸 수 있겠소. 보급품을 챙기고 빙하 협곡부터 천천히 살피시오.');
+            yield Dialogue.turnInQuest(FROSTVEIL_QUEST_IDS.WINTER_SUPPLY);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('boss_offer', function* () {
+            yield Dialogue.say('빙경 여왕 에르시나가 왕좌에서 깨어났소. 그녀의 극광은 주문을 끊고, 빙경 관통창은 회피조차 허락하지 않소. 왕좌의 냉기를 멈춰 주겠소?');
+            yield Dialogue.choice([
+                { label: '얼어붙은 왕좌를 깨겠습니다.', target: 'boss_accept' },
+                { label: '더 준비하겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('boss_accept', function* () {
+            yield Dialogue.acceptQuest(FROSTVEIL_QUEST_IDS.BREAK_FROZEN_THRONE);
+            yield Dialogue.say('궁의 거울회랑에서 두 길이 갈리오. 백광 분광대의 수수께끼를 풀면 숨은 빙하동의 왕실 유물도 찾을 수 있소.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('boss_progress', function* () {
+            yield Dialogue.say('침묵이 오기 전 회복과 보호막을 준비하고, 관통창의 예고가 보이면 피해를 견딜 수단을 먼저 쓰시오.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('boss_complete', function* () {
+            yield Dialogue.say('왕좌의 빛이 맑아졌군. 에르시나가 남긴 분광 지팡이를 가져가시오. 냉기를 지배할 힘은 쓰는 자에게 달렸으니.');
+            yield Dialogue.turnInQuest(FROSTVEIL_QUEST_IDS.BREAK_FROZEN_THRONE);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('lore', function* () {
+            yield Dialogue.say('백광성역에서 서리잔향 고개를 넘으면 파수초소요. 상고송 숲과 얼어붙은 호수를 지나 빙하 협곡으로 가면 빙경궁이 나오지. 극광다리는 사령묘 관문으로 이어지오.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('눈보라 속에서는 발자국보다 바람이 끊기는 곳을 보시오.');
             yield Dialogue.end();
         }),
     ],

@@ -785,6 +785,170 @@ const glassduneMonsters: readonly WorldMonsterData[] = [
 
 for (const monster of glassduneMonsters) defineWorldMonster(monster);
 
+const frostveilMonsters: readonly WorldMonsterData[] = [
+    {
+        id: 'snowfield_hare', name: '눈밭 칼귀토끼',
+        description: '눈 아래 진동을 먼저 듣고 얼음처럼 날카로운 뒷발로 차는 설원 짐승.', level: 118,
+        baseAttribute: { maxLife: 8_250, atk: 348, def: 178, magicDef: 192, speed: 3.2, attackSpeed: 1.42, critRate: 0.12 },
+        drops: [
+            { itemDataId: 'frostwolf_hide', minCount: 1, maxCount: 1, chance: 0.15 },
+            { itemDataId: 'snowmoss', minCount: 1, maxCount: 2, chance: 0.32 },
+        ],
+        goldReward: { min: 335, max: 555 },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_ICE],
+    },
+    {
+        id: 'rimeclaw_wolf', name: '상고발톱 늑대',
+        description: '빙결된 발톱으로 상처를 벌리고 무리의 다음 공격을 부르는 설원 포식자.', level: 122,
+        baseAttribute: { maxLife: 9_450, atk: 382, def: 205, magicDef: 184, armorPen: 25, speed: 2.75, attackSpeed: 1.22, critRate: 0.11 },
+        drops: [
+            { itemDataId: 'frostwolf_hide', minCount: 1, maxCount: 3, chance: 0.58 },
+            { itemDataId: 'rime_crystal', minCount: 1, maxCount: 1, chance: 0.15 },
+        ],
+        goldReward: { min: 350, max: 580 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.24, duration: 8, level: 6 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_ICE],
+    },
+    {
+        id: 'icesilk_spider', name: '빙실 발톱거미',
+        description: '눈 위에 거의 보이지 않는 빙실을 깔아 사냥감의 발을 얼리는 거미.', level: 126,
+        baseAttribute: { maxLife: 10_100, atk: 350, magicForce: 392, def: 196, magicDef: 235, speed: 2.25, attackSpeed: 1.08 },
+        drops: [
+            { itemDataId: 'ice_silk', minCount: 1, maxCount: 3, chance: 0.62 },
+            { itemDataId: 'rime_crystal', minCount: 1, maxCount: 2, chance: 0.2 },
+        ],
+        goldReward: { min: 365, max: 610 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'slowness', chance: 0.3, duration: 7, level: 6 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_INSECT, GameTags.PROPERTY_ICE],
+    },
+    {
+        id: 'frozen_revenant', name: '동결 순례망자',
+        description: '설원을 건너지 못한 순례자의 의지가 갑옷과 함께 얼어붙은 망자.', level: 130,
+        baseAttribute: { maxLife: 11_350, atk: 408, magicForce: 365, def: 248, magicDef: 228, speed: 1.55, attackSpeed: 0.88 },
+        drops: [
+            { itemDataId: 'mirrorsteel_fragment', minCount: 1, maxCount: 2, chance: 0.38 },
+            { itemDataId: 'aurora_shard', minCount: 1, maxCount: 1, chance: 0.12 },
+        ],
+        goldReward: { min: 380, max: 635 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'curse', chance: 0.24, duration: 10, level: 6 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_ICE, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'glacier_golem', name: '빙하심 골렘',
+        description: '오래된 빙하의 중심핵을 따라 돌과 얼음이 뭉쳐 움직이는 둔중한 수호체.', level: 133,
+        baseAttribute: { maxLife: 14_800, atk: 438, def: 310, magicDef: 235, armorPen: 34, speed: 0.95, attackSpeed: 0.62 },
+        drops: [
+            { itemDataId: 'frozen_core', minCount: 1, maxCount: 2, chance: 0.46 },
+            { itemDataId: 'rime_crystal', minCount: 2, maxCount: 4, chance: 0.5 },
+        ],
+        goldReward: { min: 395, max: 660 },
+        attack: { effect: { statusEffectId: 'slowness', chance: 0.26, duration: 8, level: 7 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_STONE, GameTags.PROPERTY_ICE],
+    },
+    {
+        id: 'hoarfrost_spider_queen', name: '상고발톱 거미여왕',
+        description: '빙하 협곡을 거대한 사냥망으로 바꾼 필드 보스. 피해와 제어를 가한 대상을 빠르게 바꿔 노린다.', level: 136,
+        baseAttribute: {
+            maxLife: 60_500, atk: 424, magicForce: 458, def: 270, magicDef: 292,
+            magicPen: 34, speed: 2.15, attackSpeed: 0.76, critRate: 0.13, critDmg: 1.75,
+        },
+        expReward: 136 * 20 * 6,
+        drops: [
+            { itemDataId: 'ice_silk', minCount: 4, maxCount: 8, chance: 0.92 },
+            { itemDataId: 'frozen_core', minCount: 1, maxCount: 3, chance: 0.58 },
+            { itemDataId: 'icesilk_longbow', minCount: 1, maxCount: 1, chance: 0.035 },
+            { itemDataId: 'hoarfrost_snare_skillbook', minCount: 1, maxCount: 1, chance: 0.025 },
+        ],
+        goldReward: { min: 610, max: 980 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'frozen', chance: 0.3, duration: 3, level: 7 } },
+        skills: [
+            { skillDataId: 'hoarfrost_web_barrage', level: 4 },
+            { skillDataId: 'seismic_crush', level: 4 },
+        ],
+        skillPattern: {
+            sequence: ['hoarfrost_web_barrage', 'seismic_crush'], randomOrder: true,
+            initialDelay: 4, interval: { min: 7, max: 10 },
+        },
+        ai: {
+            intelligence: 74, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.3, damage: 1.2, healing: 1.25, shielding: 0.8, control: 1.45, taunt: 1.8 },
+            tauntResistance: 0.58, switchThreshold: 0.16,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_BEAST, GameTags.PROPERTY_INSECT, GameTags.PROPERTY_ICE],
+    },
+    {
+        id: 'mirror_wraith', name: '거울서리 망령',
+        description: '침입자의 모습과 마력을 비춘 뒤 뒤틀어 되쏘는 빙경궁의 잔영.', level: 140,
+        baseAttribute: { maxLife: 12_650, atk: 405, magicForce: 465, def: 224, magicDef: 315, magicPen: 35, speed: 2.5, attackSpeed: 1.02 },
+        drops: [
+            { itemDataId: 'aurora_shard', minCount: 1, maxCount: 3, chance: 0.44 },
+            { itemDataId: 'mirrorsteel_fragment', minCount: 1, maxCount: 2, chance: 0.35 },
+        ],
+        goldReward: { min: 420, max: 700 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'silence', chance: 0.2, duration: 3, level: 6 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_ICE, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'frostguard_knight', name: '빙경 근위기사',
+        description: '왕좌를 비추는 경철 갑주가 명령만을 따라 검을 휘두르는 궁정 수호자.', level: 144,
+        baseAttribute: { maxLife: 14_900, atk: 488, def: 325, magicDef: 272, armorPen: 38, speed: 1.7, attackSpeed: 0.9, critRate: 0.1 },
+        drops: [
+            { itemDataId: 'mirrorsteel_fragment', minCount: 2, maxCount: 4, chance: 0.62 },
+            { itemDataId: 'rime_crystal', minCount: 1, maxCount: 3, chance: 0.38 },
+        ],
+        goldReward: { min: 440, max: 735 },
+        attack: { effect: { statusEffectId: 'defense_reduction', chance: 0.24, duration: 9, level: 7 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_METAL, GameTags.PROPERTY_ICE],
+    },
+    {
+        id: 'aurora_seer', name: '극광 예지자',
+        description: '극광의 갈라진 색을 읽어 다음 주문의 궤적을 미리 고르는 궁정 술사.', level: 148,
+        baseAttribute: { maxLife: 13_750, atk: 430, magicForce: 525, def: 245, magicDef: 338, magicPen: 42, speed: 2.1, attackSpeed: 0.94 },
+        drops: [
+            { itemDataId: 'aurora_shard', minCount: 2, maxCount: 4, chance: 0.6 },
+            { itemDataId: 'snowmoss', minCount: 1, maxCount: 3, chance: 0.3 },
+        ],
+        goldReward: { min: 465, max: 770 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'silence', chance: 0.25, duration: 3.5, level: 7 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ICE],
+    },
+    {
+        id: 'frostglass_queen', name: '빙경 여왕 에르시나',
+        description: '얼어붙은 왕좌와 하나가 된 빙경궁의 군주. 회피 불가 관통창과 침묵의 극광을 불규칙하게 교차한다.', level: 152,
+        baseAttribute: {
+            maxLife: 82_000, atk: 470, magicForce: 565, def: 318, magicDef: 350,
+            armorPen: 36, magicPen: 50, speed: 1.8, attackSpeed: 0.7, critRate: 0.14, critDmg: 1.8,
+        },
+        expReward: 152 * 20 * 7,
+        drops: [
+            { itemDataId: 'aurora_shard', minCount: 5, maxCount: 9, chance: 0.94 },
+            { itemDataId: 'mirrorsteel_fragment', minCount: 4, maxCount: 7, chance: 0.78 },
+            { itemDataId: 'auroraprism_staff', minCount: 1, maxCount: 1, chance: 0.035 },
+            { itemDataId: 'frostglass_bulwark', minCount: 1, maxCount: 1, chance: 0.03 },
+            { itemDataId: 'aurora_lance_skillbook', minCount: 1, maxCount: 1, chance: 0.022 },
+        ],
+        goldReward: { min: 760, max: 1_240 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'frozen', chance: 0.32, duration: 3.5, level: 8 } },
+        skills: [
+            { skillDataId: 'mirror_frost_lance', level: 5 },
+            { skillDataId: 'aurora_silence', level: 5 },
+            { skillDataId: 'hoarfrost_web_barrage', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['mirror_frost_lance', 'aurora_silence', 'hoarfrost_web_barrage'], randomOrder: true,
+            initialDelay: 4, interval: { min: 6, max: 9 },
+        },
+        ai: {
+            intelligence: 96, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.12, damage: 1, healing: 1.65, shielding: 1.4, control: 1.55, taunt: 3 },
+            tauntResistance: 0.88, switchThreshold: 0.28, decayPerSecond: 0.006,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_ICE, GameTags.PROPERTY_LIGHT],
+    },
+];
+
+for (const monster of frostveilMonsters) defineWorldMonster(monster);
+
 const advancedWorldMonsters: WorldMonsterData[] = [
     {
         id: 'spark_moth', name: '섬광나방', description: '폭풍 전류를 날개에 모아 번쩍이며 달려드는 거대 곤충.', level: 52,

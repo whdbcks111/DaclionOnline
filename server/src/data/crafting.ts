@@ -122,3 +122,62 @@ for (const recipe of [
     }),
     tags: recipe.tags,
 });
+
+for (const recipe of [
+    {
+        id: 'frostveil:frostward_tonic', result: 'frostward_tonic', time: 4,
+        description: '눈솔이끼와 상고 수정을 맑은 물에 달여 상고막이 영약을 만듭니다.',
+        ingredients: [['snowmoss', 3], ['rime_crystal', 1], ['fresh_water', 1]],
+        tags: ['crafting:consumable', 'region:frostveil'],
+    },
+    {
+        id: 'frostveil:aurora_recovery_draught', result: 'aurora_recovery_draught', time: 5,
+        description: '극광 파편과 눈솔이끼의 흐름을 안정시켜 극광 회복약을 만듭니다.',
+        ingredients: [['aurora_shard', 2], ['snowmoss', 3], ['mana_potion', 1]],
+        tags: ['crafting:consumable', 'region:frostveil'],
+    },
+    {
+        id: 'frostveil:rimecleaver_sword', result: 'rimecleaver_sword', time: 12,
+        description: '경철과 제련된 철 사이에 상고 수정을 접어 넣어 빙맥 절단검을 만듭니다.',
+        ingredients: [['mirrorsteel_fragment', 6], ['rime_crystal', 5], ['refined_iron', 4]],
+        tags: ['crafting:weapon', 'region:frostveil'],
+    },
+    {
+        id: 'frostveil:icesilk_longbow', result: 'icesilk_longbow', time: 11,
+        description: '빙실 거미줄과 서리늑대 가죽을 겹쳐 빠르고 안정적인 빙실 연궁을 만듭니다.',
+        ingredients: [['ice_silk', 7], ['frostwolf_hide', 4], ['rime_crystal', 3]],
+        tags: ['crafting:weapon', 'region:frostveil'],
+    },
+    {
+        id: 'frostveil:mirrorfang_dagger', result: 'mirrorfang_dagger', time: 10,
+        description: '경철 파편을 얇게 갈아 상고 수정의 냉기를 품은 경빙 송곳니를 만듭니다.',
+        ingredients: [['mirrorsteel_fragment', 5], ['rime_crystal', 4], ['frozen_core', 2]],
+        tags: ['crafting:weapon', 'region:frostveil'],
+    },
+    {
+        id: 'frostveil:auroraprism_staff', result: 'auroraprism_staff', time: 13,
+        description: '극광 파편을 상고 수정 프리즘에 고정해 극광분광 지팡이를 만듭니다.',
+        ingredients: [['aurora_shard', 6], ['rime_crystal', 5], ['refined_gold', 3]],
+        tags: ['crafting:weapon', 'region:frostveil'],
+    },
+    {
+        id: 'frostveil:frostglass_bulwark', result: 'frostglass_bulwark', time: 14,
+        description: '경철판과 빙결 핵을 포개어 깨져도 다시 얼어붙는 빙경 성벽방패를 만듭니다.',
+        ingredients: [['mirrorsteel_fragment', 8], ['frozen_core', 4], ['rime_crystal', 5]],
+        tags: ['crafting:armor', 'region:frostveil'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});

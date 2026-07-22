@@ -124,6 +124,19 @@ const GLASSDUNE_RELIQUARY_REWARDS = Object.freeze([
     { itemDataId: 'sunmirror_shield', count: 1, weight: 2.4 },
 ]);
 
+const FROSTVEIL_RELIQUARY_REWARDS = Object.freeze([
+    { itemDataId: 'winter_trail_ration', count: 4, weight: 22 },
+    { itemDataId: 'frostward_tonic', count: 3, weight: 18 },
+    { itemDataId: 'rime_crystal', count: 7, weight: 17 },
+    { itemDataId: 'mirrorsteel_fragment', count: 5, weight: 15 },
+    { itemDataId: 'aurora_shard', count: 3, weight: 12 },
+    { itemDataId: 'rimecleaver_sword', count: 1, weight: 3.2 },
+    { itemDataId: 'icesilk_longbow', count: 1, weight: 3.2 },
+    { itemDataId: 'mirrorfang_dagger', count: 1, weight: 3.2 },
+    { itemDataId: 'auroraprism_staff', count: 1, weight: 3.2 },
+    { itemDataId: 'frostglass_bulwark', count: 1, weight: 3.2 },
+]);
+
 export function rollTwilightReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
     let cursor = random() * TWILIGHT_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = TWILIGHT_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
@@ -135,6 +148,13 @@ export function rollGlassduneReliquaryReward(random = Math.random): { itemDataId
     let cursor = random() * GLASSDUNE_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = GLASSDUNE_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
         ?? GLASSDUNE_RELIQUARY_REWARDS[0];
+    return { itemDataId: reward.itemDataId, count: reward.count };
+}
+
+export function rollFrostveilReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
+    let cursor = random() * FROSTVEIL_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
+    const reward = FROSTVEIL_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
+        ?? FROSTVEIL_RELIQUARY_REWARDS[0];
     return { itemDataId: reward.itemDataId, count: reward.count };
 }
 
@@ -194,6 +214,24 @@ registerResourceInteraction('open_glassdune_reliquary', (_resource, player) => {
     return true;
 });
 
+registerResourceInteraction('open_frostveil_reliquary', (_resource, player) => {
+    const reward = rollFrostveilReliquaryReward();
+    if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'frostveil-reliquary-full',
+            message: '빙경궁의 유물을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem(reward.itemDataId, reward.count);
+    const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
+    sendBotMessageToUser(player.userId, chat()
+        .color('aqua', builder => builder.weight('bold', nested => nested.text('[ 빙경궁의 유물 ]')))
+        .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
+        .build());
+    return true;
+});
+
 registerResourceInteraction('harvest_oasis_palm', (_resource, player) => {
     const count = randomInt({ min: 2, max: 4 }, Math.random);
     if (!player.inventory.canAdd('oasis_date', count)) {
@@ -207,6 +245,23 @@ registerResourceInteraction('harvest_oasis_palm', (_resource, player) => {
     sendNotificationToUser(player.userId, {
         key: 'oasis-palm-harvested',
         message: `오아시스 대추야자 ${count}개를 따냈습니다.`,
+    });
+    return true;
+});
+
+registerResourceInteraction('harvest_snowmoss', (_resource, player) => {
+    const count = randomInt({ min: 2, max: 5 }, Math.random);
+    if (!player.inventory.canAdd('snowmoss', count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'snowmoss-full',
+            message: '눈솔이끼를 담을 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem('snowmoss', count);
+    sendNotificationToUser(player.userId, {
+        key: 'snowmoss-harvested',
+        message: `눈 아래에서 눈솔이끼 ${count}개를 채집했습니다.`,
     });
     return true;
 });
@@ -396,6 +451,54 @@ defineResource({
     attackable: false,
     interactionCooldown: { min: 3 * 60 * 60, max: 5 * 60 * 60 },
     tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_GLASS, GameTags.PROPERTY_LIGHT],
+});
+
+defineResource({
+    id: 'rime_crystal_vein',
+    name: '상고 수정맥',
+    level: 126,
+    baseAttribute: { maxLife: 7_500, def: 260, magicDef: 215 },
+    requiredToolTags: [GameTags.TOOL_MINING],
+    drops: [
+        { itemDataId: 'rime_crystal', weight: 60, minCount: 1, maxCount: 3 },
+        { itemDataId: 'frozen_core', weight: 24, minCount: 1, maxCount: 1 },
+        { itemDataId: 'aurora_shard', weight: 12, minCount: 1, maxCount: 1 },
+        { itemDataId: 'diamond', weight: 4, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 1_900, max: 2_700 },
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_RIME, GameTags.MATERIAL_DIAMOND, GameTags.PROPERTY_ICE],
+});
+
+defineResource({
+    id: 'snowmoss_patch',
+    name: '눈솔이끼 군락',
+    level: 120,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'harvest_snowmoss', attackable: false,
+    interactionCooldown: { min: 35 * 60, max: 55 * 60 },
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_RIME, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_ICE],
+});
+
+defineResource({
+    id: 'ice_prism_pedestal',
+    name: '백광 분광대',
+    level: 138,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'frostveil_prism_riddle', attackable: false,
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_RIME, GameTags.MATERIAL_GLASS, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ICE],
+});
+
+defineResource({
+    id: 'frostveil_reliquary',
+    name: '빙경궁 왕실 유물함',
+    level: 145,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'open_frostveil_reliquary', attackable: false,
+    interactionCooldown: { min: 4 * 60 * 60, max: 6 * 60 * 60 },
+    tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_LIGHT],
 });
 
 defineResource({

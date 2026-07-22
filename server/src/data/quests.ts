@@ -20,6 +20,10 @@ export const GLASSDUNE_QUEST_IDS = Object.freeze({
     CARAPACE_ROUTE: 'glassdune:carapace-route',
     SILENCE_SUN_VAULT: 'glassdune:silence-sun-vault',
 } as const);
+export const FROSTVEIL_QUEST_IDS = Object.freeze({
+    WINTER_SUPPLY: 'frostveil:winter-supply',
+    BREAK_FROZEN_THRONE: 'frostveil:break-frozen-throne',
+} as const);
 
 defineQuest({
     id: FIRST_SLIME_HUNT_QUEST_ID,
@@ -157,6 +161,60 @@ defineQuest({
         QuestReward.exp(18_000),
         QuestReward.gold(3_200),
         QuestReward.item('sunmirror_shield', 1, '태양거울 방패'),
+    ],
+});
+
+defineQuest({
+    id: FROSTVEIL_QUEST_IDS.WINTER_SUPPLY,
+    name: '눈보라를 버티는 실',
+    aliases: ['빙실 의뢰', '설원 보급'],
+    description: '빙실 발톱거미에게서 빙실 거미줄 7개를 모아 설원 파수대장에게 가져가세요.',
+    tags: ['quest:side', 'region:frostveil'],
+    giverNpcIds: ['frostveil_warden'],
+    turnInNpcIds: ['frostveil_warden'],
+    visible: player => player.level >= 120,
+    canAccept: player => player.level >= 120,
+    stages: [new QuestStage({
+        id: 'collect-ice-silk',
+        description: '상고송 숲과 얼어붙은 호수에서 빙실 발톱거미를 찾으세요.',
+        objectives: [QuestObjective.item('ice-silk', '빙실 거미줄 수집', 7, 'ice_silk', true)],
+    })],
+    rewards: [
+        QuestReward.exp(24_000),
+        QuestReward.gold(4_200),
+        QuestReward.item('winter_trail_ration', 5, '설원 행군식'),
+        QuestReward.item('frostward_tonic', 3, '상고막이 영약'),
+    ],
+});
+
+defineQuest({
+    id: FROSTVEIL_QUEST_IDS.BREAK_FROZEN_THRONE,
+    name: '얼어붙은 왕좌를 깨는 빛',
+    aliases: ['빙경 여왕', '빙경궁 왕좌'],
+    description: '빙경궁 깊은 곳에서 침묵과 냉기를 퍼뜨리는 빙경 여왕 에르시나를 쓰러뜨리세요.',
+    tags: ['quest:side', 'quest:boss', 'region:frostveil'],
+    giverNpcIds: ['frostveil_warden'],
+    turnInNpcIds: ['frostveil_warden'],
+    prerequisiteQuestIds: [FROSTVEIL_QUEST_IDS.WINTER_SUPPLY],
+    visible: player => player.level >= 138,
+    canAccept: player => player.level >= 138,
+    stages: [new QuestStage({
+        id: 'break-frostglass-queen',
+        description: '빙경궁의 왕좌에서 에르시나를 제압하세요.',
+        objectives: [QuestObjective.kill(
+            'frostglass-queen',
+            '빙경 여왕 에르시나 처치',
+            1,
+            target => target.hasTag(GameTags.ENTITY_BOSS)
+                && target.hasTag(GameTags.PROPERTY_ICE)
+                && target.hasTag(GameTags.PROPERTY_LIGHT),
+        )],
+    })],
+    rewards: [
+        QuestReward.exp(42_000),
+        QuestReward.gold(6_800),
+        QuestReward.item('auroraprism_staff', 1, '극광분광 지팡이'),
+        QuestReward.item('aurora_recovery_draught', 3, '극광 회복약'),
     ],
 });
 

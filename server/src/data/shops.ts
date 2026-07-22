@@ -369,3 +369,49 @@ defineShop({
     ],
     tags: [GameTags.SHOP_CARAVAN],
 });
+
+defineShop({
+    id: 'frostveil_outpost_store',
+    buyList: [
+        {
+            label: '설원 행군식', create: () => ({ itemDataId: 'winter_trail_ration', count: 1 }),
+            count: 1, price: 76, stock: 24, restockTime: 50,
+        },
+        {
+            label: '상고막이 영약', create: () => ({ itemDataId: 'frostward_tonic', count: 1 }),
+            count: 1, price: 125, stock: 14, restockTime: 100,
+        },
+        {
+            label: '극광 회복약', create: () => ({ itemDataId: 'aurora_recovery_draught', count: 1 }),
+            count: 1, price: 160, stock: 10, restockTime: 120,
+        },
+        {
+            label: '화살 50개', create: () => ({ itemDataId: 'wooden_arrow', count: 50 }),
+            count: 50, price: 95, stock: 20, restockTime: 40,
+        },
+        ...[
+            ['빙맥 절단검', 'rimecleaver_sword', 5_500],
+            ['빙실 연궁', 'icesilk_longbow', 5_350],
+            ['경빙 송곳니', 'mirrorfang_dagger', 5_650],
+            ['극광분광 지팡이', 'auroraprism_staff', 5_900],
+            ['빙경 성벽방패', 'frostglass_bulwark', 5_700],
+        ].map(([label, itemDataId, price]) => ({
+            label: label as string,
+            create: () => ({ itemDataId: itemDataId as string, count: 1 }),
+            count: 1,
+            price: price as number,
+            stock: 1,
+            restockTime: 1_200,
+        })),
+    ],
+    sellList: [
+        { label: '상고 수정', filter: item => item.itemDataId === 'rime_crystal', count: 99, price: 72 },
+        { label: '서리늑대 가죽', filter: item => item.itemDataId === 'frostwolf_hide', count: 99, price: 44 },
+        { label: '빙실 거미줄', filter: item => item.itemDataId === 'ice_silk', count: 99, price: 58 },
+        { label: '경철 파편', filter: item => item.itemDataId === 'mirrorsteel_fragment', count: 99, price: 96 },
+        { label: '극광 파편', filter: item => item.itemDataId === 'aurora_shard', count: 99, price: 145 },
+        { label: '빙결 핵', filter: item => item.itemDataId === 'frozen_core', count: 99, price: 118 },
+        { label: '눈솔이끼', filter: item => item.itemDataId === 'snowmoss', count: 99, price: 35 },
+    ],
+    tags: [GameTags.SHOP_FROST],
+});

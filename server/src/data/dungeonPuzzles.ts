@@ -25,6 +25,11 @@ export const GlassdunePuzzleIds = Object.freeze({
     SUNDIAL_FLAG: 'dungeon:glassdune/shadowless-sundial-solved',
 } as const);
 
+export const FrostveilPuzzleIds = Object.freeze({
+    PRISM: 'frostveil:white-prism',
+    PRISM_FLAG: 'dungeon:frostveil/white-prism-solved',
+} as const);
+
 defineProgress({
     id: IronrootPuzzleIds.RIDDLE_FLAG,
     type: ProgressType.FLAG,
@@ -94,6 +99,29 @@ defineQuestionPuzzle({
     failureMessage: '모래 아래의 톱니바퀴만 돌아가고 해시계는 아무 길도 가리키지 않습니다.',
 });
 
+defineProgress({
+    id: FrostveilPuzzleIds.PRISM_FLAG,
+    type: ProgressType.FLAG,
+    label: '빙경궁 백광 분광 해독',
+    description: '빙경궁의 흩어진 빛을 하나로 모아 숨은 빙하동을 열었습니다.',
+    visible: true,
+});
+
+defineQuestionPuzzle({
+    id: FrostveilPuzzleIds.PRISM,
+    title: '백광 분광대',
+    prompt: '나는 하나로 비치지만 거울을 통과하면 여러 색으로 갈라진다. 흩어진 색을 모두 모으면 다시 무엇이 되는가?',
+    answers: ['빛', '백색광', '흰빛', '하얀빛'],
+    choices: [
+        { label: '백색광', answer: '백색광' },
+        { label: '그림자', answer: '그림자' },
+        { label: '얼음', answer: '얼음' },
+    ],
+    successFlag: FrostveilPuzzleIds.PRISM_FLAG,
+    successMessage: '분광대의 색들이 하나의 흰빛으로 합쳐지며 숨은 빙하동의 벽이 투명해집니다.',
+    failureMessage: '색이 서로 밀어내며 흩어지고, 얼음벽은 아무 반응도 보이지 않습니다.',
+});
+
 defineTeleportArtifact({
     id: IronrootPuzzleIds.RELAY_ARTIFACT,
     destinations: {
@@ -115,6 +143,9 @@ registerResourceInteraction('twilight_tomb_riddle', (_resource, player) =>
 registerResourceInteraction('glassdune_sundial_riddle', (_resource, player) =>
     beginQuestionPuzzle(player, GlassdunePuzzleIds.SUNDIAL));
 
+registerResourceInteraction('frostveil_prism_riddle', (_resource, player) =>
+    beginQuestionPuzzle(player, FrostveilPuzzleIds.PRISM));
+
 registerConnectionCondition('ironroot_riddle_solved', player =>
     player.progress.getFlag(IronrootPuzzleIds.RIDDLE_FLAG)
         ? 'visible'
@@ -134,6 +165,11 @@ registerConnectionCondition('glassdune_sundial_solved', player =>
     player.progress.getFlag(GlassdunePuzzleIds.SUNDIAL_FLAG)
         ? 'visible'
         : { status: 'locked', publicReason: '그림자 없는 해시계의 해답 필요' });
+
+registerConnectionCondition('frostveil_prism_solved', player =>
+    player.progress.getFlag(FrostveilPuzzleIds.PRISM_FLAG)
+        ? 'visible'
+        : { status: 'locked', publicReason: '백광 분광대의 해답 필요' });
 
 // 지도 연결성은 유지하되 일반 이동·지도에는 노출하지 않고 유물 상호작용만 통과시킨다.
 registerConnectionCondition('ironroot_artifact_route', () => 'hidden');

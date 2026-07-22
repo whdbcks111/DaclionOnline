@@ -23,6 +23,7 @@ import './shops.js';
 import './fishing.js';
 import './crafting.js';
 import {
+    rollFrostveilReliquaryReward,
     rollGlassduneReliquaryReward,
     rollLabyrinthCacheReward,
     rollTreasureReward,
@@ -42,7 +43,7 @@ const locations = JSON.parse(
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, 80);
+    assert.equal(locations.length, 94);
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -70,7 +71,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 8, neutral: 31, hostile: 41 },
+        { safe: 9, neutral: 34, hostile: 51 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -79,7 +80,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     assert.ok(locations.every(location => /^#[0-9a-f]{6}$/i.test(location.mapColor ?? '')));
     assert.deepEqual(
         locations.filter(location => location.mapIcon).map(location => location.mapIcon).sort(),
-        ['general-shop', 'general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
+        ['general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
     );
     for (const icon of new Set(locations.flatMap(location => location.mapIcon ? [location.mapIcon] : []))) {
         const png = readFileSync(new URL(`../../../client/public/icons/map/${icon}.png`, import.meta.url));
@@ -152,6 +153,10 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
         ['glassdune_border', 'glassdune_caravan', 'glassdune_sea', 'glassdune_mirage_path',
             'glassdune_sunken_colonnade', 'glassdune_scorpion_nest', 'glassdune_observatory',
             'glassdune_glass_canyon', 'glassdune_sun_vault', 'glassdune_hidden_oasis'],
+        ['frostveil_pass', 'frostveil_outpost', 'frostveil_pinewood', 'frostveil_hunting_field',
+            'frostveil_frozen_lake', 'frostveil_ravine', 'frostveil_spider_nest', 'frostveil_palace_gate',
+            'frostveil_mirror_hall', 'frostveil_arsenal', 'frostveil_oracle_gallery', 'frostveil_throne',
+            'frostveil_hidden_grotto', 'frostveil_aurora_bridge'],
     ];
 
     for (const ids of regions) {
@@ -359,6 +364,49 @@ test('유리모래 사막은 분기·필드 보스·해시계·거울 기둥·�
     vault?.update(0.05);
     assert.equal(getGlassduneMirrorProtectionMultiplier(), 1);
     assert.equal(boss?.getDamageReceivedModifier(), 1);
+});
+
+test('서리잔향 설원과 빙경궁은 두 보스·분광 퍼즐·왕실 유물·초소 경제를 연결한다', () => {
+    const region = locations.filter(location => location.id.startsWith('frostveil_'));
+    const spiderQueen = getMonsterData('hoarfrost_spider_queen');
+    const frostglassQueen = getMonsterData('frostglass_queen');
+    const store = getShop('frostveil_outpost_store');
+    const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('frostveil:'));
+    const quests = getAllQuestData().filter(quest => quest.id.startsWith('frostveil:'));
+
+    assert.equal(region.length, 14);
+    assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
+    assert.ok(region.every(location => location.tags.includes('location:frozen')));
+    assert.equal(spiderQueen?.level, 136);
+    assert.equal(frostglassQueen?.level, 152);
+    assert.ok(spiderQueen?.skillPattern?.randomOrder);
+    assert.deepEqual(frostglassQueen?.skillPattern?.sequence, [
+        'mirror_frost_lance', 'aurora_silence', 'hoarfrost_web_barrage',
+    ]);
+    assert.ok((frostglassQueen?.ai?.tauntResistance ?? 0) >= 0.85);
+
+    const lake = locations.find(location => location.id === 'frostveil_frozen_lake');
+    const mirrorHall = locations.find(location => location.id === 'frostveil_mirror_hall');
+    const bridge = locations.find(location => location.id === 'frostveil_aurora_bridge');
+    assert.ok(lake?.objects.some(object => object.dataId === 'rime_crystal_vein'));
+    assert.ok(mirrorHall?.connections.some(connection => connection.condition === 'frostveil_prism_solved'));
+    assert.ok(bridge?.connections.some(connection => connection.locationId === 'necropolis_gate'));
+    assert.deepEqual(getResourceData('frostveil_reliquary')?.interactionCooldown, {
+        min: 4 * 60 * 60,
+        max: 6 * 60 * 60,
+    });
+    assert.equal(rollFrostveilReliquaryReward(() => 0).itemDataId, 'winter_trail_ration');
+    assert.equal(rollFrostveilReliquaryReward(() => 0.999).itemDataId, 'frostglass_bulwark');
+
+    for (const itemId of [
+        'rimecleaver_sword', 'icesilk_longbow', 'mirrorfang_dagger', 'auroraprism_staff', 'frostglass_bulwark',
+    ]) {
+        assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === itemId), itemId);
+        assert.ok(getItemData(itemId)?.balance, `${itemId} balance`);
+    }
+    assert.equal(recipes.length, 7);
+    assert.equal(quests.length, 2);
+    assert.equal(NPC.getNpc('frostveil_warden')?.name, '설원 파수대장 베른');
 });
 
 test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {

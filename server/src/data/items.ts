@@ -1221,6 +1221,217 @@ defineItem({
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });
 
+// TODO(icons): 서리잔향 설원·빙경궁 전용 소재/장비 아트 제작 전까지 같은 카테고리의 기존 아이콘을 사용한다.
+for (const material of [
+    {
+        id: 'rime_crystal', name: '상고 수정', image: 'items/diamond', weight: 0.35,
+        description: '설원 바위의 틈에서 자라난 푸른 수정. 냉기를 오래 붙잡는다.',
+        tags: [GameTags.MATERIAL_RIME, GameTags.MATERIAL_DIAMOND, GameTags.PROPERTY_ICE],
+    },
+    {
+        id: 'frostwolf_hide', name: '서리늑대 가죽', image: 'items/earthworm_bait', weight: 0.8,
+        description: '상고바람을 견딘 늑대의 두꺼운 가죽. 가볍지만 냉기를 잘 막는다.',
+        tags: [GameTags.MATERIAL_RIME, GameTags.PROPERTY_NATURAL],
+    },
+    {
+        id: 'ice_silk', name: '빙실 거미줄', image: 'items/earthworm_bait', weight: 0.18,
+        description: '서리가 맺혀도 끊어지지 않는 거미줄. 활시위와 마법 직조에 쓴다.',
+        tags: [GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_INSECT],
+    },
+    {
+        id: 'mirrorsteel_fragment', name: '경철 파편', image: 'items/iron_ore', weight: 0.55,
+        description: '빙경궁의 수호병에게서 떨어진 거울빛 금속 조각.',
+        tags: [GameTags.MATERIAL_RIME, GameTags.PROPERTY_METAL, GameTags.PROPERTY_ICE],
+    },
+    {
+        id: 'aurora_shard', name: '극광 파편', image: 'items/mana_potion', weight: 0.16,
+        description: '밤하늘의 빛이 차갑게 굳어 생긴 마력 결정.',
+        tags: [GameTags.MATERIAL_RIME, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ICE],
+    },
+    {
+        id: 'frozen_core', name: '빙결 핵', image: 'items/diamond', weight: 0.7,
+        description: '빙하 수호체의 움직임을 유지하던 고밀도 냉기 핵.',
+        tags: [GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_STONE],
+    },
+    {
+        id: 'snowmoss', name: '눈솔이끼', image: 'items/earthworm_bait', weight: 0.08,
+        description: '눈 아래에서도 푸른빛을 잃지 않는 약용 이끼.',
+        tags: [GameTags.MATERIAL_RIME, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_ICE],
+    },
+] as const) defineItem({
+    id: material.id,
+    name: material.name,
+    description: material.description,
+    image: material.image,
+    category: '설원 소재',
+    weight: material.weight,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [...material.tags],
+});
+
+defineItem({
+    id: 'winter_trail_ration',
+    name: '설원 행군식',
+    description: '눈솔이끼와 말린 고기를 눌러 만든 따뜻한 행군식. 배고픔 65와 수분 15를 회복한다.',
+    image: 'items/traveler_bread', category: '음식', weight: 0.4, stackable: true, maxStack: 30,
+    baseMetadata: { hunger: 65, thirst: 15, time: 1.2, useMessage: '설원 행군식을 데워 먹는 중...' },
+    onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_NATURAL],
+});
+
+defineItem({
+    id: 'frostward_tonic',
+    name: '상고막이 영약',
+    description: '눈솔이끼와 상고 수정을 달여 60초 동안 빙결 지속시간을 빠르게 줄이는 영약.',
+    image: 'items/health_potion', category: '소모품', weight: 0.25, stackable: true, maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'frozen_resistance', level: 5, duration: 60 } },
+    onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE],
+});
+
+defineItem({
+    id: 'aurora_recovery_draught',
+    name: '극광 회복약',
+    description: '극광 파편의 흐름을 안정시켜 35초 동안 생명력 재생을 크게 높이는 회복약.',
+    image: 'items/mana_potion', category: '소모품', weight: 0.25, stackable: true, maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'regeneration', level: 8, duration: 35 } },
+    onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ICE],
+});
+
+defineItem({
+    id: 'rimecleaver_sword',
+    name: '빙맥 절단검',
+    description: '경철 사이에 상고 수정을 접어 넣은 장검. 두꺼운 갑주를 가르고 냉기를 남긴다.',
+    image: 'items/windsteel_sword', category: '장검', weight: 3.8, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 108, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 22, source: '' },
+    ],
+    baseDurability: 360,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_METAL],
+    onBasicAttackHit: ({ target }) => {
+        const slowness = StatusEffectType.fromKey('slowness');
+        if (slowness && Math.random() < 0.18) target.applyStatusEffect(slowness, 6, 5);
+    },
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+});
+
+defineItem({
+    id: 'icesilk_longbow',
+    name: '빙실 연궁',
+    description: '빙실 거미줄을 여러 겹 꼬아 만든 장궁. 화살을 빠르게 밀어내며 급소를 안정적으로 노린다.',
+    image: 'items/stormstring_bow', category: '활', weight: 2.5, stackable: false, maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 80, source: '' },
+        { attribute: 'critRate', op: 'add', value: 0.06, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.28, source: '' },
+    ],
+    baseDurability: 340,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+});
+
+defineItem({
+    id: 'mirrorfang_dagger',
+    name: '경빙 송곳니',
+    description: '거울처럼 적의 움직임을 비추는 경철 단검. 방어 틈을 파고들어 빙결을 쌓는다.',
+    image: 'items/nightglass_dagger', category: '단검', weight: 1.5, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 96, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 27, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.16, source: '' },
+    ],
+    baseDurability: 315,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_METAL],
+    onBasicAttackHit: ({ target }) => {
+        const frozen = StatusEffectType.fromKey('frozen');
+        if (frozen && Math.random() < 0.14) target.applyStatusEffect(frozen, 2.5, 4);
+    },
+    balance: {
+        role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'],
+        notes: ['빙결 부가효과는 기본 DPS와 분리해 평가합니다.'],
+    },
+});
+
+defineItem({
+    id: 'auroraprism_staff',
+    name: '극광분광 지팡이',
+    description: '극광을 여러 갈래의 냉기 마력으로 분해해 쏘는 빙경궁 지팡이.',
+    image: 'items/starwood_staff', category: '지팡이', weight: 2.8, stackable: false, maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: {
+            projectile: { dataId: 'basic_magic_orb', overrides: { tags: [GameTags.PROPERTY_ICE, GameTags.PROPERTY_LIGHT] } },
+        },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'magicForce', op: 'add', value: 140, source: '' },
+        { attribute: 'magicPen', op: 'add', value: 30, source: '' },
+        { attribute: 'mentalityRegen', op: 'add', value: 6, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.28, source: '' },
+    ],
+    baseDurability: 365,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_LIGHT],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+});
+
+defineItem({
+    id: 'frostglass_bulwark',
+    name: '빙경 성벽방패',
+    description: '깨져도 다시 얼어붙는 경철판을 포갠 방패. 물리 충격과 마법 냉기를 함께 흘린다.',
+    image: 'items/forged_shield', category: '방패', weight: 3.9, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'offHand',
+    modifiers: [
+        { attribute: 'def', op: 'add', value: 34, source: '' },
+        { attribute: 'magicDef', op: 'add', value: 38, source: '' },
+        { attribute: 'maxLife', op: 'add', value: 430, source: '' },
+    ],
+    baseDurability: 430,
+    tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_METAL],
+    balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
+});
+
+for (const book of [
+    {
+        id: 'hoarfrost_snare_skillbook', name: '상고 그물 전승서', skillDataId: 'hoarfrost_snare',
+        description: '서리거미 여왕의 포박술이 기록된 전승서. 사용하면 스킬 [ 상고 그물 ] 을 획득합니다.',
+    },
+    {
+        id: 'aurora_lance_skillbook', name: '극광 창 전승서', skillDataId: 'aurora_lance',
+        description: '빙경 여왕의 분광 마법이 기록된 전승서. 사용하면 스킬 [ 극광 창 ] 을 획득합니다.',
+    },
+] as const) defineItem({
+    id: book.id,
+    name: book.name,
+    description: book.description,
+    image: 'items/seismic_crush_skillbook',
+    category: '스킬북',
+    weight: 0.3,
+    stackable: true,
+    maxStack: 10,
+    baseMetadata: { skillDataId: book.skillDataId },
+    onUse: 'learn_skill',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.PROPERTY_ICE],
+});
+
 defineItem({
     id: 'ember_ore',
     name: '화맥 광석',

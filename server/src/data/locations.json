@@ -875,7 +875,8 @@
     ],
     "connections": [
       { "locationId": "dawn_cloister" },
-      { "locationId": "necropolis_gate", "condition": "level_120" }
+      { "locationId": "necropolis_gate", "condition": "level_120" },
+      { "locationId": "frostveil_pass", "condition": "level_120" }
     ]
   },
   {
@@ -893,6 +894,7 @@
     ],
     "connections": [
       { "locationId": "dawn_sanctum" },
+      { "locationId": "frostveil_aurora_bridge" },
       { "locationId": "necropolis_east_crypt" },
       { "locationId": "necropolis_west_crypt" }
     ]
@@ -1565,6 +1567,284 @@
     ],
     "connections": [
       { "locationId": "glassdune_observatory" }
+    ]
+  },
+  {
+    "id": "frostveil_pass",
+    "name": "서리잔향 설원 1 눈바람 고개",
+    "mapColor": "#536773",
+    "zoneType": "neutral",
+    "x": 1490,
+    "y": 185,
+    "z": 102,
+    "tags": ["location:wilderness", "location:frozen", "property:ice", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "snowfield_hare", "maxCount": 3, "respawnTime": 78 },
+      { "type": "resource", "dataId": "snowmoss_patch", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "dawn_sanctum" },
+      { "locationId": "frostveil_outpost" },
+      { "locationId": "frostveil_pinewood" }
+    ]
+  },
+  {
+    "id": "frostveil_outpost",
+    "name": "서리잔향 파수초소",
+    "mapColor": "#536773",
+    "zoneType": "safe",
+    "x": 1430,
+    "y": 245,
+    "z": 98,
+    "shopId": "frostveil_outpost_store",
+    "mapIcon": "general-shop",
+    "tags": ["location:safe", "location:shop", "location:frozen", "property:ice"],
+    "npcIds": ["frostveil_warden"],
+    "objects": [
+      { "type": "resource", "dataId": "snowmoss_patch", "maxCount": 2, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_pass" },
+      { "locationId": "frostveil_hunting_field" }
+    ]
+  },
+  {
+    "id": "frostveil_pinewood",
+    "name": "서리잔향 설원 2 상고송 숲",
+    "mapColor": "#536773",
+    "zoneType": "hostile",
+    "x": 1550,
+    "y": 240,
+    "z": 84,
+    "tags": ["location:wilderness", "location:forest", "location:frozen", "property:ice", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "rimeclaw_wolf", "maxCount": 3, "respawnTime": 86 },
+      { "type": "monster", "dataId": "icesilk_spider", "maxCount": 2, "respawnTime": 90 },
+      { "type": "resource", "dataId": "snowmoss_patch", "maxCount": 2, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_pass" },
+      { "locationId": "frostveil_hunting_field" },
+      { "locationId": "frostveil_frozen_lake" }
+    ]
+  },
+  {
+    "id": "frostveil_hunting_field",
+    "name": "서리잔향 설원 3 흰숨 사냥터",
+    "mapColor": "#536773",
+    "zoneType": "hostile",
+    "x": 1490,
+    "y": 305,
+    "z": 74,
+    "tags": ["location:wilderness", "location:frozen", "property:ice", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "snowfield_hare", "maxCount": 3, "respawnTime": 78 },
+      { "type": "monster", "dataId": "rimeclaw_wolf", "maxCount": 3, "respawnTime": 86 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_outpost" },
+      { "locationId": "frostveil_pinewood" },
+      { "locationId": "frostveil_frozen_lake" }
+    ]
+  },
+  {
+    "id": "frostveil_frozen_lake",
+    "name": "서리잔향 설원 4 얼어붙은 호수",
+    "mapColor": "#536773",
+    "zoneType": "hostile",
+    "x": 1605,
+    "y": 315,
+    "z": 55,
+    "tags": ["location:wilderness", "location:frozen", "property:ice", "property:water"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "icesilk_spider", "maxCount": 3, "respawnTime": 90 },
+      { "type": "monster", "dataId": "frozen_revenant", "maxCount": 2, "respawnTime": 96 },
+      { "type": "resource", "dataId": "rime_crystal_vein", "maxCount": 2, "respawnTime": 180 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_pinewood" },
+      { "locationId": "frostveil_hunting_field" },
+      { "locationId": "frostveil_ravine" }
+    ]
+  },
+  {
+    "id": "frostveil_ravine",
+    "name": "서리잔향 설원 5 빙하 협곡",
+    "mapColor": "#536773",
+    "zoneType": "hostile",
+    "x": 1665,
+    "y": 265,
+    "z": 38,
+    "tags": ["location:wilderness", "location:frozen", "location:cave", "property:ice", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "glacier_golem", "maxCount": 2, "respawnTime": 104 },
+      { "type": "monster", "dataId": "frozen_revenant", "maxCount": 2, "respawnTime": 96 },
+      { "type": "resource", "dataId": "rime_crystal_vein", "maxCount": 3, "respawnTime": 180 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_frozen_lake" },
+      { "locationId": "frostveil_spider_nest" },
+      { "locationId": "frostveil_palace_gate" }
+    ]
+  },
+  {
+    "id": "frostveil_spider_nest",
+    "name": "서리잔향 상고발톱 둥지",
+    "mapColor": "#536773",
+    "zoneType": "hostile",
+    "x": 1660,
+    "y": 355,
+    "z": 20,
+    "tags": ["location:wilderness", "location:frozen", "location:cave", "property:ice", "property:insect"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "icesilk_spider", "maxCount": 3, "respawnTime": 90 },
+      { "type": "monster", "dataId": "hoarfrost_spider_queen", "maxCount": 1, "respawnTime": 600 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_ravine" }
+    ]
+  },
+  {
+    "id": "frostveil_palace_gate",
+    "name": "빙경궁 1 서리문",
+    "mapColor": "#536773",
+    "zoneType": "hostile",
+    "x": 1730,
+    "y": 265,
+    "z": 24,
+    "tags": ["location:wilderness", "location:dungeon", "location:frozen", "property:ice", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "frostguard_knight", "maxCount": 3, "respawnTime": 106 },
+      { "type": "resource", "dataId": "rime_crystal_vein", "maxCount": 1, "respawnTime": 190 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_ravine" },
+      { "locationId": "frostveil_mirror_hall" }
+    ]
+  },
+  {
+    "id": "frostveil_mirror_hall",
+    "name": "빙경궁 2 거울회랑",
+    "mapColor": "#536773",
+    "zoneType": "hostile",
+    "x": 1795,
+    "y": 265,
+    "z": 16,
+    "tags": ["location:wilderness", "location:dungeon", "location:frozen", "property:ice", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "mirror_wraith", "maxCount": 3, "respawnTime": 102 },
+      { "type": "resource", "dataId": "ice_prism_pedestal", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_palace_gate" },
+      { "locationId": "frostveil_arsenal" },
+      { "locationId": "frostveil_oracle_gallery" },
+      { "locationId": "frostveil_hidden_grotto", "condition": "frostveil_prism_solved" }
+    ]
+  },
+  {
+    "id": "frostveil_arsenal",
+    "name": "빙경궁 얼어붙은 병기고",
+    "mapColor": "#536773",
+    "zoneType": "hostile",
+    "x": 1800,
+    "y": 340,
+    "z": 8,
+    "tags": ["location:wilderness", "location:dungeon", "location:frozen", "property:ice", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "frostguard_knight", "maxCount": 3, "respawnTime": 106 },
+      { "type": "monster", "dataId": "mirror_wraith", "maxCount": 1, "respawnTime": 102 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_mirror_hall" },
+      { "locationId": "frostveil_oracle_gallery" }
+    ]
+  },
+  {
+    "id": "frostveil_oracle_gallery",
+    "name": "빙경궁 3 극광 예지실",
+    "mapColor": "#536773",
+    "zoneType": "hostile",
+    "x": 1870,
+    "y": 280,
+    "z": 2,
+    "tags": ["location:wilderness", "location:dungeon", "location:frozen", "property:ice", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "aurora_seer", "maxCount": 3, "respawnTime": 110 },
+      { "type": "monster", "dataId": "frostguard_knight", "maxCount": 1, "respawnTime": 106 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_mirror_hall" },
+      { "locationId": "frostveil_arsenal" },
+      { "locationId": "frostveil_throne" },
+      { "locationId": "frostveil_aurora_bridge" }
+    ]
+  },
+  {
+    "id": "frostveil_throne",
+    "name": "빙경궁 4 얼어붙은 왕좌",
+    "mapColor": "#536773",
+    "zoneType": "hostile",
+    "x": 1940,
+    "y": 325,
+    "z": -8,
+    "tags": ["location:wilderness", "location:dungeon", "location:frozen", "property:ice", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "frostglass_queen", "maxCount": 1, "respawnTime": 780 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_oracle_gallery" }
+    ]
+  },
+  {
+    "id": "frostveil_hidden_grotto",
+    "name": "빙경궁 숨은 빙하동",
+    "mapColor": "#536773",
+    "zoneType": "neutral",
+    "x": 1870,
+    "y": 205,
+    "z": 0,
+    "tags": ["location:wilderness", "location:dungeon", "location:frozen", "location:hidden", "property:ice", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "rime_crystal_vein", "maxCount": 2, "respawnTime": 180 },
+      { "type": "resource", "dataId": "frostveil_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_mirror_hall" }
+    ]
+  },
+  {
+    "id": "frostveil_aurora_bridge",
+    "name": "빙경궁 극광다리",
+    "mapColor": "#536773",
+    "zoneType": "neutral",
+    "x": 1815,
+    "y": 150,
+    "z": 28,
+    "tags": ["location:wilderness", "location:frozen", "property:ice", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "aurora_seer", "maxCount": 2, "respawnTime": 110 },
+      { "type": "resource", "dataId": "snowmoss_patch", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_oracle_gallery" },
+      { "locationId": "necropolis_gate" }
     ]
   }
 ]

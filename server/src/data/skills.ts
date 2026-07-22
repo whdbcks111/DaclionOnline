@@ -1640,6 +1640,24 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         extraDescription: '은빛 거미실을 펼쳐 이동과 회피를 봉쇄합니다.',
         acquisitionDescription: '은빛그물 거미여왕이 남기는 스킬북으로 전승받아야 합니다.',
     },
+    {
+        id: 'hoarfrost_snare', name: '상고 그물', icon: 'affinities/ice', activationHeader: 'stunning_shot',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 210, perLevelPercent: 15,
+        manaCost: 30, cooldown: 13, projectile: 'basic_magic_orb', projectileName: '상고 그물',
+        propertyTag: GameTags.PROPERTY_ICE, statusEffect: LegacyStatusEffects.FROZEN,
+        statusLabel: '빙결', statusDuration: 2.5, statusDurationPerLevel: 0.3,
+        extraDescription: '빙실 거미줄을 한 점에 얼려 이동과 회피를 봉쇄합니다.',
+        acquisitionDescription: '상고발톱 거미여왕이 남기는 전승서로 배워야 합니다.',
+    },
+    {
+        id: 'aurora_lance', name: '극광 창', icon: 'affinities/ice', activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 265, perLevelPercent: 18,
+        manaCost: 38, cooldown: 12, projectile: 'magic_bolt', projectileName: '극광 창',
+        propertyTag: GameTags.PROPERTY_ICE,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 28, perLevel: 6 },
+        extraDescription: '극광을 하나의 창으로 압축해 마법 저항을 꿰뚫습니다.',
+        acquisitionDescription: '빙경 여왕이 남기는 전승서로 배워야 합니다.',
+    },
 ];
 
 for (const technique of growthTechniques) defineSkill({
@@ -2410,6 +2428,24 @@ for (const skill of [
         attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.55, perLevelMultiplier: 0.15,
         castTime: 1.35, cooldown: 9, propertyTag: GameTags.PROPERTY_FIRE,
         statusEffectId: 'sun_fever', statusDuration: 12, activationHeader: 'fireball',
+    },
+    {
+        id: 'hoarfrost_web_barrage', name: '상고발톱 그물비', icon: 'affinities/ice', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.55, perLevelMultiplier: 0.14,
+        castTime: 1.15, cooldown: 8, propertyTag: GameTags.PROPERTY_ICE,
+        statusEffectId: 'frozen', statusDuration: 3.5, activationHeader: 'stunning_shot',
+    },
+    {
+        id: 'mirror_frost_lance', name: '빙경 관통창', icon: 'affinities/ice', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.72, perLevelMultiplier: 0.16,
+        castTime: 1.4, cooldown: 9, propertyTag: GameTags.PROPERTY_ICE,
+        statusEffectId: 'slowness', statusDuration: 7, unavoidable: true, activationHeader: 'magic_bolt',
+    },
+    {
+        id: 'aurora_silence', name: '극광 침묵', icon: 'affinities/light', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.48, perLevelMultiplier: 0.13,
+        castTime: 1.6, cooldown: 11, propertyTag: GameTags.PROPERTY_LIGHT,
+        statusEffectId: 'silence', statusDuration: 4.5, activationHeader: 'sanctum_judgment',
     },
     {
         id: 'caldera_eruption', name: '칼데라 분출', icon: 'affinities/fire', damageType: 'magic' as const,
