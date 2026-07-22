@@ -182,6 +182,57 @@ const SWIFTNESS = defineAttributeEffect({
     modifiers: level => [{ attribute: AttributeType.SPEED.key, op: 'multiply', value: 1 + level * 0.05 }],
 });
 
+const CURSE = StatusEffectType.define({
+    id: 'curse', label: '쇠약의 저주', icon: 'affinities/dark',
+    descriptionTemplate: '공격력·마법력과 받는 치유량이 각각 [color=purple]{{calc.powerReduction}}%[/color]·[color=red]{{calc.healReduction}}%[/color] 감소합니다.',
+    calculatedFields: {
+        powerReduction: ({ effect }) => Math.round((1 - Math.max(0.5, Math.pow(0.95, effect.level))) * 100),
+        healReduction: ({ effect }) => Math.round((1 - Math.max(0.5, Math.pow(0.96, effect.level))) * 100),
+    },
+    onStart: applyCurse,
+    onUpdate: applyCurse,
+    onRemove: context => {
+        removeModifiers(context);
+        context.target.removeHealingReceivedModifier(modifierSource(context.effect));
+    },
+    aliases: ['저주', '쇠약의 저주'], tags: [GameTags.PROPERTY_DARK],
+});
+
+const PETRIFICATION = StatusEffectType.define({
+    id: 'petrification', label: '석화', icon: 'affinities/stone',
+    descriptionTemplate: '공격·스킬·이동·회피·장소 이동을 할 수 없습니다. 방어력은 20% 증가하지만 마법 저항력은 20% 감소합니다.',
+    onStart: applyPetrification,
+    onEarlyUpdate: applyPetrification,
+    onUpdate: context => refreshModifiers(context, [
+        { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.2 },
+        { attribute: AttributeType.MAGIC_DEF.key, op: 'multiply', value: 0.8 },
+    ]),
+    onRemove: context => {
+        context.target.releaseActionDisableSource(modifierSource(context.effect));
+        removeModifiers(context);
+    },
+    aliases: ['석화', '돌이 됨'], tags: [GameTags.PROPERTY_STONE],
+});
+
+const SUN_FEVER = StatusEffectType.define({
+    id: 'sun_fever', label: '열병', icon: 'affinities/fire',
+    descriptionTemplate: '이동속도와 공격속도가 [color=orange]{{calc.slowPercent}}%[/color] 감소하고 초당 수분 감소량이 {{calc.extraThirst}} 증가합니다. 빙결 효과와 만나면 상쇄됩니다.',
+    calculatedFields: {
+        slowPercent: ({ effect }) => Math.round((1 - Math.max(0.5, Math.pow(0.96, effect.level))) * 100),
+        extraThirst: ({ effect }) => Number((effect.level * 0.02).toFixed(2)),
+    },
+    onStart: context => {
+        if (livingOnly(context) === 'remove') return 'remove';
+        applySunFever(context);
+    },
+    onUpdate: context => {
+        if (livingOnly(context) === 'remove') return 'remove';
+        applySunFever(context);
+    },
+    onRemove: removeModifiers,
+    aliases: ['열병', '일사병'], tags: [GameTags.PROPERTY_FIRE],
+});
+
 const EXPERIENCE_AMPLIFICATION = StatusEffectType.define({
     id: 'experience_amplification', label: '경험 증폭', icon: 'attributes/luck',
     descriptionTemplate: '획득 경험치가 레벨당 5% 증가합니다.',
@@ -340,6 +391,41 @@ function applyExperienceAmplification({ target, effect }: StatusEffectContext): 
     target.setExperienceGainModifier(modifierSource(effect), 1 + effect.level * 0.05);
 }
 
+function applyCurse(context: StatusEffectContext): void {
+    const powerMultiplier = Math.max(0.5, Math.pow(0.95, context.effect.level));
+    refreshModifiers(context, [
+        { attribute: AttributeType.ATK.key, op: 'multiply', value: powerMultiplier },
+        { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: powerMultiplier },
+    ]);
+    context.target.setHealingReceivedModifier(
+        modifierSource(context.effect),
+        Math.max(0.5, Math.pow(0.96, context.effect.level)),
+    );
+}
+
+function applyPetrification(context: StatusEffectContext): void {
+    context.target.disableActions([
+        ActionType.ATTACK,
+        ActionType.SKILL,
+        ActionType.MOVEMENT,
+        ActionType.EVASION,
+        ActionType.LOCATION_TRAVEL,
+    ], modifierSource(context.effect));
+    refreshModifiers(context, [
+        { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.2 },
+        { attribute: AttributeType.MAGIC_DEF.key, op: 'multiply', value: 0.8 },
+    ]);
+}
+
+function applySunFever(context: StatusEffectContext): void {
+    const multiplier = Math.max(0.5, Math.pow(0.96, context.effect.level));
+    refreshModifiers(context, [
+        { attribute: AttributeType.SPEED.key, op: 'multiply', value: multiplier },
+        { attribute: AttributeType.ATTACK_SPEED.key, op: 'multiply', value: multiplier },
+        { attribute: AttributeType.THIRST_DRAIN.key, op: 'add', value: context.effect.level * 0.02 },
+    ]);
+}
+
 function applyFear(context: StatusEffectContext): void {
     context.target.disableActions([ActionType.ATTACK, ActionType.SKILL, ActionType.EVASION], modifierSource(context.effect));
     refreshModifiers(context, [{
@@ -365,6 +451,7 @@ function applyFrozen(context: StatusEffectContext): StatusEffectLifecycleResult 
 
 defineStatusEffectNeutralization(StatusEffectType.FIRE, FROZEN);
 defineStatusEffectNeutralization(SLOWNESS, SWIFTNESS);
+defineStatusEffectNeutralization(SUN_FEVER, FROZEN);
 
 for (const [blocked, resistance] of [
     [StatusEffectType.FIRE, FIRE_RESISTANCE],
@@ -388,7 +475,8 @@ defineStatusEffectInteraction(StatusEffectType.FIRE, INVISIBLE, StatusEffectInte
 export const LegacyStatusEffects = Object.freeze({
     POISON, BLEEDING, DECAY, HEAL_REDUCTION, DEFENSE_REDUCTION, MAGIC_DEFENSE_REDUCTION,
     MAGIC_ENHANCEMENT, STRENGTH_ENHANCEMENT, MENTALITY_REGENERATION, REGENERATION,
-    EXPERIENCE_AMPLIFICATION, SLOWNESS, SWIFTNESS, SILENCE, BIND, STUN, OVERMASTER,
+    EXPERIENCE_AMPLIFICATION, SLOWNESS, SWIFTNESS, CURSE, PETRIFICATION, SUN_FEVER,
+    SILENCE, BIND, STUN, OVERMASTER,
     NAUSEA, BLINDNESS, AIRBORNE, CHARM, FEAR, SLEEP, INVULNERABLE, INVISIBLE, EXPOSE,
     FIRE_RESISTANCE, FROZEN_RESISTANCE, DETOXIFICATION, PRESERVATION, FROZEN,
 });
