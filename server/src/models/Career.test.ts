@@ -225,3 +225,51 @@ test('직업 스킬 설명은 현재 수치와 계수 hover를 제공하고 두 
         }
     }
 });
+
+test('스킬 정보는 자연스러운 효과 문장과 실제 발동 준비만 안내한다', () => {
+    const { player } = createCareer();
+    const manaLance = new Skill({ playerId: player.userId, skillDataId: 'mana_lance', level: 1 });
+    const lanceDescription = manaLance.formatDescription(player);
+
+    assert.match(lanceDescription, /마력으로 이루어진 창을 소환하여 대상에게 발사합니다/);
+    assert.match(lanceDescription, /마법 관통력/);
+    assert.match(lanceDescription, /마법 피해를 입힙니다/);
+    assert.doesNotMatch(lanceDescription, /피해 입힙니다|을 적용합니다|지팡이 없이도|마법 저항을 꿰뚫/);
+    assert.equal(
+        manaLance.formatActivationCondition(player),
+        '대상을 지정하고 `/스킬 마력 창` 또는 채팅에 [color=gold]마력 창![/color]를 입력해 발동합니다.',
+    );
+    assert.equal(
+        new Skill({ playerId: player.userId, skillDataId: 'steel_slash', level: 1 })
+            .formatActivationCondition(player),
+        '대상을 지정하고 검 또는 도끼를 장착한 뒤 `/스킬 강철 베기` 또는 채팅에 [color=gold]강철 베기![/color]를 입력해 발동합니다.',
+    );
+
+    const aegis = new Skill({ playerId: player.userId, skillDataId: 'tempered_aegis', level: 1 });
+    const aegisDescription = aegis.formatDescription(player);
+    assert.match(aegisDescription, /만큼의 피해를 막는 일반 보호막/);
+    assert.match(aegisDescription, /\[tooltip=최대 생명력 × 12% \+ 공격력 × 45%\]/);
+    assert.doesNotMatch(aegisDescription, /최대 생명력의 .*공격력의 .*합친/);
+    assert.equal(
+        new Skill({ playerId: player.userId, skillDataId: 'battle_rush', level: 1 })
+            .formatActivationCondition(player),
+        '`/스킬 전투 질주` 또는 채팅에 [color=gold]전투 질주![/color]를 입력해 발동합니다.',
+    );
+});
+
+test('스킬 정보 문구에는 기계적인 조건·효과 나열을 남기지 않는다', () => {
+    const { player } = createCareer();
+    for (const data of getAllSkillData()) {
+        const skill = new Skill({ playerId: player.userId, skillDataId: data.id, level: 1 });
+        assert.doesNotMatch(
+            skill.formatDescription(player),
+            /피해 입힙니다|장착 무기와 관계없이|별도의 대상이나 무기가 필요하지 않습니다|\{\{/,
+            data.id,
+        );
+        assert.doesNotMatch(
+            skill.formatActivationCondition(player),
+            /장착 무기와 관계없이|별도의 대상이나 무기가 필요하지 않습니다|살아 있는 현재 대상|\{\{/,
+            data.id,
+        );
+    }
+});

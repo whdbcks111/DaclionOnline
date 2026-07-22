@@ -81,21 +81,21 @@ export class AttributeType {
     )
     static readonly MAGIC_DEF    = new AttributeType(
         'magicDef',     
-        '마법저항',       
+        '마법 저항력',
         0,   
         undefined, 
         v => `마법 피해를 ${v.toFixed(1)} 감소시킵니다.`
     )
     static readonly ARMOR_PEN    = new AttributeType(
         'armorPen',     
-        '방어관통',       
+        '물리 관통력',
         0,   
         undefined, 
         v => `대상의 방어력을 ${v.toFixed(1)} 무시합니다.`
     )
     static readonly MAGIC_PEN    = new AttributeType(
         'magicPen',     
-        '마법관통',       
+        '마법 관통력',
         0,   
         undefined, 
         v => `대상의 마법저항을 ${v.toFixed(1)} 무시합니다.`
@@ -123,14 +123,14 @@ export class AttributeType {
     )
     static readonly CRIT_RATE    = new AttributeType(
         'critRate',     
-        '치명타율',    
+        '치명타 확률',
         0.05, 
         v => `${(v * 100).toFixed(1)}%`,
         v => `${(v * 100).toFixed(1)}% 확률로 치명타가 발생합니다.`
     )
     static readonly CRIT_DMG     = new AttributeType(
         'critDmg',      
-        '치명타피해', 
+        '치명타 피해',
         1.5,  
         v => `${(v * 100).toFixed(0)}%`, 
         v => `치명타 시 ${(v * 100).toFixed(0)}%의 피해를 줍니다.`

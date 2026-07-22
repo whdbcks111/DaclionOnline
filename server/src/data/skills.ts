@@ -143,16 +143,28 @@ function manaBarrierShieldAmount(context: SkillContext): number {
         + context.owner.attribute.get(AttributeType.MAGIC_FORCE) * 0.75;
 }
 
-function activationGuide(requirement: string): string {
-    return `${requirement} \`/스킬 {{name}}\` 또는 채팅에 [color=gold]{{name}}![/color]를 입력해 발동합니다.`;
+function activationGuide(preparation = ''): string {
+    const prefix = preparation.trim().replace(/[.]+$/, '');
+    return `${prefix ? `${prefix} ` : ''}\`/스킬 {{name}}\` 또는 채팅에 [color=gold]{{name}}![/color]를 입력해 발동합니다.`;
+}
+
+function targetActivationGuide(weaponRequirement?: string): string {
+    const equipment = weaponRequirement
+        ? weaponRequirement.trim().replace(/장착해야 합니다\.?$/, '장착한 뒤')
+        : '';
+    return activationGuide(`대상을 지정하고${equipment ? ` ${equipment}` : ''}`);
+}
+
+function penetrationLabel(attribute: AttributeType): string {
+    return attribute === AttributeType.MAGIC_PEN ? '마법 관통력' : '물리 관통력';
 }
 
 function buffFeedback(name: string, duration: number, effects: string): string {
     return `${name} 발동! ${effects} (${formatNumber(duration)}초)`;
 }
 
-const PROJECTILE_CRITICAL_TEXT = '투사체는 {{icon.critRate}}{{icon.critDmg}} 시전자의 치명타 능력치를 적용합니다.';
-const PROJECTILE_FLIGHT_TEXT = '{{icon.projectileAcceleration}} 현재 도달 시간은 [color=cyan]{{projectileTravelTime}}[/color]입니다.';
+const PROJECTILE_CRITICAL_TEXT = '이 투사체에는 시전자의 {{icon.critRate}} 치명타 확률과 {{icon.critDmg}} 치명타 피해가 적용됩니다.';
+const PROJECTILE_FLIGHT_TEXT = '{{icon.projectileAcceleration}} 대상에게 도달하기까지 [color=cyan]{{projectileTravelTime}}[/color]가 걸립니다.';
 
 function magicSkillAccelerationMultiplier(context: SkillContext): number {
     const levelBonus = Math.max(0, context.skill.level - 1) * 0.08;
@@ -183,15 +195,13 @@ defineSkill({
     aliases: ['powerstrike'],
     maxLevel: 5,
     descriptionTemplate:
-        '현재 대상으로 기본 공격을 가해 {{icon.atk}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 예상 물리 피해를 입힙니다. '
-        + '이 공격은 [color=gold]100% 확률로 치명타[/color]가 발생합니다.\n'
+        '힘을 모아 지정한 대상을 강하게 내리칩니다. 이 공격은 [color=gold]반드시 치명타로 적중[/color]하며, '
         + '공격 직전에 {{icon.armorPen}} 물리 관통력이 일회성으로 [color=orange]+{{armorPenFlat}}[/color] 및 '
-        + '[color=orange]+{{armorPenPercent}}%[/color] 증가합니다.',
+        + '[color=orange]+{{armorPenPercent}}%[/color] 증가하고, '
+        + '{{icon.atk}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
     costTemplate:
         '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
-    activationConditionTemplate:
-        `살아 있는 현재 대상과 {{icon.maxMentality}} [color=$magic]정신력 {{manaCost}} 이상[/color]이 필요합니다. `
-        + '`/스킬 {{name}}` 또는 채팅에 [color=gold]강타![/color]를 입력해 발동합니다.',
+    activationConditionTemplate: targetActivationGuide(),
     activationMessage: '강타!',
     baseMetadata: {
         baseManaCost: 20,
@@ -444,10 +454,10 @@ defineJobPassive({
     name: '살의 감각',
     jobId: JOBS.assassin,
     icon: 'jobs/assassin',
-    description: '{{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color], {{icon.armorPen}} 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+    description: '{{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color], {{icon.armorPen}} 물리 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
     modifiers: [
         { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.18, label: '치명타 피해 증가', display: '+18%p' },
-        { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 4, label: '방어 관통력 증가', display: '+4' },
+        { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 4, label: '물리 관통력 증가', display: '+4' },
     ],
 });
 
@@ -528,10 +538,10 @@ const elitePassives = [
     },
     {
         id: 'executioner_mastery', name: '처형 준비', jobId: 'career:executioner', icon: 'jobs/assassin',
-        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.armorPen}} 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.armorPen}} 물리 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
         modifiers: [
             { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.12, label: '공격력 증가', display: '+12%' },
-            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 6, label: '방어 관통력 증가', display: '+6' },
+            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 6, label: '물리 관통력 증가', display: '+6' },
         ],
     },
     {
@@ -592,10 +602,10 @@ const elitePassives = [
     },
     {
         id: 'steel_shadow_mastery', name: '연마된 살의', jobId: 'career:steel_shadow', icon: 'jobs/assassin',
-        description: '{{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color], {{icon.armorPen}} 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+        description: '{{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color], {{icon.armorPen}} 물리 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
         modifiers: [
             { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.2, label: '치명타 피해 증가', display: '+20%p' },
-            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 7, label: '방어 관통력 증가', display: '+7' },
+            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 7, label: '물리 관통력 증가', display: '+7' },
         ],
     },
     {
@@ -624,10 +634,10 @@ const elitePassives = [
     },
     {
         id: 'venom_smith_mastery', name: '독금 연마', jobId: 'career:venom_smith', icon: 'items/iron_pickaxe',
-        description: '{{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color], {{icon.armorPen}} 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+        description: '{{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color], {{icon.armorPen}} 물리 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
         modifiers: [
             { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.2, label: '치명타 피해 증가', display: '+20%p' },
-            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 6, label: '방어 관통력 증가', display: '+6' },
+            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 6, label: '물리 관통력 증가', display: '+6' },
         ],
     },
     {
@@ -645,10 +655,10 @@ for (const passive of elitePassives) defineJobPassive(passive);
 const statAwakenings = [
     {
         id: 'titan_strength', name: '거인의 힘', stat: StatType.STRENGTH, icon: 'attributes/atk',
-        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.armorPen}} 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.armorPen}} 물리 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
         modifiers: [
             { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.08, label: '공격력 증가', display: '+8%' },
-            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 8, label: '방어 관통력 증가', display: '+8' },
+            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 8, label: '물리 관통력 증가', display: '+8' },
         ],
     },
     {
@@ -739,8 +749,8 @@ const weaponMasteries = [
     },
     {
         id: 'dagger_mastery', name: '단검 숙련', weapon: 'dagger', label: '단검', tag: GameTags.WEAPON_DAGGER, icon: 'items/venom_dagger',
-        description: '{{icon.armorPen}} 단검 장착 중 방어 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
-        modifiers: [{ attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 5, label: '방어 관통력 증가', display: '+5' }],
+        description: '{{icon.armorPen}} 단검 장착 중 물리 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+        modifiers: [{ attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 5, label: '물리 관통력 증가', display: '+5' }],
     },
     {
         id: 'staff_mastery', name: '지팡이 숙련', weapon: 'staff', label: '지팡이', tag: GameTags.WEAPON_STAFF, icon: 'items/apprentice_staff',
@@ -758,7 +768,7 @@ for (const mastery of weaponMasteries) {
         maxLevel: 1,
         descriptionTemplate: mastery.description,
         costTemplate: '소모값 없음',
-        activationConditionTemplate: `${mastery.label}을(를) 장착한 동안 항상 적용됩니다.`,
+        activationConditionTemplate: `${mastery.label} 장착 중 항상 적용됩니다.`,
         baseMetadata: null,
         calculatedFields: Object.fromEntries(mastery.modifiers.map(modifier => [
             modifier.attribute,
@@ -770,7 +780,7 @@ for (const mastery of weaponMasteries) {
             watchedProgress: [`combat:weapon_hits/${mastery.weapon}`],
             check: ({ player }) => (player?.progress.getCounter(`combat:weapon_hits/${mastery.weapon}`) ?? 0n) >= 200n,
         },
-        weaponRequirement: weaponRequirement(`${mastery.label}을(를) 장착해야 합니다.`, mastery.tag),
+        weaponRequirement: weaponRequirement(`${mastery.label} 장착이 필요합니다.`, mastery.tag),
         canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
         onPassiveUpdate: ({ owner }) => {
             if (owner.attribute.hasSource(source)) return;
@@ -803,9 +813,9 @@ defineSkill({
     name: '결 파쇄',
     icon: 'skills/precision_break',
     maxLevel: 5,
-    descriptionTemplate: '금속의 결을 읽어 현재 대상에게 {{icon.atk}}{{icon.maxLife}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 확정 치명타를 가합니다. 공격력과 최대 생명력, 감각으로 높인 치명타 피해가 함께 반영됩니다.',
+    descriptionTemplate: '대상의 방어 태세에서 가장 약한 결을 찾아 파쇄합니다. 이 공격은 반드시 치명타로 적중하며, {{icon.atk}}{{icon.maxLife}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 12[/color]',
-    activationConditionTemplate: activationGuide('살아 있는 현재 대상이 필요하며 장착 무기의 종류는 제한하지 않습니다.'),
+    activationConditionTemplate: targetActivationGuide(),
     activationMessage: '결 파쇄!',
     baseMetadata: null,
     calculatedFields: {
@@ -844,7 +854,7 @@ defineSkill({
     maxLevel: 10,
     descriptionTemplate: '인벤토리에서 가장 앞에 있는 원광을 찾아 불순물을 걷어내고 스킬 레벨과 {{icon.forgingPrecision}} 제련 정밀도에 따라 한 번에 [color=gold]{{batch}}개[/color]까지 제련 소재로 바꿉니다.',
     costTemplate: '{{manaCost}} 정신력 · 재사용 대기시간 {{maxCooldown}}초',
-    activationConditionTemplate: '/스킬 마력 제련 또는 마력 제련!',
+    activationConditionTemplate: activationGuide(),
     activationMessage: '마력 제련!',
     baseMetadata: { baseManaCost: 18 },
     calculatedFields: {
@@ -899,7 +909,7 @@ defineSkill({
     maxLevel: 1,
     descriptionTemplate: '제련 소재와 장비 형태를 선택해 리듬 단조를 시작할 수 있습니다. 정확도가 완성품의 공격·방어 수치와 내구도를 결정합니다.',
     costTemplate: '형태별 제련 소재 소모',
-    activationConditionTemplate: '/단조 <형태> <재료> 명령어로 사용합니다.',
+    activationConditionTemplate: '제련 소재와 장비 형태를 준비한 뒤 `/단조 <형태> <재료>`를 입력해 사용합니다.',
     baseMetadata: null,
     calculatedFields: {},
     canActivate: () => denySkill('/단조 <형태> <재료> 명령어를 사용하세요.'),
@@ -914,7 +924,7 @@ defineSkill({
     maxLevel: 1,
     descriptionTemplate: '직접 단조한 장비에 장인이 정한 고유한 이름을 새깁니다. 이름은 장비 인스턴스에 영속되며 같은 마스터 아이템의 다른 장비에는 영향을 주지 않습니다.',
     costTemplate: '소모값 없음',
-    activationConditionTemplate: `/장비명명 <아이템 번호 또는 장착칸> <새 이름> · 감각 ${FORGED_ITEM_NAMING_SENSIBILITY} 이상`,
+    activationConditionTemplate: `감각 ${FORGED_ITEM_NAMING_SENSIBILITY} 이상일 때 직접 단조한 장비를 지정해 \`/장비명명 <아이템 번호 또는 장착칸> <새 이름>\`을 입력합니다.`,
     baseMetadata: null,
     calculateExperienceGain: () => 0,
     calculateRequiredExperience: () => 0,
@@ -938,7 +948,7 @@ defineSkill({
     maxLevel: 5,
     descriptionTemplate: '무기의 재료·속성을 읽어 다음 적중 효과 중 하나를 영구히 각인합니다. [tooltip=1초마다 불 속성 피해를 주며 오래 지속되면 화상을 남깁니다.][color=orange]화염[/color][/tooltip] · [tooltip=0.5초마다 최대 생명력과 잃은 생명력에 비례한 피해를 주고 받는 치유량을 50% 감소시킵니다.][color=purple]맹독[/color][/tooltip] · [tooltip=스킬·아이템 사용·공격·이동·회피·장소 이동을 모두 막습니다.][color=yellow]기절[/color][/tooltip] · [tooltip=초당 얼음 피해를 주고 이동속도와 공격속도를 낮춥니다. 화염과 만나면 서로 상쇄됩니다.][color=skyblue]빙결[/color][/tooltip] · [tooltip=공격과 회피를 할 수 없게 만듭니다.][color=darkgray]실명[/color][/tooltip]. 장비 속성과 고유 특성이 후보를 편향하며 발동률(18~68%)·효과 레벨·지속시간은 감각과 서버 난수에 따라 결정됩니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 80[/color]',
-    activationConditionTemplate: '/마법부여 <아이템 번호 또는 장착칸> · 마도 대장장이 전용 · 아직 마법이 없는 무기',
+    activationConditionTemplate: '마도 대장장이가 아직 마법이 부여되지 않은 무기를 지정해 `/마법부여 <아이템 번호 또는 장착칸>`을 입력합니다.',
     baseMetadata: null,
     calculateExperienceGain: () => 25,
     jobRequirement: jobRequirement('career:arcane_smith'),
@@ -954,7 +964,7 @@ defineSkill({
     maxLevel: 5,
     descriptionTemplate: `지핵 강화석을 소모해 무기를 최대 +${MAX_WEAPON_REINFORCEMENT}까지 강화합니다. 강화는 실패하거나 하락하지 않으며, 매 단계 공격 계열 능력치와 무기 종류에 맞는 긍정 효과가 영구적으로 누적됩니다.`,
     costTemplate: '지핵 강화석 1개',
-    activationConditionTemplate: '/무기강화 <아이템 번호 또는 장착칸> · 전투 대장장이 전용 · +5 미만 무기',
+    activationConditionTemplate: '전투 대장장이가 +5 미만인 무기를 지정해 `/무기강화 <아이템 번호 또는 장착칸>`을 입력합니다.',
     baseMetadata: null,
     calculateExperienceGain: () => 28,
     jobRequirement: jobRequirement('career:battle_smith'),
@@ -1023,9 +1033,9 @@ function projectileAttack(
 
 defineSkill({
     id: 'steel_slash', name: '강철 베기', icon: 'skills/steel_slash', maxLevel: 5,
-    descriptionTemplate: '검 또는 도끼로 현재 대상에게 {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
+    descriptionTemplate: '검 또는 도끼에 힘을 실어 대상을 힘껏 베어 냅니다. {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 10[/color]',
-    activationConditionTemplate: activationGuide('검 또는 도끼와 살아 있는 현재 대상이 필요합니다.'),
+    activationConditionTemplate: targetActivationGuide('검 또는 도끼를 장착해야 합니다.'),
     activationMessage: '강철 베기!', activationPhrase: '강철 베기!', baseMetadata: null,
     calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.ATK, 175, 12) },
     balance: {
@@ -1045,9 +1055,9 @@ defineSkill({
 
 defineSkill({
     id: 'battle_rush', name: '전투 질주', icon: 'skills/battle_rush', maxLevel: 5,
-    descriptionTemplate: '{{duration}} 동안 {{icon.atk}} 공격력이 [color=orange]{{attackBonus}}[/color], {{icon.speed}} 이동속도가 [color=cyan]{{speedBonus}}[/color] 증가합니다.',
+    descriptionTemplate: '전의를 끌어올려 {{duration}} 동안 {{icon.atk}} 공격력이 [color=orange]{{attackBonus}}[/color], {{icon.speed}} 이동속도가 [color=cyan]{{speedBonus}}[/color] 증가합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 14[/color]',
-    activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '전투 질주!', baseMetadata: null,
+    activationConditionTemplate: activationGuide(), activationMessage: '전투 질주!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
         valueByLevel(context.skill.level, 8, 1),
@@ -1079,9 +1089,9 @@ defineSkill({
 
 defineSkill({
     id: 'indomitable', name: '불굴', icon: 'skills/indomitable', maxLevel: 5,
-    descriptionTemplate: '{{duration}} 동안 {{icon.def}} 방어력이 [color=yellow]+{{defBonus}}[/color], {{icon.maxLife}} 최대 생명력이 [color=green]{{lifeBonus}}[/color] 증가하고 최대 생명력의 [color=green]{{healPercent}}[/color]를 회복합니다.',
+    descriptionTemplate: '고통을 견디며 전열을 가다듬습니다. {{duration}} 동안 {{icon.def}} 방어력이 [color=yellow]+{{defBonus}}[/color], {{icon.maxLife}} 최대 생명력이 [color=green]{{lifeBonus}}[/color] 증가하고 생명력을 최대치의 [color=green]{{healPercent}}[/color]만큼 회복합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
-    activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '불굴!', baseMetadata: null,
+    activationConditionTemplate: activationGuide(), activationMessage: '불굴!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
         valueByLevel(context.skill.level, 10, 1),
@@ -1117,9 +1127,9 @@ defineSkill({
 
 defineSkill({
     id: 'arcane_arrow', name: '마력 화살', icon: 'skills/arcane_arrow', maxLevel: 5,
-    descriptionTemplate: `탄약을 소모하지 않는 빛 속성 화살을 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
+    descriptionTemplate: `빛의 마력으로 화살을 빚어 대상에게 발사합니다. 탄약은 소모하지 않으며, {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 12[/color]',
-    activationConditionTemplate: activationGuide('활과 살아 있는 현재 대상이 필요합니다.'), activationMessage: '마력 화살!', baseMetadata: null,
+    activationConditionTemplate: targetActivationGuide('활을 장착해야 합니다.'), activationMessage: '마력 화살!', baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 160, 12),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_magic_orb', true),
@@ -1144,7 +1154,7 @@ defineSkill({
     id: 'multishot', name: '다중 사격', icon: 'skills/multishot', maxLevel: 5,
     descriptionTemplate: `현재 장소의 공격 가능한 대상 최대 [color=gold]3명[/color]에게 각각 {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 화살을 발사합니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
-    activationConditionTemplate: activationGuide('활과 현재 장소의 공격 가능한 오브젝트가 필요합니다.'), activationMessage: '다중 사격!', baseMetadata: null,
+    activationConditionTemplate: activationGuide('활을 장착하고 공격할 대상이 있는 장소에서'), activationMessage: '다중 사격!', baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.ATK, 100, 10),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_arrow', false),
@@ -1180,9 +1190,9 @@ defineSkill({
 
 defineSkill({
     id: 'stunning_shot', name: '충격 화살', icon: 'skills/stunning_shot', maxLevel: 5,
-    descriptionTemplate: `{{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 강화 화살을 발사합니다. 적중한 대상은 {{stunDuration}} 동안 기절합니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
+    descriptionTemplate: `충격을 응축한 강화 화살을 대상에게 발사합니다. {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입히고, 적중한 대상을 {{stunDuration}} 동안 기절시킵니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 20[/color]',
-    activationConditionTemplate: activationGuide('활과 살아 있는 현재 대상이 필요합니다.'), activationMessage: '충격 화살!', baseMetadata: null,
+    activationConditionTemplate: targetActivationGuide('활을 장착해야 합니다.'), activationMessage: '충격 화살!', baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.ATK, 125, 10),
         stunDuration: context => levelValueTooltip(context, '기절 지속시간', 2, 0.25, '초'),
@@ -1210,7 +1220,7 @@ defineSkill({
     id: 'wind_evasion', name: '바람 회피', icon: 'skills/wind_evasion', maxLevel: 5,
     descriptionTemplate: '{{duration}} 동안 {{icon.speed}} 이동 가능한 상태라면 받는 공격을 [color=cyan]확정적으로 회피[/color]합니다. 이동이 금지된 동안에는 발동하지 않습니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 22[/color]',
-    activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '바람 회피!', baseMetadata: null,
+    activationConditionTemplate: activationGuide(), activationMessage: '바람 회피!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
         valueByLevel(context.skill.level, 7, 0.75),
@@ -1234,7 +1244,7 @@ defineSkill({
     id: 'stealth', name: '은신', icon: 'skills/stealth', maxLevel: 5,
     descriptionTemplate: '{{duration}} 동안 다른 대상이 공격 대상으로 지정할 수 없는 은신 상태가 되고 {{icon.speed}} 이동속도가 [color=cyan]{{speedBonus}}[/color] 증가합니다. 직접 공격하거나 투사체를 발사하면 즉시 해제됩니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 16[/color]',
-    activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '은신!', baseMetadata: null,
+    activationConditionTemplate: activationGuide(), activationMessage: '은신!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
         valueByLevel(context.skill.level, 8, 0.75),
@@ -1265,9 +1275,9 @@ defineSkill({
 
 defineSkill({
     id: 'ambush', name: '암습', icon: 'skills/ambush', maxLevel: 5,
-    descriptionTemplate: '은신을 해제하고 {{icon.atk}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 {{icon.critRate}} 확정 치명타 공격을 가합니다. 이 공격은 회피할 수 없습니다.',
+    descriptionTemplate: '은신을 해제하며 대상의 급소를 기습합니다. 이 공격은 회피할 수 없고 반드시 치명타로 적중하며, {{icon.atk}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
-    activationConditionTemplate: activationGuide('단검, 은신 효과와 살아 있는 현재 대상이 필요합니다.'), activationMessage: '암습!', baseMetadata: null,
+    activationConditionTemplate: activationGuide('대상을 지정하고 단검을 장착한 뒤 은신 상태에서'), activationMessage: '암습!', baseMetadata: null,
     calculatedFields: { damage: context => {
         const percent = percentByLevel(context.skill.level, 180, 15);
         const damage = context.owner.attribute.get(AttributeType.ATK) * percent / 100
@@ -1298,9 +1308,9 @@ defineSkill({
 
 defineSkill({
     id: 'venom_blade', name: '맹독 칼날', icon: 'skills/venom_blade', maxLevel: 5,
-    descriptionTemplate: '단검으로 {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다. 피해를 준 대상에게 Lv.{{level}} 맹독을 {{poisonDuration}} 동안 부여합니다.',
+    descriptionTemplate: '단검에 치명적인 독을 발라 대상을 베어 냅니다. {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입히고, 적중한 대상에게 Lv.{{level}} 맹독을 {{poisonDuration}} 동안 부여합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 14[/color]',
-    activationConditionTemplate: activationGuide('단검과 살아 있는 현재 대상이 필요합니다.'), activationMessage: '맹독 칼날!', baseMetadata: null,
+    activationConditionTemplate: targetActivationGuide('단검을 장착해야 합니다.'), activationMessage: '맹독 칼날!', baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.ATK, 145, 10),
         poisonDuration: context => levelValueTooltip(context, '맹독 지속시간', 8, 1, '초'),
@@ -1330,7 +1340,7 @@ defineSkill({
     id: 'magic_bolt', name: '마력탄', icon: 'skills/magic_bolt', maxLevel: 5,
     descriptionTemplate: `응축한 정신 에너지를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 10[/color]',
-    activationConditionTemplate: activationGuide('살아 있는 현재 대상이 필요합니다. 장착 무기와 관계없이 사용할 수 있습니다.'), activationMessage: '마력탄!', baseMetadata: null,
+    activationConditionTemplate: targetActivationGuide(), activationMessage: '마력탄!', baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 130, 9),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'magic_bolt', true),
@@ -1351,10 +1361,10 @@ defineSkill({
 
 defineSkill({
     id: 'mana_barrier', name: '마력 보호막', icon: 'skills/mana_barrier', maxLevel: 5,
-    descriptionTemplate: '{{duration}} 동안 [color=#a56de2]{{shieldAmount}}의 마법 보호막[/color]을 얻습니다. '
+    descriptionTemplate: '마력으로 몸을 감싸 {{duration}} 동안 [color=#a56de2]{{shieldAmount}}만큼의 마법 피해를 막는 보호막[/color]을 얻습니다. '
         + '{{icon.def}} 방어력이 [color=yellow]+{{defBonus}}[/color], {{icon.magicDef}} 마법 저항력이 [color=purple]+{{magicDefBonus}}[/color] 증가합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 22[/color]',
-    activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '마력 보호막!', baseMetadata: null,
+    activationConditionTemplate: activationGuide(), activationMessage: '마력 보호막!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
         valueByLevel(context.skill.level, 10, 1),
@@ -1393,9 +1403,9 @@ defineSkill({
 
 defineSkill({
     id: 'elemental_bind', name: '원소 속박', icon: 'skills/elemental_bind', maxLevel: 5,
-    descriptionTemplate: `얼음 속성 구체로 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. 적중한 대상은 {{bindDuration}} 동안 공격·스킬·이동·장소 이동을 할 수 없습니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
+    descriptionTemplate: `얼음 마력을 구체로 응축해 대상에게 발사합니다. {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입히고, 적중한 대상을 {{bindDuration}} 동안 속박해 공격·스킬·이동·장소 이동을 막습니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 24[/color]',
-    activationConditionTemplate: activationGuide('살아 있는 현재 대상이 필요합니다. 장착 무기와 관계없이 사용할 수 있습니다.'), activationMessage: '원소 속박!', baseMetadata: null,
+    activationConditionTemplate: targetActivationGuide(), activationMessage: '원소 속박!', baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 105, 8),
         bindDuration: context => levelValueTooltip(context, '속박 지속시간', 1.5, 0.2, '초'),
@@ -1423,7 +1433,7 @@ defineSkill({
     id: 'elemental_insight', name: '원소 통찰', icon: 'skills/elemental_insight', maxLevel: 5,
     descriptionTemplate: '{{duration}} 동안 {{icon.magicForce}} 마법력이 [color=$magic]{{magicBonus}}[/color], {{icon.mentalityRegen}} 정신력 재생이 [color=purple]+{{regenBonus}}/초[/color] 증가합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 16[/color]',
-    activationConditionTemplate: activationGuide('별도의 대상이나 무기가 필요하지 않습니다.'), activationMessage: '원소 통찰!', baseMetadata: null,
+    activationConditionTemplate: activationGuide(), activationMessage: '원소 통찰!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
         valueByLevel(context.skill.level, 12, 1),
@@ -1458,9 +1468,9 @@ for (const elemental of [
     { id: 'lightning_orb', name: '뇌전구', icon: 'affinities/electric', tag: GameTags.PROPERTY_ELECTRIC, stat: 'career:mage_electric_kills', effect: StatusEffectType.PARALYTIC_POISON, effectLabel: '마비독', duration: 5, durationPerLevel: 0.75 },
 ] as const) defineSkill({
     id: elemental.id, name: elemental.name, icon: `skills/${elemental.id}`, maxLevel: 5,
-    descriptionTemplate: `${elemental.name}를 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 속성 마법 피해를 입히고 Lv.{{level}} ${elemental.effectLabel} 효과를 {{effectDuration}} 동안 부여합니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
+    descriptionTemplate: `${elemental.name}에 원소 마력을 응축해 대상에게 발사합니다. {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 속성 마법 피해를 입히고, 적중한 대상에게 Lv.{{level}} ${elemental.effectLabel} 효과를 {{effectDuration}} 동안 부여합니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 28[/color]',
-    activationConditionTemplate: activationGuide('살아 있는 현재 대상이 필요합니다. 장착 무기와 관계없이 사용할 수 있습니다.'),
+    activationConditionTemplate: targetActivationGuide(),
     activationMessage: `${elemental.name}!`, baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 140, 10),
@@ -1523,8 +1533,7 @@ interface GrowthTechniqueDefinition {
     statusDurationPerLevel?: number;
     statusLevel?: (skillLevel: number) => number;
     shieldPercent?: number;
-    extraDescription: string;
-    acquisitionDescription?: string;
+    descriptionIntro: string;
 }
 
 function growthTechniqueDamage(context: SkillContext, definition: GrowthTechniqueDefinition): number {
@@ -1550,7 +1559,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         manaCost: 18, cooldown: 8, jobId: JOBS.warrior, groupTag: GameTags.SKILL_GROUP_WARRIOR, unlockLevel: 30,
         weaponDescription: '검 또는 도끼를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
         statusEffect: LegacyStatusEffects.DEFENSE_REDUCTION, statusLabel: '방어력 감소', statusDuration: 8,
-        statusDurationPerLevel: 0.5, extraDescription: '적중한 대상의 방어력을 약화시켜 이어지는 물리 공격의 길을 엽니다.',
+        statusDurationPerLevel: 0.5, descriptionIntro: '방어 태세의 빈틈을 노려 무기를 힘껏 베어 냅니다.',
     },
     {
         id: 'iron_tempest', name: '철풍 돌파', icon: 'skills/battle_rush', activationHeader: 'battle_rush',
@@ -1558,7 +1567,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         manaCost: 26, cooldown: 13, jobId: JOBS.warrior, groupTag: GameTags.SKILL_GROUP_WARRIOR, unlockLevel: 50,
         weaponDescription: '검 또는 도끼를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
         unavoidable: true, shieldPercent: 8,
-        extraDescription: '회피할 수 없는 돌파 공격 뒤 최대 생명력에 비례한 일반 보호막을 얻습니다.',
+        descriptionIntro: '강철 바람을 두르고 대상에게 거침없이 돌진합니다.',
     },
     {
         id: 'piercing_arrow', name: '관통 화살', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
@@ -1567,14 +1576,14 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW], projectile: 'basic_arrow',
         propertyTag: GameTags.PROPERTY_METAL,
         penetration: { attribute: AttributeType.ARMOR_PEN, base: 20, perLevel: 5 },
-        extraDescription: '발사 순간의 방어 관통력을 따로 보정한 금속 화살입니다.',
+        descriptionIntro: '금속 화살촉에 힘을 집중해 대상의 방어를 관통합니다.',
     },
     {
         id: 'arrow_storm', name: '화살 폭우', icon: 'skills/multishot', activationHeader: 'multishot',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 92, perLevelPercent: 7,
         manaCost: 30, cooldown: 15, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 50,
         weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW], projectile: 'basic_arrow',
-        hitCount: 4, extraDescription: '현재 대상 한 명에게 네 발을 연속으로 발사하며 각 화살은 별도로 치명타가 발생합니다.',
+        hitCount: 4, descriptionIntro: '한 대상을 향해 네 발의 화살을 연달아 쏟아붓습니다.',
     },
     {
         id: 'rupture_cut', name: '혈맥 절단', icon: 'skills/ambush', activationHeader: 'ambush',
@@ -1582,7 +1591,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         manaCost: 18, cooldown: 8, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 30,
         weaponDescription: '단검을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_DAGGER], guaranteedCritical: true,
         statusEffect: LegacyStatusEffects.BLEEDING, statusLabel: '출혈', statusDuration: 7, statusDurationPerLevel: 0.75,
-        extraDescription: '급소를 베어 확정 치명타를 가하고 출혈을 남깁니다.',
+        descriptionIntro: '단검으로 급소의 혈맥을 깊게 베어 냅니다.',
     },
     {
         id: 'shadow_dagger', name: '그림자 단검', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
@@ -1590,7 +1599,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         manaCost: 24, cooldown: 11, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 50,
         projectile: 'basic_arrow', projectileName: '그림자 단검', propertyTag: GameTags.PROPERTY_DARK,
         penetration: { attribute: AttributeType.ARMOR_PEN, base: 16, perLevel: 4 },
-        extraDescription: '무기 종류와 관계없이 암흑으로 빚은 단검을 투척합니다.',
+        descriptionIntro: '암흑으로 빚은 단검을 대상에게 투척합니다.',
     },
     {
         id: 'mana_lance', name: '마력 창', icon: 'skills/magic_bolt', activationHeader: 'magic_bolt',
@@ -1598,7 +1607,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         manaCost: 24, cooldown: 8, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 30,
         projectile: 'magic_bolt', projectileName: '마력 창',
         penetration: { attribute: AttributeType.MAGIC_PEN, base: 20, perLevel: 5 },
-        extraDescription: '지팡이 없이도 사용할 수 있으며 마법 저항을 꿰뚫는 응축탄을 발사합니다.',
+        descriptionIntro: '마력으로 이루어진 창을 소환하여 대상에게 발사합니다.',
     },
     {
         id: 'flame_wave', name: '홍염 파동', icon: 'skills/fireball', activationHeader: 'fireball',
@@ -1606,7 +1615,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         manaCost: 32, cooldown: 12, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 50,
         projectile: 'basic_magic_orb', projectileName: '홍염 파동', propertyTag: GameTags.PROPERTY_FIRE,
         statusEffect: StatusEffectType.FIRE, statusLabel: '화염', statusDuration: 8, statusDurationPerLevel: 1,
-        extraDescription: '지팡이 없이도 사용할 수 있으며 적중한 대상을 오래 불태웁니다.',
+        descriptionIntro: '응축한 홍염을 거센 파동으로 빚어 대상에게 발사합니다.',
     },
     {
         id: 'fault_finder', name: '결함 간파', icon: 'skills/precision_break', activationHeader: 'precision_break',
@@ -1614,22 +1623,21 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         manaCost: 18, cooldown: 9, jobId: JOBS.blacksmith, groupTag: GameTags.SKILL_GROUP_BLACKSMITH, unlockLevel: 30,
         guaranteedCritical: true, statusEffect: LegacyStatusEffects.DEFENSE_REDUCTION,
         statusLabel: '방어력 감소', statusDuration: 9, statusDurationPerLevel: 0.5,
-        extraDescription: '감각으로 성장하는 치명타 피해를 확정적으로 적용하고 대상 장비의 결함을 드러냅니다.',
+        descriptionIntro: '대상의 장비와 방어 태세에서 취약한 결을 찾아 베어 냅니다.',
     },
     {
         id: 'anvil_resonance', name: '모루의 공명', icon: 'skills/precision_break', activationHeader: 'precision_break',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 550, perLevelPercent: 35,
         manaCost: 32, cooldown: 14, jobId: JOBS.blacksmith, groupTag: GameTags.SKILL_GROUP_BLACKSMITH, unlockLevel: 50,
         guaranteedCritical: true, unavoidable: true,
-        extraDescription: '금속의 결을 공명시켜 감각으로 성장하는 치명타 피해를 확정 적용하며 회피를 무시합니다.',
+        descriptionIntro: '무기에 금속의 공명을 실어 대상을 강하게 내리칩니다.',
     },
     {
         id: 'predator_pounce', name: '포식자의 도약', icon: 'skills/battle_rush', activationHeader: 'battle_rush',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 220, perLevelPercent: 15,
         manaCost: 20, cooldown: 10, unavoidable: true,
         statusEffect: LegacyStatusEffects.BLEEDING, statusLabel: '출혈', statusDuration: 8, statusDurationPerLevel: 1,
-        extraDescription: '대상을 놓치지 않는 도약으로 회피를 무시하고 깊은 상처를 남깁니다.',
-        acquisitionDescription: '적갈기 늑대왕이 남기는 스킬북으로 전승받아야 합니다.',
+        descriptionIntro: '포식자처럼 단숨에 거리를 좁혀 대상을 덮칩니다.',
     },
     {
         id: 'silverweb_snare', name: '은실 사냥망', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
@@ -1637,8 +1645,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         manaCost: 24, cooldown: 12, projectile: 'basic_magic_orb', projectileName: '은실 사냥망',
         propertyTag: GameTags.PROPERTY_INSECT, statusEffect: LegacyStatusEffects.BIND,
         statusLabel: '속박', statusDuration: 2.5, statusDurationPerLevel: 0.25,
-        extraDescription: '은빛 거미실을 펼쳐 이동과 회피를 봉쇄합니다.',
-        acquisitionDescription: '은빛그물 거미여왕이 남기는 스킬북으로 전승받아야 합니다.',
+        descriptionIntro: '은빛 거미실로 엮은 사냥망을 대상에게 펼칩니다.',
     },
     {
         id: 'hoarfrost_snare', name: '상고 그물', icon: 'affinities/ice', activationHeader: 'stunning_shot',
@@ -1646,8 +1653,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         manaCost: 30, cooldown: 13, projectile: 'basic_magic_orb', projectileName: '상고 그물',
         propertyTag: GameTags.PROPERTY_ICE, statusEffect: LegacyStatusEffects.FROZEN,
         statusLabel: '빙결', statusDuration: 2.5, statusDurationPerLevel: 0.3,
-        extraDescription: '빙실 거미줄을 한 점에 얼려 이동과 회피를 봉쇄합니다.',
-        acquisitionDescription: '상고발톱 거미여왕이 남기는 전승서로 배워야 합니다.',
+        descriptionIntro: '서리 맺힌 거미줄을 한 점에 얼려 대상에게 던집니다.',
     },
     {
         id: 'aurora_lance', name: '극광 창', icon: 'affinities/ice', activationHeader: 'magic_bolt',
@@ -1655,10 +1661,38 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         manaCost: 38, cooldown: 12, projectile: 'magic_bolt', projectileName: '극광 창',
         propertyTag: GameTags.PROPERTY_ICE,
         penetration: { attribute: AttributeType.MAGIC_PEN, base: 28, perLevel: 6 },
-        extraDescription: '극광을 하나의 창으로 압축해 마법 저항을 꿰뚫습니다.',
-        acquisitionDescription: '빙경 여왕이 남기는 전승서로 배워야 합니다.',
+        descriptionIntro: '흩어진 극광을 하나의 얼음 창으로 압축해 발사합니다.',
     },
 ];
+
+function growthTechniqueDescription(technique: GrowthTechniqueDefinition): string {
+    const multipleHits = Boolean(technique.hitCount && technique.hitCount > 1);
+    const subject = multipleHits ? '이 기술은' : technique.projectile ? '이 투사체는' : '이 공격은';
+    const clauses = [
+        ...(technique.projectile
+            ? ['시전자의 {{icon.critRate}} 치명타 확률과 {{icon.critDmg}} 치명타 피해를 적용받고']
+            : []),
+        ...(technique.guaranteedCritical ? ['반드시 치명타로 적중하며'] : []),
+        ...(technique.unavoidable ? ['회피할 수 없고'] : []),
+        ...(technique.penetration ? [
+            `{{icon.${technique.penetration.attribute.key}}} ${penetrationLabel(technique.penetration.attribute)} `
+            + `[color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{penetration}}[/color]이 부여되며`,
+        ] : []),
+        `{{icon.${technique.attribute.key}}} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 `
+        + `${technique.damageType === 'magic' ? '마법' : '물리'} 피해를${multipleHits ? ' {{hitCount}}회' : ''} 입힙니다`,
+    ];
+    return [
+        technique.descriptionIntro,
+        `${subject} ${clauses.join(', ')}.`,
+        technique.statusEffect
+            ? `적중한 대상에게 Lv.{{statusLevel}} ${technique.statusLabel} 효과를 {{statusDuration}} 동안 부여합니다.`
+            : '',
+        technique.shieldPercent
+            ? '공격 후 {{shieldAmount}}만큼의 피해를 막는 일반 보호막을 8초 동안 얻습니다.'
+            : '',
+        technique.projectile ? PROJECTILE_FLIGHT_TEXT : '',
+    ].filter(Boolean).join(' ');
+}
 
 for (const technique of growthTechniques) defineSkill({
     id: technique.id,
@@ -1667,19 +1701,9 @@ for (const technique of growthTechniques) defineSkill({
     activationHeader: technique.activationHeader,
     maxLevel: 5,
     unlockLevel: technique.unlockLevel,
-    descriptionTemplate: `${technique.hitCount && technique.hitCount > 1 ? `각 타격마다 ` : ''}`
-        + `{{icon.${technique.attribute.key}}} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 `
-        + `${technique.damageType === 'magic' ? '마법' : '물리'} 피해${technique.hitCount && technique.hitCount > 1 ? `를 {{hitCount}}회` : ''} 입힙니다. `
-        + `${technique.penetration ? `{{icon.${technique.penetration.attribute.key}}} {{penetration}}을 적용합니다. ` : ''}`
-        + `${technique.statusEffect ? `적중 시 Lv.{{statusLevel}} ${technique.statusLabel}을 {{statusDuration}} 동안 부여합니다. ` : ''}`
-        + `${technique.shieldPercent ? `공격 후 최대 생명력의 {{shieldPercent}}만큼 일반 보호막을 8초 동안 얻습니다. ` : ''}`
-        + `${technique.projectile ? `${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT} ` : ''}`
-        + technique.extraDescription,
+    descriptionTemplate: growthTechniqueDescription(technique),
     costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${technique.manaCost}[/color]`,
-    activationConditionTemplate: activationGuide(
-        `${technique.weaponDescription ? `${technique.weaponDescription} ` : '장착 무기와 관계없이 '}`
-        + `살아 있는 현재 대상이 필요합니다.${technique.acquisitionDescription ? ` ${technique.acquisitionDescription}` : ''}`,
-    ),
+    activationConditionTemplate: targetActivationGuide(technique.weaponDescription),
     activationMessage: `${technique.name}!`,
     baseMetadata: null,
     calculatedFields: {
@@ -1697,6 +1721,12 @@ for (const technique of growthTechniques) defineSkill({
             '초',
         ),
         shieldPercent: () => technique.shieldPercent ? `${formatNumber(technique.shieldPercent)}%` : '0%',
+        shieldAmount: context => technique.shieldPercent
+            ? tooltipValue(
+                context.owner.maxLife * technique.shieldPercent / 100,
+                `최대 생명력 × ${formatNumber(technique.shieldPercent)}%`,
+            )
+            : 0,
         projectileTravelTime: context => technique.projectile
             ? projectileTravelTimeTooltip(context, technique.projectile, technique.damageType === 'magic')
             : 0,
@@ -1784,15 +1814,21 @@ for (const technique of growthTechniques) defineSkill({
 defineSkill({
     id: 'tempered_aegis', name: '담금질 방벽', icon: 'skills/indomitable', activationHeader: 'indomitable',
     maxLevel: 5, unlockLevel: 50,
-    descriptionTemplate: '{{icon.maxLife}} 최대 생명력의 [color=green]{{lifeShield}}[/color]와 {{icon.atk}} 공격력의 [color=orange]{{attackShield}}[/color]을 합친 일반 보호막을 {{duration}} 동안 얻습니다.',
+    descriptionTemplate: '달군 금속의 기운으로 몸을 감싸 {{shieldAmount}}만큼의 피해를 막는 일반 보호막을 {{duration}} 동안 얻습니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 26[/color]',
-    activationConditionTemplate: activationGuide('대장장이 계보이며 Lv.50 이상이어야 합니다. 별도의 대상이나 무기가 필요하지 않습니다.'),
+    activationConditionTemplate: activationGuide(),
     activationMessage: '담금질 방벽!', baseMetadata: null,
     calculatedFields: {
-        lifeShield: context => tooltipValue(context.owner.maxLife * percentByLevel(context.skill.level, 12, 1.5) / 100,
-            `최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 12, 1.5))}%`),
-        attackShield: context => tooltipValue(context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 45, 5) / 100,
-            `공격력 × ${formatNumber(percentByLevel(context.skill.level, 45, 5))}%`),
+        shieldAmount: context => {
+            const lifePercent = percentByLevel(context.skill.level, 12, 1.5);
+            const attackPercent = percentByLevel(context.skill.level, 45, 5);
+            const amount = context.owner.maxLife * lifePercent / 100
+                + context.owner.attribute.get(AttributeType.ATK) * attackPercent / 100;
+            return tooltipValue(
+                amount,
+                `최대 생명력 × ${formatNumber(lifePercent)}% + 공격력 × ${formatNumber(attackPercent)}%`,
+            );
+        },
         duration: context => levelValueTooltip(context, '보호막 지속시간', 10, 1, '초'),
     },
     balance: {
@@ -1837,7 +1873,8 @@ interface EliteTechniqueDefinition {
     propertyTag?: TagId;
     guaranteedCritical?: boolean;
     unavoidable?: boolean;
-    extraDescription?: string;
+    descriptionIntro: string;
+    onHitDescription?: string;
     onHit?: (target: Entity, level: number) => void;
     shieldPercent?: number;
 }
@@ -1848,14 +1885,14 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 250, perLevelPercent: 15,
         manaCost: 24, cooldown: 10, weaponDescription: '검 또는 도끼를 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE], unavoidable: true,
-        extraDescription: '바람을 가르며 파고들어 이 공격은 회피할 수 없습니다.', propertyTag: GameTags.PROPERTY_NATURAL,
+        descriptionIntro: '바람을 가르며 대상의 퇴로를 따라붙어 베어 냅니다.', propertyTag: GameTags.PROPERTY_NATURAL,
     },
     {
         id: 'shadow_blade_technique', name: '그림자 참수', jobId: 'career:shadow_blade', icon: 'jobs/warrior',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 225, perLevelPercent: 15,
         manaCost: 26, cooldown: 12, weaponDescription: '검 또는 단검을 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_DAGGER], guaranteedCritical: true,
-        extraDescription: '그림자에서 급소를 베어 확정적으로 치명타가 발생합니다.', propertyTag: GameTags.PROPERTY_DARK,
+        descriptionIntro: '대상의 그림자에 파고들어 드러난 급소를 참수합니다.', propertyTag: GameTags.PROPERTY_DARK,
     },
     {
         id: 'spellblade_technique', name: '마력 검파', jobId: 'career:spellblade', icon: 'jobs/warrior',
@@ -1863,20 +1900,20 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 120, secondaryPerLevelPercent: 8,
         manaCost: 30, cooldown: 11, weaponDescription: '검을 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_SWORD],
-        extraDescription: '칼날에 실은 마력을 폭발시켜 마법 피해를 입힙니다.',
+        descriptionIntro: '칼날에 응축한 마력을 검파로 터뜨려 대상을 가릅니다.',
     },
     {
         id: 'siege_bow_technique', name: '성벽 관통사격', jobId: 'career:siege_bow', icon: 'jobs/archer',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 310, perLevelPercent: 18,
         manaCost: 28, cooldown: 15, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
-        projectile: 'basic_arrow', extraDescription: '무거운 한 발로 큰 피해를 입힙니다.', propertyTag: GameTags.PROPERTY_METAL,
+        projectile: 'basic_arrow', descriptionIntro: '공성 장비처럼 무거운 금속 화살 한 발을 힘껏 발사합니다.', propertyTag: GameTags.PROPERTY_METAL,
     },
     {
         id: 'night_hunter_technique', name: '월영 사격', jobId: 'career:night_hunter', icon: 'jobs/archer',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 235, perLevelPercent: 15,
         manaCost: 24, cooldown: 10, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', guaranteedCritical: true,
-        extraDescription: '달빛 아래 급소를 겨냥해 확정적으로 치명타가 발생합니다.', propertyTag: GameTags.PROPERTY_DARK,
+        descriptionIntro: '달빛에 비친 대상의 급소를 포착해 화살을 발사합니다.', propertyTag: GameTags.PROPERTY_DARK,
     },
     {
         id: 'elemental_marksman_technique', name: '뇌광 관통화살', jobId: 'career:elemental_marksman', icon: 'jobs/archer',
@@ -1884,7 +1921,8 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 100, secondaryPerLevelPercent: 6,
         manaCost: 32, cooldown: 12, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_ELECTRIC,
-        extraDescription: '적중 시 같은 레벨의 마비독을 4초 동안 부여합니다.',
+        descriptionIntro: '번개를 두른 마력 화살로 대상의 신경을 꿰뚫습니다.',
+        onHitDescription: '적중한 대상에게 같은 레벨의 마비독을 4초 동안 부여합니다.',
         onHit: (target, level) => target.applyStatusEffect(StatusEffectType.PARALYTIC_POISON, 4, level),
     },
     {
@@ -1892,39 +1930,41 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 300, perLevelPercent: 18,
         manaCost: 28, cooldown: 14, weaponDescription: '도끼 또는 단검을 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_AXE, GameTags.WEAPON_DAGGER], unavoidable: true,
-        extraDescription: '도망칠 틈을 주지 않는 집행으로 이 공격은 회피할 수 없습니다.',
+        descriptionIntro: '도망칠 틈을 주지 않고 대상에게 최후의 일격을 집행합니다.',
     },
     {
         id: 'phantom_shooter_technique', name: '환영 추적탄', jobId: 'career:phantom_shooter', icon: 'jobs/assassin',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 250, perLevelPercent: 16,
         manaCost: 25, cooldown: 11, projectile: 'basic_arrow',
-        extraDescription: '장착 무기와 관계없이 환영 단검을 투척해 적의 움직임을 추적합니다.', propertyTag: GameTags.PROPERTY_DARK,
+        descriptionIntro: '대상의 움직임을 좇는 환영 단검을 만들어 투척합니다.', propertyTag: GameTags.PROPERTY_DARK,
     },
     {
         id: 'arcane_reaper_technique', name: '비전 수확', jobId: 'career:arcane_reaper', icon: 'jobs/assassin',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 275, perLevelPercent: 17,
         secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 100, secondaryPerLevelPercent: 6,
         manaCost: 30, cooldown: 12, propertyTag: GameTags.PROPERTY_POISON,
-        extraDescription: '적중 시 같은 레벨의 맹독을 6초 동안 부여합니다.',
+        descriptionIntro: '비전 마력으로 대상의 생명력을 베어 독성 잔재를 남깁니다.',
+        onHitDescription: '적중한 대상에게 같은 레벨의 맹독을 6초 동안 부여합니다.',
         onHit: (target, level) => target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 6, level),
     },
     {
         id: 'battle_magus_technique', name: '마력갑 돌진', jobId: 'career:battle_magus', icon: 'jobs/mage',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 225, perLevelPercent: 14,
         manaCost: 30, cooldown: 13, shieldPercent: 12,
-        extraDescription: '공격 후 최대 생명력의 12%만큼 일반 보호막을 8초 동안 얻습니다.',
+        descriptionIntro: '마력으로 갑옷을 보강한 채 대상에게 정면으로 돌진합니다.',
     },
     {
         id: 'star_weaver_technique', name: '낙성', jobId: 'career:star_weaver', icon: 'jobs/mage',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 315, perLevelPercent: 18,
         manaCost: 34, cooldown: 15, projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_LIGHT,
-        extraDescription: '별빛을 낙하시켜 강한 빛 속성 마법 피해를 입힙니다.',
+        descriptionIntro: '대상의 머리 위에 별빛을 모아 거대한 유성으로 떨어뜨립니다.',
     },
     {
         id: 'hexblade_technique', name: '저주 각인', jobId: 'career:hexblade', icon: 'jobs/mage',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 245, perLevelPercent: 16,
         manaCost: 29, cooldown: 11, propertyTag: GameTags.PROPERTY_DARK,
-        extraDescription: '적중 시 같은 레벨의 마비독을 3초 동안 부여합니다.',
+        descriptionIntro: '대상의 몸에 불길한 주술 각인을 새겨 움직임을 뒤틀어 놓습니다.',
+        onHitDescription: '적중한 대상에게 같은 레벨의 마비독을 3초 동안 부여합니다.',
         onHit: (target, level) => target.applyStatusEffect(StatusEffectType.PARALYTIC_POISON, 3, level),
     },
     {
@@ -1932,49 +1972,50 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 305, perLevelPercent: 18,
         manaCost: 28, cooldown: 13, weaponDescription: '검 또는 도끼를 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE], unavoidable: true,
-        extraDescription: '무기의 무게 중심을 완전히 제어해 이 공격은 회피할 수 없습니다.', propertyTag: GameTags.PROPERTY_METAL,
+        descriptionIntro: '무기의 무게 중심을 완전히 제어해 빈틈없는 일격을 가합니다.', propertyTag: GameTags.PROPERTY_METAL,
     },
     {
         id: 'machinist_archer_technique', name: '철우 연사', jobId: 'career:machinist_archer', icon: 'jobs/archer',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 285, perLevelPercent: 17,
         manaCost: 27, cooldown: 12, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', propertyTag: GameTags.PROPERTY_METAL,
-        extraDescription: '정밀 가공한 금속 화살을 고속으로 발사합니다.',
+        descriptionIntro: '정밀 가공한 금속 화살을 기계 장력으로 고속 발사합니다.',
     },
     {
         id: 'steel_shadow_technique', name: '톱날 급습', jobId: 'career:steel_shadow', icon: 'jobs/assassin',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 255, perLevelPercent: 16,
         manaCost: 25, cooldown: 11, weaponDescription: '단검 또는 검을 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_DAGGER, GameTags.WEAPON_SWORD], guaranteedCritical: true,
-        extraDescription: '연마한 날로 급소를 파고들어 확정적으로 치명타가 발생합니다.', propertyTag: GameTags.PROPERTY_METAL,
+        descriptionIntro: '톱날처럼 연마한 금속 칼날로 대상의 급소를 파고듭니다.', propertyTag: GameTags.PROPERTY_METAL,
     },
     {
         id: 'runeforger_technique', name: '폭발 룬', jobId: 'career:runeforger', icon: 'jobs/mage',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 300, perLevelPercent: 18,
         manaCost: 34, cooldown: 14,
         projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_FIRE,
-        extraDescription: '금속에 새긴 룬을 폭발시켜 불 속성 마법 피해를 입힙니다.',
+        descriptionIntro: '금속에 새긴 화염 룬을 대상 곁에서 폭발시킵니다.',
     },
     {
         id: 'battle_smith_technique', name: '모루 강타', jobId: 'career:battle_smith', icon: 'items/iron_pickaxe',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 330, perLevelPercent: 19,
         manaCost: 30, cooldown: 15, weaponDescription: '도끼 또는 검을 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_AXE, GameTags.WEAPON_SWORD], unavoidable: true,
-        extraDescription: '모루를 내리치듯 무겁게 찍어 이 공격은 회피할 수 없습니다.', propertyTag: GameTags.PROPERTY_METAL,
+        descriptionIntro: '모루를 내리치듯 무기를 크게 휘둘러 대상을 짓누릅니다.', propertyTag: GameTags.PROPERTY_METAL,
     },
     {
         id: 'artificer_technique', name: '자동 추적탄', jobId: 'career:artificer', icon: 'items/iron_pickaxe',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 275, perLevelPercent: 17,
         manaCost: 27, cooldown: 11,
         projectile: 'basic_arrow', propertyTag: GameTags.PROPERTY_ELECTRIC,
-        extraDescription: '기계식 유도 장치가 달린 전기 속성 탄환을 발사합니다.',
+        descriptionIntro: '기계식 유도 장치가 달린 전기 탄환을 조립해 발사합니다.',
     },
     {
         id: 'venom_smith_technique', name: '독금 천공', jobId: 'career:venom_smith', icon: 'items/iron_pickaxe',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 250, perLevelPercent: 16,
         manaCost: 26, cooldown: 12, weaponDescription: '단검을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_DAGGER],
         propertyTag: GameTags.PROPERTY_POISON,
-        extraDescription: '적중 시 같은 레벨의 맹독을 7초 동안 부여합니다.',
+        descriptionIntro: '독성 금속으로 벼린 칼날을 대상의 방어 틈새에 찔러 넣습니다.',
+        onHitDescription: '적중한 대상에게 같은 레벨의 맹독을 7초 동안 부여합니다.',
         onHit: (target, level) => target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 7, level),
     },
     {
@@ -1982,7 +2023,7 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 310, perLevelPercent: 18,
         manaCost: 35, cooldown: 14,
         projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_FIRE, shieldPercent: 10,
-        extraDescription: '용융 마력을 발사하고 공격 후 최대 생명력의 10%만큼 일반 보호막을 8초 동안 얻습니다.',
+        descriptionIntro: '용융한 금속과 마력을 탄환으로 빚어 대상에게 발사합니다.',
     },
 ];
 
@@ -2030,6 +2071,27 @@ function eliteTechniqueDamageTooltip(context: SkillContext, technique: EliteTech
     return tooltipValue(damage, `${technique.attribute.label} × ${formatNumber(primaryPercent)}%${secondary}`);
 }
 
+function eliteTechniqueDescription(technique: EliteTechniqueDefinition): string {
+    const clauses = [
+        ...(technique.projectile
+            ? ['시전자의 {{icon.critRate}} 치명타 확률과 {{icon.critDmg}} 치명타 피해를 적용받고']
+            : []),
+        ...(technique.guaranteedCritical ? ['반드시 치명타로 적중하며'] : []),
+        ...(technique.unavoidable ? ['회피할 수 없고'] : []),
+        `{{icon.${technique.attribute.key}}} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 `
+        + `${technique.damageType === 'magic' ? '마법' : '물리'} 피해를 입힙니다`,
+    ];
+    return [
+        technique.descriptionIntro,
+        `${technique.projectile ? '이 투사체는' : '이 공격은'} ${clauses.join(', ')}.`,
+        technique.onHitDescription ?? '',
+        technique.shieldPercent
+            ? '공격 후 {{shieldAmount}}만큼의 피해를 막는 일반 보호막을 8초 동안 얻습니다.'
+            : '',
+        technique.projectile ? PROJECTILE_FLIGHT_TEXT : '',
+    ].filter(Boolean).join(' ');
+}
+
 for (const technique of eliteTechniques) {
     const groupTag = eliteTechniqueGroupByJobId[technique.jobId];
     if (!groupTag) throw new Error(`엘리트 스킬 공유 쿨다운 계열이 없습니다: ${technique.jobId}`);
@@ -2038,15 +2100,19 @@ for (const technique of eliteTechniques) {
         name: technique.name,
         icon: `skills/${technique.id}`,
         maxLevel: 5,
-        descriptionTemplate: `현재 대상에게 {{icon.${technique.attribute.key}}} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 ${technique.damageType === 'magic' ? '마법' : '물리'} 피해를 입힙니다. ${technique.extraDescription ?? ''}${technique.projectile ? ` ${PROJECTILE_FLIGHT_TEXT}` : ''}`,
+        descriptionTemplate: eliteTechniqueDescription(technique),
         costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${technique.manaCost}[/color]`,
-        activationConditionTemplate: activationGuide(
-            `${technique.weaponDescription ? `${technique.weaponDescription} ` : '장착 무기와 관계없이 '}살아 있는 현재 대상이 필요합니다.`,
-        ),
+        activationConditionTemplate: targetActivationGuide(technique.weaponDescription),
         activationMessage: `${technique.name}!`,
         baseMetadata: null,
         calculatedFields: {
             damage: context => eliteTechniqueDamageTooltip(context, technique),
+            shieldAmount: context => technique.shieldPercent
+                ? tooltipValue(
+                    context.owner.maxLife * technique.shieldPercent / 100,
+                    `최대 생명력 × ${formatNumber(technique.shieldPercent)}%`,
+                )
+                : 0,
             ...(technique.projectile ? {
                 projectileTravelTime: (context: SkillContext) => projectileTravelTimeTooltip(
                     context,
@@ -2146,12 +2212,11 @@ defineSkill({
     aliases: ['seismiccrush'],
     maxLevel: 5,
     descriptionTemplate:
-        '[color=gold]{{castTime}}초[/color] 동안 지면의 힘을 모은 뒤 현재 대상에게 '
-        + '{{icon.magicForce}} [color=$magic]{{damage}}의 마법 피해[/color]를 입힙니다. '
-        + '적중 시 [color=violet]{{paralysisChance}}% 확률[/color]로 마비독을 부여합니다.',
+        '지면의 마력을 끌어올려 [color=gold]{{castTime}}초[/color] 동안 응축한 뒤 대상 아래에서 폭발시킵니다. '
+        + '{{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입히고, '
+        + '적중한 대상에게 [color=violet]{{paralysisChance}}% 확률[/color]로 마비독을 부여합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
-    activationConditionTemplate:
-        '살아 있는 현재 대상과 공격 가능 상태가 필요합니다. 시전 중에는 다른 공격을 하지 않습니다.',
+    activationConditionTemplate: targetActivationGuide(),
     activationMessage: '지각 붕괴!',
     baseMetadata: {
         baseManaCost: 32,
@@ -2166,7 +2231,14 @@ defineSkill({
     },
     calculatedFields: {
         manaCost: seismicManaCost,
-        damage: seismicDamage,
+        damage: context => {
+            const multiplier = numberMeta(context, 'baseDamageMultiplier')
+                + (context.skill.level - 1) * numberMeta(context, 'damageMultiplierPerLevel');
+            return tooltipValue(
+                seismicDamage(context),
+                `마법력 × ${formatNumber(multiplier * 100)}% · 스킬 레벨당 계수 +${formatNumber(numberMeta(context, 'damageMultiplierPerLevel') * 100)}%p`,
+            );
+        },
         castTime: context => numberMeta(context, 'castTime'),
         paralysisChance: context => numberMeta(context, 'paralysisChance'),
     },
@@ -2250,7 +2322,7 @@ defineSkill({
         + '회피할 수 없고 방어력을 무시하는 [color=red]최대 생명력 비례 고정 피해[/color]를 입힙니다. '
         + '적중한 대상은 [color=violet]{{controlDuration}}초 동안 제압[/color]됩니다.',
     costTemplate: '소모값 없음',
-    activationConditionTemplate: '살아 있는 현재 대상이 필요합니다. 몬스터 전용 스킬입니다.',
+    activationConditionTemplate: '철근 심장수호자가 현재 위협 대상으로 지정한 대상에게 사용합니다.',
     activationMessage: '철근 압살!',
     baseMetadata: {
         castTime: 1.4,
@@ -2337,19 +2409,27 @@ interface BossStrikeSkillDefinition {
 function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): void {
     const damage = (context: SkillContext) => context.owner.attribute.get(definition.attribute)
         * (definition.baseMultiplier + Math.max(0, context.skill.level - 1) * definition.perLevelMultiplier);
+    const statusEffect = definition.statusEffectId ? StatusEffectType.fromKey(definition.statusEffectId) : undefined;
     defineSkill({
         id: definition.id,
         name: definition.name,
         // TODO: 구간 보스 전용 스킬 아트 제작 전까지 속성 아이콘을 사용한다.
         icon: definition.icon,
         maxLevel: 5,
-        descriptionTemplate: `${definition.castTime}초 예고 후 현재 대상에게 {{damage}}의 ${definition.damageType === 'magic' ? '마법' : '물리'} 피해를 입힙니다.${definition.statusEffectId ? ' 적중하면 보스 고유 상태효과를 부여합니다.' : ''}`,
+        descriptionTemplate: `${definition.name}을 준비해 [color=gold]${formatNumber(definition.castTime)}초[/color] 뒤 위협 대상을 공격합니다. `
+            + `{{icon.${definition.attribute.key}}} {{damage}}의 ${definition.damageType === 'magic' ? '마법' : '물리'} 피해를 입힙니다.`
+            + `${statusEffect ? ` 적중한 대상에게 Lv.{{level}} ${statusEffect.label} 효과를 ${formatNumber(definition.statusDuration ?? 5)}초 동안 부여합니다.` : ''}`,
         costTemplate: '소모값 없음',
-        activationConditionTemplate: '살아 있는 현재 위협 대상이 필요합니다. 몬스터 전용 스킬입니다.',
+        activationConditionTemplate: '몬스터가 현재 위협 대상으로 지정한 대상에게 사용합니다.',
         activationMessage: `${definition.name}!`,
         activationHeader: definition.activationHeader ?? definition.id,
         baseMetadata: null,
-        calculatedFields: { damage },
+        calculatedFields: {
+            damage: context => tooltipValue(
+                damage(context),
+                `${definition.attribute.label} × ${formatNumber((definition.baseMultiplier + Math.max(0, context.skill.level - 1) * definition.perLevelMultiplier) * 100)}% · 스킬 레벨당 계수 +${formatNumber(definition.perLevelMultiplier * 100)}%p`,
+            ),
+        },
         calculateMaxCooldown: () => definition.cooldown,
         canActivate: context => {
             if (context.player) return denySkill('구간 보스만 사용할 수 있는 스킬입니다.');
@@ -2494,13 +2574,18 @@ defineSkill({
     // TODO: 구간 보스 전용 스킬 아트 제작 전까지 자연 속성 아이콘을 사용한다.
     icon: 'affinities/natural',
     maxLevel: 5,
-    descriptionTemplate: '2초 동안 뿌리를 내린 뒤 잃은 생명력 일부를 회복합니다.',
+    descriptionTemplate: '2초 동안 뿌리를 내려 주변의 생기를 흡수한 뒤 {{healing}}의 생명력을 회복합니다.',
     costTemplate: '소모값 없음',
     activationConditionTemplate: '월영밤숲 구간 보스 전용 회복 패턴입니다.',
     activationMessage: '검은 심재 재생!',
     activationHeader: 'nightwood_regrowth',
     baseMetadata: null,
-    calculatedFields: {},
+    calculatedFields: {
+        healing: context => {
+            const percent = 6 + context.skill.level * 1.5;
+            return tooltipValue(context.owner.maxLife * percent / 100, `최대 생명력 × ${formatNumber(percent)}%`);
+        },
+    },
     calculateMaxCooldown: () => 16,
     canActivate: context => context.player
         ? denySkill('밤숲의 검은 심재만 사용할 수 있습니다.')
