@@ -79,7 +79,7 @@
 | `NPC`, `DialogueScenario`, `Dialogue` | `NPC.define/getNpc/getAll`, `getEntryScenario/getScenario`, `say/event/setFlag/acceptQuest/turnInQuest/goto/choice/end` | NPC 정적 정의, 조건부 generator 장면과 타입별 대화·퀘스트 액션 생성 |
 | NPC dialogue | `startNpcDialogue`, `chooseNpcDialogue`, `endNpcDialogue/endNpcDialogueByUserId`, `is/getActiveNpcDialogue`, `updateNpcDialogues` | player별 비영속 대화 세션 시작·선택·종료와 이탈 안전망 |
 | `ProgressType`, `PlayerProgress` | `values/fromKey`, `getCounter/setCounter/increment`, `getFlag/setFlag`, `getState/setState`, `reset`, `getSnapshots`, `subscribeChanges`, `load/save` | 통계·NPC 플래그·분기 상태의 메모리 dirty 영속 API |
-| `TitleBook` | `equipped/equippedName`, `isOwned/getOwned/getOwnedSnapshots/findOwnedByInput`, `grant/equip/unequip`, `refreshAcquisitions/refreshPassiveEffects`, `applyCombat/update` | Progress 기반 칭호 소유·장착, 자동 업적 판정, source 기반 능력치·경험치 패시브와 CombatPipeline 적중 효과 |
+| `TitleBook` | `equipped/equippedName`, `isOwned/getOwned/getOwnedSnapshots/findOwnedByInput`, `grant/revoke/equip/unequip`, `refreshAcquisitions/refreshPassiveEffects`, `applyCombat/update` | Progress 기반 칭호 소유·장착·관리자 회수/재부여, 자동 업적 판정, source 기반 능력치·경험치 패시브와 CombatPipeline 적중 효과 |
 | Title registry | `defineTitle`, `getTitle`, `getAllTitles` | 코드 칭호 마스터 데이터와 이름·별칭 조회 |
 | `RankingCategory`, `RankingVisibility` | `values/fromKey/fromInput`, `isPublic/setAll/setCategory/snapshot`, `createRankingMetricRecord` | 레벨·골드·스탯·능력치 순위 정의와 기본 공개+카테고리 예외 dirty 설정 |
 | Ranking service | `getRankingEntries`, `rankPlayerSnapshots` | DB 저장 snapshot과 온라인 메모리 값을 합성해 공동 순위와 수치 공개 여부 반환 |

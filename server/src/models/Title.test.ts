@@ -95,6 +95,32 @@ test('칭호 소유와 장착 상태는 PlayerProgress로 복원된다', () => {
     assert.equal(restored.titles.equippedName, '슬라임 연구가');
 });
 
+test('관리자 회수 칭호는 패시브와 장착을 제거하고 다시 부여할 때까지 자동 획득을 막는다', () => {
+    const player = new TestTitlePlayer();
+    for (let i = 0; i < 50; i++) {
+        emitGameEvent(GameEventIds.ENTITY_DEFEATED, {
+            actor: player,
+            subject: new TestWolf(),
+        });
+    }
+    player.titles.refreshAcquisitions(false);
+    player.titles.equip('늑대 학살자');
+    player.currentTarget = new TestWolf();
+    player.titles.refreshPassiveEffects();
+    assert.equal(player.attribute.get(AttributeType.ATK), 105);
+
+    const revoked = player.titles.revoke('늑대 학살자', 'test', false);
+
+    assert.equal(revoked.success, true);
+    assert.equal(player.titles.isOwned('늑대 학살자'), false);
+    assert.equal(player.titles.equippedName, '');
+    assert.equal(player.attribute.get(AttributeType.ATK), 100);
+    assert.equal(player.titles.refreshAcquisitions(false).length, 0);
+
+    assert.equal(player.titles.grant('늑대 학살자', 'test', false).success, true);
+    assert.equal(player.titles.isOwned('늑대 학살자'), true);
+});
+
 test('레거시 칭호 대부분과 신규 생활·보스 칭호를 등록한다', () => {
     const names = new Set(getAllTitles().map(title => title.name));
     for (const name of [

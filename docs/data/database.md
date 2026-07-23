@@ -20,7 +20,7 @@ Item/Equipment의 `metadata` JSON은 전체 유효값이 아니라 `{ "__daclion
 
 `Equipment.count`는 미끼처럼 장착 가능한 스택 아이템의 남은 묶음 수량을 저장한다. 장착 시 인벤토리 스택 전체가 이동하고 `consumeEquippedItem(count)`는 필요한 수량만 차감해 남은 스택을 슬롯에 유지한다. 기존 장비 행은 `20260718000000_add_equipment_count` 마이그레이션의 기본값 1로 이행한다.
 
-`player_progress`는 counter/flag를 `int_value`, state를 `text_value`에 저장한다. 등록된 기본값 `0/false/빈 문자열`은 row를 삭제하거나 만들지 않는다. `kind`가 직렬화 타입 경계이며 기능 코드는 Prisma row 대신 `PlayerProgress` API만 사용한다. `player:play_time_seconds` counter는 Player가 온라인이었던 누적 초를 30초 주기·unload·종료 저장에 합산하며 24시간 미만 새싹 표시의 원본이다. `tutorial:status/step/content_done`과 지원품·성장 보상 FLAG는 새 Player의 첫 모험 안내 및 반복 보상을, `title-owned:*` FLAG와 `title:equipped` STATE는 칭호 소유·장착을 별도 스키마 없이 저장한다.
+`player_progress`는 counter/flag를 `int_value`, state를 `text_value`에 저장한다. 등록된 기본값 `0/false/빈 문자열`은 row를 삭제하거나 만들지 않는다. `kind`가 직렬화 타입 경계이며 기능 코드는 Prisma row 대신 `PlayerProgress` API만 사용한다. `player:play_time_seconds` counter는 Player가 온라인이었던 누적 초를 30초 주기·unload·종료 저장에 합산하며 24시간 미만 새싹 표시의 원본이다. `tutorial:status/step/content_done`과 지원품·성장 보상 FLAG는 새 Player의 첫 모험 안내 및 반복 보상을, `title-owned:*` FLAG와 `title:equipped` STATE는 칭호 소유·장착을 저장한다. 관리자에게 회수된 칭호는 `title-blocked:*` FLAG로 자동 재획득을 막고 재부여 시 해당 flag를 제거한다. 모두 기존 진행 테이블을 사용하므로 별도 스키마 변경은 없다.
 
 사망한 Player의 `runtime:death_remaining_seconds` 숨김 STATE는 이미 지역 사망 패널티가 적용됐다는 표식과 남은 부활 대기시간을 겸한다. 주기 저장 및 unload에서 현재 남은 초를 갱신하고 재접속 시 그대로 복원하므로 별도 컬럼·migration 없이 중복 사망 처리와 중복 손실을 막는다. 부활하면 row를 삭제한다.
 제작법 발견 여부도 `crafting:recipe/{namespace}/{path}` FLAG로 이 테이블에 저장되므로 제작 시스템 추가에 따른 별도 스키마 마이그레이션은 없다.

@@ -27,7 +27,7 @@ interface ActionDefinition {
 }
 
 const emptyBootstrap: AdminPanelBootstrapData = {
-  items: [], balanceItems: [], skills: [], jobs: [], locations: [], monsters: [], resources: [], statusEffects: [], stats: [], miniGamePresets: [],
+  items: [], balanceItems: [], skills: [], titles: [], jobs: [], locations: [], monsters: [], resources: [], statusEffects: [], stats: [], miniGamePresets: [],
 }
 
 function option(value: string, label: string): AdminOptionData { return { value, label } }
@@ -35,6 +35,9 @@ function option(value: string, label: string): AdminOptionData { return { value,
 function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailData | null): ActionDefinition[] {
   const inventory = detail?.inventory.map(item => option(String(item.index), `${item.index + 1}. ${item.name} x${item.count}`)) ?? []
   const ownedSkills = detail?.skills.map(skill => option(skill.id, `${skill.name} Lv.${skill.level}`)) ?? []
+  const ownedTitleIds = new Set(detail?.titles.map(title => title.id) ?? [])
+  const grantableTitles = data.titles.filter(title => !ownedTitleIds.has(title.value))
+  const ownedTitles = detail?.titles.map(title => option(title.id, `${title.name}${title.equipped ? ' · 장착 중' : ''}`)) ?? []
   const locationField = (): FormDialogField => ({ name: 'locationId', label: '장소', type: 'select', options: data.locations, required: true })
   return [
     { action: 'broadcast_chat_notice', label: '전체 채팅 공지', description: '모든 채널의 채팅창에 시스템 공지를 발송하고 채널 기록에 남깁니다.', category: 'notice', targetless: true, fields: [
@@ -118,6 +121,12 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
       { name: 'level', label: '변경할 레벨', type: 'number', min: 1, defaultValue: detail?.skills[0]?.level ?? 1, required: true },
     ] },
     { action: 'remove_skill', label: '스킬 삭제', description: '보유 스킬 인스턴스를 영구 삭제합니다.', category: 'skills', danger: true, fields: [{ name: 'skillDataId', label: '보유 스킬', type: 'select', options: ownedSkills, required: true }] },
+    { action: 'grant_title', label: '칭호 부여', description: '선택한 플레이어에게 칭호를 영구 부여합니다.', category: 'skills', fields: [
+      { name: 'titleId', label: '미보유 칭호', type: 'select', options: grantableTitles, required: true },
+    ] },
+    { action: 'remove_title', label: '칭호 삭제', description: '보유 칭호를 회수하고 관리자 재부여 전까지 자동 재획득을 막습니다.', category: 'skills', danger: true, fields: [
+      { name: 'titleId', label: '보유 칭호', type: 'select', options: ownedTitles, required: true },
+    ] },
     { action: 'apply_status_effect', label: '상태이상 부여', description: '온라인 플레이어에게 상태이상을 적용합니다.', category: 'skills', fields: [
       { name: 'statusEffectId', label: '상태이상', type: 'select', options: data.statusEffects, required: true },
       { name: 'level', label: '레벨', type: 'number', min: 1, defaultValue: 1, required: true },
@@ -260,11 +269,11 @@ export default function AdminPage() {
                   <div className={styles.summaryCard}><h3>현재 상태</h3><Meter tone="life" label="생명력" value={detail.life} max={detail.maxLife} /><Meter tone="mentality" label="정신력" value={detail.mentality} max={detail.maxMentality} /><Meter tone="hunger" label="배고픔" value={detail.hungry} max={detail.maxHungry} /><Meter tone="thirst" label="수분" value={detail.thirsty} max={detail.maxThirsty} /></div>
                   <div className={`${styles.summaryCard} ${styles.overviewCard}`}>
                     <section><h3>진행 정보</h3><dl><dt>위치</dt><dd>{detail.locationName}</dd><dt>골드</dt><dd>{detail.gold.toLocaleString()}</dd><dt>카르마</dt><dd>{detail.karma.toFixed(1)} ({detail.karmaTier})</dd><dt>스탯 포인트</dt><dd>{detail.statPoint}</dd><dt>직업</dt><dd>{detail.mainJobName} / {detail.subJobName}</dd><dt>엘리트</dt><dd>{detail.eliteJobName}</dd></dl></section>
-                    <section><h3>보유 현황</h3><dl><dt>인벤토리</dt><dd>{detail.inventory.length}종</dd><dt>장비</dt><dd>{detail.equipment.length}개</dd><dt>스킬</dt><dd>{detail.skills.length}개</dd><dt>상태이상</dt><dd>{detail.statusEffects.length}개</dd></dl></section>
+                    <section><h3>보유 현황</h3><dl><dt>인벤토리</dt><dd>{detail.inventory.length}종</dd><dt>장비</dt><dd>{detail.equipment.length}개</dd><dt>스킬</dt><dd>{detail.skills.length}개</dd><dt>칭호</dt><dd>{detail.titles.length}개</dd><dt>상태이상</dt><dd>{detail.statusEffects.length}개</dd></dl></section>
                   </div>
                 </div>
                 <details className={styles.inspect}><summary>인벤토리·장비 검사</summary><div className={`${styles.inspectGrid} ${styles.inspectBody}`}><div><h4>인벤토리</h4>{detail.inventory.length ? detail.inventory.map(item => <div key={item.index}><b>{item.index + 1}. {item.name} x{item.count}</b><code>{JSON.stringify(item.metadataDelta ?? {})}</code></div>) : <p>비어 있음</p>}</div><div><h4>장비</h4>{detail.equipment.map(item => <p key={`${item.slot}-${item.index}`}>{item.slotLabel}: {item.name}</p>)}</div></div></details>
-                <details className={styles.inspect}><summary>스탯·스킬·상태이상 검사</summary><div className={`${styles.inspectGrid} ${styles.inspectBody}`}><div><h4>스탯</h4>{detail.stats.map(stat => <p key={stat.key}>{stat.label}: {stat.value}</p>)}</div><div><h4>스킬</h4>{detail.skills.map(skill => <p key={skill.id}>{skill.name} Lv.{skill.level} · EXP {skill.experience}</p>)}<h4>상태이상</h4>{detail.statusEffects.map(effect => <p key={effect.id}>{effect.label} Lv.{effect.level} · {effect.duration.toFixed(1)}초</p>)}</div></div></details>
+                <details className={styles.inspect}><summary>스탯·스킬·칭호·상태이상 검사</summary><div className={`${styles.inspectGrid} ${styles.inspectBody}`}><div><h4>스탯</h4>{detail.stats.map(stat => <p key={stat.key}>{stat.label}: {stat.value}</p>)}</div><div><h4>스킬</h4>{detail.skills.map(skill => <p key={skill.id}>{skill.name} Lv.{skill.level} · EXP {skill.experience}</p>)}<h4>칭호</h4>{detail.titles.length ? detail.titles.map(title => <p key={title.id}>{title.name}{title.equipped ? ' · 장착 중' : ''}</p>) : <p>보유 칭호 없음</p>}<h4>상태이상</h4>{detail.statusEffects.map(effect => <p key={effect.id}>{effect.label} Lv.{effect.level} · {effect.duration.toFixed(1)}초</p>)}</div></div></details>
               </div>
             </>}
           </section>

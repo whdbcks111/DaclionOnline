@@ -8,6 +8,7 @@ import { AttributeType } from "../models/Attribute.js";
 import logger from "../utils/logger.js";
 import type { CompletionItem } from "../../../shared/types.js";
 import { StatusEffectType } from "../models/StatusEffect.js";
+import { getAllTitles } from '../models/Title.js';
 import { cancelNavigation } from "../modules/navigation.js";
 
 
@@ -65,6 +66,122 @@ export function initAdminCommands(): void {
             } catch (error) {
                 logger.error('카르마설정 명령어 처리 중 오류:', error);
                 sendBotMessageToUser(userId, '카르마 설정 중 오류가 발생했습니다.');
+            }
+        },
+    });
+
+    registerCommand({
+        name: '칭호부여',
+        aliases: ['titlegrant'],
+        description: '플레이어에게 등록된 칭호를 관리자 권한으로 부여합니다.',
+        permission: 10,
+        showCommandUse: 'private',
+        args: [
+            {
+                name: '대상',
+                description: '플레이어 userId 또는 me',
+                required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((player): CompletionItem => ({
+                            value: String(player.userId),
+                            description: player.name,
+                        })),
+                    ];
+                },
+            },
+            {
+                name: '칭호이름',
+                description: '부여할 칭호 ID 또는 이름',
+                required: true,
+                isText: true,
+                completions: getAllTitles().map((title): CompletionItem => ({
+                    value: title.name,
+                    description: `${title.acquisitionDescription} · ${title.description}`,
+                })),
+            },
+        ],
+        async handler(userId, args) {
+            try {
+                const targetId = args[0] === 'me' ? userId : Number.parseInt(args[0], 10);
+                if (!Number.isSafeInteger(targetId) || targetId <= 0) {
+                    sendBotMessageToUser(userId, '유효한 플레이어 ID 또는 me를 입력해주세요.');
+                    return;
+                }
+                const player = await fetchPlayerByUserId(targetId);
+                if (!player) {
+                    sendBotMessageToUser(userId, '플레이어를 찾을 수 없습니다.');
+                    return;
+                }
+                const result = player.titles.grant(args[1] ?? '', 'admin-command', targetId !== userId);
+                if (!result.success || !result.title) {
+                    sendBotMessageToUser(userId, result.reason ?? '칭호를 부여할 수 없습니다.');
+                    return;
+                }
+                await player.save();
+                sendBotMessageToUser(userId, `${player.name}에게 칭호 [ ${result.title.name} ] 을(를) 부여했습니다.`);
+            } catch (error) {
+                logger.error('칭호부여 명령어 처리 중 오류:', error);
+                sendBotMessageToUser(userId, '칭호 부여 중 오류가 발생했습니다.');
+            }
+        },
+    });
+
+    registerCommand({
+        name: '칭호삭제',
+        aliases: ['titlerevoke', 'titledelete'],
+        description: '플레이어의 보유 칭호를 회수하고 자동 재획득을 막습니다.',
+        permission: 10,
+        showCommandUse: 'private',
+        args: [
+            {
+                name: '대상',
+                description: '플레이어 userId 또는 me',
+                required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((player): CompletionItem => ({
+                            value: String(player.userId),
+                            description: player.name,
+                        })),
+                    ];
+                },
+            },
+            {
+                name: '칭호이름',
+                description: '삭제할 보유 칭호 ID 또는 이름',
+                required: true,
+                isText: true,
+                completions: getAllTitles().map((title): CompletionItem => ({
+                    value: title.name,
+                    description: title.description,
+                })),
+            },
+        ],
+        async handler(userId, args) {
+            try {
+                const targetId = args[0] === 'me' ? userId : Number.parseInt(args[0], 10);
+                if (!Number.isSafeInteger(targetId) || targetId <= 0) {
+                    sendBotMessageToUser(userId, '유효한 플레이어 ID 또는 me를 입력해주세요.');
+                    return;
+                }
+                const player = await fetchPlayerByUserId(targetId);
+                if (!player) {
+                    sendBotMessageToUser(userId, '플레이어를 찾을 수 없습니다.');
+                    return;
+                }
+                const result = player.titles.revoke(args[1] ?? '', 'admin-command', targetId !== userId);
+                if (!result.success || !result.title) {
+                    sendBotMessageToUser(userId, result.reason ?? '칭호를 삭제할 수 없습니다.');
+                    return;
+                }
+                await player.save();
+                sendBotMessageToUser(userId, `${player.name}의 칭호 [ ${result.title.name} ] 을(를) 삭제했습니다.`);
+            } catch (error) {
+                logger.error('칭호삭제 명령어 처리 중 오류:', error);
+                sendBotMessageToUser(userId, '칭호 삭제 중 오류가 발생했습니다.');
             }
         },
     });

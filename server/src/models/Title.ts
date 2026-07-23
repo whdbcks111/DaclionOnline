@@ -58,6 +58,11 @@ function ownershipProgressId(titleId: string): string {
     return `title-owned:${namespace}/${path}`;
 }
 
+function acquisitionBlockedProgressId(titleId: string): string {
+    const [namespace, path] = normalizeTag(titleId).split(':', 2);
+    return `title-blocked:${namespace}/${path}`;
+}
+
 function normalizedInput(value: string): string {
     return value.trim().toLocaleLowerCase().replace(/\s+/g, '');
 }
@@ -86,6 +91,13 @@ export function defineTitle(data: TitleData): Readonly<TitleData> {
         type: ProgressType.FLAG,
         label: `칭호 획득: ${name}`,
         description: `${name} 칭호의 영구 획득 여부입니다.`,
+        visible: false,
+    });
+    defineProgress({
+        id: acquisitionBlockedProgressId(id),
+        type: ProgressType.FLAG,
+        label: `칭호 관리자 회수: ${name}`,
+        description: `${name} 칭호가 자동 재획득되지 않도록 관리자가 회수했는지 나타냅니다.`,
         visible: false,
     });
     return title;
@@ -168,6 +180,7 @@ export default class TitleBook {
         const title = getTitle(idOrName);
         if (!title) return { success: false, reason: '등록되지 않은 칭호입니다.' };
         if (this.isOwned(title.id)) return { success: false, reason: '이미 획득한 칭호입니다.', title };
+        this.player.progress.setFlag(acquisitionBlockedProgressId(title.id), false);
         this.player.progress.setFlag(ownershipProgressId(title.id));
         if (notify) {
             const message = `칭호 [ ${title.name} ] 를 획득했습니다!`;
@@ -182,6 +195,34 @@ export default class TitleBook {
             });
         }
         emitGameEvent(GameEventIds.TITLE_ACQUIRED, {
+            actor: this.player,
+            data: { titleId: title.id, source },
+        });
+        return { success: true, title };
+    }
+
+    /** 관리자가 회수한 칭호는 다시 부여하기 전까지 달성 조건으로 자동 재획득되지 않는다. */
+    revoke(idOrName: string, source = 'admin', notify = true): TitleOperationResult {
+        const title = getTitle(idOrName);
+        if (!title) return { success: false, reason: '등록되지 않은 칭호입니다.' };
+        if (!this.isOwned(title.id)) return { success: false, reason: '보유하지 않은 칭호입니다.', title };
+        const equipped = this.equippedId === title.id;
+        this.player.progress.setFlag(ownershipProgressId(title.id), false);
+        this.player.progress.setFlag(acquisitionBlockedProgressId(title.id));
+        if (equipped) {
+            this.player.progress.setState(EQUIPPED_TITLE_PROGRESS_ID, '');
+            this.refreshPassiveEffects(true);
+        }
+        if (notify) {
+            const message = `칭호 [ ${title.name} ] 이(가) 회수되었습니다.`;
+            sendBotMessageToUser(this.player.userId, message);
+            sendNotificationToUser(this.player.userId, {
+                key: `title-revoked:${title.id}`,
+                message,
+                length: 4000,
+            });
+        }
+        emitGameEvent(GameEventIds.TITLE_REVOKED, {
             actor: this.player,
             data: { titleId: title.id, source },
         });
@@ -234,7 +275,8 @@ export default class TitleBook {
         const acquired: Readonly<TitleData>[] = [];
         try {
             for (const title of getAllTitles()) {
-                if (this.isOwned(title.id)) continue;
+                if (this.isOwned(title.id)
+                    || this.player.progress.getFlag(acquisitionBlockedProgressId(title.id))) continue;
                 let accepted = false;
                 try {
                     accepted = title.canAcquire(this.player);

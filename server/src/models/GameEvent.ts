@@ -59,6 +59,7 @@ export const GameEventIds = Object.freeze({
     CAREER_ELITE_PROMOTED: 'career:elite_promoted',
     TITLE_ACQUIRED: 'title:acquired',
     TITLE_EQUIPPED: 'title:equipped',
+    TITLE_REVOKED: 'title:revoked',
 } as const);
 
 export type GameEventHandler = (event: GameEvent) => void;

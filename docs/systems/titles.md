@@ -10,6 +10,7 @@ GameEvent
        └─ PlayerProgress counter
             └─ TitleBook.refreshAcquisitions()
                  ├─ title-owned:* flag
+                 ├─ title-blocked:* admin revoke flag
                  └─ title:equipped state
 
 TitleBook
@@ -20,7 +21,7 @@ TitleBook
 - `models/Title.ts`는 `TitleData` 레지스트리와 플레이어별 `TitleBook`을 소유한다.
 - `data/titles.ts`는 획득 통계, 레거시 이식 칭호와 신규 칭호, 전투 hook을 등록한다.
 - 소유 여부와 장착 ID는 기존 `PlayerProgress`에 저장하므로 별도 Prisma 모델이나 마이그레이션이 필요 없다.
-- 기능 코드는 Progress key나 칭호 레지스트리를 직접 수정하지 않고 `TitleBook.grant/equip/unequip`을 사용한다.
+- 기능 코드는 Progress key나 칭호 레지스트리를 직접 수정하지 않고 `TitleBook.grant/revoke/equip/unequip`을 사용한다.
 
 ## 획득과 장착
 
@@ -31,6 +32,8 @@ TitleBook
 - `/칭호장착해제`(`tue`): 현재 칭호를 해제한다.
 
 목록은 정보성 명령이므로 플레이어의 정보 공개/비공개 모드를 따른다. 장착 명령은 조작 명령이며 입력을 채팅에 노출하지 않는다.
+
+권한 10 관리자는 `/칭호부여 <대상> <칭호>`와 `/칭호삭제 <대상> <칭호>`를 사용할 수 있다. 관리자 페이지의 `스킬·효과` 카테고리에서도 미보유 칭호 부여와 보유 칭호 삭제를 검색 가능한 선택창으로 제공한다. 삭제는 장착 패시브까지 즉시 해제하고 `title-blocked:*`를 남겨 이미 달성한 조건으로 곧바로 자동 재획득되는 것을 막는다. 같은 칭호를 관리자가 다시 부여하면 차단 flag가 제거된다.
 
 ## 패시브 적용
 

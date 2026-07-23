@@ -28,10 +28,10 @@
 | `requestLocationInfo` | 없음 | 필요 | `modules/chat.ts` | `locationInfo` |
 | `adminRequestLocations` | 없음 | 권한 10 | `modules/location.ts` | `adminLocations` |
 | `adminSaveLocations` | `LocationData[]` | 권한 10 | `modules/location.ts` | `safe/neutral/hostile zoneType`, `objects(type/dataId/maxCount/respawnTime)`, `npcIds`, `tags`, 선택 `mapIcon`·`#RRGGBB mapColor`를 검증·정규화한 뒤 JSON 저장 및 런타임 재로드, `adminSaveResult` |
-| `adminPanelRequestBootstrap` | 없음 | 권한 10 | `modules/adminPanel.ts` | `adminPanelBootstrap`; 관리자 form option 목록 |
+| `adminPanelRequestBootstrap` | 없음 | 권한 10 | `modules/adminPanel.ts` | `adminPanelBootstrap`; 아이템·스킬·칭호 등 관리자 form option 목록 |
 | `adminPanelRequestPlayers` | 없음 | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayers`; 온라인 우선 전체 캐릭터 목록 |
-| `adminPanelRequestPlayer` | `userId: number` | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayer`; 가공된 캐릭터 상세 snapshot |
-| `adminPanelExecute` | `AdminPanelActionRequest` | 권한 10 | `modules/adminPanel.ts` | 플레이어·월드 action, 전체 채팅/알림·개별 온라인 알림, `analyze_balance_profile` 전투 로테이션 진단을 서버 검증 후 실행하고 result/목록/상세 갱신 |
+| `adminPanelRequestPlayer` | `userId: number` | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayer`; 보유·장착 칭호를 포함한 가공된 캐릭터 상세 snapshot |
+| `adminPanelExecute` | `AdminPanelActionRequest` | 권한 10 | `modules/adminPanel.ts` | 플레이어·월드 action, 칭호 부여·삭제, 전체 채팅/알림·개별 온라인 알림, `analyze_balance_profile` 전투 로테이션 진단을 서버 검증 후 실행하고 result/목록/상세 갱신 |
 | `miniGameResult` | `MiniGameResultRequest` (session/token/경과 시간/20ms 단위 축 입력 trace/선택 action trace) | 필요 | `modules/minigame.ts` | 일회성 세션·token·경과 시간 확인, 축·단조 타격 입력 정규화와 타입별 서버 재현 검증 후 `miniGameResolved` |
 
 클라이언트 emit 위치는 주로 `pages/Login.tsx`, `pages/Register.tsx`, `pages/Home.tsx`, `pages/LocationEditor.tsx`, `components/chat/nodes/ButtonNode.tsx`, `components/hud/huds/QuickSlotHud.tsx`다.

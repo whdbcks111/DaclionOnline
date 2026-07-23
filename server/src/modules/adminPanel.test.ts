@@ -2,9 +2,24 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import test from 'node:test';
 import { initSocket } from './socket.js';
-import { executeAdminPanelAction } from './adminPanel.js';
+import { executeAdminPanelAction, getAdminPanelBootstrap } from './adminPanel.js';
+import { defineTitle } from '../models/Title.js';
 
 initSocket(createServer(), '*');
+
+defineTitle({
+    id: 'test:admin-panel-title',
+    name: '관리자 패널 시험 칭호',
+    description: '관리자 칭호 선택 항목을 검증합니다.',
+    acquisitionDescription: '관리자 시험에서만 사용합니다.',
+    canAcquire: () => false,
+});
+
+test('관리자 패널 bootstrap은 검색 가능한 칭호 마스터 목록을 제공한다', () => {
+    const title = getAdminPanelBootstrap().titles.find(option => option.value === 'test:admin-panel-title');
+    assert.equal(title?.label, '관리자 패널 시험 칭호');
+    assert.match(title?.description ?? '', /관리자 시험에서만 사용/);
+});
 
 test('관리자 패널은 전체 채팅과 전체 알림 공지를 서버에서 검증해 발송한다', async () => {
     const chat = await executeAdminPanelAction(1, {

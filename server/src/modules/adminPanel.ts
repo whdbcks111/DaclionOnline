@@ -11,6 +11,7 @@ import type {
 import prisma from '../config/prisma.js';
 import { getAllItemData, getItemData } from '../models/Item.js';
 import { getAllSkillData, getSkillData } from '../models/Skill.js';
+import { getAllTitles } from '../models/Title.js';
 import { getAllJobs, JobTier } from '../models/Job.js';
 import { getAllLocations, getLocation } from '../models/Location.js';
 import Monster, { getAllMonsterData, getMonsterData } from '../models/Monster.js';
@@ -71,6 +72,11 @@ export function getAdminPanelBootstrap(): AdminPanelBootstrapData {
         balanceItems: getAllItemData().filter(data => data.balance)
             .map(data => option(data.id, data.name, data.balance?.role.label)),
         skills: getAllSkillData().map(data => option(data.id, data.name, `최대 Lv.${data.maxLevel}`)),
+        titles: getAllTitles().map(data => option(
+            data.id,
+            data.name,
+            `${data.acquisitionDescription} · ${data.description}`,
+        )),
         jobs: getAllJobs().filter(job => job.tier === JobTier.FIRST).map(job => option(job.id, job.name, job.description)),
         locations: getAllLocations().map(location => option(location.id, location.data.name)),
         monsters: getAllMonsterData().map(monster => option(monster.id, monster.name, `Lv.${monster.level}`)),
@@ -173,6 +179,11 @@ export async function getAdminPlayerDetail(userId: number): Promise<AdminPlayerD
             name: skill.name,
             level: skill.level,
             experience: skill.experience,
+        })),
+        titles: player.titles.getOwnedSnapshots().map(title => ({
+            id: title.id,
+            name: title.name,
+            equipped: title.equipped,
         })),
         statusEffects: player.getStatusEffectDisplaySnapshots().map(effect => ({
             id: effect.id,
@@ -333,6 +344,20 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
             if (!player.skills.revoke(skillDataId)) throw new Error('보유한 스킬을 찾을 수 없습니다.');
             await save(player);
             return `${player.name}의 스킬을 삭제했습니다.`;
+        }
+        case 'grant_title': {
+            const titleId = stringValue(values, 'titleId');
+            const result = player.titles.grant(titleId, 'admin-panel', player.userId !== adminId);
+            if (!result.success || !result.title) throw new Error(result.reason ?? '칭호를 부여할 수 없습니다.');
+            await save(player);
+            return `${player.name}에게 칭호 [ ${result.title.name} ] 을(를) 부여했습니다.`;
+        }
+        case 'remove_title': {
+            const titleId = stringValue(values, 'titleId');
+            const result = player.titles.revoke(titleId, 'admin-panel', player.userId !== adminId);
+            if (!result.success || !result.title) throw new Error(result.reason ?? '칭호를 삭제할 수 없습니다.');
+            await save(player);
+            return `${player.name}의 칭호 [ ${result.title.name} ] 을(를) 삭제했습니다.`;
         }
         case 'set_jobs': {
             const result = player.career.setByAdmin(

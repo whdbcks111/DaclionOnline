@@ -4,7 +4,7 @@
 
 서버와 클라이언트가 함께 사용하는 네트워크 계약과 리소스를 둔다.
 
-- `types.ts`: 태그, `monster | resource` 통합 오브젝트·NPC ID·지도 아이콘·대표색이 포함된 LocationData, 플레이어별 `WorldMapData`와 `worldMap` ChatNode, 타입색 `ShieldBarSegment`와 재사용 채팅 노드, `level/exp/maxExp/equippedTitle`을 가진 플레이어 HUD DTO, `newcomer/karmaMarked/equippedTitle` 메시지 헤더 표식, 서버 검증 `ChatReplyReference`, 채팅 타입을 포함한 단일 호환·최대 10장 묶음 이미지 메시지·정보 공개·채널·온라인 mention Socket.io 이벤트 map의 단일 기준. Player/Location HUD는 `syncId/revision`을 포함해 중복·역순 snapshot을 거르며, `AdjacentLocationData`는 플레이어 기준 `visible | locked`와 공개 잠금 사유를 포함한다. 관리자 action 계약에는 카르마 설정과 실제 장비·스킬 로테이션을 실행하는 `analyze_balance_profile`이 포함된다.
+- `types.ts`: 태그, `monster | resource` 통합 오브젝트·NPC ID·지도 아이콘·대표색이 포함된 LocationData, 플레이어별 `WorldMapData`와 `worldMap` ChatNode, 타입색 `ShieldBarSegment`와 재사용 채팅 노드, `level/exp/maxExp/equippedTitle`을 가진 플레이어 HUD DTO, `newcomer/karmaMarked/equippedTitle` 메시지 헤더 표식, 서버 검증 `ChatReplyReference`, 채팅 타입을 포함한 단일 호환·최대 10장 묶음 이미지 메시지·정보 공개·채널·온라인 mention Socket.io 이벤트 map의 단일 기준. Player/Location HUD는 `syncId/revision`을 포함해 중복·역순 snapshot을 거르며, `AdjacentLocationData`는 플레이어 기준 `visible | locked`와 공개 잠금 사유를 포함한다. 관리자 계약에는 칭호 마스터 option·보유/장착 snapshot·부여/회수 action, 카르마 설정과 실제 장비·스킬 로테이션을 실행하는 `analyze_balance_profile`이 포함된다.
 - `chat.ts`: 채널·근처·파티·광고·권한 10 공지의 `ChatType` 표시 메타데이터와 광고 제한·귓속말 회색 token을 공유하고, 구조화 ChatNode를 답장용 최대 120자 한 줄로 요약하며 서버 메시지 ID 형식을 검증한다.
 - `commandInput.ts`: 슬래시 명령과 슬래시 없는 별칭 입력을 같은 방식으로 첫 토큰/나머지 인자로 분리하는 공용 parser.
 - `patchNotes.ts`: 작업 묶음별 SemVer 사용자 공개 변경 기록, 배포일, `[+] 기능/콘텐츠`, `[/] 수정`, `[-] 삭제` 클래스형 분류와 버전 역순 불변 snapshot 조회 API. 튜토리얼 완성까지는 `0.x.x` 베타로 구분하고, `v` 접두사를 정규화하며 서버 명령과 클라이언트 화면이 같은 데이터를 사용한다.
