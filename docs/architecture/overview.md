@@ -10,7 +10,7 @@
 
 ```text
 Browser
-  ├─ React Router 화면
+  ├─ React Router 게임·게임 안내·관리자 화면
   ├─ SocketContext ───────────── Socket.io ──┐
   └─ profile upload ───────────── HTTP ───────┤
                                               v

@@ -17,6 +17,7 @@ interface Props {
     channelCounts: Record<string, number>
     onJoinChannel: (channel: string | null) => void
     onOpenHudSettings: () => void
+    onOpenGuide: () => void
     permission?: number
     onOpenAdmin: () => void
 }
@@ -25,7 +26,7 @@ function channelRoomKey(channel: string | null): string {
     return channel === null ? 'channel:main' : `channel:${channel}`
 }
 
-export default function Drawer({ open, onClose, nickname, profileImage, onProfileUpdate, onChangeNickname, userId, currentChannel, channelList, channelCounts, onJoinChannel, onOpenHudSettings, permission = 0, onOpenAdmin }: Props) {
+export default function Drawer({ open, onClose, nickname, profileImage, onProfileUpdate, onChangeNickname, userId, currentChannel, channelList, channelCounts, onJoinChannel, onOpenHudSettings, onOpenGuide, permission = 0, onOpenAdmin }: Props) {
     const [uploading, setUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [showChannels, setShowChannels] = useState(false)
@@ -149,6 +150,9 @@ export default function Drawer({ open, onClose, nickname, profileImage, onProfil
                     )}
                     <button className={styles.uploadButton} onClick={onOpenHudSettings}>
                         HUD 설정
+                    </button>
+                    <button className={styles.uploadButton} onClick={onOpenGuide}>
+                        게임 안내
                     </button>
                     {permission >= 10 && (
                         <button className={styles.uploadButton} onClick={onOpenAdmin}>

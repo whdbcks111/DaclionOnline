@@ -1,6 +1,6 @@
 # Client Source Overview
 
-`main.tsx`가 앱을 mount하고 `App.tsx`가 전역 provider와 라우트를 구성한다.
+`main.tsx`가 앱을 mount하고 `App.tsx`가 전역 provider와 게임·안내·관리자 라우트를 구성한다.
 
 - `pages/`: 라우트 단위 화면과 화면 상태 조정.
 - `components/`: 재사용 UI, 채팅 renderer, HUD.

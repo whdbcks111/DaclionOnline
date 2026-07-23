@@ -51,6 +51,10 @@
 
 `utils/validators.ts`는 `validateId`, `validatePassword`, `validateEmail`, `validateNickname`을 제공한다. 이는 즉시 UI 피드백용이며 서버의 같은 이름 validator가 최종 검증을 수행한다.
 
+## 게임 안내 라우트
+
+`/guide`의 `GameGuide`는 별도 서버 데이터를 복제하지 않는 정적 사용 안내 화면이다. `Drawer`의 `게임 안내` 버튼으로 진입하고 `게임으로 돌아가기`로 `/home`에 복귀한다. PC에서는 장/문서 계층을 왼쪽 고정 목차로, 모바일에서는 가로 장 탭과 문서 이전/다음 버튼으로 탐색한다. 실제 수치나 마스터 데이터 목록이 아니라 안정적인 입력 흐름과 시스템 개념만 설명하며, 명령 별칭이나 기능 계약이 바뀌면 같은 변경에서 문구를 갱신한다.
+
 ## 확장 원칙
 
 - Context가 소유한 raw state를 다른 기능이 localStorage나 내부 구조로 직접 수정하지 않는다. 필요한 동작은 Context value에 가장 작은 목적형 함수를 추가한다.

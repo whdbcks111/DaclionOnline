@@ -601,6 +601,10 @@ function HomeContent() {
         channelCounts={userCountData.channelCounts}
         onJoinChannel={(channel) => socket?.emit('joinChannel', channel)}
         onOpenHudSettings={() => { setDrawerOpen(false); setHudSettingsOpen(true) }}
+        onOpenGuide={() => {
+          setDrawerOpen(false)
+          window.location.assign('/guide')
+        }}
         permission={sessionInfo?.permission}
         onOpenAdmin={() => {
           setDrawerOpen(false)
