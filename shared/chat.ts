@@ -1,6 +1,55 @@
-import type { ChatMessage, ChatNode } from './types.js'
+import type { ChatMessage, ChatNode, ChatTypeKey } from './types.js'
 
 export const MAX_CHAT_REPLY_PREVIEW_LENGTH = 120
+export const CHAT_ADVERTISEMENT_COOLDOWN_MS = 30_000
+export const CHAT_WHISPER_DISPLAY = Object.freeze({
+    label: '귓속말',
+    color: '#8b949e',
+})
+
+/** 전송 범위와 표시 메타데이터를 함께 소유하는 공유 클래스형 enum. */
+export class ChatType {
+    private static readonly entries: ChatType[] = []
+    readonly key: ChatTypeKey
+    readonly label: string
+    readonly color: string | null
+    readonly requiredPermission: number
+
+    static readonly CHANNEL = new ChatType('channel', '채널', null, 0)
+    static readonly NEARBY = new ChatType('nearby', '근처', '#8b5cf6', 0)
+    static readonly PARTY = new ChatType('party', '파티', '#f59e0b', 0)
+    static readonly ADVERTISEMENT = new ChatType('advertisement', '광고', '#2a9d8f', 0)
+    static readonly NOTICE = new ChatType('notice', '공지', '#08c26e', 10)
+
+    private constructor(
+        key: ChatTypeKey,
+        label: string,
+        color: string | null,
+        requiredPermission: number,
+    ) {
+        this.key = key
+        this.label = label
+        this.color = color
+        this.requiredPermission = requiredPermission
+        ChatType.entries.push(this)
+    }
+
+    static values(): readonly ChatType[] {
+        return [...ChatType.entries]
+    }
+
+    static fromKey(key: unknown): ChatType | undefined {
+        return typeof key === 'string'
+            ? ChatType.entries.find(entry => entry.key === key)
+            : undefined
+    }
+
+    static fromInput(input: string): ChatType | undefined {
+        const normalized = input.trim().toLocaleLowerCase('ko-KR')
+        return ChatType.entries.find(entry =>
+            entry.key === normalized || entry.label.toLocaleLowerCase('ko-KR') === normalized)
+    }
+}
 
 function nodeText(node: ChatNode): string {
     switch (node.type) {

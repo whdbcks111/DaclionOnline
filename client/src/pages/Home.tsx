@@ -14,10 +14,11 @@ import Drawer from '../components/Drawer'
 import HudContainer from '../components/hud/HudContainer'
 import HudSettings from '../components/hud/HudSettings'
 import MiniGameOverlay from '../components/minigame/MiniGameOverlay'
-import { summarizeChatContent } from '@shared/chat'
+import { CHAT_WHISPER_DISPLAY, ChatType, summarizeChatContent } from '@shared/chat'
 import type {
   ChatMessage as ChatMessageType,
   ChatReplyReference,
+  ChatTypeKey,
   CommandInfo,
   PlayerStatsData,
   LocationInfoData,
@@ -80,9 +81,12 @@ function HomeContent() {
   const [mediaError, setMediaError] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<PendingChatImage[]>([])
   const [replyingTo, setReplyingTo] = useState<ChatReplyReference | null>(null)
+  const [chatTypeKey, setChatTypeKey] = useState<ChatTypeKey>(ChatType.CHANNEL.key)
+  const [chatTypeMenuOpen, setChatTypeMenuOpen] = useState(false)
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const inputRef = useRef<HTMLDivElement>(null)
   const mediaInputRef = useRef<HTMLInputElement>(null)
+  const chatTypeMenuRef = useRef<HTMLDivElement>(null)
   const pendingImagesRef = useRef<PendingChatImage[]>([])
   const imageSendingRef = useRef(false)
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -110,6 +114,22 @@ function HomeContent() {
     pendingImagesRef.current.forEach(image => URL.revokeObjectURL(image.previewUrl))
     if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current)
   }, [])
+
+  useEffect(() => {
+    if (!chatTypeMenuOpen) return
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!chatTypeMenuRef.current?.contains(event.target as Node)) setChatTypeMenuOpen(false)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setChatTypeMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOnOutsidePointer)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [chatTypeMenuOpen])
 
   useEffect(() => {
     if (!socket) return
@@ -245,6 +265,8 @@ function HomeContent() {
 
   const beginReply = useCallback((message: ChatMessageType) => {
     if (!message.id || message.replyable === false) return
+    setChatTypeKey(ChatType.CHANNEL.key)
+    setChatTypeMenuOpen(false)
     setReplyingTo({
       messageId: message.id,
       userId: message.userId,
@@ -312,6 +334,10 @@ function HomeContent() {
     const content = inputElement?.textContent?.trim() ?? ''
     const attachments = pendingImages
     if (!socket || imageSendingRef.current || (!content && attachments.length === 0)) return
+    if (content.trimStart().startsWith('@') && attachments.length > 0) {
+      setMediaError('귓속말에는 이미지를 첨부할 수 없습니다.')
+      return
+    }
 
     imageSendingRef.current = true
     setMediaError(null)
@@ -322,12 +348,18 @@ function HomeContent() {
         filenames = await Promise.all(attachments.map(image => uploadChatImage(image.file)))
       }
       const replyToId = replyingTo?.messageId
+      const chatType = chatTypeKey === ChatType.CHANNEL.key ? {} : { chatType: chatTypeKey }
       if (content) {
-        socket.emit('sendMessage', replyToId ? { content, replyToId } : content)
+        socket.emit('sendMessage', {
+          content,
+          ...chatType,
+          ...(replyToId ? { replyToId } : {}),
+        })
       }
       if (filenames.length > 0) {
         socket.emit('sendImageMessages', {
           filenames,
+          ...chatType,
           ...(!content && replyToId ? { replyToId } : {}),
         })
       }
@@ -344,7 +376,7 @@ function HomeContent() {
       imageSendingRef.current = false
       setImageUploading(false)
     }
-  }, [clearPendingImages, focusComposerEnd, pendingImages, replyingTo, socket])
+  }, [chatTypeKey, clearPendingImages, focusComposerEnd, pendingImages, replyingTo, socket])
 
   const selectCommand = useCallback((name: string) => {
     if (!inputRef.current) return
@@ -372,6 +404,22 @@ function HomeContent() {
   }, [commands])
 
   const mentionQuery = useMemo(() => getMentionQuery(commandFilter), [commandFilter])
+  const isWhisperDraft = commandFilter.trimStart().startsWith('@')
+  const selectedChatType = ChatType.fromKey(chatTypeKey) ?? ChatType.CHANNEL
+  const availableChatTypes = useMemo(
+    () => ChatType.values().filter(type => (sessionInfo?.permission ?? 0) >= type.requiredPermission),
+    [sessionInfo?.permission],
+  )
+  const activeChatTypeDisplay = isWhisperDraft
+    ? CHAT_WHISPER_DISPLAY
+    : { label: selectedChatType.label, color: selectedChatType.color }
+
+  const selectChatType = useCallback((type: ChatType) => {
+    setChatTypeKey(type.key)
+    setChatTypeMenuOpen(false)
+    if (type !== ChatType.CHANNEL) setReplyingTo(null)
+    requestAnimationFrame(focusComposerEnd)
+  }, [focusComposerEnd])
 
   // 명령어가 완성된 후 파라미터 입력 모드 계산
   const paramMode = useMemo(() => {
@@ -641,12 +689,52 @@ function HomeContent() {
                 </svg>
               )}
             </button>
+            <div ref={chatTypeMenuRef} className={styles.chatTypePicker}>
+              {chatTypeMenuOpen && (
+                <div className={styles.chatTypeMenu} role="listbox" aria-label="채팅 타입 선택">
+                  {availableChatTypes.map(type => (
+                    <button
+                      key={type.key}
+                      type="button"
+                      className={styles.chatTypeOption}
+                      role="option"
+                      aria-selected={type === selectedChatType}
+                      onPointerDown={event => event.preventDefault()}
+                      onClick={() => selectChatType(type)}
+                    >
+                      <span
+                        className={styles.chatTypeSwatch}
+                        style={{ backgroundColor: type.color ?? 'currentColor' }}
+                        aria-hidden="true"
+                      />
+                      <span>{type.label}</span>
+                      {type === selectedChatType && <span className={styles.chatTypeCheck}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                className={styles.chatTypeButton}
+                aria-haspopup="listbox"
+                aria-expanded={chatTypeMenuOpen}
+                title={`${activeChatTypeDisplay.label} 채팅`}
+                style={activeChatTypeDisplay.color
+                  ? { color: activeChatTypeDisplay.color, borderColor: activeChatTypeDisplay.color }
+                  : undefined}
+                onPointerDown={event => event.preventDefault()}
+                onClick={() => setChatTypeMenuOpen(open => !open)}
+              >
+                {activeChatTypeDisplay.label}
+                <span className={styles.chatTypeChevron} aria-hidden="true">⌃</span>
+              </button>
+            </div>
             <div
               ref={inputRef}
               className={styles.chatInputField}
               contentEditable
               role="textbox"
-              data-placeholder="메시지를 입력하세요"
+              data-placeholder="메시지 입력 · @닉네임으로 귓속말"
               onInput={handleInput}
               onPaste={handlePaste}
               onKeyDown={handleKeyDown}

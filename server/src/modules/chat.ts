@@ -1,7 +1,14 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
-import { getSession, broadcastUserCount } from "./login.js";
-import { sendMessageToChannel, getFlagsForPermission, sendNotificationToUser, sendWhisperMessage } from "./message.js";
+import { getSession, broadcastUserCount, isUserOnline } from "./login.js";
+import {
+    broadcastMessageAll,
+    sendMessageToAudience,
+    sendMessageToChannel,
+    getFlagsForPermission,
+    sendNotificationToUser,
+    sendWhisperMessage,
+} from "./message.js";
 import {
     getUserChannel,
     setUserChannel,
@@ -13,20 +20,31 @@ import {
 } from "./channel.js";
 import { sendPlayerStats, sendLocationInfo, getPlayerByUserId } from "./player.js";
 import { handleCommand, isCommandAliasInput } from "./bot.js";
-import { isChatMessageId } from "../../../shared/chat.js";
+import {
+    CHAT_ADVERTISEMENT_COOLDOWN_MS,
+    ChatType,
+    isChatMessageId,
+} from "../../../shared/chat.js";
 import type {
     ChatMessage,
     ChatReplyReference,
+    ChatTypeKey,
     SendChatImageRequest,
     SendChatMessageRequest,
 } from "../../../shared/types.js";
 import { ActionType } from "../models/Action.js";
-import { findOnlinePlayerByIdentity, searchOnlinePlayerIdentitySnapshots } from './playerRegistry.js';
+import {
+    findOnlinePlayerByIdentity,
+    getOnlinePlayerUserIdsAtLocation,
+    searchOnlinePlayerIdentitySnapshots,
+} from './playerRegistry.js';
 import { getOwnedChatImage } from './upload.js';
 import { chat } from '../utils/chatBuilder.js';
+import { partyManager } from './party.js';
 
 const MAX_MESSAGE_LENGTH = 500;
 const MAX_CHAT_IMAGE_BATCH = 10;
+const lastAdvertisementAtByUserId = new Map<number, number>();
 
 export interface WhisperInput {
     target: string;
@@ -36,12 +54,18 @@ export interface WhisperInput {
 export function parseChatMessageRequest(payload: unknown): SendChatMessageRequest | undefined {
     if (typeof payload === 'string') return { content: payload };
     if (typeof payload !== 'object' || payload === null) return undefined;
-    const { content, replyToId } = payload as { content?: unknown; replyToId?: unknown };
+    const { content, replyToId, chatType } = payload as {
+        content?: unknown;
+        replyToId?: unknown;
+        chatType?: unknown;
+    };
     if (typeof content !== 'string') return undefined;
     if (replyToId !== undefined && !isChatMessageId(replyToId)) return undefined;
+    if (chatType !== undefined && !ChatType.fromKey(chatType)) return undefined;
     return {
         content,
         ...(replyToId === undefined ? {} : { replyToId }),
+        ...(chatType === undefined ? {} : { chatType: chatType as ChatTypeKey }),
     };
 }
 
@@ -60,14 +84,21 @@ export function parseWhisperInput(content: string): WhisperInput | null {
 /** 단일 레거시 payload와 다중 이미지 payload를 답장 참조까지 포함해 정규화한다. */
 export function parseChatImageRequest(payload: unknown): SendChatImageRequest | undefined {
     if (typeof payload !== 'object' || payload === null) return undefined;
-    const record = payload as { filename?: unknown; filenames?: unknown; replyToId?: unknown };
+    const record = payload as {
+        filename?: unknown;
+        filenames?: unknown;
+        replyToId?: unknown;
+        chatType?: unknown;
+    };
     const raw = record.filenames ?? (record.filename === undefined ? undefined : [record.filename]);
     if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_CHAT_IMAGE_BATCH) return undefined;
     if (!raw.every(filename => typeof filename === 'string' && filename.length > 0 && filename.length <= 160)) return undefined;
     if (record.replyToId !== undefined && !isChatMessageId(record.replyToId)) return undefined;
+    if (record.chatType !== undefined && !ChatType.fromKey(record.chatType)) return undefined;
     return {
         filenames: raw as string[],
         ...(record.replyToId === undefined ? {} : { replyToId: record.replyToId }),
+        ...(record.chatType === undefined ? {} : { chatType: record.chatType as ChatTypeKey }),
     };
 }
 
@@ -89,6 +120,85 @@ function resolveReplyReference(
         message: '답장할 원본 메시지가 현재 공개 채팅 기록에 없습니다.',
     });
     return { ok: false };
+}
+
+export interface AdvertisementCooldownResult {
+    allowed: boolean;
+    remainingMs: number;
+}
+
+/** 광고 채팅의 30초 제한을 원자적으로 확인한다. 관리자 권한은 제한하지 않는다. */
+export function tryStartAdvertisementCooldown(
+    userId: number,
+    permission: number,
+    now = Date.now(),
+): AdvertisementCooldownResult {
+    if (permission >= ChatType.NOTICE.requiredPermission) {
+        return { allowed: true, remainingMs: 0 };
+    }
+    const lastSentAt = lastAdvertisementAtByUserId.get(userId) ?? Number.NEGATIVE_INFINITY;
+    const remainingMs = Math.max(0, lastSentAt + CHAT_ADVERTISEMENT_COOLDOWN_MS - now);
+    if (remainingMs > 0) return { allowed: false, remainingMs };
+    lastAdvertisementAtByUserId.set(userId, now);
+    return { allowed: true, remainingMs: 0 };
+}
+
+export interface ChatDeliveryResult {
+    ok: boolean;
+    reason?: string;
+}
+
+/** 선택된 채팅 타입의 권한과 audience를 서버에서 확정해 메시지를 전달한다. */
+export function deliverChatMessage(
+    userId: number,
+    permission: number,
+    message: ChatMessage,
+    type: ChatType,
+    now = Date.now(),
+): ChatDeliveryResult {
+    if (permission < type.requiredPermission) {
+        return { ok: false, reason: `${type.label} 채팅을 사용할 권한이 없습니다.` };
+    }
+
+    if (type === ChatType.CHANNEL) {
+        sendMessageToChannel(message, getUserChannel(userId));
+        return { ok: true };
+    }
+    if (type === ChatType.NEARBY) {
+        const player = getPlayerByUserId(userId);
+        if (!player) return { ok: false, reason: '현재 플레이어 위치를 확인할 수 없습니다.' };
+        const audience = getOnlinePlayerUserIdsAtLocation(player.locationId).filter(isUserOnline);
+        sendMessageToAudience(audience, message, type);
+        return { ok: true };
+    }
+    if (type === ChatType.PARTY) {
+        const party = partyManager.getParty(userId);
+        if (!party) return { ok: false, reason: '파티에 소속되어 있지 않습니다.' };
+        sendMessageToAudience(party.memberUserIds.filter(isUserOnline), message, type);
+        return { ok: true };
+    }
+    if (type === ChatType.ADVERTISEMENT) {
+        const cooldown = tryStartAdvertisementCooldown(userId, permission, now);
+        if (!cooldown.allowed) {
+            return {
+                ok: false,
+                reason: `광고 채팅은 ${Math.ceil(cooldown.remainingMs / 1_000)}초 후 다시 보낼 수 있습니다.`,
+            };
+        }
+        broadcastMessageAll(message, type);
+        return { ok: true };
+    }
+
+    broadcastMessageAll(message, ChatType.NOTICE);
+    return { ok: true };
+}
+
+function notifyChatDeliveryFailure(userId: number, result: ChatDeliveryResult): void {
+    if (result.ok) return;
+    sendNotificationToUser(userId, {
+        key: 'chat-type-denied',
+        message: result.reason ?? '선택한 채팅 타입으로 메시지를 보낼 수 없습니다.',
+    });
 }
 
 export const initChat = () => {
@@ -216,6 +326,14 @@ export const initChat = () => {
                 return;
             }
 
+            const chatType = ChatType.fromKey(request.chatType) ?? ChatType.CHANNEL;
+            if (request.replyToId && chatType !== ChatType.CHANNEL) {
+                sendNotificationToUser(session.userId, {
+                    key: 'chat-reply-channel-only',
+                    message: '답장은 채널 채팅으로만 보낼 수 있습니다.',
+                });
+                return;
+            }
             const channel = getUserChannel(session.userId);
             const resolvedReply = resolveReplyReference(session.userId, channel, request.replyToId);
             if (!resolvedReply.ok) return;
@@ -290,7 +408,10 @@ export const initChat = () => {
             const skillActivation = player?.skills.activateFromMessage(trimmed);
             if (skillActivation?.matched) return;
 
-            sendMessageToChannel(msg, channel);
+            notifyChatDeliveryFailure(
+                session.userId,
+                deliverChatMessage(session.userId, session.permission, msg, chatType),
+            );
         });
 
         const sendImageBatch = async (payload: unknown) => {
@@ -308,6 +429,14 @@ export const initChat = () => {
                 return;
             }
 
+            const chatType = ChatType.fromKey(request.chatType) ?? ChatType.CHANNEL;
+            if (request.replyToId && chatType !== ChatType.CHANNEL) {
+                sendNotificationToUser(session.userId, {
+                    key: 'chat-reply-channel-only',
+                    message: '답장은 채널 채팅으로만 보낼 수 있습니다.',
+                });
+                return;
+            }
             const channel = getUserChannel(session.userId);
             const resolvedReply = resolveReplyReference(session.userId, channel, request.replyToId);
             if (!resolvedReply.ok) return;
@@ -332,7 +461,7 @@ export const initChat = () => {
                     height: image.height,
                 });
             });
-            sendMessageToChannel({
+            notifyChatDeliveryFailure(session.userId, deliverChatMessage(session.userId, session.permission, {
                 userId: session.userId,
                 nickname: session.nickname,
                 profileImage: session.profileImage,
@@ -340,7 +469,7 @@ export const initChat = () => {
                 content: content.build(),
                 timestamp: Date.now(),
                 replyTo: resolvedReply.replyTo,
-            }, channel);
+            }, chatType));
         };
 
         socket.on('sendImageMessage', sendImageBatch);

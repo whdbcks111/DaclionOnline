@@ -138,6 +138,88 @@
         animation: media-spin 0.7s linear infinite;
     }
 
+    .chatTypePicker {
+        position: relative;
+        flex: 0 0 auto;
+    }
+
+    button.chatTypeButton {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+        min-width: clamp(3.8rem, 9vw, 4.8rem);
+        height: 2.65rem;
+        padding: 0 $spacing-sm;
+        border: 1px solid $color-border;
+        color: $color-text-secondary;
+        background: $color-bg-secondary;
+        transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+
+        &:hover,
+        &:focus-visible {
+            background: $color-bg-tertiary;
+        }
+    }
+
+    .chatTypeChevron {
+        color: currentColor;
+        font-size: 0.75em;
+        opacity: 0.7;
+    }
+
+    .chatTypeMenu {
+        position: absolute;
+        z-index: 30;
+        bottom: calc(100% + $spacing-xs);
+        left: 0;
+        display: flex;
+        flex-direction: column;
+        width: min(11rem, calc(100vw - 1rem));
+        max-height: min(18rem, 45vh);
+        overflow-y: auto;
+        padding: $spacing-xs;
+        border: 1px solid $color-border;
+        border-radius: $border-radius-md;
+        background: $color-bg-secondary;
+        box-shadow: 0 0.3rem 0.9rem rgba(0, 0, 0, 0.18);
+        scrollbar-width: thin;
+    }
+
+    button.chatTypeOption {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        width: 100%;
+        min-width: 0;
+        padding: $spacing-sm;
+        border: 0;
+        color: $color-text;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover,
+        &:focus-visible,
+        &[aria-selected='true'] {
+            background: $color-bg-tertiary;
+        }
+    }
+
+    .chatTypeSwatch {
+        width: 0.65rem;
+        height: 0.65rem;
+        flex: 0 0 auto;
+        border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+        border-radius: 50%;
+        opacity: 0.9;
+    }
+
+    .chatTypeCheck {
+        margin-left: auto;
+        color: $color-primary;
+    }
+
     .mediaError {
         align-self: flex-start;
         max-width: 100%;
@@ -339,6 +421,11 @@
 
         .mediaPreviewItem {
             width: clamp(3.75rem, 18vw, 4.5rem);
+        }
+
+        button.chatTypeButton {
+            min-width: 3.5rem;
+            padding-inline: clamp(0.45rem, 2vw, 0.65rem);
         }
     }
 }

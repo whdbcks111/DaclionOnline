@@ -3,6 +3,7 @@ import { getSession, getSessionByUserId } from "./login.js";
 import { parseChatMessage } from "../utils/chatParser.js";
 import { getChannelRoomKey, addToChannelHistory, addToAllChannelHistories, addToFilteredChannelHistory, getUserChannel, editMessageInHistory, deleteMessageFromHistory } from "./channel.js";
 import type { ChatMessage, ChatFlag, ChatNode, NotificationData } from "../../../shared/types.js";
+import { ChatType, CHAT_WHISPER_DISPLAY } from '../../../shared/chat.js';
 import { shouldPublishInformationOutput } from './informationVisibility.js';
 import { getOnlinePlayer } from './playerRegistry.js';
 
@@ -43,16 +44,26 @@ export function sendMessageToChannel(msg: ChatMessage, channel: string | null): 
     getIO().to(getChannelRoomKey(channel)).emit('chatMessage', identified);
 }
 
-const FLAG_ALL: ChatFlag = { text: '전체', color: '#08c26e' };
-const FLAG_WHISPER: ChatFlag = { text: '귓속말', color: '#a855f7' };
-const FLAG_PARTY: ChatFlag = { text: '파티', color: '#38bdf8' };
+const FLAG_WHISPER: ChatFlag = {
+    text: CHAT_WHISPER_DISPLAY.label,
+    color: CHAT_WHISPER_DISPLAY.color,
+};
+const FLAG_PARTY: ChatFlag = {
+    text: ChatType.PARTY.label,
+    color: ChatType.PARTY.color!,
+};
 
-/** 모든 채널에 브로드캐스트 (모든 채널 히스토리에 저장, [전체] 플래그 자동 부착) */
-export function broadcastMessageAll(msg: ChatMessage): void {
+function getFlagForChatType(type: ChatType): ChatFlag | undefined {
+    return type.color ? { text: type.label, color: type.color } : undefined;
+}
+
+/** 모든 채널에 브로드캐스트하고 공지 또는 광고 플래그를 자동 부착한다. */
+export function broadcastMessageAll(msg: ChatMessage, type = ChatType.NOTICE): void {
+    const typeFlag = getFlagForChatType(type);
     const flagged: ChatMessage = withId({
         ...msg,
         replyable: true,
-        flags: [FLAG_ALL, ...(msg.flags ?? [])],
+        flags: [...(typeFlag ? [typeFlag] : []), ...(msg.flags ?? [])],
     });
     addToAllChannelHistories(flagged);
     getIO().emit('chatMessage', flagged);
@@ -216,6 +227,19 @@ export function sendNotificationFiltered(filter: (userId: number) => boolean, da
 /** 특정 유저에게만 메시지 전송 (유저의 현재 채널로 범위 한정) */
 export function sendMessageToUser(userId: number, msg: ChatMessage, privateLabel = true): void {
     sendMessageFiltered(id => id === userId, getUserChannel(userId), msg, privateLabel);
+}
+
+/** 서로 다른 채널에 있는 지정 사용자들에게 동일한 범위 플래그로 채팅을 전달한다. */
+export function sendMessageToAudience(
+    userIds: readonly number[],
+    msg: ChatMessage,
+    type: ChatType,
+): void {
+    const typeFlag = getFlagForChatType(type);
+    const flagged = typeFlag
+        ? { ...msg, flags: [typeFlag, ...(msg.flags ?? [])] }
+        : msg;
+    for (const userId of new Set(userIds)) sendMessageToUser(userId, flagged, false);
 }
 
 /** 특정 유저에게만 봇 메시지 전송 (유저의 현재 채널로 범위 한정) */

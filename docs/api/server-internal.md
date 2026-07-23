@@ -11,7 +11,7 @@
 | Online | `setUserOnline`, `setUserOffline`, `isUserOnline`, `getUserCountData`, `broadcastUserCount` | userId별 socket ID Set과 중복 없는 전체/채널 접속 인원 snapshot |
 | Player | `loadPlayerByUserId`, `unloadPlayerByUserId`, `getPlayerByUserId`, `getOnlinePlayers`, `fetchPlayerByUserId`, `saveAllPlayers` | Player 수명과 저장 |
 | Admin panel | `initAdminPanel`, `getAdminPanelBootstrap`, `getAdminPlayerList`, `getAdminPlayerDetail`, `executeAdminPanelAction` | 권한 10 운영 도구의 가공된 조회, 플레이어·월드·전체/개별 공지 action 검증과 실행 |
-| Player registry | `registerOnlinePlayer`, `getOnlinePlayer`, `unregisterOnlinePlayer`, `getOnlinePlayerSnapshot`, `isOnlinePlayerAtLocation` | 내부 Map을 숨긴 온라인 객체 조회와 위치 필터 |
+| Player registry | `registerOnlinePlayer`, `getOnlinePlayer`, `unregisterOnlinePlayer`, `getOnlinePlayerSnapshot`, `getOnlinePlayerUserIdsAtLocation`, `isOnlinePlayerAtLocation` | 내부 Map을 숨긴 온라인 객체 조회와 위치별 userId snapshot |
 | Player identity | `findOnlinePlayerByIdentity`, `getOnlinePlayerIdentitySnapshots`, `searchOnlinePlayerIdentitySnapshots` | 고유번호/정확한 닉네임 대상 조회와 prefix 온라인 자동완성 DTO |
 | HUD | `sendPlayerStats`, `sendLocationInfo` | 특정 사용자의 모든 소켓에 HUD payload 전송 |
 | State sync | `publishUserSnapshot`, `clearUserSnapshotStreams`, `RevisionedSnapshot` | 내용 변경 revision·stream syncId와 socket별 전달 stamp로 완전한 HUD snapshot 중복/역순 방지 |
@@ -21,7 +21,8 @@
 | Party | `partyManager.invite/accept/decline/leave/disband/kick/removeDisconnectedPlayer/getParty/areInSameParty/getHudData/distributeMonsterExp`, `calculatePartyExpGrant` | 내부 Map을 숨긴 초대·구성·PVP 아군 판정·HUD·같은 장소 몬스터 경험치 공유 |
 | Trade | `tradeManager.invite/accept/decline/addItem/removeItem/setGold/confirm/unconfirm/cancel/cancelForPlayer/update/getSessionSnapshot/subscribe` | 같은 장소 플레이어 거래의 요청·런타임 에스크로·양쪽 확인·자동 취소와 불변 표시 snapshot/event |
 | Channel | `getUserChannel`, `setUserChannel`, `getChannelRoomKey`, `getChannelHistory`, `getFilteredHistoryForUser`, `getPublicReplyReference` | room·히스토리 상태와 공개 원문의 안전한 답장 요약 snapshot |
-| Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageFiltered`, `sendMessageToUser`, `sendPlayerTextToCurrentChannel`, `sendPrivatePlayerTextToCurrentChannel`, `sendPrivatePlayerContentToCurrentChannel`, `sendPlayerTextToPartyMembers`, `sendPlayerContentToPartyMembers`, `sendWhisperMessage` | 텍스트 또는 이미지 등 구조화 노드를 가진 시스템 생성 플레이어 메시지, `[파티]` 필터 피드와 채널을 넘는 양방향 비공개 귓속말 전송 |
+| Chat delivery | `deliverChatMessage`, `tryStartAdvertisementCooldown`, `ChatType.values/fromKey/fromInput` | 채널·장소·파티·전체 광고·관리자 공지 audience, 권한과 30초 광고 제한 검증 |
+| Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageToAudience`, `sendMessageFiltered`, `sendMessageToUser`, `sendPlayerTextToCurrentChannel`, `sendPrivatePlayerTextToCurrentChannel`, `sendPrivatePlayerContentToCurrentChannel`, `sendPlayerTextToPartyMembers`, `sendPlayerContentToPartyMembers`, `sendWhisperMessage` | 구조화 메시지의 공개·지정 audience 전송, `[파티]` 필터 피드와 회색 양방향 비공개 귓속말 |
 | Bot message | `sendBotMessageToChannel`, `broadcastBotMessageAll`, `sendBotMessageFiltered`, `sendBotMessageToUser`, `sendPrivateBotMessageToUser`, `sendBotMessageToPartyMembers`, `sendNotificationToUsers` | 정보 명령 문맥을 반영하거나 강제로 비공개인 시스템 메시지 및 파티 전투 피드 전송 |
 | Notification | `broadcastNotification`, `sendNotificationFiltered`, `sendNotificationToUser` | 화면 알림 전송 |
 | Message mutation | `editMessage`, `deleteMessage`; `sendMessageFiltered/sendPrivateBotMessageToUser` 반환 message ID | 히스토리 수정 후 이벤트 브로드캐스트와 교체 가능한 비공개 카드 추적 |

@@ -18,7 +18,7 @@
 
 채팅 상태창의 능력치 표시는 `AttributeType.icon`이 만든 `/icons/attributes/{key}.png`를 사용한다. 각 능력치를 한 행의 `아이콘 + hover 이름 + 값`으로 렌더링하므로 긴 재생/감소량 이름을 두 열 고정 폭에 억지로 배치하지 않는다. 같은 아이콘은 스킬 포맷의 `[icon=attributes/{key}]` 노드에서도 렌더링된다.
 
-`PartyHud`는 nullable `playerStats.party`를 사용해 파티원별 레벨·생명력·정신력과 같은 장소 여부를 표시한다. 파티가 없으면 렌더링하지 않으며 HUD 설정 API로 표시·위치·크기를 조절한다. `Home.tsx`의 정보 공개 버튼은 서버 `informationMode` 이벤트만 상태 원본으로 사용한다. 채팅 첫 토큰이 `@`로 시작하면 온라인 플레이어 mention completion을 요청하고 선택한 닉네임을 `@닉네임 ` 형식으로 입력한다.
+`PartyHud`는 nullable `playerStats.party`를 사용해 파티원별 레벨·생명력·정신력과 같은 장소 여부를 표시한다. 파티가 없으면 렌더링하지 않으며 HUD 설정 API로 표시·위치·크기를 조절한다. `Home.tsx`의 정보 공개 버튼은 서버 `informationMode` 이벤트만 상태 원본으로 사용한다. 미디어 버튼 옆의 위쪽 메뉴는 권한으로 필터한 `ChatType.values()`를 사용하며 일반 사용자에게 관리자 전용 공지를 렌더링하지 않는다. 채팅 첫 토큰이 `@`로 시작하면 온라인 플레이어 mention completion을 요청하고 선택한 닉네임을 `@닉네임 ` 형식으로 입력하며, 전송 타입 버튼은 입력 중에만 회색 귓속말 표시로 바뀐다.
 
 `Home.tsx`의 답장 상태는 원문 `messageId/userId/nickname/preview` snapshot 하나만 소유한다. 공개 메시지의 답장 버튼은 모바일 입력 포커스를 빼앗지 않고 입력창 위 미리보기를 열며, 텍스트 또는 이미지만 전송하는 첫 메시지에 `replyToId`를 붙인다. 전송된 `ChatMessage.replyTo` 카드를 누르면 `chat-message-{id}` 요소로 즉시 이동하고 1.6초 동안 강조한다. 원문이 현재 100개 히스토리에 없으면 입력창 안내를 표시한다.
 

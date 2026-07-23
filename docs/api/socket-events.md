@@ -11,9 +11,9 @@
 | `logout` | `token: string` | 토큰 | `modules/login.ts` | `logoutResult`; 마지막 세션이면 Player 저장/언로드 |
 | `sendVerifyCode` | `email: string` | 불필요 | `modules/register.ts` | `verifyCodeSendResult`; 6자리, 5분 만료, 60초 재전송 제한 |
 | `verifyCode` | `code: string` | 불필요 | `modules/register.ts` | `verifyCodeResult` |
-| `sendMessage` | `string \| { content, replyToId? }` | 필요 | `modules/chat.ts` | 최대 500자; 선택한 서버 메시지 ID를 현재 공개 채널 히스토리에서 재검증한 뒤 일반 채팅·명령 또는 답장 전송 |
-| `sendImageMessages` | `{ filenames: string[], replyToId? }` (1~10장) | 필요 | `modules/chat.ts` | 모든 HTTP 업로드의 소유권·보관 기간·`ActionType.CHAT`과 선택 공개 원문을 확인한 뒤 하나의 다중 image ChatNode 메시지 전송 |
-| `sendImageMessage` | `{ filename: string, replyToId? }` | 필요 | `modules/chat.ts` | 구형 클라이언트 호환용 단일 이미지 이벤트. `sendImageMessages`와 같은 검증 경계를 사용 |
+| `sendMessage` | `string \| { content, replyToId?, chatType? }` | 필요 | `modules/chat.ts` | 최대 500자; `channel/nearby/party/advertisement/notice` 범위와 공지 권한·광고 30초 제한을 서버에서 검증. 답장은 현재 공개 채널 히스토리에서 재검증하고 채널 타입만 허용 |
+| `sendImageMessages` | `{ filenames: string[], replyToId?, chatType? }` (1~10장) | 필요 | `modules/chat.ts` | 모든 HTTP 업로드의 소유권·보관 기간·`ActionType.CHAT`, 선택 범위와 공개 원문을 확인한 뒤 하나의 다중 image ChatNode 메시지 전송 |
+| `sendImageMessage` | `{ filename: string, replyToId?, chatType? }` | 필요 | `modules/chat.ts` | 구형 클라이언트 호환용 단일 이미지 이벤트. `sendImageMessages`와 같은 검증 경계를 사용 |
 | `chatButtonClick` | `{ action, showCommand? }` | 필요 | `modules/chat.ts` | `ActionType.COMMAND` 제한 확인 후 `/` action만 `handleCommand()`로 전달 |
 | `requestChatHistory` | 없음 | 선택 | `modules/chat.ts` | `chatHistory`; 인증 시 private history와 HUD 데이터도 전송 |
 | `requestCommandList` | 없음 | 불필요 | `modules/bot.ts` | `commandList` |

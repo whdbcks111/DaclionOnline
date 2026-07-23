@@ -24,6 +24,13 @@ export function getOnlinePlayerSnapshot(): Player[] {
     return [...onlinePlayers.values()];
 }
 
+/** 같은 장소에 있는 온라인 Player의 userId 스냅샷을 반환한다. */
+export function getOnlinePlayerUserIdsAtLocation(locationId: string): number[] {
+    return [...onlinePlayers.values()]
+        .filter(player => player.locationId === locationId)
+        .map(player => player.userId);
+}
+
 /** 고유번호 또는 대소문자를 무시한 정확한 닉네임으로 온라인 Player를 찾는다. */
 export function findOnlinePlayerByIdentity(input: string): Player | undefined {
     const normalized = input.trim();

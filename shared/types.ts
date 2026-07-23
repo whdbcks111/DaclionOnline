@@ -150,15 +150,19 @@ export interface ChatReplyReference {
     preview: string
 }
 
+export type ChatTypeKey = 'channel' | 'nearby' | 'party' | 'advertisement' | 'notice'
+
 export interface SendChatMessageRequest {
     content: string
     replyToId?: string
+    chatType?: ChatTypeKey
 }
 
 export interface SendChatImageRequest {
     filename?: string
     filenames?: string[]
     replyToId?: string
+    chatType?: ChatTypeKey
 }
 
 // 채팅 메시지

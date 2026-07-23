@@ -134,7 +134,7 @@ $avatar-size: 40px;
     border-radius: $border-radius-sm;
     color: $color-text-secondary;
     background: $color-bg-secondary;
-    opacity: 0.68;
+    opacity: 0.38;
     cursor: pointer;
 
     svg {
@@ -150,7 +150,7 @@ $avatar-size: 40px;
     &:hover,
     &:focus-visible {
         color: $color-primary;
-        opacity: 1;
+        opacity: 0.76;
     }
 }
 
@@ -168,7 +168,7 @@ $avatar-size: 40px;
 
     .message:hover .replyAction,
     .replyAction:focus-visible {
-        opacity: 1;
+        opacity: 0.72;
     }
 }
 
