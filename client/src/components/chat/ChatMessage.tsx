@@ -83,6 +83,15 @@ export function resolveColor(color: string): string {
     return color
 }
 
+function preserveActiveComposerFocus(event: React.PointerEvent<HTMLDivElement>): void {
+    const target = event.target
+    if (!(target instanceof Element) || !target.closest('button')) return
+    const activeElement = document.activeElement
+    if (activeElement instanceof HTMLElement && activeElement.isContentEditable) {
+        event.preventDefault()
+    }
+}
+
 interface Props {
     message: ChatMessageType
     showHeader: boolean
@@ -157,7 +166,7 @@ export default function ChatMessage({
                         </button>
                     )}
                     <div className={`${styles.body} ${hasTopLevelImage ? styles.mediaBody : ''}`}>
-                        <div className={styles.content}>
+                        <div className={styles.content} onPointerDownCapture={preserveActiveComposerFocus}>
                             {nodes.map((node, i) => renderNode(node, i))}
                         </div>
                     </div>
