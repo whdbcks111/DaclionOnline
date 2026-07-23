@@ -63,7 +63,7 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 스킬 템플릿은 `{{icon.atk}}`, `{{icon.magicForce}}`, `{{icon.projectileAcceleration}}`처럼 `icon.{AttributeKey}`를 사용하면 해당 `AttributeType.iconMarkup`으로 치환된다. 공격력·마법력 계수, 관통, 방어, 속도, 투사체 가속, 치명타와 정신력 소모 표기는 이 문법을 사용해 상태창과 같은 대표색 아이콘을 재사용한다.
 
-투사체 스킬 정보는 현재 능력치로 계산한 도달 시간을 표시한다. 모든 투사체는 owner의 `projectileAcceleration`을 마스터 데이터 계수만큼 반영하며, 마법 피해 투사체 스킬은 여기에 스킬 레벨당 8%와 마법력 1당 0.2%(마법력 기여 최대 75%)의 가속 배율을 추가한다. 표시 tooltip과 실제 발사는 `calculateProjectileAcceleration/calculateProjectileTravelTime`을 공유한다.
+투사체 스킬 정보는 현재 능력치로 계산한 도달 시간을 표시한다. 모든 투사체는 owner의 `projectileAcceleration`을 마스터 데이터 계수만큼 반영하며, 마법 피해 투사체 스킬은 여기에 스킬 레벨당 8%와 마법력 1당 0.2%(마법력 기여 최대 75%)의 가속 배율을 추가한다. 표시 tooltip과 실제 발사는 `calculateProjectileAcceleration/calculateProjectileTravelTime`을 공유한다. 계수 적용이 끝난 가속은 `calculateProjectileEvasionSpeed`로 회피 판정 속도에도 환산하며 발사자의 이동속도는 직접 섞지 않는다.
 
 계산 필드는 `[tooltip=산식]현재값[/tooltip]`을 반환할 수 있다. 스킬 정보 본문은 현재 적용될 결과 숫자만 보여주고 hover에서 능력치 계수·기본값·레벨당 증가량을 설명한다. 실제 발동과 표시 계산은 같은 함수와 상수를 사용해 밸런스 변경 시 서로 어긋나지 않게 한다.
 

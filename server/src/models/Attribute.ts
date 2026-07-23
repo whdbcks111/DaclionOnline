@@ -119,7 +119,7 @@ export class AttributeType {
         '투사체 가속',
         1,
         v => `${v.toFixed(2)}배`,
-        v => `투사체 비행 시간을 기본 시간의 1/${v.toFixed(2)}로 단축합니다.`
+        v => `투사체 비행 시간을 기본 시간의 1/${v.toFixed(2)}로 단축하고 빠른 대상에 대한 적중률을 높입니다.`
     )
     static readonly CRIT_RATE    = new AttributeType(
         'critRate',     

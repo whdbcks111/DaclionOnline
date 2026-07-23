@@ -17,9 +17,12 @@ import {
     analyzeJobBalance,
     analyzeSkillBalance,
     BalanceEncounterType,
+    BALANCE_PROFILE_LEVELS,
     createBalanceScenario,
 } from './Balance.js';
 import { AttributeType } from './Attribute.js';
+import { calculateProjectileEvasionSpeed } from './Projectile.js';
+import { calculateEvasionChance } from './Combat.js';
 
 test('projected profile uses the same eight stat points earned per level', () => {
     const report = analyzeJobBalance(50, 'career:warrior');
@@ -39,6 +42,23 @@ test('projected profiles follow the intended primary stat order for every first 
     assert.ok(assassin.agility > assassin.strength && assassin.strength > assassin.sensibility);
     assert.ok(mage.mentality > mage.sensibility && mage.sensibility > mage.vitality);
     assert.ok(blacksmith.sensibility > blacksmith.vitality && blacksmith.vitality > blacksmith.strength);
+});
+
+test('궁수 투사체 가속 환산은 성장 구간에서 근접 명중률과 15%p 안으로 균형을 유지한다', () => {
+    for (const level of BALANCE_PROFILE_LEVELS) {
+        for (const encounter of [BalanceEncounterType.MONSTER, BalanceEncounterType.BOSS]) {
+            const scenario = createBalanceScenario(level, 'career:archer', undefined, encounter);
+            const acceleration = scenario.entity.attribute.get(AttributeType.PROJECTILE_ACCELERATION);
+            const projectileSpeed = calculateProjectileEvasionSpeed(acceleration);
+            const ownerSpeed = scenario.entity.attribute.get(AttributeType.SPEED);
+            const targetSpeed = scenario.target.attribute.get(AttributeType.SPEED);
+            const projectileEvasion = calculateEvasionChance(projectileSpeed, targetSpeed);
+            const meleeEvasion = calculateEvasionChance(ownerSpeed, targetSpeed);
+
+            assert.ok(projectileEvasion <= meleeEvasion + 0.15);
+            if (level === 20) assert.ok(projectileEvasion <= 0.05);
+        }
+    }
 });
 
 test('archer and assassin combat skills gain real damage from movement speed buffs', () => {

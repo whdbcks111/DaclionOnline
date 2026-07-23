@@ -180,6 +180,11 @@ export default abstract class Entity implements TagReadable {
     /** 공격 보상·어그로를 귀속할 최종 소유자. Projectile은 owner를 반환한다. */
     get attackOwner(): Entity { return this; }
 
+    /** 피격자의 이동속도 회피 판정에 사용할 공격 측 속도. */
+    getEvasionAttackSpeed(): number {
+        return this.attribute.get(AttributeType.SPEED);
+    }
+
     /** lateUpdate의 사망 처리 전 life가 먼저 0이 된 프레임까지 포함한 제압 상태. */
     get isDefeated(): boolean { return this.isDead || this.life <= 0; }
 
@@ -814,7 +819,7 @@ export default abstract class Entity implements TagReadable {
         const evasionChance = combatOptions.unavoidable || !target.canPerformAction(ActionType.EVASION)
             ? 0
             : guaranteedEvasion ? 1 : calculateEvasionChance(
-                this.attribute.get(AttributeType.SPEED),
+                this.getEvasionAttackSpeed(),
                 target.attribute.get(AttributeType.SPEED),
             );
         combat.evasionChance = evasionChance;

@@ -4,6 +4,8 @@
 
 `Entity.attack()`은 기존 회피·치명타·상성·방어/관통·보호막 계산의 단일 진입점이며, `CombatPipeline`이 계산 사이의 확장 지점을 제공한다.
 
+회피율의 공격 측 속도는 `Entity.getEvasionAttackSpeed()`로 조회한다. 일반 Entity의 근접 공격은 이동속도를 사용하지만 Projectile은 발사자의 이동속도를 배제하고 최종 `projectileAcceleration`만 사용한다. 투사체 가속은 이동속도보다 작은 단위로 성장하므로 `1 + (가속 - 1) × 5`로 회피 판정 속도에 환산한다. 이에 따라 가속 +0.1배는 유효 적중 속도 +0.5가 되며 비행시간과 실제 적중률을 함께 개선한다. `unavoidable` 공격은 기존처럼 이 계산을 건너뛴다.
+
 | 단계 | 용도 |
 | --- | --- |
 | `PREPARE` | 공격 가능 조건을 추가 검사하거나 `cancelled/cancelReason`으로 취소 |

@@ -64,6 +64,17 @@ export interface SpawnProjectileDataOptions {
     onHit?: ProjectileOptions['onHit'];
 }
 
+/**
+ * 투사체 가속은 이동속도보다 작은 단위로 성장하므로 초과분을 회피 판정 단위로 환산한다.
+ * 가속 +0.1배당 유효 적중 속도 +0.5이며, 발사자의 이동속도는 섞지 않는다.
+ */
+export function calculateProjectileEvasionSpeed(projectileAcceleration: number): number {
+    const acceleration = Number.isFinite(projectileAcceleration)
+        ? Math.max(0.1, projectileAcceleration)
+        : 1;
+    return Math.max(0.1, 1 + (acceleration - 1) * 5);
+}
+
 /** 좌표가 없는 현재 월드에서 비행 시간 뒤 지정 대상을 공격하는 런타임 엔티티. */
 export default class Projectile extends Entity {
     readonly owner: Entity;
@@ -139,6 +150,11 @@ export default class Projectile extends Entity {
     /** 중첩 소유 관계에서도 보상과 어그로는 최종 발사자에게 귀속한다. */
     override get attackOwner(): Entity {
         return this.owner.attackOwner;
+    }
+
+    /** 회피 판정은 발사자의 이동속도가 아닌 투사체 가속만 사용한다. */
+    override getEvasionAttackSpeed(): number {
+        return calculateProjectileEvasionSpeed(this.projectileAcceleration);
     }
 
     get active(): boolean { return this._active; }
