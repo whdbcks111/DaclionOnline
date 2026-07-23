@@ -115,6 +115,11 @@ export default function ChatMessage({ message, showHeader }: Props) {
                                     {flag.text}
                                 </span>
                             ))}
+                            {message.newcomer && (
+                                <span className={styles.newcomer} title="누적 플레이 24시간 미만" aria-label="새싹 모험가">
+                                    🌱
+                                </span>
+                            )}
                             <span className={styles.nickname}>{message.nickname}</span>
                             <span className={styles.timestamp}>{formatTime(message.timestamp)}</span>
                         </div>

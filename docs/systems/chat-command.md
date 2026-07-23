@@ -15,6 +15,8 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 
 `ChatMessage.content`는 사용자 일반 입력에서는 text node 배열이고, 시스템 메시지는 `chat()` 빌더 또는 `parseChatMessage()`로 만든 `ChatNode[]`다. 클라이언트 `ChatMessage.tsx`가 노드 트리를 재귀 렌더링한다.
 
+플레이어가 보낸 일반 채팅·명령 표시·이미지·귓속말·스킬 시전 메시지는 채널 히스토리에 들어가는 시점의 `Player.isNewcomer`를 `ChatMessage.newcomer`로 snapshot한다. Player 생성 뒤 누적 온라인 플레이 시간이 24시간 미만이면 클라이언트가 닉네임 왼쪽에 `🌱`를 표시한다. 누적 시간은 User 가입일이 아니라 `player:play_time_seconds` Progress이며 오프라인 시간은 포함하지 않는다.
+
 `Home.tsx`는 메시지 전송 후 입력 내용만 비우고 contenteditable의 포커스와 커서를 유지한다. 전송 버튼의 pointer down도 입력 포커스를 빼앗지 않으므로 모바일 가상 키보드가 매 전송마다 닫히거나 다시 열리며 깜빡이지 않는다.
 
 입력창 왼쪽 미디어 버튼은 숨은 `accept="image/*"` 다중 파일 입력을 열어 모바일에서는 OS 미디어 선택기, PC에서는 파일 탐색기를 사용한다. contenteditable에 이미지 파일을 `Ctrl+V`로 붙여넣어도 같은 첨부 대기열에 들어간다. 최대 10장의 미리보기를 입력창 위에서 개별 또는 전체 삭제한 뒤 전송하며, 전송 전에는 서버로 업로드하지 않는다. 전송 시 각 파일은 인증 HTTP API에서 최대 1600px·품질 78의 WebP로 재인코딩되고, 성공한 서버 파일명 묶음만 `sendImageMessages`로 보낸다. 소켓은 모든 파일의 사용자 소유권과 `ActionType.CHAT`을 다시 검사한 뒤 한 채팅 메시지에 이미지들을 묶는다. 파일은 전체 최신 100장·최대 7일 동안만 보관되며 매시간 정리되므로 이전 채팅의 만료된 이미지는 더 이상 조회되지 않는다.

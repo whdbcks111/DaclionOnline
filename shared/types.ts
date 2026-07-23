@@ -149,6 +149,8 @@ export interface ChatMessage {
     nickname: string
     profileImage?: string
     flags?: ChatFlag[]
+    /** 누적 플레이 24시간 미만의 신규 Player 표시. User 계정 생성 시점과는 무관하다. */
+    newcomer?: boolean
     content: string | ChatNode[]
     timestamp: number
     private?: boolean

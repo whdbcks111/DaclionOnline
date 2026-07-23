@@ -37,10 +37,13 @@ import { partyManager } from '../modules/party.js';
 import { emitGameEvent, GameEventIds } from './GameEvent.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
+export const NEWCOMER_PLAY_TIME_SECONDS = 24 * 60 * 60;
 
 export const PlayerRuntimeProgressIds = Object.freeze({
     /** 사망 패널티 적용 완료 여부와 오프라인 동안 정지할 남은 부활 시간을 함께 나타낸다. */
     DEATH_REMAINING: 'runtime:death_remaining_seconds',
+    /** User가 아니라 생성된 Player에 귀속되는 누적 온라인 플레이 시간. */
+    PLAY_TIME_SECONDS: 'player:play_time_seconds',
 });
 
 defineProgress({
@@ -50,6 +53,24 @@ defineProgress({
     description: '재접속 시 사망 처리를 반복하지 않고 남은 부활 대기시간을 복원하는 내부 상태입니다.',
     visible: false,
 });
+
+defineProgress({
+    id: PlayerRuntimeProgressIds.PLAY_TIME_SECONDS,
+    type: ProgressType.COUNTER,
+    label: '누적 플레이 시간',
+    description: 'Player가 게임에 접속해 있었던 누적 시간입니다.',
+    visible: true,
+    format: value => {
+        const totalMinutes = Number(value) / 60;
+        if (totalMinutes < 60) return `${Math.floor(totalMinutes)}분`;
+        const totalHours = totalMinutes / 60;
+        return totalHours < 24 ? `${totalHours.toFixed(1)}시간` : `${Math.floor(totalHours / 24)}일`;
+    },
+});
+
+export function isNewcomerPlayTime(seconds: number): boolean {
+    return Number.isFinite(seconds) && seconds >= 0 && seconds < NEWCOMER_PLAY_TIME_SECONDS;
+}
 
 export interface PlayerLevelAdjustmentResult {
     readonly previousLevel: number;
@@ -162,6 +183,7 @@ export default class Player extends Entity {
     private _statPoint = 0;
     private _deathNotifTimer = 0;
     private _craftingDiscoveryTimer = 0;
+    private _unsavedPlayTime = 0;
     private _savePromise: Promise<void> | null = null;
     private _saveRequested = false;
 
@@ -276,6 +298,16 @@ export default class Player extends Entity {
     get gold() { return this._gold; }
     set gold(val: number) { this._gold = Math.max(0, val); this._dirty = true; }
 
+    /** 저장된 초와 현재 접속 구간을 합친 Player 누적 플레이 시간. */
+    get cumulativePlayTimeSeconds(): number {
+        return this.progress.getCounterNumber(PlayerRuntimeProgressIds.PLAY_TIME_SECONDS)
+            + this._unsavedPlayTime;
+    }
+
+    get isNewcomer(): boolean {
+        return isNewcomerPlayTime(this.cumulativePlayTimeSeconds);
+    }
+
     /** 관리자 레벨 조정: 실제 레벨업 지급분과 분배 포인트를 함께 증감한다. */
     adjustLevel(targetLevel: number, expPercent = 0): PlayerLevelAdjustmentResult {
         if (!Number.isFinite(expPercent) || expPercent < 0 || expPercent >= 100) {
@@ -379,6 +411,7 @@ export default class Player extends Entity {
 
     override update(dt: number): void {
         super.update(dt);
+        if (Number.isFinite(dt) && dt > 0) this._unsavedPlayTime += dt;
         this.skills.update(dt);
         this._craftingDiscoveryTimer -= dt;
         if (this._craftingDiscoveryTimer <= 0) {
@@ -614,6 +647,11 @@ export default class Player extends Entity {
     }
 
     private async saveDirtyState(): Promise<void> {
+        const elapsedSeconds = Math.floor(this._unsavedPlayTime);
+        if (elapsedSeconds > 0) {
+            this._unsavedPlayTime -= elapsedSeconds;
+            this.progress.increment(PlayerRuntimeProgressIds.PLAY_TIME_SECONDS, elapsedSeconds);
+        }
         // 오프라인 동안 카운트하지 않을 정확한 잔여 시간을 unload/주기 저장 시점에 스냅샷한다.
         if (this.isDead) this.persistDeathState();
         if (this._dirty || this.stat.dirty || this.equipment.dirty || this.skills.dirty || this.rankingVisibility.dirty) {

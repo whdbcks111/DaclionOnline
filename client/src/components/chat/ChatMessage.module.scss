@@ -93,6 +93,12 @@ $avatar-size: 40px;
     color: $color-text;
 }
 
+.newcomer {
+    display: inline-block;
+    margin-right: -$spacing-xs;
+    line-height: 1;
+}
+
 .timestamp {
     font-size: $font-size-sm;
     color: $color-text-tertiary;

@@ -4,6 +4,7 @@ import { parseChatMessage } from "../utils/chatParser.js";
 import { getChannelRoomKey, addToChannelHistory, addToAllChannelHistories, addToFilteredChannelHistory, getUserChannel, editMessageInHistory, deleteMessageFromHistory } from "./channel.js";
 import type { ChatMessage, ChatFlag, ChatNode, NotificationData } from "../../../shared/types.js";
 import { shouldPublishInformationOutput } from './informationVisibility.js';
+import { getOnlinePlayer } from './playerRegistry.js';
 
 const BOT_USER_ID = 0;
 const BOT_NICKNAME = "Daclion System";
@@ -16,7 +17,13 @@ function generateMessageId(): string {
 }
 
 function withId(msg: ChatMessage): ChatMessage {
-    return msg.id ? msg : { ...msg, id: generateMessageId() };
+    if (msg.id) return msg;
+    const newcomer = msg.userId > 0 ? getOnlinePlayer(msg.userId)?.isNewcomer : false;
+    return {
+        ...msg,
+        id: generateMessageId(),
+        ...(newcomer ? { newcomer: true } : {}),
+    };
 }
 
 /** permission 기반 플래그 생성 */
