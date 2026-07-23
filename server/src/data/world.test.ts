@@ -33,6 +33,7 @@ import {
     rollTreasureReward,
     rollTwilightReliquaryReward,
     rollVoidcrownReliquaryReward,
+    rollWorldrootReliquaryReward,
 } from './resources.js';
 import { MonsterAiDisposition } from '../models/Threat.js';
 import {
@@ -42,6 +43,7 @@ import {
     getParadoxAnchorProtectionMultiplier,
     getVoidcrownPillarProtectionMultiplier,
     getWhiteNightMirrorProtectionMultiplier,
+    getPrimordialSeedProtectionMultiplier,
 } from './bossPatterns.js';
 import { GameTags } from '../../../shared/tags.js';
 
@@ -51,7 +53,7 @@ const locations = JSON.parse(
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, 209);
+    assert.equal(locations.length, 233);
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -79,7 +81,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 14, neutral: 46, hostile: 149 },
+        { safe: 15, neutral: 46, hostile: 172 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -88,7 +90,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     assert.ok(locations.every(location => /^#[0-9a-f]{6}$/i.test(location.mapColor ?? '')));
     assert.deepEqual(
         locations.filter(location => location.mapIcon).map(location => location.mapIcon).sort(),
-        ['general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
+        ['general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
     );
     for (const icon of new Set(locations.flatMap(location => location.mapIcon ? [location.mapIcon] : []))) {
         const png = readFileSync(new URL(`../../../client/public/icons/map/${icon}.png`, import.meta.url));
@@ -204,6 +206,14 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
             'eclipse_sunken_reliquary', 'eclipse_mirror_causeway', 'eclipse_white_night_nave',
             'eclipse_oracle_apse', 'eclipse_drowned_belfry', 'eclipse_final_crossing',
             'eclipse_altar_vestibule', 'eclipse_white_night_altar'],
+        ['worldroot_threshold', 'worldroot_waystation', 'worldroot_lower_fork', 'worldroot_luminous_root',
+            'worldroot_rot_hollow', 'worldroot_sap_aqueduct', 'worldroot_fossil_bark',
+            'worldroot_devourer_gate', 'worldroot_inner_gate', 'worldroot_spore_garden',
+            'worldroot_amber_channel', 'worldroot_memory_grove', 'worldroot_heart_threshold',
+            'worldroot_vein_gallery', 'worldroot_seed_archive', 'worldroot_memory_altar',
+            'worldroot_hidden_reliquary', 'worldroot_root_bridge', 'worldroot_holy_canopy',
+            'worldroot_dark_canopy', 'worldroot_forgotten_ring', 'worldroot_pulse_chamber',
+            'worldroot_heart_antechamber', 'worldroot_primordial_heart'],
     ];
 
     for (const ids of regions) {
@@ -213,14 +223,14 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
     }
 });
 
-test('1~345레벨 월드는 모든 속성을 관찰 가능하고 동급 일반 몬스터 보상은 5%로 수렴한다', () => {
+test('1~380레벨 월드는 모든 속성을 관찰 가능하고 동급 일반 몬스터 보상은 5%로 수렴한다', () => {
     const monsters = getAllMonsterData();
     const levelOne = getMonsterData('slime');
     const midLevelNormal = getMonsterData('spark_moth');
     const levelTwoHundred = getMonsterData('eclipse_watcher');
 
     assert.equal(Math.min(...monsters.map(monster => monster.level)), 1);
-    assert.equal(Math.max(...monsters.map(monster => monster.level)), 345);
+    assert.equal(Math.max(...monsters.map(monster => monster.level)), 380);
     assert.equal(Entity.getMaxExpOfLevel(1), 100);
     assert.equal(Entity.getMaxExpOfLevel(50), 20_000);
     assert.equal(Entity.getMaxExpOfLevel(200), 80_000);
@@ -245,7 +255,7 @@ test('성장 구간 보스는 최대 30레벨 간격으로 배치되고 일반�
         .sort((left, right) => left.level - right.level);
 
     assert.ok(bosses[0].level <= 32);
-    assert.equal(bosses[bosses.length - 1].level, 345);
+    assert.equal(bosses[bosses.length - 1].level, 380);
     for (let index = 1; index < bosses.length; index++) {
         assert.ok(bosses[index].level - bosses[index - 1].level <= 30,
             `${bosses[index - 1].name} Lv.${bosses[index - 1].level} → ${bosses[index].name} Lv.${bosses[index].level}`);
@@ -748,6 +758,71 @@ test('월식해구는 24개 분기 수로·조류제단·거울 보호 보스·�
     }
     runtimeAltar?.update(0.05);
     assert.equal(getWhiteNightMirrorProtectionMultiplier(), 1);
+    assert.equal(runtimeBoss?.getDamageReceivedModifier(), 1);
+});
+
+test('역근수해는 24개 분기 뿌리·기억 제단·씨앗 보호 보스·최종 지역 경제를 연결한다', () => {
+    const region = locations.filter(location => location.tags.includes(GameTags.LOCATION_WORLDROOT));
+    const devourer = getMonsterData('inverse_root_devourer');
+    const heart = getMonsterData('primordial_heart_arbor');
+    const store = getShop('worldroot_waystation_store');
+    const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('worldroot:'));
+    const quests = getAllQuestData().filter(quest => quest.id.startsWith('worldroot:'));
+
+    assert.equal(region.length, 24);
+    assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
+    assert.equal(devourer?.level, 360);
+    assert.equal(heart?.level, 380);
+    assert.deepEqual(devourer?.skillPattern?.sequence, [
+        'root_devourer_downfall', 'root_devourer_rot_breath',
+    ]);
+    assert.equal(devourer?.skillPattern?.randomOrder, undefined);
+    assert.ok(heart?.skillPattern?.randomOrder);
+    assert.ok((heart?.ai?.weights?.healing ?? 0) > (heart?.ai?.weights?.damage ?? 0));
+    assert.ok((heart?.ai?.tauntResistance ?? 0) >= 0.99);
+
+    const fork = locations.find(location => location.id === 'worldroot_lower_fork');
+    const innerGate = locations.find(location => location.id === 'worldroot_inner_gate');
+    const altar = locations.find(location => location.id === 'worldroot_memory_altar');
+    const vault = locations.find(location => location.id === 'worldroot_hidden_reliquary');
+    const chamber = locations.find(location => location.id === 'worldroot_primordial_heart');
+    assert.ok(fork?.connections.some(connection => connection.locationId === 'worldroot_luminous_root'));
+    assert.ok(fork?.connections.some(connection => connection.locationId === 'worldroot_rot_hollow'));
+    assert.ok(innerGate?.connections.some(connection => connection.locationId === 'worldroot_spore_garden'));
+    assert.ok(innerGate?.connections.some(connection => connection.locationId === 'worldroot_amber_channel'));
+    assert.ok(altar?.connections.some(connection => connection.condition === 'worldroot_memory_solved'));
+    assert.ok(vault?.tags.includes(GameTags.LOCATION_HIDDEN));
+    assert.equal(chamber?.objects.find(object => object.dataId === 'primordial_heart_seed')?.maxCount, 3);
+    assert.ok(getResourceData('rootbone_vein')?.requiredToolTags.includes(GameTags.TOOL_MINING));
+    assert.deepEqual(getResourceData('worldroot_reliquary')?.interactionCooldown, {
+        min: 9 * 60 * 60,
+        max: 13 * 60 * 60,
+    });
+    assert.equal(rollWorldrootReliquaryReward(() => 0).itemDataId, 'worldroot_ration');
+    assert.equal(rollWorldrootReliquaryReward(() => 0.999).itemDataId, 'canopy_heartshield');
+
+    for (const itemId of [
+        'rootbone_cleaver', 'heartstring_greatbow', 'amber_memory_fang',
+        'origin_heart_staff', 'canopy_heartshield',
+    ]) {
+        assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === itemId), itemId);
+        assert.ok(getItemData(itemId)?.balance, `${itemId} balance`);
+    }
+    assert.equal(recipes.length, 7);
+    assert.equal(quests.length, 2);
+    assert.equal(NPC.getNpc('worldroot_keeper')?.name, '기억수호자 오르넬');
+
+    reloadAllLocations(locations);
+    const runtimeHeart = getLocation('worldroot_primordial_heart');
+    runtimeHeart?.update(0.05);
+    const runtimeBoss = runtimeHeart?.getMonstersByDataId('primordial_heart_arbor')[0];
+    assert.equal(getPrimordialSeedProtectionMultiplier(), 0.3);
+    assert.equal(runtimeBoss?.getDamageReceivedModifier(), 0.3);
+    for (const seed of runtimeHeart?.getResourcesByDataId('primordial_heart_seed') ?? []) {
+        seed.damage(seed.maxLife, 'absolute', { type: 'void', causeEntity: null, fixedDamage: true });
+    }
+    runtimeHeart?.update(0.05);
+    assert.equal(getPrimordialSeedProtectionMultiplier(), 1);
     assert.equal(runtimeBoss?.getDamageReceivedModifier(), 1);
 });
 

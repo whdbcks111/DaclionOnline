@@ -243,6 +243,65 @@ for (const recipe of [
 
 for (const recipe of [
     {
+        id: 'worldroot:worldroot_ration', result: 'worldroot_ration', time: 6,
+        description: '천근수피 속살을 태초수액과 함께 구워 오래 보존되는 수피 빵을 만듭니다.',
+        ingredients: [['skyroot_bark', 3], ['primal_sap', 2], ['traveler_bread', 2]],
+        tags: ['crafting:consumable', 'region:worldroot'],
+    },
+    {
+        id: 'worldroot:primordial_draught', result: 'primordial_draught', time: 9,
+        description: '태초수액과 심장씨앗의 맥동을 회복약에 안정시켜 태초맥 영약을 만듭니다.',
+        ingredients: [['primal_sap', 5], ['heart_seed', 2], ['health_potion', 2]],
+        tags: ['crafting:consumable', 'region:worldroot'],
+    },
+    {
+        id: 'worldroot:rootbone_cleaver', result: 'rootbone_cleaver', time: 28,
+        description: '근골철의 결을 천근수피로 고정하고 심장씨앗의 맥동으로 칼날을 깨웁니다.',
+        ingredients: [['rootbone_iron', 16], ['skyroot_bark', 8], ['heart_seed', 4]],
+        tags: ['crafting:weapon', 'region:worldroot'],
+    },
+    {
+        id: 'worldroot:heartstring_greatbow', result: 'heartstring_greatbow', time: 26,
+        description: '천근수피 활대에 심장씨앗과 기억호박을 연결해 맥동하는 활시위를 만듭니다.',
+        ingredients: [['skyroot_bark', 15], ['heart_seed', 7], ['memory_amber', 6]],
+        tags: ['crafting:weapon', 'region:worldroot'],
+    },
+    {
+        id: 'worldroot:amber_memory_fang', result: 'amber_memory_fang', time: 25,
+        description: '근골철 단검에 기억호박을 박고 태초수액으로 사냥의 기억을 고정합니다.',
+        ingredients: [['rootbone_iron', 11], ['memory_amber', 9], ['primal_sap', 6]],
+        tags: ['crafting:weapon', 'region:worldroot'],
+    },
+    {
+        id: 'worldroot:origin_heart_staff', result: 'origin_heart_staff', time: 29,
+        description: '태초수액과 심장씨앗을 기억호박 회로에 순환시켜 기원심장 지팡이를 만듭니다.',
+        ingredients: [['primal_sap', 12], ['heart_seed', 9], ['memory_amber', 8]],
+        tags: ['crafting:weapon', 'region:worldroot'],
+    },
+    {
+        id: 'worldroot:canopy_heartshield', result: 'canopy_heartshield', time: 30,
+        description: '천근수피와 근골철 사이에 태초수액과 심장씨앗을 봉해 충격을 순환시키는 방패를 만듭니다.',
+        ingredients: [['skyroot_bark', 16], ['rootbone_iron', 13], ['primal_sap', 8], ['heart_seed', 4]],
+        tags: ['crafting:armor', 'region:worldroot'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
         id: 'ashen:ashmarch_ration', result: 'ashmarch_ration', time: 5,
         description: '여행자 빵에 잿빛 힘줄의 열기를 스며들게 하고 맑은 물과 함께 밀봉해 재길 행군식을 만듭니다.',
         ingredients: [['ashen_sinew', 2], ['traveler_bread', 2], ['fresh_water', 1]],

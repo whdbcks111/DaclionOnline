@@ -4017,7 +4017,428 @@
       { "type": "resource", "dataId": "eclipse_reliquary", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
-      { "locationId": "eclipse_altar_vestibule" }
+      { "locationId": "eclipse_altar_vestibule" },
+      { "locationId": "worldroot_threshold", "condition": "level_345" }
+    ]
+  },
+  {
+    "id": "worldroot_threshold",
+    "name": "역근수해 1 하늘뿌리 경계",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 6800, "y": -285, "z": -1370,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:earth"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "skyroot_husk", "maxCount": 3, "respawnTime": 335 },
+      { "type": "monster", "dataId": "memory_amber_moth", "maxCount": 2, "respawnTime": 340 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_white_night_altar", "condition": "level_345" },
+      { "locationId": "worldroot_waystation" }
+    ]
+  },
+  {
+    "id": "worldroot_waystation",
+    "name": "역근수해 기억길잡이 둥지",
+    "mapColor": "#40513f",
+    "zoneType": "safe",
+    "x": 6890, "y": -285, "z": -1400,
+    "mapIcon": "general-shop",
+    "shopId": "worldroot_waystation_store",
+    "tags": ["location:safe", "location:outpost", "location:worldroot", "property:natural", "property:light"],
+    "npcIds": ["worldroot_keeper"],
+    "objects": [
+      { "type": "resource", "dataId": "worldroot_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_threshold" },
+      { "locationId": "worldroot_lower_fork" }
+    ]
+  },
+  {
+    "id": "worldroot_lower_fork",
+    "name": "역근수해 2 빛과 부패의 갈림뿌리",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 6980, "y": -285, "z": -1435,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "skyroot_husk", "maxCount": 2, "respawnTime": 335 },
+      { "type": "monster", "dataId": "forgetting_spore_shaman", "maxCount": 1, "respawnTime": 345 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_waystation" },
+      { "locationId": "worldroot_luminous_root" },
+      { "locationId": "worldroot_rot_hollow" }
+    ]
+  },
+  {
+    "id": "worldroot_luminous_root",
+    "name": "역근수해 3 광휘뿌리 회랑",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7060, "y": -375, "z": -1470,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "memory_amber_moth", "maxCount": 3, "respawnTime": 340 },
+      { "type": "resource", "dataId": "rootbone_vein", "maxCount": 2, "respawnTime": 720 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_lower_fork" },
+      { "locationId": "worldroot_sap_aqueduct" }
+    ]
+  },
+  {
+    "id": "worldroot_rot_hollow",
+    "name": "역근수해 4 부패포자 공동",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7060, "y": -195, "z": -1470,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:poison", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "forgetting_spore_shaman", "maxCount": 3, "respawnTime": 345 },
+      { "type": "monster", "dataId": "skyroot_husk", "maxCount": 1, "respawnTime": 335 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_lower_fork" },
+      { "locationId": "worldroot_fossil_bark" }
+    ]
+  },
+  {
+    "id": "worldroot_sap_aqueduct",
+    "name": "역근수해 5 태초수액 수로",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7140, "y": -375, "z": -1510,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:water", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "memory_amber_moth", "maxCount": 2, "respawnTime": 340 },
+      { "type": "monster", "dataId": "rootbone_sentinel", "maxCount": 2, "respawnTime": 350 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_luminous_root" },
+      { "locationId": "worldroot_devourer_gate" }
+    ]
+  },
+  {
+    "id": "worldroot_fossil_bark",
+    "name": "역근수해 6 화석수피 매듭",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7140, "y": -195, "z": -1510,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:earth", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "rootbone_sentinel", "maxCount": 3, "respawnTime": 350 },
+      { "type": "resource", "dataId": "rootbone_vein", "maxCount": 3, "respawnTime": 720 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_rot_hollow" },
+      { "locationId": "worldroot_devourer_gate" }
+    ]
+  },
+  {
+    "id": "worldroot_devourer_gate",
+    "name": "역근수해 7 포식수의 문",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7230, "y": -285, "z": -1550,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:earth", "property:poison"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "inverse_root_devourer", "maxCount": 1, "respawnTime": 1800 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_sap_aqueduct" },
+      { "locationId": "worldroot_fossil_bark" },
+      { "locationId": "worldroot_inner_gate" }
+    ]
+  },
+  {
+    "id": "worldroot_inner_gate",
+    "name": "역근수해 8 안쪽 생장문",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7320, "y": -285, "z": -1590,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "rootbone_sentinel", "maxCount": 2, "respawnTime": 350 },
+      { "type": "monster", "dataId": "origin_sap_acolyte", "maxCount": 1, "respawnTime": 360 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_devourer_gate" },
+      { "locationId": "worldroot_spore_garden" },
+      { "locationId": "worldroot_amber_channel" }
+    ]
+  },
+  {
+    "id": "worldroot_spore_garden",
+    "name": "역근수해 9 망각포자 정원",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7400, "y": -385, "z": -1630,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:poison", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "forgetting_spore_shaman", "maxCount": 2, "respawnTime": 345 },
+      { "type": "monster", "dataId": "origin_sap_acolyte", "maxCount": 2, "respawnTime": 360 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_inner_gate" },
+      { "locationId": "worldroot_memory_grove" }
+    ]
+  },
+  {
+    "id": "worldroot_amber_channel",
+    "name": "역근수해 10 기억호박 수로",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7400, "y": -185, "z": -1630,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:water", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "memory_amber_moth", "maxCount": 2, "respawnTime": 340 },
+      { "type": "monster", "dataId": "amber_memory_keeper", "maxCount": 2, "respawnTime": 365 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_inner_gate" },
+      { "locationId": "worldroot_memory_grove" }
+    ]
+  },
+  {
+    "id": "worldroot_memory_grove",
+    "name": "역근수해 11 기억이끼 숲",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7490, "y": -285, "z": -1670,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "amber_memory_keeper", "maxCount": 3, "respawnTime": 365 },
+      { "type": "monster", "dataId": "origin_sap_acolyte", "maxCount": 1, "respawnTime": 360 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_spore_garden" },
+      { "locationId": "worldroot_amber_channel" },
+      { "locationId": "worldroot_heart_threshold" }
+    ]
+  },
+  {
+    "id": "worldroot_heart_threshold",
+    "name": "태초심장 성역 1 박동의 문턱",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7580, "y": -285, "z": -1710,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:holy"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "origin_sap_acolyte", "maxCount": 2, "respawnTime": 360 },
+      { "type": "monster", "dataId": "canopy_seraph", "maxCount": 1, "respawnTime": 370 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_memory_grove" },
+      { "locationId": "worldroot_vein_gallery" },
+      { "locationId": "worldroot_seed_archive" }
+    ]
+  },
+  {
+    "id": "worldroot_vein_gallery",
+    "name": "태초심장 성역 2 성수관 회랑",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7660, "y": -385, "z": -1750,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:water", "property:holy"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "origin_sap_acolyte", "maxCount": 3, "respawnTime": 360 },
+      { "type": "resource", "dataId": "rootbone_vein", "maxCount": 2, "respawnTime": 720 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_heart_threshold" },
+      { "locationId": "worldroot_memory_altar" },
+      { "locationId": "worldroot_root_bridge" }
+    ]
+  },
+  {
+    "id": "worldroot_seed_archive",
+    "name": "태초심장 성역 3 종자기록고",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7660, "y": -185, "z": -1750,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "amber_memory_keeper", "maxCount": 2, "respawnTime": 365 },
+      { "type": "monster", "dataId": "heart_gardener", "maxCount": 1, "respawnTime": 380 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_heart_threshold" },
+      { "locationId": "worldroot_memory_altar" },
+      { "locationId": "worldroot_root_bridge" }
+    ]
+  },
+  {
+    "id": "worldroot_memory_altar",
+    "name": "태초심장 성역 4 첫 기억의 제단",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7740, "y": -385, "z": -1790,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "worldroot_memory_altar", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_vein_gallery" },
+      { "locationId": "worldroot_seed_archive" },
+      { "locationId": "worldroot_hidden_reliquary", "condition": "worldroot_memory_solved" }
+    ]
+  },
+  {
+    "id": "worldroot_hidden_reliquary",
+    "name": "태초심장 성역 숨은 기억호박 유물고",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7820, "y": -435, "z": -1830,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "location:hidden", "property:natural", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "worldroot_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_memory_altar", "condition": "worldroot_memory_solved" },
+      { "locationId": "worldroot_root_bridge", "condition": "worldroot_memory_solved" }
+    ]
+  },
+  {
+    "id": "worldroot_root_bridge",
+    "name": "태초심장 성역 5 심장고리 뿌리교",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7830, "y": -285, "z": -1830,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:earth"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "canopy_seraph", "maxCount": 2, "respawnTime": 370 },
+      { "type": "monster", "dataId": "heart_gardener", "maxCount": 2, "respawnTime": 380 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_vein_gallery" },
+      { "locationId": "worldroot_seed_archive" },
+      { "locationId": "worldroot_hidden_reliquary", "condition": "worldroot_memory_solved" },
+      { "locationId": "worldroot_holy_canopy" },
+      { "locationId": "worldroot_dark_canopy" }
+    ]
+  },
+  {
+    "id": "worldroot_holy_canopy",
+    "name": "태초심장 성역 6 광명의 천개",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7910, "y": -385, "z": -1870,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:light", "property:holy"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "canopy_seraph", "maxCount": 3, "respawnTime": 370 },
+      { "type": "monster", "dataId": "origin_sap_acolyte", "maxCount": 1, "respawnTime": 360 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_root_bridge" },
+      { "locationId": "worldroot_forgotten_ring" }
+    ]
+  },
+  {
+    "id": "worldroot_dark_canopy",
+    "name": "태초심장 성역 7 망각의 천개",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 7910, "y": -185, "z": -1870,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:dark", "property:poison"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "heart_gardener", "maxCount": 2, "respawnTime": 380 },
+      { "type": "monster", "dataId": "forgetting_spore_shaman", "maxCount": 2, "respawnTime": 345 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_root_bridge" },
+      { "locationId": "worldroot_forgotten_ring" }
+    ]
+  },
+  {
+    "id": "worldroot_forgotten_ring",
+    "name": "태초심장 성역 8 잊힌 나이테",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 8000, "y": -285, "z": -1910,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "amber_memory_keeper", "maxCount": 2, "respawnTime": 365 },
+      { "type": "monster", "dataId": "canopy_seraph", "maxCount": 1, "respawnTime": 370 },
+      { "type": "monster", "dataId": "heart_gardener", "maxCount": 1, "respawnTime": 380 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_holy_canopy" },
+      { "locationId": "worldroot_dark_canopy" },
+      { "locationId": "worldroot_pulse_chamber" }
+    ]
+  },
+  {
+    "id": "worldroot_pulse_chamber",
+    "name": "태초심장 성역 9 박동 회랑",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 8090, "y": -285, "z": -1950,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:holy"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "canopy_seraph", "maxCount": 2, "respawnTime": 370 },
+      { "type": "monster", "dataId": "heart_gardener", "maxCount": 2, "respawnTime": 380 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_forgotten_ring" },
+      { "locationId": "worldroot_heart_antechamber" }
+    ]
+  },
+  {
+    "id": "worldroot_heart_antechamber",
+    "name": "태초심장 성역 10 첫 박동 전실",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 8180, "y": -285, "z": -1990,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:holy", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "origin_sap_acolyte", "maxCount": 2, "respawnTime": 360 },
+      { "type": "monster", "dataId": "heart_gardener", "maxCount": 2, "respawnTime": 380 },
+      { "type": "resource", "dataId": "worldroot_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_pulse_chamber" },
+      { "locationId": "worldroot_primordial_heart" }
+    ]
+  },
+  {
+    "id": "worldroot_primordial_heart",
+    "name": "태초심장 첫 기억의 심실",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 8270, "y": -285, "z": -2030,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:holy", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "primordial_heart_arbor", "maxCount": 1, "respawnTime": 2100 },
+      { "type": "resource", "dataId": "primordial_heart_seed", "maxCount": 3, "respawnTime": 2100 },
+      { "type": "resource", "dataId": "worldroot_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_heart_antechamber" }
     ]
   }
 ]

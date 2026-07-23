@@ -52,6 +52,10 @@ export const ECLIPSE_TRENCH_QUEST_IDS = Object.freeze({
     RESTORE_DOCK: 'eclipse-trench:restore-dock',
     END_WHITE_NIGHT: 'eclipse-trench:end-white-night',
 } as const);
+export const WORLDROOT_QUEST_IDS = Object.freeze({
+    RESTORE_MEMORY: 'worldroot:restore-memory',
+    AWAKEN_HEART: 'worldroot:awaken-heart',
+} as const);
 
 defineQuest({
     id: TUTORIAL_QUEST_ID,
@@ -633,6 +637,75 @@ defineQuest({
         QuestReward.gold(86_000),
         QuestReward.item('white_night_bulwark', 1, '백야 조류방패'),
         QuestReward.item('eclipse_verdict_skillbook', 1, '월식선고 전승서'),
+    ],
+});
+
+defineQuest({
+    id: WORLDROOT_QUEST_IDS.RESTORE_MEMORY,
+    name: '수해가 잊은 이름',
+    aliases: ['역근수해 기억', '기억호박 복구'],
+    description: '기억호박과 태초수액을 모아 역근수해의 길잡이 기억을 복원하세요.',
+    tags: ['quest:side', 'region:worldroot'],
+    giverNpcIds: ['worldroot_keeper'],
+    turnInNpcIds: ['worldroot_keeper'],
+    visible: player => player.level >= 345,
+    canAccept: player => player.level >= 345,
+    stages: [new QuestStage({
+        id: 'restore-root-memory',
+        description: '수피 회랑과 호박 수로에서 길잡이 기억에 필요한 기억호박과 태초수액을 모으세요.',
+        objectives: [
+            QuestObjective.item('memory-amber', '기억호박 수집', 16, 'memory_amber', true),
+            QuestObjective.item('primal-sap', '태초수액 수집', 12, 'primal_sap', true),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(390_000),
+        QuestReward.gold(72_000),
+        QuestReward.item('primordial_draught', 5, '태초맥 영약'),
+        QuestReward.item('rootbreaker_descent_skillbook', 1, '역근강하 전승서'),
+    ],
+});
+
+defineQuest({
+    id: WORLDROOT_QUEST_IDS.AWAKEN_HEART,
+    name: '첫 박동과 마지막 망각',
+    aliases: ['태초심장 토벌', '아르보르'],
+    description: '역근 포식수를 넘어 심장씨앗을 부수고 태초심장 아르보르의 뒤틀린 박동을 멈추세요.',
+    tags: ['quest:side', 'quest:boss', 'region:worldroot'],
+    giverNpcIds: ['worldroot_keeper'],
+    turnInNpcIds: ['worldroot_keeper'],
+    prerequisiteQuestIds: [WORLDROOT_QUEST_IDS.RESTORE_MEMORY],
+    visible: player => player.level >= 360,
+    canAccept: player => player.level >= 360,
+    stages: [new QuestStage({
+        id: 'awaken-primordial-heart',
+        description: '역근의 포식자와 심장씨앗을 제거한 뒤 태초심장의 뒤틀린 의지를 잠재우세요.',
+        objectives: [
+            QuestObjective.kill(
+                'inverse-root-devourer',
+                '역근 포식수 처치',
+                1,
+                target => target.hasTag('monster:inverse-root-devourer'),
+            ),
+            QuestObjective.destroy(
+                'primordial-heart-seeds',
+                '태초심장 씨앗 파괴',
+                3,
+                target => target.hasTag('resource:primordial-heart-seed'),
+            ),
+            QuestObjective.kill(
+                'primordial-heart-arbor',
+                '태초심장 아르보르 제압',
+                1,
+                target => target.hasTag('monster:primordial-heart-arbor'),
+            ),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(620_000),
+        QuestReward.gold(110_000),
+        QuestReward.item('canopy_heartshield', 1, '천개심 방패'),
+        QuestReward.item('primordial_sanctuary_skillbook', 1, '태초성역 전승서'),
     ],
 });
 

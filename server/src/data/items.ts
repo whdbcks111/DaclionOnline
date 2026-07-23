@@ -2604,3 +2604,174 @@ for (const book of [
     modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_ECLIPSE_TRENCH, book.property],
 });
+
+// TODO(icons): 역근수해 전용 아트 제작 전까지 자연·땅·빛 계열 소재와 장비 fallback을 사용한다.
+for (const material of [
+    {
+        id: 'skyroot_bark', name: '천근수피', image: 'items/earthworm_bait', weight: 0.64,
+        description: '하늘에서 아래로 자라는 역근의 바깥을 감싼 청회색 수피.',
+        tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_EARTH],
+    },
+    {
+        id: 'primal_sap', name: '태초수액', image: 'items/health_potion', weight: 0.32,
+        description: '세계수가 처음 싹튼 순간의 생명력이 아직도 맥동하는 푸른 수액.',
+        tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'memory_amber', name: '기억호박', image: 'items/resonance_evasion_shard', weight: 0.28,
+        description: '수해를 지나간 생명의 기억을 얇은 결로 보존하는 황금빛 호박.',
+        tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'rot_spore', name: '망각포자', image: 'items/earthworm_bait', weight: 0.12,
+        description: '기억과 생기를 천천히 분해해 새로운 흙으로 돌려보내는 검은 포자.',
+        tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_POISON, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'heart_seed', name: '심장씨앗', image: 'items/refined_emerald', weight: 0.24,
+        description: '태초심장의 박동 하나를 씨앗껍질 안에 가둔 희귀한 생명 결정.',
+        tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_HOLY],
+    },
+    {
+        id: 'rootbone_iron', name: '근골철', image: 'items/refined_iron', weight: 0.86,
+        description: '오래된 뿌리뼈와 금속 광맥이 한 덩어리로 굳은 역근수해의 합금.',
+        tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_METAL, GameTags.PROPERTY_EARTH],
+    },
+] as const) defineItem({
+    id: material.id,
+    name: material.name,
+    description: material.description,
+    image: material.image,
+    category: '역근 소재',
+    weight: material.weight,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [...material.tags],
+});
+
+defineItem({
+    id: 'worldroot_ration', name: '천근수피 빵',
+    description: '천근수피 속살과 태초수액을 구워 만든 단단한 보존식. 배고픔 145와 수분 70을 회복한다.',
+    image: 'items/traveler_bread', category: '음식', weight: 0.58, stackable: true, maxStack: 30,
+    baseMetadata: { hunger: 145, thirst: 70, time: 1.1, useMessage: '천근수피 빵의 단단한 껍질을 자르는 중...' },
+    onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL],
+});
+
+defineItem({
+    id: 'primordial_draught', name: '태초맥 영약',
+    description: '태초수액과 심장씨앗의 맥동을 안정시켜 60초 동안 강한 재생 효과를 부여한다.',
+    image: 'items/health_potion', category: '소모품', weight: 0.36, stackable: true, maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'regeneration', level: 18, duration: 60 } },
+    onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_HOLY],
+});
+
+defineItem({
+    id: 'rootbone_cleaver', name: '근골철 수맥검',
+    description: '근골철의 결을 뿌리 방향으로 세워 방어를 가르고 생명맥을 끊는 장검.',
+    image: 'items/windsteel_sword', category: '장검', weight: 5, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 392, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 104, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.32, source: '' },
+    ],
+    baseDurability: 810,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_METAL, GameTags.PROPERTY_EARTH],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+});
+
+defineItem({
+    id: 'heartstring_greatbow', name: '심장현 대궁',
+    description: '심장씨앗의 맥동을 활시위에 옮겨 화살이 목표에 가까워질수록 더 빠르게 당겨지는 대궁.',
+    image: 'items/stormstring_bow', category: '활', weight: 3.35, stackable: false, maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+        [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 318, source: '' },
+        { attribute: 'critRate', op: 'add', value: 0.15, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 2.02, source: '' },
+    ],
+    baseDurability: 770,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+});
+
+defineItem({
+    id: 'amber_memory_fang', name: '기억호박 송곳니',
+    description: '기억호박에 남은 사냥의 순간을 칼끝으로 재생하는 짧은 근골철 단검.',
+    image: 'items/nightglass_dagger', category: '단검', weight: 1.65, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 346, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 112, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.5, source: '' },
+        { attribute: 'speed', op: 'add', value: 0.24, source: '' },
+    ],
+    baseDurability: 705,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
+});
+
+defineItem({
+    id: 'origin_heart_staff', name: '기원심장 지팡이',
+    description: '태초수액의 맥동을 기억호박에 순환시켜 생명과 신성 마력을 한 점으로 모으는 지팡이.',
+    image: 'items/starwood_staff', category: '지팡이', weight: 3.45, stackable: false, maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+        [ItemMetadataKeys.PROJECTILE_ATTACK]: {
+            projectile: {
+                dataId: 'basic_magic_orb',
+                overrides: { tags: [GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY] },
+            },
+        },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'magicForce', op: 'add', value: 455, source: '' },
+        { attribute: 'magicPen', op: 'add', value: 118, source: '' },
+        { attribute: 'mentalityRegen', op: 'add', value: 19, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 2.08, source: '' },
+    ],
+    baseDurability: 825,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+});
+
+defineItem({
+    id: 'canopy_heartshield', name: '천개심 방패',
+    description: '천근수피와 근골철 사이에서 태초수액이 순환해 충격을 생명력으로 흩어 보내는 방패.',
+    image: 'items/forged_shield', category: '방패', weight: 5.4, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'offHand',
+    modifiers: [
+        { attribute: 'def', op: 'add', value: 126, source: '' },
+        { attribute: 'magicDef', op: 'add', value: 132, source: '' },
+        { attribute: 'maxLife', op: 'add', value: 1_820, source: '' },
+        { attribute: 'lifeRegen', op: 'add', value: 8, source: '' },
+    ],
+    baseDurability: 930,
+    tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_EARTH],
+    balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
+});
+
+for (const book of [
+    { id: 'rootbreaker_descent_skillbook', name: '역근강하 전승서', skillDataId: 'rootbreaker_descent', property: GameTags.PROPERTY_EARTH },
+    { id: 'primordial_sanctuary_skillbook', name: '태초성역 전승서', skillDataId: 'primordial_sanctuary', property: GameTags.PROPERTY_HOLY },
+] as const) defineItem({
+    id: book.id,
+    name: book.name,
+    description: `역근수해와 태초심장의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
+    image: 'items/seismic_crush_skillbook', category: '스킬북', weight: 0.3, stackable: true, maxStack: 10,
+    baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
+    modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_WORLDROOT, book.property],
+});

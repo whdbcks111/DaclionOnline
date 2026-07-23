@@ -1774,6 +1774,24 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         statusEffect: LegacyStatusEffects.BLINDNESS, statusLabel: '실명', statusDuration: 4.5, statusDurationPerLevel: 0.4,
         descriptionIntro: '달빛과 심해의 어둠을 겹쳐 대상의 감각을 지우고 남은 월광을 방벽으로 거둡니다.',
     },
+    {
+        id: 'rootbreaker_descent', name: '역근강하', icon: 'affinities/earth', activationHeader: 'battle_rush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 390, perLevelPercent: 27,
+        manaCost: 70, cooldown: 14, groupTag: GameTags.SKILL_GROUP_WARRIOR,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_EARTH,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 68, perLevel: 12 },
+        statusEffect: LegacyStatusEffects.DEFENSE_REDUCTION, statusLabel: '방어력 감소', statusDuration: 10, statusDurationPerLevel: 0.5,
+        descriptionIntro: '하늘에서 뻗어 내리는 역근의 무게를 몸에 실어 대상의 방어선 위로 곧장 떨어집니다.',
+    },
+    {
+        id: 'primordial_sanctuary', name: '태초성역', icon: 'affinities/holy', activationHeader: 'sanctum_judgment',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 385, perLevelPercent: 27,
+        manaCost: 74, cooldown: 19, groupTag: GameTags.SKILL_GROUP_MAGIC,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_HOLY, shieldPercent: 16,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 66, perLevel: 12 },
+        statusEffect: LegacyStatusEffects.SILENCE, statusLabel: '침묵', statusDuration: 4.5, statusDurationPerLevel: 0.45,
+        descriptionIntro: '태초심장의 첫 박동을 성역으로 펼쳐 대상의 마력 흐름을 끊고 남은 생명력을 방벽으로 거둡니다.',
+    },
 ];
 
 function growthTechniqueDescription(technique: GrowthTechniqueDefinition): string {
@@ -2807,6 +2825,30 @@ for (const skill of [
         attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 2.84, perLevelMultiplier: 0.26,
         castTime: 1.3, cooldown: 9, propertyTag: GameTags.PROPERTY_DARK,
         statusEffectId: 'silence', statusDuration: 5.5, unavoidable: true, activationHeader: 'deathless_requiem',
+    },
+    {
+        id: 'root_devourer_downfall', name: '역근 낙하', icon: 'affinities/earth', damageType: 'physical' as const,
+        attribute: AttributeType.ATK, baseMultiplier: 3.08, perLevelMultiplier: 0.28,
+        castTime: 1.35, cooldown: 9, propertyTag: GameTags.PROPERTY_EARTH,
+        statusEffectId: 'defense_reduction', statusDuration: 12, unavoidable: true, activationHeader: 'battle_rush',
+    },
+    {
+        id: 'root_devourer_rot_breath', name: '망각포자 숨결', icon: 'affinities/poison', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 2.94, perLevelMultiplier: 0.27,
+        castTime: 1.55, cooldown: 10, propertyTag: GameTags.PROPERTY_POISON,
+        statusEffectId: 'decay', statusDuration: 12, activationHeader: 'venom_blade',
+    },
+    {
+        id: 'primordial_heart_pulse', name: '태초 박동', icon: 'affinities/holy', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 3.28, perLevelMultiplier: 0.3,
+        castTime: 1.75, cooldown: 10, propertyTag: GameTags.PROPERTY_HOLY,
+        statusEffectId: 'overmaster', statusDuration: 5, unavoidable: true, activationHeader: 'sanctum_judgment',
+    },
+    {
+        id: 'primordial_forgetting_bloom', name: '망각 개화', icon: 'affinities/natural', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 3.12, perLevelMultiplier: 0.29,
+        castTime: 1.3, cooldown: 9, propertyTag: GameTags.PROPERTY_NATURAL,
+        statusEffectId: 'curse', statusDuration: 12, unavoidable: true, activationHeader: 'deathless_requiem',
     },
     {
         id: 'caldera_eruption', name: '칼데라 분출', icon: 'affinities/fire', damageType: 'magic' as const,

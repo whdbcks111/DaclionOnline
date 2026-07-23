@@ -2150,3 +2150,209 @@ const eclipseTrenchMonsters: WorldMonsterData[] = [
 ];
 
 for (const monster of eclipseTrenchMonsters) defineWorldMonster(monster);
+
+const worldrootMonsters: WorldMonsterData[] = [
+    {
+        id: 'skyroot_husk', name: '천근수피 허물',
+        description: '역근에서 떨어진 수피가 주변 생명의 움직임을 흉내 내며 마지막 공격자를 따라붙는 빈 껍질.', level: 348,
+        baseAttribute: {
+            maxLife: 244_000, atk: 2_180, def: 1_500, magicDef: 1_330, armorPen: 184,
+            speed: 2.45, attackSpeed: 0.74, critRate: 0.25, critDmg: 2.4,
+        },
+        drops: [
+            { itemDataId: 'skyroot_bark', minCount: 1, maxCount: 4, chance: 0.72 },
+            { itemDataId: 'rootbone_iron', minCount: 1, maxCount: 2, chance: 0.28 },
+        ],
+        goldReward: { min: 2_720, max: 4_350 },
+        attack: { effect: { statusEffectId: 'defense_reduction', chance: 0.25, duration: 10, level: 18 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_EARTH],
+    },
+    {
+        id: 'memory_amber_moth', name: '기억호박 나방',
+        description: '기억호박 안에 남은 사냥 장면을 날갯짓마다 재생해 다음 회피 방향을 미리 읽는 빛나방.', level: 351,
+        baseAttribute: {
+            maxLife: 232_000, atk: 1_780, magicForce: 2_390, def: 1_210, magicDef: 1_520, magicPen: 190,
+            speed: 4.9, attackSpeed: 1.18, critRate: 0.28, critDmg: 2.45,
+        },
+        drops: [
+            { itemDataId: 'memory_amber', minCount: 1, maxCount: 4, chance: 0.68 },
+            { itemDataId: 'primal_sap', minCount: 1, maxCount: 2, chance: 0.34 },
+        ],
+        goldReward: { min: 2_780, max: 4_450 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'blindness', chance: 0.25, duration: 5, level: 18 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_INSECT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'forgetting_spore_shaman', name: '망각포자 주술사',
+        description: '죽은 기억을 포자로 분해하며 파티의 치유 흐름을 가장 먼저 썩히는 역근수해의 주술사.', level: 354,
+        baseAttribute: {
+            maxLife: 250_000, atk: 1_840, magicForce: 2_520, def: 1_280, magicDef: 1_590, magicPen: 202,
+            speed: 3.15, attackSpeed: 0.9,
+        },
+        drops: [
+            { itemDataId: 'rot_spore', minCount: 2, maxCount: 5, chance: 0.72 },
+            { itemDataId: 'primal_sap', minCount: 1, maxCount: 3, chance: 0.4 },
+        ],
+        goldReward: { min: 2_840, max: 4_560 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'decay', chance: 0.29, duration: 12, level: 18 } },
+        ai: {
+            intelligence: 94, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.04, damage: 0.9, healing: 2.25, shielding: 1.8, control: 1.75, taunt: 3.5 },
+            tauntResistance: 0.94, switchThreshold: 0.34, decayPerSecond: 0.003,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_POISON, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'rootbone_sentinel', name: '근골철 파수자',
+        description: '뿌리뼈와 금속 광맥이 함께 자란 갑주를 두르고 제어를 가장 많이 시도한 침입자를 짓누르는 파수자.', level: 357,
+        baseAttribute: {
+            maxLife: 276_000, atk: 2_470, def: 1_650, magicDef: 1_460, armorPen: 204,
+            speed: 2.6, attackSpeed: 0.7, critRate: 0.27, critDmg: 2.46,
+        },
+        drops: [
+            { itemDataId: 'rootbone_iron', minCount: 2, maxCount: 5, chance: 0.72 },
+            { itemDataId: 'skyroot_bark', minCount: 1, maxCount: 3, chance: 0.44 },
+        ],
+        goldReward: { min: 2_900, max: 4_660 },
+        attack: { effect: { statusEffectId: 'overmaster', chance: 0.2, duration: 3.5, level: 18 } },
+        ai: {
+            intelligence: 89, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.06, damage: 1.05, healing: 1.4, shielding: 1.5, control: 2.2, taunt: 3.2 },
+            tauntResistance: 0.9, switchThreshold: 0.3, decayPerSecond: 0.004,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_METAL, GameTags.PROPERTY_EARTH],
+    },
+    {
+        id: 'inverse_root_devourer', name: '역근 포식수',
+        description: '하늘에서 내려온 뿌리를 먹고 몸집을 불린 거대 식충수. 역근 낙하와 망각포자 숨결을 번갈아 사용한다.', level: 360,
+        baseAttribute: {
+            maxLife: 3_420_000, atk: 2_650, magicForce: 2_570, def: 1_760, magicDef: 1_720,
+            armorPen: 216, magicPen: 210, speed: 2.55, attackSpeed: 0.39, critRate: 0.28, critDmg: 2.5,
+        },
+        expReward: 360 * 20 * 8,
+        drops: [
+            { itemDataId: 'rootbone_iron', minCount: 8, maxCount: 14, chance: 0.94 },
+            { itemDataId: 'heart_seed', minCount: 3, maxCount: 6, chance: 0.62 },
+            { itemDataId: 'rootbreaker_descent_skillbook', minCount: 1, maxCount: 1, chance: 0.035 },
+        ],
+        goldReward: { min: 16_000, max: 22_000 },
+        skills: [
+            { skillDataId: 'root_devourer_downfall', level: 5 },
+            { skillDataId: 'root_devourer_rot_breath', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['root_devourer_downfall', 'root_devourer_rot_breath'],
+            initialDelay: 2.8, interval: { min: 5.5, max: 7.5 },
+        },
+        ai: {
+            intelligence: 68, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.15, damage: 1.35, healing: 1.2, shielding: 1.05, control: 1.25, taunt: 2.4 },
+            tauntResistance: 0.72, switchThreshold: 0.23, decayPerSecond: 0.008,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_BEAST, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_EARTH, GameTags.PROPERTY_POISON, 'monster:inverse-root-devourer'],
+    },
+    {
+        id: 'origin_sap_acolyte', name: '기원수액 사제',
+        description: '태초수액의 흐름을 지키며 회복과 보호막 위협을 읽고 생명맥을 먼저 끊는 심장 성역의 사제.', level: 364,
+        baseAttribute: {
+            maxLife: 288_000, atk: 1_940, magicForce: 2_720, def: 1_460, magicDef: 1_720, magicPen: 222,
+            speed: 3.2, attackSpeed: 0.86, critRate: 0.27, critDmg: 2.5,
+        },
+        drops: [
+            { itemDataId: 'primal_sap', minCount: 2, maxCount: 5, chance: 0.7 },
+            { itemDataId: 'heart_seed', minCount: 1, maxCount: 2, chance: 0.22 },
+        ],
+        goldReward: { min: 3_080, max: 4_940 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'silence', chance: 0.28, duration: 5, level: 19 } },
+        ai: {
+            intelligence: 96, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.03, damage: 0.9, healing: 2.35, shielding: 2.15, control: 1.8, taunt: 3.8 },
+            tauntResistance: 0.96, switchThreshold: 0.36, decayPerSecond: 0.003,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY],
+    },
+    {
+        id: 'amber_memory_keeper', name: '기억호박 수호자',
+        description: '수해의 과거 전투를 호박 속에서 꺼내 가장 큰 피해를 만든 움직임을 그대로 되돌리는 수호자.', level: 368,
+        baseAttribute: {
+            maxLife: 302_000, atk: 2_510, magicForce: 2_460, def: 1_610, magicDef: 1_650,
+            armorPen: 216, magicPen: 212, speed: 3, attackSpeed: 0.8, critRate: 0.29, critDmg: 2.55,
+        },
+        drops: [
+            { itemDataId: 'memory_amber', minCount: 2, maxCount: 5, chance: 0.72 },
+            { itemDataId: 'rootbone_iron', minCount: 1, maxCount: 4, chance: 0.45 },
+        ],
+        goldReward: { min: 3_160, max: 5_060 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.27, duration: 12, level: 19 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'canopy_seraph', name: '천개 세라프',
+        description: '역근수해 위의 빛을 여섯 잎 날개에 모아 회피 경로를 먼저 태우는 심장 성역의 수호 생명체.', level: 372,
+        baseAttribute: {
+            maxLife: 294_000, atk: 2_020, magicForce: 2_850, def: 1_480, magicDef: 1_790, magicPen: 232,
+            projectileAcceleration: 3.35, speed: 4.2, attackSpeed: 1.02, critRate: 0.3, critDmg: 2.58,
+        },
+        drops: [
+            { itemDataId: 'heart_seed', minCount: 1, maxCount: 4, chance: 0.55 },
+            { itemDataId: 'primal_sap', minCount: 2, maxCount: 5, chance: 0.64 },
+        ],
+        goldReward: { min: 3_240, max: 5_190 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'blindness', chance: 0.28, duration: 6, level: 19 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY],
+    },
+    {
+        id: 'heart_gardener', name: '심장정원사',
+        description: '태초심장의 가지를 다듬으며 치유·방벽·제어 기여도를 비교해 가장 오래 전투를 끌 대상을 가지치기하는 정원사.', level: 376,
+        baseAttribute: {
+            maxLife: 324_000, atk: 2_410, magicForce: 2_880, def: 1_670, magicDef: 1_820,
+            armorPen: 220, magicPen: 236, speed: 2.9, attackSpeed: 0.72, critRate: 0.29, critDmg: 2.6,
+        },
+        drops: [
+            { itemDataId: 'skyroot_bark', minCount: 2, maxCount: 5, chance: 0.66 },
+            { itemDataId: 'heart_seed', minCount: 1, maxCount: 4, chance: 0.5 },
+            { itemDataId: 'memory_amber', minCount: 1, maxCount: 3, chance: 0.4 },
+        ],
+        goldReward: { min: 3_320, max: 5_320 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'curse', chance: 0.28, duration: 12, level: 19 } },
+        ai: {
+            intelligence: 98, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.02, damage: 0.95, healing: 2.45, shielding: 2.25, control: 2.2, taunt: 4 },
+            tauntResistance: 0.98, switchThreshold: 0.38, decayPerSecond: 0.002,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_HOLY, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'primordial_heart_arbor', name: '태초심장 아르보르',
+        description: '세계수의 첫 박동과 마지막 망각을 동시에 품은 역근수해의 의지. 남은 심장씨앗으로 피해를 흘리고 파티 기여도를 계산해 심판 대상을 바꾼다.', level: 380,
+        baseAttribute: {
+            maxLife: 4_350_000, atk: 2_920, magicForce: 3_160, def: 1_940, magicDef: 2_020,
+            armorPen: 238, magicPen: 252, speed: 3.25, attackSpeed: 0.4, critRate: 0.31, critDmg: 2.68,
+        },
+        expReward: 380 * 20 * 10,
+        drops: [
+            { itemDataId: 'heart_seed', minCount: 11, maxCount: 18, chance: 0.97 },
+            { itemDataId: 'memory_amber', minCount: 8, maxCount: 14, chance: 0.9 },
+            { itemDataId: 'primordial_sanctuary_skillbook', minCount: 1, maxCount: 1, chance: 0.03 },
+            { itemDataId: 'canopy_heartshield', minCount: 1, maxCount: 1, chance: 0.018 },
+        ],
+        goldReward: { min: 19_000, max: 27_000 },
+        skills: [
+            { skillDataId: 'primordial_heart_pulse', level: 5 },
+            { skillDataId: 'primordial_forgetting_bloom', level: 5 },
+            { skillDataId: 'root_devourer_downfall', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['primordial_heart_pulse', 'primordial_forgetting_bloom', 'root_devourer_downfall'],
+            randomOrder: true, initialDelay: 2.4, interval: { min: 4.6, max: 6.5 },
+        },
+        ai: {
+            intelligence: 100, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.01, damage: 0.95, healing: 2.55, shielding: 2.45, control: 2.35, taunt: 4.4 },
+            tauntResistance: 0.995, switchThreshold: 0.42, decayPerSecond: 0.0015,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_HOLY, GameTags.PROPERTY_DARK, 'monster:primordial-heart-arbor'],
+    },
+];
+
+for (const monster of worldrootMonsters) defineWorldMonster(monster);

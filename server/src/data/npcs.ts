@@ -10,6 +10,7 @@ import {
     PARADOX_QUEST_IDS,
     TWILIGHT_TOMB_QUEST_IDS,
     VOIDCROWN_QUEST_IDS,
+    WORLDROOT_QUEST_IDS,
 } from './quests.js';
 import { CAREER_QUEST_IDS } from './quests.js';
 import { BLACKSMITH_APPRENTICESHIP_QUEST_ID } from './quests.js';
@@ -789,6 +790,81 @@ NPC.define({
         }),
         new DialogueScenario('end', function* () {
             yield Dialogue.say('빛이 길을 보여주는 동안에도 조류의 방향을 확인하세요. 이 해구의 빛은 절반의 시간 동안 거짓말을 합니다.');
+            yield Dialogue.end();
+        }),
+    ],
+});
+
+NPC.define({
+    id: 'worldroot_keeper',
+    name: '기억수호자 오르넬',
+    description: '역근수해가 잊은 이름과 길을 기억호박에 옮겨 기록하는 마지막 수호자입니다.',
+    tags: ['npc:guide', 'npc:quest', 'region:worldroot'],
+    entryScenario: ({ player }) => {
+        if (player.quests.canTurnIn(WORLDROOT_QUEST_IDS.AWAKEN_HEART, 'worldroot_keeper')) return 'heart_complete';
+        if (player.quests.isActive(WORLDROOT_QUEST_IDS.AWAKEN_HEART)) return 'heart_progress';
+        if (player.quests.canTurnIn(WORLDROOT_QUEST_IDS.RESTORE_MEMORY, 'worldroot_keeper')) return 'memory_complete';
+        if (player.quests.isActive(WORLDROOT_QUEST_IDS.RESTORE_MEMORY)) return 'memory_progress';
+        if (player.quests.canAccept(WORLDROOT_QUEST_IDS.AWAKEN_HEART, 'worldroot_keeper')) return 'heart_offer';
+        return player.quests.canAccept(WORLDROOT_QUEST_IDS.RESTORE_MEMORY, 'worldroot_keeper') ? 'greeting' : 'lore';
+    },
+    scenarios: [
+        new DialogueScenario('greeting', function* () {
+            yield Dialogue.say('이 수해는 길을 막는 게 아니라 길의 이름을 잊게 만듭니다. 기억호박 열여섯과 태초수액 열둘이 있으면 귀환로의 기억을 되살릴 수 있어요.');
+            yield Dialogue.choice([
+                { label: '수해의 기억을 복원하겠습니다.', target: 'memory_accept' },
+                { label: '역근수해의 구조를 알려주세요.', target: 'lore' },
+                { label: '조금 더 준비하겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('memory_accept', function* () {
+            yield Dialogue.acceptQuest(WORLDROOT_QUEST_IDS.RESTORE_MEMORY);
+            yield Dialogue.say('기억호박은 빛나방과 수호자에게서, 태초수액은 수액 사제와 수해의 밝은 뿌리에서 얻을 수 있습니다.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('memory_progress', function* ({ player }) {
+            const objectives = player.quests.getSnapshot(WORLDROOT_QUEST_IDS.RESTORE_MEMORY)?.objectives ?? [];
+            const amber = objectives.find(objective => objective.id === 'memory-amber');
+            const sap = objectives.find(objective => objective.id === 'primal-sap');
+            yield Dialogue.say(`기억호박 ${amber?.progress ?? 0}/${amber?.required ?? 16}, 태초수액 ${sap?.progress ?? 0}/${sap?.required ?? 12}. 망각포자가 묻은 호박은 길 대신 죽은 기억을 보여주니 섞지 마세요.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('memory_complete', function* () {
+            yield Dialogue.say('잊혔던 길의 이름이 돌아왔습니다. 이제 태초심장으로 향하는 동안에도 되돌아올 방향을 기억할 수 있어요.');
+            yield Dialogue.turnInQuest(WORLDROOT_QUEST_IDS.RESTORE_MEMORY);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('heart_offer', function* () {
+            yield Dialogue.say('역근 포식수가 심장으로 가는 뿌리를 삼키고, 아르보르는 심장씨앗으로 상처를 다른 박동에 흘립니다. 씨앗이 남은 동안 본체를 공격해도 대부분 회복될 거예요.');
+            yield Dialogue.choice([
+                { label: '뒤틀린 박동을 멈추겠습니다.', target: 'heart_accept' },
+                { label: '심장 성역을 먼저 살피겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('heart_accept', function* () {
+            yield Dialogue.acceptQuest(WORLDROOT_QUEST_IDS.AWAKEN_HEART);
+            yield Dialogue.say('포식수는 낙하와 포자 숨결을 차례로 쓰지만, 아르보르는 치유·보호·제어를 계산해 태초 박동과 망각 개화의 순서를 바꿉니다. 씨앗부터 파괴하세요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('heart_progress', function* ({ player }) {
+            const objectives = player.quests.getSnapshot(WORLDROOT_QUEST_IDS.AWAKEN_HEART)?.objectives ?? [];
+            const devourer = objectives.find(objective => objective.id === 'inverse-root-devourer');
+            const seeds = objectives.find(objective => objective.id === 'primordial-heart-seeds');
+            const heart = objectives.find(objective => objective.id === 'primordial-heart-arbor');
+            yield Dialogue.say(`역근 포식수 ${devourer?.progress ?? 0}/1, 심장씨앗 ${seeds?.progress ?? 0}/3, 태초심장 ${heart?.progress ?? 0}/1. 박동이 강해질수록 본체보다 씨앗의 빛을 먼저 찾으세요.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('heart_complete', function* () {
+            yield Dialogue.say('태초심장이 조용해졌습니다. 수해는 사라지지 않겠지만 이제 첫 기억과 마지막 망각이 서로를 삼키지는 않을 겁니다.');
+            yield Dialogue.turnInQuest(WORLDROOT_QUEST_IDS.AWAKEN_HEART);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('lore', function* () {
+            yield Dialogue.say('길잡이 둥지 아래에서 광휘뿌리와 부패공동으로 갈라지고 역근 포식장의 문에서 합쳐집니다. 심장 성역은 성수관과 종자기록고로 다시 갈라지며, 첫 기억의 제단을 풀면 기억호박 유물고를 거쳐 심장고리로 우회할 수 있습니다.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('이곳에서는 표지보다 기억을 믿으세요. 같은 뿌리가 두 번 보인다면 길을 잃은 것이 아니라 이름을 잊은 겁니다.');
             yield Dialogue.end();
         }),
     ],

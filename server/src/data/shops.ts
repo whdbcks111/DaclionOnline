@@ -643,3 +643,44 @@ defineShop({
     ],
     tags: [GameTags.SHOP_ECLIPSE_TRENCH],
 });
+
+defineShop({
+    id: 'worldroot_waystation_store',
+    buyList: [
+        {
+            label: '천근수피 빵', create: () => ({ itemDataId: 'worldroot_ration', count: 1 }),
+            count: 1, price: 410, stock: 24, restockTime: 50,
+        },
+        {
+            label: '태초맥 영약', create: () => ({ itemDataId: 'primordial_draught', count: 1 }),
+            count: 1, price: 680, stock: 12, restockTime: 120,
+        },
+        {
+            label: '화살 160개', create: () => ({ itemDataId: 'wooden_arrow', count: 160 }),
+            count: 160, price: 500, stock: 20, restockTime: 40,
+        },
+        ...[
+            ['근골철 수맥검', 'rootbone_cleaver', 47_500],
+            ['심장현 대궁', 'heartstring_greatbow', 46_700],
+            ['기억호박 송곳니', 'amber_memory_fang', 48_000],
+            ['기원심장 지팡이', 'origin_heart_staff', 49_500],
+            ['천개심 방패', 'canopy_heartshield', 48_700],
+        ].map(([label, itemDataId, price]) => ({
+            label: label as string,
+            create: () => ({ itemDataId: itemDataId as string, count: 1 }),
+            count: 1,
+            price: price as number,
+            stock: 1,
+            restockTime: 3_000,
+        })),
+    ],
+    sellList: [
+        { label: '천근수피', filter: item => item.itemDataId === 'skyroot_bark', count: 99, price: 720 },
+        { label: '태초수액', filter: item => item.itemDataId === 'primal_sap', count: 99, price: 810 },
+        { label: '기억호박', filter: item => item.itemDataId === 'memory_amber', count: 99, price: 890 },
+        { label: '망각포자', filter: item => item.itemDataId === 'rot_spore', count: 99, price: 670 },
+        { label: '심장씨앗', filter: item => item.itemDataId === 'heart_seed', count: 99, price: 1_050 },
+        { label: '근골철', filter: item => item.itemDataId === 'rootbone_iron', count: 99, price: 780 },
+    ],
+    tags: [GameTags.SHOP_WORLDROOT],
+});

@@ -207,6 +207,20 @@ const ECLIPSE_RELIQUARY_REWARDS = Object.freeze([
     { itemDataId: 'white_night_bulwark', count: 1, weight: 3.2 },
 ]);
 
+const WORLDROOT_RELIQUARY_REWARDS = Object.freeze([
+    { itemDataId: 'worldroot_ration', count: 6, weight: 18 },
+    { itemDataId: 'primordial_draught', count: 3, weight: 14 },
+    { itemDataId: 'skyroot_bark', count: 8, weight: 16 },
+    { itemDataId: 'primal_sap', count: 6, weight: 14 },
+    { itemDataId: 'memory_amber', count: 5, weight: 12 },
+    { itemDataId: 'heart_seed', count: 4, weight: 10 },
+    { itemDataId: 'rootbone_cleaver', count: 1, weight: 3.2 },
+    { itemDataId: 'heartstring_greatbow', count: 1, weight: 3.2 },
+    { itemDataId: 'amber_memory_fang', count: 1, weight: 3.2 },
+    { itemDataId: 'origin_heart_staff', count: 1, weight: 3.2 },
+    { itemDataId: 'canopy_heartshield', count: 1, weight: 3.2 },
+]);
+
 export function rollTwilightReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
     let cursor = random() * TWILIGHT_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = TWILIGHT_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
@@ -260,6 +274,13 @@ export function rollEclipseReliquaryReward(random = Math.random): { itemDataId: 
     let cursor = random() * ECLIPSE_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = ECLIPSE_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
         ?? ECLIPSE_RELIQUARY_REWARDS[0];
+    return { itemDataId: reward.itemDataId, count: reward.count };
+}
+
+export function rollWorldrootReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
+    let cursor = random() * WORLDROOT_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
+    const reward = WORLDROOT_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
+        ?? WORLDROOT_RELIQUARY_REWARDS[0];
     return { itemDataId: reward.itemDataId, count: reward.count };
 }
 
@@ -422,6 +443,24 @@ registerResourceInteraction('open_eclipse_reliquary', (_resource, player) => {
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('purple', builder => builder.weight('bold', nested => nested.text('[ 월식해구의 침수 유산 ]')))
+        .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
+        .build());
+    return true;
+});
+
+registerResourceInteraction('open_worldroot_reliquary', (_resource, player) => {
+    const reward = rollWorldrootReliquaryReward();
+    if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'worldroot-reliquary-full',
+            message: '역근수해의 유산을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem(reward.itemDataId, reward.count);
+    const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
+    sendBotMessageToUser(player.userId, chat()
+        .color('green', builder => builder.weight('bold', nested => nested.text('[ 역근수해의 기억 유산 ]')))
         .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
         .build());
     return true;
@@ -1111,5 +1150,64 @@ defineResource({
         GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ECLIPSE_TRENCH,
         GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT,
         'resource:white-night-tide-mirror',
+    ],
+});
+
+defineResource({
+    id: 'rootbone_vein',
+    name: '근골철 광맥',
+    level: 354,
+    baseAttribute: { maxLife: 48_000, def: 640, magicDef: 590 },
+    requiredToolTags: [GameTags.TOOL_MINING],
+    drops: [
+        { itemDataId: 'rootbone_iron', weight: 52, minCount: 2, maxCount: 5 },
+        { itemDataId: 'skyroot_bark', weight: 22, minCount: 1, maxCount: 3 },
+        { itemDataId: 'memory_amber', weight: 16, minCount: 1, maxCount: 2 },
+        { itemDataId: 'heart_seed', weight: 10, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 9_800, max: 12_700 },
+    tags: [
+        GameTags.RESOURCE_ORE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_WORLDROOT,
+        GameTags.PROPERTY_METAL, GameTags.PROPERTY_EARTH,
+    ],
+});
+
+defineResource({
+    id: 'worldroot_memory_altar',
+    name: '첫 기억의 제단',
+    level: 368,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'worldroot_memory_riddle', attackable: false,
+    tags: [
+        GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_WORLDROOT,
+        GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT,
+    ],
+});
+
+defineResource({
+    id: 'worldroot_reliquary',
+    name: '봉인된 기억호박 유물함',
+    level: 372,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'open_worldroot_reliquary', attackable: false,
+    interactionCooldown: { min: 9 * 60 * 60, max: 13 * 60 * 60 },
+    tags: [
+        GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_WORLDROOT,
+        GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT,
+    ],
+});
+
+defineResource({
+    id: 'primordial_heart_seed',
+    name: '태초심장 씨앗',
+    level: 380,
+    baseAttribute: { maxLife: 64_000, def: 820, magicDef: 870 },
+    requiredToolTags: [], drops: [], expReward: { min: 10_800, max: 14_000 },
+    tags: [
+        GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_WORLDROOT,
+        GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_HOLY,
+        'resource:primordial-heart-seed',
     ],
 });

@@ -158,6 +158,7 @@ const SUN_MIRROR_PROTECTION_SOURCE = 'boss:glassdune:sun-mirrors';
 const PARADOX_ANCHOR_PROTECTION_SOURCE = 'boss:paradox:causality-anchors';
 const VOIDCROWN_PILLAR_PROTECTION_SOURCE = 'boss:voidcrown:crown-pillars';
 const WHITE_NIGHT_MIRROR_PROTECTION_SOURCE = 'boss:eclipse:tide-mirrors';
+const PRIMORDIAL_SEED_PROTECTION_SOURCE = 'boss:worldroot:heart-seeds';
 
 registerLocationPassive('silverweb_queen_nest', location => {
     const protectedByBrood = location.getActiveResourceCount('silverweb_egg_cluster') > 0;
@@ -207,6 +208,14 @@ registerLocationPassive('eclipse_white_night_altar', location => {
     }
 });
 
+registerLocationPassive('worldroot_primordial_heart', location => {
+    const protectedBySeeds = location.getActiveResourceCount('primordial_heart_seed') > 0;
+    for (const boss of location.getMonstersByDataId('primordial_heart_arbor')) {
+        if (protectedBySeeds) boss.setDamageReceivedModifier(PRIMORDIAL_SEED_PROTECTION_SOURCE, 0.3);
+        else boss.removeDamageReceivedModifier(PRIMORDIAL_SEED_PROTECTION_SOURCE);
+    }
+});
+
 /** 테스트·운영 진단에서 수정 보호가 적용됐는지 같은 계산식으로 확인한다. */
 export function getIronrootCrystalProtectionMultiplier(locationId = 'ironroot_crystal_sanctum'): number {
     return (getLocation(locationId)?.getActiveResourceCount('ironroot_resonance_crystal') ?? 0) > 0 ? 0.15 : 1;
@@ -235,4 +244,9 @@ export function getVoidcrownPillarProtectionMultiplier(locationId = 'voidcrown_t
 /** 조류거울이 남아 있을 때 백야대사제의 65% 피해 감소가 유지되는지 확인한다. */
 export function getWhiteNightMirrorProtectionMultiplier(locationId = 'eclipse_white_night_altar'): number {
     return (getLocation(locationId)?.getActiveResourceCount('white_night_tide_mirror') ?? 0) > 0 ? 0.35 : 1;
+}
+
+/** 심장씨앗이 남아 있을 때 태초심장의 70% 피해 감소가 유지되는지 확인한다. */
+export function getPrimordialSeedProtectionMultiplier(locationId = 'worldroot_primordial_heart'): number {
+    return (getLocation(locationId)?.getActiveResourceCount('primordial_heart_seed') ?? 0) > 0 ? 0.3 : 1;
 }

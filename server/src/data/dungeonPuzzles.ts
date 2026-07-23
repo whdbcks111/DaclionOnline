@@ -55,6 +55,11 @@ export const EclipseTrenchPuzzleIds = Object.freeze({
     TIDE_BALANCE_FLAG: 'dungeon:eclipse-trench/tide-balance-solved',
 } as const);
 
+export const WorldrootPuzzleIds = Object.freeze({
+    FIRST_MEMORY: 'worldroot:first-memory',
+    FIRST_MEMORY_FLAG: 'dungeon:worldroot/first-memory-solved',
+} as const);
+
 defineProgress({
     id: IronrootPuzzleIds.RIDDLE_FLAG,
     type: ProgressType.FLAG,
@@ -262,6 +267,29 @@ defineQuestionPuzzle({
     failureMessage: '두 조류가 서로 밀어내며 제단의 문을 다시 닫습니다.',
 });
 
+defineProgress({
+    id: WorldrootPuzzleIds.FIRST_MEMORY_FLAG,
+    type: ProgressType.FLAG,
+    label: '역근수해 첫 기억 복원',
+    description: '역근수해가 잊고 있던 첫 기억을 되찾아 숨은 기억호박 유물고를 열었습니다.',
+    visible: true,
+});
+
+defineQuestionPuzzle({
+    id: WorldrootPuzzleIds.FIRST_MEMORY,
+    title: '첫 기억의 제단',
+    prompt: '태어나기 전에는 없고, 사라진 뒤에도 다른 이에게 남아 다음 길을 알려 주는 것은 무엇인가?',
+    answers: ['기억', '추억', '남겨진 기억'],
+    choices: [
+        { label: '이름', answer: '이름' },
+        { label: '기억', answer: '기억' },
+        { label: '그림자', answer: '그림자' },
+    ],
+    successFlag: WorldrootPuzzleIds.FIRST_MEMORY_FLAG,
+    successMessage: '제단에 묻힌 호박빛이 이어지며 기억호박 유물고로 향하는 뿌리문이 열립니다.',
+    failureMessage: '호박 속 형상이 흐려지고, 뿌리문은 기억을 받아들이지 않습니다.',
+});
+
 defineTeleportArtifact({
     id: IronrootPuzzleIds.RELAY_ARTIFACT,
     destinations: {
@@ -300,6 +328,9 @@ registerResourceInteraction('voidcrown_oath_riddle', (_resource, player) =>
 
 registerResourceInteraction('eclipse_tide_riddle', (_resource, player) =>
     beginQuestionPuzzle(player, EclipseTrenchPuzzleIds.TIDE_BALANCE));
+
+registerResourceInteraction('worldroot_memory_riddle', (_resource, player) =>
+    beginQuestionPuzzle(player, WorldrootPuzzleIds.FIRST_MEMORY));
 
 registerConnectionCondition('ironroot_riddle_solved', player =>
     player.progress.getFlag(IronrootPuzzleIds.RIDDLE_FLAG)
@@ -350,6 +381,11 @@ registerConnectionCondition('eclipse_tide_solved', player =>
     player.progress.getFlag(EclipseTrenchPuzzleIds.TIDE_BALANCE_FLAG)
         ? 'visible'
         : { status: 'locked', publicReason: '월식 조류제단의 해답 필요' });
+
+registerConnectionCondition('worldroot_memory_solved', player =>
+    player.progress.getFlag(WorldrootPuzzleIds.FIRST_MEMORY_FLAG)
+        ? 'visible'
+        : { status: 'locked', publicReason: '첫 기억의 제단 해답 필요' });
 
 // 지도 연결성은 유지하되 일반 이동·지도에는 노출하지 않고 유물 상호작용만 통과시킨다.
 registerConnectionCondition('ironroot_artifact_route', () => 'hidden');
