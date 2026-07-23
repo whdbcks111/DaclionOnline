@@ -49,11 +49,11 @@ export function initTutorialCommands(): void {
     registerCommand({
         name: '튜토리얼선택',
         aliases: ['tutorialchoose'],
-        description: '먼저 확인할 생활·전투 콘텐츠를 선택합니다.',
+        description: '먼저 체험할 생활·전투 콘텐츠를 선택합니다.',
         showCommandUse: 'hide',
         args: [{
             name: '콘텐츠',
-            description: '낚시, 광질, 사냥 중 먼저 확인할 콘텐츠',
+            description: '낚시, 광질, 사냥 중 먼저 체험할 콘텐츠',
             required: true,
             completions: TutorialContent.values().map(content => ({
                 value: content.label,

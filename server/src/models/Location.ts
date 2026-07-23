@@ -140,9 +140,22 @@ export default class Location implements TagReadable {
         return index >= 0 ? index + 1 : undefined;
     }
 
+    getResourceObjectNumberByTag(tag: string, includeDefeated = false): number | undefined {
+        const index = this._objects.findIndex(object => object instanceof Resource
+            && object.hasTag(tag)
+            && (includeDefeated || !object.isDefeated));
+        return index >= 0 ? index + 1 : undefined;
+    }
+
     getMonstersByDataId(monsterDataId: string): readonly Monster[] {
         return this._objects.filter((object): object is Monster => object instanceof Monster
             && object.monsterDataId === monsterDataId);
+    }
+
+    getFirstMonsterObjectNumber(includeDefeated = false): number | undefined {
+        const index = this._objects.findIndex(object => object instanceof Monster
+            && (includeDefeated || !object.isDefeated));
+        return index >= 0 ? index + 1 : undefined;
     }
 
     addObject(object: Entity): void {

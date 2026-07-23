@@ -35,6 +35,7 @@ export const GameEventIds = Object.freeze({
     RESOURCE_INTERACTED: 'resource:interacted',
     ITEM_EQUIPPED: 'item:equipped',
     ITEM_USED: 'item:used',
+    FISH_CAUGHT: 'fishing:fish_caught',
     STAT_ALLOCATED: 'player:stat_allocated',
     SKILL_ACQUIRED: 'skill:acquired',
     SKILL_STARTED: 'skill:started',

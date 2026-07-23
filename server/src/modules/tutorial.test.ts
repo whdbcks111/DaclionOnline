@@ -46,6 +46,21 @@ test('행동 실습은 명령 호출이 아니라 올바른 실제 게임 결과
         id: GameEventIds.ITEM_USED,
         itemDataId: 'health_potion',
     }), true);
+    assert.equal(doesTutorialEventCompleteStep(TutorialStep.CONTENT_FISHING, {
+        id: GameEventIds.FISH_CAUGHT,
+    }), true);
+    assert.equal(doesTutorialEventCompleteStep(TutorialStep.CONTENT_MINING, {
+        id: GameEventIds.RESOURCE_DESTROYED,
+        isOreResource: false,
+    }), false);
+    assert.equal(doesTutorialEventCompleteStep(TutorialStep.CONTENT_MINING, {
+        id: GameEventIds.RESOURCE_DESTROYED,
+        isOreResource: true,
+    }), true);
+    assert.equal(doesTutorialEventCompleteStep(TutorialStep.CONTENT_HUNTING, {
+        id: GameEventIds.ENTITY_DEFEATED,
+        isMonster: true,
+    }), true);
 });
 
 test('주요 튜토리얼 단계는 콘텐츠 선택까지 순서대로 이어진다', () => {

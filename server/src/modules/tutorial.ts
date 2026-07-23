@@ -8,12 +8,14 @@ import { chat } from '../utils/chatBuilder.js';
 import { getLocation } from '../models/Location.js';
 import { getShop } from '../models/Shop.js';
 import Resource from '../models/Resource.js';
+import Monster from '../models/Monster.js';
 import {
     GameEventIds,
     subscribeAllGameEvents,
     type GameEvent,
 } from '../models/GameEvent.js';
 import { markLocationVisited } from '../models/WorldMap.js';
+import { GameTags } from '../../../shared/tags.js';
 
 export const TUTORIAL_QUEST_ID = 'tutorial:first-steps';
 export const TUTORIAL_PRACTICE_QUEST_ID = 'tutorial:basic-practice';
@@ -85,9 +87,9 @@ export class TutorialStep {
     static readonly HUD = new TutorialStep('hud', 'HUD 설정', []);
     static readonly SHORTCUTS = new TutorialStep('shortcuts', '단축키 확인', ['단축키목록']);
     static readonly CONTENT_CHOICE = new TutorialStep('content-choice', '콘텐츠 선택', []);
-    static readonly CONTENT_FISHING = new TutorialStep('content-fishing', '낚시 안내', []);
-    static readonly CONTENT_MINING = new TutorialStep('content-mining', '광질 안내', []);
-    static readonly CONTENT_HUNTING = new TutorialStep('content-hunting', '사냥 안내', []);
+    static readonly CONTENT_FISHING = new TutorialStep('content-fishing', '낚시 체험', []);
+    static readonly CONTENT_MINING = new TutorialStep('content-mining', '광질 체험', []);
+    static readonly CONTENT_HUNTING = new TutorialStep('content-hunting', '사냥 체험', []);
     static readonly COMPLETE = new TutorialStep('complete', '튜토리얼 완료', []);
 
     private constructor(
@@ -160,8 +162,8 @@ for (const definition of [
     {
         id: TutorialProgressIds.CONTENT_DONE,
         type: ProgressType.STATE,
-        label: '튜토리얼 콘텐츠 확인',
-        description: '낚시·광질·사냥 중 확인을 마친 콘텐츠입니다.',
+        label: '튜토리얼 콘텐츠 체험',
+        description: '낚시·광질·사냥 중 실제 행동을 완료한 콘텐츠입니다.',
     },
     {
         id: TutorialProgressIds.STARTER_KIT_GRANTED,
@@ -257,26 +259,21 @@ export function acknowledgeTutorialStep(player: Player): boolean {
         advanceMainStep(player, step);
         return true;
     }
-    const content = contentForStep(step);
-    if (content) {
-        completeContentIntroduction(player, content);
-        return true;
-    }
     return false;
 }
 
 export function chooseTutorialContent(player: Player, input: string): { success: boolean; reason?: string } {
     const snapshot = getTutorialSnapshot(player);
     if (snapshot.status !== 'active' || snapshot.step !== TutorialStep.CONTENT_CHOICE) {
-        return { success: false, reason: '지금은 콘텐츠 소개를 선택하는 단계가 아닙니다.' };
+        return { success: false, reason: '지금은 콘텐츠 체험을 선택하는 단계가 아닙니다.' };
     }
     const content = TutorialContent.fromInput(input);
     if (!content) return { success: false, reason: '낚시, 광질, 사냥 중 하나를 선택해주세요.' };
     if (snapshot.completedContents.includes(content)) {
-        return { success: false, reason: '이미 확인한 콘텐츠입니다.' };
+        return { success: false, reason: '이미 체험을 완료한 콘텐츠입니다.' };
     }
     const step = CONTENT_STEPS.get(content.key);
-    if (!step) return { success: false, reason: '콘텐츠 안내를 찾지 못했습니다.' };
+    if (!step) return { success: false, reason: '콘텐츠 체험 안내를 찾지 못했습니다.' };
     setStep(player, step);
     return { success: true };
 }
@@ -294,6 +291,8 @@ export interface TutorialEventFacts {
     readonly resourceDataId?: string;
     readonly itemDataId?: string;
     readonly skillDataId?: string;
+    readonly isOreResource?: boolean;
+    readonly isMonster?: boolean;
 }
 
 /** 실제 게임 결과가 현재 실습 목표를 충족했는지 판정하는 순수 함수. */
@@ -330,6 +329,12 @@ export function doesTutorialEventCompleteStep(
             return event.id === GameEventIds.SKILL_STARTED && event.skillDataId === 'power_strike';
         case TutorialStep.GROWTH:
             return event.id === GameEventIds.STAT_ALLOCATED;
+        case TutorialStep.CONTENT_FISHING:
+            return event.id === GameEventIds.FISH_CAUGHT;
+        case TutorialStep.CONTENT_MINING:
+            return event.id === GameEventIds.RESOURCE_DESTROYED && event.isOreResource === true;
+        case TutorialStep.CONTENT_HUNTING:
+            return event.id === GameEventIds.ENTITY_DEFEATED && event.isMonster === true;
         default:
             return false;
     }
@@ -360,7 +365,9 @@ export function initTutorial(): void {
 
         const facts = tutorialEventFacts(event);
         if (doesTutorialEventCompleteStep(snapshot.step, facts)) {
-            advanceMainStep(player, snapshot.step);
+            const content = contentForStep(snapshot.step);
+            if (content) completeTutorialContent(player, content);
+            else advanceMainStep(player, snapshot.step);
             return;
         }
         if (event.id === GameEventIds.LOCATION_CHANGED
@@ -374,6 +381,9 @@ export function initTutorial(): void {
                 TutorialStep.TARGET,
                 TutorialStep.ATTACK,
                 TutorialStep.SKILL_USE,
+                TutorialStep.CONTENT_FISHING,
+                TutorialStep.CONTENT_MINING,
+                TutorialStep.CONTENT_HUNTING,
             ].includes(snapshot.step)) {
             showTutorialStep(player, true);
         }
@@ -391,6 +401,9 @@ function tutorialEventFacts(event: GameEvent): TutorialEventFacts {
         resourceDataId: stringEventData(event, 'resourceDataId') ?? subjectResourceId,
         itemDataId: stringEventData(event, 'itemDataId'),
         skillDataId: stringEventData(event, 'skillDataId'),
+        isOreResource: event.subject instanceof Resource
+            && event.subject.hasTag(GameTags.RESOURCE_ORE),
+        isMonster: event.subject instanceof Monster,
     };
 }
 
@@ -423,7 +436,12 @@ function ensureTutorialDestinationVisited(player: Player, step: TutorialStep): v
     if (destinationId) markLocationVisited(player, destinationId);
 }
 
-function completeContentIntroduction(player: Player, content: TutorialContent): void {
+function completeTutorialContent(player: Player, content: TutorialContent): void {
+    sendNotificationToUser(player.userId, {
+        key: `tutorial:content-complete:${content.key}`,
+        message: `${content.label} 체험을 완료했습니다!`,
+        length: 3500,
+    });
     const completed = new Set(getTutorialSnapshot(player).completedContents.map(entry => entry.key));
     completed.add(content.key);
     player.progress.setState(TutorialProgressIds.CONTENT_DONE, [...completed].join(','));
@@ -525,6 +543,14 @@ function getTutorialDummyNumber(player: Player): number | undefined {
 
 function getTutorialGuideNumber(player: Player): number | undefined {
     return getLocation(player.locationId)?.getNpcNumber('town_guide');
+}
+
+function getTutorialOreNumber(player: Player): number | undefined {
+    return getLocation(player.locationId)?.getResourceObjectNumberByTag(GameTags.RESOURCE_ORE);
+}
+
+function getTutorialMonsterNumber(player: Player): number | undefined {
+    return getLocation(player.locationId)?.getFirstMonsterObjectNumber();
 }
 
 function hasTutorialDummyTarget(player: Player): boolean {
@@ -735,37 +761,81 @@ function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
             break;
         case TutorialStep.CONTENT_CHOICE: {
             const done = new Set(snapshot.completedContents.map(content => content.key));
-            b.text('낚시, 광질, 사냥 중 먼저 알고 싶은 콘텐츠를 고르세요. 하나를 확인하면 남은 콘텐츠를 다시 선택할 수 있습니다.\n\n');
+            b.text('낚시, 광질, 사냥 중 먼저 체험할 콘텐츠를 고르세요. 실제 행동을 완료하면 남은 콘텐츠를 다시 선택할 수 있습니다.\n\n');
             for (const content of TutorialContent.values()) {
                 if (done.has(content.key)) continue;
                 b.button(`/튜토리얼선택 ${content.label}`, x => x.text(`[${content.label}]`)).text('  ');
             }
             break;
         }
-        case TutorialStep.CONTENT_FISHING:
-            b.text('낚시 가능 장소에서 낚싯대를 주 손에, 미끼 묶음을 보조 손에 장착하고 /낚시를 사용합니다. ')
-                .text('입질 뒤 미니게임에서 물고기를 채집 영역 안에 유지하면 등급별 물고기와 경험치를 얻습니다.\n')
-                .color('$text-tertiary', x => x.text('루미나르 연못에는 낚시 상점이 있으며, 미끼가 미장착이면 보유 묶음을 자동 장착합니다.\n\n'))
-                .button('/자동이동 루미나르 물빛 연못', x => x.text('[연못으로 자동이동]'))
+        case TutorialStep.CONTENT_FISHING: {
+            if (player.locationId !== TutorialLocationIds.POND) {
+                b.text('루미나르 물빛 연못으로 이동해 물고기를 한 마리 실제로 낚아보세요. ')
+                    .text('튜토리얼이 연못의 방문 기록을 열어두었으므로 자동이동할 수 있습니다.\n\n')
+                    .button('/자동이동 루미나르 물빛 연못', x => x.text('[연못으로 자동이동]'));
+                break;
+            }
+            const rodEquipped = player.equipment.hasEquippedItemTag('mainHand', GameTags.TOOL_FISHING);
+            const rodNumber = getTutorialItemNumber(player, 'beginner_fishing_rod');
+            b.text('낚싯대를 주 손에 장착하고 /낚시를 사용하세요. 미끼가 장착되지 않았다면 보유한 미끼 묶음을 자동 장착합니다. ')
+                .text('입질 뒤 미니게임에 성공해 물고기를 획득해야 이 체험이 완료됩니다.\n\n');
+            if (!rodEquipped && rodNumber) {
+                b.button(`/장착 ${rodNumber}`, x => x.text('[초보자 낚싯대 장착]')).text('  ');
+            }
+            b.button('/낚시', x => x.text('[낚시 시작]'))
                 .text('  ')
-                .button('/튜토리얼다음', x => x.text('[설명 완료]'));
+                .button('/상점', x => x.text('[낚시 상점]'));
             break;
-        case TutorialStep.CONTENT_MINING:
-            b.text('곡괭이를 장착하고 피버릭 갱도의 광석을 대상 지정한 뒤 공격하면 채굴할 수 있습니다. ')
-                .text('광석은 경험치와 단조·제작에 쓰는 재료를 확률에 따라 떨어뜨립니다.\n')
-                .color('$text-tertiary', x => x.text('자원도 몬스터와 같은 오브젝트 번호를 사용하지만 먼저 공격하지 않습니다.\n\n'))
-                .button('/자동이동 피버릭 갱도 입구', x => x.text('[광산으로 자동이동]'))
-                .text('  ')
-                .button('/튜토리얼다음', x => x.text('[설명 완료]'));
+        }
+        case TutorialStep.CONTENT_MINING: {
+            if (player.locationId !== TutorialLocationIds.MINE) {
+                b.text('피버릭 갱도 입구로 이동해 광석 하나를 실제로 파괴하세요. ')
+                    .text('튜토리얼이 갱도 입구의 방문 기록을 열어두었으므로 자동이동할 수 있습니다.\n\n')
+                    .button('/자동이동 피버릭 갱도 입구', x => x.text('[광산으로 자동이동]'));
+                break;
+            }
+            const pickaxeEquipped = player.equipment.hasEquippedItemTag('mainHand', GameTags.TOOL_MINING);
+            const pickaxeNumber = getTutorialItemNumber(player, 'basic_pickaxe');
+            const oreNumber = getTutorialOreNumber(player);
+            b.text('곡괭이를 주 손에 장착하고 광석을 대상 지정한 뒤 파괴될 때까지 공격하세요. ')
+                .text('광석 파괴에 성공해야 경험치와 무작위 재료를 받고 체험이 완료됩니다.\n')
+                .color('$text-tertiary', x => x.text('자원도 몬스터와 같은 오브젝트 번호를 사용하지만 먼저 공격하지 않습니다.\n\n'));
+            if (!pickaxeEquipped && pickaxeNumber) {
+                b.button(`/장착 ${pickaxeNumber}`, x => x.text('[기본 곡괭이 장착]')).text('  ');
+            }
+            if (oreNumber) {
+                b.button(`/대상지정 ${oreNumber}`, x => x.text('[광석 대상 지정]'))
+                    .text('  ')
+                    .button(`/공격 ${oreNumber}`, x => x.text('[광석 공격]'));
+            } else {
+                b.button('/위치', x => x.text('[광석 다시 확인]'));
+            }
             break;
-        case TutorialStep.CONTENT_HUNTING:
-            b.text('바람결 초원부터 몬스터 레벨을 확인하고 대상 지정 → 공격 → 스킬 순서로 싸워보세요. ')
-                .text('속성표, 몬스터 정보, 상태이상과 장비를 활용하면 강한 적을 상대하기 쉬워집니다.\n')
-                .color('$text-tertiary', x => x.text('명령어 /속성표, 감각 100 이상이면 /몬스터정보 <번호>\n\n'))
-                .button('/자동이동 바람결 초원 1', x => x.text('[초원으로 자동이동]'))
-                .text('  ')
-                .button('/튜토리얼다음', x => x.text('[설명 완료]'));
+        }
+        case TutorialStep.CONTENT_HUNTING: {
+            if (player.locationId !== TutorialLocationIds.FIELD) {
+                b.text('바람결 초원 1 들머리로 이동해 슬라임 한 마리를 실제로 처치하세요. ')
+                    .text('튜토리얼이 초원 방문 기록을 열어두었으므로 자동이동할 수 있습니다.\n\n')
+                    .button('/자동이동 바람결 초원 1 들머리', x => x.text('[초원으로 자동이동]'));
+                break;
+            }
+            const swordNumber = getTutorialItemNumber(player, 'old_sword');
+            const monsterNumber = getTutorialMonsterNumber(player);
+            b.text('몬스터를 대상 지정하고 기본 공격과 강타를 사용해 직접 처치하세요. ')
+                .text('처치에 성공해야 경험치와 보상을 받고 체험이 완료됩니다.\n')
+                .color('$text-tertiary', x => x.text('속성표와 상태이상, 장비를 활용하면 강한 적을 상대하기 쉬워집니다.\n\n'));
+            if (swordNumber) {
+                b.button(`/장착 ${swordNumber}`, x => x.text('[낡은 검 장착]')).text('  ');
+            }
+            if (monsterNumber) {
+                b.button(`/대상지정 ${monsterNumber}`, x => x.text('[몬스터 대상 지정]'))
+                    .text('  ')
+                    .button(`/공격 ${monsterNumber}`, x => x.text('[몬스터 공격]'));
+            } else {
+                b.button('/위치', x => x.text('[몬스터 다시 확인]'));
+            }
             break;
+        }
         default:
             b.text('현재 안내 정보를 불러올 수 없습니다.');
     }

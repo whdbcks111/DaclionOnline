@@ -13,6 +13,7 @@ import { sendBotMessageToUser, sendNotificationToUser } from './message.js';
 import { cancelMiniGame, hasActiveMiniGame, normalizeMiniGameInputs, startMiniGame } from './minigame.js';
 import { getPlayerByUserId } from './player.js';
 import { cancelGameTask, scheduleGameTask } from './scheduler.js';
+import { emitGameEvent, GameEventIds } from '../models/GameEvent.js';
 
 interface FishingState {
     locationId: string
@@ -31,6 +32,12 @@ export interface StartFishingResult {
     waitSeconds?: number
 }
 
+interface FishingRewardResult {
+    message: string
+    itemDataId?: string
+    exp?: number
+}
+
 const fishingByUser = new Map<number, FishingState>();
 const FISHING_BITE_WARNING_MS = 1_000;
 
@@ -38,11 +45,11 @@ function normalizeShape(value: unknown): FishingCaptureShape {
     return value === 'circle' || value === 'rectangle' || value === 'square' ? value : 'circle';
 }
 
-function finishFishingReward(player: Player, rarity: FishRarity): string {
+function finishFishingReward(player: Player, rarity: FishRarity): FishingRewardResult {
     const fish = rollFish(rarity);
-    if (!fish) return '해당 등급의 물고기 데이터가 없어 보상을 받지 못했습니다.';
+    if (!fish) return { message: '해당 등급의 물고기 데이터가 없어 보상을 받지 못했습니다.' };
     const itemData = getItemData(fish.itemDataId);
-    if (!itemData) return '물고기 아이템 데이터가 없어 보상을 받지 못했습니다.';
+    if (!itemData) return { message: '물고기 아이템 데이터가 없어 보상을 받지 못했습니다.' };
 
     const exp = rollFishingExp(rarity);
     const levels = player.gainExp(exp);
@@ -58,7 +65,11 @@ function finishFishingReward(player: Player, rarity: FishRarity): string {
         placement = '인벤토리가 무거워 발밑에 떨어졌습니다.';
     }
     const levelText = levels.length > 0 ? ` Lv.${levels.at(-1)} 달성!` : '';
-    return `[${rarity.label}] ${itemData.name}을(를) 낚았습니다! 경험치 +${exp}.${levelText} ${placement}`;
+    return {
+        message: `[${rarity.label}] ${itemData.name}을(를) 낚았습니다! 경험치 +${exp}.${levelText} ${placement}`,
+        itemDataId: fish.itemDataId,
+        exp,
+    };
 }
 
 function getFishingContext(userId: number, locationId: string): { player: Player; state: FishingState } | undefined {
@@ -151,9 +162,22 @@ function beginFishingMiniGame(userId: number, locationId: string, rarity: FishRa
             fishingByUser.delete(userId);
             const current = getPlayerByUserId(userId);
             if (!current) return;
-            const message = result.success ? finishFishingReward(current, rarity) : (result.message ?? '낚시에 실패했습니다.');
+            const reward = result.success
+                ? finishFishingReward(current, rarity)
+                : { message: result.message ?? '낚시에 실패했습니다.' };
+            const message = reward.message;
             sendBotMessageToUser(userId, message);
             sendNotificationToUser(userId, { key: 'fishing:result', message, length: 4500 });
+            if (reward.itemDataId && reward.exp !== undefined) {
+                emitGameEvent(GameEventIds.FISH_CAUGHT, {
+                    actor: current,
+                    data: {
+                        itemDataId: reward.itemDataId,
+                        rarity: rarity.key,
+                        exp: reward.exp,
+                    },
+                });
+            }
         },
         onCancelled: () => { fishingByUser.delete(userId); },
     });
