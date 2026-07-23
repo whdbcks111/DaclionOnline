@@ -52,6 +52,28 @@ export interface VisitedLocationMatch {
     name: string;
 }
 
+function longestCommonSubsequenceLength(left: string, right: string): number {
+    if (!left || !right) return 0;
+    let previous = new Uint16Array(right.length + 1);
+    for (let leftIndex = 1; leftIndex <= left.length; leftIndex++) {
+        const current = new Uint16Array(right.length + 1);
+        for (let rightIndex = 1; rightIndex <= right.length; rightIndex++) {
+            current[rightIndex] = left[leftIndex - 1] === right[rightIndex - 1]
+                ? previous[rightIndex - 1] + 1
+                : Math.max(previous[rightIndex], current[rightIndex - 1]);
+        }
+        previous = current;
+    }
+    return previous[right.length];
+}
+
+function locationSearchValues(location: VisitedLocationMatch): string[] {
+    return [
+        normalizeLocationInput(location.name),
+        normalizeLocationInput(location.locationId),
+    ];
+}
+
 /** 자동이동 검색용으로 지도에 표시 가능한 방문 장소만 반환한다. */
 export function getVisitedLocationMatches(player: Player, input = ''): VisitedLocationMatch[] {
     const normalizedInput = normalizeLocationInput(input);
@@ -66,17 +88,43 @@ export function getVisitedLocationMatches(player: Player, input = ''): VisitedLo
     if (!normalizedInput) return visited.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
     const exact = visited.filter(location =>
-        normalizeLocationInput(location.name) === normalizedInput
-        || normalizeLocationInput(location.locationId) === normalizedInput,
-    );
+        locationSearchValues(location).some(value => value === normalizedInput));
     if (exact.length > 0) return exact;
 
-    return visited
-        .filter(location =>
-            normalizeLocationInput(location.name).includes(normalizedInput)
-            || normalizeLocationInput(location.locationId).includes(normalizedInput),
-        )
-        .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    const startsWith = visited.filter(location =>
+        locationSearchValues(location).some(value => value.startsWith(normalizedInput)));
+    if (startsWith.length > 0) {
+        return startsWith.sort((a, b) => a.name.length - b.name.length || a.name.localeCompare(b.name, 'ko'));
+    }
+
+    const includes = visited.filter(location =>
+        locationSearchValues(location).some(value => value.includes(normalizedInput)));
+    if (includes.length > 0) {
+        return includes.sort((a, b) => a.name.length - b.name.length || a.name.localeCompare(b.name, 'ko'));
+    }
+
+    // 한두 글자는 우연히 겹칠 가능성이 커서 오타 보정을 적용하지 않는다.
+    if (normalizedInput.length < 3) return [];
+
+    const scored = visited.map(location => {
+        const score = Math.max(...locationSearchValues(location).map(value => {
+            const common = longestCommonSubsequenceLength(normalizedInput, value);
+            const queryCoverage = common / normalizedInput.length;
+            const lengthPrecision = common / value.length;
+            return queryCoverage * 0.8 + lengthPrecision * 0.2;
+        }));
+        return { location, score };
+    });
+    const bestScore = Math.max(0, ...scored.map(entry => entry.score));
+    if (bestScore < 0.58) return [];
+
+    return scored
+        .filter(entry => entry.score >= 0.58 && entry.score >= bestScore - 0.08)
+        .sort((a, b) => b.score - a.score
+            || a.location.name.length - b.location.name.length
+            || a.location.name.localeCompare(b.location.name, 'ko'))
+        .slice(0, 20)
+        .map(entry => entry.location);
 }
 
 function reconstructRoute(cameFrom: ReadonlyMap<string, string>, destinationId: string): string[] {

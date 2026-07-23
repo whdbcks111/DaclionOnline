@@ -118,10 +118,14 @@ test('방문 장소 검색은 exact를 우선하고 구분 기호 없는 부분 
         { ...location('start', 0, []), name: '피버릭 광장' },
         { ...location('meadow_1', 100, []), name: '피버릭 초원 1구역' },
         { ...location('meadow_2', 200, []), name: '피버릭 초원 2구역' },
+        { ...location('mist_swamp_1', 240, []), name: '안개수렁 1 물먹은 둑' },
+        { ...location('mist_swamp_2', 260, []), name: '안개수렁 2 잠든 포자밭' },
         { ...location('secret', 300, [], ['location:hidden']), name: '숨은 초원' },
     ]);
     const player = { locationId: 'start', progress: PlayerProgress.createEmpty(13) } as Player;
-    for (const id of ['start', 'meadow_1', 'meadow_2', 'secret']) markLocationVisited(player, id);
+    for (const id of ['start', 'meadow_1', 'meadow_2', 'mist_swamp_1', 'mist_swamp_2', 'secret']) {
+        markLocationVisited(player, id);
+    }
 
     assert.deepEqual(
         getVisitedLocationMatches(player, 'meadow_1'),
@@ -132,6 +136,10 @@ test('방문 장소 검색은 exact를 우선하고 구분 기호 없는 부분 
         ['meadow_1', 'meadow_2'],
     );
     assert.deepEqual(getVisitedLocationMatches(player, '숨은'), []);
+    assert.deepEqual(
+        getVisitedLocationMatches(player, '안개 수령').map(match => match.locationId),
+        ['mist_swamp_1', 'mist_swamp_2'],
+    );
 });
 
 test('A* 자동이동 경로는 방문한 공개 장소의 현재 열린 연결 중 최단 거리를 고른다', () => {
