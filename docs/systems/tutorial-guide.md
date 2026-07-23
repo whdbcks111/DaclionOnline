@@ -20,7 +20,7 @@
 
 각 단계는 `tutorial:current-step` key의 `length: 0`, `editExists: true` notification을 갱신하므로 완료 또는 건너뛰기 전까지 현재 목표가 계속 보인다. 설명 카드는 버튼을 먼저 보여주고 같은 기능의 정식 명령과 1~2자리 별칭을 뒤에 안내한다.
 
-`bot.subscribeCommandExecutions()`는 버튼, `/정식명령`, 슬래시 없는 별칭을 canonical 명령 이름으로 전달한다. 튜토리얼은 이를 구독해 같은 행동으로 처리한다. 명령 인자와 게임 상태의 최종 판정은 각 소유 command/model이 계속 담당하며, 튜토리얼은 다른 기능의 raw 배열이나 DB row를 읽지 않는다.
+`bot.subscribeCommandExecutions()`는 버튼, `/정식명령`, 슬래시 없는 별칭을 canonical 명령 이름으로 전달한다. 예를 들어 상태 확인 단계는 실제 등록명 `/상태창`과 별칭 `s`를 모두 canonical 이름 `상태창`으로 받아 완료한다. 튜토리얼은 이를 구독해 같은 행동으로 처리한다. 명령 인자와 게임 상태의 최종 판정은 각 소유 command/model이 계속 담당하며, 튜토리얼은 다른 기능의 raw 배열이나 DB row를 읽지 않는다.
 
 ## 보상과 반복 방지
 

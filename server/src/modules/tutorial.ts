@@ -49,7 +49,7 @@ export class TutorialStep {
     private static readonly all: TutorialStep[] = [];
 
     static readonly WELCOME = new TutorialStep('welcome', '첫걸음', []);
-    static readonly STATUS = new TutorialStep('status', '상태창 확인', ['스테이터스']);
+    static readonly STATUS = new TutorialStep('status', '상태창 확인', ['상태창']);
     static readonly LOCATION = new TutorialStep('location', '위치 확인', ['위치']);
     static readonly MOVE = new TutorialStep('move', '장소 이동', ['이동', '자동이동']);
     static readonly INTERACT = new TutorialStep('interact', '오브젝트 상호작용', ['상호작용']);
@@ -396,8 +396,8 @@ function buildTutorialCard(snapshot: TutorialSnapshot) {
         case TutorialStep.STATUS:
             b.text('상태창은 레벨, 경험치, 생명력·정신력, 장비, 능력치와 상태이상을 보여줍니다. ')
                 .text('메시지의 상세 보기로 세부 탭을 펼칠 수 있습니다.\n')
-                .color('$text-tertiary', x => x.text('명령어 /스테이터스 · 별칭 s\n\n'))
-                .button('/스테이터스', x => x.text('[상태창 열기]'));
+                .color('$text-tertiary', x => x.text('명령어 /상태창 · 별칭 s\n\n'))
+                .button('/상태창', x => x.text('[상태창 열기]'));
             break;
         case TutorialStep.LOCATION:
             b.text('위치 정보에는 이동할 길, 번호가 붙은 몬스터·자원·NPC, 바닥 아이템이 표시됩니다. ')
