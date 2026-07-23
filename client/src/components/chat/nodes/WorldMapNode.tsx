@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from 'react'
 import type { WorldMapData, WorldMapLocationData } from '@shared/types'
+import { useSocket } from '../../../context/SocketContext'
+import Dialog from '../../dialog/Dialog'
 import styles from './WorldMapNode.module.scss'
 
 interface Props {
@@ -238,6 +240,7 @@ function getLocalPoint(svg: SVGSVGElement, point: Point): Point {
 }
 
 export default function WorldMapNode({ data }: Props) {
+    const { socket } = useSocket()
     const svgId = useId().replaceAll(':', '')
     const gridId = `world-map-grid-${svgId}`
     const glowId = `world-map-current-glow-${svgId}`
@@ -245,11 +248,14 @@ export default function WorldMapNode({ data }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
     const pointers = useRef(new Map<number, Point>())
+    const pointerStarts = useRef(new Map<number, Point>())
+    const pointerGestureMoved = useRef(false)
     const fitViewRef = useRef(createFitView(data))
     const hasInteracted = useRef(false)
     const [view, setView] = useState(() => createFitView(data))
     const [hoveredId, setHoveredId] = useState<string | null>(null)
     const [selectedId, setSelectedId] = useState<string | null>(null)
+    const [navigationLocationId, setNavigationLocationId] = useState<string | null>(null)
     const [labelZoom, setLabelZoom] = useState(DEFAULT_LABEL_ZOOM)
     const [showLabels, setShowLabels] = useState(true)
     const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 })
@@ -259,6 +265,7 @@ export default function WorldMapNode({ data }: Props) {
         [data.locations],
     )
     const activeLocation = locationsById.get(hoveredId ?? selectedId ?? '')
+    const navigationLocation = locationsById.get(navigationLocationId ?? '')
     const biomeSeeds = useMemo(() => createBiomeSeeds(data), [data])
     const biomeSofteningDistance = useMemo(() => getBiomeSofteningDistance(biomeSeeds), [biomeSeeds])
     const labelFontSize = viewportSize.width > 0
@@ -341,7 +348,11 @@ export default function WorldMapNode({ data }: Props) {
     const handlePointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
         if (event.pointerType === 'mouse' && event.button !== 0) return
         hasInteracted.current = true
-        pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+        const point = { x: event.clientX, y: event.clientY }
+        if (pointers.current.size === 0) pointerGestureMoved.current = false
+        else pointerGestureMoved.current = true
+        pointers.current.set(event.pointerId, point)
+        pointerStarts.current.set(event.pointerId, point)
         event.currentTarget.setPointerCapture(event.pointerId)
     }
 
@@ -354,6 +365,8 @@ export default function WorldMapNode({ data }: Props) {
 
         const before = [...pointers.current.values()]
         const nextPoint = { x: event.clientX, y: event.clientY }
+        const startPoint = pointerStarts.current.get(event.pointerId)
+        if (startPoint && distance(startPoint, nextPoint) > 6) pointerGestureMoved.current = true
         pointers.current.set(event.pointerId, nextPoint)
         const after = [...pointers.current.values()]
 
@@ -392,9 +405,18 @@ export default function WorldMapNode({ data }: Props) {
 
     const releasePointer = (event: ReactPointerEvent<SVGSVGElement>) => {
         pointers.current.delete(event.pointerId)
+        pointerStarts.current.delete(event.pointerId)
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId)
         }
+    }
+
+    const closeNavigationDialog = useCallback(() => setNavigationLocationId(null), [])
+
+    const startNavigation = () => {
+        if (!socket || !navigationLocation?.visited || navigationLocation.current) return
+        socket.emit('chatButtonClick', { action: `/자동이동 ${navigationLocation.id}` })
+        closeNavigationDialog()
     }
 
     const resetView = () => {
@@ -498,7 +520,9 @@ export default function WorldMapNode({ data }: Props) {
                         onBlur={() => setHoveredId(null)}
                         onClick={event => {
                             event.stopPropagation()
-                            setSelectedId(current => current === location.id ? null : location.id)
+                            if (event.detail > 0 && pointerGestureMoved.current) return
+                            setSelectedId(location.id)
+                            setNavigationLocationId(location.id)
                         }}
                     >
                         {location.current && <circle r="17" className={styles.currentRing} filter={`url(#${glowId})`} />}
@@ -536,6 +560,30 @@ export default function WorldMapNode({ data }: Props) {
             )}
             {data.locations.length === 0 && <div className={styles.empty}>지도에 표시할 장소가 없습니다.</div>}
             <div className={styles.help}>드래그로 이동 · 휠 또는 두 손가락으로 확대/축소</div>
+            <Dialog
+                open={Boolean(navigationLocation)}
+                title="자동이동"
+                onClose={closeNavigationDialog}
+                footer={navigationLocation && (
+                    <>
+                        <button type="button" className={styles.dialogSecondary} onClick={closeNavigationDialog}>취소</button>
+                        <button
+                            type="button"
+                            className={styles.dialogPrimary}
+                            onClick={startNavigation}
+                            disabled={!socket || !navigationLocation.visited || navigationLocation.current}
+                        >자동이동</button>
+                    </>
+                )}
+            >
+                {navigationLocation && (
+                    <div className={styles.navigationPrompt}>
+                        <p><strong>{navigationLocation.name}</strong>(으)로 자동이동 하시겠습니까?</p>
+                        {!navigationLocation.visited && <p className={styles.navigationNotice}>아직 방문하지 않은 장소에는 자동이동할 수 없습니다.</p>}
+                        {navigationLocation.current && <p className={styles.navigationNotice}>현재 머물고 있는 장소입니다.</p>}
+                    </div>
+                )}
+            </Dialog>
         </div>
     )
 }

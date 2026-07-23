@@ -216,6 +216,43 @@
     color: rgba(255, 255, 255, 0.55);
 }
 
+.navigationPrompt {
+    display: grid;
+    gap: 0.6rem;
+
+    p { margin: 0; line-height: 1.55; }
+}
+
+.navigationNotice {
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+}
+
+.dialogPrimary, .dialogSecondary {
+    min-height: 2.5rem;
+    padding: 0 $spacing-md;
+    border: 0;
+    border-radius: $border-radius-md;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: default;
+    }
+}
+
+.dialogPrimary {
+    color: $color-text-inverse;
+    background: $color-primary;
+}
+
+.dialogSecondary {
+    color: $color-text;
+    background: $color-bg-tertiary;
+}
+
 @keyframes currentPulse {
     from { r: 12; opacity: 0.9; }
     to { r: 22; opacity: 0; }
