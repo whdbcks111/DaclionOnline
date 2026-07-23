@@ -48,6 +48,10 @@ export const VOIDCROWN_QUEST_IDS = Object.freeze({
     RESTORE_WARD: 'voidcrown:restore-ward',
     END_REGENCY: 'voidcrown:end-regency',
 } as const);
+export const ECLIPSE_TRENCH_QUEST_IDS = Object.freeze({
+    RESTORE_DOCK: 'eclipse-trench:restore-dock',
+    END_WHITE_NIGHT: 'eclipse-trench:end-white-night',
+} as const);
 
 defineQuest({
     id: TUTORIAL_QUEST_ID,
@@ -560,6 +564,75 @@ defineQuest({
         QuestReward.gold(68_000),
         QuestReward.item('regent_aegis', 1, '섭정의 무광방패'),
         QuestReward.item('crown_nullification_skillbook', 1, '왕관무효 전승서'),
+    ],
+});
+
+defineQuest({
+    id: ECLIPSE_TRENCH_QUEST_IDS.RESTORE_DOCK,
+    name: '달빛 아래 잠긴 정박지',
+    aliases: ['월식해구 정박지', '조류 관측선'],
+    description: '월염수와 침은을 모아 월식해구 관측선의 조류기관을 복구하세요.',
+    tags: ['quest:side', 'region:eclipse-trench'],
+    giverNpcIds: ['eclipse_navigator'],
+    turnInNpcIds: ['eclipse_navigator'],
+    visible: player => player.level >= 310,
+    canAccept: player => player.level >= 310,
+    stages: [new QuestStage({
+        id: 'restore-tide-engine',
+        description: '해구 입구와 침몰광맥에서 조류기관에 필요한 월염수와 침은을 모으세요.',
+        objectives: [
+            QuestObjective.item('moon-brine', '월염수 수집', 16, 'moon_brine', true),
+            QuestObjective.item('drowned-silver', '침은 수집', 12, 'drowned_silver', true),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(330_000),
+        QuestReward.gold(58_000),
+        QuestReward.item('tideheart_tonic', 5, '조류심장 영약'),
+        QuestReward.item('undertow_step_skillbook', 1, '역조보법 전승서'),
+    ],
+});
+
+defineQuest({
+    id: ECLIPSE_TRENCH_QUEST_IDS.END_WHITE_NIGHT,
+    name: '끝나지 않는 백야',
+    aliases: ['백야대사제 토벌', '세르미아'],
+    description: '월조 리바이어던을 넘어 조류거울을 부수고 백야대사제 세르미아가 고정한 월식을 끝내세요.',
+    tags: ['quest:side', 'quest:boss', 'region:eclipse-trench'],
+    giverNpcIds: ['eclipse_navigator'],
+    turnInNpcIds: ['eclipse_navigator'],
+    prerequisiteQuestIds: [ECLIPSE_TRENCH_QUEST_IDS.RESTORE_DOCK],
+    visible: player => player.level >= 325,
+    canAccept: player => player.level >= 325,
+    stages: [new QuestStage({
+        id: 'break-white-night',
+        description: '해구의 포식자와 성소의 조류거울을 제거한 뒤 대사제의 백야 의식을 끝내세요.',
+        objectives: [
+            QuestObjective.kill(
+                'moon-tide-leviathan',
+                '월조 리바이어던 처치',
+                1,
+                target => target.hasTag('monster:moon-tide-leviathan'),
+            ),
+            QuestObjective.destroy(
+                'white-night-mirrors',
+                '백야 조류거울 파괴',
+                3,
+                target => target.hasTag('resource:white-night-tide-mirror'),
+            ),
+            QuestObjective.kill(
+                'white-night-hierophant',
+                '백야대사제 세르미아 처치',
+                1,
+                target => target.hasTag('monster:white-night-hierophant'),
+            ),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(510_000),
+        QuestReward.gold(86_000),
+        QuestReward.item('white_night_bulwark', 1, '백야 조류방패'),
+        QuestReward.item('eclipse_verdict_skillbook', 1, '월식선고 전승서'),
     ],
 });
 

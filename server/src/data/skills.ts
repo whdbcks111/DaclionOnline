@@ -1756,6 +1756,24 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         statusEffect: LegacyStatusEffects.SILENCE, statusLabel: '침묵', statusDuration: 4, statusDurationPerLevel: 0.4,
         descriptionIntro: '대상에게 내려진 권능의 문장을 지워 마법 흐름을 끊고 지워진 힘을 자신의 방벽으로 되돌립니다.',
     },
+    {
+        id: 'undertow_step', name: '역조보법', icon: 'affinities/water', activationHeader: 'battle_rush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 365, perLevelPercent: 25,
+        manaCost: 64, cooldown: 14, groupTag: GameTags.SKILL_GROUP_ASSASSIN,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_WATER,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 60, perLevel: 11 },
+        statusEffect: LegacyStatusEffects.SLOWNESS, statusLabel: '둔화', statusDuration: 5, statusDurationPerLevel: 0.4,
+        descriptionIntro: '거꾸로 흐르는 해류에 몸을 실어 대상의 등 뒤로 파고들고 발밑의 흐름을 끊습니다.',
+    },
+    {
+        id: 'eclipse_verdict', name: '월식선고', icon: 'affinities/dark', activationHeader: 'sanctum_judgment',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 360, perLevelPercent: 25,
+        manaCost: 68, cooldown: 18, groupTag: GameTags.SKILL_GROUP_MAGIC,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_DARK, shieldPercent: 15,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 58, perLevel: 11 },
+        statusEffect: LegacyStatusEffects.BLINDNESS, statusLabel: '실명', statusDuration: 4.5, statusDurationPerLevel: 0.4,
+        descriptionIntro: '달빛과 심해의 어둠을 겹쳐 대상의 감각을 지우고 남은 월광을 방벽으로 거둡니다.',
+    },
 ];
 
 function growthTechniqueDescription(technique: GrowthTechniqueDefinition): string {
@@ -2765,6 +2783,30 @@ for (const skill of [
         attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 2.58, perLevelMultiplier: 0.24,
         castTime: 1.25, cooldown: 9, propertyTag: GameTags.PROPERTY_DARK,
         statusEffectId: 'overmaster', statusDuration: 4.5, unavoidable: true, activationHeader: 'deathless_requiem',
+    },
+    {
+        id: 'leviathan_moon_tide', name: '월조 해일', icon: 'affinities/water', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 2.74, perLevelMultiplier: 0.25,
+        castTime: 1.55, cooldown: 9, propertyTag: GameTags.PROPERTY_WATER,
+        statusEffectId: 'slowness', statusDuration: 7, unavoidable: true, activationHeader: 'elemental_bind',
+    },
+    {
+        id: 'leviathan_depth_crush', name: '해압 분쇄', icon: 'affinities/stone', damageType: 'physical' as const,
+        attribute: AttributeType.ATK, baseMultiplier: 2.66, perLevelMultiplier: 0.24,
+        castTime: 1.1, cooldown: 8, propertyTag: GameTags.PROPERTY_STONE,
+        statusEffectId: 'defense_reduction', statusDuration: 12, unavoidable: true, activationHeader: 'steel_slash',
+    },
+    {
+        id: 'hierophant_white_night', name: '백야 강림', icon: 'affinities/light', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 2.96, perLevelMultiplier: 0.27,
+        castTime: 1.8, cooldown: 10, propertyTag: GameTags.PROPERTY_LIGHT,
+        statusEffectId: 'blindness', statusDuration: 6, unavoidable: true, activationHeader: 'sanctum_judgment',
+    },
+    {
+        id: 'hierophant_eclipse_dirge', name: '월식 애가', icon: 'affinities/dark', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 2.84, perLevelMultiplier: 0.26,
+        castTime: 1.3, cooldown: 9, propertyTag: GameTags.PROPERTY_DARK,
+        statusEffectId: 'silence', statusDuration: 5.5, unavoidable: true, activationHeader: 'deathless_requiem',
     },
     {
         id: 'caldera_eruption', name: '칼데라 분출', icon: 'affinities/fire', damageType: 'magic' as const,

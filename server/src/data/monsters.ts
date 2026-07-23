@@ -1945,3 +1945,208 @@ const voidcrownMonsters: WorldMonsterData[] = [
 ];
 
 for (const monster of voidcrownMonsters) defineWorldMonster(monster);
+
+const eclipseTrenchMonsters: WorldMonsterData[] = [
+    {
+        id: 'moonbrine_crawler', name: '월염수 게',
+        description: '월염수가 결정화된 갑각으로 해구 입구를 기어 다니며 마지막 공격자의 발목을 집요하게 붙드는 심해 갑각류.', level: 313,
+        baseAttribute: {
+            maxLife: 181_000, atk: 1_720, def: 1_160, magicDef: 1_020, armorPen: 142,
+            speed: 2.2, attackSpeed: 0.76, critRate: 0.22, critDmg: 2.2,
+        },
+        drops: [
+            { itemDataId: 'moon_brine', minCount: 1, maxCount: 4, chance: 0.7 },
+            { itemDataId: 'eclipse_scale', minCount: 1, maxCount: 2, chance: 0.3 },
+        ],
+        goldReward: { min: 2_150, max: 3_450 },
+        attack: { effect: { statusEffectId: 'slowness', chance: 0.24, duration: 7, level: 16 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_WATER, GameTags.PROPERTY_STONE],
+    },
+    {
+        id: 'nightpearl_jelly', name: '밤진주 해파리',
+        description: '몸속 밤진주에 빛을 모았다가 어둠과 함께 방출해 공격자의 감각을 지우는 해파리.', level: 316,
+        baseAttribute: {
+            maxLife: 173_000, atk: 1_410, magicForce: 1_850, def: 930, magicDef: 1_210, magicPen: 148,
+            speed: 3.8, attackSpeed: 1.12, critRate: 0.23, critDmg: 2.25,
+        },
+        drops: [
+            { itemDataId: 'night_pearl', minCount: 1, maxCount: 3, chance: 0.58 },
+            { itemDataId: 'moon_brine', minCount: 1, maxCount: 3, chance: 0.5 },
+        ],
+        goldReward: { min: 2_190, max: 3_520 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'blindness', chance: 0.26, duration: 5, level: 16 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'drowned_lancer', name: '침은 창병',
+        description: '백야성소로 향하던 순례선을 지키다 해구에 가라앉은 창병. 높은 피해를 준 침입자를 조류인장으로 추적한다.', level: 319,
+        baseAttribute: {
+            maxLife: 196_000, atk: 1_880, def: 1_210, magicDef: 1_100, armorPen: 154,
+            speed: 2.75, attackSpeed: 0.84, critRate: 0.24, critDmg: 2.28,
+        },
+        drops: [
+            { itemDataId: 'drowned_silver', minCount: 1, maxCount: 4, chance: 0.68 },
+            { itemDataId: 'tide_sigil', minCount: 1, maxCount: 1, chance: 0.15 },
+        ],
+        goldReward: { min: 2_240, max: 3_600 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.26, duration: 11, level: 16 } },
+        ai: {
+            intelligence: 78, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.15, damage: 1.35, healing: 1.15, shielding: 1.05, control: 1.1, taunt: 2.2 },
+            tauntResistance: 0.7, switchThreshold: 0.22, decayPerSecond: 0.009,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_WATER, GameTags.PROPERTY_METAL, GameTags.PROPERTY_UNDEAD],
+    },
+    {
+        id: 'abyss_kelp_witch', name: '해구 다시마마녀',
+        description: '해구섬유를 머리카락처럼 펼쳐 파티의 회복 흐름을 감지하고 가장 오래 버틸 대상을 먼저 묶는 심해 마녀.', level: 322,
+        baseAttribute: {
+            maxLife: 188_000, atk: 1_490, magicForce: 1_980, def: 980, magicDef: 1_290, magicPen: 162,
+            speed: 3.1, attackSpeed: 0.93,
+        },
+        drops: [
+            { itemDataId: 'abyss_fiber', minCount: 2, maxCount: 5, chance: 0.72 },
+            { itemDataId: 'moon_brine', minCount: 1, maxCount: 3, chance: 0.42 },
+        ],
+        goldReward: { min: 2_290, max: 3_680 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'bind', chance: 0.24, duration: 4.5, level: 16 } },
+        ai: {
+            intelligence: 90, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.06, damage: 0.95, healing: 1.95, shielding: 1.55, control: 1.65, taunt: 2.9 },
+            tauntResistance: 0.86, switchThreshold: 0.3, decayPerSecond: 0.006,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_WATER, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'moon_tide_leviathan', name: '월조 리바이어던',
+        description: '월식해구의 두 조류가 합쳐지는 곳에서 자란 거대한 포식자. 해일과 수압 분쇄를 번갈아 사용해 느린 대상부터 삼킨다.', level: 325,
+        baseAttribute: {
+            maxLife: 2_260_000, atk: 2_040, magicForce: 2_110, def: 1_340, magicDef: 1_360,
+            armorPen: 168, magicPen: 172, speed: 2.5, attackSpeed: 0.4, critRate: 0.25, critDmg: 2.35,
+        },
+        expReward: 325 * 20 * 8,
+        drops: [
+            { itemDataId: 'eclipse_scale', minCount: 8, maxCount: 14, chance: 0.94 },
+            { itemDataId: 'night_pearl', minCount: 4, maxCount: 8, chance: 0.7 },
+            { itemDataId: 'undertow_step_skillbook', minCount: 1, maxCount: 1, chance: 0.035 },
+        ],
+        goldReward: { min: 11_500, max: 16_500 },
+        skills: [
+            { skillDataId: 'leviathan_moon_tide', level: 5 },
+            { skillDataId: 'leviathan_depth_crush', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['leviathan_moon_tide', 'leviathan_depth_crush'],
+            initialDelay: 3, interval: { min: 5.8, max: 7.8 },
+        },
+        ai: {
+            intelligence: 72, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.12, damage: 1.3, healing: 1.25, shielding: 1.1, control: 1.35, taunt: 2.5 },
+            tauntResistance: 0.76, switchThreshold: 0.24, decayPerSecond: 0.007,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_BEAST, GameTags.PROPERTY_WATER, GameTags.PROPERTY_DARK, 'monster:moon-tide-leviathan'],
+    },
+    {
+        id: 'white_night_acolyte', name: '백야 수문사제',
+        description: '빛이 사라지지 않는 성소의 수문을 조율하며 회복과 보호막을 가장 많이 만든 침입자의 호흡부터 끊는 사제.', level: 329,
+        baseAttribute: {
+            maxLife: 208_000, atk: 1_580, magicForce: 2_130, def: 1_080, magicDef: 1_400, magicPen: 174,
+            speed: 3.05, attackSpeed: 0.88, critRate: 0.24, critDmg: 2.3,
+        },
+        drops: [
+            { itemDataId: 'tide_sigil', minCount: 1, maxCount: 3, chance: 0.58 },
+            { itemDataId: 'night_pearl', minCount: 1, maxCount: 3, chance: 0.48 },
+        ],
+        goldReward: { min: 2_420, max: 3_880 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'silence', chance: 0.27, duration: 5, level: 17 } },
+        ai: {
+            intelligence: 95, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.04, damage: 0.9, healing: 2.2, shielding: 2, control: 1.8, taunt: 3.5 },
+            tauntResistance: 0.95, switchThreshold: 0.34, decayPerSecond: 0.003,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'eclipse_ray', name: '월식 가오리',
+        description: '등의 밝은 면과 배의 어두운 면을 뒤집으며 공격 속성을 바꾸는 성소의 거대 가오리.', level: 333,
+        baseAttribute: {
+            maxLife: 214_000, atk: 1_750, magicForce: 2_070, def: 1_120, magicDef: 1_350,
+            armorPen: 158, magicPen: 168, speed: 4.7, attackSpeed: 1.15, critRate: 0.26, critDmg: 2.35,
+        },
+        drops: [
+            { itemDataId: 'eclipse_scale', minCount: 2, maxCount: 5, chance: 0.7 },
+            { itemDataId: 'abyss_fiber', minCount: 1, maxCount: 4, chance: 0.44 },
+        ],
+        goldReward: { min: 2_480, max: 3_980 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'blindness', chance: 0.23, duration: 5, level: 17 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'sunken_choir_guard', name: '침수성가 근위',
+        description: '성가의 박자에 맞춰 침은 갑주를 울리고 제어를 시도한 침입자에게 파동을 되돌리는 백야성소 근위.', level: 337,
+        baseAttribute: {
+            maxLife: 232_000, atk: 2_080, def: 1_420, magicDef: 1_310, armorPen: 176,
+            speed: 2.7, attackSpeed: 0.72, critRate: 0.25, critDmg: 2.38,
+        },
+        drops: [
+            { itemDataId: 'drowned_silver', minCount: 2, maxCount: 5, chance: 0.7 },
+            { itemDataId: 'tide_sigil', minCount: 1, maxCount: 3, chance: 0.4 },
+        ],
+        goldReward: { min: 2_550, max: 4_080 },
+        attack: { effect: { statusEffectId: 'overmaster', chance: 0.2, duration: 3.5, level: 17 } },
+        ai: {
+            intelligence: 92, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.06, damage: 1.05, healing: 1.55, shielding: 1.6, control: 2.1, taunt: 3.1 },
+            tauntResistance: 0.91, switchThreshold: 0.31, decayPerSecond: 0.004,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'twilight_oracle', name: '황혼 조류예언자',
+        description: '월식이 끝나는 순간을 계산해 다음 공격의 경로를 먼저 봉쇄하는 백야성소의 예언자.', level: 341,
+        baseAttribute: {
+            maxLife: 224_000, atk: 1_660, magicForce: 2_260, def: 1_180, magicDef: 1_470, magicPen: 184,
+            projectileAcceleration: 3.1, speed: 3.4, attackSpeed: 0.96, critRate: 0.27, critDmg: 2.4,
+        },
+        drops: [
+            { itemDataId: 'night_pearl', minCount: 2, maxCount: 5, chance: 0.68 },
+            { itemDataId: 'tide_sigil', minCount: 1, maxCount: 4, chance: 0.54 },
+        ],
+        goldReward: { min: 2_620, max: 4_200 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'curse', chance: 0.27, duration: 11, level: 17 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'white_night_hierophant', name: '백야대사제 세르미아',
+        description: '백야와 월식을 한 몸에 겹쳐 성소의 시간을 고정한 대사제. 남은 조류거울로 피해를 분산하고 치유자·보호자를 우선 심판한다.', level: 345,
+        baseAttribute: {
+            maxLife: 2_980_000, atk: 2_250, magicForce: 2_460, def: 1_520, magicDef: 1_590,
+            armorPen: 184, magicPen: 198, speed: 3.15, attackSpeed: 0.42, critRate: 0.28, critDmg: 2.45,
+        },
+        expReward: 345 * 20 * 10,
+        drops: [
+            { itemDataId: 'tide_sigil', minCount: 10, maxCount: 16, chance: 0.96 },
+            { itemDataId: 'night_pearl', minCount: 8, maxCount: 13, chance: 0.9 },
+            { itemDataId: 'eclipse_verdict_skillbook', minCount: 1, maxCount: 1, chance: 0.03 },
+            { itemDataId: 'white_night_bulwark', minCount: 1, maxCount: 1, chance: 0.018 },
+        ],
+        goldReward: { min: 14_000, max: 20_000 },
+        skills: [
+            { skillDataId: 'hierophant_white_night', level: 5 },
+            { skillDataId: 'hierophant_eclipse_dirge', level: 5 },
+            { skillDataId: 'leviathan_moon_tide', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['hierophant_white_night', 'hierophant_eclipse_dirge', 'leviathan_moon_tide'],
+            randomOrder: true, initialDelay: 2.5, interval: { min: 4.8, max: 6.8 },
+        },
+        ai: {
+            intelligence: 100, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.02, damage: 0.95, healing: 2.45, shielding: 2.3, control: 2.15, taunt: 4.2 },
+            tauntResistance: 0.99, switchThreshold: 0.4, decayPerSecond: 0.002,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK, 'monster:white-night-hierophant'],
+    },
+];
+
+for (const monster of eclipseTrenchMonsters) defineWorldMonster(monster);

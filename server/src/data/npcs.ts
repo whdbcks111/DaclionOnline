@@ -2,6 +2,7 @@ import NPC, { Dialogue, DialogueScenario } from '../models/NPC.js';
 import { defineProgress, ProgressType } from '../models/Progress.js';
 import {
     ASHEN_ABYSS_QUEST_IDS,
+    ECLIPSE_TRENCH_QUEST_IDS,
     FIRST_SLIME_HUNT_QUEST_ID,
     FROSTVEIL_QUEST_IDS,
     GLASSDUNE_QUEST_IDS,
@@ -713,6 +714,81 @@ NPC.define({
         }),
         new DialogueScenario('end', function* () {
             yield Dialogue.say('왕관 문양보다 바닥의 귀환표식을 믿으세요. 이곳의 왕관은 아직도 거짓 명령을 내립니다.');
+            yield Dialogue.end();
+        }),
+    ],
+});
+
+NPC.define({
+    id: 'eclipse_navigator',
+    name: '조류항해사 미레나',
+    description: '월식해구의 빛과 어둠이 바뀌는 주기를 기록하며 침수된 관측선을 지키는 항해사입니다.',
+    tags: ['npc:guide', 'npc:quest', 'region:eclipse-trench'],
+    entryScenario: ({ player }) => {
+        if (player.quests.canTurnIn(ECLIPSE_TRENCH_QUEST_IDS.END_WHITE_NIGHT, 'eclipse_navigator')) return 'white_night_complete';
+        if (player.quests.isActive(ECLIPSE_TRENCH_QUEST_IDS.END_WHITE_NIGHT)) return 'white_night_progress';
+        if (player.quests.canTurnIn(ECLIPSE_TRENCH_QUEST_IDS.RESTORE_DOCK, 'eclipse_navigator')) return 'dock_complete';
+        if (player.quests.isActive(ECLIPSE_TRENCH_QUEST_IDS.RESTORE_DOCK)) return 'dock_progress';
+        if (player.quests.canAccept(ECLIPSE_TRENCH_QUEST_IDS.END_WHITE_NIGHT, 'eclipse_navigator')) return 'white_night_offer';
+        return player.quests.canAccept(ECLIPSE_TRENCH_QUEST_IDS.RESTORE_DOCK, 'eclipse_navigator') ? 'greeting' : 'lore';
+    },
+    scenarios: [
+        new DialogueScenario('greeting', function* () {
+            yield Dialogue.say('공허왕관 아래의 해구는 달이 보이지 않아도 월식을 반복해요. 관측선을 움직이려면 월염수 열여섯 병과 침은 열두 덩이가 필요합니다.');
+            yield Dialogue.choice([
+                { label: '조류기관을 복구하겠습니다.', target: 'dock_accept' },
+                { label: '해구의 길을 알려주세요.', target: 'lore' },
+                { label: '조금 더 준비하겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('dock_accept', function* () {
+            yield Dialogue.acceptQuest(ECLIPSE_TRENCH_QUEST_IDS.RESTORE_DOCK);
+            yield Dialogue.say('월염수는 입구의 갑각류에게서, 침은은 침몰광맥과 창병에게서 얻을 수 있어요. 물속의 밝은 길만 따라가면 오히려 순환하게 되니 조심하세요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('dock_progress', function* ({ player }) {
+            const objectives = player.quests.getSnapshot(ECLIPSE_TRENCH_QUEST_IDS.RESTORE_DOCK)?.objectives ?? [];
+            const brine = objectives.find(objective => objective.id === 'moon-brine');
+            const silver = objectives.find(objective => objective.id === 'drowned-silver');
+            yield Dialogue.say(`월염수 ${brine?.progress ?? 0}/${brine?.required ?? 16}, 침은 ${silver?.progress ?? 0}/${silver?.required ?? 12}. 조류기관은 두 재료의 비율이 어긋나면 관측선을 더 깊이 끌고 내려갑니다.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('dock_complete', function* () {
+            yield Dialogue.say('조류기관이 다시 뛰기 시작했어요. 이제 해구와 백야성소 사이의 귀환 항로를 잃지 않을 겁니다.');
+            yield Dialogue.turnInQuest(ECLIPSE_TRENCH_QUEST_IDS.RESTORE_DOCK);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('white_night_offer', function* () {
+            yield Dialogue.say('리바이어던이 두 조류의 합류점을 막고, 세르미아는 조류거울로 백야를 고정하고 있어요. 거울이 하나라도 남으면 대사제의 몸으로 피해가 제대로 닿지 않습니다.');
+            yield Dialogue.choice([
+                { label: '고정된 월식을 끝내겠습니다.', target: 'white_night_accept' },
+                { label: '성소를 먼저 살피겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('white_night_accept', function* () {
+            yield Dialogue.acceptQuest(ECLIPSE_TRENCH_QUEST_IDS.END_WHITE_NIGHT);
+            yield Dialogue.say('리바이어던은 해일과 수압 분쇄를 번갈아 쓰지만, 세르미아는 파티의 치유와 보호를 계산해 백야와 월식의 순서를 바꿉니다. 마지막 제단에서는 거울부터 부수세요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('white_night_progress', function* ({ player }) {
+            const objectives = player.quests.getSnapshot(ECLIPSE_TRENCH_QUEST_IDS.END_WHITE_NIGHT)?.objectives ?? [];
+            const leviathan = objectives.find(objective => objective.id === 'moon-tide-leviathan');
+            const mirrors = objectives.find(objective => objective.id === 'white-night-mirrors');
+            const hierophant = objectives.find(objective => objective.id === 'white-night-hierophant');
+            yield Dialogue.say(`월조 리바이어던 ${leviathan?.progress ?? 0}/1, 조류거울 ${mirrors?.progress ?? 0}/3, 백야대사제 ${hierophant?.progress ?? 0}/1. 밝은 제단에서도 어두운 거울의 뒷면을 놓치지 마세요.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('white_night_complete', function* () {
+            yield Dialogue.say('해구의 빛이 다시 시간에 따라 움직여요. 끝나지 않던 백야가 끝났으니 이 물길도 언젠가는 새벽을 맞을 겁니다.');
+            yield Dialogue.turnInQuest(ECLIPSE_TRENCH_QUEST_IDS.END_WHITE_NIGHT);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('lore', function* () {
+            yield Dialogue.say('관측선 아래에서 밝은 암초와 어두운 침몰선으로 갈라지고 월조 분지에서 합쳐집니다. 성소에 들어가면 성가 회랑과 수문 기관실이 다시 갈라지며, 월식 조류제단의 답을 찾으면 침수된 보물고로 우회할 수 있어요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('빛이 길을 보여주는 동안에도 조류의 방향을 확인하세요. 이 해구의 빛은 절반의 시간 동안 거짓말을 합니다.');
             yield Dialogue.end();
         }),
     ],

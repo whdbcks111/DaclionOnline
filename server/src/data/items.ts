@@ -2434,3 +2434,173 @@ for (const book of [
     modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_VOIDCROWN, book.property],
 });
+
+// TODO(icons): 월식해구 전용 아트 제작 전까지 물·빛·어둠 계열 소재와 장비 fallback을 사용한다.
+for (const material of [
+    {
+        id: 'moon_brine', name: '월염수', image: 'items/mana_potion', weight: 0.38,
+        description: '달빛이 닿지 않는 해구에서만 은빛으로 굳는 고농도 마력 염수.',
+        tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'eclipse_scale', name: '월식비늘', image: 'items/resonance_evasion_shard', weight: 0.45,
+        description: '빛과 어둠을 번갈아 반사하는 심해 생물의 단단한 비늘.',
+        tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'drowned_silver', name: '침은', image: 'items/refined_iron', weight: 0.78,
+        description: '깊은 수압과 월염수에 오래 눌려 푸른 결이 생긴 은빛 합금.',
+        tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
+    },
+    {
+        id: 'night_pearl', name: '밤진주', image: 'items/resonance_evasion_shard', weight: 0.18,
+        description: '어둠 속에서 주변의 희미한 빛을 모아 내부에 보존하는 검푸른 진주.',
+        tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'abyss_fiber', name: '해구섬유', image: 'items/earthworm_bait', weight: 0.14,
+        description: '해류가 바뀔 때마다 스스로 꼬임을 바꾸는 질긴 심해 식물 섬유.',
+        tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_WATER],
+    },
+    {
+        id: 'tide_sigil', name: '조류인장', image: 'items/gold_ore', weight: 0.25,
+        description: '백야성소의 수문과 조류를 통제하던 의식용 금속 인장.',
+        tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
+    },
+] as const) defineItem({
+    id: material.id,
+    name: material.name,
+    description: material.description,
+    image: material.image,
+    category: '해구 소재',
+    weight: material.weight,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [...material.tags],
+});
+
+defineItem({
+    id: 'eclipse_ration', name: '월식 해초말이',
+    description: '해구섬유의 연한 속살과 월염수를 말려 만든 보존식. 배고픔 125와 수분 90을 회복한다.',
+    image: 'items/traveler_bread', category: '음식', weight: 0.55, stackable: true, maxStack: 30,
+    baseMetadata: { hunger: 125, thirst: 90, time: 1.1, useMessage: '월식 해초말이의 봉인을 푸는 중...' },
+    onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER],
+});
+
+defineItem({
+    id: 'tideheart_tonic', name: '조류심장 영약',
+    description: '밤진주에 응축한 월염수를 녹여 55초 동안 강한 정신력 재생을 부여한다.',
+    image: 'items/arcane_tonic', category: '소모품', weight: 0.34, stackable: true, maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'mentality_regeneration', level: 16, duration: 55 } },
+    onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER],
+});
+
+defineItem({
+    id: 'drowned_edge', name: '침은 파도검',
+    description: '침은의 무게를 칼날 앞쪽에 모아 해류처럼 연속되는 타격을 만드는 장검.',
+    image: 'items/windsteel_sword', category: '장검', weight: 4.8, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 338, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 88, source: '' },
+        { attribute: 'attackSpeed', op: 'multiply', value: 1.12, source: '' },
+    ],
+    baseDurability: 735,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+});
+
+defineItem({
+    id: 'mooncurrent_bow', name: '월조류 장궁',
+    description: '해구섬유로 만든 활시위가 주변 조류를 밀어내 화살의 초가속을 유지하는 장궁.',
+    image: 'items/stormstring_bow', category: '활', weight: 3.2, stackable: false, maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+        [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 275, source: '' },
+        { attribute: 'critRate', op: 'add', value: 0.14, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.82, source: '' },
+    ],
+    baseDurability: 700,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+});
+
+defineItem({
+    id: 'nightpearl_knife', name: '밤진주 잠행도',
+    description: '밤진주의 빛을 칼등에 가두고 칼끝만 어둠 속에 남기는 침은 단검.',
+    image: 'items/nightglass_dagger', category: '단검', weight: 1.6, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 298, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 96, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.44, source: '' },
+        { attribute: 'speed', op: 'add', value: 0.21, source: '' },
+    ],
+    baseDurability: 640,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_DARK],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
+});
+
+defineItem({
+    id: 'eclipse_oracle_staff', name: '월식 예언봉',
+    description: '밤진주와 조류인장을 겹쳐 빛과 어둠의 마력을 같은 파동으로 발사하는 지팡이.',
+    image: 'items/starwood_staff', category: '지팡이', weight: 3.3, stackable: false, maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+        [ItemMetadataKeys.PROJECTILE_ATTACK]: {
+            projectile: {
+                dataId: 'basic_magic_orb',
+                overrides: { tags: [GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK] },
+            },
+        },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'magicForce', op: 'add', value: 390, source: '' },
+        { attribute: 'magicPen', op: 'add', value: 102, source: '' },
+        { attribute: 'mentalityRegen', op: 'add', value: 16, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.88, source: '' },
+    ],
+    baseDurability: 755,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+});
+
+defineItem({
+    id: 'white_night_bulwark', name: '백야 조류방패',
+    description: '월식비늘 사이로 충격을 순환시켜 물리 피해와 마법 피해를 번갈아 흘려보내는 방패.',
+    image: 'items/forged_shield', category: '방패', weight: 5.2, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'offHand',
+    modifiers: [
+        { attribute: 'def', op: 'add', value: 108, source: '' },
+        { attribute: 'magicDef', op: 'add', value: 114, source: '' },
+        { attribute: 'maxLife', op: 'add', value: 1_520, source: '' },
+    ],
+    baseDurability: 850,
+    tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
+    balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
+});
+
+for (const book of [
+    { id: 'undertow_step_skillbook', name: '역조보법 전승서', skillDataId: 'undertow_step', property: GameTags.PROPERTY_WATER },
+    { id: 'eclipse_verdict_skillbook', name: '월식선고 전승서', skillDataId: 'eclipse_verdict', property: GameTags.PROPERTY_DARK },
+] as const) defineItem({
+    id: book.id,
+    name: book.name,
+    description: `월식해구와 백야성소의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
+    image: 'items/seismic_crush_skillbook', category: '스킬북', weight: 0.3, stackable: true, maxStack: 10,
+    baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
+    modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_ECLIPSE_TRENCH, book.property],
+});

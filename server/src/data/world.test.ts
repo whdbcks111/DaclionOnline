@@ -24,6 +24,7 @@ import './fishing.js';
 import './crafting.js';
 import {
     rollAshenReliquaryReward,
+    rollEclipseReliquaryReward,
     rollFrostveilReliquaryReward,
     rollGlassduneReliquaryReward,
     rollLabyrinthCacheReward,
@@ -40,6 +41,7 @@ import {
     getSilverwebBroodProtectionMultiplier,
     getParadoxAnchorProtectionMultiplier,
     getVoidcrownPillarProtectionMultiplier,
+    getWhiteNightMirrorProtectionMultiplier,
 } from './bossPatterns.js';
 import { GameTags } from '../../../shared/tags.js';
 
@@ -49,7 +51,7 @@ const locations = JSON.parse(
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, 185);
+    assert.equal(locations.length, 209);
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -77,7 +79,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 13, neutral: 46, hostile: 126 },
+        { safe: 14, neutral: 46, hostile: 149 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -194,6 +196,14 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
             'voidcrown_upper_stair', 'voidcrown_celestial_balcony', 'voidcrown_null_library',
             'voidcrown_guardian_hall', 'voidcrown_crown_spire', 'voidcrown_throne_antechamber',
             'voidcrown_throne'],
+        ['eclipse_threshold', 'eclipse_dock', 'eclipse_lower_crossing', 'eclipse_luminous_reef',
+            'eclipse_drowned_convoy', 'eclipse_brine_shelf', 'eclipse_silver_sink',
+            'eclipse_tide_confluence', 'eclipse_deep_gate', 'eclipse_kelp_cloister',
+            'eclipse_black_current', 'eclipse_basin', 'eclipse_sanctuary_threshold',
+            'eclipse_choir_gallery', 'eclipse_floodgate_engine', 'eclipse_tide_altar',
+            'eclipse_sunken_reliquary', 'eclipse_mirror_causeway', 'eclipse_white_night_nave',
+            'eclipse_oracle_apse', 'eclipse_drowned_belfry', 'eclipse_final_crossing',
+            'eclipse_altar_vestibule', 'eclipse_white_night_altar'],
     ];
 
     for (const ids of regions) {
@@ -203,14 +213,14 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
     }
 });
 
-test('1~310레벨 월드는 모든 속성을 관찰 가능하고 동급 일반 몬스터 보상은 5%로 수렴한다', () => {
+test('1~345레벨 월드는 모든 속성을 관찰 가능하고 동급 일반 몬스터 보상은 5%로 수렴한다', () => {
     const monsters = getAllMonsterData();
     const levelOne = getMonsterData('slime');
     const midLevelNormal = getMonsterData('spark_moth');
     const levelTwoHundred = getMonsterData('eclipse_watcher');
 
     assert.equal(Math.min(...monsters.map(monster => monster.level)), 1);
-    assert.equal(Math.max(...monsters.map(monster => monster.level)), 310);
+    assert.equal(Math.max(...monsters.map(monster => monster.level)), 345);
     assert.equal(Entity.getMaxExpOfLevel(1), 100);
     assert.equal(Entity.getMaxExpOfLevel(50), 20_000);
     assert.equal(Entity.getMaxExpOfLevel(200), 80_000);
@@ -235,7 +245,7 @@ test('성장 구간 보스는 최대 30레벨 간격으로 배치되고 일반�
         .sort((left, right) => left.level - right.level);
 
     assert.ok(bosses[0].level <= 32);
-    assert.equal(bosses[bosses.length - 1].level, 310);
+    assert.equal(bosses[bosses.length - 1].level, 345);
     for (let index = 1; index < bosses.length; index++) {
         assert.ok(bosses[index].level - bosses[index - 1].level <= 30,
             `${bosses[index - 1].name} Lv.${bosses[index - 1].level} → ${bosses[index].name} Lv.${bosses[index].level}`);
@@ -677,6 +687,68 @@ test('공허왕관 성채는 25개 분기 층·서약 퍼즐·기둥 보호 보�
     runtimeThrone?.update(0.05);
     assert.equal(getVoidcrownPillarProtectionMultiplier(), 1);
     assert.equal(runtimeRegent?.getDamageReceivedModifier(), 1);
+});
+
+test('월식해구는 24개 분기 수로·조류제단·거울 보호 보스·지역 경제를 연결한다', () => {
+    const region = locations.filter(location => location.tags.includes(GameTags.LOCATION_ECLIPSE_TRENCH));
+    const leviathan = getMonsterData('moon_tide_leviathan');
+    const hierophant = getMonsterData('white_night_hierophant');
+    const store = getShop('eclipse_dock_store');
+    const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('eclipse:'));
+    const quests = getAllQuestData().filter(quest => quest.id.startsWith('eclipse-trench:'));
+
+    assert.equal(region.length, 24);
+    assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
+    assert.equal(leviathan?.level, 325);
+    assert.equal(hierophant?.level, 345);
+    assert.deepEqual(leviathan?.skillPattern?.sequence, ['leviathan_moon_tide', 'leviathan_depth_crush']);
+    assert.equal(leviathan?.skillPattern?.randomOrder, undefined);
+    assert.ok(hierophant?.skillPattern?.randomOrder);
+    assert.ok((hierophant?.ai?.weights?.healing ?? 0) > (hierophant?.ai?.weights?.damage ?? 0));
+    assert.ok((hierophant?.ai?.tauntResistance ?? 0) >= 0.95);
+
+    const crossing = locations.find(location => location.id === 'eclipse_lower_crossing');
+    const basin = locations.find(location => location.id === 'eclipse_basin');
+    const altar = locations.find(location => location.id === 'eclipse_tide_altar');
+    const vault = locations.find(location => location.id === 'eclipse_sunken_reliquary');
+    const bossAltar = locations.find(location => location.id === 'eclipse_white_night_altar');
+    assert.ok(crossing?.connections.some(connection => connection.locationId === 'eclipse_luminous_reef'));
+    assert.ok(crossing?.connections.some(connection => connection.locationId === 'eclipse_drowned_convoy'));
+    assert.ok(basin?.connections.some(connection => connection.locationId === 'eclipse_kelp_cloister'));
+    assert.ok(basin?.connections.some(connection => connection.locationId === 'eclipse_black_current'));
+    assert.ok(altar?.connections.some(connection => connection.condition === 'eclipse_tide_solved'));
+    assert.ok(vault?.tags.includes(GameTags.LOCATION_HIDDEN));
+    assert.equal(bossAltar?.objects.find(object => object.dataId === 'white_night_tide_mirror')?.maxCount, 3);
+    assert.ok(getResourceData('drowned_silver_vein')?.requiredToolTags.includes(GameTags.TOOL_MINING));
+    assert.deepEqual(getResourceData('eclipse_reliquary')?.interactionCooldown, {
+        min: 8 * 60 * 60,
+        max: 12 * 60 * 60,
+    });
+    assert.equal(rollEclipseReliquaryReward(() => 0).itemDataId, 'eclipse_ration');
+    assert.equal(rollEclipseReliquaryReward(() => 0.999).itemDataId, 'white_night_bulwark');
+
+    for (const itemId of [
+        'drowned_edge', 'mooncurrent_bow', 'nightpearl_knife', 'eclipse_oracle_staff', 'white_night_bulwark',
+    ]) {
+        assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === itemId), itemId);
+        assert.ok(getItemData(itemId)?.balance, `${itemId} balance`);
+    }
+    assert.equal(recipes.length, 7);
+    assert.equal(quests.length, 2);
+    assert.equal(NPC.getNpc('eclipse_navigator')?.name, '조류항해사 미레나');
+
+    reloadAllLocations(locations);
+    const runtimeAltar = getLocation('eclipse_white_night_altar');
+    runtimeAltar?.update(0.05);
+    const runtimeBoss = runtimeAltar?.getMonstersByDataId('white_night_hierophant')[0];
+    assert.equal(getWhiteNightMirrorProtectionMultiplier(), 0.35);
+    assert.equal(runtimeBoss?.getDamageReceivedModifier(), 0.35);
+    for (const mirror of runtimeAltar?.getResourcesByDataId('white_night_tide_mirror') ?? []) {
+        mirror.damage(mirror.maxLife, 'absolute', { type: 'void', causeEntity: null, fixedDamage: true });
+    }
+    runtimeAltar?.update(0.05);
+    assert.equal(getWhiteNightMirrorProtectionMultiplier(), 1);
+    assert.equal(runtimeBoss?.getDamageReceivedModifier(), 1);
 });
 
 test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {

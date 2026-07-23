@@ -184,6 +184,65 @@ for (const recipe of [
 
 for (const recipe of [
     {
+        id: 'eclipse:eclipse_ration', result: 'eclipse_ration', time: 6,
+        description: '해구섬유의 속살을 월염수에 절이고 여행자 빵으로 말아 월식 해초말이를 만듭니다.',
+        ingredients: [['abyss_fiber', 3], ['moon_brine', 2], ['traveler_bread', 2]],
+        tags: ['crafting:consumable', 'region:eclipse-trench'],
+    },
+    {
+        id: 'eclipse:tideheart_tonic', result: 'tideheart_tonic', time: 8,
+        description: '밤진주의 마력과 월염수를 비전 영약에 안정시켜 조류심장 영약을 만듭니다.',
+        ingredients: [['night_pearl', 3], ['moon_brine', 4], ['arcane_tonic', 2]],
+        tags: ['crafting:consumable', 'region:eclipse-trench'],
+    },
+    {
+        id: 'eclipse:drowned_edge', result: 'drowned_edge', time: 26,
+        description: '침은의 푸른 결을 월식비늘로 고정하고 조류인장으로 무게 중심을 봉합니다.',
+        ingredients: [['drowned_silver', 15], ['eclipse_scale', 7], ['tide_sigil', 4]],
+        tags: ['crafting:weapon', 'region:eclipse-trench'],
+    },
+    {
+        id: 'eclipse:mooncurrent_bow', result: 'mooncurrent_bow', time: 24,
+        description: '해구섬유를 여러 겹 꼬아 월식비늘 활대와 밤진주 도르래에 연결합니다.',
+        ingredients: [['abyss_fiber', 14], ['eclipse_scale', 8], ['night_pearl', 5]],
+        tags: ['crafting:weapon', 'region:eclipse-trench'],
+    },
+    {
+        id: 'eclipse:nightpearl_knife', result: 'nightpearl_knife', time: 23,
+        description: '침은 단검의 칼등에 밤진주를 박고 월염수로 빛의 흔적을 지웁니다.',
+        ingredients: [['drowned_silver', 10], ['night_pearl', 8], ['moon_brine', 6]],
+        tags: ['crafting:weapon', 'region:eclipse-trench'],
+    },
+    {
+        id: 'eclipse:eclipse_oracle_staff', result: 'eclipse_oracle_staff', time: 27,
+        description: '밤진주와 조류인장을 해구섬유 회로로 묶어 빛과 어둠을 함께 다루는 예언봉을 만듭니다.',
+        ingredients: [['night_pearl', 11], ['tide_sigil', 8], ['abyss_fiber', 8]],
+        tags: ['crafting:weapon', 'region:eclipse-trench'],
+    },
+    {
+        id: 'eclipse:white_night_bulwark', result: 'white_night_bulwark', time: 28,
+        description: '월식비늘과 침은 판 사이에 해구섬유를 겹쳐 충격이 순환하는 조류방패를 만듭니다.',
+        ingredients: [['eclipse_scale', 16], ['drowned_silver', 12], ['abyss_fiber', 8], ['tide_sigil', 4]],
+        tags: ['crafting:armor', 'region:eclipse-trench'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
         id: 'ashen:ashmarch_ration', result: 'ashmarch_ration', time: 5,
         description: '여행자 빵에 잿빛 힘줄의 열기를 스며들게 하고 맑은 물과 함께 밀봉해 재길 행군식을 만듭니다.',
         ingredients: [['ashen_sinew', 2], ['traveler_bread', 2], ['fresh_water', 1]],

@@ -50,6 +50,11 @@ export const VoidcrownPuzzleIds = Object.freeze({
     EMPTY_THRONE_OATH_FLAG: 'dungeon:voidcrown/empty-throne-oath-solved',
 } as const);
 
+export const EclipseTrenchPuzzleIds = Object.freeze({
+    TIDE_BALANCE: 'eclipse-trench:tide-balance',
+    TIDE_BALANCE_FLAG: 'dungeon:eclipse-trench/tide-balance-solved',
+} as const);
+
 defineProgress({
     id: IronrootPuzzleIds.RIDDLE_FLAG,
     type: ProgressType.FLAG,
@@ -234,6 +239,29 @@ defineQuestionPuzzle({
     failureMessage: '서약문의 글자가 모두 지워지고, 빈 왕좌는 아무 대답도 돌려주지 않습니다.',
 });
 
+defineProgress({
+    id: EclipseTrenchPuzzleIds.TIDE_BALANCE_FLAG,
+    type: ProgressType.FLAG,
+    label: '월식 조류제단 해독',
+    description: '빛과 어둠 사이에서 해구의 조류를 움직이는 힘을 찾아냈습니다.',
+    visible: true,
+});
+
+defineQuestionPuzzle({
+    id: EclipseTrenchPuzzleIds.TIDE_BALANCE,
+    title: '월식 조류제단',
+    prompt: '달이 보이지 않아도 바다를 움직이고, 빛과 어둠 어느 한쪽에도 머물지 않으며 되돌아오는 것은 무엇인가?',
+    answers: ['조류', '밀물과 썰물', '밀물 썰물', '파도'],
+    choices: [
+        { label: '달빛', answer: '달빛' },
+        { label: '조류', answer: '조류' },
+        { label: '그림자', answer: '그림자' },
+    ],
+    successFlag: EclipseTrenchPuzzleIds.TIDE_BALANCE_FLAG,
+    successMessage: '제단의 밝은 면과 어두운 면이 함께 회전하며 침수된 보물고로 향하는 물길이 열립니다.',
+    failureMessage: '두 조류가 서로 밀어내며 제단의 문을 다시 닫습니다.',
+});
+
 defineTeleportArtifact({
     id: IronrootPuzzleIds.RELAY_ARTIFACT,
     destinations: {
@@ -269,6 +297,9 @@ registerResourceInteraction('ashen_seal_riddle', (_resource, player) =>
 
 registerResourceInteraction('voidcrown_oath_riddle', (_resource, player) =>
     beginQuestionPuzzle(player, VoidcrownPuzzleIds.EMPTY_THRONE_OATH));
+
+registerResourceInteraction('eclipse_tide_riddle', (_resource, player) =>
+    beginQuestionPuzzle(player, EclipseTrenchPuzzleIds.TIDE_BALANCE));
 
 registerConnectionCondition('ironroot_riddle_solved', player =>
     player.progress.getFlag(IronrootPuzzleIds.RIDDLE_FLAG)
@@ -314,6 +345,11 @@ registerConnectionCondition('voidcrown_oath_solved', player =>
     player.progress.getFlag(VoidcrownPuzzleIds.EMPTY_THRONE_OATH_FLAG)
         ? 'visible'
         : { status: 'locked', publicReason: '빈 왕좌의 서약 해답 필요' });
+
+registerConnectionCondition('eclipse_tide_solved', player =>
+    player.progress.getFlag(EclipseTrenchPuzzleIds.TIDE_BALANCE_FLAG)
+        ? 'visible'
+        : { status: 'locked', publicReason: '월식 조류제단의 해답 필요' });
 
 // 지도 연결성은 유지하되 일반 이동·지도에는 노출하지 않고 유물 상호작용만 통과시킨다.
 registerConnectionCondition('ironroot_artifact_route', () => 'hidden');

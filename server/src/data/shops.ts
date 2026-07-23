@@ -602,3 +602,44 @@ defineShop({
     ],
     tags: [GameTags.SHOP_VOIDCROWN],
 });
+
+defineShop({
+    id: 'eclipse_dock_store',
+    buyList: [
+        {
+            label: '월식 해초말이', create: () => ({ itemDataId: 'eclipse_ration', count: 1 }),
+            count: 1, price: 340, stock: 24, restockTime: 50,
+        },
+        {
+            label: '조류심장 영약', create: () => ({ itemDataId: 'tideheart_tonic', count: 1 }),
+            count: 1, price: 560, stock: 12, restockTime: 120,
+        },
+        {
+            label: '화살 140개', create: () => ({ itemDataId: 'wooden_arrow', count: 140 }),
+            count: 140, price: 410, stock: 20, restockTime: 40,
+        },
+        ...[
+            ['침은 파도검', 'drowned_edge', 36_800],
+            ['월조류 장궁', 'mooncurrent_bow', 36_100],
+            ['밤진주 잠행도', 'nightpearl_knife', 37_200],
+            ['월식 예언봉', 'eclipse_oracle_staff', 38_300],
+            ['백야 조류방패', 'white_night_bulwark', 37_600],
+        ].map(([label, itemDataId, price]) => ({
+            label: label as string,
+            create: () => ({ itemDataId: itemDataId as string, count: 1 }),
+            count: 1,
+            price: price as number,
+            stock: 1,
+            restockTime: 2_700,
+        })),
+    ],
+    sellList: [
+        { label: '월염수', filter: item => item.itemDataId === 'moon_brine', count: 99, price: 590 },
+        { label: '월식비늘', filter: item => item.itemDataId === 'eclipse_scale', count: 99, price: 660 },
+        { label: '침은', filter: item => item.itemDataId === 'drowned_silver', count: 99, price: 620 },
+        { label: '밤진주', filter: item => item.itemDataId === 'night_pearl', count: 99, price: 730 },
+        { label: '해구섬유', filter: item => item.itemDataId === 'abyss_fiber', count: 99, price: 540 },
+        { label: '조류인장', filter: item => item.itemDataId === 'tide_sigil', count: 99, price: 850 },
+    ],
+    tags: [GameTags.SHOP_ECLIPSE_TRENCH],
+});

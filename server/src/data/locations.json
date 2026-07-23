@@ -3593,7 +3593,431 @@
       { "type": "resource", "dataId": "voidcrown_reliquary", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
-      { "locationId": "voidcrown_throne_antechamber" }
+      { "locationId": "voidcrown_throne_antechamber" },
+      { "locationId": "eclipse_threshold", "condition": "level_310" }
+    ]
+  },
+  {
+    "id": "eclipse_threshold",
+    "name": "월식해구 1 침수 승강정",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 5460, "y": -285, "z": -790,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "moonbrine_crawler", "maxCount": 3, "respawnTime": 285 },
+      { "type": "resource", "dataId": "drowned_silver_vein", "maxCount": 1, "respawnTime": 360 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_throne", "condition": "level_310" },
+      { "locationId": "eclipse_dock" },
+      { "locationId": "eclipse_lower_crossing" }
+    ]
+  },
+  {
+    "id": "eclipse_dock",
+    "name": "월식해구 조류관측선 정박지",
+    "mapColor": "#304452",
+    "zoneType": "safe",
+    "x": 5500, "y": -245, "z": -815,
+    "shopId": "eclipse_dock_store",
+    "tags": ["location:town", "location:eclipse-trench", "property:water", "shop:eclipse-trench"],
+    "npcIds": ["eclipse_navigator"],
+    "objects": [],
+    "connections": [
+      { "locationId": "eclipse_threshold" },
+      { "locationId": "eclipse_lower_crossing" }
+    ]
+  },
+  {
+    "id": "eclipse_lower_crossing",
+    "name": "월식해구 2 갈라진 조류",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 5550, "y": -285, "z": -840,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "moonbrine_crawler", "maxCount": 2, "respawnTime": 285 },
+      { "type": "monster", "dataId": "nightpearl_jelly", "maxCount": 2, "respawnTime": 290 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_threshold" },
+      { "locationId": "eclipse_dock" },
+      { "locationId": "eclipse_luminous_reef" },
+      { "locationId": "eclipse_drowned_convoy" }
+    ]
+  },
+  {
+    "id": "eclipse_luminous_reef",
+    "name": "월식해구 3 희미한 산호초",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 5620, "y": -350, "z": -865,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "nightpearl_jelly", "maxCount": 3, "respawnTime": 290 },
+      { "type": "resource", "dataId": "drowned_silver_vein", "maxCount": 1, "respawnTime": 360 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_lower_crossing" },
+      { "locationId": "eclipse_brine_shelf" }
+    ]
+  },
+  {
+    "id": "eclipse_drowned_convoy",
+    "name": "월식해구 4 침몰 순례선단",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 5620, "y": -220, "z": -865,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:dark", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "drowned_lancer", "maxCount": 3, "respawnTime": 300 },
+      { "type": "monster", "dataId": "abyss_kelp_witch", "maxCount": 1, "respawnTime": 305 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_lower_crossing" },
+      { "locationId": "eclipse_silver_sink" }
+    ]
+  },
+  {
+    "id": "eclipse_brine_shelf",
+    "name": "월식해구 5 월염수 단층",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 5700, "y": -350, "z": -900,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "moonbrine_crawler", "maxCount": 3, "respawnTime": 285 },
+      { "type": "monster", "dataId": "abyss_kelp_witch", "maxCount": 2, "respawnTime": 305 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_luminous_reef" },
+      { "locationId": "eclipse_tide_confluence" }
+    ]
+  },
+  {
+    "id": "eclipse_silver_sink",
+    "name": "월식해구 6 침은 함몰광맥",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 5700, "y": -220, "z": -900,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "drowned_lancer", "maxCount": 2, "respawnTime": 300 },
+      { "type": "resource", "dataId": "drowned_silver_vein", "maxCount": 3, "respawnTime": 360 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_drowned_convoy" },
+      { "locationId": "eclipse_tide_confluence" }
+    ]
+  },
+  {
+    "id": "eclipse_tide_confluence",
+    "name": "월식해구 7 두 조류의 포식장",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 5790, "y": -285, "z": -940,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "moon_tide_leviathan", "maxCount": 1, "respawnTime": 1500 },
+      { "type": "resource", "dataId": "eclipse_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_brine_shelf" },
+      { "locationId": "eclipse_silver_sink" },
+      { "locationId": "eclipse_deep_gate" }
+    ]
+  },
+  {
+    "id": "eclipse_deep_gate",
+    "name": "월식해구 8 심층 수문",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 5880, "y": -285, "z": -980,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "drowned_lancer", "maxCount": 2, "respawnTime": 300 },
+      { "type": "monster", "dataId": "white_night_acolyte", "maxCount": 1, "respawnTime": 315 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_tide_confluence" },
+      { "locationId": "eclipse_kelp_cloister" },
+      { "locationId": "eclipse_black_current" }
+    ]
+  },
+  {
+    "id": "eclipse_kelp_cloister",
+    "name": "월식해구 9 해구숲 회랑",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 5960, "y": -350, "z": -1015,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "abyss_kelp_witch", "maxCount": 3, "respawnTime": 305 },
+      { "type": "resource", "dataId": "drowned_silver_vein", "maxCount": 1, "respawnTime": 360 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_deep_gate" },
+      { "locationId": "eclipse_basin" }
+    ]
+  },
+  {
+    "id": "eclipse_black_current",
+    "name": "월식해구 10 검은 역조",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 5960, "y": -220, "z": -1015,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "eclipse_ray", "maxCount": 2, "respawnTime": 320 },
+      { "type": "monster", "dataId": "nightpearl_jelly", "maxCount": 2, "respawnTime": 290 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_deep_gate" },
+      { "locationId": "eclipse_basin" }
+    ]
+  },
+  {
+    "id": "eclipse_basin",
+    "name": "월식해구 11 월식 분지",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6045, "y": -285, "z": -1050,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "eclipse_ray", "maxCount": 3, "respawnTime": 320 },
+      { "type": "monster", "dataId": "white_night_acolyte", "maxCount": 2, "respawnTime": 315 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_kelp_cloister" },
+      { "locationId": "eclipse_black_current" },
+      { "locationId": "eclipse_sanctuary_threshold" }
+    ]
+  },
+  {
+    "id": "eclipse_sanctuary_threshold",
+    "name": "백야성소 1 잠긴 현관",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6130, "y": -285, "z": -1080,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "white_night_acolyte", "maxCount": 3, "respawnTime": 315 },
+      { "type": "monster", "dataId": "sunken_choir_guard", "maxCount": 1, "respawnTime": 325 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_basin" },
+      { "locationId": "eclipse_choir_gallery" },
+      { "locationId": "eclipse_floodgate_engine" }
+    ]
+  },
+  {
+    "id": "eclipse_choir_gallery",
+    "name": "백야성소 2 침수 성가회랑",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6210, "y": -350, "z": -1115,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "sunken_choir_guard", "maxCount": 3, "respawnTime": 325 },
+      { "type": "monster", "dataId": "twilight_oracle", "maxCount": 1, "respawnTime": 330 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_sanctuary_threshold" },
+      { "locationId": "eclipse_tide_altar" },
+      { "locationId": "eclipse_mirror_causeway" }
+    ]
+  },
+  {
+    "id": "eclipse_floodgate_engine",
+    "name": "백야성소 3 조류기관실",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6210, "y": -220, "z": -1115,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "white_night_acolyte", "maxCount": 2, "respawnTime": 315 },
+      { "type": "monster", "dataId": "eclipse_ray", "maxCount": 2, "respawnTime": 320 },
+      { "type": "resource", "dataId": "drowned_silver_vein", "maxCount": 2, "respawnTime": 360 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_sanctuary_threshold" },
+      { "locationId": "eclipse_mirror_causeway" }
+    ]
+  },
+  {
+    "id": "eclipse_tide_altar",
+    "name": "백야성소 4 월식 조류제단",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6285, "y": -405, "z": -1150,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "eclipse_tide_altar", "maxCount": 1, "respawnTime": 0 },
+      { "type": "monster", "dataId": "twilight_oracle", "maxCount": 2, "respawnTime": 330 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_choir_gallery" },
+      { "locationId": "eclipse_sunken_reliquary", "condition": "eclipse_tide_solved" }
+    ]
+  },
+  {
+    "id": "eclipse_sunken_reliquary",
+    "name": "백야성소 숨은 침수보물고",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6360, "y": -430, "z": -1180,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "location:hidden", "property:water", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "eclipse_reliquary", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "drowned_silver_vein", "maxCount": 2, "respawnTime": 360 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_tide_altar", "condition": "eclipse_tide_solved" },
+      { "locationId": "eclipse_oracle_apse", "condition": "eclipse_tide_solved" }
+    ]
+  },
+  {
+    "id": "eclipse_mirror_causeway",
+    "name": "백야성소 5 쌍면 거울길",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6300, "y": -285, "z": -1155,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "eclipse_ray", "maxCount": 2, "respawnTime": 320 },
+      { "type": "monster", "dataId": "sunken_choir_guard", "maxCount": 2, "respawnTime": 325 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_choir_gallery" },
+      { "locationId": "eclipse_floodgate_engine" },
+      { "locationId": "eclipse_white_night_nave" },
+      { "locationId": "eclipse_oracle_apse" }
+    ]
+  },
+  {
+    "id": "eclipse_white_night_nave",
+    "name": "백야성소 6 끝없는 주랑",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6380, "y": -235, "z": -1190,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "white_night_acolyte", "maxCount": 3, "respawnTime": 315 },
+      { "type": "monster", "dataId": "sunken_choir_guard", "maxCount": 2, "respawnTime": 325 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_mirror_causeway" },
+      { "locationId": "eclipse_drowned_belfry" },
+      { "locationId": "eclipse_final_crossing" }
+    ]
+  },
+  {
+    "id": "eclipse_oracle_apse",
+    "name": "백야성소 7 황혼 예언실",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6380, "y": -335, "z": -1190,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "twilight_oracle", "maxCount": 3, "respawnTime": 330 },
+      { "type": "monster", "dataId": "eclipse_ray", "maxCount": 1, "respawnTime": 320 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_mirror_causeway" },
+      { "locationId": "eclipse_sunken_reliquary", "condition": "eclipse_tide_solved" },
+      { "locationId": "eclipse_drowned_belfry" },
+      { "locationId": "eclipse_final_crossing" }
+    ]
+  },
+  {
+    "id": "eclipse_drowned_belfry",
+    "name": "백야성소 8 잠긴 종루",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6460, "y": -285, "z": -1225,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:metal", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "sunken_choir_guard", "maxCount": 3, "respawnTime": 325 },
+      { "type": "monster", "dataId": "twilight_oracle", "maxCount": 2, "respawnTime": 330 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_white_night_nave" },
+      { "locationId": "eclipse_oracle_apse" },
+      { "locationId": "eclipse_final_crossing" }
+    ]
+  },
+  {
+    "id": "eclipse_final_crossing",
+    "name": "백야성소 9 일월 교차정",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6540, "y": -285, "z": -1260,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "white_night_acolyte", "maxCount": 2, "respawnTime": 315 },
+      { "type": "monster", "dataId": "twilight_oracle", "maxCount": 2, "respawnTime": 330 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_white_night_nave" },
+      { "locationId": "eclipse_oracle_apse" },
+      { "locationId": "eclipse_drowned_belfry" },
+      { "locationId": "eclipse_altar_vestibule" }
+    ]
+  },
+  {
+    "id": "eclipse_altar_vestibule",
+    "name": "백야성소 10 대제단 전실",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6620, "y": -285, "z": -1300,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "sunken_choir_guard", "maxCount": 2, "respawnTime": 325 },
+      { "type": "monster", "dataId": "twilight_oracle", "maxCount": 2, "respawnTime": 330 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_final_crossing" },
+      { "locationId": "eclipse_white_night_altar" }
+    ]
+  },
+  {
+    "id": "eclipse_white_night_altar",
+    "name": "백야성소 대제단 고정된 월식",
+    "mapColor": "#304452",
+    "zoneType": "hostile",
+    "x": 6710, "y": -285, "z": -1340,
+    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "white_night_hierophant", "maxCount": 1, "respawnTime": 1800 },
+      { "type": "resource", "dataId": "white_night_tide_mirror", "maxCount": 3, "respawnTime": 1800 },
+      { "type": "resource", "dataId": "eclipse_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "eclipse_altar_vestibule" }
     ]
   }
 ]

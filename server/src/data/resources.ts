@@ -193,6 +193,20 @@ const VOIDCROWN_RELIQUARY_REWARDS = Object.freeze([
     { itemDataId: 'regent_aegis', count: 1, weight: 3.2 },
 ]);
 
+const ECLIPSE_RELIQUARY_REWARDS = Object.freeze([
+    { itemDataId: 'eclipse_ration', count: 6, weight: 18 },
+    { itemDataId: 'tideheart_tonic', count: 3, weight: 14 },
+    { itemDataId: 'moon_brine', count: 8, weight: 16 },
+    { itemDataId: 'eclipse_scale', count: 6, weight: 14 },
+    { itemDataId: 'night_pearl', count: 5, weight: 12 },
+    { itemDataId: 'tide_sigil', count: 4, weight: 10 },
+    { itemDataId: 'drowned_edge', count: 1, weight: 3.2 },
+    { itemDataId: 'mooncurrent_bow', count: 1, weight: 3.2 },
+    { itemDataId: 'nightpearl_knife', count: 1, weight: 3.2 },
+    { itemDataId: 'eclipse_oracle_staff', count: 1, weight: 3.2 },
+    { itemDataId: 'white_night_bulwark', count: 1, weight: 3.2 },
+]);
+
 export function rollTwilightReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
     let cursor = random() * TWILIGHT_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = TWILIGHT_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
@@ -239,6 +253,13 @@ export function rollVoidcrownReliquaryReward(random = Math.random): { itemDataId
     let cursor = random() * VOIDCROWN_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = VOIDCROWN_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
         ?? VOIDCROWN_RELIQUARY_REWARDS[0];
+    return { itemDataId: reward.itemDataId, count: reward.count };
+}
+
+export function rollEclipseReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
+    let cursor = random() * ECLIPSE_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
+    const reward = ECLIPSE_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
+        ?? ECLIPSE_RELIQUARY_REWARDS[0];
     return { itemDataId: reward.itemDataId, count: reward.count };
 }
 
@@ -383,6 +404,24 @@ registerResourceInteraction('open_voidcrown_reliquary', (_resource, player) => {
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('purple', builder => builder.weight('bold', nested => nested.text('[ 공허왕관의 비밀 유산 ]')))
+        .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
+        .build());
+    return true;
+});
+
+registerResourceInteraction('open_eclipse_reliquary', (_resource, player) => {
+    const reward = rollEclipseReliquaryReward();
+    if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'eclipse-reliquary-full',
+            message: '월식해구의 유산을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem(reward.itemDataId, reward.count);
+    const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
+    sendBotMessageToUser(player.userId, chat()
+        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 월식해구의 침수 유산 ]')))
         .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
         .build());
     return true;
@@ -1013,5 +1052,64 @@ defineResource({
         GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_VOIDCROWN,
         GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT,
         'resource:voidcrown-pillar',
+    ],
+});
+
+defineResource({
+    id: 'drowned_silver_vein',
+    name: '침은 광맥',
+    level: 319,
+    baseAttribute: { maxLife: 42_000, def: 560, magicDef: 520 },
+    requiredToolTags: [GameTags.TOOL_MINING],
+    drops: [
+        { itemDataId: 'drowned_silver', weight: 54, minCount: 2, maxCount: 5 },
+        { itemDataId: 'moon_brine', weight: 22, minCount: 1, maxCount: 3 },
+        { itemDataId: 'night_pearl', weight: 15, minCount: 1, maxCount: 2 },
+        { itemDataId: 'tide_sigil', weight: 9, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 8_400, max: 10_900 },
+    tags: [
+        GameTags.RESOURCE_ORE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ECLIPSE_TRENCH,
+        GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER,
+    ],
+});
+
+defineResource({
+    id: 'eclipse_tide_altar',
+    name: '월식 조류제단',
+    level: 333,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'eclipse_tide_riddle', attackable: false,
+    tags: [
+        GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ECLIPSE_TRENCH,
+        GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK,
+    ],
+});
+
+defineResource({
+    id: 'eclipse_reliquary',
+    name: '침수된 월식 유물함',
+    level: 337,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'open_eclipse_reliquary', attackable: false,
+    interactionCooldown: { min: 8 * 60 * 60, max: 12 * 60 * 60 },
+    tags: [
+        GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ECLIPSE_TRENCH,
+        GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK,
+    ],
+});
+
+defineResource({
+    id: 'white_night_tide_mirror',
+    name: '백야 조류거울',
+    level: 345,
+    baseAttribute: { maxLife: 55_000, def: 710, magicDef: 760 },
+    requiredToolTags: [], drops: [], expReward: { min: 9_400, max: 12_200 },
+    tags: [
+        GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ECLIPSE_TRENCH,
+        GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT,
+        'resource:white-night-tide-mirror',
     ],
 });
