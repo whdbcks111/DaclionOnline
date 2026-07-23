@@ -158,8 +158,8 @@ test('성장 기술 정보는 내부 태그 대신 속성·계열·공유 쿨다
     assert.deepEqual(tags.groups.map(value => value.label), ['마법', '화염 계열']);
     assert.deepEqual(tags.affinities.map(value => value.label), ['불']);
     assert.deepEqual(tags.sharedCooldowns.map(value => [value.label, value.seconds]), [
-        ['마법', 1],
-        ['화염 계열', 2],
+        ['마법', 0.5],
+        ['화염 계열', 1],
     ]);
     assert.equal(JSON.stringify(tags).includes('skill:group'), false);
 });
@@ -221,15 +221,15 @@ test('공유 쿨다운은 보유 스킬의 표시 계열 태그에 최소 시간
 
     assert.equal(player.skills.applySharedCooldowns(fireball, now), 2);
     assert.equal(fireball.getRemainingCooldown(now), 7);
-    assert.equal(magicBolt.getRemainingCooldown(now), 1);
-    assert.equal(runeforger.getRemainingCooldown(now), 2);
+    assert.equal(magicBolt.getRemainingCooldown(now), 0.5);
+    assert.equal(runeforger.getRemainingCooldown(now), 1);
 
     const info = fireball.getInformationTagsSnapshot();
     assert.deepEqual(info.groups.map(tag => tag.label), ['마법', '화염 계열']);
     assert.deepEqual(info.affinities.map(tag => tag.label), ['불']);
     assert.deepEqual(info.sharedCooldowns.map(rule => [rule.label, rule.seconds]), [
-        ['마법', 1],
-        ['화염 계열', 2],
+        ['마법', 0.5],
+        ['화염 계열', 1],
     ]);
 });
 

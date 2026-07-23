@@ -131,8 +131,8 @@ test('combat rotation removes temporary balance modifiers after analysis', () =>
 test('combat rotation applies tag-based shared cooldowns between magic skills', () => {
     const scenario = createBalanceScenario(100, 'career:mage');
     const report = analyzeCombatRotation(scenario, 5);
-    // 마법 계열은 전체 1초 공유 쿨타임이므로 5초 창에서 5회를 초과해 발동할 수 없다.
-    assert.ok(report.skillCasts <= 5);
+    // 마법 계열은 전체 0.5초 공유 쿨타임이므로 5초 창에서 10회를 초과해 발동할 수 없다.
+    assert.ok(report.skillCasts <= 10);
     assert.ok(report.notes.some(note => note.includes('태그 공유')));
 });
 

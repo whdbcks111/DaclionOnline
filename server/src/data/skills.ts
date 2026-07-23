@@ -42,8 +42,8 @@ defineSkillTagDisplay(GameTags.SKILL_GROUP_ICE, '빙결 계열', 'affinities/ice
 defineSkillTagDisplay(GameTags.SKILL_GROUP_ELECTRIC, '전격 계열', 'affinities/electric');
 
 const CAREER_SHARED_COOLDOWN_SECONDS = 0.75;
-const MAGIC_SHARED_COOLDOWN_SECONDS = 1;
-const ELEMENT_SHARED_COOLDOWN_SECONDS = 2;
+const MAGIC_SHARED_COOLDOWN_SECONDS = 0.5;
+const ELEMENT_SHARED_COOLDOWN_SECONDS = 1;
 
 function careerSharedCooldown(targetTag: TagId, seconds = CAREER_SHARED_COOLDOWN_SECONDS) {
     return [{ targetTag, seconds }] as const;
