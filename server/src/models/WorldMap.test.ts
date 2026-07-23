@@ -140,6 +140,10 @@ test('방문 장소 검색은 exact를 우선하고 구분 기호 없는 부분 
         getVisitedLocationMatches(player, '안개 수령').map(match => match.locationId),
         ['mist_swamp_1', 'mist_swamp_2'],
     );
+    assert.deepEqual(
+        getVisitedLocationMatches(player, '안 개   수 령').map(match => match.locationId),
+        ['mist_swamp_1', 'mist_swamp_2'],
+    );
 });
 
 test('A* 자동이동 경로는 방문한 공개 장소의 현재 열린 연결 중 최단 거리를 고른다', () => {
