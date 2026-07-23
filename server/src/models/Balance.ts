@@ -159,6 +159,9 @@ export interface SkillBalanceReport {
     readonly cooldown: number;
     readonly manaCost: number;
     readonly rawDamage: number;
+    readonly penetration: number;
+    readonly effectiveDefense: number;
+    readonly evasionChance: number;
     readonly expectedDamagePerTarget: number;
     readonly expectedTotalDamage: number;
     readonly cooldownLimitedCasts: number;
@@ -280,13 +283,15 @@ export function analyzeSkillBalance(
     const defense = damageType === 'physical'
         ? scenario.target.attribute.get(AttributeType.DEF)
         : damageType === 'magic' ? scenario.target.attribute.get(AttributeType.MAGIC_DEF) : 0;
-    const penetration = damageType === 'physical'
+    const defaultPenetration = damageType === 'physical'
         ? scenario.entity.attribute.get(AttributeType.ARMOR_PEN)
         : damageType === 'magic' ? scenario.entity.attribute.get(AttributeType.MAGIC_PEN) : 0;
+    const penetration = finiteNonNegative(balance?.calculatePenetration?.(context) ?? defaultPenetration);
+    const effectiveDefense = Math.max(0, defense - penetration);
     const defendedDamage = damageType === 'absolute'
         ? rawDamage * criticalMultiplier
         : calculateFinalDamage(rawDamage * criticalMultiplier, defense, penetration);
-    const evasion = balance?.criticalMode === SkillCriticalMode.DISABLED && damageType === 'absolute'
+    const evasion = balance?.unavoidable || balance?.criticalMode === SkillCriticalMode.DISABLED && damageType === 'absolute'
         ? 0
         : calculateEvasionChance(
             scenario.entity.attribute.get(AttributeType.SPEED),
@@ -318,6 +323,9 @@ export function analyzeSkillBalance(
         cooldown,
         manaCost,
         rawDamage,
+        penetration,
+        effectiveDefense,
+        evasionChance: evasion,
         expectedDamagePerTarget,
         expectedTotalDamage,
         cooldownLimitedCasts,

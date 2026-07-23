@@ -151,6 +151,20 @@ const MISTTIDE_RELIQUARY_REWARDS = Object.freeze([
     { itemDataId: 'drowned_admiral_shield', count: 1, weight: 2.4 },
 ]);
 
+const PARADOX_RELIQUARY_REWARDS = Object.freeze([
+    { itemDataId: 'cogwork_ration', count: 6, weight: 18 },
+    { itemDataId: 'phase_tonic', count: 3, weight: 14 },
+    { itemDataId: 'chronosteel_shard', count: 8, weight: 16 },
+    { itemDataId: 'logic_core', count: 5, weight: 14 },
+    { itemDataId: 'fracture_crystal', count: 4, weight: 12 },
+    { itemDataId: 'paradox_thread', count: 3, weight: 10 },
+    { itemDataId: 'paradox_edge', count: 1, weight: 3.2 },
+    { itemDataId: 'photon_repeater', count: 1, weight: 3.2 },
+    { itemDataId: 'voidspring_dagger', count: 1, weight: 3.2 },
+    { itemDataId: 'logic_core_staff', count: 1, weight: 3.2 },
+    { itemDataId: 'causality_aegis', count: 1, weight: 3.2 },
+]);
+
 export function rollTwilightReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
     let cursor = random() * TWILIGHT_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = TWILIGHT_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
@@ -176,6 +190,13 @@ export function rollMisttideReliquaryReward(random = Math.random): { itemDataId:
     let cursor = random() * MISTTIDE_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = MISTTIDE_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
         ?? MISTTIDE_RELIQUARY_REWARDS[0];
+    return { itemDataId: reward.itemDataId, count: reward.count };
+}
+
+export function rollParadoxReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
+    let cursor = random() * PARADOX_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
+    const reward = PARADOX_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
+        ?? PARADOX_RELIQUARY_REWARDS[0];
     return { itemDataId: reward.itemDataId, count: reward.count };
 }
 
@@ -271,6 +292,24 @@ registerResourceInteraction('open_misttide_reliquary', (_resource, player) => {
     return true;
 });
 
+registerResourceInteraction('open_paradox_reliquary', (_resource, player) => {
+    const reward = rollParadoxReliquaryReward();
+    if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'paradox-reliquary-full',
+            message: '시제품고의 유물을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem(reward.itemDataId, reward.count);
+    const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
+    sendBotMessageToUser(player.userId, chat()
+        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 역설기계고 시제품 ]')))
+        .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
+        .build());
+    return true;
+});
+
 registerResourceInteraction('harvest_oasis_palm', (_resource, player) => {
     const count = randomInt({ min: 2, max: 4 }, Math.random);
     if (!player.inventory.canAdd('oasis_date', count)) {
@@ -318,6 +357,23 @@ registerResourceInteraction('harvest_kelp_resin', (_resource, player) => {
     sendNotificationToUser(player.userId, {
         key: 'kelp-resin-harvested',
         message: `청해초 줄기에서 수지 ${count}개를 채집했습니다.`,
+    });
+    return true;
+});
+
+registerResourceInteraction('harvest_memory_coil', (_resource, player) => {
+    const count = randomInt({ min: 2, max: 5 }, Math.random);
+    if (!player.inventory.canAdd('memory_gear', count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'memory-coil-full',
+            message: '기억 톱니를 담을 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem('memory_gear', count);
+    sendNotificationToUser(player.userId, {
+        key: 'memory-coil-harvested',
+        message: `기억 두루마리 장치에서 온전한 톱니 ${count}개를 분리했습니다.`,
     });
     return true;
 });
@@ -715,4 +771,64 @@ defineResource({
         GameTags.MATERIAL_ENHANCEMENT_STONE,
         GameTags.PROPERTY_EARTH,
     ],
+});
+
+defineResource({
+    id: 'chronosteel_vein',
+    name: '시간강 광맥',
+    level: 205,
+    baseAttribute: { maxLife: 22_000, def: 285, magicDef: 330 },
+    requiredToolTags: [GameTags.TOOL_MINING],
+    drops: [
+        { itemDataId: 'chronosteel_shard', weight: 58, minCount: 2, maxCount: 5 },
+        { itemDataId: 'fracture_crystal', weight: 24, minCount: 1, maxCount: 2 },
+        { itemDataId: 'void_spring', weight: 12, minCount: 1, maxCount: 2 },
+        { itemDataId: 'logic_core', weight: 6, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 4_800, max: 6_400 },
+    tags: [
+        GameTags.RESOURCE_ORE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CLOCKWORK,
+        GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK,
+    ],
+});
+
+defineResource({
+    id: 'memory_coil',
+    name: '기억 두루마리 장치',
+    level: 205,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'harvest_memory_coil', attackable: false,
+    interactionCooldown: { min: 50 * 60, max: 80 * 60 },
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_METAL],
+});
+
+defineResource({
+    id: 'causality_console',
+    name: '인과율 연산대',
+    level: 218,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'paradox_causality_riddle', attackable: false,
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+});
+
+defineResource({
+    id: 'prototype_reliquary',
+    name: '폐기 시제품 보관고',
+    level: 225,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'open_paradox_reliquary', attackable: false,
+    interactionCooldown: { min: 6 * 60 * 60, max: 8 * 60 * 60 },
+    tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_DARK],
+});
+
+defineResource({
+    id: 'paradox_anchor',
+    name: '역설 고정자',
+    level: 232,
+    baseAttribute: { maxLife: 28_000, def: 360, magicDef: 520 },
+    requiredToolTags: [], drops: [], expReward: { min: 5_200, max: 6_800 },
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
 });

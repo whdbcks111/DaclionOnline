@@ -73,6 +73,7 @@ export const GameTags = Object.freeze({
     MATERIAL_GLASS: 'material:glass',
     MATERIAL_RIME: 'material:rime',
     MATERIAL_CORAL: 'material:coral',
+    MATERIAL_CLOCKWORK: 'material:clockwork',
     MATERIAL_ENHANCEMENT_STONE: 'material:enhancement_stone',
     MATERIAL_REFINED: 'material:refined',
 
@@ -113,6 +114,7 @@ export const GameTags = Object.freeze({
     LOCATION_FROZEN: 'location:frozen',
     LOCATION_COAST: 'location:coast',
     LOCATION_SUBMERGED: 'location:submerged',
+    LOCATION_CLOCKWORK: 'location:clockwork',
     LOCATION_HIDDEN: 'location:hidden',
     LOCATION_FISHING: 'location:fishing',
     SHOP_GENERAL: 'shop:general',
@@ -122,6 +124,7 @@ export const GameTags = Object.freeze({
     SHOP_CARAVAN: 'shop:caravan',
     SHOP_FROST: 'shop:frost',
     SHOP_TIDAL: 'shop:tidal',
+    SHOP_CLOCKWORK: 'shop:clockwork',
 } satisfies Record<string, TagId>)
 
 const TAG_PATTERN = /^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9/._-]*$/

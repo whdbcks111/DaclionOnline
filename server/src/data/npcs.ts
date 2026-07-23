@@ -5,6 +5,7 @@ import {
     FROSTVEIL_QUEST_IDS,
     GLASSDUNE_QUEST_IDS,
     MISTTIDE_QUEST_IDS,
+    PARADOX_QUEST_IDS,
     TWILIGHT_TOMB_QUEST_IDS,
 } from './quests.js';
 import { CAREER_QUEST_IDS } from './quests.js';
@@ -366,6 +367,80 @@ NPC.define({
         }),
         new DialogueScenario('end', function* () {
             yield Dialogue.say('안개 속에서는 파도 소리보다 염등의 방향을 믿으세요.');
+            yield Dialogue.end();
+        }),
+    ],
+});
+
+NPC.define({
+    id: 'paradox_curator',
+    name: '기록보존관 이델',
+    description: '기계고가 자기 기록을 덮어쓰기 전에 온전한 기억 톱니를 분리해 보관하는 마지막 기록관입니다.',
+    tags: ['npc:guide', 'npc:quest', 'region:paradox-clockwork'],
+    entryScenario: ({ player }) => {
+        if (player.quests.canTurnIn(PARADOX_QUEST_IDS.CLOSE_CAUSALITY_ENGINE, 'paradox_curator')) return 'architect_complete';
+        if (player.quests.isActive(PARADOX_QUEST_IDS.CLOSE_CAUSALITY_ENGINE)) return 'architect_progress';
+        if (player.quests.canTurnIn(PARADOX_QUEST_IDS.RESTORE_ARCHIVE, 'paradox_curator')) return 'archive_complete';
+        if (player.quests.isActive(PARADOX_QUEST_IDS.RESTORE_ARCHIVE)) return 'archive_progress';
+        if (player.quests.canAccept(PARADOX_QUEST_IDS.CLOSE_CAUSALITY_ENGINE, 'paradox_curator')) return 'architect_offer';
+        return player.quests.canAccept(PARADOX_QUEST_IDS.RESTORE_ARCHIVE, 'paradox_curator') ? 'greeting' : 'lore';
+    },
+    scenarios: [
+        new DialogueScenario('greeting', function* () {
+            yield Dialogue.say('이곳의 기계는 움직임을 멈춘 게 아니에요. 실패한 시간을 지우고 같은 하루를 다시 조립하고 있죠. 온전한 기억 톱니 열둘과 논리핵 다섯이면 바깥으로 이어지는 기록부터 복원할 수 있어요.');
+            yield Dialogue.choice([
+                { label: '기록 부품을 모아 오겠습니다.', target: 'archive_accept' },
+                { label: '역설기계고에 대해 알려주세요.', target: 'lore' },
+                { label: '지금은 쉬겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('archive_accept', function* () {
+            yield Dialogue.acceptQuest(PARADOX_QUEST_IDS.RESTORE_ARCHIVE);
+            yield Dialogue.say('기억 톱니는 외곽 기계충과 두루마리 장치에서, 논리핵은 논리식 골렘과 기록고 파수기에게서 찾을 수 있어요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('archive_progress', function* ({ player }) {
+            const objectives = player.quests.getSnapshot(PARADOX_QUEST_IDS.RESTORE_ARCHIVE)?.objectives ?? [];
+            const gears = objectives.find(objective => objective.id === 'memory-gears');
+            const cores = objectives.find(objective => objective.id === 'logic-cores');
+            yield Dialogue.say(`기억 톱니 ${gears?.progress ?? 0}/${gears?.required ?? 12}, 논리핵 ${cores?.progress ?? 0}/${cores?.required ?? 5}. 순서가 섞이지 않도록 온전한 것만 가져와 주세요.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('archive_complete', function* () {
+            yield Dialogue.say('항로 기록이 돌아왔어요. 시간강 주조로 뒤편에서 중앙 인과기관까지 가는 길도 확인됐지만, 두 곳의 수호 연산이 아직 작동 중이에요.');
+            yield Dialogue.turnInQuest(PARADOX_QUEST_IDS.RESTORE_ARCHIVE);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('architect_offer', function* () {
+            yield Dialogue.say('시간강 거신이 주조로를 봉쇄했고, 오르도는 중앙 인과기관에서 실패한 세계를 계속 덮어쓰고 있어요. 거신을 멈춘 뒤 설계자의 역설 고정자부터 파괴해 주세요.');
+            yield Dialogue.choice([
+                { label: '기계고의 반복을 끝내겠습니다.', target: 'architect_accept' },
+                { label: '조금 더 준비하겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('architect_accept', function* () {
+            yield Dialogue.acceptQuest(PARADOX_QUEST_IDS.CLOSE_CAUSALITY_ENGINE);
+            yield Dialogue.say('중앙 인과기관에는 고정자가 셋 있어요. 하나라도 남아 있으면 오르도가 충격의 대부분을 실패한 시간대로 밀어냅니다.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('architect_progress', function* ({ player }) {
+            const objectives = player.quests.getSnapshot(PARADOX_QUEST_IDS.CLOSE_CAUSALITY_ENGINE)?.objectives ?? [];
+            const colossus = objectives.find(objective => objective.id === 'chronosteel-colossus');
+            const architect = objectives.find(objective => objective.id === 'paradox-architect');
+            yield Dialogue.say(`시간강 거신 ${colossus?.progress ?? 0}/1, 역설설계자 ${architect?.progress ?? 0}/1. 설계자에게 가기 전에 고정자 세 개를 모두 부수세요.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('architect_complete', function* () {
+            yield Dialogue.say('기계고의 시계가 처음으로 다음 시각을 가리켰어요. 오르도가 남긴 인과율 방패와 반전 연산서를 당신에게 맡기겠습니다.');
+            yield Dialogue.turnInQuest(PARADOX_QUEST_IDS.CLOSE_CAUSALITY_ENGINE);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('lore', function* () {
+            yield Dialogue.say('외곽의 폐철 수거로와 광학 회랑은 논리 기록고에서 합쳐져요. 주조로를 지나면 균열 분기소에서 기억 회랑과 방정식 교량으로 갈라지고, 인과율 연산대를 풀면 숨은 시제품고가 열립니다.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('같은 복도를 두 번 지나도 톱니의 흠집은 달라요. 기록을 믿되, 눈앞의 길을 더 믿으세요.');
             yield Dialogue.end();
         }),
     ],

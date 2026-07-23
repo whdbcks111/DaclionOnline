@@ -125,6 +125,77 @@ for (const recipe of [
 
 for (const recipe of [
     {
+        id: 'paradox:cogwork_ration', result: 'cogwork_ration', time: 5,
+        description: '여행자 빵을 얇게 압축하고 기억 톱니의 온도 유지 장치로 밀봉해 태엽 작업식을 만듭니다.',
+        ingredients: [['traveler_bread', 2], ['memory_gear', 1], ['mist_salt', 1]],
+        tags: ['crafting:consumable', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:phase_tonic', result: 'phase_tonic', time: 6,
+        description: '공허 용수철의 반동을 균열 수정에 가둬 위상 촉진제를 만듭니다.',
+        ingredients: [['void_spring', 3], ['fracture_crystal', 2], ['fresh_water', 1]],
+        tags: ['crafting:consumable', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:logic_elixir', result: 'logic_elixir', time: 6,
+        description: '논리핵과 광자 렌즈를 비전 영약에 안정시켜 논리회로 영약을 만듭니다.',
+        ingredients: [['logic_core', 2], ['photon_lens', 2], ['arcane_tonic', 1]],
+        tags: ['crafting:consumable', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:temporal_salve', result: 'temporal_salve', time: 7,
+        description: '역설 실과 균열 수정에 회복약을 스며들게 해 시간봉합 연고를 만듭니다.',
+        ingredients: [['paradox_thread', 2], ['fracture_crystal', 2], ['health_potion', 2]],
+        tags: ['crafting:consumable', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:paradox_edge', result: 'paradox_edge', time: 18,
+        description: '시간강을 반복해 접고 역설 실로 두 궤적을 묶어 역설절단검을 만듭니다.',
+        ingredients: [['chronosteel_shard', 10], ['paradox_thread', 4], ['automaton_plate', 4]],
+        tags: ['crafting:weapon', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:photon_repeater', result: 'photon_repeater', time: 17,
+        description: '광자 렌즈와 기억 톱니를 시위의 보조 연산 장치로 엮어 광자연사궁을 만듭니다.',
+        ingredients: [['photon_lens', 7], ['memory_gear', 9], ['paradox_thread', 4]],
+        tags: ['crafting:weapon', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:voidspring_dagger', result: 'voidspring_dagger', time: 16,
+        description: '시간강 단검 안에 공허 용수철을 압축해 공허태엽 단검을 만듭니다.',
+        ingredients: [['chronosteel_shard', 7], ['void_spring', 7], ['fracture_crystal', 3]],
+        tags: ['crafting:weapon', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:logic_core_staff', result: 'logic_core_staff', time: 19,
+        description: '논리핵과 광자 렌즈를 시간강 지지대에 배열해 논리핵 지팡이를 만듭니다.',
+        ingredients: [['logic_core', 7], ['photon_lens', 6], ['chronosteel_shard', 6]],
+        tags: ['crafting:weapon', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:causality_aegis', result: 'causality_aegis', time: 20,
+        description: '자동인형 장갑판 사이에 논리핵과 역설 실을 넣어 인과율 방패를 만듭니다.',
+        ingredients: [['automaton_plate', 12], ['logic_core', 5], ['paradox_thread', 5]],
+        tags: ['crafting:armor', 'region:paradox-clockwork'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
         id: 'misttide:brine_trail_ration', result: 'brine_trail_ration', time: 4,
         description: '여행자 빵과 말린 식재료에 해무 소금을 더해 오래 보관되는 염풍 행군식을 만듭니다.',
         ingredients: [['mist_salt', 3], ['traveler_bread', 1], ['fresh_water', 1]],

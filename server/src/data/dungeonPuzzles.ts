@@ -35,6 +35,11 @@ export const MisttidePuzzleIds = Object.freeze({
     TIDE_CLOCK_FLAG: 'dungeon:misttide/stopped-tide-clock-solved',
 } as const);
 
+export const ParadoxPuzzleIds = Object.freeze({
+    CAUSALITY_SEQUENCE: 'paradox:causality-sequence',
+    CAUSALITY_SEQUENCE_FLAG: 'dungeon:paradox/causality-sequence-solved',
+} as const);
+
 defineProgress({
     id: IronrootPuzzleIds.RIDDLE_FLAG,
     type: ProgressType.FLAG,
@@ -150,6 +155,29 @@ defineQuestionPuzzle({
     failureMessage: '바늘 하나만 잠시 떨리고, 바위틈의 물길은 열리지 않습니다.',
 });
 
+defineProgress({
+    id: ParadoxPuzzleIds.CAUSALITY_SEQUENCE_FLAG,
+    type: ProgressType.FLAG,
+    label: '인과율 수열 복원',
+    description: '역설기계고의 끊어진 연산 순서를 복원해 폐기 시제품고를 열었습니다.',
+    visible: true,
+});
+
+defineQuestionPuzzle({
+    id: ParadoxPuzzleIds.CAUSALITY_SEQUENCE,
+    title: '끊어진 인과 수열',
+    prompt: '연산대에 2, 3, 5, 8, 13이 차례로 나타났다. 앞선 두 결과를 합쳐 다음 결과를 만든다면 여섯 번째 수는 무엇인가?',
+    answers: ['21', '이십일'],
+    choices: [
+        { label: '18', answer: '18' },
+        { label: '20', answer: '20' },
+        { label: '21', answer: '21' },
+    ],
+    successFlag: ParadoxPuzzleIds.CAUSALITY_SEQUENCE_FLAG,
+    successMessage: '연산대의 톱니가 순서대로 맞물리며 폐기 시제품고의 위상문이 열립니다.',
+    failureMessage: '서로 맞지 않는 톱니가 역회전하며 연산 결과를 지워 버립니다.',
+});
+
 defineTeleportArtifact({
     id: IronrootPuzzleIds.RELAY_ARTIFACT,
     destinations: {
@@ -176,6 +204,9 @@ registerResourceInteraction('frostveil_prism_riddle', (_resource, player) =>
 
 registerResourceInteraction('misttide_clock_riddle', (_resource, player) =>
     beginQuestionPuzzle(player, MisttidePuzzleIds.TIDE_CLOCK));
+
+registerResourceInteraction('paradox_causality_riddle', (_resource, player) =>
+    beginQuestionPuzzle(player, ParadoxPuzzleIds.CAUSALITY_SEQUENCE));
 
 registerConnectionCondition('ironroot_riddle_solved', player =>
     player.progress.getFlag(IronrootPuzzleIds.RIDDLE_FLAG)
@@ -206,6 +237,11 @@ registerConnectionCondition('misttide_clock_solved', player =>
     player.progress.getFlag(MisttidePuzzleIds.TIDE_CLOCK_FLAG)
         ? 'visible'
         : { status: 'locked', publicReason: '멈춘 조류시계의 해답 필요' });
+
+registerConnectionCondition('paradox_causality_solved', player =>
+    player.progress.getFlag(ParadoxPuzzleIds.CAUSALITY_SEQUENCE_FLAG)
+        ? 'visible'
+        : { status: 'locked', publicReason: '인과율 연산대의 해답 필요' });
 
 // 지도 연결성은 유지하되 일반 이동·지도에는 노출하지 않고 유물 상호작용만 통과시킨다.
 registerConnectionCondition('ironroot_artifact_route', () => 'hidden');

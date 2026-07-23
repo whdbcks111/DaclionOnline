@@ -27,6 +27,7 @@ import {
     rollGlassduneReliquaryReward,
     rollLabyrinthCacheReward,
     rollMisttideReliquaryReward,
+    rollParadoxReliquaryReward,
     rollTreasureReward,
     rollTwilightReliquaryReward,
 } from './resources.js';
@@ -35,6 +36,7 @@ import {
     getIronrootCrystalProtectionMultiplier,
     getGlassduneMirrorProtectionMultiplier,
     getSilverwebBroodProtectionMultiplier,
+    getParadoxAnchorProtectionMultiplier,
 } from './bossPatterns.js';
 import { GameTags } from '../../../shared/tags.js';
 
@@ -44,7 +46,7 @@ const locations = JSON.parse(
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, 113);
+    assert.equal(locations.length, 135);
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -72,7 +74,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 10, neutral: 38, hostile: 65 },
+        { safe: 11, neutral: 43, hostile: 81 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -81,7 +83,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     assert.ok(locations.every(location => /^#[0-9a-f]{6}$/i.test(location.mapColor ?? '')));
     assert.deepEqual(
         locations.filter(location => location.mapIcon).map(location => location.mapIcon).sort(),
-        ['general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
+        ['general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
     );
     for (const icon of new Set(locations.flatMap(location => location.mapIcon ? [location.mapIcon] : []))) {
         const png = readFileSync(new URL(`../../../client/public/icons/map/${icon}.png`, import.meta.url));
@@ -164,6 +166,14 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
             'misttide_clock_cove', 'misttide_hidden_grotto', 'misttide_drowned_gate',
             'misttide_drowned_causeway', 'misttide_drowned_market', 'misttide_drowned_archive',
             'misttide_abyssal_barracks', 'misttide_leviathan_trench', 'misttide_drowned_throne'],
+        ['paradox_foundry_threshold', 'paradox_relay_station', 'paradox_rusted_conveyor',
+            'paradox_lens_corridor', 'paradox_scrap_reservoir', 'paradox_gear_chapel',
+            'paradox_crow_gantry', 'paradox_logic_archive', 'paradox_mirrored_assembly',
+            'paradox_chronosteel_foundry', 'paradox_fracture_junction', 'paradox_memory_gallery',
+            'paradox_lost_workshop', 'paradox_equation_bridge', 'paradox_inverse_hall',
+            'paradox_causality_lock', 'paradox_hidden_prototype_vault', 'paradox_stage',
+            'paradox_puppet_hall', 'paradox_abandoned_test_chamber', 'paradox_architect_core',
+            'paradox_endless_observatory'],
     ];
 
     for (const ids of regions) {
@@ -173,14 +183,14 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
     }
 });
 
-test('1~210레벨 월드는 모든 속성을 관찰 가능하고 동급 일반 몬스터 보상은 5%로 수렴한다', () => {
+test('1~235레벨 월드는 모든 속성을 관찰 가능하고 동급 일반 몬스터 보상은 5%로 수렴한다', () => {
     const monsters = getAllMonsterData();
     const levelOne = getMonsterData('slime');
     const midLevelNormal = getMonsterData('spark_moth');
     const levelTwoHundred = getMonsterData('eclipse_watcher');
 
     assert.equal(Math.min(...monsters.map(monster => monster.level)), 1);
-    assert.equal(Math.max(...monsters.map(monster => monster.level)), 210);
+    assert.equal(Math.max(...monsters.map(monster => monster.level)), 235);
     assert.equal(Entity.getMaxExpOfLevel(1), 100);
     assert.equal(Entity.getMaxExpOfLevel(50), 20_000);
     assert.equal(Entity.getMaxExpOfLevel(200), 80_000);
@@ -205,7 +215,7 @@ test('성장 구간 보스는 최대 30레벨 간격으로 배치되고 일반�
         .sort((left, right) => left.level - right.level);
 
     assert.ok(bosses[0].level <= 32);
-    assert.equal(bosses[bosses.length - 1].level, 210);
+    assert.equal(bosses[bosses.length - 1].level, 235);
     for (let index = 1; index < bosses.length; index++) {
         assert.ok(bosses[index].level - bosses[index - 1].level <= 30,
             `${bosses[index - 1].name} Lv.${bosses[index - 1].level} → ${bosses[index].name} Lv.${bosses[index].level}`);
@@ -461,6 +471,67 @@ test('안개파도 해안과 침몰왕도는 분기 항로·두 지휘자·조�
     assert.equal(recipes.length, 8);
     assert.equal(quests.length, 2);
     assert.equal(NPC.getNpc('misttide_navigator')?.name, '염등 항로지기 소마');
+});
+
+test('역설기계고는 분기 조립선·인과 퍼즐·시제품고·고정자 보스 기믹과 지역 경제를 연결한다', () => {
+    const region = locations.filter(location => location.id.startsWith('paradox_'));
+    const colossus = getMonsterData('chronosteel_colossus');
+    const architect = getMonsterData('paradox_architect');
+    const store = getShop('paradox_relay_store');
+    const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('paradox:'));
+    const quests = getAllQuestData().filter(quest => quest.id.startsWith('paradox:'));
+
+    assert.equal(region.length, 22);
+    assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
+    assert.ok(region.every(location => location.tags.includes(GameTags.LOCATION_CLOCKWORK)));
+    assert.equal(colossus?.level, 220);
+    assert.equal(architect?.level, 235);
+    assert.deepEqual(colossus?.skillPattern?.sequence, ['clockwork_overrun', 'chronosteel_time_lock']);
+    assert.ok(architect?.skillPattern?.randomOrder);
+    assert.ok((architect?.ai?.tauntResistance ?? 0) >= 0.9);
+
+    const conveyor = locations.find(location => location.id === 'paradox_rusted_conveyor');
+    const bridge = locations.find(location => location.id === 'paradox_equation_bridge');
+    const lock = locations.find(location => location.id === 'paradox_causality_lock');
+    const hiddenVault = locations.find(location => location.id === 'paradox_hidden_prototype_vault');
+    const core = locations.find(location => location.id === 'paradox_architect_core');
+    assert.ok(conveyor?.connections.some(connection => connection.locationId === 'paradox_scrap_reservoir'));
+    assert.ok(conveyor?.connections.some(connection => connection.locationId === 'paradox_lens_corridor'));
+    assert.ok(bridge?.connections.some(connection => connection.locationId === 'paradox_inverse_hall'));
+    assert.ok(bridge?.connections.some(connection => connection.locationId === 'paradox_stage'));
+    assert.ok(lock?.connections.some(connection => connection.condition === 'paradox_causality_solved'));
+    assert.ok(hiddenVault?.tags.includes(GameTags.LOCATION_HIDDEN));
+    assert.equal(core?.objects.find(object => object.dataId === 'paradox_anchor')?.maxCount, 3);
+    assert.ok(core?.objects.some(object => object.dataId === 'paradox_architect' && object.maxCount === 1));
+    assert.deepEqual(getResourceData('prototype_reliquary')?.interactionCooldown, {
+        min: 6 * 60 * 60,
+        max: 8 * 60 * 60,
+    });
+    assert.equal(rollParadoxReliquaryReward(() => 0).itemDataId, 'cogwork_ration');
+    assert.equal(rollParadoxReliquaryReward(() => 0.999).itemDataId, 'causality_aegis');
+
+    for (const itemId of [
+        'paradox_edge', 'photon_repeater', 'voidspring_dagger', 'logic_core_staff', 'causality_aegis',
+    ]) {
+        assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === itemId), itemId);
+        assert.ok(getItemData(itemId)?.balance, `${itemId} balance`);
+    }
+    assert.equal(recipes.length, 9);
+    assert.equal(quests.length, 2);
+    assert.equal(NPC.getNpc('paradox_curator')?.name, '기록보존관 이델');
+
+    reloadAllLocations(locations);
+    const runtimeCore = getLocation('paradox_architect_core');
+    runtimeCore?.update(0.05);
+    const runtimeArchitect = runtimeCore?.getMonstersByDataId('paradox_architect')[0];
+    assert.equal(getParadoxAnchorProtectionMultiplier(), 0.25);
+    assert.equal(runtimeArchitect?.getDamageReceivedModifier(), 0.25);
+    for (const anchor of runtimeCore?.getResourcesByDataId('paradox_anchor') ?? []) {
+        anchor.damage(anchor.maxLife, 'absolute', { type: 'void', causeEntity: null, fixedDamage: true });
+    }
+    runtimeCore?.update(0.05);
+    assert.equal(getParadoxAnchorProtectionMultiplier(), 1);
+    assert.equal(runtimeArchitect?.getDamageReceivedModifier(), 1);
 });
 
 test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {

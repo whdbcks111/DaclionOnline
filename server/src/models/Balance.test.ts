@@ -16,8 +16,10 @@ import {
     analyzeItemBalance,
     analyzeJobBalance,
     analyzeSkillBalance,
+    BalanceEncounterType,
     createBalanceScenario,
 } from './Balance.js';
+import { AttributeType } from './Attribute.js';
 
 test('projected profile uses the same eight stat points earned per level', () => {
     const report = analyzeJobBalance(50, 'career:warrior');
@@ -33,6 +35,18 @@ test('skill report uses real cooldown, resource and damage callbacks', () => {
     assert.ok(report.rawDamage > 0);
     assert.ok(report.sustainableDpm > report.rawDamage);
     assert.equal(report.coverage, 'complete');
+});
+
+test('skill report applies skill-specific penetration and unavoidable attacks', () => {
+    const scenario = createBalanceScenario(220, 'career:mage', undefined, BalanceEncounterType.BOSS);
+    const lock = analyzeSkillBalance(scenario, 'causality_lock', 5);
+    const lance = analyzeSkillBalance(scenario, 'photon_lance', 5);
+
+    assert.equal(lock.penetration, scenario.entity.attribute.get(AttributeType.MAGIC_PEN) + 62);
+    assert.equal(lock.evasionChance, 0);
+    assert.equal(lock.effectiveDefense, Math.max(0,
+        scenario.target.attribute.get(AttributeType.MAGIC_DEF) - lock.penetration));
+    assert.equal(lance.penetration, 74);
 });
 
 test('all first jobs produce finite offensive and defensive baselines', () => {

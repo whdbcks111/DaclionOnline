@@ -28,6 +28,10 @@ export const MISTTIDE_QUEST_IDS = Object.freeze({
     REPAIR_SALT_BEACON: 'misttide:repair-salt-beacon',
     END_DROWNED_COMMAND: 'misttide:end-drowned-command',
 } as const);
+export const PARADOX_QUEST_IDS = Object.freeze({
+    RESTORE_ARCHIVE: 'paradox:restore-archive',
+    CLOSE_CAUSALITY_ENGINE: 'paradox:close-causality-engine',
+} as const);
 
 defineQuest({
     id: FIRST_SLIME_HUNT_QUEST_ID,
@@ -279,6 +283,69 @@ defineQuest({
         QuestReward.gold(10_500),
         QuestReward.item('drowned_admiral_shield', 1, '침몰제독 방패'),
         QuestReward.item('tideheart_draught', 4, '조류심장 회복약'),
+    ],
+});
+
+defineQuest({
+    id: PARADOX_QUEST_IDS.RESTORE_ARCHIVE,
+    name: '기억 톱니의 순서',
+    aliases: ['기계고 기록 복원', '기억 톱니'],
+    description: '역설기계고에 흩어진 기억 톱니와 논리핵을 모아 중계소의 항로 기록을 복원하세요.',
+    tags: ['quest:side', 'region:paradox-clockwork'],
+    giverNpcIds: ['paradox_curator'],
+    turnInNpcIds: ['paradox_curator'],
+    visible: player => player.level >= 200,
+    canAccept: player => player.level >= 200,
+    stages: [new QuestStage({
+        id: 'gather-archive-components',
+        description: '기계고 외곽과 논리 기록고에서 기록 복원 부품을 모으세요.',
+        objectives: [
+            QuestObjective.item('memory-gears', '기억 톱니 수집', 12, 'memory_gear', true),
+            QuestObjective.item('logic-cores', '논리핵 수집', 5, 'logic_core', true),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(92_000),
+        QuestReward.gold(14_500),
+        QuestReward.item('logic_elixir', 4, '논리회로 영약'),
+        QuestReward.item('photon_lance_skillbook', 1, '광자창 전승서'),
+    ],
+});
+
+defineQuest({
+    id: PARADOX_QUEST_IDS.CLOSE_CAUSALITY_ENGINE,
+    name: '설계자의 마지막 모순',
+    aliases: ['역설설계자', '시간강 거신'],
+    description: '시간강 거신을 멈추고 역설 고정자를 파괴한 뒤, 역설설계자 오르도의 인과 연산을 끝내세요.',
+    tags: ['quest:side', 'quest:boss', 'region:paradox-clockwork'],
+    giverNpcIds: ['paradox_curator'],
+    turnInNpcIds: ['paradox_curator'],
+    prerequisiteQuestIds: [PARADOX_QUEST_IDS.RESTORE_ARCHIVE],
+    visible: player => player.level >= 218,
+    canAccept: player => player.level >= 218,
+    stages: [new QuestStage({
+        id: 'break-clockwork-command',
+        description: '시간강 주조로의 거신과 중앙 인과기관의 설계자를 차례로 제압하세요.',
+        objectives: [
+            QuestObjective.kill(
+                'chronosteel-colossus',
+                '시간강 거신 처치',
+                1,
+                target => target.hasTag('monster:chronosteel-colossus'),
+            ),
+            QuestObjective.kill(
+                'paradox-architect',
+                '역설설계자 오르도 처치',
+                1,
+                target => target.hasTag('monster:paradox-architect'),
+            ),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(165_000),
+        QuestReward.gold(24_000),
+        QuestReward.item('causality_aegis', 1, '인과율 방패'),
+        QuestReward.item('paradox_reversal_skillbook', 1, '역설반전 전승서'),
     ],
 });
 

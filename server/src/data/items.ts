@@ -1634,6 +1634,217 @@ for (const book of [
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.PROPERTY_WATER],
 });
 
+// TODO(icons): 역설기계고 전용 아트 제작 전까지 광물·기계 부품과 같은 장비군의 기존 아이콘을 명시적으로 재사용한다.
+for (const material of [
+    {
+        id: 'chronosteel_shard', name: '시간강 파편', image: 'items/iron_ore', weight: 0.7,
+        description: '앞으로 휘었다가 되돌아오는 성질을 가진 기계고의 청회색 합금 조각.',
+        tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'memory_gear', name: '기억 톱니', image: 'items/gold_ore', weight: 0.24,
+        description: '맞물렸던 장치의 동작 순서를 표면에 새겨 두는 작은 황동 톱니.',
+        tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'photon_lens', name: '광자 렌즈', image: 'items/diamond', weight: 0.2,
+        description: '빛을 한 점이 아니라 정해진 미래의 궤도로 모으는 투명 렌즈.',
+        tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'void_spring', name: '공허 용수철', image: 'items/coal', weight: 0.18,
+        description: '압축할수록 주변의 빛과 소리를 삼키는 검은 태엽 용수철.',
+        tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'logic_core', name: '논리핵', image: 'items/diamond', weight: 0.35,
+        description: '자동인형의 판단 순서를 보관하는 다면체 마도 회로.',
+        tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ELECTRIC],
+    },
+    {
+        id: 'paradox_thread', name: '역설 실', image: 'items/earthworm_bait', weight: 0.08,
+        description: '서로 다른 두 순간의 위치를 동시에 잇는 은보랏빛 마력 섬유.',
+        tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'automaton_plate', name: '자동인형 장갑판', image: 'items/iron_ore', weight: 1.1,
+        description: '관절의 움직임에 맞춰 단단함이 변하는 기계 병사의 외장판.',
+        tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'fracture_crystal', name: '균열 수정', image: 'items/diamond', weight: 0.28,
+        description: '공간의 금이 결정으로 굳은 조각. 가까운 사물의 윤곽을 겹쳐 보이게 한다.',
+        tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'archive_key_fragment', name: '기록고 열쇠 파편', image: 'items/gold_ore', weight: 0.16,
+        description: '기계고의 폐쇄된 기록층을 열던 톱니형 열쇠의 일부.',
+        tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
+    },
+] as const) defineItem({
+    id: material.id,
+    name: material.name,
+    description: material.description,
+    image: material.image,
+    category: '기계고 소재',
+    weight: material.weight,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [...material.tags],
+});
+
+defineItem({
+    id: 'cogwork_ration', name: '태엽 작업식',
+    description: '자동 공방의 교대 시간을 견디도록 만든 압축 식량. 배고픔 90과 수분 30을 회복한다.',
+    image: 'items/traveler_bread', category: '음식', weight: 0.48, stackable: true, maxStack: 30,
+    baseMetadata: { hunger: 90, thirst: 30, time: 1.2, useMessage: '태엽 작업식을 풀어 먹는 중...' },
+    onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_CLOCKWORK],
+});
+
+for (const tonic of [
+    {
+        id: 'phase_tonic', name: '위상 촉진제', image: 'items/fresh_water',
+        description: '공허 용수철의 반동을 몸에 흘려 55초 동안 움직임을 가속한다.',
+        statusEffect: { id: 'swiftness', level: 11, duration: 55 },
+        tags: [GameTags.PROPERTY_DARK, GameTags.PROPERTY_ELECTRIC],
+    },
+    {
+        id: 'logic_elixir', name: '논리회로 영약', image: 'items/mana_potion',
+        description: '논리핵의 계산 회로를 정신에 겹쳐 55초 동안 마법 위력을 강화한다.',
+        statusEffect: { id: 'magic_enhancement', level: 11, duration: 55 },
+        tags: [GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ELECTRIC],
+    },
+    {
+        id: 'temporal_salve', name: '시간봉합 연고', image: 'items/health_potion',
+        description: '상처가 나기 전의 형상을 되짚어 40초 동안 강한 생명력 재생을 부여한다.',
+        statusEffect: { id: 'regeneration', level: 12, duration: 40 },
+        tags: [GameTags.PROPERTY_LIGHT],
+    },
+] as const) defineItem({
+    id: tonic.id, name: tonic.name, description: tonic.description,
+    image: tonic.image, category: '소모품', weight: 0.3, stackable: true, maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: tonic.statusEffect },
+    onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_CLOCKWORK, ...tonic.tags],
+});
+
+defineItem({
+    id: 'paradox_edge', name: '역설절단검',
+    description: '베기 전과 베어 낸 뒤의 궤적을 겹쳐 갑옷의 같은 틈을 두 번 파고드는 시간강 장검.',
+    image: 'items/windsteel_sword', category: '장검', weight: 4.1, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 190, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 48, source: '' },
+    ],
+    baseDurability: 520,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL],
+    onBasicAttackHit: ({ target }) => {
+        const effect = StatusEffectType.fromKey('defense_reduction');
+        if (effect && Math.random() < 0.22) target.applyStatusEffect(effect, 9, 10);
+    },
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+});
+
+defineItem({
+    id: 'photon_repeater', name: '광자연사궁',
+    description: '광자 렌즈가 다음 사격 궤도를 미리 잡아 화살을 빠르게 이어 보내는 복합궁.',
+    image: 'items/stormstring_bow', category: '활', weight: 2.75, stackable: false, maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+        [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 142, source: '' },
+        { attribute: 'critRate', op: 'add', value: 0.09, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.45, source: '' },
+    ],
+    baseDurability: 495,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+});
+
+defineItem({
+    id: 'voidspring_dagger', name: '공허태엽 단검',
+    description: '검신 안의 공허 용수철이 접촉 순간 튀어나와 얕은 상처를 깊게 벌리는 단검.',
+    image: 'items/nightglass_dagger', category: '단검', weight: 1.6, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 158, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 54, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.26, source: '' },
+    ],
+    baseDurability: 455,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL],
+    onBasicAttackHit: ({ target }) => {
+        const effect = StatusEffectType.fromKey('slowness');
+        if (effect && Math.random() < 0.18) target.applyStatusEffect(effect, 6, 9);
+    },
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
+});
+
+defineItem({
+    id: 'logic_core_staff', name: '논리핵 지팡이',
+    description: '논리핵이 마력의 낭비 경로를 지우고 가장 짧은 탄도만 남기는 마도 지팡이.',
+    image: 'items/starwood_staff', category: '지팡이', weight: 3, stackable: false, maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+        [ItemMetadataKeys.PROJECTILE_ATTACK]: {
+            projectile: {
+                dataId: 'basic_magic_orb',
+                overrides: { tags: [GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ELECTRIC] },
+            },
+        },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'magicForce', op: 'add', value: 222, source: '' },
+        { attribute: 'magicPen', op: 'add', value: 58, source: '' },
+        { attribute: 'mentalityRegen', op: 'add', value: 10, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.48, source: '' },
+    ],
+    baseDurability: 535,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ELECTRIC],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+});
+
+defineItem({
+    id: 'causality_aegis', name: '인과율 방패',
+    description: '공격이 닿는 원인과 상처가 생기는 결과 사이를 벌려 충격을 흘리는 자동 장갑 방패.',
+    image: 'items/forged_shield', category: '방패', weight: 4.5, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'offHand',
+    modifiers: [
+        { attribute: 'def', op: 'add', value: 64, source: '' },
+        { attribute: 'magicDef', op: 'add', value: 68, source: '' },
+        { attribute: 'maxLife', op: 'add', value: 820, source: '' },
+    ],
+    baseDurability: 620,
+    tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
+    balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
+});
+
+for (const book of [
+    { id: 'photon_lance_skillbook', name: '광자창 전승서', skillDataId: 'photon_lance', property: GameTags.PROPERTY_LIGHT },
+    { id: 'causality_lock_skillbook', name: '인과고정 전승서', skillDataId: 'causality_lock', property: GameTags.PROPERTY_DARK },
+    { id: 'gearstorm_skillbook', name: '톱니폭우 전승서', skillDataId: 'gearstorm', property: GameTags.PROPERTY_METAL },
+    { id: 'paradox_reversal_skillbook', name: '역설반전 전승서', skillDataId: 'paradox_reversal', property: GameTags.PROPERTY_LIGHT },
+] as const) defineItem({
+    id: book.id,
+    name: book.name,
+    description: `역설기계고의 전투 연산이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
+    image: 'items/seismic_crush_skillbook', category: '스킬북', weight: 0.3, stackable: true, maxStack: 10,
+    baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
+    modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_CLOCKWORK, book.property],
+});
+
 defineItem({
     id: 'ember_ore',
     name: '화맥 광석',

@@ -462,3 +462,55 @@ defineShop({
     ],
     tags: [GameTags.SHOP_TIDAL],
 });
+
+defineShop({
+    id: 'paradox_relay_store',
+    buyList: [
+        {
+            label: '태엽 작업식', create: () => ({ itemDataId: 'cogwork_ration', count: 1 }),
+            count: 1, price: 165, stock: 24, restockTime: 50,
+        },
+        {
+            label: '위상 촉진제', create: () => ({ itemDataId: 'phase_tonic', count: 1 }),
+            count: 1, price: 260, stock: 12, restockTime: 110,
+        },
+        {
+            label: '논리회로 영약', create: () => ({ itemDataId: 'logic_elixir', count: 1 }),
+            count: 1, price: 275, stock: 12, restockTime: 110,
+        },
+        {
+            label: '시간봉합 연고', create: () => ({ itemDataId: 'temporal_salve', count: 1 }),
+            count: 1, price: 295, stock: 10, restockTime: 130,
+        },
+        {
+            label: '화살 80개', create: () => ({ itemDataId: 'wooden_arrow', count: 80 }),
+            count: 80, price: 185, stock: 20, restockTime: 40,
+        },
+        ...[
+            ['역설절단검', 'paradox_edge', 12_600],
+            ['광자연사궁', 'photon_repeater', 12_300],
+            ['공허태엽 단검', 'voidspring_dagger', 12_750],
+            ['논리핵 지팡이', 'logic_core_staff', 13_100],
+            ['인과율 방패', 'causality_aegis', 12_900],
+        ].map(([label, itemDataId, price]) => ({
+            label: label as string,
+            create: () => ({ itemDataId: itemDataId as string, count: 1 }),
+            count: 1,
+            price: price as number,
+            stock: 1,
+            restockTime: 1_800,
+        })),
+    ],
+    sellList: [
+        { label: '시간강 파편', filter: item => item.itemDataId === 'chronosteel_shard', count: 99, price: 175 },
+        { label: '기억 톱니', filter: item => item.itemDataId === 'memory_gear', count: 99, price: 125 },
+        { label: '광자 렌즈', filter: item => item.itemDataId === 'photon_lens', count: 99, price: 205 },
+        { label: '공허 용수철', filter: item => item.itemDataId === 'void_spring', count: 99, price: 220 },
+        { label: '논리핵', filter: item => item.itemDataId === 'logic_core', count: 99, price: 295 },
+        { label: '역설 실', filter: item => item.itemDataId === 'paradox_thread', count: 99, price: 340 },
+        { label: '자동인형 장갑판', filter: item => item.itemDataId === 'automaton_plate', count: 99, price: 155 },
+        { label: '균열 수정', filter: item => item.itemDataId === 'fracture_crystal', count: 99, price: 275 },
+        { label: '기록고 열쇠 파편', filter: item => item.itemDataId === 'archive_key_fragment', count: 99, price: 245 },
+    ],
+    tags: [GameTags.SHOP_CLOCKWORK],
+});

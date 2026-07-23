@@ -1679,6 +1679,38 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         statusEffect: LegacyStatusEffects.BIND, statusLabel: '속박', statusDuration: 2.5, statusDurationPerLevel: 0.25,
         descriptionIntro: '심해철로 벼린 거대한 닻을 대상에게 내리꽂습니다.',
     },
+    {
+        id: 'photon_lance', name: '광자창', icon: 'affinities/light', activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 300, perLevelPercent: 21,
+        manaCost: 46, cooldown: 12, groupTag: GameTags.SKILL_GROUP_MAGIC,
+        projectile: 'magic_bolt', projectileName: '광자창', propertyTag: GameTags.PROPERTY_LIGHT,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 42, perLevel: 8 },
+        descriptionIntro: '광자 렌즈로 모은 빛을 가느다란 창으로 압축해 대상에게 발사합니다.',
+    },
+    {
+        id: 'causality_lock', name: '인과고정', icon: 'affinities/dark', activationHeader: 'elemental_bind',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 250, perLevelPercent: 18,
+        manaCost: 44, cooldown: 15, groupTag: GameTags.SKILL_GROUP_MAGIC,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_DARK,
+        statusEffect: LegacyStatusEffects.BIND, statusLabel: '속박', statusDuration: 3, statusDurationPerLevel: 0.4,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 34, perLevel: 7 },
+        descriptionIntro: '대상의 현재 위치를 결과로 고정해 움직임과 회피 경로를 함께 끊습니다.',
+    },
+    {
+        id: 'gearstorm', name: '톱니폭우', icon: 'affinities/metal', activationHeader: 'multishot',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 175, perLevelPercent: 14,
+        manaCost: 40, cooldown: 14, groupTag: GameTags.SKILL_GROUP_WARRIOR,
+        projectile: 'basic_arrow', projectileName: '비행 톱니', propertyTag: GameTags.PROPERTY_METAL,
+        hitCount: 3, penetration: { attribute: AttributeType.ARMOR_PEN, base: 28, perLevel: 6 },
+        descriptionIntro: '세 장의 비행 톱니를 서로 다른 각도로 회전시켜 대상에게 연달아 쏟아냅니다.',
+    },
+    {
+        id: 'paradox_reversal', name: '역설반전', icon: 'affinities/light', activationHeader: 'sanctum_judgment',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 275, perLevelPercent: 19,
+        manaCost: 52, cooldown: 18, groupTag: GameTags.SKILL_GROUP_MAGIC,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_LIGHT, shieldPercent: 12,
+        descriptionIntro: '받게 될 충격의 일부를 뒤집어 대상에게 되돌리고 남은 힘을 방벽으로 고정합니다.',
+    },
 ];
 
 function growthTechniqueDescription(technique: GrowthTechniqueDefinition): string {
@@ -1753,6 +1785,21 @@ for (const technique of growthTechniques) defineSkill({
         damageType: technique.damageType,
         effectTags: technique.propertyTag ? [technique.propertyTag] : undefined,
         calculateDamage: context => growthTechniqueDamage(context, technique),
+        calculatePenetration: technique.penetration
+            ? context => {
+                const granted = valueByLevel(
+                    context.skill.level,
+                    technique.penetration!.base,
+                    technique.penetration!.perLevel,
+                );
+                if (technique.projectile) return granted;
+                const base = context.owner.attribute.get(
+                    technique.damageType === 'magic' ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN,
+                );
+                return base + granted;
+            }
+            : undefined,
+        unavoidable: technique.unavoidable,
         criticalMode: technique.guaranteedCritical ? SkillCriticalMode.GUARANTEED : SkillCriticalMode.NORMAL,
         hitCount: technique.hitCount,
         calculateManaCost: () => technique.manaCost,
@@ -1803,11 +1850,31 @@ for (const technique of growthTechniques) defineSkill({
                 );
             }
         } else {
-            hit(directAttack(context, multiplier, {
-                criticalRate: technique.guaranteedCritical ? 1 : undefined,
-                unavoidable: technique.unavoidable,
-                consumeMainHandDurability: Boolean(technique.weaponTags?.length),
-            }));
+            const penetrationSource = `skill:${technique.id}:penetration`;
+            const penetration = technique.penetration
+                ? valueByLevel(context.skill.level, technique.penetration.base, technique.penetration.perLevel)
+                : 0;
+            if (technique.penetration) {
+                context.owner.attribute.removeBySource(penetrationSource);
+                context.owner.attribute.addModifiers([{
+                    attribute: technique.penetration.attribute.key,
+                    op: 'add',
+                    value: penetration,
+                    source: penetrationSource,
+                }]);
+            }
+            try {
+                const result = context.owner.attack(found.target, technique.damageType,
+                    context.owner.attribute.get(technique.attribute) * multiplier, {
+                        criticalRate: technique.guaranteedCritical ? 1 : undefined,
+                        unavoidable: technique.unavoidable,
+                        consumeMainHandDurability: Boolean(technique.weaponTags?.length),
+                    });
+                if (!result) throw new Error('공격이 확정되지 않았습니다.');
+                hit(result);
+            } finally {
+                context.owner.attribute.removeBySource(penetrationSource);
+            }
         }
         if (technique.shieldPercent) {
             context.owner.setShield(
@@ -2446,6 +2513,15 @@ function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): void {
                 `${definition.attribute.label} × ${formatNumber((definition.baseMultiplier + Math.max(0, context.skill.level - 1) * definition.perLevelMultiplier) * 100)}% · 스킬 레벨당 계수 +${formatNumber(definition.perLevelMultiplier * 100)}%p`,
             ),
         },
+        balance: {
+            role: statusEffect ? SkillBalanceRole.CONTROL : SkillBalanceRole.DAMAGE,
+            damageType: definition.damageType,
+            effectTags: [definition.propertyTag],
+            calculateDamage: context => damage(context),
+            unavoidable: definition.unavoidable,
+            calculateManaCost: () => 0,
+            notes: statusEffect ? [`${statusEffect.label}의 전술 가치는 직접 피해와 분리합니다.`] : undefined,
+        },
         calculateMaxCooldown: () => definition.cooldown,
         canActivate: context => {
             if (context.player) return denySkill('구간 보스만 사용할 수 있는 스킬입니다.');
@@ -2566,6 +2642,30 @@ for (const skill of [
         attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.62, perLevelMultiplier: 0.15,
         castTime: 1.7, cooldown: 11, propertyTag: GameTags.PROPERTY_UNDEAD,
         statusEffectId: 'fear', statusDuration: 5, activationHeader: 'deathless_requiem',
+    },
+    {
+        id: 'clockwork_overrun', name: '태엽 과주행', icon: 'affinities/metal', damageType: 'physical' as const,
+        attribute: AttributeType.ATK, baseMultiplier: 1.92, perLevelMultiplier: 0.18,
+        castTime: 1.05, cooldown: 8, propertyTag: GameTags.PROPERTY_METAL,
+        statusEffectId: 'bleeding', statusDuration: 9, activationHeader: 'battle_rush',
+    },
+    {
+        id: 'chronosteel_time_lock', name: '시간강 정지추', icon: 'affinities/electric', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.82, perLevelMultiplier: 0.17,
+        castTime: 1.45, cooldown: 10, propertyTag: GameTags.PROPERTY_ELECTRIC,
+        statusEffectId: 'bind', statusDuration: 4.5, unavoidable: true, activationHeader: 'elemental_bind',
+    },
+    {
+        id: 'architect_causality_sever', name: '인과 절단', icon: 'affinities/dark', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 2.08, perLevelMultiplier: 0.2,
+        castTime: 1.2, cooldown: 9, propertyTag: GameTags.PROPERTY_DARK,
+        statusEffectId: 'silence', statusDuration: 5, unavoidable: true, activationHeader: 'deathless_requiem',
+    },
+    {
+        id: 'architect_photon_verdict', name: '광자 판결', icon: 'affinities/light', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.95, perLevelMultiplier: 0.18,
+        castTime: 1.55, cooldown: 10, propertyTag: GameTags.PROPERTY_LIGHT,
+        statusEffectId: 'blindness', statusDuration: 5, activationHeader: 'sanctum_judgment',
     },
     {
         id: 'caldera_eruption', name: '칼데라 분출', icon: 'affinities/fire', damageType: 'magic' as const,

@@ -11,6 +11,9 @@ import {
     analyzeAllFirstJobs,
     analyzeBalanceProfile,
     analyzeItemBalance,
+    analyzeSkillBalance,
+    BalanceEncounterType,
+    createBalanceScenario,
 } from '../models/Balance.js';
 
 const levelInput = process.argv[2] ?? '50';
@@ -81,6 +84,11 @@ const itemCases = [
     ['career:archer', 'mistcurrent_bow'],
     ['career:assassin', 'blackcoral_sting'],
     ['career:mage', 'deeppearl_staff'],
+    ['career:warrior', 'paradox_edge'],
+    ['career:warrior', 'causality_aegis'],
+    ['career:archer', 'photon_repeater'],
+    ['career:assassin', 'voidspring_dagger'],
+    ['career:mage', 'logic_core_staff'],
     ['career:warrior', 'battle_tonic'],
     ['career:mage', 'arcane_tonic'],
     ['career:archer', 'swift_tonic'],
@@ -93,6 +101,27 @@ for (const [jobId, itemId] of itemCases) {
         `DPS=${report.before[dpsKey].toFixed(2)}→${report.after[dpsKey].toFixed(2)}`,
         `물리생존=${formatSeconds(report.before.physicalSurvivalSeconds)}→${formatSeconds(report.after.physicalSurvivalSeconds)}`,
         `마법생존=${formatSeconds(report.before.magicSurvivalSeconds)}→${formatSeconds(report.after.magicSurvivalSeconds)}`,
+    ].join('  '));
+}
+
+console.log('\n지역 전승 스킬 실측');
+for (const [jobId, skillId] of [
+    ['career:mage', 'photon_lance'],
+    ['career:mage', 'causality_lock'],
+    ['career:warrior', 'gearstorm'],
+    ['career:mage', 'paradox_reversal'],
+] as const) {
+    const scenario = createBalanceScenario(level, jobId, undefined, BalanceEncounterType.BOSS);
+    const report = analyzeSkillBalance(scenario, skillId, 5);
+    console.log([
+        `${scenario.effectiveJob.name}/${report.name}`,
+        `1회=${report.expectedTotalDamage.toFixed(2)}`,
+        `60초=${report.sustainableDpm.toFixed(2)}`,
+        `사용=${report.sustainableCasts}회`,
+        `소모=${report.manaCost.toFixed(0)}`,
+        `재사용=${report.cooldown.toFixed(1)}초`,
+        `회피=${(report.evasionChance * 100).toFixed(1)}%`,
+        `관통=${report.penetration.toFixed(1)}/${(report.penetration + report.effectiveDefense).toFixed(1)}→${report.effectiveDefense.toFixed(1)}`,
     ].join('  '));
 }
 

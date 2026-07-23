@@ -9,7 +9,7 @@
 - `minigames.ts`: 종류별 미니게임 세션·축/action trace DTO, 20ms 축 입력 병합·2,048개 상한·불변 전송 snapshot API와 낚시 포획, 실제 패턴 label·보스별 단색 theme·난이도 1~10·성장형 연쇄 폭발·세 줄 연사·교차 레이저를 지원하는 위험 회피, 난이도별 정박/엇박/연속박자 생성·가장 가까운 note 우선 타격 판정·짧은 터치 표시 지연 보정·품질 보정을 서버와 클라이언트가 공유하는 단조 리듬 시뮬레이터.
 - `tags.ts`: `namespace:path` 검증, 액티브/패시브와 전사·궁수·암살자·마법·대장장이·원소 공유 쿨다운 스킬 계열, 검·도끼·활·단검·지팡이 무기 분류, 은신, 투사체/탄약/광맥/보물/채굴·낚시 도구/미끼·물고기·물고기 희귀도/스킬북, 낚시 가능 지역·속성 공용 태그 ID와 raw Set을 숨기는 `TagCollection/TagReadable/TagQuery` API.
 - 은빛그물 숲 확장은 `location:forest` 권역과 `shop:hunter` 상점 분류를 동일한 공용 태그 API에 추가한다.
-- 유리모래 사막의 `location:desert`, `shop:caravan`, `material:glass`와 서리잔향 설원·빙경궁의 `location:frozen`, `shop:frost`, `material:rime` 분류를 같은 공용 태그 API에서 소유한다.
+- 유리모래 사막의 `location:desert`, `shop:caravan`, `material:glass`, 서리잔향 설원·빙경궁의 `location:frozen`, `shop:frost`, `material:rime`, 역설기계고의 `location:clockwork`, `shop:clockwork`, `material:clockwork` 분류를 같은 공용 태그 API에서 소유한다.
 - `package.json`: 서버 빌드와 브라우저 번들에서 공용 런타임 모듈을 ESM으로 일관되게 해석한다.
 - `templates/`: 서버 메일에서 읽는 HTML 템플릿.
 

@@ -1126,6 +1126,183 @@ const misttideMonsters: readonly WorldMonsterData[] = [
 
 for (const monster of misttideMonsters) defineWorldMonster(monster);
 
+const paradoxClockworkMonsters: readonly WorldMonsterData[] = [
+    {
+        id: 'gearmite_scavenger', name: '톱니진드기',
+        description: '버려진 장치 사이를 돌아다니며 닳은 톱니를 몸에 덧붙이는 작은 기계충.', level: 196,
+        baseAttribute: { maxLife: 35_500, atk: 682, def: 438, magicDef: 370, armorPen: 38, speed: 3.35, attackSpeed: 1.42 },
+        drops: [
+            { itemDataId: 'memory_gear', minCount: 1, maxCount: 3, chance: 0.58 },
+            { itemDataId: 'chronosteel_shard', minCount: 1, maxCount: 2, chance: 0.26 },
+        ],
+        goldReward: { min: 720, max: 1_160 },
+        tags: [GameTags.ENTITY_BEAST, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_INSECT, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'clockwork_hound', name: '태엽 추적견',
+        description: '마지막으로 감지한 침입자의 보폭을 기억하고 같은 속도로 추격하는 자동 사냥개.', level: 199,
+        baseAttribute: { maxLife: 38_200, atk: 714, def: 420, magicDef: 382, armorPen: 44, speed: 3.8, attackSpeed: 1.34 },
+        drops: [
+            { itemDataId: 'automaton_plate', minCount: 1, maxCount: 3, chance: 0.5 },
+            { itemDataId: 'void_spring', minCount: 1, maxCount: 2, chance: 0.24 },
+        ],
+        goldReward: { min: 745, max: 1_195 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.22, duration: 8, level: 9 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_METAL, GameTags.PROPERTY_ELECTRIC],
+    },
+    {
+        id: 'lens_sentinel', name: '광학 파수기',
+        description: '광자 렌즈로 침입자의 다음 위치를 예측해 빛줄기를 먼저 쏘는 부유 파수기.', level: 202,
+        baseAttribute: { maxLife: 37_600, atk: 650, magicForce: 760, def: 390, magicDef: 480, magicPen: 48, speed: 3.15, attackSpeed: 1.18 },
+        drops: [
+            { itemDataId: 'photon_lens', minCount: 1, maxCount: 2, chance: 0.48 },
+            { itemDataId: 'logic_core', minCount: 1, maxCount: 1, chance: 0.17 },
+        ],
+        goldReward: { min: 770, max: 1_230 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'blindness', chance: 0.2, duration: 5, level: 9 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'scrap_centurion', name: '폐철 백인대장',
+        description: '부서진 병사들의 장갑을 모아 덧댄 뒤 낡은 대형을 홀로 반복하는 지휘 자동인형.', level: 205,
+        baseAttribute: { maxLife: 44_800, atk: 754, def: 502, magicDef: 415, armorPen: 46, speed: 1.8, attackSpeed: 0.82 },
+        drops: [
+            { itemDataId: 'automaton_plate', minCount: 2, maxCount: 4, chance: 0.64 },
+            { itemDataId: 'archive_key_fragment', minCount: 1, maxCount: 1, chance: 0.15 },
+        ],
+        goldReward: { min: 795, max: 1_275 },
+        attack: { effect: { statusEffectId: 'defense_reduction', chance: 0.24, duration: 8, level: 9 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'phase_crow', name: '위상 까마귀',
+        description: '한 박자 뒤의 자기 위치와 번갈아 나타나며 공허 용수철을 훔치는 검은 기계조.', level: 208,
+        baseAttribute: { maxLife: 39_400, atk: 705, magicForce: 782, def: 405, magicDef: 468, magicPen: 52, speed: 4.2, attackSpeed: 1.45 },
+        drops: [
+            { itemDataId: 'void_spring', minCount: 1, maxCount: 3, chance: 0.56 },
+            { itemDataId: 'paradox_thread', minCount: 1, maxCount: 1, chance: 0.12 },
+        ],
+        goldReward: { min: 820, max: 1_315 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'slowness', chance: 0.22, duration: 6, level: 10 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_DARK, GameTags.PROPERTY_ELECTRIC],
+    },
+    {
+        id: 'logic_golem', name: '논리식 골렘',
+        description: '같은 공격을 반복해서 받을수록 방어 식을 고쳐 쓰는 다면체 기계 골렘.', level: 211,
+        baseAttribute: { maxLife: 51_500, atk: 752, magicForce: 805, def: 545, magicDef: 535, speed: 1.25, attackSpeed: 0.68 },
+        drops: [
+            { itemDataId: 'logic_core', minCount: 1, maxCount: 2, chance: 0.46 },
+            { itemDataId: 'chronosteel_shard', minCount: 2, maxCount: 4, chance: 0.52 },
+        ],
+        goldReward: { min: 850, max: 1_360 },
+        attack: { damageType: 'magic' },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'archive_mimic', name: '기록고 의태함',
+        description: '열쇠를 찾는 손길을 기다렸다가 기억과 마력을 함께 물어뜯는 보관함 모양 자동인형.', level: 214,
+        baseAttribute: { maxLife: 47_600, atk: 805, magicForce: 742, def: 518, magicDef: 460, armorPen: 52, speed: 1.55, attackSpeed: 0.9 },
+        drops: [
+            { itemDataId: 'archive_key_fragment', minCount: 1, maxCount: 3, chance: 0.62 },
+            { itemDataId: 'paradox_thread', minCount: 1, maxCount: 2, chance: 0.18 },
+        ],
+        goldReward: { min: 880, max: 1_410 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'silence', chance: 0.18, duration: 4, level: 10 } },
+        tags: [GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'photon_executioner', name: '광자 처형기',
+        description: '유죄로 분류한 목표의 회피 경로를 지운 뒤 광자 도끼를 내리치는 고등 자동병기.', level: 218,
+        baseAttribute: { maxLife: 56_800, atk: 842, magicForce: 835, def: 565, magicDef: 548, armorPen: 58, magicPen: 56, speed: 2.05, attackSpeed: 0.76 },
+        drops: [
+            { itemDataId: 'photon_lens', minCount: 1, maxCount: 3, chance: 0.55 },
+            { itemDataId: 'fracture_crystal', minCount: 1, maxCount: 2, chance: 0.22 },
+        ],
+        goldReward: { min: 920, max: 1_470 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'magic_defense_reduction', chance: 0.24, duration: 8, level: 10 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'chronosteel_colossus', name: '시간강 거신',
+        description: '폐쇄된 주조로를 지키는 거대 자동인형. 느린 태엽 과주행과 회피할 수 없는 시간강 정지추를 번갈아 사용한다.', level: 220,
+        baseAttribute: { maxLife: 340_000, atk: 940, magicForce: 925, def: 650, magicDef: 625, armorPen: 62, magicPen: 60, speed: 1.2, attackSpeed: 0.34, critRate: 0.16, critDmg: 1.9 },
+        expReward: 220 * 20 * 7,
+        drops: [
+            { itemDataId: 'chronosteel_shard', minCount: 8, maxCount: 14, chance: 0.9 },
+            { itemDataId: 'automaton_plate', minCount: 6, maxCount: 10, chance: 0.75 },
+            { itemDataId: 'gearstorm_skillbook', minCount: 1, maxCount: 1, chance: 0.035 },
+            { itemDataId: 'causality_lock_skillbook', minCount: 1, maxCount: 1, chance: 0.025 },
+        ],
+        goldReward: { min: 2_100, max: 3_250 },
+        skills: [
+            { skillDataId: 'clockwork_overrun', level: 5 },
+            { skillDataId: 'chronosteel_time_lock', level: 5 },
+        ],
+        skillPattern: { sequence: ['clockwork_overrun', 'chronosteel_time_lock'], initialDelay: 4, interval: { min: 7, max: 10 } },
+        ai: {
+            intelligence: 88, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.2, damage: 1, healing: 1.35, shielding: 1.15, control: 1.4, taunt: 2.5 },
+            tauntResistance: 0.78, switchThreshold: 0.24, decayPerSecond: 0.007,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_METAL, GameTags.PROPERTY_ELECTRIC, 'monster:chronosteel-colossus'],
+    },
+    {
+        id: 'fracture_shade', name: '균열 잔영',
+        description: '파괴된 시간대에서 흘러나와 현재의 공격보다 반 박자 늦게 상처를 남기는 마력 잔상.', level: 224,
+        baseAttribute: { maxLife: 52_500, atk: 770, magicForce: 892, def: 455, magicDef: 595, magicPen: 66, speed: 4.35, attackSpeed: 1.38 },
+        drops: [
+            { itemDataId: 'fracture_crystal', minCount: 1, maxCount: 3, chance: 0.58 },
+            { itemDataId: 'paradox_thread', minCount: 1, maxCount: 2, chance: 0.25 },
+        ],
+        goldReward: { min: 970, max: 1_560 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'decay', chance: 0.24, duration: 9, level: 11 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'paradox_doll', name: '역설 꼭두각시',
+        description: '쓰러진 기록과 아직 싸우지 않은 기록을 번갈아 불러내는 인간형 전투 인형.', level: 228,
+        baseAttribute: { maxLife: 61_500, atk: 892, magicForce: 905, def: 592, magicDef: 610, armorPen: 64, magicPen: 68, speed: 3.1, attackSpeed: 1.08, critRate: 0.18, critDmg: 1.95 },
+        drops: [
+            { itemDataId: 'memory_gear', minCount: 2, maxCount: 5, chance: 0.62 },
+            { itemDataId: 'archive_key_fragment', minCount: 1, maxCount: 3, chance: 0.38 },
+            { itemDataId: 'paradox_thread', minCount: 1, maxCount: 2, chance: 0.27 },
+        ],
+        goldReward: { min: 1_020, max: 1_640 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'bind', chance: 0.2, duration: 4, level: 11 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'paradox_architect', name: '역설설계자 오르도',
+        description: '역설기계고의 모든 인과 연산을 다시 쓰려는 최종 설계자. 세 역설 고정자가 남아 있는 동안 받는 피해가 75% 감소한다.', level: 235,
+        baseAttribute: { maxLife: 480_000, atk: 1_010, magicForce: 1_085, def: 690, magicDef: 720, armorPen: 72, magicPen: 78, speed: 2.55, attackSpeed: 0.48, critRate: 0.2, critDmg: 2 },
+        expReward: 235 * 20 * 8,
+        drops: [
+            { itemDataId: 'logic_core', minCount: 6, maxCount: 10, chance: 0.9 },
+            { itemDataId: 'fracture_crystal', minCount: 5, maxCount: 9, chance: 0.82 },
+            { itemDataId: 'photon_lance_skillbook', minCount: 1, maxCount: 1, chance: 0.04 },
+            { itemDataId: 'paradox_reversal_skillbook', minCount: 1, maxCount: 1, chance: 0.025 },
+        ],
+        goldReward: { min: 2_850, max: 4_300 },
+        skills: [
+            { skillDataId: 'architect_causality_sever', level: 5 },
+            { skillDataId: 'architect_photon_verdict', level: 5 },
+            { skillDataId: 'chronosteel_time_lock', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['architect_causality_sever', 'architect_photon_verdict', 'chronosteel_time_lock'],
+            randomOrder: true, initialDelay: 3.5, interval: { min: 6, max: 8.5 },
+        },
+        ai: {
+            intelligence: 100, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.08, damage: 1, healing: 1.95, shielding: 1.75, control: 1.8, taunt: 3.4 },
+            tauntResistance: 0.94, switchThreshold: 0.32, decayPerSecond: 0.004,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL, 'monster:paradox-architect'],
+    },
+];
+
+for (const monster of paradoxClockworkMonsters) defineWorldMonster(monster);
+
 const advancedWorldMonsters: WorldMonsterData[] = [
     {
         id: 'spark_moth', name: '섬광나방', description: '폭풍 전류를 날개에 모아 번쩍이며 달려드는 거대 곤충.', level: 52,

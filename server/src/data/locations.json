@@ -1186,7 +1186,8 @@
       { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
-      { "locationId": "eclipse_crossroads" }
+      { "locationId": "eclipse_crossroads" },
+      { "locationId": "paradox_foundry_threshold", "condition": "level_200" }
     ]
   },
   {
@@ -2231,6 +2232,455 @@
     "connections": [
       { "locationId": "misttide_abyssal_barracks" },
       { "locationId": "misttide_leviathan_trench" }
+    ]
+  },
+  {
+    "id": "paradox_foundry_threshold",
+    "name": "역설기계고 1 정지된 문턱",
+    "mapColor": "#5b5264",
+    "zoneType": "neutral",
+    "x": 2290,
+    "y": -100,
+    "z": 30,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:metal", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "gearmite_scavenger", "maxCount": 3, "respawnTime": 138 }
+    ],
+    "connections": [
+      { "locationId": "astral_nexus", "condition": "level_200" },
+      { "locationId": "paradox_relay_station" },
+      { "locationId": "paradox_rusted_conveyor" }
+    ]
+  },
+  {
+    "id": "paradox_relay_station",
+    "name": "역설기계고 기록 중계소",
+    "mapColor": "#5b5264",
+    "zoneType": "safe",
+    "x": 2360,
+    "y": -150,
+    "z": 34,
+    "mapIcon": "general-shop",
+    "shopId": "paradox_relay_store",
+    "tags": ["location:town", "location:clockwork", "property:metal", "shop:clockwork"],
+    "npcIds": ["paradox_curator"],
+    "objects": [],
+    "connections": [
+      { "locationId": "paradox_foundry_threshold" },
+      { "locationId": "paradox_rusted_conveyor" },
+      { "locationId": "paradox_lens_corridor" }
+    ]
+  },
+  {
+    "id": "paradox_rusted_conveyor",
+    "name": "역설기계고 2 폐철 수거로",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2360,
+    "y": -70,
+    "z": 18,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "gearmite_scavenger", "maxCount": 3, "respawnTime": 138 },
+      { "type": "monster", "dataId": "clockwork_hound", "maxCount": 2, "respawnTime": 142 },
+      { "type": "resource", "dataId": "memory_coil", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "paradox_foundry_threshold" },
+      { "locationId": "paradox_relay_station" },
+      { "locationId": "paradox_scrap_reservoir" },
+      { "locationId": "paradox_lens_corridor" }
+    ]
+  },
+  {
+    "id": "paradox_lens_corridor",
+    "name": "역설기계고 3 광학 회랑",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2440,
+    "y": -190,
+    "z": 45,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:light", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "lens_sentinel", "maxCount": 3, "respawnTime": 146 },
+      { "type": "monster", "dataId": "phase_crow", "maxCount": 1, "respawnTime": 152 }
+    ],
+    "connections": [
+      { "locationId": "paradox_relay_station" },
+      { "locationId": "paradox_rusted_conveyor" },
+      { "locationId": "paradox_gear_chapel" },
+      { "locationId": "paradox_crow_gantry" }
+    ]
+  },
+  {
+    "id": "paradox_scrap_reservoir",
+    "name": "역설기계고 4 폐장갑 저수고",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2440,
+    "y": -40,
+    "z": 5,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:metal", "property:earth"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "scrap_centurion", "maxCount": 2, "respawnTime": 150 },
+      { "type": "monster", "dataId": "gearmite_scavenger", "maxCount": 2, "respawnTime": 138 },
+      { "type": "resource", "dataId": "chronosteel_vein", "maxCount": 2, "respawnTime": 260 }
+    ],
+    "connections": [
+      { "locationId": "paradox_rusted_conveyor" },
+      { "locationId": "paradox_gear_chapel" },
+      { "locationId": "paradox_fracture_junction" }
+    ]
+  },
+  {
+    "id": "paradox_gear_chapel",
+    "name": "역설기계고 5 맞물림 예배실",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2520,
+    "y": -110,
+    "z": 22,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:metal", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "clockwork_hound", "maxCount": 2, "respawnTime": 142 },
+      { "type": "monster", "dataId": "scrap_centurion", "maxCount": 2, "respawnTime": 150 }
+    ],
+    "connections": [
+      { "locationId": "paradox_lens_corridor" },
+      { "locationId": "paradox_scrap_reservoir" },
+      { "locationId": "paradox_logic_archive" },
+      { "locationId": "paradox_mirrored_assembly" }
+    ]
+  },
+  {
+    "id": "paradox_crow_gantry",
+    "name": "역설기계고 6 위상 조류잔교",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2520,
+    "y": -220,
+    "z": 58,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:dark", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "phase_crow", "maxCount": 3, "respawnTime": 152 },
+      { "type": "monster", "dataId": "lens_sentinel", "maxCount": 2, "respawnTime": 146 }
+    ],
+    "connections": [
+      { "locationId": "paradox_lens_corridor" },
+      { "locationId": "paradox_logic_archive" },
+      { "locationId": "paradox_mirrored_assembly" }
+    ]
+  },
+  {
+    "id": "paradox_logic_archive",
+    "name": "역설기계고 7 논리 기록고",
+    "mapColor": "#5b5264",
+    "zoneType": "neutral",
+    "x": 2600,
+    "y": -170,
+    "z": 35,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:light", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "logic_golem", "maxCount": 2, "respawnTime": 158 },
+      { "type": "resource", "dataId": "memory_coil", "maxCount": 2, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "paradox_gear_chapel" },
+      { "locationId": "paradox_crow_gantry" },
+      { "locationId": "paradox_memory_gallery" },
+      { "locationId": "paradox_lost_workshop" }
+    ]
+  },
+  {
+    "id": "paradox_mirrored_assembly",
+    "name": "역설기계고 8 거울 조립선",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2600,
+    "y": -70,
+    "z": 12,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:light", "property:dark", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "lens_sentinel", "maxCount": 2, "respawnTime": 146 },
+      { "type": "monster", "dataId": "archive_mimic", "maxCount": 2, "respawnTime": 160 }
+    ],
+    "connections": [
+      { "locationId": "paradox_gear_chapel" },
+      { "locationId": "paradox_crow_gantry" },
+      { "locationId": "paradox_chronosteel_foundry" }
+    ]
+  },
+  {
+    "id": "paradox_chronosteel_foundry",
+    "name": "역설기계고 시간강 주조로",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2680,
+    "y": -30,
+    "z": -5,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:metal", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "chronosteel_colossus", "maxCount": 1, "respawnTime": 1020 },
+      { "type": "resource", "dataId": "chronosteel_vein", "maxCount": 2, "respawnTime": 280 }
+    ],
+    "connections": [
+      { "locationId": "paradox_mirrored_assembly" },
+      { "locationId": "paradox_fracture_junction" }
+    ]
+  },
+  {
+    "id": "paradox_fracture_junction",
+    "name": "역설기계고 9 균열 분기소",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2680,
+    "y": -120,
+    "z": -18,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:dark", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "fracture_shade", "maxCount": 3, "respawnTime": 166 },
+      { "type": "resource", "dataId": "chronosteel_vein", "maxCount": 1, "respawnTime": 280 }
+    ],
+    "connections": [
+      { "locationId": "paradox_scrap_reservoir" },
+      { "locationId": "paradox_chronosteel_foundry" },
+      { "locationId": "paradox_memory_gallery" },
+      { "locationId": "paradox_equation_bridge" }
+    ]
+  },
+  {
+    "id": "paradox_memory_gallery",
+    "name": "역설기계고 10 기억 회랑",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2680,
+    "y": -210,
+    "z": -8,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:light", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "archive_mimic", "maxCount": 3, "respawnTime": 160 },
+      { "type": "resource", "dataId": "memory_coil", "maxCount": 2, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "paradox_logic_archive" },
+      { "locationId": "paradox_fracture_junction" },
+      { "locationId": "paradox_lost_workshop" },
+      { "locationId": "paradox_equation_bridge" }
+    ]
+  },
+  {
+    "id": "paradox_lost_workshop",
+    "name": "역설기계고 잃어버린 공방",
+    "mapColor": "#5b5264",
+    "zoneType": "neutral",
+    "x": 2760,
+    "y": -250,
+    "z": -24,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "archive_mimic", "maxCount": 2, "respawnTime": 160 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "paradox_logic_archive" },
+      { "locationId": "paradox_memory_gallery" },
+      { "locationId": "paradox_causality_lock" }
+    ]
+  },
+  {
+    "id": "paradox_equation_bridge",
+    "name": "역설기계고 11 방정식 교량",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2760,
+    "y": -140,
+    "z": -42,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:light", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "logic_golem", "maxCount": 2, "respawnTime": 158 },
+      { "type": "monster", "dataId": "photon_executioner", "maxCount": 2, "respawnTime": 170 }
+    ],
+    "connections": [
+      { "locationId": "paradox_fracture_junction" },
+      { "locationId": "paradox_memory_gallery" },
+      { "locationId": "paradox_inverse_hall" },
+      { "locationId": "paradox_stage" }
+    ]
+  },
+  {
+    "id": "paradox_inverse_hall",
+    "name": "역설기계고 12 역행 회랑",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2840,
+    "y": -190,
+    "z": -55,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:dark", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "fracture_shade", "maxCount": 2, "respawnTime": 166 },
+      { "type": "monster", "dataId": "paradox_doll", "maxCount": 2, "respawnTime": 176 }
+    ],
+    "connections": [
+      { "locationId": "paradox_equation_bridge" },
+      { "locationId": "paradox_causality_lock" },
+      { "locationId": "paradox_puppet_hall" }
+    ]
+  },
+  {
+    "id": "paradox_causality_lock",
+    "name": "역설기계고 인과율 연산실",
+    "mapColor": "#5b5264",
+    "zoneType": "neutral",
+    "x": 2840,
+    "y": -280,
+    "z": -60,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "causality_console", "maxCount": 1, "respawnTime": 0 },
+      { "type": "monster", "dataId": "photon_executioner", "maxCount": 1, "respawnTime": 170 }
+    ],
+    "connections": [
+      { "locationId": "paradox_lost_workshop" },
+      { "locationId": "paradox_inverse_hall" },
+      { "locationId": "paradox_hidden_prototype_vault", "condition": "paradox_causality_solved" },
+      { "locationId": "paradox_stage" }
+    ]
+  },
+  {
+    "id": "paradox_hidden_prototype_vault",
+    "name": "역설기계고 숨은 폐기 시제품고",
+    "mapColor": "#5b5264",
+    "zoneType": "neutral",
+    "x": 2920,
+    "y": -330,
+    "z": -78,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "location:hidden", "property:dark", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "prototype_reliquary", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "chronosteel_vein", "maxCount": 2, "respawnTime": 300 }
+    ],
+    "connections": [
+      { "locationId": "paradox_causality_lock", "condition": "paradox_causality_solved" },
+      { "locationId": "paradox_endless_observatory", "condition": "paradox_causality_solved" }
+    ]
+  },
+  {
+    "id": "paradox_stage",
+    "name": "역설기계고 13 반복 연무대",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2840,
+    "y": -70,
+    "z": -72,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "photon_executioner", "maxCount": 2, "respawnTime": 170 },
+      { "type": "monster", "dataId": "paradox_doll", "maxCount": 2, "respawnTime": 176 }
+    ],
+    "connections": [
+      { "locationId": "paradox_equation_bridge" },
+      { "locationId": "paradox_causality_lock" },
+      { "locationId": "paradox_puppet_hall" },
+      { "locationId": "paradox_abandoned_test_chamber" }
+    ]
+  },
+  {
+    "id": "paradox_puppet_hall",
+    "name": "역설기계고 14 꼭두각시 보관실",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2920,
+    "y": -120,
+    "z": -88,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:dark", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "paradox_doll", "maxCount": 3, "respawnTime": 176 },
+      { "type": "monster", "dataId": "phase_crow", "maxCount": 2, "respawnTime": 152 }
+    ],
+    "connections": [
+      { "locationId": "paradox_inverse_hall" },
+      { "locationId": "paradox_stage" },
+      { "locationId": "paradox_architect_core" }
+    ]
+  },
+  {
+    "id": "paradox_abandoned_test_chamber",
+    "name": "역설기계고 15 폐쇄 시험실",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2920,
+    "y": -30,
+    "z": -92,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:electric", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "fracture_shade", "maxCount": 2, "respawnTime": 166 },
+      { "type": "monster", "dataId": "logic_golem", "maxCount": 2, "respawnTime": 158 },
+      { "type": "resource", "dataId": "prototype_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "paradox_stage" },
+      { "locationId": "paradox_architect_core" },
+      { "locationId": "paradox_endless_observatory" }
+    ]
+  },
+  {
+    "id": "paradox_architect_core",
+    "name": "역설기계고 중앙 인과기관",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 3000,
+    "y": -75,
+    "z": -115,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:light", "property:dark", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "paradox_architect", "maxCount": 1, "respawnTime": 1200 },
+      { "type": "resource", "dataId": "paradox_anchor", "maxCount": 3, "respawnTime": 420 }
+    ],
+    "connections": [
+      { "locationId": "paradox_puppet_hall" },
+      { "locationId": "paradox_abandoned_test_chamber" },
+      { "locationId": "paradox_endless_observatory" }
+    ]
+  },
+  {
+    "id": "paradox_endless_observatory",
+    "name": "역설기계고 무한 관측실",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 3000,
+    "y": -220,
+    "z": -108,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "paradox_doll", "maxCount": 2, "respawnTime": 176 },
+      { "type": "monster", "dataId": "fracture_shade", "maxCount": 2, "respawnTime": 166 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "paradox_hidden_prototype_vault", "condition": "paradox_causality_solved" },
+      { "locationId": "paradox_abandoned_test_chamber" },
+      { "locationId": "paradox_architect_core" }
     ]
   }
 ]

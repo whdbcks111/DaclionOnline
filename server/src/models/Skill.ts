@@ -171,6 +171,10 @@ export interface SkillData {
         /** 직접 피해 자체에 적용할 속성 태그. 무기 태그나 후속 상태효과 태그는 넣지 않는다. */
         effectTags?: readonly TagId[];
         calculateDamage?: (context: SkillContext) => number;
+        /** 스킬 공격 순간 실제로 적용되는 총 관통력. 생략하면 시전자 능력치를 사용한다. */
+        calculatePenetration?: (context: SkillContext) => number;
+        /** 실제 공격 옵션이 회피 불가일 때 밸런스 계산에서도 명중률을 100%로 고정한다. */
+        unavoidable?: boolean;
         criticalMode?: SkillCriticalMode;
         hitCount?: number;
         targetCount?: number;
