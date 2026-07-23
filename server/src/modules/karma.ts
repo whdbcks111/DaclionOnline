@@ -1,6 +1,6 @@
 import type { ZoneType } from '../../../shared/types.js';
 import { GameEventIds, subscribeGameEvent, type GameEvent } from '../models/GameEvent.js';
-import { getKarmaHeroReward, getPvpKarmaGain } from '../models/Karma.js';
+import { getCreditedKarmaHeroReward, getPvpKarmaGain } from '../models/Karma.js';
 import Player from '../models/Player.js';
 import { StatusEffectType } from '../models/StatusEffect.js';
 import { chat } from '../utils/chatBuilder.js';
@@ -24,7 +24,7 @@ function handlePvpKill(event: GameEvent): void {
         ? event.data.victimKarma
         : victim.karma;
     const zoneType = parseZoneType(event.data.zoneType);
-    const heroReward = getKarmaHeroReward(victimKarma);
+    const heroReward = getCreditedKarmaHeroReward(victimKarma, event.data.creditEligible);
 
     if (heroReward) {
         const hero = StatusEffectType.fromKey('hero');

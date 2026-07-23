@@ -204,6 +204,17 @@ export function getKarmaHeroReward(victimKarma: number): KarmaHeroReward | undef
     };
 }
 
+/**
+ * 현상 대상 처치 보상은 부계정·부활 직후·동일 대상 반복 처치를 거른
+ * 서버의 유효 PVP 판정을 명시적으로 통과한 경우에만 반환한다.
+ */
+export function getCreditedKarmaHeroReward(
+    victimKarma: number,
+    creditEligible: unknown,
+): KarmaHeroReward | undefined {
+    return creditEligible === true ? getKarmaHeroReward(victimKarma) : undefined;
+}
+
 /** 지역 기본 사망 손실에 더할 고카르마 전용 패널티를 계산한다. */
 export function getKarmaDeathPenalty(karmaValue: number): KarmaDeathPenalty {
     const karma = getEffectiveKarma(karmaValue);

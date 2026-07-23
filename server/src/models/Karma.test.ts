@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
     getKarmaAtonementQuote,
+    getCreditedKarmaHeroReward,
     getKarmaDeathPenalty,
     getKarmaHeroReward,
     getPvpKarmaGain,
@@ -41,6 +42,15 @@ test('일반 플레이어 PVP는 지역별 카르마를 주고 현상 대상 처
     assert.equal(getKarmaHeroReward(99.9), undefined);
     assert.deepEqual(getKarmaHeroReward(100), { level: 1, durationSeconds: 900 });
     assert.deepEqual(getKarmaHeroReward(1_000), { level: 5, durationSeconds: 3_600 });
+});
+
+test('현상 대상 영웅 보상은 유효 PVP 처치 판정을 통과한 경우에만 지급한다', () => {
+    assert.equal(getCreditedKarmaHeroReward(1_000, false), undefined);
+    assert.equal(getCreditedKarmaHeroReward(1_000, undefined), undefined);
+    assert.deepEqual(
+        getCreditedKarmaHeroReward(1_000, true),
+        { level: 5, durationSeconds: 3_600 },
+    );
 });
 
 test('악명 단계 사망은 레거시형 부활 지연과 추가 재화 손실·고정 카르마 감소를 계산한다', () => {

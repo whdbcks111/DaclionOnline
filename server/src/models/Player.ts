@@ -47,9 +47,11 @@ import {
     type KarmaValueSnapshot,
 } from './Karma.js';
 import TitleBook from './Title.js';
+import { evaluatePvpKillCredit, recordPvpRespawn } from './PvpKillCredit.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
 export const NEWCOMER_PLAY_TIME_SECONDS = 24 * 60 * 60;
+export const NEWCOMER_MAX_LEVEL = 30;
 
 export const PlayerRuntimeProgressIds = Object.freeze({
     /** 사망 패널티 적용 완료 여부와 오프라인 동안 정지할 남은 부활 시간을 함께 나타낸다. */
@@ -82,6 +84,11 @@ defineProgress({
 
 export function isNewcomerPlayTime(seconds: number): boolean {
     return Number.isFinite(seconds) && seconds >= 0 && seconds < NEWCOMER_PLAY_TIME_SECONDS;
+}
+
+export function isNewcomerProgress(level: number, seconds: number): boolean {
+    return Number.isFinite(level) && level >= 1 && level < NEWCOMER_MAX_LEVEL
+        && isNewcomerPlayTime(seconds);
 }
 
 export interface PlayerLevelAdjustmentResult {
@@ -390,7 +397,7 @@ export default class Player extends Entity {
     }
 
     get isNewcomer(): boolean {
-        return isNewcomerPlayTime(this.cumulativePlayTimeSeconds);
+        return isNewcomerProgress(this.level, this.cumulativePlayTimeSeconds);
     }
 
     /** 관리자 레벨 조정: 실제 레벨업 지급분과 분배 포인트를 함께 증감한다. */
@@ -515,15 +522,25 @@ export default class Player extends Entity {
         this.persistDeathState();
         const location = getLocation(this.locationId);
         const killer = this.lastDamageCause?.causeEntity?.attackOwner;
-        if (killer?.isPlayer && killer !== this) {
+        if (killer instanceof Player && killer !== this) {
+            const credit = evaluatePvpKillCredit(killer, this);
             emitGameEvent(GameEventIds.PVP_KILL, {
                 actor: killer,
                 subject: this,
                 data: {
                     zoneType: location?.data.zoneType ?? 'unknown',
                     victimKarma: this.karma,
+                    creditEligible: credit.credited,
+                    creditReason: credit.reason ?? null,
                 },
             });
+            if (!credit.credited && credit.reason) {
+                sendNotificationToUser(killer.userId, {
+                    key: 'pvp:kill-credit-denied',
+                    message: `PVP 칭호·영웅 보상 미반영: ${credit.reason}`,
+                    length: 5_000,
+                });
+            }
         }
         endNpcDialogue(this, DialogueEndReason.DEFEATED);
         this._deathNotifTimer = 0;
@@ -589,6 +606,7 @@ export default class Player extends Entity {
     override respawn(): void {
         super.respawn();
         this.progress.reset(PlayerRuntimeProgressIds.DEATH_REMAINING);
+        recordPvpRespawn(this);
         const respawnLoc = getRespawnLocation();
         if (respawnLoc) this.locationId = respawnLoc.id;
         sendBotMessageToUser(this.userId, '리스폰했습니다.');

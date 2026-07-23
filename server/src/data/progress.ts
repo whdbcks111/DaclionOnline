@@ -46,6 +46,16 @@ defineStatistic({
 });
 
 defineStatistic({
+    id: 'combat:pvp_credited_kills',
+    eventId: GameEventIds.PVP_KILL,
+    label: '유효 플레이어 처치',
+    description: '반복 처치 방지 조건을 통과해 칭호와 긍정적 보상에 인정된 PVP 처치 횟수입니다.',
+    visible: true,
+    amount: event => event.data.creditEligible === true ? 1 : 0,
+    format: value => `${value}회`,
+});
+
+defineStatistic({
     id: 'combat:neutral_pvp_kills',
     eventId: GameEventIds.PVP_KILL,
     label: '중립 구역 플레이어 처치',

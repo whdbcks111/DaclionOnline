@@ -138,7 +138,7 @@ export default function ChatMessage({
                                 </span>
                             ))}
                             {message.newcomer && (
-                                <span className={styles.newcomer} title="누적 플레이 24시간 미만" aria-label="새싹 모험가">
+                                <span className={styles.newcomer} title="Lv.30 미만 · 누적 플레이 24시간 미만" aria-label="새싹 모험가">
                                     🌱
                                 </span>
                             )}
