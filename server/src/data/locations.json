@@ -424,7 +424,7 @@
     ],
     "connections": [
       { "locationId": "volcanic_slope" },
-      { "locationId": "volcanic_crater" },
+      { "locationId": "volcanic_crater", "condition": "level_36" },
       { "locationId": "volcanic_core", "condition": "level_45" }
     ]
   },

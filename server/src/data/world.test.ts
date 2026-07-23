@@ -287,6 +287,15 @@ test('안개수렁·홍염산지·천둥마루는 일자 대신 분기와 재합
         assert.ok(entry.connections.some(connection => connection.locationId === branchId), `${entryId} → ${branchId}`);
         assert.ok(branch.connections.some(connection => connection.locationId === mergeId), `${branchId} → ${mergeId}`);
     }
+
+    for (const entranceId of ['volcanic_slope', 'ember_ravine', 'obsidian_shelf']) {
+        const entrance = locations.find(location => location.id === entranceId)!;
+        assert.equal(
+            entrance.connections.find(connection => connection.locationId === 'volcanic_crater')?.condition,
+            'level_36',
+            `${entranceId} → volcanic_crater Lv.36 제한`,
+        );
+    }
 });
 
 test('은빛그물 숲은 두 보스·사냥꾼 상점·알주머니 보호 기믹을 하나의 초반 우회 동선으로 연결한다', () => {
