@@ -238,6 +238,31 @@ export interface AttributeModifier {
     source: string  // "equip:42", "buff:화염강화", "skill:분노" 등
 }
 
+/** 같은 능력치의 고정·비율 modifier를 사용자 표시용 한 행으로 합친 값. */
+export interface AttributeModifierSummary {
+    attribute: AttributeKey
+    additive: number
+    multiplier: number
+}
+
+/** 실제 add 합산 → multiply 곱산 규칙을 보존하면서 modifier를 능력치별로 묶는다. */
+export function summarizeAttributeModifiers(
+    modifiers: readonly AttributeModifier[],
+): readonly AttributeModifierSummary[] {
+    const summaries = new Map<AttributeKey, AttributeModifierSummary>()
+    for (const modifier of modifiers) {
+        const summary = summaries.get(modifier.attribute) ?? {
+            attribute: modifier.attribute,
+            additive: 0,
+            multiplier: 1,
+        }
+        if (modifier.op === 'add') summary.additive += modifier.value
+        else summary.multiplier *= modifier.value
+        summaries.set(modifier.attribute, summary)
+    }
+    return [...summaries.values()]
+}
+
 /** 능력치 레코드 */
 export type AttributeRecord = Record<AttributeKey, number>
 

@@ -1,14 +1,15 @@
 import { GameTags, type TagId } from '../../../shared/tags.js';
+import Entity from './Entity.js';
 
 export class FishRarity {
     private static readonly all: FishRarity[] = [];
 
-    static readonly COMMON = new FishRarity('common', '일반', '#aab4bd', GameTags.FISH_RARITY_COMMON, 5, 62, 1, [12, 20]);
-    static readonly UNCOMMON = new FishRarity('uncommon', '고급', '#54b978', GameTags.FISH_RARITY_UNCOMMON, 20, 22, 2, [20, 34]);
-    static readonly RARE = new FishRarity('rare', '희귀', '#4f95e8', GameTags.FISH_RARITY_RARE, 90, 9, 3, [35, 55]);
-    static readonly EPIC = new FishRarity('epic', '서사', '#9b67e8', GameTags.FISH_RARITY_EPIC, 400, 4.5, 4, [60, 90]);
-    static readonly LEGENDARY = new FishRarity('legendary', '전설', '#efaa35', GameTags.FISH_RARITY_LEGENDARY, 1800, 2, 5, [110, 160]);
-    static readonly MYTHIC = new FishRarity('mythic', '신화', '#ef5c72', GameTags.FISH_RARITY_MYTHIC, 8000, 0.5, 6, [200, 300]);
+    static readonly COMMON = new FishRarity('common', '일반', '#aab4bd', GameTags.FISH_RARITY_COMMON, 5, 62, 1, [0.7, 0.9]);
+    static readonly UNCOMMON = new FishRarity('uncommon', '고급', '#54b978', GameTags.FISH_RARITY_UNCOMMON, 20, 22, 2, [0.85, 1.05]);
+    static readonly RARE = new FishRarity('rare', '희귀', '#4f95e8', GameTags.FISH_RARITY_RARE, 90, 9, 3, [1.05, 1.3]);
+    static readonly EPIC = new FishRarity('epic', '서사', '#9b67e8', GameTags.FISH_RARITY_EPIC, 400, 4.5, 4, [1.35, 1.7]);
+    static readonly LEGENDARY = new FishRarity('legendary', '전설', '#efaa35', GameTags.FISH_RARITY_LEGENDARY, 1800, 2, 5, [1.9, 2.4]);
+    static readonly MYTHIC = new FishRarity('mythic', '신화', '#ef5c72', GameTags.FISH_RARITY_MYTHIC, 8000, 0.5, 6, [3, 4]);
 
     private constructor(
         readonly key: FishRarityKey,
@@ -18,7 +19,8 @@ export class FishRarity {
         readonly sellPrice: number,
         readonly baseWeight: number,
         readonly difficulty: number,
-        readonly expRange: readonly [number, number],
+        /** 동레벨 일반 몬스터 한 마리 경험치에 곱하는 최소~최대 배율. */
+        readonly experienceRateRange: readonly [number, number],
     ) {
         FishRarity.all.push(this);
     }
@@ -82,9 +84,15 @@ export function rollFish(rarity: FishRarity, random: () => number = Math.random)
     return pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))];
 }
 
-export function rollFishingExp(rarity: FishRarity, random: () => number = Math.random): number {
-    const [min, max] = rarity.expRange;
-    return Math.floor(min + random() * (max - min + 1));
+export function rollFishingExp(
+    rarity: FishRarity,
+    anglerLevel: number,
+    random: () => number = Math.random,
+): number {
+    const [minRate, maxRate] = rarity.experienceRateRange;
+    const roll = Math.max(0, Math.min(1, random()));
+    const standardHuntExp = Entity.getStandardMonsterExpOfLevel(anglerLevel);
+    return Math.max(1, Math.round(standardHuntExp * (minRate + (maxRate - minRate) * roll)));
 }
 
 export const FISHING_BASE_WAIT_RANGE = Object.freeze({ min: 45, max: 65 });

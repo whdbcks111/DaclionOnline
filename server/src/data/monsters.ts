@@ -2,6 +2,7 @@
 import './statusEffects.js';
 import { defineMonster } from '../models/Monster.js';
 import type { MonsterData } from '../models/Monster.js';
+import Entity from '../models/Entity.js';
 import { GameTags } from '../../../shared/tags.js';
 import { MonsterAiDisposition } from '../models/Threat.js';
 
@@ -20,7 +21,7 @@ function defineWorldMonster(data: WorldMonsterData): void {
             switchThreshold: 0,
         } : undefined),
         exp: 0,
-        expReward: data.expReward ?? data.level * 20,
+        expReward: data.expReward ?? Entity.getStandardMonsterExpOfLevel(data.level),
         equipments: data.equipments ?? [],
     });
 }

@@ -51,7 +51,7 @@ function finishFishingReward(player: Player, rarity: FishRarity): FishingRewardR
     const itemData = getItemData(fish.itemDataId);
     if (!itemData) return { message: '물고기 아이템 데이터가 없어 보상을 받지 못했습니다.' };
 
-    const exp = rollFishingExp(rarity);
+    const exp = rollFishingExp(rarity, player.level);
     const levels = player.gainExp(exp);
     let placement = '인벤토리에 넣었습니다.';
     if (!player.inventory.addItem(fish.itemDataId, 1)) {

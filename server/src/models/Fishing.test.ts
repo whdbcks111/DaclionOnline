@@ -24,6 +24,7 @@ import {
     getFishByRarity,
     getFishRarityChances,
     rollFishRarity,
+    rollFishingExp,
     rollFishingWaitSeconds,
 } from './Fishing.js';
 import '../data/items.js';
@@ -267,6 +268,16 @@ test('행운은 상위 물고기 등급의 가중치를 증가시킨다', () => 
     assert.ok(Math.abs(baseChances.reduce((sum, chance) => sum + chance.probability, 0) - 1) < 1e-12);
     assert.ok(luckyChances[0].probability < baseChances[0].probability);
     assert.ok(luckyChances.at(-1)!.probability > baseChances.at(-1)!.probability);
+});
+
+test('낚시 경험치는 현재 레벨의 동급 사냥 보상을 기준으로 희귀도에 따라 증가한다', () => {
+    assert.equal(rollFishingExp(FishRarity.COMMON, 200, () => 0.5), 3_200);
+    assert.equal(rollFishingExp(FishRarity.RARE, 200, () => 0.5), 4_700);
+    assert.equal(rollFishingExp(FishRarity.MYTHIC, 200, () => 0.5), 14_000);
+    assert.ok(
+        rollFishingExp(FishRarity.LEGENDARY, 50, () => 0)
+        > rollFishingExp(FishRarity.COMMON, 50, () => 1),
+    );
 });
 
 test('입질 대기 시간은 45~65초 기본 범위와 입질 속도를 그대로 반영한다', () => {

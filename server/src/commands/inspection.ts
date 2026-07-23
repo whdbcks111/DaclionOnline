@@ -4,7 +4,7 @@ import type { Item, ItemInspectionSnapshot } from '../models/Item.js';
 import { getItemData } from '../models/Item.js';
 import { getSkillData } from '../models/Skill.js';
 import { EquipSlotType } from '../models/Equipment.js';
-import { AttributeType } from '../models/Attribute.js';
+import { AttributeType, summarizeAttributeModifiers } from '../models/Attribute.js';
 import { StatType } from '../models/Stat.js';
 import { StatusEffectType } from '../models/StatusEffect.js';
 import { getTagEffectAffinitySnapshots } from '../models/TagEffect.js';
@@ -230,13 +230,20 @@ export function buildItemInspection(snapshot: ItemInspectionSnapshot, sourceLabe
                     builder.tab(120, b => b.text('내구도')).text('없음\n');
                 }
                 if (snapshot.modifiers.length === 0) builder.color('$text-tertiary', b => b.text('능력치 보정 없음\n'));
-                for (const modifier of snapshot.modifiers) {
+                for (const modifier of summarizeAttributeModifiers(snapshot.modifiers)) {
                     const type = AttributeType.fromKey(modifier.attribute);
-                    const value = modifier.op === 'multiply'
-                        ? `${modifier.value >= 0 ? '+' : ''}${formatNumber(modifier.value * 100)}%`
-                        : `${modifier.value >= 0 ? '+' : ''}${type?.format(modifier.value) ?? formatNumber(modifier.value)}`;
+                    const values: string[] = [];
+                    if (modifier.additive !== 0 || modifier.multiplier === 1) {
+                        values.push(
+                            `${modifier.additive >= 0 ? '+' : ''}${type?.format(modifier.additive) ?? formatNumber(modifier.additive)}`,
+                        );
+                    }
+                    if (modifier.multiplier !== 1) {
+                        const percent = (modifier.multiplier - 1) * 100;
+                        values.push(`${percent >= 0 ? '+' : ''}${formatNumber(percent)}%`);
+                    }
                     if (type) builder.icon(type.icon).text(' ');
-                    builder.tab(120, b => b.text(type?.label ?? modifier.attribute)).text(`${value}\n`);
+                    builder.tab(120, b => b.text(type?.label ?? modifier.attribute)).text(`${values.join(' ')}\n`);
                 }
             }
 

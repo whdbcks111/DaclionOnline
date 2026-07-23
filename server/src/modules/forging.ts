@@ -5,8 +5,16 @@ import {
     type ForgeRhythmConfig,
 } from '../../../shared/minigames.js';
 import { emitGameEvent, GameEventIds } from '../models/GameEvent.js';
-import { createForgedItemSnapshot, ForgeForm, ForgeMaterial } from '../models/Forging.js';
+import {
+    calculateForgedItemLevel,
+    createForgedItemSnapshot,
+    ForgeForm,
+    ForgeMaterial,
+    ForgeQuality,
+} from '../models/Forging.js';
 import type Player from '../models/Player.js';
+import Entity from '../models/Entity.js';
+import { getItemSnapshotDisplay } from '../models/Item.js';
 import { chat } from '../utils/chatBuilder.js';
 import { sendBotMessageToUser, sendNotificationToUser } from './message.js';
 import { normalizeMiniGameActions, startMiniGame } from './minigame.js';
@@ -25,15 +33,14 @@ export function calculateSmeltingExperience(player: BlacksmithExperienceOwner, p
     return Math.max(0, Math.round(Math.max(0, player.maxExp) * rate));
 }
 
-/** 단조 성공은 정확도와 재료 난도를 반영해 다음 레벨 요구 경험치의 약 2.8~4%를 지급한다. */
+/** 완성품 레벨의 동급 사냥 경험치 80%를 기준으로 단조 품질을 보정한다. */
 export function calculateForgingExperience(
-    player: BlacksmithExperienceOwner,
-    material: ForgeMaterial,
-    accuracy: number,
+    itemLevel: number,
+    quality: ForgeQuality,
 ): number {
-    const normalizedAccuracy = Math.max(0, Math.min(1, accuracy));
-    const rate = Math.min(0.04, 0.02 + normalizedAccuracy * 0.015 + Math.max(0, material.power - 0.9) * 0.01);
-    return Math.max(1, Math.round(Math.max(0, player.maxExp) * rate));
+    return Math.max(1, Math.round(
+        Entity.getStandardMonsterExpOfLevel(itemLevel) * 0.8 * quality.experienceMultiplier,
+    ));
 }
 
 export function hasBlacksmithProfession(player: Player): boolean {
@@ -122,27 +129,32 @@ export function startForging(player: Player, form: ForgeForm, material: ForgeMat
                 return;
             }
             const accuracy = Math.max(0, Math.min(1, result.score ?? 0));
-            const output = createForgedItemSnapshot(form, material, {
+            const forgeOptions = {
                 accuracy,
                 creatorUserId: player.userId,
                 creatorLevel: player.level,
                 sensibility: player.stat.get(StatType.SENSIBILITY),
                 forgingPrecision: player.attribute.get(AttributeType.FORGING_PRECISION),
-            });
+            };
+            const output = createForgedItemSnapshot(form, material, forgeOptions);
             if (!player.inventory.replaceSelectedItems(selections, [output])) {
                 sendNotificationToUser(player.userId, { key: 'forging:no-space', message: '완성품을 보관할 중량 공간이 부족해 단조가 취소되었습니다.' });
                 return;
             }
-            const name = output.metadataDelta?.customName;
-            const itemName = typeof name === 'string' ? name : `${material.label} ${form.label}`;
-            const experience = calculateForgingExperience(player, material, accuracy);
+            const itemName = getItemSnapshotDisplay(output).name;
+            const itemLevel = calculateForgedItemLevel(material, forgeOptions);
+            const quality = ForgeQuality.fromAccuracy(accuracy);
+            const experience = calculateForgingExperience(itemLevel, quality);
             const levelsGained = player.gainExp(experience);
             emitGameEvent(GameEventIds.ITEM_FORGED, {
                 actor: player,
-                data: { form: form.key, material: material.key, accuracy, itemName },
+                data: { form: form.key, material: material.key, accuracy, quality: quality.key, itemLevel, itemName },
             });
             const levelText = levelsGained.length ? ` · Lv.${levelsGained.at(-1)} 달성` : '';
-            sendBotMessageToUser(player.userId, chat().color('gold', b => b.text('[ 단조 완료 ] ')).text(`${itemName} · 정확도 ${Math.round(accuracy * 100)}% · 제련 정밀도 ${Math.round(precision * 100)}% · +${experience} EXP${levelText}`).build());
+            sendBotMessageToUser(player.userId, chat()
+                .color('gold', b => b.text('[ 단조 완료 ] '))
+                .text(`${itemName} · 장비 Lv.${itemLevel} · ${quality.label} · 정확도 ${Math.round(accuracy * 100)}% · 제련 정밀도 ${Math.round(precision * 100)}% · +${experience} EXP${levelText}`)
+                .build());
             sendNotificationToUser(player.userId, { key: 'forging:complete', message: `${itemName} 단조를 완료했습니다!` });
         },
     });

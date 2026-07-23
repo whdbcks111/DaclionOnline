@@ -2104,11 +2104,16 @@ for (const material of refinedMinerals) defineItem({
 });
 
 const forgedTemplates = [
-    { id: 'forged_sword', name: '단조 장검', image: 'items/forged_sword', category: '장검', weight: 3.4, slot: 'mainHand', tag: GameTags.WEAPON_SWORD },
-    { id: 'forged_axe', name: '단조 도끼', image: 'items/forged_axe', category: '도끼', weight: 3.8, slot: 'mainHand', tag: GameTags.WEAPON_AXE },
-    { id: 'forged_dagger', name: '단조 단검', image: 'items/forged_dagger', category: '단검', weight: 1.7, slot: 'mainHand', tag: GameTags.WEAPON_DAGGER },
-    { id: 'forged_shield', name: '단조 방패', image: 'items/forged_shield', category: '방패', weight: 3.2, slot: 'offHand', tag: null },
-    { id: 'forged_pickaxe', name: '단조 곡괭이', image: 'items/forged_pickaxe', category: '곡괭이', weight: 3.5, slot: 'mainHand', tag: null },
+    { id: 'forged_sword', name: '단조 장검', image: 'items/forged_sword', category: '장검', weight: 3.4, slot: 'mainHand', kind: 'weapon', tag: GameTags.WEAPON_SWORD },
+    { id: 'forged_axe', name: '단조 도끼', image: 'items/forged_axe', category: '도끼', weight: 3.8, slot: 'mainHand', kind: 'weapon', tag: GameTags.WEAPON_AXE },
+    { id: 'forged_dagger', name: '단조 단검', image: 'items/forged_dagger', category: '단검', weight: 1.7, slot: 'mainHand', kind: 'weapon', tag: GameTags.WEAPON_DAGGER },
+    { id: 'forged_shield', name: '단조 방패', image: 'items/forged_shield', category: '방패', weight: 3.2, slot: 'offHand', kind: 'armor', tag: null },
+    { id: 'forged_pickaxe', name: '단조 곡괭이', image: 'items/forged_pickaxe', category: '곡괭이', weight: 3.5, slot: 'mainHand', kind: 'tool', tag: null },
+    // TODO(art): 전용 방어구 아트 단계 전까지 단조 방패 카테고리 fallback을 재사용한다.
+    { id: 'forged_helmet', name: '단조 투구', image: 'items/forged_shield', category: '투구', weight: 2.1, slot: 'head', kind: 'armor', tag: null },
+    { id: 'forged_chestplate', name: '단조 흉갑', image: 'items/forged_shield', category: '흉갑', weight: 5.8, slot: 'body', kind: 'armor', tag: null },
+    { id: 'forged_greaves', name: '단조 각반', image: 'items/forged_shield', category: '각반', weight: 4.2, slot: 'legs', kind: 'armor', tag: null },
+    { id: 'forged_sabatons', name: '단조 철갑화', image: 'items/forged_shield', category: '철갑화', weight: 2.4, slot: 'feet', kind: 'armor', tag: null },
 ] as const;
 
 for (const template of forgedTemplates) defineItem({
@@ -2126,12 +2131,12 @@ for (const template of forgedTemplates) defineItem({
     modifiers: null,
     baseDurability: 100,
     tags: [
-        template.id === 'forged_shield' ? GameTags.ITEM_ARMOR : template.id === 'forged_pickaxe' ? GameTags.ITEM_TOOL : GameTags.ITEM_WEAPON,
+        template.kind === 'armor' ? GameTags.ITEM_ARMOR : template.kind === 'tool' ? GameTags.ITEM_TOOL : GameTags.ITEM_WEAPON,
         GameTags.ITEM_FORGED,
         ...(template.tag ? [template.tag] : []),
-        ...(template.id === 'forged_pickaxe' ? [GameTags.TOOL_MINING] : []),
+        ...(template.kind === 'tool' ? [GameTags.TOOL_MINING] : []),
     ],
-    balance: template.id === 'forged_shield'
+    balance: template.kind === 'armor'
         ? { role: ItemBalanceRole.DEFENSE }
         : { role: ItemBalanceRole.WEAPON, attackType: 'physical' },
 });

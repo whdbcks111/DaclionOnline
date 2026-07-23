@@ -115,6 +115,38 @@ export function renameForgedItem(item: Item, creatorUserId: number, requestedNam
     return { success: true, name };
 }
 
+/** 리듬 정확도를 사용자 표시·경험치 보정에 함께 사용하는 단조 품질 등급. */
+export class ForgeQuality {
+    private static readonly all: ForgeQuality[] = [];
+
+    static readonly ROUGH = new ForgeQuality('rough', '거친', 0, 0.7);
+    static readonly GOOD = new ForgeQuality('good', '양호', 0.62, 1);
+    static readonly EXCELLENT = new ForgeQuality('excellent', '우수', 0.78, 1.2);
+    static readonly MASTERWORK = new ForgeQuality('masterwork', '명품', 0.92, 1.45);
+
+    private constructor(
+        readonly key: string,
+        readonly label: string,
+        readonly minimumAccuracy: number,
+        /** 동레벨 일반 몬스터 경험치의 80% 기준에 적용할 품질 보정. */
+        readonly experienceMultiplier: number,
+    ) {
+        ForgeQuality.all.push(this);
+    }
+
+    static values(): readonly ForgeQuality[] { return ForgeQuality.all; }
+    static fromKey(key: string): ForgeQuality | undefined {
+        return ForgeQuality.all.find(value => value.key === key.trim().toLowerCase());
+    }
+    static fromAccuracy(accuracy: number): ForgeQuality {
+        const normalized = Math.max(0, Math.min(1, accuracy));
+        return [...ForgeQuality.all]
+            .reverse()
+            .find(value => normalized >= value.minimumAccuracy)
+            ?? ForgeQuality.ROUGH;
+    }
+}
+
 export class ForgeForm {
     private static readonly all: ForgeForm[] = [];
 
@@ -123,6 +155,10 @@ export class ForgeForm {
     static readonly DAGGER = new ForgeForm('dagger', '단검', ['대거', '팽', '스팅어'], '나이트베인', 'forged_dagger', 3, 9, 105, GameTags.WEAPON_DAGGER);
     static readonly SHIELD = new ForgeForm('shield', '방패', ['이지스', '실드', '가드'], '아르카디아', 'forged_shield', 5, 9, 180, null, 'def');
     static readonly PICKAXE = new ForgeForm('pickaxe', '곡괭이', ['픽', '딥델버', '브레이커'], '테라크레스트', 'forged_pickaxe', 4, 7, 160, null);
+    static readonly HELMET = new ForgeForm('helmet', '투구', ['헬름', '바이저', '크라운'], '아이기스혼', 'forged_helmet', 3, 1.5, 120, null, 'def');
+    static readonly CHESTPLATE = new ForgeForm('chestplate', '흉갑', ['아머', '큐라스', '플레이트'], '아다만티아', 'forged_chestplate', 7, 3.5, 240, null, 'def');
+    static readonly GREAVES = new ForgeForm('greaves', '각반', ['그리브', '레그가드', '타셋'], '바스티온', 'forged_greaves', 5, 2.5, 180, null, 'def');
+    static readonly SABATONS = new ForgeForm('sabatons', '철갑화', ['사바톤', '부츠', '트레더'], '스틸워커', 'forged_sabatons', 3, 1.25, 110, null, 'def');
 
     private constructor(
         readonly key: string,
@@ -308,6 +344,17 @@ export interface ForgeCraftsmanship {
     multiplier: number;
 }
 
+/** 재료의 격과 리듬 품질로 완성품의 장비 레벨을 계산한다. */
+export function calculateForgedItemLevel(material: ForgeMaterial, options: ForgeResultOptions): number {
+    const creatorLevel = Math.max(1, Math.floor(options.creatorLevel ?? 1));
+    const accuracy = Math.max(0, Math.min(1, options.accuracy));
+    const levelFactor = Math.max(0.65, Math.min(
+        1.1,
+        0.65 + accuracy * 0.3 + Math.max(0, material.power - 0.9) * 0.15,
+    ));
+    return Math.max(1, Math.round(creatorLevel * levelFactor));
+}
+
 /** 레거시의 감각 100 초과분 기반 효율을 현재 장비 수치 규모에 맞춰 완만한 배율로 환산한다. */
 export function calculateForgeCraftsmanship(options: ForgeResultOptions): ForgeCraftsmanship {
     const creatorLevel = Math.max(1, Math.floor(options.creatorLevel ?? 1));
@@ -346,6 +393,7 @@ export function createForgedItemSnapshot(
         ? forgeQuirks[Math.min(forgeQuirks.length - 1, Math.floor(random() * forgeQuirks.length))]
         : undefined;
     const craftsmanship = calculateForgeCraftsmanship(options);
+    const itemLevel = calculateForgedItemLevel(material, options);
     const formPowerScale = form.basePower / ForgeForm.SWORD.basePower;
     const power = round(
         (form.basePower + craftsmanship.primaryPower * formPowerScale)
@@ -362,7 +410,7 @@ export function createForgedItemSnapshot(
         ...trait.modifiers,
         ...(quirk?.createModifiers(craftsmanship) ?? []),
     ];
-    const quality = accuracy >= 0.92 ? '명품' : accuracy >= 0.78 ? '우수' : accuracy >= 0.62 ? '양호' : '거친';
+    const quality = ForgeQuality.fromAccuracy(accuracy);
     const baseName = createForgedItemName(form, material, accuracy, trait, random);
     const customName = quirk ? `${quirk.nameWord} ${baseName}` : baseName;
     const storedModifiers: MetadataValue[] = instanceModifiers.map(modifier => ({
@@ -372,7 +420,7 @@ export function createForgedItemSnapshot(
     }));
     const metadata: ItemMetadata = {
         [ItemMetadataKeys.CUSTOM_NAME]: customName,
-        [ItemMetadataKeys.CUSTOM_DESCRIPTION]: `${quality} 단조품. ${material.label}의 성질과 ${form.label}의 형태가 결합되었다. 단조 정확도 ${Math.round(accuracy * 100)}%, 제작 숙련 배율 ${craftsmanship.multiplier.toFixed(2)}배.${quirk ? ` 특이 각인 [ ${quirk.label} ].` : ''}`,
+        [ItemMetadataKeys.CUSTOM_DESCRIPTION]: `Lv.${itemLevel} ${quality.label} 단조품. ${material.label}의 성질과 ${form.label}의 형태가 결합되었다. 단조 정확도 ${Math.round(accuracy * 100)}%, 제작 숙련 배율 ${craftsmanship.multiplier.toFixed(2)}배.${quirk ? ` 특이 각인 [ ${quirk.label} ].` : ''}`,
         [ItemMetadataKeys.MAX_DURABILITY]: maxDurability,
         [ItemMetadataKeys.INSTANCE_MODIFIERS]: storedModifiers,
         [ItemMetadataKeys.FORGE]: {
@@ -380,6 +428,8 @@ export function createForgedItemSnapshot(
             material: material.key,
             trait: trait.key,
             quirk: quirk?.key ?? '',
+            quality: quality.key,
+            itemLevel,
             generatedName: customName,
             accuracy: round(accuracy, 4),
             efficiency: round(efficiency, 4),

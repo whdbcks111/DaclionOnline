@@ -225,6 +225,11 @@ export default abstract class Entity implements TagReadable {
         return Math.max(1, Math.round(normalizedLevel * 100 * growthMultiplier));
     }
 
+    /** 생산·생활 콘텐츠가 동레벨 일반 몬스터 사냥 보상과 같은 기준을 재사용하는 공개 API. */
+    static getStandardMonsterExpOfLevel(level: number): number {
+        return Math.max(1, Math.floor(Math.max(1, level))) * 20;
+    }
+
     get life() { return this._life; }
     set life(val: number) { this._life = val; }
 
