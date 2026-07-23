@@ -99,6 +99,12 @@ $avatar-size: 40px;
     line-height: 1;
 }
 
+.karmaMarked {
+    display: inline-block;
+    margin-left: -$spacing-xs;
+    line-height: 1;
+}
+
 .timestamp {
     font-size: $font-size-sm;
     color: $color-text-tertiary;

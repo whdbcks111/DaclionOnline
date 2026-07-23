@@ -18,11 +18,12 @@ function generateMessageId(): string {
 
 function withId(msg: ChatMessage): ChatMessage {
     if (msg.id) return msg;
-    const newcomer = msg.userId > 0 ? getOnlinePlayer(msg.userId)?.isNewcomer : false;
+    const player = msg.userId > 0 ? getOnlinePlayer(msg.userId) : undefined;
     return {
         ...msg,
         id: generateMessageId(),
-        ...(newcomer ? { newcomer: true } : {}),
+        ...(player?.isNewcomer ? { newcomer: true } : {}),
+        ...(player?.isKarmaMarked ? { karmaMarked: true } : {}),
     };
 }
 

@@ -121,6 +121,11 @@ export default function ChatMessage({ message, showHeader }: Props) {
                                 </span>
                             )}
                             <span className={styles.nickname}>{message.nickname}</span>
+                            {message.karmaMarked && (
+                                <span className={styles.karmaMarked} title="카르마가 높은 현상 대상" aria-label="악명 높은 모험가">
+                                    🥀
+                                </span>
+                            )}
                             <span className={styles.timestamp}>{formatTime(message.timestamp)}</span>
                         </div>
                     )}

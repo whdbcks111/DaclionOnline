@@ -151,6 +151,8 @@ export interface ChatMessage {
     flags?: ChatFlag[]
     /** 누적 플레이 24시간 미만의 신규 Player 표시. User 계정 생성 시점과는 무관하다. */
     newcomer?: boolean
+    /** 전송 시점에 카르마가 악명 단계 이상인 Player 표시. */
+    karmaMarked?: boolean
     content: string | ChatNode[]
     timestamp: number
     private?: boolean
@@ -360,6 +362,8 @@ export interface AdminPlayerDetailData extends AdminPlayerListItem {
     exp: number
     maxExp: number
     gold: number
+    karma: number
+    karmaTier: string
     statPoint: number
     life: number
     maxLife: number
@@ -386,7 +390,7 @@ export type AdminPanelAction =
     | 'teleport_admin_to_player' | 'teleport_player_to_admin' | 'teleport_player_location'
     | 'grant_item' | 'remove_item' | 'clear_inventory' | 'set_item_metadata'
     | 'grant_skill' | 'set_skill_level' | 'remove_skill' | 'set_jobs'
-    | 'set_level' | 'adjust_level' | 'set_stat_points' | 'set_stat' | 'set_gold' | 'set_vital'
+    | 'set_level' | 'adjust_level' | 'set_stat_points' | 'set_stat' | 'set_gold' | 'set_karma' | 'set_vital'
     | 'unlock_all_locations' | 'unlock_all_crafting_recipes'
     | 'apply_status_effect' | 'clear_status_effects' | 'revive_player'
     | 'start_minigame'

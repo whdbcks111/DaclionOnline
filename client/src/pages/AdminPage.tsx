@@ -83,6 +83,7 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
       { name: 'value', label: '값', type: 'number', min: 0, required: true },
     ] },
     { action: 'set_gold', label: '골드 설정', description: '보유 골드를 덮어씁니다.', category: 'growth', fields: [{ name: 'value', label: '골드', type: 'number', min: 0, defaultValue: detail?.gold ?? 0, required: true }] },
+    { action: 'set_karma', label: '카르마 설정', description: 'PVP·사망·시설 제한 테스트용 카르마를 덮어씁니다.', category: 'growth', fields: [{ name: 'value', label: '카르마', type: 'number', min: 0, max: 1000000, step: .1, defaultValue: detail?.karma ?? 0, required: true }] },
     { action: 'set_vital', label: '상태 자원 설정', description: '현재 생명력·정신력·배고픔·수분을 최대값 범위 안에서 설정합니다.', category: 'growth', fields: [
       { name: 'vitalKey', label: '자원', type: 'select', required: true, options: [option('life', '생명력'), option('mentality', '정신력'), option('hungry', '배고픔'), option('thirsty', '수분')] },
       { name: 'value', label: '현재값', type: 'number', min: 0, required: true },
@@ -258,7 +259,7 @@ export default function AdminPage() {
                 <div className={styles.summaryGrid}>
                   <div className={styles.summaryCard}><h3>현재 상태</h3><Meter tone="life" label="생명력" value={detail.life} max={detail.maxLife} /><Meter tone="mentality" label="정신력" value={detail.mentality} max={detail.maxMentality} /><Meter tone="hunger" label="배고픔" value={detail.hungry} max={detail.maxHungry} /><Meter tone="thirst" label="수분" value={detail.thirsty} max={detail.maxThirsty} /></div>
                   <div className={`${styles.summaryCard} ${styles.overviewCard}`}>
-                    <section><h3>진행 정보</h3><dl><dt>위치</dt><dd>{detail.locationName}</dd><dt>골드</dt><dd>{detail.gold.toLocaleString()}</dd><dt>스탯 포인트</dt><dd>{detail.statPoint}</dd><dt>직업</dt><dd>{detail.mainJobName} / {detail.subJobName}</dd><dt>엘리트</dt><dd>{detail.eliteJobName}</dd></dl></section>
+                    <section><h3>진행 정보</h3><dl><dt>위치</dt><dd>{detail.locationName}</dd><dt>골드</dt><dd>{detail.gold.toLocaleString()}</dd><dt>카르마</dt><dd>{detail.karma.toFixed(1)} ({detail.karmaTier})</dd><dt>스탯 포인트</dt><dd>{detail.statPoint}</dd><dt>직업</dt><dd>{detail.mainJobName} / {detail.subJobName}</dd><dt>엘리트</dt><dd>{detail.eliteJobName}</dd></dl></section>
                     <section><h3>보유 현황</h3><dl><dt>인벤토리</dt><dd>{detail.inventory.length}종</dd><dt>장비</dt><dd>{detail.equipment.length}개</dd><dt>스킬</dt><dd>{detail.skills.length}개</dd><dt>상태이상</dt><dd>{detail.statusEffects.length}개</dd></dl></section>
                   </div>
                 </div>

@@ -134,6 +134,8 @@ export async function getAdminPlayerDetail(userId: number): Promise<AdminPlayerD
         locationId: player.locationId,
         locationName: location?.data.name ?? player.locationId,
         gold: player.gold,
+        karma: player.karma,
+        karmaTier: player.karmaTier.label,
         statPoint: player.statPoint,
         life: player.life,
         maxLife: player.maxLife,
@@ -378,6 +380,12 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
             player.gold = numberValue(values, 'value', { integer: true, min: 0, max: Number.MAX_SAFE_INTEGER });
             await save(player);
             return `${player.name}의 골드를 ${player.gold}로 설정했습니다.`;
+        }
+        case 'set_karma': {
+            const value = numberValue(values, 'value', { min: 0, max: 1_000_000 });
+            player.setKarma(value, 'karma:admin-panel');
+            await save(player);
+            return `${player.name}의 카르마를 ${player.karma.toFixed(1)}로 설정했습니다.`;
         }
         case 'set_vital': {
             const key = stringValue(values, 'vitalKey') as VitalKey;

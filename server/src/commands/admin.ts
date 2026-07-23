@@ -22,6 +22,54 @@ const STAT_MAX_MAP: Record<StatKey, AttributeType> = {
 
 export function initAdminCommands(): void {
     registerCommand({
+        name: '카르마설정',
+        aliases: ['karmaset'],
+        description: '플레이어의 카르마를 운영·테스트용 값으로 설정합니다.',
+        permission: 10,
+        showCommandUse: 'private',
+        args: [
+            {
+                name: '대상',
+                description: '플레이어 userId 또는 me',
+                required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((player): CompletionItem => ({
+                            value: String(player.userId),
+                            description: player.name,
+                        })),
+                    ];
+                },
+            },
+            { name: '카르마', description: '설정할 카르마 (0~1000000)', required: true },
+        ],
+        async handler(userId, args) {
+            try {
+                const targetId = args[0] === 'me' ? userId : Number.parseInt(args[0], 10);
+                const value = Number.parseFloat(args[1]);
+                if (!Number.isSafeInteger(targetId) || !Number.isFinite(value) || value < 0 || value > 1_000_000) {
+                    sendBotMessageToUser(userId, '유효한 대상과 0~1000000 범위의 카르마를 입력해주세요.');
+                    return;
+                }
+                const player = await fetchPlayerByUserId(targetId);
+                if (!player) {
+                    sendBotMessageToUser(userId, '플레이어를 찾을 수 없습니다.');
+                    return;
+                }
+                player.setKarma(value, 'karma:admin-command');
+                await player.save();
+                const message = `${player.name}의 카르마를 ${player.karma.toFixed(1)} (${player.karmaTier.label})로 설정했습니다.`;
+                sendBotMessageToUser(userId, message);
+                if (targetId !== userId) sendBotMessageToUser(targetId, `관리자에 의해 ${message}`);
+            } catch (error) {
+                logger.error('카르마설정 명령어 처리 중 오류:', error);
+                sendBotMessageToUser(userId, '카르마 설정 중 오류가 발생했습니다.');
+            }
+        },
+    });
+
+    registerCommand({
         name: '상태이상부여',
         aliases: ['effectgive'],
         description: '온라인 플레이어에게 런타임 상태이상을 부여합니다.',
