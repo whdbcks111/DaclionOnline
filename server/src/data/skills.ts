@@ -1711,6 +1711,33 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         unavoidable: true, propertyTag: GameTags.PROPERTY_LIGHT, shieldPercent: 12,
         descriptionIntro: '받게 될 충격의 일부를 뒤집어 대상에게 되돌리고 남은 힘을 방벽으로 고정합니다.',
     },
+    {
+        id: 'hellhound_charge', name: '재아귀 돌진', icon: 'affinities/fire', activationHeader: 'battle_rush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 320, perLevelPercent: 22,
+        manaCost: 48, cooldown: 13, groupTag: GameTags.SKILL_GROUP_WARRIOR,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_FIRE,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 44, perLevel: 9 },
+        statusEffect: LegacyStatusEffects.BLEEDING, statusLabel: '출혈', statusDuration: 9, statusDurationPerLevel: 0.75,
+        descriptionIntro: '흑염을 두른 마수의 자세로 거리를 짓밟고 대상의 방어선에 들이받습니다.',
+    },
+    {
+        id: 'blackflame_brand', name: '흑염 낙인', icon: 'affinities/fire', activationHeader: 'fireball',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 315, perLevelPercent: 22,
+        manaCost: 50, cooldown: 14, groupTag: GameTags.SKILL_GROUP_MAGIC,
+        projectile: 'basic_magic_orb', projectileName: '흑염 낙인', propertyTag: GameTags.PROPERTY_FIRE,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 46, perLevel: 9 },
+        statusEffect: LegacyStatusEffects.CURSE, statusLabel: '쇠약의 저주', statusDuration: 9, statusDurationPerLevel: 0.75,
+        descriptionIntro: '빛 없는 불꽃을 낙인의 형태로 압축해 대상의 힘과 회복을 함께 태웁니다.',
+    },
+    {
+        id: 'sovereign_decree', name: '재왕의 칙령', icon: 'affinities/undead', activationHeader: 'deathless_requiem',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 295, perLevelPercent: 20,
+        manaCost: 55, cooldown: 18, groupTag: GameTags.SKILL_GROUP_MAGIC,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_UNDEAD, shieldPercent: 10,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 40, perLevel: 8 },
+        statusEffect: LegacyStatusEffects.FEAR, statusLabel: '공포', statusDuration: 3.5, statusDurationPerLevel: 0.35,
+        descriptionIntro: '폐허의 왕명을 한 문장으로 선고해 대상의 의지를 꺾고 남은 권능을 방벽으로 거둡니다.',
+    },
 ];
 
 function growthTechniqueDescription(technique: GrowthTechniqueDefinition): string {
@@ -2666,6 +2693,36 @@ for (const skill of [
         attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.95, perLevelMultiplier: 0.18,
         castTime: 1.55, cooldown: 10, propertyTag: GameTags.PROPERTY_LIGHT,
         statusEffectId: 'blindness', statusDuration: 5, activationHeader: 'sanctum_judgment',
+    },
+    {
+        id: 'gatekeeper_cinder_breath', name: '삼아귀 흑염포', icon: 'affinities/fire', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 2.1, perLevelMultiplier: 0.2,
+        castTime: 1.45, cooldown: 9, propertyTag: GameTags.PROPERTY_FIRE,
+        statusEffectId: 'fire', statusDuration: 11, activationHeader: 'fireball',
+    },
+    {
+        id: 'gatekeeper_triple_maul', name: '세 갈래 물어뜯기', icon: 'affinities/dark', damageType: 'physical' as const,
+        attribute: AttributeType.ATK, baseMultiplier: 2.05, perLevelMultiplier: 0.19,
+        castTime: 1.05, cooldown: 8, propertyTag: GameTags.PROPERTY_DARK,
+        statusEffectId: 'bleeding', statusDuration: 10, unavoidable: true, activationHeader: 'battle_rush',
+    },
+    {
+        id: 'blackflame_general_march', name: '흑염 군세진', icon: 'affinities/fire', damageType: 'physical' as const,
+        attribute: AttributeType.ATK, baseMultiplier: 2.22, perLevelMultiplier: 0.21,
+        castTime: 1.25, cooldown: 9, propertyTag: GameTags.PROPERTY_FIRE,
+        statusEffectId: 'fear', statusDuration: 5, activationHeader: 'steel_slash',
+    },
+    {
+        id: 'sovereign_crownfall', name: '재왕관 추락', icon: 'affinities/undead', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 2.35, perLevelMultiplier: 0.22,
+        castTime: 1.6, cooldown: 10, propertyTag: GameTags.PROPERTY_UNDEAD,
+        statusEffectId: 'curse', statusDuration: 10, unavoidable: true, activationHeader: 'deathless_requiem',
+    },
+    {
+        id: 'sovereign_ash_sentence', name: '잿빛 종언', icon: 'affinities/dark', damageType: 'physical' as const,
+        attribute: AttributeType.ATK, baseMultiplier: 2.25, perLevelMultiplier: 0.21,
+        castTime: 1.15, cooldown: 9, propertyTag: GameTags.PROPERTY_DARK,
+        statusEffectId: 'overmaster', statusDuration: 4, unavoidable: true, activationHeader: 'steel_slash',
     },
     {
         id: 'caldera_eruption', name: '칼데라 분출', icon: 'affinities/fire', damageType: 'magic' as const,

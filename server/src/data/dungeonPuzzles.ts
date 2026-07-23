@@ -40,6 +40,11 @@ export const ParadoxPuzzleIds = Object.freeze({
     CAUSALITY_SEQUENCE_FLAG: 'dungeon:paradox/causality-sequence-solved',
 } as const);
 
+export const AshenAbyssPuzzleIds = Object.freeze({
+    SEAL_OATH: 'ashen-abyss:seal-oath',
+    SEAL_OATH_FLAG: 'dungeon:ashen-abyss/seal-oath-solved',
+} as const);
+
 defineProgress({
     id: IronrootPuzzleIds.RIDDLE_FLAG,
     type: ProgressType.FLAG,
@@ -178,6 +183,29 @@ defineQuestionPuzzle({
     failureMessage: '서로 맞지 않는 톱니가 역회전하며 연산 결과를 지워 버립니다.',
 });
 
+defineProgress({
+    id: AshenAbyssPuzzleIds.SEAL_OATH_FLAG,
+    type: ProgressType.FLAG,
+    label: '재왕 인장 맹세 해독',
+    description: '잿왕성의 봉인 맹세를 해독해 왕가 유물고의 길을 열었습니다.',
+    visible: true,
+});
+
+defineQuestionPuzzle({
+    id: AshenAbyssPuzzleIds.SEAL_OATH,
+    title: '재왕 인장의 맹세',
+    prompt: '살아 있을 때는 주인을 지키고, 죽은 뒤에는 주인의 이름을 지운다. 불에 타도 남아 왕의 명령을 증명하는 것은 무엇인가?',
+    answers: ['인장', '왕의 인장', '왕인'],
+    choices: [
+        { label: '왕관', answer: '왕관' },
+        { label: '인장', answer: '인장' },
+        { label: '검', answer: '검' },
+    ],
+    successFlag: AshenAbyssPuzzleIds.SEAL_OATH_FLAG,
+    successMessage: '제단의 검은 불꽃이 갈라지고, 봉인된 왕가 유물고로 이어지는 문이 모습을 드러냅니다.',
+    failureMessage: '인장의 금속면이 차갑게 굳으며 맹세를 거부합니다.',
+});
+
 defineTeleportArtifact({
     id: IronrootPuzzleIds.RELAY_ARTIFACT,
     destinations: {
@@ -207,6 +235,9 @@ registerResourceInteraction('misttide_clock_riddle', (_resource, player) =>
 
 registerResourceInteraction('paradox_causality_riddle', (_resource, player) =>
     beginQuestionPuzzle(player, ParadoxPuzzleIds.CAUSALITY_SEQUENCE));
+
+registerResourceInteraction('ashen_seal_riddle', (_resource, player) =>
+    beginQuestionPuzzle(player, AshenAbyssPuzzleIds.SEAL_OATH));
 
 registerConnectionCondition('ironroot_riddle_solved', player =>
     player.progress.getFlag(IronrootPuzzleIds.RIDDLE_FLAG)
@@ -242,6 +273,11 @@ registerConnectionCondition('paradox_causality_solved', player =>
     player.progress.getFlag(ParadoxPuzzleIds.CAUSALITY_SEQUENCE_FLAG)
         ? 'visible'
         : { status: 'locked', publicReason: '인과율 연산대의 해답 필요' });
+
+registerConnectionCondition('ashen_seal_solved', player =>
+    player.progress.getFlag(AshenAbyssPuzzleIds.SEAL_OATH_FLAG)
+        ? 'visible'
+        : { status: 'locked', publicReason: '재왕 인장 제단의 해답 필요' });
 
 // 지도 연결성은 유지하되 일반 이동·지도에는 노출하지 않고 유물 상호작용만 통과시킨다.
 registerConnectionCondition('ironroot_artifact_route', () => 'hidden');

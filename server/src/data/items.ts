@@ -1845,6 +1845,205 @@ for (const book of [
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_CLOCKWORK, book.property],
 });
 
+// TODO: 잿빛성흔 심연 전용 아트 제작 전까지 소재·무기·스킬북 카테고리 fallback을 사용한다.
+for (const material of [
+    {
+        id: 'ashen_sinew', name: '잿빛 힘줄', image: 'items/earthworm_bait', weight: 0.22,
+        description: '심연 짐승의 근육 사이에서 타지 않고 남은 질긴 회색 힘줄.',
+        tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'blackflame_residue', name: '흑염 잔재', image: 'items/ember_ore', weight: 0.18,
+        description: '빛을 내지 않으면서 주변의 온기만 태우는 검은 불꽃의 응결물.',
+        tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'hollow_horn', name: '공허뿔', image: 'items/stone', weight: 0.75,
+        description: '속이 텅 비었지만 두드리면 먼 곳의 포효가 되돌아오는 마수의 뿔.',
+        tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'cursebone_fragment', name: '저주뼈 파편', image: 'items/stone', weight: 0.42,
+        description: '오래된 저주가 골수 대신 차 있는 검붉은 뼛조각.',
+        tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'night_iron', name: '밤쇠', image: 'items/iron_ore', weight: 0.86,
+        description: '검은재 지층에서 흑염과 함께 굳어 빛을 거의 반사하지 않는 철광.',
+        tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'sovereign_seal_fragment', name: '재왕 인장 파편', image: 'items/gold_ore', weight: 0.2,
+        description: '잿왕성의 명령을 각인하던 인장이 전투 중 부서져 남은 조각.',
+        tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_METAL],
+    },
+    {
+        id: 'abyssal_hide', name: '심연가죽', image: 'items/earthworm_bait', weight: 0.65,
+        description: '어둠 속에서만 결이 드러나는 두껍고 유연한 마수 가죽.',
+        tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'mourning_eye', name: '애도의 눈', image: 'items/ruby', weight: 0.12,
+        description: '쓰러진 자의 마지막 모습을 반복해 비추는 보랏빛 결정안.',
+        tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK, GameTags.PROPERTY_UNDEAD],
+    },
+] as const) defineItem({
+    id: material.id,
+    name: material.name,
+    description: material.description,
+    image: material.image,
+    category: '심연 소재',
+    weight: material.weight,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [...material.tags],
+});
+
+defineItem({
+    id: 'ashmarch_ration', name: '재길 행군식',
+    description: '흑염의 열을 밀봉해 차가운 심연에서도 굳지 않는 식량. 배고픔 95와 수분 35를 회복한다.',
+    image: 'items/traveler_bread', category: '음식', weight: 0.52, stackable: true, maxStack: 30,
+    baseMetadata: { hunger: 95, thirst: 35, time: 1.2, useMessage: '재길 행군식의 봉인을 푸는 중...' },
+    onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_FIRE],
+});
+
+for (const tonic of [
+    {
+        id: 'blackflame_ward', name: '흑염막이 영약', image: 'items/arcane_tonic',
+        description: '흑염 잔재를 역류시켜 60초 동안 화염 저항을 부여한다.',
+        statusEffect: { id: 'fire_resistance', level: 12, duration: 60 },
+        tags: [GameTags.PROPERTY_FIRE],
+    },
+    {
+        id: 'ashblood_elixir', name: '회혈 영약', image: 'items/health_potion',
+        description: '잿빛 힘줄의 생명력을 정제해 45초 동안 강한 생명력 재생을 부여한다.',
+        statusEffect: { id: 'regeneration', level: 13, duration: 45 },
+        tags: [GameTags.PROPERTY_DARK],
+    },
+] as const) defineItem({
+    id: tonic.id, name: tonic.name, description: tonic.description,
+    image: tonic.image, category: '소모품', weight: 0.32, stackable: true, maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: tonic.statusEffect },
+    onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_ASHEN_ABYSS, ...tonic.tags],
+});
+
+defineItem({
+    id: 'sootcleaver_sword', name: '재가름 장검',
+    description: '밤쇠의 무게를 칼끝에 모아 갑옷째 상처를 벌리는 검은 장검.',
+    image: 'items/windsteel_sword', category: '장검', weight: 4.35, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 215, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 55, source: '' },
+    ],
+    baseDurability: 555,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_METAL],
+    onBasicAttackHit: ({ target }) => {
+        const effect = StatusEffectType.fromKey('bleeding');
+        if (effect && Math.random() < 0.24) target.applyStatusEffect(effect, 10, 11);
+    },
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+});
+
+defineItem({
+    id: 'hornstring_bow', name: '공허뿔 장궁',
+    description: '공허뿔과 잿빛 힘줄을 겹쳐 화살의 첫 가속을 극단적으로 높인 장궁.',
+    image: 'items/stormstring_bow', category: '활', weight: 2.9, stackable: false, maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+        [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 160, source: '' },
+        { attribute: 'critRate', op: 'add', value: 0.1, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.52, source: '' },
+    ],
+    baseDurability: 525,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+});
+
+defineItem({
+    id: 'gloamfang_dagger', name: '황혼송곳',
+    description: '그림자가 가장 짙어지는 순간에만 날이 드러나는 밤쇠 단검.',
+    image: 'items/nightglass_dagger', category: '단검', weight: 1.7, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 180, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 62, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.3, source: '' },
+    ],
+    baseDurability: 485,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL],
+    onBasicAttackHit: ({ target }) => {
+        const effect = StatusEffectType.fromKey('curse');
+        if (effect && Math.random() < 0.2) target.applyStatusEffect(effect, 8, 10);
+    },
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
+});
+
+defineItem({
+    id: 'blackflame_staff', name: '흑염각 지팡이',
+    description: '공허뿔 내부에서 흑염을 순환시켜 빛 없는 마력탄을 발사하는 지팡이.',
+    image: 'items/starwood_staff', category: '지팡이', weight: 3.2, stackable: false, maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+        [ItemMetadataKeys.PROJECTILE_ATTACK]: {
+            projectile: {
+                dataId: 'basic_magic_orb',
+                overrides: { tags: [GameTags.PROPERTY_FIRE, GameTags.PROPERTY_DARK] },
+            },
+        },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'magicForce', op: 'add', value: 248, source: '' },
+        { attribute: 'magicPen', op: 'add', value: 68, source: '' },
+        { attribute: 'mentalityRegen', op: 'add', value: 11, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.55, source: '' },
+    ],
+    baseDurability: 570,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_DARK],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+});
+
+defineItem({
+    id: 'ashguard_bulwark', name: '재성벽 방패',
+    description: '밤쇠와 심연가죽 사이에 저주뼈를 넣어 물리 충격과 마력을 함께 흘리는 대형 방패.',
+    image: 'items/forged_shield', category: '방패', weight: 4.8, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'offHand',
+    modifiers: [
+        { attribute: 'def', op: 'add', value: 73, source: '' },
+        { attribute: 'magicDef', op: 'add', value: 75, source: '' },
+        { attribute: 'maxLife', op: 'add', value: 950, source: '' },
+    ],
+    baseDurability: 660,
+    tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
+    balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
+});
+
+for (const book of [
+    { id: 'hellhound_charge_skillbook', name: '재아귀 돌진 전승서', skillDataId: 'hellhound_charge', property: GameTags.PROPERTY_FIRE },
+    { id: 'blackflame_brand_skillbook', name: '흑염 낙인 전승서', skillDataId: 'blackflame_brand', property: GameTags.PROPERTY_DARK },
+    { id: 'sovereign_decree_skillbook', name: '재왕의 칙령 전승서', skillDataId: 'sovereign_decree', property: GameTags.PROPERTY_UNDEAD },
+] as const) defineItem({
+    id: book.id,
+    name: book.name,
+    description: `잿빛성흔 심연의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
+    image: 'items/seismic_crush_skillbook', category: '스킬북', weight: 0.3, stackable: true, maxStack: 10,
+    baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
+    modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_ASHEN_ABYSS, book.property],
+});
+
 defineItem({
     id: 'ember_ore',
     name: '화맥 광석',

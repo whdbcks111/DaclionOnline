@@ -165,6 +165,20 @@ const PARADOX_RELIQUARY_REWARDS = Object.freeze([
     { itemDataId: 'causality_aegis', count: 1, weight: 3.2 },
 ]);
 
+const ASHEN_RELIQUARY_REWARDS = Object.freeze([
+    { itemDataId: 'ashmarch_ration', count: 6, weight: 18 },
+    { itemDataId: 'blackflame_ward', count: 3, weight: 14 },
+    { itemDataId: 'night_iron', count: 8, weight: 16 },
+    { itemDataId: 'blackflame_residue', count: 6, weight: 14 },
+    { itemDataId: 'sovereign_seal_fragment', count: 4, weight: 12 },
+    { itemDataId: 'mourning_eye', count: 4, weight: 10 },
+    { itemDataId: 'sootcleaver_sword', count: 1, weight: 3.2 },
+    { itemDataId: 'hornstring_bow', count: 1, weight: 3.2 },
+    { itemDataId: 'gloamfang_dagger', count: 1, weight: 3.2 },
+    { itemDataId: 'blackflame_staff', count: 1, weight: 3.2 },
+    { itemDataId: 'ashguard_bulwark', count: 1, weight: 3.2 },
+]);
+
 export function rollTwilightReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
     let cursor = random() * TWILIGHT_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = TWILIGHT_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
@@ -197,6 +211,13 @@ export function rollParadoxReliquaryReward(random = Math.random): { itemDataId: 
     let cursor = random() * PARADOX_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = PARADOX_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
         ?? PARADOX_RELIQUARY_REWARDS[0];
+    return { itemDataId: reward.itemDataId, count: reward.count };
+}
+
+export function rollAshenReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
+    let cursor = random() * ASHEN_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
+    const reward = ASHEN_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
+        ?? ASHEN_RELIQUARY_REWARDS[0];
     return { itemDataId: reward.itemDataId, count: reward.count };
 }
 
@@ -305,6 +326,24 @@ registerResourceInteraction('open_paradox_reliquary', (_resource, player) => {
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('purple', builder => builder.weight('bold', nested => nested.text('[ 역설기계고 시제품 ]')))
+        .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
+        .build());
+    return true;
+});
+
+registerResourceInteraction('open_ashen_reliquary', (_resource, player) => {
+    const reward = rollAshenReliquaryReward();
+    if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'ashen-reliquary-full',
+            message: '잿왕의 유물을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem(reward.itemDataId, reward.count);
+    const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
+    sendBotMessageToUser(player.userId, chat()
+        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 잿왕성의 봉인 유산 ]')))
         .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
         .build());
     return true;
@@ -831,4 +870,50 @@ defineResource({
     baseAttribute: { maxLife: 28_000, def: 360, magicDef: 520 },
     requiredToolTags: [], drops: [], expReward: { min: 5_200, max: 6_800 },
     tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+});
+
+defineResource({
+    id: 'night_iron_vein',
+    name: '밤쇠 광맥',
+    level: 248,
+    baseAttribute: { maxLife: 31_000, def: 430, magicDef: 390 },
+    requiredToolTags: [GameTags.TOOL_MINING],
+    drops: [
+        { itemDataId: 'night_iron', weight: 62, minCount: 2, maxCount: 5 },
+        { itemDataId: 'blackflame_residue', weight: 22, minCount: 1, maxCount: 3 },
+        { itemDataId: 'cursebone_fragment', weight: 11, minCount: 1, maxCount: 2 },
+        { itemDataId: 'sovereign_seal_fragment', weight: 5, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 6_300, max: 8_200 },
+    tags: [
+        GameTags.RESOURCE_ORE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ASHEN_ABYSS,
+        GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK,
+    ],
+});
+
+defineResource({
+    id: 'ashen_seal_altar',
+    name: '재왕 인장 제단',
+    level: 258,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'ashen_seal_riddle', attackable: false,
+    tags: [
+        GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ASHEN_ABYSS,
+        GameTags.PROPERTY_FIRE, GameTags.PROPERTY_DARK,
+    ],
+});
+
+defineResource({
+    id: 'ashen_reliquary',
+    name: '봉인된 잿왕 유물함',
+    level: 265,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'open_ashen_reliquary', attackable: false,
+    interactionCooldown: { min: 7 * 60 * 60, max: 10 * 60 * 60 },
+    tags: [
+        GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ASHEN_ABYSS,
+        GameTags.PROPERTY_DARK, GameTags.PROPERTY_UNDEAD,
+    ],
 });

@@ -23,6 +23,7 @@ import './shops.js';
 import './fishing.js';
 import './crafting.js';
 import {
+    rollAshenReliquaryReward,
     rollFrostveilReliquaryReward,
     rollGlassduneReliquaryReward,
     rollLabyrinthCacheReward,
@@ -46,7 +47,7 @@ const locations = JSON.parse(
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, 135);
+    assert.equal(locations.length, 160);
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -74,7 +75,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 11, neutral: 43, hostile: 81 },
+        { safe: 12, neutral: 46, hostile: 102 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -83,7 +84,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     assert.ok(locations.every(location => /^#[0-9a-f]{6}$/i.test(location.mapColor ?? '')));
     assert.deepEqual(
         locations.filter(location => location.mapIcon).map(location => location.mapIcon).sort(),
-        ['general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
+        ['general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
     );
     for (const icon of new Set(locations.flatMap(location => location.mapIcon ? [location.mapIcon] : []))) {
         const png = readFileSync(new URL(`../../../client/public/icons/map/${icon}.png`, import.meta.url));
@@ -174,6 +175,14 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
             'paradox_causality_lock', 'paradox_hidden_prototype_vault', 'paradox_stage',
             'paradox_puppet_hall', 'paradox_abandoned_test_chamber', 'paradox_architect_core',
             'paradox_endless_observatory'],
+        ['ashen_gate_chasm', 'ashen_waystation', 'ashen_dead_valley_west', 'ashen_dead_valley_east',
+            'ashen_lament_basin', 'ashen_hollowfang_den', 'ashen_bonewind_ravine',
+            'ashen_three_maw_gate', 'ashen_blackflame_outer_fork', 'ashen_soot_cloister',
+            'ashen_ember_furnace', 'ashen_ossuary_turn', 'ashen_night_iron_gallery',
+            'ashen_seal_chapel', 'ashen_hidden_reliquary', 'ashen_ash_spiral',
+            'ashen_general_parade', 'ashen_castle_barbican', 'ashen_lower_barracks',
+            'ashen_cursebone_range', 'ashen_gargoyle_rampart', 'ashen_mourning_hall',
+            'ashen_execution_court', 'ashen_crown_stair', 'ashen_sovereign_throne'],
     ];
 
     for (const ids of regions) {
@@ -183,14 +192,14 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
     }
 });
 
-test('1~235레벨 월드는 모든 속성을 관찰 가능하고 동급 일반 몬스터 보상은 5%로 수렴한다', () => {
+test('1~275레벨 월드는 모든 속성을 관찰 가능하고 동급 일반 몬스터 보상은 5%로 수렴한다', () => {
     const monsters = getAllMonsterData();
     const levelOne = getMonsterData('slime');
     const midLevelNormal = getMonsterData('spark_moth');
     const levelTwoHundred = getMonsterData('eclipse_watcher');
 
     assert.equal(Math.min(...monsters.map(monster => monster.level)), 1);
-    assert.equal(Math.max(...monsters.map(monster => monster.level)), 235);
+    assert.equal(Math.max(...monsters.map(monster => monster.level)), 275);
     assert.equal(Entity.getMaxExpOfLevel(1), 100);
     assert.equal(Entity.getMaxExpOfLevel(50), 20_000);
     assert.equal(Entity.getMaxExpOfLevel(200), 80_000);
@@ -215,7 +224,7 @@ test('성장 구간 보스는 최대 30레벨 간격으로 배치되고 일반�
         .sort((left, right) => left.level - right.level);
 
     assert.ok(bosses[0].level <= 32);
-    assert.equal(bosses[bosses.length - 1].level, 235);
+    assert.equal(bosses[bosses.length - 1].level, 275);
     for (let index = 1; index < bosses.length; index++) {
         assert.ok(bosses[index].level - bosses[index - 1].level <= 30,
             `${bosses[index - 1].name} Lv.${bosses[index - 1].level} → ${bosses[index].name} Lv.${bosses[index].level}`);
@@ -532,6 +541,68 @@ test('역설기계고는 분기 조립선·인과 퍼즐·시제품고·고정�
     runtimeCore?.update(0.05);
     assert.equal(getParadoxAnchorProtectionMultiplier(), 1);
     assert.equal(runtimeArchitect?.getDamageReceivedModifier(), 1);
+});
+
+test('잿빛성흔 심연은 다중 분기·세 보스·봉인 퍼즐·밤쇠 경제를 잿왕성까지 연결한다', () => {
+    const region = locations.filter(location => location.id.startsWith('ashen_'));
+    const gatekeeper = getMonsterData('three_maw_gatekeeper');
+    const general = getMonsterData('blackflame_general');
+    const sovereign = getMonsterData('ashen_sovereign');
+    const store = getShop('ashen_waystation_store');
+    const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('ashen:'));
+    const quests = getAllQuestData().filter(quest => quest.id.startsWith('ashen-abyss:'));
+
+    assert.equal(region.length, 25);
+    assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
+    assert.ok(region.every(location => location.tags.includes(GameTags.LOCATION_ASHEN_ABYSS)));
+    assert.deepEqual(
+        [gatekeeper?.level, general?.level, sovereign?.level],
+        [248, 260, 275],
+    );
+    assert.deepEqual(gatekeeper?.skillPattern?.sequence, [
+        'gatekeeper_cinder_breath', 'gatekeeper_triple_maul',
+    ]);
+    assert.ok(general?.skillPattern?.randomOrder);
+    assert.deepEqual(sovereign?.skillPattern?.sequence, [
+        'sovereign_crownfall', 'sovereign_ash_sentence', 'blackflame_general_march',
+    ]);
+    assert.ok((general?.ai?.weights?.healing ?? 0) > (general?.ai?.weights?.damage ?? 0));
+    assert.ok((sovereign?.ai?.tauntResistance ?? 0) >= 0.95);
+
+    const gate = locations.find(location => location.id === 'ashen_gate_chasm');
+    const valleyWest = locations.find(location => location.id === 'ashen_dead_valley_west');
+    const valleyEast = locations.find(location => location.id === 'ashen_dead_valley_east');
+    const outerFork = locations.find(location => location.id === 'ashen_blackflame_outer_fork');
+    const sealChapel = locations.find(location => location.id === 'ashen_seal_chapel');
+    const hiddenReliquary = locations.find(location => location.id === 'ashen_hidden_reliquary');
+    const barbican = locations.find(location => location.id === 'ashen_castle_barbican');
+    const throne = locations.find(location => location.id === 'ashen_sovereign_throne');
+    assert.ok(gate?.connections.some(connection => connection.locationId === valleyWest?.id));
+    assert.ok(gate?.connections.some(connection => connection.locationId === valleyEast?.id));
+    assert.ok(outerFork?.connections.some(connection => connection.locationId === 'ashen_soot_cloister'));
+    assert.ok(outerFork?.connections.some(connection => connection.locationId === 'ashen_ember_furnace'));
+    assert.ok(sealChapel?.connections.some(connection => connection.condition === 'ashen_seal_solved'));
+    assert.ok(hiddenReliquary?.tags.includes(GameTags.LOCATION_HIDDEN));
+    assert.ok(barbican?.connections.some(connection => connection.locationId === 'ashen_lower_barracks'));
+    assert.ok(barbican?.connections.some(connection => connection.locationId === 'ashen_gargoyle_rampart'));
+    assert.ok(throne?.objects.some(object => object.dataId === 'ashen_sovereign' && object.maxCount === 1));
+    assert.ok(getResourceData('night_iron_vein')?.requiredToolTags.includes(GameTags.TOOL_MINING));
+    assert.deepEqual(getResourceData('ashen_reliquary')?.interactionCooldown, {
+        min: 7 * 60 * 60,
+        max: 10 * 60 * 60,
+    });
+    assert.equal(rollAshenReliquaryReward(() => 0).itemDataId, 'ashmarch_ration');
+    assert.equal(rollAshenReliquaryReward(() => 0.999).itemDataId, 'ashguard_bulwark');
+
+    for (const itemId of [
+        'sootcleaver_sword', 'hornstring_bow', 'gloamfang_dagger', 'blackflame_staff', 'ashguard_bulwark',
+    ]) {
+        assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === itemId), itemId);
+        assert.ok(getItemData(itemId)?.balance, `${itemId} balance`);
+    }
+    assert.equal(recipes.length, 8);
+    assert.equal(quests.length, 2);
+    assert.equal(NPC.getNpc('ashen_wayfinder')?.name, '회색불길 길잡이 타렌');
 });
 
 test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {

@@ -32,6 +32,10 @@ export const PARADOX_QUEST_IDS = Object.freeze({
     RESTORE_ARCHIVE: 'paradox:restore-archive',
     CLOSE_CAUSALITY_ENGINE: 'paradox:close-causality-engine',
 } as const);
+export const ASHEN_ABYSS_QUEST_IDS = Object.freeze({
+    RELIGHT_WAYSTATION: 'ashen-abyss:relight-waystation',
+    END_ASHEN_COURT: 'ashen-abyss:end-ashen-court',
+} as const);
 
 defineQuest({
     id: FIRST_SLIME_HUNT_QUEST_ID,
@@ -346,6 +350,75 @@ defineQuest({
         QuestReward.gold(24_000),
         QuestReward.item('causality_aegis', 1, '인과율 방패'),
         QuestReward.item('paradox_reversal_skillbook', 1, '역설반전 전승서'),
+    ],
+});
+
+defineQuest({
+    id: ASHEN_ABYSS_QUEST_IDS.RELIGHT_WAYSTATION,
+    name: '회색불길을 다시 밝히는 법',
+    aliases: ['회색불길', '심연 중계소'],
+    description: '심연의 흑염 잔재와 밤쇠를 모아 회색불길 중계소의 길잡이 화로를 복구하세요.',
+    tags: ['quest:side', 'region:ashen-abyss'],
+    giverNpcIds: ['ashen_wayfinder'],
+    turnInNpcIds: ['ashen_wayfinder'],
+    visible: player => player.level >= 235,
+    canAccept: player => player.level >= 235,
+    stages: [new QuestStage({
+        id: 'recover-waystation-fire',
+        description: '흑염 회랑과 밤쇠 회랑에서 길잡이 화로를 복구할 재료를 모으세요.',
+        objectives: [
+            QuestObjective.item('blackflame-residue', '흑염 잔재 수집', 12, 'blackflame_residue', true),
+            QuestObjective.item('night-iron', '밤쇠 수집', 8, 'night_iron', true),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(118_000),
+        QuestReward.gold(18_500),
+        QuestReward.item('blackflame_ward', 5, '흑염막이 영약'),
+        QuestReward.item('hellhound_charge_skillbook', 1, '지옥견 돌진 전승서'),
+    ],
+});
+
+defineQuest({
+    id: ASHEN_ABYSS_QUEST_IDS.END_ASHEN_COURT,
+    name: '재가 된 왕조의 끝',
+    aliases: ['잿왕 토벌', '재왕 벨카르'],
+    description: '세 아귀 문지기와 흑염대장을 넘어 잿왕성의 벨카르를 쓰러뜨리세요.',
+    tags: ['quest:side', 'quest:boss', 'region:ashen-abyss'],
+    giverNpcIds: ['ashen_wayfinder'],
+    turnInNpcIds: ['ashen_wayfinder'],
+    prerequisiteQuestIds: [ASHEN_ABYSS_QUEST_IDS.RELIGHT_WAYSTATION],
+    visible: player => player.level >= 248,
+    canAccept: player => player.level >= 248,
+    stages: [new QuestStage({
+        id: 'break-ashen-court',
+        description: '심연의 세 관문을 지키는 지휘자들을 차례로 제압하세요.',
+        objectives: [
+            QuestObjective.kill(
+                'three-maw-gatekeeper',
+                '세 아귀 문지기 처치',
+                1,
+                target => target.hasTag('monster:three-maw-gatekeeper'),
+            ),
+            QuestObjective.kill(
+                'blackflame-general',
+                '흑염대장 모르칸 처치',
+                1,
+                target => target.hasTag('monster:blackflame-general'),
+            ),
+            QuestObjective.kill(
+                'ashen-sovereign',
+                '재왕 벨카르 처치',
+                1,
+                target => target.hasTag('monster:ashen-sovereign'),
+            ),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(245_000),
+        QuestReward.gold(38_000),
+        QuestReward.item('ashguard_bulwark', 1, '재성벽 방패'),
+        QuestReward.item('sovereign_decree_skillbook', 1, '재왕의 칙령 전승서'),
     ],
 });
 

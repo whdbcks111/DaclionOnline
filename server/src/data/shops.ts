@@ -514,3 +514,50 @@ defineShop({
     ],
     tags: [GameTags.SHOP_CLOCKWORK],
 });
+
+defineShop({
+    id: 'ashen_waystation_store',
+    buyList: [
+        {
+            label: '재길 행군식', create: () => ({ itemDataId: 'ashmarch_ration', count: 1 }),
+            count: 1, price: 220, stock: 24, restockTime: 50,
+        },
+        {
+            label: '흑염막이 영약', create: () => ({ itemDataId: 'blackflame_ward', count: 1 }),
+            count: 1, price: 350, stock: 12, restockTime: 110,
+        },
+        {
+            label: '회혈 영약', create: () => ({ itemDataId: 'ashblood_elixir', count: 1 }),
+            count: 1, price: 390, stock: 10, restockTime: 130,
+        },
+        {
+            label: '화살 100개', create: () => ({ itemDataId: 'wooden_arrow', count: 100 }),
+            count: 100, price: 260, stock: 20, restockTime: 40,
+        },
+        ...[
+            ['재가름 장검', 'sootcleaver_sword', 18_300],
+            ['공허뿔 장궁', 'hornstring_bow', 17_900],
+            ['황혼송곳', 'gloamfang_dagger', 18_550],
+            ['흑염각 지팡이', 'blackflame_staff', 19_100],
+            ['재성벽 방패', 'ashguard_bulwark', 18_800],
+        ].map(([label, itemDataId, price]) => ({
+            label: label as string,
+            create: () => ({ itemDataId: itemDataId as string, count: 1 }),
+            count: 1,
+            price: price as number,
+            stock: 1,
+            restockTime: 2_100,
+        })),
+    ],
+    sellList: [
+        { label: '잿빛 힘줄', filter: item => item.itemDataId === 'ashen_sinew', count: 99, price: 210 },
+        { label: '흑염 잔재', filter: item => item.itemDataId === 'blackflame_residue', count: 99, price: 275 },
+        { label: '공허뿔', filter: item => item.itemDataId === 'hollow_horn', count: 99, price: 330 },
+        { label: '저주뼈 파편', filter: item => item.itemDataId === 'cursebone_fragment', count: 99, price: 245 },
+        { label: '밤쇠', filter: item => item.itemDataId === 'night_iron', count: 99, price: 360 },
+        { label: '재왕 인장 파편', filter: item => item.itemDataId === 'sovereign_seal_fragment', count: 99, price: 490 },
+        { label: '심연가죽', filter: item => item.itemDataId === 'abyssal_hide', count: 99, price: 295 },
+        { label: '애도의 눈', filter: item => item.itemDataId === 'mourning_eye', count: 99, price: 420 },
+    ],
+    tags: [GameTags.SHOP_ASHEN_ABYSS],
+});

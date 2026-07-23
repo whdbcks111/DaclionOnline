@@ -125,6 +125,71 @@ for (const recipe of [
 
 for (const recipe of [
     {
+        id: 'ashen:ashmarch_ration', result: 'ashmarch_ration', time: 5,
+        description: '여행자 빵에 잿빛 힘줄의 열기를 스며들게 하고 맑은 물과 함께 밀봉해 재길 행군식을 만듭니다.',
+        ingredients: [['ashen_sinew', 2], ['traveler_bread', 2], ['fresh_water', 1]],
+        tags: ['crafting:consumable', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:blackflame_ward', result: 'blackflame_ward', time: 7,
+        description: '흑염 잔재를 비전 영약에 역류시켜 불꽃의 열을 밀어내는 흑염막이 영약을 만듭니다.',
+        ingredients: [['blackflame_residue', 3], ['mourning_eye', 1], ['arcane_tonic', 1]],
+        tags: ['crafting:consumable', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:ashblood_elixir', result: 'ashblood_elixir', time: 7,
+        description: '잿빛 힘줄과 심연가죽의 생명력을 회복약에 정제해 회혈 영약을 만듭니다.',
+        ingredients: [['ashen_sinew', 4], ['abyssal_hide', 2], ['health_potion', 2]],
+        tags: ['crafting:consumable', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:sootcleaver_sword', result: 'sootcleaver_sword', time: 21,
+        description: '밤쇠를 흑염 잔재와 함께 접고 재왕 인장으로 칼등을 고정해 재가름 장검을 만듭니다.',
+        ingredients: [['night_iron', 12], ['blackflame_residue', 6], ['sovereign_seal_fragment', 3]],
+        tags: ['crafting:weapon', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:hornstring_bow', result: 'hornstring_bow', time: 20,
+        description: '공허뿔을 활대로 다듬고 잿빛 힘줄과 심연가죽을 겹쳐 공허뿔 장궁을 만듭니다.',
+        ingredients: [['hollow_horn', 8], ['ashen_sinew', 10], ['abyssal_hide', 5]],
+        tags: ['crafting:weapon', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:gloamfang_dagger', result: 'gloamfang_dagger', time: 19,
+        description: '밤쇠 단검에 애도의 눈을 박고 저주뼈 가루를 봉해 황혼송곳을 만듭니다.',
+        ingredients: [['night_iron', 8], ['mourning_eye', 5], ['cursebone_fragment', 7]],
+        tags: ['crafting:weapon', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:blackflame_staff', result: 'blackflame_staff', time: 22,
+        description: '공허뿔 내부에 흑염 잔재와 애도의 눈을 배열해 흑염각 지팡이를 만듭니다.',
+        ingredients: [['hollow_horn', 7], ['blackflame_residue', 9], ['mourning_eye', 6]],
+        tags: ['crafting:weapon', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:ashguard_bulwark', result: 'ashguard_bulwark', time: 23,
+        description: '밤쇠 판 사이에 심연가죽과 저주뼈를 겹쳐 재성벽 방패를 만듭니다.',
+        ingredients: [['night_iron', 14], ['abyssal_hide', 8], ['cursebone_fragment', 8]],
+        tags: ['crafting:armor', 'region:ashen-abyss'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
         id: 'paradox:cogwork_ration', result: 'cogwork_ration', time: 5,
         description: '여행자 빵을 얇게 압축하고 기억 톱니의 온도 유지 장치로 밀봉해 태엽 작업식을 만듭니다.',
         ingredients: [['traveler_bread', 2], ['memory_gear', 1], ['mist_salt', 1]],

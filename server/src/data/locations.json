@@ -2680,7 +2680,463 @@
     "connections": [
       { "locationId": "paradox_hidden_prototype_vault", "condition": "paradox_causality_solved" },
       { "locationId": "paradox_abandoned_test_chamber" },
-      { "locationId": "paradox_architect_core" }
+      { "locationId": "paradox_architect_core" },
+      { "locationId": "ashen_gate_chasm", "condition": "level_235" }
+    ]
+  },
+  {
+    "id": "ashen_gate_chasm",
+    "name": "잿빛성흔 심연 1 끊어진 관문",
+    "mapColor": "#563b42",
+    "zoneType": "neutral",
+    "x": 3090, "y": -220, "z": -95,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:dark", "property:fire"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ashen_hound", "maxCount": 2, "respawnTime": 180 }
+    ],
+    "connections": [
+      { "locationId": "paradox_endless_observatory" },
+      { "locationId": "ashen_waystation" },
+      { "locationId": "ashen_dead_valley_west" },
+      { "locationId": "ashen_dead_valley_east" }
+    ]
+  },
+  {
+    "id": "ashen_waystation",
+    "name": "잿빛성흔 심연 회색불길 중계소",
+    "mapColor": "#563b42",
+    "zoneType": "safe",
+    "x": 3160, "y": -285, "z": -82,
+    "mapIcon": "general-shop",
+    "shopId": "ashen_waystation_store",
+    "tags": ["location:town", "location:ashen_abyss", "property:fire", "shop:ashen_abyss"],
+    "npcIds": ["ashen_wayfinder"],
+    "objects": [],
+    "connections": [
+      { "locationId": "ashen_gate_chasm" },
+      { "locationId": "ashen_dead_valley_west" },
+      { "locationId": "ashen_lament_basin" }
+    ]
+  },
+  {
+    "id": "ashen_dead_valley_west",
+    "name": "잿빛성흔 심연 2 서쪽 망자골",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3170, "y": -175, "z": -110,
+    "tags": ["location:wilderness", "location:ashen_abyss", "property:dark", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "mourning_wraith", "maxCount": 3, "respawnTime": 186 },
+      { "type": "monster", "dataId": "ashen_hound", "maxCount": 2, "respawnTime": 180 }
+    ],
+    "connections": [
+      { "locationId": "ashen_gate_chasm" },
+      { "locationId": "ashen_waystation" },
+      { "locationId": "ashen_hollowfang_den" },
+      { "locationId": "ashen_lament_basin" }
+    ]
+  },
+  {
+    "id": "ashen_dead_valley_east",
+    "name": "잿빛성흔 심연 3 동쪽 뿔무덤",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3170, "y": -80, "z": -125,
+    "tags": ["location:wilderness", "location:ashen_abyss", "property:dark", "property:earth"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "horned_reaver", "maxCount": 3, "respawnTime": 192 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "ashen_gate_chasm" },
+      { "locationId": "ashen_bonewind_ravine" },
+      { "locationId": "ashen_lament_basin" }
+    ]
+  },
+  {
+    "id": "ashen_lament_basin",
+    "name": "잿빛성흔 심연 4 곡성 분지",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3250, "y": -215, "z": -138,
+    "tags": ["location:wilderness", "location:ashen_abyss", "property:dark", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "mourning_wraith", "maxCount": 3, "respawnTime": 186 },
+      { "type": "monster", "dataId": "horned_reaver", "maxCount": 1, "respawnTime": 192 }
+    ],
+    "connections": [
+      { "locationId": "ashen_waystation" },
+      { "locationId": "ashen_dead_valley_west" },
+      { "locationId": "ashen_dead_valley_east" },
+      { "locationId": "ashen_hollowfang_den" },
+      { "locationId": "ashen_bonewind_ravine" }
+    ]
+  },
+  {
+    "id": "ashen_hollowfang_den",
+    "name": "잿빛성흔 심연 5 빈송곳니 굴",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3250, "y": -315, "z": -155,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ashen_hound", "maxCount": 3, "respawnTime": 180 },
+      { "type": "monster", "dataId": "horned_reaver", "maxCount": 2, "respawnTime": 192 }
+    ],
+    "connections": [
+      { "locationId": "ashen_dead_valley_west" },
+      { "locationId": "ashen_lament_basin" },
+      { "locationId": "ashen_three_maw_gate" }
+    ]
+  },
+  {
+    "id": "ashen_bonewind_ravine",
+    "name": "잿빛성흔 심연 6 뼛바람 협곡",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3250, "y": -95, "z": -165,
+    "tags": ["location:wilderness", "location:ashen_abyss", "property:dark", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "mourning_wraith", "maxCount": 2, "respawnTime": 186 },
+      { "type": "monster", "dataId": "horned_reaver", "maxCount": 2, "respawnTime": 192 },
+      { "type": "resource", "dataId": "night_iron_vein", "maxCount": 1, "respawnTime": 330 }
+    ],
+    "connections": [
+      { "locationId": "ashen_dead_valley_east" },
+      { "locationId": "ashen_lament_basin" },
+      { "locationId": "ashen_three_maw_gate" }
+    ]
+  },
+  {
+    "id": "ashen_three_maw_gate",
+    "name": "잿빛성흔 심연 삼아귀 관문",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3340, "y": -205, "z": -185,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:fire", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "three_maw_gatekeeper", "maxCount": 1, "respawnTime": 1080 }
+    ],
+    "connections": [
+      { "locationId": "ashen_hollowfang_den" },
+      { "locationId": "ashen_bonewind_ravine" },
+      { "locationId": "ashen_blackflame_outer_fork" }
+    ]
+  },
+  {
+    "id": "ashen_blackflame_outer_fork",
+    "name": "흑염미로 1 갈라진 불길",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3430, "y": -205, "z": -205,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:fire", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "cursebone_archer", "maxCount": 2, "respawnTime": 198 },
+      { "type": "monster", "dataId": "blackflame_priest", "maxCount": 1, "respawnTime": 204 }
+    ],
+    "connections": [
+      { "locationId": "ashen_three_maw_gate" },
+      { "locationId": "ashen_soot_cloister" },
+      { "locationId": "ashen_ember_furnace" }
+    ]
+  },
+  {
+    "id": "ashen_soot_cloister",
+    "name": "흑염미로 2 그을음 회랑",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3510, "y": -295, "z": -220,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:dark", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "cursebone_archer", "maxCount": 3, "respawnTime": 198 },
+      { "type": "monster", "dataId": "mourning_wraith", "maxCount": 1, "respawnTime": 186 }
+    ],
+    "connections": [
+      { "locationId": "ashen_blackflame_outer_fork" },
+      { "locationId": "ashen_ossuary_turn" },
+      { "locationId": "ashen_night_iron_gallery" }
+    ]
+  },
+  {
+    "id": "ashen_ember_furnace",
+    "name": "흑염미로 3 빛없는 화로",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3510, "y": -115, "z": -225,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:fire", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "blackflame_priest", "maxCount": 3, "respawnTime": 204 },
+      { "type": "resource", "dataId": "night_iron_vein", "maxCount": 2, "respawnTime": 340 }
+    ],
+    "connections": [
+      { "locationId": "ashen_blackflame_outer_fork" },
+      { "locationId": "ashen_night_iron_gallery" },
+      { "locationId": "ashen_seal_chapel" }
+    ]
+  },
+  {
+    "id": "ashen_ossuary_turn",
+    "name": "흑염미로 4 저주뼈 굽이",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3590, "y": -345, "z": -242,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:undead", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "cursebone_archer", "maxCount": 3, "respawnTime": 198 },
+      { "type": "monster", "dataId": "abyssal_gargoyle", "maxCount": 1, "respawnTime": 212 }
+    ],
+    "connections": [
+      { "locationId": "ashen_soot_cloister" },
+      { "locationId": "ashen_night_iron_gallery" },
+      { "locationId": "ashen_ash_spiral" }
+    ]
+  },
+  {
+    "id": "ashen_night_iron_gallery",
+    "name": "흑염미로 5 밤쇠 광랑",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3590, "y": -220, "z": -250,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "abyssal_gargoyle", "maxCount": 2, "respawnTime": 212 },
+      { "type": "resource", "dataId": "night_iron_vein", "maxCount": 3, "respawnTime": 350 }
+    ],
+    "connections": [
+      { "locationId": "ashen_soot_cloister" },
+      { "locationId": "ashen_ember_furnace" },
+      { "locationId": "ashen_ossuary_turn" },
+      { "locationId": "ashen_seal_chapel" },
+      { "locationId": "ashen_ash_spiral" }
+    ]
+  },
+  {
+    "id": "ashen_seal_chapel",
+    "name": "흑염미로 재왕 인장예배실",
+    "mapColor": "#563b42",
+    "zoneType": "neutral",
+    "x": 3590, "y": -95, "z": -248,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:fire", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "ashen_seal_altar", "maxCount": 1, "respawnTime": 0 },
+      { "type": "monster", "dataId": "blackflame_priest", "maxCount": 1, "respawnTime": 204 }
+    ],
+    "connections": [
+      { "locationId": "ashen_ember_furnace" },
+      { "locationId": "ashen_night_iron_gallery" },
+      { "locationId": "ashen_hidden_reliquary", "condition": "ashen_seal_solved" },
+      { "locationId": "ashen_ash_spiral" }
+    ]
+  },
+  {
+    "id": "ashen_hidden_reliquary",
+    "name": "흑염미로 숨은 왕가 유물고",
+    "mapColor": "#563b42",
+    "zoneType": "neutral",
+    "x": 3670, "y": -35, "z": -270,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "location:hidden", "property:dark", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "ashen_reliquary", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "night_iron_vein", "maxCount": 2, "respawnTime": 380 }
+    ],
+    "connections": [
+      { "locationId": "ashen_seal_chapel", "condition": "ashen_seal_solved" },
+      { "locationId": "ashen_castle_barbican", "condition": "ashen_seal_solved" }
+    ]
+  },
+  {
+    "id": "ashen_ash_spiral",
+    "name": "흑염미로 6 재소용돌이 계단",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3670, "y": -220, "z": -275,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:fire", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "night_iron_knight", "maxCount": 2, "respawnTime": 220 },
+      { "type": "monster", "dataId": "blackflame_priest", "maxCount": 2, "respawnTime": 204 }
+    ],
+    "connections": [
+      { "locationId": "ashen_ossuary_turn" },
+      { "locationId": "ashen_night_iron_gallery" },
+      { "locationId": "ashen_seal_chapel" },
+      { "locationId": "ashen_general_parade" }
+    ]
+  },
+  {
+    "id": "ashen_general_parade",
+    "name": "흑염미로 흑염 군세 연무장",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3750, "y": -205, "z": -295,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:fire", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "blackflame_general", "maxCount": 1, "respawnTime": 1260 }
+    ],
+    "connections": [
+      { "locationId": "ashen_ash_spiral" },
+      { "locationId": "ashen_castle_barbican" }
+    ]
+  },
+  {
+    "id": "ashen_castle_barbican",
+    "name": "잿왕성 1 무너진 외성문",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3830, "y": -205, "z": -320,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "night_iron_knight", "maxCount": 3, "respawnTime": 220 },
+      { "type": "monster", "dataId": "abyssal_gargoyle", "maxCount": 1, "respawnTime": 212 }
+    ],
+    "connections": [
+      { "locationId": "ashen_hidden_reliquary", "condition": "ashen_seal_solved" },
+      { "locationId": "ashen_general_parade" },
+      { "locationId": "ashen_lower_barracks" },
+      { "locationId": "ashen_gargoyle_rampart" }
+    ]
+  },
+  {
+    "id": "ashen_lower_barracks",
+    "name": "잿왕성 2 밤쇠 병영",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3910, "y": -285, "z": -338,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "night_iron_knight", "maxCount": 3, "respawnTime": 220 },
+      { "type": "monster", "dataId": "cursebone_archer", "maxCount": 2, "respawnTime": 198 }
+    ],
+    "connections": [
+      { "locationId": "ashen_castle_barbican" },
+      { "locationId": "ashen_cursebone_range" },
+      { "locationId": "ashen_mourning_hall" }
+    ]
+  },
+  {
+    "id": "ashen_cursebone_range",
+    "name": "잿왕성 3 저주뼈 사격장",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3990, "y": -335, "z": -352,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:undead", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "cursebone_archer", "maxCount": 4, "respawnTime": 198 },
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "ashen_lower_barracks" },
+      { "locationId": "ashen_mourning_hall" },
+      { "locationId": "ashen_execution_court" }
+    ]
+  },
+  {
+    "id": "ashen_gargoyle_rampart",
+    "name": "잿왕성 4 석익수 성벽",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3910, "y": -105, "z": -345,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:stone", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "abyssal_gargoyle", "maxCount": 4, "respawnTime": 212 },
+      { "type": "resource", "dataId": "night_iron_vein", "maxCount": 2, "respawnTime": 360 }
+    ],
+    "connections": [
+      { "locationId": "ashen_castle_barbican" },
+      { "locationId": "ashen_mourning_hall" },
+      { "locationId": "ashen_execution_court" }
+    ]
+  },
+  {
+    "id": "ashen_mourning_hall",
+    "name": "잿왕성 5 애도 회랑",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 3990, "y": -215, "z": -365,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:undead", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "throne_mourner", "maxCount": 3, "respawnTime": 228 },
+      { "type": "monster", "dataId": "night_iron_knight", "maxCount": 1, "respawnTime": 220 }
+    ],
+    "connections": [
+      { "locationId": "ashen_lower_barracks" },
+      { "locationId": "ashen_cursebone_range" },
+      { "locationId": "ashen_gargoyle_rampart" },
+      { "locationId": "ashen_execution_court" },
+      { "locationId": "ashen_crown_stair" }
+    ]
+  },
+  {
+    "id": "ashen_execution_court",
+    "name": "잿왕성 6 심연 처형정",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 4070, "y": -280, "z": -388,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "abyssal_executioner", "maxCount": 2, "respawnTime": 236 },
+      { "type": "monster", "dataId": "night_iron_knight", "maxCount": 2, "respawnTime": 220 }
+    ],
+    "connections": [
+      { "locationId": "ashen_cursebone_range" },
+      { "locationId": "ashen_gargoyle_rampart" },
+      { "locationId": "ashen_mourning_hall" },
+      { "locationId": "ashen_crown_stair" }
+    ]
+  },
+  {
+    "id": "ashen_crown_stair",
+    "name": "잿왕성 7 재왕관 계단",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 4070, "y": -145, "z": -405,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:fire", "property:undead", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "throne_mourner", "maxCount": 2, "respawnTime": 228 },
+      { "type": "monster", "dataId": "abyssal_executioner", "maxCount": 2, "respawnTime": 236 }
+    ],
+    "connections": [
+      { "locationId": "ashen_mourning_hall" },
+      { "locationId": "ashen_execution_court" },
+      { "locationId": "ashen_sovereign_throne" }
+    ]
+  },
+  {
+    "id": "ashen_sovereign_throne",
+    "name": "잿왕성 최상층 잿빛 왕좌",
+    "mapColor": "#563b42",
+    "zoneType": "hostile",
+    "x": 4160, "y": -205, "z": -430,
+    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:fire", "property:dark", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ashen_sovereign", "maxCount": 1, "respawnTime": 1500 },
+      { "type": "resource", "dataId": "ashen_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "ashen_crown_stair" }
     ]
   }
 ]

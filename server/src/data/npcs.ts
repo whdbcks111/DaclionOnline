@@ -1,6 +1,7 @@
 import NPC, { Dialogue, DialogueScenario } from '../models/NPC.js';
 import { defineProgress, ProgressType } from '../models/Progress.js';
 import {
+    ASHEN_ABYSS_QUEST_IDS,
     FIRST_SLIME_HUNT_QUEST_ID,
     FROSTVEIL_QUEST_IDS,
     GLASSDUNE_QUEST_IDS,
@@ -441,6 +442,81 @@ NPC.define({
         }),
         new DialogueScenario('end', function* () {
             yield Dialogue.say('같은 복도를 두 번 지나도 톱니의 흠집은 달라요. 기록을 믿되, 눈앞의 길을 더 믿으세요.');
+            yield Dialogue.end();
+        }),
+    ],
+});
+
+NPC.define({
+    id: 'ashen_wayfinder',
+    name: '회색불길 길잡이 타렌',
+    description: '잿빛성흔 심연에서 검은 불꽃의 열을 읽어 살아 돌아올 길을 기록하는 길잡이입니다.',
+    tags: ['npc:guide', 'npc:quest', 'region:ashen-abyss'],
+    entryScenario: ({ player }) => {
+        if (player.quests.canTurnIn(ASHEN_ABYSS_QUEST_IDS.END_ASHEN_COURT, 'ashen_wayfinder')) return 'court_complete';
+        if (player.quests.isActive(ASHEN_ABYSS_QUEST_IDS.END_ASHEN_COURT)) return 'court_progress';
+        if (player.quests.canTurnIn(ASHEN_ABYSS_QUEST_IDS.RELIGHT_WAYSTATION, 'ashen_wayfinder')) return 'fire_complete';
+        if (player.quests.isActive(ASHEN_ABYSS_QUEST_IDS.RELIGHT_WAYSTATION)) return 'fire_progress';
+        if (player.quests.canAccept(ASHEN_ABYSS_QUEST_IDS.END_ASHEN_COURT, 'ashen_wayfinder')) return 'court_offer';
+        return player.quests.canAccept(ASHEN_ABYSS_QUEST_IDS.RELIGHT_WAYSTATION, 'ashen_wayfinder') ? 'greeting' : 'lore';
+    },
+    scenarios: [
+        new DialogueScenario('greeting', function* () {
+            yield Dialogue.say('저 불꽃은 빛을 내지 않지만, 심연에서 돌아오는 길만큼은 기억해요. 화로가 꺼지기 전에 흑염 잔재 열둘과 밤쇠 여덟 덩이를 구해 주시겠어요?');
+            yield Dialogue.choice([
+                { label: '길잡이 화로를 복구하겠습니다.', target: 'fire_accept' },
+                { label: '심연의 길을 알려주세요.', target: 'lore' },
+                { label: '지금은 쉬겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('fire_accept', function* () {
+            yield Dialogue.acceptQuest(ASHEN_ABYSS_QUEST_IDS.RELIGHT_WAYSTATION);
+            yield Dialogue.say('흑염 잔재는 사제와 회랑의 망령에게서, 밤쇠는 밤쇠 회랑의 광맥과 근위기사에게서 얻을 수 있어요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('fire_progress', function* ({ player }) {
+            const objectives = player.quests.getSnapshot(ASHEN_ABYSS_QUEST_IDS.RELIGHT_WAYSTATION)?.objectives ?? [];
+            const residue = objectives.find(objective => objective.id === 'blackflame-residue');
+            const iron = objectives.find(objective => objective.id === 'night-iron');
+            yield Dialogue.say(`흑염 잔재 ${residue?.progress ?? 0}/${residue?.required ?? 12}, 밤쇠 ${iron?.progress ?? 0}/${iron?.required ?? 8}. 화로가 버틸 수 있도록 갈라지지 않은 것만 가져와 주세요.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('fire_complete', function* () {
+            yield Dialogue.say('회색불길이 다시 길을 비추기 시작했어요. 이제 문지기 너머 흑염 회랑과 잿왕성까지 귀환로가 끊기지 않을 거예요.');
+            yield Dialogue.turnInQuest(ASHEN_ABYSS_QUEST_IDS.RELIGHT_WAYSTATION);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('court_offer', function* () {
+            yield Dialogue.say('세 아귀 문지기가 외곽을 지키고, 모르칸은 흑염 군세를 다시 세우고 있어요. 둘을 넘으면 재왕 벨카르의 명령도 끝낼 수 있습니다.');
+            yield Dialogue.choice([
+                { label: '재가 된 왕조를 끝내겠습니다.', target: 'court_accept' },
+                { label: '조금 더 준비하겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('court_accept', function* () {
+            yield Dialogue.acceptQuest(ASHEN_ABYSS_QUEST_IDS.END_ASHEN_COURT);
+            yield Dialogue.say('벨카르는 도발보다 치유와 보호, 제어를 만드는 이를 먼저 심판해요. 봉인 예배당의 맹세를 풀면 숨은 유산고를 거쳐 외성으로 우회할 수도 있습니다.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('court_progress', function* ({ player }) {
+            const objectives = player.quests.getSnapshot(ASHEN_ABYSS_QUEST_IDS.END_ASHEN_COURT)?.objectives ?? [];
+            const gatekeeper = objectives.find(objective => objective.id === 'three-maw-gatekeeper');
+            const general = objectives.find(objective => objective.id === 'blackflame-general');
+            const sovereign = objectives.find(objective => objective.id === 'ashen-sovereign');
+            yield Dialogue.say(`세 아귀 문지기 ${gatekeeper?.progress ?? 0}/1, 흑염대장 ${general?.progress ?? 0}/1, 재왕 ${sovereign?.progress ?? 0}/1. 앞선 관문을 넘을수록 적은 위협 행동을 더 정확하게 읽습니다.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('court_complete', function* () {
+            yield Dialogue.say('왕관의 불씨가 꺼졌어요. 심연은 여전히 어둡지만, 이제 그 어둠이 누구의 명령을 따르지는 않겠죠.');
+            yield Dialogue.turnInQuest(ASHEN_ABYSS_QUEST_IDS.END_ASHEN_COURT);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('lore', function* () {
+            yield Dialogue.say('망자골은 공허어금니 굴과 백골바람 골짜기로 갈라져 문지기 앞에서 합쳐져요. 그 너머 흑염 회랑은 여러 번 순환하고, 외성에서는 병영과 석익수 성벽 길이 왕관계단에서 다시 만납니다.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('회색불길이 보이지 않으면 발밑의 재가 어느 쪽으로 흐르는지 살펴보세요.');
             yield Dialogue.end();
         }),
     ],

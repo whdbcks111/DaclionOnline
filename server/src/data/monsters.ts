@@ -1303,6 +1303,245 @@ const paradoxClockworkMonsters: readonly WorldMonsterData[] = [
 
 for (const monster of paradoxClockworkMonsters) defineWorldMonster(monster);
 
+const ashenAbyssMonsters: WorldMonsterData[] = [
+    {
+        id: 'ashen_hound', name: '재길 사냥개',
+        description: '꺼지지 않는 재를 털가죽 사이에 품고 마지막으로 자신을 친 자를 끝까지 추적하는 심연의 사냥개.', level: 238,
+        baseAttribute: {
+            maxLife: 65_500, atk: 925, def: 585, magicDef: 520, armorPen: 62,
+            speed: 4.35, attackSpeed: 1.42, critRate: 0.18, critDmg: 1.9,
+        },
+        drops: [
+            { itemDataId: 'ashen_sinew', minCount: 1, maxCount: 3, chance: 0.62 },
+            { itemDataId: 'abyssal_hide', minCount: 1, maxCount: 2, chance: 0.28 },
+        ],
+        goldReward: { min: 1_080, max: 1_720 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.24, duration: 9, level: 11 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'mourning_wraith', name: '곡성 망령',
+        description: '망자의 골짜기에 남은 이름을 울음으로 되풀이하며 정신을 갉아먹는 검은 망령.', level: 241,
+        baseAttribute: {
+            maxLife: 62_800, atk: 810, magicForce: 985, def: 475, magicDef: 650, magicPen: 74,
+            speed: 3.75, attackSpeed: 1.18,
+        },
+        drops: [
+            { itemDataId: 'mourning_eye', minCount: 1, maxCount: 2, chance: 0.5 },
+            { itemDataId: 'blackflame_residue', minCount: 1, maxCount: 2, chance: 0.25 },
+        ],
+        goldReward: { min: 1_120, max: 1_790 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'fear', chance: 0.2, duration: 4, level: 11 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'horned_reaver', name: '공허뿔 약탈자',
+        description: '빈 뿔에서 울리는 전장의 메아리를 따라 가장 크게 상처 입힌 적에게 돌진하는 마수.', level: 244,
+        baseAttribute: {
+            maxLife: 74_500, atk: 1_015, def: 640, magicDef: 555, armorPen: 72,
+            speed: 3.2, attackSpeed: 0.92, critRate: 0.2, critDmg: 2,
+        },
+        drops: [
+            { itemDataId: 'hollow_horn', minCount: 1, maxCount: 2, chance: 0.52 },
+            { itemDataId: 'ashen_sinew', minCount: 1, maxCount: 2, chance: 0.34 },
+        ],
+        goldReward: { min: 1_160, max: 1_860 },
+        attack: { effect: { statusEffectId: 'defense_reduction', chance: 0.23, duration: 9, level: 12 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_DARK, GameTags.PROPERTY_EARTH],
+    },
+    {
+        id: 'three_maw_gatekeeper', name: '세 아귀 문지기',
+        description: '세 개의 목이 서로 다른 침입자를 기억하는 잿빛성흔 심연의 첫 관문 보스. 흑염포와 회피할 수 없는 물어뜯기를 번갈아 사용한다.', level: 248,
+        baseAttribute: {
+            maxLife: 585_000, atk: 1_090, magicForce: 1_105, def: 710, magicDef: 690,
+            armorPen: 78, magicPen: 76, speed: 2.55, attackSpeed: 0.44, critRate: 0.2, critDmg: 2.05,
+        },
+        expReward: 248 * 20 * 7,
+        drops: [
+            { itemDataId: 'hollow_horn', minCount: 5, maxCount: 9, chance: 0.9 },
+            { itemDataId: 'blackflame_residue', minCount: 4, maxCount: 7, chance: 0.78 },
+            { itemDataId: 'hellhound_charge_skillbook', minCount: 1, maxCount: 1, chance: 0.035 },
+        ],
+        goldReward: { min: 3_250, max: 4_900 },
+        skills: [
+            { skillDataId: 'gatekeeper_cinder_breath', level: 5 },
+            { skillDataId: 'gatekeeper_triple_maul', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['gatekeeper_cinder_breath', 'gatekeeper_triple_maul'],
+            initialDelay: 3.5, interval: { min: 6.5, max: 9 },
+        },
+        ai: {
+            intelligence: 36, disposition: MonsterAiDisposition.LAST_ATTACKER,
+            weights: { attack: 1, damage: 1, healing: 0.25, shielding: 0.2, control: 0.45, taunt: 1.2 },
+            tauntResistance: 0.18, switchThreshold: 0.05,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_BEAST, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_DARK, 'monster:three-maw-gatekeeper'],
+    },
+    {
+        id: 'cursebone_archer', name: '저주뼈 궁병',
+        description: '활시위를 놓는 순간 자신의 뼈를 화살촉으로 부러뜨리는 잿왕성의 불사 궁병.', level: 249,
+        baseAttribute: {
+            maxLife: 70_200, atk: 1_035, def: 565, magicDef: 605, armorPen: 80,
+            projectileAcceleration: 2.35, speed: 3.4, attackSpeed: 1.24, critRate: 0.22, critDmg: 2.05,
+        },
+        drops: [
+            { itemDataId: 'cursebone_fragment', minCount: 1, maxCount: 3, chance: 0.62 },
+            { itemDataId: 'wooden_arrow', minCount: 12, maxCount: 24, chance: 0.45 },
+        ],
+        goldReward: { min: 1_220, max: 1_950 },
+        attack: { effect: { statusEffectId: 'curse', chance: 0.2, duration: 9, level: 12 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'blackflame_priest', name: '흑염 사제',
+        description: '불꽃의 빛을 버리고 열과 저주만 남기는 제례를 반복하는 잿왕성의 사제.', level: 252,
+        baseAttribute: {
+            maxLife: 72_800, atk: 850, magicForce: 1_075, def: 535, magicDef: 715, magicPen: 84,
+            speed: 2.65, attackSpeed: 0.96,
+        },
+        drops: [
+            { itemDataId: 'blackflame_residue', minCount: 1, maxCount: 4, chance: 0.67 },
+            { itemDataId: 'mourning_eye', minCount: 1, maxCount: 1, chance: 0.18 },
+        ],
+        goldReward: { min: 1_260, max: 2_020 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'fire', chance: 0.26, duration: 10, level: 12 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'abyssal_gargoyle', name: '심연 석익수',
+        description: '밤쇠와 저주뼈가 성벽의 그림자를 먹고 깨어난 비행 수호상.', level: 255,
+        baseAttribute: {
+            maxLife: 86_500, atk: 1_060, magicForce: 935, def: 760, magicDef: 625, armorPen: 76,
+            speed: 3.15, attackSpeed: 0.78,
+        },
+        drops: [
+            { itemDataId: 'night_iron', minCount: 1, maxCount: 3, chance: 0.55 },
+            { itemDataId: 'cursebone_fragment', minCount: 1, maxCount: 2, chance: 0.38 },
+        ],
+        goldReward: { min: 1_300, max: 2_090 },
+        attack: { effect: { statusEffectId: 'slowness', chance: 0.24, duration: 8, level: 12 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_STONE, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'night_iron_knight', name: '밤쇠 근위기사',
+        description: '갑옷의 빈 틈까지 검은 철판으로 봉한 채 치료와 보호 행동을 먼저 끊는 잿왕성의 근위병.', level: 258,
+        baseAttribute: {
+            maxLife: 91_500, atk: 1_145, def: 805, magicDef: 690, armorPen: 86,
+            speed: 2.25, attackSpeed: 0.72, critRate: 0.18, critDmg: 2,
+        },
+        drops: [
+            { itemDataId: 'night_iron', minCount: 2, maxCount: 4, chance: 0.64 },
+            { itemDataId: 'sovereign_seal_fragment', minCount: 1, maxCount: 1, chance: 0.14 },
+        ],
+        goldReward: { min: 1_350, max: 2_170 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.24, duration: 10, level: 13 } },
+        ai: {
+            intelligence: 82, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.15, damage: 1, healing: 1.55, shielding: 1.3, control: 1.35, taunt: 2.4 },
+            tauntResistance: 0.78, switchThreshold: 0.24, decayPerSecond: 0.008,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'blackflame_general', name: '흑염대장 모르칸',
+        description: '흩어진 성군을 한 번의 진군 명령으로 다시 세우는 잿왕성 외성의 지휘관. 도발보다 치유와 제어 행위를 높게 평가한다.', level: 260,
+        baseAttribute: {
+            maxLife: 735_000, atk: 1_245, magicForce: 1_135, def: 825, magicDef: 755,
+            armorPen: 92, magicPen: 80, speed: 2.8, attackSpeed: 0.5, critRate: 0.22, critDmg: 2.1,
+        },
+        expReward: 260 * 20 * 8,
+        drops: [
+            { itemDataId: 'night_iron', minCount: 7, maxCount: 12, chance: 0.9 },
+            { itemDataId: 'sovereign_seal_fragment', minCount: 3, maxCount: 6, chance: 0.72 },
+            { itemDataId: 'blackflame_brand_skillbook', minCount: 1, maxCount: 1, chance: 0.035 },
+        ],
+        goldReward: { min: 4_050, max: 6_200 },
+        skills: [
+            { skillDataId: 'blackflame_general_march', level: 5 },
+            { skillDataId: 'gatekeeper_cinder_breath', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['blackflame_general_march', 'gatekeeper_cinder_breath'],
+            randomOrder: true, initialDelay: 3, interval: { min: 6, max: 8.5 },
+        },
+        ai: {
+            intelligence: 94, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.1, damage: 1, healing: 1.85, shielding: 1.55, control: 1.7, taunt: 3 },
+            tauntResistance: 0.9, switchThreshold: 0.3, decayPerSecond: 0.005,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK, 'monster:blackflame-general'],
+    },
+    {
+        id: 'throne_mourner', name: '왕좌의 애도자',
+        description: '비어 있는 왕좌 앞에서 끝나지 않는 장송곡을 읊어 생명력과 회복 의지를 함께 시들게 하는 시종.', level: 263,
+        baseAttribute: {
+            maxLife: 84_600, atk: 910, magicForce: 1_180, def: 605, magicDef: 790, magicPen: 94,
+            speed: 2.9, attackSpeed: 1.04,
+        },
+        drops: [
+            { itemDataId: 'mourning_eye', minCount: 1, maxCount: 3, chance: 0.58 },
+            { itemDataId: 'sovereign_seal_fragment', minCount: 1, maxCount: 2, chance: 0.24 },
+        ],
+        goldReward: { min: 1_420, max: 2_280 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'decay', chance: 0.26, duration: 10, level: 13 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'abyssal_executioner', name: '심연 처형관',
+        description: '재왕의 명령이 사라진 뒤에도 가장 약해진 침입자를 골라 형을 집행하는 거대한 밤쇠 집행자.', level: 268,
+        baseAttribute: {
+            maxLife: 108_000, atk: 1_285, def: 865, magicDef: 735, armorPen: 102,
+            speed: 2.1, attackSpeed: 0.6, critRate: 0.24, critDmg: 2.15,
+        },
+        drops: [
+            { itemDataId: 'night_iron', minCount: 2, maxCount: 5, chance: 0.7 },
+            { itemDataId: 'abyssal_hide', minCount: 1, maxCount: 3, chance: 0.42 },
+        ],
+        goldReward: { min: 1_520, max: 2_450 },
+        attack: { effect: { statusEffectId: 'defense_reduction', chance: 0.28, duration: 10, level: 14 } },
+        ai: {
+            intelligence: 88, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.1, damage: 1.2, healing: 1.4, shielding: 1.2, control: 1.55, taunt: 2.7 },
+            tauntResistance: 0.84, switchThreshold: 0.27, decayPerSecond: 0.006,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'ashen_sovereign', name: '재왕 벨카르',
+        description: '무너진 왕국의 죽음과 흑염을 한 몸에 묶은 잿빛성흔 심연의 군주. 치유·방벽·제어를 읽어 가장 전투를 오래 끌 적부터 심판한다.', level: 275,
+        baseAttribute: {
+            maxLife: 1_080_000, atk: 1_410, magicForce: 1_465, def: 940, magicDef: 965,
+            armorPen: 112, magicPen: 116, speed: 2.7, attackSpeed: 0.46, critRate: 0.25, critDmg: 2.2,
+        },
+        expReward: 275 * 20 * 9,
+        drops: [
+            { itemDataId: 'sovereign_seal_fragment', minCount: 8, maxCount: 14, chance: 0.95 },
+            { itemDataId: 'mourning_eye', minCount: 6, maxCount: 10, chance: 0.85 },
+            { itemDataId: 'sovereign_decree_skillbook', minCount: 1, maxCount: 1, chance: 0.03 },
+            { itemDataId: 'ashguard_bulwark', minCount: 1, maxCount: 1, chance: 0.02 },
+        ],
+        goldReward: { min: 6_200, max: 9_400 },
+        skills: [
+            { skillDataId: 'sovereign_crownfall', level: 5 },
+            { skillDataId: 'sovereign_ash_sentence', level: 5 },
+            { skillDataId: 'blackflame_general_march', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['sovereign_crownfall', 'sovereign_ash_sentence', 'blackflame_general_march'],
+            randomOrder: true, initialDelay: 2.8, interval: { min: 5.5, max: 7.5 },
+        },
+        ai: {
+            intelligence: 100, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.04, damage: 1, healing: 2.15, shielding: 1.9, control: 2, taunt: 3.8 },
+            tauntResistance: 0.97, switchThreshold: 0.35, decayPerSecond: 0.003,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_DARK, GameTags.PROPERTY_UNDEAD, 'monster:ashen-sovereign'],
+    },
+];
+
+for (const monster of ashenAbyssMonsters) defineWorldMonster(monster);
+
 const advancedWorldMonsters: WorldMonsterData[] = [
     {
         id: 'spark_moth', name: '섬광나방', description: '폭풍 전류를 날개에 모아 번쩍이며 달려드는 거대 곤충.', level: 52,

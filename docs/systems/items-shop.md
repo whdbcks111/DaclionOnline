@@ -29,6 +29,8 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 `learn_skill` 사용 handler는 아이템 metadata의 `skillDataId`를 `Player.skills.grant()`에 전달한다. 신규 획득 성공 시에만 해당 아이템 인스턴스 한 개를 제거하며 이미 보유했거나 데이터가 잘못된 경우 소비하지 않는다. `seismic_crush_skillbook`과 은빛그물 보스의 `predator_pounce_skillbook`, `silverweb_snare_skillbook`, 역설기계고의 광자창·인과고정·톱니폭우·역설반전 전승서가 같은 계약을 사용한다. 콘텐츠 확장 중인 전승서는 전용 아트 전까지 기존 스킬북 카테고리 아이콘을 명시적 fallback으로 사용한다.
 
+잿빛성흔 심연은 잿빛 힘줄·흑염 잔재·공허뿔·저주뼈·밤쇠·재왕 인장·심연가죽·애도의 눈을 사냥·채굴 소재로 제공한다. 재길 행군식과 두 영약이 생존·화염 저항·재생을 담당하고, 재가름 장검·공허뿔 장궁·황혼송곳·흑염각 지팡이·재성벽 방패가 Lv.238~275 역할 장비를 구성한다. 세 단계 보스의 전승서는 지옥견 돌진·흑염 낙인·재왕의 칙령을 낮은 확률로 제공하며 전용 아트 전에는 유효한 동종 카테고리 fallback을 명시적으로 사용한다.
+
 내구도는 `baseDurability`가 있는 아이템만 사용한다. `durability/durabilityRatio/isBroken`으로 조회하고 `setDurability/changeDurability/increaseDurability/decreaseDurability`로 0~기본 내구도 범위 안에서 변경한다. 소유 중인 아이템이 0이 되면 Inventory는 해당 인스턴스를 삭제하고 Equipment는 슬롯 modifier를 즉시 제거한 뒤 삭제 상태로 저장한다. 주무기가 공격으로 파괴되면 소유 플레이어에게 알림을 보낸다.
 
 은빛그물 숲의 `forest_antidote`는 30초 해독 상태로 독·맹독·마비독을 제거하고 재적용을 막는다. `silverweb_hunter_bow`는 공격력 6·치명타율 2%·투사체 가속 8%를 제공하는 초반 성장 활이다. 전용 아트 제작 전에는 기존 활·포션·유기물 카테고리 아이콘을 명시적 fallback으로 사용한다.
@@ -136,6 +138,8 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 안개파도 염등 항구의 `misttide_harbor_store`는 행군식·화염 저항·재생 소모품·화살과 해안 직업 장비 다섯 종을 제한 재고로 판매한다. 지역 소재 여덟 종은 희귀도에 따라 매입되며, 같은 소재는 여덟 자동 발견 조합법과 5~7시간 침몰왕도 유물함 보상에 재사용된다.
 
 역설기계고 중계소의 `paradox_relay_store`는 지역 소모품·화살과 다섯 역할 장비를 제한 재고로 판매한다. 지역 소재 아홉 종은 희귀도에 따라 매입되며, 같은 소재는 아홉 자동 발견 제작법·두 퀘스트·6~8시간 원형 보관고 보상에 재사용된다.
+
+잿빛성흔 심연의 `ashen_waystation_store`는 지역 소모품·화살과 다섯 역할 장비를 제한 재고로 판매하고 소재 여덟 종을 매입한다. 같은 소재는 여덟 자동 발견 제작법, 세 보스 드롭과 7~10시간 봉인 유산고 보상에 재사용된다.
 
 `data/shops.ts`가 `ShopData`를 등록하고 Location의 `shopId`가 상점을 노출한다. `BuyEntry`는 생성 함수·가격·1회 수량·최대 재고·재입고 시간을, `SellEntry`는 필터·가격을 가진다.
 
