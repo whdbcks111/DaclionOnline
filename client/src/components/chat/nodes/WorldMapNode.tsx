@@ -38,6 +38,7 @@ const MIN_LABEL_ZOOM = 0.5
 const MAX_LABEL_ZOOM = 1
 const LABEL_ZOOM_STEP = 0.125
 const DEFAULT_LABEL_ZOOM = 0.75
+const DRAG_START_DISTANCE = 6
 
 interface BiomeSeed {
     colorKey: string
@@ -353,7 +354,9 @@ export default function WorldMapNode({ data }: Props) {
         else pointerGestureMoved.current = true
         pointers.current.set(event.pointerId, point)
         pointerStarts.current.set(event.pointerId, point)
-        event.currentTarget.setPointerCapture(event.pointerId)
+        // Mouse capture retargets an otherwise valid blip click to the whole SVG.
+        // Touch keeps immediate capture for stable one-finger and pinch gestures.
+        if (event.pointerType !== 'mouse') event.currentTarget.setPointerCapture(event.pointerId)
     }
 
     const handlePointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -366,7 +369,12 @@ export default function WorldMapNode({ data }: Props) {
         const before = [...pointers.current.values()]
         const nextPoint = { x: event.clientX, y: event.clientY }
         const startPoint = pointerStarts.current.get(event.pointerId)
-        if (startPoint && distance(startPoint, nextPoint) > 6) pointerGestureMoved.current = true
+        if (startPoint && distance(startPoint, nextPoint) > DRAG_START_DISTANCE) {
+            pointerGestureMoved.current = true
+            if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.setPointerCapture(event.pointerId)
+            }
+        }
         pointers.current.set(event.pointerId, nextPoint)
         const after = [...pointers.current.values()]
 
@@ -396,6 +404,7 @@ export default function WorldMapNode({ data }: Props) {
             return
         }
 
+        if (!pointerGestureMoved.current) return
         setView(current => ({
             ...current,
             x: current.x - (nextPoint.x - previous.x) * current.width / rect.width,
@@ -559,7 +568,7 @@ export default function WorldMapNode({ data }: Props) {
                 </aside>
             )}
             {data.locations.length === 0 && <div className={styles.empty}>지도에 표시할 장소가 없습니다.</div>}
-            <div className={styles.help}>드래그로 이동 · 휠 또는 두 손가락으로 확대/축소</div>
+            <div className={styles.help}>장소 선택 · 드래그로 이동 · 휠 또는 두 손가락으로 확대/축소</div>
             <Dialog
                 open={Boolean(navigationLocation)}
                 title="자동이동"
