@@ -124,29 +124,66 @@ test('엘리트 직업은 원래 메인 직업 스킬의 표시 조건을 계속
     assert.equal(player.skills.getVisible().some(skill => skill.skillDataId === 'steel_slash'), true);
 });
 
-test('각 1차 직업은 Lv.30과 Lv.50 성장 기술을 해당 레벨에 자동 획득한다', () => {
-    for (const [jobId, level30Skill, level50Skills] of [
-        ['career:warrior', 'fracture_slash', ['iron_tempest']],
-        ['career:archer', 'piercing_arrow', ['arrow_storm']],
-        ['career:assassin', 'rupture_cut', ['shadow_dagger']],
-        ['career:mage', 'mana_lance', ['flame_wave']],
-        ['career:blacksmith', 'fault_finder', ['anvil_resonance', 'tempered_aegis']],
+test('각 1차 직업은 Lv.30부터 Lv.180까지 성장 기술을 단계별로 자동 획득한다', () => {
+    for (const [jobId, expectedByLevel] of [
+        ['career:warrior', [
+            [30, ['fracture_slash']], [50, ['iron_tempest']], [75, ['frontline_cleave']],
+            [100, ['ironblood_counter']], [140, ['giant_execution']], [180, ['war_god_descent']],
+        ]],
+        ['career:archer', [
+            [30, ['piercing_arrow']], [50, ['arrow_storm']], [75, ['tracking_arrow']],
+            [100, ['rupture_volley']], [140, ['meteor_arrow']], [180, ['skyfall_barrage']],
+        ]],
+        ['career:assassin', [
+            [30, ['rupture_cut']], [50, ['shadow_dagger']], [75, ['venom_shadow']],
+            [100, ['shadow_pursuit']], [140, ['heart_extraction']], [180, ['formless_chain']],
+        ]],
+        ['career:mage', [
+            [30, ['mana_lance']], [50, ['flame_wave']], [75, ['mana_detonation']],
+            [100, ['arcane_meteor']], [140, ['element_collapse']], [180, ['constellation_rupture']],
+        ]],
+        ['career:blacksmith', [
+            [30, ['fault_finder']], [50, ['anvil_resonance', 'tempered_aegis']], [75, ['hotspot_strike']],
+            [100, ['steel_pulse']], [140, ['masterwork_break']], [180, ['anvil_starfall']],
+        ]],
     ] as const) {
         const player = new TestSkillPlayer();
         player.progress.setState(CareerProgressIds.MAIN, jobId);
-        player.level = 29;
-        player.skills.update(0.5);
-        assert.equal(player.skills.has(level30Skill), false, `${jobId} Lv.29`);
-
-        player.level = 30;
-        player.skills.update(0.5);
-        assert.equal(player.skills.has(level30Skill), true, `${jobId} Lv.30`);
-        assert.ok(level50Skills.every(skillId => !player.skills.has(skillId)), `${jobId} Lv.30`);
-
-        player.level = 50;
-        player.skills.update(0.5);
-        assert.ok(level50Skills.every(skillId => player.skills.has(skillId)), `${jobId} Lv.50`);
+        for (const [level, skillIds] of expectedByLevel) {
+            player.level = level - 1;
+            player.skills.update(0.5);
+            assert.ok(skillIds.every(skillId => !player.skills.has(skillId)), `${jobId} Lv.${level - 1}`);
+            player.level = level;
+            player.skills.update(0.5);
+            assert.ok(skillIds.every(skillId => player.skills.has(skillId)), `${jobId} Lv.${level}`);
+        }
     }
+});
+
+test('마법사 속성 상위 주문은 처치 통계와 선행 스킬 숙련을 모두 만족해야 열린다', () => {
+    const player = new TestSkillPlayer();
+    player.progress.setState(CareerProgressIds.MAIN, 'career:mage');
+    player.level = 180;
+    const fireball = player.skills.grant('fireball', 'test', 2).skill;
+    player.progress.increment('career:mage_fire_kills', 30);
+    player.skills.update(0.5);
+    assert.equal(player.skills.has('blazing_spear'), false);
+
+    fireball.setLevel(3);
+    player.skills.update(0.5);
+    assert.equal(player.skills.has('blazing_spear'), true);
+
+    player.progress.increment('career:mage_fire_kills', 70);
+    player.skills.update(0.5);
+    assert.equal(player.skills.has('phoenix_eruption'), false);
+    player.skills.setLevel('blazing_spear', 3);
+    player.skills.update(0.5);
+    assert.equal(player.skills.has('phoenix_eruption'), true);
+
+    player.progress.increment('career:mage_fire_kills', 100);
+    player.skills.setLevel('phoenix_eruption', 4);
+    player.skills.update(0.5);
+    assert.equal(player.skills.has('inferno_meteor'), true);
 });
 
 test('성장 기술 정보는 내부 태그 대신 속성·계열·공유 쿨다운 표시명을 제공한다', () => {
@@ -415,6 +452,39 @@ test('마력탄 스킬은 지팡이용 마력 구체와 분리된 전용 투사�
     assert.equal(outcome.activated, true);
     assert.equal(projectile?.name, '마력탄');
     if (projectile) removeProjectile(projectile);
+});
+
+test('성장 투사체는 표시·밸런스 callback과 같은 복합 피해량을 발사체에 고정한다', () => {
+    const player = new TestSkillPlayer();
+    const target = new TestTarget();
+    player.progress.setState(CareerProgressIds.MAIN, 'career:mage');
+    player.attribute.addModifier({ attribute: 'magicForce', op: 'add', value: 90, source: 'test:magic' });
+    player.currentTarget = target;
+    player.skills.grant('mana_detonation', 'test');
+
+    assert.equal(player.skills.activateByInput('마력 폭쇄').activated, true);
+    const projectile = getActiveProjectiles().find(candidate => candidate.owner === player);
+    assert.ok(projectile);
+    assert.equal(projectile.damageAmount, 210);
+    removeProjectile(projectile);
+});
+
+test('대장장이 상위 공격은 실제 발동에서도 최대 생명력과 제련 정밀도 계수를 사용한다', () => {
+    const player = new TestSkillPlayer();
+    const target = new TestTarget();
+    player.progress.setState(CareerProgressIds.MAIN, 'career:blacksmith');
+    player.attribute.addModifier({
+        attribute: AttributeType.FORGING_PRECISION.key,
+        op: 'add',
+        value: 1,
+        source: 'test:precision',
+    });
+    player.currentTarget = target;
+    player.skills.grant('hotspot_strike', 'test');
+
+    assert.equal(player.skills.activateByInput('열점 타격').activated, true);
+    // (공격력 10 × 270% + 최대 생명력 100 × 3% + 공격력 10 × 정밀도 1 × 50%) × 치명타 150%
+    assert.equal(target.life, 47.5);
 });
 
 test('마법 투사체는 스킬 레벨과 마법력이 높을수록 더 빨리 도달한다', () => {

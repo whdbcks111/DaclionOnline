@@ -32,6 +32,8 @@ export interface ProjectileDataOverrides {
     damageBonus?: number;
     tags?: TagId[];
     attributeOverrides?: Partial<AttributeRecord>;
+    /** true면 투사체 적중 공격은 이동속도 회피 판정을 건너뛴다. */
+    unavoidable?: boolean;
 }
 
 export interface ProjectileReference {
@@ -50,6 +52,7 @@ export interface ProjectileOptions {
     accelerationMultiplier?: number;
     tags?: readonly TagId[];
     baseAttribute?: Partial<AttributeRecord>;
+    unavoidable?: boolean;
     onHit?: (projectile: Projectile, result: DamageResult) => void;
 }
 
@@ -70,6 +73,7 @@ export default class Projectile extends Entity {
     readonly damageType: DamageType;
     readonly baseTravelTime: number;
     readonly projectileAcceleration: number;
+    readonly unavoidable: boolean;
 
     private _remainingTravelTime: number;
     private _active = true;
@@ -122,6 +126,7 @@ export default class Projectile extends Entity {
         this.damageType = options.damageType ?? 'physical';
         this.baseTravelTime = travelTime;
         this.projectileAcceleration = projectileAcceleration;
+        this.unavoidable = options.unavoidable ?? false;
         this._remainingTravelTime = travelTime / projectileAcceleration;
         this.onHit = options.onHit;
     }
@@ -154,7 +159,9 @@ export default class Projectile extends Entity {
             return;
         }
 
-        const result = this.attack(this.target, this.damageType, this.damageAmount);
+        const result = this.attack(this.target, this.damageType, this.damageAmount, {
+            unavoidable: this.unavoidable,
+        });
         this.despawn();
         if (result) this.onHit?.(this, result);
     }
@@ -265,6 +272,10 @@ export function parseProjectileReference(value: unknown): ProjectileReference | 
         if (!attributes) return undefined;
         overrides.attributeOverrides = attributes;
     }
+    if (raw.unavoidable !== undefined) {
+        if (typeof raw.unavoidable !== 'boolean') return undefined;
+        overrides.unavoidable = raw.unavoidable;
+    }
     return { dataId: value.dataId, overrides };
 }
 
@@ -335,6 +346,7 @@ export function spawnProjectileFromData(options: SpawnProjectileDataOptions): Pr
             critDmg: options.owner.attribute.get(AttributeType.CRIT_DMG),
             ...overrides.attributeOverrides,
         },
+        unavoidable: overrides.unavoidable,
         onHit: options.onHit,
     });
 }

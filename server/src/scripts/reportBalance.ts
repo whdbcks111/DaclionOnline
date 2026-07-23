@@ -13,6 +13,7 @@ import {
     analyzeItemBalance,
     analyzeSkillBalance,
     BalanceEncounterType,
+    BALANCE_PROFILE_LEVELS,
     createBalanceScenario,
 } from '../models/Balance.js';
 
@@ -22,7 +23,7 @@ const level = Number.isInteger(requestedLevel) && requestedLevel > 0 ? requested
 const reports = analyzeAllFirstJobs(level);
 
 if (levelInput.toLowerCase() === 'all') {
-    for (const band of [20, 50, 100, 150, 200]) printProfiles(band);
+    for (const band of BALANCE_PROFILE_LEVELS) printProfiles(band);
     process.exit(0);
 }
 

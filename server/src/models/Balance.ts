@@ -27,6 +27,8 @@ import type { TagId } from '../../../shared/tags.js';
 
 const BALANCE_WINDOW_SECONDS = 60;
 const BALANCE_ACTION_FLOOR_SECONDS = 0.45;
+/** 1차 성장기와 2차 전직 경계를 모두 포함하는 공용 밸런스 회귀 구간. */
+export const BALANCE_PROFILE_LEVELS = Object.freeze([20, 50, 75, 100, 140, 180, 200] as const);
 const PROJECTED_SKILL_UNLOCK_LEVELS = new Map<string, number>([
     ['power_strike', 10],
     ['fireball', 40],

@@ -11,6 +11,7 @@ import {
     findSkillDataForBalance,
     findItemDataForBalance,
     getAllBalanceItemData,
+    BALANCE_PROFILE_LEVELS,
     type ItemBalanceReport,
     type JobBalanceReport,
     type BalanceProfileReport,
@@ -33,7 +34,7 @@ export function initBalanceCommands(): void {
         description: '실제 장비와 성장 스킬을 적용해 평타·전체 스킬 로테이션으로 동레벨 일반/보스전을 비교합니다.',
         args: [
             { name: '레벨', description: `분석 레벨 또는 전체 (생략 시 Lv.${DEFAULT_LEVEL})`, required: false,
-                completions: [{ value: '전체', description: 'Lv.20/50/100/150/200 구간 비교' }] },
+                completions: [{ value: '전체', description: `Lv.${BALANCE_PROFILE_LEVELS.join('/')} 구간 비교` }] },
             { name: '메인직업', description: '생략 또는 전체 입력 시 모든 1차 직업 비교', required: false,
                 completions: [{ value: '전체', description: '모든 1차 직업 비교' }, ...getFirstJobCompletions()] },
             { name: '서브직업', description: 'Lv.200 엘리트 조합 분석', required: false, completions: getFirstJobCompletions() },
@@ -41,7 +42,9 @@ export function initBalanceCommands(): void {
         handler(userId, args) {
             try {
                 if (args[0] === '전체') {
-                    sendBotMessageToUser(userId, buildLevelBandProfileMessage([20, 50, 100, 150, 200].flatMap(analyzeAllBalanceProfiles)));
+                    sendBotMessageToUser(userId, buildLevelBandProfileMessage(
+                        BALANCE_PROFILE_LEVELS.flatMap(analyzeAllBalanceProfiles),
+                    ));
                     return;
                 }
                 const level = parsePositiveInteger(args[0], DEFAULT_LEVEL);

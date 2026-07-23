@@ -122,6 +122,43 @@ test('combat profiles share resources while mixing basics and every available jo
     }
 });
 
+test('advanced first-job profiles stay within the measured 1.5x boss DPS band', () => {
+    for (const level of [75, 100, 140, 180]) {
+        const profiles = analyzeAllBalanceProfiles(level);
+        const bossDps = profiles.map(profile => profile.boss.dps);
+        const spread = Math.max(...bossDps) / Math.min(...bossDps);
+        assert.ok(spread <= 1.5, `Lv.${level} spread=${spread.toFixed(3)}`);
+        assert.ok(profiles.every(profile =>
+            profile.boss.basicDamageShare >= 0.15 && profile.boss.basicDamageShare <= 0.75));
+    }
+});
+
+test('all elite combinations stay within the measured 1.5x boss DPS band', () => {
+    const profiles = [];
+    for (const main of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith']) {
+        for (const sub of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith']) {
+            if (main === sub) continue;
+            profiles.push(analyzeBalanceProfile(200, `career:${main}`, `career:${sub}`));
+        }
+    }
+    const bossDps = profiles.map(profile => profile.boss.dps);
+    assert.ok(Math.max(...bossDps) / Math.min(...bossDps) <= 1.5);
+    assert.ok(profiles.every(profile => profile.boss.basicDamageShare >= 0.15));
+});
+
+test('blacksmith advanced attacks use forging precision in the real balance callback', () => {
+    const scenario = createBalanceScenario(140, 'career:blacksmith');
+    const before = analyzeSkillBalance(scenario, 'masterwork_break', 3).rawDamage;
+    scenario.entity.attribute.addModifier({
+        attribute: AttributeType.FORGING_PRECISION.key,
+        op: 'add',
+        value: 1,
+        source: 'test:precision',
+    });
+    const after = analyzeSkillBalance(scenario, 'masterwork_break', 3).rawDamage;
+    assert.ok(after > before);
+});
+
 test('combat rotation removes temporary balance modifiers after analysis', () => {
     const scenario = createBalanceScenario(100, 'career:mage');
     analyzeCombatRotation(scenario);

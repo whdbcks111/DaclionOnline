@@ -1342,12 +1342,12 @@ defineSkill({
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 10[/color]',
     activationConditionTemplate: targetActivationGuide(), activationMessage: '마력탄!', baseMetadata: null,
     calculatedFields: {
-        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 130, 9),
+        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 95, 7),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'magic_bolt', true),
     },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
-        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 130, 9) / 100,
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 95, 7) / 100,
         calculateManaCost: () => 10,
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 4, 0.2, 3.2),
@@ -1355,7 +1355,7 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.mage),
     canActivate: simpleCheck(10), onStart: context => {
         spend(context, 10);
-        projectileAttack(context, 'magic_bolt', percentByLevel(context.skill.level, 130, 9) / 100);
+        projectileAttack(context, 'magic_bolt', percentByLevel(context.skill.level, 95, 7) / 100);
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC],
 });
 
@@ -1407,13 +1407,13 @@ defineSkill({
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 24[/color]',
     activationConditionTemplate: targetActivationGuide(), activationMessage: '원소 속박!', baseMetadata: null,
     calculatedFields: {
-        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 105, 8),
+        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 75, 6),
         bindDuration: context => levelValueTooltip(context, '속박 지속시간', 1.5, 0.2, '초'),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_magic_orb', true),
     },
     balance: {
         role: SkillBalanceRole.CONTROL, damageType: 'magic',
-        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 105, 8) / 100,
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 75, 6) / 100,
         calculateManaCost: () => 24,
         notes: ['속박의 가치는 적 패턴에 따라 달라 피해량에 임의 합산하지 않습니다.'],
     },
@@ -1422,7 +1422,7 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.mage),
     canActivate: simpleCheck(24), onStart: context => {
         spend(context, 24);
-        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 105, 8) / 100, [GameTags.PROPERTY_ICE], (_p, result) => {
+        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 75, 6) / 100, [GameTags.PROPERTY_ICE], (_p, result) => {
             if (!result.evaded) _p.target.applyStatusEffect(STUN, valueByLevel(context.skill.level, 1.5, 0.2), context.skill.level);
         });
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.PROPERTY_ICE,
@@ -1473,14 +1473,14 @@ for (const elemental of [
     activationConditionTemplate: targetActivationGuide(),
     activationMessage: `${elemental.name}!`, baseMetadata: null,
     calculatedFields: {
-        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 140, 10),
+        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 100, 7),
         effectDuration: context => levelValueTooltip(context, `${elemental.effectLabel} 지속시간`, elemental.duration, elemental.durationPerLevel, '초'),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_magic_orb', true),
     },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
         effectTags: [elemental.tag],
-        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 140, 10) / 100,
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 100, 7) / 100,
         calculateManaCost: () => 28,
         notes: [`${elemental.effectLabel} 효과는 대상 상태에 따라 달라 직접 타격 DPM과 분리합니다.`],
     },
@@ -1490,7 +1490,7 @@ for (const elemental of [
     autoAcquire: { watchedProgress: [elemental.stat], check: ({ player }) => Boolean(player?.career?.hasJob(JOBS.mage) && player.progress.getCounter(elemental.stat) >= 5n) },
     canActivate: simpleCheck(28), onStart: context => {
         spend(context, 28);
-        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 140, 10) / 100, [elemental.tag], (_p, result) => {
+        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 100, 7) / 100, [elemental.tag], (_p, result) => {
             if (!result.evaded) {
                 _p.target.applyStatusEffect(
                     elemental.effect,
@@ -1513,6 +1513,12 @@ interface GrowthTechniqueDefinition {
     attribute: AttributeType;
     basePercent: number;
     perLevelPercent: number;
+    secondaryAttribute?: AttributeType;
+    secondaryBasePercent?: number;
+    secondaryPerLevelPercent?: number;
+    /** 대장장이 감각 파생 능력치가 주 능력치 계수를 추가로 증폭하는 비율. */
+    forgingPrecisionBasePercent?: number;
+    forgingPrecisionPerLevelPercent?: number;
     manaCost: number;
     cooldown: number;
     jobId?: string;
@@ -1533,12 +1539,61 @@ interface GrowthTechniqueDefinition {
     statusDurationPerLevel?: number;
     statusLevel?: (skillLevel: number) => number;
     shieldPercent?: number;
+    autoAcquireProgress?: {
+        id: string;
+        count: number;
+        prerequisiteSkillId: string;
+        prerequisiteLevel: number;
+    };
     descriptionIntro: string;
 }
 
 function growthTechniqueDamage(context: SkillContext, definition: GrowthTechniqueDefinition): number {
-    return context.owner.attribute.get(definition.attribute)
+    const primary = context.owner.attribute.get(definition.attribute)
         * percentByLevel(context.skill.level, definition.basePercent, definition.perLevelPercent) / 100;
+    const secondary = definition.secondaryAttribute
+        ? context.owner.attribute.get(definition.secondaryAttribute)
+            * percentByLevel(
+                context.skill.level,
+                definition.secondaryBasePercent ?? 0,
+                definition.secondaryPerLevelPercent ?? 0,
+            ) / 100
+        : 0;
+    const precision = definition.forgingPrecisionBasePercent !== undefined
+        ? context.owner.attribute.get(definition.attribute)
+            * context.owner.attribute.get(AttributeType.FORGING_PRECISION)
+            * percentByLevel(
+                context.skill.level,
+                definition.forgingPrecisionBasePercent,
+                definition.forgingPrecisionPerLevelPercent ?? 0,
+            ) / 100
+        : 0;
+    return primary + secondary + precision;
+}
+
+function growthTechniqueDamageTooltip(context: SkillContext, definition: GrowthTechniqueDefinition): string {
+    const primaryPercent = percentByLevel(context.skill.level, definition.basePercent, definition.perLevelPercent);
+    const formulas = [`${definition.attribute.label} × ${formatNumber(primaryPercent)}%`];
+    if (definition.secondaryAttribute) {
+        formulas.push(
+            `${definition.secondaryAttribute.label} × ${formatNumber(percentByLevel(
+                context.skill.level,
+                definition.secondaryBasePercent ?? 0,
+                definition.secondaryPerLevelPercent ?? 0,
+            ))}%`,
+        );
+    }
+    if (definition.forgingPrecisionBasePercent !== undefined) {
+        formulas.push(
+            `${definition.attribute.label} × ${AttributeType.FORGING_PRECISION.label} × `
+            + `${formatNumber(percentByLevel(
+                context.skill.level,
+                definition.forgingPrecisionBasePercent,
+                definition.forgingPrecisionPerLevelPercent ?? 0,
+            ))}%`,
+        );
+    }
+    return tooltipValue(growthTechniqueDamage(context, definition), formulas.join(' + '));
 }
 
 function careerLevelAutoAcquire(jobId: string, unlockLevel: number) {
@@ -1547,6 +1602,25 @@ function careerLevelAutoAcquire(jobId: string, unlockLevel: number) {
         alwaysEvaluate: true,
         check: ({ player }: SkillContext) => Boolean(
             player && player.level >= unlockLevel && player.career.hasJob(jobId),
+        ),
+    };
+}
+
+function careerMasteryAutoAcquire(
+    jobId: string,
+    unlockLevel: number,
+    requirement: NonNullable<GrowthTechniqueDefinition['autoAcquireProgress']>,
+) {
+    return {
+        watchedProgress: [requirement.id] as readonly string[],
+        // 선행 스킬 레벨은 Progress 변경 없이 오르므로 주기 검사도 함께 사용한다.
+        alwaysEvaluate: true,
+        check: ({ player }: SkillContext) => Boolean(
+            player
+            && player.level >= unlockLevel
+            && player.career.hasJob(jobId)
+            && player.progress.getCounter(requirement.id) >= BigInt(requirement.count)
+            && (player.skills.get(requirement.prerequisiteSkillId)?.level ?? 0) >= requirement.prerequisiteLevel,
         ),
     };
 }
@@ -1603,7 +1677,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'mana_lance', name: '마력 창', icon: 'skills/magic_bolt', activationHeader: 'magic_bolt',
-        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 205, perLevelPercent: 14,
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 150, perLevelPercent: 10,
         manaCost: 24, cooldown: 8, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 30,
         projectile: 'magic_bolt', projectileName: '마력 창',
         penetration: { attribute: AttributeType.MAGIC_PEN, base: 20, perLevel: 5 },
@@ -1611,7 +1685,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'flame_wave', name: '홍염 파동', icon: 'skills/fireball', activationHeader: 'fireball',
-        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 235, perLevelPercent: 16,
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 170, perLevelPercent: 11,
         manaCost: 32, cooldown: 12, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 50,
         projectile: 'basic_magic_orb', projectileName: '홍염 파동', propertyTag: GameTags.PROPERTY_FIRE,
         statusEffect: StatusEffectType.FIRE, statusLabel: '화염', statusDuration: 8, statusDurationPerLevel: 1,
@@ -1631,6 +1705,395 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         manaCost: 32, cooldown: 14, jobId: JOBS.blacksmith, groupTag: GameTags.SKILL_GROUP_BLACKSMITH, unlockLevel: 50,
         guaranteedCritical: true, unavoidable: true,
         descriptionIntro: '무기에 금속의 공명을 실어 대상을 강하게 내리칩니다.',
+    },
+    {
+        id: 'frontline_cleave', name: '전선 가르기', icon: 'skills/steel_slash', activationHeader: 'steel_slash',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 320, perLevelPercent: 20,
+        manaCost: 34, cooldown: 10, jobId: JOBS.warrior, groupTag: GameTags.SKILL_GROUP_WARRIOR, unlockLevel: 75,
+        weaponDescription: '검 또는 도끼를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 28, perLevel: 6 },
+        descriptionIntro: '무게 중심을 낮추고 전방의 방어선을 한 번에 갈라 냅니다.',
+    },
+    {
+        id: 'ironblood_counter', name: '철혈 반격', icon: 'skills/indomitable', activationHeader: 'indomitable',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 350, perLevelPercent: 22,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 2.5, secondaryPerLevelPercent: 0.25,
+        manaCost: 42, cooldown: 14, jobId: JOBS.warrior, groupTag: GameTags.SKILL_GROUP_WARRIOR, unlockLevel: 100,
+        weaponDescription: '검 또는 도끼를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
+        shieldPercent: 12,
+        descriptionIntro: '받아 낸 충격을 몸 안에 붙들어 두었다가 무기에 실어 되돌려 줍니다.',
+    },
+    {
+        id: 'giant_execution', name: '거인 단두', icon: 'skills/steel_slash', activationHeader: 'steel_slash',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 430, perLevelPercent: 28,
+        manaCost: 52, cooldown: 13, jobId: JOBS.warrior, groupTag: GameTags.SKILL_GROUP_WARRIOR, unlockLevel: 140,
+        weaponDescription: '검 또는 도끼를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
+        guaranteedCritical: true, penetration: { attribute: AttributeType.ARMOR_PEN, base: 42, perLevel: 8 },
+        descriptionIntro: '거대한 적의 목덜미를 겨누듯 무기를 높이 들어 급소를 내려칩니다.',
+    },
+    {
+        id: 'war_god_descent', name: '전쟁신 강림', icon: 'skills/battle_rush', activationHeader: 'battle_rush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 520, perLevelPercent: 34,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 3, secondaryPerLevelPercent: 0.35,
+        manaCost: 68, cooldown: 18, jobId: JOBS.warrior, groupTag: GameTags.SKILL_GROUP_WARRIOR, unlockLevel: 180,
+        weaponDescription: '검 또는 도끼를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
+        unavoidable: true, penetration: { attribute: AttributeType.ARMOR_PEN, base: 60, perLevel: 10 },
+        statusEffect: LegacyStatusEffects.OVERMASTER, statusLabel: '제압', statusDuration: 1.5,
+        statusDurationPerLevel: 0.2,
+        descriptionIntro: '전장의 압력을 한 몸에 모아 대상이 물러설 틈조차 없이 돌진합니다.',
+    },
+    {
+        id: 'shieldbreaker_blow', name: '방패분쇄', icon: 'skills/steel_slash', activationHeader: 'steel_slash',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 255, perLevelPercent: 17,
+        manaCost: 28, cooldown: 8, jobId: JOBS.warrior, groupTag: GameTags.SKILL_GROUP_WARRIOR, unlockLevel: 75,
+        weaponDescription: '검 또는 도끼를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 38, perLevel: 7 },
+        statusEffect: LegacyStatusEffects.DEFENSE_REDUCTION, statusLabel: '방어력 감소',
+        statusDuration: 8, statusDurationPerLevel: 0.5,
+        descriptionIntro: '무기의 무게를 방어구 한 점에 집중해 방패와 갑옷의 결속을 부숩니다.',
+    },
+    {
+        id: 'bloodline_tempest', name: '혈기 폭풍', icon: 'skills/battle_rush', activationHeader: 'battle_rush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 325, perLevelPercent: 21,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 2, secondaryPerLevelPercent: 0.2,
+        manaCost: 38, cooldown: 11, jobId: JOBS.warrior, groupTag: GameTags.SKILL_GROUP_WARRIOR, unlockLevel: 100,
+        weaponDescription: '검 또는 도끼를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
+        shieldPercent: 8,
+        descriptionIntro: '상처에서 솟은 투지를 회전하는 폭풍으로 바꿔 대상에게 되돌립니다.',
+    },
+    {
+        id: 'earthsplitter', name: '대지 가르기', icon: 'skills/steel_slash', activationHeader: 'steel_slash',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 395, perLevelPercent: 26,
+        manaCost: 48, cooldown: 13, jobId: JOBS.warrior, groupTag: GameTags.SKILL_GROUP_WARRIOR, unlockLevel: 140,
+        weaponDescription: '검 또는 도끼를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
+        propertyTag: GameTags.PROPERTY_EARTH, unavoidable: true,
+        descriptionIntro: '지면을 따라 충격을 흘려 보내 대상의 발밑에서 대지를 갈라 올립니다.',
+    },
+    {
+        id: 'last_legion', name: '최후 군단', icon: 'skills/indomitable', activationHeader: 'indomitable',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 480, perLevelPercent: 31,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 4, secondaryPerLevelPercent: 0.4,
+        manaCost: 62, cooldown: 17, jobId: JOBS.warrior, groupTag: GameTags.SKILL_GROUP_WARRIOR, unlockLevel: 180,
+        weaponDescription: '검 또는 도끼를 장착해야 합니다.', weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
+        guaranteedCritical: true, shieldPercent: 15,
+        descriptionIntro: '혼자 남은 전장을 하나의 군단처럼 버티며 모든 힘을 마지막 일격에 싣습니다.',
+    },
+    {
+        id: 'tracking_arrow', name: '추적 화살', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 275, perLevelPercent: 18,
+        manaCost: 32, cooldown: 9, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 75,
+        weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', unavoidable: true,
+        descriptionIntro: '대상의 움직임을 미리 읽어 궤적을 휘게 만든 화살을 발사합니다.',
+    },
+    {
+        id: 'rupture_volley', name: '파열 연사', icon: 'skills/multishot', activationHeader: 'multishot',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 128, perLevelPercent: 9,
+        manaCost: 42, cooldown: 13, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 100,
+        weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', hitCount: 3,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 30, perLevel: 6 },
+        descriptionIntro: '같은 상처를 세 번 꿰뚫도록 간격을 맞춘 화살을 연달아 놓습니다.',
+    },
+    {
+        id: 'meteor_arrow', name: '유성 화살', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 410, perLevelPercent: 27,
+        manaCost: 54, cooldown: 15, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 140,
+        weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', propertyTag: GameTags.PROPERTY_FIRE,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 38, perLevel: 7 },
+        statusEffect: StatusEffectType.FIRE, statusLabel: '화염', statusDuration: 8, statusDurationPerLevel: 1,
+        descriptionIntro: '활시위에 마찰열을 모아 밤하늘의 유성처럼 타오르는 화살을 쏩니다.',
+    },
+    {
+        id: 'skyfall_barrage', name: '천궁 낙화', icon: 'skills/multishot', activationHeader: 'multishot',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 112, perLevelPercent: 8,
+        manaCost: 70, cooldown: 18, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 180,
+        weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', hitCount: 5,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 48, perLevel: 9 },
+        descriptionIntro: '다섯 발을 하늘로 흩뿌려 서로 다른 각도에서 한 대상을 덮치게 합니다.',
+    },
+    {
+        id: 'windsplit_arrow', name: '풍절 화살', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 245, perLevelPercent: 17,
+        manaCost: 27, cooldown: 8, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 75,
+        weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', penetration: { attribute: AttributeType.ARMOR_PEN, base: 24, perLevel: 5 },
+        descriptionIntro: '화살 앞의 공기를 얇게 갈라 저항과 방어구를 함께 뚫는 사격을 합니다.',
+    },
+    {
+        id: 'binding_arrow', name: '구속 화살', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 305, perLevelPercent: 20,
+        manaCost: 38, cooldown: 11, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 100,
+        weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', statusEffect: LegacyStatusEffects.BIND, statusLabel: '속박',
+        statusDuration: 2.5, statusDurationPerLevel: 0.25,
+        descriptionIntro: '명중과 동시에 마력 실이 펼쳐지는 화살로 대상의 이동 경로를 묶습니다.',
+    },
+    {
+        id: 'sun_piercer', name: '태양 관통', icon: 'affinities/light', activationHeader: 'stunning_shot',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 390, perLevelPercent: 26,
+        manaCost: 49, cooldown: 13, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 140,
+        weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', propertyTag: GameTags.PROPERTY_LIGHT,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 46, perLevel: 8 },
+        descriptionIntro: '한 줄기 햇빛을 화살대에 감아 그림자와 방어구를 동시에 꿰뚫습니다.',
+    },
+    {
+        id: 'star_rain', name: '성우', icon: 'skills/multishot', activationHeader: 'multishot',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 145, perLevelPercent: 10,
+        manaCost: 64, cooldown: 17, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 180,
+        weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', hitCount: 4, propertyTag: GameTags.PROPERTY_LIGHT,
+        descriptionIntro: '별빛을 머금은 네 발의 화살을 비처럼 떨어뜨려 대상의 퇴로를 지웁니다.',
+    },
+    {
+        id: 'venom_shadow', name: '독영 투척', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 295, perLevelPercent: 19,
+        manaCost: 32, cooldown: 9, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 75,
+        projectile: 'basic_arrow', projectileName: '독영', propertyTag: GameTags.PROPERTY_POISON,
+        statusEffect: StatusEffectType.DEADLY_POISON, statusLabel: '맹독', statusDuration: 9, statusDurationPerLevel: 1,
+        descriptionIntro: '손끝에서 독으로 굳힌 그림자를 뽑아 대상의 혈맥에 꽂습니다.',
+    },
+    {
+        id: 'shadow_pursuit', name: '그림자 추격', icon: 'skills/ambush', activationHeader: 'ambush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 350, perLevelPercent: 23,
+        manaCost: 40, cooldown: 11, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 100,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_DARK,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 32, perLevel: 7 },
+        descriptionIntro: '대상의 그림자를 밟아 도주 경로를 끊고 사각으로 파고듭니다.',
+    },
+    {
+        id: 'heart_extraction', name: '심장 적출', icon: 'skills/ambush', activationHeader: 'ambush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 440, perLevelPercent: 29,
+        manaCost: 52, cooldown: 14, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 140,
+        guaranteedCritical: true, penetration: { attribute: AttributeType.ARMOR_PEN, base: 48, perLevel: 9 },
+        statusEffect: LegacyStatusEffects.BLEEDING, statusLabel: '출혈', statusDuration: 10, statusDurationPerLevel: 1,
+        descriptionIntro: '한 호흡 동안 맥박을 읽고 가장 깊은 급소만을 정확히 찌릅니다.',
+    },
+    {
+        id: 'formless_chain', name: '무영 연살', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 188, perLevelPercent: 12,
+        manaCost: 66, cooldown: 17, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 180,
+        hitCount: 3, propertyTag: GameTags.PROPERTY_DARK,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 58, perLevel: 10 },
+        statusEffect: LegacyStatusEffects.BLINDNESS, statusLabel: '실명', statusDuration: 3,
+        statusDurationPerLevel: 0.35,
+        descriptionIntro: '형체를 지운 채 세 방향에서 연달아 베어 감각과 방어를 함께 무너뜨립니다.',
+    },
+    {
+        id: 'nerve_needle', name: '신경침', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 250, perLevelPercent: 17,
+        manaCost: 27, cooldown: 8, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 75,
+        projectile: 'basic_arrow', projectileName: '신경침', propertyTag: GameTags.PROPERTY_POISON,
+        statusEffect: StatusEffectType.PARALYTIC_POISON, statusLabel: '마비독',
+        statusDuration: 6, statusDurationPerLevel: 0.75,
+        descriptionIntro: '독을 바른 가느다란 침을 신경이 모인 곳에 던져 순간적인 경련을 일으킵니다.',
+    },
+    {
+        id: 'miststep_cut', name: '안개걸음', icon: 'skills/ambush', activationHeader: 'ambush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 320, perLevelPercent: 21,
+        manaCost: 37, cooldown: 10, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 100,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_WATER,
+        descriptionIntro: '안개처럼 몸을 흩뜨린 뒤 대상의 시야 안쪽에서 다시 모여 베어 냅니다.',
+    },
+    {
+        id: 'death_mark', name: '사점 낙인', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 400, perLevelPercent: 27,
+        manaCost: 48, cooldown: 13, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 140,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 44, perLevel: 8 },
+        statusEffect: LegacyStatusEffects.CURSE, statusLabel: '쇠약의 저주',
+        statusDuration: 9, statusDurationPerLevel: 0.75,
+        descriptionIntro: '다음 숨이 끊어질 지점을 낙인으로 새겨 대상의 힘과 회복을 약화합니다.',
+    },
+    {
+        id: 'moonless_execution', name: '무월 처형', icon: 'skills/ambush', activationHeader: 'ambush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 510, perLevelPercent: 33,
+        manaCost: 63, cooldown: 17, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 180,
+        guaranteedCritical: true, unavoidable: true, propertyTag: GameTags.PROPERTY_DARK,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 62, perLevel: 11 },
+        descriptionIntro: '빛이 닿지 않는 한순간을 골라 대상의 그림자와 목숨을 함께 끊습니다.',
+    },
+    {
+        id: 'mana_detonation', name: '마력 폭쇄', icon: 'skills/magic_bolt', activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 210, perLevelPercent: 13,
+        manaCost: 38, cooldown: 9, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 75,
+        projectile: 'magic_bolt', projectileName: '폭쇄 마력',
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 28, perLevel: 6 },
+        descriptionIntro: '불안정하게 겹친 마력층을 대상 안쪽에서 한꺼번에 붕괴시킵니다.',
+    },
+    {
+        id: 'arcane_meteor', name: '마도 유성', icon: 'skills/magic_bolt', activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 260, perLevelPercent: 17,
+        manaCost: 48, cooldown: 13, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 100,
+        projectile: 'basic_magic_orb', projectileName: '마도 유성', unavoidable: true,
+        descriptionIntro: '상공에 마력 덩어리를 빚어 대상의 위치로 곧장 낙하시킵니다.',
+    },
+    {
+        id: 'element_collapse', name: '원소 붕괴', icon: 'skills/elemental_bind', activationHeader: 'elemental_bind',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 315, perLevelPercent: 20,
+        manaCost: 58, cooldown: 15, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 140,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 45, perLevel: 8 },
+        statusEffect: LegacyStatusEffects.MAGIC_DEFENSE_REDUCTION, statusLabel: '마법 저항력 감소',
+        statusDuration: 10, statusDurationPerLevel: 0.75,
+        descriptionIntro: '대상을 둘러싼 원소의 균형을 무너뜨려 마력 방어막부터 붕괴시킵니다.',
+    },
+    {
+        id: 'constellation_rupture', name: '성좌 파열', icon: 'skills/magic_bolt', activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 1_350, perLevelPercent: 82,
+        manaCost: 76, cooldown: 18, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 180,
+        projectile: 'magic_bolt', projectileName: '파열 성좌', unavoidable: true,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 62, perLevel: 11 }, shieldPercent: 10,
+        descriptionIntro: '작은 성좌를 마력으로 그린 뒤 모든 별의 선을 대상 한 점에서 파열시킵니다.',
+    },
+    {
+        id: 'hotspot_strike', name: '열점 타격', icon: 'skills/precision_break', activationHeader: 'precision_break',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 270, perLevelPercent: 18,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 3, secondaryPerLevelPercent: 0.25,
+        forgingPrecisionBasePercent: 50, forgingPrecisionPerLevelPercent: 5,
+        manaCost: 34, cooldown: 10, jobId: JOBS.blacksmith, groupTag: GameTags.SKILL_GROUP_BLACKSMITH, unlockLevel: 75,
+        guaranteedCritical: true, statusEffect: LegacyStatusEffects.DEFENSE_REDUCTION,
+        statusLabel: '방어력 감소', statusDuration: 10, statusDurationPerLevel: 0.5,
+        descriptionIntro: '금속이 가장 먼저 무너지는 열점을 찾아 한 치의 오차 없이 내리칩니다.',
+    },
+    {
+        id: 'steel_pulse', name: '강철 맥동', icon: 'skills/indomitable', activationHeader: 'indomitable',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 310, perLevelPercent: 20,
+        forgingPrecisionBasePercent: 70, forgingPrecisionPerLevelPercent: 7,
+        manaCost: 42, cooldown: 14, jobId: JOBS.blacksmith, groupTag: GameTags.SKILL_GROUP_BLACKSMITH, unlockLevel: 100,
+        unavoidable: true, shieldPercent: 14,
+        descriptionIntro: '갑옷과 무기의 진동을 같은 박자로 맞춰 충격파와 방벽을 동시에 일으킵니다.',
+    },
+    {
+        id: 'masterwork_break', name: '극정밀 파쇄', icon: 'skills/precision_break', activationHeader: 'precision_break',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 385, perLevelPercent: 25,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 4, secondaryPerLevelPercent: 0.35,
+        forgingPrecisionBasePercent: 90, forgingPrecisionPerLevelPercent: 8,
+        manaCost: 54, cooldown: 14, jobId: JOBS.blacksmith, groupTag: GameTags.SKILL_GROUP_BLACKSMITH, unlockLevel: 140,
+        guaranteedCritical: true, penetration: { attribute: AttributeType.ARMOR_PEN, base: 48, perLevel: 9 },
+        descriptionIntro: '수없이 단조한 경험으로 대상의 결함선을 계산해 정확히 그 선만 파쇄합니다.',
+    },
+    {
+        id: 'anvil_starfall', name: '모루성 낙하', icon: 'skills/precision_break', activationHeader: 'precision_break',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 500, perLevelPercent: 32,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 6, secondaryPerLevelPercent: 0.5,
+        forgingPrecisionBasePercent: 120, forgingPrecisionPerLevelPercent: 10,
+        manaCost: 72, cooldown: 18, jobId: JOBS.blacksmith, groupTag: GameTags.SKILL_GROUP_BLACKSMITH, unlockLevel: 180,
+        guaranteedCritical: true, unavoidable: true,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 64, perLevel: 11 },
+        descriptionIntro: '하늘의 별을 거대한 모루로 상상해 대상의 결함점 위로 그대로 떨어뜨립니다.',
+    },
+    {
+        id: 'blazing_spear', name: '작열창', icon: 'affinities/fire', activationHeader: 'fireball',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 240, perLevelPercent: 15,
+        manaCost: 42, cooldown: 10, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 75,
+        projectile: 'magic_bolt', projectileName: '작열창', propertyTag: GameTags.PROPERTY_FIRE,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 30, perLevel: 6 },
+        statusEffect: StatusEffectType.FIRE, statusLabel: '화염', statusDuration: 10, statusDurationPerLevel: 1,
+        autoAcquireProgress: {
+            id: 'career:mage_fire_kills', count: 30, prerequisiteSkillId: 'fireball', prerequisiteLevel: 3,
+        },
+        descriptionIntro: '화염구를 가늘고 뜨겁게 압축해 갑옷 틈을 꿰뚫는 불꽃 창으로 빚습니다.',
+    },
+    {
+        id: 'phoenix_eruption', name: '불사조 폭염', icon: 'affinities/fire', activationHeader: 'fireball',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 335, perLevelPercent: 20,
+        manaCost: 62, cooldown: 15, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 140,
+        projectile: 'basic_magic_orb', projectileName: '불사조 폭염', propertyTag: GameTags.PROPERTY_FIRE,
+        statusEffect: StatusEffectType.FIRE, statusLabel: '화염', statusDuration: 14, statusDurationPerLevel: 1.25,
+        autoAcquireProgress: {
+            id: 'career:mage_fire_kills', count: 100, prerequisiteSkillId: 'blazing_spear', prerequisiteLevel: 3,
+        },
+        descriptionIntro: '되살아나는 불꽃의 형상을 만들어 대상에게 폭발시키고 꺼지지 않는 열기를 남깁니다.',
+    },
+    {
+        id: 'inferno_meteor', name: '겁화 유성', icon: 'affinities/fire', activationHeader: 'fireball',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 1_425, perLevelPercent: 86,
+        manaCost: 86, cooldown: 20, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 180,
+        projectile: 'basic_magic_orb', projectileName: '겁화 유성', propertyTag: GameTags.PROPERTY_FIRE,
+        unavoidable: true, penetration: { attribute: AttributeType.MAGIC_PEN, base: 68, perLevel: 12 },
+        statusEffect: StatusEffectType.FIRE, statusLabel: '화염', statusDuration: 18, statusDurationPerLevel: 1.5,
+        autoAcquireProgress: {
+            id: 'career:mage_fire_kills', count: 200, prerequisiteSkillId: 'phoenix_eruption', prerequisiteLevel: 4,
+        },
+        descriptionIntro: '상공의 열을 한 점으로 끌어모아 피할 수 없는 거대한 겁화의 유성으로 떨어뜨립니다.',
+    },
+    {
+        id: 'frost_prison', name: '서리 감옥', icon: 'affinities/ice', activationHeader: 'elemental_bind',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 225, perLevelPercent: 14,
+        manaCost: 40, cooldown: 11, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 75,
+        projectile: 'basic_magic_orb', projectileName: '서리 감옥', propertyTag: GameTags.PROPERTY_ICE,
+        statusEffect: LegacyStatusEffects.FROZEN, statusLabel: '빙결', statusDuration: 3,
+        statusDurationPerLevel: 0.3,
+        autoAcquireProgress: {
+            id: 'career:mage_ice_kills', count: 30, prerequisiteSkillId: 'frost_bolt', prerequisiteLevel: 3,
+        },
+        descriptionIntro: '대상 주위의 수분을 한순간에 얼려 움직임을 가두는 서리 감옥을 세웁니다.',
+    },
+    {
+        id: 'glacial_spike', name: '빙하 첨탑', icon: 'affinities/ice', activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 325, perLevelPercent: 20,
+        manaCost: 60, cooldown: 15, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 140,
+        projectile: 'magic_bolt', projectileName: '빙하 첨탑', propertyTag: GameTags.PROPERTY_ICE,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 48, perLevel: 9 },
+        statusEffect: LegacyStatusEffects.FROZEN, statusLabel: '빙결', statusDuration: 4,
+        statusDurationPerLevel: 0.35,
+        autoAcquireProgress: {
+            id: 'career:mage_ice_kills', count: 100, prerequisiteSkillId: 'frost_prison', prerequisiteLevel: 3,
+        },
+        descriptionIntro: '오래된 빙하의 압력을 창끝에 담아 마력 방벽까지 얼려 부수는 첨탑을 발사합니다.',
+    },
+    {
+        id: 'absolute_zero', name: '절대영도', icon: 'affinities/ice', activationHeader: 'elemental_bind',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 1_350, perLevelPercent: 82,
+        manaCost: 84, cooldown: 21, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 180,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_ICE,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 64, perLevel: 11 },
+        statusEffect: LegacyStatusEffects.FROZEN, statusLabel: '빙결', statusDuration: 5,
+        statusDurationPerLevel: 0.45,
+        autoAcquireProgress: {
+            id: 'career:mage_ice_kills', count: 200, prerequisiteSkillId: 'glacial_spike', prerequisiteLevel: 4,
+        },
+        descriptionIntro: '대상 주변의 열 운동을 강제로 멈춰 피할 공간까지 얼어붙는 절대영도를 펼칩니다.',
+    },
+    {
+        id: 'thunder_lance', name: '뇌광창', icon: 'affinities/electric', activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 235, perLevelPercent: 15,
+        manaCost: 41, cooldown: 9, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 75,
+        projectile: 'magic_bolt', projectileName: '뇌광창', propertyTag: GameTags.PROPERTY_ELECTRIC,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 26, perLevel: 6 },
+        statusEffect: StatusEffectType.PARALYTIC_POISON, statusLabel: '마비독', statusDuration: 7,
+        statusDurationPerLevel: 0.75,
+        autoAcquireProgress: {
+            id: 'career:mage_electric_kills', count: 30, prerequisiteSkillId: 'lightning_orb', prerequisiteLevel: 3,
+        },
+        descriptionIntro: '전류를 한 줄기 창으로 정렬해 신경과 마력 회로를 함께 관통합니다.',
+    },
+    {
+        id: 'chain_thunder', name: '연쇄 뇌격', icon: 'affinities/electric', activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 118, perLevelPercent: 8,
+        manaCost: 61, cooldown: 14, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 140,
+        projectile: 'magic_bolt', projectileName: '연쇄 뇌격', propertyTag: GameTags.PROPERTY_ELECTRIC,
+        hitCount: 3, statusEffect: StatusEffectType.PARALYTIC_POISON, statusLabel: '마비독',
+        statusDuration: 8, statusDurationPerLevel: 0.8,
+        autoAcquireProgress: {
+            id: 'career:mage_electric_kills', count: 100, prerequisiteSkillId: 'thunder_lance', prerequisiteLevel: 3,
+        },
+        descriptionIntro: '세 번 되튀는 뇌격을 같은 대상의 마력 회로에 연속으로 흘려보냅니다.',
+    },
+    {
+        id: 'heavenly_thunder', name: '천뢰 심판', icon: 'affinities/electric', activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 1_380, perLevelPercent: 84,
+        manaCost: 85, cooldown: 19, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 180,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_ELECTRIC,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 66, perLevel: 12 },
+        statusEffect: LegacyStatusEffects.STUN, statusLabel: '기절', statusDuration: 3,
+        statusDurationPerLevel: 0.3,
+        autoAcquireProgress: {
+            id: 'career:mage_electric_kills', count: 200, prerequisiteSkillId: 'chain_thunder', prerequisiteLevel: 4,
+        },
+        descriptionIntro: '대상의 마력을 피뢰침으로 삼아 하늘의 번개를 한 줄기 심판으로 떨어뜨립니다.',
     },
     {
         id: 'predator_pounce', name: '포식자의 도약', icon: 'skills/battle_rush', activationHeader: 'battle_rush',
@@ -1836,7 +2299,7 @@ for (const technique of growthTechniques) defineSkill({
     activationMessage: `${technique.name}!`,
     baseMetadata: null,
     calculatedFields: {
-        damage: context => attributeDamageTooltip(context, technique.attribute, technique.basePercent, technique.perLevelPercent),
+        damage: context => growthTechniqueDamageTooltip(context, technique),
         hitCount: () => technique.hitCount ?? 1,
         penetration: context => technique.penetration
             ? levelValueTooltip(context, technique.penetration.attribute.label, technique.penetration.base, technique.penetration.perLevel)
@@ -1893,7 +2356,10 @@ for (const technique of growthTechniques) defineSkill({
         ? combatSharedCooldowns(technique.groupTag, technique.propertyTag) : undefined,
     jobRequirement: technique.jobId ? jobRequirement(technique.jobId) : undefined,
     autoAcquire: technique.jobId && technique.unlockLevel
-        ? careerLevelAutoAcquire(technique.jobId, technique.unlockLevel) : undefined,
+        ? technique.autoAcquireProgress
+            ? careerMasteryAutoAcquire(technique.jobId, technique.unlockLevel, technique.autoAcquireProgress)
+            : careerLevelAutoAcquire(technique.jobId, technique.unlockLevel)
+        : undefined,
     ...(technique.weaponDescription && technique.weaponTags?.length ? {
         weaponRequirement: weaponRequirement(technique.weaponDescription, ...technique.weaponTags),
     } : {}),
@@ -1902,7 +2368,7 @@ for (const technique of growthTechniques) defineSkill({
         const found = targetOrDeny(context);
         if ('reason' in found) throw new Error(found.reason);
         spend(context, technique.manaCost);
-        const multiplier = percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent) / 100;
+        const damage = growthTechniqueDamage(context, technique);
         const hit = (result: ReturnType<Entity['attack']>) => {
             if (!result || result.evaded || result.finalDamage <= 0 || !technique.statusEffect) return;
             found.target.applyStatusEffect(
@@ -1919,14 +2385,17 @@ for (const technique of growthTechniques) defineSkill({
                 projectileAttack(
                     context,
                     technique.projectile,
-                    multiplier,
+                    1,
                     technique.propertyTag ? [technique.propertyTag] : undefined,
                     (_projectile, result) => hit(result),
                     {
                         ...(technique.projectileName ? { name: technique.projectileName } : {}),
-                        ...(penetration !== undefined && technique.penetration ? {
-                            attributeOverrides: { [technique.penetration.attribute.key]: penetration },
-                        } : {}),
+                        ...(technique.unavoidable ? { unavoidable: true } : {}),
+                        damage,
+                        attributeOverrides: {
+                            ...(penetration !== undefined && technique.penetration
+                                ? { [technique.penetration.attribute.key]: penetration } : {}),
+                        },
                     },
                 );
             }
@@ -1946,7 +2415,7 @@ for (const technique of growthTechniques) defineSkill({
             }
             try {
                 const result = context.owner.attack(found.target, technique.damageType,
-                    context.owner.attribute.get(technique.attribute) * multiplier, {
+                    damage, {
                         criticalRate: technique.guaranteedCritical ? 1 : undefined,
                         unavoidable: technique.unavoidable,
                         consumeMainHandDurability: Boolean(technique.weaponTags?.length),

@@ -12,14 +12,14 @@ const firstJobs = [
         id: 'career:archer', name: '궁수', icon: 'jobs/archer',
         description: '투사체·속성 화살·제어기와 순간적인 확정 회피에 특화된 원거리 직업.',
         skills: ['archer_hawkeye', 'arcane_arrow', 'multishot', 'stunning_shot', 'wind_evasion'],
-        main: [{ attribute: 'speed', op: 'multiply', value: 1.12 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.15 }, { attribute: 'critRate', op: 'add', value: 0.05 }, { attribute: 'atk', op: 'multiply', value: 1.05 }],
+        main: [{ attribute: 'speed', op: 'multiply', value: 1.12 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.15 }, { attribute: 'critRate', op: 'add', value: 0.05 }, { attribute: 'atk', op: 'multiply', value: 1.25 }],
         sub: [{ attribute: 'speed', op: 'multiply', value: 1.06 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.07 }, { attribute: 'critRate', op: 'add', value: 0.02 }],
     },
     {
         id: 'career:assassin', name: '암살자', icon: 'jobs/assassin',
         description: '은신과 맹독, 빠른 움직임으로 짧은 순간에 폭발적인 피해를 입히는 직업.',
         skills: ['assassin_lethal_instinct', 'stealth', 'ambush', 'venom_blade'],
-        main: [{ attribute: 'speed', op: 'multiply', value: 1.16 }, { attribute: 'critDmg', op: 'add', value: 0.25 }, { attribute: 'armorPen', op: 'add', value: 5 }],
+        main: [{ attribute: 'speed', op: 'multiply', value: 1.16 }, { attribute: 'critDmg', op: 'add', value: 0.25 }, { attribute: 'armorPen', op: 'add', value: 5 }, { attribute: 'atk', op: 'multiply', value: 1.2 }],
         sub: [{ attribute: 'speed', op: 'multiply', value: 1.08 }, { attribute: 'critDmg', op: 'add', value: 0.1 }],
     },
     {
@@ -54,27 +54,27 @@ for (const job of firstJobs) defineJob({
 const eliteRecipes = [
     ['warrior', 'archer', 'blade_ranger', '검의 추적자'],
     ['warrior', 'assassin', 'shadow_blade', '그림자 검객'],
-    ['warrior', 'mage', 'spellblade', '마검사'],
+    ['warrior', 'mage', 'spellblade', '마검사', 1.18],
     ['archer', 'warrior', 'siege_bow', '철벽 사수'],
     ['archer', 'assassin', 'night_hunter', '밤사냥꾼'],
-    ['archer', 'mage', 'elemental_marksman', '원소 사수'],
+    ['archer', 'mage', 'elemental_marksman', '원소 사수', 1.08],
     ['assassin', 'warrior', 'executioner', '처형자'],
     ['assassin', 'archer', 'phantom_shooter', '환영 사수'],
-    ['assassin', 'mage', 'arcane_reaper', '비전 사신'],
+    ['assassin', 'mage', 'arcane_reaper', '비전 사신', 1.12],
     ['mage', 'warrior', 'battle_magus', '전투 마도사'],
     ['mage', 'archer', 'star_weaver', '별의 직조사'],
     ['mage', 'assassin', 'hexblade', '주술 단검사'],
     ['warrior', 'blacksmith', 'weapon_master', '무기대가'],
     ['archer', 'blacksmith', 'machinist_archer', '기공 사수'],
     ['assassin', 'blacksmith', 'steel_shadow', '강철 그림자'],
-    ['mage', 'blacksmith', 'runeforger', '룬 제련사'],
+    ['mage', 'blacksmith', 'runeforger', '룬 제련사', 0.9],
     ['blacksmith', 'warrior', 'battle_smith', '전투 대장장이'],
     ['blacksmith', 'archer', 'artificer', '기계 장인'],
     ['blacksmith', 'assassin', 'venom_smith', '독금 장인'],
     ['blacksmith', 'mage', 'arcane_smith', '마도 대장장이'],
 ] as const;
 
-for (const [main, sub, eliteId, name] of eliteRecipes) {
+for (const [main, sub, eliteId, name, offenseFactor = 1] of eliteRecipes) {
     const mainId = `career:${main}`;
     const subId = `career:${sub}`;
     const id = `career:${eliteId}`;
@@ -96,6 +96,10 @@ for (const [main, sub, eliteId, name] of eliteRecipes) {
             ...parent.main,
             { attribute: main === 'mage' ? 'magicForce' : 'atk', op: 'multiply', value: 1.15 },
             { attribute: main === 'warrior' ? 'maxLife' : 'speed', op: 'multiply', value: 1.12 },
+            ...(offenseFactor === 1 ? [] : [
+                { attribute: 'atk' as const, op: 'multiply' as const, value: offenseFactor },
+                { attribute: 'magicForce' as const, op: 'multiply' as const, value: offenseFactor },
+            ]),
         ],
         tags: ['career:elite'],
     });
