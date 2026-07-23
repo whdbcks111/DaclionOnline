@@ -31,11 +31,15 @@ function appendRankingRow(
     entry: RankingEntrySnapshot,
 ): void {
     const append = (row: ReturnType<typeof chat>) => row
-        .tab(RANK_WIDTH, cell => cell.text(`${entry.rank === 1 ? '👑 ' : ''}${entry.rank}위`))
+        .tab(RANK_WIDTH, cell => cell.text(
+            entry.rank === null ? '-' : `${entry.rank === 1 ? '👑 ' : ''}${entry.rank}위`,
+        ))
         .tab(NAME_WIDTH, cell => cell.text(entry.nickname))
-        .tab(VALUE_WIDTH, cell => cell.text(entry.valuePublic ? category.format(entry.value) : '?'))
+        .tab(VALUE_WIDTH, cell => cell.text(
+            entry.valuePublic && entry.value !== null ? category.format(entry.value) : '비공개',
+        ))
         .text('\n');
-    const color = rankColor(entry.rank);
+    const color = entry.rank === null ? undefined : rankColor(entry.rank);
     if (color) builder.color(color, append);
     else append(builder);
 }
@@ -48,7 +52,7 @@ function registerVisibilityCommand(isPublic: boolean): void {
     registerCommand({
         name: isPublic ? '순위공개' : '순위비공개',
         aliases: isPublic ? ['rankpublic'] : ['rankprivate'],
-        description: `전체 또는 특정 순위 카테고리의 수치를 ${isPublic ? '공개' : '비공개'}합니다.`,
+        description: `전체 또는 특정 카테고리의 순위와 수치를 ${isPublic ? '공개' : '비공개'}합니다.`,
         showCommandUse: 'private',
         args: [{
             name: '카테고리',
@@ -67,7 +71,7 @@ function registerVisibilityCommand(isPublic: boolean): void {
             else player.rankingVisibility.setAll(isPublic);
             sendNotificationToUser(userId, {
                 key: `ranking-visibility:${category?.key ?? 'all'}`,
-                message: `${category?.label ?? '전체 순위'} 수치가 ${isPublic ? '공개' : '비공개'}로 설정되었습니다.`,
+                message: `${category?.label ?? '전체 순위'} 정보가 ${isPublic ? '공개' : '비공개'}로 설정되었습니다.`,
                 length: 2500,
             });
         },
@@ -93,6 +97,9 @@ export function initRankingCommands(): void {
             }
             try {
                 const entries = await getRankingEntries(category);
+                const publicEntries = entries.filter(entry => entry.valuePublic);
+                const privateEntries = entries.filter(entry => !entry.valuePublic);
+                const visiblePublicEntries = publicEntries.slice(0, RANK_LIMIT);
                 const builder = chat()
                     .text(`[ 순위 · ${category.label} ]\n`)
                     .tab(RANK_WIDTH, cell => cell.weight('bold', text => text.text('순위')))
@@ -100,13 +107,33 @@ export function initRankingCommands(): void {
                     .tab(VALUE_WIDTH, cell => cell.weight('bold', text => text.text('수치')))
                     .text('\n')
                     .divider();
-                for (const entry of entries.slice(0, RANK_LIMIT)) appendRankingRow(builder, category, entry);
-                const own = entries.find(entry => entry.userId === userId);
-                if (own && !entries.slice(0, RANK_LIMIT).includes(own)) {
+                for (const entry of visiblePublicEntries) appendRankingRow(builder, category, entry);
+                if (publicEntries.length === 0) {
+                    builder.color('gray', row => row.text('공개된 순위가 없습니다.\n'));
+                }
+                const own = publicEntries.find(entry => entry.userId === userId);
+                if (own && !visiblePublicEntries.includes(own)) {
                     builder.divider('내 순위');
                     appendRankingRow(builder, category, own);
                 }
-                if (entries.length === 0) builder.color('gray', row => row.text('표시할 플레이어가 없습니다.'));
+                if (privateEntries.length > 0) {
+                    builder.divider(`순위 비공개 · ${privateEntries.length}명`);
+                    const visiblePrivateEntries = privateEntries.slice(0, RANK_LIMIT);
+                    for (const entry of visiblePrivateEntries) appendRankingRow(builder, category, entry);
+                    if (privateEntries.length > visiblePrivateEntries.length) {
+                        builder.color('gray', row => row.text(
+                            `외 ${(privateEntries.length - visiblePrivateEntries.length).toLocaleString()}명\n`,
+                        ));
+                    }
+                    const ownPrivate = privateEntries.find(entry => entry.userId === userId);
+                    if (ownPrivate && !visiblePrivateEntries.includes(ownPrivate)) {
+                        builder.divider('내 공개 설정');
+                        appendRankingRow(builder, category, ownPrivate);
+                    }
+                }
+                if (entries.length === 0) {
+                    builder.color('gray', row => row.text('표시할 플레이어가 없습니다.'));
+                }
                 sendBotMessageToUser(userId, builder.build());
             } catch (error) {
                 logger.error('순위 조회 실패', error);

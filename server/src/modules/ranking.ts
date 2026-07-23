@@ -7,10 +7,10 @@ import {
 import { getOnlinePlayerSnapshot } from './playerRegistry.js';
 
 export interface RankingEntrySnapshot {
-    rank: number;
+    rank: number | null;
     userId: number;
     nickname: string;
-    value: number;
+    value: number | null;
     valuePublic: boolean;
 }
 
@@ -26,17 +26,22 @@ let databaseSnapshots: RankingPlayerSnapshot[] | undefined;
 let databaseSnapshotsExpireAt = 0;
 let databaseSnapshotPromise: Promise<RankingPlayerSnapshot[]> | undefined;
 
-/** 값 내림차순, 동점 공동 순위, userId 안정 정렬을 적용하는 공개 순위 계산 API. */
+/**
+ * 공개 참가자끼리만 값 내림차순·동점 공동 순위를 계산한다.
+ * 비공개 참가자는 실제 값과 순위를 DTO에서 제거하고 userId 안정 정렬로 하단에 분리한다.
+ */
 export function rankPlayerSnapshots(
     category: RankingCategory,
     snapshots: readonly RankingPlayerSnapshot[],
 ): RankingEntrySnapshot[] {
-    const sorted = [...snapshots].sort((left, right) =>
+    const isPublic = (snapshot: RankingPlayerSnapshot) =>
+        snapshot.visibility.overrides[category.key] ?? snapshot.visibility.defaultPublic;
+    const publicSnapshots = snapshots.filter(isPublic).sort((left, right) =>
         (right.metrics[category.key] ?? 0) - (left.metrics[category.key] ?? 0)
         || left.userId - right.userId);
     let previousValue: number | undefined;
     let previousRank = 0;
-    return sorted.map((snapshot, index) => {
+    const publicEntries = publicSnapshots.map((snapshot, index): RankingEntrySnapshot => {
         const value = snapshot.metrics[category.key] ?? 0;
         if (previousValue === undefined || value !== previousValue) previousRank = index + 1;
         previousValue = value;
@@ -45,9 +50,20 @@ export function rankPlayerSnapshots(
             userId: snapshot.userId,
             nickname: snapshot.nickname,
             value,
-            valuePublic: snapshot.visibility.overrides[category.key] ?? snapshot.visibility.defaultPublic,
+            valuePublic: true,
         };
     });
+    const privateEntries = snapshots
+        .filter(snapshot => !isPublic(snapshot))
+        .sort((left, right) => left.userId - right.userId)
+        .map((snapshot): RankingEntrySnapshot => ({
+            rank: null,
+            userId: snapshot.userId,
+            nickname: snapshot.nickname,
+            value: null,
+            valuePublic: false,
+        }));
+    return [...publicEntries, ...privateEntries];
 }
 
 /** DB의 마지막 저장 snapshot에 온라인 메모리 값을 덮어써 전체 플레이어 순위를 만든다. */

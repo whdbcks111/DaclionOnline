@@ -50,16 +50,29 @@ test('저장 데이터 fallback도 스탯이 반영된 물리공격력과 이동
     assert.equal(metrics['attribute:speed'], 1.2);
 });
 
-test('동점은 공동 순위이며 비공개 플레이어도 순위는 유지하고 수치만 숨긴다', () => {
+test('동점은 공개 플레이어끼리 공동 순위를 계산하고 비공개 플레이어는 하단으로 분리한다', () => {
     const publicVisibility = { defaultPublic: true, overrides: {} };
     const entries = rankPlayerSnapshots(RankingCategory.LEVEL, [
         { userId: 3, nickname: '셋', metrics: { level: 5 }, visibility: publicVisibility },
         { userId: 1, nickname: '하나', metrics: { level: 10 }, visibility: publicVisibility },
         { userId: 2, nickname: '둘', metrics: { level: 10 }, visibility: { defaultPublic: false, overrides: {} } },
     ]);
-    assert.deepEqual(entries.map(entry => [entry.rank, entry.nickname, entry.valuePublic]), [
-        [1, '하나', true],
-        [1, '둘', false],
-        [3, '셋', true],
+    assert.deepEqual(entries.map(entry => [entry.rank, entry.nickname, entry.value, entry.valuePublic]), [
+        [1, '하나', 10, true],
+        [2, '셋', 5, true],
+        [null, '둘', null, false],
+    ]);
+});
+
+test('비공개 플레이어끼리는 숨긴 수치가 아닌 userId 순서로 정렬한다', () => {
+    const privateVisibility = { defaultPublic: false, overrides: {} };
+    const entries = rankPlayerSnapshots(RankingCategory.LEVEL, [
+        { userId: 20, nickname: '낮은값', metrics: { level: 1 }, visibility: privateVisibility },
+        { userId: 10, nickname: '높은값', metrics: { level: 999 }, visibility: privateVisibility },
+    ]);
+
+    assert.deepEqual(entries.map(entry => [entry.userId, entry.rank, entry.value]), [
+        [10, null, null],
+        [20, null, null],
     ]);
 });

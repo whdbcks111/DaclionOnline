@@ -83,7 +83,7 @@
 | `TitleBook` | `equipped/equippedName`, `isOwned/getOwned/getOwnedSnapshots/findOwnedByInput`, `grant/revoke/equip/unequip`, `refreshAcquisitions/refreshPassiveEffects`, `applyCombat/update` | Progress 기반 칭호 소유·장착·관리자 회수/재부여, 자동 업적 판정, source 기반 능력치·경험치 패시브와 CombatPipeline 적중 효과 |
 | Title registry | `defineTitle`, `getTitle`, `getAllTitles` | 코드 칭호 마스터 데이터와 이름·별칭 조회 |
 | `RankingCategory`, `RankingVisibility` | `values/fromKey/fromInput`, `isPublic/setAll/setCategory/snapshot`, `createRankingMetricRecord` | 레벨·골드·스탯·능력치 순위 정의와 기본 공개+카테고리 예외 dirty 설정 |
-| Ranking service | `getRankingEntries`, `rankPlayerSnapshots` | DB 저장 snapshot과 온라인 메모리 값을 합성해 공동 순위와 수치 공개 여부 반환 |
+| Ranking service | `getRankingEntries`, `rankPlayerSnapshots` | DB 저장 snapshot과 온라인 메모리 값을 합성해 공개 참가자 공동 순위를 계산하고 비공개 참가자는 값·순위 없는 별도 목록으로 반환 |
 | Player ranking snapshot | `Player.getRankingMetricSnapshot`, `Player.getPersistedRankingSnapshots` | 온라인 계산값과 가공된 오프라인 DTO를 제공해 Ranking이 raw Player/DB row를 참조하지 않게 함 |
 | Progress registry | `defineProgress`, `defineStatistic`, `getProgressDefinition`, `getAllProgressDefinitions` | `namespace:path` 상태 정의와 이벤트 기반 counter 등록 |
 | `QuestStatus`, `QuestMarker`, `QuestObjective`, `QuestStage`, `QuestReward`, `QuestData` | `values/fromKey`, 목표 `event/kill/destroy/talk/craft/possess/item/visit/custom`, 보상 `exp/gold/item/skill/flag/custom`, `define/get/findQuestData` | 퀘스트 정의, 단계형 목표·제출 조건·보상과 NPC marker |
