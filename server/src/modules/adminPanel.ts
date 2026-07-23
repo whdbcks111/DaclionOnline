@@ -28,6 +28,7 @@ import { getIO } from './socket.js';
 import { broadcastBotMessageAll, broadcastNotification, sendNotificationToUser } from './message.js';
 import logger from '../utils/logger.js';
 import { getMiniGamePresetSummaries, startMiniGamePreset } from './minigamePresets.js';
+import { cancelNavigation } from './navigation.js';
 import {
     analyzeBalanceProfile,
     analyzeItemBalance,
@@ -248,7 +249,7 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
         case 'teleport_admin_to_player': {
             const admin = getPlayerByUserId(adminId);
             if (!admin) throw new Error('관리자 캐릭터가 온라인 상태가 아닙니다.');
-            admin.moving = false;
+            cancelNavigation(admin, false);
             admin.locationId = player.locationId;
             await save(admin);
             return `${player.name}의 위치로 이동했습니다.`;
@@ -256,7 +257,7 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
         case 'teleport_player_to_admin': {
             const admin = getPlayerByUserId(adminId);
             if (!admin) throw new Error('관리자 캐릭터가 온라인 상태가 아닙니다.');
-            player.moving = false;
+            cancelNavigation(player, false);
             player.locationId = admin.locationId;
             await save(player);
             return `${player.name}을(를) 관리자 위치로 이동했습니다.`;
@@ -265,7 +266,7 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
             const locationId = stringValue(values, 'locationId');
             const location = getLocation(locationId);
             if (!location) throw new Error('장소를 찾을 수 없습니다.');
-            player.moving = false;
+            cancelNavigation(player, false);
             player.locationId = location.id;
             await save(player);
             return `${player.name}을(를) ${location.data.name}(으)로 이동했습니다.`;

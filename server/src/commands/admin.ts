@@ -8,6 +8,7 @@ import { AttributeType } from "../models/Attribute.js";
 import logger from "../utils/logger.js";
 import type { CompletionItem } from "../../../shared/types.js";
 import { StatusEffectType } from "../models/StatusEffect.js";
+import { cancelNavigation } from "../modules/navigation.js";
 
 
 type StatKey = 'life' | 'mentality' | 'thirsty' | 'hungry';
@@ -524,9 +525,7 @@ export function initAdminCommands(): void {
                     return;
                 }
 
-                if (player.moving) {
-                    player.moving = false;
-                }
+                cancelNavigation(player, false);
 
                 player.locationId = locationId;
                 await player.save();

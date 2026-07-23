@@ -3,52 +3,12 @@ import { sendBotMessageToUser, sendNotificationToUser, sendPrivateBotMessageToUs
 import { getPlayerByUserId, getOnlinePlayers } from "../modules/player.js";
 import { getSessionByUserId } from "../modules/login.js";
 import { chat } from "../utils/chatBuilder.js";
-import { getLocation, distanceBetween } from "../models/Location.js";
+import { getLocation } from "../models/Location.js";
 import { getItemSnapshotDisplay } from "../models/Item.js";
-import { startCoroutine, Wait } from "../modules/coroutine.js";
-import type { CoroutineGenerator } from "../modules/coroutine.js";
-import type Player from "../models/Player.js";
-import { AttributeType } from "../models/Attribute.js";
 import type { CompletionItem } from "../../../shared/types.js";
 import { ActionType } from "../models/Action.js";
-
-function* travelCoroutine(player: Player, targetLocationId: string): CoroutineGenerator {
-    const from = getLocation(player.locationId);
-    const to = getLocation(targetLocationId);
-    if (!from || !to) return;
-
-    const distance = distanceBetween(from.data, to.data);
-    const speed = player.attribute.get(AttributeType.SPEED);
-    const totalTime = Math.max(1, distance / Math.max(0.01, speed) / 5);
-    let elapsed = 0;
-
-    player.moving = true;
-
-    sendPrivateBotMessageToUser(player.userId, `${to.data.name}(으)로 이동 시작... (${Math.ceil(totalTime)}초)`);
-
-    while (elapsed < totalTime) {
-        const waitTime = Math.min(0.5, totalTime - elapsed);
-        yield Wait(waitTime);
-        elapsed += waitTime;
-
-        const progress = Math.min(100, Math.floor((elapsed / totalTime) * 100));
-        sendNotificationToUser(player.userId, {
-            key: 'travel',
-            message: chat()
-                .text(`${to.data.name}(으)로 이동 중... \n`)
-                .progress({ value: progress / 100, color: 'white', length: 200, thickness: 6 })
-                .text(` ${progress.toFixed(1)}%`)
-                .build(),
-            editExists: true,
-            showProgress: false,
-        });
-    }
-
-    player.locationId = targetLocationId;
-    player.moving = false;
-
-    sendPrivateBotMessageToUser(player.userId, `${to.data.name}에 도착했습니다.`);
-}
+import { getVisitedLocationMatches } from "../models/WorldMap.js";
+import { cancelNavigation, startAutoNavigation, startLocationTravel } from "../modules/navigation.js";
 
 export function initLocationCommands(): void {
     registerCommand({
@@ -141,7 +101,72 @@ export function initLocationCommands(): void {
                 return;
             }
 
-            startCoroutine(travelCoroutine(player, target.locationId));
+            const result = startLocationTravel(player, target.locationId);
+            if (!result.ok && result.reason) sendBotMessageToUser(userId, result.reason);
+        },
+    });
+
+    registerCommand({
+        name: '자동이동',
+        aliases: ['nav', 'ago', 'av', 'amv'],
+        description: '방문한 장소까지 최단 경로로 자동이동합니다.',
+        showCommandUse: 'private',
+        args: [
+            {
+                name: '장소명검색어',
+                description: '이미 방문한 목적지의 이름 또는 검색어',
+                required: true,
+                isText: true,
+                completions(userId) {
+                    const player = getPlayerByUserId(userId);
+                    if (!player) return [];
+                    return getVisitedLocationMatches(player).map((location): CompletionItem => ({
+                        value: location.name,
+                        description: location.locationId,
+                    }));
+                },
+            },
+        ],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+
+            const input = args[0]?.trim() ?? '';
+            const matches = getVisitedLocationMatches(player, input);
+            if (matches.length === 0) {
+                sendBotMessageToUser(userId, `방문한 장소에서 '${input}'에 맞는 목적지를 찾지 못했습니다.`);
+                return;
+            }
+            if (matches.length > 1) {
+                const message = chat()
+                    .text(`검색 결과가 ${matches.length}개입니다. 목적지를 선택해주세요.\n`);
+                for (const match of matches.slice(0, 20)) {
+                    message
+                        .button(`/자동이동 ${match.locationId}`, b => b.text(match.name), true)
+                        .color('gray', b => b.text(`  ${match.locationId}`))
+                        .text('\n');
+                }
+                if (matches.length > 20) message.text(`외 ${matches.length - 20}개`);
+                sendBotMessageToUser(userId, message.build());
+                return;
+            }
+
+            const result = startAutoNavigation(player, matches[0].locationId);
+            if (!result.ok && result.reason) sendBotMessageToUser(userId, result.reason);
+        },
+    });
+
+    registerCommand({
+        name: '이동취소',
+        aliases: ['vc', 'mvc', 'goc'],
+        description: '진행 중인 이동 또는 자동이동을 취소합니다.',
+        showCommandUse: 'private',
+        handler(userId) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            if (!cancelNavigation(player)) {
+                sendBotMessageToUser(userId, '현재 진행 중인 이동이 없습니다.');
+            }
         },
     });
 

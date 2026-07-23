@@ -19,6 +19,7 @@ import { clearUserSnapshotStreams, publishUserSnapshot } from './stateSync.js';
 import { clearDungeonPuzzleSession } from '../models/DungeonPuzzle.js';
 import { migrateLegacyBlacksmithProfession } from './forging.js';
 import { tradeManager } from './trade.js';
+import { cancelNavigation } from './navigation.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -47,6 +48,7 @@ export async function unloadPlayerByUserId(userId: number, requireOffline = fals
     endNpcDialogue(player, DialogueEndReason.UNLOADED, false);
     cancelCrafting(player);
     cancelFishing(userId, '접속 종료로 낚시가 취소되었습니다.');
+    cancelNavigation(player, false);
     clearDungeonPuzzleSession(userId);
     tradeManager.cancelForPlayer(player, '접속이 종료되어 거래가 취소되었습니다.');
     player.skills.finishAll();

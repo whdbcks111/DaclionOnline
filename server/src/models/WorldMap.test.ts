@@ -4,6 +4,8 @@ import type { LocationData } from '../../../shared/types.js';
 import { PlayerProgress } from './Progress.js';
 import { normalizeLocationData, reloadAllLocations } from './Location.js';
 import {
+    findShortestVisitedRoute,
+    getVisitedLocationMatches,
     getVisitedLocationIds,
     getFullWorldMapSnapshot,
     getWorldMapSnapshot,
@@ -109,4 +111,47 @@ test('관리자 전체 지역 잠금 해제는 아직 방문하지 않은 장소
     assert.equal(markAllLocationsVisited(player), 0);
     assert.deepEqual(getVisitedLocationIds(player).sort(), ['near', 'secret', 'start']);
     assert.equal(getWorldMapSnapshot(player).locations.some(node => node.id === 'secret'), false);
+});
+
+test('방문 장소 검색은 exact를 우선하고 구분 기호 없는 부분 이름을 지원한다', () => {
+    reloadAllLocations([
+        { ...location('start', 0, []), name: '피버릭 광장' },
+        { ...location('meadow_1', 100, []), name: '피버릭 초원 1구역' },
+        { ...location('meadow_2', 200, []), name: '피버릭 초원 2구역' },
+        { ...location('secret', 300, [], ['location:hidden']), name: '숨은 초원' },
+    ]);
+    const player = { locationId: 'start', progress: PlayerProgress.createEmpty(13) } as Player;
+    for (const id of ['start', 'meadow_1', 'meadow_2', 'secret']) markLocationVisited(player, id);
+
+    assert.deepEqual(
+        getVisitedLocationMatches(player, 'meadow_1'),
+        [{ locationId: 'meadow_1', name: '피버릭 초원 1구역' }],
+    );
+    assert.deepEqual(
+        getVisitedLocationMatches(player, '초원').map(match => match.locationId),
+        ['meadow_1', 'meadow_2'],
+    );
+    assert.deepEqual(getVisitedLocationMatches(player, '숨은'), []);
+});
+
+test('A* 자동이동 경로는 방문한 공개 장소의 현재 열린 연결 중 최단 거리를 고른다', () => {
+    reloadAllLocations([
+        { ...location('start', 0, ['short', 'detour']), y: 0 },
+        { ...location('short', 5, ['goal']), y: 0 },
+        { ...location('detour', 1, ['goal']), y: 10 },
+        { ...location('goal', 10, []), y: 0 },
+    ]);
+    const allVisited = { locationId: 'start', progress: PlayerProgress.createEmpty(14) } as Player;
+    for (const id of ['start', 'short', 'detour', 'goal']) markLocationVisited(allVisited, id);
+    assert.deepEqual(
+        findShortestVisitedRoute(allVisited, 'start', 'goal'),
+        ['start', 'short', 'goal'],
+    );
+
+    const detourOnly = { locationId: 'start', progress: PlayerProgress.createEmpty(15) } as Player;
+    for (const id of ['start', 'detour', 'goal']) markLocationVisited(detourOnly, id);
+    assert.deepEqual(
+        findShortestVisitedRoute(detourOnly, 'start', 'goal'),
+        ['start', 'detour', 'goal'],
+    );
 });

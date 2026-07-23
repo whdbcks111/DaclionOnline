@@ -18,6 +18,7 @@ import { DialogueEndReason, endNpcDialogue } from "./NpcDialogue.js";
 import { StatusEffectRemovalReason, StatusEffectType } from './StatusEffect.js';
 import QuestBook from './QuestBook.js';
 import { markLocationVisited } from './WorldMap.js';
+import { cancelNavigation } from '../modules/navigation.js';
 import CareerProfile from './Career.js';
 import { Item } from './Item.js';
 import { SLOT_MAX, type EquipSlot } from './Equipment.js';
@@ -388,6 +389,7 @@ export default class Player extends Entity {
 
     override onDeath(): void {
         super.onDeath();
+        cancelNavigation(this, false);
         this.persistDeathState();
         const location = getLocation(this.locationId);
         const killer = this.lastDamageCause?.causeEntity?.attackOwner;
