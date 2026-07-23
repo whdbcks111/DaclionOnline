@@ -13,6 +13,7 @@
     "build": "bash -c 'unset npm_config_prefix && . $HOME/.nvm/nvm.sh && nvm use && npm run build:server && npm run build:client'",
     "verify": "npm run build:server && cd server && npm test && npm run data:validate && cd ../client && npm run build",
     "build:window": "npm run build:server && npm run build:client",
+    "db:reset:game": "cd server && npm run db:reset:game --",
     "start": "cd server && npm start"
   },
   "devDependencies": {

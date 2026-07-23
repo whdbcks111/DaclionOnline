@@ -10,6 +10,7 @@
     "balance:report": "tsx src/scripts/reportBalance.ts",
     "db:migrate:item-metadata": "tsx src/scripts/migrateItemMetadataDeltas.ts",
     "db:migrate:deploy": "prisma migrate deploy && prisma generate && npm run db:migrate:item-metadata",
+    "db:reset:game": "tsx src/scripts/resetGameData.ts",
     "start": "node dist/server/src/index.js"
   },
   "dependencies": {

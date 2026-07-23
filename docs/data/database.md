@@ -30,6 +30,12 @@ NPC 대화 결과 flag/state도 같은 `player_progress`에 저장한다. 진행
 StatusEffect 인스턴스와 ActionType 제한도 Entity의 런타임 메모리에만 존재한다. 상태효과 metadata delta는 실행 중 누적값을 기본 metadata와 분리하기 위한 구조이며 DB에 flush하지 않으므로 스키마 변경은 없다.
 퀘스트는 코드 `QuestData`를 원본으로 삼고 `player_quests`에는 플레이어별 인스턴스만 저장한다. 목표 진행 JSON key는 `{stageId}/{objectiveId}`이며 metadata는 Item/Skill과 같은 versioned top-level delta다. 반복 완료 횟수와 재수락 가능 시각을 같은 행에 유지한다.
 
+## 계정 보존 운영 초기화
+
+`npm run db:reset:game`은 기본적으로 User와 Player 하위 테이블의 count만 출력하고 변경하지 않는다. 서버를 중지한 뒤 `--confirm RESET-DACLION-GAME-DATA`를 붙였을 때만 하나의 DB 트랜잭션에서 `players`를 삭제한다. `items`, `equipments`, `player_progress`, `player_skills`, `player_quests`는 FK cascade로 함께 삭제되며 트랜잭션 안에서 모두 0인지와 `users` count가 변하지 않았는지 검증한다.
+
+`users`의 ID, username/email, password hash/salt, nickname, profile image, permission과 생성·수정 시각은 보존된다. 업로드 파일과 코드 마스터 데이터는 DB 초기화 대상이 아니다. 서버가 실행 중이면 메모리 Player와 저장 작업이 삭제된 행을 계속 참조할 수 있으므로 실제 초기화 전 서버 중지가 필수다. 다음 로그인에서 `Player.create()`가 기본 상태를 만들고 첫 모험 안내, 일회성 지원품과 새싹 누적 시간이 처음부터 시작된다.
+
 `players.ranking_metrics`는 마지막 Player 저장 시 레벨·골드와 모든 스탯·계산 능력치를 저장한 순위 전용 snapshot이다. 온라인 순위는 이 값 대신 현재 메모리 Player snapshot을 사용한다. `ranking_visibility`는 `{ defaultPublic, overrides }` 구조이며 기본 전체 공개와 반대되는 카테고리 예외만 보관한다. 두 필드는 Player/RankingVisibility dirty 상태를 기존 30초·unload 경로에서 함께 flush한다.
 
 ## 로드와 저장

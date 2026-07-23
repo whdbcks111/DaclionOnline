@@ -21,11 +21,15 @@ cd client && npm run lint
 cd server && npm run db:migrate:deploy  # 운영 schema migration + Client 생성 + metadata 데이터 변환
 cd server && npm run db:migrate:item-metadata  # 아이템 metadata 데이터 변환만 재실행
 cd server && npm run db:migrate:item-metadata -- --dry-run  # 변경 대상 수만 확인
+cd server && npm run db:reset:game  # 계정 보존 운영 초기화 대상 count만 확인(dry-run)
+cd server && npm run db:reset:game -- --confirm RESET-DACLION-GAME-DATA  # 서버를 중지한 뒤 실제 초기화
 cd server && npm run data:validate  # 코드 마스터 상호 참조와 필수 아이콘 검사
 cd server && npm run balance:report -- 50  # 실제 전투식으로 Lv.50 직업·주력 장비·버프 기준선 출력
 ```
 
 기본 포트는 서버 `3001`, Vite `5173`이다.
+
+`db:reset:game`은 `users` 행 전체를 보존하고 `players`를 삭제해 FK cascade로 인벤토리·장비·진행도·스킬·퀘스트를 함께 비운다. 실제 실행은 반드시 게임 서버를 먼저 중지하고 DB 백업을 확인한 뒤 수행한다. 루트에서도 `npm run db:reset:game -- --confirm RESET-DACLION-GAME-DATA`로 같은 명령을 실행할 수 있다. 다음 로그인에는 새 Player가 생성되므로 첫 모험 튜토리얼과 누적 플레이 24시간 미만 `🌱` 표시가 다시 시작된다.
 
 ## 환경 변수
 
