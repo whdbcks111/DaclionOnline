@@ -102,6 +102,14 @@ defineShop({
             restockTime: 20,
         },
         {
+            label: '단단한 나무 막대기 10개',
+            create: () => ({ itemDataId: 'hardwood_stick', count: 10 }),
+            count: 10,
+            price: 18,
+            stock: 20,
+            restockTime: 30,
+        },
+        {
             label: '견습 마법 지팡이',
             create: () => ({ itemDataId: 'apprentice_staff', count: 1 }),
             count: 1,
@@ -152,6 +160,12 @@ defineShop({
         {
             label: '화살',
             filter: (item) => item.itemDataId === 'wooden_arrow',
+            count: 99,
+            price: 1,
+        },
+        {
+            label: '단단한 나무 막대기',
+            filter: (item) => item.itemDataId === 'hardwood_stick',
             count: 99,
             price: 1,
         },

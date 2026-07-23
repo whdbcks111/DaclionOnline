@@ -1,5 +1,109 @@
 import { CraftingRecipeIngredient, defineCraftingRecipe } from '../models/Crafting.js';
+import type { CraftingDiscoveryContext } from '../models/Crafting.js';
 import { getItemData } from '../models/Item.js';
+import type { Item, ItemSnapshot } from '../models/Item.js';
+import {
+    createAssembledBowSnapshot,
+    createForgedArrowSnapshot,
+    ForgeForm,
+} from '../models/Forging.js';
+import { GameTags } from '../../../shared/tags.js';
+
+function artificerDiscovery({ player, recipe }: CraftingDiscoveryContext): boolean {
+    return player.skills.has('artificer_manufacturing')
+        && recipe.selectIngredients(player.inventory, 1) !== null;
+}
+
+function selectedUnits(items: readonly { item: Item; count: number }[]): Item[] {
+    return items.flatMap(selected =>
+        Array.from({ length: selected.count }, () => selected.item));
+}
+
+function unwrapForgedOutput(
+    result: ReturnType<typeof createAssembledBowSnapshot>,
+): ItemSnapshot {
+    if (!result.success || !result.snapshot) {
+        throw new Error(result.reason ?? '단조 부품 조립 결과가 없습니다.');
+    }
+    return result.snapshot;
+}
+
+defineCraftingRecipe({
+    id: 'artificer:reinforced_bowstring',
+    name: '강화 활시위',
+    aliases: ['활시위', '시위'],
+    resultItemDataId: 'reinforced_bowstring',
+    description: '호환되는 실이나 섬유 두 가닥을 여러 겹 꼬아 단조 활대용 시위로 만듭니다.',
+    ingredients: [new CraftingRecipeIngredient(
+        '활시위용 실 또는 섬유',
+        2,
+        item => item.itemDataId !== 'reinforced_bowstring'
+            && item.hasTag(GameTags.CRAFTING_BOWSTRING_MATERIAL),
+    )],
+    craftTime: 4,
+    create: ({ quantity }) => ({
+        itemDataId: 'reinforced_bowstring',
+        count: quantity,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    discoveryCondition: artificerDiscovery,
+    tags: ['crafting:component', 'crafting:artificer'],
+});
+
+defineCraftingRecipe({
+    id: 'artificer:arrow_shafts',
+    name: '화살대 10개',
+    aliases: ['화살대'],
+    resultItemDataId: 'arrow_shaft',
+    description: '단단한 나무 막대기를 곧고 가볍게 다듬어 화살대 열 개를 만듭니다.',
+    ingredients: [CraftingRecipeIngredient.item('hardwood_stick', 2)],
+    craftTime: 4,
+    create: ({ quantity }) => ({
+        itemDataId: 'arrow_shaft',
+        count: quantity * 10,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    discoveryCondition: artificerDiscovery,
+    tags: ['crafting:component', 'crafting:artificer'],
+});
+
+defineCraftingRecipe({
+    id: 'artificer:forged_bow',
+    name: '단조 활 조립',
+    aliases: ['단조활', '활조립'],
+    resultItemDataId: 'forged_bow',
+    description: '단조 활대마다 장력에 맞는 강화 활시위를 연결해 완성 활로 조립합니다.',
+    ingredients: [
+        CraftingRecipeIngredient.item(ForgeForm.BOW_LIMB.itemDataId, 1),
+        CraftingRecipeIngredient.item('reinforced_bowstring', 1),
+    ],
+    craftTime: 7,
+    create: ({ ingredients }) => selectedUnits(ingredients[0].items)
+        .map(limb => unwrapForgedOutput(createAssembledBowSnapshot(limb))),
+    discoveryCondition: artificerDiscovery,
+    tags: ['crafting:weapon', 'crafting:artificer'],
+});
+
+defineCraftingRecipe({
+    id: 'artificer:forged_arrows',
+    name: '단조 화살 10개',
+    aliases: ['단조화살', '화살조립'],
+    resultItemDataId: 'wooden_arrow',
+    description: '단조 화살촉 한 묶음을 화살대 열 개에 고정해 기존 활과 호환되는 화살을 만듭니다.',
+    ingredients: [
+        CraftingRecipeIngredient.item(ForgeForm.ARROWHEADS.itemDataId, 1),
+        CraftingRecipeIngredient.item('arrow_shaft', 10),
+    ],
+    craftTime: 6,
+    create: ({ ingredients }) => selectedUnits(ingredients[0].items)
+        .map(arrowheads => unwrapForgedOutput(createForgedArrowSnapshot(arrowheads))),
+    discoveryCondition: artificerDiscovery,
+    tags: ['crafting:ammunition', 'crafting:artificer'],
+});
 
 defineCraftingRecipe({
     id: 'basic:iron_pickaxe',

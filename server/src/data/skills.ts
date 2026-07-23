@@ -28,7 +28,11 @@ import { ShieldType } from '../models/Shield.js';
 import { LegacyStatusEffects } from './statusEffects.js';
 import { StatType } from '../models/Stat.js';
 import { calculateSmeltingExperience } from '../modules/forging.js';
-import { FORGED_ITEM_NAMING_SENSIBILITY, MAX_WEAPON_REINFORCEMENT } from '../models/Forging.js';
+import {
+    FORGED_ITEM_NAMING_SENSIBILITY,
+    MAX_WEAPON_REINFORCEMENT,
+    STAFF_INFUSION_MENTALITY_COST,
+} from '../models/Forging.js';
 
 const CRITICAL_HIT_STAT = 'combat:critical_hits';
 
@@ -1007,6 +1011,38 @@ defineSkill({
     jobRequirement: jobRequirement('career:arcane_smith'),
     canActivate: () => denySkill('/마법부여 <아이템 번호 또는 장착칸> 명령어를 사용하세요.'),
     tags: [GameTags.SKILL_PASSIVE],
+});
+
+defineSkill({
+    id: 'staff_infusing',
+    name: '지팡이 마력 부여',
+    // TODO(art): 전용 스킬 아이콘 제작 전까지 지팡이 카테고리 fallback을 사용한다.
+    icon: 'items/apprentice_staff',
+    maxLevel: 1,
+    descriptionTemplate: '직접 단조한 지팡이 틀에 마력 회로를 열어 실제 주문과 마력탄을 다룰 수 있는 지팡이로 완성합니다. 틀의 재료·품질·단조 능력치는 유지되며 마법 관통력, 정신력 재생, 투사체 가속이 추가됩니다.',
+    costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${STAFF_INFUSION_MENTALITY_COST}[/color]`,
+    activationConditionTemplate: '마도 대장장이가 `/단조 지팡이 틀 <재료>`로 틀을 만든 뒤 `/지팡이부여 <인벤토리 번호>`를 입력합니다.',
+    baseMetadata: null,
+    calculateExperienceGain: () => 0,
+    jobRequirement: jobRequirement('career:arcane_smith'),
+    canActivate: () => denySkill('/지팡이부여 <인벤토리 번호> 명령어를 사용하세요.'),
+    tags: [GameTags.SKILL_PASSIVE, GameTags.SKILL_GROUP_BLACKSMITH],
+});
+
+defineSkill({
+    id: 'artificer_manufacturing',
+    name: '정밀 병기 제작',
+    // TODO(art): 전용 스킬 아이콘 제작 전까지 활 카테고리 fallback을 사용한다.
+    icon: 'items/light_bow',
+    maxLevel: 1,
+    descriptionTemplate: '단조 미니게임으로 활대와 화살촉 묶음을 만들고, 호환되는 시위와 화살대를 제작해 활과 화살로 조립합니다. 단조 재료·품질·특이 각인은 완성 병기와 화살의 공격 성능에 그대로 반영됩니다.',
+    costTemplate: '형태별 제련 소재와 제작 부품 소모',
+    activationConditionTemplate: '기계 장인이 `/단조 활대 <재료>` 또는 `/단조 화살촉 묶음 <재료>`를 사용한 뒤 발견한 전용 제작법으로 부품을 조립합니다.',
+    baseMetadata: null,
+    calculateExperienceGain: () => 0,
+    jobRequirement: jobRequirement('career:artificer'),
+    canActivate: () => denySkill('/단조와 /제작 명령어를 사용하세요.'),
+    tags: [GameTags.SKILL_PASSIVE, GameTags.SKILL_GROUP_BLACKSMITH],
 });
 
 defineSkill({

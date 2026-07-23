@@ -860,7 +860,9 @@ for (const material of [
     {
         id: 'silverweb_silk', name: '은빛 거미실',
         description: '빛을 받으면 은빛으로 반사하는 강인한 숲거미의 실.',
-        image: 'items/earthworm_bait', tags: [GameTags.PROPERTY_INSECT], weight: 0.15,
+        image: 'items/earthworm_bait',
+        tags: [GameTags.PROPERTY_INSECT, GameTags.CRAFTING_BOWSTRING_MATERIAL],
+        weight: 0.15,
     },
     {
         id: 'venom_gland', name: '자빛 독샘',
@@ -895,7 +897,7 @@ for (const material of [
     {
         id: 'gravecloth', name: '묘지기 천', image: 'items/earthworm_bait', weight: 0.15,
         description: '오래된 의복에서 풀어낸 질긴 검푸른 천.',
-        tags: [GameTags.PROPERTY_DARK],
+        tags: [GameTags.PROPERTY_DARK, GameTags.CRAFTING_BOWSTRING_MATERIAL],
     },
     {
         id: 'broken_oath_badge', name: '깨진 맹세 휘장', image: 'items/gold_ore', weight: 0.2,
@@ -1237,7 +1239,12 @@ for (const material of [
     {
         id: 'ice_silk', name: '빙실 거미줄', image: 'items/earthworm_bait', weight: 0.18,
         description: '서리가 맺혀도 끊어지지 않는 거미줄. 활시위와 마법 직조에 쓴다.',
-        tags: [GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_INSECT],
+        tags: [
+            GameTags.MATERIAL_RIME,
+            GameTags.PROPERTY_ICE,
+            GameTags.PROPERTY_INSECT,
+            GameTags.CRAFTING_BOWSTRING_MATERIAL,
+        ],
     },
     {
         id: 'mirrorsteel_fragment', name: '경철 파편', image: 'items/iron_ore', weight: 0.55,
@@ -1665,7 +1672,12 @@ for (const material of [
     {
         id: 'paradox_thread', name: '역설 실', image: 'items/earthworm_bait', weight: 0.08,
         description: '서로 다른 두 순간의 위치를 동시에 잇는 은보랏빛 마력 섬유.',
-        tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+        tags: [
+            GameTags.MATERIAL_CLOCKWORK,
+            GameTags.PROPERTY_LIGHT,
+            GameTags.PROPERTY_DARK,
+            GameTags.CRAFTING_BOWSTRING_MATERIAL,
+        ],
     },
     {
         id: 'automaton_plate', name: '자동인형 장갑판', image: 'items/iron_ore', weight: 1.1,
@@ -1851,7 +1863,11 @@ for (const material of [
     {
         id: 'ashen_sinew', name: '잿빛 힘줄', image: 'items/earthworm_bait', weight: 0.22,
         description: '심연 짐승의 근육 사이에서 타지 않고 남은 질긴 회색 힘줄.',
-        tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK],
+        tags: [
+            GameTags.MATERIAL_ASHEN_ABYSS,
+            GameTags.PROPERTY_DARK,
+            GameTags.CRAFTING_BOWSTRING_MATERIAL,
+        ],
     },
     {
         id: 'blackflame_residue', name: '흑염 잔재', image: 'items/ember_ore', weight: 0.18,
@@ -2142,6 +2158,125 @@ for (const template of forgedTemplates) defineItem({
         : { role: ItemBalanceRole.WEAPON, attackType: 'physical' },
 });
 
+// TODO(art): 엘리트 대장장이 부품 전용 아트 제작 전까지 무기/광물 카테고리 fallback을 사용한다.
+for (const component of [
+    {
+        id: 'forged_staff_frame', name: '단조 지팡이 틀', image: 'items/apprentice_staff',
+        description: '마도 대장장이가 마력 회로를 열기 전의 단조 지팡이 틀.', weight: 2.5,
+    },
+    {
+        id: 'forged_bow_limb', name: '단조 활대', image: 'items/light_bow',
+        description: '기계 장인이 장력에 맞는 시위를 연결하기 전의 단조 활대.', weight: 2,
+    },
+    {
+        id: 'forged_arrowheads', name: '단조 화살촉 묶음', image: 'items/iron_ore',
+        description: '화살대 열 개에 고정할 수 있도록 함께 단조한 화살촉 묶음.', weight: 0.8,
+    },
+] as const) defineItem({
+    id: component.id,
+    name: component.name,
+    description: component.description,
+    image: component.image,
+    category: '제작 부품',
+    weight: component.weight,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: 100,
+    tags: [GameTags.ITEM_CRAFTING_COMPONENT, GameTags.ITEM_FORGED],
+    balance: { role: ItemBalanceRole.UTILITY },
+});
+
+defineItem({
+    id: 'forged_staff',
+    name: '단조 지팡이',
+    description: '단조 틀에 마력 회로를 열어 완성한 주문용 지팡이.',
+    // TODO(art): 전용 아트 제작 전까지 지팡이 카테고리 fallback을 사용한다.
+    image: 'items/apprentice_staff',
+    category: '지팡이',
+    weight: 2.5,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: { projectile: { dataId: 'basic_magic_orb' } },
+    },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: null,
+    baseDurability: 100,
+    tags: [GameTags.ITEM_WEAPON, GameTags.ITEM_FORGED, GameTags.WEAPON_STAFF],
+    balance: {
+        role: ItemBalanceRole.WEAPON,
+        attackType: 'magic',
+        recommendedJobIds: ['career:mage', 'career:arcane_smith'],
+    },
+});
+
+defineItem({
+    id: 'forged_bow',
+    name: '단조 활',
+    description: '단조 활대와 장력에 맞는 시위를 조립해 완성한 활.',
+    // TODO(art): 전용 아트 제작 전까지 활 카테고리 fallback을 사용한다.
+    image: 'items/light_bow',
+    category: '활',
+    weight: 2.1,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: {
+        basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: null,
+    baseDurability: 100,
+    tags: [GameTags.ITEM_WEAPON, GameTags.ITEM_FORGED, GameTags.WEAPON_BOW],
+    balance: {
+        role: ItemBalanceRole.WEAPON,
+        attackType: 'physical',
+        recommendedJobIds: ['career:archer', 'career:artificer'],
+    },
+});
+
+for (const component of [
+    {
+        id: 'hardwood_stick', name: '단단한 나무 막대기', image: 'items/wooden_arrow',
+        description: '곧게 다듬으면 화살대로 쓸 수 있는 질긴 나무 막대기.',
+        count: 99, weight: 0.18, tags: [GameTags.MATERIAL_WOOD],
+    },
+    {
+        id: 'reinforced_bowstring', name: '강화 활시위', image: 'items/earthworm_bait',
+        description: '질긴 섬유를 여러 겹 꼬아 만든 활 조립용 시위.',
+        count: 20, weight: 0.12, tags: [GameTags.CRAFTING_BOWSTRING_MATERIAL],
+    },
+    {
+        id: 'arrow_shaft', name: '화살대', image: 'items/wooden_arrow',
+        description: '화살촉을 끼울 수 있도록 곧고 가볍게 다듬은 나무 화살대.',
+        count: 99, weight: 0.08, tags: [GameTags.CRAFTING_ARROW_SHAFT_MATERIAL, GameTags.MATERIAL_WOOD],
+    },
+] as const) defineItem({
+    id: component.id,
+    name: component.name,
+    description: component.description,
+    // TODO(art): 제작 부품 전용 아트 제작 전까지 가까운 소재 카테고리 fallback을 사용한다.
+    image: component.image,
+    category: '제작 부품',
+    weight: component.weight,
+    stackable: true,
+    maxStack: component.count,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CRAFTING_COMPONENT, ...component.tags],
+    balance: { role: ItemBalanceRole.UTILITY },
+});
+
 defineItem({
     id: 'beginner_fishing_rod',
     name: '초보자 낚싯대',
@@ -2286,7 +2421,11 @@ for (const material of [
     {
         id: 'void_silk', name: '공허비단', image: 'items/earthworm_bait', weight: 0.12,
         description: '허공을 헤엄치는 나방이 남긴, 손끝보다 한 박자 늦게 흔들리는 검은 비단.',
-        tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_DARK],
+        tags: [
+            GameTags.MATERIAL_VOIDCROWN,
+            GameTags.PROPERTY_DARK,
+            GameTags.CRAFTING_BOWSTRING_MATERIAL,
+        ],
     },
     {
         id: 'starved_vine', name: '기아덩굴', image: 'items/earthworm_bait', weight: 0.3,
@@ -2466,7 +2605,12 @@ for (const material of [
     {
         id: 'abyss_fiber', name: '해구섬유', image: 'items/earthworm_bait', weight: 0.14,
         description: '해류가 바뀔 때마다 스스로 꼬임을 바꾸는 질긴 심해 식물 섬유.',
-        tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_WATER],
+        tags: [
+            GameTags.MATERIAL_ECLIPSE_TRENCH,
+            GameTags.PROPERTY_NATURAL,
+            GameTags.PROPERTY_WATER,
+            GameTags.CRAFTING_BOWSTRING_MATERIAL,
+        ],
     },
     {
         id: 'tide_sigil', name: '조류인장', image: 'items/gold_ore', weight: 0.25,

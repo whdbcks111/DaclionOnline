@@ -47,6 +47,10 @@ test('5개 1차 직업은 최소 3개 스킬을 지급하고 서로 다른 20개
     assert.ok(eliteJobs.every(job => job.grantedSkills.length >= 2
         && job.grantedSkills.filter(grant => getSkillData(grant.skillDataId)?.tags.includes('skill:passive')).length >= 1
         && job.grantedSkills.filter(grant => getSkillData(grant.skillDataId)?.tags.includes('skill:active')).length === 1));
+    assert.ok(getJob('career:arcane_smith')?.grantedSkills
+        .some(grant => grant.skillDataId === 'staff_infusing'));
+    assert.ok(getJob('career:artificer')?.grantedSkills
+        .some(grant => grant.skillDataId === 'artificer_manufacturing'));
     for (const skill of getAllSkillData()) {
         const png = readFileSync(new URL(`../../../client/public/icons/${skill.icon}.png`, import.meta.url));
         assert.equal(png.readUInt32BE(16), 128, `${skill.id} icon width`);

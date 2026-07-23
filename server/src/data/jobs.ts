@@ -90,7 +90,11 @@ for (const [main, sub, eliteId, name, offenseFactor = 1] of eliteRecipes) {
             { skillDataId: `${eliteId}_mastery` },
             { skillDataId: `${eliteId}_technique` },
             ...(eliteId === 'battle_smith' ? [{ skillDataId: 'weapon_reinforcement' }] : []),
-            ...(eliteId === 'arcane_smith' ? [{ skillDataId: 'arcane_enchanting' }] : []),
+            ...(eliteId === 'artificer' ? [{ skillDataId: 'artificer_manufacturing' }] : []),
+            ...(eliteId === 'arcane_smith' ? [
+                { skillDataId: 'arcane_enchanting' },
+                { skillDataId: 'staff_infusing' },
+            ] : []),
         ],
         mainModifiers: [
             ...parent.main,

@@ -1,7 +1,7 @@
 import type Player from './Player.js';
 import Inventory from './Inventory.js';
 import type { InventoryItemSelection } from './Inventory.js';
-import { getItemData } from './Item.js';
+import { getItemData, getItemSnapshotDisplay } from './Item.js';
 import type { Item, ItemSnapshot } from './Item.js';
 import { defineProgress, ProgressType } from './Progress.js';
 import { emitGameEvent, GameEventIds } from './GameEvent.js';
@@ -364,7 +364,8 @@ export function cancelCrafting(player: Player): boolean {
 function formatOutputSummary(outputs: readonly ItemSnapshot[]): string {
     const counts = new Map<string, number>();
     for (const output of outputs) {
-        counts.set(output.itemDataId, (counts.get(output.itemDataId) ?? 0) + output.count);
+        const name = getItemSnapshotDisplay(output).name;
+        counts.set(name, (counts.get(name) ?? 0) + output.count);
     }
-    return [...counts].map(([id, count]) => `${getItemData(id)?.name ?? id} x${count}`).join(', ');
+    return [...counts].map(([name, count]) => `${name} x${count}`).join(', ');
 }

@@ -57,6 +57,15 @@ export function canUseMetalForging(player: Player): boolean {
     return hasBlacksmithProfession(player) || player.skills.has('metal_forging');
 }
 
+/** 직업/스킬에 따라 현재 플레이어에게 공개할 수 있는 단조 형태인지 판정한다. */
+export function canUseForgeForm(player: Player, form: ForgeForm): boolean {
+    return form.requiredSkillDataId === null || player.skills.has(form.requiredSkillDataId);
+}
+
+export function getAvailableForgeForms(player: Player): readonly ForgeForm[] {
+    return ForgeForm.values().filter(form => canUseForgeForm(player, form));
+}
+
 export function grantBlacksmithProfession(player: Player): boolean {
     if (hasBlacksmithProfession(player)) return false;
     return player.career.assignAvailable(BLACKSMITH_JOB_ID).success;
@@ -96,6 +105,9 @@ export function migrateLegacyBlacksmithProfession(player: Player): boolean {
 export function startForging(player: Player, form: ForgeForm, material: ForgeMaterial): { success: boolean; reason?: string } {
     if (!canUseMetalForging(player)) {
         return { success: false, reason: '대장장이 전문 직업 또는 금속 단조 스킬이 필요합니다.' };
+    }
+    if (!canUseForgeForm(player, form)) {
+        return { success: false, reason: form.unlockDescription ?? '아직 해금하지 않은 단조 형태입니다.' };
     }
     if (player.isDefeated) return { success: false, reason: '사망 상태에서는 단조할 수 없습니다.' };
     const requirement = [{ count: form.materialCount, matches: (item: { itemDataId: string }) => item.itemDataId === material.itemDataId }];

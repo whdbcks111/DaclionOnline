@@ -16,6 +16,7 @@ export interface ForgedItemRenameResult {
 }
 
 export const ARCANE_ENCHANT_MENTALITY_COST = 80;
+export const STAFF_INFUSION_MENTALITY_COST = 120;
 export const MAX_WEAPON_REINFORCEMENT = 5;
 export const ENHANCEMENT_STONE_ITEM_ID = 'enhancement_stone';
 
@@ -30,6 +31,12 @@ export interface WeaponReinforcementResult {
     success: boolean;
     level?: number;
     addedModifiers?: readonly ForgeModifierSeed[];
+    reason?: string;
+}
+
+export interface ForgedComponentResult {
+    success: boolean;
+    snapshot?: ItemSnapshot;
     reason?: string;
 }
 
@@ -153,6 +160,21 @@ export class ForgeForm {
     static readonly SWORD = new ForgeForm('sword', '장검', ['블레이드', '소드', '세이버'], '아스트라엘', 'forged_sword', 4, 12, 130, GameTags.WEAPON_SWORD);
     static readonly AXE = new ForgeForm('axe', '도끼', ['액스', '클리버', '브레이커'], '익스클리프', 'forged_axe', 5, 15, 150, GameTags.WEAPON_AXE);
     static readonly DAGGER = new ForgeForm('dagger', '단검', ['대거', '팽', '스팅어'], '나이트베인', 'forged_dagger', 3, 9, 105, GameTags.WEAPON_DAGGER);
+    static readonly STAFF_FRAME = new ForgeForm(
+        'staff_frame', '지팡이 틀', ['로드', '스태프', '완드'], '아르카노스',
+        'forged_staff_frame', 4, 13, 145, GameTags.WEAPON_STAFF, 'magicForce',
+        'staff_infusing', '마도 대장장이의 [ 지팡이 마력 부여 ] 스킬이 필요합니다.',
+    );
+    static readonly BOW_LIMB = new ForgeForm(
+        'bow_limb', '활대', ['보우', '아크', '런처'], '기어스트링',
+        'forged_bow_limb', 4, 11, 135, GameTags.WEAPON_BOW, 'atk',
+        'artificer_manufacturing', '기계 장인의 [ 정밀 병기 제작 ] 스킬이 필요합니다.',
+    );
+    static readonly ARROWHEADS = new ForgeForm(
+        'arrowheads', '화살촉 묶음', ['애로우', '볼트', '피어서'], '트루스파이크',
+        'forged_arrowheads', 2, 4, 70, null, 'atk',
+        'artificer_manufacturing', '기계 장인의 [ 정밀 병기 제작 ] 스킬이 필요합니다.',
+    );
     static readonly SHIELD = new ForgeForm('shield', '방패', ['이지스', '실드', '가드'], '아르카디아', 'forged_shield', 5, 9, 180, null, 'def');
     static readonly PICKAXE = new ForgeForm('pickaxe', '곡괭이', ['픽', '딥델버', '브레이커'], '테라크레스트', 'forged_pickaxe', 4, 7, 160, null);
     static readonly HELMET = new ForgeForm('helmet', '투구', ['헬름', '바이저', '크라운'], '아이기스혼', 'forged_helmet', 3, 1.5, 120, null, 'def');
@@ -171,6 +193,8 @@ export class ForgeForm {
         readonly baseDurability: number,
         readonly weaponTag: TagId | null,
         readonly powerAttribute: AttributeKey = 'atk',
+        readonly requiredSkillDataId: string | null = null,
+        readonly unlockDescription: string | null = null,
     ) { ForgeForm.all.push(this); }
 
     static values(): readonly ForgeForm[] { return ForgeForm.all; }
@@ -454,6 +478,143 @@ export function createForgedItemSnapshot(
         durability: maxDurability,
         metadataDelta: metadata,
         tags: [...material.tags],
+    };
+}
+
+function additiveModifierValue(item: Item, attribute: AttributeKey): number {
+    return (item.modifiers ?? [])
+        .filter(modifier => modifier.attribute === attribute && modifier.op === 'add')
+        .reduce((sum, modifier) => sum + modifier.value, 0);
+}
+
+function forgeMetadataOf(item: Item): Record<string, MetadataValue> | undefined {
+    return item.getMetadata<Record<string, MetadataValue>>(ItemMetadataKeys.FORGE);
+}
+
+function completedComponentName(item: Item, sourceLabel: string, completedLabel: string): string {
+    return item.name.includes(sourceLabel)
+        ? item.name.replace(sourceLabel, completedLabel)
+        : item.name;
+}
+
+function storedItemModifiers(item: Item): MetadataValue[] {
+    return (item.modifiers ?? []).map(modifier => ({
+        attribute: modifier.attribute,
+        op: modifier.op,
+        value: modifier.value,
+    }));
+}
+
+/** 마도 대장장이의 전용 스킬로 단조 지팡이 틀을 실제 마법 무기로 완성한다. */
+export function createInfusedStaffSnapshot(frame: Item): ForgedComponentResult {
+    if (frame.itemDataId !== ForgeForm.STAFF_FRAME.itemDataId) {
+        return { success: false, reason: '단조한 지팡이 틀만 마력을 부여해 완성할 수 있습니다.' };
+    }
+    const forge = forgeMetadataOf(frame);
+    if (!forge) return { success: false, reason: '단조 정보가 없는 지팡이 틀입니다.' };
+
+    const name = completedComponentName(frame, ForgeForm.STAFF_FRAME.label, '지팡이');
+    const itemLevel = typeof forge.itemLevel === 'number' ? Math.max(1, forge.itemLevel) : 1;
+    const magicForce = additiveModifierValue(frame, 'magicForce');
+    const metadata = frame.getMetadataDeltaSnapshot() ?? {};
+    metadata[ItemMetadataKeys.CUSTOM_NAME] = name;
+    metadata[ItemMetadataKeys.CUSTOM_DESCRIPTION] = `${frame.description} 마도 대장장이가 마력 회로를 열어 실제 주문과 마력탄을 다룰 수 있게 완성했다.`;
+    metadata[ItemMetadataKeys.INSTANCE_MODIFIERS] = [
+        ...storedItemModifiers(frame),
+        { attribute: 'magicPen', op: 'add', value: round(6 + itemLevel * 0.12 + magicForce * 0.04, 2) },
+        { attribute: 'mentalityRegen', op: 'add', value: round(1 + Math.sqrt(itemLevel) * 0.35, 2) },
+        {
+            attribute: 'projectileAcceleration',
+            op: 'multiply',
+            value: round(1 + Math.min(0.9, 0.08 + itemLevel * 0.0025), 4),
+        },
+    ];
+    metadata[ItemMetadataKeys.FORGE] = { ...forge, form: 'staff', generatedName: name };
+
+    return {
+        success: true,
+        snapshot: {
+            itemDataId: 'forged_staff',
+            count: 1,
+            durability: frame.durability,
+            metadataDelta: metadata,
+            tags: [...frame.snapshot(1).tags],
+        },
+    };
+}
+
+/** 기계 장인이 단조 활대와 제작 시위를 조립해 실제 투사체 무기로 완성한다. */
+export function createAssembledBowSnapshot(limb: Item): ForgedComponentResult {
+    if (limb.itemDataId !== ForgeForm.BOW_LIMB.itemDataId) {
+        return { success: false, reason: '단조한 활대만 시위와 조립할 수 있습니다.' };
+    }
+    const forge = forgeMetadataOf(limb);
+    if (!forge) return { success: false, reason: '단조 정보가 없는 활대입니다.' };
+
+    const name = completedComponentName(limb, ForgeForm.BOW_LIMB.label, '활');
+    const itemLevel = typeof forge.itemLevel === 'number' ? Math.max(1, forge.itemLevel) : 1;
+    const metadata = limb.getMetadataDeltaSnapshot() ?? {};
+    metadata[ItemMetadataKeys.CUSTOM_NAME] = name;
+    metadata[ItemMetadataKeys.CUSTOM_DESCRIPTION] = `${limb.description} 기계 장인이 장력에 맞는 시위를 연결해 화살을 발사할 수 있게 조립했다.`;
+    metadata[ItemMetadataKeys.INSTANCE_MODIFIERS] = [
+        ...storedItemModifiers(limb),
+        {
+            attribute: 'projectileAcceleration',
+            op: 'multiply',
+            value: round(1 + Math.min(0.9, 0.08 + itemLevel * 0.0025), 4),
+        },
+    ];
+    metadata[ItemMetadataKeys.FORGE] = { ...forge, form: 'bow', generatedName: name };
+
+    return {
+        success: true,
+        snapshot: {
+            itemDataId: 'forged_bow',
+            count: 1,
+            durability: limb.durability,
+            metadataDelta: metadata,
+            tags: [...limb.snapshot(1).tags],
+        },
+    };
+}
+
+/** 단조 화살촉 한 묶음을 호환 화살대 열 개와 결합해 기존 활이 소비할 수 있는 화살을 만든다. */
+export function createForgedArrowSnapshot(arrowheads: Item): ForgedComponentResult {
+    if (arrowheads.itemDataId !== ForgeForm.ARROWHEADS.itemDataId) {
+        return { success: false, reason: '단조한 화살촉 묶음만 화살대로 조립할 수 있습니다.' };
+    }
+    const forge = forgeMetadataOf(arrowheads);
+    if (!forge) return { success: false, reason: '단조 정보가 없는 화살촉 묶음입니다.' };
+
+    const name = completedComponentName(arrowheads, ForgeForm.ARROWHEADS.label, '화살');
+    const damageBonus = round(2 + additiveModifierValue(arrowheads, 'atk') * 0.18, 2);
+    const armorPen = round(1 + additiveModifierValue(arrowheads, 'armorPen'), 2);
+    const persistentTags = arrowheads.snapshot(1).tags;
+    const metadata = arrowheads.getMetadataDeltaSnapshot() ?? {};
+    delete metadata[ItemMetadataKeys.INSTANCE_MODIFIERS];
+    delete metadata[ItemMetadataKeys.MAX_DURABILITY];
+    metadata[ItemMetadataKeys.CUSTOM_NAME] = name;
+    metadata[ItemMetadataKeys.CUSTOM_DESCRIPTION] = `${arrowheads.description} 기계 장인이 균형을 맞춘 화살대 열 개에 촉을 고정해 완성했다.`;
+    metadata[ItemMetadataKeys.PROJECTILE] = {
+        dataId: 'basic_arrow',
+        overrides: {
+            name,
+            damageBonus,
+            attributeOverrides: { armorPen },
+            tags: [...persistentTags],
+        },
+    };
+    metadata[ItemMetadataKeys.FORGE] = { ...forge, form: 'arrow', generatedName: name };
+
+    return {
+        success: true,
+        snapshot: {
+            itemDataId: 'wooden_arrow',
+            count: 10,
+            durability: null,
+            metadataDelta: metadata,
+            tags: [...persistentTags],
+        },
     };
 }
 

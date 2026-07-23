@@ -1,14 +1,16 @@
 import type { CompletionItem } from '../../../shared/types.js';
 import { registerCommand } from '../modules/bot.js';
-import { startForging } from '../modules/forging.js';
+import { getAvailableForgeForms, startForging } from '../modules/forging.js';
 import { sendBotMessageToUser } from '../modules/message.js';
 import { getPlayerByUserId } from '../modules/player.js';
 import {
     ARCANE_ENCHANT_MENTALITY_COST,
     ENHANCEMENT_STONE_ITEM_ID,
     FORGED_ITEM_NAMING_SENSIBILITY,
+    STAFF_INFUSION_MENTALITY_COST,
     ForgeForm,
     ForgeMaterial,
+    createInfusedStaffSnapshot,
     enchantWeapon,
     reinforceWeapon,
     renameForgedItem,
@@ -27,7 +29,11 @@ export function initForgingCommands(): void {
         args: [
             {
                 name: '형태', description: '제작할 장비 형태', required: true, isText: true,
-                completions: (): CompletionItem[] => ForgeForm.values().map(form => ({ value: form.label, description: `재료 ${form.materialCount}개` })),
+                completions: (userId): CompletionItem[] => {
+                    const player = getPlayerByUserId(userId);
+                    return (player ? getAvailableForgeForms(player) : [])
+                        .map(form => ({ value: form.label, description: `재료 ${form.materialCount}개` }));
+                },
             },
             {
                 name: '재료', description: '사용할 제련 소재', required: true, isText: true,
@@ -40,13 +46,73 @@ export function initForgingCommands(): void {
             const form = ForgeForm.fromInput(args[0] ?? '');
             const material = ForgeMaterial.fromInput(args[1] ?? '');
             if (!form || !material) {
-                const forms = ForgeForm.values().map(value => value.label).join('|');
+                const forms = getAvailableForgeForms(player).map(value => value.label).join('|');
                 const materials = ForgeMaterial.values().map(value => value.label).join('|');
                 sendBotMessageToUser(userId, `사용법: /단조 <${forms}> <${materials}>`);
                 return;
             }
             const result = startForging(player, form, material);
             if (!result.success) sendBotMessageToUser(userId, result.reason ?? '단조를 시작할 수 없습니다.');
+        },
+    });
+
+    registerCommand({
+        name: '지팡이부여',
+        aliases: ['지팡이마법부여', 'staffinfuse', 'sfi'],
+        description: '단조한 지팡이 틀에 마력 회로를 열어 실제 지팡이로 완성합니다.',
+        showCommandUse: 'private',
+        args: [{
+            name: '인벤토리 번호',
+            description: '마력을 부여할 단조 지팡이 틀',
+            required: true,
+            completions(userId): CompletionItem[] {
+                const player = getPlayerByUserId(userId);
+                if (!player) return [];
+                return player.inventory.getIndexedItems()
+                    .filter(({ item }) => item.itemDataId === ForgeForm.STAFF_FRAME.itemDataId)
+                    .map(({ item, index }) => ({ value: String(index + 1), description: item.name }));
+            },
+        }],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            const skill = player.skills.get('staff_infusing');
+            if (!skill || !player.career.hasJob('career:arcane_smith')) {
+                sendBotMessageToUser(userId, '마도 대장장이의 [ 지팡이 마력 부여 ] 스킬이 필요합니다.');
+                return;
+            }
+            if (!/^\d+$/.test(args[0] ?? '')) {
+                sendBotMessageToUser(userId, '사용법: /지팡이부여 <인벤토리 번호>');
+                return;
+            }
+            const frame = player.inventory.getItemByIndex(Number(args[0]) - 1);
+            if (!frame) {
+                sendBotMessageToUser(userId, '인벤토리에서 해당 지팡이 틀을 찾지 못했습니다.');
+                return;
+            }
+            if (!player.canSpendMentality(STAFF_INFUSION_MENTALITY_COST)) {
+                sendBotMessageToUser(userId, `정신력이 ${STAFF_INFUSION_MENTALITY_COST} 필요합니다.`);
+                return;
+            }
+            const completion = createInfusedStaffSnapshot(frame);
+            if (!completion.success || !completion.snapshot) {
+                sendBotMessageToUser(userId, completion.reason ?? '지팡이를 완성하지 못했습니다.');
+                return;
+            }
+            const selections = player.inventory.selectItems([{
+                count: 1,
+                matches: item => item === frame,
+            }]);
+            if (!selections || !player.spendMentality(STAFF_INFUSION_MENTALITY_COST)) {
+                sendBotMessageToUser(userId, '지팡이 틀 또는 정신력 상태가 변경되어 마력 부여를 취소했습니다.');
+                return;
+            }
+            if (!player.inventory.replaceSelectedItems(selections, [completion.snapshot])) {
+                player.restoreMentality(STAFF_INFUSION_MENTALITY_COST);
+                sendBotMessageToUser(userId, '지팡이 틀이 변경되었거나 완성품을 보관할 공간이 부족합니다.');
+                return;
+            }
+            sendBotMessageToUser(userId, `[ ${completion.snapshot.metadataDelta?.customName ?? '단조 지팡이'} ]에 마력 회로를 열었습니다.`);
         },
     });
 
