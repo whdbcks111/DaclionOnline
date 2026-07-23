@@ -769,9 +769,14 @@ export default abstract class Entity implements TagReadable {
             const weapon = this.equipment.getEquipped(EquipSlotType.MAIN_HAND.key, 0);
             const durability = this.equipment.decreaseItemDurability(EquipSlotType.MAIN_HAND.key, 0, 1);
             if (weapon && durability === 0 && this.playerUserId !== undefined) {
+                const message = `${weapon.name}의 내구도가 다해 파괴되었습니다.`;
+                sendBotMessageToUser(this.playerUserId, chat()
+                    .color('red', builder => builder.weight('bold', nested => nested.text('[ 장비 파괴 ]')))
+                    .text(`\n${message}`)
+                    .build());
                 sendNotificationToUser(this.playerUserId, {
                     key: `item-broken:${weapon.itemDataId}`,
-                    message: `${weapon.name}의 내구도가 다해 파괴되었습니다.`,
+                    message,
                     length: 3000,
                 });
             }
