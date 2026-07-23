@@ -242,6 +242,22 @@ const EXPERIENCE_AMPLIFICATION = StatusEffectType.define({
     aliases: ['경험 증폭'], tags: [],
 });
 
+// TODO(art): 카르마 전용 아트 제작 단계에서 영웅 상태효과 아이콘으로 교체한다.
+const HERO = StatusEffectType.define({
+    id: 'hero',
+    label: '영웅',
+    icon: 'attributes/luck',
+    descriptionTemplate: '악명 높은 플레이어를 처치한 보상입니다. 획득 경험치가 {{calc.experienceBonusPercent}}% 증가합니다.',
+    calculatedFields: {
+        experienceBonusPercent: ({ effect }) => 10 + effect.level * 5,
+    },
+    onStart: applyHero,
+    onUpdate: applyHero,
+    onRemove: ({ target, effect }) => { target.removeExperienceGainModifier(modifierSource(effect)); },
+    aliases: ['영웅', '현상금 사냥꾼'],
+    tags: [],
+});
+
 const SILENCE = defineActionEffect('silence', '침묵', [ActionType.SKILL], ['침묵']);
 const BIND = defineActionEffect('bind', '속박', [ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['속박']);
 const STUN = defineActionEffect('stun', '기절', [ActionType.SKILL, ActionType.ITEM_USE, ActionType.ATTACK, ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['기절']);
@@ -391,6 +407,10 @@ function applyExperienceAmplification({ target, effect }: StatusEffectContext): 
     target.setExperienceGainModifier(modifierSource(effect), 1 + effect.level * 0.05);
 }
 
+function applyHero({ target, effect }: StatusEffectContext): void {
+    target.setExperienceGainModifier(modifierSource(effect), 1 + (10 + effect.level * 5) / 100);
+}
+
 function applyCurse(context: StatusEffectContext): void {
     const powerMultiplier = Math.max(0.5, Math.pow(0.95, context.effect.level));
     refreshModifiers(context, [
@@ -475,7 +495,7 @@ defineStatusEffectInteraction(StatusEffectType.FIRE, INVISIBLE, StatusEffectInte
 export const LegacyStatusEffects = Object.freeze({
     POISON, BLEEDING, DECAY, HEAL_REDUCTION, DEFENSE_REDUCTION, MAGIC_DEFENSE_REDUCTION,
     MAGIC_ENHANCEMENT, STRENGTH_ENHANCEMENT, MENTALITY_REGENERATION, REGENERATION,
-    EXPERIENCE_AMPLIFICATION, SLOWNESS, SWIFTNESS, CURSE, PETRIFICATION, SUN_FEVER,
+    EXPERIENCE_AMPLIFICATION, HERO, SLOWNESS, SWIFTNESS, CURSE, PETRIFICATION, SUN_FEVER,
     SILENCE, BIND, STUN, OVERMASTER,
     NAUSEA, BLINDNESS, AIRBORNE, CHARM, FEAR, SLEEP, INVULNERABLE, INVISIBLE, EXPOSE,
     FIRE_RESISTANCE, FROZEN_RESISTANCE, DETOXIFICATION, PRESERVATION, FROZEN,

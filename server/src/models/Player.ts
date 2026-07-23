@@ -37,7 +37,9 @@ import { partyManager } from '../modules/party.js';
 import { emitGameEvent, GameEventIds } from './GameEvent.js';
 import {
     KarmaAccessPolicy,
+    KarmaTier,
     KarmaState,
+    getKarmaDeathPenalty,
     type KarmaChangeSnapshot,
     type KarmaValueSnapshot,
 } from './Karma.js';
@@ -171,6 +173,8 @@ export interface PlayerDeathPenaltySnapshot {
     readonly zoneLabel: string;
     readonly experienceLost: number;
     readonly goldLost: number;
+    readonly karmaReduced: number;
+    readonly karmaRespawnSeconds: number;
 }
 
 export default class Player extends Entity {
@@ -316,9 +320,9 @@ export default class Player extends Entity {
     set gold(val: number) { this._gold = Math.max(0, val); this._dirty = true; }
 
     /** 기준 시각 이후 자연 감소까지 반영한 현재 카르마. */
-    get karma(): number { return this.karmaState.value; }
-    get karmaTier() { return this.karmaState.tier; }
-    get isKarmaMarked(): boolean { return this.karmaState.marked; }
+    get karma(): number { return this.karmaState?.value ?? 0; }
+    get karmaTier() { return this.karmaState?.tier ?? KarmaTier.CLEAR; }
+    get isKarmaMarked(): boolean { return this.karmaState?.marked ?? false; }
 
     getKarmaSnapshot(now: Date | number = Date.now()): KarmaValueSnapshot {
         return this.karmaState.snapshot(now);
@@ -392,7 +396,10 @@ export default class Player extends Entity {
         else if(this.level >= 10) baseDuration = 30;
 
         const location = getLocation(this.locationId);
-        return location ? location.riskPolicy.calculateRespawnDuration(baseDuration) : baseDuration;
+        const regionDuration = location
+            ? location.riskPolicy.calculateRespawnDuration(baseDuration)
+            : baseDuration;
+        return regionDuration + getKarmaDeathPenalty(this.karma).respawnSeconds;
     }
 
     override getAttackDeniedReason(attacker: Entity): string | undefined {
@@ -475,7 +482,10 @@ export default class Player extends Entity {
             emitGameEvent(GameEventIds.PVP_KILL, {
                 actor: killer,
                 subject: this,
-                data: { zoneType: location?.data.zoneType ?? 'unknown' },
+                data: {
+                    zoneType: location?.data.zoneType ?? 'unknown',
+                    victimKarma: this.karma,
+                },
             });
         }
         endNpcDialogue(this, DialogueEndReason.DEFEATED);
@@ -493,18 +503,50 @@ export default class Player extends Entity {
         } else {
             message.color('$text-tertiary', b => b.text('사망 재화 손실은 없습니다.\n'));
         }
+        if (penalty.karmaReduced > 0) {
+            message.color('#dc5868', b => b.text(
+                `악명 패널티: 카르마 -${penalty.karmaReduced.toFixed(1)}`
+                + ` · 부활 대기 +${Math.ceil(penalty.karmaRespawnSeconds / 60)}분\n`,
+            ));
+        }
         message.text(`${this.deathTimer.toFixed(0)}초 후 리스폰됩니다.`);
         sendBotMessageToUser(this.userId, message.build());
     }
 
     applyRegionDeathPenalty(): PlayerDeathPenaltySnapshot {
         const policy = getLocation(this.locationId)?.riskPolicy;
-        if (!policy) return { zoneLabel: '알 수 없는 구역', experienceLost: 0, goldLost: 0 };
-        const experienceLost = policy.calculateExperienceLoss(this.exp, this.maxExp, this.level);
-        const goldLost = policy.calculateGoldLoss(this.gold, this.level);
+        const karmaPenalty = getKarmaDeathPenalty(this.karma);
+        if (!policy) {
+            return {
+                zoneLabel: '알 수 없는 구역',
+                experienceLost: 0,
+                goldLost: 0,
+                karmaReduced: 0,
+                karmaRespawnSeconds: karmaPenalty.respawnSeconds,
+            };
+        }
+        const regionExperienceLoss = policy.calculateExperienceLoss(this.exp, this.maxExp, this.level);
+        const regionGoldLoss = policy.calculateGoldLoss(this.gold, this.level);
+        const experienceLost = Math.min(
+            Math.max(0, Math.floor(this.exp)),
+            regionExperienceLoss + Math.max(0, Math.floor(this.maxExp * karmaPenalty.experienceLossRate)),
+        );
+        const goldLost = Math.min(
+            Math.max(0, Math.floor(this.gold)),
+            regionGoldLoss + Math.max(0, Math.floor(this.gold * karmaPenalty.goldLossRate)),
+        );
         if (experienceLost > 0) this.exp = this.exp - experienceLost;
         if (goldLost > 0) this.gold = this.gold - goldLost;
-        return { zoneLabel: policy.label, experienceLost, goldLost };
+        const karmaReduced = karmaPenalty.karmaReduction > 0
+            ? -this.reduceKarma(karmaPenalty.karmaReduction, 'karma:death').delta
+            : 0;
+        return {
+            zoneLabel: policy.label,
+            experienceLost,
+            goldLost,
+            karmaReduced,
+            karmaRespawnSeconds: karmaPenalty.respawnSeconds,
+        };
     }
 
     override respawn(): void {

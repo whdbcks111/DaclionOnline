@@ -38,7 +38,7 @@ export class KarmaTier {
         return KarmaTier.all.find(tier => tier.key === key.trim().toLowerCase());
     }
     static forValue(value: number): KarmaTier {
-        const normalized = normalizeKarma(value);
+        const normalized = getEffectiveKarma(value);
         return [...KarmaTier.all].reverse().find(tier => normalized >= tier.minimum)
             ?? KarmaTier.CLEAR;
     }
@@ -82,7 +82,7 @@ export class KarmaAccessPolicy {
     }
 
     getDeniedReason(karma: number): string | undefined {
-        return normalizeKarma(karma) >= this.deniedAt ? this.deniedMessage : undefined;
+        return getEffectiveKarma(karma) >= this.deniedAt ? this.deniedMessage : undefined;
     }
 }
 
@@ -112,7 +112,7 @@ export class KarmaState {
 
     get value(): number { return this.getValueAt(Date.now()); }
     get tier(): KarmaTier { return KarmaTier.forValue(this.value); }
-    get marked(): boolean { return this.value >= KarmaRules.WANTED_THRESHOLD; }
+    get marked(): boolean { return this.tier.marked; }
 
     getValueAt(now: Date | number): number {
         const nowMs = Math.max(this.baseUpdatedAtMs, normalizeTimestamp(now));
@@ -167,7 +167,7 @@ export interface KarmaDeathPenalty {
 
 /** 현상 대상이 아닌 플레이어를 처치했을 때만 지역별 악업을 반환한다. */
 export function getPvpKarmaGain(zoneType: ZoneType | 'unknown', victimKarma: number): number {
-    if (normalizeKarma(victimKarma) >= KarmaRules.WANTED_THRESHOLD) return 0;
+    if (getEffectiveKarma(victimKarma) >= KarmaRules.WANTED_THRESHOLD) return 0;
     if (zoneType === 'neutral') return KarmaRules.NEUTRAL_PVP_KILL_GAIN;
     if (zoneType === 'hostile') return KarmaRules.HOSTILE_PVP_KILL_GAIN;
     return 0;
@@ -175,7 +175,7 @@ export function getPvpKarmaGain(zoneType: ZoneType | 'unknown', victimKarma: num
 
 /** 악명 높은 플레이어를 처치했을 때 영웅 효과의 레벨과 지속시간을 계산한다. */
 export function getKarmaHeroReward(victimKarma: number): KarmaHeroReward | undefined {
-    const karma = normalizeKarma(victimKarma);
+    const karma = getEffectiveKarma(victimKarma);
     if (karma < KarmaRules.WANTED_THRESHOLD) return undefined;
     return {
         level: Math.min(5, Math.max(1, Math.floor(karma / 200) + 1)),
@@ -185,7 +185,7 @@ export function getKarmaHeroReward(victimKarma: number): KarmaHeroReward | undef
 
 /** 지역 기본 사망 손실에 더할 고카르마 전용 패널티를 계산한다. */
 export function getKarmaDeathPenalty(karmaValue: number): KarmaDeathPenalty {
-    const karma = normalizeKarma(karmaValue);
+    const karma = getEffectiveKarma(karmaValue);
     if (karma < KarmaRules.WANTED_THRESHOLD) {
         return { respawnSeconds: 0, experienceLossRate: 0, goldLossRate: 0, karmaReduction: 0 };
     }
@@ -201,6 +201,11 @@ export function getKarmaDeathPenalty(karmaValue: number): KarmaDeathPenalty {
 export function normalizeKarma(value: number): number {
     if (!Number.isFinite(value)) return 0;
     return Math.min(KarmaRules.MAX_VALUE, Math.max(0, value));
+}
+
+/** 사용자에게 표시하는 소수 첫째 자리와 정책 임계값 판정을 일치시킨다. */
+export function getEffectiveKarma(value: number): number {
+    return Math.round(normalizeKarma(value) * 10) / 10;
 }
 
 function requireFiniteAmount(value: number): number {

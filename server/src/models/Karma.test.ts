@@ -30,6 +30,7 @@ test('카르마 단계와 시설 제한은 클래스형 enum 임계값을 공유
     assert.match(KarmaAccessPolicy.BENEVOLENT_QUEST.getDeniedReason(100) ?? '', /의뢰/);
     assert.equal(KarmaAccessPolicy.LAWFUL_SHOP.getDeniedReason(299.9), undefined);
     assert.match(KarmaAccessPolicy.LAWFUL_SHOP.getDeniedReason(300) ?? '', /거래/);
+    assert.equal(KarmaTier.forValue(99.96), KarmaTier.NOTORIOUS);
 });
 
 test('일반 플레이어 PVP는 지역별 카르마를 주고 현상 대상 처치는 영웅 보상으로 전환된다', () => {

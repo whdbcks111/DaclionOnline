@@ -34,6 +34,7 @@ import { initAllCommands } from './commands/index.js';
 import { initAdminPanel } from './modules/adminPanel.js';
 import { initMiniGame } from './modules/minigame.js';
 import { initTutorial } from './modules/tutorial.js';
+import { initKarma } from './modules/karma.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -57,6 +58,7 @@ initLogin();
 initChat();
 initBot();
 initAllCommands();
+initKarma();
 initTutorial();
 initPlayer();
 initLocation();
