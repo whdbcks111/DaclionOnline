@@ -24,6 +24,11 @@ import { GameTags } from '../../../shared/tags.js';
 import Monster, { getAllMonsterData, type MonsterData } from './Monster.js';
 import { applyTagEffectValue } from './TagEffect.js';
 import type { TagId } from '../../../shared/tags.js';
+import {
+    calculateProjectileAcceleration,
+    calculateProjectileEvasionSpeed,
+    getProjectileData,
+} from './Projectile.js';
 
 const BALANCE_WINDOW_SECONDS = 60;
 const BALANCE_ACTION_FLOOR_SECONDS = 0.45;
@@ -102,6 +107,7 @@ export interface BalanceScenario {
     readonly targetNormalized: boolean;
     readonly loadoutName: string;
     readonly basicAttackType: 'physical' | 'magic';
+    readonly basicProjectileDataId?: string;
 }
 
 export interface RotationSkillReport {
@@ -136,6 +142,7 @@ export interface CombatRotationReport {
     readonly estimatedKillSeconds: number;
     readonly currentSpeed: number;
     readonly targetSpeed: number;
+    readonly basicAttackEvasionSpeed: number;
     readonly evasionChance: number;
     readonly evasionCapSpeed: number;
     readonly evasionCapAgility: number;
@@ -171,6 +178,7 @@ export interface SkillBalanceReport {
     readonly penetration: number;
     readonly effectiveDefense: number;
     readonly evasionChance: number;
+    readonly evasionAttackSpeed: number;
     readonly expectedDamagePerTarget: number;
     readonly expectedTotalDamage: number;
     readonly cooldownLimitedCasts: number;
@@ -273,6 +281,7 @@ export function createBalanceScenario(
         targetNormalized: targetProfile.data.level !== normalizedLevel,
         loadoutName: loadout.name,
         basicAttackType: loadout.attackType,
+        basicProjectileDataId: loadout.projectileDataId,
     };
 }
 
@@ -301,13 +310,17 @@ export function analyzeSkillBalance(
         : damageType === 'magic' ? scenario.entity.attribute.get(AttributeType.MAGIC_PEN) : 0;
     const penetration = finiteNonNegative(balance?.calculatePenetration?.(context) ?? defaultPenetration);
     const effectiveDefense = Math.max(0, defense - penetration);
+    const evasionAttackSpeed = finitePositive(
+        balance?.calculateEvasionAttackSpeed?.(context)
+            ?? scenario.entity.getEvasionAttackSpeed(),
+    );
     const defendedDamage = damageType === 'absolute'
         ? rawDamage * criticalMultiplier
         : calculateFinalDamage(rawDamage * criticalMultiplier, defense, penetration);
     const evasion = balance?.unavoidable || balance?.criticalMode === SkillCriticalMode.DISABLED && damageType === 'absolute'
         ? 0
         : calculateEvasionChance(
-            scenario.entity.attribute.get(AttributeType.SPEED),
+            evasionAttackSpeed,
             scenario.target.attribute.get(AttributeType.SPEED),
         );
     const affinitySource = balance?.effectTags?.length ? {
@@ -339,6 +352,7 @@ export function analyzeSkillBalance(
         penetration,
         effectiveDefense,
         evasionChance: evasion,
+        evasionAttackSpeed,
         expectedDamagePerTarget,
         expectedTotalDamage,
         cooldownLimitedCasts,
@@ -427,7 +441,8 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
     // 회피 투자 기준은 로테이션 도중 우연히 남아 있는 짧은 버프가 아니라 상시 장비·직업 modifier로 계산한다.
     const currentSpeed = entity.attribute.get(AttributeType.SPEED);
     const targetSpeed = target.attribute.get(AttributeType.SPEED);
-    const evasionChance = calculateEvasionChance(currentSpeed, targetSpeed);
+    const basicAttackEvasionSpeed = getBasicAttackEvasionSpeed(scenario);
+    const evasionChance = calculateEvasionChance(basicAttackEvasionSpeed, targetSpeed);
     const evasionCapSpeed = targetSpeed * 2.8;
     const defenseAttribute = scenario.basicAttackType === 'magic' ? AttributeType.MAGIC_DEF : AttributeType.DEF;
     const penetrationAttribute = scenario.basicAttackType === 'magic' ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN;
@@ -539,6 +554,7 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
         estimatedKillSeconds: dps > 0 ? target.maxLife / dps : Number.POSITIVE_INFINITY,
         currentSpeed,
         targetSpeed,
+        basicAttackEvasionSpeed,
         evasionChance,
         evasionCapSpeed,
         evasionCapAgility,
@@ -740,11 +756,64 @@ function createCombatSnapshot(entity: Entity, target: Entity): CombatBalanceSnap
 }
 
 const PROJECTED_WEAPONS = Object.freeze({
-    'career:warrior': [{ level: 1, id: 'training_axe' }, { level: 70, id: 'windsteel_sword' }],
-    'career:archer': [{ level: 1, id: 'light_bow' }, { level: 70, id: 'stormstring_bow' }],
-    'career:assassin': [{ level: 1, id: 'venom_dagger' }, { level: 90, id: 'nightglass_dagger' }],
-    'career:mage': [{ level: 1, id: 'apprentice_staff' }, { level: 120, id: 'starwood_staff' }],
-    'career:blacksmith': [{ level: 1, id: 'iron_pickaxe' }],
+    'career:warrior': [
+        { level: 1, id: 'training_axe' },
+        { level: 28, id: 'oathiron_sword' },
+        { level: 50, id: 'windsteel_sword' },
+        { level: 70, id: 'dunebreaker_sword' },
+        { level: 120, id: 'rimecleaver_sword' },
+        { level: 150, id: 'tidebreaker_sword' },
+        { level: 200, id: 'paradox_edge' },
+        { level: 235, id: 'sootcleaver_sword' },
+        { level: 275, id: 'nullsilver_greatsword' },
+        { level: 310, id: 'drowned_edge' },
+        { level: 345, id: 'rootbone_cleaver' },
+    ],
+    'career:archer': [
+        { level: 1, id: 'light_bow' },
+        { level: 10, id: 'silverweb_hunter_bow' },
+        { level: 28, id: 'requiem_bow' },
+        { level: 50, id: 'stormstring_bow' },
+        { level: 70, id: 'sunwire_bow' },
+        { level: 120, id: 'icesilk_longbow' },
+        { level: 150, id: 'mistcurrent_bow' },
+        { level: 200, id: 'photon_repeater' },
+        { level: 235, id: 'hornstring_bow' },
+        { level: 275, id: 'crownstring_longbow' },
+        { level: 310, id: 'mooncurrent_bow' },
+        { level: 345, id: 'heartstring_greatbow' },
+    ],
+    'career:assassin': [
+        { level: 1, id: 'venom_dagger' },
+        { level: 50, id: 'nightglass_dagger' },
+        { level: 70, id: 'mirage_fang_dagger' },
+        { level: 120, id: 'mirrorfang_dagger' },
+        { level: 150, id: 'blackcoral_sting' },
+        { level: 200, id: 'voidspring_dagger' },
+        { level: 235, id: 'gloamfang_dagger' },
+        { level: 275, id: 'voidsilk_stiletto' },
+        { level: 310, id: 'nightpearl_knife' },
+        { level: 345, id: 'amber_memory_fang' },
+    ],
+    'career:mage': [
+        { level: 1, id: 'apprentice_staff' },
+        { level: 20, id: 'starwood_staff' },
+        { level: 40, id: 'mourning_staff' },
+        { level: 70, id: 'helioglass_staff' },
+        { level: 120, id: 'auroraprism_staff' },
+        { level: 150, id: 'deeppearl_staff' },
+        { level: 200, id: 'logic_core_staff' },
+        { level: 235, id: 'blackflame_staff' },
+        { level: 275, id: 'starless_scepter' },
+        { level: 310, id: 'eclipse_oracle_staff' },
+        { level: 345, id: 'origin_heart_staff' },
+    ],
+    'career:blacksmith': [
+        { level: 1, id: 'iron_pickaxe' },
+        // 생산 장비의 난수 편차를 프로파일 기준값으로 쓰지 않고,
+        // 황혼왕릉에서 확정 회수 가능한 범용 장검을 전투 기준선으로 사용한다.
+        { level: 28, id: 'oathiron_sword' },
+    ],
 } satisfies Record<string, readonly { level: number; id: string }[]>);
 
 const COMBAT_ATTRIBUTE_TYPES = Object.freeze([
@@ -764,7 +833,11 @@ const COMBAT_ATTRIBUTE_TYPES = Object.freeze([
     AttributeType.CRIT_DMG,
 ]);
 
-function applyProjectedLoadout(entity: Entity, mainJobId: string, level: number): { name: string; attackType: 'physical' | 'magic' } {
+function applyProjectedLoadout(entity: Entity, mainJobId: string, level: number): {
+    name: string;
+    attackType: 'physical' | 'magic';
+    projectileDataId?: string;
+} {
     const choices = PROJECTED_WEAPONS[mainJobId as keyof typeof PROJECTED_WEAPONS] ?? [];
     const choice = [...choices].reverse().find(value => level >= value.level);
     const data = choice ? getItemData(choice.id) : undefined;
@@ -777,6 +850,9 @@ function applyProjectedLoadout(entity: Entity, mainJobId: string, level: number)
     return {
         name: data?.name ?? '무장비',
         attackType: data?.balance?.attackType ?? (mainJobId === 'career:mage' ? 'magic' : 'physical'),
+        projectileDataId: data?.tags.includes(GameTags.WEAPON_BOW)
+            ? 'basic_arrow'
+            : data?.tags.includes(GameTags.WEAPON_STAFF) ? 'basic_magic_orb' : undefined,
     };
 }
 
@@ -833,7 +909,11 @@ function calculateExpectedBasicHit(scenario: BalanceScenario): number {
     const entity = scenario.entity;
     const target = scenario.target;
     const magic = scenario.basicAttackType === 'magic';
-    const raw = entity.attribute.get(magic ? AttributeType.MAGIC_FORCE : AttributeType.ATK)
+    const projectile = scenario.basicProjectileDataId
+        ? getProjectileData(scenario.basicProjectileDataId)
+        : undefined;
+    const rawPower = entity.attribute.get(magic ? AttributeType.MAGIC_FORCE : AttributeType.ATK);
+    const raw = (rawPower * (projectile?.damageMultiplier ?? 1) + (projectile?.damageBonus ?? 0))
         * getExpectedCriticalMultiplier(entity, SkillCriticalMode.NORMAL);
     const defended = calculateFinalDamage(
         raw,
@@ -841,9 +921,22 @@ function calculateExpectedBasicHit(scenario: BalanceScenario): number {
         entity.attribute.get(magic ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN),
     );
     return defended * (1 - calculateEvasionChance(
-        entity.attribute.get(AttributeType.SPEED),
+        getBasicAttackEvasionSpeed(scenario),
         target.attribute.get(AttributeType.SPEED),
     ));
+}
+
+/** 추천 무기의 실제 투사체 계수까지 반영한 기본 공격 회피 판정 속도. */
+function getBasicAttackEvasionSpeed(scenario: BalanceScenario): number {
+    const projectile = scenario.basicProjectileDataId
+        ? getProjectileData(scenario.basicProjectileDataId)
+        : undefined;
+    if (!projectile) return scenario.entity.getEvasionAttackSpeed();
+    const acceleration = calculateProjectileAcceleration(
+        scenario.entity,
+        projectile.accelerationCoefficient,
+    );
+    return calculateProjectileEvasionSpeed(acceleration);
 }
 
 function resolveItemStatusEffect(data: ItemData): {
@@ -872,6 +965,10 @@ function getExpectedCriticalMultiplier(entity: Entity, mode = SkillCriticalMode.
 
 function finiteNonNegative(value: number): number {
     return Number.isFinite(value) ? Math.max(0, value) : 0;
+}
+
+function finitePositive(value: number): number {
+    return Number.isFinite(value) ? Math.max(0.01, value) : 0.01;
 }
 
 function positiveInteger(value: number): number {

@@ -109,6 +109,14 @@ defineShop({
             price: 55,
             restockTime: 180,
         },
+        {
+            label: '성휘목 지팡이',
+            create: () => ({ itemDataId: 'starwood_staff', count: 1 }),
+            count: 1,
+            stock: 2,
+            price: 180,
+            restockTime: 300,
+        },
     ],
     sellList: [
         {
@@ -152,6 +160,12 @@ defineShop({
             filter: (item) => item.itemDataId === 'apprentice_staff',
             count: 1,
             price: 25,
+        },
+        {
+            label: '성휘목 지팡이',
+            filter: (item) => item.itemDataId === 'starwood_staff',
+            count: 1,
+            price: 80,
         },
     ],
     tags: [GameTags.SHOP_GENERAL, GameTags.FACILITY_LAWFUL],

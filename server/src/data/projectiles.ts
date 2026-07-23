@@ -20,7 +20,7 @@ defineProjectileData({
     damageType: 'magic',
     travelTime: 0.5,
     accelerationCoefficient: 0.85,
-    damageMultiplier: 1,
+    damageMultiplier: 1.08,
     damageBonus: 0,
     tags: [],
     baseAttribute: { magicPen: 0, critRate: 0 },

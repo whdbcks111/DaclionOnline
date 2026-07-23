@@ -200,7 +200,8 @@ function appendRotation(builder: ReturnType<typeof chat>, rotation: CombatRotati
     builder.divider(rotation.encounter.label)
         .text(`대상 Lv.${rotation.targetLevel} ${rotation.targetName}${source}\n`)
         .text(`장비 ${rotation.loadoutName} · ${rotation.basicAttackType === 'magic' ? '마법' : '물리'} 평타\n`)
-        .text(`속도 ${format(rotation.currentSpeed)} : ${format(rotation.targetSpeed)} · 대상 회피 ${format(rotation.evasionChance * 100)}%\n`)
+        .text(`이동속도 ${format(rotation.currentSpeed)} : ${format(rotation.targetSpeed)}\n`)
+        .text(`평타 판정속도 ${format(rotation.basicAttackEvasionSpeed)} · 대상 회피 ${format(rotation.evasionChance * 100)}%\n`)
         .text(`90% 회피 기준 속도 ${format(rotation.evasionCapSpeed)} · 필요 민첩 ${rotation.evasionCapAgility}${rotation.evasionCapReached ? ' (현재 도달)' : ''}\n`)
         .text(`${rotation.basicAttackType === 'magic' ? '마법 관통' : '방어 관통'} ${format(rotation.penetration)} · 대상 방어 ${format(rotation.targetDefense)} → 유효 ${format(rotation.effectiveDefense)}\n`)
         .weight('bold', b => b.text(`DPS ${format(rotation.dps)} · 예상 처치 ${formatSeconds(rotation.estimatedKillSeconds)}\n`))
@@ -275,6 +276,7 @@ function buildSkillBalanceMessage(report: SkillBalanceReport, jobName: string, c
         .text(`재사용 ${format(report.cooldown)}초  |  정신력 ${format(report.manaCost)}\n`);
     if (report.rawDamage > 0) {
         builder.text(`방어 전 1타 ${format(report.rawDamage)}\n`)
+            .text(`공격 판정속도 ${format(report.evasionAttackSpeed)}  |  대상 회피 ${format(report.evasionChance * 100)}%\n`)
             .text(`대상 1명 기대 피해 ${format(report.expectedDamagePerTarget)}\n`)
             .text(`1회 총 기대 피해 ${format(report.expectedTotalDamage)}\n`)
             .text(`60초 시전 ${report.sustainableCasts}회 (쿨다운 ${report.cooldownLimitedCasts} / 자원 ${report.resourceLimitedCasts})\n`)

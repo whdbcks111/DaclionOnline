@@ -16,6 +16,7 @@ import { GameTags } from '../../../shared/tags.js';
 import type { TagId } from '../../../shared/tags.js';
 import {
     calculateProjectileAcceleration,
+    calculateProjectileEvasionSpeed,
     calculateProjectileTravelTime,
     getProjectileData,
     spawnProjectileFromData,
@@ -220,6 +221,18 @@ function projectileTravelTimeTooltip(context: SkillContext, dataId: string, magi
         `기본 ${formatNumber(data.travelTime)}초 ÷ 최종 투사체 가속 ${formatNumber(acceleration)}배${magicDetail}`,
         '초',
     );
+}
+
+/** 런타임 Projectile과 같은 계산으로 밸런스 진단용 회피 판정 속도를 구한다. */
+function projectileEvasionAttackSpeed(context: SkillContext, dataId: string, magicSkill: boolean): number {
+    const data = getProjectileData(dataId);
+    if (!data) return context.owner.getEvasionAttackSpeed();
+    const multiplier = magicSkill ? magicSkillAccelerationMultiplier(context) : 1;
+    return calculateProjectileEvasionSpeed(calculateProjectileAcceleration(
+        context.owner,
+        data.accelerationCoefficient,
+        multiplier,
+    ));
 }
 
 defineSkill({
@@ -644,10 +657,11 @@ const elitePassives = [
     },
     {
         id: 'runeforger_mastery', name: '전투 룬각', jobId: 'career:runeforger', icon: 'jobs/mage',
-        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color] 증가합니다.',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color], {{icon.attackSpeed}} 공격속도가 [color=cyan]{{attackSpeed}}[/color] 증가합니다.',
         modifiers: [
             { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.12, label: '마법력 증가', display: '+12%' },
             { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.08, label: '방어력 증가', display: '+8%' },
+            { attribute: AttributeType.ATTACK_SPEED.key, op: 'multiply', value: 1.08, label: '공격속도 증가', display: '+8%' },
         ],
     },
     {
@@ -1219,6 +1233,7 @@ defineSkill({
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
         effectTags: [GameTags.PROPERTY_LIGHT],
         calculateDamage: context => combinedAttributeDamage(context, ARCHER_ARCANE_ARROW_TERMS),
+        calculateEvasionAttackSpeed: context => projectileEvasionAttackSpeed(context, 'basic_magic_orb', true),
         calculateManaCost: () => 12,
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 5, 0.2, 4.2),
@@ -1245,6 +1260,7 @@ defineSkill({
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'physical', targetCount: 3,
         calculateDamage: context => combinedAttributeDamage(context, ARCHER_MULTISHOT_TERMS),
+        calculateEvasionAttackSpeed: context => projectileEvasionAttackSpeed(context, 'basic_arrow', false),
         calculateManaCost: () => 18,
         notes: ['대상이 3명 있다고 가정한 총 피해와 대상 1명 피해를 함께 표시합니다.'],
     },
@@ -1288,6 +1304,7 @@ defineSkill({
     balance: {
         role: SkillBalanceRole.CONTROL, damageType: 'physical',
         calculateDamage: context => combinedAttributeDamage(context, ARCHER_STUNNING_SHOT_TERMS),
+        calculateEvasionAttackSpeed: context => projectileEvasionAttackSpeed(context, 'basic_arrow', false),
         calculateManaCost: () => 20,
         notes: ['기절의 가치는 적 패턴에 따라 달라 피해량에 임의 합산하지 않습니다.'],
     },
@@ -1461,6 +1478,7 @@ defineSkill({
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
         calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 95, 7) / 100,
+        calculateEvasionAttackSpeed: context => projectileEvasionAttackSpeed(context, 'magic_bolt', true),
         calculateManaCost: () => 10,
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 4, 0.2, 3.2),
@@ -1527,6 +1545,7 @@ defineSkill({
     balance: {
         role: SkillBalanceRole.CONTROL, damageType: 'magic',
         calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 75, 6) / 100,
+        calculateEvasionAttackSpeed: context => projectileEvasionAttackSpeed(context, 'basic_magic_orb', true),
         calculateManaCost: () => 24,
         notes: ['속박의 가치는 적 패턴에 따라 달라 피해량에 임의 합산하지 않습니다.'],
     },
@@ -1594,6 +1613,7 @@ for (const elemental of [
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
         effectTags: [elemental.tag],
         calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 100, 7) / 100,
+        calculateEvasionAttackSpeed: context => projectileEvasionAttackSpeed(context, 'basic_magic_orb', true),
         calculateManaCost: () => 28,
         notes: [`${elemental.effectLabel} 효과는 대상 상태에 따라 달라 직접 타격 DPM과 분리합니다.`],
     },
@@ -2529,6 +2549,9 @@ for (const technique of growthTechniques) defineSkill({
         damageType: technique.damageType,
         effectTags: technique.propertyTag ? [technique.propertyTag] : undefined,
         calculateDamage: context => growthTechniqueDamage(context, technique),
+        calculateEvasionAttackSpeed: technique.projectile
+            ? context => projectileEvasionAttackSpeed(context, technique.projectile!, technique.damageType === 'magic')
+            : undefined,
         calculatePenetration: technique.penetration
             ? context => {
                 const granted = valueByLevel(
@@ -3059,6 +3082,9 @@ for (const technique of eliteTechniques) {
             effectTags: technique.propertyTag && !(technique.damageType === 'physical' && technique.propertyTag === GameTags.PROPERTY_POISON)
                 ? [technique.propertyTag] : undefined,
             calculateDamage: context => eliteTechniqueDamage(context, technique),
+            calculateEvasionAttackSpeed: technique.projectile
+                ? context => projectileEvasionAttackSpeed(context, technique.projectile!, technique.damageType === 'magic')
+                : undefined,
             criticalMode: technique.guaranteedCritical ? SkillCriticalMode.GUARANTEED : SkillCriticalMode.NORMAL,
             calculateManaCost: () => technique.manaCost,
             calculateShield: technique.shieldPercent

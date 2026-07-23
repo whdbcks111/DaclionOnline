@@ -280,7 +280,14 @@ const forgeQuirks: readonly ForgeQuirk[] = [
     {
         key: 'spell_bound', label: '마도 결속', nameWord: '아케인', power: 0.78, durability: 0.88,
         createModifiers: craftsmanship => [
-            { attribute: 'magicForce', op: 'add', value: round(20 + craftsmanship.sensibility * 0.06, 2) },
+            {
+                attribute: 'magicForce',
+                op: 'add',
+                value: round(Math.min(
+                    160,
+                    8 + craftsmanship.creatorLevel * 0.22 + Math.sqrt(Math.max(0, craftsmanship.sensibility)) * 0.9,
+                ), 2),
+            },
             { attribute: 'magicPen', op: 'add', value: round(6 + craftsmanship.creatorLevel * 0.04, 2) },
         ],
     },

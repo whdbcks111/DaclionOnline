@@ -585,7 +585,7 @@ defineItem({
 defineItem({
     id: 'apprentice_staff',
     name: '견습 마법 지팡이',
-    description: '정신 에너지를 모아 마법 투사체를 안정적으로 발사한다. 투사체 가속이 4% 증가한다.',
+    description: '정신 에너지를 모아 마법 투사체를 안정적으로 발사한다. 투사체 가속이 6% 증가한다.',
     image: 'items/apprentice_staff',
     category: '지팡이',
     weight: 2.2,
@@ -598,8 +598,8 @@ defineItem({
     onUse: null,
     equipSlot: 'mainHand',
     modifiers: [
-        { attribute: 'magicForce', op: 'add', value: 8, source: '' },
-        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.04, source: '' },
+        { attribute: 'magicForce', op: 'add', value: 12, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.06, source: '' },
     ],
     baseDurability: 100,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_WOOD],
@@ -685,7 +685,7 @@ defineItem({
 defineItem({
     id: 'starwood_staff',
     name: '성휘목 지팡이',
-    description: '빛을 머금은 고목 심재로 만든 지팡이. 마법력과 정신력 순환, 투사체 가속을 12% 강화한다.',
+    description: '빛을 머금은 고목 심재로 만든 초급 지팡이. 마법력과 정신력 순환, 투사체 가속을 14% 강화한다.',
     image: 'items/starwood_staff',
     category: '지팡이',
     weight: 2.6,
@@ -698,9 +698,9 @@ defineItem({
     onUse: null,
     equipSlot: 'mainHand',
     modifiers: [
-        { attribute: 'magicForce', op: 'add', value: 28, source: '' },
+        { attribute: 'magicForce', op: 'add', value: 36, source: '' },
         { attribute: 'mentalityRegen', op: 'add', value: 2, source: '' },
-        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.12, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.14, source: '' },
     ],
     baseDurability: 230,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY],
@@ -995,7 +995,7 @@ defineItem({
 defineItem({
     id: 'mourning_staff',
     name: '애도목 지팡이',
-    description: '애도의 백합과 혼불을 매달아 망자의 마력을 멀리 쏘아 보내는 지팡이.',
+    description: '애도의 백합과 혼불을 매달아 망자의 마력을 빠르게 쏘아 보내는 중급 지팡이.',
     image: 'items/apprentice_staff',
     category: '지팡이',
     weight: 2.45,
@@ -1010,9 +1010,10 @@ defineItem({
     onUse: null,
     equipSlot: 'mainHand',
     modifiers: [
-        { attribute: 'magicForce', op: 'add', value: 18, source: '' },
-        { attribute: 'mentalityRegen', op: 'add', value: 1, source: '' },
-        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.1, source: '' },
+        { attribute: 'magicForce', op: 'add', value: 60, source: '' },
+        { attribute: 'magicPen', op: 'add', value: 6, source: '' },
+        { attribute: 'mentalityRegen', op: 'add', value: 3, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.2, source: '' },
     ],
     baseDurability: 170,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.PROPERTY_DARK, GameTags.PROPERTY_UNDEAD],

@@ -173,6 +173,11 @@ export interface SkillData {
         calculateDamage?: (context: SkillContext) => number;
         /** 스킬 공격 순간 실제로 적용되는 총 관통력. 생략하면 시전자 능력치를 사용한다. */
         calculatePenetration?: (context: SkillContext) => number;
+        /**
+         * 피격자의 이동속도 회피 판정에 사용할 실제 공격 측 속도.
+         * 투사체 스킬은 발사체 가속·반영 계수·스킬 배율을 모두 적용한 값을 반환한다.
+         */
+        calculateEvasionAttackSpeed?: (context: SkillContext) => number;
         /** 실제 공격 옵션이 회피 불가일 때 밸런스 계산에서도 명중률을 100%로 고정한다. */
         unavoidable?: boolean;
         criticalMode?: SkillCriticalMode;

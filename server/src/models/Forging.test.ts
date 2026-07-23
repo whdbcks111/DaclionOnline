@@ -129,6 +129,18 @@ test('희귀 특이 각인은 기본 형태와 무관한 상충 능력치와 이
     assert.ok(lifeBound.modifiers?.some(modifier => modifier.attribute === 'maxLife' && modifier.value >= 900));
     assert.ok(spellBound.modifiers?.some(modifier => modifier.attribute === 'magicForce' && modifier.value >= 80));
     assert.equal(spellBound.getMetadata<{ quirk: string }>('forge')?.quirk, 'spell_bound');
+
+    const extremeRolls = [0, 0.99, 0.99, 0, 0];
+    const extremeSpellBound = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SWORD, ForgeMaterial.IRON, {
+        accuracy: 0.9,
+        random: () => extremeRolls.shift() ?? 0,
+        creatorLevel: 10_000,
+        sensibility: 1_000_000,
+        forgingPrecision: 2,
+    }));
+    const extremeMagicForce = extremeSpellBound.modifiers
+        ?.find(modifier => modifier.attribute === 'magicForce')?.value ?? 0;
+    assert.equal(extremeMagicForce, 160);
 });
 
 test('방어 형태는 무기 전용 치명타 성향을 제외한다', () => {

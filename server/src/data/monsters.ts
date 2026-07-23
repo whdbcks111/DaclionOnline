@@ -1616,7 +1616,7 @@ const advancedWorldMonsters: WorldMonsterData[] = [
     {
         id: 'sanctum_keeper', name: '성역 수문장', description: '침입자를 가려내는 신성 금속 갑주.', level: 115,
         baseAttribute: { maxLife: 8800, atk: 360, magicForce: 330, def: 225, magicDef: 220, speed: 1.65 },
-        drops: [{ itemDataId: 'starwood_staff', minCount: 1, maxCount: 1, chance: 0.025 }], goldReward: { min: 320, max: 530 },
+        drops: [{ itemDataId: 'helioglass_staff', minCount: 1, maxCount: 1, chance: 0.025 }], goldReward: { min: 320, max: 530 },
         tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_HOLY, GameTags.PROPERTY_METAL],
     },
     {

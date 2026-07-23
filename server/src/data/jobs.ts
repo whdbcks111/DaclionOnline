@@ -71,7 +71,7 @@ const eliteRecipes = [
     ['blacksmith', 'warrior', 'battle_smith', '전투 대장장이', 0.9],
     ['blacksmith', 'archer', 'artificer', '기계 장인'],
     ['blacksmith', 'assassin', 'venom_smith', '독금 장인'],
-    ['blacksmith', 'mage', 'arcane_smith', '마도 대장장이', 0.95],
+    ['blacksmith', 'mage', 'arcane_smith', '마도 대장장이', 0.93],
 ] as const;
 
 for (const [main, sub, eliteId, name, offenseFactor = 1] of eliteRecipes) {

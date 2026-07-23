@@ -168,7 +168,7 @@ function printProfiles(profileLevel: number): void {
             `일반=${report.monster.dps.toFixed(2)}DPS/${formatSeconds(report.monster.estimatedKillSeconds)}`,
             `보스=${report.boss.dps.toFixed(2)}DPS/${formatSeconds(report.boss.estimatedKillSeconds)}`,
             `평타=${(report.boss.basicDamageShare * 100).toFixed(1)}%`,
-            `회피=${(report.boss.evasionChance * 100).toFixed(1)}%(${report.boss.currentSpeed.toFixed(2)}:${report.boss.targetSpeed.toFixed(2)})`,
+            `회피=${(report.boss.evasionChance * 100).toFixed(1)}%(${report.boss.basicAttackEvasionSpeed.toFixed(2)}:${report.boss.targetSpeed.toFixed(2)})`,
             `관통=${report.boss.penetration.toFixed(1)}/${report.boss.targetDefense.toFixed(1)}→${report.boss.effectiveDefense.toFixed(1)}`,
             `스킬=${report.boss.skills.map(skill => `${skill.name}Lv.${skill.skillLevel}x${skill.casts}`).join(',')}`,
         ].join('  '));

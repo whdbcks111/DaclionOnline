@@ -175,7 +175,7 @@ test('high-level job weapons expose measurable role-specific gains', () => {
         analyzeItemBalance(70, 'career:warrior', 'windsteel_sword'),
         analyzeItemBalance(70, 'career:archer', 'stormstring_bow'),
         analyzeItemBalance(90, 'career:assassin', 'nightglass_dagger'),
-        analyzeItemBalance(120, 'career:mage', 'starwood_staff'),
+        analyzeItemBalance(120, 'career:mage', 'auroraprism_staff'),
     ];
     assert.ok(reports[0].after.attack > reports[0].before.attack);
     assert.ok(reports[1].after.physicalBasicDps > reports[1].before.physicalBasicDps);
@@ -198,8 +198,23 @@ test('combat profiles share resources while mixing basics and every available jo
             assert.ok(rotation.evasionChance >= 0 && rotation.evasionChance <= 0.9);
             assert.equal(rotation.effectiveDefense, Math.max(0, rotation.targetDefense - rotation.penetration));
             assert.ok(rotation.currentSpeed > 0 && rotation.targetSpeed > 0);
+            assert.ok(rotation.basicAttackEvasionSpeed > 0);
         }
     }
+});
+
+test('recommended mage equipment follows the actual early-to-late staff progression', () => {
+    assert.equal(analyzeBalanceProfile(20, 'career:mage').boss.loadoutName, '성휘목 지팡이');
+    assert.equal(analyzeBalanceProfile(50, 'career:mage').boss.loadoutName, '애도목 지팡이');
+    assert.equal(analyzeBalanceProfile(120, 'career:mage').boss.loadoutName, '극광분광 지팡이');
+    assert.equal(analyzeBalanceProfile(200, 'career:mage').boss.loadoutName, '논리핵 지팡이');
+});
+
+test('projectile balance reports use flight acceleration instead of owner movement speed for evasion', () => {
+    const mage = analyzeBalanceProfile(50, 'career:mage').boss;
+    assert.notEqual(mage.basicAttackEvasionSpeed, mage.currentSpeed);
+    assert.ok(mage.basicAttackEvasionSpeed > mage.currentSpeed);
+    assert.ok(mage.evasionChance < 0.15);
 });
 
 test('advanced first-job profiles stay within the measured 1.5x boss DPS band', () => {
