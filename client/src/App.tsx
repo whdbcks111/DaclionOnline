@@ -10,6 +10,7 @@ import Register from './pages/Register'
 import LocationEditor from './pages/LocationEditor'
 import AdminPage from './pages/AdminPage'
 import GameGuide from './pages/GameGuide'
+import PatchNotes from './pages/PatchNotes'
 
 function SessionHandler() {
   const { socket } = useSocket();
@@ -68,6 +69,7 @@ function App() {
             {/* 홈 페이지 (로그인 후) */}
             <Route path="/home" element={<Home />} />
             <Route path="/guide" element={<GameGuide />} />
+            <Route path="/patch-notes" element={<PatchNotes />} />
 
             {/* 어드민 페이지 */}
             <Route path="/admin" element={<AdminPage />} />

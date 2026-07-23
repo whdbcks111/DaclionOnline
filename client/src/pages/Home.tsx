@@ -605,6 +605,10 @@ function HomeContent() {
           setDrawerOpen(false)
           window.location.assign('/guide')
         }}
+        onOpenPatchNotes={() => {
+          setDrawerOpen(false)
+          window.location.assign('/patch-notes')
+        }}
         permission={sessionInfo?.permission}
         onOpenAdmin={() => {
           setDrawerOpen(false)

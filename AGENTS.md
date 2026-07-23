@@ -20,6 +20,7 @@
 11. 장소에 `mapIcon`을 추가할 때는 `client/public/icons/map/{mapIcon}.png` 128×128 투명 배경 랜드마크 아이콘을 같은 변경에 추가한다.
 12. 직업 정의에 아이콘을 추가할 때는 `client/public/icons/jobs/{key}.png` 128×128 투명 배경 아이콘을 같은 변경에 추가한다. 엘리트 직업은 계보 아이콘을 재사용할 수 있다.
 13. UI는 테마 token과 단색 면, 얇은 경계선, 명확한 간격·타이포그래피를 중심으로 깔끔하고 평면적으로 구성한다. 장식 목적의 그라데이션, 네온 glow, 발광 외곽선, 과도한 그림자는 기본적으로 사용하지 않으며 게임 효과를 의미상 표현해야 할 때만 제한적으로 사용한다.
+14. 사용자에게 보이는 기능·콘텐츠·밸런스·오류 수정은 같은 변경에서 `shared/patchNotes.ts`의 해당 날짜 항목도 갱신한다. 같은 날짜는 하나의 일별 항목에 합치고 내부 구현명이 아닌 플레이어 관점으로 작성한다.
 
 ## 문서 경로
 
@@ -38,6 +39,7 @@
 - [`docs/systems/combat-ai.md`](docs/systems/combat-ai.md)
 - [`docs/systems/pvp-regions.md`](docs/systems/pvp-regions.md)
 - [`docs/systems/karma.md`](docs/systems/karma.md)
+- [`docs/systems/patch-notes.md`](docs/systems/patch-notes.md)
 - [`docs/systems/shields.md`](docs/systems/shields.md)
 - [`docs/systems/items-shop.md`](docs/systems/items-shop.md)
 - [`docs/systems/crafting.md`](docs/systems/crafting.md)

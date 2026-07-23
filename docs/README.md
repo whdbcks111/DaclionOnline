@@ -21,6 +21,7 @@
 | 전투 pipeline·몬스터 AI·위협/기여도 | [systems/combat-ai.md](systems/combat-ai.md) |
 | PVP 타겟·지역 위험도·사망 패널티 | [systems/pvp-regions.md](systems/pvp-regions.md) |
 | 카르마·악명·현상 대상과 시설 제한 | [systems/karma.md](systems/karma.md) |
+| 일별 패치노트 데이터·명령·화면 | [systems/patch-notes.md](systems/patch-notes.md) |
 | 엔티티 보호막·피해 흡수·체력바 표시 | [systems/shields.md](systems/shields.md) |
 | 태그·속성 상성·효과 배율 | [systems/tags-effects.md](systems/tags-effects.md) |
 | 상태효과·행동 제한·지속 피해 | [systems/status-effects.md](systems/status-effects.md) |
@@ -134,5 +135,6 @@ UI 스타일은 고정 px 배치와 크기에 의존하지 않는다. 기존 SCS
 3. 이벤트·엔드포인트·공개 함수가 바뀌면 `docs/api/`를 갱신한다.
 4. 시스템 흐름이나 책임 경계가 바뀌면 `docs/systems/` 또는 `docs/architecture/`를 갱신한다.
 5. DB 스키마나 저장 시점이 바뀌면 `docs/data/database.md`를 갱신한다.
+6. 사용자에게 보이는 기능·콘텐츠·밸런스·오류 수정은 `shared/patchNotes.ts`의 해당 날짜에도 플레이어 관점으로 기록한다.
 
 단순 포맷팅이나 주석 교정처럼 동작·책임·API가 바뀌지 않는 변경은 문서 수정이 필요하지 않다.

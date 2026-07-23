@@ -15,7 +15,7 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 
 `ChatMessage.content`는 사용자 일반 입력에서는 text node 배열이고, 시스템 메시지는 `chat()` 빌더 또는 `parseChatMessage()`로 만든 `ChatNode[]`다. 클라이언트 `ChatMessage.tsx`가 노드 트리를 재귀 렌더링한다.
 
-플레이어가 보낸 일반 채팅·명령 표시·이미지·귓속말·스킬 시전 메시지는 채널 히스토리에 들어가는 시점의 `Player.isNewcomer`를 `ChatMessage.newcomer`로 snapshot한다. Player 생성 뒤 누적 온라인 플레이 시간이 24시간 미만이면 클라이언트가 닉네임 왼쪽에 `🌱`를 표시한다. 누적 시간은 User 가입일이 아니라 `player:play_time_seconds` Progress이며 오프라인 시간은 포함하지 않는다.
+플레이어가 보낸 일반 채팅·명령 표시·이미지·귓속말·스킬 시전 메시지는 채널 히스토리에 들어가는 시점의 `Player.isNewcomer/isKarmaMarked`를 `ChatMessage.newcomer/karmaMarked`로 snapshot한다. Player 생성 뒤 누적 온라인 플레이 시간이 24시간 미만이면 닉네임 왼쪽에 `🌱`를, 카르마가 악명 단계 이상이면 닉네임 오른쪽에 `🥀`를 표시한다. 누적 시간은 User 가입일이 아니라 `player:play_time_seconds` Progress이며 오프라인 시간은 포함하지 않는다.
 
 `Home.tsx`는 메시지 전송 후 입력 내용만 비우고 contenteditable의 포커스와 커서를 유지한다. 전송 버튼의 pointer down도 입력 포커스를 빼앗지 않으므로 모바일 가상 키보드가 매 전송마다 닫히거나 다시 열리며 깜빡이지 않는다.
 
@@ -48,6 +48,7 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 | --- | --- | --- |
 | 일반 | `/도움말` (`help`) | 권한별 명령 목록. 구분선·인자·설명은 라이트/다크 테마별 text/background token으로 표시 |
 | 일반 | `/단축키목록` | 현재 권한으로 사용 가능한 명령 중 별칭이 등록된 항목을 `정식 명령 → 별칭` 형식으로 표시 |
+| 일반 | `/패치노트 [날짜]` (`patchnotes`, `pn`) | 공유 일별 변경 기록을 최신순으로 표시하거나 지정 날짜만 확인 |
 | 일반 | `/공개모드` (`publicmode`), `/비공개모드` (`privatemode`) | 이후 정보성 명령의 입력·결과 공개 범위를 전환하고 notification 표시 |
 | 일반 | `/랜덤` (`random`) | 두 정수 사이 난수 |
 | 일반 | `/속성표` (`affinity`) | 내부 태그 코드 없이 표시명·아이콘·배율만 사용해 공격/방어와 우세·열세·무효/취약·저항·면역을 계층별 한 줄로 표시 |
