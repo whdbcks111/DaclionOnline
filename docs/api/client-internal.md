@@ -20,6 +20,8 @@
 
 `PartyHud`는 nullable `playerStats.party`를 사용해 파티원별 레벨·생명력·정신력과 같은 장소 여부를 표시한다. 파티가 없으면 렌더링하지 않으며 HUD 설정 API로 표시·위치·크기를 조절한다. `Home.tsx`의 정보 공개 버튼은 서버 `informationMode` 이벤트만 상태 원본으로 사용한다. 채팅 첫 토큰이 `@`로 시작하면 온라인 플레이어 mention completion을 요청하고 선택한 닉네임을 `@닉네임 ` 형식으로 입력한다.
 
+`Home.tsx`의 답장 상태는 원문 `messageId/userId/nickname/preview` snapshot 하나만 소유한다. 공개 메시지의 답장 버튼은 모바일 입력 포커스를 빼앗지 않고 입력창 위 미리보기를 열며, 텍스트 또는 이미지만 전송하는 첫 메시지에 `replyToId`를 붙인다. 전송된 `ChatMessage.replyTo` 카드를 누르면 `chat-message-{id}` 요소로 즉시 이동하고 1.6초 동안 강조한다. 원문이 현재 100개 히스토리에 없으면 입력창 안내를 표시한다.
+
 `components/minigame/MiniGameOverlay`는 서버 `miniGameStart`를 전체 화면 overlay로 렌더링한다. 낚시·위험 회피는 키보드와 pointer 조이스틱의 축 변경을 20ms 단위로 합치고, 단조 리듬은 Space·Enter·터치 버튼의 `strike` 시각을 별도 action trace로 기록한다. 단조는 난이도·원 정확도·보정 품질을 표시하고 첫 사용자 타격 이후 Web Audio 접근 cue와 충격음을 재생한다. 화면은 공용 결정론 시뮬레이터로 미리 계산하지만 성공 권한은 서버에 있으며 전송 시점의 불변 trace snapshot만 `miniGameResult`로 반환한다.
 
 ## 채팅 UI API
@@ -28,6 +30,7 @@
 | --- | --- | --- |
 | `renderNode(node, key)` | `components/chat/ChatMessage.tsx` | ChatNode별 renderer dispatch |
 | `resolveColor(color)` | `components/chat/ChatMessage.tsx` | `$token` 또는 CSS color 해석 |
+| `summarizeChatContent(content)` | `shared/chat.ts` | 구조화 메시지를 답장 카드용 최대 120자 한 줄 요약으로 변환 |
 | `resolveCommandInput(commands, raw)` | `utils/commandAutocomplete.ts` | 슬래시 명령 또는 첫 단어가 정확한 별칭인 입력을 CommandInfo에 연결 |
 | `isCommandAutocompleteInput(commands, raw)` | `utils/commandAutocomplete.ts` | 현재 입력이 명령 자동완성 대상인지 판정 |
 | `getFilteredCommands(commands, filter)` | `utils/commandAutocomplete.ts` | 슬래시 명령 prefix 또는 정확한 슬래시 없는 별칭 필터 |

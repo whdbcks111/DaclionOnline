@@ -1,4 +1,5 @@
-import type { ChatMessage, ChannelInfo } from "../../../shared/types.js";
+import { summarizeChatContent } from "../../../shared/chat.js";
+import type { ChatMessage, ChatReplyReference, ChannelInfo } from "../../../shared/types.js";
 
 const MAX_CHANNEL_HISTORY = 100;
 
@@ -48,6 +49,18 @@ export function setUserChannel(userId: number, channel: string | null): void {
 /** 채널의 메시지 히스토리 반환 */
 export function getChannelHistory(channel: string | null): ChatMessage[] {
     return channelHistories.get(channel) ?? [];
+}
+
+/** 현재 공개 채널 히스토리의 메시지를 안전한 답장 표시 스냅샷으로 변환한다. */
+export function getPublicReplyReference(channel: string | null, messageId: string): ChatReplyReference | undefined {
+    const message = channelHistories.get(channel)?.find(candidate => candidate.id === messageId);
+    if (!message?.id || message.replyable === false) return undefined;
+    return {
+        messageId: message.id,
+        userId: message.userId,
+        nickname: message.nickname,
+        preview: summarizeChatContent(message.content),
+    };
 }
 
 /** 채널 히스토리에 메시지 추가 */

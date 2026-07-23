@@ -15,6 +15,8 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 
 `ChatMessage.content`는 사용자 일반 입력에서는 text node 배열이고, 시스템 메시지는 `chat()` 빌더 또는 `parseChatMessage()`로 만든 `ChatNode[]`다. 클라이언트 `ChatMessage.tsx`가 노드 트리를 재귀 렌더링한다.
 
+공개 메시지의 답장 버튼을 누르면 `Home.tsx`가 원문 ID와 로컬 요약을 입력창 위에 표시하고 포커스를 유지한다. 전송 시에는 본문과 `replyToId`만 서버에 보내며, 서버가 현재 채널의 공개 히스토리에서 원문을 다시 찾아 전송자·120자 한 줄 요약을 `ChatMessage.replyTo`로 snapshot한다. 필터·귓속말·본인 전용 메시지는 `replyable: false`라 공개 답장 대상으로 선택되지 않아 비공개 본문이 유출되지 않는다. 전송된 답장 위의 원문 요약을 누르면 클라이언트가 현재 히스토리의 원문으로 즉시 스크롤하고 잠시 강조한다. 원문이 100개 히스토리 밖으로 밀렸거나 삭제되었다면 안내만 표시한다.
+
 플레이어가 보낸 일반 채팅·명령 표시·이미지·귓속말·스킬 시전 메시지는 채널 히스토리에 들어가는 시점의 `Player.isNewcomer/isKarmaMarked`를 `ChatMessage.newcomer/karmaMarked`로 snapshot한다. Player 생성 뒤 누적 온라인 플레이 시간이 24시간 미만이면 닉네임 왼쪽에 `🌱`를, 카르마가 악명 단계 이상이면 닉네임 오른쪽에 `🥀`를 표시한다. 누적 시간은 User 가입일이 아니라 `player:play_time_seconds` Progress이며 오프라인 시간은 포함하지 않는다.
 
 `Home.tsx`는 메시지 전송 후 입력 내용만 비우고 contenteditable의 포커스와 커서를 유지한다. 전송 버튼의 pointer down도 입력 포커스를 빼앗지 않으므로 모바일 가상 키보드가 매 전송마다 닫히거나 다시 열리며 깜빡이지 않는다.
@@ -39,6 +41,7 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 - 필터 히스토리: 채널별 최대 200개이며 사용자 filter 함수와 함께 메모리에 저장된다.
 - 모든 히스토리는 프로세스 재시작 시 사라진다.
 - 메시지에는 서버 생성 ID가 붙으며 `editMessage`/`deleteMessage`로 히스토리와 클라이언트 목록을 바꿀 수 있다.
+- 답장은 원문 전체를 중복 저장하지 않고 서버가 전송 시점에 만든 ID·전송자·요약 snapshot만 가진다.
 
 ## 등록된 명령어
 

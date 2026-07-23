@@ -86,9 +86,18 @@ export function resolveColor(color: string): string {
 interface Props {
     message: ChatMessageType
     showHeader: boolean
+    highlighted?: boolean
+    onReply?: (message: ChatMessageType) => void
+    onJumpToMessage?: (messageId: string) => void
 }
 
-export default function ChatMessage({ message, showHeader }: Props) {
+export default function ChatMessage({
+    message,
+    showHeader,
+    highlighted = false,
+    onReply,
+    onJumpToMessage,
+}: Props) {
     const nodes: ChatNode[] = typeof(message.content) === 'string' ?
         [{ type: 'text', text: message.content }] :
         message.content;
@@ -96,7 +105,11 @@ export default function ChatMessage({ message, showHeader }: Props) {
 
     return (
         <ChatMessageContext.Provider value={{ nickname: message.nickname, timestamp: message.timestamp }}>
-            <div className={`${styles.message} ${showHeader ? styles.withHeader : styles.continued}`}>
+            <div
+                id={message.id ? `chat-message-${message.id}` : undefined}
+                data-message-id={message.id}
+                className={`${styles.message} ${showHeader ? styles.withHeader : styles.continued} ${highlighted ? styles.highlighted : ''}`}
+            >
                 <div className={styles.avatarSlot}>
                     {showHeader && (
                         <div
@@ -129,6 +142,20 @@ export default function ChatMessage({ message, showHeader }: Props) {
                             <span className={styles.timestamp}>{formatTime(message.timestamp)}</span>
                         </div>
                     )}
+                    {message.replyTo && (
+                        <button
+                            type="button"
+                            className={styles.replyReference}
+                            aria-label={`${message.replyTo.nickname}님의 원본 메시지로 이동`}
+                            title="원본 메시지로 이동"
+                            onPointerDown={event => event.preventDefault()}
+                            onClick={() => onJumpToMessage?.(message.replyTo!.messageId)}
+                        >
+                            <span className={styles.replyMark} aria-hidden="true">↳</span>
+                            <span className={styles.replyAuthor}>{message.replyTo.nickname}</span>
+                            <span className={styles.replyExcerpt}>{message.replyTo.preview}</span>
+                        </button>
+                    )}
                     <div className={`${styles.body} ${hasTopLevelImage ? styles.mediaBody : ''}`}>
                         <div className={styles.content}>
                             {nodes.map((node, i) => renderNode(node, i))}
@@ -138,6 +165,22 @@ export default function ChatMessage({ message, showHeader }: Props) {
                         <div className={styles.privateLabel}>나에게만 보이는 메시지입니다.</div>
                     )}
                 </div>
+                {message.id && message.replyable !== false && onReply && (
+                    <div className={styles.messageActions}>
+                        <button
+                            type="button"
+                            className={styles.replyAction}
+                            aria-label={`${message.nickname}님의 메시지에 답장`}
+                            title="답장"
+                            onPointerDown={event => event.preventDefault()}
+                            onClick={() => onReply(message)}
+                        >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M9.5 7 4.5 12l5 5M5 12h8.2c3.8 0 6.3 2.1 6.3 5.5V19" />
+                            </svg>
+                        </button>
+                    </div>
+                )}
             </div>
         </ChatMessageContext.Provider>
     )

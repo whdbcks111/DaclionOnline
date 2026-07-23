@@ -38,7 +38,7 @@ export function getFlagsForPermission(permission: number): ChatFlag[] {
 
 /** 특정 채널에 메시지 전송 (채널 히스토리에 저장) */
 export function sendMessageToChannel(msg: ChatMessage, channel: string | null): void {
-    const identified = withId(msg);
+    const identified = withId({ ...msg, replyable: true });
     addToChannelHistory(channel, identified);
     getIO().to(getChannelRoomKey(channel)).emit('chatMessage', identified);
 }
@@ -49,7 +49,11 @@ const FLAG_PARTY: ChatFlag = { text: '파티', color: '#38bdf8' };
 
 /** 모든 채널에 브로드캐스트 (모든 채널 히스토리에 저장, [전체] 플래그 자동 부착) */
 export function broadcastMessageAll(msg: ChatMessage): void {
-    const flagged: ChatMessage = withId({ ...msg, flags: [FLAG_ALL, ...(msg.flags ?? [])] });
+    const flagged: ChatMessage = withId({
+        ...msg,
+        replyable: true,
+        flags: [FLAG_ALL, ...(msg.flags ?? [])],
+    });
     addToAllChannelHistories(flagged);
     getIO().emit('chatMessage', flagged);
 }
@@ -178,7 +182,11 @@ export function sendMessageFiltered(
     msg: ChatMessage,
     privateLabel = true,
 ): string {
-    const emitMsg = withId(privateLabel ? { ...msg, private: true } : msg);
+    const emitMsg = withId({
+        ...msg,
+        ...(privateLabel ? { private: true } : {}),
+        replyable: false,
+    });
     addToFilteredChannelHistory(channel, filter, emitMsg);
     // 해당 채널에 현재 접속 중인 유저에게만 실시간 전달
     forEachSocket(

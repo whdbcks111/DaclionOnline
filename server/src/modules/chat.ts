@@ -2,10 +2,24 @@ import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
 import { getSession, broadcastUserCount } from "./login.js";
 import { sendMessageToChannel, getFlagsForPermission, sendNotificationToUser, sendWhisperMessage } from "./message.js";
-import { getUserChannel, setUserChannel, getChannelHistory, getChannelRoomKey, getAvailableChannels, getFilteredHistoryForUser } from "./channel.js";
+import {
+    getUserChannel,
+    setUserChannel,
+    getChannelHistory,
+    getChannelRoomKey,
+    getAvailableChannels,
+    getFilteredHistoryForUser,
+    getPublicReplyReference,
+} from "./channel.js";
 import { sendPlayerStats, sendLocationInfo, getPlayerByUserId } from "./player.js";
 import { handleCommand, isCommandAliasInput } from "./bot.js";
-import type { ChatMessage } from "../../../shared/types.js";
+import { isChatMessageId } from "../../../shared/chat.js";
+import type {
+    ChatMessage,
+    ChatReplyReference,
+    SendChatImageRequest,
+    SendChatMessageRequest,
+} from "../../../shared/types.js";
 import { ActionType } from "../models/Action.js";
 import { findOnlinePlayerByIdentity, searchOnlinePlayerIdentitySnapshots } from './playerRegistry.js';
 import { getOwnedChatImage } from './upload.js';
@@ -17,6 +31,18 @@ const MAX_CHAT_IMAGE_BATCH = 10;
 export interface WhisperInput {
     target: string;
     message: string;
+}
+
+export function parseChatMessageRequest(payload: unknown): SendChatMessageRequest | undefined {
+    if (typeof payload === 'string') return { content: payload };
+    if (typeof payload !== 'object' || payload === null) return undefined;
+    const { content, replyToId } = payload as { content?: unknown; replyToId?: unknown };
+    if (typeof content !== 'string') return undefined;
+    if (replyToId !== undefined && !isChatMessageId(replyToId)) return undefined;
+    return {
+        content,
+        ...(replyToId === undefined ? {} : { replyToId }),
+    };
 }
 
 /** @닉네임 뒤의 첫 공백을 기준으로 수신자와 본문을 분리한다. @ 입력은 오류 안내를 위해 빈 값도 반환한다. */
@@ -31,14 +57,38 @@ export function parseWhisperInput(content: string): WhisperInput | null {
     };
 }
 
-/** 단일 레거시 payload와 다중 이미지 payload를 같은 검증 경계로 정규화한다. */
-export function parseChatImageFilenames(payload: unknown): string[] | undefined {
+/** 단일 레거시 payload와 다중 이미지 payload를 답장 참조까지 포함해 정규화한다. */
+export function parseChatImageRequest(payload: unknown): SendChatImageRequest | undefined {
     if (typeof payload !== 'object' || payload === null) return undefined;
-    const record = payload as { filename?: unknown; filenames?: unknown };
+    const record = payload as { filename?: unknown; filenames?: unknown; replyToId?: unknown };
     const raw = record.filenames ?? (record.filename === undefined ? undefined : [record.filename]);
     if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_CHAT_IMAGE_BATCH) return undefined;
     if (!raw.every(filename => typeof filename === 'string' && filename.length > 0 && filename.length <= 160)) return undefined;
-    return raw as string[];
+    if (record.replyToId !== undefined && !isChatMessageId(record.replyToId)) return undefined;
+    return {
+        filenames: raw as string[],
+        ...(record.replyToId === undefined ? {} : { replyToId: record.replyToId }),
+    };
+}
+
+/** 기존 테스트·호출부에서 파일명 배열만 필요할 때 사용하는 호환 API. */
+export function parseChatImageFilenames(payload: unknown): string[] | undefined {
+    return parseChatImageRequest(payload)?.filenames;
+}
+
+function resolveReplyReference(
+    userId: number,
+    channel: string | null,
+    replyToId?: string,
+): { ok: true; replyTo?: ChatReplyReference } | { ok: false } {
+    if (!replyToId) return { ok: true };
+    const replyTo = getPublicReplyReference(channel, replyToId);
+    if (replyTo) return { ok: true, replyTo };
+    sendNotificationToUser(userId, {
+        key: 'chat-reply-target-missing',
+        message: '답장할 원본 메시지가 현재 공개 채팅 기록에 없습니다.',
+    });
+    return { ok: false };
 }
 
 export const initChat = () => {
@@ -151,10 +201,10 @@ export const initChat = () => {
             handleCommand(session.userId, trimmed, msg, session.permission);
         });
 
-        socket.on('sendMessage', (content: unknown) => {
-            if (typeof content !== 'string') return;
-
-            const trimmed = content.trim();
+        socket.on('sendMessage', (payload: unknown) => {
+            const request = parseChatMessageRequest(payload);
+            if (!request) return;
+            const trimmed = request.content.trim();
             if (trimmed.length === 0 || trimmed.length > MAX_MESSAGE_LENGTH) return;
 
             const session = socket.data.sessionToken
@@ -166,6 +216,9 @@ export const initChat = () => {
                 return;
             }
 
+            const channel = getUserChannel(session.userId);
+            const resolvedReply = resolveReplyReference(session.userId, channel, request.replyToId);
+            if (!resolvedReply.ok) return;
             const flags = getFlagsForPermission(session.permission);
             const msg: ChatMessage = {
                 userId: session.userId,
@@ -174,6 +227,7 @@ export const initChat = () => {
                 flags: flags.length > 0 ? flags : undefined,
                 content: [{ type: 'text', text: trimmed }],
                 timestamp: Date.now(),
+                replyTo: resolvedReply.replyTo,
             };
 
             // 명령어 처리
@@ -236,12 +290,13 @@ export const initChat = () => {
             const skillActivation = player?.skills.activateFromMessage(trimmed);
             if (skillActivation?.matched) return;
 
-            sendMessageToChannel(msg, getUserChannel(session.userId));
+            sendMessageToChannel(msg, channel);
         });
 
         const sendImageBatch = async (payload: unknown) => {
-            const filenames = parseChatImageFilenames(payload);
-            if (!filenames) return;
+            const request = parseChatImageRequest(payload);
+            const filenames = request?.filenames;
+            if (!request || !filenames) return;
             const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
             if (!session) { socket.emit('sessionInvalid'); return; }
             const player = getPlayerByUserId(session.userId);
@@ -253,6 +308,9 @@ export const initChat = () => {
                 return;
             }
 
+            const channel = getUserChannel(session.userId);
+            const resolvedReply = resolveReplyReference(session.userId, channel, request.replyToId);
+            if (!resolvedReply.ok) return;
             const images = await Promise.all(filenames.map(filename => getOwnedChatImage(session.userId, filename)));
             if (images.some(image => !image)) {
                 sendNotificationToUser(session.userId, {
@@ -281,7 +339,8 @@ export const initChat = () => {
                 flags: flags.length > 0 ? flags : undefined,
                 content: content.build(),
                 timestamp: Date.now(),
-            }, getUserChannel(session.userId));
+                replyTo: resolvedReply.replyTo,
+            }, channel);
         };
 
         socket.on('sendImageMessage', sendImageBatch);

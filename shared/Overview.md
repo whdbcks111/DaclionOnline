@@ -4,7 +4,8 @@
 
 서버와 클라이언트가 함께 사용하는 네트워크 계약과 리소스를 둔다.
 
-- `types.ts`: 태그, `monster | resource` 통합 오브젝트·NPC ID·지도 아이콘·대표색이 포함된 LocationData, 플레이어별 `WorldMapData`와 `worldMap` ChatNode, 타입색 `ShieldBarSegment`와 재사용 채팅 노드, `level/exp/maxExp`를 가진 플레이어/위치 HUD DTO, `newcomer/karmaMarked` 닉네임 표식, 단일 호환·최대 10장 묶음 이미지 메시지·정보 공개·채널·온라인 mention Socket.io 이벤트 map의 단일 기준. Player/Location HUD는 `syncId/revision`을 포함해 중복·역순 snapshot을 거르며, `AdjacentLocationData`는 플레이어 기준 `visible | locked`와 공개 잠금 사유를 포함한다. 관리자 action 계약에는 카르마 설정과 실제 장비·스킬 로테이션을 실행하는 `analyze_balance_profile`이 포함된다.
+- `types.ts`: 태그, `monster | resource` 통합 오브젝트·NPC ID·지도 아이콘·대표색이 포함된 LocationData, 플레이어별 `WorldMapData`와 `worldMap` ChatNode, 타입색 `ShieldBarSegment`와 재사용 채팅 노드, `level/exp/maxExp`를 가진 플레이어/위치 HUD DTO, `newcomer/karmaMarked` 닉네임 표식, 서버 검증 `ChatReplyReference`, 단일 호환·최대 10장 묶음 이미지 메시지·정보 공개·채널·온라인 mention Socket.io 이벤트 map의 단일 기준. Player/Location HUD는 `syncId/revision`을 포함해 중복·역순 snapshot을 거르며, `AdjacentLocationData`는 플레이어 기준 `visible | locked`와 공개 잠금 사유를 포함한다. 관리자 action 계약에는 카르마 설정과 실제 장비·스킬 로테이션을 실행하는 `analyze_balance_profile`이 포함된다.
+- `chat.ts`: 구조화 ChatNode를 답장용 최대 120자 한 줄로 요약하고 서버 메시지 ID 형식을 검증하는 공용 순수 함수.
 - `commandInput.ts`: 슬래시 명령과 슬래시 없는 별칭 입력을 같은 방식으로 첫 토큰/나머지 인자로 분리하는 공용 parser.
 - `patchNotes.ts`: 일별 사용자 공개 변경 기록, 콘텐츠·시스템·밸런스·편의성·오류 수정 클래스형 분류와 날짜 역순 불변 snapshot 조회 API. 서버 명령과 클라이언트 패치노트 화면이 같은 데이터를 사용한다.
 - `minigames.ts`: 종류별 미니게임 세션·축/action trace DTO, 20ms 축 입력 병합·2,048개 상한·불변 전송 snapshot API와 낚시 포획, 실제 패턴 label·보스별 단색 theme·난이도 1~10·성장형 연쇄 폭발·세 줄 연사·교차 레이저를 지원하는 위험 회피, 난이도별 정박/엇박/연속박자 생성·가장 가까운 note 우선 타격 판정·짧은 터치 표시 지연 보정·품질 보정을 서버와 클라이언트가 공유하는 단조 리듬 시뮬레이터.

@@ -14,7 +14,17 @@ import Drawer from '../components/Drawer'
 import HudContainer from '../components/hud/HudContainer'
 import HudSettings from '../components/hud/HudSettings'
 import MiniGameOverlay from '../components/minigame/MiniGameOverlay'
-import type { ChatMessage as ChatMessageType, CommandInfo, PlayerStatsData, LocationInfoData, ChannelInfo, UserCountData, CompletionItem } from '@shared/types'
+import { summarizeChatContent } from '@shared/chat'
+import type {
+  ChatMessage as ChatMessageType,
+  ChatReplyReference,
+  CommandInfo,
+  PlayerStatsData,
+  LocationInfoData,
+  ChannelInfo,
+  UserCountData,
+  CompletionItem,
+} from '@shared/types'
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
 const MAX_PENDING_IMAGES = 10
@@ -69,10 +79,13 @@ function HomeContent() {
   const [imageUploading, setImageUploading] = useState(false)
   const [mediaError, setMediaError] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<PendingChatImage[]>([])
+  const [replyingTo, setReplyingTo] = useState<ChatReplyReference | null>(null)
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const inputRef = useRef<HTMLDivElement>(null)
   const mediaInputRef = useRef<HTMLInputElement>(null)
   const pendingImagesRef = useRef<PendingChatImage[]>([])
   const imageSendingRef = useRef(false)
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
   const followLatestMessageRef = useRef(true)
   const forceLatestMessageRef = useRef(true)
@@ -95,6 +108,7 @@ function HomeContent() {
 
   useEffect(() => () => {
     pendingImagesRef.current.forEach(image => URL.revokeObjectURL(image.previewUrl))
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current)
   }, [])
 
   useEffect(() => {
@@ -125,6 +139,8 @@ function HomeContent() {
       followLatestMessageRef.current = true
       setCurrentChannel(channel)
       setMessages(history)
+      setReplyingTo(null)
+      setHighlightedMessageId(null)
     }
     const onChannelList = (list: Parameters<typeof setChannelList>[0]) => setChannelList(list)
     const onEditMessage = (id: string, content: ChatMessageType['content']) => {
@@ -132,6 +148,7 @@ function HomeContent() {
     }
     const onDeleteMessage = (id: string) => {
       setMessages(prev => prev.filter(msg => msg.id !== id))
+      setReplyingTo(current => current?.messageId === id ? null : current)
     }
     const onArgCompletions = (items: CompletionItem[]) => setDynamicCompletions(items)
     const onMentionCompletions = (items: CompletionItem[]) => setMentionCompletions(items)
@@ -210,6 +227,34 @@ function HomeContent() {
     selection?.addRange(range)
   }, [])
 
+  const jumpToMessage = useCallback((messageId: string) => {
+    const target = document.getElementById(`chat-message-${messageId}`)
+    if (!target) {
+      setMediaError('원본 메시지가 현재 채팅 기록에 없습니다.')
+      return
+    }
+    followLatestMessageRef.current = false
+    target.scrollIntoView({ behavior: 'auto', block: 'center' })
+    setHighlightedMessageId(messageId)
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current)
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlightedMessageId(current => current === messageId ? null : current)
+      highlightTimerRef.current = null
+    }, 1_600)
+  }, [])
+
+  const beginReply = useCallback((message: ChatMessageType) => {
+    if (!message.id || message.replyable === false) return
+    setReplyingTo({
+      messageId: message.id,
+      userId: message.userId,
+      nickname: message.nickname,
+      preview: summarizeChatContent(message.content),
+    })
+    setMediaError(null)
+    requestAnimationFrame(focusComposerEnd)
+  }, [focusComposerEnd])
+
   const clearPendingImages = useCallback(() => {
     pendingImagesRef.current.forEach(image => URL.revokeObjectURL(image.previewUrl))
     setPendingImages([])
@@ -276,11 +321,20 @@ function HomeContent() {
         setImageUploading(true)
         filenames = await Promise.all(attachments.map(image => uploadChatImage(image.file)))
       }
-      if (content) socket.emit('sendMessage', content)
-      if (filenames.length > 0) socket.emit('sendImageMessages', { filenames })
+      const replyToId = replyingTo?.messageId
+      if (content) {
+        socket.emit('sendMessage', replyToId ? { content, replyToId } : content)
+      }
+      if (filenames.length > 0) {
+        socket.emit('sendImageMessages', {
+          filenames,
+          ...(!content && replyToId ? { replyToId } : {}),
+        })
+      }
 
       if (inputElement) inputElement.textContent = ''
       clearPendingImages()
+      setReplyingTo(null)
       setCommandFilter('')
       setShowAutocomplete(false)
       focusComposerEnd()
@@ -290,7 +344,7 @@ function HomeContent() {
       imageSendingRef.current = false
       setImageUploading(false)
     }
-  }, [clearPendingImages, focusComposerEnd, pendingImages, socket])
+  }, [clearPendingImages, focusComposerEnd, pendingImages, replyingTo, socket])
 
   const selectCommand = useCallback((name: string) => {
     if (!inputRef.current) return
@@ -476,7 +530,16 @@ function HomeContent() {
               || prev.profileImage !== msg.profileImage
               || JSON.stringify(prev.flags) !== JSON.stringify(msg.flags)
               || Math.floor(prev.timestamp / 60000) !== Math.floor(msg.timestamp / 60000)
-            return <ChatMessage key={msg.id ?? i} message={msg} showHeader={showHeader} />
+            return (
+              <ChatMessage
+                key={msg.id ?? i}
+                message={msg}
+                showHeader={showHeader}
+                highlighted={msg.id === highlightedMessageId}
+                onReply={beginReply}
+                onJumpToMessage={jumpToMessage}
+              />
+            )
           })}
         </div>
         <div className={styles.statusBars}>
@@ -498,6 +561,31 @@ function HomeContent() {
               paramCompletions={autocompleteCompletions}
               onSelectCompletion={mentionQuery !== null ? selectMention : selectCompletion}
             />
+          )}
+          {replyingTo && (
+            <div className={styles.replyPreview} aria-label={`${replyingTo.nickname}님에게 답장 중`}>
+              <button
+                type="button"
+                className={styles.replyPreviewTarget}
+                title="원본 메시지로 이동"
+                onPointerDown={event => event.preventDefault()}
+                onClick={() => jumpToMessage(replyingTo.messageId)}
+              >
+                <span className={styles.replyPreviewLabel}>{replyingTo.nickname}님에게 답장</span>
+                <span className={styles.replyPreviewText}>{replyingTo.preview}</span>
+              </button>
+              <button
+                type="button"
+                className={styles.replyCancelButton}
+                aria-label="답장 취소"
+                title="답장 취소"
+                onPointerDown={event => event.preventDefault()}
+                onClick={() => {
+                  setReplyingTo(null)
+                  focusComposerEnd()
+                }}
+              >×</button>
+            </div>
           )}
           {mediaError && <span className={styles.mediaError} role="alert">{mediaError}</span>}
           {pendingImages.length > 0 && (

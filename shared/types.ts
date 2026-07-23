@@ -142,6 +142,25 @@ export interface ChatFlag {
     color: string
 }
 
+/** 서버가 답장 원문에서 생성한 변경 불가능한 표시용 스냅샷. */
+export interface ChatReplyReference {
+    messageId: string
+    userId: number
+    nickname: string
+    preview: string
+}
+
+export interface SendChatMessageRequest {
+    content: string
+    replyToId?: string
+}
+
+export interface SendChatImageRequest {
+    filename?: string
+    filenames?: string[]
+    replyToId?: string
+}
+
 // 채팅 메시지
 export interface ChatMessage {
     id?: string
@@ -156,6 +175,10 @@ export interface ChatMessage {
     content: string | ChatNode[]
     timestamp: number
     private?: boolean
+    /** 공개 채널 원문을 서버에서 검증해 만든 답장 표시 정보. */
+    replyTo?: ChatReplyReference
+    /** false인 필터·귓속말 메시지는 공개 채널 답장 대상으로 선택하지 않는다. */
+    replyable?: boolean
 }
 
 /** 자동완성 항목 (값만 또는 값+설명) */
@@ -452,9 +475,9 @@ export interface ClientToServerEvents {
     logout: (token: string) => void
     sendVerifyCode: (email: string) => void
     verifyCode: (code: string) => void
-    sendMessage: (content: string) => void
-    sendImageMessage: (payload: { filename: string }) => void
-    sendImageMessages: (payload: { filenames: string[] }) => void
+    sendMessage: (payload: string | SendChatMessageRequest) => void
+    sendImageMessage: (payload: SendChatImageRequest) => void
+    sendImageMessages: (payload: SendChatImageRequest) => void
     chatButtonClick: (payload: { action: string; showCommand?: boolean }) => void
     requestChatHistory: () => void
     requestCommandList: () => void

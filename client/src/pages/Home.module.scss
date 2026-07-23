@@ -150,6 +150,74 @@
         font-size: $font-size-sm;
     }
 
+    .replyPreview {
+        display: flex;
+        align-items: stretch;
+        gap: $spacing-xs;
+        width: 100%;
+        box-sizing: border-box;
+        padding: $spacing-xs $spacing-sm;
+        border: 1px solid $color-border;
+        border-left: 3px solid $color-primary;
+        border-radius: $border-radius-sm;
+        background: $color-bg-secondary;
+    }
+
+    button.replyPreviewTarget {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        align-items: flex-start;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        color: $color-text-secondary;
+        background: transparent;
+        line-height: 1.35;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .replyPreviewLabel {
+        width: 100%;
+        overflow: hidden;
+        color: $color-primary;
+        font-size: $font-size-sm;
+        font-weight: bold;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .replyPreviewText {
+        width: 100%;
+        overflow: hidden;
+        color: $color-text-secondary;
+        font-size: $font-size-sm;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    button.replyCancelButton {
+        align-self: center;
+        min-width: 2rem;
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        color: $color-text-secondary;
+        background: transparent;
+        font-size: 1.25rem;
+        line-height: 1;
+        cursor: pointer;
+
+        &:hover,
+        &:focus-visible {
+            color: $color-text;
+            background: $color-bg-tertiary;
+        }
+    }
+
     .mediaPreviewTray {
         width: 100%;
         box-sizing: border-box;
