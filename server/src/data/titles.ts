@@ -222,9 +222,9 @@ defineTitle({
 defineTitle({
     id: 'title:annihilator',
     name: '몰살자',
-    acquisitionDescription: 'PVP에서 플레이어 100명 처치',
+    acquisitionDescription: 'PVP에서 플레이어 500명 처치',
     description: '플레이어를 대상으로 지정 중이면 치명타 확률이 5%p 증가합니다.',
-    canAcquire: player => counter(player, 'combat:pvp_kills') >= 100,
+    canAcquire: player => counter(player, 'combat:pvp_kills') >= 500,
     isPassiveActive: targetHas(GameTags.ENTITY_PLAYER),
     modifiers: () => [{ attribute: AttributeType.CRIT_RATE.key, op: 'add', value: 0.05 }],
 });
