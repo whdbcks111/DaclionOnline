@@ -22,6 +22,7 @@ import { initTradeCommands } from './trade.js';
 import { initTutorialCommands } from './tutorial.js';
 import { initKarmaCommands } from './karma.js';
 import { initPatchNoteCommands } from './patchNotes.js';
+import { initTitleCommands } from './title.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -48,4 +49,5 @@ export function initAllCommands(): void {
     initTutorialCommands();
     initKarmaCommands();
     initPatchNoteCommands();
+    initTitleCommands();
 }

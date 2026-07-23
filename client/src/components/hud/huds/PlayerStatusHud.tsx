@@ -61,13 +61,14 @@ export default function PlayerStatusHud() {
   const { playerStats } = useHud()
   if (!playerStats) return null
 
-  const { userId, nickname, level, exp, maxExp, life, maxLife, shields, mentality, maxMentality, thirsty, maxThirsty, hungry, maxHungry, attackCooldown, maxAttackCooldown } = playerStats
+  const { userId, nickname, equippedTitle, level, exp, maxExp, life, maxLife, shields, mentality, maxMentality, thirsty, maxThirsty, hungry, maxHungry, attackCooldown, maxAttackCooldown } = playerStats
   const statusEffects = playerStats.statusEffects ?? []
   const attackReady = maxAttackCooldown > 0 ? pct(maxAttackCooldown - attackCooldown, maxAttackCooldown) : 100
 
   return (
     <div className={styles.hud}>
       <div className={styles.title}>
+        {equippedTitle && <span className={styles.equippedTitle}>[{equippedTitle}]</span>}
         <span>{nickname}</span>
         <span className={styles.level}>Lv.{level}</span>
         <span className={styles.userId}>ID {userId}</span>

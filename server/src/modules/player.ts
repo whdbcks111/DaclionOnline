@@ -103,6 +103,7 @@ export function sendPlayerStats(userId: number): void {
     const data = {
         userId:            player.userId,
         nickname:          getSessionByUserId(userId)?.nickname ?? '',
+        equippedTitle:     player.titles.equippedName || undefined,
         level:             player.level,
         exp:               player.exp,
         maxExp:            player.maxExp,

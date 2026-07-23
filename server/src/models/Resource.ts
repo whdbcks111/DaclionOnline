@@ -149,6 +149,7 @@ export default class Resource extends Entity {
         if (!attackOwner?.isPlayer) return;
         const player = attackOwner as Player;
         attackOwner.currentTarget = null;
+        player.titles?.refreshPassiveEffects();
 
         const drop = this.rollDrop();
         if (drop) player.inventory.addItem(drop.itemDataId, drop.count);

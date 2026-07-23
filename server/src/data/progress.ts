@@ -65,6 +65,7 @@ for (const statistic of [
     label: statistic.label,
     description: '마법사 속성 주문 자동 획득에 사용하는 누적 처치 통계입니다.',
     visible: true,
-    amount: event => event.subject?.hasTag(statistic.tag) ? 1 : 0,
+    amount: event => event.subject?.hasTag(GameTags.ENTITY_MONSTER)
+        && event.subject.hasTag(statistic.tag) ? 1 : 0,
     format: value => `${value}회`,
 });

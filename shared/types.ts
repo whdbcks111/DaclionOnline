@@ -176,6 +176,8 @@ export interface ChatMessage {
     newcomer?: boolean
     /** 전송 시점에 카르마가 악명 단계 이상인 Player 표시. */
     karmaMarked?: boolean
+    /** 전송 시점에 장착 중인 칭호 표시명. */
+    equippedTitle?: string
     content: string | ChatNode[]
     timestamp: number
     private?: boolean
@@ -316,6 +318,7 @@ export interface SkillHudData {
 export interface PlayerStatsData extends SnapshotRevision {
     userId: number
     nickname: string
+    equippedTitle?: string
     level: number
     exp: number
     maxExp: number

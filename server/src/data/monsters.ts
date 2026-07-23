@@ -114,7 +114,7 @@ defineWorldMonster({
     baseAttribute: { maxLife: 120, atk: 24, def: 7, magicDef: 4, speed: 1.55, attackSpeed: 1.08 },
     drops: [{ itemDataId: 'wolf_pelt', minCount: 1, maxCount: 1, chance: 0.42 }],
     goldReward: { min: 8, max: 17 },
-    tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_NATURAL],
+    tags: [GameTags.ENTITY_BEAST, GameTags.ENTITY_WOLF, GameTags.PROPERTY_NATURAL],
 });
 
 defineWorldMonster({
@@ -141,7 +141,7 @@ defineWorldMonster({
     drops: [{ itemDataId: 'wolf_pelt', minCount: 1, maxCount: 2, chance: 0.58 }],
     goldReward: { min: 17, max: 31 },
     attack: { effect: { statusEffectId: 'bleeding', chance: 0.16, duration: 7, level: 1 } },
-    tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_NATURAL],
+    tags: [GameTags.ENTITY_BEAST, GameTags.ENTITY_WOLF, GameTags.PROPERTY_NATURAL],
 });
 
 defineWorldMonster({
@@ -168,7 +168,7 @@ defineWorldMonster({
         weights: { attack: 0.8, damage: 1, healing: 0.2, shielding: 0.2, control: 0.5, taunt: 0.8 },
         tauntResistance: 0.12, switchThreshold: 0.06,
     },
-    tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_BEAST, GameTags.PROPERTY_NATURAL],
+    tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_BEAST, GameTags.ENTITY_WOLF, GameTags.PROPERTY_NATURAL],
 });
 
 defineWorldMonster({
@@ -808,7 +808,7 @@ const frostveilMonsters: readonly WorldMonsterData[] = [
         ],
         goldReward: { min: 350, max: 580 },
         attack: { effect: { statusEffectId: 'bleeding', chance: 0.24, duration: 8, level: 6 } },
-        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_ICE],
+        tags: [GameTags.ENTITY_BEAST, GameTags.ENTITY_WOLF, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_ICE],
     },
     {
         id: 'icesilk_spider', name: '빙실 발톱거미',

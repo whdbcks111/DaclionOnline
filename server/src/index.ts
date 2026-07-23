@@ -22,6 +22,7 @@ import './data/shops.js';
 import './data/tagEffects.js';
 import './data/jobs.js';
 import './data/progress.js';
+import './data/titles.js';
 import './data/dungeonPuzzles.js';
 import './data/skills.js';
 import './data/crafting.js';

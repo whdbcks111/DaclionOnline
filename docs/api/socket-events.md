@@ -48,12 +48,12 @@
 | `verifyCodeSendResult` | `SimpleResult` | `modules/register.ts` | `pages/Register.tsx` |
 | `verifyCodeResult` | `SimpleResult` | `modules/register.ts` | `pages/Register.tsx` |
 | `chatHistory` | `ChatMessage[]` | `modules/chat.ts` | `pages/Home.tsx` |
-| `chatMessage` | `ChatMessage` (`replyTo?`, `replyable?` 포함) | `modules/message.ts` | `pages/Home.tsx` |
+| `chatMessage` | `ChatMessage` (`replyTo?`, `replyable?`, `equippedTitle?` 포함) | `modules/message.ts` | `pages/Home.tsx` |
 | `notification` | `NotificationData` | `modules/message.ts` | `components/Notification.tsx` |
 | `commandList` | `CommandInfo[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `argCompletions` | `CompletionItem[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `mentionCompletions` | `CompletionItem[]` | `modules/chat.ts` | `pages/Home.tsx` |
-| `playerStats` | `PlayerStatsData` (`syncId/revision`, 현재 `level/exp/maxExp`·자원·타입색 `shields`·공격 cooldown·`statusEffects`, 표시 가능한 스킬, nullable 파티 HUD). 내용이 바뀐 완전한 snapshot만 socket별 1회 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 `HudContext` → HUD |
+| `playerStats` | `PlayerStatsData` (`syncId/revision`, 장착 칭호, 현재 `level/exp/maxExp`·자원·타입색 `shields`·공격 cooldown·`statusEffects`, 표시 가능한 스킬, nullable 파티 HUD). 내용이 바뀐 완전한 snapshot만 socket별 1회 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 `HudContext` → HUD |
 | `informationMode` | `isPublic: boolean` | `modules/bot.ts` | `pages/Home.tsx` 입력창 공개/비공개 전환 버튼 |
 | `locationInfo` | `LocationInfoData` (`syncId/revision`, `zoneType/zoneLabel/pvpAllowed`, objects/플레이어 생명력·`shields`, 플레이어 기준 인접 장소). 내용 변경 시 완전한 snapshot 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 Location/Minimap HUD |
 | `userCount` | `UserCountData` (다중 탭을 합친 고유 사용자 기준 전체/채널 인원) | `modules/login.ts` | `pages/Home.tsx` |
@@ -73,7 +73,7 @@
 | `miniGameResolved` | `MiniGameResolvedData` | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 | `miniGameCancelled` | `MiniGameCancelledData` | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 
-`ChatMessage`와 `NotificationData` 안의 progress/health `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다. 플레이어 메시지는 전송 시점의 `newcomer/karmaMarked`를 선택적으로 포함해 `🌱/🥀` 닉네임 표식을 히스토리와 실시간 메시지에서 일관되게 표시한다. health 노드는 생명력·최대 생명력과 `ShieldBarSegment[]`를 한 snapshot으로 전달한다. image 노드는 서버가 정한 `src/alt/maxHeight`와 선택적 원본 `width/height` snapshot으로 채팅 업로드와 향후 스킬 연출 이미지를 공통 렌더링하고, divider는 선택적 제목을 가진 구분선을 렌더링한다. `/지도` private `ChatMessage`의 worldMap 노드는 별도 socket event 없이 방문지·인접 미방문지로 제한된 `WorldMapData` snapshot을 포함하며, 방문 장소의 검증된 `mapColor`만 바이옴 배경에 사용한다.
+`ChatMessage`와 `NotificationData` 안의 progress/health `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다. 플레이어 메시지는 전송 시점의 `newcomer/karmaMarked/equippedTitle`을 선택적으로 포함해 `🌱/🥀` 표식과 `[칭호]`를 히스토리와 실시간 메시지에서 일관되게 표시한다. health 노드는 생명력·최대 생명력과 `ShieldBarSegment[]`를 한 snapshot으로 전달한다. image 노드는 서버가 정한 `src/alt/maxHeight`와 선택적 원본 `width/height` snapshot으로 채팅 업로드와 향후 스킬 연출 이미지를 공통 렌더링하고, divider는 선택적 제목을 가진 구분선을 렌더링한다. `/지도` private `ChatMessage`의 worldMap 노드는 별도 socket event 없이 방문지·인접 미방문지로 제한된 `WorldMapData` snapshot을 포함하며, 방문 장소의 검증된 `mapColor`만 바이옴 배경에 사용한다.
 
 ## Room과 전송 범위
 

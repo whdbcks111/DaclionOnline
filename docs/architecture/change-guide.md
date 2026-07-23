@@ -74,6 +74,14 @@
 4. 고빈도 handler에서는 DB I/O를 하지 않는다. 메모리 dirty 변경은 Player의 30초/unload/종료 flush가 저장한다.
 5. 이벤트/진행 상태 ID와 사용처를 [systems/progress-skills.md](../systems/progress-skills.md)에 기록한다.
 
+## 칭호 추가
+
+1. `data/titles.ts`에서 `defineTitle()`로 획득 조건, 표시 설명, 장착 패시브를 등록한다.
+2. 획득 조건은 `PlayerProgress` 통계·플래그 공개 API를 사용하고, 새 행동을 세어야 하면 먼저 게임 이벤트와 숨김 통계를 정의한다.
+3. 지속 능력치는 `modifiers`, 경험치 보정은 `experienceGainMultiplier`, 공격 적중 효과는 전투 단계 callback으로 선언한다. 장비·대상 조건은 `isPassiveActive`에 둔다.
+4. 소유·장착·목록은 `Player.titles` 공개 API만 사용한다. `title-owned:*` 진행 플래그와 `title:equipped` 상태를 직접 수정하지 않는다.
+5. 명령·표시·영속 규칙과 전체 칭호 목록은 [systems/titles.md](../systems/titles.md)에 동기화하고 획득·장착·조건부 패시브 테스트를 추가한다.
+
 ## 스킬 추가
 
 1. `data/skills.ts`에 `defineSkill()` 마스터 데이터를 등록한다. base metadata, 계산 필드, 설명/소모/발동 조건 템플릿과 수명주기 callback을 필요한 만큼만 정의한다.

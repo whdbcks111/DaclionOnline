@@ -656,6 +656,7 @@ export default abstract class Entity implements TagReadable {
         const owner = attacker.attackOwner;
         if (this.currentTarget || owner === this || owner.isDefeated) return false;
         this.currentTarget = owner;
+        if (this.isPlayer) (this as unknown as Player).titles?.refreshPassiveEffects();
         return true;
     }
 
@@ -1071,7 +1072,8 @@ export default abstract class Entity implements TagReadable {
 
 function getAttackWeaponType(owner: Entity): string {
     const weapon = owner.equipment.getEquipped(EquipSlotType.MAIN_HAND.key);
-    if (!weapon) return '';
+    if (!weapon) return 'unarmed';
+    if (weapon.hasTag(GameTags.TOOL_MINING)) return 'pickaxe';
     for (const [type, tag] of [
         ['sword', GameTags.WEAPON_SWORD],
         ['axe', GameTags.WEAPON_AXE],
@@ -1079,7 +1081,7 @@ function getAttackWeaponType(owner: Entity): string {
         ['dagger', GameTags.WEAPON_DAGGER],
         ['staff', GameTags.WEAPON_STAFF],
     ] as const) if (weapon.hasTag(tag)) return type;
-    return '';
+    return 'other';
 }
 
 function addActionDisableSource(

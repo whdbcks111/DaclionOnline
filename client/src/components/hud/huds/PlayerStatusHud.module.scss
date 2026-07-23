@@ -37,6 +37,14 @@
     font-weight: 700;
 }
 
+.equippedTitle {
+    max-width: min(11rem, 38vw);
+    overflow: hidden;
+    color: $color-secondary;
+    font-size: 0.68rem;
+    text-overflow: ellipsis;
+}
+
 .compactExp {
     display: inline-flex;
     align-items: center;

@@ -21,6 +21,7 @@ export const GameTags = Object.freeze({
     ENTITY_HUMANOID: 'entity:humanoid',
     ENTITY_ELEMENTAL: 'entity:elemental',
     ENTITY_BEAST: 'entity:beast',
+    ENTITY_WOLF: 'entity:wolf',
     ENTITY_BOSS: 'entity:boss',
 
     ITEM_CONSUMABLE: 'item:consumable',

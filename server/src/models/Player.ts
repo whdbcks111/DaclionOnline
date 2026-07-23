@@ -46,6 +46,7 @@ import {
     type KarmaChangeSnapshot,
     type KarmaValueSnapshot,
 } from './Karma.js';
+import TitleBook from './Title.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
 export const NEWCOMER_PLAY_TIME_SECONDS = 24 * 60 * 60;
@@ -187,6 +188,7 @@ export default class Player extends Entity {
     readonly skills: SkillBook;
     readonly quests: QuestBook;
     readonly career: CareerProfile;
+    readonly titles: TitleBook;
     readonly rankingVisibility: RankingVisibility;
 
     private _nickname: string;
@@ -235,6 +237,7 @@ export default class Player extends Entity {
         this.quests.bindOwner(this);
         this.career = new CareerProfile(this);
         this.career.initialize();
+        this.titles = new TitleBook(this);
         this.inventory.subscribeChanges(() => this.quests.refreshSnapshotObjectives());
         this.progress.subscribeChanges(() => this.quests.refreshSnapshotObjectives());
         this._statPoint = statPoint;
@@ -498,6 +501,7 @@ export default class Player extends Entity {
         super.update(dt);
         if (Number.isFinite(dt) && dt > 0) this._unsavedPlayTime += dt;
         this.skills.update(dt);
+        this.titles.update(dt);
         this._craftingDiscoveryTimer -= dt;
         if (this._craftingDiscoveryTimer <= 0) {
             this._craftingDiscoveryTimer = 0.5;

@@ -194,6 +194,16 @@ $avatar-size: 40px;
     color: $color-text;
 }
 
+.titleBadge {
+    max-width: min(11rem, 35vw);
+    overflow: hidden;
+    color: $color-secondary;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .newcomer {
     display: inline-block;
     margin-right: -$spacing-xs;

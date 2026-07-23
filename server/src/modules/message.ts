@@ -20,11 +20,13 @@ function generateMessageId(): string {
 function withId(msg: ChatMessage): ChatMessage {
     if (msg.id) return msg;
     const player = msg.userId > 0 ? getOnlinePlayer(msg.userId) : undefined;
+    const equippedTitle = player?.titles?.equippedName;
     return {
         ...msg,
         id: generateMessageId(),
         ...(player?.isNewcomer ? { newcomer: true } : {}),
         ...(player?.isKarmaMarked ? { karmaMarked: true } : {}),
+        ...(equippedTitle ? { equippedTitle } : {}),
     };
 }
 

@@ -140,6 +140,8 @@ export function initPlayerCommands(): void {
                     .color(player.karmaTier.color, b => b.text(player.karmaTier.label))
                     .text(player.isKarmaMarked ? ' 🥀' : '')
                     .text('\n')
+                    .weight('bold', b => b.text('칭호'))
+                    .text(` ${player.titles.equippedName || '(미장착)'}\n`)
                     .weight('bold', b => b.text('메인 직업'))
                     .text(` ${player.career.effectiveMainJob?.name ?? '(미선택)'}`)
                     .text(player.career.eliteJob ? ` (${player.career.mainJob?.name} 계보)` : '')
@@ -619,6 +621,7 @@ export function initPlayerCommands(): void {
                 return;
             }
             player.currentTarget = target;
+            player.titles.refreshPassiveEffects();
             emitGameEvent(GameEventIds.TARGET_SELECTED, {
                 actor: player,
                 subject: target,
@@ -671,6 +674,7 @@ export function initPlayerCommands(): void {
                 return;
             }
             player.currentTarget = target;
+            player.titles.refreshPassiveEffects();
             sendBotMessageToUser(userId, chat()
                 .color('$enemy', b => b.text('[PVP 대상 지정] '))
                 .text(`Lv.${target.level} ${target.name} (#${target.userId})`)
@@ -713,6 +717,7 @@ export function initPlayerCommands(): void {
                 return;
             }
             player.currentTarget = target;
+            player.titles.refreshPassiveEffects();
             player.performBasicAttack(target);
         },
     });
@@ -755,6 +760,7 @@ export function initPlayerCommands(): void {
                     && ct.locationId === player.locationId;
                 if (!location.hasObject(ct) && !onlinePlayerTarget) {
                     player.currentTarget = null;
+                    player.titles.refreshPassiveEffects();
                     sendBotMessageToUser(userId, '현재 타겟이 이 장소에 없습니다.');
                     return;
                 }
@@ -773,6 +779,7 @@ export function initPlayerCommands(): void {
                 }
                 target = selected;
                 player.currentTarget = target;
+                player.titles.refreshPassiveEffects();
             }
 
             player.performBasicAttack(target);

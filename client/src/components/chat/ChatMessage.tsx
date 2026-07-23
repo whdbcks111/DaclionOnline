@@ -142,6 +142,11 @@ export default function ChatMessage({
                                     🌱
                                 </span>
                             )}
+                            {message.equippedTitle && (
+                                <span className={styles.titleBadge} title="장착 칭호">
+                                    [{message.equippedTitle}]
+                                </span>
+                            )}
                             <span className={styles.nickname}>{message.nickname}</span>
                             {message.karmaMarked && (
                                 <span className={styles.karmaMarked} title="카르마가 높은 현상 대상" aria-label="악명 높은 모험가">

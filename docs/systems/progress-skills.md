@@ -17,11 +17,13 @@ Entity/Resource/SkillBook
 
 `GameEvent`는 도메인 동작을 직접 DB나 스킬에 결합하지 않는 동기식 내부 이벤트다. handler에서는 DB I/O를 하지 않고 Player가 소유한 메모리 상태만 변경한다. 운영 진단용 trace는 최근 500개만 유지하며 `getRecentGameEvents()`가 ID·사용자 ID·이름·primitive data 스냅샷만 반환한다. 프로세스를 재시작하면 trace는 사라진다.
 
-현재 표준 이벤트 ID는 장소 도착, 치명타, 공격 적중·회피, 대상 지정, Entity 제압, Resource 파괴·성공 상호작용, 아이템 장착·성공 사용, 낚시 성공, 스탯 분배, 스킬 획득·시작·종료, 제작법 발견·아이템 제작, NPC 대화, 상태효과, 퀘스트, 직업 배정·엘리트 전직이다. 새 이벤트는 `GameEventIds`에 넣고 실제 상태가 확정되는 모델 API에서 `emitGameEvent()`를 호출한다. 명령 호출 자체는 성공 증거로 사용하지 않는다. 퀘스트 목표 추적은 [퀘스트 시스템](quests.md)을 참고한다.
+현재 표준 이벤트 ID는 장소 도착, 치명타, 공격 적중·회피, 대상 지정, Entity 제압, Resource 파괴·성공 상호작용, 아이템 장착·성공 사용, 낚시 성공, 스탯 분배, 스킬 획득·시작·종료, 제작법 발견·아이템 제작, NPC 대화, 상태효과, 퀘스트, 직업 배정·엘리트 전직, 칭호 획득·장착이다. 새 이벤트는 `GameEventIds`에 넣고 실제 상태가 확정되는 모델 API에서 `emitGameEvent()`를 호출한다. 명령 호출 자체는 성공 증거로 사용하지 않는다. 퀘스트 목표 추적은 [퀘스트 시스템](quests.md), 칭호 획득과 장착 패시브는 [칭호 시스템](titles.md)을 참고한다.
 
 ## 진행 상태와 통계
 
 `PlayerProgress`는 다른 기능과 NPC 대화 조건에서도 재사용하는 플레이어별 범용 상태 저장소다. 값의 종류는 클래스형 enum `ProgressType`으로 구분한다.
+
+칭호는 별도 테이블을 만들지 않고 `title-owned:*` FLAG와 `title:equipped` STATE를 사용한다. 칭호 콘텐츠는 Progress 원본 Map이나 DB row를 참조하지 않고 `PlayerProgress` 조회 API와 `TitleBook` 명령형 API만 사용한다.
 
 | 종류 | 공개 API | 용도 |
 | --- | --- | --- |

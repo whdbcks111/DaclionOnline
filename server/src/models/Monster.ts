@@ -351,6 +351,7 @@ export default class Monster extends Entity {
             const causePlayer = attackOwner as Player;
 
             attackOwner.currentTarget = null;
+            causePlayer.titles?.refreshPassiveEffects();
 
             const drops = this.rollDrops();
             for (const drop of drops) {
