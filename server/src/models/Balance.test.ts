@@ -27,6 +27,66 @@ test('projected profile uses the same eight stat points earned per level', () =>
     assert.equal(total, (50 - 1) * 8);
 });
 
+test('projected profiles follow the intended primary stat order for every first job', () => {
+    const warrior = createBalanceScenario(200, 'career:warrior').stats;
+    const archer = createBalanceScenario(200, 'career:archer').stats;
+    const assassin = createBalanceScenario(200, 'career:assassin').stats;
+    const mage = createBalanceScenario(200, 'career:mage').stats;
+    const blacksmith = createBalanceScenario(200, 'career:blacksmith').stats;
+
+    assert.ok(warrior.strength > warrior.vitality && warrior.vitality > warrior.agility);
+    assert.ok(archer.strength > archer.agility && archer.agility > archer.sensibility);
+    assert.ok(assassin.agility > assassin.strength && assassin.strength > assassin.sensibility);
+    assert.ok(mage.mentality > mage.sensibility && mage.sensibility > mage.vitality);
+    assert.ok(blacksmith.sensibility > blacksmith.vitality && blacksmith.vitality > blacksmith.strength);
+});
+
+test('archer and assassin combat skills gain real damage from movement speed buffs', () => {
+    const archer = createBalanceScenario(200, 'career:archer');
+    const assassin = createBalanceScenario(200, 'career:assassin');
+    const arrowBefore = analyzeSkillBalance(archer, 'tracking_arrow', 5).rawDamage;
+    const ambushBefore = analyzeSkillBalance(assassin, 'ambush', 5).rawDamage;
+
+    archer.entity.attribute.addModifier({
+        attribute: AttributeType.SPEED.key,
+        op: 'multiply',
+        value: 1.2,
+        source: 'test:speed-buff',
+    });
+    assassin.entity.attribute.addModifier({
+        attribute: AttributeType.SPEED.key,
+        op: 'multiply',
+        value: 1.2,
+        source: 'test:speed-buff',
+    });
+
+    assert.ok(analyzeSkillBalance(archer, 'tracking_arrow', 5).rawDamage > arrowBefore);
+    assert.ok(analyzeSkillBalance(assassin, 'ambush', 5).rawDamage > ambushBefore);
+});
+
+test('elite hybrid actives keep their main-job coefficient ahead of the sub-job coefficient', () => {
+    const speedScenario = createBalanceScenario(200, 'career:assassin', 'career:mage');
+    const magicScenario = createBalanceScenario(200, 'career:assassin', 'career:mage');
+    const base = analyzeSkillBalance(speedScenario, 'arcane_reaper_technique', 5).rawDamage;
+
+    speedScenario.entity.attribute.addModifier({
+        attribute: AttributeType.SPEED.key,
+        op: 'multiply',
+        value: 1.2,
+        source: 'test:main-stat',
+    });
+    magicScenario.entity.attribute.addModifier({
+        attribute: AttributeType.MAGIC_FORCE.key,
+        op: 'multiply',
+        value: 1.2,
+        source: 'test:sub-stat',
+    });
+
+    const speedGain = analyzeSkillBalance(speedScenario, 'arcane_reaper_technique', 5).rawDamage - base;
+    const magicGain = analyzeSkillBalance(magicScenario, 'arcane_reaper_technique', 5).rawDamage - base;
+    assert.ok(speedGain > magicGain);
+});
+
 test('skill report uses real cooldown, resource and damage callbacks', () => {
     const scenario = createBalanceScenario(50, 'career:mage');
     const report = analyzeSkillBalance(scenario, 'magic_bolt', 5);
@@ -156,6 +216,19 @@ test('blacksmith advanced attacks use forging precision in the real balance call
         source: 'test:precision',
     });
     const after = analyzeSkillBalance(scenario, 'masterwork_break', 3).rawDamage;
+    assert.ok(after > before);
+});
+
+test('blacksmith elite attacks also retain forging precision scaling', () => {
+    const scenario = createBalanceScenario(200, 'career:blacksmith', 'career:mage');
+    const before = analyzeSkillBalance(scenario, 'arcane_smith_technique', 5).rawDamage;
+    scenario.entity.attribute.addModifier({
+        attribute: AttributeType.FORGING_PRECISION.key,
+        op: 'add',
+        value: 0.2,
+        source: 'test:elite-precision',
+    });
+    const after = analyzeSkillBalance(scenario, 'arcane_smith_technique', 5).rawDamage;
     assert.ok(after > before);
 });
 

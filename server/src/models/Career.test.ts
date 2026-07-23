@@ -248,7 +248,10 @@ test('스킬 정보는 자연스러운 효과 문장과 실제 발동 준비만 
     const aegis = new Skill({ playerId: player.userId, skillDataId: 'tempered_aegis', level: 1 });
     const aegisDescription = aegis.formatDescription(player);
     assert.match(aegisDescription, /만큼의 피해를 막는 일반 보호막/);
-    assert.match(aegisDescription, /\[tooltip=최대 생명력 × 12% \+ 공격력 × 45%\]/);
+    assert.match(
+        aegisDescription,
+        /\[tooltip=최대 생명력 × 12% \+ 공격력 × 45% \+ 최대 생명력 × 제련 정밀도 × 4%\]/,
+    );
     assert.doesNotMatch(aegisDescription, /최대 생명력의 .*공격력의 .*합친/);
     assert.equal(
         new Skill({ playerId: player.userId, skillDataId: 'battle_rush', level: 1 })

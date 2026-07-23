@@ -52,26 +52,26 @@ for (const job of firstJobs) defineJob({
 });
 
 const eliteRecipes = [
-    ['warrior', 'archer', 'blade_ranger', '검의 추적자'],
-    ['warrior', 'assassin', 'shadow_blade', '그림자 검객'],
-    ['warrior', 'mage', 'spellblade', '마검사', 1.18],
-    ['archer', 'warrior', 'siege_bow', '철벽 사수'],
-    ['archer', 'assassin', 'night_hunter', '밤사냥꾼'],
-    ['archer', 'mage', 'elemental_marksman', '원소 사수', 1.08],
+    ['warrior', 'archer', 'blade_ranger', '검의 추적자', 1.12],
+    ['warrior', 'assassin', 'shadow_blade', '그림자 검객', 1.08],
+    ['warrior', 'mage', 'spellblade', '마검사', 1.35],
+    ['archer', 'warrior', 'siege_bow', '철벽 사수', 0.9],
+    ['archer', 'assassin', 'night_hunter', '밤사냥꾼', 0.97],
+    ['archer', 'mage', 'elemental_marksman', '원소 사수', 1.15],
     ['assassin', 'warrior', 'executioner', '처형자'],
     ['assassin', 'archer', 'phantom_shooter', '환영 사수'],
-    ['assassin', 'mage', 'arcane_reaper', '비전 사신', 1.12],
+    ['assassin', 'mage', 'arcane_reaper', '비전 사신', 1.3],
     ['mage', 'warrior', 'battle_magus', '전투 마도사'],
-    ['mage', 'archer', 'star_weaver', '별의 직조사'],
-    ['mage', 'assassin', 'hexblade', '주술 단검사'],
+    ['mage', 'archer', 'star_weaver', '별의 직조사', 0.95],
+    ['mage', 'assassin', 'hexblade', '주술 단검사', 0.92],
     ['warrior', 'blacksmith', 'weapon_master', '무기대가'],
-    ['archer', 'blacksmith', 'machinist_archer', '기공 사수'],
+    ['archer', 'blacksmith', 'machinist_archer', '기공 사수', 0.9],
     ['assassin', 'blacksmith', 'steel_shadow', '강철 그림자'],
     ['mage', 'blacksmith', 'runeforger', '룬 제련사', 0.9],
-    ['blacksmith', 'warrior', 'battle_smith', '전투 대장장이'],
+    ['blacksmith', 'warrior', 'battle_smith', '전투 대장장이', 0.9],
     ['blacksmith', 'archer', 'artificer', '기계 장인'],
     ['blacksmith', 'assassin', 'venom_smith', '독금 장인'],
-    ['blacksmith', 'mage', 'arcane_smith', '마도 대장장이'],
+    ['blacksmith', 'mage', 'arcane_smith', '마도 대장장이', 0.95],
 ] as const;
 
 for (const [main, sub, eliteId, name, offenseFactor = 1] of eliteRecipes) {

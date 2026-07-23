@@ -61,10 +61,17 @@ const DEFAULT_ALLOCATION: BalanceStatAllocation = Object.freeze({
 
 const JOB_ALLOCATIONS = new Map<string, BalanceStatAllocation>([
     ['career:warrior', freezeAllocation('전사 기준', { strength: 4, vitality: 3, agility: 2, sensibility: 1 })],
-    ['career:archer', freezeAllocation('궁수 기준', { agility: 4, sensibility: 3, strength: 2, vitality: 1 })],
-    ['career:assassin', freezeAllocation('암살자 기준', { agility: 4, sensibility: 3, strength: 2, vitality: 1 })],
-    ['career:mage', freezeAllocation('마법사 기준', { mentality: 4, vitality: 3, sensibility: 2, agility: 1 })],
-    ['career:blacksmith', freezeAllocation('대장장이 기준', { sensibility: 4, vitality: 4, strength: 1, mentality: 1 })],
+    ['career:archer', freezeAllocation('궁수 기준', { strength: 4, agility: 3, sensibility: 2, vitality: 1 })],
+    ['career:assassin', freezeAllocation('암살자 기준', { agility: 4, strength: 3, sensibility: 2, vitality: 1 })],
+    ['career:mage', freezeAllocation('마법사 기준', { mentality: 4, sensibility: 3, vitality: 2, agility: 1 })],
+    ['career:blacksmith', freezeAllocation('대장장이 기준', { sensibility: 4, vitality: 3, strength: 2, mentality: 1 })],
+]);
+
+const BLACKSMITH_ELITE_ALLOCATIONS = new Map<string, BalanceStatAllocation>([
+    ['career:warrior', freezeAllocation('대장장이·전사 기준', { sensibility: 4, strength: 3, vitality: 2, agility: 1 })],
+    ['career:archer', freezeAllocation('대장장이·궁수 기준', { sensibility: 4, strength: 3, agility: 2, vitality: 1 })],
+    ['career:assassin', freezeAllocation('대장장이·암살자 기준', { sensibility: 4, agility: 3, strength: 2, vitality: 1 })],
+    ['career:mage', freezeAllocation('대장장이·마법사 기준', { sensibility: 4, mentality: 3, vitality: 2, agility: 1 })],
 ]);
 
 class BalanceEntity extends Entity {
@@ -238,10 +245,14 @@ export function createBalanceScenario(
     const effectiveJob = normalizedLevel >= 200 && subJob
         ? resolveEliteJob(mainJob.id, subJob.id) ?? mainJob
         : mainJob;
-    const allocation = JOB_ALLOCATIONS.get(mainJob.id) ?? DEFAULT_ALLOCATION;
+    const allocation = mainJob.id === 'career:blacksmith' && subJob
+        ? BLACKSMITH_ELITE_ALLOCATIONS.get(subJob.id) ?? JOB_ALLOCATIONS.get(mainJob.id) ?? DEFAULT_ALLOCATION
+        : JOB_ALLOCATIONS.get(mainJob.id) ?? DEFAULT_ALLOCATION;
     const stats = createProjectedStats(normalizedLevel, allocation);
     const entity = new BalanceEntity(`${effectiveJob.name} 기준 공격자`, normalizedLevel, stats);
-    const loadout = applyProjectedLoadout(entity, mainJob.id, normalizedLevel);
+    // 대장장이 메인 엘리트는 서브 직업 방향에 맞는 무기를 쓰는 실제 운용을 기준으로 측정한다.
+    const projectedLoadoutJobId = mainJob.id === 'career:blacksmith' && subJob ? subJob.id : mainJob.id;
+    const loadout = applyProjectedLoadout(entity, projectedLoadoutJobId, normalizedLevel);
     applyJobModifiers(entity, effectiveJob.mainModifiers, 'balance:main');
     if (subJob) applyJobModifiers(entity, subJob.subModifiers, 'balance:sub');
     applyJobPassives(entity, [mainJob, subJob, effectiveJob]);

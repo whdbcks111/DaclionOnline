@@ -43,6 +43,8 @@ defineSkillTagDisplay(GameTags.SKILL_GROUP_ELECTRIC, '전격 계열', 'affinitie
 
 const CAREER_SHARED_COOLDOWN_SECONDS = 0.75;
 const MAGIC_SHARED_COOLDOWN_SECONDS = 0.5;
+/** 이동속도는 공격력보다 단위가 작으므로 피해 계수에서만 이 비율로 전투력 단위를 맞춘다. */
+const MOBILITY_DAMAGE_SCALE = 40;
 const ELEMENT_SHARED_COOLDOWN_SECONDS = 1;
 
 function careerSharedCooldown(targetTag: TagId, seconds = CAREER_SHARED_COOLDOWN_SECONDS) {
@@ -134,13 +136,45 @@ function attributeDamageTooltip(
     return tooltipValue(damage, `${attribute.label} × ${formatNumber(percent)}%${growth}`);
 }
 
+interface AttributeDamageTerm {
+    readonly attribute: AttributeType;
+    readonly basePercent: number;
+    readonly perLevelPercent: number;
+    readonly scale?: number;
+}
+
+function attributeTermValue(context: SkillContext, term: AttributeDamageTerm): number {
+    return context.owner.attribute.get(term.attribute) * (term.scale ?? 1);
+}
+
+function combinedAttributeDamage(context: SkillContext, terms: readonly AttributeDamageTerm[]): number {
+    return terms.reduce((sum, term) => sum + attributeTermValue(context, term)
+        * percentByLevel(context.skill.level, term.basePercent, term.perLevelPercent) / 100, 0);
+}
+
+function combinedAttributeDamageFormula(context: SkillContext, terms: readonly AttributeDamageTerm[]): string {
+    return terms.map(term => {
+        const percent = percentByLevel(context.skill.level, term.basePercent, term.perLevelPercent);
+        const scale = term.scale && term.scale !== 1 ? ` × ${formatNumber(term.scale)}` : '';
+        return `${term.attribute.label}${scale} × ${formatNumber(percent)}%`;
+    }).join(' + ');
+}
+
+function combinedAttributeDamageTooltip(context: SkillContext, terms: readonly AttributeDamageTerm[]): string {
+    return tooltipValue(
+        combinedAttributeDamage(context, terms),
+        combinedAttributeDamageFormula(context, terms),
+    );
+}
+
 function cooldownByLevel(context: SkillContext, base: number, perLevelReduction: number, minimum: number): number {
     return Math.max(minimum, base - Math.max(0, context.skill.level - 1) * perLevelReduction);
 }
 
 function manaBarrierShieldAmount(context: SkillContext): number {
     return valueByLevel(context.skill.level, 45, 15)
-        + context.owner.attribute.get(AttributeType.MAGIC_FORCE) * 0.75;
+        + context.owner.attribute.get(AttributeType.MAGIC_FORCE) * 0.65
+        + context.owner.maxLife * 0.04;
 }
 
 function activationGuide(preparation = ''): string {
@@ -805,7 +839,10 @@ const smeltingMaterials = [
 
 function precisionBreakDamage(context: SkillContext): number {
     return context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 135, 10) / 100
-        + context.owner.maxLife * percentByLevel(context.skill.level, 2, 0.25) / 100;
+        + context.owner.maxLife * percentByLevel(context.skill.level, 2, 0.25) / 100
+        + context.owner.attribute.get(AttributeType.ATK)
+            * context.owner.attribute.get(AttributeType.FORGING_PRECISION)
+            * percentByLevel(context.skill.level, 60, 6) / 100;
 }
 
 defineSkill({
@@ -813,7 +850,7 @@ defineSkill({
     name: '결 파쇄',
     icon: 'skills/precision_break',
     maxLevel: 5,
-    descriptionTemplate: '대상의 방어 태세에서 가장 약한 결을 찾아 파쇄합니다. 이 공격은 반드시 치명타로 적중하며, {{icon.atk}}{{icon.maxLife}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
+    descriptionTemplate: '대상의 방어 태세에서 가장 약한 결을 찾아 파쇄합니다. 이 공격은 반드시 치명타로 적중하며, {{icon.atk}}{{icon.maxLife}}{{icon.forgingPrecision}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 12[/color]',
     activationConditionTemplate: targetActivationGuide(),
     activationMessage: '결 파쇄!',
@@ -821,7 +858,9 @@ defineSkill({
     calculatedFields: {
         damage: context => tooltipValue(
             precisionBreakDamage(context) * context.owner.attribute.get(AttributeType.CRIT_DMG),
-            `(${AttributeType.ATK.label} × ${formatNumber(percentByLevel(context.skill.level, 135, 10))}% + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 2, 0.25))}%) × 치명타 피해`,
+            `(${AttributeType.ATK.label} × ${formatNumber(percentByLevel(context.skill.level, 135, 10))}%`
+            + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 2, 0.25))}%`
+            + ` + ${AttributeType.ATK.label} × ${AttributeType.FORGING_PRECISION.label} × ${formatNumber(percentByLevel(context.skill.level, 60, 6))}%) × 치명타 피해`,
         ),
     },
     balance: {
@@ -997,9 +1036,20 @@ function simpleCheck(cost: number, needsTarget = true, requiresAttackReady = nee
     };
 }
 function directAttack(context: SkillContext, multiplier: number, options: Parameters<Player['attack']>[3] = {}) {
+    return directDamageAttack(
+        context,
+        context.owner.attribute.get(AttributeType.ATK) * multiplier,
+        options,
+    );
+}
+function directDamageAttack(
+    context: SkillContext,
+    damage: number,
+    options: Parameters<Player['attack']>[3] = {},
+) {
     const found = targetOrDeny(context);
     if ('reason' in found) throw new Error(found.reason);
-    const result = context.owner.attack(found.target, 'physical', context.owner.attribute.get(AttributeType.ATK) * multiplier, options);
+    const result = context.owner.attack(found.target, 'physical', damage, options);
     if (!result) throw new Error('공격이 확정되지 않았습니다.');
     return result;
 }
@@ -1029,6 +1079,37 @@ function projectileAttack(
     });
     if (!projectile) throw new Error('투사체 생성에 실패했습니다.');
     context.owner.commitAttack(false);
+}
+
+const ARCHER_ARCANE_ARROW_TERMS: readonly AttributeDamageTerm[] = [
+    { attribute: AttributeType.ATK, basePercent: 105, perLevelPercent: 8 },
+    { attribute: AttributeType.SPEED, scale: MOBILITY_DAMAGE_SCALE, basePercent: 35, perLevelPercent: 4 },
+];
+const ARCHER_MULTISHOT_TERMS: readonly AttributeDamageTerm[] = [
+    { attribute: AttributeType.ATK, basePercent: 90, perLevelPercent: 9 },
+    { attribute: AttributeType.SPEED, scale: MOBILITY_DAMAGE_SCALE, basePercent: 15, perLevelPercent: 2 },
+];
+const ARCHER_STUNNING_SHOT_TERMS: readonly AttributeDamageTerm[] = [
+    { attribute: AttributeType.ATK, basePercent: 110, perLevelPercent: 9 },
+    { attribute: AttributeType.SPEED, scale: MOBILITY_DAMAGE_SCALE, basePercent: 20, perLevelPercent: 2 },
+];
+const ASSASSIN_AMBUSH_TERMS: readonly AttributeDamageTerm[] = [
+    { attribute: AttributeType.SPEED, scale: MOBILITY_DAMAGE_SCALE, basePercent: 75, perLevelPercent: 6 },
+    { attribute: AttributeType.ATK, basePercent: 100, perLevelPercent: 8 },
+];
+const ASSASSIN_VENOM_BLADE_TERMS: readonly AttributeDamageTerm[] = [
+    { attribute: AttributeType.SPEED, scale: MOBILITY_DAMAGE_SCALE, basePercent: 55, perLevelPercent: 5 },
+    { attribute: AttributeType.ATK, basePercent: 90, perLevelPercent: 7 },
+];
+
+function speedScaledDuration(
+    context: SkillContext,
+    base: number,
+    perLevel: number,
+    speedRatio: number,
+): number {
+    return valueByLevel(context.skill.level, base, perLevel)
+        + Math.max(0, context.owner.attribute.get(AttributeType.SPEED) - AttributeType.SPEED.defaultValue) * speedRatio;
 }
 
 defineSkill({
@@ -1127,17 +1208,17 @@ defineSkill({
 
 defineSkill({
     id: 'arcane_arrow', name: '마력 화살', icon: 'skills/arcane_arrow', maxLevel: 5,
-    descriptionTemplate: `빛의 마력으로 화살을 빚어 대상에게 발사합니다. 탄약은 소모하지 않으며, {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
+    descriptionTemplate: `활의 장력과 기동력을 빛의 화살로 바꿔 대상에게 발사합니다. 탄약은 소모하지 않으며, {{icon.atk}}{{icon.speed}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 12[/color]',
     activationConditionTemplate: targetActivationGuide('활을 장착해야 합니다.'), activationMessage: '마력 화살!', baseMetadata: null,
     calculatedFields: {
-        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 160, 12),
+        damage: context => combinedAttributeDamageTooltip(context, ARCHER_ARCANE_ARROW_TERMS),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_magic_orb', true),
     },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
         effectTags: [GameTags.PROPERTY_LIGHT],
-        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 160, 12) / 100,
+        calculateDamage: context => combinedAttributeDamage(context, ARCHER_ARCANE_ARROW_TERMS),
         calculateManaCost: () => 12,
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 5, 0.2, 4.2),
@@ -1145,23 +1226,25 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
     canActivate: simpleCheck(12), onStart: context => {
         spend(context, 12);
-        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 160, 12) / 100, [GameTags.PROPERTY_LIGHT]);
+        projectileAttack(context, 'basic_magic_orb', 1, [GameTags.PROPERTY_LIGHT], undefined, {
+            damage: combinedAttributeDamage(context, ARCHER_ARCANE_ARROW_TERMS),
+        });
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ARCHER],
 });
 
 defineSkill({
     id: 'multishot', name: '다중 사격', icon: 'skills/multishot', maxLevel: 5,
-    descriptionTemplate: `현재 장소의 공격 가능한 대상 최대 [color=gold]3명[/color]에게 각각 {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 화살을 발사합니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
+    descriptionTemplate: `현재 장소의 공격 가능한 대상 최대 [color=gold]3명[/color]에게 각각 {{icon.atk}}{{icon.speed}} [color=orange]{{damage}}[/color]의 물리 피해를 주는 화살을 발사합니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
     activationConditionTemplate: activationGuide('활을 장착하고 공격할 대상이 있는 장소에서'), activationMessage: '다중 사격!', baseMetadata: null,
     calculatedFields: {
-        damage: context => attributeDamageTooltip(context, AttributeType.ATK, 100, 10),
+        damage: context => combinedAttributeDamageTooltip(context, ARCHER_MULTISHOT_TERMS),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_arrow', false),
     },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'physical', targetCount: 3,
-        calculateDamage: context => context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 100, 10) / 100,
+        calculateDamage: context => combinedAttributeDamage(context, ARCHER_MULTISHOT_TERMS),
         calculateManaCost: () => 18,
         notes: ['대상이 3명 있다고 가정한 총 피해와 대상 1명 피해를 함께 표시합니다.'],
     },
@@ -1181,7 +1264,7 @@ defineSkill({
                 owner: player,
                 target,
                 dataId: 'basic_arrow',
-                overrides: { damageMultiplier: percentByLevel(context.skill.level, 100, 10) / 100 },
+                overrides: { damage: combinedAttributeDamage(context, ARCHER_MULTISHOT_TERMS) },
             });
         }
         player.commitAttack(false);
@@ -1190,17 +1273,21 @@ defineSkill({
 
 defineSkill({
     id: 'stunning_shot', name: '충격 화살', icon: 'skills/stunning_shot', maxLevel: 5,
-    descriptionTemplate: `충격을 응축한 강화 화살을 대상에게 발사합니다. {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입히고, 적중한 대상을 {{stunDuration}} 동안 기절시킵니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
+    descriptionTemplate: `활의 장력과 비행 속도를 충격으로 응축한 화살을 발사합니다. {{icon.atk}}{{icon.speed}} [color=orange]{{damage}}[/color]의 물리 피해를 입히고, 적중한 대상을 {{stunDuration}} 동안 기절시킵니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 20[/color]',
     activationConditionTemplate: targetActivationGuide('활을 장착해야 합니다.'), activationMessage: '충격 화살!', baseMetadata: null,
     calculatedFields: {
-        damage: context => attributeDamageTooltip(context, AttributeType.ATK, 125, 10),
-        stunDuration: context => levelValueTooltip(context, '기절 지속시간', 2, 0.25, '초'),
+        damage: context => combinedAttributeDamageTooltip(context, ARCHER_STUNNING_SHOT_TERMS),
+        stunDuration: context => tooltipValue(
+            speedScaledDuration(context, 2, 0.25, 0.02),
+            `기본 ${formatNumber(valueByLevel(context.skill.level, 2, 0.25))}초 + 기본치를 넘는 이동속도 × 0.02초`,
+            '초',
+        ),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_arrow', false),
     },
     balance: {
         role: SkillBalanceRole.CONTROL, damageType: 'physical',
-        calculateDamage: context => context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 125, 10) / 100,
+        calculateDamage: context => combinedAttributeDamage(context, ARCHER_STUNNING_SHOT_TERMS),
         calculateManaCost: () => 20,
         notes: ['기절의 가치는 적 패턴에 따라 달라 피해량에 임의 합산하지 않습니다.'],
     },
@@ -1209,26 +1296,35 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.archer), weaponRequirement: weaponRequirement('활을 장착해야 합니다.', GameTags.WEAPON_BOW),
     canActivate: simpleCheck(20), onStart: context => {
         spend(context, 20);
-        projectileAttack(context, 'basic_arrow', percentByLevel(context.skill.level, 125, 10) / 100, undefined, (_p, result) => {
-            if (!result.evaded) _p.target.applyStatusEffect(STUN, valueByLevel(context.skill.level, 2, 0.25), context.skill.level);
-        });
+        projectileAttack(context, 'basic_arrow', 1, undefined, (_p, result) => {
+            if (!result.evaded) _p.target.applyStatusEffect(
+                STUN,
+                speedScaledDuration(context, 2, 0.25, 0.02),
+                context.skill.level,
+            );
+        }, { damage: combinedAttributeDamage(context, ARCHER_STUNNING_SHOT_TERMS) });
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ARCHER],
 });
 
 defineSkill({
     id: 'wind_evasion', name: '바람 회피', icon: 'skills/wind_evasion', maxLevel: 5,
-    descriptionTemplate: '{{duration}} 동안 {{icon.speed}} 이동 가능한 상태라면 받는 공격을 [color=cyan]확정적으로 회피[/color]합니다. 이동이 금지된 동안에는 발동하지 않습니다.',
+    descriptionTemplate: '{{icon.speed}} 이동속도에 따라 결정되는 {{duration}} 동안 이동 가능한 상태라면 받는 공격을 [color=cyan]확정적으로 회피[/color]합니다. 이동이 금지된 동안에는 발동하지 않습니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 22[/color]',
     activationConditionTemplate: activationGuide(), activationMessage: '바람 회피!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
-        valueByLevel(context.skill.level, 7, 0.75),
+        speedScaledDuration(context, 7, 0.75, 0.04),
         '이동 가능한 동안 공격 확정 회피',
     ),
-    calculatedFields: { duration: context => levelValueTooltip(context, '확정 회피 지속시간', 7, 0.75, '초') },
+    calculatedFields: { duration: context => tooltipValue(
+        speedScaledDuration(context, 7, 0.75, 0.04),
+        `기본 ${formatNumber(valueByLevel(context.skill.level, 7, 0.75))}초 + 기본치를 넘는 이동속도 × 0.04초`,
+        '초',
+    ) },
     balance: {
         role: SkillBalanceRole.DEFENSE, calculateManaCost: () => 22,
+        calculateEffectDuration: context => speedScaledDuration(context, 7, 0.75, 0.04),
         notes: ['확정 회피는 적 공격 빈도에 의존하므로 고정 전투력으로 환산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 24, 1.5, 18),
@@ -1236,27 +1332,35 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.archer), canActivate: simpleCheck(22, false),
     onStart: context => {
         spend(context, 22);
-        context.owner.applyStatusEffect(WIND_EVASION, valueByLevel(context.skill.level, 7, 0.75), context.skill.level);
+        context.owner.applyStatusEffect(
+            WIND_EVASION,
+            speedScaledDuration(context, 7, 0.75, 0.04),
+            context.skill.level,
+        );
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_ARCHER],
 });
 
 defineSkill({
     id: 'stealth', name: '은신', icon: 'skills/stealth', maxLevel: 5,
-    descriptionTemplate: '{{duration}} 동안 다른 대상이 공격 대상으로 지정할 수 없는 은신 상태가 되고 {{icon.speed}} 이동속도가 [color=cyan]{{speedBonus}}[/color] 증가합니다. 직접 공격하거나 투사체를 발사하면 즉시 해제됩니다.',
+    descriptionTemplate: '{{icon.speed}} 이동속도에 따라 결정되는 {{duration}} 동안 다른 대상이 공격 대상으로 지정할 수 없는 은신 상태가 되고 이동속도가 [color=cyan]{{speedBonus}}[/color] 증가합니다. 직접 공격하거나 투사체를 발사하면 즉시 해제됩니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 16[/color]',
     activationConditionTemplate: activationGuide(), activationMessage: '은신!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
-        valueByLevel(context.skill.level, 8, 0.75),
+        speedScaledDuration(context, 8, 0.75, 0.05),
         `공격 대상 지정 방지, 이동속도 +${formatNumber(percentByLevel(context.skill.level, 25, 5))}%`,
     ),
     calculatedFields: {
-        duration: context => levelValueTooltip(context, '은신 지속시간', 8, 0.75, '초'),
+        duration: context => tooltipValue(
+            speedScaledDuration(context, 8, 0.75, 0.05),
+            `기본 ${formatNumber(valueByLevel(context.skill.level, 8, 0.75))}초 + 기본치를 넘는 이동속도 × 0.05초`,
+            '초',
+        ),
         speedBonus: context => levelValueTooltip(context, '이동속도 증가', 25, 5, '%'),
     },
     balance: {
         role: SkillBalanceRole.SUPPORT, calculateManaCost: () => 16,
-        calculateEffectDuration: context => valueByLevel(context.skill.level, 8, 0.75),
+        calculateEffectDuration: context => speedScaledDuration(context, 8, 0.75, 0.05),
         calculateRotationModifiers: context => [{
             attribute: AttributeType.SPEED.key,
             op: 'multiply',
@@ -1269,27 +1373,30 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.assassin), canActivate: simpleCheck(16, false),
     onStart: context => {
         spend(context, 16);
-        context.owner.applyStatusEffect(STEALTH, valueByLevel(context.skill.level, 8, 0.75), context.skill.level);
+        context.owner.applyStatusEffect(
+            STEALTH,
+            speedScaledDuration(context, 8, 0.75, 0.05),
+            context.skill.level,
+        );
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_ASSASSIN],
 });
 
 defineSkill({
     id: 'ambush', name: '암습', icon: 'skills/ambush', maxLevel: 5,
-    descriptionTemplate: '은신을 해제하며 대상의 급소를 기습합니다. 이 공격은 회피할 수 없고 반드시 치명타로 적중하며, {{icon.atk}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
+    descriptionTemplate: '은신을 해제하며 이동속도를 살린 채 대상의 급소를 기습합니다. 이 공격은 회피할 수 없고 반드시 치명타로 적중하며, {{icon.speed}}{{icon.atk}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
     activationConditionTemplate: activationGuide('대상을 지정하고 단검을 장착한 뒤 은신 상태에서'), activationMessage: '암습!', baseMetadata: null,
     calculatedFields: { damage: context => {
-        const percent = percentByLevel(context.skill.level, 180, 15);
-        const damage = context.owner.attribute.get(AttributeType.ATK) * percent / 100
+        const damage = combinedAttributeDamage(context, ASSASSIN_AMBUSH_TERMS)
             * context.owner.attribute.get(AttributeType.CRIT_DMG);
         return tooltipValue(
             damage,
-            `공격력 × ${formatNumber(percent)}% × 치명타 피해 ${formatNumber(context.owner.attribute.get(AttributeType.CRIT_DMG) * 100)}% · 스킬 레벨당 계수 +15%p`,
+            `(${combinedAttributeDamageFormula(context, ASSASSIN_AMBUSH_TERMS)}) × 치명타 피해 ${formatNumber(context.owner.attribute.get(AttributeType.CRIT_DMG) * 100)}%`,
         );
     } },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'physical',
-        calculateDamage: context => context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 180, 15) / 100,
+        calculateDamage: context => combinedAttributeDamage(context, ASSASSIN_AMBUSH_TERMS),
         criticalMode: SkillCriticalMode.GUARANTEED,
         calculateManaCost: () => 18,
         notes: ['선행 은신의 재사용 대기시간과 정신력 소모는 별도이며, 이 명령은 암습 단독 사용량을 계산합니다.'],
@@ -1301,23 +1408,27 @@ defineSkill({
     onStart: context => {
         spend(context, 18);
         context.owner.removeStatusEffect(STEALTH);
-        directAttack(context, percentByLevel(context.skill.level, 180, 15) / 100, { criticalRate: 1, unavoidable: true, consumeMainHandDurability: true });
+        directDamageAttack(context, combinedAttributeDamage(context, ASSASSIN_AMBUSH_TERMS), {
+            criticalRate: 1,
+            unavoidable: true,
+            consumeMainHandDurability: true,
+        });
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ASSASSIN],
 });
 
 defineSkill({
     id: 'venom_blade', name: '맹독 칼날', icon: 'skills/venom_blade', maxLevel: 5,
-    descriptionTemplate: '단검에 치명적인 독을 발라 대상을 베어 냅니다. {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입히고, 적중한 대상에게 Lv.{{level}} 맹독을 {{poisonDuration}} 동안 부여합니다.',
+    descriptionTemplate: '단검에 치명적인 독을 바르고 빠르게 파고들어 대상을 베어 냅니다. {{icon.speed}}{{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입히고, 적중한 대상에게 Lv.{{level}} 맹독을 {{poisonDuration}} 동안 부여합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 14[/color]',
     activationConditionTemplate: targetActivationGuide('단검을 장착해야 합니다.'), activationMessage: '맹독 칼날!', baseMetadata: null,
     calculatedFields: {
-        damage: context => attributeDamageTooltip(context, AttributeType.ATK, 145, 10),
+        damage: context => combinedAttributeDamageTooltip(context, ASSASSIN_VENOM_BLADE_TERMS),
         poisonDuration: context => levelValueTooltip(context, '맹독 지속시간', 8, 1, '초'),
     },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'physical',
-        calculateDamage: context => context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 145, 10) / 100,
+        calculateDamage: context => combinedAttributeDamage(context, ASSASSIN_VENOM_BLADE_TERMS),
         calculateManaCost: () => 14,
         notes: ['맹독 지속 피해는 대상의 최대·현재 생명력에 의존하므로 직접 타격 DPM과 분리합니다.'],
     },
@@ -1328,7 +1439,9 @@ defineSkill({
         const found = targetOrDeny(context);
         if ('reason' in found) throw new Error(found.reason);
         spend(context, 14);
-        const result = directAttack(context, percentByLevel(context.skill.level, 145, 10) / 100, { consumeMainHandDurability: true });
+        const result = directDamageAttack(context, combinedAttributeDamage(context, ASSASSIN_VENOM_BLADE_TERMS), {
+            consumeMainHandDurability: true,
+        });
         if (!result.evaded && result.finalDamage > 0) {
             found.target.applyStatusEffect(StatusEffectType.DEADLY_POISON, valueByLevel(context.skill.level, 8, 1), context.skill.level);
         }
@@ -1374,7 +1487,7 @@ defineSkill({
         duration: context => levelValueTooltip(context, '지속시간', 10, 1, '초'),
         shieldAmount: context => tooltipValue(
             manaBarrierShieldAmount(context),
-            `기본 ${formatNumber(valueByLevel(context.skill.level, 45, 15))} + 마법력 × 75% · 기본 보호막 스킬 레벨당 +15`,
+            `기본 ${formatNumber(valueByLevel(context.skill.level, 45, 15))} + 마법력 × 65% + 최대 생명력 × 4% · 기본 보호막 스킬 레벨당 +15`,
         ),
         defBonus: context => levelValueTooltip(context, '방어력 증가', 12, 4),
         magicDefBonus: context => levelValueTooltip(context, '마법 저항력 증가', 20, 5),
@@ -1511,11 +1624,17 @@ interface GrowthTechniqueDefinition {
     activationHeader: string;
     damageType: 'physical' | 'magic';
     attribute: AttributeType;
+    attributeScale?: number;
     basePercent: number;
     perLevelPercent: number;
     secondaryAttribute?: AttributeType;
+    secondaryAttributeScale?: number;
     secondaryBasePercent?: number;
     secondaryPerLevelPercent?: number;
+    tertiaryAttribute?: AttributeType;
+    tertiaryAttributeScale?: number;
+    tertiaryBasePercent?: number;
+    tertiaryPerLevelPercent?: number;
     /** 대장장이 감각 파생 능력치가 주 능력치 계수를 추가로 증폭하는 비율. */
     forgingPrecisionBasePercent?: number;
     forgingPrecisionPerLevelPercent?: number;
@@ -1548,19 +1667,35 @@ interface GrowthTechniqueDefinition {
     descriptionIntro: string;
 }
 
+function scaledAttributeValue(
+    context: SkillContext,
+    attribute: AttributeType,
+    scale = 1,
+): number {
+    return context.owner.attribute.get(attribute) * scale;
+}
+
 function growthTechniqueDamage(context: SkillContext, definition: GrowthTechniqueDefinition): number {
-    const primary = context.owner.attribute.get(definition.attribute)
+    const primary = scaledAttributeValue(context, definition.attribute, definition.attributeScale)
         * percentByLevel(context.skill.level, definition.basePercent, definition.perLevelPercent) / 100;
     const secondary = definition.secondaryAttribute
-        ? context.owner.attribute.get(definition.secondaryAttribute)
+        ? scaledAttributeValue(context, definition.secondaryAttribute, definition.secondaryAttributeScale)
             * percentByLevel(
                 context.skill.level,
                 definition.secondaryBasePercent ?? 0,
                 definition.secondaryPerLevelPercent ?? 0,
             ) / 100
         : 0;
+    const tertiary = definition.tertiaryAttribute
+        ? scaledAttributeValue(context, definition.tertiaryAttribute, definition.tertiaryAttributeScale)
+            * percentByLevel(
+                context.skill.level,
+                definition.tertiaryBasePercent ?? 0,
+                definition.tertiaryPerLevelPercent ?? 0,
+            ) / 100
+        : 0;
     const precision = definition.forgingPrecisionBasePercent !== undefined
-        ? context.owner.attribute.get(definition.attribute)
+        ? scaledAttributeValue(context, definition.attribute, definition.attributeScale)
             * context.owner.attribute.get(AttributeType.FORGING_PRECISION)
             * percentByLevel(
                 context.skill.level,
@@ -1568,24 +1703,37 @@ function growthTechniqueDamage(context: SkillContext, definition: GrowthTechniqu
                 definition.forgingPrecisionPerLevelPercent ?? 0,
             ) / 100
         : 0;
-    return primary + secondary + precision;
+    return primary + secondary + tertiary + precision;
 }
 
 function growthTechniqueDamageTooltip(context: SkillContext, definition: GrowthTechniqueDefinition): string {
     const primaryPercent = percentByLevel(context.skill.level, definition.basePercent, definition.perLevelPercent);
-    const formulas = [`${definition.attribute.label} × ${formatNumber(primaryPercent)}%`];
+    const scaledLabel = (attribute: AttributeType, scale = 1) =>
+        `${attribute.label}${scale === 1 ? '' : ` × ${formatNumber(scale)}`}`;
+    const formulas = [
+        `${scaledLabel(definition.attribute, definition.attributeScale)} × ${formatNumber(primaryPercent)}%`,
+    ];
     if (definition.secondaryAttribute) {
         formulas.push(
-            `${definition.secondaryAttribute.label} × ${formatNumber(percentByLevel(
+            `${scaledLabel(definition.secondaryAttribute, definition.secondaryAttributeScale)} × ${formatNumber(percentByLevel(
                 context.skill.level,
                 definition.secondaryBasePercent ?? 0,
                 definition.secondaryPerLevelPercent ?? 0,
             ))}%`,
         );
     }
+    if (definition.tertiaryAttribute) {
+        formulas.push(
+            `${scaledLabel(definition.tertiaryAttribute, definition.tertiaryAttributeScale)} × ${formatNumber(percentByLevel(
+                context.skill.level,
+                definition.tertiaryBasePercent ?? 0,
+                definition.tertiaryPerLevelPercent ?? 0,
+            ))}%`,
+        );
+    }
     if (definition.forgingPrecisionBasePercent !== undefined) {
         formulas.push(
-            `${definition.attribute.label} × ${AttributeType.FORGING_PRECISION.label} × `
+            `${scaledLabel(definition.attribute, definition.attributeScale)} × ${AttributeType.FORGING_PRECISION.label} × `
             + `${formatNumber(percentByLevel(
                 context.skill.level,
                 definition.forgingPrecisionBasePercent,
@@ -1645,7 +1793,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'piercing_arrow', name: '관통 화살', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 205, perLevelPercent: 14,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 172, perLevelPercent: 12,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 41, secondaryPerLevelPercent: 3,
         manaCost: 18, cooldown: 8, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 30,
         weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW], projectile: 'basic_arrow',
         propertyTag: GameTags.PROPERTY_METAL,
@@ -1654,14 +1804,18 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'arrow_storm', name: '화살 폭우', icon: 'skills/multishot', activationHeader: 'multishot',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 92, perLevelPercent: 7,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 77, perLevelPercent: 6,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 18, secondaryPerLevelPercent: 1.5,
         manaCost: 30, cooldown: 15, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 50,
         weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW], projectile: 'basic_arrow',
         hitCount: 4, descriptionIntro: '한 대상을 향해 네 발의 화살을 연달아 쏟아붓습니다.',
     },
     {
         id: 'rupture_cut', name: '혈맥 절단', icon: 'skills/ambush', activationHeader: 'ambush',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 190, perLevelPercent: 13,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 105, perLevelPercent: 7,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 85, secondaryPerLevelPercent: 6,
         manaCost: 18, cooldown: 8, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 30,
         weaponDescription: '단검을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_DAGGER], guaranteedCritical: true,
         statusEffect: LegacyStatusEffects.BLEEDING, statusLabel: '출혈', statusDuration: 7, statusDurationPerLevel: 0.75,
@@ -1669,7 +1823,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'shadow_dagger', name: '그림자 단검', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 235, perLevelPercent: 15,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 129, perLevelPercent: 8,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 106, secondaryPerLevelPercent: 7,
         manaCost: 24, cooldown: 11, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 50,
         projectile: 'basic_arrow', projectileName: '그림자 단검', propertyTag: GameTags.PROPERTY_DARK,
         penetration: { attribute: AttributeType.ARMOR_PEN, base: 16, perLevel: 4 },
@@ -1694,6 +1850,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     {
         id: 'fault_finder', name: '결함 간파', icon: 'skills/precision_break', activationHeader: 'precision_break',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 165, perLevelPercent: 12,
+        forgingPrecisionBasePercent: 50, forgingPrecisionPerLevelPercent: 5,
         manaCost: 18, cooldown: 9, jobId: JOBS.blacksmith, groupTag: GameTags.SKILL_GROUP_BLACKSMITH, unlockLevel: 30,
         guaranteedCritical: true, statusEffect: LegacyStatusEffects.DEFENSE_REDUCTION,
         statusLabel: '방어력 감소', statusDuration: 9, statusDurationPerLevel: 0.5,
@@ -1702,6 +1859,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     {
         id: 'anvil_resonance', name: '모루의 공명', icon: 'skills/precision_break', activationHeader: 'precision_break',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 550, perLevelPercent: 35,
+        forgingPrecisionBasePercent: 60, forgingPrecisionPerLevelPercent: 6,
         manaCost: 32, cooldown: 14, jobId: JOBS.blacksmith, groupTag: GameTags.SKILL_GROUP_BLACKSMITH, unlockLevel: 50,
         guaranteedCritical: true, unavoidable: true,
         descriptionIntro: '무기에 금속의 공명을 실어 대상을 강하게 내리칩니다.',
@@ -1780,7 +1938,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'tracking_arrow', name: '추적 화살', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 275, perLevelPercent: 18,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 230, perLevelPercent: 15,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 55, secondaryPerLevelPercent: 4,
         manaCost: 32, cooldown: 9, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 75,
         weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', unavoidable: true,
@@ -1788,7 +1948,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'rupture_volley', name: '파열 연사', icon: 'skills/multishot', activationHeader: 'multishot',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 128, perLevelPercent: 9,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 108, perLevelPercent: 8,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 26, secondaryPerLevelPercent: 2,
         manaCost: 42, cooldown: 13, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 100,
         weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', hitCount: 3,
@@ -1797,7 +1959,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'meteor_arrow', name: '유성 화살', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 410, perLevelPercent: 27,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 345, perLevelPercent: 23,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 82, secondaryPerLevelPercent: 5,
         manaCost: 54, cooldown: 15, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 140,
         weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', propertyTag: GameTags.PROPERTY_FIRE,
@@ -1807,7 +1971,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'skyfall_barrage', name: '천궁 낙화', icon: 'skills/multishot', activationHeader: 'multishot',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 112, perLevelPercent: 8,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 94, perLevelPercent: 7,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 22, secondaryPerLevelPercent: 1.5,
         manaCost: 70, cooldown: 18, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 180,
         weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', hitCount: 5,
@@ -1816,7 +1982,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'windsplit_arrow', name: '풍절 화살', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 245, perLevelPercent: 17,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 205, perLevelPercent: 14,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 49, secondaryPerLevelPercent: 3.5,
         manaCost: 27, cooldown: 8, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 75,
         weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', penetration: { attribute: AttributeType.ARMOR_PEN, base: 24, perLevel: 5 },
@@ -1824,7 +1992,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'binding_arrow', name: '구속 화살', icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 305, perLevelPercent: 20,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 255, perLevelPercent: 17,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 61, secondaryPerLevelPercent: 4,
         manaCost: 38, cooldown: 11, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 100,
         weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', statusEffect: LegacyStatusEffects.BIND, statusLabel: '속박',
@@ -1833,7 +2003,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'sun_piercer', name: '태양 관통', icon: 'affinities/light', activationHeader: 'stunning_shot',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 390, perLevelPercent: 26,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 328, perLevelPercent: 22,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 78, secondaryPerLevelPercent: 5,
         manaCost: 49, cooldown: 13, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 140,
         weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', propertyTag: GameTags.PROPERTY_LIGHT,
@@ -1842,7 +2014,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'star_rain', name: '성우', icon: 'skills/multishot', activationHeader: 'multishot',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 145, perLevelPercent: 10,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 122, perLevelPercent: 8.5,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 29, secondaryPerLevelPercent: 2,
         manaCost: 64, cooldown: 17, jobId: JOBS.archer, groupTag: GameTags.SKILL_GROUP_ARCHER, unlockLevel: 180,
         weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', hitCount: 4, propertyTag: GameTags.PROPERTY_LIGHT,
@@ -1850,7 +2024,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'venom_shadow', name: '독영 투척', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 295, perLevelPercent: 19,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 162, perLevelPercent: 10.5,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 133, secondaryPerLevelPercent: 8.5,
         manaCost: 32, cooldown: 9, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 75,
         projectile: 'basic_arrow', projectileName: '독영', propertyTag: GameTags.PROPERTY_POISON,
         statusEffect: StatusEffectType.DEADLY_POISON, statusLabel: '맹독', statusDuration: 9, statusDurationPerLevel: 1,
@@ -1858,7 +2034,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'shadow_pursuit', name: '그림자 추격', icon: 'skills/ambush', activationHeader: 'ambush',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 350, perLevelPercent: 23,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 193, perLevelPercent: 13,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 157, secondaryPerLevelPercent: 10,
         manaCost: 40, cooldown: 11, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 100,
         unavoidable: true, propertyTag: GameTags.PROPERTY_DARK,
         penetration: { attribute: AttributeType.ARMOR_PEN, base: 32, perLevel: 7 },
@@ -1866,7 +2044,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'heart_extraction', name: '심장 적출', icon: 'skills/ambush', activationHeader: 'ambush',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 440, perLevelPercent: 29,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 242, perLevelPercent: 16,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 198, secondaryPerLevelPercent: 13,
         manaCost: 52, cooldown: 14, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 140,
         guaranteedCritical: true, penetration: { attribute: AttributeType.ARMOR_PEN, base: 48, perLevel: 9 },
         statusEffect: LegacyStatusEffects.BLEEDING, statusLabel: '출혈', statusDuration: 10, statusDurationPerLevel: 1,
@@ -1874,7 +2054,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'formless_chain', name: '무영 연살', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 188, perLevelPercent: 12,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 103, perLevelPercent: 7,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 85, secondaryPerLevelPercent: 5,
         manaCost: 66, cooldown: 17, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 180,
         hitCount: 3, propertyTag: GameTags.PROPERTY_DARK,
         penetration: { attribute: AttributeType.ARMOR_PEN, base: 58, perLevel: 10 },
@@ -1884,7 +2066,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'nerve_needle', name: '신경침', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 250, perLevelPercent: 17,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 138, perLevelPercent: 9,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 112, secondaryPerLevelPercent: 8,
         manaCost: 27, cooldown: 8, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 75,
         projectile: 'basic_arrow', projectileName: '신경침', propertyTag: GameTags.PROPERTY_POISON,
         statusEffect: StatusEffectType.PARALYTIC_POISON, statusLabel: '마비독',
@@ -1893,14 +2077,18 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'miststep_cut', name: '안개걸음', icon: 'skills/ambush', activationHeader: 'ambush',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 320, perLevelPercent: 21,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 176, perLevelPercent: 12,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 144, secondaryPerLevelPercent: 9,
         manaCost: 37, cooldown: 10, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 100,
         unavoidable: true, propertyTag: GameTags.PROPERTY_WATER,
         descriptionIntro: '안개처럼 몸을 흩뜨린 뒤 대상의 시야 안쪽에서 다시 모여 베어 냅니다.',
     },
     {
         id: 'death_mark', name: '사점 낙인', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 400, perLevelPercent: 27,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 220, perLevelPercent: 15,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 180, secondaryPerLevelPercent: 12,
         manaCost: 48, cooldown: 13, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 140,
         penetration: { attribute: AttributeType.ARMOR_PEN, base: 44, perLevel: 8 },
         statusEffect: LegacyStatusEffects.CURSE, statusLabel: '쇠약의 저주',
@@ -1909,7 +2097,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'moonless_execution', name: '무월 처형', icon: 'skills/ambush', activationHeader: 'ambush',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 510, perLevelPercent: 33,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 281, perLevelPercent: 18,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 229, secondaryPerLevelPercent: 15,
         manaCost: 63, cooldown: 17, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 180,
         guaranteedCritical: true, unavoidable: true, propertyTag: GameTags.PROPERTY_DARK,
         penetration: { attribute: AttributeType.ARMOR_PEN, base: 62, perLevel: 11 },
@@ -2260,6 +2450,16 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
 function growthTechniqueDescription(technique: GrowthTechniqueDefinition): string {
     const multipleHits = Boolean(technique.hitCount && technique.hitCount > 1);
     const subject = multipleHits ? '이 기술은' : technique.projectile ? '이 투사체는' : '이 공격은';
+    const coefficientIcons = [
+        technique.attribute,
+        technique.secondaryAttribute,
+        technique.tertiaryAttribute,
+        ...(technique.forgingPrecisionBasePercent !== undefined ? [AttributeType.FORGING_PRECISION] : []),
+    ]
+        .filter((attribute): attribute is AttributeType => Boolean(attribute))
+        .filter((attribute, index, values) => values.indexOf(attribute) === index)
+        .map(attribute => `{{icon.${attribute.key}}}`)
+        .join('');
     const clauses = [
         ...(technique.projectile
             ? ['시전자의 {{icon.critRate}} 치명타 확률과 {{icon.critDmg}} 치명타 피해를 적용받고']
@@ -2270,7 +2470,7 @@ function growthTechniqueDescription(technique: GrowthTechniqueDefinition): strin
             `{{icon.${technique.penetration.attribute.key}}} ${penetrationLabel(technique.penetration.attribute)} `
             + `[color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{penetration}}[/color]이 부여되며`,
         ] : []),
-        `{{icon.${technique.attribute.key}}} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 `
+        `${coefficientIcons} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 `
         + `${technique.damageType === 'magic' ? '마법' : '물리'} 피해를${multipleHits ? ' {{hitCount}}회' : ''} 입힙니다`,
     ];
     return [
@@ -2444,10 +2644,21 @@ for (const technique of growthTechniques) defineSkill({
     ],
 });
 
+function temperedAegisAmount(context: SkillContext): number {
+    const lifePercent = percentByLevel(context.skill.level, 12, 1.5);
+    const attackPercent = percentByLevel(context.skill.level, 45, 5);
+    const precisionPercent = percentByLevel(context.skill.level, 4, 0.5);
+    return context.owner.maxLife * lifePercent / 100
+        + context.owner.attribute.get(AttributeType.ATK) * attackPercent / 100
+        + context.owner.maxLife
+            * (context.owner.attribute.get(AttributeType.FORGING_PRECISION) ?? 0)
+            * precisionPercent / 100;
+}
+
 defineSkill({
     id: 'tempered_aegis', name: '담금질 방벽', icon: 'skills/indomitable', activationHeader: 'indomitable',
     maxLevel: 5, unlockLevel: 50,
-    descriptionTemplate: '달군 금속의 기운으로 몸을 감싸 {{shieldAmount}}만큼의 피해를 막는 일반 보호막을 {{duration}} 동안 얻습니다.',
+    descriptionTemplate: '달군 금속의 기운으로 몸을 감싸 {{icon.maxLife}}{{icon.atk}}{{icon.forgingPrecision}} {{shieldAmount}}만큼의 피해를 막는 일반 보호막을 {{duration}} 동안 얻습니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 26[/color]',
     activationConditionTemplate: activationGuide(),
     activationMessage: '담금질 방벽!', baseMetadata: null,
@@ -2455,11 +2666,11 @@ defineSkill({
         shieldAmount: context => {
             const lifePercent = percentByLevel(context.skill.level, 12, 1.5);
             const attackPercent = percentByLevel(context.skill.level, 45, 5);
-            const amount = context.owner.maxLife * lifePercent / 100
-                + context.owner.attribute.get(AttributeType.ATK) * attackPercent / 100;
+            const precisionPercent = percentByLevel(context.skill.level, 4, 0.5);
             return tooltipValue(
-                amount,
-                `최대 생명력 × ${formatNumber(lifePercent)}% + 공격력 × ${formatNumber(attackPercent)}%`,
+                temperedAegisAmount(context),
+                `최대 생명력 × ${formatNumber(lifePercent)}% + 공격력 × ${formatNumber(attackPercent)}%`
+                + ` + 최대 생명력 × 제련 정밀도 × ${formatNumber(precisionPercent)}%`,
             );
         },
         duration: context => levelValueTooltip(context, '보호막 지속시간', 10, 1, '초'),
@@ -2467,8 +2678,7 @@ defineSkill({
     balance: {
         role: SkillBalanceRole.DEFENSE,
         calculateManaCost: () => 26,
-        calculateShield: context => context.owner.maxLife * percentByLevel(context.skill.level, 12, 1.5) / 100
-            + context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 45, 5) / 100,
+        calculateShield: temperedAegisAmount,
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 22, 1, 18),
     sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_BLACKSMITH),
@@ -2477,9 +2687,7 @@ defineSkill({
     canActivate: simpleCheck(26, false),
     onStart: context => {
         spend(context, 26);
-        const amount = context.owner.maxLife * percentByLevel(context.skill.level, 12, 1.5) / 100
-            + context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 45, 5) / 100;
-        context.owner.setShield('skill:tempered_aegis', amount, ShieldType.GENERAL,
+        context.owner.setShield('skill:tempered_aegis', temperedAegisAmount(context), ShieldType.GENERAL,
             valueByLevel(context.skill.level, 10, 1), context.owner);
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_BLACKSMITH],
@@ -2492,11 +2700,19 @@ interface EliteTechniqueDefinition {
     icon: string;
     damageType: 'physical' | 'magic';
     attribute: AttributeType;
+    attributeScale?: number;
     secondaryAttribute?: AttributeType;
+    secondaryAttributeScale?: number;
+    tertiaryAttribute?: AttributeType;
+    tertiaryAttributeScale?: number;
     basePercent: number;
     perLevelPercent: number;
     secondaryBasePercent?: number;
     secondaryPerLevelPercent?: number;
+    tertiaryBasePercent?: number;
+    tertiaryPerLevelPercent?: number;
+    forgingPrecisionBasePercent?: number;
+    forgingPrecisionPerLevelPercent?: number;
     manaCost: number;
     cooldown: number;
     /** 실제 무기를 휘두르거나 발사하는 기술에만 지정한다. 자체 생성 투사체·주문에는 생략한다. */
@@ -2515,43 +2731,56 @@ interface EliteTechniqueDefinition {
 const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     {
         id: 'blade_ranger_technique', name: '질풍 추격', jobId: 'career:blade_ranger', icon: 'jobs/warrior',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 250, perLevelPercent: 15,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 215, perLevelPercent: 13,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 45, secondaryPerLevelPercent: 3,
         manaCost: 24, cooldown: 10, weaponDescription: '검 또는 도끼를 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE], unavoidable: true,
         descriptionIntro: '바람을 가르며 대상의 퇴로를 따라붙어 베어 냅니다.', propertyTag: GameTags.PROPERTY_NATURAL,
     },
     {
         id: 'shadow_blade_technique', name: '그림자 참수', jobId: 'career:shadow_blade', icon: 'jobs/warrior',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 225, perLevelPercent: 15,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 190, perLevelPercent: 12,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 45, secondaryPerLevelPercent: 3,
         manaCost: 26, cooldown: 12, weaponDescription: '검 또는 단검을 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_DAGGER], guaranteedCritical: true,
         descriptionIntro: '대상의 그림자에 파고들어 드러난 급소를 참수합니다.', propertyTag: GameTags.PROPERTY_DARK,
     },
     {
         id: 'spellblade_technique', name: '마력 검파', jobId: 'career:spellblade', icon: 'jobs/warrior',
-        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 255, perLevelPercent: 16,
-        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 120, secondaryPerLevelPercent: 8,
+        damageType: 'magic', attribute: AttributeType.ATK, basePercent: 180, perLevelPercent: 11,
+        secondaryAttribute: AttributeType.MAGIC_FORCE, secondaryBasePercent: 120, secondaryPerLevelPercent: 8,
+        tertiaryAttribute: AttributeType.SPEED, tertiaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        tertiaryBasePercent: 25, tertiaryPerLevelPercent: 2,
         manaCost: 30, cooldown: 11, weaponDescription: '검을 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_SWORD],
         descriptionIntro: '칼날에 응축한 마력을 검파로 터뜨려 대상을 가릅니다.',
     },
     {
         id: 'siege_bow_technique', name: '성벽 관통사격', jobId: 'career:siege_bow', icon: 'jobs/archer',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 310, perLevelPercent: 18,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 260, perLevelPercent: 15,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 55, secondaryPerLevelPercent: 4,
+        tertiaryAttribute: AttributeType.MAX_LIFE, tertiaryBasePercent: 2, tertiaryPerLevelPercent: 0.15,
         manaCost: 28, cooldown: 15, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', descriptionIntro: '공성 장비처럼 무거운 금속 화살 한 발을 힘껏 발사합니다.', propertyTag: GameTags.PROPERTY_METAL,
     },
     {
         id: 'night_hunter_technique', name: '월영 사격', jobId: 'career:night_hunter', icon: 'jobs/archer',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 235, perLevelPercent: 15,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 195, perLevelPercent: 12,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 50, secondaryPerLevelPercent: 4,
         manaCost: 24, cooldown: 10, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', guaranteedCritical: true,
         descriptionIntro: '달빛에 비친 대상의 급소를 포착해 화살을 발사합니다.', propertyTag: GameTags.PROPERTY_DARK,
     },
     {
         id: 'elemental_marksman_technique', name: '뇌광 관통화살', jobId: 'career:elemental_marksman', icon: 'jobs/archer',
-        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 270, perLevelPercent: 17,
-        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 100, secondaryPerLevelPercent: 6,
+        damageType: 'magic', attribute: AttributeType.ATK, basePercent: 155, perLevelPercent: 10,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 55, secondaryPerLevelPercent: 4,
+        tertiaryAttribute: AttributeType.MAGIC_FORCE, tertiaryBasePercent: 115, tertiaryPerLevelPercent: 7,
         manaCost: 32, cooldown: 12, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_ELECTRIC,
         descriptionIntro: '번개를 두른 마력 화살로 대상의 신경을 꿰뚫습니다.',
@@ -2560,21 +2789,27 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     },
     {
         id: 'executioner_technique', name: '최후 집행', jobId: 'career:executioner', icon: 'jobs/assassin',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 300, perLevelPercent: 18,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 165, perLevelPercent: 10,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 135, secondaryPerLevelPercent: 8,
         manaCost: 28, cooldown: 14, weaponDescription: '도끼 또는 단검을 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_AXE, GameTags.WEAPON_DAGGER], unavoidable: true,
         descriptionIntro: '도망칠 틈을 주지 않고 대상에게 최후의 일격을 집행합니다.',
     },
     {
         id: 'phantom_shooter_technique', name: '환영 추적탄', jobId: 'career:phantom_shooter', icon: 'jobs/assassin',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 250, perLevelPercent: 16,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 138, perLevelPercent: 9,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 112, secondaryPerLevelPercent: 7,
         manaCost: 25, cooldown: 11, projectile: 'basic_arrow',
         descriptionIntro: '대상의 움직임을 좇는 환영 단검을 만들어 투척합니다.', propertyTag: GameTags.PROPERTY_DARK,
     },
     {
         id: 'arcane_reaper_technique', name: '비전 수확', jobId: 'career:arcane_reaper', icon: 'jobs/assassin',
-        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 275, perLevelPercent: 17,
+        damageType: 'magic', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 125, perLevelPercent: 8,
         secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 100, secondaryPerLevelPercent: 6,
+        tertiaryAttribute: AttributeType.MAGIC_FORCE, tertiaryBasePercent: 90, tertiaryPerLevelPercent: 6,
         manaCost: 30, cooldown: 12, propertyTag: GameTags.PROPERTY_POISON,
         descriptionIntro: '비전 마력으로 대상의 생명력을 베어 독성 잔재를 남깁니다.',
         onHitDescription: '적중한 대상에게 같은 레벨의 맹독을 6초 동안 부여합니다.',
@@ -2583,18 +2818,23 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     {
         id: 'battle_magus_technique', name: '마력갑 돌진', jobId: 'career:battle_magus', icon: 'jobs/mage',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 225, perLevelPercent: 14,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 2.5, secondaryPerLevelPercent: 0.2,
         manaCost: 30, cooldown: 13, shieldPercent: 12,
         descriptionIntro: '마력으로 갑옷을 보강한 채 대상에게 정면으로 돌진합니다.',
     },
     {
         id: 'star_weaver_technique', name: '낙성', jobId: 'career:star_weaver', icon: 'jobs/mage',
-        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 315, perLevelPercent: 18,
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 270, perLevelPercent: 16,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 50, secondaryPerLevelPercent: 3,
         manaCost: 34, cooldown: 15, projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_LIGHT,
         descriptionIntro: '대상의 머리 위에 별빛을 모아 거대한 유성으로 떨어뜨립니다.',
     },
     {
         id: 'hexblade_technique', name: '저주 각인', jobId: 'career:hexblade', icon: 'jobs/mage',
-        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 245, perLevelPercent: 16,
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 210, perLevelPercent: 14,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 40, secondaryPerLevelPercent: 3,
         manaCost: 29, cooldown: 11, propertyTag: GameTags.PROPERTY_DARK,
         descriptionIntro: '대상의 몸에 불길한 주술 각인을 새겨 움직임을 뒤틀어 놓습니다.',
         onHitDescription: '적중한 대상에게 같은 레벨의 마비독을 3초 동안 부여합니다.',
@@ -2603,20 +2843,27 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     {
         id: 'weapon_master_technique', name: '완성의 일격', jobId: 'career:weapon_master', icon: 'jobs/warrior',
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 305, perLevelPercent: 18,
+        forgingPrecisionBasePercent: 55, forgingPrecisionPerLevelPercent: 5,
         manaCost: 28, cooldown: 13, weaponDescription: '검 또는 도끼를 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE], unavoidable: true,
         descriptionIntro: '무기의 무게 중심을 완전히 제어해 빈틈없는 일격을 가합니다.', propertyTag: GameTags.PROPERTY_METAL,
     },
     {
         id: 'machinist_archer_technique', name: '철우 연사', jobId: 'career:machinist_archer', icon: 'jobs/archer',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 285, perLevelPercent: 17,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 245, perLevelPercent: 15,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 45, secondaryPerLevelPercent: 3,
+        forgingPrecisionBasePercent: 50, forgingPrecisionPerLevelPercent: 5,
         manaCost: 27, cooldown: 12, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
         projectile: 'basic_arrow', propertyTag: GameTags.PROPERTY_METAL,
         descriptionIntro: '정밀 가공한 금속 화살을 기계 장력으로 고속 발사합니다.',
     },
     {
         id: 'steel_shadow_technique', name: '톱날 급습', jobId: 'career:steel_shadow', icon: 'jobs/assassin',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 255, perLevelPercent: 16,
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 140, perLevelPercent: 9,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 115, secondaryPerLevelPercent: 7,
+        forgingPrecisionBasePercent: 45, forgingPrecisionPerLevelPercent: 4,
         manaCost: 25, cooldown: 11, weaponDescription: '단검 또는 검을 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_DAGGER, GameTags.WEAPON_SWORD], guaranteedCritical: true,
         descriptionIntro: '톱날처럼 연마한 금속 칼날로 대상의 급소를 파고듭니다.', propertyTag: GameTags.PROPERTY_METAL,
@@ -2624,27 +2871,36 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     {
         id: 'runeforger_technique', name: '폭발 룬', jobId: 'career:runeforger', icon: 'jobs/mage',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 300, perLevelPercent: 18,
+        forgingPrecisionBasePercent: 55, forgingPrecisionPerLevelPercent: 5,
         manaCost: 34, cooldown: 14,
         projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_FIRE,
         descriptionIntro: '금속에 새긴 화염 룬을 대상 곁에서 폭발시킵니다.',
     },
     {
         id: 'battle_smith_technique', name: '모루 강타', jobId: 'career:battle_smith', icon: 'items/iron_pickaxe',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 330, perLevelPercent: 19,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 285, perLevelPercent: 16,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 2.5, secondaryPerLevelPercent: 0.2,
+        forgingPrecisionBasePercent: 80, forgingPrecisionPerLevelPercent: 7,
         manaCost: 30, cooldown: 15, weaponDescription: '도끼 또는 검을 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_AXE, GameTags.WEAPON_SWORD], unavoidable: true,
         descriptionIntro: '모루를 내리치듯 무기를 크게 휘둘러 대상을 짓누릅니다.', propertyTag: GameTags.PROPERTY_METAL,
     },
     {
         id: 'artificer_technique', name: '자동 추적탄', jobId: 'career:artificer', icon: 'items/iron_pickaxe',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 275, perLevelPercent: 17,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 225, perLevelPercent: 14,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 55, secondaryPerLevelPercent: 4,
+        forgingPrecisionBasePercent: 75, forgingPrecisionPerLevelPercent: 7,
         manaCost: 27, cooldown: 11,
         projectile: 'basic_arrow', propertyTag: GameTags.PROPERTY_ELECTRIC,
         descriptionIntro: '기계식 유도 장치가 달린 전기 탄환을 조립해 발사합니다.',
     },
     {
         id: 'venom_smith_technique', name: '독금 천공', jobId: 'career:venom_smith', icon: 'items/iron_pickaxe',
-        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 250, perLevelPercent: 16,
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 205, perLevelPercent: 13,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 50, secondaryPerLevelPercent: 4,
+        forgingPrecisionBasePercent: 75, forgingPrecisionPerLevelPercent: 7,
         manaCost: 26, cooldown: 12, weaponDescription: '단검을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_DAGGER],
         propertyTag: GameTags.PROPERTY_POISON,
         descriptionIntro: '독성 금속으로 벼린 칼날을 대상의 방어 틈새에 찔러 넣습니다.',
@@ -2653,7 +2909,9 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     },
     {
         id: 'arcane_smith_technique', name: '마도 용융탄', jobId: 'career:arcane_smith', icon: 'items/iron_pickaxe',
-        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 310, perLevelPercent: 18,
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 270, perLevelPercent: 16,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 2, secondaryPerLevelPercent: 0.15,
+        forgingPrecisionBasePercent: 85, forgingPrecisionPerLevelPercent: 8,
         manaCost: 35, cooldown: 14,
         projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_FIRE, shieldPercent: 10,
         descriptionIntro: '용융한 금속과 마력을 탄환으로 빚어 대상에게 발사합니다.',
@@ -2684,34 +2942,74 @@ const eliteTechniqueGroupByJobId: Readonly<Record<string, TagId>> = Object.freez
 });
 
 function eliteTechniqueDamage(context: SkillContext, technique: EliteTechniqueDefinition): number {
-    const primary = context.owner.attribute.get(technique.attribute)
+    const primary = scaledAttributeValue(context, technique.attribute, technique.attributeScale)
         * percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent) / 100;
-    if (!technique.secondaryAttribute) return primary;
-    return primary + context.owner.attribute.get(technique.secondaryAttribute)
+    const secondary = technique.secondaryAttribute
+        ? scaledAttributeValue(context, technique.secondaryAttribute, technique.secondaryAttributeScale)
         * percentByLevel(
             context.skill.level,
             technique.secondaryBasePercent ?? 0,
             technique.secondaryPerLevelPercent ?? 0,
-        ) / 100;
+        ) / 100
+        : 0;
+    const tertiary = technique.tertiaryAttribute
+        ? scaledAttributeValue(context, technique.tertiaryAttribute, technique.tertiaryAttributeScale)
+            * percentByLevel(
+                context.skill.level,
+                technique.tertiaryBasePercent ?? 0,
+                technique.tertiaryPerLevelPercent ?? 0,
+            ) / 100
+        : 0;
+    const precision = technique.forgingPrecisionBasePercent !== undefined
+        ? scaledAttributeValue(context, technique.attribute, technique.attributeScale)
+            * context.owner.attribute.get(AttributeType.FORGING_PRECISION)
+            * percentByLevel(
+                context.skill.level,
+                technique.forgingPrecisionBasePercent,
+                technique.forgingPrecisionPerLevelPercent ?? 0,
+            ) / 100
+        : 0;
+    return primary + secondary + tertiary + precision;
 }
 
 function eliteTechniqueDamageTooltip(context: SkillContext, technique: EliteTechniqueDefinition): string {
     const damage = eliteTechniqueDamage(context, technique);
     const primaryPercent = percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent);
+    const scaledLabel = (attribute: AttributeType, scale = 1) =>
+        `${attribute.label}${scale === 1 ? '' : ` × ${formatNumber(scale)}`}`;
     const secondary = technique.secondaryAttribute
-        ? ` + ${technique.secondaryAttribute.label} × ${formatNumber(percentByLevel(context.skill.level, technique.secondaryBasePercent ?? 0, technique.secondaryPerLevelPercent ?? 0))}%`
+        ? ` + ${scaledLabel(technique.secondaryAttribute, technique.secondaryAttributeScale)} × ${formatNumber(percentByLevel(context.skill.level, technique.secondaryBasePercent ?? 0, technique.secondaryPerLevelPercent ?? 0))}%`
         : '';
-    return tooltipValue(damage, `${technique.attribute.label} × ${formatNumber(primaryPercent)}%${secondary}`);
+    const tertiary = technique.tertiaryAttribute
+        ? ` + ${scaledLabel(technique.tertiaryAttribute, technique.tertiaryAttributeScale)} × ${formatNumber(percentByLevel(context.skill.level, technique.tertiaryBasePercent ?? 0, technique.tertiaryPerLevelPercent ?? 0))}%`
+        : '';
+    const precision = technique.forgingPrecisionBasePercent !== undefined
+        ? ` + ${scaledLabel(technique.attribute, technique.attributeScale)} × ${AttributeType.FORGING_PRECISION.label} × ${formatNumber(percentByLevel(context.skill.level, technique.forgingPrecisionBasePercent, technique.forgingPrecisionPerLevelPercent ?? 0))}%`
+        : '';
+    return tooltipValue(
+        damage,
+        `${scaledLabel(technique.attribute, technique.attributeScale)} × ${formatNumber(primaryPercent)}%${secondary}${tertiary}${precision}`,
+    );
 }
 
 function eliteTechniqueDescription(technique: EliteTechniqueDefinition): string {
+    const coefficientIcons = [
+        technique.attribute,
+        technique.secondaryAttribute,
+        technique.tertiaryAttribute,
+        ...(technique.forgingPrecisionBasePercent !== undefined ? [AttributeType.FORGING_PRECISION] : []),
+    ]
+        .filter((attribute): attribute is AttributeType => Boolean(attribute))
+        .filter((attribute, index, values) => values.indexOf(attribute) === index)
+        .map(attribute => `{{icon.${attribute.key}}}`)
+        .join('');
     const clauses = [
         ...(technique.projectile
             ? ['시전자의 {{icon.critRate}} 치명타 확률과 {{icon.critDmg}} 치명타 피해를 적용받고']
             : []),
         ...(technique.guaranteedCritical ? ['반드시 치명타로 적중하며'] : []),
         ...(technique.unavoidable ? ['회피할 수 없고'] : []),
-        `{{icon.${technique.attribute.key}}} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 `
+        `${coefficientIcons} [color=${technique.damageType === 'magic' ? '$magic' : 'orange'}]{{damage}}[/color]의 `
         + `${technique.damageType === 'magic' ? '마법' : '물리'} 피해를 입힙니다`,
     ];
     return [
@@ -2779,19 +3077,18 @@ for (const technique of eliteTechniques) {
             const found = targetOrDeny(context);
             if ('reason' in found) throw new Error(found.reason);
             spend(context, technique.manaCost);
-            const multiplier = percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent) / 100;
             const damage = eliteTechniqueDamage(context, technique);
             if (technique.projectile) {
                 projectileAttack(
                     context,
                     technique.projectile,
-                    multiplier,
+                    1,
                     technique.propertyTag ? [technique.propertyTag] : undefined,
                     (_projectile, result) => {
                         if (!result.evaded && result.finalDamage > 0) technique.onHit?.(_projectile.target, context.skill.level);
                     },
                     {
-                        ...(technique.secondaryAttribute ? { damage } : {}),
+                        damage,
                         ...(technique.guaranteedCritical ? { attributeOverrides: { critRate: 1 } } : {}),
                     },
                 );
