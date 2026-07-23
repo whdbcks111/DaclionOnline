@@ -37,9 +37,12 @@ import { partyManager } from '../modules/party.js';
 import { emitGameEvent, GameEventIds } from './GameEvent.js';
 import {
     KarmaAccessPolicy,
+    KarmaRules,
     KarmaTier,
     KarmaState,
+    getKarmaAtonementQuote,
     getKarmaDeathPenalty,
+    type KarmaAtonementQuote,
     type KarmaChangeSnapshot,
     type KarmaValueSnapshot,
 } from './Karma.js';
@@ -345,6 +348,36 @@ export default class Player extends Entity {
     setKarma(value: number, source = 'karma:admin', now: Date | number = Date.now()): KarmaChangeSnapshot {
         const result = this.karmaState.set(value, now);
         return this.recordKarmaChange(result, source);
+    }
+
+    /**
+     * 교단 헌금으로 카르마를 낮춘다. 결제와 카르마 변경을 Player가 함께 소유해
+     * NPC 스크립트가 gold나 카르마 원본을 직접 조작하지 않게 한다.
+     */
+    atoneKarma(offeredGold: number): {
+        success: boolean;
+        reason?: string;
+        quote?: KarmaAtonementQuote;
+    } {
+        const deniedReason = this.getKarmaAccessDeniedReason(KarmaAccessPolicy.SANCTUARY);
+        if (deniedReason) return { success: false, reason: deniedReason };
+        if (this.karma <= 0) return { success: false, reason: '씻어낼 카르마가 없습니다.' };
+        const quote = getKarmaAtonementQuote(this.karma, offeredGold);
+        if (quote.karmaReduction <= 0) {
+            return {
+                success: false,
+                reason: `카르마 1을 씻으려면 최소 ${KarmaRules.DONATION_GOLD_PER_KARMA.toLocaleString()}G가 필요합니다.`,
+            };
+        }
+        if (this.gold < quote.goldSpent) {
+            return {
+                success: false,
+                reason: `헌금할 골드가 부족합니다. (필요 ${quote.goldSpent.toLocaleString()}G)`,
+            };
+        }
+        this.gold -= quote.goldSpent;
+        this.reduceKarma(quote.karmaReduction, 'karma:donation');
+        return { success: true, quote };
     }
 
     /** 저장된 초와 현재 접속 구간을 합친 Player 누적 플레이 시간. */

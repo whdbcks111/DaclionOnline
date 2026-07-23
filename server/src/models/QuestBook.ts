@@ -3,7 +3,7 @@ import prisma from '../config/prisma.js';
 import { sendBotMessageToUser, sendNotificationToUser } from '../modules/message.js';
 import { chat } from '../utils/chatBuilder.js';
 import logger from '../utils/logger.js';
-import { TagCollection } from '../../../shared/tags.js';
+import { GameTags, TagCollection } from '../../../shared/tags.js';
 import type { TagId, TagReadable } from '../../../shared/tags.js';
 import type Player from './Player.js';
 import {
@@ -27,6 +27,8 @@ import {
     subscribeAllGameEvents,
 } from './GameEvent.js';
 import type { GameEvent } from './GameEvent.js';
+import { KarmaAccessPolicy } from './Karma.js';
+import NPC from './NPC.js';
 
 const METADATA_STORAGE_KEY = '__daclionQuestMetadata';
 const METADATA_STORAGE_VERSION = 1;
@@ -317,6 +319,7 @@ export default class QuestBook {
         const data = getQuestData(id);
         if (!player || !data || !data.isVisible(player)) return false;
         if (npcId && !data.giverNpcIds.includes(npcId)) return false;
+        if (this.getKarmaAcceptDeniedReason(npcId)) return false;
         const current = this.quests.get(data.id);
         if (current?.status === QuestStatus.ACTIVE || current?.status === QuestStatus.READY) return false;
         if (current?.completionCount && !data.repeat) return false;
@@ -334,6 +337,8 @@ export default class QuestBook {
         const player = this.owner;
         const data = getQuestData(id);
         if (!player || !data) return { success: false, reason: '존재하지 않는 퀘스트입니다.' };
+        const karmaDeniedReason = this.getKarmaAcceptDeniedReason(sourceNpcId);
+        if (karmaDeniedReason) return { success: false, reason: karmaDeniedReason };
         if (!this.canAccept(data.id, sourceNpcId)) {
             return { success: false, reason: '현재 이 퀘스트를 수락할 수 없습니다.' };
         }
@@ -363,6 +368,15 @@ export default class QuestBook {
         });
         this.refreshSnapshotObjectives();
         return { success: true };
+    }
+
+    private getKarmaAcceptDeniedReason(npcId?: string): string | undefined {
+        const player = this.owner;
+        if (!player || !npcId) return undefined;
+        const npc = NPC.getNpc(npcId);
+        return npc?.hasTag(GameTags.NPC_BENEVOLENT)
+            ? player.getKarmaAccessDeniedReason(KarmaAccessPolicy.BENEVOLENT_QUEST)
+            : undefined;
     }
 
     canTurnIn(id: string, npcId?: string): boolean {

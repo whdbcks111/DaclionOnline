@@ -132,6 +132,30 @@ export default class Inventory {
         return this._items.reduce((sum, item) => sum + (matches(item) ? item.count : 0), 0);
     }
 
+    /** 상점 일괄 판매처럼 predicate에 맞는 아이템을 지정 수량만큼 안전하게 제거한다. */
+    removeMatching(matches: (item: Item) => boolean, count = Number.POSITIVE_INFINITY): number {
+        const requested = Number.isFinite(count)
+            ? Math.max(0, Math.trunc(count))
+            : Number.POSITIVE_INFINITY;
+        if (requested <= 0) return 0;
+
+        let remaining = requested;
+        let removed = 0;
+        this.beginChangeBatch();
+        try {
+            for (const item of [...this._items]) {
+                if (remaining <= 0 || !matches(item)) continue;
+                const amount = Math.min(item.count, remaining);
+                if (!this.removeItemInstance(item, amount)) continue;
+                removed += amount;
+                remaining -= amount;
+            }
+        } finally {
+            this.endChangeBatch();
+        }
+        return removed;
+    }
+
     /**
      * 여러 필터 요구량에 실제 아이템 수량을 중복 없이 배정한다.
      * 최대 유량으로 겹치는 필터도 가능한 조합이 있으면 찾아낸다.

@@ -125,6 +125,12 @@ export const GameTags = Object.freeze({
     LOCATION_WORLDROOT: 'location:worldroot',
     LOCATION_HIDDEN: 'location:hidden',
     LOCATION_FISHING: 'location:fishing',
+
+    /** 카르마 기반 NPC·시설 이용 정책 태그. */
+    NPC_BENEVOLENT: 'npc:benevolent',
+    FACILITY_LAWFUL: 'facility:lawful',
+    FACILITY_SANCTUARY: 'facility:sanctuary',
+
     SHOP_GENERAL: 'shop:general',
     SHOP_MINING: 'shop:mining',
     SHOP_FISHING: 'shop:fishing',

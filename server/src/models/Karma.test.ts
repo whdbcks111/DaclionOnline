@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+    getKarmaAtonementQuote,
     getKarmaDeathPenalty,
     getKarmaHeroReward,
     getPvpKarmaGain,
@@ -54,4 +55,19 @@ test('악명 단계 사망은 레거시형 부활 지연과 추가 재화 손실
     assert.equal(penalty.experienceLossRate, 0.06);
     assert.equal(penalty.goldLossRate, 0.045);
     assert.equal(penalty.karmaReduction, 15);
+});
+
+test('교단 헌금은 카르마보다 많은 돈을 받지 않고 100G당 카르마 1을 낮춘다', () => {
+    assert.deepEqual(getKarmaAtonementQuote(25, 1_000), {
+        goldSpent: 1_000,
+        karmaReduction: 10,
+    });
+    assert.deepEqual(getKarmaAtonementQuote(3.25, 20_000), {
+        goldSpent: 325,
+        karmaReduction: 3.25,
+    });
+    assert.deepEqual(getKarmaAtonementQuote(10, 99), {
+        goldSpent: 0,
+        karmaReduction: 0,
+    });
 });

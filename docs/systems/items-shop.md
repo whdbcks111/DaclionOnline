@@ -153,8 +153,9 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 `data/shops.ts`가 `ShopData`를 등록하고 Location의 `shopId`가 상점을 노출한다. `BuyEntry`는 생성 함수·가격·1회 수량·최대 재고·재입고 시간을, `SellEntry`는 필터·가격을 가진다.
 
+- `facility:lawful` 상점은 `Shop.getAccessDeniedReason(player)`로 카르마 정책을 검사한다. `/상점`, 구매, 개별 판매, 전체 판매와 자동완성에 같은 API를 적용해 우회 경로를 막는다.
 - 구매는 현재 위치 상점, 생존 상태, 번호/수량, 재고, 골드, 인벤토리 무게를 검사한 뒤 재고와 골드를 차감하고 아이템을 추가한다.
-- 판매는 filter에 맞는 인벤토리 아이템을 제거하고 골드를 지급한다.
+- 판매는 `Inventory.countMatching/removeMatching`으로 filter에 맞는 아이템을 제거하고 골드를 지급한다.
 - `Shop.update(dt)`가 재입고 timer를 누적하며 게임 루프가 모든 상점을 갱신한다.
 - 재고는 메모리 상태여서 서버 재시작 시 최대치로 초기화된다.
 

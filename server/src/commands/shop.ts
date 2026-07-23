@@ -18,6 +18,16 @@ function getPlayerShop(userId: number) {
     return { player, location, shop };
 }
 
+function ensureShopAccess(
+    userId: number,
+    context: NonNullable<ReturnType<typeof getPlayerShop>>,
+): boolean {
+    const deniedReason = context.shop.getAccessDeniedReason(context.player);
+    if (!deniedReason) return true;
+    sendBotMessageToUser(userId, deniedReason);
+    return false;
+}
+
 export function initShopCommands(): void {
     registerCommand({
         name: '상점',
@@ -40,6 +50,7 @@ export function initShopCommands(): void {
             }
 
             const { player, location, shop } = ctx;
+            if (!ensureShopAccess(userId, ctx)) return;
 
             const b = chat()
                 .color('yellow', b2 => b2.text(`[ ${location.data.name} ]`))
@@ -86,9 +97,7 @@ export function initShopCommands(): void {
             } else {
                 for (let i = 0; i < shop.data.sellList.length; i++) {
                     const entry = shop.data.sellList[i];
-                    const matchCount = player.inventory.items
-                        .filter(item => entry.filter(item))
-                        .reduce((sum, item) => sum + item.count, 0);
+                    const matchCount = player.inventory.countMatching(entry.filter);
 
                     b.color('gray', b2 => b2.text(`[${i + 1}] `));
                     b.text(`${entry.label} — `);
@@ -124,7 +133,7 @@ export function initShopCommands(): void {
                 required: true,
                 completions: (userId) => {
                     const ctx = getPlayerShop(userId);
-                    if (!ctx) return [];
+                    if (!ctx || ctx.shop.getAccessDeniedReason(ctx.player)) return [];
                     return ctx.shop.data.buyList.map((e, i) => ({ value: String(i + 1), description: e.label }));
                 },
             },
@@ -150,6 +159,7 @@ export function initShopCommands(): void {
             }
 
             const { shop } = ctx;
+            if (!ensureShopAccess(userId, ctx)) return;
             const entryIndex = parseInt(args[0], 10) - 1;
             const amount = args[1] ? parseInt(args[1], 10) : 1;
 
@@ -213,7 +223,7 @@ export function initShopCommands(): void {
                 required: true,
                 completions: (userId) => {
                     const ctx = getPlayerShop(userId);
-                    if (!ctx) return [];
+                    if (!ctx || ctx.shop.getAccessDeniedReason(ctx.player)) return [];
                     return ctx.shop.data.sellList.map((e, i) => ({ value: String(i + 1), description: e.label }));
                 },
             },
@@ -239,6 +249,7 @@ export function initShopCommands(): void {
             }
 
             const { shop } = ctx;
+            if (!ensureShopAccess(userId, ctx)) return;
             const entryIndex = parseInt(args[0], 10) - 1;
             const countArg = args[1];
 
@@ -249,8 +260,7 @@ export function initShopCommands(): void {
 
             const entry = shop.data.sellList[entryIndex];
 
-            const matchingItems = player.inventory.items.filter(item => entry.filter(item));
-            const totalAvailable = matchingItems.reduce((sum, item) => sum + item.count, 0);
+            const totalAvailable = player.inventory.countMatching(entry.filter);
 
             if (totalAvailable === 0) {
                 sendBotMessageToUser(userId, `판매할 '${entry.label}' 아이템이 없습니다.`);
@@ -273,12 +283,10 @@ export function initShopCommands(): void {
             toSell = Math.min(toSell, totalAvailable);
             const totalGold = toSell * entry.price;
 
-            let remaining = toSell;
-            for (const item of [...matchingItems]) {
-                if (remaining <= 0) break;
-                const remove = Math.min(remaining, item.count);
-                player.inventory.removeItem(item.id, remove);
-                remaining -= remove;
+            const removed = player.inventory.removeMatching(entry.filter, toSell);
+            if (removed !== toSell) {
+                sendBotMessageToUser(userId, '판매 처리 중 아이템 수량이 변경되었습니다. 다시 시도해주세요.');
+                return;
             }
 
             player.gold += totalGold;
@@ -321,26 +329,21 @@ export function initShopCommands(): void {
             }
 
             const { shop } = ctx;
+            if (!ensureShopAccess(userId, ctx)) return;
 
             let totalGold = 0;
             const results: { label: string; count: number; gold: number }[] = [];
 
             for (const entry of shop.data.sellList) {
-                const matchingItems = player.inventory.items.filter(item => entry.filter(item));
-                const count = matchingItems.reduce((sum, item) => sum + item.count, 0);
+                const count = player.inventory.countMatching(entry.filter);
                 if (count === 0) continue;
 
-                let remaining = count;
-                for (const item of [...matchingItems]) {
-                    if (remaining <= 0) break;
-                    const remove = Math.min(remaining, item.count);
-                    player.inventory.removeItem(item.id, remove);
-                    remaining -= remove;
-                }
+                const removed = player.inventory.removeMatching(entry.filter, count);
+                if (removed <= 0) continue;
 
-                const gold = count * entry.price;
+                const gold = removed * entry.price;
                 totalGold += gold;
-                results.push({ label: entry.label, count, gold });
+                results.push({ label: entry.label, count: removed, gold });
             }
 
             if (results.length === 0) {

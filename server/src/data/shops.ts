@@ -154,7 +154,7 @@ defineShop({
             price: 25,
         },
     ],
-    tags: [GameTags.SHOP_GENERAL],
+    tags: [GameTags.SHOP_GENERAL, GameTags.FACILITY_LAWFUL],
 });
 
 defineShop({
@@ -195,7 +195,7 @@ defineShop({
         { label: '전설 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_LEGENDARY), count: 99, price: FishRarity.LEGENDARY.sellPrice },
         { label: '신화 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_MYTHIC), count: 99, price: FishRarity.MYTHIC.sellPrice },
     ],
-    tags: [GameTags.SHOP_FISHING],
+    tags: [GameTags.SHOP_FISHING, GameTags.FACILITY_LAWFUL],
 });
 
 defineShop({

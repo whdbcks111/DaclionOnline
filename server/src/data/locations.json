@@ -46,7 +46,7 @@
     "z": 0,
     "mapIcon": "job-hall",
     "tags": ["location:safe"],
-    "npcIds": ["job_master"],
+    "npcIds": ["job_master", "atonement_priest"],
     "objects": [],
     "connections": [
       { "locationId": "town_square" }

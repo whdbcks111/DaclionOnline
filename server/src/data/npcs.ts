@@ -16,6 +16,7 @@ import { CAREER_QUEST_IDS } from './quests.js';
 import { BLACKSMITH_APPRENTICESHIP_QUEST_ID } from './quests.js';
 import { JobSlotType, getAllJobs, JobTier } from '../models/Job.js';
 import { canAcquireBlacksmithProfession, hasBlacksmithProfession } from '../modules/forging.js';
+import { GameTags } from '../../../shared/tags.js';
 
 export const MONSTER_HUNT_QUESTION_FLAG = 'npc:monster-hunt-question';
 
@@ -32,7 +33,7 @@ NPC.define({
     id: 'town_guide',
     name: '안내인 리아',
     description: '루미나르 개척촌을 찾은 모험가에게 길을 알려주는 안내인입니다.',
-    tags: ['npc:guide'],
+    tags: ['npc:guide', GameTags.NPC_BENEVOLENT],
     entryScenario: ({ player }) => {
         if (player.quests.canTurnIn(FIRST_SLIME_HUNT_QUEST_ID, 'town_guide')) return 'quest_complete';
         if (player.quests.isActive(FIRST_SLIME_HUNT_QUEST_ID)) return 'quest_progress';
@@ -595,7 +596,7 @@ NPC.define({
     id: 'job_master',
     name: '전직관 세레나',
     description: '모험가의 자질을 살펴 전직 시험을 안내하는 루미나르 전직관입니다.',
-    tags: ['npc:career'],
+    tags: ['npc:career', GameTags.NPC_BENEVOLENT],
     entryScenario: ({ player }) => {
         const ready = careerQuestEntries.find(entry => player.quests.canTurnIn(entry.questId, 'job_master'));
         if (ready) return `complete_${ready.key}`;
@@ -642,6 +643,49 @@ NPC.define({
                 yield Dialogue.end();
             }),
         ]),
+    ],
+});
+
+NPC.define({
+    id: 'atonement_priest',
+    name: '새벽교단 고해사제 세라',
+    description: '헌금을 받아 감당할 수 있는 악업을 씻도록 돕는 새벽교단의 사제입니다.',
+    tags: ['npc:priest', GameTags.NPC_BENEVOLENT, GameTags.FACILITY_SANCTUARY],
+    entryScenario: ({ player }) => player.karma > 0 ? 'greeting' : 'clear',
+    scenarios: [
+        new DialogueScenario('clear', function* () {
+            yield Dialogue.say('당신에게서는 씻어낼 악업이 느껴지지 않아요. 지금의 길을 잃지 마세요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('greeting', function* ({ player }) {
+            yield Dialogue.say(`현재 카르마는 ${player.karma.toFixed(1)}입니다. 헌금 100G마다 카르마 1을 씻을 수 있지만, 교단이 감당할 수 없는 악업은 돈으로 지울 수 없어요.`);
+            yield Dialogue.choice([
+                { label: '1,000G를 헌금한다.', target: 'donate_1000' },
+                { label: '5,000G를 헌금한다.', target: 'donate_5000' },
+                { label: '20,000G를 헌금한다.', target: 'donate_20000' },
+                { label: '지금은 돌아간다.', target: 'end' },
+            ]);
+        }),
+        ...([1_000, 5_000, 20_000] as const).map(amount => {
+            const key = `donate_${amount}`;
+            return new DialogueScenario(key, function* ({ player }) {
+                let result: ReturnType<typeof player.atoneKarma> | undefined;
+                yield Dialogue.event(() => { result = player.atoneKarma(amount); });
+                if (!result?.success || !result.quote) {
+                    yield Dialogue.say(result?.reason ?? '헌금을 처리하지 못했습니다.');
+                    yield Dialogue.end();
+                    return;
+                }
+                yield Dialogue.say(
+                    `${result.quote.goldSpent.toLocaleString()}G를 헌금해 카르마 ${result.quote.karmaReduction.toFixed(1)}을 씻었습니다. 남은 카르마는 ${player.karma.toFixed(1)}입니다.`,
+                );
+                yield Dialogue.end();
+            });
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('스스로 멈추기로 한 선택도 속죄의 시작이에요.');
+            yield Dialogue.end();
+        }),
     ],
 });
 

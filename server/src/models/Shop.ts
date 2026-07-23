@@ -1,7 +1,10 @@
 import type { Item, ItemMetadata } from "./Item.js";
 import logger from "../utils/logger.js";
 import { TagCollection, normalizeTags } from "../../../shared/tags.js";
+import { GameTags } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
+import { KarmaAccessPolicy } from './Karma.js';
+import type Player from './Player.js';
 
 /** 판매 물품 목록 항목 (플레이어가 상점에 판매) */
 export interface SellEntry {
@@ -42,6 +45,13 @@ export class Shop implements TagReadable {
     }
 
     hasTag(tag: TagId): boolean { return this.tags.hasTag(tag); }
+
+    /** 상점 성향과 플레이어 카르마를 합성한 거래 거부 사유. */
+    getAccessDeniedReason(player: Player): string | undefined {
+        return this.hasTag(GameTags.FACILITY_LAWFUL)
+            ? player.getKarmaAccessDeniedReason(KarmaAccessPolicy.LAWFUL_SHOP)
+            : undefined;
+    }
 
     getStock(buyIndex: number): number {
         return this._stocks[buyIndex] ?? 0;

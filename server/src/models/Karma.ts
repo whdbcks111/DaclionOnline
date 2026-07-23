@@ -8,6 +8,7 @@ export const KarmaRules = Object.freeze({
     WANTED_THRESHOLD: 100,
     LAWFUL_SHOP_DENIED_THRESHOLD: 300,
     SANCTUARY_DENIED_THRESHOLD: 500,
+    DONATION_GOLD_PER_KARMA: 100,
     DEATH_REDUCTION: 15,
     MAX_VALUE: 1_000_000,
 } as const);
@@ -163,6 +164,26 @@ export interface KarmaDeathPenalty {
     readonly experienceLossRate: number;
     readonly goldLossRate: number;
     readonly karmaReduction: number;
+}
+
+export interface KarmaAtonementQuote {
+    readonly goldSpent: number;
+    readonly karmaReduction: number;
+}
+
+/**
+ * 제시한 헌금액과 현재 카르마로 실제 결제·감소량을 계산한다.
+ * 남은 카르마보다 많은 금액은 받지 않아 소액의 악업도 정확히 정리할 수 있다.
+ */
+export function getKarmaAtonementQuote(karmaValue: number, offeredGold: number): KarmaAtonementQuote {
+    const karma = normalizeKarma(karmaValue);
+    const gold = Math.max(0, Math.trunc(Number.isFinite(offeredGold) ? offeredGold : 0));
+    const affordableReduction = Math.floor(gold / KarmaRules.DONATION_GOLD_PER_KARMA);
+    const karmaReduction = Math.min(karma, affordableReduction);
+    return {
+        karmaReduction,
+        goldSpent: Math.ceil(karmaReduction * KarmaRules.DONATION_GOLD_PER_KARMA),
+    };
 }
 
 /** 현상 대상이 아닌 플레이어를 처치했을 때만 지역별 악업을 반환한다. */

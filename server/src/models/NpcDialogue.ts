@@ -9,6 +9,8 @@ import { getLocation } from './Location.js';
 import NPC from './NPC.js';
 import type { DialogueAction, DialogueChoice, DialogueContent, DialogueContext } from './NPC.js';
 import type Player from './Player.js';
+import { GameTags } from '../../../shared/tags.js';
+import { KarmaAccessPolicy } from './Karma.js';
 
 export type DialogueEndReasonKey = 'completed' | 'user' | 'moved' | 'defeated' | 'unloaded' | 'replaced' | 'error';
 
@@ -67,6 +69,10 @@ export function startNpcDialogue(player: Player, npc: NPC): DialogueOperationRes
     if (player.moving) return { success: false, reason: '이동 중에는 대화할 수 없습니다.' };
     const location = getLocation(player.locationId);
     if (!location?.hasNpc(npc)) return { success: false, reason: '현재 장소에 없는 NPC입니다.' };
+    if (npc.hasTag(GameTags.FACILITY_SANCTUARY)) {
+        const deniedReason = player.getKarmaAccessDeniedReason(KarmaAccessPolicy.SANCTUARY);
+        if (deniedReason) return { success: false, reason: deniedReason };
+    }
 
     endNpcDialogue(player, DialogueEndReason.REPLACED, false);
     const context: DialogueContext = { player, npc };
