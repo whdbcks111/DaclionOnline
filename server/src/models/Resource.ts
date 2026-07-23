@@ -112,7 +112,17 @@ export default class Resource extends Entity {
             return true;
         }
         const handled = interactionRegistry.get(this.interaction)?.(this, player);
-        if (handled !== false) this._interactionCooldownRemaining = this.rollInteractionCooldown();
+        if (handled !== false) {
+            this._interactionCooldownRemaining = this.rollInteractionCooldown();
+            emitGameEvent(GameEventIds.RESOURCE_INTERACTED, {
+                actor: player,
+                subject: this,
+                data: {
+                    resourceDataId: this.resourceDataId,
+                    locationId: this.locationId,
+                },
+            });
+        }
         return true;
     }
 

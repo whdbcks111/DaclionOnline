@@ -24,12 +24,18 @@ export interface GameEventTrace {
 }
 
 export const GameEventIds = Object.freeze({
+    LOCATION_CHANGED: 'world:location_changed',
     CRITICAL_HIT: 'combat:critical_hit',
     ATTACK_HIT: 'combat:attack_hit',
     ATTACK_EVADED: 'combat:attack_evaded',
+    TARGET_SELECTED: 'combat:target_selected',
     ENTITY_DEFEATED: 'combat:entity_defeated',
     PVP_KILL: 'combat:pvp_kill',
     RESOURCE_DESTROYED: 'resource:destroyed',
+    RESOURCE_INTERACTED: 'resource:interacted',
+    ITEM_EQUIPPED: 'item:equipped',
+    ITEM_USED: 'item:used',
+    STAT_ALLOCATED: 'player:stat_allocated',
     SKILL_ACQUIRED: 'skill:acquired',
     SKILL_STARTED: 'skill:started',
     SKILL_FINISHED: 'skill:finished',
@@ -74,7 +80,7 @@ export function emitGameEvent<TData extends GameEventData>(
     traces.push({
         id: event.id,
         occurredAt: event.occurredAt,
-        actorUserId: event.actor?.attackOwner.playerUserId,
+        actorUserId: event.actor?.attackOwner?.playerUserId,
         actorName: event.actor?.name,
         subjectUserId: event.subject?.playerUserId,
         subjectName: event.subject?.name,

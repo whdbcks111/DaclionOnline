@@ -132,6 +132,14 @@ export default class Location implements TagReadable {
             && object.resourceDataId === resourceDataId);
     }
 
+    /** 번호 기반 명령/UI가 특정 자원의 현재 1-based 오브젝트 번호를 찾는다. */
+    getResourceObjectNumber(resourceDataId: string, includeDefeated = false): number | undefined {
+        const index = this._objects.findIndex(object => object instanceof Resource
+            && object.resourceDataId === resourceDataId
+            && (includeDefeated || !object.isDefeated));
+        return index >= 0 ? index + 1 : undefined;
+    }
+
     getMonstersByDataId(monsterDataId: string): readonly Monster[] {
         return this._objects.filter((object): object is Monster => object instanceof Monster
             && object.monsterDataId === monsterDataId);
@@ -156,6 +164,11 @@ export default class Location implements TagReadable {
     getNpc(index: number): NPC | undefined {
         const id = this.data.npcIds[index];
         return id ? NPC.getNpc(id) : undefined;
+    }
+
+    getNpcNumber(npcId: string): number | undefined {
+        const index = this.data.npcIds.indexOf(normalizeNpcId(npcId));
+        return index >= 0 ? index + 1 : undefined;
     }
 
     hasNpc(npc: NPC): boolean {

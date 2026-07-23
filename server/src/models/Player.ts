@@ -263,11 +263,18 @@ export default class Player extends Entity {
 
     override get locationId() { return this._locationId; }
     override set locationId(val: string) {
-        if (val !== this._locationId) endNpcDialogue(this, DialogueEndReason.MOVED);
+        const previousLocationId = this._locationId;
+        if (val !== previousLocationId) endNpcDialogue(this, DialogueEndReason.MOVED);
         this._locationId = val;
         this._dirty = true;
         if (this.progress) markLocationVisited(this, val);
         this.quests?.refreshSnapshotObjectives();
+        if (val !== previousLocationId) {
+            emitGameEvent(GameEventIds.LOCATION_CHANGED, {
+                actor: this,
+                data: { fromLocationId: previousLocationId, toLocationId: val },
+            });
+        }
     }
 
     override get life() { return this._life; }
@@ -518,6 +525,10 @@ export default class Player extends Entity {
         if (displaced && !this.inventory.addItemSnapshot(displaced.snapshot(displaced.count))) {
             throw new Error(`장착 해제 아이템을 인벤토리에 복원하지 못했습니다: ${displaced.itemDataId}`);
         }
+        emitGameEvent(GameEventIds.ITEM_EQUIPPED, {
+            actor: this,
+            data: { itemDataId: equippedCopy.itemDataId, slot, slotIndex },
+        });
         return { slot, slotIndex, displaced };
     }
 
@@ -556,11 +567,15 @@ export default class Player extends Entity {
 
     /** 스탯 포인트 분배. 성공 여부를 반환 */
     allocateStat(statType: StatType, amount: number): boolean {
-        if (this._statPoint < amount) return false;
+        if (!Number.isInteger(amount) || amount < 1 || this._statPoint < amount) return false;
         this.stat.add(statType, amount);
         this._statPoint -= amount;
         this.stat.applyModifiers(this);
         this._dirty = true;
+        emitGameEvent(GameEventIds.STAT_ALLOCATED, {
+            actor: this,
+            data: { stat: statType.key, amount },
+        });
         return true;
     }
 

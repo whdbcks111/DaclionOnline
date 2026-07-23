@@ -11,6 +11,15 @@ registerResourceInteraction('inspect_ore', (resource, player) => {
     });
 });
 
+registerResourceInteraction('inspect_tutorial_training_dummy', (resource, player) => {
+    resource.life = resource.maxLife;
+    sendNotificationToUser(player.userId, {
+        key: 'tutorial:training-dummy',
+        message: '튼튼한 훈련 목인이다. 대상 지정 후 기본 공격과 스킬을 연습할 수 있다.',
+    });
+    return true;
+});
+
 interface TreasureReward {
     label: string;
     weight: number;
@@ -532,6 +541,23 @@ registerResourceInteraction('harvest_memory_coil', (_resource, player) => {
         message: `기억 두루마리 장치에서 온전한 톱니 ${count}개를 분리했습니다.`,
     });
     return true;
+});
+
+defineResource({
+    id: 'tutorial_training_dummy',
+    name: '초보 모험가 훈련 목인',
+    level: 1,
+    baseAttribute: {
+        maxLife: 10_000_000_000,
+        def: 0,
+        magicDef: 0,
+        speed: 0,
+    },
+    requiredToolTags: [],
+    drops: [],
+    expReward: { min: 0, max: 0 },
+    interaction: 'inspect_tutorial_training_dummy',
+    tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_WOOD],
 });
 
 defineResource({

@@ -5,9 +5,26 @@ import { sendBotMessageToUser, sendNotificationToUser } from './message.js';
 import { getOnlinePlayer } from './playerRegistry.js';
 import { subscribeCommandExecutions } from './bot.js';
 import { chat } from '../utils/chatBuilder.js';
+import { getLocation } from '../models/Location.js';
+import { getShop } from '../models/Shop.js';
+import Resource from '../models/Resource.js';
+import {
+    GameEventIds,
+    subscribeAllGameEvents,
+    type GameEvent,
+} from '../models/GameEvent.js';
+import { markLocationVisited } from '../models/WorldMap.js';
 
 export const TUTORIAL_QUEST_ID = 'tutorial:first-steps';
 export const TUTORIAL_PRACTICE_QUEST_ID = 'tutorial:basic-practice';
+
+const TutorialLocationIds = Object.freeze({
+    SQUARE: 'town_square',
+    POND: 'luminous_pond',
+    FIELD: 'field',
+    MINE: 'feveric_mine',
+} as const);
+const TUTORIAL_TRAINING_DUMMY_ID = 'tutorial_training_dummy';
 
 export const TutorialProgressIds = Object.freeze({
     STATUS: 'tutorial:status',
@@ -51,18 +68,20 @@ export class TutorialStep {
     static readonly WELCOME = new TutorialStep('welcome', '첫걸음', []);
     static readonly STATUS = new TutorialStep('status', '상태창 확인', ['상태창']);
     static readonly LOCATION = new TutorialStep('location', '위치 확인', ['위치']);
-    static readonly MOVE = new TutorialStep('move', '장소 이동', ['이동', '자동이동']);
-    static readonly INTERACT = new TutorialStep('interact', '오브젝트 상호작용', ['상호작용']);
-    static readonly NPC = new TutorialStep('npc', 'NPC 대화', ['대화']);
+    static readonly NPC = new TutorialStep('npc', '안내인과 대화', []);
+    static readonly MOVE = new TutorialStep('move', '물빛 연못으로 이동', []);
+    static readonly SHOP = new TutorialStep('shop', '낚시 상점 확인', ['상점']);
+    static readonly RETURN_SQUARE = new TutorialStep('return-square', '개척촌 광장으로 복귀', []);
+    static readonly MOVE_FIELD = new TutorialStep('move-field', '바람결 초원으로 이동', []);
+    static readonly INTERACT = new TutorialStep('interact', '훈련 목인과 상호작용', []);
     static readonly INVENTORY = new TutorialStep('inventory', '인벤토리 확인', ['인벤토리']);
-    static readonly EQUIP = new TutorialStep('equip', '아이템 장착', ['장착']);
-    static readonly USE = new TutorialStep('use', '아이템 사용', ['사용']);
-    static readonly SHOP = new TutorialStep('shop', '상점 이용', ['상점', '구매']);
-    static readonly TARGET = new TutorialStep('target', '대상 지정', ['대상지정']);
-    static readonly ATTACK = new TutorialStep('attack', '기본 공격', ['공격']);
+    static readonly EQUIP = new TutorialStep('equip', '아이템 장착', []);
+    static readonly USE = new TutorialStep('use', '아이템 사용', []);
+    static readonly TARGET = new TutorialStep('target', '훈련 대상 지정', []);
+    static readonly ATTACK = new TutorialStep('attack', '훈련 대상 공격', []);
     static readonly SKILL_LIST = new TutorialStep('skill-list', '스킬 목록', ['스킬목록']);
-    static readonly SKILL_USE = new TutorialStep('skill-use', '스킬 사용', ['스킬']);
-    static readonly GROWTH = new TutorialStep('growth', '레벨과 스탯', ['스탯분배']);
+    static readonly SKILL_USE = new TutorialStep('skill-use', '강타 사용', []);
+    static readonly GROWTH = new TutorialStep('growth', '레벨과 스탯', []);
     static readonly HUD = new TutorialStep('hud', 'HUD 설정', []);
     static readonly SHORTCUTS = new TutorialStep('shortcuts', '단축키 확인', ['단축키목록']);
     static readonly CONTENT_CHOICE = new TutorialStep('content-choice', '콘텐츠 선택', []);
@@ -97,13 +116,15 @@ const MAIN_STEP_ORDER = Object.freeze([
     TutorialStep.WELCOME,
     TutorialStep.STATUS,
     TutorialStep.LOCATION,
-    TutorialStep.MOVE,
-    TutorialStep.INTERACT,
     TutorialStep.NPC,
+    TutorialStep.MOVE,
+    TutorialStep.SHOP,
+    TutorialStep.RETURN_SQUARE,
+    TutorialStep.MOVE_FIELD,
+    TutorialStep.INTERACT,
     TutorialStep.INVENTORY,
     TutorialStep.EQUIP,
     TutorialStep.USE,
-    TutorialStep.SHOP,
     TutorialStep.TARGET,
     TutorialStep.ATTACK,
     TutorialStep.SKILL_LIST,
@@ -201,6 +222,7 @@ export function initializeTutorialSession(player: Player, options: {
     }
     if (snapshot.status !== 'active') return;
     ensureTutorialQuest(player);
+    ensureTutorialDestinationVisited(player, snapshot.step);
     showTutorialStep(player, options.showCard === true);
 }
 
@@ -265,6 +287,54 @@ export function getNextMainTutorialStep(step: TutorialStep): TutorialStep | unde
     return index >= 0 ? MAIN_STEP_ORDER[index + 1] : undefined;
 }
 
+export interface TutorialEventFacts {
+    readonly id: string;
+    readonly toLocationId?: string;
+    readonly npcId?: string;
+    readonly resourceDataId?: string;
+    readonly itemDataId?: string;
+    readonly skillDataId?: string;
+}
+
+/** 실제 게임 결과가 현재 실습 목표를 충족했는지 판정하는 순수 함수. */
+export function doesTutorialEventCompleteStep(
+    step: TutorialStep,
+    event: TutorialEventFacts,
+): boolean {
+    switch (step) {
+        case TutorialStep.NPC:
+            return event.id === GameEventIds.NPC_DIALOGUE_STARTED && event.npcId === 'town_guide';
+        case TutorialStep.MOVE:
+            return event.id === GameEventIds.LOCATION_CHANGED
+                && event.toLocationId === TutorialLocationIds.POND;
+        case TutorialStep.RETURN_SQUARE:
+            return event.id === GameEventIds.LOCATION_CHANGED
+                && event.toLocationId === TutorialLocationIds.SQUARE;
+        case TutorialStep.MOVE_FIELD:
+            return event.id === GameEventIds.LOCATION_CHANGED
+                && event.toLocationId === TutorialLocationIds.FIELD;
+        case TutorialStep.INTERACT:
+            return event.id === GameEventIds.RESOURCE_INTERACTED
+                && event.resourceDataId === TUTORIAL_TRAINING_DUMMY_ID;
+        case TutorialStep.EQUIP:
+            return event.id === GameEventIds.ITEM_EQUIPPED;
+        case TutorialStep.USE:
+            return event.id === GameEventIds.ITEM_USED && event.itemDataId === 'health_potion';
+        case TutorialStep.TARGET:
+            return event.id === GameEventIds.TARGET_SELECTED
+                && event.resourceDataId === TUTORIAL_TRAINING_DUMMY_ID;
+        case TutorialStep.ATTACK:
+            return (event.id === GameEventIds.ATTACK_HIT || event.id === GameEventIds.ATTACK_EVADED)
+                && event.resourceDataId === TUTORIAL_TRAINING_DUMMY_ID;
+        case TutorialStep.SKILL_USE:
+            return event.id === GameEventIds.SKILL_STARTED && event.skillDataId === 'power_strike';
+        case TutorialStep.GROWTH:
+            return event.id === GameEventIds.STAT_ALLOCATED;
+        default:
+            return false;
+    }
+}
+
 export function initTutorial(): void {
     if (initialized) return;
     initialized = true;
@@ -274,8 +344,59 @@ export function initTutorial(): void {
         if (!player) return;
         const snapshot = getTutorialSnapshot(player);
         if (snapshot.status !== 'active' || !snapshot.step.acceptsCommand(event.commandName)) return;
+        if (snapshot.step === TutorialStep.SHOP) {
+            const shopId = getLocation(player.locationId)?.data.shopId;
+            if (!shopId || !getShop(shopId)) return;
+        }
         advanceMainStep(player, snapshot.step);
     });
+    subscribeAllGameEvents(event => {
+        const userId = event.actor?.attackOwner.playerUserId;
+        if (userId === undefined) return;
+        const player = getOnlinePlayer(userId);
+        if (!player) return;
+        const snapshot = getTutorialSnapshot(player);
+        if (snapshot.status !== 'active') return;
+
+        const facts = tutorialEventFacts(event);
+        if (doesTutorialEventCompleteStep(snapshot.step, facts)) {
+            advanceMainStep(player, snapshot.step);
+            return;
+        }
+        if (event.id === GameEventIds.LOCATION_CHANGED
+            && [
+                TutorialStep.NPC,
+                TutorialStep.MOVE,
+                TutorialStep.SHOP,
+                TutorialStep.RETURN_SQUARE,
+                TutorialStep.MOVE_FIELD,
+                TutorialStep.INTERACT,
+                TutorialStep.TARGET,
+                TutorialStep.ATTACK,
+                TutorialStep.SKILL_USE,
+            ].includes(snapshot.step)) {
+            showTutorialStep(player, true);
+        }
+    });
+}
+
+function tutorialEventFacts(event: GameEvent): TutorialEventFacts {
+    const subjectResourceId = event.subject instanceof Resource
+        ? event.subject.resourceDataId
+        : undefined;
+    return {
+        id: event.id,
+        toLocationId: stringEventData(event, 'toLocationId'),
+        npcId: stringEventData(event, 'npcId'),
+        resourceDataId: stringEventData(event, 'resourceDataId') ?? subjectResourceId,
+        itemDataId: stringEventData(event, 'itemDataId'),
+        skillDataId: stringEventData(event, 'skillDataId'),
+    };
+}
+
+function stringEventData(event: GameEvent, key: string): string | undefined {
+    const value = event.data[key];
+    return typeof value === 'string' ? value : undefined;
 }
 
 function advanceMainStep(player: Player, current: TutorialStep): void {
@@ -287,7 +408,19 @@ function advanceMainStep(player: Player, current: TutorialStep): void {
 function setStep(player: Player, step: TutorialStep): void {
     player.progress.setState(TutorialProgressIds.STEP, step.key);
     if (step === TutorialStep.SKILL_LIST) player.skills.grant('power_strike', 'tutorial');
+    ensureTutorialDestinationVisited(player, step);
     showTutorialStep(player, true);
+}
+
+function ensureTutorialDestinationVisited(player: Player, step: TutorialStep): void {
+    const destinationId = step === TutorialStep.CONTENT_FISHING
+        ? TutorialLocationIds.POND
+        : step === TutorialStep.CONTENT_MINING
+            ? TutorialLocationIds.MINE
+            : step === TutorialStep.CONTENT_HUNTING
+                ? TutorialLocationIds.FIELD
+                : undefined;
+    if (destinationId) markLocationVisited(player, destinationId);
 }
 
 function completeContentIntroduction(player: Player, content: TutorialContent): void {
@@ -365,7 +498,7 @@ function showTutorialStep(player: Player, includeCard: boolean): void {
         showProgress: false,
         editExists: true,
     });
-    if (includeCard) sendBotMessageToUser(player.userId, buildTutorialCard(snapshot));
+    if (includeCard) sendBotMessageToUser(player.userId, buildTutorialCard(player, snapshot));
 }
 
 function clearTutorialNotification(player: Player): void {
@@ -378,7 +511,30 @@ function clearTutorialNotification(player: Player): void {
     });
 }
 
-function buildTutorialCard(snapshot: TutorialSnapshot) {
+function getTutorialItemNumber(player: Player, itemDataId: string): number | undefined {
+    const entry = player.inventory.getIndexedItems()
+        .find(candidate => candidate.item.itemDataId === itemDataId);
+    return entry ? entry.index + 1 : undefined;
+}
+
+function getTutorialDummyNumber(player: Player): number | undefined {
+    return getLocation(player.locationId)?.getResourceObjectNumber(
+        TUTORIAL_TRAINING_DUMMY_ID,
+    );
+}
+
+function getTutorialGuideNumber(player: Player): number | undefined {
+    return getLocation(player.locationId)?.getNpcNumber('town_guide');
+}
+
+function hasTutorialDummyTarget(player: Player): boolean {
+    return player.currentTarget instanceof Resource
+        && player.currentTarget.resourceDataId === TUTORIAL_TRAINING_DUMMY_ID
+        && player.currentTarget.locationId === player.locationId
+        && !player.currentTarget.isDefeated;
+}
+
+function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
     const b = chat()
         .color('$text-tertiary', x => x.text('[ 첫 모험 안내 ]  '))
         .color('gold', x => x.weight('bold', y => y.text(snapshot.step.label)))
@@ -405,71 +561,164 @@ function buildTutorialCard(snapshot: TutorialSnapshot) {
                 .color('$text-tertiary', x => x.text('명령어 /위치 · 별칭 l, m\n\n'))
                 .button('/위치', x => x.text('[현재 위치 보기]'));
             break;
-        case TutorialStep.MOVE:
-            b.text('위치 메시지의 [이동] 버튼으로 인접 장소를 오갈 수 있습니다. ')
-                .text('/이동을 입력하면 갈 수 있는 장소를 보고, 방문한 목적지는 /자동이동으로 경로를 찾아갈 수 있습니다.\n')
-                .color('$text-tertiary', x => x.text('명령어 /이동 [장소] · 별칭 v, go, mv\n\n'))
-                .button('/이동', x => x.text('[이동 가능 장소]'));
-            break;
-        case TutorialStep.INTERACT:
-            b.text('보물상자처럼 상호작용 가능한 자원은 위치 메시지에 [상호작용] 버튼이 나타납니다. ')
-                .text('버튼이 없다면 공격하거나 관찰하는 오브젝트일 수 있습니다.\n')
-                .color('$text-tertiary', x => x.text('명령어 /상호작용 <번호> · 별칭 it\n\n'))
-                .button('/상호작용 1', x => x.text('[1번과 상호작용]'));
-            break;
         case TutorialStep.NPC:
-            b.text('NPC 옆 [대화] 버튼을 누르면 선택지형 대화와 퀘스트가 시작됩니다. ')
-                .text('장소를 떠나거나 /대화종료를 입력하면 대화가 끝납니다.\n')
-                .color('$text-tertiary', x => x.text('명령어 /대화 <번호> · 별칭 tk\n\n'))
-                .button('/대화 1', x => x.text('[1번 NPC와 대화]'));
+            if (player.locationId === TutorialLocationIds.SQUARE) {
+                const guideNumber = getTutorialGuideNumber(player);
+                b.text('광장에 있는 여행 안내인 옆 [대화] 버튼을 눌러 실제로 대화를 시작하세요. ')
+                    .text('장소를 떠나거나 /대화종료를 입력하면 대화가 끝납니다.\n')
+                    .color('$text-tertiary', x => x.text('명령어 /대화 <번호> · 별칭 tk\n\n'));
+                if (guideNumber) {
+                    b.button(`/대화 ${guideNumber}`, x => x.text('[여행 안내인과 대화]'));
+                } else {
+                    b.button('/위치', x => x.text('[광장 NPC 다시 확인]'));
+                }
+            } else {
+                b.text('여행 안내인은 루미나르 개척촌 광장에 있습니다. 광장으로 돌아간 뒤 위치 정보에서 대화를 시작하세요.\n\n')
+                    .button('/자동이동 루미나르 개척촌 광장', x => x.text('[광장으로 자동이동]'));
+            }
             break;
+        case TutorialStep.MOVE:
+            if (player.locationId === TutorialLocationIds.SQUARE) {
+                b.text('이번에는 광장에서 바로 연결된 [루미나르 물빛 연못]으로 실제 이동해보세요. ')
+                    .text('도착해야 다음 단계가 진행됩니다.\n')
+                    .color('$text-tertiary', x => x.text('명령어 /이동 <장소> · 별칭 v, go, mv\n\n'))
+                    .button('/이동 루미나르 물빛 연못', x => x.text('[물빛 연못으로 이동]'));
+            } else {
+                b.text('물빛 연못은 루미나르 개척촌 광장에서 이어집니다. 먼저 광장으로 돌아오세요.\n\n')
+                    .button('/자동이동 루미나르 개척촌 광장', x => x.text('[광장으로 자동이동]'));
+            }
+            break;
+        case TutorialStep.SHOP:
+            if (player.locationId === TutorialLocationIds.POND) {
+                b.text('물빛 연못에는 낚시 상점이 있습니다. [상점]을 열어 실제 판매 목록을 확인하세요. ')
+                    .text('상점이 없는 장소에서 같은 명령을 입력해도 이 단계는 완료되지 않습니다.\n')
+                    .color('$text-tertiary', x => x.text('명령어 /상점 · 별칭 sh, 구매는 bu\n\n'))
+                    .button('/상점', x => x.text('[낚시 상점 열기]'));
+            } else {
+                b.text('낚시 상점은 루미나르 물빛 연못에 있습니다. 연못으로 돌아가야 상점 확인을 진행할 수 있습니다.\n\n')
+                    .button('/자동이동 루미나르 물빛 연못', x => x.text('[물빛 연못으로 자동이동]'));
+            }
+            break;
+        case TutorialStep.RETURN_SQUARE:
+            b.text('상점 확인을 마쳤습니다. 이제 바람결 초원으로 가기 위해 루미나르 개척촌 광장으로 돌아가세요. ')
+                .text('이동은 출발이 아니라 실제 도착 시 완료됩니다.\n')
+                .color('$text-tertiary', x => x.text('이미 방문한 장소는 /자동이동으로도 찾아갈 수 있습니다.\n\n'))
+                .button(
+                    player.locationId === TutorialLocationIds.POND
+                        ? '/이동 루미나르 개척촌 광장'
+                        : '/자동이동 루미나르 개척촌 광장',
+                    x => x.text('[개척촌 광장으로 이동]'),
+                );
+            break;
+        case TutorialStep.MOVE_FIELD:
+            if (player.locationId === TutorialLocationIds.SQUARE) {
+                b.text('광장 동쪽의 [바람결 초원 1 들머리]로 이동하세요. ')
+                    .text('초원에는 공격 가능한 몬스터와 튜토리얼용 훈련 목인이 있습니다.\n\n')
+                    .button('/이동 바람결 초원 1 들머리', x => x.text('[바람결 초원으로 이동]'));
+            } else {
+                b.text('바람결 초원은 루미나르 개척촌 광장에서 이어집니다. 먼저 광장으로 돌아오세요.\n\n')
+                    .button('/자동이동 루미나르 개척촌 광장', x => x.text('[광장으로 자동이동]'));
+            }
+            break;
+        case TutorialStep.INTERACT: {
+            const dummyNumber = getTutorialDummyNumber(player);
+            if (player.locationId === TutorialLocationIds.FIELD && dummyNumber) {
+                b.text('위치 정보에서 [초보 모험가 훈련 목인]을 찾고 [상호작용] 버튼을 눌러 살펴보세요. ')
+                    .text('다른 몬스터나 보물상자와 상호작용해도 이 실습은 완료되지 않습니다.\n')
+                    .color('$text-tertiary', x => x.text('명령어 /상호작용 <번호> · 별칭 it\n\n'))
+                    .button(`/상호작용 ${dummyNumber}`, x => x.text('[훈련 목인 살펴보기]'))
+                    .text('  ')
+                    .button('/위치', x => x.text('[위치 다시 보기]'));
+            } else {
+                b.text('훈련 목인은 바람결 초원 1 들머리에 있습니다. 초원으로 돌아가 실습을 계속하세요.\n\n')
+                    .button('/자동이동 바람결 초원 1 들머리', x => x.text('[초원으로 자동이동]'));
+            }
+            break;
+        }
         case TutorialStep.INVENTORY:
             b.text('인벤토리에서는 아이템 이름, 수량, 중량과 내구도를 확인하고 [사용]·[장착] 버튼을 누를 수 있습니다.\n')
                 .color('$text-tertiary', x => x.text('명령어 /인벤토리 · 별칭 i\n\n'))
                 .button('/인벤토리', x => x.text('[인벤토리 열기]'));
             break;
-        case TutorialStep.EQUIP:
+        case TutorialStep.EQUIP: {
+            const swordNumber = getTutorialItemNumber(player, 'old_sword');
             b.text('인벤토리의 장비 옆 [장착] 버튼을 먼저 사용해보세요. 장착한 무기와 도구에 따라 평타와 가능한 행동이 달라집니다.\n')
-                .color('$text-tertiary', x => x.text('명령어 /장착 <인벤토리 번호> · 별칭 eq\n\n'))
-                .button('/인벤토리', x => x.text('[장착할 아이템 찾기]'));
+                .color('$text-tertiary', x => x.text('명령어 /장착 <인벤토리 번호> · 별칭 eq\n\n'));
+            if (swordNumber) {
+                b.button(`/장착 ${swordNumber}`, x => x.text('[낡은 검 장착]'));
+            } else {
+                b.button('/인벤토리', x => x.text('[장착할 아이템 찾기]'));
+            }
             break;
-        case TutorialStep.USE:
+        }
+        case TutorialStep.USE: {
+            const potionNumber = getTutorialItemNumber(player, 'health_potion');
             b.text('소모품은 인벤토리의 [사용] 버튼으로 사용합니다. 지원품으로 받은 체력 포션도 같은 방식입니다.\n')
-                .color('$text-tertiary', x => x.text('명령어 /사용 <인벤토리 번호> · 별칭 u\n\n'))
-                .button('/인벤토리', x => x.text('[사용할 아이템 찾기]'));
+                .color('$text-tertiary', x => x.text('명령어 /사용 <인벤토리 번호> · 별칭 u\n\n'));
+            if (potionNumber) {
+                b.button(`/사용 ${potionNumber}`, x => x.text('[체력 포션 사용]'));
+            } else {
+                b.text('체력 포션이 없다면 상점에서 구매한 뒤 사용하세요.\n')
+                    .button('/인벤토리', x => x.text('[인벤토리 확인]'));
+            }
             break;
-        case TutorialStep.SHOP:
-            b.text('상점이 있는 장소에서 상품의 [구매] 버튼을 누르고, 인벤토리의 아이템을 판매할 수 있습니다. ')
-                .text('현재 장소가 상점이 아니라면 위치 정보에서 잡화점이나 낚시 상점으로 이동하세요.\n')
-                .color('$text-tertiary', x => x.text('명령어 /상점 · 별칭 sh, 구매는 bu\n\n'))
-                .button('/상점', x => x.text('[상점 열기]'));
+        }
+        case TutorialStep.TARGET: {
+            const dummyNumber = getTutorialDummyNumber(player);
+            if (dummyNumber) {
+                b.text('훈련 목인 옆 [대상 지정] 버튼을 눌러 전투 대상을 정하세요. ')
+                    .text('다른 대상을 지정해도 이 실습은 완료되지 않습니다.\n')
+                    .color('$text-tertiary', x => x.text('명령어 /대상지정 <번호> · 별칭 t\n\n'))
+                    .button(`/대상지정 ${dummyNumber}`, x => x.text('[훈련 목인 대상 지정]'));
+            } else {
+                b.text('훈련 목인이 있는 바람결 초원 1 들머리로 돌아가세요.\n\n')
+                    .button('/자동이동 바람결 초원 1 들머리', x => x.text('[초원으로 자동이동]'));
+            }
             break;
-        case TutorialStep.TARGET:
-            b.text('위치 메시지에서 몬스터나 자원의 [대상 지정] 버튼을 누르면 평타와 스킬이 그 대상을 바라봅니다.\n')
-                .color('$text-tertiary', x => x.text('명령어 /대상지정 <번호> · 별칭 t\n\n'))
-                .button('/대상지정 1', x => x.text('[1번 대상 지정]'));
+        }
+        case TutorialStep.ATTACK: {
+            const dummyNumber = getTutorialDummyNumber(player);
+            b.text('훈련 목인을 실제로 한 번 공격하세요. 적중하거나 목인이 회피한 공격만 실습으로 인정됩니다. ')
+                .text('장착 무기, 공격 속도, 회피, 방어력과 속성 상성이 실제 전투에 반영됩니다.\n')
+                .color('$text-tertiary', x => x.text('명령어 /공격 [번호] · 별칭 a\n\n'));
+            if (hasTutorialDummyTarget(player)) {
+                b.button('/공격', x => x.text('[현재 대상 공격]'));
+            } else if (dummyNumber) {
+                b.text('현재 대상이 바뀌었습니다. 훈련 목인을 다시 지정한 뒤 공격하세요.\n')
+                    .button(`/대상지정 ${dummyNumber}`, x => x.text('[훈련 목인 다시 지정]'))
+                    .text('  ')
+                    .button(`/공격 ${dummyNumber}`, x => x.text('[훈련 목인 공격]'));
+            } else {
+                b.button('/자동이동 바람결 초원 1 들머리', x => x.text('[초원으로 자동이동]'));
+            }
             break;
-        case TutorialStep.ATTACK:
-            b.text('대상을 지정한 뒤 공격하면 장착 무기, 공격 속도, 회피, 방어력과 속성 상성이 반영됩니다. ')
-                .text('광석은 곡괭이처럼 요구 태그가 맞는 도구가 필요합니다.\n')
-                .color('$text-tertiary', x => x.text('명령어 /공격 [번호] · 별칭 a\n\n'))
-                .button('/공격', x => x.text('[현재 대상 공격]'));
-            break;
+        }
         case TutorialStep.SKILL_LIST:
             b.text('튜토리얼 보상으로 스킬 [강타]를 지급했습니다. 스킬 목록에서 아이콘, 레벨, 재사용 대기시간과 사용 버튼을 확인하세요.\n')
                 .color('$text-tertiary', x => x.text('명령어 /스킬목록 · 별칭 sl\n\n'))
                 .button('/스킬목록', x => x.text('[스킬 목록 열기]'));
             break;
-        case TutorialStep.SKILL_USE:
-            b.text('대상을 지정하고 스킬의 [사용] 버튼을 누르세요. ')
+        case TutorialStep.SKILL_USE: {
+            b.text('훈련 목인을 대상으로 스킬의 [사용] 버튼을 누르세요. ')
                 .text('스킬 이름에 느낌표를 붙인 시전어도 같은 스킬을 발동하며, 성공한 사용은 스킬 경험치를 올립니다.\n')
-                .color('$text-tertiary', x => x.text('명령어 /스킬 강타 · 별칭 k 강타 · 시전어 강타!\n\n'))
-                .button('/스킬 강타', x => x.text('[강타 사용]'));
+                .color('$text-tertiary', x => x.text('명령어 /스킬 강타 · 별칭 k 강타 · 시전어 강타!\n\n'));
+            const dummyNumber = getTutorialDummyNumber(player);
+            if (hasTutorialDummyTarget(player)) {
+                b.text('기본 공격 대기시간이 끝난 뒤 사용하세요.\n')
+                    .button('/스킬 강타', x => x.text('[강타 사용]'));
+            } else if (dummyNumber) {
+                b.text('현재 대상이 바뀌었습니다. 훈련 목인을 다시 지정하세요.\n')
+                    .button(`/대상지정 ${dummyNumber}`, x => x.text('[훈련 목인 다시 지정]'));
+            } else {
+                b.button('/자동이동 바람결 초원 1 들머리', x => x.text('[초원으로 자동이동]'));
+            }
             break;
+        }
         case TutorialStep.GROWTH:
             b.text('기본 조작 실습 서브 퀘스트를 마쳐 방금 다음 레벨까지 필요한 경험치를 받았습니다. ')
                 .text('레벨이 오르면 모든 기본 스탯이 1씩 오르고 스탯 포인트 3을 받습니다. ')
                 .text('근력·체력·민첩·지능·감각은 공격, 생존, 속도, 마법, 치명타와 생활 능력치에 서로 다르게 관여합니다.\n')
+                .text('스탯 분배 창을 연 뒤 원하는 스탯의 [+1] 버튼을 눌러 실제로 1포인트를 투자하세요.\n')
                 .color('$text-tertiary', x => x.text('명령어 /스탯분배 · 별칭 r, st\n\n'))
                 .button('/스탯분배', x => x.text('[스탯 분배 보기]'));
             break;
@@ -497,7 +746,7 @@ function buildTutorialCard(snapshot: TutorialSnapshot) {
             b.text('낚시 가능 장소에서 낚싯대를 주 손에, 미끼 묶음을 보조 손에 장착하고 /낚시를 사용합니다. ')
                 .text('입질 뒤 미니게임에서 물고기를 채집 영역 안에 유지하면 등급별 물고기와 경험치를 얻습니다.\n')
                 .color('$text-tertiary', x => x.text('루미나르 연못에는 낚시 상점이 있으며, 미끼가 미장착이면 보유 묶음을 자동 장착합니다.\n\n'))
-                .button('/자동이동 루미나르 연못', x => x.text('[연못으로 자동이동]'))
+                .button('/자동이동 루미나르 물빛 연못', x => x.text('[연못으로 자동이동]'))
                 .text('  ')
                 .button('/튜토리얼다음', x => x.text('[설명 완료]'));
             break;

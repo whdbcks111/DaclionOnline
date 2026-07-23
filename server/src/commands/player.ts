@@ -9,6 +9,8 @@ import { getItemData, Item } from "../models/Item.js";
 import type { EquipSlot } from "../models/Equipment.js";
 import { SLOT_MAX, EquipSlotType } from "../models/Equipment.js";
 import type Entity from "../models/Entity.js";
+import Monster from "../models/Monster.js";
+import Resource from "../models/Resource.js";
 import { StatType } from "../models/Stat.js";
 import { AttributeType } from "../models/Attribute.js";
 import { ActionType } from "../models/Action.js";
@@ -17,6 +19,7 @@ import logger from "../utils/logger.js";
 import { CompletionItem } from "../../../shared/types.js";
 import { parseChatMessage } from "../utils/chatParser.js";
 import { formatWeight } from "../utils/format.js";
+import { emitGameEvent, GameEventIds } from "../models/GameEvent.js";
 
 function formatStatusDuration(seconds: number): string {
     const totalSeconds = Math.max(0, Math.ceil(seconds));
@@ -352,7 +355,10 @@ export function initPlayerCommands(): void {
                 return;
             }
 
-            const result = player.inventory.useItem(item.id);
+            const itemId = item.id;
+            const itemDataId = item.itemDataId;
+            const countBefore = item.count;
+            const result = player.inventory.useItem(itemId);
             if (!result) {
                 sendBotMessageToUser(userId, `${item.name}은(는) 사용할 수 없습니다.`);
                 return;
@@ -361,6 +367,13 @@ export function initPlayerCommands(): void {
             sendBotMessageToUser(userId, `${item.name}을(를) 사용합니다.`);
 
             await result;
+            const remaining = player.inventory.getItem(itemId);
+            if (!remaining || remaining.count < countBefore) {
+                emitGameEvent(GameEventIds.ITEM_USED, {
+                    actor: player,
+                    data: { itemDataId },
+                });
+            }
         },
     });
 
@@ -601,6 +614,16 @@ export function initPlayerCommands(): void {
                 return;
             }
             player.currentTarget = target;
+            emitGameEvent(GameEventIds.TARGET_SELECTED, {
+                actor: player,
+                subject: target,
+                data: {
+                    locationId: player.locationId,
+                    targetNumber: number,
+                    resourceDataId: target instanceof Resource ? target.resourceDataId : null,
+                    monsterDataId: target instanceof Monster ? target.monsterDataId : null,
+                },
+            });
             sendBotMessageToUser(userId, chat()
                 .color('gold', b => b.text('[대상 지정] '))
                 .text(`${number}. Lv.${target.level} ${target.name}`)
