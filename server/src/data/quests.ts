@@ -44,6 +44,10 @@ export const ASHEN_ABYSS_QUEST_IDS = Object.freeze({
     RELIGHT_WAYSTATION: 'ashen-abyss:relight-waystation',
     END_ASHEN_COURT: 'ashen-abyss:end-ashen-court',
 } as const);
+export const VOIDCROWN_QUEST_IDS = Object.freeze({
+    RESTORE_WARD: 'voidcrown:restore-ward',
+    END_REGENCY: 'voidcrown:end-regency',
+} as const);
 
 defineQuest({
     id: TUTORIAL_QUEST_ID,
@@ -487,6 +491,75 @@ defineQuest({
         QuestReward.gold(38_000),
         QuestReward.item('ashguard_bulwark', 1, '재성벽 방패'),
         QuestReward.item('sovereign_decree_skillbook', 1, '재왕의 칙령 전승서'),
+    ],
+});
+
+defineQuest({
+    id: VOIDCROWN_QUEST_IDS.RESTORE_WARD,
+    name: '빛이 닿지 않는 귀환표식',
+    aliases: ['공허왕관 귀환표식', '무광 중계소'],
+    description: '무광은과 별먹을 모아 공허왕관 성채의 귀환표식을 다시 새기세요.',
+    tags: ['quest:side', 'region:voidcrown'],
+    giverNpcIds: ['voidcrown_warden'],
+    turnInNpcIds: ['voidcrown_warden'],
+    visible: player => player.level >= 275,
+    canAccept: player => player.level >= 275,
+    stages: [new QuestStage({
+        id: 'restore-return-mark',
+        description: '외성과 왕실 서고에서 귀환표식에 필요한 무광은과 별먹을 모으세요.',
+        objectives: [
+            QuestObjective.item('nullsilver', '무광은 수집', 14, 'nullsilver', true),
+            QuestObjective.item('astral-ink', '별먹 수집', 10, 'astral_ink', true),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(275_000),
+        QuestReward.gold(45_000),
+        QuestReward.item('voidcrown_draught', 5, '공허맥 회복약'),
+        QuestReward.item('voidstep_skillbook', 1, '공허걸음 전승서'),
+    ],
+});
+
+defineQuest({
+    id: VOIDCROWN_QUEST_IDS.END_REGENCY,
+    name: '왕 없는 왕관의 판결',
+    aliases: ['공허섭정 토벌', '라시엘'],
+    description: '무관성주 테오른을 넘어 공허왕관 기둥을 부수고 섭정 라시엘의 무효 선고를 끝내세요.',
+    tags: ['quest:side', 'quest:boss', 'region:voidcrown'],
+    giverNpcIds: ['voidcrown_warden'],
+    turnInNpcIds: ['voidcrown_warden'],
+    prerequisiteQuestIds: [VOIDCROWN_QUEST_IDS.RESTORE_WARD],
+    visible: player => player.level >= 290,
+    canAccept: player => player.level >= 290,
+    stages: [new QuestStage({
+        id: 'break-empty-regency',
+        description: '외성주와 공허섭정을 차례로 제압해 왕 없는 성채의 강제 명령을 끝내세요.',
+        objectives: [
+            QuestObjective.kill(
+                'crownless-castellan',
+                '무관성주 테오른 처치',
+                1,
+                target => target.hasTag('monster:crownless-castellan'),
+            ),
+            QuestObjective.destroy(
+                'voidcrown-pillars',
+                '공허왕관 기둥 파괴',
+                3,
+                target => target.hasTag('resource:voidcrown-pillar'),
+            ),
+            QuestObjective.kill(
+                'voidcrown-regent',
+                '공허섭정 라시엘 처치',
+                1,
+                target => target.hasTag('monster:voidcrown-regent'),
+            ),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(420_000),
+        QuestReward.gold(68_000),
+        QuestReward.item('regent_aegis', 1, '섭정의 무광방패'),
+        QuestReward.item('crown_nullification_skillbook', 1, '왕관무효 전승서'),
     ],
 });
 

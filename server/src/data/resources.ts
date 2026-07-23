@@ -179,6 +179,20 @@ const ASHEN_RELIQUARY_REWARDS = Object.freeze([
     { itemDataId: 'ashguard_bulwark', count: 1, weight: 3.2 },
 ]);
 
+const VOIDCROWN_RELIQUARY_REWARDS = Object.freeze([
+    { itemDataId: 'voidcrown_ration', count: 6, weight: 18 },
+    { itemDataId: 'voidcrown_draught', count: 3, weight: 14 },
+    { itemDataId: 'nullsilver', count: 8, weight: 16 },
+    { itemDataId: 'crown_glass', count: 6, weight: 14 },
+    { itemDataId: 'void_silk', count: 5, weight: 12 },
+    { itemDataId: 'regent_insignia', count: 4, weight: 10 },
+    { itemDataId: 'nullsilver_greatsword', count: 1, weight: 3.2 },
+    { itemDataId: 'crownstring_longbow', count: 1, weight: 3.2 },
+    { itemDataId: 'voidsilk_stiletto', count: 1, weight: 3.2 },
+    { itemDataId: 'starless_scepter', count: 1, weight: 3.2 },
+    { itemDataId: 'regent_aegis', count: 1, weight: 3.2 },
+]);
+
 export function rollTwilightReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
     let cursor = random() * TWILIGHT_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = TWILIGHT_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
@@ -218,6 +232,13 @@ export function rollAshenReliquaryReward(random = Math.random): { itemDataId: st
     let cursor = random() * ASHEN_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     const reward = ASHEN_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
         ?? ASHEN_RELIQUARY_REWARDS[0];
+    return { itemDataId: reward.itemDataId, count: reward.count };
+}
+
+export function rollVoidcrownReliquaryReward(random = Math.random): { itemDataId: string; count: number } {
+    let cursor = random() * VOIDCROWN_RELIQUARY_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
+    const reward = VOIDCROWN_RELIQUARY_REWARDS.find(entry => (cursor -= entry.weight) < 0)
+        ?? VOIDCROWN_RELIQUARY_REWARDS[0];
     return { itemDataId: reward.itemDataId, count: reward.count };
 }
 
@@ -344,6 +365,24 @@ registerResourceInteraction('open_ashen_reliquary', (_resource, player) => {
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('purple', builder => builder.weight('bold', nested => nested.text('[ 잿왕성의 봉인 유산 ]')))
+        .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
+        .build());
+    return true;
+});
+
+registerResourceInteraction('open_voidcrown_reliquary', (_resource, player) => {
+    const reward = rollVoidcrownReliquaryReward();
+    if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
+        sendNotificationToUser(player.userId, {
+            key: 'voidcrown-reliquary-full',
+            message: '공허왕관의 유산을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+        });
+        return false;
+    }
+    player.inventory.addItem(reward.itemDataId, reward.count);
+    const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
+    sendBotMessageToUser(player.userId, chat()
+        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 공허왕관의 비밀 유산 ]')))
         .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
         .build());
     return true;
@@ -915,5 +954,64 @@ defineResource({
     tags: [
         GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ASHEN_ABYSS,
         GameTags.PROPERTY_DARK, GameTags.PROPERTY_UNDEAD,
+    ],
+});
+
+defineResource({
+    id: 'nullsilver_vein',
+    name: '무광은 광맥',
+    level: 284,
+    baseAttribute: { maxLife: 36_000, def: 485, magicDef: 455 },
+    requiredToolTags: [GameTags.TOOL_MINING],
+    drops: [
+        { itemDataId: 'nullsilver', weight: 58, minCount: 2, maxCount: 5 },
+        { itemDataId: 'crown_glass', weight: 22, minCount: 1, maxCount: 3 },
+        { itemDataId: 'astral_ink', weight: 13, minCount: 1, maxCount: 2 },
+        { itemDataId: 'regent_insignia', weight: 7, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 7_200, max: 9_300 },
+    tags: [
+        GameTags.RESOURCE_ORE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_VOIDCROWN,
+        GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK,
+    ],
+});
+
+defineResource({
+    id: 'voidcrown_oath_lectern',
+    name: '빈 왕좌의 서약대',
+    level: 298,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'voidcrown_oath_riddle', attackable: false,
+    tags: [
+        GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_VOIDCROWN,
+        GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK,
+    ],
+});
+
+defineResource({
+    id: 'voidcrown_reliquary',
+    name: '무성좌 비밀 유물함',
+    level: 302,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    interaction: 'open_voidcrown_reliquary', attackable: false,
+    interactionCooldown: { min: 8 * 60 * 60, max: 11 * 60 * 60 },
+    tags: [
+        GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_VOIDCROWN,
+        GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT,
+    ],
+});
+
+defineResource({
+    id: 'voidcrown_pillar',
+    name: '공허왕관 기둥',
+    level: 310,
+    baseAttribute: { maxLife: 48_000, def: 620, magicDef: 680 },
+    requiredToolTags: [], drops: [], expReward: { min: 8_000, max: 10_500 },
+    tags: [
+        GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_VOIDCROWN,
+        GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT,
+        'resource:voidcrown-pillar',
     ],
 });

@@ -2264,3 +2264,173 @@ for (const fish of getFishCatalog()) {
         tags: [GameTags.ITEM_FISH, GameTags.PROPERTY_WATER, fish.rarity.tag],
     });
 }
+
+// TODO(icons): 공허왕관 성채 전용 아트 제작 전까지 소재·장비·전승서 카테고리 fallback을 사용한다.
+for (const material of [
+    {
+        id: 'nullsilver', name: '무광은', image: 'items/refined_iron', weight: 0.72,
+        description: '빛을 반사하지 않고 마력의 흔적만 희미하게 되돌려 보내는 공허왕관의 은빛 합금.',
+        tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'crown_glass', name: '왕관유리', image: 'items/resonance_evasion_shard', weight: 0.24,
+        description: '깨진 왕관 첨탑의 빛과 어둠이 한 면에 함께 굳은 자색 유리.',
+        tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'void_silk', name: '공허비단', image: 'items/earthworm_bait', weight: 0.12,
+        description: '허공을 헤엄치는 나방이 남긴, 손끝보다 한 박자 늦게 흔들리는 검은 비단.',
+        tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'starved_vine', name: '기아덩굴', image: 'items/earthworm_bait', weight: 0.3,
+        description: '빛과 수분 대신 마력을 빨아들여 성채의 벽을 타고 자라는 창백한 덩굴.',
+        tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'astral_ink', name: '별먹', image: 'items/arcane_tonic', weight: 0.15,
+        description: '별빛이 닿지 않는 문장을 기록하기 위해 왕실 서고에서 쓰던 액체 마력.',
+        tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'regent_insignia', name: '섭정 인장', image: 'items/gold_ore', weight: 0.22,
+        description: '공허왕관의 명령 체계를 증명하던 금속 인장 조각. 아직도 희미한 복종의 마력이 남아 있다.',
+        tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
+    },
+] as const) defineItem({
+    id: material.id,
+    name: material.name,
+    description: material.description,
+    image: material.image,
+    category: '성채 소재',
+    weight: material.weight,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [...material.tags],
+});
+
+defineItem({
+    id: 'voidcrown_ration', name: '무광 행군식',
+    description: '기아덩굴의 쓴맛을 별먹으로 눌러 보존한 성채 식량. 배고픔 110과 수분 45를 회복한다.',
+    image: 'items/traveler_bread', category: '음식', weight: 0.5, stackable: true, maxStack: 30,
+    baseMetadata: { hunger: 110, thirst: 45, time: 1.1, useMessage: '무광 행군식의 밀봉을 푸는 중...' },
+    onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_DARK],
+});
+
+defineItem({
+    id: 'voidcrown_draught', name: '공허맥 회복약',
+    description: '기아덩굴과 왕관유리의 흐름을 안정시켜 50초 동안 강한 생명력 재생을 부여한다.',
+    image: 'items/health_potion', category: '소모품', weight: 0.34, stackable: true, maxStack: 20,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'regeneration', level: 15, duration: 50 } },
+    onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_DARK],
+});
+
+defineItem({
+    id: 'nullsilver_greatsword', name: '무광은 파성검',
+    description: '무광은의 무게중심을 칼끝에 모아 두꺼운 방어선도 한 호흡에 갈라내는 대검.',
+    image: 'items/windsteel_sword', category: '장검', weight: 4.7, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 292, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 76, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.24, source: '' },
+    ],
+    baseDurability: 680,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_METAL],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+});
+
+defineItem({
+    id: 'crownstring_longbow', name: '왕관현 장궁',
+    description: '공허비단과 왕관유리를 활시위에 겹쳐 먼 거리에서도 화살의 초가속을 잃지 않는 장궁.',
+    image: 'items/stormstring_bow', category: '활', weight: 3.1, stackable: false, maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+        [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 236, source: '' },
+        { attribute: 'critRate', op: 'add', value: 0.12, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.68, source: '' },
+    ],
+    baseDurability: 640,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_LIGHT],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+});
+
+defineItem({
+    id: 'voidsilk_stiletto', name: '공허비단 침',
+    description: '공허비단의 흔들림을 따라 칼끝이 뒤늦게 나타나는 무광은 단검.',
+    image: 'items/nightglass_dagger', category: '단검', weight: 1.55, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 258, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 82, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.38, source: '' },
+        { attribute: 'speed', op: 'add', value: 0.18, source: '' },
+    ],
+    baseDurability: 585,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_DARK],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
+});
+
+defineItem({
+    id: 'starless_scepter', name: '무성좌 지팡이',
+    description: '별먹으로 지운 성좌를 왕관유리에 다시 새겨 공허의 마력을 한 점으로 압축하는 지팡이.',
+    image: 'items/starwood_staff', category: '지팡이', weight: 3.25, stackable: false, maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+        [ItemMetadataKeys.PROJECTILE_ATTACK]: {
+            projectile: {
+                dataId: 'basic_magic_orb',
+                overrides: { tags: [GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK] },
+            },
+        },
+    },
+    onUse: null, equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'magicForce', op: 'add', value: 335, source: '' },
+        { attribute: 'magicPen', op: 'add', value: 88, source: '' },
+        { attribute: 'mentalityRegen', op: 'add', value: 14, source: '' },
+        { attribute: 'projectileAcceleration', op: 'multiply', value: 1.72, source: '' },
+    ],
+    baseDurability: 700,
+    tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT],
+    balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+});
+
+defineItem({
+    id: 'regent_aegis', name: '섭정의 무광방패',
+    description: '무광은과 왕관유리 사이에 공허비단을 겹쳐 물리 충격과 마력을 서로 다른 층으로 흘리는 방패.',
+    image: 'items/forged_shield', category: '방패', weight: 5, stackable: false, maxStack: 1,
+    baseMetadata: null, onUse: null, equipSlot: 'offHand',
+    modifiers: [
+        { attribute: 'def', op: 'add', value: 92, source: '' },
+        { attribute: 'magicDef', op: 'add', value: 98, source: '' },
+        { attribute: 'maxLife', op: 'add', value: 1_280, source: '' },
+    ],
+    baseDurability: 790,
+    tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
+    balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
+});
+
+for (const book of [
+    { id: 'voidstep_skillbook', name: '공허걸음 전승서', skillDataId: 'voidstep', property: GameTags.PROPERTY_DARK },
+    { id: 'crown_nullification_skillbook', name: '왕관무효 전승서', skillDataId: 'crown_nullification', property: GameTags.PROPERTY_LIGHT },
+] as const) defineItem({
+    id: book.id,
+    name: book.name,
+    description: `공허왕관 성채의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
+    image: 'items/seismic_crush_skillbook', category: '스킬북', weight: 0.3, stackable: true, maxStack: 10,
+    baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
+    modifiers: null, baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_VOIDCROWN, book.property],
+});

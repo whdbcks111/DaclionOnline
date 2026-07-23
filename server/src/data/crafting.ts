@@ -125,6 +125,65 @@ for (const recipe of [
 
 for (const recipe of [
     {
+        id: 'voidcrown:voidcrown_ration', result: 'voidcrown_ration', time: 6,
+        description: '기아덩굴을 여행자 빵에 섞고 별먹으로 밀봉해 무광 행군식을 만듭니다.',
+        ingredients: [['starved_vine', 3], ['traveler_bread', 2], ['astral_ink', 1]],
+        tags: ['crafting:consumable', 'region:voidcrown'],
+    },
+    {
+        id: 'voidcrown:voidcrown_draught', result: 'voidcrown_draught', time: 8,
+        description: '기아덩굴과 왕관유리의 마력 흡수 흐름을 회복약에 안정시킵니다.',
+        ingredients: [['starved_vine', 4], ['crown_glass', 2], ['health_potion', 2]],
+        tags: ['crafting:consumable', 'region:voidcrown'],
+    },
+    {
+        id: 'voidcrown:nullsilver_greatsword', result: 'nullsilver_greatsword', time: 24,
+        description: '무광은을 섭정 인장과 함께 접고 왕관유리로 칼등을 고정해 파성검을 만듭니다.',
+        ingredients: [['nullsilver', 14], ['regent_insignia', 4], ['crown_glass', 5]],
+        tags: ['crafting:weapon', 'region:voidcrown'],
+    },
+    {
+        id: 'voidcrown:crownstring_longbow', result: 'crownstring_longbow', time: 22,
+        description: '공허비단을 여러 겹 꼬아 왕관유리와 무광은 활대에 고정합니다.',
+        ingredients: [['void_silk', 12], ['crown_glass', 7], ['nullsilver', 6]],
+        tags: ['crafting:weapon', 'region:voidcrown'],
+    },
+    {
+        id: 'voidcrown:voidsilk_stiletto', result: 'voidsilk_stiletto', time: 21,
+        description: '무광은 날을 공허비단으로 감고 별먹을 새겨 뒤늦게 나타나는 칼끝을 만듭니다.',
+        ingredients: [['nullsilver', 9], ['void_silk', 8], ['astral_ink', 5]],
+        tags: ['crafting:weapon', 'region:voidcrown'],
+    },
+    {
+        id: 'voidcrown:starless_scepter', result: 'starless_scepter', time: 25,
+        description: '왕관유리에 별먹으로 지운 성좌를 새기고 공허비단으로 마력 회로를 묶습니다.',
+        ingredients: [['crown_glass', 10], ['astral_ink', 9], ['void_silk', 7]],
+        tags: ['crafting:weapon', 'region:voidcrown'],
+    },
+    {
+        id: 'voidcrown:regent_aegis', result: 'regent_aegis', time: 26,
+        description: '무광은 판 사이에 왕관유리와 공허비단을 겹쳐 섭정의 무광방패를 만듭니다.',
+        ingredients: [['nullsilver', 16], ['crown_glass', 8], ['void_silk', 8], ['regent_insignia', 4]],
+        tags: ['crafting:armor', 'region:voidcrown'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
         id: 'ashen:ashmarch_ration', result: 'ashmarch_ration', time: 5,
         description: '여행자 빵에 잿빛 힘줄의 열기를 스며들게 하고 맑은 물과 함께 밀봉해 재길 행군식을 만듭니다.',
         ingredients: [['ashen_sinew', 2], ['traveler_bread', 2], ['fresh_water', 1]],

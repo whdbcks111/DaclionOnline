@@ -3136,7 +3136,464 @@
       { "type": "resource", "dataId": "ashen_reliquary", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
-      { "locationId": "ashen_crown_stair" }
+      { "locationId": "ashen_crown_stair" },
+      { "locationId": "voidcrown_threshold", "condition": "level_275" }
+    ]
+  },
+  {
+    "id": "voidcrown_threshold",
+    "name": "공허왕관 성채 1 무광 관문",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4250, "y": -205, "z": -445,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "nullsilver_sentinel", "maxCount": 2, "respawnTime": 245 },
+      { "type": "monster", "dataId": "voidsilk_moth", "maxCount": 1, "respawnTime": 240 }
+    ],
+    "connections": [
+      { "locationId": "ashen_sovereign_throne", "condition": "level_275" },
+      { "locationId": "voidcrown_waystation" },
+      { "locationId": "voidcrown_lower_court" }
+    ]
+  },
+  {
+    "id": "voidcrown_waystation",
+    "name": "공허왕관 성채 귀환표식 중계소",
+    "mapColor": "#44455b",
+    "zoneType": "safe",
+    "x": 4300, "y": -120, "z": -448,
+    "shopId": "voidcrown_waystation_store",
+    "tags": ["location:town", "location:voidcrown", "property:light", "shop:voidcrown"],
+    "npcIds": ["voidcrown_warden"],
+    "objects": [],
+    "connections": [
+      { "locationId": "voidcrown_threshold" },
+      { "locationId": "voidcrown_lower_court" }
+    ]
+  },
+  {
+    "id": "voidcrown_lower_court",
+    "name": "공허왕관 성채 2 하층 안뜰",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4340, "y": -205, "z": -455,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "nullsilver_sentinel", "maxCount": 3, "respawnTime": 245 },
+      { "type": "resource", "dataId": "nullsilver_vein", "maxCount": 1, "respawnTime": 300 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_threshold" },
+      { "locationId": "voidcrown_waystation" },
+      { "locationId": "voidcrown_west_battlement" },
+      { "locationId": "voidcrown_starved_garden" }
+    ]
+  },
+  {
+    "id": "voidcrown_west_battlement",
+    "name": "공허왕관 외성 1 서쪽 무광성벽",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4400, "y": -285, "z": -468,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "nullsilver_sentinel", "maxCount": 3, "respawnTime": 245 },
+      { "type": "resource", "dataId": "nullsilver_vein", "maxCount": 2, "respawnTime": 300 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_lower_court" },
+      { "locationId": "voidcrown_broken_aqueduct" },
+      { "locationId": "voidcrown_gatehouse" }
+    ]
+  },
+  {
+    "id": "voidcrown_starved_garden",
+    "name": "공허왕관 외성 2 굶주린 정원",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4400, "y": -125, "z": -466,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:natural", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "starved_gardener", "maxCount": 2, "respawnTime": 250 },
+      { "type": "monster", "dataId": "voidsilk_moth", "maxCount": 2, "respawnTime": 240 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_lower_court" },
+      { "locationId": "voidcrown_east_battlement" },
+      { "locationId": "voidcrown_gatehouse" }
+    ]
+  },
+  {
+    "id": "voidcrown_broken_aqueduct",
+    "name": "공허왕관 외성 3 끊어진 수로",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4480, "y": -340, "z": -482,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:stone", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "voidsilk_moth", "maxCount": 3, "respawnTime": 240 },
+      { "type": "monster", "dataId": "starved_gardener", "maxCount": 1, "respawnTime": 250 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_west_battlement" },
+      { "locationId": "voidcrown_gatehouse" }
+    ]
+  },
+  {
+    "id": "voidcrown_east_battlement",
+    "name": "공허왕관 외성 4 동쪽 유리성벽",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4480, "y": -70, "z": -480,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "crown_archivist", "maxCount": 2, "respawnTime": 255 },
+      { "type": "monster", "dataId": "voidsilk_moth", "maxCount": 2, "respawnTime": 240 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_starved_garden" },
+      { "locationId": "voidcrown_gatehouse" }
+    ]
+  },
+  {
+    "id": "voidcrown_gatehouse",
+    "name": "공허왕관 외성문 무관성주의 진",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4560, "y": -205, "z": -500,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "crownless_castellan", "maxCount": 1, "respawnTime": 1500 },
+      { "type": "resource", "dataId": "nullsilver_vein", "maxCount": 1, "respawnTime": 300 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_west_battlement" },
+      { "locationId": "voidcrown_starved_garden" },
+      { "locationId": "voidcrown_broken_aqueduct" },
+      { "locationId": "voidcrown_east_battlement" },
+      { "locationId": "voidcrown_foundry" },
+      { "locationId": "voidcrown_archive" }
+    ]
+  },
+  {
+    "id": "voidcrown_foundry",
+    "name": "공허왕관 내성 1 무광 주조실",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4640, "y": -300, "z": -520,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "nullsilver_sentinel", "maxCount": 2, "respawnTime": 245 },
+      { "type": "monster", "dataId": "mirror_crown_knight", "maxCount": 1, "respawnTime": 260 },
+      { "type": "resource", "dataId": "nullsilver_vein", "maxCount": 2, "respawnTime": 300 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_gatehouse" },
+      { "locationId": "voidcrown_inner_crossing" },
+      { "locationId": "voidcrown_mirror_gallery" }
+    ]
+  },
+  {
+    "id": "voidcrown_archive",
+    "name": "공허왕관 내성 2 별먹 기록고",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4640, "y": -110, "z": -518,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "crown_archivist", "maxCount": 3, "respawnTime": 255 },
+      { "type": "monster", "dataId": "voidsilk_moth", "maxCount": 1, "respawnTime": 240 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_gatehouse" },
+      { "locationId": "voidcrown_inner_crossing" },
+      { "locationId": "voidcrown_silent_barracks" }
+    ]
+  },
+  {
+    "id": "voidcrown_inner_crossing",
+    "name": "공허왕관 내성 3 네갈래 교차정",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4720, "y": -205, "z": -538,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "mirror_crown_knight", "maxCount": 2, "respawnTime": 260 },
+      { "type": "monster", "dataId": "crown_archivist", "maxCount": 1, "respawnTime": 255 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_foundry" },
+      { "locationId": "voidcrown_archive" },
+      { "locationId": "voidcrown_mirror_gallery" },
+      { "locationId": "voidcrown_silent_barracks" },
+      { "locationId": "voidcrown_voidwell" }
+    ]
+  },
+  {
+    "id": "voidcrown_mirror_gallery",
+    "name": "공허왕관 상층 1 파경 회랑",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4790, "y": -300, "z": -562,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:light", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "mirror_crown_knight", "maxCount": 3, "respawnTime": 260 },
+      { "type": "monster", "dataId": "hollow_astrologer", "maxCount": 1, "respawnTime": 265 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_foundry" },
+      { "locationId": "voidcrown_inner_crossing" },
+      { "locationId": "voidcrown_observatory" },
+      { "locationId": "voidcrown_upper_stair" }
+    ]
+  },
+  {
+    "id": "voidcrown_silent_barracks",
+    "name": "공허왕관 상층 2 침묵 병영",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4790, "y": -110, "z": -560,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "mirror_crown_knight", "maxCount": 2, "respawnTime": 260 },
+      { "type": "monster", "dataId": "null_adjudicator", "maxCount": 1, "respawnTime": 275 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_archive" },
+      { "locationId": "voidcrown_inner_crossing" },
+      { "locationId": "voidcrown_crownworkshop" },
+      { "locationId": "voidcrown_oath_chapel" }
+    ]
+  },
+  {
+    "id": "voidcrown_observatory",
+    "name": "공허왕관 상층 3 빈별 관측소",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4870, "y": -355, "z": -585,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "hollow_astrologer", "maxCount": 3, "respawnTime": 265 },
+      { "type": "monster", "dataId": "voidsilk_moth", "maxCount": 1, "respawnTime": 240 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_mirror_gallery" },
+      { "locationId": "voidcrown_voidwell" },
+      { "locationId": "voidcrown_celestial_balcony" }
+    ]
+  },
+  {
+    "id": "voidcrown_voidwell",
+    "name": "공허왕관 상층 4 공허 우물",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4870, "y": -205, "z": -590,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "crown_chimera", "maxCount": 2, "respawnTime": 270 },
+      { "type": "monster", "dataId": "hollow_astrologer", "maxCount": 1, "respawnTime": 265 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_inner_crossing" },
+      { "locationId": "voidcrown_observatory" },
+      { "locationId": "voidcrown_crownworkshop" },
+      { "locationId": "voidcrown_oath_chapel" },
+      { "locationId": "voidcrown_upper_stair" }
+    ]
+  },
+  {
+    "id": "voidcrown_crownworkshop",
+    "name": "공허왕관 상층 5 왕관 공방",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4870, "y": -55, "z": -584,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "crown_chimera", "maxCount": 2, "respawnTime": 270 },
+      { "type": "resource", "dataId": "nullsilver_vein", "maxCount": 2, "respawnTime": 300 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_silent_barracks" },
+      { "locationId": "voidcrown_voidwell" },
+      { "locationId": "voidcrown_oath_chapel" }
+    ]
+  },
+  {
+    "id": "voidcrown_oath_chapel",
+    "name": "공허왕관 상층 6 빈 왕좌 예배당",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4950, "y": -135, "z": -610,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "null_adjudicator", "maxCount": 2, "respawnTime": 275 },
+      { "type": "resource", "dataId": "voidcrown_oath_lectern", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_silent_barracks" },
+      { "locationId": "voidcrown_voidwell" },
+      { "locationId": "voidcrown_crownworkshop" },
+      { "locationId": "voidcrown_hidden_vault", "condition": "voidcrown_oath_solved" },
+      { "locationId": "voidcrown_upper_stair" }
+    ]
+  },
+  {
+    "id": "voidcrown_hidden_vault",
+    "name": "공허왕관 숨은 무성좌 금고",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 5020, "y": -60, "z": -625,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "location:hidden", "property:dark", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "resource", "dataId": "voidcrown_reliquary", "maxCount": 1, "respawnTime": 0 },
+      { "type": "monster", "dataId": "null_adjudicator", "maxCount": 1, "respawnTime": 275 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_oath_chapel", "condition": "voidcrown_oath_solved" },
+      { "locationId": "voidcrown_crown_spire", "condition": "voidcrown_oath_solved" }
+    ]
+  },
+  {
+    "id": "voidcrown_upper_stair",
+    "name": "공허왕관 최상층 1 무성좌 계단",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4950, "y": -265, "z": -615,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "crown_chimera", "maxCount": 2, "respawnTime": 270 },
+      { "type": "monster", "dataId": "mirror_crown_knight", "maxCount": 1, "respawnTime": 260 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_mirror_gallery" },
+      { "locationId": "voidcrown_voidwell" },
+      { "locationId": "voidcrown_oath_chapel" },
+      { "locationId": "voidcrown_celestial_balcony" },
+      { "locationId": "voidcrown_null_library" }
+    ]
+  },
+  {
+    "id": "voidcrown_celestial_balcony",
+    "name": "공허왕관 최상층 2 별그늘 발코니",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 5030, "y": -355, "z": -640,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "hollow_astrologer", "maxCount": 2, "respawnTime": 265 },
+      { "type": "monster", "dataId": "null_adjudicator", "maxCount": 1, "respawnTime": 275 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_observatory" },
+      { "locationId": "voidcrown_upper_stair" },
+      { "locationId": "voidcrown_guardian_hall" }
+    ]
+  },
+  {
+    "id": "voidcrown_null_library",
+    "name": "공허왕관 최상층 3 무효 법전고",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 5030, "y": -215, "z": -642,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "crown_archivist", "maxCount": 2, "respawnTime": 255 },
+      { "type": "monster", "dataId": "null_adjudicator", "maxCount": 2, "respawnTime": 275 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_upper_stair" },
+      { "locationId": "voidcrown_guardian_hall" }
+    ]
+  },
+  {
+    "id": "voidcrown_guardian_hall",
+    "name": "공허왕관 최상층 4 판결관 회랑",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 5110, "y": -285, "z": -668,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "null_adjudicator", "maxCount": 3, "respawnTime": 275 },
+      { "type": "monster", "dataId": "crown_chimera", "maxCount": 1, "respawnTime": 270 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_celestial_balcony" },
+      { "locationId": "voidcrown_null_library" },
+      { "locationId": "voidcrown_crown_spire" }
+    ]
+  },
+  {
+    "id": "voidcrown_crown_spire",
+    "name": "공허왕관 최상층 5 왕관 첨탑",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 5190, "y": -285, "z": -695,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "null_adjudicator", "maxCount": 2, "respawnTime": 275 },
+      { "type": "monster", "dataId": "hollow_astrologer", "maxCount": 2, "respawnTime": 265 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_guardian_hall" },
+      { "locationId": "voidcrown_hidden_vault", "condition": "voidcrown_oath_solved" },
+      { "locationId": "voidcrown_throne_antechamber" }
+    ]
+  },
+  {
+    "id": "voidcrown_throne_antechamber",
+    "name": "공허왕관 최상층 6 무효 선고실",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 5270, "y": -285, "z": -720,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "null_adjudicator", "maxCount": 3, "respawnTime": 275 },
+      { "type": "monster", "dataId": "mirror_crown_knight", "maxCount": 1, "respawnTime": 260 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_crown_spire" },
+      { "locationId": "voidcrown_throne" }
+    ]
+  },
+  {
+    "id": "voidcrown_throne",
+    "name": "공허왕관 최상층 빈 왕좌",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 5360, "y": -285, "z": -750,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "voidcrown_regent", "maxCount": 1, "respawnTime": 1800 },
+      { "type": "resource", "dataId": "voidcrown_pillar", "maxCount": 3, "respawnTime": 1800 },
+      { "type": "resource", "dataId": "voidcrown_reliquary", "maxCount": 1, "respawnTime": 0 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_throne_antechamber" }
     ]
   }
 ]

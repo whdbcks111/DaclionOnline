@@ -94,6 +94,11 @@ const itemCases = [
     ['career:archer', 'hornstring_bow'],
     ['career:assassin', 'gloamfang_dagger'],
     ['career:mage', 'blackflame_staff'],
+    ['career:warrior', 'nullsilver_greatsword'],
+    ['career:warrior', 'regent_aegis'],
+    ['career:archer', 'crownstring_longbow'],
+    ['career:assassin', 'voidsilk_stiletto'],
+    ['career:mage', 'starless_scepter'],
     ['career:warrior', 'battle_tonic'],
     ['career:mage', 'arcane_tonic'],
     ['career:archer', 'swift_tonic'],
@@ -118,6 +123,8 @@ for (const [jobId, skillId] of [
     ['career:warrior', 'hellhound_charge'],
     ['career:assassin', 'blackflame_brand'],
     ['career:mage', 'sovereign_decree'],
+    ['career:assassin', 'voidstep'],
+    ['career:mage', 'crown_nullification'],
 ] as const) {
     const scenario = createBalanceScenario(level, jobId, undefined, BalanceEncounterType.BOSS);
     const report = analyzeSkillBalance(scenario, skillId, 5);

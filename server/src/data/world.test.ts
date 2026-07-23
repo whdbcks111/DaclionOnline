@@ -31,6 +31,7 @@ import {
     rollParadoxReliquaryReward,
     rollTreasureReward,
     rollTwilightReliquaryReward,
+    rollVoidcrownReliquaryReward,
 } from './resources.js';
 import { MonsterAiDisposition } from '../models/Threat.js';
 import {
@@ -38,6 +39,7 @@ import {
     getGlassduneMirrorProtectionMultiplier,
     getSilverwebBroodProtectionMultiplier,
     getParadoxAnchorProtectionMultiplier,
+    getVoidcrownPillarProtectionMultiplier,
 } from './bossPatterns.js';
 import { GameTags } from '../../../shared/tags.js';
 
@@ -47,7 +49,7 @@ const locations = JSON.parse(
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, 160);
+    assert.equal(locations.length, 185);
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -75,7 +77,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 12, neutral: 46, hostile: 102 },
+        { safe: 13, neutral: 46, hostile: 126 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -183,6 +185,15 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
             'ashen_general_parade', 'ashen_castle_barbican', 'ashen_lower_barracks',
             'ashen_cursebone_range', 'ashen_gargoyle_rampart', 'ashen_mourning_hall',
             'ashen_execution_court', 'ashen_crown_stair', 'ashen_sovereign_throne'],
+        ['voidcrown_threshold', 'voidcrown_waystation', 'voidcrown_lower_court',
+            'voidcrown_west_battlement', 'voidcrown_starved_garden', 'voidcrown_broken_aqueduct',
+            'voidcrown_east_battlement', 'voidcrown_gatehouse', 'voidcrown_foundry',
+            'voidcrown_archive', 'voidcrown_inner_crossing', 'voidcrown_mirror_gallery',
+            'voidcrown_silent_barracks', 'voidcrown_observatory', 'voidcrown_voidwell',
+            'voidcrown_crownworkshop', 'voidcrown_oath_chapel', 'voidcrown_hidden_vault',
+            'voidcrown_upper_stair', 'voidcrown_celestial_balcony', 'voidcrown_null_library',
+            'voidcrown_guardian_hall', 'voidcrown_crown_spire', 'voidcrown_throne_antechamber',
+            'voidcrown_throne'],
     ];
 
     for (const ids of regions) {
@@ -192,14 +203,14 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
     }
 });
 
-test('1~275레벨 월드는 모든 속성을 관찰 가능하고 동급 일반 몬스터 보상은 5%로 수렴한다', () => {
+test('1~310레벨 월드는 모든 속성을 관찰 가능하고 동급 일반 몬스터 보상은 5%로 수렴한다', () => {
     const monsters = getAllMonsterData();
     const levelOne = getMonsterData('slime');
     const midLevelNormal = getMonsterData('spark_moth');
     const levelTwoHundred = getMonsterData('eclipse_watcher');
 
     assert.equal(Math.min(...monsters.map(monster => monster.level)), 1);
-    assert.equal(Math.max(...monsters.map(monster => monster.level)), 275);
+    assert.equal(Math.max(...monsters.map(monster => monster.level)), 310);
     assert.equal(Entity.getMaxExpOfLevel(1), 100);
     assert.equal(Entity.getMaxExpOfLevel(50), 20_000);
     assert.equal(Entity.getMaxExpOfLevel(200), 80_000);
@@ -224,7 +235,7 @@ test('성장 구간 보스는 최대 30레벨 간격으로 배치되고 일반�
         .sort((left, right) => left.level - right.level);
 
     assert.ok(bosses[0].level <= 32);
-    assert.equal(bosses[bosses.length - 1].level, 275);
+    assert.equal(bosses[bosses.length - 1].level, 310);
     for (let index = 1; index < bosses.length; index++) {
         assert.ok(bosses[index].level - bosses[index - 1].level <= 30,
             `${bosses[index - 1].name} Lv.${bosses[index - 1].level} → ${bosses[index].name} Lv.${bosses[index].level}`);
@@ -603,6 +614,69 @@ test('잿빛성흔 심연은 다중 분기·세 보스·봉인 퍼즐·밤쇠 �
     assert.equal(recipes.length, 8);
     assert.equal(quests.length, 2);
     assert.equal(NPC.getNpc('ashen_wayfinder')?.name, '회색불길 길잡이 타렌');
+});
+
+test('공허왕관 성채는 25개 분기 층·서약 퍼즐·기둥 보호 보스·지역 경제를 연결한다', () => {
+    const region = locations.filter(location => location.id.startsWith('voidcrown_'));
+    const castellan = getMonsterData('crownless_castellan');
+    const regent = getMonsterData('voidcrown_regent');
+    const store = getShop('voidcrown_waystation_store');
+    const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('voidcrown:'));
+    const quests = getAllQuestData().filter(quest => quest.id.startsWith('voidcrown:'));
+
+    assert.equal(region.length, 25);
+    assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
+    assert.ok(region.every(location => location.tags.includes(GameTags.LOCATION_VOIDCROWN)));
+    assert.equal(castellan?.level, 290);
+    assert.equal(regent?.level, 310);
+    assert.deepEqual(castellan?.skillPattern?.sequence, ['castellan_void_lance', 'castellan_rampart_break']);
+    assert.equal(castellan?.skillPattern?.randomOrder, undefined);
+    assert.ok(regent?.skillPattern?.randomOrder);
+    assert.ok((regent?.ai?.weights?.healing ?? 0) > (regent?.ai?.weights?.damage ?? 0));
+    assert.ok((regent?.ai?.tauntResistance ?? 0) >= 0.95);
+
+    const lowerCourt = locations.find(location => location.id === 'voidcrown_lower_court');
+    const gatehouse = locations.find(location => location.id === 'voidcrown_gatehouse');
+    const chapel = locations.find(location => location.id === 'voidcrown_oath_chapel');
+    const vault = locations.find(location => location.id === 'voidcrown_hidden_vault');
+    const throne = locations.find(location => location.id === 'voidcrown_throne');
+    assert.ok(lowerCourt?.connections.some(connection => connection.locationId === 'voidcrown_west_battlement'));
+    assert.ok(lowerCourt?.connections.some(connection => connection.locationId === 'voidcrown_starved_garden'));
+    assert.ok(gatehouse?.connections.some(connection => connection.locationId === 'voidcrown_foundry'));
+    assert.ok(gatehouse?.connections.some(connection => connection.locationId === 'voidcrown_archive'));
+    assert.ok(chapel?.connections.some(connection => connection.condition === 'voidcrown_oath_solved'));
+    assert.ok(vault?.tags.includes(GameTags.LOCATION_HIDDEN));
+    assert.equal(throne?.objects.find(object => object.dataId === 'voidcrown_pillar')?.maxCount, 3);
+    assert.ok(getResourceData('nullsilver_vein')?.requiredToolTags.includes(GameTags.TOOL_MINING));
+    assert.deepEqual(getResourceData('voidcrown_reliquary')?.interactionCooldown, {
+        min: 8 * 60 * 60,
+        max: 11 * 60 * 60,
+    });
+    assert.equal(rollVoidcrownReliquaryReward(() => 0).itemDataId, 'voidcrown_ration');
+    assert.equal(rollVoidcrownReliquaryReward(() => 0.999).itemDataId, 'regent_aegis');
+
+    for (const itemId of [
+        'nullsilver_greatsword', 'crownstring_longbow', 'voidsilk_stiletto', 'starless_scepter', 'regent_aegis',
+    ]) {
+        assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === itemId), itemId);
+        assert.ok(getItemData(itemId)?.balance, `${itemId} balance`);
+    }
+    assert.equal(recipes.length, 7);
+    assert.equal(quests.length, 2);
+    assert.equal(NPC.getNpc('voidcrown_warden')?.name, '빈 왕관 기록수호자 세린');
+
+    reloadAllLocations(locations);
+    const runtimeThrone = getLocation('voidcrown_throne');
+    runtimeThrone?.update(0.05);
+    const runtimeRegent = runtimeThrone?.getMonstersByDataId('voidcrown_regent')[0];
+    assert.equal(getVoidcrownPillarProtectionMultiplier(), 0.4);
+    assert.equal(runtimeRegent?.getDamageReceivedModifier(), 0.4);
+    for (const pillar of runtimeThrone?.getResourcesByDataId('voidcrown_pillar') ?? []) {
+        pillar.damage(pillar.maxLife, 'absolute', { type: 'void', causeEntity: null, fixedDamage: true });
+    }
+    runtimeThrone?.update(0.05);
+    assert.equal(getVoidcrownPillarProtectionMultiplier(), 1);
+    assert.equal(runtimeRegent?.getDamageReceivedModifier(), 1);
 });
 
 test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {

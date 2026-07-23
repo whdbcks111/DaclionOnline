@@ -8,6 +8,7 @@ import {
     MISTTIDE_QUEST_IDS,
     PARADOX_QUEST_IDS,
     TWILIGHT_TOMB_QUEST_IDS,
+    VOIDCROWN_QUEST_IDS,
 } from './quests.js';
 import { CAREER_QUEST_IDS } from './quests.js';
 import { BLACKSMITH_APPRENTICESHIP_QUEST_ID } from './quests.js';
@@ -639,5 +640,80 @@ NPC.define({
                 yield Dialogue.end();
             }),
         ]),
+    ],
+});
+
+NPC.define({
+    id: 'voidcrown_warden',
+    name: '빈 왕관 기록수호자 세린',
+    description: '왕이 사라진 뒤 성채의 명령과 귀환로를 분리해 기록해 온 마지막 자유 기록관입니다.',
+    tags: ['npc:guide', 'npc:quest', 'region:voidcrown'],
+    entryScenario: ({ player }) => {
+        if (player.quests.canTurnIn(VOIDCROWN_QUEST_IDS.END_REGENCY, 'voidcrown_warden')) return 'regency_complete';
+        if (player.quests.isActive(VOIDCROWN_QUEST_IDS.END_REGENCY)) return 'regency_progress';
+        if (player.quests.canTurnIn(VOIDCROWN_QUEST_IDS.RESTORE_WARD, 'voidcrown_warden')) return 'ward_complete';
+        if (player.quests.isActive(VOIDCROWN_QUEST_IDS.RESTORE_WARD)) return 'ward_progress';
+        if (player.quests.canAccept(VOIDCROWN_QUEST_IDS.END_REGENCY, 'voidcrown_warden')) return 'regency_offer';
+        return player.quests.canAccept(VOIDCROWN_QUEST_IDS.RESTORE_WARD, 'voidcrown_warden') ? 'greeting' : 'lore';
+    },
+    scenarios: [
+        new DialogueScenario('greeting', function* () {
+            yield Dialogue.say('이 성채의 길은 왕의 명령을 받은 자만 되돌려 보냅니다. 우리만의 귀환표식을 새기려면 무광은 열넷과 별먹 열 병이 필요해요.');
+            yield Dialogue.choice([
+                { label: '귀환표식을 복구하겠습니다.', target: 'ward_accept' },
+                { label: '성채의 구조를 알려주세요.', target: 'lore' },
+                { label: '조금 더 준비하겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('ward_accept', function* () {
+            yield Dialogue.acceptQuest(VOIDCROWN_QUEST_IDS.RESTORE_WARD);
+            yield Dialogue.say('무광은은 외성 광맥과 파수병에게서, 별먹은 왕실 서기관과 점성술사에게서 얻을 수 있어요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('ward_progress', function* ({ player }) {
+            const objectives = player.quests.getSnapshot(VOIDCROWN_QUEST_IDS.RESTORE_WARD)?.objectives ?? [];
+            const silver = objectives.find(objective => objective.id === 'nullsilver');
+            const ink = objectives.find(objective => objective.id === 'astral-ink');
+            yield Dialogue.say(`무광은 ${silver?.progress ?? 0}/${silver?.required ?? 14}, 별먹 ${ink?.progress ?? 0}/${ink?.required ?? 10}. 빛을 반사하는 은이나 마른 먹은 표식을 망가뜨려요.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('ward_complete', function* () {
+            yield Dialogue.say('귀환표식이 왕의 명령과 분리됐어요. 이제 성채 깊은 곳에서도 스스로 돌아올 길을 기억할 수 있습니다.');
+            yield Dialogue.turnInQuest(VOIDCROWN_QUEST_IDS.RESTORE_WARD);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('regency_offer', function* () {
+            yield Dialogue.say('테오른은 외성의 길을 몸처럼 움직이고, 라시엘은 왕관 기둥이 하나라도 남으면 대부분의 공격을 무효화해요. 기둥부터 부숴야 합니다.');
+            yield Dialogue.choice([
+                { label: '왕 없는 섭정을 끝내겠습니다.', target: 'regency_accept' },
+                { label: '성채의 길을 더 살피겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('regency_accept', function* () {
+            yield Dialogue.acceptQuest(VOIDCROWN_QUEST_IDS.END_REGENCY);
+            yield Dialogue.say('무관성주는 공허창과 성벽 파단을 정해진 순서로 쓰지만, 라시엘은 치유와 방벽, 제어를 가장 많이 만든 이를 계산해 기술 순서를 바꿉니다.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('regency_progress', function* ({ player }) {
+            const objectives = player.quests.getSnapshot(VOIDCROWN_QUEST_IDS.END_REGENCY)?.objectives ?? [];
+            const castellan = objectives.find(objective => objective.id === 'crownless-castellan');
+            const pillars = objectives.find(objective => objective.id === 'voidcrown-pillars');
+            const regent = objectives.find(objective => objective.id === 'voidcrown-regent');
+            yield Dialogue.say(`무관성주 ${castellan?.progress ?? 0}/1, 왕관 기둥 ${pillars?.progress ?? 0}/3, 공허섭정 ${regent?.progress ?? 0}/1. 왕좌에서는 섭정보다 기둥을 먼저 노리세요.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('regency_complete', function* () {
+            yield Dialogue.say('왕관이 명령을 잃고 단순한 금속으로 돌아왔어요. 이제 이 성채의 다음 기록은 살아남은 이들이 직접 정할 겁니다.');
+            yield Dialogue.turnInQuest(VOIDCROWN_QUEST_IDS.END_REGENCY);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('lore', function* () {
+            yield Dialogue.say('하층 안뜰에서 서쪽 성벽과 동쪽 정원으로 갈라져 외성문에서 합쳐집니다. 상층은 관측소와 무광 주조실로 다시 갈라지고, 빈 왕좌 서약을 풀면 무성좌 비밀금고를 거쳐 왕관 첨탑으로 우회할 수 있어요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('왕관 문양보다 바닥의 귀환표식을 믿으세요. 이곳의 왕관은 아직도 거짓 명령을 내립니다.');
+            yield Dialogue.end();
+        }),
     ],
 });

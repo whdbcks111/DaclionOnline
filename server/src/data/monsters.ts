@@ -1749,3 +1749,199 @@ const advancedWorldMonsters: WorldMonsterData[] = [
 ];
 
 for (const monster of advancedWorldMonsters) defineWorldMonster(monster);
+
+const voidcrownMonsters: WorldMonsterData[] = [
+    {
+        id: 'nullsilver_sentinel', name: '무광은 파수병',
+        description: '얼굴과 관절을 모두 무광은으로 봉하고 침입자의 마지막 공격만 기계적으로 되갚는 성채 수비병.', level: 278,
+        baseAttribute: {
+            maxLife: 116_000, atk: 1_330, def: 930, magicDef: 815, armorPen: 108,
+            speed: 2.25, attackSpeed: 0.78, critRate: 0.19, critDmg: 2.05,
+        },
+        drops: [
+            { itemDataId: 'nullsilver', minCount: 1, maxCount: 3, chance: 0.64 },
+            { itemDataId: 'regent_insignia', minCount: 1, maxCount: 1, chance: 0.12 },
+        ],
+        goldReward: { min: 1_650, max: 2_650 },
+        attack: { effect: { statusEffectId: 'defense_reduction', chance: 0.24, duration: 10, level: 14 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'voidsilk_moth', name: '공허비단 나방',
+        description: '성채의 벽 사이를 접어 이동하며 날갯가루로 시야와 공격 감각을 지우는 거대 나방.', level: 281,
+        baseAttribute: {
+            maxLife: 109_000, atk: 1_120, magicForce: 1_390, def: 705, magicDef: 900, magicPen: 104,
+            speed: 4.6, attackSpeed: 1.36, critRate: 0.22, critDmg: 2.05,
+        },
+        drops: [
+            { itemDataId: 'void_silk', minCount: 1, maxCount: 3, chance: 0.66 },
+            { itemDataId: 'crown_glass', minCount: 1, maxCount: 1, chance: 0.16 },
+        ],
+        goldReward: { min: 1_690, max: 2_710 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'blindness', chance: 0.24, duration: 4, level: 14 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_INSECT, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'starved_gardener', name: '굶주린 정원사',
+        description: '기아덩굴에 생명력과 마력을 먹이며 가장 회복을 많이 만든 침입자를 가지치기하는 왕실 정원사.', level: 284,
+        baseAttribute: {
+            maxLife: 128_000, atk: 1_270, magicForce: 1_360, def: 850, magicDef: 880,
+            armorPen: 106, magicPen: 104, speed: 2.65, attackSpeed: 0.9,
+        },
+        drops: [
+            { itemDataId: 'starved_vine', minCount: 1, maxCount: 4, chance: 0.7 },
+            { itemDataId: 'astral_ink', minCount: 1, maxCount: 2, chance: 0.22 },
+        ],
+        goldReward: { min: 1_720, max: 2_780 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'decay', chance: 0.26, duration: 10, level: 14 } },
+        ai: {
+            intelligence: 86, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.1, damage: 0.9, healing: 1.75, shielding: 1.35, control: 1.15, taunt: 2.4 },
+            tauntResistance: 0.78, switchThreshold: 0.25, decayPerSecond: 0.008,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_DARK],
+    },
+    {
+        id: 'crown_archivist', name: '왕관 서기관',
+        description: '별먹으로 침입자의 기술을 기록한 뒤 그 주문의 흐름부터 끊어내는 무표정한 기록관.', level: 287,
+        baseAttribute: {
+            maxLife: 121_500, atk: 1_155, magicForce: 1_470, def: 770, magicDef: 980, magicPen: 118,
+            speed: 2.8, attackSpeed: 1.02,
+        },
+        drops: [
+            { itemDataId: 'astral_ink', minCount: 1, maxCount: 3, chance: 0.65 },
+            { itemDataId: 'crown_glass', minCount: 1, maxCount: 2, chance: 0.3 },
+        ],
+        goldReward: { min: 1_760, max: 2_850 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'silence', chance: 0.22, duration: 4.5, level: 14 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'crownless_castellan', name: '무관성주 테오른',
+        description: '왕이 사라진 뒤에도 성벽을 자신의 몸처럼 다루는 공허왕관 외성주. 피해와 치유 위협을 읽되 정해진 공허창과 성벽 파단을 교대로 집행한다.', level: 290,
+        baseAttribute: {
+            maxLife: 1_320_000, atk: 1_560, magicForce: 1_590, def: 1_070, magicDef: 1_040,
+            armorPen: 126, magicPen: 128, speed: 2.4, attackSpeed: 0.44, critRate: 0.23, critDmg: 2.15,
+        },
+        expReward: 290 * 20 * 8,
+        drops: [
+            { itemDataId: 'nullsilver', minCount: 7, maxCount: 12, chance: 0.92 },
+            { itemDataId: 'regent_insignia', minCount: 3, maxCount: 6, chance: 0.72 },
+            { itemDataId: 'voidstep_skillbook', minCount: 1, maxCount: 1, chance: 0.035 },
+        ],
+        goldReward: { min: 7_200, max: 10_800 },
+        skills: [
+            { skillDataId: 'castellan_void_lance', level: 5 },
+            { skillDataId: 'castellan_rampart_break', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['castellan_void_lance', 'castellan_rampart_break'],
+            initialDelay: 3.2, interval: { min: 6, max: 8 },
+        },
+        ai: {
+            intelligence: 92, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.08, damage: 1.15, healing: 1.7, shielding: 1.5, control: 1.45, taunt: 2.8 },
+            tauntResistance: 0.88, switchThreshold: 0.3, decayPerSecond: 0.006,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK, 'monster:crownless-castellan'],
+    },
+    {
+        id: 'mirror_crown_knight', name: '경관 근위기사',
+        description: '왕관유리 갑주로 첫 충격을 흘리고 가장 강한 피해를 되돌려 주는 상층 근위기사.', level: 294,
+        baseAttribute: {
+            maxLife: 146_000, atk: 1_515, def: 1_045, magicDef: 965, armorPen: 122,
+            speed: 2.5, attackSpeed: 0.74, critRate: 0.21, critDmg: 2.15,
+        },
+        drops: [
+            { itemDataId: 'nullsilver', minCount: 2, maxCount: 4, chance: 0.68 },
+            { itemDataId: 'crown_glass', minCount: 1, maxCount: 3, chance: 0.48 },
+        ],
+        goldReward: { min: 1_850, max: 3_000 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.25, duration: 10, level: 15 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'hollow_astrologer', name: '빈별 점성술사',
+        description: '지워진 별자리의 빈칸을 마력탄으로 바꿔 회피 경로를 미리 봉쇄하는 왕실 마도사.', level: 298,
+        baseAttribute: {
+            maxLife: 137_000, atk: 1_205, magicForce: 1_620, def: 820, magicDef: 1_060, magicPen: 132,
+            projectileAcceleration: 2.8, speed: 3.2, attackSpeed: 1.08, critRate: 0.23, critDmg: 2.2,
+        },
+        drops: [
+            { itemDataId: 'astral_ink', minCount: 2, maxCount: 4, chance: 0.7 },
+            { itemDataId: 'crown_glass', minCount: 1, maxCount: 2, chance: 0.36 },
+        ],
+        goldReward: { min: 1_900, max: 3_080 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'curse', chance: 0.25, duration: 10, level: 15 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'crown_chimera', name: '왕관 키메라',
+        description: '정원 짐승과 석익수의 몸을 이어 붙여 빛과 어둠의 공격을 번갈아 내뿜는 성채의 실험체.', level: 302,
+        baseAttribute: {
+            maxLife: 162_000, atk: 1_580, magicForce: 1_470, def: 1_020, magicDef: 985,
+            armorPen: 128, magicPen: 120, speed: 3.1, attackSpeed: 0.86, critRate: 0.24, critDmg: 2.2,
+        },
+        drops: [
+            { itemDataId: 'starved_vine', minCount: 2, maxCount: 5, chance: 0.62 },
+            { itemDataId: 'void_silk', minCount: 1, maxCount: 3, chance: 0.48 },
+            { itemDataId: 'regent_insignia', minCount: 1, maxCount: 2, chance: 0.22 },
+        ],
+        goldReward: { min: 1_980, max: 3_200 },
+        attack: { effect: { statusEffectId: 'overmaster', chance: 0.18, duration: 3, level: 15 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_STONE, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'null_adjudicator', name: '무효 판결관',
+        description: '침입자의 치유·보호·제어 기록을 비교해 가장 전투를 오래 끌 대상을 우선 판결하는 최상층 집행관.', level: 306,
+        baseAttribute: {
+            maxLife: 171_000, atk: 1_530, magicForce: 1_690, def: 1_010, magicDef: 1_095,
+            armorPen: 126, magicPen: 138, speed: 2.7, attackSpeed: 0.7, critRate: 0.24, critDmg: 2.2,
+        },
+        drops: [
+            { itemDataId: 'regent_insignia', minCount: 1, maxCount: 4, chance: 0.65 },
+            { itemDataId: 'nullsilver', minCount: 2, maxCount: 5, chance: 0.6 },
+        ],
+        goldReward: { min: 2_050, max: 3_320 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'silence', chance: 0.28, duration: 5, level: 15 } },
+        ai: {
+            intelligence: 96, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.05, damage: 1, healing: 2, shielding: 1.75, control: 1.85, taunt: 3.3 },
+            tauntResistance: 0.94, switchThreshold: 0.32, decayPerSecond: 0.004,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        id: 'voidcrown_regent', name: '공허섭정 라시엘',
+        description: '왕이 없는 왕관에 스스로 법을 새긴 공허왕관의 지배자. 남은 왕관 기둥으로 피해를 흘리고 전투 기여를 계산해 치유자와 제어자를 우선 무효화한다.', level: 310,
+        baseAttribute: {
+            maxLife: 1_920_000, atk: 1_720, magicForce: 1_830, def: 1_180, magicDef: 1_210,
+            armorPen: 145, magicPen: 152, speed: 2.9, attackSpeed: 0.43, critRate: 0.26, critDmg: 2.3,
+        },
+        expReward: 310 * 20 * 10,
+        drops: [
+            { itemDataId: 'regent_insignia', minCount: 9, maxCount: 15, chance: 0.96 },
+            { itemDataId: 'crown_glass', minCount: 7, maxCount: 12, chance: 0.88 },
+            { itemDataId: 'crown_nullification_skillbook', minCount: 1, maxCount: 1, chance: 0.03 },
+            { itemDataId: 'regent_aegis', minCount: 1, maxCount: 1, chance: 0.018 },
+        ],
+        goldReward: { min: 10_000, max: 15_000 },
+        skills: [
+            { skillDataId: 'regent_crown_eclipse', level: 5 },
+            { skillDataId: 'regent_null_sentence', level: 5 },
+            { skillDataId: 'castellan_void_lance', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['regent_crown_eclipse', 'regent_null_sentence', 'castellan_void_lance'],
+            randomOrder: true, initialDelay: 2.7, interval: { min: 5.2, max: 7.2 },
+        },
+        ai: {
+            intelligence: 100, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.03, damage: 1, healing: 2.3, shielding: 2.05, control: 2.15, taunt: 4 },
+            tauntResistance: 0.98, switchThreshold: 0.37, decayPerSecond: 0.002,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_METAL, 'monster:voidcrown-regent'],
+    },
+];
+
+for (const monster of voidcrownMonsters) defineWorldMonster(monster);

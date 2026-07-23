@@ -156,6 +156,7 @@ const CRYSTAL_PROTECTION_SOURCE = 'boss:ironroot:resonance-crystals';
 const SILVERWEB_BROOD_PROTECTION_SOURCE = 'boss:silverweb:egg-clusters';
 const SUN_MIRROR_PROTECTION_SOURCE = 'boss:glassdune:sun-mirrors';
 const PARADOX_ANCHOR_PROTECTION_SOURCE = 'boss:paradox:causality-anchors';
+const VOIDCROWN_PILLAR_PROTECTION_SOURCE = 'boss:voidcrown:crown-pillars';
 
 registerLocationPassive('silverweb_queen_nest', location => {
     const protectedByBrood = location.getActiveResourceCount('silverweb_egg_cluster') > 0;
@@ -189,6 +190,14 @@ registerLocationPassive('paradox_architect_core', location => {
     }
 });
 
+registerLocationPassive('voidcrown_throne', location => {
+    const protectedByPillars = location.getActiveResourceCount('voidcrown_pillar') > 0;
+    for (const boss of location.getMonstersByDataId('voidcrown_regent')) {
+        if (protectedByPillars) boss.setDamageReceivedModifier(VOIDCROWN_PILLAR_PROTECTION_SOURCE, 0.4);
+        else boss.removeDamageReceivedModifier(VOIDCROWN_PILLAR_PROTECTION_SOURCE);
+    }
+});
+
 /** 테스트·운영 진단에서 수정 보호가 적용됐는지 같은 계산식으로 확인한다. */
 export function getIronrootCrystalProtectionMultiplier(locationId = 'ironroot_crystal_sanctum'): number {
     return (getLocation(locationId)?.getActiveResourceCount('ironroot_resonance_crystal') ?? 0) > 0 ? 0.15 : 1;
@@ -207,4 +216,9 @@ export function getGlassduneMirrorProtectionMultiplier(locationId = 'glassdune_s
 /** 역설 고정자가 하나라도 남아 있을 때 설계자의 75% 피해 감소가 유지되는지 확인한다. */
 export function getParadoxAnchorProtectionMultiplier(locationId = 'paradox_architect_core'): number {
     return (getLocation(locationId)?.getActiveResourceCount('paradox_anchor') ?? 0) > 0 ? 0.25 : 1;
+}
+
+/** 공허왕관 기둥이 남아 있을 때 섭정의 60% 피해 감소가 유지되는지 확인한다. */
+export function getVoidcrownPillarProtectionMultiplier(locationId = 'voidcrown_throne'): number {
+    return (getLocation(locationId)?.getActiveResourceCount('voidcrown_pillar') ?? 0) > 0 ? 0.4 : 1;
 }

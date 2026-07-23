@@ -1738,6 +1738,24 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         statusEffect: LegacyStatusEffects.FEAR, statusLabel: '공포', statusDuration: 3.5, statusDurationPerLevel: 0.35,
         descriptionIntro: '폐허의 왕명을 한 문장으로 선고해 대상의 의지를 꺾고 남은 권능을 방벽으로 거둡니다.',
     },
+    {
+        id: 'voidstep', name: '공허걸음', icon: 'affinities/dark', activationHeader: 'ambush',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 345, perLevelPercent: 24,
+        manaCost: 58, cooldown: 14, groupTag: GameTags.SKILL_GROUP_ASSASSIN,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_DARK,
+        penetration: { attribute: AttributeType.ARMOR_PEN, base: 54, perLevel: 10 },
+        statusEffect: LegacyStatusEffects.BLINDNESS, statusLabel: '실명', statusDuration: 3.5, statusDurationPerLevel: 0.35,
+        descriptionIntro: '공허에 한 걸음을 숨긴 뒤 대상의 그림자에서 나타나 방어선과 시야를 함께 끊습니다.',
+    },
+    {
+        id: 'crown_nullification', name: '왕관무효', icon: 'affinities/light', activationHeader: 'sanctum_judgment',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 335, perLevelPercent: 23,
+        manaCost: 62, cooldown: 18, groupTag: GameTags.SKILL_GROUP_MAGIC,
+        unavoidable: true, propertyTag: GameTags.PROPERTY_LIGHT, shieldPercent: 14,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 52, perLevel: 10 },
+        statusEffect: LegacyStatusEffects.SILENCE, statusLabel: '침묵', statusDuration: 4, statusDurationPerLevel: 0.4,
+        descriptionIntro: '대상에게 내려진 권능의 문장을 지워 마법 흐름을 끊고 지워진 힘을 자신의 방벽으로 되돌립니다.',
+    },
 ];
 
 function growthTechniqueDescription(technique: GrowthTechniqueDefinition): string {
@@ -2723,6 +2741,30 @@ for (const skill of [
         attribute: AttributeType.ATK, baseMultiplier: 2.25, perLevelMultiplier: 0.21,
         castTime: 1.15, cooldown: 9, propertyTag: GameTags.PROPERTY_DARK,
         statusEffectId: 'overmaster', statusDuration: 4, unavoidable: true, activationHeader: 'steel_slash',
+    },
+    {
+        id: 'castellan_void_lance', name: '성주의 공허창', icon: 'affinities/dark', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 2.42, perLevelMultiplier: 0.23,
+        castTime: 1.35, cooldown: 9, propertyTag: GameTags.PROPERTY_DARK,
+        statusEffectId: 'silence', statusDuration: 5, activationHeader: 'magic_bolt',
+    },
+    {
+        id: 'castellan_rampart_break', name: '성벽 파단', icon: 'affinities/metal', damageType: 'physical' as const,
+        attribute: AttributeType.ATK, baseMultiplier: 2.36, perLevelMultiplier: 0.22,
+        castTime: 1.1, cooldown: 8, propertyTag: GameTags.PROPERTY_METAL,
+        statusEffectId: 'defense_reduction', statusDuration: 11, unavoidable: true, activationHeader: 'steel_slash',
+    },
+    {
+        id: 'regent_crown_eclipse', name: '왕관 일식', icon: 'affinities/light', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 2.68, perLevelMultiplier: 0.25,
+        castTime: 1.7, cooldown: 10, propertyTag: GameTags.PROPERTY_LIGHT,
+        statusEffectId: 'blindness', statusDuration: 6, unavoidable: true, activationHeader: 'sanctum_judgment',
+    },
+    {
+        id: 'regent_null_sentence', name: '무효 선고', icon: 'affinities/dark', damageType: 'magic' as const,
+        attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 2.58, perLevelMultiplier: 0.24,
+        castTime: 1.25, cooldown: 9, propertyTag: GameTags.PROPERTY_DARK,
+        statusEffectId: 'overmaster', statusDuration: 4.5, unavoidable: true, activationHeader: 'deathless_requiem',
     },
     {
         id: 'caldera_eruption', name: '칼데라 분출', icon: 'affinities/fire', damageType: 'magic' as const,

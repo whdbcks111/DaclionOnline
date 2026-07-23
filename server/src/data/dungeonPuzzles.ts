@@ -45,6 +45,11 @@ export const AshenAbyssPuzzleIds = Object.freeze({
     SEAL_OATH_FLAG: 'dungeon:ashen-abyss/seal-oath-solved',
 } as const);
 
+export const VoidcrownPuzzleIds = Object.freeze({
+    EMPTY_THRONE_OATH: 'voidcrown:empty-throne-oath',
+    EMPTY_THRONE_OATH_FLAG: 'dungeon:voidcrown/empty-throne-oath-solved',
+} as const);
+
 defineProgress({
     id: IronrootPuzzleIds.RIDDLE_FLAG,
     type: ProgressType.FLAG,
@@ -206,6 +211,29 @@ defineQuestionPuzzle({
     failureMessage: '인장의 금속면이 차갑게 굳으며 맹세를 거부합니다.',
 });
 
+defineProgress({
+    id: VoidcrownPuzzleIds.EMPTY_THRONE_OATH_FLAG,
+    type: ProgressType.FLAG,
+    label: '빈 왕좌의 서약 해독',
+    description: '공허왕관 성채의 서약문에서 왕이 사라진 뒤에도 남는 의무를 찾아냈습니다.',
+    visible: true,
+});
+
+defineQuestionPuzzle({
+    id: VoidcrownPuzzleIds.EMPTY_THRONE_OATH,
+    title: '빈 왕좌의 서약',
+    prompt: '왕이 사라져도 성을 지키고, 명령이 끊겨도 맹세한 자의 선택 속에 남는 것은 무엇인가?',
+    answers: ['의무', '책임', '맹세', '서약'],
+    choices: [
+        { label: '왕관', answer: '왕관' },
+        { label: '의무', answer: '의무' },
+        { label: '혈통', answer: '혈통' },
+    ],
+    successFlag: VoidcrownPuzzleIds.EMPTY_THRONE_OATH_FLAG,
+    successMessage: '서약대의 빈 왕관 문양이 갈라지며 무성좌 비밀금고로 향하는 어두운 회랑이 드러납니다.',
+    failureMessage: '서약문의 글자가 모두 지워지고, 빈 왕좌는 아무 대답도 돌려주지 않습니다.',
+});
+
 defineTeleportArtifact({
     id: IronrootPuzzleIds.RELAY_ARTIFACT,
     destinations: {
@@ -238,6 +266,9 @@ registerResourceInteraction('paradox_causality_riddle', (_resource, player) =>
 
 registerResourceInteraction('ashen_seal_riddle', (_resource, player) =>
     beginQuestionPuzzle(player, AshenAbyssPuzzleIds.SEAL_OATH));
+
+registerResourceInteraction('voidcrown_oath_riddle', (_resource, player) =>
+    beginQuestionPuzzle(player, VoidcrownPuzzleIds.EMPTY_THRONE_OATH));
 
 registerConnectionCondition('ironroot_riddle_solved', player =>
     player.progress.getFlag(IronrootPuzzleIds.RIDDLE_FLAG)
@@ -278,6 +309,11 @@ registerConnectionCondition('ashen_seal_solved', player =>
     player.progress.getFlag(AshenAbyssPuzzleIds.SEAL_OATH_FLAG)
         ? 'visible'
         : { status: 'locked', publicReason: '재왕 인장 제단의 해답 필요' });
+
+registerConnectionCondition('voidcrown_oath_solved', player =>
+    player.progress.getFlag(VoidcrownPuzzleIds.EMPTY_THRONE_OATH_FLAG)
+        ? 'visible'
+        : { status: 'locked', publicReason: '빈 왕좌의 서약 해답 필요' });
 
 // 지도 연결성은 유지하되 일반 이동·지도에는 노출하지 않고 유물 상호작용만 통과시킨다.
 registerConnectionCondition('ironroot_artifact_route', () => 'hidden');

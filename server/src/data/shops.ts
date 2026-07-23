@@ -561,3 +561,44 @@ defineShop({
     ],
     tags: [GameTags.SHOP_ASHEN_ABYSS],
 });
+
+defineShop({
+    id: 'voidcrown_waystation_store',
+    buyList: [
+        {
+            label: '무광 행군식', create: () => ({ itemDataId: 'voidcrown_ration', count: 1 }),
+            count: 1, price: 285, stock: 24, restockTime: 50,
+        },
+        {
+            label: '공허맥 회복약', create: () => ({ itemDataId: 'voidcrown_draught', count: 1 }),
+            count: 1, price: 480, stock: 12, restockTime: 120,
+        },
+        {
+            label: '화살 120개', create: () => ({ itemDataId: 'wooden_arrow', count: 120 }),
+            count: 120, price: 330, stock: 20, restockTime: 40,
+        },
+        ...[
+            ['무광은 파성검', 'nullsilver_greatsword', 27_800],
+            ['왕관현 장궁', 'crownstring_longbow', 27_200],
+            ['공허비단 침', 'voidsilk_stiletto', 28_100],
+            ['무성좌 지팡이', 'starless_scepter', 29_000],
+            ['섭정의 무광방패', 'regent_aegis', 28_500],
+        ].map(([label, itemDataId, price]) => ({
+            label: label as string,
+            create: () => ({ itemDataId: itemDataId as string, count: 1 }),
+            count: 1,
+            price: price as number,
+            stock: 1,
+            restockTime: 2_400,
+        })),
+    ],
+    sellList: [
+        { label: '무광은', filter: item => item.itemDataId === 'nullsilver', count: 99, price: 470 },
+        { label: '왕관유리', filter: item => item.itemDataId === 'crown_glass', count: 99, price: 530 },
+        { label: '공허비단', filter: item => item.itemDataId === 'void_silk', count: 99, price: 455 },
+        { label: '기아덩굴', filter: item => item.itemDataId === 'starved_vine', count: 99, price: 390 },
+        { label: '별먹', filter: item => item.itemDataId === 'astral_ink', count: 99, price: 560 },
+        { label: '섭정 인장', filter: item => item.itemDataId === 'regent_insignia', count: 99, price: 680 },
+    ],
+    tags: [GameTags.SHOP_VOIDCROWN],
+});
