@@ -2,26 +2,25 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
     formatPatchNoteDate,
+    formatPatchNoteVersion,
     getPatchNote,
     getPatchNotes,
 } from '../../../shared/patchNotes.js';
 
-test('패치노트는 날짜별 유일 항목을 최신순으로 반환한다', () => {
+test('패치노트는 버전별 유일 항목을 최신순으로 반환한다', () => {
     const notes = getPatchNotes();
     assert.ok(notes.length > 0);
-    assert.deepEqual(
-        notes.map(note => note.date),
-        [...notes].map(note => note.date).sort((left, right) => right.localeCompare(left)),
-    );
-    assert.equal(new Set(notes.map(note => note.date)).size, notes.length);
+    assert.ok(notes.every(note => /^\d+\.\d+\.\d+(?:-[0-9a-z.-]+)?$/i.test(note.version)));
+    assert.equal(new Set(notes.map(note => note.version)).size, notes.length);
     assert.ok(notes.every(note => note.sections.every(section => section.items.length > 0)));
 });
 
-test('날짜 조회는 구분 기호 없는 입력을 지원하고 외부 변경에 원본이 노출되지 않는다', () => {
+test('버전 조회는 선택적 v 접두사를 지원하고 외부 변경에 원본이 노출되지 않는다', () => {
     const latest = getPatchNotes()[0];
-    assert.equal(getPatchNote(latest.date)?.title, latest.title);
-    assert.equal(getPatchNote(latest.date.replaceAll('-', ''))?.title, latest.title);
-    assert.match(formatPatchNoteDate(latest.date), /년 .*월 .*일/);
+    assert.equal(getPatchNote(latest.version)?.title, latest.title);
+    assert.equal(getPatchNote(`v${latest.version}`)?.title, latest.title);
+    assert.equal(formatPatchNoteVersion(latest.version), `v${latest.version}`);
+    assert.match(formatPatchNoteDate(latest.releasedAt), /년 .*월 .*일/);
 
     const mutableItems = latest.sections[0].items as string[];
     mutableItems.push('외부에서 추가한 항목');

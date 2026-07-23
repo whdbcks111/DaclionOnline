@@ -2,9 +2,15 @@
 @use '../styles/themes' as *;
 
 .page {
-  min-height: 100vh;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
   box-sizing: border-box;
   padding: clamp($spacing-md, 3vw, $spacing-xl);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   color: $color-text;
   background: $color-bg-secondary;
 }
@@ -41,13 +47,13 @@
   align-items: start;
 }
 
-.dateNav, .content {
+.versionNav, .content {
   background: $color-bg;
   border: 1px solid $color-border;
   border-radius: $border-radius-lg;
 }
 
-.dateNav {
+.versionNav {
   position: sticky;
   top: $spacing-md;
   max-height: calc(100vh - 2 * $spacing-md);
@@ -71,15 +77,16 @@
 
     &:hover { border-color: $color-border; background: $color-bg-secondary; }
   }
-  time { font-size: $font-size-sm; font-weight: 750; }
+  strong { color: $color-text; font-size: $font-size-base; }
+  time { color: $color-text-tertiary; font-size: $font-size-sm; }
   span { color: $color-text-secondary; font-size: $font-size-sm; }
 }
 
-.dateNav .activeDate {
+.versionNav .activeVersion {
   background: color-mix(in srgb, $color-primary 12%, $color-bg);
   border-color: $color-primary;
 
-  time { color: $color-primary; }
+  strong { color: $color-primary; }
 }
 
 .content {
@@ -89,9 +96,13 @@
   h2 { margin: $spacing-xs 0 $spacing-sm; font-size: clamp(1.4rem, 3vw, 2rem); }
 }
 
-.date {
-  color: $color-text-tertiary;
-  font-size: $font-size-sm;
+.releaseMeta {
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-sm;
+
+  strong { color: $color-primary; font-size: $font-size-lg; }
+  time { color: $color-text-tertiary; font-size: $font-size-sm; }
 }
 
 .lead {
@@ -114,7 +125,7 @@
 @media (max-width: $breakpoint-tablet) {
   .page { padding: $spacing-sm; }
   .layout { grid-template-columns: 1fr; }
-  .dateNav {
+  .versionNav {
     position: static;
     display: flex;
     max-height: none;

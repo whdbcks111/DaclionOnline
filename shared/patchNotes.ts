@@ -1,4 +1,5 @@
 const PATCH_NOTE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+const PATCH_NOTE_VERSION_PATTERN = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9a-z.-]+))?$/i
 
 /** 패치노트 분류와 표시 순서를 소유하는 클래스형 enum. */
 export class PatchNoteCategory {
@@ -30,7 +31,8 @@ interface PatchNoteSectionDefinition {
 }
 
 interface PatchNoteDefinition {
-    readonly date: string
+    readonly version: string
+    readonly releasedAt: string
     readonly title: string
     readonly summary: string
     readonly sections: readonly PatchNoteSectionDefinition[]
@@ -43,19 +45,21 @@ export interface PatchNoteSectionSnapshot {
 }
 
 export interface PatchNoteSnapshot {
-    readonly date: string
+    readonly version: string
+    readonly releasedAt: string
     readonly title: string
     readonly summary: string
     readonly sections: readonly PatchNoteSectionSnapshot[]
 }
 
 /**
- * 사용자에게 공개할 일별 변경 기록의 단일 기준.
- * 새 패치는 가장 위에 쓰지 않아도 getPatchNotes()가 날짜 역순으로 정렬한다.
+ * 사용자에게 공개할 버전별 변경 기록의 단일 기준.
+ * 새 패치는 가장 위에 쓰지 않아도 getPatchNotes()가 SemVer 역순으로 정렬한다.
  */
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
     {
-        date: '2026-07-23',
+        version: '1.0.0',
+        releasedAt: '2026-07-23',
         title: '후반 세계, 직업 성장과 카르마',
         summary: '후반 모험 지역과 Lv.180까지의 직업 성장을 완성하고 튜토리얼·자동이동·악명 시스템을 실제 플레이 흐름에 연결했습니다.',
         sections: [
@@ -81,7 +85,8 @@ const PATCH_NOTES: readonly PatchNoteDefinition[] = [
                     '방문 장소를 대상으로 띄어쓰기·부분 이름·유사도를 지원하는 자동이동과 이동 취소 명령을 추가했습니다.',
                     '게임 안내 페이지와 실제 행동·장소·콘텐츠 완료를 검증하는 첫 모험 튜토리얼을 추가했습니다.',
                     '악명 단계 플레이어의 채팅 닉네임 옆에 🥀 표식을 표시하고 관리자 페이지에서 카르마를 확인·설정할 수 있게 했습니다.',
-                    '햄버거 메뉴와 /패치노트 명령에서 일별 변경 사항을 최신순으로 확인할 수 있게 했습니다.',
+                    '햄버거 메뉴와 /패치노트 명령에서 버전별 변경 사항을 최신순으로 확인할 수 있게 했습니다.',
+                    '패치노트 전용 페이지가 PC와 모바일에서 끝까지 세로 스크롤되도록 수정했습니다.',
                     '공개 채팅 메시지에 답장하고 원문 요약을 눌러 해당 메시지 위치로 이동할 수 있게 했습니다.',
                     '입력창에서 채널·근처·파티·광고 채팅을 선택하고 관리자만 공지를 선택할 수 있게 했습니다.',
                     '귓속말을 회색으로 구분하고 @ 입력 중 채팅 타입 버튼에도 귓속말 대상을 표시하도록 개선했습니다.',
@@ -110,14 +115,19 @@ const PATCH_NOTES: readonly PatchNoteDefinition[] = [
 
 export function getPatchNotes(): PatchNoteSnapshot[] {
     return [...PATCH_NOTES]
-        .sort((left, right) => right.date.localeCompare(left.date))
+        .sort((left, right) => comparePatchNoteVersions(right.version, left.version))
         .map(toSnapshot)
 }
 
-export function getPatchNote(dateInput: string): PatchNoteSnapshot | undefined {
-    const date = normalizePatchNoteDateInput(dateInput)
-    const note = PATCH_NOTES.find(candidate => candidate.date === date)
+export function getPatchNote(versionInput: string): PatchNoteSnapshot | undefined {
+    const version = normalizePatchNoteVersionInput(versionInput)
+    const note = PATCH_NOTES.find(candidate => candidate.version === version)
     return note ? toSnapshot(note) : undefined
+}
+
+export function formatPatchNoteVersion(version: string): string {
+    const normalized = normalizePatchNoteVersionInput(version)
+    return PATCH_NOTE_VERSION_PATTERN.test(normalized) ? `v${normalized}` : version
 }
 
 export function formatPatchNoteDate(date: string): string {
@@ -126,18 +136,33 @@ export function formatPatchNoteDate(date: string): string {
     return `${year}년 ${month}월 ${day}일`
 }
 
-function normalizePatchNoteDateInput(input: string): string {
+function normalizePatchNoteVersionInput(input: string): string {
     const trimmed = input.trim()
-    if (PATCH_NOTE_DATE_PATTERN.test(trimmed)) return trimmed
-    const digits = trimmed.replace(/\D/g, '')
-    return digits.length === 8
-        ? `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`
-        : trimmed
+    const match = trimmed.match(PATCH_NOTE_VERSION_PATTERN)
+    if (!match) return trimmed
+    const [, major, minor, patch, prerelease] = match
+    return `${Number(major)}.${Number(minor)}.${Number(patch)}${prerelease ? `-${prerelease.toLowerCase()}` : ''}`
+}
+
+function comparePatchNoteVersions(left: string, right: string): number {
+    const leftMatch = normalizePatchNoteVersionInput(left).match(PATCH_NOTE_VERSION_PATTERN)
+    const rightMatch = normalizePatchNoteVersionInput(right).match(PATCH_NOTE_VERSION_PATTERN)
+    if (!leftMatch || !rightMatch) return left.localeCompare(right)
+    for (let index = 1; index <= 3; index++) {
+        const difference = Number(leftMatch[index]) - Number(rightMatch[index])
+        if (difference !== 0) return difference
+    }
+    const leftPrerelease = leftMatch[4]
+    const rightPrerelease = rightMatch[4]
+    if (!leftPrerelease && rightPrerelease) return 1
+    if (leftPrerelease && !rightPrerelease) return -1
+    return (leftPrerelease ?? '').localeCompare(rightPrerelease ?? '', undefined, { numeric: true })
 }
 
 function toSnapshot(note: PatchNoteDefinition): PatchNoteSnapshot {
     return {
-        date: note.date,
+        version: note.version,
+        releasedAt: note.releasedAt,
         title: note.title,
         summary: note.summary,
         sections: note.sections.map(section => ({

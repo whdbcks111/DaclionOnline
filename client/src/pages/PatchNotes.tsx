@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { formatPatchNoteDate, getPatchNotes } from '@shared/patchNotes'
+import { formatPatchNoteDate, formatPatchNoteVersion, getPatchNotes } from '@shared/patchNotes'
 import styles from './PatchNotes.module.scss'
 
 export default function PatchNotes() {
   const navigate = useNavigate()
   const notes = useMemo(() => getPatchNotes(), [])
-  const [selectedDate, setSelectedDate] = useState(notes[0]?.date ?? '')
-  const selected = notes.find(note => note.date === selectedDate) ?? notes[0]
+  const [selectedVersion, setSelectedVersion] = useState(notes[0]?.version ?? '')
+  const selected = notes.find(note => note.version === selectedVersion) ?? notes[0]
 
   return (
     <main className={styles.page}>
@@ -20,16 +20,17 @@ export default function PatchNotes() {
       </header>
 
       <div className={styles.layout}>
-        <nav className={styles.dateNav} aria-label="패치노트 날짜">
+        <nav className={styles.versionNav} aria-label="패치노트 버전">
           <h2>업데이트 기록</h2>
           {notes.map(note => (
             <button
               type="button"
-              key={note.date}
-              className={note.date === selected?.date ? styles.activeDate : ''}
-              onClick={() => setSelectedDate(note.date)}
+              key={note.version}
+              className={note.version === selected?.version ? styles.activeVersion : ''}
+              onClick={() => setSelectedVersion(note.version)}
             >
-              <time dateTime={note.date}>{formatPatchNoteDate(note.date)}</time>
+              <strong>{formatPatchNoteVersion(note.version)}</strong>
+              <time dateTime={note.releasedAt}>{formatPatchNoteDate(note.releasedAt)}</time>
               <span>{note.title}</span>
             </button>
           ))}
@@ -37,7 +38,10 @@ export default function PatchNotes() {
 
         {selected ? (
           <article className={styles.content}>
-            <div className={styles.date}>{formatPatchNoteDate(selected.date)}</div>
+            <div className={styles.releaseMeta}>
+              <strong>{formatPatchNoteVersion(selected.version)}</strong>
+              <time dateTime={selected.releasedAt}>{formatPatchNoteDate(selected.releasedAt)}</time>
+            </div>
             <h2>{selected.title}</h2>
             <p className={styles.lead}>{selected.summary}</p>
             {selected.sections.map(section => (
