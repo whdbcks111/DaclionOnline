@@ -22,16 +22,14 @@
 }
 .placeholder { color: $color-text-tertiary; }
 .popover {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + .25rem);
-  right: 0;
-  left: 0;
+  position: fixed;
+  z-index: 3100;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: $spacing-xs;
-  width: max(100%, min(30rem, 78vw));
-  min-width: min(26rem, 78vw);
-  max-height: min(32rem, 72vh);
+  min-height: min(14rem, 100%);
+  box-sizing: border-box;
+  overflow: hidden;
   padding: $spacing-sm;
   background: $color-bg;
   border: 1px solid $color-border;
@@ -52,9 +50,9 @@
   display: grid;
   grid-auto-rows: max-content;
   align-content: start;
-  min-height: min(14rem, 32vh);
-  max-height: min(26rem, 58vh);
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   button {
     display: grid;
     min-height: 3rem;
@@ -75,6 +73,5 @@
 }
 
 @media (max-width: $breakpoint-mobile) {
-  .popover { position: fixed; inset: auto $spacing-sm $spacing-sm; width: auto; min-width: 0; max-height: 82vh; }
-  .options { min-height: min(18rem, 44vh); max-height: 64vh; }
+  .popover { min-width: 0; min-height: min(18rem, 100%); }
 }
