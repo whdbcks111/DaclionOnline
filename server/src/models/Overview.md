@@ -1,6 +1,6 @@
 # Models Overview
 
-`Player.getAttackDeniedReason()`은 지역 PVP·같은 파티·동일 장소 제한을 모든 직접/투사체 공격에 공통 적용한다. `RegionRiskPolicy` 클래스형 enum은 안전·중립·적대 장소의 PVP 허용, 사망 경험치/골드 손실, 부활 시간 배율을 소유한다.
+`Player.getAttackDeniedReason()`은 지역 PVP·같은 파티·동일 장소 제한을 모든 직접/투사체 공격에 공통 적용한다. `RegionRiskPolicy` 클래스형 enum은 안전·중립·적대 장소의 PVP 허용, 사망 경험치/골드 손실, 부활 시간 배율을 소유한다. `KarmaState`는 저장 기준값·시각으로 초당 감소를 지연 계산해 매 tick dirty를 만들지 않으며, `KarmaTier/KarmaAccessPolicy`는 악명 표시와 선의 의뢰·질서 상점·교단 성소 제한 임계값을 소유한다.
 
 서버가 권위를 갖는 게임 상태와 규칙을 표현한다.
 
@@ -18,6 +18,7 @@
 - `Quest`/`QuestBook`: 코드 QuestData 레지스트리, 단계형 이벤트·현재 상태 목표, 제출 조건과 보상, NPC marker/수락/보고, 상태·반복·metadata delta·영속 태그를 가진 플레이어별 versioned dirty 인스턴스. Inventory/Progress 변경과 GameEvent를 공개 API로 받아 진행을 갱신한다.
 - `Shop`: 상점 태그, 구매/판매 정의와 재고 timer.
 - `GameEvent`: 동기식 내부 이벤트 발행/구독과 원시 Entity를 제거한 최근 500개 trace 스냅샷. 장소 도착, 대상 지정, 성공한 자원 상호작용·아이템 장착/사용·낚시·스탯 분배와 전투 결과를 소유 모델 경계에서 발행하며 `combat:attack_hit`은 최종 피해·피해 타입·장착 무기 분류를 primitive data로 제공한다.
+- `Karma`: `KarmaState`의 기준 시각형 자연 감소, `KarmaTier/KarmaAccessPolicy` 클래스형 enum, 지역별 PVP 증가·현상 대상 영웅 보상·고카르마 사망 추가 패널티 계산 API. Player는 `karma/isKarmaMarked/getKarmaSnapshot/addKarma/reduceKarma/setKarma/getKarmaAccessDeniedReason`만 외부에 제공하고 명시적인 변경을 기존 aggregate dirty 저장에 연결한다.
 - `GameAction`: 모든 조건을 먼저 검증하고 메모리 변경을 순차 적용하며 예외 시 등록된 rollback을 역순 실행하는 작은 동기식 트랜잭션 빌더.
 - `ProgressType`/`PlayerProgress`: 통계 counter, NPC/퀘스트 flag, 짧은 state의 목적형 조회·변경·구독과 versioned dirty 저장. `defineProgress/defineStatistic`이 정적 정의와 이벤트 counter를 등록하며 숨김 무기별 적중 counter가 숙련 자동 획득을 구동한다.
 - `RankingCategory`/`RankingVisibility`: 레벨·골드와 모든 StatType/AttributeType을 자동 등록하는 순위 클래스형 enum, 계산 지표 snapshot과 기본 공개 여부에 대한 카테고리별 예외 dirty 상태. Player는 raw 내부 상태 대신 온라인 `getRankingMetricSnapshot`과 DB row를 가공한 `getPersistedRankingSnapshots` DTO를 제공하고 마지막 계산 지표·공개 설정을 함께 저장한다.

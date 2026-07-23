@@ -35,6 +35,12 @@ import {
 import { DEFAULT_PLAYER_BASE_ATTRIBUTE } from './PlayerDefaults.js';
 import { partyManager } from '../modules/party.js';
 import { emitGameEvent, GameEventIds } from './GameEvent.js';
+import {
+    KarmaAccessPolicy,
+    KarmaState,
+    type KarmaChangeSnapshot,
+    type KarmaValueSnapshot,
+} from './Karma.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
 export const NEWCOMER_PLAY_TIME_SECONDS = 24 * 60 * 60;
@@ -178,6 +184,7 @@ export default class Player extends Entity {
 
     private _nickname: string;
     private _gold = 0;
+    private readonly karmaState: KarmaState;
     private _dirty = false;
     private _moving = false;
     private _statPoint = 0;
@@ -197,6 +204,8 @@ export default class Player extends Entity {
         persistentTags: readonly TagId[] = [],
         rankingMetrics?: unknown,
         rankingVisibility?: unknown,
+        karma = 0,
+        karmaUpdatedAt: Date = new Date(),
     ) {
         super(
             level,
@@ -223,6 +232,7 @@ export default class Player extends Entity {
         this.progress.subscribeChanges(() => this.quests.refreshSnapshotObjectives());
         this._statPoint = statPoint;
         this._gold = gold;
+        this.karmaState = new KarmaState(karma, karmaUpdatedAt);
         this.rankingVisibility = new RankingVisibility(rankingVisibility);
         if (!isCompleteRankingMetricRecord(rankingMetrics)) this._dirty = true;
 
@@ -304,6 +314,34 @@ export default class Player extends Entity {
 
     get gold() { return this._gold; }
     set gold(val: number) { this._gold = Math.max(0, val); this._dirty = true; }
+
+    /** 기준 시각 이후 자연 감소까지 반영한 현재 카르마. */
+    get karma(): number { return this.karmaState.value; }
+    get karmaTier() { return this.karmaState.tier; }
+    get isKarmaMarked(): boolean { return this.karmaState.marked; }
+
+    getKarmaSnapshot(now: Date | number = Date.now()): KarmaValueSnapshot {
+        return this.karmaState.snapshot(now);
+    }
+
+    getKarmaAccessDeniedReason(policy: KarmaAccessPolicy): string | undefined {
+        return policy.getDeniedReason(this.karma);
+    }
+
+    addKarma(amount: number, source = 'karma:action', now: Date | number = Date.now()): KarmaChangeSnapshot {
+        const result = this.karmaState.add(amount, now);
+        return this.recordKarmaChange(result, source);
+    }
+
+    reduceKarma(amount: number, source = 'karma:reduction', now: Date | number = Date.now()): KarmaChangeSnapshot {
+        const result = this.karmaState.reduce(amount, now);
+        return this.recordKarmaChange(result, source);
+    }
+
+    setKarma(value: number, source = 'karma:admin', now: Date | number = Date.now()): KarmaChangeSnapshot {
+        const result = this.karmaState.set(value, now);
+        return this.recordKarmaChange(result, source);
+    }
 
     /** 저장된 초와 현재 접속 구간을 합친 Player 누적 플레이 시간. */
     get cumulativePlayTimeSeconds(): number {
@@ -596,7 +634,31 @@ export default class Player extends Entity {
             QuestBook.load(data.userId),
         ]);
         const stats = data.stats as Partial<StatRecord> | null;
-        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, progress, skills, quests, stats ?? undefined, data.life, data.mentality, data.thirsty, data.hungry, data.statPoint, data.gold, (data.tags as TagId[] | null) ?? [], data.rankingMetrics, data.rankingVisibility);
+        return new Player(
+            data.userId,
+            data.user.nickname,
+            data.level,
+            data.exp,
+            data.locationId,
+            data.maxWeight,
+            inventory,
+            equipment,
+            progress,
+            skills,
+            quests,
+            stats ?? undefined,
+            data.life,
+            data.mentality,
+            data.thirsty,
+            data.hungry,
+            data.statPoint,
+            data.gold,
+            (data.tags as TagId[] | null) ?? [],
+            data.rankingMetrics,
+            data.rankingVisibility,
+            data.karma,
+            data.karmaUpdatedAt,
+        );
     }
 
     /** 새 플레이어 생성 */
@@ -670,6 +732,7 @@ export default class Player extends Entity {
         // 오프라인 동안 카운트하지 않을 정확한 잔여 시간을 unload/주기 저장 시점에 스냅샷한다.
         if (this.isDead) this.persistDeathState();
         if (this._dirty || this.stat.dirty || this.equipment.dirty || this.skills.dirty || this.rankingVisibility.dirty) {
+            const karma = this.karmaState.snapshot();
             await prisma.player.update({
                 where: { userId: this.userId },
                 data: {
@@ -684,6 +747,8 @@ export default class Player extends Entity {
                     hungry: this._hungry,
                     statPoint: this._statPoint,
                     gold: this._gold,
+                    karma: karma.value,
+                    karmaUpdatedAt: karma.updatedAt,
                     tags: this.tags.persistentValues(),
                     rankingMetrics: this.getRankingMetricSnapshot() as any,
                     rankingVisibility: this.rankingVisibility.toPersistence() as any,
@@ -698,6 +763,22 @@ export default class Player extends Entity {
         await this.progress.save();
         await this.skills.save();
         await this.quests.save();
+    }
+
+    private recordKarmaChange(result: KarmaChangeSnapshot, source: string): KarmaChangeSnapshot {
+        if (Math.abs(result.delta) < Number.EPSILON) return result;
+        this._dirty = true;
+        emitGameEvent(GameEventIds.KARMA_CHANGED, {
+            actor: this,
+            data: {
+                source: source.trim() || 'karma:unknown',
+                before: result.before,
+                value: result.value,
+                delta: result.delta,
+                tier: this.karmaTier.key,
+            },
+        });
+        return result;
     }
 
     /** DB에서 life=0을 읽은 뒤 이미 처리된 사망이라면 onDeath를 다시 호출하지 않도록 런타임 상태를 복원한다. */

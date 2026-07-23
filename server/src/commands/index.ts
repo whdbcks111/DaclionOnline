@@ -20,6 +20,7 @@ import { initForgingCommands } from './forging.js';
 import { initPuzzleCommands } from './puzzle.js';
 import { initTradeCommands } from './trade.js';
 import { initTutorialCommands } from './tutorial.js';
+import { initKarmaCommands } from './karma.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -44,4 +45,5 @@ export function initAllCommands(): void {
     initPuzzleCommands();
     initTradeCommands();
     initTutorialCommands();
+    initKarmaCommands();
 }
