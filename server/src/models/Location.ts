@@ -241,9 +241,20 @@ export default class Location implements TagReadable {
         }
     }
 
-    pickupItem(index: number): DroppedItem | null {
+    pickupItem(index: number, count?: number): DroppedItem | null {
         if (index < 0 || index >= this._droppedItems.length) return null;
-        return this._droppedItems.splice(index, 1)[0];
+        const item = this._droppedItems[index];
+        const pickupCount = count ?? item.count;
+        if (!Number.isSafeInteger(pickupCount) || pickupCount <= 0 || pickupCount > item.count) return null;
+        if (pickupCount === item.count) return this._droppedItems.splice(index, 1)[0];
+
+        item.count -= pickupCount;
+        return {
+            ...item,
+            count: pickupCount,
+            metadataDelta: item.metadataDelta ? { ...item.metadataDelta } : null,
+            tags: [...item.tags],
+        };
     }
 
     pickupAllItems(): DroppedItem[] {

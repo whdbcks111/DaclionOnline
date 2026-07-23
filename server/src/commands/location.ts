@@ -192,6 +192,7 @@ export function initLocationCommands(): void {
                     ];
                 },
             },
+            { name: '개수', description: '주울 개수 (생략 시 해당 묶음 전체)' },
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
@@ -215,6 +216,10 @@ export function initLocationCommands(): void {
             }
 
             if (args[0] === '전체') {
+                if (args[1] !== undefined) {
+                    sendBotMessageToUser(userId, '전체 줍기에는 개수를 지정할 수 없습니다.');
+                    return;
+                }
                 if (!player.inventory.canAddSnapshots(droppedItems)) {
                     sendBotMessageToUser(userId, '인벤토리 중량이 부족하여 바닥 아이템을 모두 주울 수 없습니다.');
                     return;
@@ -235,12 +240,24 @@ export function initLocationCommands(): void {
             }
 
             const selected = droppedItems[index];
-            if (!player.inventory.canAddSnapshot(selected)) {
+            const countInput = args[1];
+            if (countInput !== undefined && (!/^\d+$/.test(countInput) || Number(countInput) <= 0)) {
+                sendBotMessageToUser(userId, '주울 개수는 1 이상의 정수여야 합니다.');
+                return;
+            }
+            const count = countInput === undefined ? selected.count : Number(countInput);
+            if (!Number.isSafeInteger(count) || count > selected.count) {
+                sendBotMessageToUser(userId, `주울 수량이 부족합니다. (바닥에 ${selected.count}개)`);
+                return;
+            }
+
+            const pickupSnapshot = { ...selected, count };
+            if (!player.inventory.canAddSnapshot(pickupSnapshot)) {
                 sendBotMessageToUser(userId, '인벤토리 중량이 부족하여 아이템을 주울 수 없습니다.');
                 return;
             }
 
-            const picked = location.pickupItem(index);
+            const picked = location.pickupItem(index, count);
             if (!picked) {
                 sendBotMessageToUser(userId, '아이템을 줍는 중 오류가 발생했습니다.');
                 return;

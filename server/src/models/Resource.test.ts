@@ -235,6 +235,41 @@ test('바닥 아이템은 인스턴스 상태가 같을 때 최대 스택까지 
     assert.deepEqual(location.getDroppedItems()[2].metadataDelta, { quality: 'special' });
 });
 
+test('바닥 아이템 묶음은 지정한 수량만 회수하고 나머지를 유지한다', () => {
+    defineItem({
+        id: 'test_floor_partial_pickup',
+        name: '시험 부분 줍기',
+        description: '',
+        category: '재료',
+        weight: 0,
+        stackable: true,
+        maxStack: 20,
+        baseMetadata: null,
+        onUse: null,
+        equipSlot: null,
+        modifiers: null,
+        baseDurability: null,
+        tags: [],
+    });
+    const location = new Location({
+        id: 'test_floor_partial_pickup_location', name: '부분 줍기 시험', zoneType: 'neutral',
+        x: 0, y: 0, z: 0, npcIds: [], objects: [], connections: [], tags: [],
+    });
+    location.addDroppedItem({
+        itemDataId: 'test_floor_partial_pickup', count: 15,
+        durability: null, metadataDelta: { quality: 'same' }, tags: ['test:floor'],
+    });
+
+    const picked = location.pickupItem(0, 6);
+
+    assert.equal(picked?.count, 6);
+    assert.deepEqual(picked?.metadataDelta, { quality: 'same' });
+    assert.deepEqual(picked?.tags, ['test:floor']);
+    assert.equal(location.getDroppedItems()[0]?.count, 9);
+    assert.equal(location.pickupItem(0, 10), null);
+    assert.equal(location.getDroppedItems()[0]?.count, 9);
+});
+
 test('바닥 아이템 표시는 인스턴스의 커스텀 이름 metadata를 적용한다', () => {
     defineItem({
         id: 'test_floor_named_weapon', name: '기본 장검', description: '', category: '검',
