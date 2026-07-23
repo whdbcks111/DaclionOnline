@@ -55,6 +55,8 @@ GameEvent + Inventory/Progress 변경
 
 `player_quests`의 복합키는 `(player_id, quest_data_id)`다. status, 현재 stage ID, 목표 진행 JSON, metadata delta, 영속 태그, 완료 횟수와 수락/보고 가능/완료/반복 가능 시각을 저장한다. `PlayerProgress`는 선행 조건과 NPC 세계 플래그에 계속 사용하며 퀘스트 인스턴스를 대신하지 않는다.
 
+새 Player의 `첫 모험 안내`와 중간 `기본 조작 실습`도 같은 QuestBook에 등록된다. 상세 안내 단계는 Progress가 소유하고 Quest는 목록·완료·보상 경계를 제공한다. 기본 조작 실습은 스킬 사용 단계까지 도달하면 자동 완료되어 정확히 다음 레벨까지 필요한 경험치를 한 번 지급하고, 이후 스탯 분배 단계를 연다. 전체 흐름은 [게임 안내·첫 모험 튜토리얼](tutorial-guide.md)을 참고한다.
+
 ## NPC와 명령
 
 대화 generator는 `Dialogue.acceptQuest(id)`와 `Dialogue.turnInQuest(id)`를 yield한다. 두 액션은 현재 NPC ID를 QuestBook에 전달해 제공/보고 NPC인지 재검증한다. `/위치` NPC 이름 앞에는 수락 가능 `!`, 보고 가능 `?`, 진행 중 `·` marker가 표시된다.

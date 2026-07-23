@@ -1,0 +1,48 @@
+# 게임 안내·첫 모험 튜토리얼
+
+## 두 안내 계층
+
+- 햄버거 메뉴의 `게임 안내`는 `/guide` 라우트에서 게임 방식, 기본 조작, 성장, 전투, 생활 콘텐츠와 운영 기능을 계층형 페이지로 설명한다. 로그인 전에도 읽을 수 있다.
+- `첫 모험 안내`는 새 User가 아니라 새 `Player`가 생성된 직후 자동으로 시작되는 서버 권위 튜토리얼이다. 기존 계정이라도 운영 초기화로 Player가 다시 생성되면 새 튜토리얼을 받는다.
+
+튜토리얼은 실제 QuestBook의 `tutorial:first-steps` 메인 퀘스트와 `tutorial:basic-practice` 서브 퀘스트로 목록에 표시된다. 세부 단계·완료한 콘텐츠·일회성 보상 여부는 `PlayerProgress`에 저장하므로 별도 테이블이나 매 단계 DB 쓰기를 만들지 않는다. 변경은 Player의 30초 dirty flush와 unload/종료 저장에 포함된다.
+
+## 진행 흐름
+
+`modules/tutorial.ts`의 `TutorialStep`과 `TutorialContent`는 `values/fromKey/fromInput`을 제공하는 클래스형 enum이다. 순서는 다음과 같다.
+
+1. 텍스트 MUD와 버튼 우선 조작 안내
+2. 상태창, 위치, 이동·자동이동, 오브젝트 상호작용과 NPC 대화
+3. 인벤토리, 장착, 사용, 상점
+4. 대상 지정, 기본 공격, 스킬 목록과 스킬 사용
+5. 실제 레벨업 보상과 스탯 분배, HUD 설정, 단축키 목록
+6. 사용자가 원하는 순서로 낚시·광질·사냥 소개
+
+각 단계는 `tutorial:current-step` key의 `length: 0`, `editExists: true` notification을 갱신하므로 완료 또는 건너뛰기 전까지 현재 목표가 계속 보인다. 설명 카드는 버튼을 먼저 보여주고 같은 기능의 정식 명령과 1~2자리 별칭을 뒤에 안내한다.
+
+`bot.subscribeCommandExecutions()`는 버튼, `/정식명령`, 슬래시 없는 별칭을 canonical 명령 이름으로 전달한다. 튜토리얼은 이를 구독해 같은 행동으로 처리한다. 명령 인자와 게임 상태의 최종 판정은 각 소유 command/model이 계속 담당하며, 튜토리얼은 다른 기능의 raw 배열이나 DB row를 읽지 않는다.
+
+## 보상과 반복 방지
+
+첫 시작에는 공개 Inventory API로 낡은 검, 체력 포션, 기본 곡괭이, 초보자 낚싯대와 미끼를 한 번만 지급한다. 스킬 단계에서는 SkillBook API로 `강타`를 지급한다. 두 API 모두 기존 인스턴스를 존중한다.
+
+스킬 사용 안내까지 도달하면 `기본 조작 실습`이 자동 완료된다. 보상은 지급 시점의 `maxExp - exp`만큼이라 정확히 한 레벨이 오르고, 현재 성장 규칙에 따라 모든 기본 스탯 +1과 스탯 포인트 3을 받는다. `tutorial:growth_reward_granted` 플래그가 반복 시작으로 경험치를 다시 받는 것을 막는다.
+
+## 명령과 재접속
+
+- `/튜토리얼스킵`: 현재 안내와 기본 조작 실습을 종료한다.
+- `/튜토리얼시작`: 처음 단계부터 다시 시작한다. 지원품·레벨업 경험치는 중복 지급하지 않는다.
+- `/튜토리얼다음`: 설명 확인형 단계와 각 콘텐츠 설명을 진행한다.
+- `/튜토리얼선택 낚시|광질|사냥`: 아직 확인하지 않은 콘텐츠를 선택한다.
+
+활성 상태로 재접속하면 저장된 단계의 고정 notification과 안내 카드를 복원한다. 이미 온라인인 Player의 소켓만 다시 연결된 경우에는 중복 카드를 쌓지 않고 notification만 복원한다.
+
+## 변경 지점
+
+- 단계·보상·진행 API: `server/src/modules/tutorial.ts`
+- 명령 등록: `server/src/commands/tutorial.ts`
+- 실제 퀘스트 마스터 데이터: `server/src/data/quests.ts`
+- 신규 Player 연결: `server/src/modules/player.ts`
+- 정적 안내 페이지: `client/src/pages/GameGuide.tsx`, `client/src/data/gameGuide.ts`
+
+새 튜토리얼 단계는 `TutorialStep`, 카드 내용, canonical 명령 매핑, 이 문서와 테스트를 같은 변경에서 갱신한다. 실제 기능을 수행하지 않고 설명만 확인하는 단계만 `/튜토리얼다음`을 사용한다.

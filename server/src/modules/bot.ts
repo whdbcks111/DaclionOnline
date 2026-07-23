@@ -35,8 +35,22 @@ interface CommandConfig {
     handler: (userId: number, args: string[], raw: string, msg: ChatMessage | null, permission: number) => void | Promise<void>
 }
 
+export interface CommandExecutionEvent {
+    readonly userId: number
+    readonly commandName: string
+    readonly args: readonly string[]
+    readonly raw: string
+}
+
 const commands = new Map<string, CommandConfig>();
 const aliasMap = new Map<string, string>(); // alias → name
+const commandExecutionHandlers = new Set<(event: CommandExecutionEvent) => void>();
+
+/** 버튼·별칭·정식 명령을 canonical 명령 이름 하나로 관찰한다. */
+export function subscribeCommandExecutions(handler: (event: CommandExecutionEvent) => void): () => void {
+    commandExecutionHandlers.add(handler);
+    return () => { commandExecutionHandlers.delete(handler); };
+}
 
 /** UI와 명령어가 공유하는 정보 공개 모드 변경 API. 같은 계정의 모든 소켓에 즉시 반영한다. */
 export function setInformationModeForUser(userId: number, isPublic: boolean): void {
@@ -206,6 +220,20 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
 
     if (cmd.information) runInformationCommand(userId, () => cmd.handler(userId, args, raw, msg, permission), informationPublic);
     else cmd.handler(userId, args, raw, msg, permission);
+
+    const event: CommandExecutionEvent = Object.freeze({
+        userId,
+        commandName: cmd.name,
+        args: Object.freeze([...args]),
+        raw,
+    });
+    for (const handler of [...commandExecutionHandlers]) {
+        try {
+            handler(event);
+        } catch (error) {
+            logger.error(`명령 실행 구독자 오류: ${cmd.name}`, error);
+        }
+    }
 }
 
 /** 봇 모듈 초기화 */

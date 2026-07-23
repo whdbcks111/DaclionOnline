@@ -33,6 +33,7 @@ import { initUploadMaintenance, uploadRouter } from './modules/upload.js';
 import { initAllCommands } from './commands/index.js';
 import { initAdminPanel } from './modules/adminPanel.js';
 import { initMiniGame } from './modules/minigame.js';
+import { initTutorial } from './modules/tutorial.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -56,6 +57,7 @@ initLogin();
 initChat();
 initBot();
 initAllCommands();
+initTutorial();
 initPlayer();
 initLocation();
 initAdminPanel();

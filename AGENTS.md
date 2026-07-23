@@ -44,6 +44,7 @@
 - [`docs/systems/tags-effects.md`](docs/systems/tags-effects.md)
 - [`docs/systems/status-effects.md`](docs/systems/status-effects.md)
 - [`docs/systems/npc-dialogue.md`](docs/systems/npc-dialogue.md)
+- [`docs/systems/tutorial-guide.md`](docs/systems/tutorial-guide.md)
 - [`docs/systems/dungeon-puzzles.md`](docs/systems/dungeon-puzzles.md)
 - [`docs/systems/progress-skills.md`](docs/systems/progress-skills.md)
 - [`docs/systems/party.md`](docs/systems/party.md)

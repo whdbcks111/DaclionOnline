@@ -20,6 +20,7 @@ import { clearDungeonPuzzleSession } from '../models/DungeonPuzzle.js';
 import { migrateLegacyBlacksmithProfession } from './forging.js';
 import { tradeManager } from './trade.js';
 import { cancelNavigation } from './navigation.js';
+import { initializeTutorialSession } from './tutorial.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -27,9 +28,13 @@ const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
 /** 로그인 시 호출: DB에서 로드하여 메모리에 올림 */
 export async function loadPlayerByUserId(userId: number): Promise<Player> {
     const existing = getOnlinePlayer(userId);
-    if (existing) return existing;
+    if (existing) {
+        initializeTutorialSession(existing, { newPlayer: false, showCard: false });
+        return existing;
+    }
 
     let player = await Player.loadByUserId(userId);
+    const newPlayer = player === null;
     if (!player) {
         player = await Player.create(userId);
     }
@@ -37,6 +42,7 @@ export async function loadPlayerByUserId(userId: number): Promise<Player> {
     if (migrateLegacyBlacksmithProfession(player)) await player.save();
 
     registerOnlinePlayer(player);
+    initializeTutorialSession(player, { newPlayer, showCard: !newPlayer });
     return player;
 }
 

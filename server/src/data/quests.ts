@@ -8,6 +8,14 @@ import {
 import { JobSlotType } from '../models/Job.js';
 import './jobs.js';
 import { canAcquireBlacksmithProfession, grantBlacksmithProfession } from '../modules/forging.js';
+import {
+    getTutorialSnapshot,
+    hasReachedTutorialGrowth,
+    isTutorialTerminal,
+    TUTORIAL_PRACTICE_QUEST_ID,
+    TUTORIAL_QUEST_ID,
+    TutorialProgressIds,
+} from '../modules/tutorial.js';
 import type Entity from '../models/Entity.js';
 import type Player from '../models/Player.js';
 
@@ -36,6 +44,66 @@ export const ASHEN_ABYSS_QUEST_IDS = Object.freeze({
     RELIGHT_WAYSTATION: 'ashen-abyss:relight-waystation',
     END_ASHEN_COURT: 'ashen-abyss:end-ashen-court',
 } as const);
+
+defineQuest({
+    id: TUTORIAL_QUEST_ID,
+    name: '첫 모험 안내',
+    aliases: ['튜토리얼', '초보 안내'],
+    description: '버튼과 명령어를 직접 사용하며 DaclionOnline의 기본 조작과 주요 콘텐츠를 익힙니다.',
+    tags: ['quest:tutorial'],
+    giverNpcIds: ['town_guide'],
+    turnInNpcIds: ['town_guide'],
+    visible: player => Boolean(getTutorialSnapshot(player).status),
+    canAccept: player => getTutorialSnapshot(player).status === 'active',
+    stages: [new QuestStage({
+        id: 'first-steps',
+        description: '화면에 계속 표시되는 첫 모험 안내를 따라 기본 기능과 콘텐츠를 확인하세요.',
+        objectives: [QuestObjective.custom(
+            'complete-guide',
+            '첫 모험 안내 완료 또는 건너뛰기',
+            1,
+            player => isTutorialTerminal(player) ? 1 : 0,
+        )],
+    })],
+    rewards: [],
+    repeat: { cooldownSeconds: 0 },
+    abandonable: false,
+    completionMode: 'automatic',
+});
+
+defineQuest({
+    id: TUTORIAL_PRACTICE_QUEST_ID,
+    name: '기본 조작 실습',
+    aliases: ['튜토리얼 실습'],
+    description: '상태창부터 스킬 사용까지 기본 조작을 직접 확인하는 첫 모험 안내의 서브 퀘스트입니다.',
+    tags: ['quest:tutorial', 'quest:sub'],
+    giverNpcIds: ['town_guide'],
+    turnInNpcIds: ['town_guide'],
+    visible: player => getTutorialSnapshot(player).status === 'active'
+        && !player.progress.getFlag(TutorialProgressIds.GROWTH_REWARD_GRANTED),
+    canAccept: player => getTutorialSnapshot(player).status === 'active'
+        && !player.progress.getFlag(TutorialProgressIds.GROWTH_REWARD_GRANTED),
+    stages: [new QuestStage({
+        id: 'practice',
+        description: '안내 카드의 버튼과 명령어를 따라 기본 조작과 첫 스킬 사용을 익히세요.',
+        objectives: [QuestObjective.custom(
+            'reach-growth',
+            '기본 조작과 스킬 사용 익히기',
+            1,
+            player => hasReachedTutorialGrowth(player) ? 1 : 0,
+        )],
+    })],
+    rewards: [QuestReward.custom({
+        label: '다음 레벨까지 필요한 경험치',
+        grant: player => {
+            const required = Math.max(1, player.maxExp - player.exp);
+            player.gainExp(required);
+            player.progress.setFlag(TutorialProgressIds.GROWTH_REWARD_GRANTED, true);
+        },
+    })],
+    abandonable: true,
+    completionMode: 'automatic',
+});
 
 defineQuest({
     id: FIRST_SLIME_HUNT_QUEST_ID,

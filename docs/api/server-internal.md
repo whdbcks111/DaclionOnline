@@ -16,7 +16,7 @@
 | HUD | `sendPlayerStats`, `sendLocationInfo` | 특정 사용자의 모든 소켓에 HUD payload 전송 |
 | State sync | `publishUserSnapshot`, `clearUserSnapshotStreams`, `RevisionedSnapshot` | 내용 변경 revision·stream syncId와 socket별 전달 stamp로 완전한 HUD snapshot 중복/역순 방지 |
 | Master validation | `validateMasterData` | 마스터 레지스트리 상호 참조와 아이템·스킬·직업·지도 아이콘 파일 검사 |
-| Command | `registerCommand`, `handleCommand`, `isCommandAliasInput`, `getCommandList`, `getCommandListFiltered`, `setInformationModeForUser` | 명령 등록, 별칭 판정·실행, 정보성 명령 공개 모드와 권한별 aliases 포함 목록 snapshot |
+| Command | `registerCommand`, `handleCommand`, `isCommandAliasInput`, `getCommandList`, `getCommandListFiltered`, `setInformationModeForUser`, `subscribeCommandExecutions` | 명령 등록, 별칭 판정·실행, 정보성 명령 공개 모드, 권한별 aliases 포함 목록 snapshot, 버튼·별칭을 통합한 canonical 실행 구독 |
 | Information visibility | `set/is/clearInformationPublicMode`, `runInformationCommand`, `shouldPublishInformationOutput` | 사용자별 런타임 정보 공개 설정과 async 출력 문맥 |
 | Party | `partyManager.invite/accept/decline/leave/disband/kick/removeDisconnectedPlayer/getParty/areInSameParty/getHudData/distributeMonsterExp`, `calculatePartyExpGrant` | 내부 Map을 숨긴 초대·구성·PVP 아군 판정·HUD·같은 장소 몬스터 경험치 공유 |
 | Trade | `tradeManager.invite/accept/decline/addItem/removeItem/setGold/confirm/unconfirm/cancel/cancelForPlayer/update/getSessionSnapshot/subscribe` | 같은 장소 플레이어 거래의 요청·런타임 에스크로·양쪽 확인·자동 취소와 불변 표시 snapshot/event |
@@ -122,5 +122,7 @@
 - `information`: 정보 열람 명령 표시. 공개 모드에서는 `showCommandUse`보다 우선해 입력과 결과를 현재 채널에 공개한다.
 - `args`: `required`, `isText`, 정적/동적 `completions`를 지원한다. 한 명령에서 `isText`는 최대 한 개를 전제로 한다.
 - `handler(userId, args, raw, msg, permission)`: 검증된 명령 실행 진입점.
+
+`subscribeCommandExecutions(handler)`는 권한·필수 인자 검증을 통과해 handler가 호출된 뒤 `{ userId, commandName, args, raw }`를 전달하고 해제 함수를 반환한다. `commandName`은 입력한 별칭이 아니라 등록된 canonical 이름이다. 튜토리얼처럼 명령 경로를 관찰할 때만 사용하고, 실제 성공 여부가 필요한 도메인은 각 모델의 결과나 GameEvent를 구독한다.
 
 등록된 사용자 명령 전체 목록과 시스템별 사용 흐름은 [chat-command.md](../systems/chat-command.md)를 참고한다.

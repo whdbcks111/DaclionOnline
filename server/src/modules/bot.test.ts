@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getCommandListFiltered, handleCommand, isCommandAliasInput, registerCommand } from './bot.js';
+import {
+    getCommandListFiltered,
+    handleCommand,
+    isCommandAliasInput,
+    registerCommand,
+    subscribeCommandExecutions,
+} from './bot.js';
 import { parseCommandInput } from '../../../shared/commandInput.js';
 import { initLocationCommands } from '../commands/location.js';
 
@@ -47,6 +53,29 @@ test('권한별 명령 스냅샷은 등록된 별칭을 복사해 제공한다',
     });
     const snapshot = getCommandListFiltered(0).find(command => command.name === 'test_alias_snapshot');
     assert.deepEqual(snapshot?.aliases, ['tas', 'TAS2']);
+});
+
+test('명령 실행 구독은 버튼과 별칭 경로를 canonical 이름으로 통합한다', () => {
+    registerCommand({
+        name: 'test_execution_event',
+        aliases: ['tee'],
+        description: 'test',
+        handler: () => undefined,
+    });
+    const events: Array<{ commandName: string; args: readonly string[] }> = [];
+    const unsubscribe = subscribeCommandExecutions(event => {
+        if (event.commandName === 'test_execution_event') events.push(event);
+    });
+
+    handleCommand(7, 'tee one');
+    handleCommand(7, '/test_execution_event two');
+    unsubscribe();
+    handleCommand(7, 'tee three');
+
+    assert.deepEqual(events.map(event => [event.commandName, ...event.args]), [
+        ['test_execution_event', 'one'],
+        ['test_execution_event', 'two'],
+    ]);
 });
 
 test('이동 명령은 단일 키 v를 별칭과 단축키 목록 snapshot에 제공한다', () => {
