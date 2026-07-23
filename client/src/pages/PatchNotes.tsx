@@ -31,7 +31,6 @@ export default function PatchNotes() {
             >
               <strong>{formatPatchNoteVersion(note.version)}</strong>
               <time dateTime={note.releasedAt}>{formatPatchNoteDate(note.releasedAt)}</time>
-              <span>{note.title}</span>
             </button>
           ))}
         </nav>
@@ -42,11 +41,9 @@ export default function PatchNotes() {
               <strong>{formatPatchNoteVersion(selected.version)}</strong>
               <time dateTime={selected.releasedAt}>{formatPatchNoteDate(selected.releasedAt)}</time>
             </div>
-            <h2>{selected.title}</h2>
-            <p className={styles.lead}>{selected.summary}</p>
             {selected.sections.map(section => (
               <section className={styles.section} key={section.categoryKey}>
-                <h3>{section.categoryLabel}</h3>
+                <h3>[{section.categoryMarker}] {section.categoryLabel}</h3>
                 <ul>
                   {section.items.map(item => <li key={item}>{item}</li>)}
                 </ul>

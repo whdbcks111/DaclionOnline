@@ -79,7 +79,6 @@
   }
   strong { color: $color-text; font-size: $font-size-base; }
   time { color: $color-text-tertiary; font-size: $font-size-sm; }
-  span { color: $color-text-secondary; font-size: $font-size-sm; }
 }
 
 .versionNav .activeVersion {
@@ -93,7 +92,7 @@
   min-height: min(70vh, 40rem);
   padding: clamp($spacing-md, 3vw, $spacing-xl);
 
-  h2 { margin: $spacing-xs 0 $spacing-sm; font-size: clamp(1.4rem, 3vw, 2rem); }
+  > h2 { margin: $spacing-xs 0 $spacing-sm; font-size: clamp(1.4rem, 3vw, 2rem); }
 }
 
 .releaseMeta {
@@ -101,23 +100,20 @@
   align-items: baseline;
   gap: $spacing-sm;
 
-  strong { color: $color-primary; font-size: $font-size-lg; }
+  strong { color: $color-primary; font-size: clamp(1.2rem, 3vw, 1.55rem); }
   time { color: $color-text-tertiary; font-size: $font-size-sm; }
 }
 
-.lead {
-  max-width: 48rem;
-  margin-bottom: $spacing-xl;
-  color: $color-text-secondary;
-  font-size: clamp(1rem, 2vw, 1.12rem);
-  line-height: 1.75;
-}
-
 .section {
-  padding: $spacing-md 0;
+  padding: $spacing-lg 0;
   border-top: 1px solid $color-border-light;
 
-  h3 { margin: 0 0 $spacing-sm; font-size: $font-size-base; }
+  h3 {
+    margin: 0 0 $spacing-sm;
+    color: $color-text;
+    font-size: $font-size-base;
+    font-weight: 800;
+  }
   ul { margin: 0; padding-left: 1.25rem; }
   li { margin: $spacing-xs 0; line-height: 1.7; }
 }

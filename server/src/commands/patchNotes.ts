@@ -21,7 +21,7 @@ export function initPatchNoteCommands(): void {
             description: '특정 버전 (예: 1.0.0, 생략 시 전체)',
             completions: getPatchNotes().map((note): CompletionItem => ({
                 value: note.version,
-                description: note.title,
+                description: formatPatchNoteDate(note.releasedAt),
             })),
         }],
         handler(userId, args) {
@@ -41,13 +41,12 @@ export function initPatchNoteCommands(): void {
 
             for (const note of notes) {
                 builder
-                    .divider(`${formatPatchNoteVersion(note.version)} · ${note.title}`)
-                    .color('$text-tertiary', body => body.text(`${formatPatchNoteDate(note.releasedAt)}\n`))
-                    .color('$text-secondary', body => body.text(note.summary))
-                    .text('\n');
+                    .divider()
+                    .weight('bold', title => title.text(`${formatPatchNoteVersion(note.version)}\n`))
+                    .color('$text-tertiary', body => body.text(`${formatPatchNoteDate(note.releasedAt)}\n`));
                 for (const section of note.sections) {
                     builder
-                        .weight('bold', title => title.text(`\n[ ${section.categoryLabel} ]\n`));
+                        .weight('bold', title => title.text(`\n[${section.categoryMarker}] ${section.categoryLabel}\n`));
                     for (const item of section.items) builder.text(`• ${item}\n`);
                 }
             }
