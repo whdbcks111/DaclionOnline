@@ -357,6 +357,20 @@ test('무기 반복 적중 통계는 숨겨진 숙련 패시브를 해금하고 
     assert.equal(player.attribute.get(AttributeType.ATK), 10);
 });
 
+test('활 숙련은 활 장착 중 공격력과 치명타 확률을 함께 높인다', () => {
+    const player = new TestSkillPlayer();
+    assert.equal(player.equipment.equip('mainHand', new Item('light_bow', 1, 80, null), player.attribute), true);
+    const attackBefore = player.attribute.get(AttributeType.ATK);
+    const critBefore = player.attribute.get(AttributeType.CRIT_RATE);
+
+    player.progress.setCounter('combat:weapon_hits/bow', 200);
+    player.skills.update(0.5);
+
+    assert.equal(player.skills.has('bow_mastery'), true);
+    assert.ok(Math.abs(player.attribute.get(AttributeType.ATK) - attackBefore * 1.04) < 0.0001);
+    assert.ok(Math.abs(player.attribute.get(AttributeType.CRIT_RATE) - (critBefore + 0.03)) < 0.0001);
+});
+
 test('스탯 달성형 히든 패시브는 Progress 변경 없이도 자동 획득한다', () => {
     const player = new TestSkillPlayer();
     player.stat.set(StatType.STRENGTH, 100);

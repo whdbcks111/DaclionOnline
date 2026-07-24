@@ -842,8 +842,11 @@ const weaponMasteries = [
     },
     {
         id: 'bow_mastery', name: '활 숙련', weapon: 'bow', label: '활', tag: GameTags.WEAPON_BOW, icon: 'items/light_bow',
-        description: '{{icon.critRate}} 활 장착 중 치명타 확률이 [color=gold]{{critRate}}[/color] 증가합니다.',
-        modifiers: [{ attribute: AttributeType.CRIT_RATE.key, op: 'add', value: 0.03, label: '치명타 확률 증가', display: '+3%p' }],
+        description: '{{icon.atk}} 활 장착 중 공격력이 [color=orange]{{atk}}[/color], {{icon.critRate}} 치명타 확률이 [color=gold]{{critRate}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.04, label: '공격력 증가', display: '+4%' },
+            { attribute: AttributeType.CRIT_RATE.key, op: 'add', value: 0.03, label: '치명타 확률 증가', display: '+3%p' },
+        ],
     },
     {
         id: 'dagger_mastery', name: '단검 숙련', weapon: 'dagger', label: '단검', tag: GameTags.WEAPON_DAGGER, icon: 'items/venom_dagger',

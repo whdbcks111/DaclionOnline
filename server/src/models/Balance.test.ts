@@ -61,6 +61,31 @@ test('궁수 투사체 가속 환산은 성장 구간에서 근접 명중률과 
     }
 });
 
+test('궁수는 같은 성장 구간의 검보다 추천 활 로테이션에서 우위를 유지한다', () => {
+    const comparisons = [
+        { level: 20, bow: 'silverweb_hunter_bow', sword: 'old_sword' },
+        { level: 28, bow: 'requiem_bow', sword: 'oathiron_sword' },
+        { level: 50, bow: 'stormstring_bow', sword: 'windsteel_sword' },
+        { level: 75, bow: 'sunwire_bow', sword: 'dunebreaker_sword' },
+        { level: 120, bow: 'icesilk_longbow', sword: 'rimecleaver_sword' },
+        { level: 200, bow: 'photon_repeater', sword: 'paradox_edge' },
+    ] as const;
+
+    for (const { level, bow, sword } of comparisons) {
+        const bowRotation = analyzeCombatRotation(createBalanceScenario(
+            level, 'career:archer', undefined, BalanceEncounterType.BOSS, bow,
+        ));
+        const swordRotation = analyzeCombatRotation(createBalanceScenario(
+            level, 'career:archer', undefined, BalanceEncounterType.BOSS, sword,
+        ));
+
+        assert.ok(
+            bowRotation.dps >= swordRotation.dps * 1.05,
+            `Lv.${level}: ${bowRotation.loadoutName} ${bowRotation.dps.toFixed(1)} < ${swordRotation.loadoutName} ${swordRotation.dps.toFixed(1)} × 1.05`,
+        );
+    }
+});
+
 test('archer and assassin combat skills gain real damage from movement speed buffs', () => {
     const archer = createBalanceScenario(200, 'career:archer');
     const assassin = createBalanceScenario(200, 'career:assassin');

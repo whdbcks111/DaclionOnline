@@ -244,6 +244,7 @@ export function createBalanceScenario(
     mainJobId: string,
     subJobId?: string,
     encounter = BalanceEncounterType.MONSTER,
+    loadoutItemDataId?: string,
 ): BalanceScenario {
     const normalizedLevel = normalizeLevel(level);
     const mainJob = getJob(mainJobId);
@@ -261,7 +262,7 @@ export function createBalanceScenario(
     const entity = new BalanceEntity(`${effectiveJob.name} 기준 공격자`, normalizedLevel, stats);
     // 대장장이 메인 엘리트는 서브 직업 방향에 맞는 무기를 쓰는 실제 운용을 기준으로 측정한다.
     const projectedLoadoutJobId = mainJob.id === 'career:blacksmith' && subJob ? subJob.id : mainJob.id;
-    const loadout = applyProjectedLoadout(entity, projectedLoadoutJobId, normalizedLevel);
+    const loadout = applyProjectedLoadout(entity, projectedLoadoutJobId, normalizedLevel, loadoutItemDataId);
     applyJobModifiers(entity, effectiveJob.mainModifiers, 'balance:main');
     if (subJob) applyJobModifiers(entity, subJob.subModifiers, 'balance:sub');
     applyJobPassives(entity, [mainJob, subJob, effectiveJob]);
@@ -835,15 +836,18 @@ const COMBAT_ATTRIBUTE_TYPES = Object.freeze([
     AttributeType.CRIT_DMG,
 ]);
 
-function applyProjectedLoadout(entity: Entity, mainJobId: string, level: number): {
+function applyProjectedLoadout(entity: Entity, mainJobId: string, level: number, itemDataId?: string): {
     name: string;
     tags: readonly TagId[];
     attackType: 'physical' | 'magic';
     projectileDataId?: string;
 } {
     const choices = PROJECTED_WEAPONS[mainJobId as keyof typeof PROJECTED_WEAPONS] ?? [];
-    const choice = [...choices].reverse().find(value => level >= value.level);
-    const data = choice ? getItemData(choice.id) : undefined;
+    const choice = itemDataId ? undefined : [...choices].reverse().find(value => level >= value.level);
+    const data = getItemData(itemDataId ?? choice?.id ?? '');
+    if (itemDataId && (!data || data.equipSlot !== 'mainHand' || !data.tags.includes(GameTags.ITEM_WEAPON))) {
+        throw new Error(`밸런스 주무기 데이터를 찾을 수 없습니다: ${itemDataId}`);
+    }
     if (data?.modifiers?.length) {
         entity.attribute.addModifiers(data.modifiers.map(modifier => ({
             ...modifier,
