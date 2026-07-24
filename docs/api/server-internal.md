@@ -126,7 +126,7 @@
 
 - `name`, `aliases`, `description`: 목록/파싱/자동완성 메타데이터.
 - `permission`: 최소 권한, 기본 0. 실제 실행 시 서버가 검사한다.
-- `showCommandUse`: `show`는 채널, `private`는 본인, `hide`는 입력 메시지를 표시하지 않는다.
+- `showCommandUse`: `show`는 채널, `private`는 본인, `hide`는 입력 메시지를 표시하지 않는다. 생략 시 `private`이며 입력과 결과를 모두 공개해야 하는 명령만 `show`를 명시한다.
 - `information`: 정보 열람 명령 표시. 공개 모드에서는 `showCommandUse`보다 우선해 입력과 결과를 현재 채널에 공개한다.
 - `args`: `required`, `isText`, 정적/동적 `completions`를 지원한다. 한 명령에서 `isText`는 최대 한 개를 전제로 한다.
 - `handler(userId, args, raw, msg, permission)`: 검증된 명령 실행 진입점.

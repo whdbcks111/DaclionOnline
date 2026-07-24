@@ -28,7 +28,7 @@ interface CommandConfig {
     aliases?: string[]
     description: string
     permission?: number        // 최소 권한 레벨 (미지정 시 0, 누구나 사용 가능)
-    showCommandUse?: CommandUseVisibility  // 명령어 사용 채팅 표시 방식 (기본: 'show')
+    showCommandUse?: CommandUseVisibility  // 명령어 사용 채팅 표시 방식 (기본: 'private')
     /** 정보 열람 명령. 공개 모드이면 입력과 sendBotMessageToUser 결과를 현재 채널에 공개한다. */
     information?: boolean
     args?: CommandArg[]
@@ -214,8 +214,11 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
         if (cmd.information) {
             if (informationPublic) sendMessageToChannel(msg, getUserChannel(userId));
             else sendMessageToUser(userId, msg);
-        } else if(cmd.showCommandUse === 'show' || !cmd.showCommandUse) sendMessageToChannel(msg, getUserChannel(userId));
-        else if(cmd.showCommandUse == 'private') sendMessageToUser(userId, msg);
+        } else {
+            const visibility = cmd.showCommandUse ?? 'private';
+            if (visibility === 'show') sendMessageToChannel(msg, getUserChannel(userId));
+            else if (visibility === 'private') sendMessageToUser(userId, msg);
+        }
     }
 
     if (cmd.information) runInformationCommand(userId, () => cmd.handler(userId, args, raw, msg, permission), informationPublic);

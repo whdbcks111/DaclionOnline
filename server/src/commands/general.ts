@@ -100,6 +100,7 @@ export function initGeneralCommands(): void {
         name: '랜덤',
         aliases: ['random'],
         description: '범위 내 랜덤한 정수를 뽑습니다.',
+        showCommandUse: 'show',
         args: [
             { name: '최소', description: '범위의 최소값', required: true },
             { name: '최대', description: '범위의 최대', required: true },

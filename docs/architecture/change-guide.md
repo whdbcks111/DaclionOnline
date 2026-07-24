@@ -14,7 +14,7 @@
 ## 채팅 명령어 추가
 
 1. 일반, 플레이어, 위치, 상점, 관리자 중 책임에 맞는 `server/src/commands/*.ts`에서 `registerCommand()`를 호출한다.
-2. `name`, `aliases`, `description`, `permission`, `showCommandUse`, `args`, `handler`를 정한다. 자동완성은 정적 배열 또는 `(userId, args, raw) => CompletionItem[]`로 제공한다.
+2. `name`, `aliases`, `description`, `permission`, `showCommandUse`, `args`, `handler`를 정한다. `showCommandUse` 기본값은 본인 전용 `private`이며 결과도 공개되는 명령만 `show`, 별도 연출로 입력이 불필요하면 `hide`를 사용한다. 자동완성은 정적 배열 또는 `(userId, args, raw) => CompletionItem[]`로 제공한다.
 3. 새 명령 파일이면 `server/src/commands/index.ts`에 초기화 함수를 등록한다.
 4. 출력은 `modules/message.ts`와 `utils/chatBuilder.ts`를 사용한다. 상태 변경은 직접 DB보다 `Player` 등 도메인 모델을 우선한다.
 

@@ -388,7 +388,7 @@ export function initPlayerCommands(): void {
         name: '버리기',
         aliases: ['drop', 'q'],
         description: '아이템을 지정한 개수만큼 현재 장소에 버립니다.',
-        showCommandUse: 'show',
+        showCommandUse: 'private',
         args: [
             { name: '슬롯ID', description: '버릴 아이템 인벤토리 슬롯 ID', required: true,
                 completions(userId) {
@@ -457,7 +457,7 @@ export function initPlayerCommands(): void {
         name: '장착',
         aliases: ['equip', 'eq'],
         description: '인벤토리의 아이템을 장착합니다.',
-        showCommandUse: 'show',
+        showCommandUse: 'private',
         args: [
             { name: '슬롯ID', description: '장착할 아이템 인벤토리 슬롯 ID', required: true,
                 completions(userId) {
@@ -524,7 +524,7 @@ export function initPlayerCommands(): void {
         name: '장착해제',
         aliases: ['unequip'],
         description: '장착된 아이템을 해제합니다.',
-        showCommandUse: 'show',
+        showCommandUse: 'private',
         args: [
             { name: '슬롯명', description: `해제할 슬롯 (${EquipSlotType.values().map(s => s.label).join('/')})`, required: true,
                 completions: EquipSlotType.values().map(s => s.label),

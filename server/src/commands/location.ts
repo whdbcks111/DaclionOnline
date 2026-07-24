@@ -174,7 +174,7 @@ export function initLocationCommands(): void {
         name: '줍기',
         aliases: ['pickup', 'p'],
         description: '현재 위치의 바닥 아이템을 줍습니다.',
-        showCommandUse: 'show',
+        showCommandUse: 'private',
         args: [
             { name: '번호/전체', description: '주울 바닥 아이템 번호 또는 전체', required: true,
                 completions(userId) {
