@@ -10,8 +10,12 @@ import {
 import type { SkillContext } from '../models/Skill.js';
 import type Player from '../models/Player.js';
 import { StatusEffectType } from '../models/StatusEffect.js';
-import { sendNotificationFiltered } from '../modules/message.js';
-import { isOnlinePlayerAtLocation } from '../modules/playerRegistry.js';
+import {
+    sendBotMessageToUsers,
+    sendNotificationToUsers,
+} from '../modules/message.js';
+import { getOnlinePlayerUserIdsAtLocation } from '../modules/playerRegistry.js';
+import { chat } from '../utils/chatBuilder.js';
 import { GameTags } from '../../../shared/tags.js';
 import type { TagId } from '../../../shared/tags.js';
 import {
@@ -81,6 +85,41 @@ function numberMeta(context: SkillContext, key: string): number {
     const value = context.skill.getMetadata(key);
     if (typeof value !== 'number') throw new Error(`${context.skill.name} metadata가 숫자가 아닙니다: ${key}`);
     return value;
+}
+
+function announceMonsterSkill(
+    context: SkillContext,
+    skillId: string,
+    skillName: string,
+    castTime: number,
+    preview?: string,
+): void {
+    if (context.player) return;
+    const audience = getOnlinePlayerUserIdsAtLocation(context.owner.locationId);
+    if (audience.length === 0) return;
+    const message = `${context.owner.name}이(가) ${skillName}을(를) 준비합니다! (${formatNumber(castTime)}초)`;
+    sendNotificationToUsers(audience, {
+        key: `boss-skill:${context.owner.name}:${skillId}`,
+        message,
+        length: castTime * 1_000,
+    });
+    const record = chat()
+        .color('red', builder => builder.weight('bold', nested => nested.text('[ 전투 예고 ]')))
+        .text(` ${context.owner.name} · `)
+        .color('gold', builder => builder.weight('bold', nested => nested.text(skillName)))
+        .text(` (${formatNumber(castTime)}초)`);
+    if (preview) record.text('\n').color('gray', builder => builder.text(preview));
+    sendBotMessageToUsers(audience, record.build());
+}
+
+function recordMonsterSkillResult(context: SkillContext, skillName: string, comment: string): void {
+    if (context.player) return;
+    const audience = getOnlinePlayerUserIdsAtLocation(context.owner.locationId);
+    if (audience.length === 0) return;
+    sendBotMessageToUsers(audience, chat()
+        .color('gold', builder => builder.weight('bold', nested => nested.text(`[ ${skillName} ]`)))
+        .text(` ${comment}`)
+        .build());
 }
 
 function requirePlayer(context: SkillContext): Player {
@@ -3271,13 +3310,12 @@ defineSkill({
             throw new Error('지각 붕괴 정신력 소모에 실패했습니다.');
         }
         const castTime = numberMeta(context, 'castTime');
-        sendNotificationFiltered(
-            userId => isOnlinePlayerAtLocation(userId, context.owner.locationId),
-            {
-                key: `skill-telegraph:${context.owner.name}:seismic-crush`,
-                message: `${context.owner.name}이(가) 지각 붕괴를 준비합니다! (${castTime.toFixed(1)}초)`,
-                length: castTime * 1000,
-            },
+        announceMonsterSkill(
+            context,
+            'seismic_crush',
+            '지각 붕괴',
+            castTime,
+            `적중 시 ${formatNumber(numberMeta(context, 'paralysisChance'))}% 확률로 마비독 Lv.${context.skill.level} · ${formatNumber(numberMeta(context, 'paralysisDuration'))}초`,
         );
         return { duration: castTime, state: { released: false } };
     },
@@ -3289,6 +3327,10 @@ defineSkill({
         if (!target || target.isDefeated || target.locationId !== context.owner.locationId) return 'finish';
         const result = context.owner.attack(target, 'magic', seismicDamage(context), {
             consumeMainHandDurability: false,
+            combatMessage: {
+                title: '지각 붕괴',
+                comment: `지면을 무너뜨려 대상을 덮쳤습니다. 적중 시 ${formatNumber(numberMeta(context, 'paralysisChance'))}% 확률로 마비독을 부여합니다.`,
+            },
         });
         if (result && !result.evaded
             && Math.random() < numberMeta(context, 'paralysisChance') / 100) {
@@ -3340,13 +3382,12 @@ defineSkill({
     },
     onStart: context => {
         const castTime = numberMeta(context, 'castTime');
-        sendNotificationFiltered(
-            userId => isOnlinePlayerAtLocation(userId, context.owner.locationId),
-            {
-                key: `skill-telegraph:${context.owner.name}:ironroot-lockdown`,
-                message: `${context.owner.name}이(가) 한 명을 철근으로 고정합니다! (${castTime.toFixed(1)}초)`,
-                length: castTime * 1_000,
-            },
+        announceMonsterSkill(
+            context,
+            'ironroot_lockdown',
+            '철근 압살',
+            castTime,
+            `회피 불가 · 방어력 무시 · 적중 시 제압 ${formatNumber(numberMeta(context, 'controlDuration'))}초`,
         );
         return { duration: castTime, state: { released: false } };
     },
@@ -3365,6 +3406,10 @@ defineSkill({
             fixedDamage: true,
             consumeMainHandDurability: false,
             triggerMainHandHitEffects: false,
+            combatMessage: {
+                title: '철근 압살',
+                comment: `철근이 대상을 고정한 채 압살했습니다. 제압이 ${formatNumber(numberMeta(context, 'controlDuration'))}초 동안 적용됩니다.`,
+            },
         });
         if (result) {
             target.applyStatusEffect(
@@ -3396,6 +3441,7 @@ interface BossStrikeSkillDefinition {
     statusEffectId?: string;
     statusDuration?: number;
     unavoidable?: boolean;
+    combatComment?: string;
 }
 
 function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): void {
@@ -3442,13 +3488,15 @@ function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): void {
             return denied ? denySkill(denied) : { accepted: true };
         },
         onStart: context => {
-            sendNotificationFiltered(
-                userId => isOnlinePlayerAtLocation(userId, context.owner.locationId),
-                {
-                    key: `boss-skill:${context.owner.name}:${definition.id}`,
-                    message: `${context.owner.name}이(가) ${definition.name}을(를) 준비합니다! (${definition.castTime.toFixed(1)}초)`,
-                    length: definition.castTime * 1_000,
-                },
+            const effectPreview = statusEffect
+                ? `적중 시 ${statusEffect.label} Lv.${context.skill.level} · ${formatNumber(definition.statusDuration ?? 5)}초`
+                : '강력한 직접 피해';
+            announceMonsterSkill(
+                context,
+                definition.id,
+                definition.name,
+                definition.castTime,
+                `${definition.unavoidable ? '회피 불가 · ' : ''}${effectPreview}`,
             );
             return { duration: definition.castTime, state: { released: false } };
         },
@@ -3461,6 +3509,15 @@ function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): void {
                 unavoidable: definition.unavoidable,
                 consumeMainHandDurability: false,
                 triggerMainHandHitEffects: false,
+                combatMessage: {
+                    title: definition.name,
+                    comment: [
+                        definition.combatComment ?? `${definition.name}이(가) 대상을 강타했습니다.`,
+                        ...(statusEffect
+                            ? [` ${statusEffect.label} Lv.${context.skill.level} 효과가 ${formatNumber(definition.statusDuration ?? 5)}초 동안 적용됩니다.`]
+                            : []),
+                    ].join(''),
+                },
             });
             if (result && !result.evaded && definition.statusEffectId) {
                 const effect = StatusEffectType.fromKey(definition.statusEffectId);
@@ -3688,6 +3745,7 @@ for (const skill of [
         attribute: AttributeType.MAGIC_FORCE, baseMultiplier: 1.42, perLevelMultiplier: 0.13,
         castTime: 1.4, cooldown: 9, propertyTag: GameTags.PROPERTY_UNDEAD,
         statusEffectId: 'fear', statusDuration: 4, activationHeader: 'deathless_requiem',
+        combatComment: '왕관에 남은 명령이 대상의 의지를 짓눌렀습니다.',
     },
     {
         id: 'fallen_oath_execution', name: '파계 처형', icon: 'affinities/metal', damageType: 'physical' as const,
@@ -3744,16 +3802,14 @@ defineSkill({
             ? { accepted: true }
             : denySkill('아직 재생할 필요가 없습니다.'),
     onStart: context => {
-        sendNotificationFiltered(
-            userId => isOnlinePlayerAtLocation(userId, context.owner.locationId),
-            { key: `boss-skill:${context.owner.name}:regrowth`, message: `${context.owner.name}이(가) 주변 뿌리에서 생명력을 끌어옵니다!`, length: 2_000 },
-        );
+        announceMonsterSkill(context, 'nightwood_regrowth', '검은 심재 재생', 2, '시전이 끝나면 최대 생명력에 비례해 회복합니다.');
         return { duration: 2, state: { released: false } };
     },
     onUpdate: context => {
         if (context.elapsed < 2 || context.skill.getActiveState<boolean>('released')) return 'continue';
         context.skill.setActiveState('released', true);
-        context.owner.heal(context.owner.maxLife * (0.06 + context.skill.level * 0.015), context.owner);
+        const result = context.owner.heal(context.owner.maxLife * (0.06 + context.skill.level * 0.015), context.owner);
+        recordMonsterSkillResult(context, '검은 심재 재생', `${formatNumber(result.healedAmount)}의 생명력을 회복했습니다.`);
         return 'finish';
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.PROPERTY_NATURAL],

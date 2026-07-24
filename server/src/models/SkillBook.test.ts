@@ -25,6 +25,18 @@ import { ShieldType } from './Shield.js';
 import Stat, { StatType } from './Stat.js';
 import { partyManager } from '../modules/party.js';
 import { StatusEffectType } from './StatusEffect.js';
+import { ActionType } from './Action.js';
+import type { ChatNode } from '../../../shared/types.js';
+
+function getChatText(content: string | ChatNode[] | undefined): string {
+    if (typeof content === 'string') return content;
+    if (!content) return '';
+    return content.map(node => {
+        if (node.type === 'text') return node.text;
+        if ('children' in node) return getChatText(node.children);
+        return '';
+    }).join('');
+}
 
 class TestSkillPlayer extends Entity {
     override readonly name = '스킬 시험 플레이어';
@@ -88,14 +100,14 @@ class TestMonsterSkillOwner extends Entity {
     override readonly name = '보스 시험체';
     readonly skills: SkillBook;
 
-    constructor() {
+    constructor(skillDataId = 'seismic_crush') {
         super(30, 0, 'test', {
             maxLife: 1000,
             magicForce: 100,
             speed: 1,
             attackSpeed: 0.2,
         }, Equipment.createEmpty());
-        this.skills = SkillBook.createRuntime(this, [{ skillDataId: 'seismic_crush', level: 3 }]);
+        this.skills = SkillBook.createRuntime(this, [{ skillDataId, level: 3 }]);
     }
 }
 
@@ -648,6 +660,41 @@ test('몬스터 런타임 스킬북도 플레이어와 같은 SkillData 수명�
     assert.ok(target.life < target.maxLife);
     assert.equal(monster.skills.get('seismic_crush')?.isActive, false);
     assert.equal(monster.skills.get('seismic_crush')?.data.icon, 'skills/seismic_crush');
+});
+
+test('보스 스킬은 지속되는 예고와 기술명·효과 코멘트가 포함된 공격 기록을 남긴다', () => {
+    const monster = new TestMonsterSkillOwner('bone_crown_decree');
+    const target = new TestSkillPlayer(9411);
+    const token = createSession({
+        id: target.userId,
+        username: 'boss_combat_record_target',
+        nickname: target.name,
+    });
+    setUserOnline(target.userId, 'boss-combat-record-target');
+    registerOnlinePlayer(target as unknown as Player);
+    target.attribute.setBase(AttributeType.MAX_LIFE, 1_000);
+    target.life = target.maxLife;
+    target.disableAction(ActionType.EVASION, 'test:boss-combat-record');
+    monster.currentTarget = target;
+
+    try {
+        const before = getFilteredHistoryForUser(target.userId, null).length;
+        assert.equal(monster.skills.activateById('bone_crown_decree').activated, true);
+        monster.skills.update(1.5);
+
+        const messages = getFilteredHistoryForUser(target.userId, null).slice(before);
+        const texts = messages.map(message => getChatText(message.content)).join('\n');
+        assert.match(texts, /전투 예고/);
+        assert.match(texts, /백골 왕명/);
+        assert.match(texts, /왕관에 남은 명령/);
+        assert.match(texts, /공포 Lv\.3/);
+        assert.equal(target.hasStatusEffect('fear'), true);
+        assert.equal(messages[0]?.private, undefined);
+    } finally {
+        unregisterOnlinePlayer(target.userId);
+        setUserOffline(target.userId, 'boss-combat-record-target');
+        removeSession(token);
+    }
 });
 
 test('스킬북은 신규 스킬 획득 때만 아이템 한 개를 소비한다', async () => {

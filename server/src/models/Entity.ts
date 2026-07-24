@@ -15,6 +15,7 @@ import { applyTagEffectValue } from "./TagEffect.js";
 import type { TagEffectReadable } from "./TagEffect.js";
 import { GameTags, TagCollection } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
+import type { ChatNode } from "../../../shared/types.js";
 import type Player from "./Player.js";
 import { emitGameEvent, GameEventIds } from "./GameEvent.js";
 import StatusEffect, {
@@ -66,6 +67,11 @@ export interface AttackOptions {
     fixedDamage?: boolean;
     /** 생략하면 물리 직접 공격이 주무기의 적중 callback을 실행한다. */
     triggerMainHandHitEffects?: boolean;
+    /** 공격 결과 카드에 기술명과 상황 설명을 함께 남긴다. */
+    combatMessage?: Readonly<{
+        title?: string;
+        comment?: string | readonly ChatNode[];
+    }>;
 }
 
 export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fire' | 'poison' | 'bleeding' | 'decay' | 'frozen' | 'suffocation'
@@ -841,7 +847,7 @@ export default abstract class Entity implements TagReadable {
             };
             combat.result = result;
             runCombatStage(CombatStage.EVADED, combat);
-            this.notifyEvadedAttack(target, evasionChance);
+            this.notifyEvadedAttack(target, evasionChance, combatOptions.combatMessage);
             emitGameEvent(GameEventIds.ATTACK_EVADED, {
                 actor: this,
                 subject: target,
@@ -925,22 +931,40 @@ export default abstract class Entity implements TagReadable {
             if (attackerUid !== undefined) userIds.add(attackerUid);
             if (targetUid !== undefined) userIds.add(targetUid);
 
+            const combatTitle = combatOptions.combatMessage?.title?.trim();
+            const combatComment = combatOptions.combatMessage?.comment;
+            const notificationComment = typeof combatComment === 'string' ? combatComment.trim() : '';
             const notification = {
                 key: 'attack',
                 message: chat()
-                    .text(`${critical ? '치명타! ' : ''}${effectLabel}${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.${absorbedLabel}\n`)
+                    .text(`${combatTitle ? `[${combatTitle}] ` : ''}${critical ? '치명타! ' : ''}${effectLabel}${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.${absorbedLabel}`)
+                    .text(`${notificationComment ? ` ${notificationComment}` : ''}\n`)
                     .health({ life: target.life, maxLife: target.maxLife, shields: shieldSegments, length: 150, color: attackerUid !== undefined ? '$enemy' : '$life', thickness: 6 })
                     .text(` ${pct}%`)
                     .build(),
             };
 
-            const nodes = chat()
+            const messageBuilder = chat()
                 .color(effectModifier === 0 ? 'gray' : critical ? 'gold' : 'orange', b => b.text(
                     damageResult.fixedDamage ? '[고정 피해] ' : effectModifier === 0 ? '[면역] ' : critical ? '[치명타] ' : effectModifier > 1 ? '[상성 우세] ' : effectModifier < 1 ? '[상성 저항] ' : '[공격] '
-                ))
+                ));
+            if (combatTitle) {
+                messageBuilder.color(attackerUid !== undefined ? 'gold' : 'red', b => b
+                    .weight('bold', nested => nested.text(`[${combatTitle}]`)));
+            }
+            messageBuilder
+                .text(combatTitle ? '\n' : '')
                 .text(`${this.name}이(가) ${target.name}에게 `)
                 .color('red', b => b.text(finalDamage.toFixed(1)))
-                .text(` 피해${absorbedLabel}\n`)
+                .text(` 피해${absorbedLabel}`);
+            if (combatComment) {
+                messageBuilder.text('\n').color('gray', b => {
+                    if (typeof combatComment === 'string') return b.text(combatComment);
+                    return b.appendNodes(combatComment);
+                });
+            }
+            const nodes = messageBuilder
+                .text('\n')
                 .health({ life: target.life, maxLife: target.maxLife, shields: shieldSegments, length: 150, color: attackerUid !== undefined ? '$enemy' : '$life', thickness: 6 })
                 .text(` ${pct}%`)
                 .build();
@@ -960,16 +984,26 @@ export default abstract class Entity implements TagReadable {
         return damageResult;
     }
 
-    private notifyEvadedAttack(target: Entity, evasionChance: number): void {
+    private notifyEvadedAttack(
+        target: Entity,
+        evasionChance: number,
+        combatMessage?: AttackOptions['combatMessage'],
+    ): void {
         const attackerUid = this.playerUserId;
         const targetUid = target.playerUserId;
         if (attackerUid === undefined && targetUid === undefined) return;
 
-        const message = `${target.name}이(가) ${this.name}의 공격을 회피했습니다!`;
+        const combatTitle = combatMessage?.title?.trim();
+        const message = `${combatTitle ? `[${combatTitle}] ` : ''}${target.name}이(가) ${this.name}의 공격을 회피했습니다!`;
+        const content = chat()
+            .color('cyan', builder => builder.text('[회피] '));
+        if (combatTitle) {
+            content.color('gold', builder => builder.weight('bold', nested => nested.text(`[${combatTitle}] `)));
+        }
         const nodes = chat()
-            .tooltip(`${(evasionChance * 100).toFixed(1)}% 회피 확률`, b => b
-                .color('cyan', b2 => b2.text('[회피] '))
-                .text(message))
+            .tooltip(`${(evasionChance * 100).toFixed(1)}% 회피 확률`, builder => builder
+                .appendNodes(content.build())
+                .text(`${target.name}이(가) ${this.name}의 공격을 회피했습니다!`))
             .build();
         const userIds = new Set<number>();
         if (attackerUid !== undefined) userIds.add(attackerUid);

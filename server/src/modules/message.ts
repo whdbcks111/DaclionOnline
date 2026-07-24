@@ -258,6 +258,12 @@ export function sendPrivateBotMessageToUser(userId: number, content: string | Ch
     return sendMessageFiltered(id => id === userId, getUserChannel(userId), makeBotMessage(content), privateLabel);
 }
 
+/** 위치 전투 예고처럼 지정된 사용자들의 현재 채널에 같은 봇 메시지를 남긴다. */
+export function sendBotMessageToUsers(userIds: readonly number[], content: string | ChatNode[]): void {
+    const message = makeBotMessage(content);
+    for (const userId of new Set(userIds)) sendMessageToUser(userId, message, false);
+}
+
 /** 전투·스킬 봇 메시지를 각 파티원의 현재 채널에 파티 피드로 남긴다. */
 export function sendBotMessageToPartyMembers(memberUserIds: readonly number[], content: string | ChatNode[]): void {
     const message = makeBotMessage(content);

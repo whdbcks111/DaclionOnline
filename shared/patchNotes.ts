@@ -73,6 +73,11 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.5', '2026-07-24',
+        [CHANGED,
+            '보스 기술의 시전 예고를 채팅 기록에도 남기고, 적중·회피 메시지에서 기술명과 상태이상 효과를 확인할 수 있게 개선했습니다.',
+        ],
+    ),
     definePatchNote('1.0.4', '2026-07-24',
         [FEATURE,
             '지도에서 방문한 장소를 선택해 확인 한 번으로 해당 장소까지 자동이동할 수 있게 했습니다.',
