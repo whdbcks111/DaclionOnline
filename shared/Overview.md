@@ -16,4 +16,6 @@
 - `package.json`: 서버 빌드와 브라우저 번들에서 공용 런타임 모듈을 ESM으로 일관되게 해석한다.
 - `templates/`: 서버 메일에서 읽는 HTML 템플릿.
 
+`tags.ts`는 `normalizeTag(s)`와 `isPropertyTag()`로 namespace 문법 및 `property:*` 상성 태그를 판별하고, `TagCollection`으로 정의·영속·런타임 태그를 raw Set 노출 없이 합성한다.
+
 공유 타입 변경은 서버 생산자/소비자와 클라이언트 생산자/소비자를 같은 변경에서 수정하고 [`docs/api/socket-events.md`](../docs/api/socket-events.md)와 이 문서를 갱신한다.

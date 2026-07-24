@@ -7,6 +7,8 @@ import {
     removeProjectile,
     spawnProjectileFromData,
 } from '../models/Projectile.js';
+import type { ProjectileReference } from '../models/Projectile.js';
+import { isPropertyTag } from '../../../shared/tags.js';
 
 export interface ItemAttackOverrideContext {
     attacker: Entity;
@@ -53,6 +55,21 @@ function parseProjectileAttackMetadata(value: unknown): ProjectileAttackMetadata
     return { ammunitionItemId, projectile: record.projectile };
 }
 
+/**
+ * 일반 물리 화살의 재료 속성은 아이템 제작·검색용 정보다.
+ * 과거 저장된 단조 화살 metadata도 공격 전체의 속성 상성으로 승격하지 않는다.
+ */
+function normalizeAmmunitionProjectileReference(reference: ProjectileReference): ProjectileReference {
+    if (reference.dataId !== 'basic_arrow' || !reference.overrides?.tags) return reference;
+    return {
+        ...reference,
+        overrides: {
+            ...reference.overrides,
+            tags: reference.overrides.tags.filter(tag => !isPropertyTag(tag)),
+        },
+    };
+}
+
 /** 탄약 아이템 또는 무기 자체의 metadata를 읽어 투사체 기본 공격을 수행한다. */
 export function executeProjectileItemAttack(context: ItemAttackOverrideContext): boolean {
     const config = parseProjectileAttackMetadata(
@@ -65,12 +82,15 @@ export function executeProjectileItemAttack(context: ItemAttackOverrideContext):
         : undefined;
     if (config.ammunitionItemId && !ammunition) return false;
 
-    const reference = parseProjectileReference(
+    const parsedReference = parseProjectileReference(
         ammunition
             ? ammunition.getMetadata(ItemMetadataKeys.PROJECTILE)
             : config.projectile,
     );
-    if (!reference) return false;
+    if (!parsedReference) return false;
+    const reference = ammunition
+        ? normalizeAmmunitionProjectileReference(parsedReference)
+        : parsedReference;
     if (!context.attacker.canAttack(context.target)) return true;
 
     const projectile = spawnProjectileFromData({

@@ -164,6 +164,11 @@ export function normalizeTags(tags: readonly TagId[] = []): TagId[] {
     return [...new Set(tags.map(normalizeTag))].sort()
 }
 
+/** 재료·분류 태그와 실제 속성 상성 태그를 구분한다. */
+export function isPropertyTag(tag: TagId): boolean {
+    return normalizeTag(tag).startsWith('property:')
+}
+
 export function matchesTagQuery(tags: TagReadable, query: TagQuery): boolean {
     return (query.all?.every(tag => tags.hasTag(tag)) ?? true)
         && (query.any?.some(tag => tags.hasTag(tag)) ?? true)

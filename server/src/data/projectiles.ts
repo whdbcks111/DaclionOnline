@@ -9,7 +9,8 @@ defineProjectileData({
     accelerationCoefficient: 1,
     damageMultiplier: 1,
     damageBonus: 0,
-    tags: [GameTags.PROPERTY_NATURAL, GameTags.MATERIAL_WOOD],
+    // 일반 화살은 물리 공격이다. 재료·속성 화살의 공격 상성은 스킬/효과가 명시적으로 부여한다.
+    tags: [GameTags.MATERIAL_WOOD],
     baseAttribute: { armorPen: 0, critRate: 0 },
 });
 

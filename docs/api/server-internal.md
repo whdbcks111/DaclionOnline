@@ -36,7 +36,7 @@
 | Upload media | `encodeChatImage`, `initUploadMaintenance`, `cleanupChatImages`, `getOwnedChatImage` | 이미지 재인코딩, 전체 100장·7일 보관 정리와 채팅 파일 소유권·표시 치수 snapshot 검증 |
 | Location service | `loadLocationsFromJson`, `updateLocations`, `initLocation` | JSON/소켓/프레임 조정 |
 | Item use | `registerItemUse`, `executeItemUse`, `hasItemUseHandler` | 아이템 효과 ID와 실행 함수 연결 |
-| Item attack | `registerItemAttackOverride`, `executeItemAttackOverride`, `hasItemAttackOverride`, `executeProjectileItemAttack` | `basicAttackOverride` key와 기본 공격 함수 연결, 탄약/무탄약 투사체 발사·발사 무기 적중 효과와 근접 폴백 신호 |
+| Item attack | `registerItemAttackOverride`, `executeItemAttackOverride`, `hasItemAttackOverride`, `executeProjectileItemAttack` | `basicAttackOverride` key와 기본 공격 함수 연결, 일반 물리 화살의 재료 속성 정규화, 탄약/무탄약 투사체 발사·발사 무기 적중 효과와 근접 폴백 신호 |
 | Mail | `loadTemplate`, `sendMail` | 공유 HTML 템플릿과 Nodemailer |
 
 ## 게임 모델 (`server/src/models`)
@@ -50,7 +50,7 @@
 | PVP reward credit | `PvpKillCreditRules`, `evaluatePvpKillCredit`, `recordPvpRespawn` | 양쪽 플레이시간·레벨차·부활 보호·동일 피해자 쿨다운을 검사하고 칭호·영웅 같은 긍정적 PVP 보상만 제한 |
 | Combat | `calculateEvasionChance`, `rollEvasion`, `applyCritical`, `calculateFinalDamage` | 부작용 없는 속도 회피율·치명타·방어/관통 최종 대미지 계산 |
 | Combat pipeline | `CombatStage.values/fromKey`, `register/unregisterCombatHook`, `runCombatStage` | 준비·회피·피해 전후·완료 단계에서 스킬/장비/효과가 전투를 확장하는 key registry |
-| Balance | `BALANCE_PROFILE_LEVELS`, `createBalanceScenario`, `analyzeSkill/Job/ItemBalance`, `analyzeCombatRotation`, `analyzeBalanceProfile`, `analyzeAllBalanceProfiles` | 공용 회귀 레벨·추천 장비·일반/보스 정규화 대상과 평타+전체 스킬 공유 자원 로테이션 진단 |
+| Balance | `BALANCE_PROFILE_LEVELS`, `createBalanceScenario`, `analyzeSkill/Job/ItemBalance`, `analyzeCombatRotation`, `analyzeBalanceProfile`, `analyzeAllBalanceProfiles` | 공용 회귀 레벨·추천 장비 태그·일반/보스 정규화 대상과 실제 무기 조건·투사체 상성을 반영한 평타+가용 스킬 공유 자원 로테이션 진단 |
 | Threat | `ThreatAction.values/fromKey`, `MonsterAiDisposition.values/fromKey`, `normalizeMonsterAiProfile`, `ThreatTable`, `reportSupportThreat` | 마스터 AI 성향·지능·행동 가중치·도발 저항, 대상 선택과 기여도/지원 위협 추적 |
 | Tag effects | `defineTagEffectModifier`, `defineTagEffectTagDisplay`, `resolveTagEffect`, `applyTagEffectValue`, `getAllTagEffectModifiers`, `getTagEffectAffinitySnapshots` | `TagEffectReadable` 문맥 태그를 우선하는 단방향 source→target 배율 등록·판정·수치 적용과 라벨·아이콘이 포함된 공격/방어 관계 표시 DTO |
 | `Player` | `career`, `titles`, `loadByUserId`, `create`, `save`, `getAttackDeniedReason`, `applyRegionDeathPenalty`, `performBasicAttack`, `equipInventoryItem`, `canSpendMentality/spendMentality/restoreMentality`, `gainExp`, `allocateStat`, `adjustLevel` | CareerProfile과 TitleBook을 포함한 영속 aggregate, 지역/파티 PVP 검증과 사망 손실, 안전한 인벤토리→장비 교환, 무기 오버라이드·적중 callback 기본 공격과 스킬 자원·실제 성장 지급분을 동반하는 관리자 레벨 조정 |
@@ -104,7 +104,7 @@
 | `hasTag/hasAny/hasAll/matches` | 다른 기능이 raw 배열 없이 태그를 조회 |
 | `add/remove/replacePersistent` | dirty callback과 연결되는 영속 태그 변경 |
 | `setRuntime/removeRuntime` | 버프·지역 효과 등 비영속 태그를 source 단위 교체 |
-| `normalizeTag/normalizeTags` | `namespace:path` 검증, 소문자화, 중복 제거 |
+| `normalizeTag/normalizeTags`, `isPropertyTag` | `namespace:path` 검증·소문자화·중복 제거와 `property:*` 상성 태그 판별 |
 
 ## 출력/파싱 유틸
 

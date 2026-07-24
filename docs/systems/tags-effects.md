@@ -12,6 +12,7 @@
 - `addPersistent`, `removePersistent`, `replacePersistent`: DB에 남을 태그를 변경한다.
 - `setRuntime(source, tags)`, `removeRuntime(source)`: 버프·지역 효과처럼 저장하지 않을 태그를 source 단위로 교체한다.
 - `normalizeTag(s)`: 소문자 `namespace:path` 문법을 검증하고 중복을 제거한다.
+- `isPropertyTag`: 재료·분류 태그와 실제 상성에 참여할 `property:*` 태그를 구분한다.
 
 현재 태그 보유 객체는 다음과 같다.
 
@@ -29,7 +30,7 @@
 
 일반 태그 조회에서는 장착 아이템 태그가 `Equipment.hasTag/getTags`를 통해 Entity의 유효 태그에 포함된다. 단, 상성 판정은 공격·피격 문맥을 분리하며 양쪽 모두 Entity 본체의 정의·영속·런타임 태그만 자동 사용한다. 장착 무기의 속성 태그는 아이템 분류에는 남지만 기본 물리 피해 전체의 상성으로 합산하지 않는다. 갑옷이나 무기 패시브가 실제로 `Entity.tags.setRuntime(source, tags)`를 호출해 본체 속성을 부여한 경우에만 그 런타임 태그가 공격·피격 상성에 포함된다.
 
-Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만 조회한다. owner 본체와 활·스태프 같은 발사 무기의 태그는 복사하거나 참조하지 않으므로, 투사체 상성은 `ProjectileData` 및 발사 metadata의 `tags` 오버라이드로만 결정된다. 피격 측 규칙은 다른 Entity와 같다.
+Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만 조회한다. owner 본체와 활·스태프 같은 발사 무기의 태그는 복사하거나 참조하지 않으므로, 투사체 상성은 `ProjectileData` 및 발사 metadata의 `tags` 오버라이드로만 결정된다. 단, `basic_arrow` 일반 물리 사격은 탄약의 재료 `property:*`를 공격 속성으로 승격하지 않는다. 단조 화살 아이템에는 금속 같은 재료 정체성을 보존하되 발사 경계에서 속성 태그를 제외하며, 실제 속성 화살 스킬만 명시한 속성으로 상성을 계산한다. 피격 측 규칙은 다른 Entity와 같다.
 
 화염과 맹독 주기 피해는 `DamageCause.effectSource`에 StatusEffect 인스턴스를 전달한다. 따라서 시전자나 장비 태그가 아니라 효과 타입의 `property:fire/property:poison` 태그로 상성을 계산한다. `trait:living`은 Player와 무생물이 아닌 Monster에 기본 부여되며 화상·맹독·마비독 적용 조건에 사용된다.
 

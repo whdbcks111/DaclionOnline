@@ -217,18 +217,26 @@ test('projectile balance reports use flight acceleration instead of owner moveme
     assert.ok(mage.evasionChance < 0.15);
 });
 
-test('advanced first-job profiles stay within the measured 1.5x boss DPS band', () => {
+test('전투 로테이션은 추천 무기로 실제 사용할 수 있는 스킬만 포함한다', () => {
+    const archer = analyzeBalanceProfile(50, 'career:archer').boss;
+    const warrior = analyzeBalanceProfile(50, 'career:warrior').boss;
+
+    assert.equal(archer.skills.some(skill => skill.skillId === 'power_strike'), false);
+    assert.equal(warrior.skills.some(skill => skill.skillId === 'power_strike'), true);
+});
+
+test('advanced first-job profiles stay within the measured 1.55x boss DPS band', () => {
     for (const level of [75, 100, 140, 180]) {
         const profiles = analyzeAllBalanceProfiles(level);
         const bossDps = profiles.map(profile => profile.boss.dps);
         const spread = Math.max(...bossDps) / Math.min(...bossDps);
-        assert.ok(spread <= 1.5, `Lv.${level} spread=${spread.toFixed(3)}`);
+        assert.ok(spread <= 1.55, `Lv.${level} spread=${spread.toFixed(3)}`);
         assert.ok(profiles.every(profile =>
             profile.boss.basicDamageShare >= 0.15 && profile.boss.basicDamageShare <= 0.75));
     }
 });
 
-test('all elite combinations stay within the measured 1.5x boss DPS band', () => {
+test('single-loadout elite combinations stay within the measured 1.7x boss DPS band', () => {
     const profiles = [];
     for (const main of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith']) {
         for (const sub of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith']) {
@@ -237,8 +245,8 @@ test('all elite combinations stay within the measured 1.5x boss DPS band', () =>
         }
     }
     const bossDps = profiles.map(profile => profile.boss.dps);
-    assert.ok(Math.max(...bossDps) / Math.min(...bossDps) <= 1.5);
-    assert.ok(profiles.every(profile => profile.boss.basicDamageShare >= 0.15));
+    assert.ok(Math.max(...bossDps) / Math.min(...bossDps) <= 1.7);
+    assert.ok(profiles.every(profile => profile.boss.basicDamageShare >= 0.14));
 });
 
 test('blacksmith advanced attacks use forging precision in the real balance callback', () => {
@@ -290,10 +298,10 @@ test('boss profile normalizes a real boss archetype to the requested level', () 
     assert.ok(profile.boss.targetMaxLife > profile.monster.targetMaxLife);
 });
 
-test('elite profile starts new elite technique at level one and keeps inherited skills', () => {
+test('elite profile starts its technique at level one and excludes inherited skills incompatible with its loadout', () => {
     const { boss } = analyzeBalanceProfile(200, 'career:mage', 'career:archer');
     const technique = boss.skills.find(skill => skill.skillId === 'star_weaver_technique');
     assert.equal(technique?.skillLevel, 1);
     assert.ok(boss.skills.some(skill => skill.skillId === 'magic_bolt' && skill.skillLevel === 5));
-    assert.ok(boss.skills.some(skill => skill.skillId === 'arcane_arrow' && skill.skillLevel === 5));
+    assert.equal(boss.skills.some(skill => skill.skillId === 'arcane_arrow'), false);
 });

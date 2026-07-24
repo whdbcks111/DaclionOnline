@@ -8,6 +8,7 @@ import {
     defineProjectileData,
     getActiveProjectiles,
     calculateProjectileEvasionSpeed,
+    getProjectileData,
     spawnProjectile,
     spawnProjectileFromData,
     updateProjectiles,
@@ -16,6 +17,7 @@ import { executeProjectileItemAttack } from '../modules/itemAttack.js';
 import { GameTags } from '../../../shared/tags.js';
 import type { TagId } from '../../../shared/tags.js';
 import '../data/tagEffects.js';
+import '../data/projectiles.js';
 
 class TestEntity extends Entity {
     override readonly name: string;
@@ -229,6 +231,46 @@ test('탄약 모드는 아이템 한 개를 소비해 투사체를 발사한다'
     assert.ok(owner.attackCooldown > 0);
     updateProjectiles(0);
     assert.equal(target.life, 88);
+});
+
+test('일반 화살은 재료 속성 상성 없이 활 공격력을 사용한다', () => {
+    const data = getProjectileData('basic_arrow');
+
+    assert.ok(data);
+    assert.equal(data.damageMultiplier, 1);
+    assert.equal(data.tags.includes(GameTags.PROPERTY_NATURAL), false);
+    assert.equal(data.tags.includes(GameTags.MATERIAL_WOOD), true);
+});
+
+test('과거 단조 화살의 속성 metadata도 일반 물리 공격 상성으로 승격하지 않는다', () => {
+    defineTestItem('test_legacy_forged_bow', {
+        [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'test_legacy_metal_arrow' },
+    });
+    defineTestItem('test_legacy_metal_arrow', {
+        [ItemMetadataKeys.PROJECTILE]: {
+            dataId: 'basic_arrow',
+            overrides: {
+                damage: 20,
+                tags: [GameTags.PROPERTY_METAL, GameTags.MATERIAL_IRON],
+            },
+        },
+    });
+    const owner = new TestEntity('단조 화살 궁수');
+    const target = new TestEntity('불 속성 표적', [GameTags.PROPERTY_FIRE]);
+    const ammunition = new Item('test_legacy_metal_arrow', 1, null, null);
+
+    assert.equal(executeProjectileItemAttack({
+        attacker: owner,
+        target,
+        weapon: new Item('test_legacy_forged_bow', 1, null, null),
+        inventory: {
+            getFirstItemByData: () => ammunition,
+            removeItemInstance: () => true,
+        } as never,
+    }), true);
+    updateProjectiles(1);
+
+    assert.equal(target.life, 80);
 });
 
 test('무탄약 모드는 무기 자체의 투사체 참조를 사용하고, 탄약 누락은 폴백 신호를 반환한다', () => {

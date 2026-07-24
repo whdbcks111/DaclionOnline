@@ -291,7 +291,7 @@ defineSkill({
         + '{{icon.atk}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
     costTemplate:
         '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
-    activationConditionTemplate: targetActivationGuide(),
+    activationConditionTemplate: targetActivationGuide('검, 도끼, 단검 또는 곡괭이를 장착해야 합니다.'),
     activationMessage: '강타!',
     baseMetadata: {
         baseManaCost: 20,
@@ -335,6 +335,13 @@ defineSkill({
         watchedProgress: [CRITICAL_HIT_STAT],
         check: ({ player }) => (player?.progress.getCounter(CRITICAL_HIT_STAT) ?? 0n) >= 5n,
     },
+    weaponRequirement: weaponRequirement(
+        '강타는 검, 도끼, 단검 또는 곡괭이를 장착해야 사용할 수 있습니다.',
+        GameTags.WEAPON_SWORD,
+        GameTags.WEAPON_AXE,
+        GameTags.WEAPON_DAGGER,
+        GameTags.TOOL_MINING,
+    ),
     activateOnMessage: ({ message }) => message.trim() === '강타!',
     canActivate: context => {
         const player = requirePlayer(context);

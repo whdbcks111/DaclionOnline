@@ -106,6 +106,7 @@ export interface BalanceScenario {
     readonly targetSourceLevel: number;
     readonly targetNormalized: boolean;
     readonly loadoutName: string;
+    readonly mainHandTags: readonly TagId[];
     readonly basicAttackType: 'physical' | 'magic';
     readonly basicProjectileDataId?: string;
 }
@@ -280,6 +281,7 @@ export function createBalanceScenario(
         targetSourceLevel: targetProfile.data.level,
         targetNormalized: targetProfile.data.level !== normalizedLevel,
         loadoutName: loadout.name,
+        mainHandTags: loadout.tags,
         basicAttackType: loadout.attackType,
         basicProjectileDataId: loadout.projectileDataId,
     };
@@ -835,6 +837,7 @@ const COMBAT_ATTRIBUTE_TYPES = Object.freeze([
 
 function applyProjectedLoadout(entity: Entity, mainJobId: string, level: number): {
     name: string;
+    tags: readonly TagId[];
     attackType: 'physical' | 'magic';
     projectileDataId?: string;
 } {
@@ -849,6 +852,7 @@ function applyProjectedLoadout(entity: Entity, mainJobId: string, level: number)
     }
     return {
         name: data?.name ?? '무장비',
+        tags: Object.freeze([...(data?.tags ?? [])]),
         attackType: data?.balance?.attackType ?? (mainJobId === 'career:mage' ? 'magic' : 'physical'),
         projectileDataId: data?.tags.includes(GameTags.WEAPON_BOW)
             ? 'basic_arrow'
@@ -892,6 +896,8 @@ function getRotationSkills(scenario: BalanceScenario): Readonly<SkillData>[] {
     return getAllSkillData().filter(data => {
         if (!data.balance || data.tags.includes(GameTags.SKILL_PASSIVE)) return false;
         if (scenario.level < (data.unlockLevel ?? PROJECTED_SKILL_UNLOCK_LEVELS.get(data.id) ?? 1)) return false;
+        if (data.weaponRequirement && !data.weaponRequirement.mainHandAnyTags.some(tag =>
+            scenario.mainHandTags.includes(tag))) return false;
         if (granted.has(data.id) || data.id === 'power_strike') return true;
         return data.jobRequirement?.anyOf.some(required => ownedJobs.some(job => isJobDescendant(job, required))) ?? false;
     }).sort((left, right) => left.id.localeCompare(right.id));
@@ -920,7 +926,11 @@ function calculateExpectedBasicHit(scenario: BalanceScenario): number {
         target.attribute.get(magic ? AttributeType.MAGIC_DEF : AttributeType.DEF),
         entity.attribute.get(magic ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN),
     );
-    return defended * (1 - calculateEvasionChance(
+    const affinitySource = projectile ? {
+        hasTag: (tag: TagId) => projectile.tags.includes(tag),
+    } : entity;
+    const affinityDamage = applyTagEffectValue(defended, affinitySource, target).value;
+    return affinityDamage * (1 - calculateEvasionChance(
         getBasicAttackEvasionSpeed(scenario),
         target.attribute.get(AttributeType.SPEED),
     ));

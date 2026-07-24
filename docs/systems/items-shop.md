@@ -115,6 +115,8 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 `overrides`는 `name`, 절대 `damage`, `damageType`, `travelTime`, `accelerationCoefficient`, `accelerationMultiplier`, `damageMultiplier`, `damageBonus`, `tags`, `attributeOverrides`를 지원한다. 값은 `parseProjectileReference`가 검증하며 투사체 템플릿은 `data/projectiles.ts`에서 `defineProjectileData`로 등록한다. 피해량을 직접 지정하지 않으면 물리는 owner `atk`, 마법은 `magicForce`에 multiplier와 bonus를 적용한다. 실제 비행 시간은 owner의 `projectileAcceleration` 보너스를 템플릿 계수만큼 반영하며 활·지팡이 modifier도 같은 능력치 API를 사용한다.
 
+`basic_arrow`는 중립 물리 투사체다. 나무·철·금속 같은 탄약의 태그는 제작 재료와 아이템 분류에는 보존하지만 일반 화살 피해 전체의 속성 상성으로 사용하지 않는다. 새 단조 화살은 투사체 override에서 `property:*`를 제외하며, `executeProjectileItemAttack()`도 과거 저장 화살의 같은 override를 발사 시 정규화한다. 화염 화살·금속 관통 화살처럼 실제 공격에 속성이 필요한 기술은 SkillData 또는 별도 투사체 정의가 `tags`를 명시해야 한다.
+
 ## Equipment API와 규칙
 
 슬롯은 `EquipSlotType` 클래스형 enum이 key, 한글 label, 입력 별칭, 최대 수량을 소유한다. 현재 head(1), body(1), legs(1), feet(1), accessory(3), mainHand(1), offHand(1)이다.

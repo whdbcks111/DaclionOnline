@@ -1,7 +1,7 @@
 import { ItemMetadataKeys, type Item, type ItemMetadata, type ItemSnapshot } from './Item.js';
 import type { AttributeKey, ModifierOp } from './Attribute.js';
 import type { MetadataValue } from './Metadata.js';
-import { GameTags } from '../../../shared/tags.js';
+import { GameTags, isPropertyTag } from '../../../shared/tags.js';
 import type { TagId } from '../../../shared/tags.js';
 import { generateItemEnchantment, type ItemAttackEffectSnapshot } from './ItemAttackEffect.js';
 
@@ -590,6 +590,7 @@ export function createForgedArrowSnapshot(arrowheads: Item): ForgedComponentResu
     const damageBonus = round(2 + additiveModifierValue(arrowheads, 'atk') * 0.18, 2);
     const armorPen = round(1 + additiveModifierValue(arrowheads, 'armorPen'), 2);
     const persistentTags = arrowheads.snapshot(1).tags;
+    const projectileTags = persistentTags.filter(tag => !isPropertyTag(tag));
     const metadata = arrowheads.getMetadataDeltaSnapshot() ?? {};
     delete metadata[ItemMetadataKeys.INSTANCE_MODIFIERS];
     delete metadata[ItemMetadataKeys.MAX_DURABILITY];
@@ -601,7 +602,7 @@ export function createForgedArrowSnapshot(arrowheads: Item): ForgedComponentResu
             name,
             damageBonus,
             attributeOverrides: { armorPen },
-            tags: [...persistentTags],
+            tags: projectileTags,
         },
     };
     metadata[ItemMetadataKeys.FORGE] = { ...forge, form: 'arrow', generatedName: name };
