@@ -361,9 +361,17 @@ test('황혼왕릉은 두 왕좌·질문문·유물함·상점·연속 퀘스트
 
     const crownHall = locations.find(location => location.id === 'twilight_crown_hall');
     const oathHall = locations.find(location => location.id === 'twilight_oath_hall');
+    const tempestGate = locations.find(location => location.id === 'tempest_gate');
     assert.ok(crownHall?.objects.some(object => object.dataId === 'twilight_riddle_door'));
     assert.ok(crownHall?.connections.some(connection => connection.condition === 'twilight_tomb_riddle_solved'));
-    assert.ok(oathHall?.connections.some(connection => connection.locationId === 'tempest_gate'));
+    assert.equal(
+        oathHall?.connections.find(connection => connection.locationId === 'tempest_gate')?.condition,
+        'level_50',
+    );
+    assert.equal(
+        tempestGate?.connections.find(connection => connection.locationId === 'twilight_oath_hall')?.condition,
+        'level_50',
+    );
     assert.deepEqual(getResourceData('twilight_reliquary')?.interactionCooldown, {
         min: 4 * 60 * 60,
         max: 6 * 60 * 60,
