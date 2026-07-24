@@ -416,9 +416,11 @@ const STUN = LegacyStatusEffects.STUN;
 const WIND_EVASION = StatusEffectType.define({
     id: 'wind_evasion', label: '바람 회피', icon: 'skills/career_archer',
     descriptionTemplate: '이동할 수 있는 동안 받는 공격을 확정적으로 회피합니다.',
-    onStart: ({ target, effect }) => target.grantGuaranteedEvasion(`status:${effect.type.id}`),
-    onEarlyUpdate: ({ target, effect }) => target.grantGuaranteedEvasion(`status:${effect.type.id}`),
-    onRemove: ({ target, effect }) => { target.removeGuaranteedEvasion(`status:${effect.type.id}`); },
+    onStart: ({ target, effect }) => target.grantPersistentGuaranteedEvasion(`status:${effect.type.id}`),
+    onEarlyUpdate: ({ target, effect }) => target.grantPersistentGuaranteedEvasion(`status:${effect.type.id}`),
+    onRemove: ({ target, effect }) => {
+        target.removePersistentGuaranteedEvasion(`status:${effect.type.id}`);
+    },
     aliases: ['바람 회피'], tags: [GameTags.PROPERTY_NATURAL],
 });
 

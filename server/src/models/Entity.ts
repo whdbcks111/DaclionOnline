@@ -122,7 +122,10 @@ export default abstract class Entity implements TagReadable {
     private readonly experienceGainModifiers = new Map<string, number>();
     private readonly actionDisableSources = new Map<string, Set<string>>();
     private readonly tickActionDisableSources = new Map<string, Set<string>>();
+    /** 아이템처럼 다음 공격 한 번에 소비되는 확정 회피 source. */
     private readonly guaranteedEvasionSources = new Set<string>();
+    /** 상태효과 지속 중 매 공격에 적용되고 명시적으로 해제되는 확정 회피 source. */
+    private readonly persistentGuaranteedEvasionSources = new Set<string>();
 
     protected _level: number;
     protected _exp: number;
@@ -215,6 +218,17 @@ export default abstract class Entity implements TagReadable {
     consumeGuaranteedEvasion(): boolean {
         const source = this.guaranteedEvasionSources.values().next().value as string | undefined;
         return source ? this.guaranteedEvasionSources.delete(source) : false;
+    }
+    grantPersistentGuaranteedEvasion(source: string): void {
+        if (source.trim()) this.persistentGuaranteedEvasionSources.add(source);
+    }
+    hasPersistentGuaranteedEvasion(source?: string): boolean {
+        return source
+            ? this.persistentGuaranteedEvasionSources.has(source.trim())
+            : this.persistentGuaranteedEvasionSources.size > 0;
+    }
+    removePersistentGuaranteedEvasion(source: string): boolean {
+        return this.persistentGuaranteedEvasionSources.delete(source);
     }
 
     get level() { return this._level; }
@@ -820,8 +834,9 @@ export default abstract class Entity implements TagReadable {
         const combatType = combat.damageType;
         const combatOptions = combat.options;
 
-        const guaranteedEvasion = !combatOptions.unavoidable && target.canPerformAction(ActionType.EVASION)
-            && target.consumeGuaranteedEvasion();
+        const guaranteedEvasion = !combatOptions.unavoidable
+            && target.canPerformAction(ActionType.EVASION)
+            && (target.hasPersistentGuaranteedEvasion() || target.consumeGuaranteedEvasion());
         const evasionChance = combatOptions.unavoidable || !target.canPerformAction(ActionType.EVASION)
             ? 0
             : guaranteedEvasion ? 1 : calculateEvasionChance(

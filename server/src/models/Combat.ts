@@ -15,7 +15,9 @@ export function calculateEvasionChance(attackerSpeed: number, targetSpeed: numbe
 }
 
 export function rollEvasion(chance: number, random = Math.random): boolean {
-    const clampedChance = Math.max(0, Math.min(0.9, chance));
+    // 속도 기반 회피의 90% 상한은 calculateEvasionChance에서 적용한다.
+    // 확정 회피처럼 명시적으로 전달된 100% 확률까지 다시 90%로 낮추지 않는다.
+    const clampedChance = Math.max(0, Math.min(1, chance));
     return clampedChance > 0 && random() < clampedChance;
 }
 
