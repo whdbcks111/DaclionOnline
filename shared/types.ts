@@ -347,6 +347,26 @@ export interface NotificationData {
     editExists?: boolean
 }
 
+/** 반복 행동 감지 후 서버가 발급하는 일회성 사람 확인 문제. 정답은 서버에만 존재한다. */
+export interface HumanVerificationStartData {
+    sessionId: string
+    prompt: string
+    imageDataUrl: string
+    expiresAt: number
+}
+
+export interface HumanVerificationSubmitRequest {
+    sessionId: string
+    answer: string
+}
+
+export interface HumanVerificationResultData {
+    sessionId?: string
+    passed: boolean
+    message: string
+    retryAllowed?: boolean
+}
+
 export interface AdminOptionData {
     value: string
     label: string
@@ -415,6 +435,8 @@ export interface AdminPlayerDetailData extends AdminPlayerListItem {
     skills: Array<{ id: string; name: string; level: number; experience: number }>
     titles: Array<{ id: string; name: string; equipped: boolean }>
     statusEffects: Array<{ id: string; label: string; level: number; duration: number }>
+    humanVerificationRequired: boolean
+    humanVerificationFailures: number
 }
 
 export type AdminPanelAction =
@@ -426,7 +448,7 @@ export type AdminPanelAction =
     | 'set_level' | 'adjust_level' | 'set_stat_points' | 'set_stat' | 'set_gold' | 'set_karma' | 'set_vital'
     | 'unlock_all_locations' | 'unlock_all_crafting_recipes'
     | 'apply_status_effect' | 'clear_status_effects' | 'revive_player'
-    | 'start_minigame'
+    | 'start_minigame' | 'start_human_verification' | 'clear_human_verification'
     | 'analyze_skill_balance' | 'analyze_job_balance' | 'analyze_item_balance' | 'analyze_balance_profile'
     | 'spawn_monster' | 'respawn_monsters' | 'reset_resource_cooldown'
 
@@ -477,6 +499,8 @@ export interface ServerToClientEvents {
     miniGameStart: (data: MiniGameStartData) => void
     miniGameResolved: (data: MiniGameResolvedData) => void
     miniGameCancelled: (data: MiniGameCancelledData) => void
+    humanVerificationStart: (data: HumanVerificationStartData) => void
+    humanVerificationResult: (data: HumanVerificationResultData) => void
 }
 
 export interface ClientToServerEvents {
@@ -507,4 +531,6 @@ export interface ClientToServerEvents {
     adminPanelRequestPlayer: (userId: number) => void
     adminPanelExecute: (request: AdminPanelActionRequest) => void
     miniGameResult: (request: MiniGameResultRequest) => void
+    requestHumanVerification: () => void
+    submitHumanVerification: (request: HumanVerificationSubmitRequest) => void
 }

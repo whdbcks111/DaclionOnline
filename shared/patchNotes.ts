@@ -73,6 +73,12 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.6', '2026-07-25',
+        [FEATURE,
+            '장시간 같은 사냥 동선을 반복하는 행동이 감지되면 게임을 안전하게 일시 정지하고 사람 확인 문제를 표시하는 운영 보호 기능을 추가했습니다.',
+            '관리자 페이지에서 선택한 온라인 플레이어에게 사람 확인 화면을 시험하거나 오탐 상태를 해제할 수 있습니다.',
+        ],
+    ),
     definePatchNote('1.0.5', '2026-07-24',
         [CHANGED,
             '보스 기술의 시전 예고를 채팅 기록에도 남기고, 적중·회피 메시지에서 기술명과 상태이상 효과를 확인할 수 있게 개선했습니다.',

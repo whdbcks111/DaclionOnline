@@ -29,6 +29,12 @@ import { getIO } from './socket.js';
 import { broadcastBotMessageAll, broadcastNotification, sendNotificationToUser } from './message.js';
 import logger from '../utils/logger.js';
 import { getMiniGamePresetSummaries, startMiniGamePreset } from './minigamePresets.js';
+import {
+    clearHumanVerification,
+    HUMAN_VERIFICATION_FAILURE_PROGRESS_ID,
+    HUMAN_VERIFICATION_REQUIRED_PROGRESS_ID,
+    requireHumanVerification,
+} from './humanVerification.js';
 import { cancelNavigation } from './navigation.js';
 import {
     analyzeBalanceProfile,
@@ -191,6 +197,8 @@ export async function getAdminPlayerDetail(userId: number): Promise<AdminPlayerD
             level: effect.level,
             duration: effect.duration,
         })),
+        humanVerificationRequired: player.progress.getFlag(HUMAN_VERIFICATION_REQUIRED_PROGRESS_ID),
+        humanVerificationFailures: player.progress.getCounterNumber(HUMAN_VERIFICATION_FAILURE_PROGRESS_ID),
     };
 }
 
@@ -248,6 +256,18 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
             if (!preset) throw new Error('미니게임 프리셋을 찾을 수 없습니다.');
             if (!startMiniGamePreset(online, presetId)) throw new Error('플레이어가 이미 미니게임을 진행 중입니다.');
             return `${online.name}에게 ${preset.label} 미니게임을 실행했습니다.`;
+        }
+        case 'start_human_verification': {
+            const online = getPlayerByUserId(player.userId);
+            if (!online) throw new Error('사람 확인 검사는 온라인 플레이어에게만 실행할 수 있습니다.');
+            requireHumanVerification(online, '관리자에 의해 사람 확인 검사가 시작되었습니다.');
+            await save(online);
+            return `${online.name}에게 사람 확인 검사를 실행했습니다.`;
+        }
+        case 'clear_human_verification': {
+            clearHumanVerification(player, false);
+            await save(player);
+            return `${player.name}의 사람 확인 요구를 해제했습니다.`;
         }
         case 'notify_player': {
             const online = getPlayerByUserId(player.userId);

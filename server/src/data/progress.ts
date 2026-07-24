@@ -3,6 +3,24 @@ import { GameEventIds } from '../models/GameEvent.js';
 import { GameTags } from '../../../shared/tags.js';
 
 defineProgress({
+    id: 'security:human_verification_required',
+    type: ProgressType.FLAG,
+    label: '사람 확인 필요',
+    description: '반복 행동 검사 완료 전 재접속으로 우회하지 못하게 유지하는 운영 플래그입니다.',
+    visible: false,
+    tags: ['security:anti-automation'],
+});
+
+defineProgress({
+    id: 'security:human_verification_failures',
+    type: ProgressType.COUNTER,
+    label: '사람 확인 실패',
+    description: '사람 확인 오답 횟수를 운영 기록으로 보존합니다.',
+    visible: false,
+    tags: ['security:anti-automation'],
+});
+
+defineProgress({
     id: 'profession:blacksmith',
     type: ProgressType.FLAG,
     label: '구형 대장장이 전직 데이터',

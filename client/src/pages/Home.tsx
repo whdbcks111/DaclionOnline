@@ -14,6 +14,7 @@ import Drawer from '../components/Drawer'
 import HudContainer from '../components/hud/HudContainer'
 import HudSettings from '../components/hud/HudSettings'
 import MiniGameOverlay from '../components/minigame/MiniGameOverlay'
+import HumanVerificationOverlay from '../components/security/HumanVerificationOverlay'
 import { CHAT_WHISPER_DISPLAY, ChatType, summarizeChatContent } from '@shared/chat'
 import type {
   ChatMessage as ChatMessageType,
@@ -794,6 +795,7 @@ function HomeContent() {
       />
       <HudContainer />
       <MiniGameOverlay />
+      <HumanVerificationOverlay />
       {hudSettingsOpen && <HudSettings onClose={() => setHudSettingsOpen(false)} />}
     </div>
   )

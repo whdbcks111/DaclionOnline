@@ -29,6 +29,7 @@
 | Coroutine | `startCoroutine`, `Wait`, `tickCoroutines` | 게임 루프 기반 지연 작업 |
 | Scheduler | `scheduleGameTask`, `cancelGameTask`, `cancelGameTasksByPrefix`, `hasGameTask`, `updateGameScheduler` | key 교체·취소·반복을 지원하는 게임 루프 기반 단일 지연 작업 |
 | Minigame | `startMiniGame`, `cancelMiniGame`, `hasActiveMiniGame`, `normalizeMiniGameInputs/Actions`, `initMiniGame` | session/token/만료와 축·단조 타격 trace 정규화, 타입별 결과 validator를 가진 서버 권위 미니게임 |
+| Human verification | `analyzeHuntingPattern`, `requireHumanVerification`, `requestHumanVerification`, `clearHumanVerification`, `initializeHumanVerification`, `detachHumanVerification`, `initHumanVerification` | 서버 확정 몬스터 처치의 반복 패턴 분석, 영속 검사 요구와 행동 제한·피해 보호, 일회성 raster 문제와 재접속 복원 |
 | Fishing | `startFishing`, `cancelFishing`, `isFishing` | 장소·낚싯대 검증, 미끼 묶음 자동 장착·한 개 소비, 입질 대기, 등급/미니게임/보상 연결 |
 | Karma | `initKarma` | `combat:pvp_kill` 구독, 지역별 카르마 증가와 현상 대상 처치자의 영웅 상태효과·알림 연결 |
 | Forging | `ForgeForm.values/fromInput`, `ForgeMaterial.values/fromInput`, `ForgeQuality.values/fromKey/fromAccuracy`, `calculateForgedItemLevel`, `createForgedItemSnapshot`, `createInfusedStaffSnapshot`, `createAssembledBowSnapshot`, `createForgedArrowSnapshot`, `renameForgedItem`, `enchantWeapon`, `reinforceWeapon` | 무기·도구·전신 방어구와 엘리트 전용 지팡이 틀·활대·화살촉 형태, 레벨/품질 영속 snapshot, 부품 능력치와 커스텀 이름을 보존하는 지팡이/활/화살 변환, 이름 변경·마법 부여·+5 강화 |

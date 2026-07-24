@@ -21,6 +21,7 @@ import { migrateLegacyBlacksmithProfession } from './forging.js';
 import { tradeManager } from './trade.js';
 import { cancelNavigation } from './navigation.js';
 import { initializeTutorialSession } from './tutorial.js';
+import { detachHumanVerification, initializeHumanVerification } from './humanVerification.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -43,6 +44,7 @@ export async function loadPlayerByUserId(userId: number): Promise<Player> {
 
     registerOnlinePlayer(player);
     initializeTutorialSession(player, { newPlayer, showCard: !newPlayer });
+    initializeHumanVerification(player);
     return player;
 }
 
@@ -55,6 +57,7 @@ export async function unloadPlayerByUserId(userId: number, requireOffline = fals
     cancelCrafting(player);
     cancelFishing(userId, '접속 종료로 낚시가 취소되었습니다.');
     cancelNavigation(player, false);
+    detachHumanVerification(player);
     clearDungeonPuzzleSession(userId);
     tradeManager.cancelForPlayer(player, '접속이 종료되어 거래가 취소되었습니다.');
     player.skills.finishAll();

@@ -10,10 +10,22 @@ interface DialogProps {
   footer?: ReactNode
   onClose: () => void
   closeOnBackdrop?: boolean
+  closable?: boolean
   className?: string
+  backdropClassName?: string
 }
 
-export default function Dialog({ open, title, children, footer, onClose, closeOnBackdrop = true, className = '' }: DialogProps) {
+export default function Dialog({
+  open,
+  title,
+  children,
+  footer,
+  onClose,
+  closeOnBackdrop = true,
+  closable = true,
+  className = '',
+  backdropClassName = '',
+}: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const previousFocus = useRef<HTMLElement | null>(null)
 
@@ -24,7 +36,7 @@ export default function Dialog({ open, title, children, footer, onClose, closeOn
       panelRef.current?.querySelector<HTMLElement>('input, select, textarea, button:not([disabled])')?.focus()
     })
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (closable && event.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKeyDown)
     const previousOverflow = document.body.style.overflow
@@ -35,17 +47,17 @@ export default function Dialog({ open, title, children, footer, onClose, closeOn
       document.body.style.overflow = previousOverflow
       previousFocus.current?.focus()
     }
-  }, [open, onClose])
+  }, [closable, open, onClose])
 
   if (!open) return null
   return createPortal(
-    <div className={styles.backdrop} onMouseDown={event => {
-      if (closeOnBackdrop && event.target === event.currentTarget) onClose()
+    <div className={`${styles.backdrop} ${backdropClassName}`} onMouseDown={event => {
+      if (closable && closeOnBackdrop && event.target === event.currentTarget) onClose()
     }}>
       <div ref={panelRef} className={`${styles.dialog} ${className}`} role="dialog" aria-modal="true" aria-labelledby="dialog-title">
         <header className={styles.header}>
           <h2 id="dialog-title">{title}</h2>
-          <button type="button" className={styles.close} aria-label="닫기" onClick={onClose}>×</button>
+          {closable && <button type="button" className={styles.close} aria-label="닫기" onClick={onClose}>×</button>}
         </header>
         <div className={styles.body}>{children}</div>
         {footer && <footer className={styles.footer}>{footer}</footer>}

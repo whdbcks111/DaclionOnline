@@ -136,6 +136,8 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
     { action: 'start_minigame', label: '미니게임 실행', description: '선택한 온라인 플레이어에게 보상 없는 테스트 미니게임을 실행합니다. 회피 게임의 조작 속도는 대상의 현재 이동속도와 동기화됩니다.', category: 'testing', fields: [
       { name: 'presetId', label: '미니게임 프리셋', type: 'select', options: data.miniGamePresets, required: true },
     ] },
+    { action: 'start_human_verification', label: '사람 확인 실행', description: '선택한 온라인 플레이어에게 반복 행동 검사 화면을 강제로 실행하고 통과 전까지 게임 행동을 제한합니다.', category: 'testing', fields: [] },
+    { action: 'clear_human_verification', label: '사람 확인 해제', description: `선택한 플레이어의 사람 확인 요구를 해제합니다.${detail?.humanVerificationRequired ? ` 현재 실패 ${detail.humanVerificationFailures}회가 기록되어 있습니다.` : ''}`, category: 'testing', fields: [] },
     { action: 'notify_player', label: '개별 알림 발송', description: '선택한 온라인 플레이어 화면에 관리자 알림을 표시합니다.', category: 'communication', fields: [
       { name: 'message', label: '알림 내용', type: 'textarea', placeholder: '선택한 플레이어에게 보낼 내용을 입력하세요.', required: true },
       { name: 'duration', label: '표시 시간 (초)', type: 'number', min: 1, max: 60, defaultValue: 5, required: true },

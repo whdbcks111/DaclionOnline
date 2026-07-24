@@ -33,6 +33,8 @@
 | `adminPanelRequestPlayer` | `userId: number` | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayer`; 보유·장착 칭호를 포함한 가공된 캐릭터 상세 snapshot |
 | `adminPanelExecute` | `AdminPanelActionRequest` | 권한 10 | `modules/adminPanel.ts` | 플레이어·월드 action, 칭호 부여·삭제, 전체 채팅/알림·개별 온라인 알림, `analyze_balance_profile` 전투 로테이션 진단을 서버 검증 후 실행하고 result/목록/상세 갱신 |
 | `miniGameResult` | `MiniGameResultRequest` (session/token/경과 시간/20ms 단위 축 입력 trace/선택 action trace) | 필요 | `modules/minigame.ts` | 일회성 세션·token·경과 시간 확인, 축·단조 타격 입력 정규화와 타입별 서버 재현 검증 후 `miniGameResolved` |
+| `requestHumanVerification` | 없음 | 필요 | `modules/humanVerification.ts` | required FLAG가 있는 플레이어의 기존 문제를 재전송하거나 새 일회성 문제를 발급 |
+| `submitHumanVerification` | `{ sessionId, answer }` | 필요 | `modules/humanVerification.ts` | 서버 메모리의 정답과 session을 검사하고 성공 시 영속 요구 상태와 행동 제한 해제 |
 
 클라이언트 emit 위치는 주로 `pages/Login.tsx`, `pages/Register.tsx`, `pages/Home.tsx`, `pages/LocationEditor.tsx`, `components/chat/nodes/ButtonNode.tsx`, `components/hud/huds/QuickSlotHud.tsx`다.
 
@@ -72,6 +74,8 @@
 | `miniGameStart` | `MiniGameStartData` (session/token/type/만료/config, 위험 회피 config의 실제 패턴 `label`과 단색 `theme`) | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 | `miniGameResolved` | `MiniGameResolvedData` | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 | `miniGameCancelled` | `MiniGameCancelledData` | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
+| `humanVerificationStart` | `HumanVerificationStartData` (session ID, 안내, raster PNG data URL, 만료 시각) | `modules/humanVerification.ts` | `components/security/HumanVerificationOverlay.tsx` |
+| `humanVerificationResult` | `HumanVerificationResultData` (성공 여부, 안내, 재시도 가능 여부) | `modules/humanVerification.ts` | `components/security/HumanVerificationOverlay.tsx` |
 
 `ChatMessage`와 `NotificationData` 안의 progress/health `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다. 플레이어 메시지는 전송 시점의 `newcomer/karmaMarked/equippedTitle`을 선택적으로 포함해 `🌱/🥀` 표식과 `[칭호]`를 히스토리와 실시간 메시지에서 일관되게 표시한다. `newcomer`는 누적 플레이 24시간 미만이면서 Lv.30 미만인 경우에만 서버가 넣는다. health 노드는 생명력·최대 생명력과 `ShieldBarSegment[]`를 한 snapshot으로 전달한다. image 노드는 서버가 정한 `src/alt/maxHeight`와 선택적 원본 `width/height` snapshot으로 채팅 업로드와 향후 스킬 연출 이미지를 공통 렌더링하고, divider는 선택적 제목을 가진 구분선을 렌더링한다. `/지도` private `ChatMessage`의 worldMap 노드는 별도 socket event 없이 방문지·인접 미방문지로 제한된 `WorldMapData` snapshot을 포함하며, 방문 장소의 검증된 `mapColor`만 바이옴 배경에 사용한다.
 

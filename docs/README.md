@@ -34,6 +34,7 @@
 | 아이템·인벤토리·장비·상점 | [systems/items-shop.md](systems/items-shop.md) |
 | 제작법 발견·재료 필터·제작 | [systems/crafting.md](systems/crafting.md) |
 | 서버 검증 미니게임·낚시 | [systems/minigames-fishing.md](systems/minigames-fishing.md) |
+| 반복 사냥 감지·사람 확인 | [systems/anti-automation.md](systems/anti-automation.md) |
 | NPC 배치·조건부 대화·선택지 | [systems/npc-dialogue.md](systems/npc-dialogue.md) |
 | NPC 퀘스트·목표 추적·보상 | [systems/quests.md](systems/quests.md) |
 | 계층형 게임 안내·첫 접속 튜토리얼 | [systems/tutorial-guide.md](systems/tutorial-guide.md) |

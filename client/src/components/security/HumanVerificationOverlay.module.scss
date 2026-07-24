@@ -1,0 +1,110 @@
+@use '../../styles/variables' as *;
+@use '../../styles/themes' as *;
+
+.backdrop {
+  z-index: 5000;
+  background: rgb(0 0 0 / 76%);
+}
+
+.dialog {
+  width: min(92vw, 30rem);
+}
+
+.content, .form, .retry {
+  display: grid;
+  gap: $spacing-md;
+}
+
+.description, .prompt, .retry p, .notice {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.description, .notice {
+  color: $color-text-secondary;
+}
+
+.prompt {
+  font-weight: 700;
+}
+
+.challenge {
+  display: block;
+  width: 100%;
+  aspect-ratio: 44 / 17;
+  object-fit: contain;
+  user-select: none;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  background: #20282d;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  color: $color-text-secondary;
+
+  strong {
+    color: $color-text;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.field {
+  display: grid;
+  gap: $spacing-xs;
+  font-weight: 700;
+
+  input {
+    width: 100%;
+    min-height: 3rem;
+    box-sizing: border-box;
+    padding: $spacing-sm $spacing-md;
+    color: $color-text;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-md;
+    font: inherit;
+    font-size: clamp(1.1rem, 5vw, 1.45rem);
+    font-weight: 800;
+    letter-spacing: .2em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+}
+
+.primaryButton {
+  min-height: 2.8rem;
+  padding: 0 $spacing-md;
+  color: $color-text-inverse;
+  background: $color-primary;
+  border: 0;
+  border-radius: $border-radius-md;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: wait;
+    opacity: .55;
+  }
+}
+
+.error {
+  margin: 0;
+  padding: $spacing-sm;
+  color: $color-danger;
+  background: color-mix(in srgb, $color-danger 12%, transparent);
+  border-radius: $border-radius-md;
+}
+
+.notice {
+  padding-top: $spacing-sm;
+  border-top: 1px solid $color-border-light;
+}
+
+@media (max-width: $breakpoint-mobile) {
+  .dialog {
+    width: 100%;
+  }
+}

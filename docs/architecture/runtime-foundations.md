@@ -17,6 +17,8 @@ cancelGameTasksByPrefix(`skill:${ownerId}:`)
 
 미니게임 만료와 낚시 입질/경고 타이머가 기준 사용처다.
 
+사람 확인 문제 만료도 `human-verification:{userId}:{sessionId}` key를 사용한다. Player unload나 정상 통과 시 반드시 같은 key를 취소하고, required Progress FLAG만 재접속 복원을 위해 남긴다.
+
 ## 단순 GameAction 트랜잭션
 
 `server/src/models/GameAction.ts`는 여러 메모리 도메인 변경을 검증한 뒤 적용하는 작은 동기식 빌더다.
