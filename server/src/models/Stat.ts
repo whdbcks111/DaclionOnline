@@ -6,6 +6,8 @@ interface AttributeOwner { attribute: Attribute }
 export const SENSIBILITY_CRIT_RATE_CAP = 0.5
 /** 0 근처에서 기존 1포인트당 0.1%p 기울기를 유지하는 지수 포화 척도. */
 export const SENSIBILITY_CRIT_RATE_SCALE = SENSIBILITY_CRIT_RATE_CAP / 0.001
+/** 정신력 스탯 1포인트가 제공하는 최대 정신력. */
+export const MENTALITY_MAX_MENTALITY_PER_POINT = 5.25
 
 /** 감각이 높아질수록 한 포인트의 효율이 감소하며 50%p에 점근하는 치명타율 기여분. */
 export function calculateSensibilityCritRateBonus(points: number): number {
@@ -59,11 +61,16 @@ export class StatType {
 
     static readonly MENTALITY = new StatType('mentality', '정신력',
         (entity, points, source) => {
-            entity.attribute.addModifier({ attribute: 'maxMentality', op: 'add', value: 5 * points, source })
+            entity.attribute.addModifier({
+                attribute: 'maxMentality',
+                op: 'add',
+                value: MENTALITY_MAX_MENTALITY_PER_POINT * points,
+                source,
+            })
             entity.attribute.addModifier({ attribute: 'magicForce', op: 'add', value: 2 * points, source })
             entity.attribute.addModifier({ attribute: 'projectileAcceleration', op: 'add', value: 0.002 * points, source })
         },
-        p => `정신력 1 → 최대 정신력 +5, 마법력 +2, 투사체 가속 +0.002\n현재 정신력 ${p}: 최대 정신력 +${5 * p}, 마법력 +${2 * p}, 투사체 가속 +${(0.002 * p).toFixed(3)}`
+        p => `정신력 1 → 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT}, 마법력 +2, 투사체 가속 +0.002\n현재 정신력 ${p}: 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT * p}, 마법력 +${2 * p}, 투사체 가속 +${(0.002 * p).toFixed(3)}`
     )
 
     readonly key: StatKey

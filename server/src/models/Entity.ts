@@ -1068,6 +1068,7 @@ export default abstract class Entity implements TagReadable {
         this.isDead = false;
         this.deathTimer = 0;
         this.life = this.maxLife;
+        this.mentality = this.maxMentality;
         this.hungry = this.maxHungry;
         this.thirsty = this.maxThirsty;
         this.currentTarget = null;
