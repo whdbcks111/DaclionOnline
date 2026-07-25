@@ -5,6 +5,10 @@ import { isUserOnline } from './login.js';
 export const PARTY_MAX_MEMBERS = 5;
 export const PARTY_INVITATION_TTL_MS = 60_000;
 
+export interface PartyExperienceGainOptions {
+    readonly protectFromPendingDeathPenalty?: boolean;
+}
+
 export interface PartyParticipant {
     readonly userId: number;
     readonly name: string;
@@ -17,7 +21,7 @@ export interface PartyParticipant {
     readonly mentality: number;
     readonly maxMentality: number;
     readonly maxExp: number;
-    gainExp(amount: number): number[];
+    gainExp(amount: number, options?: PartyExperienceGainOptions): number[];
 }
 
 export interface PartySnapshot {
@@ -221,7 +225,7 @@ export class PartyManager {
                 amount,
                 levelGap,
                 multiplier,
-                levelsGained: player.gainExp(amount),
+                levelsGained: player.gainExp(amount, { protectFromPendingDeathPenalty: true }),
             };
         });
     }

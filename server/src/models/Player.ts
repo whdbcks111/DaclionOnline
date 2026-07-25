@@ -190,6 +190,25 @@ export interface PlayerDeathPenaltySnapshot {
     readonly karmaRespawnSeconds: number;
 }
 
+export interface ExperienceGainOptions {
+    /**
+     * 보상 지급 직후 같은 월드 프레임에서 사망한 경우, 아직 처리되지 않은 사망 패널티가
+     * 이번 획득분까지 소급해 차감하지 않도록 한다.
+     */
+    readonly protectFromPendingDeathPenalty?: boolean;
+}
+
+/** 현재 레벨 경험치 중 아직 처리되지 않은 사망 패널티가 차감할 수 있는 양만 반환한다. */
+export function calculateDeathPenaltyEligibleExperience(
+    currentExperience: number,
+    protectedExperience: number,
+): number {
+    return Math.max(
+        0,
+        Math.floor(currentExperience) - Math.max(0, Math.floor(protectedExperience)),
+    );
+}
+
 export default class Player extends Entity {
     readonly userId: number;
     readonly inventory: Inventory;
@@ -209,6 +228,7 @@ export default class Player extends Entity {
     private _deathNotifTimer = 0;
     private _craftingDiscoveryTimer = 0;
     private _unsavedPlayTime = 0;
+    private _pendingDeathPenaltyProtectedExp = 0;
     private _savePromise: Promise<void> | null = null;
     private _saveRequested = false;
 
@@ -518,6 +538,12 @@ export default class Player extends Entity {
         }
     }
 
+    override lateUpdate(dt: number): void {
+        super.lateUpdate(dt);
+        // location/투사체 갱신에서 지급된 전투 경험치는 다음 Player 사망 판정까지만 보호한다.
+        this._pendingDeathPenaltyProtectedExp = 0;
+    }
+
     override onDeath(): void {
         super.onDeath();
         cancelNavigation(this, false);
@@ -584,7 +610,7 @@ export default class Player extends Entity {
         const regionExperienceLoss = policy.calculateExperienceLoss(this.exp, this.maxExp, this.level);
         const regionGoldLoss = policy.calculateGoldLoss(this.gold, this.level);
         const experienceLost = Math.min(
-            Math.max(0, Math.floor(this.exp)),
+            calculateDeathPenaltyEligibleExperience(this.exp, this._pendingDeathPenaltyProtectedExp),
             regionExperienceLoss + Math.max(0, Math.floor(this.maxExp * karmaPenalty.experienceLossRate)),
         );
         const goldLost = Math.min(
@@ -686,8 +712,11 @@ export default class Player extends Entity {
     }
 
     /** 경험치 획득 및 레벨업 처리. 레벨업한 레벨 목록을 반환 */
-    gainExp(amount: number): number[] {
-        this._exp += Math.floor(amount * this.getExperienceGainModifier());
+    gainExp(amount: number, options: ExperienceGainOptions = {}): number[] {
+        const experienceBefore = Math.max(0, Math.floor(this._exp));
+        const protectedBefore = Math.min(experienceBefore, this._pendingDeathPenaltyProtectedExp);
+        const appliedGain = Math.floor(amount * this.getExperienceGainModifier());
+        this._exp += appliedGain;
         this._dirty = true;
 
         const levelsGained: number[] = [];
@@ -703,6 +732,18 @@ export default class Player extends Entity {
             this._statPoint += 3;
             this.stat.applyModifiers(this);
         }
+        const experienceSpentOnLevelUps = Math.max(0, experienceBefore + appliedGain - this._exp);
+        const protectedPool = protectedBefore
+            + (options.protectFromPendingDeathPenalty ? Math.max(0, appliedGain) : 0);
+        const unprotectedExperienceBefore = Math.max(0, experienceBefore - protectedBefore);
+        const protectedExperienceSpent = Math.max(
+            0,
+            Math.min(protectedPool, experienceSpentOnLevelUps - unprotectedExperienceBefore),
+        );
+        this._pendingDeathPenaltyProtectedExp = Math.min(
+            Math.max(0, Math.floor(this._exp)),
+            Math.max(0, protectedPool - protectedExperienceSpent),
+        );
         if (levelsGained.length > 0) this.quests.refreshSnapshotObjectives();
         if (levelsGained.length > 0) this.career.evaluateElitePromotion();
         return levelsGained;

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { PartyManager, calculatePartyExpGrant } from './party.js';
-import type { PartyParticipant } from './party.js';
+import type { PartyExperienceGainOptions, PartyParticipant } from './party.js';
 
 class FakePlayer implements PartyParticipant {
     life = 100;
@@ -11,6 +11,7 @@ class FakePlayer implements PartyParticipant {
     isDefeated = false;
     maxExp = 1_000;
     gainedExp = 0;
+    lastGainOptions: PartyExperienceGainOptions | undefined;
 
     constructor(
         readonly userId: number,
@@ -19,8 +20,9 @@ class FakePlayer implements PartyParticipant {
         readonly locationId = 'field',
     ) {}
 
-    gainExp(amount: number): number[] {
+    gainExp(amount: number, options?: PartyExperienceGainOptions): number[] {
         this.gainedExp += amount;
+        this.lastGainOptions = options;
         return [];
     }
 }
@@ -97,6 +99,12 @@ test('몬스터 경험치는 같은 장소의 생존 파티원에게 레벨 차�
         [level10.userId, 10],
     ]);
     assert.equal(remote.gainedExp, 0);
+    assert.equal(
+        [level40, level30, level20, level10]
+            .every(player => player.lastGainOptions?.protectFromPendingDeathPenalty),
+        true,
+        '처치 경험치는 바로 이어지는 사망 패널티에서 보호되어야 한다.',
+    );
 });
 
 test('30레벨 이상 차이는 10% 감쇠와 다음 레벨 요구 경험치 10% 상한을 모두 적용한다', () => {
