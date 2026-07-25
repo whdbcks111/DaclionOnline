@@ -152,7 +152,7 @@ export default class Resource extends Entity {
         player.titles?.refreshPassiveEffects();
 
         const drop = this.rollDrop();
-        if (drop) player.inventory.addItem(drop.itemDataId, drop.count);
+        const dropDestination = drop ? player.receiveLoot(drop.itemDataId, drop.count) : null;
         const exp = this.rollExp();
         const levelsGained = player.gainExp(exp);
 
@@ -162,6 +162,9 @@ export default class Resource extends Entity {
             .text(`\nEXP +${exp}`);
         if (drop) {
             message.text(`\n${getItemData(drop.itemDataId)?.name ?? drop.itemDataId} x${drop.count}`);
+            if (dropDestination === 'ground') {
+                message.color('red', b => b.text('\n인벤토리 공간이 부족해 전리품이 바닥에 떨어졌습니다.'));
+            }
         }
         if (levelsGained.length > 0) {
             message.text('\n').color('aqua', b => b.text(

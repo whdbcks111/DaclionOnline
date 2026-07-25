@@ -235,6 +235,43 @@ test('바닥 아이템은 인스턴스 상태가 같을 때 최대 스택까지 
     assert.deepEqual(location.getDroppedItems()[2].metadataDelta, { quality: 'special' });
 });
 
+test('기본 전리품은 인벤토리 지급 실패 시 사용할 수 있는 바닥 snapshot으로 보존된다', () => {
+    defineItem({
+        id: 'test_overflow_loot',
+        name: '넘친 전리품',
+        description: '',
+        category: '재료',
+        weight: 1,
+        stackable: true,
+        maxStack: 99,
+        baseMetadata: null,
+        onUse: null,
+        equipSlot: null,
+        modifiers: null,
+        baseDurability: null,
+        tags: [],
+    });
+    const location = new Location({
+        id: 'test_overflow_location',
+        name: '전리품 시험 장소',
+        zoneType: 'neutral',
+        x: 0,
+        y: 0,
+        z: 0,
+        npcIds: [],
+        objects: [],
+        connections: [],
+        tags: [],
+    });
+
+    assert.equal(location.addDroppedItemData('test_overflow_loot', 3), true);
+    assert.deepEqual(location.getDroppedItems().map(item => ({
+        itemDataId: item.itemDataId,
+        count: item.count,
+        durability: item.durability,
+    })), [{ itemDataId: 'test_overflow_loot', count: 3, durability: null }]);
+});
+
 test('바닥 아이템 묶음은 지정한 수량만 회수하고 나머지를 유지한다', () => {
     defineItem({
         id: 'test_floor_partial_pickup',

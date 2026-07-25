@@ -175,6 +175,27 @@ export default class Equipment implements TagReadable {
         return this.getEquipped(slot, slotIndex)?.decreaseDurability(amount);
     }
 
+    /**
+     * 직접 피격 한 번에 내구도가 있는 방어구를 감소시키고 파괴된 아이템을 반환한다.
+     * 공격 계산 계층은 슬롯 Map을 직접 순회하지 않고 이 API만 사용한다.
+     */
+    damageArmorDurability(amount = 1): readonly Item[] {
+        if (!Number.isFinite(amount) || amount <= 0) return [];
+        const broken: Item[] = [];
+        const armorSlots = [
+            EquipSlotType.HEAD,
+            EquipSlotType.BODY,
+            EquipSlotType.LEGS,
+            EquipSlotType.FEET,
+        ] as const;
+        for (const slot of armorSlots) {
+            const item = this.getEquipped(slot.key);
+            if (!item || item.durability === null) continue;
+            if (item.decreaseDurability(amount) === 0) broken.push(item);
+        }
+        return broken;
+    }
+
     /** 장착 아이템의 정의/영속/런타임 태그를 엔티티 유효 태그로 제공 */
     hasTag(tag: TagId): boolean {
         for (const entry of this._slots.values()) {

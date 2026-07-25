@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import Entity from '../models/Entity.js';
+import Equipment from '../models/Equipment.js';
+import type Player from '../models/Player.js';
 import { getAllLocations, getLocation, normalizeLocationInput, reloadAllLocations } from '../models/Location.js';
 import { getAllMonsterData, getMonsterData } from '../models/Monster.js';
 import { getResourceData } from '../models/Resource.js';
@@ -51,6 +53,16 @@ const locations = JSON.parse(
     readFileSync(new URL('./locations.json', import.meta.url), 'utf-8'),
 ) as LocationData[];
 
+class TestBossRoomPlayer extends Entity {
+    override readonly name = '보스방 침입자';
+    override get isPlayer(): boolean { return true; }
+    override get playerUserId(): number | undefined { return this.userId; }
+
+    constructor(locationId: string, readonly userId?: number) {
+        super(200, 0, locationId, { maxLife: 100_000, speed: 2 }, Equipment.createEmpty());
+    }
+}
+
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
     assert.equal(locations.length, 233);
@@ -79,6 +91,11 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     assert.ok(locations.find(location => location.id === 'field')?.objects.some(
         object => object.type === 'resource' && object.dataId === 'tutorial_training_dummy',
     ));
+    assert.equal(locations.filter(location => location.tags.includes(GameTags.LOCATION_BOSS_ROOM)).length, 25);
+    assert.ok(locations
+        .filter(location => location.tags.includes(GameTags.LOCATION_BOSS_ROOM))
+        .every(location => location.objects.some(object =>
+            object.type === 'monster' && getMonsterData(object.dataId)?.tags.includes(GameTags.ENTITY_BOSS))));
     assert.deepEqual(
         Object.fromEntries(['safe', 'neutral', 'hostile'].map(zoneType => [
             zoneType,
@@ -322,6 +339,46 @@ test('은빛그물 숲은 두 보스·사냥꾼 상점·알주머니 보호 기�
     nest?.update(0.05);
     assert.equal(getSilverwebBroodProtectionMultiplier(), 1);
     assert.equal(queen?.getDamageReceivedModifier(), 1);
+});
+
+test('보스방은 입장한 플레이어를 선공 대상으로 삼고 필드 보스는 기존처럼 대기한다', () => {
+    reloadAllLocations(locations);
+    const nest = getLocation('silverweb_queen_nest');
+    const hill = getLocation('red_mane_hill');
+    const intruder = new TestBossRoomPlayer('silverweb_queen_nest');
+    const fieldVisitor = new TestBossRoomPlayer('red_mane_hill');
+
+    assert.equal(nest?.isBossRoom, true);
+    assert.equal(hill?.isBossRoom, false);
+
+    nest?.update(0.05, [intruder as unknown as Player]);
+    const queen = nest?.getMonstersByDataId('silverweb_spider_queen')[0];
+    assert.equal(queen?.currentTarget, intruder);
+    assert.equal(queen?.getThreatContributions().length, 1);
+
+    nest?.update(0.05, [intruder as unknown as Player]);
+    assert.equal(queen?.getThreatContributions().length, 1);
+
+    hill?.update(0.05, [fieldVisitor as unknown as Player]);
+    const wolfKing = hill?.getMonstersByDataId('red_mane_wolf_king')[0];
+    assert.equal(wolfKing?.currentTarget, null);
+});
+
+test('몬스터는 최초 공격자에게 교전이 선점되고 선점자가 이탈하면 다시 공격할 수 있다', () => {
+    reloadAllLocations(locations);
+    const queen = getLocation('silverweb_queen_nest')?.getMonstersByDataId('silverweb_spider_queen')[0];
+    const claimant = new TestBossRoomPlayer('silverweb_queen_nest', 990_011);
+    const outsider = new TestBossRoomPlayer('silverweb_queen_nest', 990_012);
+
+    assert.equal(queen?.acquireCombatTarget(claimant), true);
+    assert.deepEqual(queen?.getCombatClaimUserIds(), [claimant.userId!]);
+    assert.equal(queen?.getAttackDeniedReason(claimant), undefined);
+    assert.match(queen?.getAttackDeniedReason(outsider) ?? '', /다른 플레이어 또는 파티/);
+
+    claimant.locationId = 'town_square';
+    queen?.update(0.05);
+    assert.deepEqual(queen?.getCombatClaimUserIds(), []);
+    assert.equal(queen?.getAttackDeniedReason(outsider), undefined);
 });
 
 test('은빛그물 보스는 모든 직업이 배울 수 있는 전승 스킬북을 낮은 확률로 드롭한다', () => {

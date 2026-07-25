@@ -1,6 +1,14 @@
 import type Player from '../models/Player.js';
+import { RankingCategory } from '../models/Ranking.js';
 
 const onlinePlayers = new Map<number, Player>();
+
+export interface OnlinePlayerIdentitySnapshot {
+    readonly userId: number;
+    readonly nickname: string;
+    /** 레벨 순위를 공개한 플레이어에게만 포함한다. */
+    readonly level?: number;
+}
 
 /** 온라인 Player를 메모리 레지스트리에 등록한다. */
 export function registerOnlinePlayer(player: Player): void {
@@ -42,10 +50,16 @@ export function findOnlinePlayerByIdentity(input: string): Player | undefined {
 }
 
 /** 파티 초대 등 사용자 선택 UI에 쓸 온라인 신원 DTO를 반환한다. */
-export function getOnlinePlayerIdentitySnapshots(excludeUserId?: number): { userId: number; nickname: string; level: number }[] {
+export function getOnlinePlayerIdentitySnapshots(excludeUserId?: number): OnlinePlayerIdentitySnapshot[] {
     return [...onlinePlayers.values()]
         .filter(player => player.userId !== excludeUserId)
-        .map(player => ({ userId: player.userId, nickname: player.name, level: player.level }));
+        .map(player => ({
+            userId: player.userId,
+            nickname: player.name,
+            ...(player.rankingVisibility?.isPublic(RankingCategory.LEVEL) !== false
+                ? { level: player.level }
+                : {}),
+        }));
 }
 
 /** @귓속말 등 온라인 사용자 검색 UI용 prefix 일치 신원 DTO를 반환한다. */
@@ -53,7 +67,7 @@ export function searchOnlinePlayerIdentitySnapshots(
     query: string,
     excludeUserId?: number,
     limit = 20,
-): { userId: number; nickname: string; level: number }[] {
+): OnlinePlayerIdentitySnapshot[] {
     const normalized = query.trim().toLocaleLowerCase('ko-KR');
     return getOnlinePlayerIdentitySnapshots(excludeUserId)
         .filter(player => !normalized || player.nickname.toLocaleLowerCase('ko-KR').startsWith(normalized))

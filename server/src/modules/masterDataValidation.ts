@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { LocationData } from '../../../shared/types.js';
+import { GameTags } from '../../../shared/tags.js';
 import { getAllCraftingRecipes } from '../models/Crafting.js';
 import { getAllItemData, getItemData } from '../models/Item.js';
 import { getAllJobs, getJob } from '../models/Job.js';
@@ -72,6 +73,11 @@ export function validateMasterData(options: MasterDataValidationOptions = {}): M
     const locations = options.locations ?? [];
     const locationIds = new Set(locations.map(location => location.id));
     for (const location of locations) {
+        const bossSpawns = location.objects.filter(object =>
+            object.type === 'monster' && getMonsterData(object.dataId)?.tags.includes(GameTags.ENTITY_BOSS));
+        if (location.tags.includes(GameTags.LOCATION_BOSS_ROOM) && bossSpawns.length === 0) {
+            issue('location', location.id, '보스방 태그가 있지만 보스 몬스터가 없습니다.');
+        }
         if (location.mapIcon) icon('location', location.id, `map/${location.mapIcon}`);
         for (const connection of location.connections) if (!locationIds.has(connection.locationId)) issue('location', location.id, `연결 장소가 없습니다: ${connection.locationId}`);
         for (const npcId of location.npcIds) if (!NPC.getNpc(npcId)) issue('location', location.id, `NPC가 없습니다: ${npcId}`);

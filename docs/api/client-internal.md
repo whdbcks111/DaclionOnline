@@ -50,8 +50,11 @@
 | `Dialog` | `components/dialog/Dialog.tsx` | portal 기반 접근 가능한 공용 화면 오버레이, Escape/배경 닫기와 포커스 복원 |
 | `FormDialog` | `components/dialog/FormDialog.tsx` | 필드 정의 배열로 text/number/select/textarea/checkbox 입력 및 비동기 실행 UI 생성. 필수 select는 첫 option을 기본 선택 |
 | `SearchableSelect` | `components/dialog/SearchableSelect.tsx` | label·코드·설명 검색과 viewport 기준 위/아래 배치, Dialog overflow 밖 portal 목록을 제공하는 공용 combobox |
+| `DisplaySettingsDialog` | `components/DisplaySettingsDialog.tsx` | 햄버거 메뉴에서 60~200% 페이지 확대율을 5% 단위로 선택하고 적용 |
 
 `AdminPage`는 이 API로 플레이어·월드 action 입력을 구성한다. 상세·검사 목록은 viewport 내부 스크롤을 사용하고 PC의 중앙 모달은 모바일에서 viewport 폭의 하단 시트로 바뀐다.
+
+`utils/displayPreferences.ts`는 `getUiScale/setUiScale/initializeUiScale` 공개 API와 허용 범위를 소유한다. `main.tsx`가 React 렌더 전에 저장 배율을 CSS `zoom` 변수로 복원하므로 body portal인 Dialog·미니게임까지 같은 배율을 사용한다. Drawer의 전체화면 버튼은 표준 Fullscreen API와 WebKit 호환 API를 사용자 클릭 안에서 호출하고 미지원·권한 거절을 화면에 안내한다.
 
 ## 클라이언트 검증 API
 

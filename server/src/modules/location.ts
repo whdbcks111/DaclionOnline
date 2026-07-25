@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import logger from "../utils/logger.js";
 import { getAllLocationData, getAllLocations, normalizeLocationData, reloadAllLocations } from "../models/Location.js";
 import type { LocationData } from "../models/Location.js";
+import type Player from "../models/Player.js";
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
 import '../data/locations.js'
@@ -30,9 +31,9 @@ function saveLocationsToJson(locations: LocationData[]): void {
 }
 
 /** 모든 장소의 update 호출 (게임 루프에서 매 프레임) */
-export function updateLocations(dt: number): void {
+export function updateLocations(dt: number, onlinePlayers: readonly Player[] = []): void {
     for (const location of getAllLocations()) {
-        location.update(dt);
+        location.update(dt, onlinePlayers);
     }
 }
 

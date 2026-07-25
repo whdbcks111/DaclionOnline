@@ -34,6 +34,17 @@ function itemDurabilityColor(ratio: number): string {
     return 'lime';
 }
 
+export function resolveDropCount(input: string | undefined, available: number): number | undefined {
+    if (!Number.isSafeInteger(available) || available <= 0) return undefined;
+    const normalized = (input ?? '1').trim().toLocaleLowerCase('ko-KR');
+    if (normalized === '전체' || normalized === 'all') return available;
+    if (!/^\d+$/.test(normalized)) return undefined;
+    const requested = Number(normalized);
+    return Number.isSafeInteger(requested) && requested > 0
+        ? Math.min(requested, available)
+        : undefined;
+}
+
 function itemLabel(b: ReturnType<typeof chat>, item: Item): ReturnType<typeof chat> {
     b.icon(item.image).text(item.name || item.itemDataId);
     const ratio = item.durabilityRatio;
@@ -400,7 +411,7 @@ export function initPlayerCommands(): void {
                     }));
                 },
             },
-            { name: '개수', description: '버릴 개수 (기본 1)' },
+            { name: '개수', description: '버릴 개수 (기본 1, 전체 가능)' },
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
@@ -412,7 +423,7 @@ export function initPlayerCommands(): void {
             }
 
             if (!/^\d+$/.test(args[0] ?? '')) {
-                sendBotMessageToUser(userId, '사용법: /버리기 <슬롯ID> [개수]');
+                sendBotMessageToUser(userId, '사용법: /버리기 <슬롯ID> [개수|전체]');
                 return;
             }
             const idx = Number(args[0]) - 1;
@@ -424,13 +435,9 @@ export function initPlayerCommands(): void {
             }
 
             const countInput = args[1] ?? '1';
-            if (!/^\d+$/.test(countInput) || Number(countInput) <= 0) {
-                sendBotMessageToUser(userId, '버릴 개수는 1 이상의 정수여야 합니다.');
-                return;
-            }
-            const count = Number(countInput);
-            if (!Number.isSafeInteger(count) || count > item.count) {
-                sendBotMessageToUser(userId, `버릴 수량이 부족합니다. (보유 ${item.count}개)`);
+            const count = resolveDropCount(countInput, item.count);
+            if (count === undefined) {
+                sendBotMessageToUser(userId, '버릴 개수는 1 이상의 정수 또는 전체여야 합니다.');
                 return;
             }
 

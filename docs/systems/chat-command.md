@@ -80,7 +80,7 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 | 플레이어 | `/감정 대상` (`appraise`) | 감각 50 이상에서 인벤토리 번호 또는 장착칸 아이템을 분석. 감각 75/100에 성능/가공된 특수 효과 정보 해금 |
 | 플레이어 | `/몬스터정보 번호` (`monsterinfo`) | 감각 100 이상에서 현재 장소 몬스터 분석. 감각 125/150에 전투/행동·보상 정보 해금 |
 | 플레이어 | `/사용` (`use`, `u`) | 아이템 효과 실행 |
-| 플레이어 | `/버리기 <번호> [개수]` (`drop`, `q`) | 기본 1개 또는 지정 수량을 현재 Location에 드롭 |
+| 플레이어 | `/버리기 <번호> [개수\|전체]` (`drop`, `q`) | 기본 1개, 지정 수량 또는 보유량 전부를 현재 Location에 드롭 |
 | 플레이어 | `/장착` (`equip`, `eq`) | 인벤토리 아이템 장착/교체 |
 | 플레이어 | `/장착해제` (`unequip`) | 장비를 인벤토리로 이동 |
 | 플레이어 | `/대상지정` (`target`, `t`) | 공격 없이 위치 오브젝트를 현재 스킬/공격 대상으로 지정 |
@@ -152,6 +152,7 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 4. 함수형 completion은 `dynamicCompletions: true`로 표시된다.
 5. `Home.tsx`가 입력 중 `requestCompletions(raw)`을 보내고 서버가 현재 사용자 상태를 이용해 `argCompletions`를 응답한다. 서버도 같은 `parseCommandInput` 규칙으로 슬래시 없는 별칭을 해석한다.
 6. 입력의 첫 토큰이 `@닉네임prefix`이면 `requestMentionCompletions`로 자기 자신을 제외한 온라인 플레이어를 조회한다. 선택하면 `@정확한닉네임 `을 입력하고 이후 본문을 작성할 수 있다.
+7. mention과 파티 초대의 공개 신원 자동완성은 레벨 순위를 비공개한 플레이어의 레벨 설명을 생략한다.
 
 명령 목록 자체는 자동완성을 위해 전체가 전송되지만 실제 실행 권한은 서버에서 다시 검사한다.
 

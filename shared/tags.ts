@@ -128,6 +128,8 @@ export const GameTags = Object.freeze({
     LOCATION_VOIDCROWN: 'location:voidcrown',
     LOCATION_ECLIPSE_TRENCH: 'location:eclipse-trench',
     LOCATION_WORLDROOT: 'location:worldroot',
+    /** 전용 보스 전투 공간. 살아 있는 보스가 입장한 플레이어를 먼저 감지한다. */
+    LOCATION_BOSS_ROOM: 'location:boss_room',
     LOCATION_HIDDEN: 'location:hidden',
     LOCATION_FISHING: 'location:fishing',
 

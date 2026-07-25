@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import styles from './Drawer.module.scss'
 import type { ChannelInfo } from '@shared/types'
+import DisplaySettingsDialog from './DisplaySettingsDialog'
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
 
@@ -35,7 +36,51 @@ export default function Drawer({ open, onClose, nickname, profileImage, onProfil
     const [nicknameInput, setNicknameInput] = useState('')
     const [nicknameChanging, setNicknameChanging] = useState(false)
     const [nicknameError, setNicknameError] = useState<string | null>(null)
+    const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false)
+    const [fullscreen, setFullscreen] = useState(false)
+    const [displayError, setDisplayError] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => {
+        const update = () => {
+            const legacyDocument = document as Document & { webkitFullscreenElement?: Element }
+            setFullscreen(Boolean(document.fullscreenElement ?? legacyDocument.webkitFullscreenElement))
+        }
+        document.addEventListener('fullscreenchange', update)
+        document.addEventListener('webkitfullscreenchange', update)
+        update()
+        return () => {
+            document.removeEventListener('fullscreenchange', update)
+            document.removeEventListener('webkitfullscreenchange', update)
+        }
+    }, [])
+
+    const toggleFullscreen = async () => {
+        const legacyDocument = document as Document & {
+            webkitFullscreenElement?: Element
+            webkitExitFullscreen?: () => Promise<void> | void
+        }
+        const root = document.documentElement as HTMLElement & {
+            webkitRequestFullscreen?: () => Promise<void> | void
+        }
+        try {
+            setDisplayError(null)
+            if (document.fullscreenElement ?? legacyDocument.webkitFullscreenElement) {
+                if (document.exitFullscreen) await document.exitFullscreen()
+                else if (legacyDocument.webkitExitFullscreen) await legacyDocument.webkitExitFullscreen()
+            } else if (root.requestFullscreen) {
+                await root.requestFullscreen()
+            } else if (root.webkitRequestFullscreen) {
+                await root.webkitRequestFullscreen()
+            } else {
+                setDisplayError('이 브라우저에서는 웹 전체화면을 지원하지 않습니다.')
+                return
+            }
+            onClose()
+        } catch {
+            setDisplayError('전체화면으로 전환하지 못했습니다. 브라우저 권한을 확인해주세요.')
+        }
+    }
 
     const handleNicknameEdit = () => {
         setNicknameInput(nickname ?? '')
@@ -158,6 +203,18 @@ export default function Drawer({ open, onClose, nickname, profileImage, onProfil
                     <button className={styles.uploadButton} onClick={onOpenPatchNotes}>
                         패치노트
                     </button>
+                    <div className={styles.displayActionRow}>
+                        <button className={styles.uploadButton} onClick={toggleFullscreen}>
+                            {fullscreen ? '전체화면 종료' : '전체화면'}
+                        </button>
+                        <button className={styles.uploadButton} onClick={() => {
+                            onClose()
+                            setDisplaySettingsOpen(true)
+                        }}>
+                            화면 확대
+                        </button>
+                    </div>
+                    {displayError && <div className={styles.error}>{displayError}</div>}
                     {permission >= 10 && (
                         <button className={styles.uploadButton} onClick={onOpenAdmin}>
                             관리자 페이지
@@ -213,6 +270,7 @@ export default function Drawer({ open, onClose, nickname, profileImage, onProfil
                     onChange={handleFileChange}
                 />
             </div>
+            <DisplaySettingsDialog open={displaySettingsOpen} onClose={() => setDisplaySettingsOpen(false)} />
         </>
     )
 }

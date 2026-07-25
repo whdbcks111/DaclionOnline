@@ -155,6 +155,8 @@ export default class Monster extends Entity {
     private readonly skillPattern?: Readonly<MonsterSkillPattern>;
     private readonly challengePattern?: Readonly<MonsterChallengePattern>;
     private readonly threat: ThreatTable;
+    /** 최초로 공격한 플레이어와 당시 파티원에게만 허용되는 런타임 교전 선점. */
+    private readonly combatClaimUserIds = new Set<number>();
     private skillPatternIndex = 0;
     private skillPatternTimer = 0;
     private challengePatternTimer = 0;
@@ -219,6 +221,7 @@ export default class Monster extends Entity {
 
     /** 스킬·상태효과가 raw threat table 없이 행동별 위협도를 기록하는 공개 API. */
     recordThreat(actor: Entity, action: ThreatAction, amount: number): void {
+        if (!this.canJoinCombatClaim(actor.attackOwner)) return;
         this.threat.record(actor, action, amount);
         this.currentTarget = this.threat.selectTarget(this.currentTarget);
     }
@@ -231,7 +234,34 @@ export default class Monster extends Entity {
         return this.threat.getContributionSnapshots();
     }
 
+    getCombatClaimUserIds(): readonly number[] {
+        return [...this.combatClaimUserIds];
+    }
+
+    /**
+     * 보스방 감지처럼 피해가 발생하기 전 시작되는 교전을 위협도 테이블에 등록한다.
+     * 이미 참여 중인 대상은 매 tick 위협도가 중복 누적되지 않는다.
+     */
+    engageIntruder(actor: Entity): boolean {
+        const target = actor.attackOwner;
+        if (this.isDefeated || target.isDefeated || target.locationId !== this.locationId
+            || !this.canJoinCombatClaim(target) || this.threat.hasParticipant(target)) return false;
+        this.recordThreat(target, ThreatAction.ATTACK, 1);
+        return true;
+    }
+
+    override getAttackDeniedReason(attacker: Entity): string | undefined {
+        const inherited = super.getAttackDeniedReason(attacker);
+        if (inherited) return inherited;
+        const userId = attacker.attackOwner.playerUserId;
+        return userId !== undefined && this.combatClaimUserIds.size > 0
+            && !this.combatClaimUserIds.has(userId)
+            ? '이미 다른 플레이어 또는 파티가 교전 중인 대상입니다.'
+            : undefined;
+    }
+
     override acquireCombatTarget(attacker: Entity): boolean {
+        this.claimCombat(attacker.attackOwner);
         const previous = this.currentTarget;
         this.recordThreat(attacker, ThreatAction.ATTACK, 1);
         return previous !== this.currentTarget;
@@ -289,6 +319,10 @@ export default class Monster extends Entity {
         if(!location) return;
 
         this.threat.update(dt);
+        if (this.combatClaimUserIds.size > 0
+            && !this.threat.hasActiveParticipantUserIds(this.combatClaimUserIds)) {
+            this.combatClaimUserIds.clear();
+        }
         this.currentTarget = this.threat.selectTarget(this.currentTarget);
         const target = this.currentTarget;
         if (!target || target.isDefeated || target.locationId !== this.locationId) {
@@ -354,8 +388,11 @@ export default class Monster extends Entity {
             causePlayer.titles?.refreshPassiveEffects();
 
             const drops = this.rollDrops();
+            let groundDropCount = 0;
             for (const drop of drops) {
-                causePlayer.inventory.addItem(drop.itemDataId, drop.count);
+                if (causePlayer.receiveLoot(drop.itemDataId, drop.count) === 'ground') {
+                    groundDropCount += drop.count;
+                }
             }
             const goldGained = this.rollGold();
             if (goldGained > 0) causePlayer.gold += goldGained;
@@ -382,6 +419,11 @@ export default class Monster extends Entity {
                     return `${data?.name ?? d.itemDataId} x${d.count}`;
                 }).join('\n');
                 killMsg.text(`\n${dropNames}`);
+            }
+            if (groundDropCount > 0) {
+                killMsg.color('red', b => b.text(
+                    `\n인벤토리 공간이 부족해 전리품 ${groundDropCount}개가 바닥에 떨어졌습니다.`,
+                ));
             }
 
             if (levelsGained.length > 0) {
@@ -412,11 +454,13 @@ export default class Monster extends Entity {
             this.threat.dispose();
             getLocation(this.locationId)?.removeObject(this);
         }
+        this.combatClaimUserIds.clear();
         this.threat.clear();
     }
 
     override respawn(): void {
         super.respawn();
+        this.combatClaimUserIds.clear();
         this.threat.clear();
         this.skillPatternTimer = this.skillPattern?.initialDelay ?? 0;
         this.skillPatternIndex = 0;
@@ -458,6 +502,22 @@ export default class Monster extends Entity {
         this.challengeActive = false;
         this.challengePatternTimer = this.challengePattern?.initialDelay ?? 0;
         cancel?.();
+    }
+
+    private canJoinCombatClaim(actor: Entity): boolean {
+        const userId = actor.attackOwner.playerUserId;
+        return userId === undefined || this.combatClaimUserIds.size === 0 || this.combatClaimUserIds.has(userId);
+    }
+
+    private claimCombat(actor: Entity): void {
+        const userId = actor.attackOwner.playerUserId;
+        if (userId === undefined || this.combatClaimUserIds.size > 0) return;
+        const party = partyManager.getParty(userId);
+        for (const memberUserId of party?.memberUserIds ?? [userId]) {
+            this.combatClaimUserIds.add(memberUserId);
+        }
+        this.threat.retainPlayerUserIds(this.combatClaimUserIds);
+        this.currentTarget = this.threat.selectTarget(this.currentTarget);
     }
 
     /** 골드 보상을 굴려 최종 지급량 반환 */

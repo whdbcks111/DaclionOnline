@@ -6,7 +6,7 @@ Prisma 스키마는 `server/prisma/schema.prisma`, 런타임 클라이언트 설
 
 | 모델/테이블 | 키와 관계 | 주요 필드 |
 | --- | --- | --- |
-| `User` / `users` | `id`, Player 1:0..1 | username, email, passwordHash/salt, nickname, profileImage, permission, timestamps |
+| `User` / `users` | `id`, Player 1:0..1 | username, email, passwordHash/salt, nickname/nicknameChangedAt, profileImage, permission, timestamps |
 | `Player` / `players` | `userId` PK/FK | level, exp, maxWeight, stats/tags JSON, locationId, life/mentality/thirsty/hungry, statPoint, gold, karma/karmaUpdatedAt, rankingMetrics/rankingVisibility JSON |
 | `Item` / `items` | id, Player N:1 cascade | itemDataId, count, durability, metadata/tags JSON, timestamps |
 | `Equipment` / `equipments` | id, Player N:1 cascade | itemDataId, count, slot, slotIndex, durability, metadata/tags JSON; `(playerId, slot, slotIndex)` unique |
@@ -89,6 +89,7 @@ login/session restore
 - 플레이어 스킬 경험치 컬럼 migration은 `20260717000000_add_skill_experience`다.
 - 장착 스택 수량 컬럼 migration은 `20260718000000_add_equipment_count`다.
 - 순위 지표·공개 설정 JSON migration은 `20260718010000_add_player_rankings`다.
+- 닉네임 24시간 변경 제한 시각 migration은 `20260725000000_add_nickname_change_cooldown`이다.
 - 카르마 기준값·감소 기준 시각 migration은 `20260723000000_add_player_karma`다.
 - 일반 운영 배포에서는 `cd server && npm run db:migrate:deploy`를 실행한다. 이 명령은 pending schema migration 적용, Prisma Client 생성, 아이템 metadata delta 데이터 마이그레이션을 순서대로 실행한다.
 - metadata 데이터 마이그레이션은 `src/scripts/migrateItemMetadataDeltas.ts`가 담당한다. 이미 버전 1인 행과 `null` 행은 건너뛰므로 재실행할 수 있다. 구형 전체 metadata 중 현재 `baseMetadata`와 같은 값은 기본값으로 간주해 제거하므로, 기본 metadata를 변경하기 전에 서버를 중지한 상태에서 운영 명령을 먼저 실행해야 한다.

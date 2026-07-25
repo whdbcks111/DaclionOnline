@@ -20,5 +20,7 @@ Socket/HTTP 요청, 세션과 온라인 상태, 주기 작업, 도메인 객체 
 - `humanVerification.ts`: 서버가 확정한 몬스터 처치의 장시간 동선 반복·간격 규칙성을 분석하고 난수 지연 뒤 사람 확인을 요구한다. required/실패 Progress와 source-key 행동 제한·피해 보호를 사용하며, 정답은 서버에만 둔 일회성 raster PNG 문제를 발급하고 Player load/unload에서 재접속 복원·정리를 담당한다.
 - `forging.ts`: `career:blacksmith` 정식 메인/서브/계보 조회와 구형 독립 flag의 비파괴 슬롯 이전, 가용 슬롯 전직 API, 대장장이 직업 또는 `metal_forging` 보유를 허용하는 공용 단조 권한과 보유 스킬별 형태 조회 API를 제공한다. 제련 소재 선검증, 재료 power·형태 크기로 정박/엇박/연속박자를 확정하는 config, 제련 정밀도 서버 판정, 어려운 패턴 품질 보정, 실패 소재 파손/성공 snapshot 교환·이벤트를 연결한다. 완성품에는 제작자 레벨·감각·제련 정밀도 숙련과 장비 레벨을 전달하고, 양호 품질 기준 동레벨 일반 사냥의 80%가 되도록 경험치를 계산한다.
 - `adminPanel.ts`: 권한 10 세션을 재검증하고 온라인 우선 플레이어 목록·카르마 단계·보유/장착 칭호·사람 확인 상태가 포함된 가공 상세 snapshot과 칭호를 포함한 마스터 option을 제공한다. 카르마 설정, 단순 레벨 설정과 성장 지급분을 동반하는 `Player.adjustLevel` 조정, 인벤토리/보유 스킬 레벨·칭호 부여/회수·직업/상한 없는 상태효과 레벨·사람 확인 실행/해제·월드 운영과 전체 채팅·전체 알림·선택 온라인 플레이어 알림 action을 소유 도메인 API로 실행한다. 전투 프로파일은 실제 상대속도 회피율과 관통 적용 뒤 유효 방어까지 반환한다. 액션 결과는 요청 소켓의 기본 notification으로 피드백한다.
+- `playerRegistry.ts`의 온라인 신원 snapshot은 레벨 순위 공개 설정을 적용해 비공개 플레이어의 `level`을 생략한다. 귓속말 mention과 파티 초대 자동완성은 이 가공 DTO를 재사용한다. `login.ts`는 `nicknameChangedAt` 기준 일반 계정 24시간 닉네임 변경 제한과 권한 10 이상 예외를 소유한다.
+- `location.ts`/`game.ts`는 온라인 Player snapshot을 Location tick에 전달해 `location:boss_room`의 살아 있는 보스가 입장자를 먼저 위협 대상으로 등록하게 한다.
 
 이벤트나 공개 함수, 초기화 책임이 바뀌면 이 문서와 [`docs/api/`](../../../docs/api), 관련 [`docs/systems/`](../../../docs/systems) 문서를 갱신한다.

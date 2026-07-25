@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { setUserChannel } from './channel.js';
 import {
+    NICKNAME_CHANGE_COOLDOWN_MS,
+    getNicknameChangeCooldownRemaining,
     getUserCountData,
     isUserOnline,
     setUserOffline,
@@ -10,6 +12,20 @@ import {
 import { getOnlinePlayers } from './player.js';
 import { registerOnlinePlayer, unregisterOnlinePlayer } from './playerRegistry.js';
 import type Player from '../models/Player.js';
+
+test('닉네임 변경은 일반 계정만 24시간 제한하고 권한 10 이상은 면제한다', () => {
+    const now = Date.UTC(2026, 6, 25, 12);
+    const twelveHoursAgo = new Date(now - NICKNAME_CHANGE_COOLDOWN_MS / 2);
+    assert.equal(
+        getNicknameChangeCooldownRemaining(twelveHoursAgo, 0, now),
+        NICKNAME_CHANGE_COOLDOWN_MS / 2,
+    );
+    assert.equal(getNicknameChangeCooldownRemaining(twelveHoursAgo, 10, now), 0);
+    assert.equal(
+        getNicknameChangeCooldownRemaining(new Date(now - NICKNAME_CHANGE_COOLDOWN_MS), 0, now),
+        0,
+    );
+});
 
 test('접속 인원은 다중 탭을 소켓 수가 아닌 사용자 수로 집계한다', () => {
     const mainUserId = 9811;

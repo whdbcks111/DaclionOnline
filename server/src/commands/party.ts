@@ -13,7 +13,7 @@ import { chat } from '../utils/chatBuilder.js';
 function onlineIdentityCompletions(userId: number): CompletionItem[] {
     return getOnlinePlayerIdentitySnapshots(userId).map(player => ({
         value: player.nickname,
-        description: `ID ${player.userId} · Lv.${player.level}`,
+        description: `ID ${player.userId}${player.level === undefined ? '' : ` · Lv.${player.level}`}`,
     }));
 }
 

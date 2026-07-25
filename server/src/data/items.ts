@@ -427,7 +427,7 @@ defineItem({
     modifiers: [
         { attribute: 'atk', op: 'add', value: 5, source: '' },
     ],
-    baseDurability: 50,
+    baseDurability: 75,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.PROPERTY_FIRE],
     balance: {
         role: ItemBalanceRole.WEAPON,
@@ -451,7 +451,7 @@ defineItem({
     modifiers: [
         { attribute: 'def', op: 'add', value: 3, source: '' },
     ],
-    baseDurability: 60,
+    baseDurability: 90,
     tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_WOOD],
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior'] },
 });
@@ -471,7 +471,7 @@ defineItem({
     modifiers: [
         { attribute: 'atk', op: 'add', value: 3, source: '' },
     ],
-    baseDurability: 40,
+    baseDurability: 60,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.PROPERTY_POISON],
     onBasicAttackHit: ({ target }) => {
         if (Math.random() < 0.5) {
@@ -505,7 +505,7 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 4, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.05, source: '' },
     ],
-    baseDurability: 80,
+    baseDurability: 120,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_WOOD],
     balance: {
         role: ItemBalanceRole.WEAPON,
@@ -536,7 +536,7 @@ defineItem({
         { attribute: 'critRate', op: 'add', value: 0.02, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.08, source: '' },
     ],
-    baseDurability: 120,
+    baseDurability: 180,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_WOOD, GameTags.PROPERTY_NATURAL],
     balance: {
         role: ItemBalanceRole.WEAPON,
@@ -577,7 +577,7 @@ defineItem({
     onUse: null,
     equipSlot: 'mainHand',
     modifiers: [{ attribute: 'atk', op: 'add', value: 7, source: '' }],
-    baseDurability: 90,
+    baseDurability: 135,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_AXE, GameTags.MATERIAL_IRON],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
 });
@@ -601,7 +601,7 @@ defineItem({
         { attribute: 'magicForce', op: 'add', value: 12, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.06, source: '' },
     ],
-    baseDurability: 100,
+    baseDurability: 150,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_WOOD],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
 });
@@ -622,7 +622,7 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 24, source: '' },
         { attribute: 'speed', op: 'multiply', value: 1.05, source: '' },
     ],
-    baseDurability: 220,
+    baseDurability: 330,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.PROPERTY_ELECTRIC, GameTags.PROPERTY_METAL],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
 });
@@ -647,7 +647,7 @@ defineItem({
         { attribute: 'critRate', op: 'add', value: 0.04, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.18, source: '' },
     ],
-    baseDurability: 210,
+    baseDurability: 315,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.PROPERTY_ELECTRIC, GameTags.PROPERTY_METAL],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
 });
@@ -668,7 +668,7 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 21, source: '' },
         { attribute: 'armorPen', op: 'add', value: 7, source: '' },
     ],
-    baseDurability: 180,
+    baseDurability: 270,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.PROPERTY_DARK],
     onBasicAttackHit: ({ target }) => {
         const decay = StatusEffectType.fromKey('decay');
@@ -702,7 +702,7 @@ defineItem({
         { attribute: 'mentalityRegen', op: 'add', value: 2, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.14, source: '' },
     ],
-    baseDurability: 230,
+    baseDurability: 345,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
 });
@@ -748,7 +748,7 @@ defineItem({
     modifiers: [
         { attribute: 'atk', op: 'add', value: 4, source: '' },
     ],
-    baseDurability: 100,
+    baseDurability: 150,
     tags: [GameTags.ITEM_TOOL, GameTags.TOOL_MINING, GameTags.MATERIAL_IRON],
 });
 
@@ -767,7 +767,7 @@ defineItem({
     modifiers: [
         { attribute: 'atk', op: 'add', value: 7, source: '' },
     ],
-    baseDurability: 180,
+    baseDurability: 270,
     tags: [GameTags.ITEM_TOOL, GameTags.TOOL_MINING, GameTags.MATERIAL_IRON],
 });
 
@@ -964,7 +964,7 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 16, source: '' },
         { attribute: 'armorPen', op: 'add', value: 6, source: '' },
     ],
-    baseDurability: 175,
+    baseDurability: 263,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.PROPERTY_METAL],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
 });
@@ -989,7 +989,7 @@ defineItem({
         { attribute: 'critRate', op: 'add', value: 0.025, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.13, source: '' },
     ],
-    baseDurability: 165,
+    baseDurability: 248,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.PROPERTY_DARK],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
 });
@@ -1017,7 +1017,7 @@ defineItem({
         { attribute: 'mentalityRegen', op: 'add', value: 3, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.2, source: '' },
     ],
-    baseDurability: 170,
+    baseDurability: 255,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.PROPERTY_DARK, GameTags.PROPERTY_UNDEAD],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
 });
@@ -1039,7 +1039,7 @@ defineItem({
         { attribute: 'magicDef', op: 'add', value: 8, source: '' },
         { attribute: 'maxLife', op: 'add', value: 80, source: '' },
     ],
-    baseDurability: 210,
+    baseDurability: 315,
     tags: [GameTags.ITEM_ARMOR, GameTags.PROPERTY_METAL, GameTags.PROPERTY_HOLY],
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });
@@ -1133,7 +1133,7 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 70, source: '' },
         { attribute: 'armorPen', op: 'add', value: 14, source: '' },
     ],
-    baseDurability: 290,
+    baseDurability: 435,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_GLASS, GameTags.PROPERTY_EARTH],
     onBasicAttackHit: ({ target }) => {
         const fever = StatusEffectType.fromKey('sun_fever');
@@ -1157,7 +1157,7 @@ defineItem({
         { attribute: 'critRate', op: 'add', value: 0.06, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.25, source: '' },
     ],
-    baseDurability: 275,
+    baseDurability: 413,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.PROPERTY_LIGHT],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
 });
@@ -1173,7 +1173,7 @@ defineItem({
         { attribute: 'armorPen', op: 'add', value: 18, source: '' },
         { attribute: 'critDmg', op: 'add', value: 0.12, source: '' },
     ],
-    baseDurability: 245,
+    baseDurability: 368,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.PROPERTY_POISON, GameTags.PROPERTY_DARK],
     onBasicAttackHit: ({ target }) => {
         const curse = StatusEffectType.fromKey('curse');
@@ -1203,7 +1203,7 @@ defineItem({
         { attribute: 'magicPen', op: 'add', value: 12, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.22, source: '' },
     ],
-    baseDurability: 285,
+    baseDurability: 428,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_GLASS, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_LIGHT],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
 });
@@ -1219,7 +1219,7 @@ defineItem({
         { attribute: 'magicDef', op: 'add', value: 24, source: '' },
         { attribute: 'maxLife', op: 'add', value: 280, source: '' },
     ],
-    baseDurability: 330,
+    baseDurability: 495,
     tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_GLASS, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_STONE],
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });
@@ -1323,7 +1323,7 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 108, source: '' },
         { attribute: 'armorPen', op: 'add', value: 22, source: '' },
     ],
-    baseDurability: 360,
+    baseDurability: 540,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_METAL],
     onBasicAttackHit: ({ target }) => {
         const slowness = StatusEffectType.fromKey('slowness');
@@ -1347,7 +1347,7 @@ defineItem({
         { attribute: 'critRate', op: 'add', value: 0.06, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.28, source: '' },
     ],
-    baseDurability: 340,
+    baseDurability: 510,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
 });
@@ -1363,7 +1363,7 @@ defineItem({
         { attribute: 'armorPen', op: 'add', value: 27, source: '' },
         { attribute: 'critDmg', op: 'add', value: 0.16, source: '' },
     ],
-    baseDurability: 315,
+    baseDurability: 473,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_METAL],
     onBasicAttackHit: ({ target }) => {
         const frozen = StatusEffectType.fromKey('frozen');
@@ -1393,7 +1393,7 @@ defineItem({
         { attribute: 'mentalityRegen', op: 'add', value: 6, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.28, source: '' },
     ],
-    baseDurability: 365,
+    baseDurability: 548,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_LIGHT],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
 });
@@ -1409,7 +1409,7 @@ defineItem({
         { attribute: 'magicDef', op: 'add', value: 38, source: '' },
         { attribute: 'maxLife', op: 'add', value: 430, source: '' },
     ],
-    baseDurability: 430,
+    baseDurability: 645,
     tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_METAL],
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });
@@ -1535,7 +1535,7 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 150, source: '' },
         { attribute: 'armorPen', op: 'add', value: 32, source: '' },
     ],
-    baseDurability: 455,
+    baseDurability: 683,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.PROPERTY_WATER, GameTags.PROPERTY_METAL],
     onBasicAttackHit: ({ target }) => {
         const bleeding = StatusEffectType.fromKey('bleeding');
@@ -1558,7 +1558,7 @@ defineItem({
         { attribute: 'critRate', op: 'add', value: 0.075, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.34, source: '' },
     ],
-    baseDurability: 430,
+    baseDurability: 645,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.PROPERTY_WATER, GameTags.PROPERTY_NATURAL],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
 });
@@ -1573,7 +1573,7 @@ defineItem({
         { attribute: 'armorPen', op: 'add', value: 38, source: '' },
         { attribute: 'critDmg', op: 'add', value: 0.2, source: '' },
     ],
-    baseDurability: 390,
+    baseDurability: 585,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_STONE],
     onBasicAttackHit: ({ target }) => {
         const defenseReduction = StatusEffectType.fromKey('defense_reduction');
@@ -1602,7 +1602,7 @@ defineItem({
         { attribute: 'mentalityRegen', op: 'add', value: 7, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.32, source: '' },
     ],
-    baseDurability: 465,
+    baseDurability: 698,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_DARK],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
 });
@@ -1617,7 +1617,7 @@ defineItem({
         { attribute: 'magicDef', op: 'add', value: 50, source: '' },
         { attribute: 'maxLife', op: 'add', value: 620, source: '' },
     ],
-    baseDurability: 530,
+    baseDurability: 795,
     tags: [GameTags.ITEM_ARMOR, GameTags.PROPERTY_WATER, GameTags.PROPERTY_METAL, GameTags.PROPERTY_UNDEAD],
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });
@@ -1756,7 +1756,7 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 190, source: '' },
         { attribute: 'armorPen', op: 'add', value: 48, source: '' },
     ],
-    baseDurability: 520,
+    baseDurability: 780,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL],
     onBasicAttackHit: ({ target }) => {
         const effect = StatusEffectType.fromKey('defense_reduction');
@@ -1779,7 +1779,7 @@ defineItem({
         { attribute: 'critRate', op: 'add', value: 0.09, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.45, source: '' },
     ],
-    baseDurability: 495,
+    baseDurability: 743,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
 });
@@ -1794,7 +1794,7 @@ defineItem({
         { attribute: 'armorPen', op: 'add', value: 54, source: '' },
         { attribute: 'critDmg', op: 'add', value: 0.26, source: '' },
     ],
-    baseDurability: 455,
+    baseDurability: 683,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL],
     onBasicAttackHit: ({ target }) => {
         const effect = StatusEffectType.fromKey('slowness');
@@ -1823,7 +1823,7 @@ defineItem({
         { attribute: 'mentalityRegen', op: 'add', value: 10, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.48, source: '' },
     ],
-    baseDurability: 535,
+    baseDurability: 803,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ELECTRIC],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
 });
@@ -1838,7 +1838,7 @@ defineItem({
         { attribute: 'magicDef', op: 'add', value: 68, source: '' },
         { attribute: 'maxLife', op: 'add', value: 820, source: '' },
     ],
-    baseDurability: 620,
+    baseDurability: 930,
     tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });
@@ -1960,7 +1960,7 @@ defineItem({
         { attribute: 'atk', op: 'add', value: 215, source: '' },
         { attribute: 'armorPen', op: 'add', value: 55, source: '' },
     ],
-    baseDurability: 555,
+    baseDurability: 833,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_METAL],
     onBasicAttackHit: ({ target }) => {
         const effect = StatusEffectType.fromKey('bleeding');
@@ -1983,7 +1983,7 @@ defineItem({
         { attribute: 'critRate', op: 'add', value: 0.1, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.52, source: '' },
     ],
-    baseDurability: 525,
+    baseDurability: 788,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
 });
@@ -1998,7 +1998,7 @@ defineItem({
         { attribute: 'armorPen', op: 'add', value: 62, source: '' },
         { attribute: 'critDmg', op: 'add', value: 0.3, source: '' },
     ],
-    baseDurability: 485,
+    baseDurability: 728,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL],
     onBasicAttackHit: ({ target }) => {
         const effect = StatusEffectType.fromKey('curse');
@@ -2027,7 +2027,7 @@ defineItem({
         { attribute: 'mentalityRegen', op: 'add', value: 11, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.55, source: '' },
     ],
-    baseDurability: 570,
+    baseDurability: 855,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_DARK],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
 });
@@ -2042,7 +2042,7 @@ defineItem({
         { attribute: 'magicDef', op: 'add', value: 75, source: '' },
         { attribute: 'maxLife', op: 'add', value: 950, source: '' },
     ],
-    baseDurability: 660,
+    baseDurability: 990,
     tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });
@@ -2146,7 +2146,7 @@ for (const template of forgedTemplates) defineItem({
     onUse: null,
     equipSlot: template.slot,
     modifiers: null,
-    baseDurability: 100,
+    baseDurability: 150,
     tags: [
         template.kind === 'armor' ? GameTags.ITEM_ARMOR : template.kind === 'tool' ? GameTags.ITEM_TOOL : GameTags.ITEM_WEAPON,
         GameTags.ITEM_FORGED,
@@ -2185,7 +2185,7 @@ for (const component of [
     onUse: null,
     equipSlot: null,
     modifiers: null,
-    baseDurability: 100,
+    baseDurability: 150,
     tags: [GameTags.ITEM_CRAFTING_COMPONENT, GameTags.ITEM_FORGED],
     balance: { role: ItemBalanceRole.UTILITY },
 });
@@ -2207,7 +2207,7 @@ defineItem({
     onUse: null,
     equipSlot: 'mainHand',
     modifiers: null,
-    baseDurability: 100,
+    baseDurability: 150,
     tags: [GameTags.ITEM_WEAPON, GameTags.ITEM_FORGED, GameTags.WEAPON_STAFF],
     balance: {
         role: ItemBalanceRole.WEAPON,
@@ -2233,7 +2233,7 @@ defineItem({
     onUse: null,
     equipSlot: 'mainHand',
     modifiers: null,
-    baseDurability: 100,
+    baseDurability: 150,
     tags: [GameTags.ITEM_WEAPON, GameTags.ITEM_FORGED, GameTags.WEAPON_BOW],
     balance: {
         role: ItemBalanceRole.WEAPON,
@@ -2296,7 +2296,7 @@ defineItem({
         { attribute: 'fishingNetSpeed', op: 'add', value: 8, source: '' },
         { attribute: 'fishingGaugeStart', op: 'add', value: 0.08, source: '' },
     ],
-    baseDurability: 120,
+    baseDurability: 180,
     tags: [GameTags.ITEM_TOOL, GameTags.TOOL_FISHING, GameTags.MATERIAL_WOOD],
 });
 
@@ -2319,7 +2319,7 @@ defineItem({
         { attribute: 'fishingNetSpeed', op: 'add', value: 16, source: '' },
         { attribute: 'fishingGaugeStart', op: 'add', value: 0.1, source: '' },
     ],
-    baseDurability: 260,
+    baseDurability: 390,
     tags: [GameTags.ITEM_TOOL, GameTags.TOOL_FISHING, GameTags.MATERIAL_IRON],
 });
 
@@ -2341,7 +2341,7 @@ defineItem({
         { attribute: 'fishingNetSize', op: 'add', value: 20, source: '' },
         { attribute: 'fishingNetSpeed', op: 'add', value: -6, source: '' },
     ],
-    baseDurability: 180,
+    baseDurability: 270,
     tags: [GameTags.ITEM_TOOL, GameTags.TOOL_FISHING, GameTags.MATERIAL_WOOD],
 });
 
@@ -2363,7 +2363,7 @@ defineItem({
         { attribute: 'fishingNetSize', op: 'add', value: -4, source: '' },
         { attribute: 'fishingNetSpeed', op: 'add', value: 46, source: '' },
     ],
-    baseDurability: 160,
+    baseDurability: 240,
     tags: [GameTags.ITEM_TOOL, GameTags.TOOL_FISHING, GameTags.MATERIAL_IRON],
 });
 
@@ -2487,7 +2487,7 @@ defineItem({
         { attribute: 'armorPen', op: 'add', value: 76, source: '' },
         { attribute: 'critDmg', op: 'add', value: 0.24, source: '' },
     ],
-    baseDurability: 680,
+    baseDurability: 1020,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_METAL],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
 });
@@ -2506,7 +2506,7 @@ defineItem({
         { attribute: 'critRate', op: 'add', value: 0.12, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.68, source: '' },
     ],
-    baseDurability: 640,
+    baseDurability: 960,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_LIGHT],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
 });
@@ -2522,7 +2522,7 @@ defineItem({
         { attribute: 'critDmg', op: 'add', value: 0.38, source: '' },
         { attribute: 'speed', op: 'add', value: 0.18, source: '' },
     ],
-    baseDurability: 585,
+    baseDurability: 878,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_DARK],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
 });
@@ -2547,7 +2547,7 @@ defineItem({
         { attribute: 'mentalityRegen', op: 'add', value: 14, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.72, source: '' },
     ],
-    baseDurability: 700,
+    baseDurability: 1050,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
 });
@@ -2562,7 +2562,7 @@ defineItem({
         { attribute: 'magicDef', op: 'add', value: 98, source: '' },
         { attribute: 'maxLife', op: 'add', value: 1_280, source: '' },
     ],
-    baseDurability: 790,
+    baseDurability: 1185,
     tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });
@@ -2662,7 +2662,7 @@ defineItem({
         { attribute: 'armorPen', op: 'add', value: 88, source: '' },
         { attribute: 'attackSpeed', op: 'multiply', value: 1.12, source: '' },
     ],
-    baseDurability: 735,
+    baseDurability: 1103,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
 });
@@ -2681,7 +2681,7 @@ defineItem({
         { attribute: 'critRate', op: 'add', value: 0.14, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.82, source: '' },
     ],
-    baseDurability: 700,
+    baseDurability: 1050,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
 });
@@ -2697,7 +2697,7 @@ defineItem({
         { attribute: 'critDmg', op: 'add', value: 0.44, source: '' },
         { attribute: 'speed', op: 'add', value: 0.21, source: '' },
     ],
-    baseDurability: 640,
+    baseDurability: 960,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_DARK],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
 });
@@ -2722,7 +2722,7 @@ defineItem({
         { attribute: 'mentalityRegen', op: 'add', value: 16, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.88, source: '' },
     ],
-    baseDurability: 755,
+    baseDurability: 1133,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
 });
@@ -2737,7 +2737,7 @@ defineItem({
         { attribute: 'magicDef', op: 'add', value: 114, source: '' },
         { attribute: 'maxLife', op: 'add', value: 1_520, source: '' },
     ],
-    baseDurability: 850,
+    baseDurability: 1275,
     tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });
@@ -2832,7 +2832,7 @@ defineItem({
         { attribute: 'armorPen', op: 'add', value: 104, source: '' },
         { attribute: 'critDmg', op: 'add', value: 0.32, source: '' },
     ],
-    baseDurability: 810,
+    baseDurability: 1215,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_METAL, GameTags.PROPERTY_EARTH],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
 });
@@ -2851,7 +2851,7 @@ defineItem({
         { attribute: 'critRate', op: 'add', value: 0.15, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 2.02, source: '' },
     ],
-    baseDurability: 770,
+    baseDurability: 1155,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
 });
@@ -2867,7 +2867,7 @@ defineItem({
         { attribute: 'critDmg', op: 'add', value: 0.5, source: '' },
         { attribute: 'speed', op: 'add', value: 0.24, source: '' },
     ],
-    baseDurability: 705,
+    baseDurability: 1058,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
 });
@@ -2892,7 +2892,7 @@ defineItem({
         { attribute: 'mentalityRegen', op: 'add', value: 19, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 2.08, source: '' },
     ],
-    baseDurability: 825,
+    baseDurability: 1238,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY],
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
 });
@@ -2908,7 +2908,7 @@ defineItem({
         { attribute: 'maxLife', op: 'add', value: 1_820, source: '' },
         { attribute: 'lifeRegen', op: 'add', value: 8, source: '' },
     ],
-    baseDurability: 930,
+    baseDurability: 1395,
     tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_EARTH],
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });

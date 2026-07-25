@@ -32,7 +32,7 @@ function tick(): void {
     tradeManager.update(players);
 
     updateProjectiles(dt);
-    updateLocations(dt);
+    updateLocations(dt, players);
     updateAllShops(dt);
     tickCoroutines(dt);
     updateNpcDialogues();

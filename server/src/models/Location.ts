@@ -94,6 +94,7 @@ export default class Location implements TagReadable {
     }
 
     get riskPolicy(): RegionRiskPolicy { return RegionRiskPolicy.require(this.data.zoneType); }
+    get isBossRoom(): boolean { return this.hasTag(GameTags.LOCATION_BOSS_ROOM); }
 
     // -- 월드 오브젝트 관리 --
 
@@ -150,6 +151,18 @@ export default class Location implements TagReadable {
     getMonstersByDataId(monsterDataId: string): readonly Monster[] {
         return this._objects.filter((object): object is Monster => object instanceof Monster
             && object.monsterDataId === monsterDataId);
+    }
+
+    /** 보스방 선공과 보조 오브젝트 교전을 raw 오브젝트 배열 없이 시작한다. */
+    engageBosses(intruder: Entity): number {
+        if (!this.isBossRoom || intruder.isDefeated || intruder.locationId !== this.id) return 0;
+        let engaged = 0;
+        for (const object of this._objects) {
+            if (object instanceof Monster
+                && object.hasTag(GameTags.ENTITY_BOSS)
+                && object.engageIntruder(intruder)) engaged++;
+        }
+        return engaged;
     }
 
     getFirstMonsterObjectNumber(includeDefeated = false): number | undefined {
@@ -241,6 +254,20 @@ export default class Location implements TagReadable {
         }
     }
 
+    /** 전리품 지급 실패 시 기본 상태의 아이템을 현재 장소 바닥에 보존한다. */
+    addDroppedItemData(itemDataId: string, count: number): boolean {
+        const data = getItemData(itemDataId);
+        if (!data || !Number.isSafeInteger(count) || count <= 0) return false;
+        this.addDroppedItem({
+            itemDataId,
+            count,
+            durability: data.baseDurability,
+            metadataDelta: null,
+            tags: [],
+        });
+        return true;
+    }
+
     pickupItem(index: number, count?: number): DroppedItem | null {
         if (index < 0 || index >= this._droppedItems.length) return null;
         const item = this._droppedItems[index];
@@ -321,7 +348,13 @@ export default class Location implements TagReadable {
 
     // -- 게임 루프 --
 
-    update(dt: number): void {
+    update(dt: number, onlinePlayers: readonly Player[] = []): void {
+        if (this.isBossRoom) {
+            for (const player of onlinePlayers) {
+                if (player.locationId === this.id && !player.isDefeated) this.engageBosses(player);
+            }
+        }
+
         // 모든 월드 오브젝트 업데이트 (스냅샷으로 순회 — 도중 제거 방지)
         for (const object of [...this._objects]) {
             object.earlyUpdate(dt);

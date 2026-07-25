@@ -193,6 +193,24 @@ test('소유 중인 아이템 내구도가 0이 되면 인벤토리 또는 장�
     assert.equal(attribute.get(AttributeType.ATK), 10);
 });
 
+test('직접 피격용 방어구 내구도 API는 방어 슬롯만 감소시키고 파괴 장비를 반환한다', () => {
+    defineItem({ ...itemData('test_armor_head', undefined, null, 2), equipSlot: 'head' });
+    defineItem({ ...itemData('test_armor_body', undefined, null, 1), equipSlot: 'body' });
+    defineItem({ ...itemData('test_armor_accessory', undefined, null, 2), equipSlot: 'accessory' });
+    const equipment = Equipment.createEmpty();
+    const attribute = new Attribute({});
+    equipment.equip('head', new Item('test_armor_head', 1, 2, null), attribute);
+    equipment.equip('body', new Item('test_armor_body', 1, 1, null), attribute);
+    equipment.equip('accessory', new Item('test_armor_accessory', 1, 2, null), attribute);
+
+    const broken = equipment.damageArmorDurability();
+
+    assert.deepEqual(broken.map(item => item.itemDataId), ['test_armor_body']);
+    assert.equal(equipment.getEquipped('head')?.durability, 1);
+    assert.equal(equipment.getEquipped('body'), undefined);
+    assert.equal(equipment.getEquipped('accessory')?.durability, 2);
+});
+
 test('스택형 미끼는 묶음 전체를 장착하고 사용할 때마다 한 개씩 소비한다', () => {
     defineItem({
         ...itemData('test_bait_stack'),

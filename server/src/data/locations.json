@@ -252,7 +252,7 @@
     "x": 415,
     "y": 35,
     "z": -32,
-    "tags": ["location:wilderness", "location:forest", "property:insect", "property:poison"],
+    "tags": ["location:wilderness", "location:boss_room", "location:forest", "property:insect", "property:poison"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "silverweb_spider_queen", "maxCount": 1, "respawnTime": 480 },
@@ -459,7 +459,7 @@
     "x": 765,
     "y": 15,
     "z": 48,
-    "tags": ["location:wilderness", "location:volcanic", "property:fire"],
+    "tags": ["location:wilderness", "location:boss_room", "location:volcanic", "property:fire"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "caldera_beast", "maxCount": 1, "respawnTime": 150 }
@@ -656,7 +656,7 @@
     "x": 5,
     "y": -610,
     "z": -165,
-    "tags": ["location:wilderness", "location:mine", "property:ice", "material:diamond"],
+    "tags": ["location:wilderness", "location:boss_room", "location:mine", "property:ice", "material:diamond"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "crystal_vein_overlord", "maxCount": 1, "respawnTime": 600 },
@@ -754,7 +754,7 @@
     "x": 1010,
     "y": -90,
     "z": 130,
-    "tags": ["location:wilderness", "location:storm", "property:electric", "property:metal"],
+    "tags": ["location:wilderness", "location:boss_room", "location:storm", "property:electric", "property:metal"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "thunder_colossus", "maxCount": 1, "respawnTime": 300 },
@@ -813,7 +813,7 @@
     "x": 1210,
     "y": 120,
     "z": 60,
-    "tags": ["location:wilderness", "location:forest", "property:dark", "property:natural"],
+    "tags": ["location:wilderness", "location:boss_room", "location:forest", "property:dark", "property:natural"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "nightwood_core", "maxCount": 1, "respawnTime": 360 }
@@ -868,7 +868,7 @@
     "x": 1440,
     "y": -70,
     "z": 110,
-    "tags": ["location:wilderness", "location:sanctum", "property:light", "property:holy"],
+    "tags": ["location:wilderness", "location:boss_room", "location:sanctum", "property:light", "property:holy"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "halo_beast", "maxCount": 1, "respawnTime": 420 },
@@ -968,7 +968,7 @@
     "x": 1750,
     "y": 0,
     "z": -60,
-    "tags": ["location:wilderness", "location:dungeon", "property:undead", "property:stone"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "property:undead", "property:stone"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "deathless_colossus", "maxCount": 1, "respawnTime": 480 },
@@ -1123,7 +1123,7 @@
     "x": 2040,
     "y": -135,
     "z": -145,
-    "tags": ["location:wilderness", "location:wastes", "location:dungeon", "property:earth", "property:metal"],
+    "tags": ["location:wilderness", "location:wastes", "location:dungeon", "location:boss_room", "property:earth", "property:metal"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "ironroot_heartwarden", "maxCount": 1, "respawnTime": 900 },
@@ -1180,7 +1180,7 @@
     "x": 2210,
     "y": 0,
     "z": 80,
-    "tags": ["location:wilderness", "location:rift", "property:light", "property:dark"],
+    "tags": ["location:wilderness", "location:boss_room", "location:rift", "property:light", "property:dark"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "astral_gatekeeper", "maxCount": 1, "respawnTime": 900 },
@@ -1320,7 +1320,7 @@
     "x": 805,
     "y": 275,
     "z": -82,
-    "tags": ["location:wilderness", "location:tomb", "location:dungeon", "property:undead", "property:dark"],
+    "tags": ["location:wilderness", "location:tomb", "location:dungeon", "location:boss_room", "property:undead", "property:dark"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "hollow_skeleton_king", "maxCount": 1, "respawnTime": 480 },
@@ -1340,7 +1340,7 @@
     "x": 805,
     "y": 395,
     "z": -86,
-    "tags": ["location:wilderness", "location:tomb", "location:dungeon", "property:undead", "property:metal", "property:dark"],
+    "tags": ["location:wilderness", "location:tomb", "location:dungeon", "location:boss_room", "property:undead", "property:metal", "property:dark"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "oathbreaker_knight", "maxCount": 2, "respawnTime": 90 },
@@ -1542,7 +1542,7 @@
     "x": 1470,
     "y": -175,
     "z": 40,
-    "tags": ["location:wilderness", "location:desert", "location:dungeon", "property:fire", "property:light", "property:stone"],
+    "tags": ["location:wilderness", "location:desert", "location:dungeon", "location:boss_room", "property:fire", "property:light", "property:stone"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "solar_vault_sentinel", "maxCount": 2, "respawnTime": 105 },
@@ -1802,7 +1802,7 @@
     "x": 1940,
     "y": 325,
     "z": -8,
-    "tags": ["location:wilderness", "location:dungeon", "location:frozen", "property:ice", "property:light"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:frozen", "property:ice", "property:light"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "frostglass_queen", "maxCount": 1, "respawnTime": 780 },
@@ -2224,7 +2224,7 @@
     "x": 2750,
     "y": 425,
     "z": -145,
-    "tags": ["location:wilderness", "location:coast", "location:submerged", "location:dungeon", "property:water", "property:metal", "property:undead"],
+    "tags": ["location:wilderness", "location:coast", "location:submerged", "location:dungeon", "location:boss_room", "property:water", "property:metal", "property:undead"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "drowned_admiral", "maxCount": 1, "respawnTime": 960 },
@@ -2427,7 +2427,7 @@
     "x": 2680,
     "y": -30,
     "z": -5,
-    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:metal", "property:electric"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:clockwork", "property:metal", "property:electric"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "chronosteel_colossus", "maxCount": 1, "respawnTime": 1020 },
@@ -2651,7 +2651,7 @@
     "x": 3000,
     "y": -75,
     "z": -115,
-    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:light", "property:dark", "property:metal"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:clockwork", "property:light", "property:dark", "property:metal"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "paradox_architect", "maxCount": 1, "respawnTime": 1200 },
@@ -2820,7 +2820,7 @@
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 3340, "y": -205, "z": -185,
-    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:fire", "property:dark"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:ashen_abyss", "property:fire", "property:dark"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "three_maw_gatekeeper", "maxCount": 1, "respawnTime": 1080 }
@@ -2984,7 +2984,7 @@
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 3750, "y": -205, "z": -295,
-    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:fire", "property:metal", "property:dark"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:ashen_abyss", "property:fire", "property:metal", "property:dark"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "blackflame_general", "maxCount": 1, "respawnTime": 1260 }
@@ -3130,7 +3130,7 @@
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 4160, "y": -205, "z": -430,
-    "tags": ["location:wilderness", "location:dungeon", "location:ashen_abyss", "property:fire", "property:dark", "property:undead"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:ashen_abyss", "property:fire", "property:dark", "property:undead"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "ashen_sovereign", "maxCount": 1, "respawnTime": 1500 },
@@ -3269,7 +3269,7 @@
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 4560, "y": -205, "z": -500,
-    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:voidcrown", "property:metal", "property:dark"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "crownless_castellan", "maxCount": 1, "respawnTime": 1500 },
@@ -3586,7 +3586,7 @@
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 5360, "y": -285, "z": -750,
-    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark", "property:light"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:voidcrown", "property:metal", "property:dark", "property:light"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "voidcrown_regent", "maxCount": 1, "respawnTime": 1800 },
@@ -3724,7 +3724,7 @@
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 5790, "y": -285, "z": -940,
-    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:dark"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:eclipse-trench", "property:water", "property:dark"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "moon_tide_leviathan", "maxCount": 1, "respawnTime": 1500 },
@@ -4010,7 +4010,7 @@
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 6710, "y": -285, "z": -1340,
-    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:light", "property:dark"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:eclipse-trench", "property:water", "property:light", "property:dark"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "white_night_hierophant", "maxCount": 1, "respawnTime": 1800 },
@@ -4149,7 +4149,7 @@
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 7230, "y": -285, "z": -1550,
-    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:earth", "property:poison"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:worldroot", "property:natural", "property:earth", "property:poison"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "inverse_root_devourer", "maxCount": 1, "respawnTime": 1800 }
@@ -4431,7 +4431,7 @@
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 8270, "y": -285, "z": -2030,
-    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:holy", "property:dark"],
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:worldroot", "property:natural", "property:holy", "property:dark"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "primordial_heart_arbor", "maxCount": 1, "respawnTime": 2100 },

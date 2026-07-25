@@ -237,14 +237,22 @@ test('온라인 플레이어 mention 검색은 본인을 제외하고 닉네임 
     const players = [
         { userId: 9711, name: 'Alpha', level: 10 },
         { userId: 9712, name: 'alpine', level: 20 },
-        { userId: 9713, name: 'Beta', level: 30 },
-    ] as Player[];
+        {
+            userId: 9713,
+            name: 'Altar',
+            level: 30,
+            rankingVisibility: { isPublic: () => false },
+        },
+    ] as unknown as Player[];
     for (const player of players) registerOnlinePlayer(player);
     try {
         assert.deepEqual(searchOnlinePlayerIdentitySnapshots('al', 9711), [{
             userId: 9712,
             nickname: 'alpine',
             level: 20,
+        }, {
+            userId: 9713,
+            nickname: 'Altar',
         }]);
     } finally {
         for (const player of players) unregisterOnlinePlayer(player.userId);

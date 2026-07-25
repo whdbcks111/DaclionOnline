@@ -8,7 +8,8 @@
 - `data/items.ts`가 `defineItem()`으로 마스터 데이터를 프로세스 레지스트리에 등록한다.
 - DB `Item`과 런타임 `Item` 객체는 플레이어가 실제 보유한 수량·내구도와 인스턴스 metadata delta를 표현한다.
 - 장착된 항목은 DB `Equipment`와 런타임 `Equipment` 슬롯 맵에 별도로 존재한다.
-- 주무기를 소모하는 공격으로 내구도가 0이 되면 장비와 modifier를 즉시 제거하고, 파괴된 인스턴스 이름을 본인 채팅 메시지와 notification에 함께 표시한다.
+- 주무기를 소모하는 공격과 직접 피격으로 각각 무기·머리/몸통/다리/발 방어구 내구도가 감소한다. 내구도가 0이 되면 장비와 modifier를 즉시 제거하고, 파괴된 인스턴스 이름을 본인 채팅 메시지와 notification에 함께 표시한다.
+- 내구도가 있는 마스터 아이템의 최대 내구도는 이전 수치 대비 1.5배로 조정한다. 기존 인스턴스의 현재 내구도는 임의로 회복하지 않으며 새 최대값까지만 수리할 수 있다.
 
 - Item 인스턴스의 추가 태그는 DB JSON에 저장되며 정의 태그와 합쳐 조회한다.
 - 인벤토리↔장비↔바닥 이동은 `ItemSnapshot`으로 metadata delta, 내구도, 영속 태그를 보존한다. 스택도 이 값이 모두 같을 때만 합쳐진다.
@@ -64,7 +65,7 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 - 제거: `removeItem`, `removeItemByData`, `removeItemInstance`가 수량 또는 인스턴스를 dirty/deleted 상태로 바꾼다. 발사는 신규 아이템의 임시 DB ID가 겹쳐도 안전한 `removeItemInstance`로 선택한 탄약만 소비한다.
 - 저장: state map의 New/Modified/Deleted 항목을 Prisma create/update/delete로 반영한다.
 
-바닥 아이템은 `Location.getDroppedItems()`의 복사본으로 표시하고 `pickupItem(index, count?)/pickupAllItems`로만 제거한다. `Location.addDroppedItem()`은 정의 ID·내구도·metadata delta·영속 태그가 같은 stackable 아이템을 `maxStack`까지 합치고 초과분만 새 스택으로 나눈다. `/버리기 <슬롯> [개수]`는 기본 1개를 버리며 선택한 인스턴스의 실제 수량을 검증한다. `/줍기 <번호> [개수]`는 개수를 생략하면 해당 스택 전체를, 지정하면 그 수량만 분리해 옮긴다. 전체 줍기는 모든 스택의 중량을 먼저 검사하므로 하나라도 받을 수 없는 경우 바닥 상태를 변경하지 않는다.
+바닥 아이템은 `Location.getDroppedItems()`의 복사본으로 표시하고 `pickupItem(index, count?)/pickupAllItems`로만 제거한다. `Location.addDroppedItem()`은 정의 ID·내구도·metadata delta·영속 태그가 같은 stackable 아이템을 `maxStack`까지 합치고 초과분만 새 스택으로 나눈다. `/버리기 <슬롯> [개수|전체]`는 기본 1개를 버리고, 지정 수량이 보유량을 넘거나 `전체`이면 해당 인스턴스를 전부 버린다. `/줍기 <번호> [개수]`는 개수를 생략하면 해당 스택 전체를, 지정하면 그 수량만 분리해 옮긴다. 전체 줍기는 모든 스택의 중량을 먼저 검사하므로 하나라도 받을 수 없는 경우 바닥 상태를 변경하지 않는다. 몬스터·파괴 가능한 자원 전리품은 `Player.receiveLoot()`로 먼저 인벤토리에 지급하고 중량이 부족하면 `Location.addDroppedItemData()`로 현재 장소에 보존한다.
 
 `/인벤토리` 목록과 `/상태창`의 장착 정보는 이름 앞에 `Item.image` 아이콘을 표시한다. 인벤토리 현재/최대 중량과 `/감정`의 아이템 단위·합계 중량은 최대 소수 둘째 자리의 `kg` 단위로 표시한다. 내구도가 있는 아이템은 이름 오른쪽에 `em` 길이의 짧은 progress와 현재/최대값 tooltip을 추가한다. progress 색은 50% 초과 초록, 20% 초과~50% 금색, 20% 이하 빨강이며 존재하지 않는 이미지 에셋은 숨겨진다.
 

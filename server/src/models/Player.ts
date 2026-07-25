@@ -99,6 +99,8 @@ export interface PlayerLevelAdjustmentResult {
     readonly statDeltas: Readonly<StatRecord>;
 }
 
+export type LootReceiveDestination = 'inventory' | 'ground' | 'failed';
+
 interface PlayerLevelAdjustmentPlan extends PlayerLevelAdjustmentResult {
     readonly stats: Readonly<StatRecord>;
     readonly statPoint: number;
@@ -625,6 +627,12 @@ export default class Player extends Entity {
             inventory: this.inventory,
         })) return;
         this.attack(target);
+    }
+
+    /** 전리품을 인벤토리에 넣고, 중량 초과 시 소멸시키지 않고 현재 장소 바닥에 둔다. */
+    receiveLoot(itemDataId: string, count: number): LootReceiveDestination {
+        if (this.inventory.addItem(itemDataId, count)) return 'inventory';
+        return getLocation(this.locationId)?.addDroppedItemData(itemDataId, count) ? 'ground' : 'failed';
     }
 
     /** 인벤토리 아이템을 장착하고 밀려난 장비는 다시 인벤토리로 돌려보낸다. */

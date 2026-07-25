@@ -720,6 +720,24 @@ export default abstract class Entity implements TagReadable {
         const remainingLife = this.life;
 
         if (cause) this.lastDamageCause = cause;
+        if (cause?.type === 'attack' && finalDamage > 0) {
+            const brokenArmor = this.equipment.damageArmorDurability();
+            const userId = this.playerUserId;
+            if (userId !== undefined) {
+                for (const armor of brokenArmor) {
+                    const message = `${armor.name}의 내구도가 다해 파괴되었습니다.`;
+                    sendBotMessageToUser(userId, chat()
+                        .color('red', builder => builder.weight('bold', nested => nested.text('[ 장비 파괴 ]')))
+                        .text(`\n${message}`)
+                        .build());
+                    sendNotificationToUser(userId, {
+                        key: `item-broken:${armor.itemDataId}`,
+                        message,
+                        length: 3000,
+                    });
+                }
+            }
+        }
 
         return {
             type,

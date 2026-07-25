@@ -18,6 +18,24 @@ async function unloadPlayerByUserId(userId: number) {
 }
 
 const sessionMap = new Map<string, Session>()
+export const NICKNAME_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+/** 일반 계정의 닉네임 변경까지 남은 시간을 반환한다. 권한 10 이상은 제한하지 않는다. */
+export function getNicknameChangeCooldownRemaining(
+    changedAt: Date | null | undefined,
+    permission: number,
+    now = Date.now(),
+): number {
+    if (permission >= 10 || !changedAt) return 0;
+    return Math.max(0, changedAt.getTime() + NICKNAME_CHANGE_COOLDOWN_MS - now);
+}
+
+function formatNicknameCooldown(remainingMs: number): string {
+    const totalMinutes = Math.max(1, Math.ceil(remainingMs / 60_000));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours > 0 ? `${hours}시간 ` : ''}${minutes}분`;
+}
 
 // 유저별 세션 카운트: userId -> Set<sessionToken> (다중 로그인 지원)
 const userSessions = new Map<number, Set<string>>()
@@ -218,6 +236,28 @@ export const initLogin = () => {
                 }
 
                 const trimmed = newNickname.trim();
+                const currentUser = await prisma.user.findUnique({
+                    where: { id: session.userId },
+                    select: { nickname: true, nicknameChangedAt: true, permission: true },
+                });
+                if (!currentUser) {
+                    socket.emit('nicknameResult', { error: '계정 정보를 찾을 수 없습니다.' });
+                    return;
+                }
+                if (currentUser.nickname === trimmed) {
+                    socket.emit('nicknameResult', { ok: true, nickname: trimmed });
+                    return;
+                }
+                const cooldownRemaining = getNicknameChangeCooldownRemaining(
+                    currentUser.nicknameChangedAt,
+                    currentUser.permission,
+                );
+                if (cooldownRemaining > 0) {
+                    socket.emit('nicknameResult', {
+                        error: `닉네임은 24시간에 한 번 변경할 수 있습니다. (${formatNicknameCooldown(cooldownRemaining)} 후 가능)`,
+                    });
+                    return;
+                }
 
                 // 중복 검사
                 const existing = await prisma.user.findUnique({ where: { nickname: trimmed }, select: { id: true } });
@@ -226,7 +266,30 @@ export const initLogin = () => {
                     return;
                 }
 
-                await prisma.user.update({ where: { id: session.userId }, data: { nickname: trimmed } });
+                const changedAt = new Date();
+                if (currentUser.permission >= 10) {
+                    await prisma.user.update({
+                        where: { id: session.userId },
+                        data: { nickname: trimmed, nicknameChangedAt: changedAt },
+                    });
+                } else {
+                    const result = await prisma.user.updateMany({
+                        where: {
+                            id: session.userId,
+                            OR: [
+                                { nicknameChangedAt: null },
+                                { nicknameChangedAt: { lte: new Date(changedAt.getTime() - NICKNAME_CHANGE_COOLDOWN_MS) } },
+                            ],
+                        },
+                        data: { nickname: trimmed, nicknameChangedAt: changedAt },
+                    });
+                    if (result.count !== 1) {
+                        socket.emit('nicknameResult', {
+                            error: '다른 창에서 닉네임이 변경되었습니다. 24시간 후 다시 시도해주세요.',
+                        });
+                        return;
+                    }
+                }
                 const player = await loadPlayerByUserId(session.userId);
                 player.name = trimmed;
 

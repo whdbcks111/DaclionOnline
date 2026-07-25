@@ -132,6 +132,25 @@ export class ThreatTable {
         return this.entries.has(entity.attackOwner);
     }
 
+    /** 교전 선점자가 아직 같은 장소에서 유효한 위협도 참여자인지 확인한다. */
+    hasActiveParticipantUserIds(userIds: ReadonlySet<number>): boolean {
+        for (const entry of this.entries.values()) {
+            const actor = entry.actor.attackOwner;
+            const userId = actor.playerUserId;
+            if (userId !== undefined && userIds.has(userId)
+                && !actor.isDefeated && actor.locationId === this.owner.locationId) return true;
+        }
+        return false;
+    }
+
+    /** 선점 확정 시 해당 플레이어·파티 외 플레이어 위협도만 제거한다. */
+    retainPlayerUserIds(userIds: ReadonlySet<number>): void {
+        for (const [actor, entry] of this.entries) {
+            const userId = entry.actor.attackOwner.playerUserId;
+            if (userId !== undefined && !userIds.has(userId)) this.entries.delete(actor);
+        }
+    }
+
     update(dt: number): void {
         const decay = Math.max(0, 1 - this.profile.decayPerSecond * dt);
         for (const [actor, entry] of this.entries) {

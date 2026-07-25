@@ -1,0 +1,74 @@
+@use '../styles/variables' as *;
+@use '../styles/themes' as *;
+
+.content {
+  display: grid;
+  gap: $spacing-md;
+
+  p {
+    margin: 0;
+    color: $color-text-secondary;
+    line-height: 1.55;
+  }
+}
+
+.value {
+  color: $color-primary;
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-weight: 800;
+  text-align: center;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: center;
+  gap: $spacing-sm;
+
+  input {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    accent-color: $color-primary;
+  }
+}
+
+.stepButton,
+.primaryButton,
+.secondaryButton {
+  min-height: 2.5rem;
+  margin: 0;
+  border: 1px solid $color-border;
+  border-radius: $border-radius-md;
+  color: $color-text;
+  background: $color-bg-secondary;
+  font: inherit;
+  font-weight: 700;
+}
+
+.stepButton {
+  padding: 0;
+  font-size: 1.3rem;
+
+  &:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+  }
+}
+
+.primaryButton {
+  color: $color-text-inverse;
+  background: $color-primary;
+  border-color: $color-primary;
+}
+
+.secondaryButton {
+  background: $color-bg-tertiary;
+}
+
+.rangeLabels {
+  display: flex;
+  justify-content: space-between;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}
