@@ -7,7 +7,7 @@ import { GameTags } from '../../../shared/tags.js';
 registerResourceInteraction('inspect_ore', (resource, player) => {
     sendNotificationToUser(player.userId, {
         key: `resource:${resource.resourceDataId}`,
-        message: '단단한 광맥이다. 채굴 속성이 있는 도구로 공격하면 캘 수 있을 것 같다.',
+        message: `경도 ${resource.miningHardness.toFixed(0)}의 광맥이다. 어떤 공격으로도 캘 수 있지만 채굴력이 높을수록 피해 효율이 좋아진다.`,
     });
 });
 
@@ -553,7 +553,6 @@ defineResource({
         magicDef: 0,
         speed: 0,
     },
-    requiredToolTags: [],
     drops: [],
     expReward: { min: 0, max: 0 },
     interaction: 'inspect_tutorial_training_dummy',
@@ -568,7 +567,7 @@ defineResource({
         maxLife: 45,
         def: 3,
     },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 20,
     drops: [
         { itemDataId: 'stone', weight: 50, minCount: 1, maxCount: 1 },
         { itemDataId: 'coal', weight: 25, minCount: 1, maxCount: 1 },
@@ -591,7 +590,7 @@ defineResource({
         maxLife: 180,
         def: 18,
     },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 40,
     drops: [
         { itemDataId: 'stone', weight: 24, minCount: 2, maxCount: 4 },
         { itemDataId: 'coal', weight: 24, minCount: 1, maxCount: 3 },
@@ -615,7 +614,7 @@ defineResource({
         def: 34,
         magicDef: 24,
     },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 65,
     drops: [
         { itemDataId: 'iron_ore', weight: 22, minCount: 2, maxCount: 4 },
         { itemDataId: 'gold_ore', weight: 24, minCount: 1, maxCount: 3 },
@@ -637,7 +636,7 @@ defineResource({
         def: 62,
         magicDef: 48,
     },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 90,
     drops: [
         { itemDataId: 'ember_ore', weight: 100, minCount: 1, maxCount: 2 },
     ],
@@ -654,7 +653,6 @@ defineResource({
     name: '낡은 보물상자',
     level: 1,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [],
     drops: [],
     expReward: { min: 0, max: 0 },
     interaction: 'open_treasure_chest',
@@ -668,7 +666,6 @@ defineResource({
     name: '왕명을 새긴 석문',
     level: 40,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [],
     drops: [],
     expReward: { min: 0, max: 0 },
     interaction: 'twilight_tomb_riddle',
@@ -681,7 +678,6 @@ defineResource({
     name: '황혼 왕가의 유물함',
     level: 45,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [],
     drops: [],
     expReward: { min: 0, max: 0 },
     interaction: 'open_twilight_reliquary',
@@ -695,7 +691,7 @@ defineResource({
     name: '굳은 유리모래맥',
     level: 78,
     baseAttribute: { maxLife: 3_800, def: 148, magicDef: 118 },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 150,
     drops: [
         { itemDataId: 'glass_sand', weight: 72, minCount: 2, maxCount: 5 },
         { itemDataId: 'mirage_crystal', weight: 22, minCount: 1, maxCount: 2 },
@@ -711,7 +707,6 @@ defineResource({
     name: '태양거울 기둥',
     level: 104,
     baseAttribute: { maxLife: 5_800, def: 195, magicDef: 145 },
-    requiredToolTags: [],
     drops: [
         { itemDataId: 'sun_glyph_fragment', weight: 65, minCount: 1, maxCount: 2 },
         { itemDataId: 'mirage_crystal', weight: 35, minCount: 1, maxCount: 1 },
@@ -725,7 +720,6 @@ defineResource({
     name: '그림자 없는 해시계',
     level: 84,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [],
     drops: [],
     expReward: { min: 0, max: 0 },
     interaction: 'glassdune_sundial_riddle',
@@ -738,7 +732,6 @@ defineResource({
     name: '태양고 반사경 유물함',
     level: 100,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [],
     drops: [],
     expReward: { min: 0, max: 0 },
     interaction: 'open_glassdune_reliquary',
@@ -752,7 +745,7 @@ defineResource({
     name: '상고 수정맥',
     level: 126,
     baseAttribute: { maxLife: 7_500, def: 260, magicDef: 215 },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 220,
     drops: [
         { itemDataId: 'rime_crystal', weight: 60, minCount: 1, maxCount: 3 },
         { itemDataId: 'frozen_core', weight: 24, minCount: 1, maxCount: 1 },
@@ -768,7 +761,7 @@ defineResource({
     name: '눈솔이끼 군락',
     level: 120,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'harvest_snowmoss', attackable: false,
     interactionCooldown: { min: 35 * 60, max: 55 * 60 },
     tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_RIME, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_ICE],
@@ -779,7 +772,7 @@ defineResource({
     name: '백광 분광대',
     level: 138,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'frostveil_prism_riddle', attackable: false,
     tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_RIME, GameTags.MATERIAL_GLASS, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ICE],
 });
@@ -789,7 +782,7 @@ defineResource({
     name: '빙경궁 왕실 유물함',
     level: 145,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'open_frostveil_reliquary', attackable: false,
     interactionCooldown: { min: 4 * 60 * 60, max: 6 * 60 * 60 },
     tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_LIGHT],
@@ -800,7 +793,7 @@ defineResource({
     name: '흑산호 암초',
     level: 162,
     baseAttribute: { maxLife: 11_500, def: 385, magicDef: 335 },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 280,
     drops: [
         { itemDataId: 'black_coral', weight: 58, minCount: 1, maxCount: 3 },
         { itemDataId: 'mist_salt', weight: 24, minCount: 2, maxCount: 5 },
@@ -816,7 +809,7 @@ defineResource({
     name: '청해초 군락',
     level: 158,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'harvest_kelp_resin', attackable: false,
     interactionCooldown: { min: 40 * 60, max: 60 * 60 },
     tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_NATURAL],
@@ -827,7 +820,7 @@ defineResource({
     name: '멈춘 조류시계',
     level: 170,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'misttide_clock_riddle', attackable: false,
     tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_METAL],
 });
@@ -837,7 +830,7 @@ defineResource({
     name: '침몰왕도 항해 유물함',
     level: 178,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'open_misttide_reliquary', attackable: false,
     interactionCooldown: { min: 5 * 60 * 60, max: 7 * 60 * 60 },
     tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_UNDEAD],
@@ -848,7 +841,6 @@ defineResource({
     name: '오아시스 대추야자나무',
     level: 70,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [],
     drops: [],
     expReward: { min: 0, max: 0 },
     interaction: 'harvest_oasis_palm',
@@ -862,7 +854,6 @@ defineResource({
     name: '은빛그물 알주머니',
     level: 18,
     baseAttribute: { maxLife: 240, def: 18, magicDef: 10 },
-    requiredToolTags: [],
     drops: [
         { itemDataId: 'silverweb_silk', weight: 72, minCount: 1, maxCount: 2 },
         { itemDataId: 'venom_gland', weight: 28, minCount: 1, maxCount: 1 },
@@ -882,7 +873,6 @@ for (const cache of [
     name: cache.name,
     level: 150,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [],
     drops: [],
     expReward: { min: 0, max: 0 },
     interaction: 'open_labyrinth_cache',
@@ -896,7 +886,6 @@ defineResource({
     name: '질문을 새긴 뿌리문',
     level: 155,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [],
     drops: [],
     expReward: { min: 0, max: 0 },
     interaction: 'ironroot_riddle_door',
@@ -909,7 +898,6 @@ defineResource({
     name: '뒤집힌 고리 유물',
     level: 160,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [],
     drops: [],
     expReward: { min: 0, max: 0 },
     interaction: 'ironroot_relay_artifact',
@@ -922,7 +910,6 @@ defineResource({
     name: '녹슨 봉인문',
     level: 165,
     baseAttribute: { maxLife: 18_000, def: 210, magicDef: 95 },
-    requiredToolTags: [],
     drops: [],
     expReward: { min: 3_800, max: 4_600 },
     tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_IRON, GameTags.PROPERTY_EARTH],
@@ -933,7 +920,6 @@ defineResource({
     name: '지핵 공명 수정',
     level: 175,
     baseAttribute: { maxLife: 9_500, def: 85, magicDef: 260 },
-    requiredToolTags: [],
     drops: [],
     expReward: { min: 2_200, max: 3_000 },
     tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_DIAMOND, GameTags.PROPERTY_EARTH],
@@ -944,7 +930,7 @@ defineResource({
     name: '강화 수정맥',
     level: 185,
     baseAttribute: { maxLife: 14_000, def: 130, magicDef: 230 },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 320,
     drops: [{ itemDataId: 'enhancement_stone', weight: 1, minCount: 1, maxCount: 1 }],
     expReward: { min: 3_400, max: 4_600 },
     tags: [
@@ -960,7 +946,7 @@ defineResource({
     name: '시간강 광맥',
     level: 205,
     baseAttribute: { maxLife: 22_000, def: 285, magicDef: 330 },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 350,
     drops: [
         { itemDataId: 'chronosteel_shard', weight: 58, minCount: 2, maxCount: 5 },
         { itemDataId: 'fracture_crystal', weight: 24, minCount: 1, maxCount: 2 },
@@ -979,7 +965,7 @@ defineResource({
     name: '기억 두루마리 장치',
     level: 205,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'harvest_memory_coil', attackable: false,
     interactionCooldown: { min: 50 * 60, max: 80 * 60 },
     tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_METAL],
@@ -990,7 +976,7 @@ defineResource({
     name: '인과율 연산대',
     level: 218,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'paradox_causality_riddle', attackable: false,
     tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
 });
@@ -1000,7 +986,7 @@ defineResource({
     name: '폐기 시제품 보관고',
     level: 225,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'open_paradox_reliquary', attackable: false,
     interactionCooldown: { min: 6 * 60 * 60, max: 8 * 60 * 60 },
     tags: [GameTags.RESOURCE_TREASURE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_DARK],
@@ -1011,7 +997,7 @@ defineResource({
     name: '역설 고정자',
     level: 232,
     baseAttribute: { maxLife: 28_000, def: 360, magicDef: 520 },
-    requiredToolTags: [], drops: [], expReward: { min: 5_200, max: 6_800 },
+    drops: [], expReward: { min: 5_200, max: 6_800 },
     tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
 });
 
@@ -1020,7 +1006,7 @@ defineResource({
     name: '밤쇠 광맥',
     level: 248,
     baseAttribute: { maxLife: 31_000, def: 430, magicDef: 390 },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 410,
     drops: [
         { itemDataId: 'night_iron', weight: 62, minCount: 2, maxCount: 5 },
         { itemDataId: 'blackflame_residue', weight: 22, minCount: 1, maxCount: 3 },
@@ -1039,7 +1025,7 @@ defineResource({
     name: '재왕 인장 제단',
     level: 258,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'ashen_seal_riddle', attackable: false,
     tags: [
         GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ASHEN_ABYSS,
@@ -1052,7 +1038,7 @@ defineResource({
     name: '봉인된 잿왕 유물함',
     level: 265,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'open_ashen_reliquary', attackable: false,
     interactionCooldown: { min: 7 * 60 * 60, max: 10 * 60 * 60 },
     tags: [
@@ -1066,7 +1052,7 @@ defineResource({
     name: '무광은 광맥',
     level: 284,
     baseAttribute: { maxLife: 36_000, def: 485, magicDef: 455 },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 470,
     drops: [
         { itemDataId: 'nullsilver', weight: 58, minCount: 2, maxCount: 5 },
         { itemDataId: 'crown_glass', weight: 22, minCount: 1, maxCount: 3 },
@@ -1085,7 +1071,7 @@ defineResource({
     name: '빈 왕좌의 서약대',
     level: 298,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'voidcrown_oath_riddle', attackable: false,
     tags: [
         GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_VOIDCROWN,
@@ -1098,7 +1084,7 @@ defineResource({
     name: '무성좌 비밀 유물함',
     level: 302,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'open_voidcrown_reliquary', attackable: false,
     interactionCooldown: { min: 8 * 60 * 60, max: 11 * 60 * 60 },
     tags: [
@@ -1112,7 +1098,7 @@ defineResource({
     name: '공허왕관 기둥',
     level: 310,
     baseAttribute: { maxLife: 48_000, def: 620, magicDef: 680 },
-    requiredToolTags: [], drops: [], expReward: { min: 8_000, max: 10_500 },
+    drops: [], expReward: { min: 8_000, max: 10_500 },
     tags: [
         GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_VOIDCROWN,
         GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT,
@@ -1125,7 +1111,7 @@ defineResource({
     name: '침은 광맥',
     level: 319,
     baseAttribute: { maxLife: 42_000, def: 560, magicDef: 520 },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 520,
     drops: [
         { itemDataId: 'drowned_silver', weight: 54, minCount: 2, maxCount: 5 },
         { itemDataId: 'moon_brine', weight: 22, minCount: 1, maxCount: 3 },
@@ -1144,7 +1130,7 @@ defineResource({
     name: '월식 조류제단',
     level: 333,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'eclipse_tide_riddle', attackable: false,
     tags: [
         GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ECLIPSE_TRENCH,
@@ -1157,7 +1143,7 @@ defineResource({
     name: '침수된 월식 유물함',
     level: 337,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'open_eclipse_reliquary', attackable: false,
     interactionCooldown: { min: 8 * 60 * 60, max: 12 * 60 * 60 },
     tags: [
@@ -1171,7 +1157,7 @@ defineResource({
     name: '백야 조류거울',
     level: 345,
     baseAttribute: { maxLife: 55_000, def: 710, magicDef: 760 },
-    requiredToolTags: [], drops: [], expReward: { min: 9_400, max: 12_200 },
+    drops: [], expReward: { min: 9_400, max: 12_200 },
     tags: [
         GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ECLIPSE_TRENCH,
         GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT,
@@ -1184,7 +1170,7 @@ defineResource({
     name: '근골철 광맥',
     level: 354,
     baseAttribute: { maxLife: 48_000, def: 640, magicDef: 590 },
-    requiredToolTags: [GameTags.TOOL_MINING],
+    hardness: 580,
     drops: [
         { itemDataId: 'rootbone_iron', weight: 52, minCount: 2, maxCount: 5 },
         { itemDataId: 'skyroot_bark', weight: 22, minCount: 1, maxCount: 3 },
@@ -1203,7 +1189,7 @@ defineResource({
     name: '첫 기억의 제단',
     level: 368,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'worldroot_memory_riddle', attackable: false,
     tags: [
         GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_WORLDROOT,
@@ -1216,7 +1202,7 @@ defineResource({
     name: '봉인된 기억호박 유물함',
     level: 372,
     baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
-    requiredToolTags: [], drops: [], expReward: { min: 0, max: 0 },
+    drops: [], expReward: { min: 0, max: 0 },
     interaction: 'open_worldroot_reliquary', attackable: false,
     interactionCooldown: { min: 9 * 60 * 60, max: 13 * 60 * 60 },
     tags: [
@@ -1230,7 +1216,7 @@ defineResource({
     name: '태초심장 씨앗',
     level: 380,
     baseAttribute: { maxLife: 64_000, def: 820, magicDef: 870 },
-    requiredToolTags: [], drops: [], expReward: { min: 10_800, max: 14_000 },
+    drops: [], expReward: { min: 10_800, max: 14_000 },
     tags: [
         GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_WORLDROOT,
         GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_HOLY,

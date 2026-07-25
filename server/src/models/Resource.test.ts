@@ -4,7 +4,11 @@ import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import Location from './Location.js';
 import Monster, { defineMonster } from './Monster.js';
-import Resource, { defineResource, registerResourceInteraction } from './Resource.js';
+import Resource, {
+    calculateMiningDamageMultiplier,
+    defineResource,
+    registerResourceInteraction,
+} from './Resource.js';
 import { defineItem, Item } from './Item.js';
 import { GameTags } from '../../../shared/tags.js';
 
@@ -22,7 +26,7 @@ function defineTestResource(id: string): void {
         name: '시험 광석',
         level: 1,
         baseAttribute: { maxLife: 20 },
-        requiredToolTags: [GameTags.TOOL_MINING],
+        hardness: 20,
         drops: [
             { itemDataId: 'test_stone', weight: 50, minCount: 1, maxCount: 1 },
             { itemDataId: 'test_coal', weight: 25, minCount: 1, maxCount: 1 },
@@ -64,7 +68,7 @@ test('자원 경험치는 정의된 최소·최대 범위 안에서 결정된다
     assert.equal(resource.rollExp(() => 0.999999), 7);
 });
 
-test('필수 도구 태그는 주무기에 장착된 아이템 공개 API로 검사한다', () => {
+test('광맥은 무기 제한 없이 공격할 수 있고 마법이 일반 물리 공격보다 경도를 잘 뚫는다', () => {
     defineTestResource('test_tool_resource');
     defineItem({
         id: 'test_pickaxe',
@@ -77,19 +81,39 @@ test('필수 도구 태그는 주무기에 장착된 아이템 공개 API로 검
         baseMetadata: null,
         onUse: null,
         equipSlot: 'mainHand',
-        modifiers: null,
+        modifiers: [{ attribute: 'miningPower', op: 'add', value: 30, source: '' }],
         baseDurability: 10,
         tags: [GameTags.ITEM_TOOL, GameTags.TOOL_MINING],
     });
     const resource = new Resource('test_tool_resource');
     const attacker = new TestEntity();
 
-    assert.ok(resource.getAttackDeniedReason(attacker));
+    assert.equal(resource.getAttackDeniedReason(attacker), undefined);
+    assert.equal(resource.evaluateMiningImpact(attacker, 'physical').multiplier, 0.2);
+    assert.equal(resource.evaluateMiningImpact(attacker, 'magic').multiplier, 0.65);
     assert.equal(
         attacker.equipment.equip('mainHand', new Item('test_pickaxe', 1, 10, null), attacker.attribute),
         true,
     );
-    assert.equal(resource.getAttackDeniedReason(attacker), undefined);
+    assert.equal(resource.evaluateMiningImpact(attacker, 'physical').multiplier, 1.5);
+});
+
+test('공격별 채굴력 override와 광맥 경도는 예측 가능한 채굴 피해 배율을 만든다', () => {
+    assert.equal(calculateMiningDamageMultiplier(0, 0, 'physical'), 1);
+    assert.equal(calculateMiningDamageMultiplier(100, 0, 'physical'), 0.2);
+    assert.equal(calculateMiningDamageMultiplier(100, 0, 'magic'), 0.65);
+    assert.equal(calculateMiningDamageMultiplier(100, 50, 'physical'), 0.7);
+    assert.equal(calculateMiningDamageMultiplier(100, 500, 'physical'), 1.5);
+
+    defineTestResource('test_magic_mining_resource');
+    const resource = new Resource('test_magic_mining_resource');
+    const attacker = new TestEntity();
+    const result = attacker.attack(resource, 'magic', 10, { criticalRate: 0 });
+
+    assert.equal(result?.miningModifier, 0.65);
+    assert.equal(result?.resourceHardness, 20);
+    assert.equal(result?.miningPower, 0);
+    assert.equal(result?.finalDamage, 6.5);
 });
 
 test('Location은 몬스터와 자원을 하나의 오브젝트 API로 제공한다', () => {
@@ -138,7 +162,6 @@ test('등록된 상호작용만 자원을 상호작용 가능 상태로 만든�
         name: '상호작용 자원',
         level: 1,
         baseAttribute: { maxLife: 10 },
-        requiredToolTags: [],
         drops: [],
         expReward: { min: 0, max: 0 },
         interaction: 'test_inspect',
@@ -167,7 +190,6 @@ test('공격 불가 자원은 성공한 상호작용 뒤 정의된 범위의 쿨
         name: '시험 보물상자',
         level: 1,
         baseAttribute: { maxLife: 1 },
-        requiredToolTags: [],
         drops: [],
         expReward: { min: 0, max: 0 },
         interaction: 'test_cooldown_interaction',

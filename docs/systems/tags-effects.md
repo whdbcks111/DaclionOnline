@@ -92,6 +92,6 @@ Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만
 
 대표 데이터로 낡은 검은 `property:fire`, 독 단검은 `property:poison` 아이템 분류를 가지지만 두 태그는 기본 물리 피해에 자동 적용되지 않는다. 기본 슬라임은 `trait:inanimate + property:water + property:poison`, 화산 생물은 `property:fire`, 수정 파수체는 `trait:inanimate + property:ice`를 가진다. 독 단검은 물리 피해 뒤 별도 맹독 적중 효과를 시도하므로 무생물에게 칼날 피해는 들어가고 맹독만 거부된다. 별도의 불 추가 피해를 가진 무기를 만들 때도 Item callback이나 명시적인 추가 damage 호출에서 무기를 `effectSource`로 전달해야 한다.
 
-광석 자원은 `entity:resource + resource:ore + trait:inanimate`와 단계별 재료 태그를 가진다. 보물상자는 `resource:treasure + trait:inanimate + material:wood`이며 공격 불가다. 공격 가능 도구 판정은 상성표와 별개로 곡괭이의 `tool:mining` 태그를 `Resource.getAttackDeniedReason`에서 검사한다. 지역은 `location:mine/swamp/volcanic`, 몬스터는 `entity:slime/elemental/beast`와 속성 태그를 조합한다.
+광석 자원은 `entity:resource + resource:ore + trait:inanimate`와 단계별 재료 태그를 가진다. 보물상자는 `resource:treasure + trait:inanimate + material:wood`이며 공격 불가다. `tool:mining`은 더 이상 공격 허가 태그가 아니라 곡괭이 분류·칭호·제작 조건에 사용한다. 실제 광맥 피해는 속성 상성 계산과 별개인 `Resource` 경도/채굴력 공개 API가 조절하므로 마법과 다른 무기도 공격할 수 있다. 지역은 `location:mine/swamp/volcanic`, 몬스터는 `entity:slime/elemental/beast`와 속성 태그를 조합한다.
 
 상태 이상이나 회복 같은 새 효과는 대상의 태그 배열을 직접 읽지 말고 `applyTagEffectValue` 또는 `resolveTagEffect`를 호출한다. 0배일 때 부수 효과도 막아야 한다면 반환값의 `effective`를 검사한다.

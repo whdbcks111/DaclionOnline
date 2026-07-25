@@ -1,4 +1,6 @@
 import Entity from './Entity.js';
+import type { DamageCause, DamageResult, DamageType } from './Entity.js';
+import { AttributeType } from './Attribute.js';
 import type { AttributeRecord } from './Attribute.js';
 import Equipment from './Equipment.js';
 import type Player from './Player.js';
@@ -21,7 +23,8 @@ export interface ResourceData {
     name: string;
     level: number;
     baseAttribute: Partial<AttributeRecord>;
-    requiredToolTags: TagId[];
+    /** 공격 피해에 적용할 자원 경도. 0이면 일반 엔티티와 같은 피해를 받는다. */
+    hardness: number;
     drops: WeightedResourceDrop[];
     expReward: { min: number; max: number };
     interaction?: string;
@@ -30,15 +33,39 @@ export interface ResourceData {
     tags: TagId[];
 }
 
+export type ResourceDefinition = Omit<ResourceData, 'hardness'> & {
+    /** 광맥에만 지정하며 생략하면 0이다. */
+    hardness?: number;
+};
+
+export interface MiningImpactSnapshot {
+    miningPower: number;
+    hardness: number;
+    multiplier: number;
+}
+
 export type ResourceInteraction = (resource: Resource, player: Player) => boolean | void;
 
 const resourceDataRegistry = new Map<string, ResourceData>();
 const interactionRegistry = new Map<string, ResourceInteraction>();
 
+/** 일반 공격도 광맥을 손상시킬 수 있지만 마법과 채굴력은 경도 손실을 더 잘 극복한다. */
+export function calculateMiningDamageMultiplier(
+    hardness: number,
+    miningPower: number,
+    damageType: DamageType,
+): number {
+    const normalizedHardness = Math.max(0, Number.isFinite(hardness) ? hardness : 0);
+    if (normalizedHardness === 0) return 1;
+    const normalizedPower = Math.max(0, Number.isFinite(miningPower) ? miningPower : 0);
+    const baseEfficiency = damageType === 'magic' ? 0.65 : damageType === 'absolute' ? 0.8 : 0.2;
+    return Math.min(1.5, baseEfficiency + normalizedPower / normalizedHardness);
+}
+
 export default class Resource extends Entity {
     readonly resourceDataId: string;
     override readonly name: string;
-    private readonly requiredToolTags: readonly TagId[];
+    private readonly hardness: number;
     private readonly drops: readonly Readonly<WeightedResourceDrop>[];
     private readonly expReward: Readonly<{ min: number; max: number }>;
     private readonly interaction?: string;
@@ -75,7 +102,7 @@ export default class Resource extends Entity {
         );
         this.resourceDataId = resourceDataId;
         this.name = data.name;
-        this.requiredToolTags = data.requiredToolTags;
+        this.hardness = data.hardness;
         this.drops = data.drops;
         this.expReward = data.expReward;
         this.interaction = data.interaction;
@@ -90,15 +117,44 @@ export default class Resource extends Entity {
         const commonReason = super.getAttackDeniedReason(attacker);
         if (commonReason) return commonReason;
         if (!this.attackable) return '이 오브젝트는 공격할 수 없습니다.';
-        if (this.requiredToolTags.length === 0) return undefined;
-        const usable = this.requiredToolTags.every(tag =>
-            attacker.equipment.hasEquippedItemTag('mainHand', tag),
-        );
-        if (usable) return undefined;
-        const requirements = this.requiredToolTags
-            .map(tag => tag === GameTags.TOOL_MINING ? '채굴' : tag)
-            .join(', ');
-        return `이 오브젝트는 ${requirements} 속성을 가진 주무기 도구로만 공격할 수 있습니다.`;
+        return undefined;
+    }
+
+    get miningHardness(): number { return this.hardness; }
+
+    /** 장비·스킬이 제공한 채굴력과 자원 경도로 이번 공격의 피해 효율을 계산한다. */
+    evaluateMiningImpact(
+        attacker: Entity | null,
+        damageType: DamageType,
+        miningPowerOverride?: number,
+    ): MiningImpactSnapshot {
+        const miningPower = Number.isFinite(miningPowerOverride)
+            ? Math.max(0, miningPowerOverride ?? 0)
+            : Math.max(0, attacker?.attribute.get(AttributeType.MINING_POWER) ?? 0);
+        return {
+            miningPower,
+            hardness: this.hardness,
+            multiplier: calculateMiningDamageMultiplier(this.hardness, miningPower, damageType),
+        };
+    }
+
+    override damage(
+        rawAmount: number,
+        type: DamageType = 'physical',
+        cause: DamageCause | null = null,
+    ): DamageResult {
+        if (cause?.type !== 'attack' || cause.fixedDamage === true || this.hardness <= 0) {
+            return super.damage(rawAmount, type, cause);
+        }
+        const impact = this.evaluateMiningImpact(cause.causeEntity, type, cause.miningPower);
+        const result = super.damage(rawAmount * impact.multiplier, type, cause);
+        return {
+            ...result,
+            rawAmount,
+            miningModifier: impact.multiplier,
+            miningPower: impact.miningPower,
+            resourceHardness: impact.hardness,
+        };
     }
 
     override interact(player: Player): boolean {
@@ -189,7 +245,7 @@ export default class Resource extends Entity {
     }
 }
 
-export function defineResource(data: ResourceData): void {
+export function defineResource(data: ResourceDefinition): void {
     if (!data.id.trim()) throw new Error('ResourceData id must not be empty');
     if (!Number.isInteger(data.level) || data.level < 1) {
         throw new Error(`Invalid resource level: ${data.id}`);
@@ -197,6 +253,10 @@ export function defineResource(data: ResourceData): void {
     if (!Number.isInteger(data.expReward.min) || !Number.isInteger(data.expReward.max)
         || data.expReward.min < 0 || data.expReward.max < data.expReward.min) {
         throw new Error(`Invalid resource exp range: ${data.id}`);
+    }
+    const hardness = data.hardness ?? 0;
+    if (!Number.isFinite(hardness) || hardness < 0) {
+        throw new Error(`Invalid resource hardness: ${data.id}`);
     }
     const cooldown = data.interactionCooldown;
     if (cooldown !== undefined) {
@@ -216,7 +276,7 @@ export function defineResource(data: ResourceData): void {
     resourceDataRegistry.set(data.id, {
         ...data,
         baseAttribute: { ...data.baseAttribute },
-        requiredToolTags: normalizeTags(data.requiredToolTags),
+        hardness,
         tags: normalizeTags(data.tags),
         drops: data.drops.map(drop => ({ ...drop })),
         expReward: { ...data.expReward },
@@ -242,7 +302,6 @@ function cloneResourceData(data: ResourceData): ResourceData {
     return {
         ...data,
         baseAttribute: { ...data.baseAttribute },
-        requiredToolTags: [...data.requiredToolTags],
         drops: data.drops.map(drop => ({ ...drop })),
         expReward: { ...data.expReward },
         interactionCooldown: typeof data.interactionCooldown === 'object'

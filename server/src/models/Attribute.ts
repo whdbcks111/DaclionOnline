@@ -142,6 +142,13 @@ export class AttributeType {
         v => `${(v * 100).toFixed(1)}%`,
         v => `단조 리듬 판정 범위와 마력 제련 처리량을 최대한 안정시킵니다. (현재 ${(v * 100).toFixed(1)}%)`
     )
+    static readonly MINING_POWER = new AttributeType(
+        'miningPower',
+        '채굴력',
+        0,
+        v => v.toFixed(1),
+        v => `광맥의 경도를 뚫고 자원에 주는 피해 효율을 높입니다. (현재 ${v.toFixed(1)})`
+    )
     static readonly LUCK = new AttributeType(
         'luck',
         '행운',
@@ -224,7 +231,7 @@ export type AttributeKey =
     | 'armorPen' | 'magicPen'
     | 'speed' | 'attackSpeed' | 'projectileAcceleration'
     | 'critRate' | 'critDmg'
-    | 'forgingPrecision'
+    | 'forgingPrecision' | 'miningPower'
     | 'luck' | 'fishingBiteSpeed' | 'fishingNetSize' | 'fishingNetSpeed' | 'fishingGaugeStart'
 
 /** Modifier 적용 방식 */

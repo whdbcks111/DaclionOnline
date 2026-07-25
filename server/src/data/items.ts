@@ -736,7 +736,7 @@ defineItem({
 defineItem({
     id: 'basic_pickaxe',
     name: '곡괭이',
-    description: '광석처럼 단단한 자원을 채굴할 수 있는 기본 곡괭이.',
+    description: '광맥의 경도를 효과적으로 뚫는 기본 곡괭이. 채굴력 30을 제공한다.',
     image: 'items/basic_pickaxe',
     category: '도구',
     weight: 2.8,
@@ -747,6 +747,7 @@ defineItem({
     equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 4, source: '' },
+        { attribute: 'miningPower', op: 'add', value: 30, source: '' },
     ],
     baseDurability: 150,
     tags: [GameTags.ITEM_TOOL, GameTags.TOOL_MINING, GameTags.MATERIAL_IRON],
@@ -755,7 +756,7 @@ defineItem({
 defineItem({
     id: 'iron_pickaxe',
     name: '철 곡괭이',
-    description: '철과 돌을 조합해 만든 튼튼한 채굴 도구.',
+    description: '철과 돌을 조합해 만든 튼튼한 채굴 도구. 채굴력 70을 제공한다.',
     image: 'items/iron_pickaxe',
     category: '도구',
     weight: 3.2,
@@ -766,6 +767,7 @@ defineItem({
     equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 7, source: '' },
+        { attribute: 'miningPower', op: 'add', value: 70, source: '' },
     ],
     baseDurability: 270,
     tags: [GameTags.ITEM_TOOL, GameTags.TOOL_MINING, GameTags.MATERIAL_IRON],

@@ -176,7 +176,10 @@ export class ForgeForm {
         'artificer_manufacturing', '기계 장인의 [ 정밀 병기 제작 ] 스킬이 필요합니다.',
     );
     static readonly SHIELD = new ForgeForm('shield', '방패', ['이지스', '실드', '가드'], '아르카디아', 'forged_shield', 5, 9, 180, null, 'def');
-    static readonly PICKAXE = new ForgeForm('pickaxe', '곡괭이', ['픽', '딥델버', '브레이커'], '테라크레스트', 'forged_pickaxe', 4, 7, 160, null);
+    static readonly PICKAXE = new ForgeForm(
+        'pickaxe', '곡괭이', ['픽', '딥델버', '브레이커'], '테라크레스트',
+        'forged_pickaxe', 4, 18, 160, null, 'miningPower',
+    );
     static readonly HELMET = new ForgeForm('helmet', '투구', ['헬름', '바이저', '크라운'], '아이기스혼', 'forged_helmet', 3, 1.5, 120, null, 'def');
     static readonly CHESTPLATE = new ForgeForm('chestplate', '흉갑', ['아머', '큐라스', '플레이트'], '아다만티아', 'forged_chestplate', 7, 3.5, 240, null, 'def');
     static readonly GREAVES = new ForgeForm('greaves', '각반', ['그리브', '레그가드', '타셋'], '바스티온', 'forged_greaves', 5, 2.5, 180, null, 'def');

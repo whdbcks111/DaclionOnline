@@ -694,7 +694,7 @@ test('잿빛성흔 심연은 다중 분기·세 보스·봉인 퍼즐·밤쇠 �
     assert.ok(barbican?.connections.some(connection => connection.locationId === 'ashen_lower_barracks'));
     assert.ok(barbican?.connections.some(connection => connection.locationId === 'ashen_gargoyle_rampart'));
     assert.ok(throne?.objects.some(object => object.dataId === 'ashen_sovereign' && object.maxCount === 1));
-    assert.ok(getResourceData('night_iron_vein')?.requiredToolTags.includes(GameTags.TOOL_MINING));
+    assert.equal(getResourceData('night_iron_vein')?.hardness, 410);
     assert.deepEqual(getResourceData('ashen_reliquary')?.interactionCooldown, {
         min: 7 * 60 * 60,
         max: 10 * 60 * 60,
@@ -744,7 +744,7 @@ test('공허왕관 성채는 25개 분기 층·서약 퍼즐·기둥 보호 보�
     assert.ok(chapel?.connections.some(connection => connection.condition === 'voidcrown_oath_solved'));
     assert.ok(vault?.tags.includes(GameTags.LOCATION_HIDDEN));
     assert.equal(throne?.objects.find(object => object.dataId === 'voidcrown_pillar')?.maxCount, 3);
-    assert.ok(getResourceData('nullsilver_vein')?.requiredToolTags.includes(GameTags.TOOL_MINING));
+    assert.equal(getResourceData('nullsilver_vein')?.hardness, 470);
     assert.deepEqual(getResourceData('voidcrown_reliquary')?.interactionCooldown, {
         min: 8 * 60 * 60,
         max: 11 * 60 * 60,
@@ -806,7 +806,7 @@ test('월식해구는 24개 분기 수로·조류제단·거울 보호 보스·�
     assert.ok(altar?.connections.some(connection => connection.condition === 'eclipse_tide_solved'));
     assert.ok(vault?.tags.includes(GameTags.LOCATION_HIDDEN));
     assert.equal(bossAltar?.objects.find(object => object.dataId === 'white_night_tide_mirror')?.maxCount, 3);
-    assert.ok(getResourceData('drowned_silver_vein')?.requiredToolTags.includes(GameTags.TOOL_MINING));
+    assert.equal(getResourceData('drowned_silver_vein')?.hardness, 520);
     assert.deepEqual(getResourceData('eclipse_reliquary')?.interactionCooldown, {
         min: 8 * 60 * 60,
         max: 12 * 60 * 60,
@@ -870,7 +870,7 @@ test('역근수해는 24개 분기 뿌리·기억 제단·씨앗 보호 보스·
     assert.ok(altar?.connections.some(connection => connection.condition === 'worldroot_memory_solved'));
     assert.ok(vault?.tags.includes(GameTags.LOCATION_HIDDEN));
     assert.equal(chamber?.objects.find(object => object.dataId === 'primordial_heart_seed')?.maxCount, 3);
-    assert.ok(getResourceData('rootbone_vein')?.requiredToolTags.includes(GameTags.TOOL_MINING));
+    assert.equal(getResourceData('rootbone_vein')?.hardness, 580);
     assert.deepEqual(getResourceData('worldroot_reliquary')?.interactionCooldown, {
         min: 9 * 60 * 60,
         max: 13 * 60 * 60,
@@ -909,7 +909,7 @@ test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 �
     assert.ok(emberLocations.every(location => location.tags.includes('location:volcanic')));
     assert.equal(getItemData('ember_ore')?.image, 'items/ember_ore');
     assert.equal(getItemData('ember_alloy')?.image, 'items/ember_alloy');
-    assert.ok(getResourceData('ember_ore_vein')?.requiredToolTags.includes('tool:mining'));
+    assert.equal(getResourceData('ember_ore_vein')?.hardness, 90);
 });
 
 test('사령묘는 분기·순환·합류 경로를 가지며 고레벨 직업 무기는 전용 아이콘을 사용한다', () => {

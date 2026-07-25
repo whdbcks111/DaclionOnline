@@ -51,6 +51,10 @@ export interface DamageResult {
     effectModifier: number;
     effectSourceTag?: TagId;
     effectTargetTag?: TagId;
+    /** 광맥처럼 경도를 가진 자원이 적용한 채굴 피해 배율. */
+    miningModifier?: number;
+    miningPower?: number;
+    resourceHardness?: number;
 }
 
 /** 한 번의 직접 공격에만 적용할 수 있는 계산 옵션. */
@@ -72,6 +76,11 @@ export interface AttackOptions {
         title?: string;
         comment?: string | readonly ChatNode[];
     }>;
+    /**
+     * 자원 공격에 사용할 채굴력 override.
+     * 생략하면 실제 공격 Entity의 채굴력 능력치를 사용한다.
+     */
+    miningPower?: number;
 }
 
 export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fire' | 'poison' | 'bleeding' | 'decay' | 'frozen' | 'suffocation'
@@ -84,6 +93,8 @@ export interface DamageCause {
     fixedDamage?: boolean;
     /** causeEntity가 없어도 속성 상성을 계산할 수 있는 효과원. */
     effectSource?: TagEffectReadable;
+    /** 자원 경도 판정에 사용할 공격별 채굴력 override. */
+    miningPower?: number;
 }
 
 export interface HealingResult {
@@ -908,6 +919,7 @@ export default abstract class Entity implements TagReadable {
             causeEntity: this,
             critical,
             fixedDamage: combatOptions.fixedDamage,
+            miningPower: combatOptions.miningPower,
         });
         combat.result = damageResult;
         runCombatStage(CombatStage.AFTER_DAMAGE, combat);
@@ -947,6 +959,10 @@ export default abstract class Entity implements TagReadable {
         const effectLabel = effectModifier === 0
             ? '효과 없음! '
             : effectModifier !== 1 ? `상성 x${effectModifier}! ` : '';
+        const miningLabel = damageResult.miningModifier !== undefined
+            && Math.abs(damageResult.miningModifier - 1) > 0.001
+            ? `채굴 효율 x${damageResult.miningModifier.toFixed(2)}! `
+            : '';
 
         const lifeRatio = target.maxLife > 0 ? Math.max(0, target.life) / target.maxLife : 0;
         const pct = Math.floor(lifeRatio * 100);
@@ -970,7 +986,7 @@ export default abstract class Entity implements TagReadable {
             const notification = {
                 key: 'attack',
                 message: chat()
-                    .text(`${combatTitle ? `[${combatTitle}] ` : ''}${critical ? '치명타! ' : ''}${effectLabel}${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.${absorbedLabel}`)
+                    .text(`${combatTitle ? `[${combatTitle}] ` : ''}${critical ? '치명타! ' : ''}${effectLabel}${miningLabel}${this.name}이(가) ${target.name}에게 ${finalDamage.toFixed(1)} 피해를 입혔습니다.${absorbedLabel}`)
                     .text(`${notificationComment ? ` ${notificationComment}` : ''}\n`)
                     .health({ life: target.life, maxLife: target.maxLife, shields: shieldSegments, length: 150, color: attackerUid !== undefined ? '$enemy' : '$life', thickness: 6 })
                     .text(` ${pct}%`)

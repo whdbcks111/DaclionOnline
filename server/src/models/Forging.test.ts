@@ -68,6 +68,25 @@ test('투구·흉갑·각반·철갑화도 각 방어구 슬롯에 단조할 수
     }
 });
 
+test('단조 곡괭이는 일반 공격력 대신 제작자 성장에 비례한 채굴력을 얻는다', () => {
+    const pickaxe = Item.fromSnapshot(createForgedItemSnapshot(
+        ForgeForm.PICKAXE,
+        ForgeMaterial.IRON,
+        {
+            accuracy: 0.85,
+            creatorLevel: 200,
+            sensibility: 1_000,
+            forgingPrecision: 1.5,
+            random: () => 0,
+        },
+    ));
+    const miningPower = pickaxe.modifiers
+        ?.find(modifier => modifier.attribute === 'miningPower')?.value ?? 0;
+
+    assert.ok(miningPower >= 700, `장인 단조 곡괭이 채굴력 ${miningPower}`);
+    assert.equal(pickaxe.hasTag(GameTags.TOOL_MINING), true);
+});
+
 test('재료 속성과 랜덤 단조 성향은 이름과 상충하는 능력치 보너스를 함께 바꾼다', () => {
     const rolls = [0.99, 0.5, 0.99, 0.99, 0.99];
     const snapshot = createForgedItemSnapshot(ForgeForm.DAGGER, ForgeMaterial.RUBY, {
