@@ -2,11 +2,14 @@ import NPC, { Dialogue, DialogueScenario } from '../models/NPC.js';
 import { defineProgress, ProgressType } from '../models/Progress.js';
 import {
     ASHEN_ABYSS_QUEST_IDS,
+    CHRONOFROST_QUEST_IDS,
     ECLIPSE_TRENCH_QUEST_IDS,
+    ENDSTAR_QUEST_IDS,
     FIRST_SLIME_HUNT_QUEST_ID,
     FROSTVEIL_QUEST_IDS,
     GLASSDUNE_QUEST_IDS,
     MISTTIDE_QUEST_IDS,
+    NEBULA_QUEST_IDS,
     PARADOX_QUEST_IDS,
     TWILIGHT_TOMB_QUEST_IDS,
     VOIDCROWN_QUEST_IDS,
@@ -17,6 +20,7 @@ import { BLACKSMITH_APPRENTICESHIP_QUEST_ID } from './quests.js';
 import { JobSlotType, getAllJobs, JobTier } from '../models/Job.js';
 import { canAcquireBlacksmithProfession, hasBlacksmithProfession } from '../modules/forging.js';
 import { GameTags } from '../../../shared/tags.js';
+import type Player from '../models/Player.js';
 
 export const MONSTER_HUNT_QUESTION_FLAG = 'npc:monster-hunt-question';
 
@@ -912,4 +916,134 @@ NPC.define({
             yield Dialogue.end();
         }),
     ],
+});
+
+interface FrontierQuestNpcDefinition {
+    readonly id: string;
+    readonly name: string;
+    readonly description: string;
+    readonly regionTag: string;
+    readonly firstQuestId: string;
+    readonly secondQuestId: string;
+    readonly greeting: string;
+    readonly firstGuidance: string;
+    readonly secondGuidance: string;
+    readonly lore: string;
+    readonly completion: string;
+}
+
+function defineFrontierQuestNpc(data: FrontierQuestNpcDefinition): void {
+    const progressText = (player: Player, questId: string) => {
+        const objectives = player.quests.getSnapshot(questId)?.objectives ?? [];
+        return objectives.map(objective => `${objective.label} ${objective.progress}/${objective.required}`).join(', ');
+    };
+    NPC.define({
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        tags: ['npc:guide', 'npc:quest', data.regionTag],
+        entryScenario: ({ player }) => {
+            if (player.quests.canTurnIn(data.secondQuestId, data.id)) return 'second_complete';
+            if (player.quests.isActive(data.secondQuestId)) return 'second_progress';
+            if (player.quests.canTurnIn(data.firstQuestId, data.id)) return 'first_complete';
+            if (player.quests.isActive(data.firstQuestId)) return 'first_progress';
+            if (player.quests.canAccept(data.secondQuestId, data.id)) return 'second_offer';
+            return player.quests.canAccept(data.firstQuestId, data.id) ? 'greeting' : 'lore';
+        },
+        scenarios: [
+            new DialogueScenario('greeting', function* () {
+                yield Dialogue.say(data.greeting);
+                yield Dialogue.choice([
+                    { label: '제가 복구 작업을 맡겠습니다.', target: 'first_accept' },
+                    { label: '이 지역의 길을 알려주세요.', target: 'lore' },
+                    { label: '조금 더 준비하겠습니다.', target: 'end' },
+                ]);
+            }),
+            new DialogueScenario('first_accept', function* () {
+                yield Dialogue.acceptQuest(data.firstQuestId);
+                yield Dialogue.say(data.firstGuidance);
+                yield Dialogue.end();
+            }),
+            new DialogueScenario('first_progress', function* ({ player }) {
+                yield Dialogue.say(`${progressText(player, data.firstQuestId)}. 필요한 재료를 모두 회수한 뒤 다시 찾아오세요.`);
+                yield Dialogue.end();
+            }),
+            new DialogueScenario('first_complete', function* () {
+                yield Dialogue.say('필요한 흐름이 다시 이어졌습니다. 이 거점은 이제 다음 관문까지 길을 잃지 않을 겁니다.');
+                yield Dialogue.turnInQuest(data.firstQuestId);
+                yield Dialogue.end();
+            }),
+            new DialogueScenario('second_offer', function* () {
+                yield Dialogue.say(data.secondGuidance);
+                yield Dialogue.choice([
+                    { label: '두 수호자를 모두 제압하겠습니다.', target: 'second_accept' },
+                    { label: '전투 동선을 먼저 확인하겠습니다.', target: 'lore' },
+                ]);
+            }),
+            new DialogueScenario('second_accept', function* () {
+                yield Dialogue.acceptQuest(data.secondQuestId);
+                yield Dialogue.say('중간 관문의 수호자를 먼저 쓰러뜨린 뒤 가장 깊은 왕좌로 향하세요. 두 전투는 서로 다른 위협 우선순위와 기술 순서를 사용합니다.');
+                yield Dialogue.end();
+            }),
+            new DialogueScenario('second_progress', function* ({ player }) {
+                yield Dialogue.say(`${progressText(player, data.secondQuestId)}. 쓰러뜨리지 못한 수호자의 방까지 이어지는 다른 갈림길도 확인하세요.`);
+                yield Dialogue.end();
+            }),
+            new DialogueScenario('second_complete', function* () {
+                yield Dialogue.say(data.completion);
+                yield Dialogue.turnInQuest(data.secondQuestId);
+                yield Dialogue.end();
+            }),
+            new DialogueScenario('lore', function* () {
+                yield Dialogue.say(data.lore);
+                yield Dialogue.end();
+            }),
+            new DialogueScenario('end', function* () {
+                yield Dialogue.say('준비가 끝나면 다시 말을 걸어주세요. 이 너머의 길은 서두르는 사람보다 돌아올 길을 기억하는 사람을 필요로 합니다.');
+                yield Dialogue.end();
+            }),
+        ],
+    });
+}
+
+defineFrontierQuestNpc({
+    id: 'nebula_navigator',
+    name: '성도항해사 벨라',
+    description: '성운회랑의 오래된 별길과 중력 흐름을 유성등 지도에 다시 기록하는 항해사입니다.',
+    regionTag: 'region:nebula-corridor',
+    firstQuestId: NEBULA_QUEST_IDS.RESTORE_BEACON,
+    secondQuestId: NEBULA_QUEST_IDS.END_SOVEREIGN,
+    greeting: '태초심장의 뿌리 위에는 별이 길처럼 흐르는 성운회랑이 있습니다. 하지만 유성등이 꺼져 돌아오는 궤도가 보이지 않아요.',
+    firstGuidance: '성운유리는 성진 가오리와 중력각에게서, 궤도편은 궤도절단 사냥꾼과 혜철 성운맥에서 얻을 수 있습니다.',
+    secondGuidance: '낙성감시자 모르가가 상층 길을 막고 성운제 아스테리온은 사건지평으로 전투자를 고립시킵니다. 빛나는 섬광 뒤의 어두운 봉쇄를 조심하세요.',
+    lore: '정거장 뒤 하층 갈림길은 성진 단구와 무음 궤도로 나뉘어 중력 합류정에서 만납니다. 낙성감시자 뒤 상층도 극광다리와 암흑물질 수로로 갈라졌다 왕관 전실에서 합쳐집니다.',
+    completion: '성운관이 꺼지고 별길이 다시 자유롭게 흐릅니다. 동결된 시간의 문이 회랑 끝에서 열렸습니다.',
+});
+
+defineFrontierQuestNpc({
+    id: 'chronofrost_keeper',
+    name: '영시계지기 노엔',
+    description: '얼어붙은 시간의 오차를 역행사 모래시계에 기록하는 동결시계원의 마지막 관리인입니다.',
+    regionTag: 'region:chronofrost',
+    firstQuestId: CHRONOFROST_QUEST_IDS.RESTART_CLOCK,
+    secondQuestId: CHRONOFROST_QUEST_IDS.END_ZERO_HOUR,
+    greeting: '이 시계원은 시간이 멈춘 것이 아니라 어제와 내일이 서로를 밀어내고 있습니다. 하층 진자를 움직이지 않으면 어느 길도 현재에 머물지 못해요.',
+    firstGuidance: '시빙정은 동결분 유령과 진자강 시빙맥에서, 역행사는 역설원 추적자와 뒤집힌 설원에서 회수할 수 있습니다.',
+    secondGuidance: '빙시계 파수장은 영시 절단과 진자뢰를 번갈아 쓰고, 크로니아는 가장 위험한 전투자의 시간을 먼저 얼립니다. 이동 제한을 풀 수단을 준비하세요.',
+    lore: '피난소 뒤 길은 얼어붙은 분침과 모래시계 묘역으로 갈라져 진자 합류정에서 만납니다. 파수장 뒤에는 어제 회랑과 내일 금고가 각각 왕좌로 이어집니다.',
+    completion: '멈췄던 초침이 한 칸 움직였습니다. 빼앗겼던 내일이 돌아왔고 종언성단으로 향하는 최후의 시간이 열렸습니다.',
+});
+
+defineFrontierQuestNpc({
+    id: 'endstar_observer',
+    name: '종성관측자 이오',
+    description: '꺼진 성좌의 이름을 하나씩 기록하며 아직 태어나지 않은 별의 가능성을 지키는 관측자입니다.',
+    regionTag: 'region:endstar',
+    firstQuestId: ENDSTAR_QUEST_IDS.RELIGHT_CONSTELLATION,
+    secondQuestId: ENDSTAR_QUEST_IDS.END_LAST_CONSTELLATION,
+    greeting: '여기는 모든 별이 끝나는 곳이지만, 끝은 하나로 정해져 있지 않습니다. 피난 성좌의 연결이 끊겨 그 사실을 증명할 길이 사라졌어요.',
+    firstGuidance: '잔광편은 재별수와 성좌 사냥꾼에게서, 창세정은 소멸 세라프와 창세정 파수자에게서 찾을 수 있습니다.',
+    secondGuidance: '전령 에녹은 폭발 뒤 침묵으로 반격을 막고, 라스트라는 창세·소멸·붕괴 중 하나를 무작위로 선고합니다. 한 가지 방어만으로는 버틸 수 없습니다.',
+    lore: '성단 요새 뒤 길은 재별무리와 침묵태양으로 나뉘어 종언 합류환에서 만납니다. 전령의 고리 뒤에는 창세 항로와 소멸 항로가 최후지평에서 다시 합쳐집니다.',
+    completion: '라스트라가 정한 마지막 별자리가 풀렸습니다. 이제 Lv.500의 지평선 너머는 정해진 종말이 아니라 다음 확장을 기다리는 빈 하늘입니다.',
 });

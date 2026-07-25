@@ -1228,3 +1228,61 @@ defineResource({
         'resource:primordial-heart-seed',
     ],
 });
+
+defineResource({
+    id: 'comet_iron_vein',
+    name: '혜철 성운맥',
+    level: 396,
+    baseAttribute: { maxLife: 72_000, def: 940, magicDef: 900 },
+    hardness: 650,
+    drops: [
+        { itemDataId: 'comet_iron', weight: 48, minCount: 2, maxCount: 5 },
+        { itemDataId: 'nebula_glass', weight: 24, minCount: 1, maxCount: 3 },
+        { itemDataId: 'orbit_fragment', weight: 18, minCount: 1, maxCount: 2 },
+        { itemDataId: 'gravity_core', weight: 10, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 11_600, max: 15_000 },
+    tags: [
+        GameTags.RESOURCE_ORE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_NEBULA_CORRIDOR,
+        GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT,
+    ],
+});
+
+defineResource({
+    id: 'pendulum_steel_vein',
+    name: '진자강 시빙맥',
+    level: 438,
+    baseAttribute: { maxLife: 88_000, def: 1_100, magicDef: 1_060 },
+    hardness: 730,
+    drops: [
+        { itemDataId: 'pendulum_steel', weight: 48, minCount: 2, maxCount: 5 },
+        { itemDataId: 'chronofrost_ice', weight: 24, minCount: 1, maxCount: 3 },
+        { itemDataId: 'reverse_sand', weight: 18, minCount: 1, maxCount: 3 },
+        { itemDataId: 'frozen_second', weight: 10, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 13_200, max: 17_100 },
+    tags: [
+        GameTags.RESOURCE_ORE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_CHRONOFROST,
+        GameTags.PROPERTY_METAL, GameTags.PROPERTY_ICE,
+    ],
+});
+
+defineResource({
+    id: 'entropy_metal_vein',
+    name: '소멸금 성좌맥',
+    level: 482,
+    baseAttribute: { maxLife: 108_000, def: 1_300, magicDef: 1_250 },
+    hardness: 820,
+    drops: [
+        { itemDataId: 'entropy_metal', weight: 46, minCount: 2, maxCount: 5 },
+        { itemDataId: 'endstar_ash', weight: 24, minCount: 1, maxCount: 4 },
+        { itemDataId: 'last_light', weight: 19, minCount: 1, maxCount: 3 },
+        { itemDataId: 'genesis_crystal', weight: 8, minCount: 1, maxCount: 1 },
+        { itemDataId: 'constellation_core', weight: 3, minCount: 1, maxCount: 1 },
+    ],
+    expReward: { min: 15_200, max: 19_800 },
+    tags: [
+        GameTags.RESOURCE_ORE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ENDSTAR,
+        GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK,
+    ],
+});

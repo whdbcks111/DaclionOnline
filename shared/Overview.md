@@ -14,7 +14,7 @@
 - `tags.ts`: `namespace:path` 검증, 액티브/패시브와 직업·원소 공유 쿨다운 계열, 무기·Entity·은신·투사체/탄약/도구/미끼/물고기/스킬북/가방, 제작 부품과 활시위/화살대 호환 소재, 지역·속성 공용 태그 ID와 raw Set을 숨기는 `TagCollection/TagReadable/TagQuery` API.
 - 은빛그물 숲 확장은 `location:forest` 권역과 `shop:hunter` 상점 분류를 동일한 공용 태그 API에 추가한다.
 - 카르마 정책은 `npc:benevolent`, `facility:lawful`, `facility:sanctuary` 태그로 NPC·퀘스트·상점·교단의 역할을 마스터 데이터에 선언한다.
-- 유리모래 사막의 `location:desert`, `shop:caravan`, `material:glass`, 서리잔향 설원·빙경궁의 `location:frozen`, `shop:frost`, `material:rime`, 역설기계고의 `location:clockwork`, `shop:clockwork`, `material:clockwork`, 공허왕관의 `location:voidcrown`, 월식해구의 `location:eclipse-trench`, 역근수해의 `location:worldroot`와 각 권역 shop/material 분류를 같은 공용 태그 API에서 소유한다.
+- 유리모래 사막의 `location:desert`, `shop:caravan`, `material:glass`, 서리잔향 설원·빙경궁의 `location:frozen`, `shop:frost`, `material:rime`, 역설기계고의 `location:clockwork`, `shop:clockwork`, `material:clockwork`, 공허왕관·월식해구·역근수해와 Lv.380~500 성운회랑·동결시계원·종언성단의 location/shop/material 분류를 같은 공용 태그 API에서 소유한다.
 - `package.json`: 서버 빌드와 브라우저 번들에서 공용 런타임 모듈을 ESM으로 일관되게 해석한다.
 - `templates/`: 서버 메일에서 읽는 HTML 템플릿.
 

@@ -4439,7 +4439,737 @@
       { "type": "resource", "dataId": "worldroot_reliquary", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
-      { "locationId": "worldroot_heart_antechamber" }
+      { "locationId": "worldroot_heart_antechamber" },
+      { "locationId": "nebula_threshold", "condition": "level_380" }
+    ]
+  },
+  {
+    "id": "nebula_threshold",
+    "name": "성운회랑 별뿌리 관문",
+    "mapColor": "#35434b",
+    "zoneType": "neutral",
+    "x": 8420, "y": -285, "z": -2070,
+    "tags": ["location:wilderness", "location:nebula-corridor", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "stardust_manta", "maxCount": 2, "respawnTime": 390 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_primordial_heart" },
+      { "locationId": "nebula_waystation" }
+    ]
+  },
+  {
+    "id": "nebula_waystation",
+    "name": "성운회랑 유성등 정거장",
+    "mapColor": "#35434b",
+    "zoneType": "safe",
+    "x": 8510, "y": -285, "z": -2110,
+    "shopId": "nebula_waystation_store",
+    "tags": ["location:safe", "location:shop", "location:nebula-corridor", "property:light"],
+    "npcIds": ["nebula_navigator"],
+    "objects": [],
+    "connections": [
+      { "locationId": "nebula_threshold" },
+      { "locationId": "nebula_lower_fork" }
+    ]
+  },
+  {
+    "id": "nebula_lower_fork",
+    "name": "성운회랑 하층 궤도갈림길",
+    "mapColor": "#35434b",
+    "zoneType": "hostile",
+    "x": 8600, "y": -285, "z": -2150,
+    "tags": ["location:wilderness", "location:dungeon", "location:nebula-corridor", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "comet_iron_knight", "maxCount": 2, "respawnTime": 400 },
+      { "type": "monster", "dataId": "gravity_shell", "maxCount": 1, "respawnTime": 410 }
+    ],
+    "connections": [
+      { "locationId": "nebula_waystation" },
+      { "locationId": "nebula_stardust_terrace" },
+      { "locationId": "nebula_echo_archive" }
+    ]
+  },
+  {
+    "id": "nebula_stardust_terrace",
+    "name": "성운회랑 성진 단구",
+    "mapColor": "#35434b",
+    "zoneType": "hostile",
+    "x": 8690, "y": -390, "z": -2190,
+    "tags": ["location:wilderness", "location:nebula-corridor", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "stardust_manta", "maxCount": 3, "respawnTime": 390 },
+      { "type": "monster", "dataId": "comet_iron_knight", "maxCount": 1, "respawnTime": 400 }
+    ],
+    "connections": [
+      { "locationId": "nebula_lower_fork" },
+      { "locationId": "nebula_comet_foundry" }
+    ]
+  },
+  {
+    "id": "nebula_comet_foundry",
+    "name": "성운회랑 혜철 주조대",
+    "mapColor": "#35434b",
+    "zoneType": "hostile",
+    "x": 8790, "y": -430, "z": -2230,
+    "tags": ["location:wilderness", "location:mine", "location:nebula-corridor", "property:metal", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "comet_iron_knight", "maxCount": 2, "respawnTime": 400 },
+      { "type": "resource", "dataId": "comet_iron_vein", "maxCount": 3, "respawnTime": 720 }
+    ],
+    "connections": [
+      { "locationId": "nebula_stardust_terrace" },
+      { "locationId": "nebula_gravity_confluence" }
+    ]
+  },
+  {
+    "id": "nebula_echo_archive",
+    "name": "성운회랑 잔향 기록고",
+    "mapColor": "#35434b",
+    "zoneType": "hostile",
+    "x": 8690, "y": -180, "z": -2190,
+    "tags": ["location:wilderness", "location:dungeon", "location:nebula-corridor", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "gravity_shell", "maxCount": 2, "respawnTime": 410 },
+      { "type": "monster", "dataId": "nebula_cantor", "maxCount": 1, "respawnTime": 425 }
+    ],
+    "connections": [
+      { "locationId": "nebula_lower_fork" },
+      { "locationId": "nebula_silent_orbit" }
+    ]
+  },
+  {
+    "id": "nebula_silent_orbit",
+    "name": "성운회랑 무음 궤도",
+    "mapColor": "#35434b",
+    "zoneType": "hostile",
+    "x": 8790, "y": -140, "z": -2230,
+    "tags": ["location:wilderness", "location:nebula-corridor", "property:dark", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "orbit_ripper", "maxCount": 3, "respawnTime": 415 },
+      { "type": "resource", "dataId": "comet_iron_vein", "maxCount": 2, "respawnTime": 720 }
+    ],
+    "connections": [
+      { "locationId": "nebula_echo_archive" },
+      { "locationId": "nebula_gravity_confluence" }
+    ]
+  },
+  {
+    "id": "nebula_gravity_confluence",
+    "name": "성운회랑 중력 합류정",
+    "mapColor": "#35434b",
+    "zoneType": "hostile",
+    "x": 8890, "y": -285, "z": -2270,
+    "tags": ["location:wilderness", "location:dungeon", "location:nebula-corridor", "property:dark", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "gravity_shell", "maxCount": 2, "respawnTime": 410 },
+      { "type": "monster", "dataId": "orbit_ripper", "maxCount": 2, "respawnTime": 415 }
+    ],
+    "connections": [
+      { "locationId": "nebula_comet_foundry" },
+      { "locationId": "nebula_silent_orbit" },
+      { "locationId": "nebula_meteor_warden_hall" }
+    ]
+  },
+  {
+    "id": "nebula_meteor_warden_hall",
+    "name": "성운회랑 낙성감시전",
+    "mapColor": "#35434b",
+    "zoneType": "hostile",
+    "x": 8990, "y": -285, "z": -2310,
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:nebula-corridor", "property:metal", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "meteor_warden", "maxCount": 1, "respawnTime": 1200 }
+    ],
+    "connections": [
+      { "locationId": "nebula_gravity_confluence" },
+      { "locationId": "nebula_upper_fork" }
+    ]
+  },
+  {
+    "id": "nebula_upper_fork",
+    "name": "성운회랑 상층 성도갈림길",
+    "mapColor": "#35434b",
+    "zoneType": "hostile",
+    "x": 9090, "y": -285, "z": -2350,
+    "tags": ["location:wilderness", "location:dungeon", "location:nebula-corridor", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "orbit_ripper", "maxCount": 2, "respawnTime": 415 },
+      { "type": "monster", "dataId": "nebula_cantor", "maxCount": 2, "respawnTime": 425 }
+    ],
+    "connections": [
+      { "locationId": "nebula_meteor_warden_hall" },
+      { "locationId": "nebula_aurora_bridge" },
+      { "locationId": "nebula_darkmatter_channel" }
+    ]
+  },
+  {
+    "id": "nebula_aurora_bridge",
+    "name": "성운회랑 극광다리",
+    "mapColor": "#35434b",
+    "zoneType": "hostile",
+    "x": 9190, "y": -390, "z": -2390,
+    "tags": ["location:wilderness", "location:nebula-corridor", "property:light", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "stardust_manta", "maxCount": 2, "respawnTime": 390 },
+      { "type": "monster", "dataId": "nebula_cantor", "maxCount": 2, "respawnTime": 425 }
+    ],
+    "connections": [
+      { "locationId": "nebula_upper_fork" },
+      { "locationId": "nebula_crown_approach" }
+    ]
+  },
+  {
+    "id": "nebula_darkmatter_channel",
+    "name": "성운회랑 암흑물질 수로",
+    "mapColor": "#35434b",
+    "zoneType": "hostile",
+    "x": 9190, "y": -180, "z": -2390,
+    "tags": ["location:wilderness", "location:mine", "location:nebula-corridor", "property:dark", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "gravity_shell", "maxCount": 2, "respawnTime": 410 },
+      { "type": "monster", "dataId": "orbit_ripper", "maxCount": 2, "respawnTime": 415 },
+      { "type": "resource", "dataId": "comet_iron_vein", "maxCount": 2, "respawnTime": 720 }
+    ],
+    "connections": [
+      { "locationId": "nebula_upper_fork" },
+      { "locationId": "nebula_crown_approach" }
+    ]
+  },
+  {
+    "id": "nebula_crown_approach",
+    "name": "성운회랑 성운관 전실",
+    "mapColor": "#35434b",
+    "zoneType": "hostile",
+    "x": 9290, "y": -285, "z": -2430,
+    "tags": ["location:wilderness", "location:dungeon", "location:nebula-corridor", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "nebula_cantor", "maxCount": 3, "respawnTime": 425 }
+    ],
+    "connections": [
+      { "locationId": "nebula_aurora_bridge" },
+      { "locationId": "nebula_darkmatter_channel" },
+      { "locationId": "nebula_sovereign_throne" }
+    ]
+  },
+  {
+    "id": "nebula_sovereign_throne",
+    "name": "성운회랑 사건지평 왕좌",
+    "mapColor": "#35434b",
+    "zoneType": "hostile",
+    "x": 9390, "y": -285, "z": -2470,
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:nebula-corridor", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "nebula_sovereign", "maxCount": 1, "respawnTime": 1800 }
+    ],
+    "connections": [
+      { "locationId": "nebula_crown_approach" },
+      { "locationId": "chronofrost_threshold", "condition": "level_420" }
+    ]
+  },
+  {
+    "id": "chronofrost_threshold",
+    "name": "동결시계원 멈춘 초침문",
+    "mapColor": "#36454b",
+    "zoneType": "neutral",
+    "x": 9540, "y": -285, "z": -2510,
+    "tags": ["location:wilderness", "location:chronofrost", "property:ice", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "frozen_minute_wraith", "maxCount": 2, "respawnTime": 430 }
+    ],
+    "connections": [
+      { "locationId": "nebula_sovereign_throne" },
+      { "locationId": "chronofrost_refuge" }
+    ]
+  },
+  {
+    "id": "chronofrost_refuge",
+    "name": "동결시계원 영시 피난소",
+    "mapColor": "#36454b",
+    "zoneType": "safe",
+    "x": 9630, "y": -285, "z": -2550,
+    "shopId": "chronofrost_refuge_store",
+    "tags": ["location:safe", "location:shop", "location:chronofrost", "property:ice"],
+    "npcIds": ["chronofrost_keeper"],
+    "objects": [],
+    "connections": [
+      { "locationId": "chronofrost_threshold" },
+      { "locationId": "chronofrost_lower_fork" }
+    ]
+  },
+  {
+    "id": "chronofrost_lower_fork",
+    "name": "동결시계원 하층 분침갈림길",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 9720, "y": -285, "z": -2590,
+    "tags": ["location:wilderness", "location:dungeon", "location:chronofrost", "property:ice"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "frozen_minute_wraith", "maxCount": 2, "respawnTime": 430 },
+      { "type": "monster", "dataId": "pendulum_colossus", "maxCount": 1, "respawnTime": 440 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_refuge" },
+      { "locationId": "chronofrost_frozen_minute" },
+      { "locationId": "chronofrost_hourglass_cemetery" }
+    ]
+  },
+  {
+    "id": "chronofrost_frozen_minute",
+    "name": "동결시계원 얼어붙은 분침",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 9810, "y": -390, "z": -2630,
+    "tags": ["location:wilderness", "location:chronofrost", "property:ice", "property:undead"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "frozen_minute_wraith", "maxCount": 3, "respawnTime": 430 },
+      { "type": "monster", "dataId": "tomorrowless_hound", "maxCount": 1, "respawnTime": 460 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_lower_fork" },
+      { "locationId": "chronofrost_pendulum_glacier" }
+    ]
+  },
+  {
+    "id": "chronofrost_pendulum_glacier",
+    "name": "동결시계원 진자빙하",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 9910, "y": -430, "z": -2670,
+    "tags": ["location:wilderness", "location:mine", "location:chronofrost", "property:ice", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "pendulum_colossus", "maxCount": 2, "respawnTime": 440 },
+      { "type": "resource", "dataId": "pendulum_steel_vein", "maxCount": 3, "respawnTime": 780 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_frozen_minute" },
+      { "locationId": "chronofrost_pendulum_confluence" }
+    ]
+  },
+  {
+    "id": "chronofrost_hourglass_cemetery",
+    "name": "동결시계원 모래시계 묘역",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 9810, "y": -180, "z": -2630,
+    "tags": ["location:wilderness", "location:dungeon", "location:chronofrost", "property:earth", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "reverse_snow_stalker", "maxCount": 2, "respawnTime": 445 },
+      { "type": "monster", "dataId": "aeon_archivist", "maxCount": 1, "respawnTime": 455 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_lower_fork" },
+      { "locationId": "chronofrost_reversed_snowfield" }
+    ]
+  },
+  {
+    "id": "chronofrost_reversed_snowfield",
+    "name": "동결시계원 뒤집힌 설원",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 9910, "y": -140, "z": -2670,
+    "tags": ["location:wilderness", "location:chronofrost", "property:ice", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "reverse_snow_stalker", "maxCount": 3, "respawnTime": 445 },
+      { "type": "monster", "dataId": "tomorrowless_hound", "maxCount": 1, "respawnTime": 460 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_hourglass_cemetery" },
+      { "locationId": "chronofrost_pendulum_confluence" }
+    ]
+  },
+  {
+    "id": "chronofrost_pendulum_confluence",
+    "name": "동결시계원 진자 합류정",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 10010, "y": -285, "z": -2710,
+    "tags": ["location:wilderness", "location:dungeon", "location:chronofrost", "property:ice", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "pendulum_colossus", "maxCount": 2, "respawnTime": 440 },
+      { "type": "monster", "dataId": "reverse_snow_stalker", "maxCount": 2, "respawnTime": 445 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_pendulum_glacier" },
+      { "locationId": "chronofrost_reversed_snowfield" },
+      { "locationId": "chronofrost_sentinel_court" }
+    ]
+  },
+  {
+    "id": "chronofrost_sentinel_court",
+    "name": "동결시계원 빙시계 수문정",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 10110, "y": -285, "z": -2750,
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:chronofrost", "property:ice", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "frostclock_sentinel", "maxCount": 1, "respawnTime": 1350 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_pendulum_confluence" },
+      { "locationId": "chronofrost_upper_fork" }
+    ]
+  },
+  {
+    "id": "chronofrost_upper_fork",
+    "name": "동결시계원 상층 시간갈림길",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 10210, "y": -285, "z": -2790,
+    "tags": ["location:wilderness", "location:dungeon", "location:chronofrost", "property:ice", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "aeon_archivist", "maxCount": 2, "respawnTime": 455 },
+      { "type": "monster", "dataId": "tomorrowless_hound", "maxCount": 2, "respawnTime": 460 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_sentinel_court" },
+      { "locationId": "chronofrost_yesterday_gallery" },
+      { "locationId": "chronofrost_tomorrow_vault" }
+    ]
+  },
+  {
+    "id": "chronofrost_yesterday_gallery",
+    "name": "동결시계원 어제 회랑",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 10310, "y": -390, "z": -2830,
+    "tags": ["location:wilderness", "location:mine", "location:chronofrost", "property:ice", "property:earth"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "frozen_minute_wraith", "maxCount": 2, "respawnTime": 430 },
+      { "type": "monster", "dataId": "aeon_archivist", "maxCount": 2, "respawnTime": 455 },
+      { "type": "resource", "dataId": "pendulum_steel_vein", "maxCount": 2, "respawnTime": 780 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_upper_fork" },
+      { "locationId": "chronofrost_zero_antechamber" }
+    ]
+  },
+  {
+    "id": "chronofrost_tomorrow_vault",
+    "name": "동결시계원 내일 금고",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 10310, "y": -180, "z": -2830,
+    "tags": ["location:wilderness", "location:dungeon", "location:chronofrost", "property:ice", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "tomorrowless_hound", "maxCount": 2, "respawnTime": 460 },
+      { "type": "monster", "dataId": "aeon_archivist", "maxCount": 2, "respawnTime": 455 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_upper_fork" },
+      { "locationId": "chronofrost_zero_antechamber" }
+    ]
+  },
+  {
+    "id": "chronofrost_zero_antechamber",
+    "name": "동결시계원 영시 왕좌전실",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 10410, "y": -285, "z": -2870,
+    "tags": ["location:wilderness", "location:dungeon", "location:chronofrost", "property:ice", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "aeon_archivist", "maxCount": 2, "respawnTime": 455 },
+      { "type": "monster", "dataId": "tomorrowless_hound", "maxCount": 2, "respawnTime": 460 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_yesterday_gallery" },
+      { "locationId": "chronofrost_tomorrow_vault" },
+      { "locationId": "chronofrost_zero_throne" }
+    ]
+  },
+  {
+    "id": "chronofrost_zero_throne",
+    "name": "동결시계원 멈춘 왕좌",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 10510, "y": -285, "z": -2910,
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:chronofrost", "property:ice", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "zero_hour_queen", "maxCount": 1, "respawnTime": 1950 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_zero_antechamber" },
+      { "locationId": "endstar_threshold", "condition": "level_460" }
+    ]
+  },
+  {
+    "id": "endstar_threshold",
+    "name": "종언성단 마지막 시간문",
+    "mapColor": "#493d49",
+    "zoneType": "neutral",
+    "x": 10660, "y": -285, "z": -2950,
+    "tags": ["location:wilderness", "location:endstar", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ash_star_beast", "maxCount": 2, "respawnTime": 465 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_zero_throne" },
+      { "locationId": "endstar_bastion" }
+    ]
+  },
+  {
+    "id": "endstar_bastion",
+    "name": "종언성단 잔광 요새",
+    "mapColor": "#493d49",
+    "zoneType": "safe",
+    "x": 10750, "y": -285, "z": -2990,
+    "shopId": "endstar_bastion_store",
+    "tags": ["location:safe", "location:shop", "location:endstar", "property:light"],
+    "npcIds": ["endstar_observer"],
+    "objects": [],
+    "connections": [
+      { "locationId": "endstar_threshold" },
+      { "locationId": "endstar_lower_fork" }
+    ]
+  },
+  {
+    "id": "endstar_lower_fork",
+    "name": "종언성단 하층 별자리갈림길",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 10840, "y": -285, "z": -3030,
+    "tags": ["location:wilderness", "location:dungeon", "location:endstar", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ash_star_beast", "maxCount": 2, "respawnTime": 465 },
+      { "type": "monster", "dataId": "entropy_seraph", "maxCount": 1, "respawnTime": 475 }
+    ],
+    "connections": [
+      { "locationId": "endstar_bastion" },
+      { "locationId": "endstar_ash_field" },
+      { "locationId": "endstar_silent_sun" }
+    ]
+  },
+  {
+    "id": "endstar_ash_field",
+    "name": "종언성단 재별무리",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 10930, "y": -400, "z": -3070,
+    "tags": ["location:wilderness", "location:endstar", "property:fire", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ash_star_beast", "maxCount": 3, "respawnTime": 465 },
+      { "type": "monster", "dataId": "constellation_hunter", "maxCount": 1, "respawnTime": 480 }
+    ],
+    "connections": [
+      { "locationId": "endstar_lower_fork" },
+      { "locationId": "endstar_broken_constellation" }
+    ]
+  },
+  {
+    "id": "endstar_broken_constellation",
+    "name": "종언성단 부서진 성좌",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 11030, "y": -440, "z": -3110,
+    "tags": ["location:wilderness", "location:mine", "location:endstar", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "constellation_hunter", "maxCount": 2, "respawnTime": 480 },
+      { "type": "resource", "dataId": "entropy_metal_vein", "maxCount": 3, "respawnTime": 840 }
+    ],
+    "connections": [
+      { "locationId": "endstar_ash_field" },
+      { "locationId": "endstar_confluence" }
+    ]
+  },
+  {
+    "id": "endstar_silent_sun",
+    "name": "종언성단 침묵태양",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 10930, "y": -170, "z": -3070,
+    "tags": ["location:wilderness", "location:endstar", "property:holy", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "entropy_seraph", "maxCount": 3, "respawnTime": 475 },
+      { "type": "monster", "dataId": "genesis_warden", "maxCount": 1, "respawnTime": 495 }
+    ],
+    "connections": [
+      { "locationId": "endstar_lower_fork" },
+      { "locationId": "endstar_oath_comet" }
+    ]
+  },
+  {
+    "id": "endstar_oath_comet",
+    "name": "종언성단 서약혜성",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 11030, "y": -130, "z": -3110,
+    "tags": ["location:wilderness", "location:endstar", "property:light", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "constellation_hunter", "maxCount": 2, "respawnTime": 480 },
+      { "type": "monster", "dataId": "entropy_seraph", "maxCount": 2, "respawnTime": 475 }
+    ],
+    "connections": [
+      { "locationId": "endstar_silent_sun" },
+      { "locationId": "endstar_confluence" }
+    ]
+  },
+  {
+    "id": "endstar_confluence",
+    "name": "종언성단 종언 합류환",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 11130, "y": -285, "z": -3150,
+    "tags": ["location:wilderness", "location:dungeon", "location:endstar", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ash_star_beast", "maxCount": 2, "respawnTime": 465 },
+      { "type": "monster", "dataId": "entropy_seraph", "maxCount": 2, "respawnTime": 475 },
+      { "type": "monster", "dataId": "constellation_hunter", "maxCount": 1, "respawnTime": 480 }
+    ],
+    "connections": [
+      { "locationId": "endstar_broken_constellation" },
+      { "locationId": "endstar_oath_comet" },
+      { "locationId": "endstar_herald_ring" }
+    ]
+  },
+  {
+    "id": "endstar_herald_ring",
+    "name": "종언성단 전령의 고리",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 11230, "y": -285, "z": -3190,
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:endstar", "property:fire", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "endstar_herald", "maxCount": 1, "respawnTime": 1500 }
+    ],
+    "connections": [
+      { "locationId": "endstar_confluence" },
+      { "locationId": "endstar_upper_fork" }
+    ]
+  },
+  {
+    "id": "endstar_upper_fork",
+    "name": "종언성단 상층 기원갈림길",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 11330, "y": -285, "z": -3230,
+    "tags": ["location:wilderness", "location:dungeon", "location:endstar", "property:holy", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "genesis_warden", "maxCount": 2, "respawnTime": 495 },
+      { "type": "monster", "dataId": "horizon_reaper", "maxCount": 2, "respawnTime": 500 }
+    ],
+    "connections": [
+      { "locationId": "endstar_herald_ring" },
+      { "locationId": "endstar_genesis_lane" },
+      { "locationId": "endstar_entropy_lane" }
+    ]
+  },
+  {
+    "id": "endstar_genesis_lane",
+    "name": "종언성단 창세 항로",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 11430, "y": -400, "z": -3270,
+    "tags": ["location:wilderness", "location:endstar", "property:holy", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "genesis_warden", "maxCount": 3, "respawnTime": 495 },
+      { "type": "monster", "dataId": "entropy_seraph", "maxCount": 1, "respawnTime": 475 }
+    ],
+    "connections": [
+      { "locationId": "endstar_upper_fork" },
+      { "locationId": "endstar_last_horizon" }
+    ]
+  },
+  {
+    "id": "endstar_entropy_lane",
+    "name": "종언성단 소멸 항로",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 11430, "y": -170, "z": -3270,
+    "tags": ["location:wilderness", "location:mine", "location:endstar", "property:dark", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "horizon_reaper", "maxCount": 3, "respawnTime": 500 },
+      { "type": "resource", "dataId": "entropy_metal_vein", "maxCount": 3, "respawnTime": 840 }
+    ],
+    "connections": [
+      { "locationId": "endstar_upper_fork" },
+      { "locationId": "endstar_last_horizon" }
+    ]
+  },
+  {
+    "id": "endstar_last_horizon",
+    "name": "종언성단 최후지평",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 11530, "y": -285, "z": -3310,
+    "tags": ["location:wilderness", "location:dungeon", "location:endstar", "property:holy", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "genesis_warden", "maxCount": 2, "respawnTime": 495 },
+      { "type": "monster", "dataId": "horizon_reaper", "maxCount": 2, "respawnTime": 500 }
+    ],
+    "connections": [
+      { "locationId": "endstar_genesis_lane" },
+      { "locationId": "endstar_entropy_lane" },
+      { "locationId": "endstar_final_approach" }
+    ]
+  },
+  {
+    "id": "endstar_final_approach",
+    "name": "종언성단 마지막 성도",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 11630, "y": -285, "z": -3350,
+    "tags": ["location:wilderness", "location:dungeon", "location:endstar", "property:light", "property:dark", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "constellation_hunter", "maxCount": 2, "respawnTime": 480 },
+      { "type": "monster", "dataId": "horizon_reaper", "maxCount": 2, "respawnTime": 500 }
+    ],
+    "connections": [
+      { "locationId": "endstar_last_horizon" },
+      { "locationId": "endstar_last_constellation" }
+    ]
+  },
+  {
+    "id": "endstar_last_constellation",
+    "name": "종언성단 최후성좌",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 11730, "y": -285, "z": -3390,
+    "tags": ["location:wilderness", "location:dungeon", "location:boss_room", "location:endstar", "property:holy", "property:dark", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "last_constellation", "maxCount": 1, "respawnTime": 2400 }
+    ],
+    "connections": [
+      { "locationId": "endstar_final_approach" }
     ]
   }
 ]

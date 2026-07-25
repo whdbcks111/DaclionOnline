@@ -229,6 +229,149 @@ for (const recipe of [
 
 for (const recipe of [
     {
+        id: 'nebula:nebula_ration', result: 'nebula_ration', time: 7,
+        description: '성사로 여행자 빵과 성운유리 가루를 묶어 무중력에서도 흩어지지 않는 건량을 만듭니다.',
+        ingredients: [['star_silk', 2], ['nebula_glass', 2], ['traveler_bread', 2]],
+        tags: ['crafting:consumable', 'region:nebula-corridor'],
+    },
+    {
+        id: 'nebula:nebula_tonic', result: 'nebula_tonic', time: 10,
+        description: '중력핵의 흐름을 성운유리와 회복약에 안정시켜 성운맥 영약을 만듭니다.',
+        ingredients: [['gravity_core', 3], ['nebula_glass', 5], ['health_potion', 2]],
+        tags: ['crafting:consumable', 'region:nebula-corridor'],
+    },
+    {
+        id: 'nebula:nebula_edge', result: 'nebula_edge', time: 31,
+        description: '혜철 칼날에 궤도편과 중력핵을 박아 움직임을 따라가는 성운궤도검을 만듭니다.',
+        ingredients: [['comet_iron', 18], ['orbit_fragment', 8], ['gravity_core', 5]],
+        tags: ['crafting:weapon', 'region:nebula-corridor'],
+    },
+    {
+        id: 'nebula:gravity_arc_bow', result: 'gravity_arc_bow', time: 29,
+        description: '성사 시위와 중력핵을 성운유리 활대에 연결해 낙차를 지우는 장궁을 만듭니다.',
+        ingredients: [['star_silk', 16], ['gravity_core', 8], ['nebula_glass', 10]],
+        tags: ['crafting:weapon', 'region:nebula-corridor'],
+    },
+    {
+        id: 'nebula:orbit_fang', result: 'orbit_fang', time: 28,
+        description: '혜철을 얇게 벼리고 궤도편으로 칼끝의 방향을 비트는 단검을 만듭니다.',
+        ingredients: [['comet_iron', 13], ['orbit_fragment', 11], ['gravity_core', 4]],
+        tags: ['crafting:weapon', 'region:nebula-corridor'],
+    },
+    {
+        id: 'nebula:starwell_staff', result: 'starwell_staff', time: 32,
+        description: '성운유리와 중력핵을 성사 회로로 연결해 별빛을 순환시키는 지팡이를 만듭니다.',
+        ingredients: [['nebula_glass', 16], ['gravity_core', 9], ['star_silk', 10]],
+        tags: ['crafting:weapon', 'region:nebula-corridor'],
+    },
+    {
+        id: 'nebula:meteor_bulwark', result: 'meteor_bulwark', time: 33,
+        description: '혜철판 사이에 중력핵과 성운유리를 겹쳐 충격을 중심에 묶는 방패를 만듭니다.',
+        ingredients: [['comet_iron', 20], ['gravity_core', 9], ['nebula_glass', 8]],
+        tags: ['crafting:armor', 'region:nebula-corridor'],
+    },
+    {
+        id: 'chronofrost:chronofrost_ration', result: 'chronofrost_ration', time: 7,
+        description: '영겁실로 여행자 빵과 시빙정을 밀봉해 변하지 않는 보존식을 만듭니다.',
+        ingredients: [['aeon_thread', 2], ['chronofrost_ice', 2], ['traveler_bread', 2]],
+        tags: ['crafting:consumable', 'region:chronofrost'],
+    },
+    {
+        id: 'chronofrost:chronofrost_tonic', result: 'chronofrost_tonic', time: 11,
+        description: '동결초와 역행사를 회복약에 풀어 상처의 시간을 되돌리는 영시 회복약을 만듭니다.',
+        ingredients: [['frozen_second', 3], ['reverse_sand', 5], ['health_potion', 2]],
+        tags: ['crafting:consumable', 'region:chronofrost'],
+    },
+    {
+        id: 'chronofrost:chronoblade', result: 'chronoblade', time: 34,
+        description: '진자강 칼날에 동결초와 시빙정을 겹쳐 영시 절단검을 만듭니다.',
+        ingredients: [['pendulum_steel', 20], ['frozen_second', 8], ['chronofrost_ice', 10]],
+        tags: ['crafting:weapon', 'region:chronofrost'],
+    },
+    {
+        id: 'chronofrost:pendulum_bow', result: 'pendulum_bow', time: 32,
+        description: '진자강 활대와 영겁실 시위에 역행사의 왕복 흐름을 새깁니다.',
+        ingredients: [['pendulum_steel', 14], ['aeon_thread', 17], ['reverse_sand', 9]],
+        tags: ['crafting:weapon', 'region:chronofrost'],
+    },
+    {
+        id: 'chronofrost:yesterglass_dagger', result: 'yesterglass_dagger', time: 31,
+        description: '시빙정 칼날에 동결초를 봉하고 역행사로 어제의 궤적을 새깁니다.',
+        ingredients: [['chronofrost_ice', 15], ['frozen_second', 11], ['reverse_sand', 8]],
+        tags: ['crafting:weapon', 'region:chronofrost'],
+    },
+    {
+        id: 'chronofrost:zero_hour_staff', result: 'zero_hour_staff', time: 35,
+        description: '동결초를 영겁실 회로로 감싸 주변 시간과 정신력 흐름을 분리하는 지팡이를 만듭니다.',
+        ingredients: [['frozen_second', 12], ['aeon_thread', 14], ['chronofrost_ice', 12]],
+        tags: ['crafting:weapon', 'region:chronofrost'],
+    },
+    {
+        id: 'chronofrost:aeon_bulwark', result: 'aeon_bulwark', time: 36,
+        description: '진자강과 시빙정 사이에 영겁실을 겹쳐 충격의 시간을 저장하는 방패를 만듭니다.',
+        ingredients: [['pendulum_steel', 22], ['chronofrost_ice', 12], ['aeon_thread', 10]],
+        tags: ['crafting:armor', 'region:chronofrost'],
+    },
+    {
+        id: 'endstar:endstar_ration', result: 'endstar_ration', time: 8,
+        description: '종성재의 온기로 여행자 빵과 잔광편을 익혀 마지막 별찬을 만듭니다.',
+        ingredients: [['endstar_ash', 3], ['last_light', 2], ['traveler_bread', 2]],
+        tags: ['crafting:consumable', 'region:endstar'],
+    },
+    {
+        id: 'endstar:endstar_tonic', result: 'endstar_tonic', time: 12,
+        description: '창세정과 성좌핵의 박동을 회복약에 안정시켜 창세맥 영약을 만듭니다.',
+        ingredients: [['genesis_crystal', 4], ['constellation_core', 2], ['health_potion', 3]],
+        tags: ['crafting:consumable', 'region:endstar'],
+    },
+    {
+        id: 'endstar:endstar_edge', result: 'endstar_edge', time: 38,
+        description: '소멸금 칼날에 종성재와 잔광편을 겹쳐 빛과 어둠을 함께 끊는 장검을 만듭니다.',
+        ingredients: [['entropy_metal', 22], ['endstar_ash', 12], ['last_light', 10]],
+        tags: ['crafting:weapon', 'region:endstar'],
+    },
+    {
+        id: 'endstar:constellation_bow', result: 'constellation_bow', time: 36,
+        description: '성좌핵과 잔광편을 연결해 미래 좌표를 겨누는 성좌연결궁을 만듭니다.',
+        ingredients: [['constellation_core', 10], ['last_light', 16], ['entropy_metal', 12]],
+        tags: ['crafting:weapon', 'region:endstar'],
+    },
+    {
+        id: 'endstar:entropy_fang', result: 'entropy_fang', time: 35,
+        description: '소멸금 단검에 종성재와 성좌핵을 새겨 주변 질서를 깎는 송곳니를 만듭니다.',
+        ingredients: [['entropy_metal', 17], ['endstar_ash', 13], ['constellation_core', 7]],
+        tags: ['crafting:weapon', 'region:endstar'],
+    },
+    {
+        id: 'endstar:genesis_staff', result: 'genesis_staff', time: 39,
+        description: '창세정과 성좌핵을 잔광 회로에 묶어 새 별의 순환을 재현하는 지팡이를 만듭니다.',
+        ingredients: [['genesis_crystal', 15], ['constellation_core', 11], ['last_light', 14]],
+        tags: ['crafting:weapon', 'region:endstar'],
+    },
+    {
+        id: 'endstar:horizon_bulwark', result: 'horizon_bulwark', time: 40,
+        description: '소멸금과 창세정을 겹쳐 충격을 지평선 밖으로 밀어내는 방패를 만듭니다.',
+        ingredients: [['entropy_metal', 24], ['genesis_crystal', 13], ['endstar_ash', 12], ['constellation_core', 6]],
+        tags: ['crafting:armor', 'region:endstar'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
         id: 'voidcrown:voidcrown_ration', result: 'voidcrown_ration', time: 6,
         description: '기아덩굴을 여행자 빵에 섞고 별먹으로 밀봉해 무광 행군식을 만듭니다.',
         ingredients: [['starved_vine', 3], ['traveler_bread', 2], ['astral_ink', 1]],

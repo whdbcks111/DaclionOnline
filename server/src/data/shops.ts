@@ -734,3 +734,90 @@ defineShop({
     ],
     tags: [GameTags.SHOP_WORLDROOT],
 });
+
+defineShop({
+    id: 'nebula_waystation_store',
+    buyList: [
+        bagStock('성운궤도 배낭', 'nebula_orbit_pack', 58_000, 3_300),
+        { label: '유성등 건량', create: () => ({ itemDataId: 'nebula_ration', count: 1 }), count: 1, price: 520, stock: 24, restockTime: 50 },
+        { label: '성운맥 영약', create: () => ({ itemDataId: 'nebula_tonic', count: 1 }), count: 1, price: 820, stock: 12, restockTime: 120 },
+        { label: '화살 180개', create: () => ({ itemDataId: 'wooden_arrow', count: 180 }), count: 180, price: 590, stock: 20, restockTime: 40 },
+        ...[
+            ['성운궤도검', 'nebula_edge', 60_000],
+            ['중력호 장궁', 'gravity_arc_bow', 59_000],
+            ['궤도이탈 송곳니', 'orbit_fang', 61_000],
+            ['성정우물 지팡이', 'starwell_staff', 63_000],
+            ['낙성 방벽', 'meteor_bulwark', 62_000],
+        ].map(([label, itemDataId, price]) => ({
+            label: label as string,
+            create: () => ({ itemDataId: itemDataId as string, count: 1 }),
+            count: 1, price: price as number, stock: 1, restockTime: 3_300,
+        })),
+    ],
+    sellList: [
+        { label: '성운유리', filter: item => item.itemDataId === 'nebula_glass', count: 99, price: 1_100 },
+        { label: '혜철', filter: item => item.itemDataId === 'comet_iron', count: 99, price: 980 },
+        { label: '중력핵', filter: item => item.itemDataId === 'gravity_core', count: 99, price: 1_350 },
+        { label: '성사', filter: item => item.itemDataId === 'star_silk', count: 99, price: 920 },
+        { label: '궤도편', filter: item => item.itemDataId === 'orbit_fragment', count: 99, price: 1_180 },
+    ],
+    tags: [GameTags.SHOP_NEBULA_CORRIDOR],
+});
+
+defineShop({
+    id: 'chronofrost_refuge_store',
+    buyList: [
+        bagStock('영시 보존배낭', 'chronofrost_vault_pack', 76_000, 3_600),
+        { label: '영겁 보존식', create: () => ({ itemDataId: 'chronofrost_ration', count: 1 }), count: 1, price: 650, stock: 24, restockTime: 50 },
+        { label: '영시 회복약', create: () => ({ itemDataId: 'chronofrost_tonic', count: 1 }), count: 1, price: 1_020, stock: 12, restockTime: 120 },
+        { label: '화살 210개', create: () => ({ itemDataId: 'wooden_arrow', count: 210 }), count: 210, price: 700, stock: 20, restockTime: 40 },
+        ...[
+            ['영시 절단검', 'chronoblade', 79_000],
+            ['진자시계궁', 'pendulum_bow', 78_000],
+            ['어제유리 비수', 'yesterglass_dagger', 80_000],
+            ['영시각 지팡이', 'zero_hour_staff', 82_000],
+            ['영겁 진자방패', 'aeon_bulwark', 81_000],
+        ].map(([label, itemDataId, price]) => ({
+            label: label as string,
+            create: () => ({ itemDataId: itemDataId as string, count: 1 }),
+            count: 1, price: price as number, stock: 1, restockTime: 3_600,
+        })),
+    ],
+    sellList: [
+        { label: '시빙정', filter: item => item.itemDataId === 'chronofrost_ice', count: 99, price: 1_420 },
+        { label: '진자강', filter: item => item.itemDataId === 'pendulum_steel', count: 99, price: 1_300 },
+        { label: '동결초', filter: item => item.itemDataId === 'frozen_second', count: 99, price: 1_720 },
+        { label: '영겁실', filter: item => item.itemDataId === 'aeon_thread', count: 99, price: 1_260 },
+        { label: '역행사', filter: item => item.itemDataId === 'reverse_sand', count: 99, price: 1_480 },
+    ],
+    tags: [GameTags.SHOP_CHRONOFROST],
+});
+
+defineShop({
+    id: 'endstar_bastion_store',
+    buyList: [
+        bagStock('최후지평 차원배낭', 'endstar_horizon_pack', 100_000, 3_900),
+        { label: '마지막 별찬', create: () => ({ itemDataId: 'endstar_ration', count: 1 }), count: 1, price: 820, stock: 24, restockTime: 50 },
+        { label: '창세맥 영약', create: () => ({ itemDataId: 'endstar_tonic', count: 1 }), count: 1, price: 1_300, stock: 12, restockTime: 120 },
+        { label: '화살 250개', create: () => ({ itemDataId: 'wooden_arrow', count: 250 }), count: 250, price: 850, stock: 20, restockTime: 40 },
+        ...[
+            ['종성단절검', 'endstar_edge', 105_000],
+            ['성좌연결궁', 'constellation_bow', 103_000],
+            ['엔트로피 송곳니', 'entropy_fang', 106_000],
+            ['창세성 지팡이', 'genesis_staff', 109_000],
+            ['최후지평 방패', 'horizon_bulwark', 108_000],
+        ].map(([label, itemDataId, price]) => ({
+            label: label as string,
+            create: () => ({ itemDataId: itemDataId as string, count: 1 }),
+            count: 1, price: price as number, stock: 1, restockTime: 3_900,
+        })),
+    ],
+    sellList: [
+        { label: '종성재', filter: item => item.itemDataId === 'endstar_ash', count: 99, price: 1_850 },
+        { label: '창세정', filter: item => item.itemDataId === 'genesis_crystal', count: 99, price: 2_350 },
+        { label: '소멸금', filter: item => item.itemDataId === 'entropy_metal', count: 99, price: 1_980 },
+        { label: '잔광편', filter: item => item.itemDataId === 'last_light', count: 99, price: 1_720 },
+        { label: '성좌핵', filter: item => item.itemDataId === 'constellation_core', count: 99, price: 2_800 },
+    ],
+    tags: [GameTags.SHOP_ENDSTAR],
+});

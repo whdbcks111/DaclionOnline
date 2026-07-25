@@ -82,6 +82,9 @@ export const GameTags = Object.freeze({
     MATERIAL_VOIDCROWN: 'material:voidcrown',
     MATERIAL_ECLIPSE_TRENCH: 'material:eclipse-trench',
     MATERIAL_WORLDROOT: 'material:worldroot',
+    MATERIAL_NEBULA_CORRIDOR: 'material:nebula-corridor',
+    MATERIAL_CHRONOFROST: 'material:chronofrost',
+    MATERIAL_ENDSTAR: 'material:endstar',
     MATERIAL_ENHANCEMENT_STONE: 'material:enhancement_stone',
     MATERIAL_REFINED: 'material:refined',
 
@@ -130,6 +133,9 @@ export const GameTags = Object.freeze({
     LOCATION_VOIDCROWN: 'location:voidcrown',
     LOCATION_ECLIPSE_TRENCH: 'location:eclipse-trench',
     LOCATION_WORLDROOT: 'location:worldroot',
+    LOCATION_NEBULA_CORRIDOR: 'location:nebula-corridor',
+    LOCATION_CHRONOFROST: 'location:chronofrost',
+    LOCATION_ENDSTAR: 'location:endstar',
     /** 전용 보스 전투 공간. 살아 있는 보스가 입장한 플레이어를 먼저 감지한다. */
     LOCATION_BOSS_ROOM: 'location:boss_room',
     LOCATION_HIDDEN: 'location:hidden',
@@ -152,6 +158,9 @@ export const GameTags = Object.freeze({
     SHOP_VOIDCROWN: 'shop:voidcrown',
     SHOP_ECLIPSE_TRENCH: 'shop:eclipse-trench',
     SHOP_WORLDROOT: 'shop:worldroot',
+    SHOP_NEBULA_CORRIDOR: 'shop:nebula-corridor',
+    SHOP_CHRONOFROST: 'shop:chronofrost',
+    SHOP_ENDSTAR: 'shop:endstar',
 } satisfies Record<string, TagId>)
 
 const TAG_PATTERN = /^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9/._-]*$/

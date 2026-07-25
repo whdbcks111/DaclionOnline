@@ -2933,6 +2933,325 @@ for (const book of [
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_WORLDROOT, book.property],
 });
 
+// TODO(art): Lv.380~500 확장 권역 전용 아트 제작 전까지 역할별 기존 fallback을 명시적으로 재사용한다.
+for (const material of [
+    { id: 'nebula_glass', name: '성운유리', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_LIGHT, image: 'items/resonance_evasion_shard', weight: 0.34, description: '별빛과 먼지가 무중력 속에서 겹쳐 굳은 반투명 결정.' },
+    { id: 'comet_iron', name: '혜철', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_METAL, image: 'items/refined_iron', weight: 0.82, description: '긴 공전 끝에 식은 혜성핵에서 벗겨낸 푸른 합금.' },
+    { id: 'gravity_core', name: '중력핵', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_DARK, image: 'items/resonance_evasion_shard', weight: 0.55, description: '주변 질량을 미세하게 당기는 성운회랑의 응축핵.' },
+    { id: 'star_silk', name: '성사', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_LIGHT, image: 'items/earthworm_bait', weight: 0.12, description: '별빛 누에가 진공 속에 남긴 질기고 가벼운 실.' },
+    { id: 'orbit_fragment', name: '궤도편', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_ELECTRIC, image: 'items/resonance_evasion_shard', weight: 0.24, description: '무너진 천체 궤도의 방향성을 간직한 작은 파편.' },
+    { id: 'chronofrost_ice', name: '시빙정', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_ICE, image: 'items/diamond', weight: 0.38, description: '얼어붙은 한 순간이 결정 내부에서 끝없이 반복되는 얼음.' },
+    { id: 'pendulum_steel', name: '진자강', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_METAL, image: 'items/refined_iron', weight: 0.88, description: '시간 진자의 왕복 운동을 기억해 충격을 되돌리는 강철.' },
+    { id: 'frozen_second', name: '동결초', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_ICE, image: 'items/resonance_evasion_shard', weight: 0.2, description: '흐르지 못한 1초가 얇은 수정막으로 굳은 조각.' },
+    { id: 'aeon_thread', name: '영겁실', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_ELECTRIC, image: 'items/earthworm_bait', weight: 0.1, description: '어제와 내일을 한 매듭으로 잇는 은빛 실.' },
+    { id: 'reverse_sand', name: '역행사', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_EARTH, image: 'items/stone', weight: 0.18, description: '바닥에 닿으면 다시 위로 흐르는 회백색 모래.' },
+    { id: 'endstar_ash', name: '종성재', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_FIRE, image: 'items/ember_alloy', weight: 0.28, description: '마지막 빛을 모두 태운 별이 남긴 따뜻한 재.' },
+    { id: 'genesis_crystal', name: '창세정', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_HOLY, image: 'items/refined_diamond', weight: 0.42, description: '아직 태어나지 않은 별의 첫 빛이 갇힌 결정.' },
+    { id: 'entropy_metal', name: '소멸금', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_DARK, image: 'items/refined_iron', weight: 0.92, description: '시간이 지날수록 표면이 매끄럽게 사라지는 검은 금속.' },
+    { id: 'last_light', name: '잔광편', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_LIGHT, image: 'items/resonance_evasion_shard', weight: 0.16, description: '꺼진 성좌가 마지막으로 내보낸 빛을 붙잡은 파편.' },
+    { id: 'constellation_core', name: '성좌핵', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_ELECTRIC, image: 'items/resonance_evasion_shard', weight: 0.58, description: '여러 별의 연결을 하나의 심장처럼 뛰게 하는 희귀 핵.' },
+] as const) defineItem({
+    id: material.id,
+    name: material.name,
+    description: material.description,
+    image: material.image,
+    category: '후반 권역 소재',
+    weight: material.weight,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [material.region, material.property],
+});
+
+for (const consumable of [
+    { id: 'nebula_ration', name: '유성등 건량', region: GameTags.MATERIAL_NEBULA_CORRIDOR, hunger: 165, thirst: 90, image: 'items/traveler_bread', description: '성사로 묶은 별열매 건량. 배고픔 165와 수분 90을 회복한다.' },
+    { id: 'chronofrost_ration', name: '영겁 보존식', region: GameTags.MATERIAL_CHRONOFROST, hunger: 185, thirst: 105, image: 'items/traveler_bread', description: '시간이 멈춘 용기 안에서 숙성된 보존식. 배고픔 185와 수분 105를 회복한다.' },
+    { id: 'endstar_ration', name: '마지막 별찬', region: GameTags.MATERIAL_ENDSTAR, hunger: 210, thirst: 125, image: 'items/traveler_bread', description: '종성재의 온기로 익힌 성단의 비상식. 배고픔 210과 수분 125를 회복한다.' },
+] as const) defineItem({
+    id: consumable.id,
+    name: consumable.name,
+    description: consumable.description,
+    image: consumable.image,
+    category: '음식',
+    weight: 0.62,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: {
+        hunger: consumable.hunger,
+        thirst: consumable.thirst,
+        time: 1.1,
+        useMessage: `${consumable.name}을(를) 꺼내는 중...`,
+    },
+    onUse: 'restore_survival',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, consumable.region],
+});
+
+for (const tonic of [
+    { id: 'nebula_tonic', name: '성운맥 영약', region: GameTags.MATERIAL_NEBULA_CORRIDOR, level: 20 },
+    { id: 'chronofrost_tonic', name: '영시 회복약', region: GameTags.MATERIAL_CHRONOFROST, level: 22 },
+    { id: 'endstar_tonic', name: '창세맥 영약', region: GameTags.MATERIAL_ENDSTAR, level: 25 },
+] as const) defineItem({
+    id: tonic.id,
+    name: tonic.name,
+    description: `${tonic.name}의 응축된 흐름이 60초 동안 강한 재생 효과를 부여합니다.`,
+    image: 'items/health_potion',
+    category: '소모품',
+    weight: 0.38,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'regeneration', level: tonic.level, duration: 60 } },
+    onUse: 'apply_status_effect',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, tonic.region],
+});
+
+const frontierEquipment: Parameters<typeof defineItem>[0][] = [
+    {
+        id: 'nebula_edge', name: '성운궤도검', description: '혜철 칼날이 목표의 움직임을 따라 미세한 궤도를 수정하는 장검.',
+        image: 'items/windsteel_sword', category: '장검', weight: 5.1, stackable: false, maxStack: 1,
+        baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'atk', op: 'add', value: 455, source: '' },
+            { attribute: 'armorPen', op: 'add', value: 122, source: '' },
+            { attribute: 'critDmg', op: 'add', value: 0.36, source: '' },
+        ],
+        baseDurability: 1_330,
+        tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_NEBULA_CORRIDOR, GameTags.PROPERTY_METAL],
+        balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+    },
+    {
+        id: 'gravity_arc_bow', name: '중력호 장궁', description: '중력핵이 화살의 낙차를 지워 먼 목표까지 직선 궤도를 유지하는 장궁.',
+        image: 'items/stormstring_bow', category: '활', weight: 3.4, stackable: false, maxStack: 1,
+        baseMetadata: {
+            [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+            [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
+        },
+        onUse: null, equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'atk', op: 'add', value: 370, source: '' },
+            { attribute: 'critRate', op: 'add', value: 0.16, source: '' },
+            { attribute: 'projectileAcceleration', op: 'multiply', value: 2.18, source: '' },
+        ],
+        baseDurability: 1_270,
+        tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_NEBULA_CORRIDOR, GameTags.PROPERTY_DARK],
+        balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+    },
+    {
+        id: 'orbit_fang', name: '궤도이탈 송곳니', description: '궤도편의 방향을 순간적으로 비틀어 방어 틈으로 파고드는 단검.',
+        image: 'items/nightglass_dagger', category: '단검', weight: 1.7, stackable: false, maxStack: 1,
+        baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'atk', op: 'add', value: 402, source: '' },
+            { attribute: 'armorPen', op: 'add', value: 130, source: '' },
+            { attribute: 'critDmg', op: 'add', value: 0.56, source: '' },
+            { attribute: 'speed', op: 'add', value: 0.28, source: '' },
+        ],
+        baseDurability: 1_165,
+        tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_NEBULA_CORRIDOR, GameTags.PROPERTY_ELECTRIC],
+        balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
+    },
+    {
+        id: 'starwell_staff', name: '성정우물 지팡이', description: '성운유리 안쪽에 끝없이 떨어지는 별빛을 마력으로 되돌리는 지팡이.',
+        image: 'items/starwood_staff', category: '지팡이', weight: 3.5, stackable: false, maxStack: 1,
+        baseMetadata: {
+            [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+            [ItemMetadataKeys.PROJECTILE_ATTACK]: {
+                projectile: { dataId: 'basic_magic_orb', overrides: { tags: [GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK] } },
+            },
+        },
+        onUse: null, equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'magicForce', op: 'add', value: 540, source: '' },
+            { attribute: 'magicPen', op: 'add', value: 136, source: '' },
+            { attribute: 'mentalityRegen', op: 'add', value: 22, source: '' },
+            { attribute: 'projectileAcceleration', op: 'multiply', value: 2.2, source: '' },
+        ],
+        baseDurability: 1_350,
+        tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_NEBULA_CORRIDOR, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+        balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+    },
+    {
+        id: 'meteor_bulwark', name: '낙성 방벽', description: '혜철과 중력핵으로 충격을 방패 중심에 붙잡아 두는 중장 방패.',
+        image: 'items/forged_shield', category: '방패', weight: 5.6, stackable: false, maxStack: 1,
+        baseMetadata: null, onUse: null, equipSlot: 'offHand',
+        modifiers: [
+            { attribute: 'def', op: 'add', value: 150, source: '' },
+            { attribute: 'magicDef', op: 'add', value: 158, source: '' },
+            { attribute: 'maxLife', op: 'add', value: 2_300, source: '' },
+            { attribute: 'lifeRegen', op: 'add', value: 10, source: '' },
+        ],
+        baseDurability: 1_530,
+        tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_NEBULA_CORRIDOR, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
+        balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
+    },
+    {
+        id: 'chronoblade', name: '영시 절단검', description: '베인 순간을 짧게 고정해 뒤늦게 같은 상처를 겹치는 진자강 장검.',
+        image: 'items/windsteel_sword', category: '장검', weight: 5.2, stackable: false, maxStack: 1,
+        baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'atk', op: 'add', value: 530, source: '' },
+            { attribute: 'armorPen', op: 'add', value: 146, source: '' },
+            { attribute: 'critDmg', op: 'add', value: 0.41, source: '' },
+        ],
+        baseDurability: 1_470,
+        tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_CHRONOFROST, GameTags.PROPERTY_ICE, GameTags.PROPERTY_METAL],
+        balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+    },
+    {
+        id: 'pendulum_bow', name: '진자시계궁', description: '영겁실의 왕복 장력으로 다음 화살을 더 빠르게 되돌려 보내는 장궁.',
+        image: 'items/stormstring_bow', category: '활', weight: 3.45, stackable: false, maxStack: 1,
+        baseMetadata: {
+            [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+            [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
+        },
+        onUse: null, equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'atk', op: 'add', value: 435, source: '' },
+            { attribute: 'critRate', op: 'add', value: 0.175, source: '' },
+            { attribute: 'projectileAcceleration', op: 'multiply', value: 2.38, source: '' },
+        ],
+        baseDurability: 1_395,
+        tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_CHRONOFROST, GameTags.PROPERTY_ELECTRIC],
+        balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+    },
+    {
+        id: 'yesterglass_dagger', name: '어제유리 비수', description: '공격 직전의 궤적을 되짚어 같은 빈틈을 두 번 찌르는 시빙정 단검.',
+        image: 'items/nightglass_dagger', category: '단검', weight: 1.72, stackable: false, maxStack: 1,
+        baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'atk', op: 'add', value: 470, source: '' },
+            { attribute: 'armorPen', op: 'add', value: 154, source: '' },
+            { attribute: 'critDmg', op: 'add', value: 0.62, source: '' },
+            { attribute: 'speed', op: 'add', value: 0.32, source: '' },
+        ],
+        baseDurability: 1_280,
+        tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_CHRONOFROST, GameTags.PROPERTY_ICE],
+        balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
+    },
+    {
+        id: 'zero_hour_staff', name: '영시각 지팡이', description: '동결초를 중심으로 정신력의 흐름만 남기고 주변 시간을 늦추는 지팡이.',
+        image: 'items/starwood_staff', category: '지팡이', weight: 3.6, stackable: false, maxStack: 1,
+        baseMetadata: {
+            [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+            [ItemMetadataKeys.PROJECTILE_ATTACK]: {
+                projectile: { dataId: 'basic_magic_orb', overrides: { tags: [GameTags.PROPERTY_ICE, GameTags.PROPERTY_ELECTRIC] } },
+            },
+        },
+        onUse: null, equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'magicForce', op: 'add', value: 625, source: '' },
+            { attribute: 'magicPen', op: 'add', value: 162, source: '' },
+            { attribute: 'mentalityRegen', op: 'add', value: 26, source: '' },
+            { attribute: 'projectileAcceleration', op: 'multiply', value: 2.42, source: '' },
+        ],
+        baseDurability: 1_495,
+        tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_CHRONOFROST, GameTags.PROPERTY_ICE, GameTags.PROPERTY_ELECTRIC],
+        balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+    },
+    {
+        id: 'aeon_bulwark', name: '영겁 진자방패', description: '받은 충격을 영겁실에 저장했다가 전투가 끝난 뒤 흘려보내는 방패.',
+        image: 'items/forged_shield', category: '방패', weight: 5.8, stackable: false, maxStack: 1,
+        baseMetadata: null, onUse: null, equipSlot: 'offHand',
+        modifiers: [
+            { attribute: 'def', op: 'add', value: 180, source: '' },
+            { attribute: 'magicDef', op: 'add', value: 188, source: '' },
+            { attribute: 'maxLife', op: 'add', value: 2_850, source: '' },
+            { attribute: 'lifeRegen', op: 'add', value: 12, source: '' },
+        ],
+        baseDurability: 1_710,
+        tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_CHRONOFROST, GameTags.PROPERTY_ICE, GameTags.PROPERTY_METAL],
+        balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
+    },
+    {
+        id: 'endstar_edge', name: '종성단절검', description: '소멸금 칼날이 베어낸 경계에서 빛과 어둠의 연결을 함께 끊는 장검.',
+        image: 'items/windsteel_sword', category: '장검', weight: 5.35, stackable: false, maxStack: 1,
+        baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'atk', op: 'add', value: 620, source: '' },
+            { attribute: 'armorPen', op: 'add', value: 176, source: '' },
+            { attribute: 'critDmg', op: 'add', value: 0.48, source: '' },
+        ],
+        baseDurability: 1_650,
+        tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_ENDSTAR, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL],
+        balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
+    },
+    {
+        id: 'constellation_bow', name: '성좌연결궁', description: '별자리의 연결선을 시위로 삼아 목표가 움직일 미래 좌표로 화살을 보내는 장궁.',
+        image: 'items/stormstring_bow', category: '활', weight: 3.55, stackable: false, maxStack: 1,
+        baseMetadata: {
+            [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+            [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
+        },
+        onUse: null, equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'atk', op: 'add', value: 510, source: '' },
+            { attribute: 'critRate', op: 'add', value: 0.19, source: '' },
+            { attribute: 'projectileAcceleration', op: 'multiply', value: 2.68, source: '' },
+        ],
+        baseDurability: 1_565,
+        tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_ENDSTAR, GameTags.PROPERTY_LIGHT],
+        balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
+    },
+    {
+        id: 'entropy_fang', name: '엔트로피 송곳니', description: '공격이 빗나가도 주변 질서를 깎아 다음 빈틈을 넓히는 소멸금 단검.',
+        image: 'items/nightglass_dagger', category: '단검', weight: 1.78, stackable: false, maxStack: 1,
+        baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'atk', op: 'add', value: 565, source: '' },
+            { attribute: 'armorPen', op: 'add', value: 188, source: '' },
+            { attribute: 'critDmg', op: 'add', value: 0.7, source: '' },
+            { attribute: 'speed', op: 'add', value: 0.38, source: '' },
+        ],
+        baseDurability: 1_440,
+        tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_ENDSTAR, GameTags.PROPERTY_DARK],
+        balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
+    },
+    {
+        id: 'genesis_staff', name: '창세성 지팡이', description: '창세정과 성좌핵 사이에서 새 별의 마력 순환을 재현하는 지팡이.',
+        image: 'items/starwood_staff', category: '지팡이', weight: 3.75, stackable: false, maxStack: 1,
+        baseMetadata: {
+            [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+            [ItemMetadataKeys.PROJECTILE_ATTACK]: {
+                projectile: { dataId: 'basic_magic_orb', overrides: { tags: [GameTags.PROPERTY_HOLY, GameTags.PROPERTY_LIGHT] } },
+            },
+        },
+        onUse: null, equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'magicForce', op: 'add', value: 735, source: '' },
+            { attribute: 'magicPen', op: 'add', value: 198, source: '' },
+            { attribute: 'mentalityRegen', op: 'add', value: 31, source: '' },
+            { attribute: 'projectileAcceleration', op: 'multiply', value: 2.72, source: '' },
+        ],
+        baseDurability: 1_680,
+        tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_ENDSTAR, GameTags.PROPERTY_HOLY, GameTags.PROPERTY_LIGHT],
+        balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
+    },
+    {
+        id: 'horizon_bulwark', name: '최후지평 방패', description: '종성재와 소멸금을 겹쳐 모든 충격을 마지막 지평선 바깥으로 밀어내는 방패.',
+        image: 'items/forged_shield', category: '방패', weight: 6, stackable: false, maxStack: 1,
+        baseMetadata: null, onUse: null, equipSlot: 'offHand',
+        modifiers: [
+            { attribute: 'def', op: 'add', value: 220, source: '' },
+            { attribute: 'magicDef', op: 'add', value: 232, source: '' },
+            { attribute: 'maxLife', op: 'add', value: 3_600, source: '' },
+            { attribute: 'lifeRegen', op: 'add', value: 15, source: '' },
+        ],
+        baseDurability: 1_950,
+        tags: [GameTags.ITEM_ARMOR, GameTags.MATERIAL_ENDSTAR, GameTags.PROPERTY_DARK, GameTags.PROPERTY_HOLY],
+        balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
+    },
+];
+for (const item of frontierEquipment) defineItem(item);
+
 // TODO(art): 전용 가방 아트 제작 전까지 모든 성장 가방이 가방 카테고리 fallback을 공유한다.
 for (const bag of [
     {
@@ -2978,6 +3297,18 @@ for (const bag of [
     {
         id: 'worldroot_living_pack', name: '천근수피 생장배낭', capacity: 600, weight: 2.5,
         description: '짐이 늘어날수록 천근수피의 내부 결이 함께 자라나는 살아 있는 배낭.',
+    },
+    {
+        id: 'nebula_orbit_pack', name: '성운궤도 배낭', capacity: 700, weight: 2.4,
+        description: '작은 물건들이 내부 중력핵 주위를 공전해 빈 공간을 유지하는 배낭.',
+    },
+    {
+        id: 'chronofrost_vault_pack', name: '영시 보존배낭', capacity: 820, weight: 2.6,
+        description: '수납한 물건의 시간을 느리게 흘려 같은 공간을 반복해 사용하는 배낭.',
+    },
+    {
+        id: 'endstar_horizon_pack', name: '최후지평 차원배낭', capacity: 960, weight: 2.8,
+        description: '지평선 너머의 접힌 공간에 전리품을 차곡차곡 보존하는 종언성단 배낭.',
     },
     {
         id: 'foxtrail_pouch', name: '여우꼬리 허리주머니', capacity: 40, weight: 0.4,

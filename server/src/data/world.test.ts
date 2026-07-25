@@ -78,7 +78,7 @@ test('일반 스택 아이템은 중량 한도까지 하나의 사실상 무제�
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, 233);
+    assert.equal(locations.length, 276);
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -104,7 +104,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     assert.ok(locations.find(location => location.id === 'field')?.objects.some(
         object => object.type === 'resource' && object.dataId === 'tutorial_training_dummy',
     ));
-    assert.equal(locations.filter(location => location.tags.includes(GameTags.LOCATION_BOSS_ROOM)).length, 25);
+    assert.equal(locations.filter(location => location.tags.includes(GameTags.LOCATION_BOSS_ROOM)).length, 31);
     assert.ok(locations
         .filter(location => location.tags.includes(GameTags.LOCATION_BOSS_ROOM))
         .every(location => location.objects.some(object =>
@@ -114,7 +114,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 15, neutral: 46, hostile: 172 },
+        { safe: 18, neutral: 49, hostile: 209 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -247,6 +247,23 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
             'worldroot_hidden_reliquary', 'worldroot_root_bridge', 'worldroot_holy_canopy',
             'worldroot_dark_canopy', 'worldroot_forgotten_ring', 'worldroot_pulse_chamber',
             'worldroot_heart_antechamber', 'worldroot_primordial_heart'],
+        ['nebula_threshold', 'nebula_waystation', 'nebula_lower_fork', 'nebula_stardust_terrace',
+            'nebula_comet_foundry', 'nebula_echo_archive', 'nebula_silent_orbit',
+            'nebula_gravity_confluence', 'nebula_meteor_warden_hall', 'nebula_upper_fork',
+            'nebula_aurora_bridge', 'nebula_darkmatter_channel', 'nebula_crown_approach',
+            'nebula_sovereign_throne'],
+        ['chronofrost_threshold', 'chronofrost_refuge', 'chronofrost_lower_fork',
+            'chronofrost_frozen_minute', 'chronofrost_pendulum_glacier',
+            'chronofrost_hourglass_cemetery', 'chronofrost_reversed_snowfield',
+            'chronofrost_pendulum_confluence', 'chronofrost_sentinel_court',
+            'chronofrost_upper_fork', 'chronofrost_yesterday_gallery',
+            'chronofrost_tomorrow_vault', 'chronofrost_zero_antechamber',
+            'chronofrost_zero_throne'],
+        ['endstar_threshold', 'endstar_bastion', 'endstar_lower_fork', 'endstar_ash_field',
+            'endstar_broken_constellation', 'endstar_silent_sun', 'endstar_oath_comet',
+            'endstar_confluence', 'endstar_herald_ring', 'endstar_upper_fork',
+            'endstar_genesis_lane', 'endstar_entropy_lane', 'endstar_last_horizon',
+            'endstar_final_approach', 'endstar_last_constellation'],
     ];
 
     for (const ids of regions) {
@@ -256,18 +273,19 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
     }
 });
 
-test('1~380레벨 월드는 모든 속성을 관찰 가능하고 Lv.200 이후 성장 난도가 점진적으로 높아진다', () => {
+test('1~500레벨 월드는 모든 속성을 관찰 가능하고 Lv.200 이후 성장 난도가 점진적으로 높아진다', () => {
     const monsters = getAllMonsterData();
     const levelOne = getMonsterData('slime');
     const midLevelNormal = getMonsterData('spark_moth');
     const levelTwoHundred = getMonsterData('eclipse_watcher');
 
     assert.equal(Math.min(...monsters.map(monster => monster.level)), 1);
-    assert.equal(Math.max(...monsters.map(monster => monster.level)), 380);
+    assert.equal(Math.max(...monsters.map(monster => monster.level)), 500);
     assert.equal(Entity.getMaxExpOfLevel(1), 100);
     assert.equal(Entity.getMaxExpOfLevel(50), 20_000);
     assert.equal(Entity.getMaxExpOfLevel(200), 80_000);
     assert.equal(Entity.getMaxExpOfLevel(380), 760_000);
+    assert.equal(Entity.getMaxExpOfLevel(500), 1_921_326);
     assert.equal(levelOne!.expReward / Entity.getMaxExpOfLevel(1), 0.2);
     assert.equal(midLevelNormal!.expReward / Entity.getMaxExpOfLevel(midLevelNormal!.level), 0.05);
     assert.equal(levelTwoHundred!.expReward / Entity.getMaxExpOfLevel(200), 0.05);
@@ -293,7 +311,7 @@ test('성장 구간 보스는 최대 30레벨 간격으로 배치되고 일반�
         .sort((left, right) => left.level - right.level);
 
     assert.ok(bosses[0].level <= 32);
-    assert.equal(bosses[bosses.length - 1].level, 380);
+    assert.equal(bosses[bosses.length - 1].level, 500);
     for (let index = 1; index < bosses.length; index++) {
         assert.ok(bosses[index].level - bosses[index - 1].level <= 30,
             `${bosses[index - 1].name} Lv.${bosses[index - 1].level} → ${bosses[index].name} Lv.${bosses[index].level}`);
@@ -919,6 +937,94 @@ test('역근수해는 24개 분기 뿌리·기억 제단·씨앗 보호 보스·
     runtimeHeart?.update(0.05);
     assert.equal(getPrimordialSeedProtectionMultiplier(), 1);
     assert.equal(runtimeBoss?.getDamageReceivedModifier(), 1);
+});
+
+test('Lv.380~500 세 후반 권역은 분기 동선·지역 경제·연속 퀘스트·25레벨 이내 보스를 제공한다', () => {
+    const regions = [
+        {
+            tag: GameTags.LOCATION_NEBULA_CORRIDOR,
+            material: GameTags.MATERIAL_NEBULA_CORRIDOR,
+            count: 14,
+            storeId: 'nebula_waystation_store',
+            recipePrefix: 'nebula:',
+            questPrefix: 'nebula-corridor:',
+            npcId: 'nebula_navigator',
+            oreId: 'comet_iron_vein',
+            oreHardness: 650,
+            itemIds: ['nebula_edge', 'gravity_arc_bow', 'orbit_fang', 'starwell_staff', 'meteor_bulwark'],
+            bosses: [['meteor_warden', 400], ['nebula_sovereign', 420]] as const,
+        },
+        {
+            tag: GameTags.LOCATION_CHRONOFROST,
+            material: GameTags.MATERIAL_CHRONOFROST,
+            count: 14,
+            storeId: 'chronofrost_refuge_store',
+            recipePrefix: 'chronofrost:',
+            questPrefix: 'chronofrost:',
+            npcId: 'chronofrost_keeper',
+            oreId: 'pendulum_steel_vein',
+            oreHardness: 730,
+            itemIds: ['chronoblade', 'pendulum_bow', 'yesterglass_dagger', 'zero_hour_staff', 'aeon_bulwark'],
+            bosses: [['frostclock_sentinel', 440], ['zero_hour_queen', 460]] as const,
+        },
+        {
+            tag: GameTags.LOCATION_ENDSTAR,
+            material: GameTags.MATERIAL_ENDSTAR,
+            count: 15,
+            storeId: 'endstar_bastion_store',
+            recipePrefix: 'endstar:',
+            questPrefix: 'endstar:',
+            npcId: 'endstar_observer',
+            oreId: 'entropy_metal_vein',
+            oreHardness: 820,
+            itemIds: ['endstar_edge', 'constellation_bow', 'entropy_fang', 'genesis_staff', 'horizon_bulwark'],
+            bosses: [['endstar_herald', 480], ['last_constellation', 500]] as const,
+        },
+    ] as const;
+
+    for (const regionData of regions) {
+        const region = locations.filter(location => location.tags.includes(regionData.tag));
+        const store = getShop(regionData.storeId);
+        const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith(regionData.recipePrefix));
+        const quests = getAllQuestData().filter(quest => quest.id.startsWith(regionData.questPrefix));
+        assert.equal(region.length, regionData.count, regionData.tag);
+        assert.equal(new Set(region.map(location => location.mapColor)).size, 1, regionData.tag);
+        assert.ok(region.some(location => location.shopId === regionData.storeId), regionData.storeId);
+        assert.equal(recipes.length, 7, regionData.recipePrefix);
+        assert.equal(quests.length, 2, regionData.questPrefix);
+        assert.ok(NPC.getNpc(regionData.npcId), regionData.npcId);
+        assert.equal(getResourceData(regionData.oreId)?.hardness, regionData.oreHardness);
+        for (const itemId of regionData.itemIds) {
+            assert.ok(getItemData(itemId)?.tags.includes(regionData.material), `${itemId} material`);
+            assert.ok(getItemData(itemId)?.balance, `${itemId} balance`);
+            assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === itemId), `${itemId} store`);
+        }
+        for (const [bossId, level] of regionData.bosses) {
+            const boss = getMonsterData(bossId);
+            assert.equal(boss?.level, level, bossId);
+            assert.ok(boss?.tags.includes(GameTags.ENTITY_BOSS), bossId);
+            assert.ok((boss?.skills?.length ?? 0) >= 2, `${bossId} skills`);
+        }
+    }
+
+    assert.ok(getMonsterData('nebula_sovereign')?.skillPattern?.randomOrder);
+    assert.ok(getMonsterData('zero_hour_queen')?.skillPattern?.randomOrder);
+    assert.ok(getMonsterData('last_constellation')?.skillPattern?.randomOrder);
+    assert.equal(
+        locations.find(location => location.id === 'worldroot_primordial_heart')
+            ?.connections.find(connection => connection.locationId === 'nebula_threshold')?.condition,
+        'level_380',
+    );
+    assert.equal(
+        locations.find(location => location.id === 'nebula_sovereign_throne')
+            ?.connections.find(connection => connection.locationId === 'chronofrost_threshold')?.condition,
+        'level_420',
+    );
+    assert.equal(
+        locations.find(location => location.id === 'chronofrost_zero_throne')
+            ?.connections.find(connection => connection.locationId === 'endstar_threshold')?.condition,
+        'level_460',
+    );
 });
 
 test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {

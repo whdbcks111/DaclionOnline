@@ -2411,3 +2411,394 @@ const worldrootMonsters: WorldMonsterData[] = [
 ];
 
 for (const monster of worldrootMonsters) defineWorldMonster(monster);
+
+const nebulaCorridorMonsters: WorldMonsterData[] = [
+    {
+        id: 'stardust_manta', name: '성진 가오리',
+        description: '성운 먼지를 지느러미 아래에 모아 빛의 파도로 흩뿌리는 공중 생명체.', level: 384,
+        statProfile: MonsterStatProfile.CASTER,
+        statWeights: { maxLife: 0.92, magicForce: 1.08, speed: 1.16 },
+        drops: [
+            { itemDataId: 'nebula_glass', minCount: 1, maxCount: 4, chance: 0.68 },
+            { itemDataId: 'star_silk', minCount: 1, maxCount: 3, chance: 0.4 },
+        ],
+        goldReward: { min: 3_500, max: 5_700 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'blindness', chance: 0.28, duration: 6, level: 20 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_WATER, GameTags.MATERIAL_NEBULA_CORRIDOR],
+    },
+    {
+        id: 'comet_iron_knight', name: '혜철 유랑기사',
+        description: '부서진 혜성 갑주를 입고 마지막 명령이 향한 궤도를 지키는 무명의 기사.', level: 390,
+        statProfile: MonsterStatProfile.BRUISER,
+        statWeights: { maxLife: 1.08, def: 1.15, magicDef: 0.9 },
+        drops: [
+            { itemDataId: 'comet_iron', minCount: 2, maxCount: 5, chance: 0.72 },
+            { itemDataId: 'orbit_fragment', minCount: 1, maxCount: 2, chance: 0.3 },
+        ],
+        goldReward: { min: 3_620, max: 5_850 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.27, duration: 12, level: 20 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT, GameTags.MATERIAL_NEBULA_CORRIDOR],
+    },
+    {
+        id: 'gravity_shell', name: '중력각',
+        description: '중력핵을 껍질처럼 두르고 접근한 무기를 표면으로 끌어당기는 성운의 응집체.', level: 395,
+        statProfile: MonsterStatProfile.TANK,
+        statWeights: { maxLife: 1.12, def: 1.2, magicDef: 1.16 },
+        drops: [
+            { itemDataId: 'gravity_core', minCount: 1, maxCount: 3, chance: 0.58 },
+            { itemDataId: 'nebula_glass', minCount: 1, maxCount: 3, chance: 0.46 },
+        ],
+        goldReward: { min: 3_720, max: 6_000 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'slowness', chance: 0.3, duration: 8, level: 20 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_DARK, GameTags.PROPERTY_STONE, GameTags.MATERIAL_NEBULA_CORRIDOR],
+    },
+    {
+        id: 'meteor_warden', name: '낙성감시자 모르가',
+        description: '성운회랑의 유성 궤도를 감시하며 중력추와 유성편을 번갈아 떨어뜨리는 거대 파수자.', level: 400,
+        statProfile: MonsterStatProfile.HYBRID, statRank: MonsterRank.BOSS,
+        statWeights: { maxLife: 0.9, atk: 1.05, magicForce: 1.04, def: 1.08 },
+        expReward: 400 * 20 * 8,
+        drops: [
+            { itemDataId: 'comet_iron', minCount: 9, maxCount: 15, chance: 0.95 },
+            { itemDataId: 'gravity_core', minCount: 5, maxCount: 9, chance: 0.72 },
+            { itemDataId: 'meteor_bulwark', minCount: 1, maxCount: 1, chance: 0.022 },
+        ],
+        goldReward: { min: 22_000, max: 31_000 },
+        skills: [
+            { skillDataId: 'meteor_warden_gravity_hammer', level: 5 },
+            { skillDataId: 'meteor_warden_starfall', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['meteor_warden_gravity_hammer', 'meteor_warden_starfall'],
+            initialDelay: 2.6, interval: { min: 5.2, max: 7.1 },
+        },
+        ai: {
+            intelligence: 74, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.12, damage: 1.35, healing: 1.2, shielding: 1.15, control: 1.35, taunt: 2.8 },
+            tauntResistance: 0.82, switchThreshold: 0.27, decayPerSecond: 0.006,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_METAL, GameTags.PROPERTY_STONE, GameTags.MATERIAL_NEBULA_CORRIDOR, 'monster:meteor-warden'],
+    },
+    {
+        id: 'orbit_ripper', name: '궤도절단 사냥꾼',
+        description: '정해진 궤도를 이탈하는 움직임을 먹잇감으로 삼아 빈틈을 베어내는 성간 포식자.', level: 405,
+        statProfile: MonsterStatProfile.SKIRMISHER,
+        statWeights: { atk: 1.12, speed: 1.12, critRate: 1.16 },
+        drops: [
+            { itemDataId: 'orbit_fragment', minCount: 2, maxCount: 5, chance: 0.7 },
+            { itemDataId: 'star_silk', minCount: 1, maxCount: 4, chance: 0.5 },
+        ],
+        goldReward: { min: 3_920, max: 6_340 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.3, duration: 13, level: 21 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_DARK, GameTags.PROPERTY_ELECTRIC, GameTags.MATERIAL_NEBULA_CORRIDOR],
+    },
+    {
+        id: 'nebula_cantor', name: '성운성가자',
+        description: '무너진 별의 이름을 노래해 치유와 보호의 흐름부터 끊는 성운 왕정의 잔향.', level: 412,
+        statProfile: MonsterStatProfile.CASTER,
+        statWeights: { magicForce: 1.15, magicDef: 1.12 },
+        drops: [
+            { itemDataId: 'nebula_glass', minCount: 2, maxCount: 5, chance: 0.66 },
+            { itemDataId: 'gravity_core', minCount: 1, maxCount: 3, chance: 0.44 },
+        ],
+        goldReward: { min: 4_060, max: 6_560 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'silence', chance: 0.29, duration: 5.5, level: 21 } },
+        ai: {
+            intelligence: 96, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.03, damage: 0.9, healing: 2.3, shielding: 2.15, control: 1.9, taunt: 3.8 },
+            tauntResistance: 0.96, switchThreshold: 0.36, decayPerSecond: 0.003,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK, GameTags.MATERIAL_NEBULA_CORRIDOR],
+    },
+    {
+        id: 'nebula_sovereign', name: '성운제 아스테리온',
+        description: '빛나는 성운관과 어두운 사건지평을 함께 다스리며 파티의 기여도를 읽어 봉쇄 대상을 바꾸는 마지막 군주.', level: 420,
+        statProfile: MonsterStatProfile.CASTER, statRank: MonsterRank.BOSS,
+        statWeights: { maxLife: 1.02, magicForce: 1.13, magicDef: 1.12 },
+        expReward: 420 * 20 * 10,
+        drops: [
+            { itemDataId: 'gravity_core', minCount: 10, maxCount: 17, chance: 0.96 },
+            { itemDataId: 'orbit_fragment', minCount: 8, maxCount: 14, chance: 0.9 },
+            { itemDataId: 'starwell_staff', minCount: 1, maxCount: 1, chance: 0.02 },
+            { itemDataId: 'gravity_arc_bow', minCount: 1, maxCount: 1, chance: 0.015 },
+        ],
+        goldReward: { min: 27_000, max: 38_000 },
+        skills: [
+            { skillDataId: 'nebula_sovereign_event_horizon', level: 5 },
+            { skillDataId: 'nebula_sovereign_crownflare', level: 5 },
+            { skillDataId: 'meteor_warden_starfall', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['nebula_sovereign_event_horizon', 'nebula_sovereign_crownflare', 'meteor_warden_starfall'],
+            randomOrder: true, initialDelay: 2.3, interval: { min: 4.5, max: 6.4 },
+        },
+        ai: {
+            intelligence: 100, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.01, damage: 0.95, healing: 2.55, shielding: 2.4, control: 2.35, taunt: 4.4 },
+            tauntResistance: 0.995, switchThreshold: 0.42, decayPerSecond: 0.0015,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK, GameTags.MATERIAL_NEBULA_CORRIDOR, 'monster:nebula-sovereign'],
+    },
+];
+for (const monster of nebulaCorridorMonsters) defineWorldMonster(monster);
+
+const chronofrostMonsters: WorldMonsterData[] = [
+    {
+        id: 'frozen_minute_wraith', name: '동결분 유령',
+        description: '끝나지 않은 한 분 동안의 후회가 얼음 갑옷을 입고 되풀이되는 망령.', level: 424,
+        statProfile: MonsterStatProfile.CASTER,
+        statWeights: { magicForce: 1.1, speed: 1.08 },
+        drops: [
+            { itemDataId: 'chronofrost_ice', minCount: 1, maxCount: 4, chance: 0.7 },
+            { itemDataId: 'frozen_second', minCount: 1, maxCount: 3, chance: 0.42 },
+        ],
+        goldReward: { min: 4_300, max: 6_900 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'slowness', chance: 0.31, duration: 9, level: 22 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_ICE, GameTags.MATERIAL_CHRONOFROST],
+    },
+    {
+        id: 'pendulum_colossus', name: '진자빙 거상',
+        description: '진자강 몸체를 앞뒤로 흔들며 받은 충격을 다음 타격에 실어 되돌리는 거상.', level: 430,
+        statProfile: MonsterStatProfile.TANK,
+        statWeights: { maxLife: 1.15, def: 1.2, magicDef: 1.12 },
+        drops: [
+            { itemDataId: 'pendulum_steel', minCount: 2, maxCount: 5, chance: 0.74 },
+            { itemDataId: 'reverse_sand', minCount: 1, maxCount: 3, chance: 0.36 },
+        ],
+        goldReward: { min: 4_450, max: 7_150 },
+        attack: { effect: { statusEffectId: 'defense_reduction', chance: 0.28, duration: 13, level: 22 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_ICE, GameTags.PROPERTY_METAL, GameTags.MATERIAL_CHRONOFROST],
+    },
+    {
+        id: 'reverse_snow_stalker', name: '역설원 추적자',
+        description: '발자국이 찍히기 전부터 냄새를 따라와 도망칠 미래를 먼저 덮치는 설원 포식자.', level: 435,
+        statProfile: MonsterStatProfile.SKIRMISHER,
+        statWeights: { atk: 1.13, speed: 1.14, critDmg: 1.1 },
+        drops: [
+            { itemDataId: 'aeon_thread', minCount: 1, maxCount: 4, chance: 0.62 },
+            { itemDataId: 'reverse_sand', minCount: 1, maxCount: 4, chance: 0.5 },
+        ],
+        goldReward: { min: 4_580, max: 7_360 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.31, duration: 13, level: 22 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_ICE, GameTags.PROPERTY_DARK, GameTags.MATERIAL_CHRONOFROST],
+    },
+    {
+        id: 'frostclock_sentinel', name: '빙시계 파수장',
+        description: '영시의 관문에서 진자뢰와 절대영도의 칼날을 교대로 사용하는 시계원의 수문장.', level: 440,
+        statProfile: MonsterStatProfile.HYBRID, statRank: MonsterRank.BOSS,
+        statWeights: { maxLife: 0.94, atk: 1.08, magicForce: 1.08, def: 1.1 },
+        expReward: 440 * 20 * 8,
+        drops: [
+            { itemDataId: 'pendulum_steel', minCount: 10, maxCount: 16, chance: 0.95 },
+            { itemDataId: 'frozen_second', minCount: 6, maxCount: 10, chance: 0.74 },
+            { itemDataId: 'chronoblade', minCount: 1, maxCount: 1, chance: 0.022 },
+        ],
+        goldReward: { min: 30_000, max: 42_000 },
+        skills: [
+            { skillDataId: 'frostclock_sentinel_zero_cut', level: 5 },
+            { skillDataId: 'frostclock_sentinel_pendulum', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['frostclock_sentinel_zero_cut', 'frostclock_sentinel_pendulum'],
+            initialDelay: 2.5, interval: { min: 5, max: 6.8 },
+        },
+        ai: {
+            intelligence: 86, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.08, damage: 1.25, healing: 1.45, shielding: 1.5, control: 1.9, taunt: 3.2 },
+            tauntResistance: 0.9, switchThreshold: 0.32, decayPerSecond: 0.004,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_ICE, GameTags.PROPERTY_ELECTRIC, GameTags.MATERIAL_CHRONOFROST, 'monster:frostclock-sentinel'],
+    },
+    {
+        id: 'aeon_archivist', name: '영겁 기록사',
+        description: '전투자의 가장 위험했던 순간을 기록해 같은 실수를 다시 강요하는 시계원 기록사.', level: 448,
+        statProfile: MonsterStatProfile.CASTER,
+        statWeights: { magicForce: 1.16, magicPen: 1.12, magicDef: 1.1 },
+        drops: [
+            { itemDataId: 'aeon_thread', minCount: 2, maxCount: 5, chance: 0.68 },
+            { itemDataId: 'frozen_second', minCount: 1, maxCount: 4, chance: 0.52 },
+        ],
+        goldReward: { min: 4_900, max: 7_900 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'curse', chance: 0.31, duration: 13, level: 23 } },
+        ai: {
+            intelligence: 98, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.02, damage: 0.95, healing: 2.4, shielding: 2.2, control: 2.15, taunt: 4 },
+            tauntResistance: 0.98, switchThreshold: 0.39, decayPerSecond: 0.002,
+        },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_ICE, GameTags.PROPERTY_LIGHT, GameTags.MATERIAL_CHRONOFROST],
+    },
+    {
+        id: 'tomorrowless_hound', name: '내일없는 사냥개',
+        description: '미래가 닫힌 길목을 배회하며 이동과 회피를 먼저 빼앗는 얼음 사냥개.', level: 454,
+        statProfile: MonsterStatProfile.SKIRMISHER,
+        statWeights: { atk: 1.16, speed: 1.16, armorPen: 1.12 },
+        drops: [
+            { itemDataId: 'chronofrost_ice', minCount: 2, maxCount: 5, chance: 0.64 },
+            { itemDataId: 'reverse_sand', minCount: 2, maxCount: 5, chance: 0.54 },
+        ],
+        goldReward: { min: 5_050, max: 8_120 },
+        attack: { effect: { statusEffectId: 'bind', chance: 0.27, duration: 4.5, level: 23 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_ICE, GameTags.PROPERTY_DARK, GameTags.MATERIAL_CHRONOFROST],
+    },
+    {
+        id: 'zero_hour_queen', name: '영시여왕 크로니아',
+        description: '어제와 내일을 얼린 왕좌에서 파티의 시간을 분리해 한 사람씩 멈추는 동결시계원의 군주.', level: 460,
+        statProfile: MonsterStatProfile.CASTER, statRank: MonsterRank.BOSS,
+        statWeights: { maxLife: 1.04, magicForce: 1.15, magicDef: 1.14 },
+        expReward: 460 * 20 * 10,
+        drops: [
+            { itemDataId: 'frozen_second', minCount: 11, maxCount: 18, chance: 0.97 },
+            { itemDataId: 'aeon_thread', minCount: 9, maxCount: 15, chance: 0.9 },
+            { itemDataId: 'zero_hour_staff', minCount: 1, maxCount: 1, chance: 0.02 },
+            { itemDataId: 'aeon_bulwark', minCount: 1, maxCount: 1, chance: 0.015 },
+        ],
+        goldReward: { min: 36_000, max: 50_000 },
+        skills: [
+            { skillDataId: 'zero_hour_queen_stillness', level: 5 },
+            { skillDataId: 'zero_hour_queen_reversal', level: 5 },
+            { skillDataId: 'frostclock_sentinel_pendulum', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['zero_hour_queen_stillness', 'zero_hour_queen_reversal', 'frostclock_sentinel_pendulum'],
+            randomOrder: true, initialDelay: 2.2, interval: { min: 4.3, max: 6.2 },
+        },
+        ai: {
+            intelligence: 100, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.01, damage: 0.92, healing: 2.5, shielding: 2.5, control: 2.55, taunt: 4.6 },
+            tauntResistance: 0.997, switchThreshold: 0.43, decayPerSecond: 0.001,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_ICE, GameTags.PROPERTY_DARK, GameTags.MATERIAL_CHRONOFROST, 'monster:zero-hour-queen'],
+    },
+];
+for (const monster of chronofrostMonsters) defineWorldMonster(monster);
+
+const endstarMonsters: WorldMonsterData[] = [
+    {
+        id: 'ash_star_beast', name: '재별수',
+        description: '꺼진 별의 재를 털가죽처럼 두르고 숨을 쉴 때마다 작은 종말을 뿜는 짐승.', level: 464,
+        statProfile: MonsterStatProfile.BRUISER,
+        statWeights: { maxLife: 1.1, atk: 1.12, magicDef: 0.92 },
+        drops: [
+            { itemDataId: 'endstar_ash', minCount: 2, maxCount: 5, chance: 0.72 },
+            { itemDataId: 'last_light', minCount: 1, maxCount: 3, chance: 0.38 },
+        ],
+        goldReward: { min: 5_300, max: 8_520 },
+        attack: { effect: { statusEffectId: 'fire', chance: 0.32, duration: 14, level: 24 } },
+        tags: [GameTags.ENTITY_BEAST, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_DARK, GameTags.MATERIAL_ENDSTAR],
+    },
+    {
+        id: 'entropy_seraph', name: '소멸 세라프',
+        description: '빛을 거두는 검은 날개로 치유와 보호막의 질서를 먼저 무너뜨리는 타락한 별의 사자.', level: 470,
+        statProfile: MonsterStatProfile.CASTER,
+        statWeights: { magicForce: 1.17, magicPen: 1.14, speed: 1.08 },
+        drops: [
+            { itemDataId: 'entropy_metal', minCount: 1, maxCount: 4, chance: 0.66 },
+            { itemDataId: 'genesis_crystal', minCount: 1, maxCount: 2, chance: 0.26 },
+        ],
+        goldReward: { min: 5_480, max: 8_800 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'decay', chance: 0.32, duration: 14, level: 24 } },
+        ai: {
+            intelligence: 97, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.03, damage: 0.9, healing: 2.45, shielding: 2.35, control: 2.1, taunt: 4 },
+            tauntResistance: 0.98, switchThreshold: 0.38, decayPerSecond: 0.002,
+        },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.PROPERTY_DARK, GameTags.PROPERTY_HOLY, GameTags.MATERIAL_ENDSTAR],
+    },
+    {
+        id: 'constellation_hunter', name: '성좌 사냥꾼',
+        description: '별과 별 사이의 선을 지름길로 삼아 이동하는 적을 미래 좌표에서 기다리는 사냥꾼.', level: 475,
+        statProfile: MonsterStatProfile.SKIRMISHER,
+        statWeights: { atk: 1.15, speed: 1.18, critRate: 1.15 },
+        drops: [
+            { itemDataId: 'last_light', minCount: 2, maxCount: 5, chance: 0.68 },
+            { itemDataId: 'constellation_core', minCount: 1, maxCount: 2, chance: 0.3 },
+        ],
+        goldReward: { min: 5_620, max: 9_040 },
+        attack: { effect: { statusEffectId: 'bleeding', chance: 0.32, duration: 14, level: 24 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ELECTRIC, GameTags.MATERIAL_ENDSTAR],
+    },
+    {
+        id: 'endstar_herald', name: '종성의 전령 에녹',
+        description: '모든 별의 종말을 기록하며 폭발과 침묵성가를 교대로 선고하는 성단의 전령.', level: 480,
+        statProfile: MonsterStatProfile.CASTER, statRank: MonsterRank.BOSS,
+        statWeights: { maxLife: 0.96, magicForce: 1.16, magicPen: 1.12 },
+        expReward: 480 * 20 * 8,
+        drops: [
+            { itemDataId: 'endstar_ash', minCount: 10, maxCount: 17, chance: 0.96 },
+            { itemDataId: 'constellation_core', minCount: 5, maxCount: 9, chance: 0.72 },
+            { itemDataId: 'entropy_fang', minCount: 1, maxCount: 1, chance: 0.022 },
+        ],
+        goldReward: { min: 40_000, max: 56_000 },
+        skills: [
+            { skillDataId: 'endstar_herald_nova', level: 5 },
+            { skillDataId: 'endstar_herald_silence', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['endstar_herald_nova', 'endstar_herald_silence'],
+            initialDelay: 2.4, interval: { min: 4.9, max: 6.7 },
+        },
+        ai: {
+            intelligence: 92, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.04, damage: 1.05, healing: 2, shielding: 2.1, control: 2.15, taunt: 3.8 },
+            tauntResistance: 0.96, switchThreshold: 0.37, decayPerSecond: 0.0025,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_DARK, GameTags.MATERIAL_ENDSTAR, 'monster:endstar-herald'],
+    },
+    {
+        id: 'genesis_warden', name: '창세정 파수자',
+        description: '태어나지 않은 별을 품은 갑주로 마지막 성단의 밝은 길을 지키는 수호체.', level: 488,
+        statProfile: MonsterStatProfile.TANK,
+        statWeights: { maxLife: 1.18, def: 1.15, magicDef: 1.22 },
+        drops: [
+            { itemDataId: 'genesis_crystal', minCount: 1, maxCount: 4, chance: 0.62 },
+            { itemDataId: 'entropy_metal', minCount: 2, maxCount: 5, chance: 0.58 },
+        ],
+        goldReward: { min: 5_980, max: 9_620 },
+        attack: { damageType: 'magic', effect: { statusEffectId: 'blindness', chance: 0.31, duration: 7, level: 25 } },
+        tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_HOLY, GameTags.PROPERTY_METAL, GameTags.MATERIAL_ENDSTAR],
+    },
+    {
+        id: 'horizon_reaper', name: '지평선 수확자',
+        description: '도망칠 방향과 돌아갈 방향을 함께 베어내며 최후지평을 순찰하는 검은 수확자.', level: 494,
+        statProfile: MonsterStatProfile.SKIRMISHER,
+        statWeights: { atk: 1.18, armorPen: 1.16, critDmg: 1.14, speed: 1.1 },
+        drops: [
+            { itemDataId: 'entropy_metal', minCount: 2, maxCount: 5, chance: 0.7 },
+            { itemDataId: 'last_light', minCount: 2, maxCount: 5, chance: 0.56 },
+        ],
+        goldReward: { min: 6_140, max: 9_880 },
+        attack: { effect: { statusEffectId: 'curse', chance: 0.31, duration: 15, level: 25 } },
+        tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL, GameTags.MATERIAL_ENDSTAR],
+    },
+    {
+        id: 'last_constellation', name: '최후성좌 라스트라',
+        description: '창세와 소멸을 하나의 별자리로 묶은 종언성단의 의지. 파티의 가장 큰 기여를 읽고 세 가지 종말을 무작위로 선택한다.', level: 500,
+        statProfile: MonsterStatProfile.HYBRID, statRank: MonsterRank.BOSS,
+        statWeights: { maxLife: 1.08, atk: 1.12, magicForce: 1.18, def: 1.12, magicDef: 1.15 },
+        expReward: 500 * 20 * 12,
+        drops: [
+            { itemDataId: 'constellation_core', minCount: 12, maxCount: 20, chance: 0.98 },
+            { itemDataId: 'genesis_crystal', minCount: 10, maxCount: 17, chance: 0.94 },
+            { itemDataId: 'genesis_staff', minCount: 1, maxCount: 1, chance: 0.022 },
+            { itemDataId: 'horizon_bulwark', minCount: 1, maxCount: 1, chance: 0.018 },
+            { itemDataId: 'constellation_bow', minCount: 1, maxCount: 1, chance: 0.014 },
+        ],
+        goldReward: { min: 52_000, max: 74_000 },
+        skills: [
+            { skillDataId: 'last_constellation_collapse', level: 5 },
+            { skillDataId: 'last_constellation_genesis', level: 5 },
+            { skillDataId: 'last_constellation_entropy', level: 5 },
+        ],
+        skillPattern: {
+            sequence: ['last_constellation_collapse', 'last_constellation_genesis', 'last_constellation_entropy'],
+            randomOrder: true, initialDelay: 2, interval: { min: 4, max: 5.8 },
+        },
+        ai: {
+            intelligence: 100, disposition: MonsterAiDisposition.THREAT,
+            weights: { attack: 0.01, damage: 1, healing: 2.6, shielding: 2.55, control: 2.5, taunt: 4.8 },
+            tauntResistance: 0.999, switchThreshold: 0.45, decayPerSecond: 0.001,
+        },
+        tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_HOLY, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL, GameTags.MATERIAL_ENDSTAR, 'monster:last-constellation'],
+    },
+];
+for (const monster of endstarMonsters) defineWorldMonster(monster);

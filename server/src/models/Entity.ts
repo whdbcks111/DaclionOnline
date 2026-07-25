@@ -281,7 +281,7 @@ export default abstract class Entity implements TagReadable {
         if (normalizedLevel <= 200) return Math.max(1, Math.round(earlyRequirement));
 
         // Lv.200까지의 체감을 보존하고 이후부터 점진적으로 사냥 횟수를 늘린다.
-        // 동레벨 일반 몬스터 기준 Lv.200은 20마리, Lv.380은 100마리가 필요하다.
+        // 동레벨 일반 몬스터 기준 Lv.200은 20마리, Lv.380은 100마리, Lv.500은 약 192마리가 필요하다.
         const lateProgress = (normalizedLevel - 200) / 180;
         const lateMultiplier = 1 + 4 * lateProgress ** 1.5;
         return Math.max(1, Math.round(earlyRequirement * lateMultiplier));

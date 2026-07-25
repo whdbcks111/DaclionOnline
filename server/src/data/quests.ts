@@ -56,6 +56,18 @@ export const WORLDROOT_QUEST_IDS = Object.freeze({
     RESTORE_MEMORY: 'worldroot:restore-memory',
     AWAKEN_HEART: 'worldroot:awaken-heart',
 } as const);
+export const NEBULA_QUEST_IDS = Object.freeze({
+    RESTORE_BEACON: 'nebula-corridor:restore-beacon',
+    END_SOVEREIGN: 'nebula-corridor:end-sovereign',
+} as const);
+export const CHRONOFROST_QUEST_IDS = Object.freeze({
+    RESTART_CLOCK: 'chronofrost:restart-clock',
+    END_ZERO_HOUR: 'chronofrost:end-zero-hour',
+} as const);
+export const ENDSTAR_QUEST_IDS = Object.freeze({
+    RELIGHT_CONSTELLATION: 'endstar:relight-constellation',
+    END_LAST_CONSTELLATION: 'endstar:end-last-constellation',
+} as const);
 
 defineQuest({
     id: TUTORIAL_QUEST_ID,
@@ -706,6 +718,165 @@ defineQuest({
         QuestReward.gold(110_000),
         QuestReward.item('canopy_heartshield', 1, '천개심 방패'),
         QuestReward.item('primordial_sanctuary_skillbook', 1, '태초성역 전승서'),
+    ],
+});
+
+defineQuest({
+    id: NEBULA_QUEST_IDS.RESTORE_BEACON,
+    name: '별길을 잃은 정거장',
+    aliases: ['성운회랑 보급', '유성등 복구'],
+    description: '성운유리와 궤도편을 모아 유성등 정거장의 끊어진 귀환 신호를 복구하세요.',
+    tags: ['quest:side', 'region:nebula-corridor'],
+    giverNpcIds: ['nebula_navigator'],
+    turnInNpcIds: ['nebula_navigator'],
+    visible: player => player.level >= 380,
+    canAccept: player => player.level >= 380,
+    stages: [new QuestStage({
+        id: 'restore-meteor-beacon',
+        description: '성운회랑의 빛나는 생명체와 궤도 사냥꾼에게서 신호 재료를 모으세요.',
+        objectives: [
+            QuestObjective.item('nebula-glass', '성운유리 수집', 18, 'nebula_glass', true),
+            QuestObjective.item('orbit-fragment', '궤도편 수집', 14, 'orbit_fragment', true),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(850_000),
+        QuestReward.gold(125_000),
+        QuestReward.item('nebula_tonic', 6, '성운맥 영약'),
+        QuestReward.item('nebula_edge', 1, '성운궤도검'),
+    ],
+});
+
+defineQuest({
+    id: NEBULA_QUEST_IDS.END_SOVEREIGN,
+    name: '사건지평 너머의 왕관',
+    aliases: ['성운제 토벌', '아스테리온'],
+    description: '낙성감시자를 넘어 성운제 아스테리온의 사건지평 봉쇄를 끝내세요.',
+    tags: ['quest:side', 'quest:boss', 'region:nebula-corridor'],
+    giverNpcIds: ['nebula_navigator'],
+    turnInNpcIds: ['nebula_navigator'],
+    prerequisiteQuestIds: [NEBULA_QUEST_IDS.RESTORE_BEACON],
+    visible: player => player.level >= 400,
+    canAccept: player => player.level >= 400,
+    stages: [new QuestStage({
+        id: 'break-nebula-crown',
+        description: '낙성감시자 모르가와 성운제 아스테리온을 차례로 제압하세요.',
+        objectives: [
+            QuestObjective.kill('meteor-warden', '낙성감시자 모르가 처치', 1, target => target.hasTag('monster:meteor-warden')),
+            QuestObjective.kill('nebula-sovereign', '성운제 아스테리온 처치', 1, target => target.hasTag('monster:nebula-sovereign')),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(1_350_000),
+        QuestReward.gold(190_000),
+        QuestReward.item('meteor_bulwark', 1, '낙성 방벽'),
+        QuestReward.item('starwell_staff', 1, '성정우물 지팡이'),
+    ],
+});
+
+defineQuest({
+    id: CHRONOFROST_QUEST_IDS.RESTART_CLOCK,
+    name: '멈춘 분침을 움직이는 법',
+    aliases: ['동결시계원 보급', '영시계 복구'],
+    description: '시빙정과 역행사를 모아 멈춘 시계원의 하층 진자를 다시 움직이세요.',
+    tags: ['quest:side', 'region:chronofrost'],
+    giverNpcIds: ['chronofrost_keeper'],
+    turnInNpcIds: ['chronofrost_keeper'],
+    visible: player => player.level >= 420,
+    canAccept: player => player.level >= 420,
+    stages: [new QuestStage({
+        id: 'restart-lower-pendulum',
+        description: '동결된 길과 역설원에서 시빙정과 역행사를 회수하세요.',
+        objectives: [
+            QuestObjective.item('chronofrost-ice', '시빙정 수집', 20, 'chronofrost_ice', true),
+            QuestObjective.item('reverse-sand', '역행사 수집', 16, 'reverse_sand', true),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(1_250_000),
+        QuestReward.gold(175_000),
+        QuestReward.item('chronofrost_tonic', 6, '영시 회복약'),
+        QuestReward.item('chronoblade', 1, '영시 절단검'),
+    ],
+});
+
+defineQuest({
+    id: CHRONOFROST_QUEST_IDS.END_ZERO_HOUR,
+    name: '내일을 돌려놓는 시계',
+    aliases: ['영시여왕 토벌', '크로니아'],
+    description: '빙시계 파수장을 넘어 영시여왕 크로니아가 얼린 내일을 되돌리세요.',
+    tags: ['quest:side', 'quest:boss', 'region:chronofrost'],
+    giverNpcIds: ['chronofrost_keeper'],
+    turnInNpcIds: ['chronofrost_keeper'],
+    prerequisiteQuestIds: [CHRONOFROST_QUEST_IDS.RESTART_CLOCK],
+    visible: player => player.level >= 440,
+    canAccept: player => player.level >= 440,
+    stages: [new QuestStage({
+        id: 'restore-tomorrow',
+        description: '빙시계 파수장과 영시여왕을 제압해 멈춘 시계원을 다시 흐르게 하세요.',
+        objectives: [
+            QuestObjective.kill('frostclock-sentinel', '빙시계 파수장 처치', 1, target => target.hasTag('monster:frostclock-sentinel')),
+            QuestObjective.kill('zero-hour-queen', '영시여왕 크로니아 처치', 1, target => target.hasTag('monster:zero-hour-queen')),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(1_950_000),
+        QuestReward.gold(260_000),
+        QuestReward.item('aeon_bulwark', 1, '영겁 진자방패'),
+        QuestReward.item('zero_hour_staff', 1, '영시각 지팡이'),
+    ],
+});
+
+defineQuest({
+    id: ENDSTAR_QUEST_IDS.RELIGHT_CONSTELLATION,
+    name: '꺼진 별을 잇는 선',
+    aliases: ['종언성단 보급', '성좌 복구'],
+    description: '잔광편과 창세정을 모아 종언성단에서 끊어진 피난 성좌를 다시 연결하세요.',
+    tags: ['quest:side', 'region:endstar'],
+    giverNpcIds: ['endstar_observer'],
+    turnInNpcIds: ['endstar_observer'],
+    visible: player => player.level >= 460,
+    canAccept: player => player.level >= 460,
+    stages: [new QuestStage({
+        id: 'relight-refuge-constellation',
+        description: '꺼진 별무리와 창세 항로에서 잔광편과 창세정을 모으세요.',
+        objectives: [
+            QuestObjective.item('last-light', '잔광편 수집', 22, 'last_light', true),
+            QuestObjective.item('genesis-crystal', '창세정 수집', 14, 'genesis_crystal', true),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(1_750_000),
+        QuestReward.gold(240_000),
+        QuestReward.item('endstar_tonic', 7, '창세맥 영약'),
+        QuestReward.item('endstar_edge', 1, '종성단절검'),
+    ],
+});
+
+defineQuest({
+    id: ENDSTAR_QUEST_IDS.END_LAST_CONSTELLATION,
+    name: '마지막 별자리의 이름',
+    aliases: ['최후성좌 토벌', '라스트라'],
+    description: '종성의 전령을 넘어 최후성좌 라스트라가 정한 단 하나의 종말을 거부하세요.',
+    tags: ['quest:side', 'quest:boss', 'region:endstar'],
+    giverNpcIds: ['endstar_observer'],
+    turnInNpcIds: ['endstar_observer'],
+    prerequisiteQuestIds: [ENDSTAR_QUEST_IDS.RELIGHT_CONSTELLATION],
+    visible: player => player.level >= 480,
+    canAccept: player => player.level >= 480,
+    stages: [new QuestStage({
+        id: 'deny-final-ending',
+        description: '종성의 전령 에녹과 최후성좌 라스트라를 제압해 성단의 미래를 되찾으세요.',
+        objectives: [
+            QuestObjective.kill('endstar-herald', '종성의 전령 에녹 처치', 1, target => target.hasTag('monster:endstar-herald')),
+            QuestObjective.kill('last-constellation', '최후성좌 라스트라 처치', 1, target => target.hasTag('monster:last-constellation')),
+        ],
+    })],
+    rewards: [
+        QuestReward.exp(2_750_000),
+        QuestReward.gold(360_000),
+        QuestReward.item('horizon_bulwark', 1, '최후지평 방패'),
+        QuestReward.item('genesis_staff', 1, '창세성 지팡이'),
     ],
 });
 
