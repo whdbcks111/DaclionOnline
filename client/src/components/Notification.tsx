@@ -11,6 +11,13 @@ interface NotificationItem extends NotificationData {
 }
 
 let nextId = 0
+const MAX_TRANSIENT_NOTIFICATIONS = 5
+
+function limitTransientNotifications(items: NotificationItem[]): NotificationItem[] {
+  let overflow = items.filter(item => item.duration > 0).length - MAX_TRANSIENT_NOTIFICATIONS
+  if (overflow <= 0) return items
+  return items.filter(item => item.duration <= 0 || overflow-- <= 0)
+}
 
 function Notification() {
   const { socket } = useSocket()
@@ -48,7 +55,7 @@ function Notification() {
       const id = nextId++
       const newItem: NotificationItem = { ...data, id, duration, animKey: 0 }
       const filtered = prev.filter(item => item.key !== key)
-      return [...filtered, newItem]
+      return limitTransientNotifications([...filtered, newItem])
     })
 
     if (duration > 0) {
@@ -58,6 +65,20 @@ function Notification() {
       }, duration)
       timeoutMap.current.set(key, t)
     }
+  }, [])
+
+  useEffect(() => {
+    const activeKeys = new Set(items.map(item => item.key))
+    for (const [key, timeout] of timeoutMap.current) {
+      if (activeKeys.has(key)) continue
+      clearTimeout(timeout)
+      timeoutMap.current.delete(key)
+    }
+  }, [items])
+
+  useEffect(() => () => {
+    for (const timeout of timeoutMap.current.values()) clearTimeout(timeout)
+    timeoutMap.current.clear()
   }, [])
 
   useEffect(() => {

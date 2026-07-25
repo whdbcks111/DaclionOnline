@@ -21,7 +21,7 @@
     font-family: $font-family-base;
     font-size: $font-size-sm;
     white-space: pre-wrap;
-    pointer-events: auto;
+    pointer-events: none;
     animation: slideIn 0.25s ease-out;
     overflow: hidden;
 }
