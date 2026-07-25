@@ -18,8 +18,49 @@ export interface InventoryItemSelection {
     count: number;
 }
 
+/** 인벤토리 정리 명령과 영속 순서가 공유하는 정렬 기준. */
+export class InventorySortMode {
+    private static readonly all: InventorySortMode[] = [];
+
+    static readonly CATEGORY = new InventorySortMode('category', '종류별', ['종류', '카테고리']);
+    static readonly NAME = new InventorySortMode('name', '이름순', ['이름']);
+    static readonly AUTO = new InventorySortMode('auto', '자동', []);
+
+    private constructor(
+        readonly key: string,
+        readonly label: string,
+        readonly aliases: readonly string[],
+    ) {
+        InventorySortMode.all.push(this);
+    }
+
+    static values(): readonly InventorySortMode[] { return InventorySortMode.all; }
+
+    static fromKey(key: string): InventorySortMode | undefined {
+        const normalized = key.trim().toLocaleLowerCase('ko-KR');
+        return InventorySortMode.all.find(mode => mode.key === normalized);
+    }
+
+    static fromInput(input: string): InventorySortMode | undefined {
+        const normalized = input.trim().toLocaleLowerCase('ko-KR');
+        return InventorySortMode.all.find(mode =>
+            mode.key === normalized
+            || mode.label.toLocaleLowerCase('ko-KR') === normalized
+            || mode.aliases.some(alias => alias.toLocaleLowerCase('ko-KR') === normalized));
+    }
+
+    getInputValues(): readonly string[] {
+        return [this.label, ...this.aliases];
+    }
+}
+
 // 아이템 상태 추적
 const enum ItemState { Clean, New, Modified, Deleted }
+
+const inventoryCollator = new Intl.Collator('ko-KR', {
+    numeric: true,
+    sensitivity: 'base',
+});
 
 export default class Inventory {
     readonly playerId: number;
@@ -30,6 +71,7 @@ export default class Inventory {
     private readonly changeHandlers = new Set<() => void>();
     private changeBatchDepth = 0;
     private changePending = false;
+    private orderDirty = false;
 
     private constructor(playerId: number, maxWeight: number) {
         this.playerId = playerId;
@@ -56,6 +98,7 @@ export default class Inventory {
         item.setPersistentChangeHandler(markModified);
         this._items.push(item);
         this._states.set(item, state);
+        if (state === ItemState.New) this.orderDirty = true;
         if (item.isBroken) this.removeItemInstance(item, item.count);
     }
 
@@ -70,6 +113,7 @@ export default class Inventory {
     get isUsingItem() { return this._usingItem; }
 
     get dirty(): boolean {
+        if (this.orderDirty) return true;
         for (const state of this._states.values()) {
             if (state !== ItemState.Clean) return true;
         }
@@ -125,6 +169,39 @@ export default class Inventory {
     /** 특정 아이템 정의의 총 수량 */
     getCount(itemDataId: string): number {
         return this.getItemsByData(itemDataId).reduce((sum, e) => sum + e.count, 0);
+    }
+
+    /**
+     * 아이템 표시 순서를 변경한다. 실제 아이템 상태는 건드리지 않고 Inventory가 순서 영속성을 소유한다.
+     * 자동 정렬은 사용 가능 아이템, 일반 아이템, 내구도 아이템 순으로 묶은 뒤 종류·이름순을 적용한다.
+     */
+    sortItems(mode: InventorySortMode = InventorySortMode.AUTO): boolean {
+        const before = [...this._items];
+        const byName = (left: Item, right: Item) =>
+            inventoryCollator.compare(left.name || left.itemDataId, right.name || right.itemDataId)
+            || inventoryCollator.compare(left.itemDataId, right.itemDataId);
+        const byCategoryThenName = (left: Item, right: Item) =>
+            inventoryCollator.compare(left.category || '기타', right.category || '기타')
+            || byName(left, right);
+        const autoPriority = (item: Item) => {
+            if (item.durability !== null) return 2;
+            if (item.data?.onUse) return 0;
+            return 1;
+        };
+
+        this._items.sort((left, right) => {
+            if (mode === InventorySortMode.NAME) return byName(left, right);
+            if (mode === InventorySortMode.AUTO) {
+                return autoPriority(left) - autoPriority(right)
+                    || byCategoryThenName(left, right);
+            }
+            return byCategoryThenName(left, right);
+        });
+
+        if (before.every((item, index) => item === this._items[index])) return false;
+        this.orderDirty = true;
+        this.notifyChange();
+        return true;
     }
 
     /** raw items 배열을 노출하지 않고 predicate에 맞는 총 수량을 반환한다. */
@@ -456,6 +533,7 @@ export default class Inventory {
         item.count -= count;
         if (item.count <= 0) {
             this._items.splice(idx, 1);
+            this.orderDirty = true;
             if (this._states.get(item) === ItemState.New) {
                 this._states.delete(item);
             } else {
@@ -478,6 +556,7 @@ export default class Inventory {
         item.count -= count;
         if (item.count <= 0) {
             this._items.splice(idx, 1);
+            this.orderDirty = true;
             if (this._states.get(item) === ItemState.New) this._states.delete(item);
             else this._states.set(item, ItemState.Deleted);
         } else if (this._states.get(item) === ItemState.Clean) {
@@ -503,6 +582,7 @@ export default class Inventory {
 
             if (item.count <= 0) {
                 this._items.splice(i, 1);
+                this.orderDirty = true;
                 if (this._states.get(item) === ItemState.New) {
                     this._states.delete(item);
                 } else {
@@ -527,6 +607,7 @@ export default class Inventory {
             else this._states.set(item, ItemState.Deleted);
         }
         this._items = [];
+        this.orderDirty = true;
         this.notifyChange();
         return removedCount;
     }
@@ -585,6 +666,7 @@ export default class Inventory {
 
                 this._items.splice(sourceIndex, 1);
                 this._states.set(source, ItemState.Deleted);
+                this.orderDirty = true;
             }
         }
     }
@@ -594,6 +676,10 @@ export default class Inventory {
         const inv = new Inventory(playerId, maxWeight);
         const rows = await prisma.item.findMany({
             where: { playerId },
+            orderBy: [
+                { sortOrder: 'asc' },
+                { id: 'asc' },
+            ],
         });
 
         for (const row of rows) {
@@ -616,9 +702,19 @@ export default class Inventory {
         if (!this.dirty) return;
 
         const ops: any[] = [];
+        const sortOrders = new Map(this._items.map((item, index) => [item, index]));
 
         for (const [item, state] of this._states) {
+            const sortOrder = sortOrders.get(item);
             switch (state) {
+                case ItemState.Clean:
+                    if (this.orderDirty && sortOrder !== undefined) {
+                        ops.push(prisma.item.update({
+                            where: { id: item.id },
+                            data: { sortOrder },
+                        }));
+                    }
+                    break;
                 case ItemState.New:
                     ops.push(
                         prisma.item.create({
@@ -629,6 +725,7 @@ export default class Inventory {
                                 durability: item.durability,
                                 metadata: item.getPersistedMetadata(),
                                 tags: item.tags.persistentValues(),
+                                sortOrder: sortOrder ?? 0,
                             },
                         }).then(row => { item.id = row.id; })
                     );
@@ -642,6 +739,7 @@ export default class Inventory {
                                 durability: item.durability,
                                 metadata: item.getPersistedMetadata(),
                                 tags: item.tags.persistentValues(),
+                                sortOrder: sortOrder ?? 0,
                             },
                         })
                     );
@@ -659,6 +757,7 @@ export default class Inventory {
         await Promise.all(ops);
 
         // 상태 초기화
+        this.orderDirty = false;
         this._states.clear();
         for (const item of this._items) {
             this._states.set(item, ItemState.Clean);

@@ -8,7 +8,7 @@ Prisma 스키마는 `server/prisma/schema.prisma`, 런타임 클라이언트 설
 | --- | --- | --- |
 | `User` / `users` | `id`, Player 1:0..1 | username, email, passwordHash/salt, nickname/nicknameChangedAt, profileImage, permission, timestamps |
 | `Player` / `players` | `userId` PK/FK | level, exp, maxWeight, stats/tags JSON, locationId, life/mentality/thirsty/hungry, statPoint, gold, karma/karmaUpdatedAt, rankingMetrics/rankingVisibility JSON |
-| `Item` / `items` | id, Player N:1 cascade | itemDataId, count, durability, metadata/tags JSON, timestamps |
+| `Item` / `items` | id, Player N:1 cascade | itemDataId, count, durability, metadata/tags JSON, sortOrder, timestamps |
 | `Equipment` / `equipments` | id, Player N:1 cascade | itemDataId, count, slot, slotIndex, durability, metadata/tags JSON; `(playerId, slot, slotIndex)` unique |
 | `PlayerProgress` / `player_progress` | `(playerId, key)` 복합 PK, Player N:1 cascade | kind, intValue, textValue, updatedAt |
 | `PlayerSkill` / `player_skills` | `(playerId, skillDataId)` 복합 PK, Player N:1 cascade | level, experience, cooldownEndsAt, metadata/tags JSON, acquisitionSource, timestamps |
@@ -17,6 +17,8 @@ Prisma 스키마는 `server/prisma/schema.prisma`, 런타임 클라이언트 설
 `itemDataId`는 DB 외래키가 아니라 코드의 `data/items.ts` 마스터 데이터 ID다. `locationId`도 JSON 마스터 데이터 ID다. 마스터 ID 변경 시 기존 DB 레코드 호환을 직접 처리해야 한다.
 
 Item/Equipment의 `metadata` JSON은 전체 유효값이 아니라 `{ "__daclionItemMetadata": 1, "values": { ...delta } }` 형식의 top-level delta만 저장한다. 런타임 `Item`이 `ItemData.baseMetadata`와 합쳐 읽으며, Item setter callback이 Inventory/Equipment dirty 상태를 만든다. `PlayerSkill.metadata`도 같은 공용 codec으로 `{ "__daclionSkillMetadata": 1, "values": { ...delta } }`만 저장한다. 이 구조 덕분에 delta에 없는 기본 필드는 기존 아이템과 스킬에도 최신 마스터 값이 적용된다.
+
+`items.sort_order`는 `/인벤토리정리`로 정한 인벤토리 표시 순서를 저장한다. 기존 행은 migration 기본값 0과 ID 보조 정렬로 종전 획득 순서를 유지하며, 최초 정리나 아이템 추가·제거 뒤 Inventory dirty flush가 0부터 시작하는 순서로 다시 저장한다.
 
 `Equipment.count`는 미끼처럼 장착 가능한 스택 아이템의 남은 묶음 수량을 저장한다. 장착 시 인벤토리 스택 전체가 이동하고 `consumeEquippedItem(count)`는 필요한 수량만 차감해 남은 스택을 슬롯에 유지한다. 기존 장비 행은 `20260718000000_add_equipment_count` 마이그레이션의 기본값 1로 이행한다.
 
@@ -90,6 +92,7 @@ login/session restore
 - 장착 스택 수량 컬럼 migration은 `20260718000000_add_equipment_count`다.
 - 순위 지표·공개 설정 JSON migration은 `20260718010000_add_player_rankings`다.
 - 닉네임 24시간 변경 제한 시각 migration은 `20260725000000_add_nickname_change_cooldown`이다.
+- 인벤토리 표시 순서 컬럼 migration은 `20260726000000_add_inventory_sort_order`다.
 - 카르마 기준값·감소 기준 시각 migration은 `20260723000000_add_player_karma`다.
 - 일반 운영 배포에서는 `cd server && npm run db:migrate:deploy`를 실행한다. 이 명령은 pending schema migration 적용, Prisma Client 생성, 아이템 metadata delta 데이터 마이그레이션을 순서대로 실행한다.
 - metadata 데이터 마이그레이션은 `src/scripts/migrateItemMetadataDeltas.ts`가 담당한다. 이미 버전 1인 행과 `null` 행은 건너뛰므로 재실행할 수 있다. 구형 전체 metadata 중 현재 `baseMetadata`와 같은 값은 기본값으로 간주해 제거하므로, 기본 metadata를 변경하기 전에 서버를 중지한 상태에서 운영 명령을 먼저 실행해야 한다.

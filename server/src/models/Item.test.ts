@@ -10,7 +10,7 @@ import {
 } from './Item.js';
 import Attribute, { AttributeType } from './Attribute.js';
 import Equipment, { EquipSlotType } from './Equipment.js';
-import Inventory from './Inventory.js';
+import Inventory, { InventorySortMode } from './Inventory.js';
 import Player from './Player.js';
 
 function itemData(
@@ -226,6 +226,48 @@ test('가방 슬롯 장비는 다른 장비와 독립적으로 최대 중량 mod
     assert.equal(AttributeType.MAX_WEIGHT.format(attribute.get(AttributeType.MAX_WEIGHT)), '140kg');
     assert.equal(equipment.unequip('bag', 0, attribute)?.itemDataId, 'test_bag');
     assert.equal(attribute.get(AttributeType.MAX_WEIGHT), 100);
+});
+
+test('인벤토리는 종류별·이름순·자동 기준으로 아이템 표시 순서를 정리한다', () => {
+    for (const data of [
+        { id: 'sort_potion', name: '마법약', category: '소모품', onUse: 'heal_mp', durability: null },
+        { id: 'sort_wood', name: '나무', category: '재료', onUse: null, durability: null },
+        { id: 'sort_ore', name: '광석', category: '광물', onUse: null, durability: null },
+        { id: 'sort_sword', name: '다리검', category: '무기', onUse: null, durability: 10 },
+        { id: 'sort_armor', name: '가죽갑옷', category: '방어구', onUse: null, durability: 10 },
+    ]) {
+        defineItem({
+            ...itemData(data.id, undefined, null, data.durability),
+            name: data.name,
+            category: data.category,
+            onUse: data.onUse,
+        });
+    }
+
+    const createInventory = () => {
+        const inventory = Inventory.createEmpty(1, 100);
+        for (const id of ['sort_sword', 'sort_wood', 'sort_potion', 'sort_armor', 'sort_ore']) {
+            assert.equal(inventory.addItem(id, 1), true);
+        }
+        return inventory;
+    };
+    const ids = (inventory: Inventory) => inventory.items.map(item => item.itemDataId);
+
+    const category = createInventory();
+    assert.equal(category.sortItems(InventorySortMode.CATEGORY), true);
+    assert.deepEqual(ids(category), ['sort_ore', 'sort_sword', 'sort_armor', 'sort_potion', 'sort_wood']);
+
+    const name = createInventory();
+    assert.equal(name.sortItems(InventorySortMode.NAME), true);
+    assert.deepEqual(ids(name), ['sort_armor', 'sort_ore', 'sort_wood', 'sort_sword', 'sort_potion']);
+
+    const automatic = createInventory();
+    assert.equal(automatic.sortItems(), true);
+    assert.deepEqual(ids(automatic), ['sort_potion', 'sort_ore', 'sort_wood', 'sort_sword', 'sort_armor']);
+
+    assert.equal(InventorySortMode.fromKey('auto'), InventorySortMode.AUTO);
+    assert.equal(InventorySortMode.fromInput('종류'), InventorySortMode.CATEGORY);
+    assert.equal(InventorySortMode.fromInput('이름순'), InventorySortMode.NAME);
 });
 
 test('스택형 미끼는 묶음 전체를 장착하고 사용할 때마다 한 개씩 소비한다', () => {

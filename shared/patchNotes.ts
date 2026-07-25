@@ -74,6 +74,9 @@ const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
     definePatchNote('1.0.10', '2026-07-26',
+        [FEATURE,
+            '`/인벤토리정리 [자동|종류별|이름순]` 명령을 추가했습니다. 기준을 생략하면 사용 아이템은 앞에, 내구도 아이템은 뒤에 정리합니다.',
+        ],
         [CHANGED,
             '소모품·재료·탄약·물고기·미끼·스킬북 등 묶을 수 있는 아이템의 작은 스택 제한을 없앴습니다. 휴대 가능 수량은 최대 중량으로 제한됩니다.',
             '기존에 여러 칸으로 갈라져 저장된 같은 상태의 아이템은 접속 후 하나의 스택으로 자동 정리됩니다.',

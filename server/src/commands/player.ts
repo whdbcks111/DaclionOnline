@@ -17,9 +17,11 @@ import { ActionType } from "../models/Action.js";
 import prisma from "../config/prisma.js";
 import logger from "../utils/logger.js";
 import { CompletionItem } from "../../../shared/types.js";
+import { parseCommandInput } from "../../../shared/commandInput.js";
 import { parseChatMessage } from "../utils/chatParser.js";
 import { formatWeight } from "../utils/format.js";
 import { emitGameEvent, GameEventIds } from "../models/GameEvent.js";
+import { InventorySortMode } from "../models/Inventory.js";
 
 function formatStatusDuration(seconds: number): string {
     const totalSeconds = Math.max(0, Math.ceil(seconds));
@@ -325,6 +327,35 @@ export function initPlayerCommands(): void {
             } else {
                 sendBotMessageToUser(userId, b.build());
             }
+        },
+    });
+
+    registerCommand({
+        name: '인벤토리정리',
+        aliases: ['inventorysort', 'isort'],
+        description: '인벤토리 아이템의 표시 순서를 정리합니다. 기준을 생략하면 자동 정렬합니다.',
+        args: [{
+            name: '정렬 기준',
+            description: '자동, 종류별 또는 이름순',
+            list: InventorySortMode.values().map(mode => mode.label),
+            completions: InventorySortMode.values().map(mode => mode.label),
+        }],
+        handler(userId, args, raw) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            if (!args[0] && parseCommandInput(raw)?.remainder.trim()) {
+                sendBotMessageToUser(userId, '정렬 기준은 자동, 종류별, 이름순 중에서 선택해주세요.');
+                return;
+            }
+            const mode = InventorySortMode.fromInput(args[0] ?? InventorySortMode.AUTO.label)
+                ?? InventorySortMode.AUTO;
+            const changed = player.inventory.sortItems(mode);
+            sendBotMessageToUser(
+                userId,
+                changed
+                    ? `인벤토리를 ${mode.label} 기준으로 정리했습니다.`
+                    : `인벤토리가 이미 ${mode.label} 기준으로 정리되어 있습니다.`,
+            );
         },
     });
 
