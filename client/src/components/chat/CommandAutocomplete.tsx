@@ -45,7 +45,9 @@ export default function CommandAutocomplete({
         const completions = paramCompletions ?? []
         if (!paramHint && completions.length === 0) return null
 
-        const label = paramHint.isText ? `${paramHint.name}:텍스트` : paramHint.name
+        const label = paramHint.isText
+            ? `${paramHint.name}:텍스트`
+            : paramHint.isList ? `${paramHint.name}:목록` : paramHint.name
         const argPos = `${paramHint.argIndex + 1} / ${paramHint.totalArgs}`
 
         return (
@@ -86,7 +88,7 @@ export default function CommandAutocomplete({
             {filtered.map((cmd, i) => {
                 const argsStr = cmd.args
                     ?.map(a => {
-                        const label = a.isText ? `${a.name}:텍스트` : a.name
+                        const label = a.isText ? `${a.name}:텍스트` : a.isList ? `${a.name}:목록` : a.name
                         return a.required ? `<${label}>` : `[${label}]`
                     })
                     .join(' ')

@@ -17,6 +17,8 @@ interface CommandArg {
     required?: boolean
     /** 띄어쓰기를 포함하는 긴 텍스트 파라미터 (명령어당 최대 1개) */
     isText?: boolean
+    /** 허용된 값 중 하나만 받는 목록형 파라미터. 각 값은 띄어쓰기를 포함할 수 있다. */
+    list?: readonly string[] | ((userId: number) => readonly string[])
     /** 자동완성 후보 목록. 함수 형태는 requestCompletions 이벤트 시 호출됨 */
     completions?: CompletionItem[] | ((userId: number, args: string[], raw: string) => CompletionItem[])
 }
@@ -110,6 +112,7 @@ export function getCommandList(): CommandInfo[] {
             description: a.description,
             required: a.required,
             isText: a.isText,
+            isList: a.list !== undefined,
             completions: typeof a.completions === 'function' ? undefined : a.completions,
             dynamicCompletions: typeof a.completions === 'function',
         })),
@@ -117,12 +120,55 @@ export function getCommandList(): CommandInfo[] {
 }
 
 /**
- * isText 파라미터를 고려한 인자 파싱.
+ * text/list 파라미터를 고려한 인자 파싱.
  * isText 파라미터는 앞/뒤 인자를 제외한 나머지 전체를 하나의 문자열로 합친다.
+ * list 파라미터는 공백을 포함하더라도 등록된 값 하나와 정확히 일치해야 한다.
  * 예) argDefs=[A, B:text, C], remainder="1 hello world 2"
  *     → ['1', 'hello world', '2']
  */
-function parseArgs(remainder: string, argDefs?: CommandArg[]): string[] {
+function parseArgs(remainder: string, argDefs?: CommandArg[], userId = 0): string[] {
+    if (argDefs?.some(arg => arg.list !== undefined)) {
+        const tokens = remainder.trim().split(/\s+/).filter(Boolean);
+        if (tokens.length === 0) return [];
+
+        const parseFrom = (argIndex: number, tokenIndex: number, parsed: string[]): string[] | null => {
+            if (argIndex >= argDefs.length) return tokenIndex === tokens.length ? parsed : null;
+            const arg = argDefs[argIndex];
+            if (tokenIndex >= tokens.length) {
+                return arg.required ? null : parseFrom(argIndex + 1, tokenIndex, parsed);
+            }
+
+            if (arg.list !== undefined) {
+                const source = typeof arg.list === 'function' ? arg.list(userId) : arg.list;
+                const values = [...new Set(source.map(value => value.trim()).filter(Boolean))];
+                for (let end = tokens.length; end > tokenIndex; end--) {
+                    const input = normalizeListArgument(tokens.slice(tokenIndex, end).join(' '));
+                    const matched = values.find(value => normalizeListArgument(value) === input);
+                    if (!matched) continue;
+                    const result = parseFrom(argIndex + 1, end, [...parsed, matched]);
+                    if (result) return result;
+                }
+                return arg.required ? null : parseFrom(argIndex + 1, tokenIndex, parsed);
+            }
+
+            if (arg.isText) {
+                for (let end = tokens.length; end > tokenIndex; end--) {
+                    const result = parseFrom(
+                        argIndex + 1,
+                        end,
+                        [...parsed, tokens.slice(tokenIndex, end).join(' ')],
+                    );
+                    if (result) return result;
+                }
+                return arg.required ? null : parseFrom(argIndex + 1, tokenIndex, parsed);
+            }
+
+            return parseFrom(argIndex + 1, tokenIndex + 1, [...parsed, tokens[tokenIndex]]);
+        };
+
+        return parseFrom(0, 0, []) ?? [];
+    }
+
     const textIdx = argDefs?.findIndex(a => a.isText) ?? -1;
 
     if (textIdx === -1 || !argDefs) {
@@ -164,6 +210,10 @@ function parseArgs(remainder: string, argDefs?: CommandArg[]): string[] {
     return [...before, textValue, ...after];
 }
 
+function normalizeListArgument(value: string): string {
+    return value.trim().toLocaleLowerCase().replace(/\s+/g, '');
+}
+
 /** 명령어 파싱 및 실행 (chat.ts에서 호출) */
 export function handleCommand(userId: number, raw: string, msg: ChatMessage | null = null, permission = 0): void {
     const input = parseCommandInput(raw);
@@ -188,7 +238,7 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
         return;
     }
 
-    const args = parseArgs(remainder, cmd.args);
+    const args = parseArgs(remainder, cmd.args, userId);
     const hasVisibilityArgument = cmd.args?.[0]?.name === '공개/비공개';
     const informationPublic = hasVisibilityArgument && args[0] === '공개'
         ? true
@@ -202,7 +252,7 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
         if(msg) sendMessageToUser(userId, msg);
         const usage = cmd.args
             ?.map(a => {
-                const label = a.isText ? `${a.name}:텍스트` : a.name;
+                const label = a.isText ? `${a.name}:텍스트` : a.list ? `${a.name}:목록` : a.name;
                 return a.required ? `<${label}>` : `[${label}]`;
             })
             .join(' ') ?? '';
@@ -286,7 +336,7 @@ export const initBot = () => {
             if (!currentArg?.completions) return;
 
             const currentTyped = argParts[argParts.length - 1] ?? '';
-            const parsedArgs = parseArgs(remainder, cmd.args);
+            const parsedArgs = parseArgs(remainder, cmd.args, session.userId);
 
             const allCompletions = typeof currentArg.completions === 'function'
                 ? currentArg.completions(session.userId, parsedArgs, raw)

@@ -129,7 +129,7 @@
 - `permission`: 최소 권한, 기본 0. 실제 실행 시 서버가 검사한다.
 - `showCommandUse`: `show`는 채널, `private`는 본인, `hide`는 입력 메시지를 표시하지 않는다. 생략 시 `private`이며 입력과 결과를 모두 공개해야 하는 명령만 `show`를 명시한다.
 - `information`: 정보 열람 명령 표시. 공개 모드에서는 `showCommandUse`보다 우선해 입력과 결과를 현재 채널에 공개한다.
-- `args`: `required`, `isText`, 정적/동적 `completions`를 지원한다. 한 명령에서 `isText`는 최대 한 개를 전제로 한다.
+- `args`: `required`, `isText`, 정적/동적 `completions`와 정적/사용자별 `list`를 지원한다. 한 명령에서 `isText`는 최대 한 개를 전제로 한다. `list` 인자는 공백을 제거한 대소문자 비구분 비교로 등록 후보 하나만 허용하며, 여러 목록형 인자를 함께 사용해도 서버가 후보 조합을 역추적해 분리한다.
 - `handler(userId, args, raw, msg, permission)`: 검증된 명령 실행 진입점.
 
 `subscribeCommandExecutions(handler)`는 권한·필수 인자 검증을 통과해 handler가 호출된 뒤 `{ userId, commandName, args, raw }`를 전달하고 해제 함수를 반환한다. `commandName`은 입력한 별칭이 아니라 등록된 canonical 이름이다. 튜토리얼처럼 명령 경로를 관찰할 때만 사용하고, 실제 성공 여부가 필요한 도메인은 각 모델의 결과나 GameEvent를 구독한다.

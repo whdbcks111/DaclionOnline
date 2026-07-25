@@ -58,6 +58,40 @@ test('슬래시 없는 첫 단어는 등록된 별칭일 때만 명령으로 실
     assert.deepEqual(calls, [['one', 'two'], ['three']]);
 });
 
+test('목록형 인자는 공백 포함 후보를 여러 인자에 걸쳐 파싱하고 목록 밖 입력을 거부한다', () => {
+    const calls: string[][] = [];
+    registerCommand({
+        name: 'test_list_arguments',
+        description: 'test',
+        args: [
+            {
+                name: '형태',
+                description: '형태',
+                required: true,
+                list: ['장검', '지팡이 틀'],
+            },
+            {
+                name: '재료',
+                description: '재료',
+                required: true,
+                list: ['철', '마나 수정'],
+            },
+        ],
+        handler: (_userId, args) => { calls.push(args); },
+    });
+
+    handleCommand(1, '/test_list_arguments 장검 마나 수정');
+    handleCommand(1, '/test_list_arguments 지팡이틀 마나수정');
+    handleCommand(1, '/test_list_arguments 장검 알 수 없는 재료');
+
+    assert.deepEqual(calls, [
+        ['장검', '마나 수정'],
+        ['지팡이 틀', '마나 수정'],
+    ]);
+    const snapshot = getCommandListFiltered(0).find(command => command.name === 'test_list_arguments');
+    assert.equal(snapshot?.args?.every(argument => argument.list !== undefined), true);
+});
+
 test('권한별 명령 스냅샷은 등록된 별칭을 복사해 제공한다', () => {
     registerCommand({
         name: 'test_alias_snapshot',

@@ -197,6 +197,8 @@ export interface CommandArgInfo {
     required?: boolean
     /** 띄어쓰기를 포함하는 긴 텍스트 파라미터 (명령어당 최대 1개) */
     isText?: boolean
+    /** 허용된 목록값 하나만 받으며 값 자체에 띄어쓰기를 포함할 수 있음 */
+    isList?: boolean
     /** 자동완성 후보 목록 (정적) */
     completions?: CompletionItem[]
     /** true이면 자동완성이 서버에서 동적으로 계산됨 (requestCompletions 이벤트 사용) */

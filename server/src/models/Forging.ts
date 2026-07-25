@@ -260,10 +260,18 @@ export class ForgeMaterial {
     static values(): readonly ForgeMaterial[] { return ForgeMaterial.all; }
     static fromKey(key: string): ForgeMaterial | undefined { return ForgeMaterial.all.find(value => value.key === key); }
     static fromInput(input: string): ForgeMaterial | undefined {
-        const value = input.trim().toLowerCase();
-        return ForgeMaterial.all.find(material => material.key === value
-            || material.label === input.trim()
-            || material.itemDataId === value);
+        const value = normalizeForgeInput(input);
+        return ForgeMaterial.all.find(material => material.getInputValues()
+            .some(candidate => normalizeForgeInput(candidate) === value));
+    }
+
+    getInputValues(): readonly string[] {
+        return [
+            this.key,
+            this.label,
+            this.itemDataId,
+            ...(this === ForgeMaterial.MANA_CRYSTAL ? ['마나수정', '정제 마나 수정', '정제마나수정'] : []),
+        ];
     }
 
     getBonusModifiers(craftsmanship: ForgeCraftsmanship): readonly ForgeModifierSeed[] {
@@ -272,6 +280,10 @@ export class ForgeMaterial {
             ...(this.createCraftsmanshipModifiers?.(craftsmanship) ?? []),
         ];
     }
+}
+
+function normalizeForgeInput(input: string): string {
+    return input.trim().toLowerCase().replace(/\s+/g, '');
 }
 
 const forgeTraits = [

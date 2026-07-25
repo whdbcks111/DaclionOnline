@@ -27,6 +27,7 @@ import {
     canUseMetalForging,
     createForgingRhythmConfig,
     getAvailableForgeForms,
+    startForging,
 } from '../modules/forging.js';
 import '../data/items.js';
 import '../data/progress.js';
@@ -110,6 +111,32 @@ test('마나 수정 단조품은 제작자 성장에 비례한 마법 능력치�
     assert.ok(modifier(master, 'magicForce') > modifier(novice, 'magicForce'));
     assert.ok(modifier(master, 'maxMentality') > modifier(novice, 'maxMentality'));
     assert.ok(modifier(master, 'magicPen') > modifier(novice, 'magicPen'));
+});
+
+test('마나 수정 단조 재료는 원석·정제 명칭과 공백 없는 입력을 해석한다', () => {
+    assert.equal(ForgeMaterial.fromInput('마나 수정'), ForgeMaterial.MANA_CRYSTAL);
+    assert.equal(ForgeMaterial.fromInput('마나수정'), ForgeMaterial.MANA_CRYSTAL);
+    assert.equal(ForgeMaterial.fromInput('정제 마나 수정'), ForgeMaterial.MANA_CRYSTAL);
+    assert.equal(ForgeMaterial.fromInput('정제마나수정'), ForgeMaterial.MANA_CRYSTAL);
+});
+
+test('원석 마나 수정만 가진 단조 시 정제 방법을 안내한다', () => {
+    const progress = PlayerProgress.createEmpty(79);
+    const inventory = Inventory.createEmpty(79, 100);
+    inventory.addItem('mana_crystal', 10);
+    const player = {
+        userId: 79,
+        progress,
+        inventory,
+        isDefeated: false,
+        career: { hasJob: (id: string) => id === 'career:blacksmith' },
+        skills: { has: () => false },
+    } as unknown as Player;
+
+    const result = startForging(player, ForgeForm.SWORD, ForgeMaterial.MANA_CRYSTAL);
+    assert.equal(result.success, false);
+    assert.match(result.reason ?? '', /정제 마나 수정/);
+    assert.match(result.reason ?? '', /마력 제련/);
 });
 
 test('단조 곡괭이는 일반 공격력 대신 제작자 성장에 비례한 채굴력을 얻는다', () => {

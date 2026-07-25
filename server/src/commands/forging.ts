@@ -28,7 +28,11 @@ export function initForgingCommands(): void {
         showCommandUse: 'private',
         args: [
             {
-                name: '형태', description: '제작할 장비 형태', required: true, isText: true,
+                name: '형태', description: '제작할 장비 형태', required: true,
+                list: userId => {
+                    const player = getPlayerByUserId(userId);
+                    return (player ? getAvailableForgeForms(player) : []).flatMap(form => [form.label, form.key]);
+                },
                 completions: (userId): CompletionItem[] => {
                     const player = getPlayerByUserId(userId);
                     return (player ? getAvailableForgeForms(player) : [])
@@ -36,8 +40,9 @@ export function initForgingCommands(): void {
                 },
             },
             {
-                name: '재료', description: '사용할 제련 소재', required: true, isText: true,
-                completions: (): CompletionItem[] => ForgeMaterial.values().map(material => ({ value: material.label, description: material.itemDataId })),
+                name: '재료', description: '사용할 제련 소재', required: true,
+                list: ForgeMaterial.values().flatMap(material => material.getInputValues()),
+                completions: ForgeMaterial.values().map(material => ({ value: material.label, description: material.itemDataId })),
             },
         ],
         handler(userId, args) {

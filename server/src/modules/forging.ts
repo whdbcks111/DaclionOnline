@@ -112,6 +112,12 @@ export function startForging(player: Player, form: ForgeForm, material: ForgeMat
     if (player.isDefeated) return { success: false, reason: '사망 상태에서는 단조할 수 없습니다.' };
     const requirement = [{ count: form.materialCount, matches: (item: { itemDataId: string }) => item.itemDataId === material.itemDataId }];
     if (!player.inventory.selectItems(requirement)) {
+        if (material === ForgeMaterial.MANA_CRYSTAL) {
+            return {
+                success: false,
+                reason: `정제 마나 수정이 ${form.materialCount}개 필요합니다. 원석 [ 마나 수정 ]은 [ 마력 제련 ] 스킬로 먼저 정제해야 합니다.`,
+            };
+        }
         return { success: false, reason: `${material.label} 제련 소재가 ${form.materialCount}개 필요합니다.` };
     }
 
