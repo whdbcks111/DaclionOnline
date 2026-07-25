@@ -9,6 +9,17 @@ import type { CompletionItem } from "../../../shared/types.js";
 import { ActionType } from "../models/Action.js";
 import { getVisitedLocationMatches } from "../models/WorldMap.js";
 import { cancelNavigation, startAutoNavigation, startLocationTravel } from "../modules/navigation.js";
+import Monster from "../models/Monster.js";
+
+function formatRespawnTime(seconds: number): string {
+    const total = Math.max(0, Math.ceil(seconds));
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor(total % 3600 / 60);
+    const remainingSeconds = total % 60;
+    return hours > 0
+        ? `${hours}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
+        : `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+}
 
 export function initLocationCommands(): void {
     registerCommand({
@@ -348,6 +359,15 @@ export function initLocationCommands(): void {
                     b.text(`${index + 1}. `)
                      .text(`Lv.${object.level}`)
                      .text(` ${object.name} `);
+                    const respawn = object instanceof Monster
+                        ? object.getRespawnDisplaySnapshot()
+                        : undefined;
+                    if (respawn) {
+                        const seconds = object.isDefeated ? respawn.remaining : respawn.duration;
+                        b.color('gray', b2 => b2.text(
+                            `[리젠 ${formatRespawnTime(seconds)}${object.isDefeated ? ' 남음' : ''}] `,
+                        ));
+                    }
                     if (object.isDefeated) {
                         b.color('red', b2 => b2.text(`(${object.defeatLabel})`)).text('\n');
                         continue;

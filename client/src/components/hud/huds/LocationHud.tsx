@@ -4,6 +4,16 @@ import type { EntityBarInfo } from '@shared/types'
 import HealthBarNode from '../../chat/nodes/HealthBarNode'
 import styles from './LocationHud.module.scss'
 
+function formatRespawnTime(seconds: number): string {
+  const total = Math.max(0, Math.ceil(seconds))
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor(total % 3600 / 60)
+  const remainingSeconds = total % 60
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
+    : `${minutes}:${String(remainingSeconds).padStart(2, '0')}`
+}
+
 function EntityRow({
   entity,
   index,
@@ -31,6 +41,15 @@ function EntityRow({
     <div className={styles.entityRow}>
       <span className={styles.entityIndex}>{label}</span>
       <span className={styles.entityName}>Lv.{entity.level} {entity.name}</span>
+      {entity.respawn && (
+        <span
+          className={styles.respawn}
+          title={`기본 리젠 시간 ${formatRespawnTime(entity.respawn.duration)}`}
+        >
+          리젠 {formatRespawnTime(defeated ? entity.respawn.remaining : entity.respawn.duration)}
+          {defeated ? ' 남음' : ''}
+        </span>
+      )}
       <HealthBarNode life={entity.life} maxLife={entity.maxLife} shields={entity.shields ?? []} length={60} color={color} thickness={5} shape="rounded" />
       {showActions && (
         <span className={styles.entityActions}>

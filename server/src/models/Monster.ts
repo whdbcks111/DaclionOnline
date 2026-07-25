@@ -140,6 +140,13 @@ export interface MonsterInspectionSnapshot {
     readonly equipments: readonly { slot: EquipSlot; slotIndex: number; itemDataId: string; name: string }[];
 }
 
+export interface MonsterRespawnDisplaySnapshot {
+    readonly duration: number;
+    readonly remaining: number;
+}
+
+export const LONG_BOSS_RESPAWN_THRESHOLD_SECONDS = 5 * 60;
+
 export default class Monster extends Entity {
     readonly monsterDataId: string;
     override readonly name: string;
@@ -166,6 +173,17 @@ export default class Monster extends Entity {
 
     override get deathDuration(): number { return this.respawnTime; }
     get isChallengePatternActive(): boolean { return this.challengeActive; }
+
+    /** 위치 UI가 장기 리젠 보스만 가공해 표시하도록 반환하는 공개 스냅샷. */
+    getRespawnDisplaySnapshot(): MonsterRespawnDisplaySnapshot | undefined {
+        if (this.isOneShot
+            || !this.hasTag(GameTags.ENTITY_BOSS)
+            || this.respawnTime <= LONG_BOSS_RESPAWN_THRESHOLD_SECONDS) return undefined;
+        return {
+            duration: Math.ceil(this.respawnTime),
+            remaining: Math.ceil(this.isDefeated ? Math.max(0, this.deathTimer) : this.respawnTime),
+        };
+    }
 
     constructor(monsterDataId: string, locationId = '', respawnTime = 10, isOneShot = false) {
         const data = getMonsterData(monsterDataId);

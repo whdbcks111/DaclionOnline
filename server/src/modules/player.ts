@@ -22,6 +22,7 @@ import { tradeManager } from './trade.js';
 import { cancelNavigation } from './navigation.js';
 import { initializeTutorialSession } from './tutorial.js';
 import { detachHumanVerification, initializeHumanVerification } from './humanVerification.js';
+import Monster from '../models/Monster.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -167,13 +168,19 @@ export function sendLocationInfo(userId: number): void {
         x: location.data.x,
         y: location.data.y,
         z: location.data.z,
-        objects: location.getObjects().map(object => ({
-            name: object.name,
-            level: object.level,
-            life: object.life,
-            maxLife: object.maxLife,
-            shields: object.getShieldBarSegments(),
-        })),
+        objects: location.getObjects().map(object => {
+            const respawn = object instanceof Monster
+                ? object.getRespawnDisplaySnapshot()
+                : undefined;
+            return {
+                name: object.name,
+                level: object.level,
+                life: object.life,
+                maxLife: object.maxLife,
+                shields: object.getShieldBarSegments(),
+                ...(respawn ? { respawn } : {}),
+            };
+        }),
         players: getOnlinePlayers()
             .filter(p => p.locationId === locationId)
             .map(p => ({

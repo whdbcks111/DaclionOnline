@@ -78,6 +78,17 @@
     max-width: 100px;
 }
 
+.respawn {
+    flex: 0 0 auto;
+    padding: 0.1em 0.35em;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: $border-radius-sm;
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 0.64rem;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
 .entityActions {
     display: flex;
     flex: 0 0 auto;

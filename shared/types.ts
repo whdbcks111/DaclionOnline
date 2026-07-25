@@ -230,6 +230,10 @@ export interface EntityBarInfo {
     life: number
     maxLife: number
     shields: ShieldBarSegment[]
+    respawn?: {
+        duration: number
+        remaining: number
+    }
     userId?: number  // 플레이어만 존재
 }
 
