@@ -73,6 +73,13 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.10', '2026-07-26',
+        [CHANGED,
+            '소모품·재료·탄약·물고기·미끼·스킬북 등 묶을 수 있는 아이템의 작은 스택 제한을 없앴습니다. 휴대 가능 수량은 최대 중량으로 제한됩니다.',
+            '기존에 여러 칸으로 갈라져 저장된 같은 상태의 아이템은 접속 후 하나의 스택으로 자동 정리됩니다.',
+            '아이템 감정 화면에 거대한 내부 상한 숫자 대신 `스택 제한 없음`이 표시됩니다.',
+        ],
+    ),
     definePatchNote('1.0.9', '2026-07-25',
         [FEATURE,
             '다른 장비와 독립적으로 사용할 수 있는 가방 장착 슬롯을 추가했습니다.',

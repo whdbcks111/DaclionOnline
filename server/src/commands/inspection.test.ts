@@ -3,7 +3,7 @@ import test from 'node:test';
 import Attribute from '../models/Attribute.js';
 import Equipment from '../models/Equipment.js';
 import Inventory from '../models/Inventory.js';
-import { defineItem, Item } from '../models/Item.js';
+import { defineItem, Item, MAX_STACKABLE_ITEM_COUNT } from '../models/Item.js';
 import Monster, { defineMonster } from '../models/Monster.js';
 import type Player from '../models/Player.js';
 import Stat, { StatType } from '../models/Stat.js';
@@ -37,7 +37,7 @@ defineItem({
     category: 'consumable',
     weight: 0.2,
     stackable: true,
-    maxStack: 20,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { amount: 10 },
     onUse: 'heal_hp',
     equipSlot: null,
@@ -172,6 +172,8 @@ test('사용자용 감정·몬스터정보·속성표에는 내부 ID, raw 태�
     assert.doesNotMatch(itemText, /inspection_test_potion|property:water|아이템 ID|식별 태그|메타데이터|amount/);
     assert.match(itemText, /생명력 10 회복/);
     assert.match(itemText, /0\.4kg \(0\.2kg × 2\)/);
+    assert.match(itemText, /스택 제한 없음/);
+    assert.doesNotMatch(itemText, /2000000000/);
 
     const monster = new Monster('inspection_test_monster');
     const monsterText = collectRenderedText(buildMonsterInspection(monster, 1, 150));

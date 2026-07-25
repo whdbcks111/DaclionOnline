@@ -4,7 +4,7 @@
 
 ## 마스터 데이터와 인스턴스
 
-- `models/Item.ts::ItemData`는 이름, 이미지 key, 분류, 무게, 스택, 기본 metadata, 사용 handler ID, 장비 슬롯, modifier, 내구도와 정의 태그를 정의한다.
+- `models/Item.ts::ItemData`는 이름, 이미지 key, 분류, 무게, 스택, 기본 metadata, 사용 handler ID, 장비 슬롯, modifier, 내구도와 정의 태그를 정의한다. 일반 stackable 아이템은 Prisma `Int` 안전 범위 안의 공용 `MAX_STACKABLE_ITEM_COUNT`를 사용해 사실상 스택 제한이 없고, 실제 휴대 한계는 인벤토리 중량으로 결정한다. 장비처럼 인스턴스 상태가 중요한 non-stackable 아이템은 한 칸에 한 개만 둔다.
 - `data/items.ts`가 `defineItem()`으로 마스터 데이터를 프로세스 레지스트리에 등록한다.
 - DB `Item`과 런타임 `Item` 객체는 플레이어가 실제 보유한 수량·내구도와 인스턴스 metadata delta를 표현한다.
 - 장착된 항목은 DB `Equipment`와 런타임 `Equipment` 슬롯 맵에 별도로 존재한다.
@@ -22,7 +22,7 @@ Lv.50 이후 지역에서는 직업별 고레벨 무기 `풍뢰강 검`, `뇌운
 
 `item:bait` 통통한 지렁이 미끼는 `/낚시` 시 보조 슬롯에 미끼가 없으면 인벤토리 묶음 전체가 자동 장착되고, 낚시 시작마다 장착 스택에서 하나만 소비된다. 직접 장착할 때도 스택형 장비는 묶음 전체가 이동한다. 물빛 연못 낚시상점은 미끼를 판매하고 일반~신화 물고기를 등급 태그와 `FishRarity.sellPrice`에 따라 5~8,000 Gold에 매입한다. 상세 흐름은 [미니게임·낚시](minigames-fishing.md)를 참고한다.
 
-광물 아이템은 `stone`, `coal`, `iron_ore`, `gold_ore`, `ruby`, `emerald`, `diamond`이며 모두 99개까지 쌓인다. 피버릭 갱도 입구의 은맥 광부 보급소는 곡괭이를 50 Gold에 판매하고 광물을 희귀도에 따라 각각 2, 5, 10, 25, 55, 60, 180 Gold에 매입한다.
+광물 아이템은 `stone`, `coal`, `iron_ore`, `gold_ore`, `ruby`, `emerald`, `diamond`이며 같은 인스턴스 상태라면 중량 한도까지 한 스택으로 쌓인다. 피버릭 갱도 입구의 은맥 광부 보급소는 곡괭이를 50 Gold에 판매하고 광물을 희귀도에 따라 각각 2, 5, 10, 25, 55, 60, 180 Gold에 매입한다.
 
 metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-level key 단위로 합쳐 계산한다. `getMetadata/getMetadataSnapshot`으로 읽고 `setMetadata/resetMetadata`로 변경한다. 기본값과 같은 값을 설정하면 delta가 제거되며, override가 없는 필드는 실행 중 `ItemData.baseMetadata`가 바뀌어도 즉시 최신 값을 상속한다. 객체·배열 같은 중첩 값은 해당 top-level 필드 전체가 하나의 override다.
 
@@ -59,13 +59,13 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 - 변경 구독: `subscribeChanges`는 수량·metadata·내구도·태그 변화 뒤 호출되며 QuestBook 같은 소유 기능의 현재 보유 조건 갱신에 사용한다. `replaceSelectedItems` 안의 연속 변경은 한 번으로 묶는다.
 - metadata 변경: `setItemMetadata`, `resetItemMetadata`가 대상 Item API를 호출하고 Inventory를 dirty로 표시한다. 조회는 반환된 Item의 `getMetadata`를 사용한다.
 - 내구도 변경: `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`가 Item API를 호출하고 Inventory를 dirty로 표시한다.
-- 추가: `canAdd`, `canAddSnapshot(s)`이 총 무게와 아이템 정의를 검사하고 `addItem`이 stackable/maxStack 규칙에 따라 병합 또는 새 인스턴스를 만든다. 기존 인스턴스를 이동할 때는 `addItemSnapshot`을 사용한다.
+- 추가: `canAdd`, `canAddSnapshot(s)`이 총 무게와 아이템 정의를 검사하고 `addItem`이 stackable/maxStack 규칙에 따라 병합 또는 새 인스턴스를 만든다. 일반 stackable 마스터 데이터의 maxStack은 공용 안전 상한이라 중량이 실질 한계다. 기존 인스턴스를 이동할 때는 `addItemSnapshot`을 사용한다.
 - 조건부 선택·교환: `selectItems`는 겹치는 여러 predicate에 아이템 수량을 중복 없이 배정하고, `replaceSelectedItems`는 선택 재료와 결과 snapshot의 수량·무게를 선검증한 뒤 교환한다.
 - 사용: `useItem`이 `ItemData.onUse` handler를 실행하며 동시에 하나의 아이템만 사용할 수 있다.
 - 제거: `removeItem`, `removeItemByData`, `removeItemInstance`가 수량 또는 인스턴스를 dirty/deleted 상태로 바꾼다. 발사는 신규 아이템의 임시 DB ID가 겹쳐도 안전한 `removeItemInstance`로 선택한 탄약만 소비한다.
-- 저장: state map의 New/Modified/Deleted 항목을 Prisma create/update/delete로 반영한다.
+- 저장: state map의 New/Modified/Deleted 항목을 Prisma create/update/delete로 반영한다. 로드 시 과거의 작은 스택 제한 때문에 여러 DB row로 나뉜 동일 상태 아이템은 현재 maxStack까지 자동 병합하고 dirty flush로 중복 row를 정리한다.
 
-바닥 아이템은 `Location.getDroppedItems()`의 복사본으로 표시하고 `pickupItem(index, count?)/pickupAllItems`로만 제거한다. `Location.addDroppedItem()`은 정의 ID·내구도·metadata delta·영속 태그가 같은 stackable 아이템을 `maxStack`까지 합치고 초과분만 새 스택으로 나눈다. `/버리기 <슬롯> [개수|전체]`는 기본 1개를 버리고, 지정 수량이 보유량을 넘거나 `전체`이면 해당 인스턴스를 전부 버린다. `/줍기 <번호> [개수]`는 개수를 생략하면 해당 스택 전체를, 지정하면 그 수량만 분리해 옮긴다. 전체 줍기는 모든 스택의 중량을 먼저 검사하므로 하나라도 받을 수 없는 경우 바닥 상태를 변경하지 않는다. 몬스터·파괴 가능한 자원 전리품은 `Player.receiveLoot()`로 먼저 인벤토리에 지급하고 중량이 부족하면 `Location.addDroppedItemData()`로 현재 장소에 보존한다.
+바닥 아이템은 `Location.getDroppedItems()`의 복사본으로 표시하고 `pickupItem(index, count?)/pickupAllItems`로만 제거한다. `Location.addDroppedItem()`은 정의 ID·내구도·metadata delta·영속 태그가 같은 stackable 아이템을 공용 안전 상한까지 합치므로 일반 수량에서는 하나의 바닥 스택으로 표시한다. `/버리기 <슬롯> [개수|전체]`는 기본 1개를 버리고, 지정 수량이 보유량을 넘거나 `전체`이면 해당 인스턴스를 전부 버린다. `/줍기 <번호> [개수]`는 개수를 생략하면 해당 스택 전체를, 지정하면 그 수량만 분리해 옮긴다. 전체 줍기는 모든 스택의 중량을 먼저 검사하므로 하나라도 받을 수 없는 경우 바닥 상태를 변경하지 않는다. 몬스터·파괴 가능한 자원 전리품은 `Player.receiveLoot()`로 먼저 인벤토리에 지급하고 중량이 부족하면 `Location.addDroppedItemData()`로 현재 장소에 보존한다.
 
 `/인벤토리` 목록과 `/상태창`의 장착 정보는 이름 앞에 `Item.image` 아이콘을 표시한다. 인벤토리 현재/최대 중량과 `/감정`의 아이템 단위·합계 중량은 최대 소수 둘째 자리의 `kg` 단위로 표시한다. 내구도가 있는 아이템은 이름 오른쪽에 `em` 길이의 짧은 progress와 현재/최대값 tooltip을 추가한다. progress 색은 50% 초과 초록, 20% 초과~50% 금색, 20% 이하 빨강이며 존재하지 않는 이미지 에셋은 숨겨진다.
 

@@ -554,6 +554,41 @@ export default class Inventory {
 
     // -- DB 연동 --
 
+    /**
+     * 과거의 작은 maxStack 때문에 DB row가 나뉜 stackable 아이템을 현재 규칙에 맞춰 합친다.
+     * 인스턴스 metadata·내구도·영속 태그가 다른 아이템은 별도 스택으로 유지한다.
+     */
+    private consolidateLoadedStacks(): void {
+        for (let targetIndex = 0; targetIndex < this._items.length; targetIndex++) {
+            const target = this._items[targetIndex];
+            const data = getItemData(target.itemDataId);
+            if (!data?.stackable || target.count >= data.maxStack) continue;
+
+            for (let sourceIndex = targetIndex + 1; sourceIndex < this._items.length;) {
+                const source = this._items[sourceIndex];
+                if (!target.canStackWith(source.snapshot())) {
+                    sourceIndex++;
+                    continue;
+                }
+
+                const moved = Math.min(source.count, data.maxStack - target.count);
+                if (moved <= 0) break;
+                target.count += moved;
+                source.count -= moved;
+                this._states.set(target, ItemState.Modified);
+
+                if (source.count > 0) {
+                    this._states.set(source, ItemState.Modified);
+                    sourceIndex++;
+                    continue;
+                }
+
+                this._items.splice(sourceIndex, 1);
+                this._states.set(source, ItemState.Deleted);
+            }
+        }
+    }
+
     /** DB에서 인벤토리 로드 */
     static async load(playerId: number, maxWeight: number): Promise<Inventory> {
         const inv = new Inventory(playerId, maxWeight);
@@ -572,6 +607,7 @@ export default class Inventory {
             );
             inv.track(item, ItemState.Clean);
         }
+        inv.consolidateLoadedStacks();
         return inv;
     }
 

@@ -77,6 +77,12 @@ export interface ItemBalanceProfile {
     readonly notes?: readonly string[];
 }
 
+/**
+ * Prisma `Int`로 안전하게 저장할 수 있는 범위 안에서 사용하는 공용 스택 상한.
+ * 일반 플레이에서는 중량이 먼저 한계가 되므로 stackable 아이템에는 사실상 무제한이다.
+ */
+export const MAX_STACKABLE_ITEM_COUNT = 2_000_000_000;
+
 /** 아이템 정의 (마스터 데이터, 코드에서 직접 정의) */
 export interface ItemData {
     id: string;
@@ -87,6 +93,7 @@ export interface ItemData {
     category: string;
     weight: number;
     stackable: boolean;
+    /** 일반 stackable 아이템은 MAX_STACKABLE_ITEM_COUNT를 사용하고, 특별한 게임 규칙이 있을 때만 더 작게 제한한다. */
     maxStack: number;
     baseMetadata: ItemMetadata | null;
     onUse: string | null;

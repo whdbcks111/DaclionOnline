@@ -3,11 +3,12 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import Entity from '../models/Entity.js';
 import Equipment from '../models/Equipment.js';
+import Inventory from '../models/Inventory.js';
 import type Player from '../models/Player.js';
 import { getAllLocations, getLocation, normalizeLocationInput, reloadAllLocations } from '../models/Location.js';
 import { getAllMonsterData, getMonsterData } from '../models/Monster.js';
 import { getResourceData } from '../models/Resource.js';
-import { getItemData } from '../models/Item.js';
+import { getAllItemData, getItemData, MAX_STACKABLE_ITEM_COUNT } from '../models/Item.js';
 import { getShop } from '../models/Shop.js';
 import { getAllCraftingRecipes } from '../models/Crafting.js';
 import { getAllQuestData } from '../models/Quest.js';
@@ -62,6 +63,17 @@ class TestBossRoomPlayer extends Entity {
         super(200, 0, locationId, { maxLife: 100_000, speed: 2 }, Equipment.createEmpty());
     }
 }
+
+test('일반 스택 아이템은 중량 한도까지 하나의 사실상 무제한 스택을 사용한다', () => {
+    const stackableItems = getAllItemData().filter(item => item.stackable);
+    assert.ok(stackableItems.length > 0);
+    assert.ok(stackableItems.every(item => item.maxStack === MAX_STACKABLE_ITEM_COUNT));
+
+    const inventory = Inventory.createEmpty(0, 1_000);
+    assert.equal(inventory.addItem('wooden_arrow', 250), true);
+    assert.equal(inventory.items.length, 1);
+    assert.equal(inventory.items[0].count, 250);
+});
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));

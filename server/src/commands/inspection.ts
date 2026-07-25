@@ -1,7 +1,7 @@
 import type Player from '../models/Player.js';
 import Monster from '../models/Monster.js';
 import type { Item, ItemInspectionSnapshot } from '../models/Item.js';
-import { getItemData } from '../models/Item.js';
+import { getItemData, MAX_STACKABLE_ITEM_COUNT } from '../models/Item.js';
 import { getSkillData } from '../models/Skill.js';
 import { EquipSlotType } from '../models/Equipment.js';
 import { AttributeType, summarizeAttributeModifiers } from '../models/Attribute.js';
@@ -233,7 +233,11 @@ export function buildItemInspection(snapshot: ItemInspectionSnapshot, sourceLabe
             appendSection(builder, '기본 정보');
             builder.tab(120, b => b.text('확인 위치')).text(`${sourceLabel}\n`)
                 .tab(120, b => b.text('분류')).text(`${snapshot.category || '기타'}\n`)
-                .tab(120, b => b.text('수량')).text(`${snapshot.count}${snapshot.stackable ? ` / 스택당 ${snapshot.maxStack}` : ''}\n`)
+                .tab(120, b => b.text('수량')).text(`${snapshot.count}${snapshot.stackable
+                    ? snapshot.maxStack >= MAX_STACKABLE_ITEM_COUNT
+                        ? ' / 스택 제한 없음'
+                        : ` / 스택당 ${snapshot.maxStack}`
+                    : ''}\n`)
                 .tab(120, b => b.text('무게')).text(`${formatWeight(snapshot.totalWeight)} (${formatWeight(snapshot.weight)} × ${snapshot.count})\n`);
             if (snapshot.equipSlot) {
                 builder.tab(120, b => b.text('장착 부위')).text(`${EquipSlotType.fromInput(snapshot.equipSlot)?.label ?? snapshot.equipSlot}\n`);
