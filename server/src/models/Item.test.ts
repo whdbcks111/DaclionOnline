@@ -9,7 +9,7 @@ import {
     type ItemMetadata,
 } from './Item.js';
 import Attribute, { AttributeType } from './Attribute.js';
-import Equipment from './Equipment.js';
+import Equipment, { EquipSlotType } from './Equipment.js';
 import Inventory from './Inventory.js';
 import Player from './Player.js';
 
@@ -209,6 +209,23 @@ test('직접 피격용 방어구 내구도 API는 방어 슬롯만 감소시키�
     assert.equal(equipment.getEquipped('head')?.durability, 1);
     assert.equal(equipment.getEquipped('body'), undefined);
     assert.equal(equipment.getEquipped('accessory')?.durability, 2);
+});
+
+test('가방 슬롯 장비는 다른 장비와 독립적으로 최대 중량 modifier를 적용한다', () => {
+    defineItem({
+        ...itemData('test_bag'),
+        equipSlot: 'bag',
+        modifiers: [{ attribute: 'maxWeight', op: 'add', value: 40, source: '' }],
+    });
+    const equipment = Equipment.createEmpty();
+    const attribute = new Attribute({ maxWeight: 100 });
+
+    assert.equal(EquipSlotType.fromInput('배낭'), EquipSlotType.BAG);
+    assert.equal(equipment.equip('bag', new Item('test_bag', 1, null, null), attribute), true);
+    assert.equal(attribute.get(AttributeType.MAX_WEIGHT), 140);
+    assert.equal(AttributeType.MAX_WEIGHT.format(attribute.get(AttributeType.MAX_WEIGHT)), '140kg');
+    assert.equal(equipment.unequip('bag', 0, attribute)?.itemDataId, 'test_bag');
+    assert.equal(attribute.get(AttributeType.MAX_WEIGHT), 100);
 });
 
 test('스택형 미끼는 묶음 전체를 장착하고 사용할 때마다 한 개씩 소비한다', () => {

@@ -996,21 +996,27 @@ test('보물상자는 1~2시간 쿨타임과 가중치 기반 골드·아이템 
     assert.equal(coins.label, '묵직한 동전 주머니');
     assert.equal(coins.gold, 35);
 
-    const wideValues = [0.9875, 0, 0];
+    const wideValues = [0.9825, 0, 0];
     const wideRod = rollTreasureReward(() => wideValues.shift() ?? 0);
     assert.equal(wideRod.itemDataId, 'wide_net_fishing_rod');
     assert.equal(wideRod.itemCount, 1);
 
-    const swiftValues = [0.999999, 0, 0];
+    const swiftValues = [0.9925, 0, 0];
     const swiftRod = rollTreasureReward(() => swiftValues.shift() ?? 0);
     assert.equal(swiftRod.itemDataId, 'swift_current_fishing_rod');
     assert.equal(swiftRod.itemCount, 1);
+
+    const pouchValues = [0.999999, 0, 0];
+    const pouch = rollTreasureReward(() => pouchValues.shift() ?? 0);
+    assert.equal(pouch.itemDataId, 'foxtrail_pouch');
+    assert.equal(pouch.itemCount, 1);
 });
 
 test('미궁 보물함은 전용 로직 아이템과 전용 아이콘을 사용한다', () => {
     assert.equal(rollLabyrinthCacheReward('echo_treasure_chest', () => 0), 'echo_hourglass');
     assert.equal(rollLabyrinthCacheReward('echo_treasure_chest', () => 0.46), 'twisted_labyrinth_compass');
-    assert.equal(rollLabyrinthCacheReward('crystal_treasure_chest', () => 0.99), 'twisted_labyrinth_compass');
+    assert.equal(rollLabyrinthCacheReward('crystal_treasure_chest', () => 0.9), 'twisted_labyrinth_compass');
+    assert.equal(rollLabyrinthCacheReward('crystal_treasure_chest', () => 0.99), 'resonance_fold_pack');
     assert.deepEqual(getResourceData('echo_treasure_chest')?.interactionCooldown, { min: 7200, max: 10800 });
     assert.deepEqual(getResourceData('crystal_treasure_chest')?.interactionCooldown, { min: 10800, max: 18000 });
 
@@ -1020,6 +1026,42 @@ test('미궁 보물함은 전용 로직 아이템과 전용 아이콘을 사용�
     assert.equal(getItemData('twisted_labyrinth_compass')?.onUse, 'labyrinth_compass');
     assert.equal(getItemData('resonance_evasion_shard')?.image, 'items/resonance_evasion_shard');
     assert.equal(getItemData('resonance_evasion_shard')?.onUse, 'grant_single_evasion');
+});
+
+test('가방은 성장 지역 상점과 희귀 보물함에서 최대 중량 장비로 제공된다', () => {
+    const tiers = [
+        ['general_store', 'traveler_leather_bag', 25],
+        ['feveric_mine_store', 'miner_frame_pack', 50],
+        ['twilight_memorial_store', 'gravecloth_field_pack', 80],
+        ['glassdune_caravan_store', 'glassdune_caravan_pack', 120],
+        ['frostveil_outpost_store', 'frostveil_expedition_pack', 175],
+        ['misttide_harbor_store', 'misttide_cargo_pack', 230],
+        ['paradox_relay_store', 'paradox_fold_pack', 300],
+        ['ashen_waystation_store', 'ashroad_carrier', 365],
+        ['voidcrown_waystation_store', 'voidsilk_dimension_pack', 435],
+        ['eclipse_dock_store', 'eclipse_pressure_pack', 510],
+        ['worldroot_waystation_store', 'worldroot_living_pack', 600],
+    ] as const;
+
+    for (const [shopId, itemDataId, capacity] of tiers) {
+        const item = getItemData(itemDataId);
+        assert.equal(item?.equipSlot, 'bag', itemDataId);
+        assert.equal(item?.image, 'items/bag_fallback', itemDataId);
+        assert.ok(item?.tags.includes(GameTags.ITEM_BAG), itemDataId);
+        assert.ok(item?.modifiers?.some(modifier =>
+            modifier.attribute === 'maxWeight' && modifier.op === 'add' && modifier.value === capacity
+        ), itemDataId);
+        assert.ok(getShop(shopId)?.data.buyList.some(entry => entry.create().itemDataId === itemDataId), shopId);
+    }
+
+    assert.equal(getItemData('foxtrail_pouch')?.equipSlot, 'bag');
+    assert.equal(getItemData('resonance_fold_pack')?.equipSlot, 'bag');
+    assert.equal(rollWorldrootReliquaryReward(() => 0.83).itemDataId, 'memory_amber_bottomless_pack');
+
+    const png = readFileSync(new URL('../../../client/public/icons/items/bag_fallback.png', import.meta.url));
+    assert.equal(png.readUInt32BE(16), 128);
+    assert.equal(png.readUInt32BE(20), 128);
+    assert.equal(png[25], 6, 'bag fallback must be RGBA');
 });
 
 test('교체한 아이템 폴백은 데이터 ID별 128px RGBA 아이콘을 가진다', () => {

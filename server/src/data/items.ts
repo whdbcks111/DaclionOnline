@@ -2931,3 +2931,79 @@ for (const book of [
     modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_WORLDROOT, book.property],
 });
+
+// TODO(art): 전용 가방 아트 제작 전까지 모든 성장 가방이 가방 카테고리 fallback을 공유한다.
+for (const bag of [
+    {
+        id: 'traveler_leather_bag', name: '여행자 가죽가방', capacity: 25, weight: 0.8,
+        description: '루미나르의 초보 모험가가 쓰는 단단한 가죽가방.',
+    },
+    {
+        id: 'miner_frame_pack', name: '광부의 철제 배낭', capacity: 50, weight: 1.4,
+        description: '광석 무게를 등 전체로 분산시키는 철제 틀 배낭.',
+    },
+    {
+        id: 'gravecloth_field_pack', name: '묘지기 천배낭', capacity: 80, weight: 1.1,
+        description: '가벼운 묘지기 천을 여러 겹 덧대 부피를 넓힌 야전 배낭.',
+    },
+    {
+        id: 'glassdune_caravan_pack', name: '유리사막 대상가방', capacity: 120, weight: 1.8,
+        description: '대상단의 장거리 횡단을 위해 모래막이 덮개와 수납끈을 늘린 가방.',
+    },
+    {
+        id: 'frostveil_expedition_pack', name: '설원 원정배낭', capacity: 175, weight: 2.1,
+        description: '결빙된 물자도 단단히 고정하는 서리잔향 원정대의 대형 배낭.',
+    },
+    {
+        id: 'misttide_cargo_pack', name: '염등항 화물배낭', capacity: 230, weight: 2.3,
+        description: '소금기와 파도를 견디도록 방수 수지로 마감한 항해용 화물 배낭.',
+    },
+    {
+        id: 'paradox_fold_pack', name: '역설 접이가방', capacity: 300, weight: 1.9,
+        description: '내부의 접힌 공간이 겉보기보다 많은 물자를 받아들이는 기계고 가방.',
+    },
+    {
+        id: 'ashroad_carrier', name: '재길 운반구', capacity: 365, weight: 2.8,
+        description: '뜨거운 재와 날카로운 잔해를 함께 나르도록 밤쇠 골격을 댄 운반구.',
+    },
+    {
+        id: 'voidsilk_dimension_pack', name: '공허비단 차원배낭', capacity: 435, weight: 2.2,
+        description: '공허비단 안쪽의 무광 공간에 짐을 차곡차곡 겹쳐 넣는 왕성 배낭.',
+    },
+    {
+        id: 'eclipse_pressure_pack', name: '해구 내압배낭', capacity: 510, weight: 2.7,
+        description: '깊은 해구의 수압에도 형태가 흐트러지지 않는 밀폐 배낭.',
+    },
+    {
+        id: 'worldroot_living_pack', name: '천근수피 생장배낭', capacity: 600, weight: 2.5,
+        description: '짐이 늘어날수록 천근수피의 내부 결이 함께 자라나는 살아 있는 배낭.',
+    },
+    {
+        id: 'foxtrail_pouch', name: '여우꼬리 허리주머니', capacity: 40, weight: 0.4,
+        description: '오래된 보물상자에서 발견되는 작고 영리한 수납 주머니.',
+    },
+    {
+        id: 'resonance_fold_pack', name: '공명 접이배낭', capacity: 210, weight: 1.3,
+        description: '철근미궁의 공명에 맞춰 내부 공간이 접혔다 펼쳐지는 희귀 배낭.',
+    },
+    {
+        id: 'memory_amber_bottomless_pack', name: '기억호박 무저배낭', capacity: 680, weight: 2.0,
+        description: '기억호박 속 오래된 수납 공간을 현실에 겹쳐 놓은 태초의 유물.',
+    },
+] as const) defineItem({
+    id: bag.id,
+    name: bag.name,
+    description: `${bag.description} 장착하면 최대 중량이 ${bag.capacity}kg 증가합니다.`,
+    image: 'items/bag_fallback',
+    category: '가방',
+    weight: bag.weight,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'bag',
+    modifiers: [{ attribute: 'maxWeight', op: 'add', value: bag.capacity, source: '' }],
+    baseDurability: null,
+    tags: [GameTags.ITEM_BAG],
+    balance: { role: ItemBalanceRole.UTILITY },
+});

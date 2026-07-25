@@ -34,6 +34,7 @@ export const GameTags = Object.freeze({
     ITEM_SKILL_BOOK: 'item:skill_book',
     ITEM_FORGED: 'item:forged',
     ITEM_CRAFTING_COMPONENT: 'item:crafting_component',
+    ITEM_BAG: 'item:bag',
 
     FISH_RARITY_COMMON: 'fish_rarity:common',
     FISH_RARITY_UNCOMMON: 'fish_rarity:uncommon',

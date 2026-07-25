@@ -5,7 +5,7 @@ import { GameTags } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
 
 /** 장비 슬롯 키 */
-export type EquipSlot = 'head' | 'body' | 'legs' | 'feet' | 'accessory' | 'mainHand' | 'offHand';
+export type EquipSlot = 'head' | 'body' | 'legs' | 'feet' | 'accessory' | 'mainHand' | 'offHand' | 'bag';
 
 /** 장비 슬롯 종류 — Java 클래스 열거형 패턴 */
 export class EquipSlotType {
@@ -19,6 +19,7 @@ export class EquipSlotType {
     static readonly MAIN_HAND = new EquipSlotType('mainHand',  '손',     1, ['주손', '주무기', 'mainhand'])
     static readonly OFF_HAND  = new EquipSlotType('offHand',   '보조',   1, ['보조무기', '보조손', 'offhand'])
     static readonly ACCESSORY = new EquipSlotType('accessory', '장신구', 3, ['악세사리'])
+    static readonly BAG       = new EquipSlotType('bag',       '가방',   1, ['배낭'])
 
     readonly key: EquipSlot
     readonly label: string

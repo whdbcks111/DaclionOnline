@@ -120,7 +120,7 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 
 ## Equipment API와 규칙
 
-슬롯은 `EquipSlotType` 클래스형 enum이 key, 한글 label, 입력 별칭, 최대 수량을 소유한다. 현재 head(1), body(1), legs(1), feet(1), accessory(3), mainHand(1), offHand(1)이다.
+슬롯은 `EquipSlotType` 클래스형 enum이 key, 한글 label, 입력 별칭, 최대 수량을 소유한다. 현재 head(1), body(1), legs(1), feet(1), accessory(3), mainHand(1), offHand(1), bag(1)이다. 가방은 다른 장비와 독립된 한 칸을 사용하며 `maxWeight` modifier로 인벤토리 최대 중량을 늘린다.
 
 - `equip`: 빈 슬롯을 찾아 장착하고 modifier를 적용한다.
 - `equipSwap`: 지정 슬롯 또는 빈/마지막 슬롯에 장착하며 밀려난 Item을 반환한다.
@@ -136,6 +136,8 @@ metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-le
 ## 상점
 
 루미나르 잡화점의 `general_store`는 시작용 견습 마법 지팡이와 Lv.20 성장용 성휘목 지팡이를 함께 판매한다. 성휘목 지팡이는 180골드·2개 재고·5분 재입고이며, 초반 마법사가 황혼왕릉 진입 전에 정상적인 장비 단계를 확보하는 경로다. Lv.40 전후에는 황혼왕릉 야영지의 애도목 지팡이로 교체한다.
+
+가방 성장선은 루미나르 25kg, 피버릭 광산 50kg, 황혼왕릉 80kg, 유리사막 120kg, 설원 175kg, 안개파도 230kg, 역설기계고 300kg, 잿빛성흔 365kg, 공허왕관 435kg, 월식해구 510kg, 역근수해 600kg 순서다. 각 가방은 해당 안전 거점 상점에서 제한 재고로 구매해 같은 `bag` 슬롯에 교체 장착한다. 일반 보물상자는 40kg 여우꼬리 허리주머니, 철근미궁 보물함은 210kg 공명 접이배낭, 역근수해 유물함은 680kg 기억호박 무저배낭을 낮은 확률로 제공한다. 전용 아트 제작 전까지 모든 가방은 하나의 128×128 가방 카테고리 fallback을 공유한다.
 
 은빛그물 숲 사냥꾼 거점의 `silverweb_hunter_store`는 사냥활·화살·해독제를 판매하고 `wolf_pelt`, `silverweb_silk`, `venom_gland`를 희귀도에 따라 매입한다.
 

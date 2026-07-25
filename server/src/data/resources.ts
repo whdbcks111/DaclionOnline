@@ -29,7 +29,7 @@ interface TreasureReward {
 }
 
 const TREASURE_REWARDS: readonly TreasureReward[] = [
-    { label: '묵직한 동전 주머니', weight: 33.5, gold: { min: 35, max: 90 } },
+    { label: '묵직한 동전 주머니', weight: 33, gold: { min: 35, max: 90 } },
     { label: '회복 물자', weight: 22, gold: { min: 10, max: 30 }, itemDataId: 'health_potion', itemCount: { min: 1, max: 2 } },
     { label: '정신력 물자', weight: 14, gold: { min: 10, max: 30 }, itemDataId: 'mana_potion', itemCount: { min: 1, max: 2 } },
     { label: '화살 묶음', weight: 14, gold: { min: 5, max: 20 }, itemDataId: 'wooden_arrow', itemCount: { min: 8, max: 18 } },
@@ -38,6 +38,7 @@ const TREASURE_REWARDS: readonly TreasureReward[] = [
     { label: '빛나는 보석함', weight: 2, gold: { min: 50, max: 100 }, itemDataId: 'diamond', itemCount: { min: 1, max: 1 } },
     { label: '너울그물 낚싯대 보관함', weight: 0.75, gold: { min: 20, max: 40 }, itemDataId: 'wide_net_fishing_rod', itemCount: { min: 1, max: 1 } },
     { label: '급류바늘 낚싯대 보관함', weight: 0.75, gold: { min: 20, max: 40 }, itemDataId: 'swift_current_fishing_rod', itemCount: { min: 1, max: 1 } },
+    { label: '여우꼬리 수납함', weight: 0.5, gold: { min: 20, max: 40 }, itemDataId: 'foxtrail_pouch', itemCount: { min: 1, max: 1 } },
 ];
 
 function randomInt(range: { min: number; max: number }, random: () => number): number {
@@ -89,14 +90,16 @@ registerResourceInteraction('open_treasure_chest', (_resource, player) => {
 
 const LABYRINTH_CACHE_REWARDS = Object.freeze({
     echo_treasure_chest: [
-        { itemDataId: 'echo_hourglass', weight: 45 },
-        { itemDataId: 'twisted_labyrinth_compass', weight: 35 },
+        { itemDataId: 'echo_hourglass', weight: 42 },
+        { itemDataId: 'twisted_labyrinth_compass', weight: 33 },
         { itemDataId: 'resonance_evasion_shard', weight: 20 },
+        { itemDataId: 'resonance_fold_pack', weight: 5 },
     ],
     crystal_treasure_chest: [
-        { itemDataId: 'resonance_evasion_shard', weight: 50 },
-        { itemDataId: 'echo_hourglass', weight: 30 },
+        { itemDataId: 'resonance_evasion_shard', weight: 47 },
+        { itemDataId: 'echo_hourglass', weight: 28 },
         { itemDataId: 'twisted_labyrinth_compass', weight: 20 },
+        { itemDataId: 'resonance_fold_pack', weight: 5 },
     ],
 } as const);
 
@@ -217,12 +220,13 @@ const ECLIPSE_RELIQUARY_REWARDS = Object.freeze([
 ]);
 
 const WORLDROOT_RELIQUARY_REWARDS = Object.freeze([
-    { itemDataId: 'worldroot_ration', count: 6, weight: 18 },
+    { itemDataId: 'worldroot_ration', count: 6, weight: 16 },
     { itemDataId: 'primordial_draught', count: 3, weight: 14 },
     { itemDataId: 'skyroot_bark', count: 8, weight: 16 },
     { itemDataId: 'primal_sap', count: 6, weight: 14 },
     { itemDataId: 'memory_amber', count: 5, weight: 12 },
     { itemDataId: 'heart_seed', count: 4, weight: 10 },
+    { itemDataId: 'memory_amber_bottomless_pack', count: 1, weight: 2 },
     { itemDataId: 'rootbone_cleaver', count: 1, weight: 3.2 },
     { itemDataId: 'heartstring_greatbow', count: 1, weight: 3.2 },
     { itemDataId: 'amber_memory_fang', count: 1, weight: 3.2 },

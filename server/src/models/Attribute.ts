@@ -56,7 +56,9 @@ export class AttributeType {
     static readonly MAX_WEIGHT   = new AttributeType(
         'maxWeight',    
         '최대 중량',     
-        50
+        50,
+        v => `${Number(v.toFixed(2))}kg`,
+        v => `인벤토리에 최대 ${Number(v.toFixed(2))}kg까지 보관할 수 있습니다.`
     )
     static readonly ATK          = new AttributeType(
         'atk',          

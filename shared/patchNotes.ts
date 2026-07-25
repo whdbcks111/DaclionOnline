@@ -73,6 +73,14 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.9', '2026-07-25',
+        [FEATURE,
+            '다른 장비와 독립적으로 사용할 수 있는 가방 장착 슬롯을 추가했습니다.',
+        ],
+        [CONTENT,
+            '루미나르부터 역근수해까지 성장 구간별 상점 가방 11종과 일반·미궁·최종 지역 보물함의 희귀 가방 3종을 추가했습니다.',
+        ],
+    ),
     definePatchNote('1.0.8', '2026-07-25',
         [FEATURE,
             '현재 대상의 이름·레벨·생명력·정신력·보호막·상태이상을 확인하는 독립 타게팅 HUD를 추가했습니다.',

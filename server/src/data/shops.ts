@@ -2,6 +2,17 @@ import { defineShop } from '../models/Shop.js';
 import { GameTags } from '../../../shared/tags.js';
 import { FishRarity } from '../models/Fishing.js';
 
+function bagStock(label: string, itemDataId: string, price: number, restockTime: number, stock = 2) {
+    return {
+        label,
+        create: () => ({ itemDataId, count: 1 }),
+        count: 1,
+        price,
+        stock,
+        restockTime,
+    };
+}
+
 defineShop({
     id: 'general_store',
     buyList: [
@@ -125,6 +136,7 @@ defineShop({
             price: 180,
             restockTime: 300,
         },
+        bagStock('여행자 가죽가방', 'traveler_leather_bag', 90, 300, 4),
     ],
     sellList: [
         {
@@ -237,6 +249,7 @@ defineShop({
             stock: 5,
             restockTime: 120,
         },
+        bagStock('광부의 철제 배낭', 'miner_frame_pack', 250, 480, 3),
     ],
     sellList: [
         { label: '돌', filter: item => item.itemDataId === 'stone', count: 99, price: 2 },
@@ -315,6 +328,7 @@ defineShop({
             stock: 2,
             restockTime: 480,
         },
+        bagStock('묘지기 천배낭', 'gravecloth_field_pack', 650, 600),
         {
             label: '진혼 시위',
             create: () => ({ itemDataId: 'requiem_bow', count: 1 }),
@@ -353,6 +367,7 @@ defineShop({
 defineShop({
     id: 'glassdune_caravan_store',
     buyList: [
+        bagStock('유리사막 대상가방', 'glassdune_caravan_pack', 2_500, 900),
         {
             label: '오아시스 대추야자',
             create: () => ({ itemDataId: 'oasis_date', count: 1 }),
@@ -401,6 +416,7 @@ defineShop({
 defineShop({
     id: 'frostveil_outpost_store',
     buyList: [
+        bagStock('설원 원정배낭', 'frostveil_expedition_pack', 4_800, 1_200),
         {
             label: '설원 행군식', create: () => ({ itemDataId: 'winter_trail_ration', count: 1 }),
             count: 1, price: 76, stock: 24, restockTime: 50,
@@ -447,6 +463,7 @@ defineShop({
 defineShop({
     id: 'misttide_harbor_store',
     buyList: [
+        bagStock('염등항 화물배낭', 'misttide_cargo_pack', 7_200, 1_500),
         {
             label: '염풍 행군식', create: () => ({ itemDataId: 'brine_trail_ration', count: 1 }),
             count: 1, price: 115, stock: 24, restockTime: 50,
@@ -494,6 +511,7 @@ defineShop({
 defineShop({
     id: 'paradox_relay_store',
     buyList: [
+        bagStock('역설 접이가방', 'paradox_fold_pack', 11_000, 1_800),
         {
             label: '태엽 작업식', create: () => ({ itemDataId: 'cogwork_ration', count: 1 }),
             count: 1, price: 165, stock: 24, restockTime: 50,
@@ -546,6 +564,7 @@ defineShop({
 defineShop({
     id: 'ashen_waystation_store',
     buyList: [
+        bagStock('재길 운반구', 'ashroad_carrier', 16_500, 2_100),
         {
             label: '재길 행군식', create: () => ({ itemDataId: 'ashmarch_ration', count: 1 }),
             count: 1, price: 220, stock: 24, restockTime: 50,
@@ -593,6 +612,7 @@ defineShop({
 defineShop({
     id: 'voidcrown_waystation_store',
     buyList: [
+        bagStock('공허비단 차원배낭', 'voidsilk_dimension_pack', 25_000, 2_400),
         {
             label: '무광 행군식', create: () => ({ itemDataId: 'voidcrown_ration', count: 1 }),
             count: 1, price: 285, stock: 24, restockTime: 50,
@@ -634,6 +654,7 @@ defineShop({
 defineShop({
     id: 'eclipse_dock_store',
     buyList: [
+        bagStock('해구 내압배낭', 'eclipse_pressure_pack', 34_000, 2_700),
         {
             label: '월식 해초말이', create: () => ({ itemDataId: 'eclipse_ration', count: 1 }),
             count: 1, price: 340, stock: 24, restockTime: 50,
@@ -675,6 +696,7 @@ defineShop({
 defineShop({
     id: 'worldroot_waystation_store',
     buyList: [
+        bagStock('천근수피 생장배낭', 'worldroot_living_pack', 45_000, 3_000),
         {
             label: '천근수피 빵', create: () => ({ itemDataId: 'worldroot_ration', count: 1 }),
             count: 1, price: 410, stock: 24, restockTime: 50,
