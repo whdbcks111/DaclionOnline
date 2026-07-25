@@ -2786,6 +2786,7 @@ for (const technique of growthTechniques) defineSkill({
                     damage, {
                         criticalRate: technique.guaranteedCritical ? 1 : undefined,
                         unavoidable: technique.unavoidable,
+                        effectTags: technique.propertyTag ? [technique.propertyTag] : undefined,
                         consumeMainHandDurability: Boolean(technique.weaponTags?.length),
                     });
                 if (!result) throw new Error('공격이 확정되지 않았습니다.');
@@ -3280,10 +3281,15 @@ for (const technique of eliteTechniques) {
                     },
                 );
             } else {
+                const effectTags = technique.propertyTag
+                    && !(technique.damageType === 'physical' && technique.propertyTag === GameTags.PROPERTY_POISON)
+                    ? [technique.propertyTag]
+                    : undefined;
                 const result = context.owner.attack(found.target, technique.damageType,
                     damage, {
                         criticalRate: technique.guaranteedCritical ? 1 : undefined,
                         unavoidable: technique.unavoidable,
+                        effectTags,
                         consumeMainHandDurability: Boolean(technique.weaponTags?.length),
                     });
                 if (!result) throw new Error(`${technique.name} 공격이 확정되지 않았습니다.`);
@@ -3597,6 +3603,7 @@ function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): void {
             if (!target || target.isDefeated || target.locationId !== context.owner.locationId) return 'finish';
             const result = context.owner.attack(target, definition.damageType, damage(context), {
                 unavoidable: definition.unavoidable,
+                effectTags: [definition.propertyTag],
                 consumeMainHandDurability: false,
                 triggerMainHandHitEffects: false,
                 combatMessage: {

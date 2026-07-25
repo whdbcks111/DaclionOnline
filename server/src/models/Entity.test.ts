@@ -10,6 +10,8 @@ import Stat, {
     SENSIBILITY_CRIT_RATE_CAP,
     StatType,
 } from './Stat.js';
+import { GameTags } from '../../../shared/tags.js';
+import '../data/tagEffects.js';
 
 class VitalEntity extends Entity {
     override readonly name = '자원 상한 시험체';
@@ -21,6 +23,19 @@ class VitalEntity extends Entity {
             maxThirsty: 70,
             maxHungry: 60,
         }, Equipment.createEmpty());
+    }
+}
+
+class CombatEntity extends Entity {
+    override readonly name: string;
+
+    constructor(name: string, tags: readonly string[] = []) {
+        super(1, 0, 'test', {
+            maxLife: 1_000,
+            speed: 1,
+            attackSpeed: 1,
+        }, Equipment.createEmpty(), undefined, tags);
+        this.name = name;
     }
 }
 
@@ -164,4 +179,22 @@ test('부활하면 생명력과 정신력, 배고픔과 수분을 최대값으�
     assert.equal(entity.mentality, entity.maxMentality);
     assert.equal(entity.hungry, entity.maxHungry);
     assert.equal(entity.thirsty, entity.maxThirsty);
+});
+
+test('직접 스킬 공격은 지정한 속성 태그로 상성을 계산한다', () => {
+    const attacker = new CombatEntity('그림자 추격 시전자');
+    const target = new CombatEntity('빛 속성 대상', [GameTags.PROPERTY_LIGHT]);
+
+    const result = attacker.attack(target, 'physical', 100, {
+        unavoidable: true,
+        effectTags: [GameTags.PROPERTY_DARK],
+        consumeMainHandDurability: false,
+        triggerMainHandHitEffects: false,
+    });
+
+    assert.ok(result);
+    assert.equal(result.effectSourceTag, GameTags.PROPERTY_DARK);
+    assert.equal(result.effectTargetTag, GameTags.PROPERTY_LIGHT);
+    assert.equal(result.effectModifier, 1.5);
+    assert.equal(result.finalDamage, 150);
 });

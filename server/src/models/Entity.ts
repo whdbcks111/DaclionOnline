@@ -69,6 +69,11 @@ export interface AttackOptions {
     unavoidable?: boolean;
     /** true이면 치명타·속성 상성·방어·관통을 적용하지 않고 지정한 피해량을 그대로 준다. */
     fixedDamage?: boolean;
+    /**
+     * 이 공격의 상성 판정에만 사용할 속성 태그.
+     * 생략하면 실제 공격 Entity 본체 태그를 사용하며 장비 태그는 포함하지 않는다.
+     */
+    effectTags?: readonly TagId[];
     /** 생략하면 물리 직접 공격이 주무기의 적중 callback을 실행한다. */
     triggerMainHandHitEffects?: boolean;
     /** 공격 결과 카드에 기술명과 상황 설명을 함께 남긴다. */
@@ -913,12 +918,16 @@ export default abstract class Entity implements TagReadable {
         runCombatStage(CombatStage.BEFORE_DAMAGE, combat);
         const rawAmount = Math.max(0, combat.amount);
         const critical = combat.critical;
+        const effectSource = combatOptions.effectTags?.length
+            ? new TagCollection({ definition: combatOptions.effectTags })
+            : undefined;
 
         const damageResult = target.damage(rawAmount, combatType, {
             type: 'attack',
             causeEntity: this,
             critical,
             fixedDamage: combatOptions.fixedDamage,
+            effectSource,
             miningPower: combatOptions.miningPower,
         });
         combat.result = damageResult;
