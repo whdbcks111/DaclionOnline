@@ -16,6 +16,7 @@ import {
     resolveItemInspectionTarget,
 } from './inspection.js';
 import { buildAffinityMessage } from './affinity.js';
+import { createMonsterTargetAnalysis } from '../models/Inspection.js';
 import '../data/tagEffects.js';
 
 function collectRenderedText(value: unknown): string {
@@ -101,6 +102,24 @@ test('감각 단계는 감정과 몬스터 정보의 공개 범위를 순차적�
     assert.equal(getMonsterInspectionTier(100), 1);
     assert.equal(getMonsterInspectionTier(125), 2);
     assert.equal(getMonsterInspectionTier(150), 3);
+});
+
+test('타게팅 HUD 몬스터 분석은 몬스터정보와 같은 감각 단계만 공개한다', () => {
+    const monster = new Monster('inspection_test_monster');
+    const hidden = createMonsterTargetAnalysis(monster, 99);
+    const affinities = createMonsterTargetAnalysis(monster, 100);
+    const combat = createMonsterTargetAnalysis(monster, 125);
+    const rewards = createMonsterTargetAnalysis(monster, 150);
+
+    assert.equal(hidden.affinities.length, 0);
+    assert.equal(hidden.combatAttributes.length, 0);
+    assert.equal(hidden.nextSensibility, 100);
+    assert.ok(affinities.affinities.some(value => value.label === '물'));
+    assert.equal(affinities.combatAttributes.length, 0);
+    assert.ok(combat.combatAttributes.some(value => value.label === '공격력'));
+    assert.equal(combat.dropNames.length, 0);
+    assert.deepEqual(rewards.dropNames, ['감정 시험 물약']);
+    assert.doesNotMatch(JSON.stringify(rewards), /inspection_test_potion|property:water/);
 });
 
 test('감각 요구 조건과 인벤토리·장착칸 감정 대상을 공개 API로 판정한다', () => {

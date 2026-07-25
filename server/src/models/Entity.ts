@@ -126,6 +126,20 @@ export interface StatusEffectDisplaySnapshot {
     description: string;
 }
 
+export interface CombatTargetDisplaySnapshot {
+    name: string;
+    level: number;
+    life: number;
+    maxLife: number;
+    shields: ShieldBarSegment[];
+    mentality: number;
+    maxMentality: number;
+    defeated: boolean;
+    defeatLabel: string;
+    statusEffects: StatusEffectDisplaySnapshot[];
+    userId?: number;
+}
+
 export default abstract class Entity implements TagReadable {
     readonly attribute: Attribute;
     readonly equipment: Equipment;
@@ -288,6 +302,31 @@ export default abstract class Entity implements TagReadable {
 
     get maxThirsty() { return this.attribute.get(AttributeType.MAX_THIRSTY); }
     get maxHungry()  { return this.attribute.get(AttributeType.MAX_HUNGRY); }
+
+    /** 같은 장소에 남아 있는 현재 전투 대상만 반환한다. */
+    getCurrentTarget(): Entity | null {
+        const target = this.currentTarget;
+        return target && target !== this && target.locationId === this.locationId ? target : null;
+    }
+
+    /** 타게팅 HUD가 내부 Entity 참조와 상태효과 Map을 직접 읽지 않도록 하는 표시 스냅샷. */
+    getCurrentTargetDisplaySnapshot(): CombatTargetDisplaySnapshot | null {
+        const target = this.getCurrentTarget();
+        if (!target) return null;
+        return {
+            name: target.name,
+            level: target.level,
+            life: target.life,
+            maxLife: target.maxLife,
+            shields: target.getShieldBarSegments(),
+            mentality: target.mentality,
+            maxMentality: target.maxMentality,
+            defeated: target.isDefeated,
+            defeatLabel: target.defeatLabel,
+            statusEffects: target.getStatusEffectDisplaySnapshots(),
+            ...(target.playerUserId !== undefined ? { userId: target.playerUserId } : {}),
+        };
+    }
 
     /** 최대 자원 modifier가 줄어든 뒤 현재값이 새 최대값을 넘지 않도록 보정한다. */
     clampVitals(): boolean {

@@ -68,6 +68,50 @@ test('투구·흉갑·각반·철갑화도 각 방어구 슬롯에 단조할 수
     }
 });
 
+test('단검과 철갑화는 형태 자체에서 제작 성장에 비례한 이동속도를 얻는다', () => {
+    const options = {
+        accuracy: 0.9,
+        creatorLevel: 200,
+        sensibility: 1_000,
+        forgingPrecision: 1.5,
+        random: () => 0,
+    };
+    const dagger = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.DAGGER, ForgeMaterial.IRON, options));
+    const sabatons = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SABATONS, ForgeMaterial.IRON, options));
+    const sword = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SWORD, ForgeMaterial.IRON, options));
+
+    const additiveSpeed = (item: Item) => item.modifiers
+        ?.filter(modifier => modifier.attribute === 'speed' && modifier.op === 'add')
+        .reduce((sum, modifier) => sum + modifier.value, 0) ?? 0;
+    assert.ok(additiveSpeed(dagger) > 0.1);
+    assert.ok(additiveSpeed(sabatons) > additiveSpeed(dagger));
+    assert.equal(additiveSpeed(sword), 0);
+});
+
+test('마나 수정 단조품은 제작자 성장에 비례한 마법 능력치를 얻는다', () => {
+    const novice = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SWORD, ForgeMaterial.MANA_CRYSTAL, {
+        accuracy: 0.8,
+        creatorLevel: 30,
+        sensibility: 100,
+        random: () => 0,
+    }));
+    const master = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SWORD, ForgeMaterial.MANA_CRYSTAL, {
+        accuracy: 0.8,
+        creatorLevel: 200,
+        sensibility: 1_000,
+        forgingPrecision: 1.5,
+        random: () => 0,
+    }));
+    const modifier = (item: Item, attribute: string) => item.modifiers
+        ?.filter(candidate => candidate.attribute === attribute && candidate.op === 'add')
+        .reduce((sum, candidate) => sum + candidate.value, 0) ?? 0;
+
+    assert.equal(master.hasTag(GameTags.MATERIAL_MANA_CRYSTAL), true);
+    assert.ok(modifier(master, 'magicForce') > modifier(novice, 'magicForce'));
+    assert.ok(modifier(master, 'maxMentality') > modifier(novice, 'maxMentality'));
+    assert.ok(modifier(master, 'magicPen') > modifier(novice, 'magicPen'));
+});
+
 test('단조 곡괭이는 일반 공격력 대신 제작자 성장에 비례한 채굴력을 얻는다', () => {
     const pickaxe = Item.fromSnapshot(createForgedItemSnapshot(
         ForgeForm.PICKAXE,

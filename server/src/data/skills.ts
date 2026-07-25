@@ -948,6 +948,7 @@ const smeltingMaterials = [
     ['ruby', 'refined_ruby', '루비'],
     ['emerald', 'refined_emerald', '에메랄드'],
     ['diamond', 'refined_diamond', '다이아몬드'],
+    ['mana_crystal', 'refined_mana_crystal', '마나 수정'],
     ['ember_ore', 'ember_alloy', '홍염강'],
 ] as const;
 
@@ -1625,14 +1626,14 @@ defineSkill({
 defineSkill({
     id: 'mana_barrier', name: '마력 보호막', icon: 'skills/mana_barrier', maxLevel: 5,
     descriptionTemplate: '마력으로 몸을 감싸 {{duration}} 동안 {{icon.magicForce}}{{icon.maxMentality}}{{icon.maxLife}} '
-        + '[color=#a56de2]{{shieldAmount}}만큼의 마법 피해를 막는 보호막[/color]을 얻습니다. '
+        + '[color=#d9d9d9]{{shieldAmount}}만큼의 모든 피해를 막는 보호막[/color]을 얻습니다. '
         + '{{icon.def}} 방어력이 [color=yellow]+{{defBonus}}[/color], {{icon.magicDef}} 마법 저항력이 [color=purple]+{{magicDefBonus}}[/color] 증가합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 22[/color]',
     activationConditionTemplate: activationGuide(), activationMessage: '마력 보호막!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
         valueByLevel(context.skill.level, 10, 1),
-        `마법 보호막 ${formatNumber(manaBarrierShieldAmount(context))}, 방어력 +${formatNumber(valueByLevel(context.skill.level, 12, 4))}, 마법 저항력 +${formatNumber(valueByLevel(context.skill.level, 20, 5))}`,
+        `일반 보호막 ${formatNumber(manaBarrierShieldAmount(context))}, 방어력 +${formatNumber(valueByLevel(context.skill.level, 12, 4))}, 마법 저항력 +${formatNumber(valueByLevel(context.skill.level, 20, 5))}`,
     ),
     calculatedFields: {
         duration: context => levelValueTooltip(context, '지속시간', 10, 1, '초'),
@@ -1660,7 +1661,7 @@ defineSkill({
     onStart: context => {
         spend(context, 22);
         const duration = valueByLevel(context.skill.level, 10, 1);
-        context.owner.setShield('skill:mana_barrier', manaBarrierShieldAmount(context), ShieldType.MAGIC, duration, context.owner);
+        context.owner.setShield('skill:mana_barrier', manaBarrierShieldAmount(context), ShieldType.GENERAL, duration, context.owner);
         context.owner.applyStatusEffect(MANA_BARRIER, duration, context.skill.level);
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_MAGIC],
 });

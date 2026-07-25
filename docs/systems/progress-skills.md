@@ -191,6 +191,8 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 Lv.200 엘리트 직업 20개는 계승 패시브와 별도로 조합 전용 액티브 1종을 지급한다. 기존 네 전투 계열에 대장장이 메인/서브 조합의 금속 물리 공격·기공 투사체·독금·룬 마법·보호막 계열을 추가한다. 피해·정신력·쿨다운은 모두 `SkillData.balance`와 실제 발동 계산을 공유하며 계승 패시브와 액티브 모두 스킬 ID별 전용 아이콘을 사용한다.
 
+`마력 보호막`의 현재 타입은 `GENERAL`이며 기존 성장 계수로 계산한 보호막이 물리·마법·고정 피해를 모두 흡수한다. 같은 지속시간의 방어력·마법 저항력 버프는 유지한다.
+
 ## 영속성
 
 로그인 시 `Player.loadByUserId()`가 `PlayerProgress`와 `SkillBook`을 Inventory/Equipment와 함께 로드한다. 경험치 획득과 레벨업을 포함한 모든 변경은 메모리에 적용하고 versioned dirty key를 남긴다. `Player.save()`가 30초 주기, unload, 종료 시 `player_progress`와 `player_skills`를 upsert/delete한다. 저장 도중 같은 값이 다시 바뀌면 이전 snapshot 완료가 새 dirty version을 지우지 않는다.

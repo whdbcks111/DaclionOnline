@@ -35,6 +35,7 @@ export interface HudDefinition {
 
 export const HUD_DEFINITIONS: HudDefinition[] = [
   { id: 'player-status', label: '플레이어 상태' },
+  { id: 'target-status', label: '타게팅 대상' },
   { id: 'player-location', label: '위치 정보' },
   { id: 'minimap', label: '미니맵' },
   { id: 'quick-slots', label: '퀵 슬롯' },
@@ -43,6 +44,7 @@ export const HUD_DEFINITIONS: HudDefinition[] = [
 
 const DEFAULT_CONFIGS: Record<string, HudConfig> = {
   'player-status':   { id: 'player-status',   visible: true,  x: 5,  y: 10, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight' },
+  'target-status':   { id: 'target-status',   visible: true,  x: 50, y: 5,  posUnitX: '%', posUnitY: '%', posAnchor: 'topLeft',     anchor: 'topMiddle' },
   'player-location': { id: 'player-location', visible: false, x: 5,  y: 30, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight', showObjectActions: true },
   'minimap':         { id: 'minimap',         visible: false, x: 5,  y: 45, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight', showTravelActions: false },
   'quick-slots':     { id: 'quick-slots',     visible: false, x: 50, y: 10,  posUnitX: '%', posUnitY: '%', posAnchor: 'bottomLeft',  anchor: 'bottomMiddle' },

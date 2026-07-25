@@ -23,6 +23,8 @@ import { cancelNavigation } from './navigation.js';
 import { initializeTutorialSession } from './tutorial.js';
 import { detachHumanVerification, initializeHumanVerification } from './humanVerification.js';
 import Monster from '../models/Monster.js';
+import { StatType } from '../models/Stat.js';
+import { createMonsterTargetAnalysis } from '../models/Inspection.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -103,6 +105,30 @@ export async function saveAllPlayers(): Promise<void> {
 export function sendPlayerStats(userId: number): void {
     const player = getOnlinePlayer(userId);
     if (!player) return;
+    const targetEntity = player.getCurrentTarget();
+    const rawTarget = player.getCurrentTargetDisplaySnapshot();
+    const target = rawTarget?.userId !== undefined && !getOnlinePlayer(rawTarget.userId)
+        ? null
+        : rawTarget
+            ? {
+                ...rawTarget,
+                kind: targetEntity instanceof Monster
+                    ? 'monster' as const
+                    : targetEntity?.isPlayer
+                        ? 'player' as const
+                        : 'object' as const,
+                statusEffects: rawTarget.statusEffects.map(effect => ({
+                    ...effect,
+                    description: parseChatMessage(effect.description),
+                })),
+                ...(targetEntity instanceof Monster ? {
+                    monsterAnalysis: createMonsterTargetAnalysis(
+                        targetEntity,
+                        player.stat.get(StatType.SENSIBILITY),
+                    ),
+                } : {}),
+            }
+            : null;
 
     const data = {
         userId:            player.userId,
@@ -127,6 +153,7 @@ export function sendPlayerStats(userId: number): void {
             ...effect,
             description: parseChatMessage(effect.description),
         })),
+        target,
         party:             partyManager.getHudData(player),
     };
 

@@ -216,6 +216,31 @@ export class ForgeMaterial {
     static readonly RUBY = new ForgeMaterial('ruby', '루비', 'refined_ruby', 1.12, [GameTags.MATERIAL_RUBY, GameTags.PROPERTY_FIRE], [{ attribute: 'magicForce', op: 'add', value: 4 }]);
     static readonly EMERALD = new ForgeMaterial('emerald', '에메랄드', 'refined_emerald', 1.08, [GameTags.MATERIAL_EMERALD, GameTags.PROPERTY_NATURAL], [{ attribute: 'speed', op: 'multiply', value: 1.03 }]);
     static readonly DIAMOND = new ForgeMaterial('diamond', '다이아몬드', 'refined_diamond', 1.3, [GameTags.MATERIAL_DIAMOND, GameTags.PROPERTY_STONE], [{ attribute: 'armorPen', op: 'add', value: 4 }]);
+    static readonly MANA_CRYSTAL = new ForgeMaterial(
+        'mana_crystal',
+        '마나 수정',
+        'refined_mana_crystal',
+        1.16,
+        [GameTags.MATERIAL_MANA_CRYSTAL],
+        [],
+        craftsmanship => [
+            {
+                attribute: 'magicForce',
+                op: 'add',
+                value: round(8 + craftsmanship.creatorLevel * 0.24 + Math.sqrt(craftsmanship.sensibility) * 0.8, 2),
+            },
+            {
+                attribute: 'maxMentality',
+                op: 'add',
+                value: round(15 + craftsmanship.creatorLevel * 0.55 + craftsmanship.sensibility * 0.05, 2),
+            },
+            {
+                attribute: 'magicPen',
+                op: 'add',
+                value: round(2 + craftsmanship.creatorLevel * 0.03, 2),
+            },
+        ],
+    );
     static readonly EMBER_ALLOY = new ForgeMaterial('ember_alloy', '홍염강', 'ember_alloy', 1.5,
         [GameTags.MATERIAL_EMBER, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_METAL], [
             { attribute: 'magicForce', op: 'add', value: 16 },
@@ -229,6 +254,7 @@ export class ForgeMaterial {
         readonly power: number,
         readonly tags: readonly TagId[],
         readonly bonusModifiers: readonly ForgeModifierSeed[] = [],
+        readonly createCraftsmanshipModifiers?: ForgeCraftsmanshipModifierFactory,
     ) { ForgeMaterial.all.push(this); }
 
     static values(): readonly ForgeMaterial[] { return ForgeMaterial.all; }
@@ -238,6 +264,13 @@ export class ForgeMaterial {
         return ForgeMaterial.all.find(material => material.key === value
             || material.label === input.trim()
             || material.itemDataId === value);
+    }
+
+    getBonusModifiers(craftsmanship: ForgeCraftsmanship): readonly ForgeModifierSeed[] {
+        return [
+            ...this.bonusModifiers,
+            ...(this.createCraftsmanshipModifiers?.(craftsmanship) ?? []),
+        ];
     }
 }
 
@@ -409,6 +442,36 @@ export function calculateForgeCraftsmanship(options: ForgeResultOptions): ForgeC
     };
 }
 
+/** 단검과 신발은 재료 특성과 별개로 민첩한 형태 자체의 이동속도 보정을 가진다. */
+function createFormUtilityModifiers(
+    form: ForgeForm,
+    craftsmanship: ForgeCraftsmanship,
+    itemLevel: number,
+    accuracy: number,
+): readonly ForgeModifierSeed[] {
+    if (form === ForgeForm.DAGGER) {
+        return [{
+            attribute: 'speed',
+            op: 'add',
+            value: round(Math.min(
+                0.32,
+                0.025 + itemLevel * 0.0007 + craftsmanship.forgingPrecision * 0.025 + accuracy * 0.045,
+            ), 4),
+        }];
+    }
+    if (form === ForgeForm.SABATONS) {
+        return [{
+            attribute: 'speed',
+            op: 'add',
+            value: round(Math.min(
+                0.45,
+                0.045 + itemLevel * 0.001 + craftsmanship.forgingPrecision * 0.035 + accuracy * 0.06,
+            ), 4),
+        }];
+    }
+    return [];
+}
+
 /** 형태·재료는 결과를 결정하고, 단조 trait만 주입 가능한 random에 따라 달라진다. */
 export function createForgedItemSnapshot(
     form: ForgeForm,
@@ -440,7 +503,8 @@ export function createForgedItemSnapshot(
     ));
     const instanceModifiers: ForgeModifierSeed[] = [
         { attribute: form.powerAttribute, op: 'add', value: power },
-        ...material.bonusModifiers,
+        ...material.getBonusModifiers(craftsmanship),
+        ...createFormUtilityModifiers(form, craftsmanship, itemLevel, accuracy),
         ...trait.modifiers,
         ...(quirk?.createModifiers(craftsmanship) ?? []),
     ];

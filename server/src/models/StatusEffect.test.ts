@@ -38,6 +38,9 @@ const MERGE_TEST_EFFECT = StatusEffectType.define({
     calculatedFields: {
         doubled: ({ effect }) => effect.level * 2,
     },
+    calculatedFieldTooltips: {
+        doubled: '효과 레벨 × 2',
+    },
     onStart: ({ effect }) => {
         starts++;
         effect.setMetadata('runtimeValue', 7);
@@ -87,6 +90,10 @@ test('같은 상태효과 재적용은 인스턴스와 metadata를 유지하며 
     assert.equal(updates, 2);
     assert.equal(effect.getMetadata('elapsedByCallback'), 3);
     assert.equal(effect.formatDescription(target), '레벨 3, 값 7, 계산 6');
+    assert.equal(
+        effect.formatDescription(target, { calculationTooltips: true }),
+        '레벨 3, 값 7, 계산 [tooltip=효과 레벨 × 2]6[/tooltip]',
+    );
     assert.deepEqual(target.getStatusEffectDisplaySnapshots(), [{
         id: 'test_merge_effect',
         label: '병합 시험',

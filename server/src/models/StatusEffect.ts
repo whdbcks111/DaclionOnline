@@ -12,6 +12,7 @@ import { ActionType } from './Action.js';
 
 export type StatusEffectMetadata = MetadataRecord;
 export type StatusEffectCalculatedValue = string | number | boolean;
+export type StatusEffectCalculatedFieldTooltip = string | ((context: StatusEffectContext) => string);
 export type StatusEffectLifecycleResult = 'continue' | 'remove';
 
 export interface StatusEffectContext {
@@ -36,6 +37,8 @@ export interface StatusEffectTypeOptions {
     descriptionTemplate: string;
     baseMetadata?: StatusEffectMetadata | null;
     calculatedFields?: Readonly<Record<string, (context: StatusEffectContext) => StatusEffectCalculatedValue>>;
+    /** 정보창에서 계산 결과에 표시할 사용자용 계수 설명. 내부 필드명 대신 게임 용어로 작성한다. */
+    calculatedFieldTooltips?: Readonly<Record<string, StatusEffectCalculatedFieldTooltip>>;
     onStart?: StatusEffectCallback;
     onEarlyUpdate?: StatusEffectUpdateCallback;
     onUpdate?: StatusEffectUpdateCallback;
@@ -107,6 +110,10 @@ export class StatusEffectType implements TagReadable {
             burnLevel: ({ effect }) => getBurnLevelFromFire(effect.level),
             burnDuration: ({ effect }) => getBurnDurationFromFire(effect.level),
         },
+        calculatedFieldTooltips: {
+            damage: '기본 피해 2 + 효과 레벨 × 1.5',
+            burnThreshold: '20초 - 효과 레벨 (최소 0초)',
+        },
         onUpdate: updateFireEffect,
         tags: [GameTags.PROPERTY_FIRE],
         aliases: ['화염', '불'],
@@ -124,6 +131,9 @@ export class StatusEffectType implements TagReadable {
         calculatedFields: {
             healingReduction: ({ effect }) => getBurnHealingReduction(effect),
             healingReductionPercent: ({ effect }) => Math.round(getBurnHealingReduction(effect) * 100),
+        },
+        calculatedFieldTooltips: {
+            healingReductionPercent: '5% + (효과 레벨 - 1) × 45% ÷ 19 (20레벨에서 최대 50%)',
         },
         onStart: updateBurnEffect,
         onUpdate: updateBurnEffect,
@@ -151,6 +161,9 @@ export class StatusEffectType implements TagReadable {
             damagePercent: ({ target, effect }) => Number((getDeadlyPoisonDamageRatio(target, effect) * 100).toFixed(2)),
             damage: ({ target, effect }) => target.maxLife * getDeadlyPoisonDamageRatio(target, effect),
         },
+        calculatedFieldTooltips: {
+            damagePercent: '0.5% + 잃은 생명력 비율 × 2% + (효과 레벨 - 1) × 0.1%p',
+        },
         onStart: updateDeadlyPoisonHealingModifier,
         onUpdate: updateDeadlyPoisonEffect,
         onRemove: ({ target, effect }) => {
@@ -173,6 +186,9 @@ export class StatusEffectType implements TagReadable {
             disableChance: ({ effect }) => getParalyticPoisonDisableChance(effect),
             disableChancePercent: ({ effect }) => Number((getParalyticPoisonDisableChance(effect) * 100).toFixed(1)),
         },
+        calculatedFieldTooltips: {
+            disableChancePercent: '5% + (효과 레벨 - 1) × 45% ÷ 19 (20레벨에서 최대 50%)',
+        },
         onStart: ensureLivingTarget,
         onEarlyUpdate: updateParalyticPoisonEffect,
         tags: [GameTags.PROPERTY_POISON],
@@ -186,6 +202,9 @@ export class StatusEffectType implements TagReadable {
         descriptionTemplate: '배고픔이 고갈되었습니다. 생명력 재생이 중단되고 초당 최대 생명력의 [color=red]{{calc.damagePercent}}%[/color] 피해를 받습니다. 60초마다 효과 레벨이 상승합니다.',
         baseMetadata: { tickInterval: 1, tickElapsed: 0, levelElapsed: 0, damageScalePerLevel: 0.25 },
         calculatedFields: { damagePercent: getSurvivalDepletionDamagePercent },
+        calculatedFieldTooltips: {
+            damagePercent: '(100% ÷ 60초) × (1 + (효과 레벨 - 1) × 0.25) ÷ 동시 고갈 효과 수',
+        },
         onStart: startSurvivalDepletionEffect,
         onUpdate: updateSurvivalDepletionEffect,
         onRemove: removeSurvivalDepletionEffect,
@@ -199,6 +218,9 @@ export class StatusEffectType implements TagReadable {
         descriptionTemplate: '수분이 고갈되었습니다. 생명력 재생이 중단되고 초당 최대 생명력의 [color=red]{{calc.damagePercent}}%[/color] 피해를 받습니다. 60초마다 효과 레벨이 상승합니다.',
         baseMetadata: { tickInterval: 1, tickElapsed: 0, levelElapsed: 0, damageScalePerLevel: 0.25 },
         calculatedFields: { damagePercent: getSurvivalDepletionDamagePercent },
+        calculatedFieldTooltips: {
+            damagePercent: '(100% ÷ 60초) × (1 + (효과 레벨 - 1) × 0.25) ÷ 동시 고갈 효과 수',
+        },
         onStart: startSurvivalDepletionEffect,
         onUpdate: updateSurvivalDepletionEffect,
         onRemove: removeSurvivalDepletionEffect,
@@ -211,6 +233,7 @@ export class StatusEffectType implements TagReadable {
     readonly descriptionTemplate: string;
     readonly baseMetadata: Readonly<StatusEffectMetadata> | null;
     readonly calculatedFields: Readonly<Record<string, (context: StatusEffectContext) => StatusEffectCalculatedValue>>;
+    readonly calculatedFieldTooltips: Readonly<Record<string, StatusEffectCalculatedFieldTooltip>>;
     readonly onStart?: StatusEffectCallback;
     readonly onEarlyUpdate?: StatusEffectUpdateCallback;
     readonly onUpdate?: StatusEffectUpdateCallback;
@@ -227,6 +250,7 @@ export class StatusEffectType implements TagReadable {
             ? Object.freeze(cloneMetadata(options.baseMetadata) as StatusEffectMetadata)
             : null;
         this.calculatedFields = Object.freeze({ ...(options.calculatedFields ?? {}) });
+        this.calculatedFieldTooltips = Object.freeze({ ...(options.calculatedFieldTooltips ?? {}) });
         this.onStart = options.onStart;
         this.onEarlyUpdate = options.onEarlyUpdate;
         this.onUpdate = options.onUpdate;
@@ -345,10 +369,26 @@ export default class StatusEffect implements TagReadable {
         return this.type.calculatedFields[key]?.({ target, effect: this });
     }
 
-    formatDescription(target: Entity): string {
+    formatDescription(target: Entity, options: { calculationTooltips?: boolean } = {}): string {
         return this.type.descriptionTemplate.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (original, rawKey: string) => {
-            const value = this.resolveTemplateValue(rawKey.trim(), target);
-            return value === undefined ? original : formatTemplateValue(value);
+            const key = rawKey.trim();
+            const value = this.resolveTemplateValue(key, target);
+            if (value === undefined) return original;
+            const formatted = formatTemplateValue(value);
+            if (!options.calculationTooltips) return formatted;
+            const calculatedKey = key.startsWith('calc.')
+                ? key.slice(5)
+                : Object.hasOwn(this.type.calculatedFields, key)
+                    ? key
+                    : undefined;
+            if (!calculatedKey) return formatted;
+            const definition = this.type.calculatedFieldTooltips[calculatedKey];
+            if (!definition) return formatted;
+            const context = { target, effect: this };
+            const tooltip = (typeof definition === 'function' ? definition(context) : definition)
+                .replace(/[\[\]]/g, '')
+                .trim();
+            return tooltip ? `[tooltip=${tooltip}]${formatted}[/tooltip]` : formatted;
         });
     }
 

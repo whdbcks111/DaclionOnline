@@ -550,7 +550,7 @@ test('마법 투사체는 스킬 레벨과 마법력이 높을수록 더 빨리 
     removeProjectile(master);
 });
 
-test('마력 보호막 스킬은 방어 버프와 같은 시간의 마법 보호막을 부여한다', () => {
+test('마력 보호막 스킬은 방어 버프와 같은 시간의 일반 보호막을 부여한다', () => {
     const player = new TestSkillPlayer();
     player.progress.setState(CareerProgressIds.MAIN, 'career:mage');
     player.skills.grant('mana_barrier', 'test', 2);
@@ -559,7 +559,7 @@ test('마력 보호막 스킬은 방어 버프와 같은 시간의 마법 보호
     const shield = player.getShield('skill:mana_barrier');
 
     assert.equal(outcome.activated, true);
-    assert.equal(shield?.type, ShieldType.MAGIC);
+    assert.equal(shield?.type, ShieldType.GENERAL);
     assert.equal(shield?.duration, 11);
     assert.ok((shield?.amount ?? 0) > 0);
 });

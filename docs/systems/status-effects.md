@@ -7,7 +7,7 @@
 ```text
 StatusEffectType
   ├─ id / label / icon / aliases / tags
-  ├─ baseMetadata / calculatedFields / descriptionTemplate
+  ├─ baseMetadata / calculatedFields / calculatedFieldTooltips / descriptionTemplate
   └─ onStart / onEarlyUpdate / onUpdate / onRemove
 
 Entity
@@ -54,7 +54,7 @@ Entity
 - 화염 → 투명화: 투명화 제거, 불타는 동안 투명화 차단.
 - 수면: 실제 생명력 피해를 받으면 `INTERACTION` 사유로 즉시 해제.
 
-Metadata는 Skill/Item과 같은 원본+top-level delta 방식이다. `getMetadata/getMetadataSnapshot/getMetadataDeltaSnapshot/setMetadata/resetMetadata`를 사용한다. 설명 문자열은 `{{level}}`, `{{duration}}`, `{{meta.key}}`, `{{calc.key}}`를 치환하며 기존 채팅 색상 문법을 보존한다.
+Metadata는 Skill/Item과 같은 원본+top-level delta 방식이다. `getMetadata/getMetadataSnapshot/getMetadataDeltaSnapshot/setMetadata/resetMetadata`를 사용한다. 설명 문자열은 `{{level}}`, `{{duration}}`, `{{meta.key}}`, `{{calc.key}}`를 치환하며 기존 채팅 색상 문법을 보존한다. 정보창용 `formatDescription(target, { calculationTooltips: true })`은 `calculatedFieldTooltips`가 등록된 결과 숫자를 스킬 정보와 같은 계산식 tooltip으로 감싼다. 일반 HUD 설명은 결과만 유지해 화면을 간결하게 한다.
 
 ## 표시와 관리자 지급
 
@@ -64,6 +64,7 @@ Metadata는 Skill/Item과 같은 원본+top-level delta 방식이다. `getMetada
 
 - `/상태창` 맨 아래는 `Lv.레벨 [아이콘]효과명 MM:SS`를 표시하며 효과명 hover에는 계산된 설명과 현재/최대 지속시간이 나온다.
 - `playerStats.statusEffects`는 `getStatusEffectDisplaySnapshots()`을 ChatNode 설명으로 변환해 전송한다. PlayerStatusHud는 아이콘 위에 남은 지속시간 비율을 반시계 방향 fill로 표시하고 hover/focus 상세 정보를 제공한다.
+- 감각 50 이상인 플레이어는 `/상태이상정보 <효과 이름> [레벨]`로 임의 레벨의 가공된 설명을 확인한다. 레벨을 생략하면 1레벨이며, 계산 결과 hover에는 등록된 레벨식·대상 능력치 계수가 표시된다. 명령 출력과 자동완성은 내부 상태이상 ID·metadata key를 노출하지 않는다.
 - 관리자 `/상태이상부여 대상 상태이상코드 레벨 시간`은 온라인 Player만 대상으로 `Entity.applyStatusEffect()`를 호출한다. 상태효과가 런타임 전용이므로 오프라인 객체에 적용하거나 DB에 저장하지 않는다.
 
 ## Lifecycle callback

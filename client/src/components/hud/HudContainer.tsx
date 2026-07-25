@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useHud, HUD_DEFINITIONS, type AnchorPoint } from '../../context/HudContext'
 import type { HudConfig } from '../../context/HudContext'
 import PlayerStatusHud from './huds/PlayerStatusHud'
+import TargetStatusHud from './huds/TargetStatusHud'
 import LocationHud from './huds/LocationHud'
 import MinimapHud from './huds/MinimapHud'
 import QuickSlotHud from './huds/QuickSlotHud'
@@ -11,6 +12,7 @@ import styles from './HudContainer.module.scss'
 
 const HUD_COMPONENTS: Record<string, React.ComponentType> = {
   'player-status': PlayerStatusHud,
+  'target-status': TargetStatusHud,
   'player-location': LocationHud,
   'minimap': MinimapHud,
   'quick-slots': QuickSlotHud,

@@ -52,6 +52,8 @@ function defineAttributeEffect(options: {
     descriptionTemplate: string;
     aliases?: readonly string[];
     tags?: readonly string[];
+    calculatedFields?: Readonly<Record<string, (context: StatusEffectContext) => string | number | boolean>>;
+    calculatedFieldTooltips?: Readonly<Record<string, string | ((context: StatusEffectContext) => string)>>;
     modifiers: (level: number) => readonly Omit<AttributeModifier, 'source'>[];
 }): StatusEffectType {
     const apply = (context: StatusEffectContext) => refreshModifiers(context, options.modifiers(context.effect.level));
@@ -65,8 +67,15 @@ function defineAttributeEffect(options: {
 
 const POISON = StatusEffectType.define({
     id: 'poison', label: '독', icon: ICON.poison,
-    descriptionTemplate: '초당 [color=purple]{{calc.damage}}[/color]의 독 피해를 받고 공격력과 마법력이 감소합니다.',
-    calculatedFields: { damage: ({ effect }) => effect.level * 20 },
+    descriptionTemplate: '초당 [color=purple]{{calc.damage}}[/color]의 독 피해를 받고 공격력과 마법력이 [color=purple]{{calc.powerReduction}}%[/color] 감소합니다.',
+    calculatedFields: {
+        damage: ({ effect }) => effect.level * 20,
+        powerReduction: ({ effect }) => Math.round((1 - Math.max(0.5, Math.pow(0.96, effect.level))) * 100),
+    },
+    calculatedFieldTooltips: {
+        damage: '효과 레벨 × 20',
+        powerReduction: '(1 - 0.96의 효과 레벨 제곱) × 100 (최대 50%)',
+    },
     onStart: context => {
         if (livingOnly(context) === 'remove') return 'remove';
         applyPoisonModifiers(context);
@@ -87,6 +96,9 @@ const BLEEDING = StatusEffectType.define({
     descriptionTemplate: '초당 최대 생명력에 비례한 [color=red]{{calc.damagePerSecond}}[/color]의 출혈 피해를 받습니다.',
     calculatedFields: {
         damagePerSecond: ({ target, effect }) => effect.level * Math.min(target.maxLife * 0.005, 50),
+    },
+    calculatedFieldTooltips: {
+        damagePerSecond: '효과 레벨 × min(대상 최대 생명력 × 0.5%, 50)',
     },
     onStart: livingOnly,
     onUpdate: (context, dt) => {
@@ -120,6 +132,9 @@ const HEAL_REDUCTION = StatusEffectType.define({
     id: 'heal_reduction', label: '회복 효율 감소', icon: ICON.life,
     descriptionTemplate: '받는 생명력 회복량이 [color=red]{{calc.reductionPercent}}%[/color] 감소합니다.',
     calculatedFields: { reductionPercent: ({ effect }) => Math.round((1 - Math.pow(0.9, effect.level)) * 100) },
+    calculatedFieldTooltips: {
+        reductionPercent: '(1 - 0.9의 효과 레벨 제곱) × 100',
+    },
     onStart: applyHealingReduction,
     onUpdate: applyHealingReduction,
     onRemove: ({ target, effect }) => { target.removeHealingReceivedModifier(modifierSource(effect)); },
@@ -128,31 +143,49 @@ const HEAL_REDUCTION = StatusEffectType.define({
 
 const DEFENSE_REDUCTION = defineAttributeEffect({
     id: 'defense_reduction', label: '방어력 감소', icon: ICON.defense,
-    descriptionTemplate: '방어력이 레벨마다 5%씩 복리로 감소합니다.', aliases: ['방어력 감소'],
+    descriptionTemplate: '방어력이 [color=orange]{{calc.reductionPercent}}%[/color] 감소합니다.', aliases: ['방어력 감소'],
+    calculatedFields: {
+        reductionPercent: ({ effect }) => Number(((1 - Math.pow(0.95, effect.level)) * 100).toFixed(2)),
+    },
+    calculatedFieldTooltips: {
+        reductionPercent: '(1 - 0.95의 효과 레벨 제곱) × 100',
+    },
     modifiers: level => [{ attribute: AttributeType.DEF.key, op: 'multiply', value: Math.pow(0.95, level) }],
 });
 
 const MAGIC_DEFENSE_REDUCTION = defineAttributeEffect({
     id: 'magic_defense_reduction', label: '마법 저항력 감소', icon: ICON.magicDefense,
-    descriptionTemplate: '마법 저항력이 레벨마다 5%씩 복리로 감소합니다.', aliases: ['마법 저항력 감소'],
+    descriptionTemplate: '마법 저항력이 [color=purple]{{calc.reductionPercent}}%[/color] 감소합니다.', aliases: ['마법 저항력 감소'],
+    calculatedFields: {
+        reductionPercent: ({ effect }) => Number(((1 - Math.pow(0.95, effect.level)) * 100).toFixed(2)),
+    },
+    calculatedFieldTooltips: {
+        reductionPercent: '(1 - 0.95의 효과 레벨 제곱) × 100',
+    },
     modifiers: level => [{ attribute: AttributeType.MAGIC_DEF.key, op: 'multiply', value: Math.pow(0.95, level) }],
 });
 
 const MAGIC_ENHANCEMENT = defineAttributeEffect({
     id: 'magic_enhancement', label: '마법 강화', icon: ICON.magic,
-    descriptionTemplate: '마법력이 레벨당 5% 증가합니다.', aliases: ['마법 강화'],
+    descriptionTemplate: '마법력이 [color=purple]{{calc.increasePercent}}%[/color] 증가합니다.', aliases: ['마법 강화'],
+    calculatedFields: { increasePercent: ({ effect }) => effect.level * 5 },
+    calculatedFieldTooltips: { increasePercent: '효과 레벨 × 5%' },
     modifiers: level => [{ attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1 + level * 0.05 }],
 });
 
 const STRENGTH_ENHANCEMENT = defineAttributeEffect({
     id: 'strength_enhancement', label: '근력 강화', icon: ICON.physical,
-    descriptionTemplate: '공격력이 레벨당 5% 증가합니다.', aliases: ['근력 강화'],
+    descriptionTemplate: '공격력이 [color=orange]{{calc.increasePercent}}%[/color] 증가합니다.', aliases: ['근력 강화'],
+    calculatedFields: { increasePercent: ({ effect }) => effect.level * 5 },
+    calculatedFieldTooltips: { increasePercent: '효과 레벨 × 5%' },
     modifiers: level => [{ attribute: AttributeType.ATK.key, op: 'multiply', value: 1 + level * 0.05 }],
 });
 
 const MENTALITY_REGENERATION = defineAttributeEffect({
     id: 'mentality_regeneration', label: '정신력 재생', icon: ICON.mentality,
-    descriptionTemplate: '정신력 재생이 레벨당 5% 증가합니다.', aliases: ['마나 재생', '정신력 재생'],
+    descriptionTemplate: '정신력 재생이 [color=purple]{{calc.increasePercent}}%[/color] 증가합니다.', aliases: ['마나 재생', '정신력 재생'],
+    calculatedFields: { increasePercent: ({ effect }) => effect.level * 5 },
+    calculatedFieldTooltips: { increasePercent: '효과 레벨 × 5%' },
     modifiers: level => [{ attribute: AttributeType.MENTALITY_REGEN.key, op: 'multiply', value: 1 + level * 0.05 }],
 });
 
@@ -164,6 +197,9 @@ const REGENERATION = StatusEffectType.define({
         healPercent: ({ effect }) => Number((regenerationHealRatio(effect) * 100).toFixed(2)),
         healAmount: ({ target, effect }) => target.maxLife * regenerationHealRatio(effect),
     },
+    calculatedFieldTooltips: {
+        healPercent: '기본 0.25% + 효과 레벨 × 0.15%p',
+    },
     onStart: livingOnly,
     onUpdate: updateRegeneration,
     aliases: ['재생'],
@@ -172,13 +208,21 @@ const REGENERATION = StatusEffectType.define({
 
 const SLOWNESS = defineAttributeEffect({
     id: 'slowness', label: '둔화', icon: ICON.speed,
-    descriptionTemplate: '이동속도가 레벨마다 5%씩 복리로 감소합니다.', aliases: ['둔화'],
+    descriptionTemplate: '이동속도가 [color=cyan]{{calc.reductionPercent}}%[/color] 감소합니다.', aliases: ['둔화'],
+    calculatedFields: {
+        reductionPercent: ({ effect }) => Number(((1 - Math.pow(0.95, effect.level)) * 100).toFixed(2)),
+    },
+    calculatedFieldTooltips: {
+        reductionPercent: '(1 - 0.95의 효과 레벨 제곱) × 100',
+    },
     modifiers: level => [{ attribute: AttributeType.SPEED.key, op: 'multiply', value: Math.pow(0.95, level) }],
 });
 
 const SWIFTNESS = defineAttributeEffect({
     id: 'swiftness', label: '신속', icon: ICON.speed,
-    descriptionTemplate: '이동속도가 레벨당 5% 증가합니다.', aliases: ['신속'],
+    descriptionTemplate: '이동속도가 [color=cyan]{{calc.increasePercent}}%[/color] 증가합니다.', aliases: ['신속'],
+    calculatedFields: { increasePercent: ({ effect }) => effect.level * 5 },
+    calculatedFieldTooltips: { increasePercent: '효과 레벨 × 5%' },
     modifiers: level => [{ attribute: AttributeType.SPEED.key, op: 'multiply', value: 1 + level * 0.05 }],
 });
 
@@ -188,6 +232,10 @@ const CURSE = StatusEffectType.define({
     calculatedFields: {
         powerReduction: ({ effect }) => Math.round((1 - Math.max(0.5, Math.pow(0.95, effect.level))) * 100),
         healReduction: ({ effect }) => Math.round((1 - Math.max(0.5, Math.pow(0.96, effect.level))) * 100),
+    },
+    calculatedFieldTooltips: {
+        powerReduction: '(1 - 0.95의 효과 레벨 제곱) × 100 (최대 50%)',
+        healReduction: '(1 - 0.96의 효과 레벨 제곱) × 100 (최대 50%)',
     },
     onStart: applyCurse,
     onUpdate: applyCurse,
@@ -221,6 +269,10 @@ const SUN_FEVER = StatusEffectType.define({
         slowPercent: ({ effect }) => Math.round((1 - Math.max(0.5, Math.pow(0.96, effect.level))) * 100),
         extraThirst: ({ effect }) => Number((effect.level * 0.02).toFixed(2)),
     },
+    calculatedFieldTooltips: {
+        slowPercent: '(1 - 0.96의 효과 레벨 제곱) × 100 (최대 50%)',
+        extraThirst: '효과 레벨 × 초당 0.02',
+    },
     onStart: context => {
         if (livingOnly(context) === 'remove') return 'remove';
         applySunFever(context);
@@ -235,7 +287,9 @@ const SUN_FEVER = StatusEffectType.define({
 
 const EXPERIENCE_AMPLIFICATION = StatusEffectType.define({
     id: 'experience_amplification', label: '경험 증폭', icon: 'attributes/luck',
-    descriptionTemplate: '획득 경험치가 레벨당 5% 증가합니다.',
+    descriptionTemplate: '획득 경험치가 [color=gold]{{calc.increasePercent}}%[/color] 증가합니다.',
+    calculatedFields: { increasePercent: ({ effect }) => effect.level * 5 },
+    calculatedFieldTooltips: { increasePercent: '효과 레벨 × 5%' },
     onStart: applyExperienceAmplification,
     onUpdate: applyExperienceAmplification,
     onRemove: ({ target, effect }) => { target.removeExperienceGainModifier(modifierSource(effect)); },
@@ -250,6 +304,9 @@ const HERO = StatusEffectType.define({
     descriptionTemplate: '악명 높은 플레이어를 처치한 보상입니다. 획득 경험치가 {{calc.experienceBonusPercent}}% 증가합니다.',
     calculatedFields: {
         experienceBonusPercent: ({ effect }) => 10 + effect.level * 5,
+    },
+    calculatedFieldTooltips: {
+        experienceBonusPercent: '기본 10% + 효과 레벨 × 5%',
     },
     onStart: applyHero,
     onUpdate: applyHero,
@@ -340,6 +397,7 @@ const FROZEN = StatusEffectType.define({
     id: 'frozen', label: '빙결', icon: ICON.ice,
     descriptionTemplate: '초당 [color=cyan]{{calc.damage}}[/color]의 얼음 피해를 받고 이동·공격속도가 감소합니다.',
     calculatedFields: { damage: ({ effect }) => effect.level * 15 },
+    calculatedFieldTooltips: { damage: '효과 레벨 × 15' },
     onStart: applyFrozen,
     onUpdate: (context, dt) => {
         if (livingOnly(context) === 'remove') return 'remove';

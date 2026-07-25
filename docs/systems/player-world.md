@@ -33,6 +33,7 @@ Location ── objects[] (Monster | Resource)
 - 일회성 미니게임과 낚시 대기는 전투 Entity 프레임과 별도의 런타임 세션이다. 마지막 연결 종료·명시적 unload에서는 `cancelFishing()`이 대기 timer와 미니게임을 함께 정리하며 장소/생존/장비 유효성은 입질과 결과 확정 시 다시 검사한다.
 - `modules/player.ts`: 500ms마다 현재 경험치/다음 레벨 요구량을 포함한 `playerStats`와 `locationInfo`를 계산하되, `stateSync.ts`가 내용이 바뀐 완전한 snapshot만 socket별로 전송한다. `locationInfo.players`는 메모리 등록 여부만 믿지 않고 실제 연결 중인 userId만 포함한다. 각 payload의 `syncId/revision`으로 오래된 순서를 거르고, 30초마다 dirty 상태를 DB에 저장한다.
 - `Entity.earlyUpdate`: tick 행동 제한 초기화 → Shield 만료 갱신 → StatusEffect early/update → 공격 cooldown 감소 → `lifeRegen` 생명력 및 `mentalityRegen` 정신력 자연 회복 → 사망 timer와 respawn. 생명력 재생은 받는 치유량 modifier를 적용하고 정신력 재생은 최대 정신력까지만 직접 회복한다.
+- 자연 재생의 기본값은 각 1/초이며, 체력은 생명력 재생을, 정신력은 정신력 재생을 추가로 제공한다. 두 스탯 기여는 `포인트당 기초 재생 × 스탯 / (1 + 스탯 / 2000)`으로 계산해 낮은 구간의 성장 체감은 유지하면서 고스탯 구간의 무한 회복을 억제한다. 상태창 능력치와 실제 `earlyUpdate` 회복은 모두 이 modifier 결과를 사용한다.
 - `Player.earlyUpdate`: Entity 공통 갱신 뒤 생존 중에만 `hungerDrain`과 `thirstDrain`을 초 단위로 적용한다. 두 자원 모두 0 아래로 내려가지 않으며 0이면 공복·갈증 StatusEffect를 적용하고 회복되면 제거한다.
 - StatusEffect나 장비·스탯 modifier 제거로 최대 생명력·정신력·목마름·배고픔이 감소하면 `clampVitals()`가 같은 earlyUpdate에서 현재값을 새 최대값 이하로 보정한다. Player override setter를 통과하므로 변경은 dirty 저장 대상이다.
 - `Entity.lateUpdate`: life가 0 이하가 된 엔티티의 사망 처리.
@@ -143,4 +144,6 @@ Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook�
 
 `locationInfo.objects[].respawn`은 기본 리젠 주기가 5분을 초과하는 비일회성 보스에만 존재하며 기본 주기와 처치 후 남은 초를 함께 제공한다.
 
-`sendPlayerStats()`는 본인의 현재 레벨, 자원, 보호막 구간, 공격 cooldown, 상태효과의 ID·아이콘·레벨·현재/최대 시간·계산 설명과 nullable 파티원 HP/MP/보호막 snapshot을 보낸다. `sendLocationInfo()`는 현재 위치 좌표·위험도 라벨·PVP 허용 여부·인접 위치·동일 위치 플레이어·통합 `objects`의 생명력과 보호막을 해당 사용자의 모든 소켓에 보낸다. 인접 위치는 `Location.getAvailableConnections(player)` 결과라 hidden은 제외되고 visible/locked 상태가 포함된다. `Home.tsx`가 이를 `HudContext`에 저장하고 PlayerStatus/Party/Location/Minimap HUD가 소비한다. Location HUD는 각 살아 있는 오브젝트 행에 설정 가능한 `공격`/`대상` 버튼을 더하고, PVP 가능 지역의 플레이어 행에는 `/대상지정p #고유번호` 버튼을 더한다. Minimap HUD는 세부 옵션을 켠 경우 visible 인접 지역만 이동 목록에 표시하고 `/이동 ID`를 숨김 실행한다.
+`sendPlayerStats()`는 본인의 현재 레벨, 자원, 보호막 구간, 공격 cooldown, 상태효과의 ID·아이콘·레벨·현재/최대 시간·계산 설명, nullable 파티원 HP/MP/보호막 snapshot과 현재 대상 snapshot을 보낸다. 대상 snapshot은 `Entity.getCurrentTargetDisplaySnapshot()`이 가공한 이름·레벨·생명력·정신력·보호막·상태효과만 포함하며 다른 장소로 이동하거나 오프라인이 된 플레이어 대상은 제거한다. 몬스터 분석은 `/몬스터정보`와 같은 감각 단계로 제한해 감각 100에서 속성, 125에서 전투 능력치·공격 방식, 150에서 보상·전리품·기술을 추가한다. 플레이어 대상에는 몬스터 분석을 붙이지 않는다.
+
+`sendLocationInfo()`는 현재 위치 좌표·위험도 라벨·PVP 허용 여부·인접 위치·동일 위치 플레이어·통합 `objects`의 생명력과 보호막을 해당 사용자의 모든 소켓에 보낸다. 인접 위치는 `Location.getAvailableConnections(player)` 결과라 hidden은 제외되고 visible/locked 상태가 포함된다. `Home.tsx`가 이를 `HudContext`에 저장하고 PlayerStatus/TargetStatus/Party/Location/Minimap HUD가 소비한다. TargetStatus HUD는 대상이 있을 때만 나타나는 독립 HUD이며 설정에서 표시·위치·크기를 조절하고 편집 모드에서는 미리보기를 표시한다. Location HUD는 각 살아 있는 오브젝트 행에 설정 가능한 `공격`/`대상` 버튼을 더하고, PVP 가능 지역의 플레이어 행에는 `/대상지정p #고유번호` 버튼을 더한다. Minimap HUD는 세부 옵션을 켠 경우 visible 인접 지역만 이동 목록에 표시하고 `/이동 ID`를 숨김 실행한다.

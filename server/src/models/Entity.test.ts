@@ -5,12 +5,16 @@ import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import { AttributeType } from './Attribute.js';
 import Stat, {
+    calculateMentalityRegenBonus,
     calculateSensibilityCritRateBonus,
+    calculateVitalityLifeRegenBonus,
     MENTALITY_MAX_MENTALITY_PER_POINT,
     SENSIBILITY_CRIT_RATE_CAP,
     StatType,
 } from './Stat.js';
 import { GameTags } from '../../../shared/tags.js';
+import { StatusEffectType } from './StatusEffect.js';
+import { ShieldType } from './Shield.js';
 import '../data/tagEffects.js';
 
 class VitalEntity extends Entity {
@@ -61,6 +65,26 @@ test('최대 자원 modifier가 사라지면 현재 생명력과 자원값을 �
     assert.equal(entity.clampVitals(), false);
 });
 
+test('현재 대상 표시 스냅샷은 같은 장소 대상의 자원·보호막·상태이상만 복제한다', () => {
+    const owner = new CombatEntity('공격자');
+    const target = new CombatEntity('대상');
+    target.life = 720;
+    target.mentality = 12;
+    target.setShield('test:target-hud', 80, ShieldType.GENERAL, 10, target);
+    target.applyStatusEffect(StatusEffectType.FIRE, 5, 2);
+    owner.currentTarget = target;
+
+    const snapshot = owner.getCurrentTargetDisplaySnapshot();
+    assert.equal(snapshot?.name, '대상');
+    assert.equal(snapshot?.life, 720);
+    assert.equal(snapshot?.shields[0]?.amount, 80);
+    assert.equal(snapshot?.statusEffects[0]?.label, '화염');
+
+    target.locationId = 'other';
+    assert.equal(owner.getCurrentTarget(), null);
+    assert.equal(owner.getCurrentTargetDisplaySnapshot(), null);
+});
+
 test('생명력과 정신력 재생 능력치는 매초 실제 자원을 회복한다', () => {
     const entity = new VitalEntity();
     entity.life = 90;
@@ -96,9 +120,37 @@ test('민첩과 정신력은 레벨 성장에 쓰이는 투사체 가속 능력�
         entity.maxMentality,
         80 + 100 * MENTALITY_MAX_MENTALITY_PER_POINT,
     );
+    assert.ok(Math.abs(
+        entity.attribute.get(AttributeType.MENTALITY_REGEN)
+            - (1 + calculateMentalityRegenBonus(100)),
+    ) < 1e-10);
     assert.match(StatType.MENTALITY.getDescription(100), /최대 정신력 \+525/);
     assert.match(StatType.AGILITY.getDescription(100), /투사체 가속/);
     assert.match(StatType.MENTALITY.getDescription(100), /투사체 가속/);
+    assert.match(StatType.MENTALITY.getDescription(100), /정신력 재생 \+1\.19\/초/);
+});
+
+test('체력과 정신력은 고스탯에서 효율이 완만히 줄어드는 자연 재생을 제공한다', () => {
+    const entity = new VitalEntity();
+    const stat = new Stat({ vitality: 100, mentality: 100 });
+    stat.applyModifiers(entity);
+
+    assert.ok(Math.abs(
+        entity.attribute.get(AttributeType.LIFE_REGEN)
+            - (1 + calculateVitalityLifeRegenBonus(100)),
+    ) < 1e-10);
+    assert.ok(Math.abs(
+        entity.attribute.get(AttributeType.MENTALITY_REGEN)
+            - (1 + calculateMentalityRegenBonus(100)),
+    ) < 1e-10);
+    assert.match(StatType.VITALITY.getDescription(100), /생명력 재생 \+2\.38\/초/);
+
+    const vitalityEarlyGain = calculateVitalityLifeRegenBonus(100) - calculateVitalityLifeRegenBonus(0);
+    const vitalityLateGain = calculateVitalityLifeRegenBonus(1_000) - calculateVitalityLifeRegenBonus(900);
+    const mentalityEarlyGain = calculateMentalityRegenBonus(100) - calculateMentalityRegenBonus(0);
+    const mentalityLateGain = calculateMentalityRegenBonus(1_000) - calculateMentalityRegenBonus(900);
+    assert.ok(vitalityLateGain < vitalityEarlyGain);
+    assert.ok(mentalityLateGain < mentalityEarlyGain);
 });
 
 test('감각은 치명타 능력치와 대장장이용 제련 정밀도를 함께 높인다', () => {

@@ -6,23 +6,31 @@ import { getSkillData } from '../models/Skill.js';
 import { EquipSlotType } from '../models/Equipment.js';
 import { AttributeType, summarizeAttributeModifiers } from '../models/Attribute.js';
 import { StatType } from '../models/Stat.js';
-import { StatusEffectType } from '../models/StatusEffect.js';
+import StatusEffect, { StatusEffectType } from '../models/StatusEffect.js';
 import { getTagEffectAffinitySnapshots } from '../models/TagEffect.js';
 import { getLocation } from '../models/Location.js';
 import { registerCommand } from '../modules/bot.js';
 import { sendBotMessageToUser } from '../modules/message.js';
 import { getPlayerByUserId } from '../modules/player.js';
 import { chat } from '../utils/chatBuilder.js';
+import { parseChatMessage } from '../utils/chatParser.js';
 import { formatWeight } from '../utils/format.js';
 import type { CompletionItem } from '../../../shared/types.js';
 import { ItemAttackEffectType } from '../models/ItemAttackEffect.js';
+import {
+    MONSTER_COMBAT_ATTRIBUTES,
+    MONSTER_COMBAT_SENSIBILITY,
+    MONSTER_INFO_SENSIBILITY,
+    MONSTER_REWARD_SENSIBILITY,
+    getMonsterInspectionTier,
+} from '../models/Inspection.js';
+
+export { getMonsterInspectionTier } from '../models/Inspection.js';
 
 export const ITEM_APPRAISAL_SENSIBILITY = 50;
 export const ITEM_PERFORMANCE_SENSIBILITY = 75;
 export const ITEM_SPECIAL_EFFECT_SENSIBILITY = 100;
-export const MONSTER_INFO_SENSIBILITY = 100;
-export const MONSTER_COMBAT_SENSIBILITY = 125;
-export const MONSTER_REWARD_SENSIBILITY = 150;
+export const STATUS_EFFECT_INFO_SENSIBILITY = 50;
 
 export interface ItemInspectionTarget {
     item: Item;
@@ -44,13 +52,6 @@ export function getItemInspectionTier(sensibility: number): 0 | 1 | 2 | 3 {
     if (sensibility < ITEM_APPRAISAL_SENSIBILITY) return 0;
     if (sensibility < ITEM_PERFORMANCE_SENSIBILITY) return 1;
     if (sensibility < ITEM_SPECIAL_EFFECT_SENSIBILITY) return 2;
-    return 3;
-}
-
-export function getMonsterInspectionTier(sensibility: number): 0 | 1 | 2 | 3 {
-    if (sensibility < MONSTER_INFO_SENSIBILITY) return 0;
-    if (sensibility < MONSTER_COMBAT_SENSIBILITY) return 1;
-    if (sensibility < MONSTER_REWARD_SENSIBILITY) return 2;
     return 3;
 }
 
@@ -119,6 +120,29 @@ function monsterTargetCompletions(userId: number): CompletionItem[] {
         value: String(index + 1),
         description: `Lv.${object.level} ${object.name}${object.isDefeated ? ` (${object.defeatLabel})` : ''}`,
     }] : []);
+}
+
+function statusEffectCompletions(): CompletionItem[] {
+    return StatusEffectType.values().map(type => ({
+        value: type.label,
+        description: '상태이상 효과 설명',
+    }));
+}
+
+function resolveStatusEffectInformationInput(rawInput: string): {
+    type: StatusEffectType;
+    level: number;
+} | undefined {
+    const input = rawInput.trim();
+    const direct = StatusEffectType.fromInput(input);
+    if (direct) return { type: direct, level: 1 };
+    const match = input.match(/^(.+?)\s+(\d+)$/);
+    if (!match) return undefined;
+    const type = StatusEffectType.fromInput(match[1]);
+    const level = Number(match[2]);
+    return type && Number.isSafeInteger(level) && level >= 1
+        ? { type, level }
+        : undefined;
 }
 
 function formatNumber(value: number): string {
@@ -262,20 +286,6 @@ export function buildItemInspection(snapshot: ItemInspectionSnapshot, sourceLabe
         .build();
 }
 
-const COMBAT_ATTRIBUTES = [
-    AttributeType.MAX_LIFE,
-    AttributeType.ATK,
-    AttributeType.MAGIC_FORCE,
-    AttributeType.DEF,
-    AttributeType.MAGIC_DEF,
-    AttributeType.ARMOR_PEN,
-    AttributeType.MAGIC_PEN,
-    AttributeType.SPEED,
-    AttributeType.ATTACK_SPEED,
-    AttributeType.CRIT_RATE,
-    AttributeType.CRIT_DMG,
-];
-
 export function buildMonsterInspection(monster: Monster, objectNumber: number, sensibility: number) {
     const snapshot = monster.getInspectionSnapshot();
     const tier = getMonsterInspectionTier(sensibility);
@@ -300,7 +310,7 @@ export function buildMonsterInspection(monster: Monster, objectNumber: number, s
             if (tier < 2) {
                 appendLocked(builder, MONSTER_COMBAT_SENSIBILITY);
             } else {
-                for (const type of COMBAT_ATTRIBUTES) {
+                for (const type of MONSTER_COMBAT_ATTRIBUTES) {
                     builder.icon(type.icon).text(' ').tab(112, b => b.text(type.label)).text(`${type.format(snapshot.attributes[type.key])}\n`);
                 }
                 const damageType = snapshot.attack?.damageType ?? 'physical';
@@ -403,6 +413,48 @@ export function initInspectionCommands(): void {
                 return;
             }
             sendBotMessageToUser(userId, buildMonsterInspection(object, number, sensibilityOf(player)));
+        },
+    });
+
+    registerCommand({
+        name: '상태이상정보',
+        aliases: ['effectinfo', 'sei'],
+        description: '감각 50 이상일 때 상태이상의 효과와 중첩 규칙을 확인합니다.',
+        information: true,
+        args: [{
+            name: '상태이상 이름 [레벨]',
+            description: '확인할 상태이상 이름과 선택 레벨 (생략 시 1레벨)',
+            required: true,
+            isText: true,
+            completions: statusEffectCompletions(),
+        }],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            const denied = getSensibilityRequirementReason(player, STATUS_EFFECT_INFO_SENSIBILITY);
+            if (denied) {
+                sendBotMessageToUser(userId, denied);
+                return;
+            }
+            const resolved = resolveStatusEffectInformationInput(args[0] ?? '');
+            if (!resolved) {
+                sendBotMessageToUser(userId, '상태이상 이름과 1 이상의 레벨을 입력해주세요. (예: /상태이상정보 화염 5)');
+                return;
+            }
+
+            const { type, level } = resolved;
+            const effect = new StatusEffect(type, 1, level);
+            const builder = chat()
+                .text('[ 상태이상 정보 ] ')
+                .icon(type.icon)
+                .weight('bold', b => b.text(` ${type.label} Lv.${level}\n`))
+                .hide('상세 보기', detail => detail
+                    .divider(`${level}레벨 효과`)
+                    .appendNodes(parseChatMessage(effect.formatDescription(player, { calculationTooltips: true })))
+                    .text('\n')
+                    .divider('재적용 규칙')
+                    .text('더 높은 레벨은 기존 효과의 레벨과 지속시간을 교체합니다. 같은 레벨은 남은 시간보다 긴 지속시간만 반영되며, 더 낮은 레벨은 적용되지 않습니다.'));
+            sendBotMessageToUser(userId, builder.build());
         },
     });
 }

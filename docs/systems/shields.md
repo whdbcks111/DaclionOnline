@@ -20,7 +20,7 @@
 
 `DamageResult`에서 `finalDamage`는 보호막 적용 전 확정 피해, `absorbedDamage`는 보호막 흡수량, `lifeDamage`는 실제 생명력 감소량이다. `remainingShield`는 처리 후 전체 보호막량이다. 고정 피해 옵션은 기존 계산 단계만 건너뛰며 피해 타입에 맞는 보호막 흡수는 그대로 적용된다.
 
-주요 공개 API는 `setShield`, `getShield`, `hasShield`, `removeShield`, `clearShields`, `getTotalShield`, `getShieldDisplaySnapshots`, `getShieldBarSegments`다. 스킬·아이템·상태효과는 고유하고 안정적인 source key를 사용해야 한다. 예를 들어 마법사 `마력 보호막`은 `skill:mana_barrier` key의 `MAGIC` 보호막을 갱신한다.
+주요 공개 API는 `setShield`, `getShield`, `hasShield`, `removeShield`, `clearShields`, `getTotalShield`, `getShieldDisplaySnapshots`, `getShieldBarSegments`다. 스킬·아이템·상태효과는 고유하고 안정적인 source key를 사용해야 한다. 예를 들어 마법사 `마력 보호막`은 `skill:mana_barrier` key의 `GENERAL` 보호막을 갱신해 물리·마법·고정 피해를 모두 막고, 마법사 정체성은 같은 지속시간의 방어력·마법 저항력 버프로 유지한다.
 
 ## 표시 계약
 

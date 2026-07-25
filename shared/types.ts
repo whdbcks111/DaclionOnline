@@ -282,6 +282,45 @@ export interface StatusEffectHudData {
     description: ChatNode[]
 }
 
+export interface TargetAffinityHudData {
+    label: string
+    icon: string
+}
+
+export interface TargetAttributeHudData {
+    label: string
+    icon: string
+    value: string
+}
+
+export interface TargetMonsterAnalysisHudData {
+    tier: 0 | 1 | 2 | 3
+    nextSensibility?: number
+    affinities: TargetAffinityHudData[]
+    combatAttributes: TargetAttributeHudData[]
+    attackSummary?: string
+    experienceReward?: string
+    goldReward?: string
+    dropNames: string[]
+    skillNames: string[]
+}
+
+export interface TargetHudData {
+    kind: 'monster' | 'player' | 'object'
+    name: string
+    level: number
+    life: number
+    maxLife: number
+    shields: ShieldBarSegment[]
+    mentality: number
+    maxMentality: number
+    defeated: boolean
+    defeatLabel: string
+    statusEffects: StatusEffectHudData[]
+    monsterAnalysis?: TargetMonsterAnalysisHudData
+    userId?: number
+}
+
 export interface PartyMemberHudData {
     userId: number
     nickname: string
@@ -339,6 +378,7 @@ export interface PlayerStatsData extends SnapshotRevision {
     maxAttackCooldown: number
     skills: SkillHudData[]
     statusEffects: StatusEffectHudData[]
+    target: TargetHudData | null
     party: PartyHudData | null
 }
 

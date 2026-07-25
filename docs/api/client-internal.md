@@ -16,7 +16,7 @@
 
 `WorldMapNode`의 방문 장소 blip은 공용 `Dialog`로 자동이동 여부를 확인한 뒤 `chatButtonClick`에 장소 ID 기반 `/자동이동`을 전달한다. 현재 장소와 미방문 장소는 실행할 수 없으며, pointer 이동 거리를 판정해 지도 drag·pinch가 장소 클릭으로 이어지지 않게 한다.
 
-`PlayerStatusHud`는 이름 옆에 `playerStats.level`을 표시하고 `playerStats.exp/maxExp` 경험치 진행 막대 뒤에 생명력·정신력·생존 자원을 표시하며, `HealthBarNode`에 생명력과 `playerStats.shields`를 함께 전달한다. 상태효과는 작은 효과별 아이콘, 레벨, 반시계 방향 duration fill과 hover/focus/touch 설명으로 표시한다. HUD wrapper는 기본적으로 pointer event를 차단하지만 상태효과 영역은 이를 명시적으로 다시 허용한다. 아이콘 URL은 서버가 보낸 key를 `/icons/{key}.png`로 해석하며 효과가 사라지면 다음 0.5초 HUD payload에서 목록에서도 제거된다.
+`PlayerStatusHud`는 이름 옆에 `playerStats.level`을 표시하고 `playerStats.exp/maxExp` 경험치 진행 막대 뒤에 생명력·정신력·생존 자원을 표시하며, `HealthBarNode`에 생명력과 `playerStats.shields`를 함께 전달한다. 상태효과는 작은 효과별 아이콘, 레벨, 반시계 방향 duration fill과 hover/focus/touch 설명으로 표시한다. `TargetStatusHud`는 같은 상태효과 표시 primitive와 HealthBarNode를 재사용해 nullable `playerStats.target`의 HP/MP/보호막·상태이상을 보여주고, 서버가 감각 단계에 맞춰 보낸 몬스터 속성·능력치·보상만 추가 표시한다. HUD wrapper는 기본적으로 pointer event를 차단하지만 상태효과 영역은 이를 명시적으로 다시 허용한다. 아이콘 URL은 서버가 보낸 key를 `/icons/{key}.png`로 해석하며 효과가 사라지면 다음 0.5초 HUD payload에서 목록에서도 제거된다.
 
 채팅 상태창의 능력치 표시는 `AttributeType.icon`이 만든 `/icons/attributes/{key}.png`를 사용한다. 각 능력치를 한 행의 `아이콘 + hover 이름 + 값`으로 렌더링하므로 긴 재생/감소량 이름을 두 열 고정 폭에 억지로 배치하지 않는다. 같은 아이콘은 스킬 포맷의 `[icon=attributes/{key}]` 노드에서도 렌더링된다.
 

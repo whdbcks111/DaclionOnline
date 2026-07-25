@@ -824,14 +824,16 @@ for (const book of [
 });
 
 const mineralItems = [
-    { id: 'stone', name: '돌', description: '가장 흔한 광물 자원.', weight: 0.8, tag: GameTags.MATERIAL_STONE },
-    { id: 'coal', name: '석탄', description: '연료로 사용할 수 있는 검은 광물.', weight: 0.5, tag: GameTags.MATERIAL_COAL },
-    { id: 'iron_ore', name: '철', description: '도구와 장비 제작에 쓰이는 철 광석.', weight: 0.7, tag: GameTags.MATERIAL_IRON },
-    { id: 'gold_ore', name: '금', description: '희소하고 가치 있는 금 광석.', weight: 0.6, tag: GameTags.MATERIAL_GOLD },
-    { id: 'ruby', name: '루비', description: '붉게 빛나는 희귀 보석.', weight: 0.2, tag: GameTags.MATERIAL_RUBY },
-    { id: 'emerald', name: '에메랄드', description: '초록빛을 띠는 희귀 보석.', weight: 0.2, tag: GameTags.MATERIAL_EMERALD },
-    { id: 'diamond', name: '다이아몬드', description: '극히 희귀하고 단단한 보석.', weight: 0.2, tag: GameTags.MATERIAL_DIAMOND },
-    { id: 'enhancement_stone', name: '지핵 강화석', description: '철근미궁 지핵 수정실의 강화 수정맥에서만 얻는 무기 강화 재료.', weight: 0.25, tag: GameTags.MATERIAL_ENHANCEMENT_STONE },
+    { id: 'stone', name: '돌', description: '가장 흔한 광물 자원.', image: 'items/stone', weight: 0.8, tag: GameTags.MATERIAL_STONE },
+    { id: 'coal', name: '석탄', description: '연료로 사용할 수 있는 검은 광물.', image: 'items/coal', weight: 0.5, tag: GameTags.MATERIAL_COAL },
+    { id: 'iron_ore', name: '철', description: '도구와 장비 제작에 쓰이는 철 광석.', image: 'items/iron_ore', weight: 0.7, tag: GameTags.MATERIAL_IRON },
+    { id: 'gold_ore', name: '금', description: '희소하고 가치 있는 금 광석.', image: 'items/gold_ore', weight: 0.6, tag: GameTags.MATERIAL_GOLD },
+    { id: 'ruby', name: '루비', description: '붉게 빛나는 희귀 보석.', image: 'items/ruby', weight: 0.2, tag: GameTags.MATERIAL_RUBY },
+    { id: 'emerald', name: '에메랄드', description: '초록빛을 띠는 희귀 보석.', image: 'items/emerald', weight: 0.2, tag: GameTags.MATERIAL_EMERALD },
+    { id: 'diamond', name: '다이아몬드', description: '극히 희귀하고 단단한 보석.', image: 'items/diamond', weight: 0.2, tag: GameTags.MATERIAL_DIAMOND },
+    // TODO(art): 마력 광물 전용 아트 제작 전까지 마나 포션 카테고리 fallback을 재사용한다.
+    { id: 'mana_crystal', name: '마나 수정', description: '수정 광맥에서 마력이 응결되어 자란 푸른 원석.', image: 'items/mana_potion', weight: 0.25, tag: GameTags.MATERIAL_MANA_CRYSTAL },
+    { id: 'enhancement_stone', name: '지핵 강화석', description: '철근미궁 지핵 수정실의 강화 수정맥에서만 얻는 무기 강화 재료.', image: 'items/enhancement_stone', weight: 0.25, tag: GameTags.MATERIAL_ENHANCEMENT_STONE },
 ] as const;
 
 for (const mineral of mineralItems) {
@@ -839,7 +841,7 @@ for (const mineral of mineralItems) {
         id: mineral.id,
         name: mineral.name,
         description: mineral.description,
-        image: `items/${mineral.id}`,
+        image: mineral.image,
         category: '광물',
         weight: mineral.weight,
         stackable: true,
@@ -2098,18 +2100,20 @@ defineItem({
 });
 
 const refinedMinerals = [
-    { id: 'refined_iron', name: '제련된 철', source: 'iron_ore', tag: GameTags.MATERIAL_IRON },
-    { id: 'refined_gold', name: '제련된 금', source: 'gold_ore', tag: GameTags.MATERIAL_GOLD },
-    { id: 'refined_ruby', name: '제련된 루비', source: 'ruby', tag: GameTags.MATERIAL_RUBY },
-    { id: 'refined_emerald', name: '제련된 에메랄드', source: 'emerald', tag: GameTags.MATERIAL_EMERALD },
-    { id: 'refined_diamond', name: '제련된 다이아몬드', source: 'diamond', tag: GameTags.MATERIAL_DIAMOND },
+    { id: 'refined_iron', name: '제련된 철', source: 'iron_ore', image: 'items/refined_iron', tag: GameTags.MATERIAL_IRON },
+    { id: 'refined_gold', name: '제련된 금', source: 'gold_ore', image: 'items/refined_gold', tag: GameTags.MATERIAL_GOLD },
+    { id: 'refined_ruby', name: '제련된 루비', source: 'ruby', image: 'items/refined_ruby', tag: GameTags.MATERIAL_RUBY },
+    { id: 'refined_emerald', name: '제련된 에메랄드', source: 'emerald', image: 'items/refined_emerald', tag: GameTags.MATERIAL_EMERALD },
+    { id: 'refined_diamond', name: '제련된 다이아몬드', source: 'diamond', image: 'items/refined_diamond', tag: GameTags.MATERIAL_DIAMOND },
+    // TODO(art): 정제 마나 수정 전용 아트 제작 전까지 마나 포션 카테고리 fallback을 재사용한다.
+    { id: 'refined_mana_crystal', name: '정제 마나 수정', source: 'mana_crystal', image: 'items/mana_potion', tag: GameTags.MATERIAL_MANA_CRYSTAL },
 ] as const;
 
 for (const material of refinedMinerals) defineItem({
     id: material.id,
     name: material.name,
     description: '마력 제련으로 불순물을 걷어내 단조할 수 있게 만든 소재.',
-    image: `items/${material.id}`,
+    image: material.image,
     category: '제련 소재',
     weight: 0.55,
     stackable: true,

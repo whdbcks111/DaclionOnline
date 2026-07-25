@@ -16,7 +16,7 @@ function formatDuration(seconds: number) {
   return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
 }
 
-function StatusEffectIndicator({ effect }: { effect: StatusEffectHudData }) {
+export function StatusEffectIndicator({ effect }: { effect: StatusEffectHudData }) {
   const remaining = Math.max(0, Math.min(100, effect.durationRatio * 100))
 
   return (
@@ -53,6 +53,21 @@ function StatusEffectIndicator({ effect }: { effect: StatusEffectHudData }) {
           {formatDuration(effect.duration)} / {formatDuration(effect.maxDuration)}
         </span>
       </div>
+    </div>
+  )
+}
+
+export function StatusEffectList({
+  effects,
+  label = '현재 상태이상',
+}: {
+  effects: readonly StatusEffectHudData[]
+  label?: string
+}) {
+  if (effects.length === 0) return null
+  return (
+    <div className={styles.effects} aria-label={label}>
+      {effects.map(effect => <StatusEffectIndicator key={effect.id} effect={effect} />)}
     </div>
   )
 }
@@ -126,11 +141,7 @@ export default function PlayerStatusHud() {
           </div>
         </div>
       </div>
-      {statusEffects.length > 0 && (
-        <div className={styles.effects} aria-label="현재 상태이상">
-          {statusEffects.map(effect => <StatusEffectIndicator key={effect.id} effect={effect} />)}
-        </div>
-      )}
+      <StatusEffectList effects={statusEffects} />
     </div>
   )
 }

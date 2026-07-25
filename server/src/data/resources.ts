@@ -621,6 +621,7 @@ defineResource({
         { itemDataId: 'ruby', weight: 20, minCount: 1, maxCount: 2 },
         { itemDataId: 'emerald', weight: 20, minCount: 1, maxCount: 2 },
         { itemDataId: 'diamond', weight: 14, minCount: 1, maxCount: 1 },
+        { itemDataId: 'mana_crystal', weight: 16, minCount: 1, maxCount: 2 },
     ],
     expReward: { min: 430, max: 600 },
     interaction: 'inspect_ore',
