@@ -215,10 +215,55 @@ function cooldownByLevel(context: SkillContext, base: number, perLevelReduction:
     return Math.max(minimum, base - Math.max(0, context.skill.level - 1) * perLevelReduction);
 }
 
+/**
+ * 보호막은 피해와 달리 방어력 계산 뒤의 실피해를 막는다.
+ * 저레벨 보호막이 과도해지지 않으면서 후반 보스의 한 기술을 받아낼 수 있도록
+ * Lv.50 이후 성장분만 최대 3배까지 완만하게 반영한다.
+ */
+function magicShieldGrowthMultiplier(context: SkillContext): number {
+    return Math.min(3, 1 + Math.max(0, context.owner.level - 50) / 150);
+}
+
 function manaBarrierShieldAmount(context: SkillContext): number {
-    return valueByLevel(context.skill.level, 45, 15)
-        + context.owner.attribute.get(AttributeType.MAGIC_FORCE) * 0.65
-        + context.owner.maxLife * 0.04;
+    const flat = valueByLevel(context.skill.level, 120, 30);
+    const magicForcePercent = percentByLevel(context.skill.level, 125, 10);
+    const mentalityPercent = percentByLevel(context.skill.level, 20, 2.5);
+    const lifePercent = percentByLevel(context.skill.level, 6, 1);
+    return (
+        flat
+        + context.owner.attribute.get(AttributeType.MAGIC_FORCE) * magicForcePercent / 100
+        + context.owner.maxMentality * mentalityPercent / 100
+        + context.owner.maxLife * lifePercent / 100
+    ) * magicShieldGrowthMultiplier(context);
+}
+
+function manaBarrierShieldFormula(context: SkillContext): string {
+    const flat = valueByLevel(context.skill.level, 120, 30);
+    const magicForcePercent = percentByLevel(context.skill.level, 125, 10);
+    const mentalityPercent = percentByLevel(context.skill.level, 20, 2.5);
+    const lifePercent = percentByLevel(context.skill.level, 6, 1);
+    return `(기본 ${formatNumber(flat)} + 마법력 × ${formatNumber(magicForcePercent)}%`
+        + ` + 최대 정신력 × ${formatNumber(mentalityPercent)}%`
+        + ` + 최대 생명력 × ${formatNumber(lifePercent)}%)`
+        + ` × 성장 보정 ${formatNumber(magicShieldGrowthMultiplier(context))}`;
+}
+
+/** 공격 기술에 붙는 마법 계열 방벽은 전용 마력 보호막보다 낮은 계수를 사용한다. */
+function followupShieldAmount(context: SkillContext, lifePercent: number, magicAligned: boolean): number {
+    if (!magicAligned) return context.owner.maxLife * lifePercent / 100;
+    return (
+        context.owner.maxLife * lifePercent / 100
+        + context.owner.attribute.get(AttributeType.MAGIC_FORCE) * lifePercent * 0.08
+        + context.owner.maxMentality * lifePercent / 100
+    ) * magicShieldGrowthMultiplier(context);
+}
+
+function followupShieldFormula(context: SkillContext, lifePercent: number, magicAligned: boolean): string {
+    if (!magicAligned) return `최대 생명력 × ${formatNumber(lifePercent)}%`;
+    return `(최대 생명력 × ${formatNumber(lifePercent)}%`
+        + ` + 마법력 × ${formatNumber(lifePercent * 8)}%`
+        + ` + 최대 정신력 × ${formatNumber(lifePercent)}%)`
+        + ` × 성장 보정 ${formatNumber(magicShieldGrowthMultiplier(context))}`;
 }
 
 function activationGuide(preparation = ''): string {
@@ -1579,7 +1624,8 @@ defineSkill({
 
 defineSkill({
     id: 'mana_barrier', name: '마력 보호막', icon: 'skills/mana_barrier', maxLevel: 5,
-    descriptionTemplate: '마력으로 몸을 감싸 {{duration}} 동안 [color=#a56de2]{{shieldAmount}}만큼의 마법 피해를 막는 보호막[/color]을 얻습니다. '
+    descriptionTemplate: '마력으로 몸을 감싸 {{duration}} 동안 {{icon.magicForce}}{{icon.maxMentality}}{{icon.maxLife}} '
+        + '[color=#a56de2]{{shieldAmount}}만큼의 마법 피해를 막는 보호막[/color]을 얻습니다. '
         + '{{icon.def}} 방어력이 [color=yellow]+{{defBonus}}[/color], {{icon.magicDef}} 마법 저항력이 [color=purple]+{{magicDefBonus}}[/color] 증가합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 22[/color]',
     activationConditionTemplate: activationGuide(), activationMessage: '마력 보호막!', baseMetadata: null,
@@ -1592,7 +1638,7 @@ defineSkill({
         duration: context => levelValueTooltip(context, '지속시간', 10, 1, '초'),
         shieldAmount: context => tooltipValue(
             manaBarrierShieldAmount(context),
-            `기본 ${formatNumber(valueByLevel(context.skill.level, 45, 15))} + 마법력 × 65% + 최대 생명력 × 4% · 기본 보호막 스킬 레벨당 +15`,
+            manaBarrierShieldFormula(context),
         ),
         defBonus: context => levelValueTooltip(context, '방어력 증가', 12, 4),
         magicDefBonus: context => levelValueTooltip(context, '마법 저항력 증가', 20, 5),
@@ -2622,8 +2668,16 @@ for (const technique of growthTechniques) defineSkill({
         shieldPercent: () => technique.shieldPercent ? `${formatNumber(technique.shieldPercent)}%` : '0%',
         shieldAmount: context => technique.shieldPercent
             ? tooltipValue(
-                context.owner.maxLife * technique.shieldPercent / 100,
-                `최대 생명력 × ${formatNumber(technique.shieldPercent)}%`,
+                followupShieldAmount(
+                    context,
+                    technique.shieldPercent,
+                    technique.groupTag === GameTags.SKILL_GROUP_MAGIC,
+                ),
+                followupShieldFormula(
+                    context,
+                    technique.shieldPercent,
+                    technique.groupTag === GameTags.SKILL_GROUP_MAGIC,
+                ),
             )
             : 0,
         projectileTravelTime: context => technique.projectile
@@ -2658,7 +2712,11 @@ for (const technique of growthTechniques) defineSkill({
         hitCount: technique.hitCount,
         calculateManaCost: () => technique.manaCost,
         calculateShield: technique.shieldPercent
-            ? context => context.owner.maxLife * technique.shieldPercent! / 100 : undefined,
+            ? context => followupShieldAmount(
+                context,
+                technique.shieldPercent!,
+                technique.groupTag === GameTags.SKILL_GROUP_MAGIC,
+            ) : undefined,
         notes: technique.statusEffect ? [`${technique.statusLabel}의 전술 가치는 직접 피해와 분리합니다.`] : undefined,
     },
     calculateMaxCooldown: () => technique.cooldown,
@@ -2739,7 +2797,11 @@ for (const technique of growthTechniques) defineSkill({
         if (technique.shieldPercent) {
             context.owner.setShield(
                 `skill:${technique.id}`,
-                context.owner.maxLife * technique.shieldPercent / 100,
+                followupShieldAmount(
+                    context,
+                    technique.shieldPercent,
+                    technique.groupTag === GameTags.SKILL_GROUP_MAGIC,
+                ),
                 ShieldType.GENERAL,
                 8,
                 context.owner,
@@ -3150,8 +3212,16 @@ for (const technique of eliteTechniques) {
             damage: context => eliteTechniqueDamageTooltip(context, technique),
             shieldAmount: context => technique.shieldPercent
                 ? tooltipValue(
-                    context.owner.maxLife * technique.shieldPercent / 100,
-                    `최대 생명력 × ${formatNumber(technique.shieldPercent)}%`,
+                    followupShieldAmount(
+                        context,
+                        technique.shieldPercent,
+                        groupTag === GameTags.SKILL_GROUP_MAGIC,
+                    ),
+                    followupShieldFormula(
+                        context,
+                        technique.shieldPercent,
+                        groupTag === GameTags.SKILL_GROUP_MAGIC,
+                    ),
                 )
                 : 0,
             ...(technique.projectile ? {
@@ -3175,7 +3245,11 @@ for (const technique of eliteTechniques) {
             criticalMode: technique.guaranteedCritical ? SkillCriticalMode.GUARANTEED : SkillCriticalMode.NORMAL,
             calculateManaCost: () => technique.manaCost,
             calculateShield: technique.shieldPercent
-                ? context => context.owner.maxLife * technique.shieldPercent! / 100
+                ? context => followupShieldAmount(
+                    context,
+                    technique.shieldPercent!,
+                    groupTag === GameTags.SKILL_GROUP_MAGIC,
+                )
                 : undefined,
             notes: technique.onHit ? ['상태효과의 가치는 대상과 패턴에 따라 달라 직접 피해와 분리합니다.'] : undefined,
         },
@@ -3218,7 +3292,11 @@ for (const technique of eliteTechniques) {
             if (technique.shieldPercent) {
                 context.owner.setShield(
                     `skill:${technique.id}`,
-                    context.owner.maxLife * technique.shieldPercent / 100,
+                    followupShieldAmount(
+                        context,
+                        technique.shieldPercent,
+                        groupTag === GameTags.SKILL_GROUP_MAGIC,
+                    ),
                     ShieldType.GENERAL,
                     8,
                     context.owner,

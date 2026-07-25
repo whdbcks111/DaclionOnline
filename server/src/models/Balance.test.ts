@@ -142,6 +142,18 @@ test('skill report uses real cooldown, resource and damage callbacks', () => {
     assert.equal(report.coverage, 'complete');
 });
 
+test('고레벨 마법사 보호막은 마법력과 최대 정신력 성장에 맞춰 보스 기술을 받아낸다', () => {
+    const mage = createBalanceScenario(200, 'career:mage');
+    const barrier = analyzeSkillBalance(mage, 'mana_barrier', 5);
+    const constellation = analyzeSkillBalance(mage, 'constellation_rupture', 5);
+    const battleMage = createBalanceScenario(200, 'career:mage', 'career:warrior');
+    const armorCharge = analyzeSkillBalance(battleMage, 'battle_magus_technique', 5);
+
+    assert.ok(barrier.shield >= mage.entity.maxLife * 2);
+    assert.ok(constellation.shield >= mage.entity.maxLife);
+    assert.ok(armorCharge.shield >= battleMage.entity.maxLife);
+});
+
 test('skill report applies skill-specific penetration and unavoidable attacks', () => {
     const scenario = createBalanceScenario(220, 'career:mage', undefined, BalanceEncounterType.BOSS);
     const lock = analyzeSkillBalance(scenario, 'causality_lock', 5);
