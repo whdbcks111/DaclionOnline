@@ -171,6 +171,11 @@ function HomeContent() {
       setMessages(prev => prev.filter(msg => msg.id !== id))
       setReplyingTo(current => current?.messageId === id ? null : current)
     }
+    const onClearChatView = (count?: number) => {
+      setMessages(current => count === undefined ? [] : current.slice(0, Math.max(0, current.length - count)))
+      setReplyingTo(null)
+      setHighlightedMessageId(null)
+    }
     const onArgCompletions = (items: CompletionItem[]) => setDynamicCompletions(items)
     const onMentionCompletions = (items: CompletionItem[]) => setMentionCompletions(items)
     const onInformationMode = (isPublic: boolean) => setInformationPublic(isPublic)
@@ -185,6 +190,7 @@ function HomeContent() {
     socket.on('channelList', onChannelList)
     socket.on('editMessage', onEditMessage)
     socket.on('deleteMessage', onDeleteMessage)
+    socket.on('clearChatView', onClearChatView)
     socket.on('argCompletions', onArgCompletions)
     socket.on('mentionCompletions', onMentionCompletions)
     socket.on('informationMode', onInformationMode)
@@ -205,6 +211,7 @@ function HomeContent() {
       socket.off('channelList', onChannelList)
       socket.off('editMessage', onEditMessage)
       socket.off('deleteMessage', onDeleteMessage)
+      socket.off('clearChatView', onClearChatView)
       socket.off('argCompletions', onArgCompletions)
       socket.off('mentionCompletions', onMentionCompletions)
       socket.off('informationMode', onInformationMode)
@@ -785,6 +792,16 @@ function HomeContent() {
         onOpenPatchNotes={() => {
           setDrawerOpen(false)
           window.location.assign('/patch-notes')
+        }}
+        onClearServerChat={() => {
+          setDrawerOpen(false)
+          socket?.emit('chatButtonClick', { action: '/채팅청소' })
+        }}
+        onClearClientChat={() => {
+          setDrawerOpen(false)
+          setMessages([])
+          setReplyingTo(null)
+          setHighlightedMessageId(null)
         }}
         permission={sessionInfo?.permission}
         onOpenAdmin={() => {

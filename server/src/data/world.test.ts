@@ -49,6 +49,7 @@ import {
     getPrimordialSeedProtectionMultiplier,
 } from './bossPatterns.js';
 import { GameTags } from '../../../shared/tags.js';
+import { MonsterRank, MonsterStatProfile } from '../models/MonsterStats.js';
 
 const locations = JSON.parse(
     readFileSync(new URL('./locations.json', import.meta.url), 'utf-8'),
@@ -255,7 +256,7 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
     }
 });
 
-test('1~380레벨 월드는 모든 속성을 관찰 가능하고 동급 일반 몬스터 보상은 5%로 수렴한다', () => {
+test('1~380레벨 월드는 모든 속성을 관찰 가능하고 Lv.200 이후 성장 난도가 점진적으로 높아진다', () => {
     const monsters = getAllMonsterData();
     const levelOne = getMonsterData('slime');
     const midLevelNormal = getMonsterData('spark_moth');
@@ -266,9 +267,14 @@ test('1~380레벨 월드는 모든 속성을 관찰 가능하고 동급 일반 �
     assert.equal(Entity.getMaxExpOfLevel(1), 100);
     assert.equal(Entity.getMaxExpOfLevel(50), 20_000);
     assert.equal(Entity.getMaxExpOfLevel(200), 80_000);
+    assert.equal(Entity.getMaxExpOfLevel(380), 760_000);
     assert.equal(levelOne!.expReward / Entity.getMaxExpOfLevel(1), 0.2);
     assert.equal(midLevelNormal!.expReward / Entity.getMaxExpOfLevel(midLevelNormal!.level), 0.05);
     assert.equal(levelTwoHundred!.expReward / Entity.getMaxExpOfLevel(200), 0.05);
+    assert.equal(Entity.getStandardMonsterExpOfLevel(380) / Entity.getMaxExpOfLevel(380), 0.01);
+    assert.equal(levelOne?.statProfile, MonsterStatProfile.BRUISER);
+    assert.equal(levelOne?.statRank, MonsterRank.NORMAL);
+    assert.ok((levelOne?.baseAttribute.maxLife ?? 0) >= 28);
     assert.ok(monsters
         .filter(monster => !monster.tags.includes('entity:boss'))
         .every(monster => monster.expReward === monster.level * 20));

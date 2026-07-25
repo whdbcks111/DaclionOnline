@@ -102,6 +102,50 @@ export function getFilteredHistoryForUser(userId: number, channel: string | null
         .map(entry => entry.msg);
 }
 
+export interface ChannelHistoryClearResult {
+    readonly channel: string | null;
+    readonly removed: number;
+}
+
+/** 개인 채널의 공개·본인 필터 기록을 시간 역순으로 지정 개수만큼 제거한다. */
+export function clearPrivateChannelHistory(userId: number, count = Number.POSITIVE_INFINITY): ChannelHistoryClearResult {
+    const channel = `private_${userId}`;
+    const publicHistory = channelHistories.get(channel) ?? [];
+    const filteredHistory = filteredChannelHistories.get(channel) ?? [];
+    const candidates = [
+        ...publicHistory.map((msg, index) => ({ kind: 'public' as const, msg, index, timestamp: msg.timestamp })),
+        ...filteredHistory
+            .filter(entry => entry.filter(userId))
+            .map((entry, index) => ({ kind: 'filtered' as const, entry, index, timestamp: entry.msg.timestamp })),
+    ].sort((left, right) => right.timestamp - left.timestamp || right.index - left.index)
+        .slice(0, normalizeClearCount(count));
+
+    for (const candidate of candidates) {
+        if (candidate.kind === 'public') {
+            const index = publicHistory.indexOf(candidate.msg);
+            if (index >= 0) publicHistory.splice(index, 1);
+        } else {
+            const index = filteredHistory.indexOf(candidate.entry);
+            if (index >= 0) filteredHistory.splice(index, 1);
+        }
+    }
+    if (publicHistory.length === 0) channelHistories.delete(channel);
+    if (filteredHistory.length === 0) filteredChannelHistories.delete(channel);
+    return { channel, removed: candidates.length };
+}
+
+/** 관리자가 현재 일반 채널의 공개 기록을 시간 역순으로 제거할 때 사용하는 목적형 API. */
+export function clearPublicChannelHistory(
+    channel: string | null,
+    count = Number.POSITIVE_INFINITY,
+): ChannelHistoryClearResult {
+    const history = channelHistories.get(channel) ?? [];
+    const removeCount = Math.min(history.length, normalizeClearCount(count));
+    if (removeCount > 0) history.splice(history.length - removeCount, removeCount);
+    if (history.length === 0) channelHistories.delete(channel);
+    return { channel, removed: removeCount };
+}
+
 /** ID로 메시지 내용 수정 (공개/필터 히스토리 모두 탐색) */
 export function editMessageInHistory(id: string, newContent: ChatMessage['content']): void {
     for (const history of channelHistories.values()) {
@@ -124,4 +168,10 @@ export function deleteMessageFromHistory(id: string): void {
         const idx = history.findIndex(e => e.msg.id === id);
         if (idx !== -1) { history.splice(idx, 1); return; }
     }
+}
+
+function normalizeClearCount(count: number): number {
+    if (count === Number.POSITIVE_INFINITY) return Number.MAX_SAFE_INTEGER;
+    if (!Number.isInteger(count) || count < 1) throw new Error(`Invalid chat clear count: ${count}`);
+    return count;
 }

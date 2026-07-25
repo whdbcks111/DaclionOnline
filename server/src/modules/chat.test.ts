@@ -17,6 +17,8 @@ import {
     tryStartAdvertisementCooldown,
 } from './chat.js';
 import {
+    clearPrivateChannelHistory,
+    clearPublicChannelHistory,
     getChannelHistory,
     getFilteredHistoryForUser,
     getPublicReplyReference,
@@ -231,6 +233,51 @@ test('공개 메시지만 답장 원문 스냅샷으로 조회되고 필터 메�
     );
     assert.equal(getFilteredHistoryForUser(9912, privateChannel).at(-1)?.replyable, false);
     assert.equal(getPublicReplyReference(privateChannel, filteredId), undefined);
+});
+
+test('개인 채널 서버 청소는 공개·개인 기록을 합쳐 최근 개수만 제거한다', () => {
+    const userId = 9914;
+    const channel = `private_${userId}`;
+    sendMessageToChannel({
+        id: 'mclearprivate_1',
+        userId,
+        nickname: '개인 사용자',
+        content: [{ type: 'text', text: '첫 메시지' }],
+        timestamp: 100,
+    }, channel);
+    sendMessageFiltered(candidate => candidate === userId, channel, {
+        id: 'mclearprivate_2',
+        userId: 0,
+        nickname: '시스템',
+        content: [{ type: 'text', text: '둘째 메시지' }],
+        timestamp: 200,
+    });
+    sendMessageToChannel({
+        id: 'mclearprivate_3',
+        userId,
+        nickname: '개인 사용자',
+        content: [{ type: 'text', text: '셋째 메시지' }],
+        timestamp: 300,
+    }, channel);
+
+    assert.equal(clearPrivateChannelHistory(userId, 2).removed, 2);
+    assert.deepEqual(getChannelHistory(channel).map(message => message.id), ['mclearprivate_1']);
+    assert.equal(getFilteredHistoryForUser(userId, channel).length, 0);
+});
+
+test('일반 채널 서버 청소는 해당 채널 공개 기록만 지정 개수만큼 제거한다', () => {
+    const channel = 'admin-clear-test';
+    for (let index = 1; index <= 3; index++) {
+        sendMessageToChannel({
+            id: `mclearpublic_${index}`,
+            userId: 9915,
+            nickname: '공개 사용자',
+            content: [{ type: 'text', text: `${index}` }],
+            timestamp: index,
+        }, channel);
+    }
+    assert.equal(clearPublicChannelHistory(channel, 2).removed, 2);
+    assert.deepEqual(getChannelHistory(channel).map(message => message.id), ['mclearpublic_1']);
 });
 
 test('온라인 플레이어 mention 검색은 본인을 제외하고 닉네임 prefix를 정렬해 반환한다', () => {

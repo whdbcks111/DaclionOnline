@@ -23,6 +23,7 @@ import {
     ThreatTable,
     type MonsterAiProfileInput,
 } from './Threat.js';
+import type { MonsterRank, MonsterStatProfile, MonsterStatWeightMap } from './MonsterStats.js';
 
 /** 드롭 아이템 정보 */
 export interface DropInfo {
@@ -106,6 +107,10 @@ export interface MonsterData {
     level: number;
     exp: number;
     baseAttribute: Partial<AttributeRecord>;
+    /** 레벨 예산을 배분한 역할과 체급. 구형 수동 마스터는 점진 이전을 위해 선택 필드다. */
+    statProfile?: MonsterStatProfile;
+    statRank?: MonsterRank;
+    statWeights?: MonsterStatWeightMap;
     drops: DropInfo[];
     expReward: number;
     goldReward?: GoldReward;
@@ -606,6 +611,7 @@ export function defineMonster(data: MonsterData): void {
     monsterDataCache.set(data.id, {
         ...data,
         baseAttribute: { ...data.baseAttribute },
+        statWeights: data.statWeights ? { ...data.statWeights } : undefined,
         drops: data.drops.map(drop => ({ ...drop })),
         equipments: data.equipments.map(equipment => ({ ...equipment })),
         attack: data.attack ? {

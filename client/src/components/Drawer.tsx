@@ -20,6 +20,8 @@ interface Props {
     onOpenHudSettings: () => void
     onOpenGuide: () => void
     onOpenPatchNotes: () => void
+    onClearServerChat: () => void
+    onClearClientChat: () => void
     permission?: number
     onOpenAdmin: () => void
 }
@@ -28,7 +30,26 @@ function channelRoomKey(channel: string | null): string {
     return channel === null ? 'channel:main' : `channel:${channel}`
 }
 
-export default function Drawer({ open, onClose, nickname, profileImage, onProfileUpdate, onChangeNickname, userId, currentChannel, channelList, channelCounts, onJoinChannel, onOpenHudSettings, onOpenGuide, onOpenPatchNotes, permission = 0, onOpenAdmin }: Props) {
+export default function Drawer({
+    open,
+    onClose,
+    nickname,
+    profileImage,
+    onProfileUpdate,
+    onChangeNickname,
+    userId,
+    currentChannel,
+    channelList,
+    channelCounts,
+    onJoinChannel,
+    onOpenHudSettings,
+    onOpenGuide,
+    onOpenPatchNotes,
+    onClearServerChat,
+    onClearClientChat,
+    permission = 0,
+    onOpenAdmin,
+}: Props) {
     const [uploading, setUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [showChannels, setShowChannels] = useState(false)
@@ -203,6 +224,14 @@ export default function Drawer({ open, onClose, nickname, profileImage, onProfil
                     <button className={styles.uploadButton} onClick={onOpenPatchNotes}>
                         패치노트
                     </button>
+                    <button className={styles.uploadButton} onClick={onClearClientChat}>
+                        현재 화면 채팅 비우기
+                    </button>
+                    {(currentChannel === privateChannelId || permission >= 10) && (
+                        <button className={styles.uploadButton} onClick={onClearServerChat}>
+                            서버 채팅 기록 청소
+                        </button>
+                    )}
                     <div className={styles.displayActionRow}>
                         <button className={styles.uploadButton} onClick={toggleFullscreen}>
                             {fullscreen ? '전체화면 종료' : '전체화면'}

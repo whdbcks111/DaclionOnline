@@ -1,10 +1,19 @@
 import { registerCommand, getCommandListFiltered, setInformationModeForUser } from "../modules/bot.js";
-import { sendBotMessageToChannel, sendBotMessageToUser, broadcastMessageAll, getFlagsForPermission } from "../modules/message.js";
+import {
+    sendBotMessageToChannel,
+    sendBotMessageToUser,
+    broadcastMessageAll,
+    getFlagsForPermission,
+    sendNotificationToUser,
+    refreshChannelHistory,
+    clearClientChatView,
+} from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
 import { getUserChannel } from "../modules/channel.js";
 import { parseChatMessage } from "../utils/chatParser.js";
 import { getSessionByUserId } from "../modules/login.js";
 import { getPlayerByUserId } from "../modules/player.js";
+import { clearPrivateChannelHistory, clearPublicChannelHistory } from '../modules/channel.js';
 
 export function initGeneralCommands(): void {
     registerCommand({
@@ -97,6 +106,74 @@ export function initGeneralCommands(): void {
     });
 
     registerCommand({
+        name: '채팅청소',
+        aliases: ['chatclear'],
+        description: '개인 채널의 서버 기록을 비웁니다. 관리자는 일반 채널도 청소할 수 있습니다.',
+        showCommandUse: 'hide',
+        args: [{
+            name: '개수',
+            description: '최근부터 지울 메시지 수 또는 전체 (생략 시 전체)',
+            required: false,
+            completions: ['전체', '10', '20', '50'],
+        }],
+        handler(userId, args, _raw, _msg, permission) {
+            const count = parseChatClearCount(args[0]);
+            if (count === null) {
+                sendNotificationToUser(userId, {
+                    key: 'chat-clear-invalid-count',
+                    message: '청소할 개수는 1 이상의 정수 또는 전체로 입력해주세요.',
+                });
+                return;
+            }
+
+            const channel = getUserChannel(userId);
+            const isOwnPrivateChannel = channel === `private_${userId}`;
+            if (!isOwnPrivateChannel && permission < 10) {
+                sendNotificationToUser(userId, {
+                    key: 'chat-clear-private-only',
+                    message: '서버 채팅 청소는 본인의 개인 채널에서만 사용할 수 있습니다.',
+                });
+                return;
+            }
+
+            const result = isOwnPrivateChannel
+                ? clearPrivateChannelHistory(userId, count)
+                : clearPublicChannelHistory(channel, count);
+            refreshChannelHistory(channel);
+            sendNotificationToUser(userId, {
+                key: 'chat-clear-complete',
+                message: result.removed > 0
+                    ? `서버 채팅 기록 ${result.removed}개를 청소했습니다.`
+                    : '청소할 서버 채팅 기록이 없습니다.',
+            });
+        },
+    });
+
+    registerCommand({
+        name: '화면청소',
+        aliases: ['localclear'],
+        description: '서버 기록은 유지하고 현재 화면의 채팅만 비웁니다.',
+        showCommandUse: 'hide',
+        args: [{
+            name: '개수',
+            description: '최근부터 지울 메시지 수 또는 전체 (생략 시 전체)',
+            required: false,
+            completions: ['전체', '10', '20', '50'],
+        }],
+        handler(userId, args) {
+            const count = parseChatClearCount(args[0]);
+            if (count === null) {
+                sendNotificationToUser(userId, {
+                    key: 'chat-clear-invalid-count',
+                    message: '청소할 개수는 1 이상의 정수 또는 전체로 입력해주세요.',
+                });
+                return;
+            }
+            clearClientChatView(userId, count);
+        },
+    });
+
+    registerCommand({
         name: '랜덤',
         aliases: ['random'],
         description: '범위 내 랜덤한 정수를 뽑습니다.',
@@ -164,4 +241,10 @@ export function initGeneralCommands(): void {
             });
         },
     });
+}
+
+function parseChatClearCount(input?: string): number | null {
+    if (!input || input === '전체') return Number.POSITIVE_INFINITY;
+    const count = Number(input);
+    return Number.isInteger(count) && count >= 1 ? count : null;
 }

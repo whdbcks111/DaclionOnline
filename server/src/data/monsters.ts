@@ -5,14 +5,57 @@ import type { MonsterData } from '../models/Monster.js';
 import Entity from '../models/Entity.js';
 import { GameTags } from '../../../shared/tags.js';
 import { MonsterAiDisposition } from '../models/Threat.js';
+import {
+    calculateMonsterBaseAttributes,
+    inferMonsterStatProfile,
+    MonsterRank,
+    MonsterStatProfile,
+    type MonsterStatWeightMap,
+} from '../models/MonsterStats.js';
+import type { AttributeRecord } from '../models/Attribute.js';
 
-type WorldMonsterData = Omit<MonsterData, 'exp' | 'expReward' | 'equipments'>
-    & Partial<Pick<MonsterData, 'expReward' | 'equipments'>>;
+type WorldMonsterData = Omit<
+    MonsterData,
+    'exp' | 'expReward' | 'equipments' | 'baseAttribute' | 'statProfile' | 'statRank' | 'statWeights'
+> & Partial<Pick<MonsterData, 'expReward' | 'equipments'>>
+    & {
+        /** 미이전 마스터의 실전 수치를 보존하는 호환 입력. */
+        baseAttribute?: Partial<AttributeRecord>;
+        statProfile?: MonsterStatProfile;
+        statRank?: MonsterRank;
+        statWeights?: MonsterStatWeightMap;
+        statOverrides?: Partial<AttributeRecord>;
+    };
 
 /** 동급 몬스터 한 마리의 기준 보상은 level * 20 EXP다. */
 function defineWorldMonster(data: WorldMonsterData): void {
+    const {
+        baseAttribute: authoredAttributes = {},
+        statProfile: explicitProfile,
+        statRank: explicitRank,
+        statWeights,
+        statOverrides,
+        ...definition
+    } = data;
+    const statProfile = explicitProfile
+        ?? inferMonsterStatProfile(authoredAttributes, data.attack?.damageType);
+    const statRank = explicitRank
+        ?? (data.tags.includes(GameTags.ENTITY_BOSS) ? MonsterRank.BOSS : MonsterRank.NORMAL);
+    // 명시 프로필로 이전된 마스터만 계산값 전체를 사용한다. 나머지는 기존 전투력을
+    // 바꾸지 않되 역할/체급 메타데이터를 등록해 구간별 이전이 가능하게 유지한다.
+    const calculatedAttributes = calculateMonsterBaseAttributes({
+        level: data.level,
+        profile: statProfile,
+        rank: statRank,
+        weights: statWeights,
+        overrides: { ...authoredAttributes, ...statOverrides },
+    });
     defineMonster({
-        ...data,
+        ...definition,
+        baseAttribute: explicitProfile ? calculatedAttributes : authoredAttributes,
+        statProfile,
+        statRank,
+        statWeights,
         ai: data.ai ?? (data.tags.includes(GameTags.ENTITY_SLIME) ? {
             intelligence: 5,
             disposition: MonsterAiDisposition.LAST_ATTACKER,
@@ -31,7 +74,8 @@ defineWorldMonster({
     name: '슬라임',
     description: '물기와 독성을 함께 머금은 가장 기초적인 슬라임.',
     level: 1,
-    baseAttribute: { maxLife: 30, atk: 8, def: 1, speed: 0.7 },
+    statProfile: MonsterStatProfile.BRUISER,
+    statOverrides: { speed: 0.7 },
     drops: [{ itemDataId: 'health_potion', minCount: 1, maxCount: 1, chance: 0.18 }],
     goldReward: { min: 1, max: 4 },
     tags: [GameTags.ENTITY_SLIME, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_WATER, GameTags.PROPERTY_POISON],
@@ -42,7 +86,9 @@ defineWorldMonster({
     name: '풀잎 슬라임',
     description: '초원의 식생을 흡수해 자연의 기운을 띠는 슬라임.',
     level: 4,
-    baseAttribute: { maxLife: 70, atk: 15, def: 3, magicDef: 2, speed: 0.9 },
+    statProfile: MonsterStatProfile.BRUISER,
+    statWeights: { maxLife: 0.76, def: 0.75 },
+    statOverrides: { magicDef: 2, speed: 0.9 },
     drops: [{ itemDataId: 'health_potion', minCount: 1, maxCount: 1, chance: 0.22 }],
     goldReward: { min: 4, max: 10 },
     tags: [GameTags.ENTITY_SLIME, GameTags.TRAIT_INANIMATE, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_POISON],
@@ -53,7 +99,9 @@ defineWorldMonster({
     name: '동굴 슬라임',
     description: '어두운 갱도에 적응해 단단한 표면을 가진 슬라임.',
     level: 6,
-    baseAttribute: { maxLife: 105, atk: 20, def: 7, speed: 0.75 },
+    statProfile: MonsterStatProfile.BRUISER,
+    statWeights: { maxLife: 0.79, def: 1.13 },
+    statOverrides: { speed: 0.75 },
     drops: [
         { itemDataId: 'coal', minCount: 1, maxCount: 2, chance: 0.2 },
         { itemDataId: 'mana_potion', minCount: 1, maxCount: 1, chance: 0.12 },
@@ -67,7 +115,9 @@ defineWorldMonster({
     name: '퍼플 슬라임',
     description: '맹독을 농축해 마법 공격에 실어 보내는 보랏빛 슬라임.',
     level: 8,
-    baseAttribute: { maxLife: 135, atk: 24, magicForce: 22, def: 6, magicDef: 8, speed: 1 },
+    statProfile: MonsterStatProfile.HYBRID,
+    statWeights: { maxLife: 0.97, atk: 1.11, def: 0.87 },
+    statOverrides: { magicForce: 22, magicDef: 8, speed: 1 },
     drops: [{ itemDataId: 'mana_potion', minCount: 1, maxCount: 1, chance: 0.25 }],
     goldReward: { min: 8, max: 18 },
     attack: {
@@ -82,7 +132,9 @@ defineWorldMonster({
     name: '샘물 슬라임',
     description: '맑은 샘물을 머금어 마법 저항이 높은 슬라임.',
     level: 11,
-    baseAttribute: { maxLife: 180, atk: 29, magicForce: 30, def: 9, magicDef: 14, speed: 1.2 },
+    statProfile: MonsterStatProfile.HYBRID,
+    statWeights: { maxLife: 0.98, atk: 1.05 },
+    statOverrides: { magicForce: 30, def: 9, magicDef: 14, speed: 1.2 },
     drops: [
         { itemDataId: 'health_potion', minCount: 1, maxCount: 2, chance: 0.2 },
         { itemDataId: 'mana_potion', minCount: 1, maxCount: 2, chance: 0.2 },
@@ -97,7 +149,9 @@ defineWorldMonster({
     name: '갱도 암석지기',
     description: '갱도의 암석이 뭉쳐 움직이는 느리고 단단한 수호체.',
     level: 12,
-    baseAttribute: { maxLife: 260, atk: 38, def: 22, magicDef: 6, speed: 0.55 },
+    statProfile: MonsterStatProfile.TANK,
+    statWeights: { maxLife: 0.87, atk: 1.25, def: 1.24, magicDef: 0.4 },
+    statOverrides: { speed: 0.55 },
     drops: [
         { itemDataId: 'stone', minCount: 2, maxCount: 4, chance: 0.7 },
         { itemDataId: 'old_shield', minCount: 1, maxCount: 1, chance: 0.05 },

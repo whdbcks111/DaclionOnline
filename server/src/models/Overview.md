@@ -4,6 +4,8 @@
 
 서버가 권위를 갖는 게임 상태와 규칙을 표현한다.
 
+`MonsterStats`의 클래스형 `MonsterStatProfile/MonsterRank`와 `calculateMonsterBaseAttributes()`는 레벨 성장 예산을 역할·체급에 배분한 뒤 몬스터 고유 weight와 최종 override를 적용한다. 기존 수동 마스터는 실전 수치를 보존한 채 역할/체급 메타데이터를 먼저 등록하고 권역별로 계산형 정의로 점진 이전한다. `Entity.getMaxExpOfLevel()`은 Lv.200까지 기존 곡선을 유지하고 이후 1.5제곱 후반 배율로 Lv.380 동급 일반 몬스터 100마리 수준까지 요구량을 높인다.
+
 `AttackOptions.effectTags`는 그림자 추격처럼 투사체가 없는 속성 기술이 한 번의 직접 공격에만 사용할 상성 공격원 태그를 전달한다. 값이 없으면 Entity 본체의 공격원 태그를 사용하며 장착 장비의 속성은 섞지 않는다.
 
 `Monster.getRespawnDisplaySnapshot()`은 일회성 소환을 제외한 보스의 기본 리젠 주기와 처치 후 남은 시간을 반환하며 위치 UI가 5분 초과 대상을 선별할 수 있게 한다.

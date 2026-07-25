@@ -536,6 +536,7 @@ export interface ServerToClientEvents {
     nicknameResult: (result: SimpleResult & { nickname?: string }) => void
     editMessage: (id: string, content: ChatMessage['content']) => void
     deleteMessage: (id: string) => void
+    clearChatView: (count?: number) => void
     adminLocations: (data: LocationData[]) => void
     adminSaveResult: (result: SimpleResult) => void
     adminPanelBootstrap: (data: AdminPanelBootstrapData) => void

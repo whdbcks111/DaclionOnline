@@ -1,7 +1,17 @@
 import { getIO } from "./socket.js";
 import { getSession, getSessionByUserId } from "./login.js";
 import { parseChatMessage } from "../utils/chatParser.js";
-import { getChannelRoomKey, addToChannelHistory, addToAllChannelHistories, addToFilteredChannelHistory, getUserChannel, editMessageInHistory, deleteMessageFromHistory } from "./channel.js";
+import {
+    getChannelRoomKey,
+    addToChannelHistory,
+    addToAllChannelHistories,
+    addToFilteredChannelHistory,
+    getUserChannel,
+    editMessageInHistory,
+    deleteMessageFromHistory,
+    getChannelHistory,
+    getFilteredHistoryForUser,
+} from "./channel.js";
 import type { ChatMessage, ChatFlag, ChatNode, NotificationData } from "../../../shared/types.js";
 import { ChatType, CHAT_WHISPER_DISPLAY } from '../../../shared/chat.js';
 import { shouldPublishInformationOutput } from './informationVisibility.js';
@@ -285,6 +295,30 @@ export function sendNotificationToUser(userId: number, data: NotificationData): 
 export function sendNotificationToUsers(userIds: readonly number[], data: NotificationData): void {
     const recipients = new Set(userIds);
     if (recipients.size > 0) sendNotificationFiltered(userId => recipients.has(userId), data);
+}
+
+/** 채널 기록 변경 뒤 각 사용자의 공개·필터 기록을 다시 합쳐 현재 화면을 동기화한다. */
+export function refreshChannelHistory(channel: string | null): void {
+    forEachSocket(
+        userId => getUserChannel(userId) === channel,
+        socket => {
+            const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            if (!session) return;
+            const history = [
+                ...getChannelHistory(channel),
+                ...getFilteredHistoryForUser(session.userId, channel),
+            ].sort((left, right) => left.timestamp - right.timestamp);
+            socket.emit('chatHistory', history);
+        },
+    );
+}
+
+/** 서버 히스토리를 유지한 채 지정 사용자의 현재 클라이언트 화면에서 최근 메시지를 비운다. */
+export function clearClientChatView(userId: number, count = Number.POSITIVE_INFINITY): void {
+    forEachSocket(
+        candidateUserId => candidateUserId === userId,
+        socket => socket.emit('clearChatView', Number.isFinite(count) ? count : undefined),
+    );
 }
 
 // ── 메시지 편집 / 삭제 ──

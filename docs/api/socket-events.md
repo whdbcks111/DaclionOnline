@@ -64,6 +64,7 @@
 | `nicknameResult` | `SimpleResult & { nickname? }` | `modules/login.ts` | `SocketContext.tsx`, `pages/Home.tsx` |
 | `editMessage` | `(id, content)` | `modules/message.ts` | `pages/Home.tsx` |
 | `deleteMessage` | `id: string` | `modules/message.ts` | `pages/Home.tsx` |
+| `clearChatView` | `count?: number` | `modules/message.ts` | `pages/Home.tsx`; 생략 시 현재 화면 전체, 숫자면 최근 메시지만 제거하며 서버 기록은 유지 |
 | `adminLocations` | 태그·통합 `objects`·`npcIds`·선택 `mapIcon/mapColor` 포함 `LocationData[]` | `modules/location.ts` | `pages/LocationEditor.tsx` |
 | `adminSaveResult` | `SimpleResult` | `modules/location.ts` | `pages/LocationEditor.tsx` |
 | `adminPanelBootstrap` | `AdminPanelBootstrapData` | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
@@ -87,6 +88,7 @@
 - `sendWhisperMessage()`는 발신자와 수신자의 서로 다른 현재 채널에 필터 메시지를 각각 저장·전송하며 공개 히스토리에는 넣지 않는다.
 - `broadcastMessageAll()`은 모든 채널 히스토리와 모든 소켓에 전송하며 `[전체]` 플래그를 붙인다.
 - 한 사용자의 여러 소켓은 채널 변경 시 함께 room을 이동하지만 `channelChanged` 응답은 요청한 소켓에 전송된다.
+- 서버 채널 청소 뒤에는 해당 채널 소켓마다 공개·사용자별 필터 히스토리를 다시 합친 `chatHistory`를 보내고, 화면 전용 청소는 `clearChatView`만 보내 서버 히스토리를 변경하지 않는다.
 
 ## 계약 변경 체크리스트
 

@@ -277,7 +277,14 @@ export default abstract class Entity implements TagReadable {
         // Lv.1의 1배에서 Lv.50의 4배까지 레벨당 요구량 배율을 늘린다.
         // 동급 몬스터 기준 보상(level * 20)은 Lv.1에서 20%, Lv.50에서 5%가 된다.
         const growthMultiplier = 1 + 3 * Math.min(49, normalizedLevel - 1) / 49;
-        return Math.max(1, Math.round(normalizedLevel * 100 * growthMultiplier));
+        const earlyRequirement = normalizedLevel * 100 * growthMultiplier;
+        if (normalizedLevel <= 200) return Math.max(1, Math.round(earlyRequirement));
+
+        // Lv.200까지의 체감을 보존하고 이후부터 점진적으로 사냥 횟수를 늘린다.
+        // 동레벨 일반 몬스터 기준 Lv.200은 20마리, Lv.380은 100마리가 필요하다.
+        const lateProgress = (normalizedLevel - 200) / 180;
+        const lateMultiplier = 1 + 4 * lateProgress ** 1.5;
+        return Math.max(1, Math.round(earlyRequirement * lateMultiplier));
     }
 
     /** 생산·생활 콘텐츠가 동레벨 일반 몬스터 사냥 보상과 같은 기준을 재사용하는 공개 API. */
