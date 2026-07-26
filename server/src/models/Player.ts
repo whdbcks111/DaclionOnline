@@ -54,17 +54,27 @@ export const NEWCOMER_PLAY_TIME_SECONDS = 24 * 60 * 60;
 export const NEWCOMER_MAX_LEVEL = 30;
 
 export const PlayerRuntimeProgressIds = Object.freeze({
-    /** 사망 패널티 적용 완료 여부와 오프라인 동안 정지할 남은 부활 시간을 함께 나타낸다. */
+    /** 사망 패널티 적용 완료 여부와 실제 시간 기준 부활 만료 시각을 함께 나타낸다. */
+    DEATH_EXPIRES_AT: 'runtime:death_expires_at_ms',
+    /** 절대 만료 시각 도입 전 저장된 남은 시간. 읽은 뒤 DEATH_EXPIRES_AT으로 이전한다. */
     DEATH_REMAINING: 'runtime:death_remaining_seconds',
     /** User가 아니라 생성된 Player에 귀속되는 누적 온라인 플레이 시간. */
     PLAY_TIME_SECONDS: 'player:play_time_seconds',
 });
 
 defineProgress({
+    id: PlayerRuntimeProgressIds.DEATH_EXPIRES_AT,
+    type: ProgressType.STATE,
+    label: '부활 대기 만료 시각',
+    description: '로그아웃 중에도 흐르는 부활 대기시간과 사망 패널티 처리 여부를 복원하는 내부 상태입니다.',
+    visible: false,
+});
+
+defineProgress({
     id: PlayerRuntimeProgressIds.DEATH_REMAINING,
     type: ProgressType.STATE,
-    label: '남은 부활 대기시간',
-    description: '재접속 시 사망 처리를 반복하지 않고 남은 부활 대기시간을 복원하는 내부 상태입니다.',
+    label: '구버전 남은 부활 대기시간',
+    description: '절대 만료 시각으로 이전하기 위한 구버전 호환 내부 상태입니다.',
     visible: false,
 });
 
@@ -229,6 +239,7 @@ export default class Player extends Entity {
     private _craftingDiscoveryTimer = 0;
     private _unsavedPlayTime = 0;
     private _pendingDeathPenaltyProtectedExp = 0;
+    private _deathExpiresAtMs = 0;
     private _savePromise: Promise<void> | null = null;
     private _saveRequested = false;
 
@@ -549,6 +560,7 @@ export default class Player extends Entity {
     override onDeath(): void {
         super.onDeath();
         cancelNavigation(this, false);
+        this._deathExpiresAtMs = Date.now() + this.deathTimer * 1_000;
         this.persistDeathState();
         const location = getLocation(this.locationId);
         const killer = this.lastDamageCause?.causeEntity?.attackOwner;
@@ -634,12 +646,18 @@ export default class Player extends Entity {
     }
 
     override respawn(): void {
+        this.completeRespawn(true);
+    }
+
+    private completeRespawn(notify: boolean): void {
         super.respawn();
+        this._deathExpiresAtMs = 0;
+        this.progress.reset(PlayerRuntimeProgressIds.DEATH_EXPIRES_AT);
         this.progress.reset(PlayerRuntimeProgressIds.DEATH_REMAINING);
         recordPvpRespawn(this);
         const respawnLoc = getRespawnLocation();
         if (respawnLoc) this.locationId = respawnLoc.id;
-        sendBotMessageToUser(this.userId, '리스폰했습니다.');
+        if (notify) sendBotMessageToUser(this.userId, '리스폰했습니다.');
     }
 
     // -- 게임 로직 --
@@ -877,7 +895,7 @@ export default class Player extends Entity {
             this._unsavedPlayTime -= elapsedSeconds;
             this.progress.increment(PlayerRuntimeProgressIds.PLAY_TIME_SECONDS, elapsedSeconds);
         }
-        // 오프라인 동안 카운트하지 않을 정확한 잔여 시간을 unload/주기 저장 시점에 스냅샷한다.
+        // 실제 시각 기반 만료점을 저장해 로그아웃 중에도 부활 대기시간이 흐르게 한다.
         if (this.isDead) this.persistDeathState();
         if (this._dirty || this.stat.dirty || this.equipment.dirty || this.skills.dirty || this.rankingVisibility.dirty) {
             const karma = this.karmaState.snapshot();
@@ -930,33 +948,54 @@ export default class Player extends Entity {
     }
 
     /** DB에서 life=0을 읽은 뒤 이미 처리된 사망이라면 onDeath를 다시 호출하지 않도록 런타임 상태를 복원한다. */
-    restorePersistedDeathState(): boolean {
-        const stored = this.progress.getState(PlayerRuntimeProgressIds.DEATH_REMAINING);
-        const parsedRemaining = Number(stored);
+    restorePersistedDeathState(now: Date | number = Date.now()): boolean {
+        const nowMs = now instanceof Date ? now.getTime() : now;
+        const storedDeadline = this.progress.getState(PlayerRuntimeProgressIds.DEATH_EXPIRES_AT);
+        const legacyRemaining = this.progress.getState(PlayerRuntimeProgressIds.DEATH_REMAINING);
         if (this.life > 0) {
-            if (stored) this.progress.reset(PlayerRuntimeProgressIds.DEATH_REMAINING);
+            this._deathExpiresAtMs = 0;
+            if (storedDeadline) this.progress.reset(PlayerRuntimeProgressIds.DEATH_EXPIRES_AT);
+            if (legacyRemaining) this.progress.reset(PlayerRuntimeProgressIds.DEATH_REMAINING);
             return false;
         }
         // 구버전 저장에는 death state가 없으므로 life=0 자체를 이미 처리된 사망으로 간주한다.
         // 이 편이 재접속 시 패널티를 중복 부과하는 것보다 안전하다.
-        const remaining = stored && Number.isFinite(parsedRemaining) && parsedRemaining > 0
-            ? parsedRemaining
-            : this.deathDuration;
+        const parsedDeadline = Number(storedDeadline);
+        const parsedLegacyRemaining = Number(legacyRemaining);
+        this._deathExpiresAtMs = storedDeadline && Number.isFinite(parsedDeadline) && parsedDeadline > 0
+            ? parsedDeadline
+            : nowMs + (
+                legacyRemaining && Number.isFinite(parsedLegacyRemaining) && parsedLegacyRemaining > 0
+                    ? parsedLegacyRemaining
+                    : this.deathDuration
+            ) * 1_000;
+        const remaining = Math.max(0, (this._deathExpiresAtMs - nowMs) / 1_000);
+        if (remaining <= 0) {
+            this.completeRespawn(false);
+            return false;
+        }
         this.isDead = true;
         this.deathTimer = remaining;
         this._deathNotifTimer = 0;
-        this.persistDeathState();
+        this.persistDeathState(nowMs);
         return true;
     }
 
-    private persistDeathState(): void {
+    private persistDeathState(now: Date | number = Date.now()): void {
         if (!this.isDead || !Number.isFinite(this.deathTimer) || this.deathTimer <= 0) {
+            this._deathExpiresAtMs = 0;
+            this.progress.reset(PlayerRuntimeProgressIds.DEATH_EXPIRES_AT);
             this.progress.reset(PlayerRuntimeProgressIds.DEATH_REMAINING);
             return;
         }
+        const nowMs = now instanceof Date ? now.getTime() : now;
+        if (!Number.isFinite(this._deathExpiresAtMs) || this._deathExpiresAtMs <= 0) {
+            this._deathExpiresAtMs = nowMs + this.deathTimer * 1_000;
+        }
         this.progress.setState(
-            PlayerRuntimeProgressIds.DEATH_REMAINING,
-            Math.max(0.001, this.deathTimer).toFixed(3),
+            PlayerRuntimeProgressIds.DEATH_EXPIRES_AT,
+            Math.max(1, Math.round(this._deathExpiresAtMs)).toString(),
         );
+        this.progress.reset(PlayerRuntimeProgressIds.DEATH_REMAINING);
     }
 }
