@@ -120,7 +120,7 @@ export default class CareerProfile {
         return { success: true };
     }
 
-    evaluateElitePromotion(): boolean {
+    evaluateElitePromotion(options: { persist?: boolean } = {}): boolean {
         if (this.player.level < 200 || !this.mainJobId || !this.subJobId || this.eliteJobId) return false;
         if (this.mainJobId === this.subJobId) return false;
         const elite = resolveEliteJob(this.mainJobId, this.subJobId);
@@ -133,14 +133,18 @@ export default class CareerProfile {
             actor: this.player,
             data: { mainJobId: this.mainJobId, subJobId: this.subJobId, eliteJobId: elite.id },
         });
-        void this.player.save();
+        if (options.persist !== false) void this.player.save();
         return true;
     }
 
-    initialize(): void {
+    /**
+     * 저장 데이터 복원 중에는 Player 생성이 끝나기 전 save를 시작하지 않는다.
+     * 신규 엘리트 전직 여부를 호출자에게 돌려주면 Player가 모든 영속 필드를 초기화한 뒤 저장한다.
+     */
+    initialize(): boolean {
         for (const job of [this.mainJob, this.subJob, this.eliteJob]) if (job) this.grantSkills(job.id, 'career:restore');
         this.refreshModifiers();
-        this.evaluateElitePromotion();
+        return this.evaluateElitePromotion({ persist: false });
     }
 
     refreshModifiers(): void {

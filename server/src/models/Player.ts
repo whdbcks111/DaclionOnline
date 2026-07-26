@@ -265,7 +265,6 @@ export default class Player extends Entity {
         this.quests = quests;
         this.quests.bindOwner(this);
         this.career = new CareerProfile(this);
-        this.career.initialize();
         this.titles = new TitleBook(this);
         this.inventory.subscribeChanges(() => this.quests.refreshSnapshotObjectives());
         this.progress.subscribeChanges(() => this.quests.refreshSnapshotObjectives());
@@ -275,14 +274,17 @@ export default class Player extends Entity {
         this.rankingVisibility = new RankingVisibility(rankingVisibility);
         if (!isCompleteRankingMetricRecord(rankingMetrics)) this._dirty = true;
 
-        // inventory에 계산된 maxWeight 동기화
-        this.inventory.maxWeight = this.attribute.get(AttributeType.MAX_WEIGHT);
-
         if (life      !== undefined) this._life      = life;
         if (mentality !== undefined) this._mentality = mentality;
         if (thirsty   !== undefined) this._thirsty   = thirsty;
         if (hungry    !== undefined) this._hungry    = hungry;
         this.restorePersistedDeathState();
+
+        // 모든 영속 상태 복원이 끝난 뒤 직업을 초기화한다. Lv.200 자동 전직이
+        // 생성자 중간에서 save를 시작해 아직 없는 karma/ranking 상태를 읽어서는 안 된다.
+        const promotedDuringLoad = this.career.initialize();
+        this.inventory.maxWeight = this.attribute.get(AttributeType.MAX_WEIGHT);
+        if (promotedDuringLoad) void this.save();
     }
 
     override get name() { return this._nickname; }

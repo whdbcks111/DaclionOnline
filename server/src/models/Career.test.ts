@@ -19,21 +19,27 @@ import { GameEventIds } from './GameEvent.js';
 initSocket(createServer(), 'http://localhost');
 test.after(() => { getIO().close(); });
 
-function createCareer(level = 200): { career: CareerProfile; player: Player; granted: string[] } {
+function createCareer(level = 200): {
+    career: CareerProfile;
+    player: Player;
+    granted: string[];
+    getSaveCount: () => number;
+} {
     const progress = PlayerProgress.createEmpty(901);
     const granted: string[] = [];
+    let saveCount = 0;
     const player = {
         userId: 901,
         level,
         progress,
         attribute: new Attribute(),
         skills: { grant: (id: string) => { granted.push(id); return { acquired: true }; } },
-        save: async () => undefined,
+        save: async () => { saveCount++; },
     } as unknown as Player;
     Object.assign(player, { attackOwner: player, name: '직업 시험 플레이어', playerUserId: 901 });
     const career = new CareerProfile(player);
     Object.assign(player, { career });
-    return { career, player, granted };
+    return { career, player, granted, getSaveCount: () => saveCount };
 }
 
 test('5개 1차 직업은 최소 3개 스킬을 지급하고 서로 다른 20개 순서 조합이 엘리트 직업을 가진다', () => {
@@ -170,6 +176,18 @@ test('Lv.200에는 서로 다른 메인·서브 순서 조합으로 엘리트 �
     assert.equal(career.evaluateElitePromotion(), true);
     assert.equal(career.eliteJobId, 'career:spellblade');
     assert.equal(career.evaluateElitePromotion(), false);
+});
+
+test('플레이어 로드 중 엘리트 전직 복원은 생성자 중간 저장을 시작하지 않는다', async () => {
+    const { career, player, getSaveCount } = createCareer(200);
+    player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+    player.progress.setState(CareerProgressIds.SUB, 'career:mage');
+
+    assert.equal(career.initialize(), true);
+    await Promise.resolve();
+
+    assert.equal(career.eliteJobId, 'career:spellblade');
+    assert.equal(getSaveCount(), 0);
 });
 
 test('관리자 직업 설정도 같은 이중 직업을 막고 유효한 조합을 즉시 적용한다', () => {

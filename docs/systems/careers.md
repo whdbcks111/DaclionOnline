@@ -13,7 +13,7 @@
 
 ## 영속성과 계보
 
-메인·서브·엘리트 ID는 `career:main_job`, `career:sub_job`, `career:elite_job` Progress STATE로 저장한다. 변경은 메모리 dirty 상태로 남고 기존 30초/unload/종료 flush를 사용한다. 퀘스트 보고와 엘리트 전직은 중요한 변경이므로 `Player.save()`도 요청한다. 별도 Prisma migration은 없다.
+메인·서브·엘리트 ID는 `career:main_job`, `career:sub_job`, `career:elite_job` Progress STATE로 저장한다. 변경은 메모리 dirty 상태로 남고 기존 30초/unload/종료 flush를 사용한다. 퀘스트 보고와 엘리트 전직은 중요한 변경이므로 `Player.save()`도 요청한다. 단, 로그인 복원 중 `CareerProfile.initialize()`는 생성자 중간에서 저장을 시작하지 않고 신규 엘리트 전직 여부만 반환한다. Player가 카르마·순위·생존 자원까지 모두 복원한 뒤 저장해 초기화되지 않은 필드 접근과 잘못된 값 저장을 막는다. 별도 Prisma migration은 없다.
 
 엘리트 전직 뒤에도 원래 메인 ID와 서브 ID를 보존한다. `CareerProfile.hasJob(jobId, slot?)`은 엘리트의 `parentJobIds`를 따라 원래 메인 계보를 호환하므로, 마검사는 전사 메인 스킬과 마법사 서브 스킬을 계속 표시·사용할 수 있다. 스킬은 박탈하지 않고 `SkillData.jobRequirement`와 `isVisible/checkUsable`에서 표시·사용만 제어한다.
 
