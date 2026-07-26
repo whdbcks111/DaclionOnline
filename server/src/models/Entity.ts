@@ -127,6 +127,7 @@ export interface StatusEffectDisplaySnapshot {
 }
 
 export interface CombatTargetDisplaySnapshot {
+    icon?: string;
     name: string;
     level: number;
     life: number;
@@ -143,6 +144,9 @@ export interface CombatTargetDisplaySnapshot {
 export default abstract class Entity implements TagReadable {
     readonly attribute: Attribute;
     readonly equipment: Equipment;
+
+    /** HUD가 엔티티 구현 종류를 검사하지 않고 사용할 수 있는 선택적 표시 아이콘. */
+    getDisplayIcon(): string | undefined { return undefined; }
     readonly stat: Stat;
     readonly tags: TagCollection;
     private readonly statusEffects = new Map<string, StatusEffect>();
@@ -321,6 +325,7 @@ export default abstract class Entity implements TagReadable {
         const target = this.getCurrentTarget();
         if (!target) return null;
         return {
+            ...(target.getDisplayIcon() ? { icon: target.getDisplayIcon() } : {}),
             name: target.name,
             level: target.level,
             life: target.life,
@@ -978,6 +983,19 @@ export default abstract class Entity implements TagReadable {
         });
         combat.result = damageResult;
         runCombatStage(CombatStage.AFTER_DAMAGE, combat);
+        if (damageResult.finalDamage > 0) {
+            const offHand = target.equipment.getEquipped(EquipSlotType.OFF_HAND.key);
+            try {
+                offHand?.data?.onDamageTaken?.({
+                    attacker: this,
+                    target,
+                    item: offHand,
+                    result: damageResult,
+                });
+            } catch (error) {
+                logger.error(`아이템 피격 효과 실패: ${offHand?.itemDataId ?? 'unknown'}`, error);
+            }
+        }
         if (critical) {
             emitGameEvent(GameEventIds.CRITICAL_HIT, {
                 actor: this,

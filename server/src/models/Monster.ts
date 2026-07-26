@@ -104,6 +104,8 @@ export interface MonsterData {
     id: string;
     name: string;
     description: string;
+    /** /icons 아래 확장자 없는 표시 key. 생략하면 monsters/{id}. */
+    icon?: string;
     level: number;
     exp: number;
     baseAttribute: Partial<AttributeRecord>;
@@ -127,6 +129,7 @@ export interface MonsterData {
 /** `/몬스터정보`가 런타임 Monster 내부 상태를 직접 참조하지 않고 사용하는 스냅샷. */
 export interface MonsterInspectionSnapshot {
     readonly monsterDataId: string;
+    readonly icon: string;
     readonly name: string;
     readonly description: string;
     readonly level: number;
@@ -178,6 +181,7 @@ export default class Monster extends Entity {
 
     override get deathDuration(): number { return this.respawnTime; }
     get isChallengePatternActive(): boolean { return this.challengeActive; }
+    override getDisplayIcon(): string { return getMonsterData(this.monsterDataId)?.icon ?? `monsters/${this.monsterDataId}`; }
 
     /** 위치 UI가 장기 리젠 보스만 가공해 표시하도록 반환하는 공개 스냅샷. */
     getRespawnDisplaySnapshot(): MonsterRespawnDisplaySnapshot | undefined {
@@ -299,6 +303,7 @@ export default class Monster extends Entity {
             : { ...this.goldReward };
         return {
             monsterDataId: this.monsterDataId,
+            icon: this.getDisplayIcon(),
             name: this.name,
             description: data.description,
             level: this.level,

@@ -103,14 +103,25 @@ export interface ItemData {
     tags: TagId[];
     /** 실제 modifier/onUse 데이터로 계산할 밸런스 리포트의 분류 정보. */
     balance?: ItemBalanceProfile;
+    /** 감정 화면에 내부 handler 이름 없이 그대로 노출할 가공된 고유 효과 설명. */
+    gameplayEffects?: readonly string[];
     /** 직접 공격이 회피되지 않고 피해를 준 뒤 실행되는 무기별 후처리. */
     onBasicAttackHit?: (context: ItemBasicAttackHitContext) => void;
+    /** 직접 공격 피해를 받은 뒤 보조 장비가 실행하는 방어 후처리. */
+    onDamageTaken?: (context: ItemDamageTakenContext) => void;
 }
 
 export interface ItemBasicAttackHitContext {
     attacker: Entity;
     target: Entity;
     weapon: Item;
+    result: DamageResult;
+}
+
+export interface ItemDamageTakenContext {
+    attacker: Entity;
+    target: Entity;
+    item: Item;
     result: DamageResult;
 }
 

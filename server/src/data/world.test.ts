@@ -174,6 +174,39 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     );
 });
 
+test('모든 몬스터는 고유한 64px 투명 아이콘을 제공한다', () => {
+    const monsters = getAllMonsterData();
+    const icons = new Set<string>();
+
+    assert.equal(monsters.length, 158);
+    for (const monster of monsters) {
+        const icon = monster.icon ?? `monsters/${monster.id}`;
+        assert.equal(icon, `monsters/${monster.id}`);
+        assert.equal(icons.has(icon), false, icon);
+        icons.add(icon);
+
+        const png = readFileSync(new URL(`../../../client/public/icons/${icon}.png`, import.meta.url));
+        assert.equal(png.readUInt32BE(16), 64, icon);
+        assert.equal(png.readUInt32BE(20), 64, icon);
+        assert.equal(png[25], 6, `${icon} must be RGBA`);
+    }
+});
+
+test('Lv.380 이후 역할 장비는 감정 가능한 고유 전투 효과를 제공한다', () => {
+    const ids = [
+        'nebula_edge', 'gravity_arc_bow', 'orbit_fang', 'starwell_staff', 'meteor_bulwark',
+        'chronoblade', 'pendulum_bow', 'yesterglass_dagger', 'zero_hour_staff', 'aeon_bulwark',
+        'endstar_edge', 'constellation_bow', 'entropy_fang', 'genesis_staff', 'horizon_bulwark',
+    ];
+
+    for (const id of ids) {
+        const item = getItemData(id);
+        assert.ok(item, id);
+        assert.ok(item.gameplayEffects?.length, `${id} gameplay effect`);
+        assert.ok(item.onBasicAttackHit || item.onDamageTaken, `${id} gameplay callback`);
+    }
+});
+
 test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공유한다', () => {
     const regions = [
         ['field', 'meadow_2', 'meadow_3'],

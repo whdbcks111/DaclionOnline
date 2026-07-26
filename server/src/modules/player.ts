@@ -199,7 +199,9 @@ export function sendLocationInfo(userId: number): void {
             const respawn = object instanceof Monster
                 ? object.getRespawnDisplaySnapshot()
                 : undefined;
+            const icon = object.getDisplayIcon();
             return {
+                ...(icon ? { icon } : {}),
                 name: object.name,
                 level: object.level,
                 life: object.life,

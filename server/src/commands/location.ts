@@ -357,8 +357,10 @@ export function initLocationCommands(): void {
                 for (let index = 0; index < objects.length; index++) {
                     const object = objects[index];
                     b.text(`${index + 1}. `)
-                     .text(`Lv.${object.level}`)
-                     .text(` ${object.name} `);
+                     .text(`Lv.${object.level} `);
+                    const icon = object.getDisplayIcon();
+                    if (icon) b.icon(icon).text(' ');
+                    b.text(`${object.name} `);
                     const respawn = object instanceof Monster
                         ? object.getRespawnDisplaySnapshot()
                         : undefined;

@@ -43,6 +43,7 @@ export function validateMasterData(options: MasterDataValidationOptions = {}): M
         for (const grant of job.grantedSkills) if (!getSkillData(grant.skillDataId)) issue('job', job.id, `지급 스킬이 없습니다: ${grant.skillDataId}`);
     }
     for (const monster of getAllMonsterData()) {
+        icon('monster', monster.id, monster.icon ?? `monsters/${monster.id}`);
         for (const drop of monster.drops) if (!getItemData(drop.itemDataId)) issue('monster', monster.id, `드롭 아이템이 없습니다: ${drop.itemDataId}`);
         for (const equipment of monster.equipments) if (!getItemData(equipment.itemDataId)) issue('monster', monster.id, `장비 아이템이 없습니다: ${equipment.itemDataId}`);
         for (const skill of monster.skills ?? []) if (!getSkillData(skill.skillDataId)) issue('monster', monster.id, `스킬이 없습니다: ${skill.skillDataId}`);

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import { AttributeType } from './Attribute.js';
+import { defineItem, Item, type ItemData } from './Item.js';
 import Stat, {
     calculateMentalityRegenBonus,
     calculateSensibilityCritRateBonus,
@@ -41,6 +42,28 @@ class CombatEntity extends Entity {
         }, Equipment.createEmpty(), undefined, tags);
         this.name = name;
     }
+}
+
+function defensiveTestItemData(
+    id: string,
+    onDamageTaken: NonNullable<ItemData['onDamageTaken']>,
+): ItemData {
+    return {
+        id,
+        name: id,
+        description: '',
+        category: '방패',
+        weight: 0,
+        stackable: false,
+        maxStack: 1,
+        baseMetadata: null,
+        onUse: null,
+        equipSlot: 'offHand',
+        modifiers: null,
+        baseDurability: null,
+        tags: [],
+        onDamageTaken,
+    };
 }
 
 test('최대 자원 modifier가 사라지면 현재 생명력과 자원값을 새 최대값으로 clamp한다', () => {
@@ -83,6 +106,27 @@ test('현재 대상 표시 스냅샷은 같은 장소 대상의 자원·보호�
     target.locationId = 'other';
     assert.equal(owner.getCurrentTarget(), null);
     assert.equal(owner.getCurrentTargetDisplaySnapshot(), null);
+});
+
+test('피해를 받은 대상의 보조 장비는 실제 피해가 발생한 뒤 한 번만 방어 효과를 실행한다', () => {
+    let triggers = 0;
+    defineItem(defensiveTestItemData('test_reactive_offhand', ({ target, result }) => {
+        triggers++;
+        target.setShield('test:reactive-offhand', result.finalDamage, ShieldType.GENERAL, 5, target);
+    }));
+    const attacker = new CombatEntity('공격자');
+    const target = new CombatEntity('방어자');
+    target.equipment.equip(
+        'offHand',
+        new Item('test_reactive_offhand', 1, null, null),
+        target.attribute,
+    );
+
+    const result = attacker.attack(target, 'absolute', 100, { unavoidable: true });
+
+    assert.equal(result?.finalDamage, 100);
+    assert.equal(triggers, 1);
+    assert.equal(target.getTotalShield(), 100);
 });
 
 test('생명력과 정신력 재생 능력치는 매초 실제 자원을 회복한다', () => {

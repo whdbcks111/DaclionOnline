@@ -194,7 +194,9 @@ export function getItemGameplayDetails(snapshot: ItemInspectionSnapshot): ItemGa
     if (isRecord(metadata.projectile)) {
         details.push({ label: '용도', value: '원거리 무기에 사용하는 투사체 탄약' });
     }
-    if (data?.onBasicAttackHit) {
+    if (data?.gameplayEffects?.length) {
+        for (const value of data.gameplayEffects) details.push({ label: '고유 효과', value });
+    } else if (data?.onBasicAttackHit || data?.onDamageTaken) {
         details.push({ label: '적중 효과', value: '설명에 명시된 고유 효과 발동' });
     }
     for (const effect of snapshot.attackEffects) {
@@ -296,6 +298,8 @@ export function buildMonsterInspection(monster: Monster, objectNumber: number, s
     const maxLife = snapshot.attributes.maxLife;
     return chat()
         .text('[ 몬스터 정보 ] ')
+        .icon(snapshot.icon)
+        .text(' ')
         .weight('bold', b => b.text(`Lv.${snapshot.level} ${snapshot.name}\n`))
         .hide('상세 보기', builder => {
             builder.text(`${snapshot.description}\n\n`);

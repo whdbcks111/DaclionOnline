@@ -73,7 +73,7 @@ Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook�
 - 투사체 무기 발사 성공 시 owner의 공격 cooldown과 주무기 내구도 1을 확정한다. Projectile 자신의 적중 공격은 owner의 근접 무기 태그나 내구도에 접근하지 않는다.
 - 일반 Monster와 야외 필드 보스는 처음 맞힌 실제 공격원의 `attackOwner`를 target으로 삼고 같은 위치에 살아 있는 동안 자동 공격한다. `location:boss_room`으로 지정된 전용 보스방에서는 살아 있는 보스가 입장한 온라인 플레이어를 피해 발생 전에 발견해 먼저 공격한다. 모든 입장자를 위협도 후보로 등록하므로 보조 오브젝트를 먼저 공격해도 보스 교전을 피할 수 없다. `MonsterData.attack`은 선택적으로 `damageType`과 적중 시 확률형 `statusEffectId/chance/duration/level`을 지정해 속성 지역 몬스터가 화염·맹독·마비독을 실제로 시험하게 한다. `skills`와 `skillPattern`이 있으면 비영속 `SkillBook`으로 실제 SkillData를 순서대로 발동하고, 활성 스킬 시전 중에는 기본 공격을 멈춘다.
 - `MonsterData.skillPattern.randomOrder`를 켜면 매 주기 시작 스킬을 무작위로 고르고, 자원·생명력 조건 때문에 사용할 수 없는 기술은 같은 패턴의 다른 기술로 넘어간다. 따라서 보스는 고정 순환만 반복하지 않으며 회복기 하나가 막혀도 AI 전체가 정지하지 않는다.
-- 모든 `MonsterData`는 감정용 `description`을 가진다. `/몬스터정보 번호`는 감각 100 이상에서 현재 장소의 Monster만 조회하며 기본 설명·상태·가공된 속성을 공개한다. 감각 125에서는 전체 전투 능력치·기본 피해 타입·적중 상태효과를, 150에서는 드롭 확률·경험치·골드·스킬 패턴·장비를 추가로 공개한다. 내부 몬스터 ID와 raw 태그는 출력하지 않는다.
+- 모든 `MonsterData`는 감정용 `description`과 기본 `monsters/{id}` 이미지 key를 가진다. 현재 158종은 서로 다른 64×64 RGBA 초상을 사용하며 `/위치`, 위치 HUD, 타게팅 HUD, `/몬스터정보`의 이름 앞에 같은 공개 아이콘을 표시한다. `/몬스터정보 번호`는 감각 100 이상에서 현재 장소의 Monster만 조회하며 기본 설명·상태·가공된 속성을 공개한다. 감각 125에서는 전체 전투 능력치·기본 피해 타입·적중 상태효과를, 150에서는 드롭 확률·경험치·골드·스킬 패턴·장비를 추가로 공개한다. 내부 몬스터 ID와 raw 태그는 출력하지 않는다.
 - Monster 사망 시 마지막 공격원의 `attackOwner`가 Player이면 드롭과 골드는 처치자에게 지급한다. 경험치는 처치자가 파티에 있으면 같은 장소의 생존 파티원에게도 지급하며 최고 레벨과의 차이에 100%/50%/20%/10% 감쇠를 적용한다. 처치 경험치는 지급 직후 다음 Player 사망 판정까지 획득분만 보호해, 같은 프레임에 처치자도 사망하더라도 그 경험치를 사망 손실로 다시 차감하지 않는다. 상세 규칙은 [파티 시스템](party.md)을 참고한다.
 - Resource는 Entity 생명력·피해·사망·리스폰을 재사용하지만 공격 AI가 없다. `attackable: false`만 공격 자체를 거부하며 광맥은 특정 주무기를 강제하지 않는다. 대신 마스터 데이터의 `hardness`와 실제 공격원의 `miningPower`를 `Resource.evaluateMiningImpact()`에서 비교한다. 채굴력 0 기준 물리 공격은 20%, 마법 공격은 65%, 절대 공격은 80% 효율로 광맥을 손상시키며 `채굴력 / 경도`만큼 효율이 증가해 최대 150%가 된다. `AttackOptions.miningPower`로 채굴 스킬이 공격별 값을 지정할 수 있고 고정 피해는 정의대로 경도 계산을 건너뛴다. `interactionCooldown`은 성공한 상호작용 뒤 고정값 또는 min~max 범위로 시작하며 월드 tick에서 감소한다.
 - Resource 파괴 시 `drops`의 가중치 합에서 한 항목을 선택하고 `expReward.min~max` 범위의 경험치를 지급한다. 실제 피해원이 Projectile이어도 `attackOwner`인 Player에게 보상이 귀속된다.
@@ -148,8 +148,8 @@ Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook�
 
 ## HUD 데이터
 
-`locationInfo.objects[].respawn`은 기본 리젠 주기가 5분을 초과하는 비일회성 보스에만 존재하며 기본 주기와 처치 후 남은 초를 함께 제공한다.
+`locationInfo.objects[].icon`은 `Entity.getDisplayIcon()`의 가공된 표시 key이며 Monster만 기본 초상을 제공한다. `respawn`은 기본 리젠 주기가 5분을 초과하는 비일회성 보스에만 존재하며 기본 주기와 처치 후 남은 초를 함께 제공한다.
 
-`sendPlayerStats()`는 본인의 현재 레벨, 자원, 보호막 구간, 공격 cooldown, 상태효과의 ID·아이콘·레벨·현재/최대 시간·계산 설명, nullable 파티원 HP/MP/보호막 snapshot과 현재 대상 snapshot을 보낸다. 대상 snapshot은 `Entity.getCurrentTargetDisplaySnapshot()`이 가공한 이름·레벨·생명력·정신력·보호막·상태효과만 포함하며 다른 장소로 이동하거나 오프라인이 된 플레이어 대상은 제거한다. 몬스터 분석은 `/몬스터정보`와 같은 감각 단계로 제한해 감각 100에서 속성, 125에서 전투 능력치·공격 방식, 150에서 보상·전리품·기술을 추가한다. 플레이어 대상에는 몬스터 분석을 붙이지 않는다.
+`sendPlayerStats()`는 본인의 현재 레벨, 자원, 보호막 구간, 공격 cooldown, 상태효과의 ID·아이콘·레벨·현재/최대 시간·계산 설명, nullable 파티원 HP/MP/보호막 snapshot과 현재 대상 snapshot을 보낸다. 대상 snapshot은 `Entity.getCurrentTargetDisplaySnapshot()`이 가공한 선택적 아이콘·이름·레벨·생명력·정신력·보호막·상태효과만 포함하며 다른 장소로 이동하거나 오프라인이 된 플레이어 대상은 제거한다. 몬스터 분석은 `/몬스터정보`와 같은 감각 단계로 제한해 감각 100에서 속성, 125에서 전투 능력치·공격 방식, 150에서 보상·전리품·기술을 추가한다. 플레이어 대상에는 몬스터 분석을 붙이지 않는다.
 
 `sendLocationInfo()`는 현재 위치 좌표·위험도 라벨·PVP 허용 여부·인접 위치·동일 위치 플레이어·통합 `objects`의 생명력과 보호막을 해당 사용자의 모든 소켓에 보낸다. 인접 위치는 `Location.getAvailableConnections(player)` 결과라 hidden은 제외되고 visible/locked 상태가 포함된다. `Home.tsx`가 이를 `HudContext`에 저장하고 PlayerStatus/TargetStatus/Party/Location/Minimap HUD가 소비한다. TargetStatus HUD는 대상이 있을 때만 나타나는 독립 HUD이며 설정에서 표시·위치·크기를 조절하고 편집 모드에서는 미리보기를 표시한다. Location HUD는 각 살아 있는 오브젝트 행에 설정 가능한 `공격`/`대상` 버튼을 더하고, PVP 가능 지역의 플레이어 행에는 `/대상지정p #고유번호` 버튼을 더한다. Minimap HUD는 세부 옵션을 켠 경우 visible 인접 지역만 이동 목록에 표시하고 `/이동 ID`를 숨김 실행한다.

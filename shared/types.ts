@@ -227,6 +227,7 @@ export interface UserCountData {
 
 // 엔티티 HP 바 정보 (위치 HUD용)
 export interface EntityBarInfo {
+    icon?: string
     name: string
     level: number
     life: number
@@ -309,6 +310,7 @@ export interface TargetMonsterAnalysisHudData {
 
 export interface TargetHudData {
     kind: 'monster' | 'player' | 'object'
+    icon?: string
     name: string
     level: number
     life: number

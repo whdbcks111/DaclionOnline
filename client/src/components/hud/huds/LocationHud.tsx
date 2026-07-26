@@ -40,6 +40,7 @@ function EntityRow({
   return (
     <div className={styles.entityRow}>
       <span className={styles.entityIndex}>{label}</span>
+      {entity.icon && <img className={styles.entityIcon} src={`/icons/${entity.icon}.png`} alt="" />}
       <span className={styles.entityName}>Lv.{entity.level} {entity.name}</span>
       {entity.respawn && (
         <span

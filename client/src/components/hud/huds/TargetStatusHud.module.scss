@@ -26,6 +26,13 @@
     margin-bottom: 0.42rem;
 }
 
+.targetIcon {
+    width: clamp(1.35rem, 3vw, 1.8rem);
+    height: clamp(1.35rem, 3vw, 1.8rem);
+    flex: 0 0 auto;
+    object-fit: contain;
+}
+
 .name {
     min-width: 0;
     overflow: hidden;
