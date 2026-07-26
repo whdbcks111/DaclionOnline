@@ -218,6 +218,36 @@
     padding: $spacing-xs 0;
 }
 
+.gridOptions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: 0 $spacing-xs;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.gridSizeRow {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0 0 $spacing-xs;
+}
+
+.powerScale {
+    display: flex;
+    justify-content: space-between;
+    color: $color-text-tertiary;
+    font-size: 0.62rem;
+}
+
+.quickSettingDivider {
+    height: 1px;
+    margin: 0.15rem 0;
+    background: $color-border;
+}
+
 .divider {
     height: 1px;
     background-color: $color-border;

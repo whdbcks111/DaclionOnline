@@ -31,20 +31,32 @@ const ANCHOR_DATA: Record<AnchorPoint, { tx: number; ty: number; origin: string 
   bottomRight:  { tx: -100, ty: -100, origin: 'bottom right' },
 }
 
-function getPositionStyle(cfg: HudConfig): React.CSSProperties {
+function getPositionStyle(cfg: HudConfig, viewportWidth: number, viewportHeight: number): React.CSSProperties {
   const ux = cfg.posUnitX ?? '%'
   const uy = cfg.posUnitY ?? '%'
   const pa = cfg.posAnchor ?? 'topLeft'
   const isRight  = pa === 'topRight'  || pa === 'bottomRight'
   const isBottom = pa === 'bottomLeft' || pa === 'bottomRight'
+  const x = ux === '%' ? cfg.x / 100 * viewportWidth : cfg.x
+  const y = uy === '%' ? cfg.y / 100 * viewportHeight : cfg.y
   return {
-    [isRight  ? 'right' : 'left']: `${cfg.x}${ux}`,
-    [isBottom ? 'bottom' : 'top']: `${cfg.y}${uy}`,
+    left: `${isRight ? viewportWidth - x : x}px`,
+    top: `${isBottom ? viewportHeight - y : y}px`,
   }
 }
 
 export default function HudContainer() {
-  const { configs, editMode, setPosition, opacity, scale } = useHud()
+  const {
+    configs,
+    editMode,
+    setPosition,
+    opacity,
+    scale,
+    gridSnapEnabled,
+    gridSize,
+    hudViewportWidth,
+    hudViewportHeight,
+  } = useHud()
 
   const handleMouseDown = useCallback((id: string, e: React.MouseEvent) => {
     if (!editMode) return
@@ -65,10 +77,10 @@ export default function HudContainer() {
       const dx = ev.clientX - startMouseX
       const dy = ev.clientY - startMouseY
       const newX = unitX === '%'
-        ? Math.max(0, Math.min(100, startX + (isRight  ? -(dx / window.innerWidth)  * 100 : (dx / window.innerWidth)  * 100)))
+        ? Math.max(0, Math.min(100, startX + (isRight  ? -(dx / hudViewportWidth)  * 100 : (dx / hudViewportWidth)  * 100)))
         : Math.max(0, startX + (isRight  ? -dx : dx))
       const newY = unitY === '%'
-        ? Math.max(0, Math.min(100, startY + (isBottom ? -(dy / window.innerHeight) * 100 : (dy / window.innerHeight) * 100)))
+        ? Math.max(0, Math.min(100, startY + (isBottom ? -(dy / hudViewportHeight) * 100 : (dy / hudViewportHeight) * 100)))
         : Math.max(0, startY + (isBottom ? -dy : dy))
       setPosition(id, newX, newY)
     }
@@ -78,7 +90,7 @@ export default function HudContainer() {
     }
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('mouseup', onMouseUp)
-  }, [editMode, configs, setPosition])
+  }, [editMode, configs, hudViewportHeight, hudViewportWidth, setPosition])
 
   const handleTouchStart = useCallback((id: string, e: React.TouchEvent) => {
     if (!editMode) return
@@ -99,10 +111,10 @@ export default function HudContainer() {
       const dx = t.clientX - startMouseX
       const dy = t.clientY - startMouseY
       const newX = unitX === '%'
-        ? Math.max(0, Math.min(100, startX + (isRight  ? -(dx / window.innerWidth)  * 100 : (dx / window.innerWidth)  * 100)))
+        ? Math.max(0, Math.min(100, startX + (isRight  ? -(dx / hudViewportWidth)  * 100 : (dx / hudViewportWidth)  * 100)))
         : Math.max(0, startX + (isRight  ? -dx : dx))
       const newY = unitY === '%'
-        ? Math.max(0, Math.min(100, startY + (isBottom ? -(dy / window.innerHeight) * 100 : (dy / window.innerHeight) * 100)))
+        ? Math.max(0, Math.min(100, startY + (isBottom ? -(dy / hudViewportHeight) * 100 : (dy / hudViewportHeight) * 100)))
         : Math.max(0, startY + (isBottom ? -dy : dy))
       setPosition(id, newX, newY)
     }
@@ -114,23 +126,28 @@ export default function HudContainer() {
     window.addEventListener('touchmove', onTouchMove, { passive: true })
     window.addEventListener('touchend', cleanup)
     window.addEventListener('touchcancel', cleanup)
-  }, [editMode, configs, setPosition])
+  }, [editMode, configs, hudViewportHeight, hudViewportWidth, setPosition])
 
   return (
     <>
+      {editMode && gridSnapEnabled && (
+        <div
+          className={styles.editGrid}
+          style={{
+            '--hud-grid-size': `${gridSize}px`,
+            width: `${hudViewportWidth}px`,
+            height: `${hudViewportHeight}px`,
+          } as React.CSSProperties}
+          aria-hidden
+        />
+      )}
       <SkillQuickHud />
       {HUD_DEFINITIONS.map(def => {
         const cfg = configs[def.id]
         if (!cfg?.visible) return null
         const Component = HUD_COMPONENTS[def.id]
         if (!Component) return null
-        const pa = cfg.posAnchor ?? 'topLeft'
-        const posIsRight  = pa === 'topRight'  || pa === 'bottomRight'
-        const posIsBottom = pa === 'bottomLeft' || pa === 'bottomRight'
         const { tx: baseTx, ty: baseTy, origin } = ANCHOR_DATA[cfg.anchor ?? 'topLeft']
-        // right/bottom CSS props already anchor from that edge, so the self-anchor offset direction flips
-        const tx = (posIsRight  ? 100 : 0) + baseTx
-        const ty = (posIsBottom ? 100 : 0) + baseTy
         const effectiveOpacity = (cfg.opacity ?? 1) * opacity
         const effectiveScale   = (cfg.scale   ?? 1) * scale
         return (
@@ -138,9 +155,9 @@ export default function HudContainer() {
             key={def.id}
             className={`${styles.hudItem} ${editMode ? styles.editMode : ''}`}
             style={{
-              ...getPositionStyle(cfg),
+              ...getPositionStyle(cfg, hudViewportWidth, hudViewportHeight),
               opacity: effectiveOpacity,
-              transform: `translate(${tx}%, ${ty}%) scale(${effectiveScale})`,
+              transform: `translate(${baseTx}%, ${baseTy}%) scale(${effectiveScale})`,
               transformOrigin: origin,
             }}
             onMouseDown={e => handleMouseDown(def.id, e)}

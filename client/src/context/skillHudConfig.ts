@@ -1,7 +1,7 @@
 export interface SkillHudConfig {
   skillId: string
   visible: boolean
-  /** viewport 기준 중심 좌표(%) */
+  /** HudContext가 소유한 전투 퀵 버튼 좌표 단위와 기준점에서의 중심 거리. */
   x: number
   y: number
 }

@@ -29,6 +29,11 @@ export default function SkillQuickHud() {
     opacity,
     scale,
     quickButtonScale,
+    quickButtonPosAnchor,
+    quickButtonPosUnitX,
+    quickButtonPosUnitY,
+    hudViewportWidth,
+    hudViewportHeight,
   } = useHud()
   const { socket } = useSocket()
   const [now, setNow] = useState(0)
@@ -74,12 +79,18 @@ export default function SkillQuickHud() {
     event.stopPropagation()
     const startX = event.clientX
     const startY = event.clientY
+    const isRight = quickButtonPosAnchor === 'topRight' || quickButtonPosAnchor === 'bottomRight'
+    const isBottom = quickButtonPosAnchor === 'bottomLeft' || quickButtonPosAnchor === 'bottomRight'
     const onMove = (moveEvent: PointerEvent) => {
       if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) <= 3) return
       setSkillHudPosition(
         skillId,
-        moveEvent.clientX / window.innerWidth * 100,
-        moveEvent.clientY / window.innerHeight * 100,
+        quickButtonPosUnitX === '%'
+          ? (isRight ? hudViewportWidth - moveEvent.clientX : moveEvent.clientX) / hudViewportWidth * 100
+          : (isRight ? hudViewportWidth - moveEvent.clientX : moveEvent.clientX),
+        quickButtonPosUnitY === '%'
+          ? (isBottom ? hudViewportHeight - moveEvent.clientY : moveEvent.clientY) / hudViewportHeight * 100
+          : (isBottom ? hudViewportHeight - moveEvent.clientY : moveEvent.clientY),
       )
     }
     const cleanup = () => {
@@ -90,7 +101,15 @@ export default function SkillQuickHud() {
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', cleanup)
     window.addEventListener('pointercancel', cleanup)
-  }, [editMode, setSkillHudPosition])
+  }, [
+    editMode,
+    hudViewportHeight,
+    hudViewportWidth,
+    quickButtonPosAnchor,
+    quickButtonPosUnitX,
+    quickButtonPosUnitY,
+    setSkillHudPosition,
+  ])
 
   const activate = useCallback((button: QuickButtonData) => {
     if (editMode) {
@@ -106,13 +125,17 @@ export default function SkillQuickHud() {
         if (!config.visible) return null
         const cooldown = cooldownState(skill, now, playerStatsReceivedAt)
         const coolingDown = cooldown.remaining > 0
+        const isRight = quickButtonPosAnchor === 'topRight' || quickButtonPosAnchor === 'bottomRight'
+        const isBottom = quickButtonPosAnchor === 'bottomLeft' || quickButtonPosAnchor === 'bottomRight'
+        const x = quickButtonPosUnitX === '%' ? config.x / 100 * hudViewportWidth : config.x
+        const y = quickButtonPosUnitY === '%' ? config.y / 100 * hudViewportHeight : config.y
         return (
           <div
             key={skill.id}
             className={`${styles.skillHud} ${editMode ? styles.editMode : ''}`}
             style={{
-              left: `${config.x}%`,
-              top: `${config.y}%`,
+              left: `${isRight ? hudViewportWidth - x : x}px`,
+              top: `${isBottom ? hudViewportHeight - y : y}px`,
               opacity,
               transform: `translate(-50%, -50%) scale(${scale * quickButtonScale})`,
             }}

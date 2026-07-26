@@ -1,5 +1,12 @@
 import { useRef, useCallback, useState } from 'react'
-import { useHud, HUD_DEFINITIONS, type AnchorPoint, type PosAnchor } from '../../context/HudContext'
+import {
+  useHud,
+  HUD_DEFINITIONS,
+  HUD_GRID_EXPONENT_MAX,
+  HUD_GRID_EXPONENT_MIN,
+  type AnchorPoint,
+  type PosAnchor,
+} from '../../context/HudContext'
 import { BASIC_ATTACK_HUD_ID } from '../../context/skillHudConfig'
 import styles from './HudSettings.module.scss'
 
@@ -34,8 +41,11 @@ export default function HudSettings({ onClose }: Props) {
     configs, setVisible, setAnchor, setPosUnit, setPosAnchor, setHudOpacity, setHudScale, resetPosition,
     setLocationObjectActionsVisible, setMinimapTravelActionsVisible,
     editMode, setEditMode, opacity, setOpacity, scale, setScale,
+    gridSnapEnabled, setGridSnapEnabled, gridExponent, gridSize, setGridExponent,
     playerStats, skillHudConfigs, setSkillHudVisible, resetSkillHudPosition,
     quickButtonScale, setQuickButtonScale,
+    quickButtonPosAnchor, setQuickButtonPosAnchor,
+    quickButtonPosUnitX, quickButtonPosUnitY, setQuickButtonPosUnit,
   } = useHud()
   const [openSettingsId, setOpenSettingsId] = useState<string | null>(null)
   const [isSkillListOpen, setIsSkillListOpen] = useState(false)
@@ -142,6 +152,47 @@ export default function HudSettings({ onClose }: Props) {
         </label>
       </div>
 
+      <div className={styles.gridOptions}>
+        <div className={styles.editModeRow}>
+          <div>
+            <div className={styles.rowLabel}>그리드에 맞춰 이동</div>
+            <div className={styles.rowDesc}>모든 HUD와 전투 퀵 버튼의 위치를 일정 간격에 맞춥니다</div>
+          </div>
+          <label className={styles.switch}>
+            <input
+              type="checkbox"
+              checked={gridSnapEnabled}
+              onChange={event => setGridSnapEnabled(event.target.checked)}
+            />
+            <span className={styles.slider} />
+          </label>
+        </div>
+        {gridSnapEnabled && (
+          <div className={styles.gridSizeRow}>
+            <div className={styles.rowLabel}>
+              그리드 단위
+              <span className={styles.opacityValue}>{gridSize}px</span>
+            </div>
+            <input
+              type="range"
+              min={HUD_GRID_EXPONENT_MIN}
+              max={HUD_GRID_EXPONENT_MAX}
+              step={1}
+              value={gridExponent}
+              aria-label={`그리드 단위 ${gridSize}px`}
+              onChange={event => setGridExponent(Number(event.target.value))}
+              className={styles.rangeSlider}
+              style={{ '--fill': fill(gridExponent, HUD_GRID_EXPONENT_MIN, HUD_GRID_EXPONENT_MAX) } as React.CSSProperties}
+            />
+            <div className={styles.powerScale} aria-hidden>
+              <span>4px</span>
+              <span>2의 거듭제곱</span>
+              <span>64px</span>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className={styles.opacityRow}>
         <div className={styles.rowLabel}>
           전체 투명도
@@ -215,6 +266,46 @@ export default function HudSettings({ onClose }: Props) {
               className={styles.rangeSlider}
               style={{ '--fill': fill(Math.round(quickButtonScale * 100), 50, 200) } as React.CSSProperties}
             />
+            <div className={styles.quickSettingDivider} />
+            <div className={styles.detailRow}>
+              <span className={styles.detailLabel}>X 좌표 단위</span>
+              <div className={styles.unitToggle}>
+                <button
+                  className={`${styles.unitBtn} ${quickButtonPosUnitX === '%' ? styles.unitActive : ''}`}
+                  onClick={() => setQuickButtonPosUnit('x', '%')}
+                >%</button>
+                <button
+                  className={`${styles.unitBtn} ${quickButtonPosUnitX === 'px' ? styles.unitActive : ''}`}
+                  onClick={() => setQuickButtonPosUnit('x', 'px')}
+                >px</button>
+              </div>
+            </div>
+            <div className={styles.detailRow}>
+              <span className={styles.detailLabel}>Y 좌표 단위</span>
+              <div className={styles.unitToggle}>
+                <button
+                  className={`${styles.unitBtn} ${quickButtonPosUnitY === '%' ? styles.unitActive : ''}`}
+                  onClick={() => setQuickButtonPosUnit('y', '%')}
+                >%</button>
+                <button
+                  className={`${styles.unitBtn} ${quickButtonPosUnitY === 'px' ? styles.unitActive : ''}`}
+                  onClick={() => setQuickButtonPosUnit('y', 'px')}
+                >px</button>
+              </div>
+            </div>
+            <div className={styles.detailRow}>
+              <span className={styles.detailLabel}>좌표 기준점</span>
+              <div className={styles.posAnchorGrid}>
+                {POS_ANCHOR_POINTS.map(posAnchor => (
+                  <button
+                    key={posAnchor}
+                    className={`${styles.posAnchorCell} ${quickButtonPosAnchor === posAnchor ? styles.anchorActive : ''}`}
+                    title={POS_ANCHOR_LABELS[posAnchor]}
+                    onClick={() => setQuickButtonPosAnchor(posAnchor)}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         )}
         {isSkillListOpen && (

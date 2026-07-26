@@ -1,5 +1,17 @@
 @use '../../styles/variables' as *;
 
+.editGrid {
+    position: fixed;
+    z-index: 49;
+    top: 0;
+    left: 0;
+    background-image:
+        linear-gradient(to right, rgba(92, 218, 222, 0.16) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(92, 218, 222, 0.16) 1px, transparent 1px);
+    background-size: var(--hud-grid-size) var(--hud-grid-size);
+    pointer-events: none;
+}
+
 .hudItem {
     position: fixed;
     z-index: 50;
