@@ -3,6 +3,7 @@ import type { AttributeRecord } from './Attribute.js';
 import Entity from './Entity.js';
 import type { DamageResult, DamageType } from './Entity.js';
 import Equipment from './Equipment.js';
+import { registerProjectileSpawner } from './ProjectileGateway.js';
 import { GameTags } from '../../../shared/tags.js';
 import { normalizeTags } from '../../../shared/tags.js';
 import type { TagId } from '../../../shared/tags.js';
@@ -61,6 +62,8 @@ export interface SpawnProjectileDataOptions {
     target: Entity;
     dataId: string;
     overrides?: ProjectileDataOverrides;
+    /** metadata 계산이 끝난 최종 투사체 피해에 적용할 런타임 배율. */
+    damageScale?: number;
     onHit?: ProjectileOptions['onHit'];
 }
 
@@ -340,10 +343,12 @@ export function spawnProjectileFromData(options: SpawnProjectileDataOptions): Pr
     const overrides = options.overrides ?? {};
     const damageType = overrides.damageType ?? data.damageType;
     const powerAttribute = damageType === 'magic' ? AttributeType.MAGIC_FORCE : AttributeType.ATK;
-    const damage = overrides.damage ?? Math.max(0,
+    const baseDamage = overrides.damage ?? Math.max(0,
         options.owner.attribute.get(powerAttribute) * (overrides.damageMultiplier ?? data.damageMultiplier)
         + (overrides.damageBonus ?? data.damageBonus)
     );
+    const damageScale = Number.isFinite(options.damageScale) ? Math.max(0, options.damageScale!) : 1;
+    const damage = baseDamage * damageScale;
 
     return spawnProjectile({
         owner: options.owner,
@@ -366,6 +371,8 @@ export function spawnProjectileFromData(options: SpawnProjectileDataOptions): Pr
         onHit: options.onHit,
     });
 }
+
+registerProjectileSpawner(spawnProjectileFromData);
 
 /** 활성 투사체의 불변 용도 스냅샷을 반환한다. */
 export function getActiveProjectiles(): readonly Projectile[] {

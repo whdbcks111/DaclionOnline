@@ -82,7 +82,25 @@ HP·MP 포션과 `apply_status_effect` 영약·회복약은 음용 성공 시 �
 
 미궁 보물함의 특수 소모품도 같은 handler 경계를 사용한다. `메아리 모래시계`는 `SkillBook.reduceCooldowns(15)`로 진행 중인 모든 쿨다운을 줄이고, `뒤틀린 미궁 나침반`은 `Location.getAvailableConnections()`의 `visible` 연결만 추첨해 즉시 이동한다. `공명 회피 파편`은 source key로 다음 회피 가능한 공격 한 번을 보장하며 같은 source가 이미 준비되어 있으면 소비하지 않는다. 전용 아트 전까지 마법 소모품은 `items/mana_potion`, 수정 파편은 `items/diamond` 카테고리 fallback을 사용한다.
 
-직접 공격 후처리는 선택형 `ItemData.onBasicAttackHit(context)`를 사용한다. 회피되지 않고 최종 피해가 0보다 큰 물리 공격이면 `Entity.attack`이 실행하므로 일반 공격과 강타 같은 물리 스킬이 같은 무기 효과를 쓴다. 필요하면 `AttackOptions.triggerMainHandHitEffects`로 해당 공격만 끌 수 있다. 투사체는 발사자 장비가 아닌 자체 Entity가 공격하므로 발사 무기의 적중 callback을 실행하지 않는다. 물리 피해와 상태효과·추가 속성 피해를 한 상성값으로 섞지 않는다.
+직접 공격 후처리는 선택형 `ItemData.onBasicAttackHit(context)`를 사용한다. 회피되지 않고 최종 피해가 0보다 큰 물리 공격이면 `Entity.attack`이 실행하므로 일반 공격과 강타 같은 물리 스킬이 같은 무기 효과를 쓴다. 필요하면 `AttackOptions.triggerMainHandHitEffects`로 해당 공격만 끌 수 있다. 아이템 투사체는 적중 시 발사 무기의 마스터 callback과 검증된 인스턴스 `attackEffects`를 명시적으로 전달받아 같은 효과를 실행한다. 물리 피해와 상태효과·추가 속성 피해를 한 상성값으로 섞지 않는다.
+
+## 특수 효과 장비와 획득처
+
+보스·유물함 희귀 장비는 고정 능력치만 높은 상위호환 대신 공격 방식, 자원, 생존 조건을 바꾸는 `gameplayEffects`와 ItemData callback을 가진다. 전용 아트 제작 전에는 존재하는 검·활·흉갑 카테고리 아이콘을 명시적으로 재사용한다.
+
+- `중력호 장궁`, `성좌연결궁`: 적중 시 원래 피해 일부의 메아리 탄환을 추가 발사한다.
+- `궤도이탈 송곳니`: 대상 현재 생명력 비례 추가 피해를 주되 원래 적중 피해의 150%를 상한으로 둔다.
+- `영시각 지팡이`: 매 기본 공격 피해가 68~132% 사이에서 무작위로 변한다.
+- `종성단절검`: 확률적으로 실제 생명력 피해 일부를 회복한다.
+- `삼연철포`: 긴 기본 공격 주기의 대가로 공격력 72%짜리 회피 불가 탄환 세 발을 시간차 발사한다.
+- `성벽시위`: 적중할 때마다 5초 방어력 +70을 얻고 지속시간을 갱신하며 최대 5중첩한다.
+- `악마의 검`: 공격력 20%를 얻고 생명력 재생이 억제되며 초당 최대 생명력 1%를 소모한다.
+- `포식뿌리 흉갑`: 경험치 획득량이 10% 감소하지만 몬스터 처치 시 잃은 생명력 12%를 회복한다.
+- `황금반향 갑주`: 피해를 받을 때 피해 비율에 따라 1~10 Gold를 만든다.
+- `회귀성운 갑주`: 6시간에 한 번 치명적 피해를 막고 최대 생명력 30%로 되돌린다. 재사용 가능 시각은 아이템 metadata에 저장되어 장비 교체·재접속으로 초기화되지 않는다.
+- `업식검 카르마보어`: 장착 중 초당 카르마 0.2를 검에 저장한다. 내구도 또는 강화 실패로 파괴되면 흡수량 50%를 당시 소유자에게 되돌리고 Lv.10 쇠약의 저주를 7일 부여한다.
+
+포식뿌리 흉갑은 태초심장수 보스와 세계수 기억호박 유물고에서 나오며, 나머지 신규 특수 장비는 공허왕관 섭정·회색성흔 군주·성운군주·영시여왕·최후성좌 등 테마에 맞는 보스의 1~1.6% 희귀 드롭이다. 장착 중 경험치 배율, 처치, 피격, 지속 tick, 치명적 피해 방지, 내구도 파괴 callback은 `Equipment` 공개 실행 API를 통해 호출한다.
 
 ## 기본 공격 오버라이드와 투사체 아이템
 
@@ -136,6 +154,7 @@ HP·MP 포션과 `apply_status_effect` 영약·회복약은 음용 성공 시 �
 - `unequip`: modifier를 제거하고 Item을 반환한다.
 - `consumeEquippedItem`: 장착 스택에서 지정 수량만 소비하고 남은 수량은 슬롯에 유지한다.
 - `applyModifiers`: 로드된 모든 장비 modifier를 Attribute에 다시 적용한다.
+- `applyOwnerEffects`, `updateOwnerEffects`, `triggerOwnerDefeatedEntity`, `triggerDamageTakenEffects`, `tryPreventFatalDamage`: 장착자의 경험치 배율과 처치·피격·지속·치명적 피해 효과를 내부 슬롯 노출 없이 실행한다.
 - `setItemMetadata/resetItemMetadata`: 장착 아이템의 delta를 변경하고 해당 슬롯을 dirty로 표시한다.
 - `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`: 장착 아이템 내구도를 변경하고 해당 슬롯을 dirty로 표시한다.
 - `save`: 슬롯별 state와 스택 `count`를 Prisma에 반영한다. DB ID가 없는 신규 슬롯은 `(playerId, slot, slotIndex)` upsert로 저장해 겹친 저장이나 이전 성공 뒤 재시도에도 유니크 오류를 내지 않는다.

@@ -1,5 +1,11 @@
 import { registerCommand } from "../modules/bot.js";
-import { sendBotMessageToUser, sendBotMessageToChannel, sendBotMessageFiltered, sendPrivateBotMessageToUser } from "../modules/message.js";
+import {
+    sendBotMessageToUser,
+    sendBotMessageToChannel,
+    sendBotMessageFiltered,
+    sendPrivateBotMessageToUser,
+    sendNotificationToUser,
+} from "../modules/message.js";
 import { getUserChannel } from "../modules/channel.js";
 import { chat } from "../utils/chatBuilder.js";
 import { getOnlinePlayers, getPlayerByUserId } from "../modules/player.js";
@@ -757,6 +763,25 @@ export function initPlayerCommands(): void {
             player.currentTarget = target;
             player.titles.refreshPassiveEffects();
             player.performBasicAttack(target);
+        },
+    });
+
+    registerCommand({
+        name: '자동공격',
+        aliases: ['autoattack', 'aa'],
+        description: '현재 타겟을 기본 공격 쿨타임마다 자동으로 공격하는 모드를 켜거나 끕니다.',
+        showCommandUse: 'hide',
+        args: [],
+        handler(userId) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            const enabled = player.toggleAutoAttack();
+            sendNotificationToUser(userId, {
+                key: 'auto-attack-mode',
+                message: `자동공격 ${enabled ? 'ON' : 'OFF'}`,
+                length: 1_500,
+            });
+            sendBotMessageToUser(userId, `자동공격 모드를 ${enabled ? '켰습니다' : '껐습니다'}.`);
         },
     });
 

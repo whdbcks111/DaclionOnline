@@ -44,10 +44,21 @@ test('마법 부여 적중 효과는 성공한 무기 공격 후 상태효과 re
         sensibility: 250,
         random: () => 0,
     });
+    const attacker = new EnchantTarget();
     const target = new EnchantTarget();
+    const damageResult = attacker.attack(target, 'physical', 10, {
+        unavoidable: true,
+        fixedDamage: true,
+        consumeMainHandDurability: false,
+    });
 
     assert.equal(result.effect?.type, ItemAttackEffectType.FIRE.id);
-    assert.deepEqual(weapon.triggerInstanceAttackEffects(target, () => 0), [ItemAttackEffectType.FIRE]);
+    assert.ok(damageResult);
+    assert.deepEqual(weapon.triggerInstanceAttackEffects({
+        attacker,
+        target,
+        result: damageResult!,
+    }, () => 0), [ItemAttackEffectType.FIRE]);
     assert.equal(target.hasStatusEffect(StatusEffectType.FIRE), true);
 });
 
@@ -58,10 +69,18 @@ test('마법 부여는 방어구와 소비 아이템을 거부한다', () => {
     }).success, false);
 });
 
-test('마법 부여 각인은 사용자에게 표시할 상태이상 이름과 상세 설명을 제공한다', () => {
+test('마법 부여 각인은 상태이상 외 특수 효과까지 사용자용 설명을 제공한다', () => {
     for (const type of ItemAttackEffectType.values()) {
-        assert.ok(type.statusEffectLabel.length > 0);
-        assert.ok(type.statusEffectSummary.length > 10);
-        assert.equal(StatusEffectType.fromKey(type.statusEffectId)?.label, type.statusEffectLabel);
+        assert.ok(type.label.length > 0);
+        assert.ok(type.summary.length > 10);
+        assert.ok(type.describe({
+            type: type.id,
+            chance: 0.25,
+            duration: 5,
+            level: 3,
+            power: 0.2,
+        }).length > 10);
+        if (type.statusEffectId) assert.ok(StatusEffectType.fromKey(type.statusEffectId));
     }
+    assert.ok(ItemAttackEffectType.values().some(type => type.statusEffectId === undefined));
 });

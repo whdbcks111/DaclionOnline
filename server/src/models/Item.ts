@@ -18,6 +18,7 @@ import {
     applyItemAttackEffects,
     ItemAttackEffectType,
     normalizeItemAttackEffects,
+    rollItemAttackDamageMultiplier,
     type ItemAttackEffectSnapshot,
 } from './ItemAttackEffect.js';
 
@@ -82,6 +83,8 @@ export interface ItemBalanceProfile {
  * 일반 플레이에서는 중량이 먼저 한계가 되므로 stackable 아이템에는 사실상 무제한이다.
  */
 export const MAX_STACKABLE_ITEM_COUNT = 2_000_000_000;
+/** 아이템 metadata와 무기 강화 규칙이 공유하는 영속 강화 단계 상한. */
+export const MAX_ITEM_REINFORCEMENT_LEVEL = 15;
 
 /** 아이템 정의 (마스터 데이터, 코드에서 직접 정의) */
 export interface ItemData {
@@ -109,6 +112,16 @@ export interface ItemData {
     onBasicAttackHit?: (context: ItemBasicAttackHitContext) => void;
     /** 직접 공격 피해를 받은 뒤 보조 장비가 실행하는 방어 후처리. */
     onDamageTaken?: (context: ItemDamageTakenContext) => void;
+    /** 장착 중 적용할 경험치 획득 배율. 여러 장비는 곱연산한다. */
+    experienceGainMultiplier?: number;
+    /** 장착자가 몬스터의 마지막 타격자로 확정되었을 때 실행하는 후처리. */
+    onOwnerDefeatedEntity?: (context: ItemOwnerDefeatedEntityContext) => void;
+    /** 장착 중 매 서버 tick 실행하는 지속 효과. */
+    onOwnerUpdate?: (context: ItemOwnerUpdateContext) => void;
+    /** 생명력이 0 이하가 된 순간 사망을 취소할 기회를 제공한다. */
+    onOwnerFatalDamage?: (context: ItemOwnerFatalDamageContext) => boolean;
+    /** 내구도 소진 또는 강화 실패로 아이템이 파괴되는 순간 당시 소유자에게 실행한다. */
+    onOwnerItemDestroyed?: (context: ItemOwnerItemDestroyedContext) => void;
 }
 
 export interface ItemBasicAttackHitContext {
@@ -123,6 +136,28 @@ export interface ItemDamageTakenContext {
     target: Entity;
     item: Item;
     result: DamageResult;
+}
+
+export interface ItemOwnerDefeatedEntityContext {
+    owner: Entity;
+    target: Entity;
+    item: Item;
+}
+
+export interface ItemOwnerUpdateContext {
+    owner: Entity;
+    item: Item;
+    dt: number;
+}
+
+export interface ItemOwnerFatalDamageContext {
+    owner: Entity;
+    item: Item;
+}
+
+export interface ItemOwnerItemDestroyedContext {
+    owner: Entity;
+    item: Item;
 }
 
 /** 소유 계층 사이에서 아이템 상태를 손실 없이 이동하는 불변 스냅샷 */
@@ -263,8 +298,16 @@ export class Item implements TagReadable {
     }
 
     /** Entity 공격 경계가 호출하는 인스턴스 적중 효과 실행 API. */
-    triggerInstanceAttackEffects(target: Entity, random: () => number = Math.random): readonly ItemAttackEffectType[] {
-        return applyItemAttackEffects(this.attackEffects, target, random);
+    triggerInstanceAttackEffects(
+        context: Omit<ItemBasicAttackHitContext, 'weapon'>,
+        random: () => number = Math.random,
+    ): readonly ItemAttackEffectType[] {
+        return applyItemAttackEffects(this.attackEffects, context, random);
+    }
+
+    /** 불안정 공명처럼 공격 전에 확정해야 하는 인스턴스 피해 배율을 반환한다. */
+    rollInstanceAttackDamageMultiplier(random: () => number = Math.random): number {
+        return rollItemAttackDamageMultiplier(this.attackEffects, random);
     }
 
     /** 기본 metadata와 delta를 합친 읽기 전용 스냅샷 */
@@ -344,7 +387,7 @@ export class Item implements TagReadable {
     get reinforcementLevel(): number {
         const value = this.getMetadata<{ level?: unknown }>(ItemMetadataKeys.REINFORCEMENT)?.level;
         return typeof value === 'number' && Number.isFinite(value)
-            ? Math.max(0, Math.min(5, Math.floor(value)))
+            ? Math.max(0, Math.min(MAX_ITEM_REINFORCEMENT_LEVEL, Math.floor(value)))
             : 0;
     }
 

@@ -226,6 +226,7 @@ const WORLDROOT_RELIQUARY_REWARDS = Object.freeze([
     { itemDataId: 'primal_sap', count: 6, weight: 14 },
     { itemDataId: 'memory_amber', count: 5, weight: 12 },
     { itemDataId: 'heart_seed', count: 4, weight: 10 },
+    { itemDataId: 'devouring_root_cuirass', count: 1, weight: 2.4 },
     { itemDataId: 'memory_amber_bottomless_pack', count: 1, weight: 2 },
     { itemDataId: 'rootbone_cleaver', count: 1, weight: 3.2 },
     { itemDataId: 'heartstring_greatbow', count: 1, weight: 3.2 },

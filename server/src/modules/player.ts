@@ -148,6 +148,7 @@ export function sendPlayerStats(userId: number): void {
         maxHungry:         player.maxHungry,
         attackCooldown:    player.attackCooldown,
         maxAttackCooldown: player.maxAttackCooldown,
+        autoAttackEnabled: player.autoAttackEnabled,
         skills:             player.skills.getHudSnapshots(),
         usableItems:        player.inventory.getUsableItemHudSnapshots(),
         statusEffects:     player.getStatusEffectDisplaySnapshots().map(effect => ({

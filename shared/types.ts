@@ -405,6 +405,7 @@ export interface PlayerStatsData extends SnapshotRevision {
     maxHungry: number
     attackCooldown: number
     maxAttackCooldown: number
+    autoAttackEnabled: boolean
     skills: SkillHudData[]
     usableItems: UsableItemHudData[]
     statusEffects: StatusEffectHudData[]

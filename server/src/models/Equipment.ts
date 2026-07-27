@@ -2,8 +2,11 @@ import prisma from "../config/prisma.js";
 import { Item, getItemData } from "./Item.js";
 import type { ItemDurabilityRepairResult } from "./Item.js";
 import type Attribute from "./Attribute.js";
+import type Entity from './Entity.js';
+import type { DamageResult } from './Entity.js';
 import { GameTags } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
+import logger from '../utils/logger.js';
 
 /** 장비 슬롯 키 */
 export type EquipSlot = 'head' | 'body' | 'legs' | 'feet' | 'accessory' | 'mainHand' | 'offHand' | 'bag';
@@ -84,6 +87,7 @@ export default class Equipment implements TagReadable {
     readonly playerId: number;
     private _slots = new Map<string, EquipEntry>();
     private ownerAttribute?: Attribute;
+    private ownerEntity?: Entity;
 
     private constructor(playerId: number) {
         this.playerId = playerId;
@@ -102,6 +106,7 @@ export default class Equipment implements TagReadable {
                 const modifiers = entry.item.modifiers;
                 if (modifiers) this.ownerAttribute.addModifiers(modifiers.map(modifier => ({ ...modifier, source })));
             }
+            this.refreshOwnerEffects();
         };
         entry.item.tags.setPersistentChangeHandler(() => {
             markModified();
@@ -113,10 +118,35 @@ export default class Equipment implements TagReadable {
     private breakEntry(entry: EquipEntry): boolean {
         const key = slotKey(entry.slot, entry.slotIndex);
         if (this._slots.get(key) !== entry || entry.state === EquipState.Deleted) return false;
+        if (this.ownerEntity) {
+            try {
+                entry.item.data?.onOwnerItemDestroyed?.({ owner: this.ownerEntity, item: entry.item });
+            } catch (error) {
+                logger.error(`장착 아이템 파괴 효과 실패: ${entry.item.itemDataId}`, error);
+            }
+        }
         this.ownerAttribute?.removeBySource(modSource(entry.slot, entry.slotIndex));
         if (entry.state === EquipState.New) this._slots.delete(key);
         else entry.state = EquipState.Deleted;
+        this.refreshOwnerEffects();
         return true;
+    }
+
+    private refreshOwnerEffects(): void {
+        const owner = this.ownerEntity;
+        if (!owner) return;
+        for (const slot of EquipSlotType.values()) {
+            for (let index = 0; index < slot.max; index++) {
+                owner.removeExperienceGainModifier(`equipment:${slot.key}:${index}`);
+            }
+        }
+        for (const entry of this._slots.values()) {
+            if (entry.state === EquipState.Deleted || entry.item.isBroken) continue;
+            const multiplier = entry.item.data?.experienceGainMultiplier;
+            if (typeof multiplier === 'number' && Number.isFinite(multiplier) && multiplier >= 0) {
+                owner.setExperienceGainModifier(`equipment:${entry.slot}:${entry.slotIndex}`, multiplier);
+            }
+        }
     }
 
     /** DB 연동 없이 인메모리 전용 Equipment 생성 (Monster 등) */
@@ -286,6 +316,7 @@ export default class Equipment implements TagReadable {
             const source = modSource(slot, slotIndex);
             attribute.addModifiers(item.modifiers.map(m => ({ ...m, source })));
         }
+        this.refreshOwnerEffects();
 
         return true;
     }
@@ -335,6 +366,7 @@ export default class Equipment implements TagReadable {
         if (item.modifiers) {
             attribute.addModifiers(item.modifiers.map(m => ({ ...m, source: modSource(slot, useIndex) })));
         }
+        this.refreshOwnerEffects();
 
         return displaced;
     }
@@ -357,6 +389,7 @@ export default class Equipment implements TagReadable {
         } else {
             entry.state = EquipState.Deleted;
         }
+        this.refreshOwnerEffects();
 
         return item;
     }
@@ -392,6 +425,48 @@ export default class Equipment implements TagReadable {
             const source = modSource(entry.slot, entry.slotIndex);
             attribute.addModifiers(modifiers.map(m => ({ ...m, source })));
         }
+    }
+
+    /** Entity 생성 뒤 경험치 배율·처치 callback의 장착자를 연결한다. */
+    applyOwnerEffects(owner: Entity): void {
+        this.ownerEntity = owner;
+        this.refreshOwnerEffects();
+    }
+
+    /** 내부 슬롯을 노출하지 않고 현재 장착 아이템의 몬스터 처치 효과를 실행한다. */
+    triggerOwnerDefeatedEntity(owner: Entity, target: Entity): void {
+        for (const entry of this._slots.values()) {
+            if (entry.state === EquipState.Deleted || entry.item.isBroken) continue;
+            entry.item.data?.onOwnerDefeatedEntity?.({ owner, target, item: entry.item });
+        }
+    }
+
+    /** 피해가 확정된 뒤 현재 장착 장비 전체의 방어 후처리를 한 번씩 실행한다. */
+    triggerDamageTakenEffects(attacker: Entity, target: Entity, result: DamageResult): void {
+        for (const entry of this._slots.values()) {
+            if (entry.state === EquipState.Deleted || entry.item.isBroken) continue;
+            entry.item.data?.onDamageTaken?.({ attacker, target, item: entry.item, result });
+        }
+    }
+
+    /** 내부 슬롯을 노출하지 않고 장착 아이템의 지속 효과를 갱신한다. */
+    updateOwnerEffects(owner: Entity, dt: number): void {
+        if (!Number.isFinite(dt) || dt <= 0) return;
+        for (const entry of this._slots.values()) {
+            if (entry.state === EquipState.Deleted || entry.item.isBroken) continue;
+            entry.item.data?.onOwnerUpdate?.({ owner, item: entry.item, dt });
+        }
+    }
+
+    /** 치명적 피해 순간 장착 효과를 순서대로 확인하고 하나가 사망을 취소하면 중단한다. */
+    tryPreventFatalDamage(owner: Entity): boolean {
+        for (const entry of this._slots.values()) {
+            if (entry.state === EquipState.Deleted || entry.item.isBroken) continue;
+            if (entry.item.data?.onOwnerFatalDamage?.({ owner, item: entry.item }) && owner.life > 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // -- DB 연동 --

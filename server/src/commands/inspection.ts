@@ -37,6 +37,7 @@ export interface ItemInspectionTarget {
     sourceLabel: string;
     increaseDurability(amount: number): number | null | undefined;
     repairDurability(amount: number, maxDurabilityLossRate: number): ItemDurabilityRepairResult | null | undefined;
+    destroy(): boolean;
 }
 
 function sensibilityOf(player: Player): number {
@@ -80,6 +81,11 @@ export function resolveItemInspectionTarget(player: Player, rawInput: string): I
             increaseDurability: amount => player.inventory.increaseItemDurabilityByIndex(index, amount),
             repairDurability: (amount, lossRate) =>
                 player.inventory.repairItemDurabilityByIndex(index, amount, lossRate),
+            destroy: () => {
+                if (!player.inventory.removeItemInstance(item, item.count)) return false;
+                item.data?.onOwnerItemDestroyed?.({ owner: player, item });
+                return true;
+            },
         } : undefined;
     }
 
@@ -93,6 +99,17 @@ export function resolveItemInspectionTarget(player: Player, rawInput: string): I
             increaseDurability: amount => player.equipment.increaseItemDurability(parsed.slot.key, parsed.index!, amount),
             repairDurability: (amount, lossRate) =>
                 player.equipment.repairItemDurability(parsed.slot.key, parsed.index!, amount, lossRate),
+            destroy: () => {
+                const destroyed = player.equipment.consumeEquippedItem(
+                    parsed.slot.key,
+                    parsed.index!,
+                    player.attribute,
+                    item.count,
+                );
+                if (!destroyed) return false;
+                destroyed.data?.onOwnerItemDestroyed?.({ owner: player, item: destroyed });
+                return true;
+            },
         } : undefined;
     }
 
@@ -104,6 +121,17 @@ export function resolveItemInspectionTarget(player: Player, rawInput: string): I
             increaseDurability: amount => player.equipment.increaseItemDurability(parsed.slot.key, index, amount),
             repairDurability: (amount, lossRate) =>
                 player.equipment.repairItemDurability(parsed.slot.key, index, amount, lossRate),
+            destroy: () => {
+                const destroyed = player.equipment.consumeEquippedItem(
+                    parsed.slot.key,
+                    index,
+                    player.attribute,
+                    item.count,
+                );
+                if (!destroyed) return false;
+                destroyed.data?.onOwnerItemDestroyed?.({ owner: player, item: destroyed });
+                return true;
+            },
         };
     }
     return undefined;
@@ -218,7 +246,7 @@ export function getItemGameplayDetails(snapshot: ItemInspectionSnapshot): ItemGa
         if (!type) continue;
         details.push({
             label: '마법 적중 효과',
-            value: `${type.label} · ${formatNumber(effect.chance * 100)}% · Lv.${effect.level} · ${formatNumber(effect.duration)}초`,
+            value: `${type.label} · ${type.describe(effect)}`,
         });
     }
     return details;

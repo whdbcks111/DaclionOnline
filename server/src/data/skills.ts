@@ -1120,7 +1120,7 @@ defineSkill({
     // TODO: 후가공 스킬 전용 아이콘 제작 전까지 마법력 능력치 아이콘을 사용한다.
     icon: 'attributes/magicForce',
     maxLevel: 5,
-    descriptionTemplate: '무기의 재료·속성을 읽어 다음 적중 효과 중 하나를 영구히 각인합니다. [tooltip=1초마다 불 속성 피해를 주며 오래 지속되면 화상을 남깁니다.][color=orange]화염[/color][/tooltip] · [tooltip=0.5초마다 최대 생명력과 잃은 생명력에 비례한 피해를 주고 받는 치유량을 50% 감소시킵니다.][color=purple]맹독[/color][/tooltip] · [tooltip=스킬·아이템 사용·공격·이동·회피·장소 이동을 모두 막습니다.][color=yellow]기절[/color][/tooltip] · [tooltip=초당 얼음 피해를 주고 이동속도와 공격속도를 낮춥니다. 화염과 만나면 서로 상쇄됩니다.][color=skyblue]빙결[/color][/tooltip] · [tooltip=공격과 회피를 할 수 없게 만듭니다.][color=darkgray]실명[/color][/tooltip]. 장비 속성과 고유 특성이 후보를 편향하며 발동률(18~68%)·효과 레벨·지속시간은 감각과 서버 난수에 따라 결정됩니다.',
+    descriptionTemplate: '무기의 재료·속성을 읽어 화염·맹독·기절·빙결·실명 외에도 추가 피해·생명 흡수·마력 환류·보호막·변동 피해·추가 투사체·현재 생명력 비례 피해 중 하나를 영구히 각인합니다. 장비 속성과 고유 특성이 후보를 편향하며 발동률·효과 레벨·위력은 감각과 서버 난수에 따라 결정됩니다. `/마법부여효과`에서 전체 후보를 확인할 수 있습니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 80[/color]',
     activationConditionTemplate: '마도 대장장이가 아직 마법이 부여되지 않은 무기를 지정해 `/마법부여 <아이템 번호 또는 장착칸>`을 입력합니다.',
     baseMetadata: null,
@@ -1168,9 +1168,9 @@ defineSkill({
     // TODO: 후가공 스킬 전용 아이콘 제작 전까지 공격력 능력치 아이콘을 사용한다.
     icon: 'attributes/atk',
     maxLevel: 5,
-    descriptionTemplate: `지핵 강화석을 소모해 무기를 최대 +${MAX_WEAPON_REINFORCEMENT}까지 강화합니다. 강화는 실패하거나 하락하지 않으며, 매 단계 공격 계열 능력치와 무기 종류에 맞는 긍정 효과가 영구적으로 누적됩니다.`,
+    descriptionTemplate: `지핵 강화석을 소모해 무기를 최대 +${MAX_WEAPON_REINFORCEMENT}까지 강화합니다. 높은 단계에서는 실패·단계 하락·장비 파괴 위험이 생기며, 성공할 때마다 공격 계열 능력치와 무기 종류에 맞는 긍정 효과가 영구적으로 누적됩니다.`,
     costTemplate: '지핵 강화석 1개',
-    activationConditionTemplate: '전투 대장장이가 +5 미만인 무기를 지정해 `/무기강화 <아이템 번호 또는 장착칸>`을 입력합니다.',
+    activationConditionTemplate: `전투 대장장이가 +${MAX_WEAPON_REINFORCEMENT} 미만인 무기를 지정해 \`/무기강화 <아이템 번호 또는 장착칸>\`을 입력합니다.`,
     baseMetadata: null,
     calculateExperienceGain: () => 28,
     jobRequirement: jobRequirement('career:battle_smith'),

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useHud } from '../../../context/HudContext'
-import { BASIC_ATTACK_HUD_ID, createDefaultSkillHudConfig } from '../../../context/skillHudConfig'
+import {
+  AUTO_ATTACK_HUD_ID,
+  BASIC_ATTACK_HUD_ID,
+  createDefaultSkillHudConfig,
+} from '../../../context/skillHudConfig'
 import { useSocket } from '../../../context/SocketContext'
 import type { SkillHudData } from '@shared/types'
 import { getUiScale } from '../../../utils/displayPreferences'
@@ -52,6 +56,17 @@ export default function SkillQuickHud() {
         remainingCooldown: playerStats.attackCooldown,
         maxCooldown: playerStats.maxAttackCooldown,
         command: '/공격',
+        showLevel: false,
+      },
+      {
+        id: AUTO_ATTACK_HUD_ID,
+        name: '자동공격',
+        icon: 'attributes/attackSpeed',
+        level: 0,
+        isActive: playerStats.autoAttackEnabled,
+        remainingCooldown: 0,
+        maxCooldown: 0,
+        command: '/자동공격',
         showLevel: false,
       },
       ...skills.map(skill => ({

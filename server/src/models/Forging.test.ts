@@ -18,6 +18,7 @@ import {
     reinforceWeapon,
     renameForgedItem,
     selectEquipmentRepairMaterials,
+    WeaponReinforcementStage,
 } from './Forging.js';
 import { PlayerProgress } from './Progress.js';
 import Skill from './Skill.js';
@@ -391,7 +392,7 @@ test('장인의 명명은 직접 만든 단조품만 안전한 이름으로 변�
     assert.equal(renameForgedItem(own, 77, '[color=red]검').success, false);
 });
 
-test('전투 대장장이 무기 강화는 +5까지 실패 없이 긍정 능력치를 누적한다', () => {
+test('전투 대장장이 무기 강화는 성공 시 +15까지 긍정 능력치를 누적한다', () => {
     const weapon = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SWORD, ForgeMaterial.IRON, {
         accuracy: 0.8,
         random: () => 0,
@@ -402,18 +403,81 @@ test('전투 대장장이 무기 강화는 +5까지 실패 없이 긍정 능력�
         .reduce((sum, modifier) => sum + modifier.value, 0) ?? 0;
 
     for (let level = 1; level <= MAX_WEAPON_REINFORCEMENT; level++) {
-        const result = reinforceWeapon(weapon, { creatorLevel: 200, sensibility: 1_000, skillLevel: level });
+        const result = reinforceWeapon(weapon, {
+            creatorLevel: 200,
+            sensibility: 1_000,
+            skillLevel: level,
+            random: () => 0,
+        });
         assert.equal(result.success, true);
+        assert.equal(result.outcome, 'success');
         assert.equal(result.level, level);
         assert.ok(result.addedModifiers?.every(modifier => modifier.op === 'add' ? modifier.value > 0 : modifier.value > 1));
     }
 
     const attackAfter = weapon.modifiers?.filter(modifier => modifier.attribute === 'atk' && modifier.op === 'add')
         .reduce((sum, modifier) => sum + modifier.value, 0) ?? 0;
-    assert.equal(weapon.reinforcementLevel, 5);
-    assert.match(weapon.name, / \+5$/);
+    assert.equal(weapon.reinforcementLevel, 15);
+    assert.match(weapon.name, / \+15$/);
     assert.ok(attackAfter >= attackBefore + 150, `강화 전 ${attackBefore}, 강화 후 ${attackAfter}`);
-    assert.equal(reinforceWeapon(weapon, { creatorLevel: 200, sensibility: 1_000, skillLevel: 5 }).success, false);
+    assert.equal(reinforceWeapon(weapon, {
+        creatorLevel: 200,
+        sensibility: 1_000,
+        skillLevel: 15,
+        random: () => 0,
+    }).success, false);
+});
+
+test('고강화 실패는 확률표에 따라 유지·하락·파괴로 갈린다', () => {
+    const createWeapon = () => Item.fromSnapshot(createForgedItemSnapshot(
+        ForgeForm.SWORD,
+        ForgeMaterial.IRON,
+        { accuracy: 0.8, random: () => 0, creatorLevel: 200, sensibility: 1_000 },
+    ));
+    const retained = createWeapon();
+    assert.equal(reinforceWeapon(retained, {
+        creatorLevel: 200, sensibility: 1_000, skillLevel: 1, random: () => 0,
+    }).success, true);
+    assert.equal(reinforceWeapon(retained, {
+        creatorLevel: 200, sensibility: 1_000, skillLevel: 2, random: () => 0.99,
+    }).outcome, 'retained');
+    assert.equal(retained.reinforcementLevel, 1);
+
+    const downgraded = createWeapon();
+    for (let level = 1; level <= 6; level++) {
+        reinforceWeapon(downgraded, {
+            creatorLevel: 200, sensibility: 1_000, skillLevel: level, random: () => 0,
+        });
+    }
+    const modifierCount = downgraded.modifiers?.length ?? 0;
+    const downgrade = reinforceWeapon(downgraded, {
+        creatorLevel: 200, sensibility: 1_000, skillLevel: 7, random: () => 0.95,
+    });
+    assert.equal(downgrade.outcome, 'downgraded');
+    assert.equal(downgraded.reinforcementLevel, 5);
+    assert.ok((downgraded.modifiers?.length ?? 0) < modifierCount);
+
+    const destroyed = createWeapon();
+    for (let level = 1; level <= 8; level++) {
+        reinforceWeapon(destroyed, {
+            creatorLevel: 200, sensibility: 1_000, skillLevel: level, random: () => 0,
+        });
+    }
+    assert.equal(reinforceWeapon(destroyed, {
+        creatorLevel: 200, sensibility: 1_000, skillLevel: 9, random: () => 0.99,
+    }).outcome, 'destroyed');
+    assert.equal(destroyed.reinforcementLevel, 8);
+});
+
+test('모든 강화 단계 확률은 정확히 100%이며 하락과 파괴는 지정 단계부터 시작한다', () => {
+    for (const stage of WeaponReinforcementStage.values()) {
+        assert.equal(
+            stage.successRate + stage.retainRate + stage.downgradeRate + stage.destructionRate,
+            100,
+        );
+        assert.equal(stage.downgradeRate > 0, stage.level >= 7);
+        assert.equal(stage.destructionRate > 0, stage.level >= 9);
+    }
 });
 
 test('무기가 아닌 장비는 강화할 수 없다', () => {

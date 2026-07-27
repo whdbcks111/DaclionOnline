@@ -7,9 +7,11 @@ import {
     ARCANE_ENCHANT_MENTALITY_COST,
     ENHANCEMENT_STONE_ITEM_ID,
     FORGED_ITEM_NAMING_SENSIBILITY,
+    MAX_WEAPON_REINFORCEMENT,
     STAFF_INFUSION_MENTALITY_COST,
     ForgeForm,
     ForgeMaterial,
+    WeaponReinforcementStage,
     createEquipmentRepairPlan,
     createInfusedStaffSnapshot,
     enchantWeapon,
@@ -231,6 +233,22 @@ export function initForgingCommands(): void {
     });
 
     registerCommand({
+        name: '마법부여효과',
+        aliases: ['enchantmenteffects', 'ee'],
+        description: '마법 부여로 등장할 수 있는 상태이상·공격·회복·보호 효과를 확인합니다.',
+        information: true,
+        handler(userId) {
+            const lines = ItemAttackEffectType.values()
+                .map(type => `${type.label}: ${type.summary}`);
+            sendBotMessageToUser(userId, [
+                '[ 마법 부여 효과 목록 ]',
+                ...lines,
+                '무기의 속성·재료·이름이 후보 가중치에 영향을 주며, 한 무기에는 마법 부여를 한 번만 할 수 있습니다.',
+            ].join('\n'));
+        },
+    });
+
+    registerCommand({
         name: '마법부여', aliases: ['enchant', 'enc'], description: '무기에 속성 연관 적중 마법을 한 번 부여합니다.',
         showCommandUse: 'private',
         args: [{
@@ -268,15 +286,32 @@ export function initForgingCommands(): void {
             const effectType = ItemAttackEffectType.fromKey(result.effect.type);
             if (!effectType) return;
             sendBotMessageToUser(userId, chat()
-                .text(`[ ${target.item.name} ]에 [ ${effectType.label} ]을 새겼습니다. 적중 시 ${(result.effect.chance * 100).toFixed(1)}% 확률로 Lv.${result.effect.level} `)
-                .tooltip(effectType.statusEffectSummary, b => b.weight('bold', b2 => b2.text(effectType.statusEffectLabel)))
-                .text(` 효과를 ${result.effect.duration}초간 부여합니다.`)
+                .text(`[ ${target.item.name} ]에 `)
+                .tooltip(effectType.summary, b => b.weight('bold', b2 => b2.text(`[ ${effectType.label} ]`)))
+                .text(`을 새겼습니다. ${effectType.describe(result.effect)}.`)
                 .build());
         },
     });
 
     registerCommand({
-        name: '무기강화', aliases: ['reinforce', 'rf'], description: '지핵 강화석으로 무기를 최대 +5까지 확정 강화합니다.',
+        name: '강화확률',
+        aliases: ['reinforcerates', 'rr'],
+        description: '목표 강화 단계별 성공·유지·하락·파괴 확률을 확인합니다.',
+        information: true,
+        handler(userId) {
+            const lines = WeaponReinforcementStage.values()
+                .map(stage => `+${stage.level} 도전: ${stage.chanceDescription}`);
+            sendBotMessageToUser(userId, [
+                `[ 무기 강화 확률 · 최대 +${MAX_WEAPON_REINFORCEMENT} ]`,
+                ...lines,
+                '강화석은 모든 유효한 시도에 1개 소모됩니다. +7부터 하락, +9부터 파괴가 발생합니다.',
+            ].join('\n'));
+        },
+    });
+
+    registerCommand({
+        name: '무기강화', aliases: ['reinforce', 'rf'],
+        description: `지핵 강화석으로 무기를 최대 +${MAX_WEAPON_REINFORCEMENT}까지 확률 강화합니다.`,
         showCommandUse: 'private',
         args: [{
             name: '아이템 번호 또는 장착칸', description: '인벤토리 번호 또는 손 같은 장착칸', required: true,
@@ -300,22 +335,57 @@ export function initForgingCommands(): void {
                 return;
             }
             const before = target.item.reinforcementLevel;
-            const preview = before >= 5 || !target.item.hasTag(GameTags.ITEM_WEAPON);
+            const preview = before >= MAX_WEAPON_REINFORCEMENT || !target.item.hasTag(GameTags.ITEM_WEAPON);
             if (preview) {
-                sendBotMessageToUser(userId, before >= 5 ? '이미 최대 강화 단계(+5)입니다.' : '무기 아이템만 강화할 수 있습니다.');
+                sendBotMessageToUser(
+                    userId,
+                    before >= MAX_WEAPON_REINFORCEMENT
+                        ? `이미 최대 강화 단계(+${MAX_WEAPON_REINFORCEMENT})입니다.`
+                        : '무기 아이템만 강화할 수 있습니다.',
+                );
                 return;
             }
+            const stage = WeaponReinforcementStage.fromLevel(before + 1);
+            if (!stage) return;
+            const previousName = target.item.name;
             if (!player.inventory.removeItemByData(ENHANCEMENT_STONE_ITEM_ID, 1)) return;
             const result = reinforceWeapon(target.item, {
                 creatorLevel: player.level,
                 sensibility: player.stat.get(StatType.SENSIBILITY),
                 skillLevel: skill.level,
             });
-            if (!result.success || !result.level) {
+            if (!result.outcome) {
                 player.inventory.addItem(ENHANCEMENT_STONE_ITEM_ID, 1);
                 sendBotMessageToUser(userId, result.reason ?? '무기 강화에 실패했습니다.');
                 return;
             }
+            const chance = `+${stage.level} 도전: ${stage.chanceDescription}`;
+            if (result.outcome === 'retained') {
+                sendBotMessageToUser(
+                    userId,
+                    `[ ${previousName} ] 강화 실패. 단계가 +${result.level ?? before}로 유지됩니다. (${chance})`,
+                );
+                return;
+            }
+            if (result.outcome === 'downgraded') {
+                sendBotMessageToUser(
+                    userId,
+                    `[ ${previousName} ] 강화 실패로 +${result.previousLevel} → +${result.level} 하락했습니다. (${chance})`,
+                );
+                return;
+            }
+            if (result.outcome === 'destroyed') {
+                if (!target.destroy()) {
+                    sendBotMessageToUser(userId, '강화 결과를 적용하는 동안 장비 상태가 변경되었습니다.');
+                    return;
+                }
+                sendBotMessageToUser(
+                    userId,
+                    `[ ${previousName} ] 강화에 실패해 장비가 파괴되었습니다. (${chance})`,
+                );
+                return;
+            }
+
             skill.addExperience(player, skill.getExperienceGain(player));
             const bonus = (result.addedModifiers ?? []).map(modifier => {
                 const label = AttributeType.fromKey(modifier.attribute)?.label ?? modifier.attribute;
@@ -324,7 +394,7 @@ export function initForgingCommands(): void {
                     : `+${modifier.value}`;
                 return `${label} ${value}`;
             }).join(', ');
-            sendBotMessageToUser(userId, `[ ${target.item.name} ] 강화 성공! (${bonus})`);
+            sendBotMessageToUser(userId, `[ ${target.item.name} ] 강화 성공! (${chance} · ${bonus})`);
         },
     });
 }

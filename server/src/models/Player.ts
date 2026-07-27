@@ -48,6 +48,7 @@ import {
 } from './Karma.js';
 import TitleBook from './Title.js';
 import { evaluatePvpKillCredit, recordPvpRespawn } from './PvpKillCredit.js';
+import { ActionType } from './Action.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
 export const LEVEL_SURVIVAL_CAPACITY_PER_LEVEL = 1;
@@ -250,6 +251,7 @@ export default class Player extends Entity {
     private _deathExpiresAtMs = 0;
     private _savePromise: Promise<void> | null = null;
     private _saveRequested = false;
+    private _autoAttackEnabled = false;
 
     private constructor(
         userId: number, nickname: string, level: number, exp: number,
@@ -317,6 +319,18 @@ export default class Player extends Entity {
     set moving(val: boolean) {
         if (val && !this._moving) endNpcDialogue(this, DialogueEndReason.MOVED);
         this._moving = val;
+    }
+
+    /** HUD와 명령이 공유하는 접속 중 자동 기본 공격 모드. */
+    get autoAttackEnabled(): boolean { return this._autoAttackEnabled; }
+
+    setAutoAttackEnabled(enabled: boolean): boolean {
+        this._autoAttackEnabled = enabled;
+        return this._autoAttackEnabled;
+    }
+
+    toggleAutoAttack(): boolean {
+        return this.setAutoAttackEnabled(!this._autoAttackEnabled);
     }
 
     // -- Getters / Setters (dirty 추적) --
@@ -528,6 +542,7 @@ export default class Player extends Entity {
 
     override earlyUpdate(dt: number): void {
         super.earlyUpdate(dt);
+        this.tryPerformAutoAttack();
         if (!this.isDefeated) {
             this.depleteSurvivalNeeds(dt);
             this.syncSurvivalStatusEffects();
@@ -556,6 +571,20 @@ export default class Player extends Entity {
                 });
             }
         }
+    }
+
+    private tryPerformAutoAttack(): void {
+        if (!this._autoAttackEnabled
+            || this.isDefeated
+            || this.attackCooldown > 0
+            || !this.canPerformAction(ActionType.ATTACK)) return;
+        const target = this.currentTarget;
+        if (!target || target.isDefeated || target.locationId !== this.locationId) return;
+        const location = getLocation(this.locationId);
+        if (!location) return;
+        if (!target.isPlayer && !location.hasObject(target)) return;
+        if (target.getAttackDeniedReason(this.attackOwner)) return;
+        this.performBasicAttack(target);
     }
 
     private syncSurvivalStatusEffects(): void {

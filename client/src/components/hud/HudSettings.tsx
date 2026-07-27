@@ -7,7 +7,11 @@ import {
   type AnchorPoint,
   type PosAnchor,
 } from '../../context/HudContext'
-import { BASIC_ATTACK_HUD_ID } from '../../context/skillHudConfig'
+import {
+  AUTO_ATTACK_HUD_ID,
+  BASIC_ATTACK_HUD_ID,
+  createDefaultSkillHudConfig,
+} from '../../context/skillHudConfig'
 import { getUiScale } from '../../utils/displayPreferences'
 import styles from './HudSettings.module.scss'
 
@@ -61,15 +65,19 @@ export default function HudSettings({ onClose }: Props) {
   const skills = playerStats?.skills ?? []
   const quickButtonSettings = [
     { id: BASIC_ATTACK_HUD_ID, name: '공격', icon: 'attributes/atk', detail: '현재 대상', defaultIndex: 0 },
+    { id: AUTO_ATTACK_HUD_ID, name: '자동공격', icon: 'attributes/attackSpeed', detail: '쿨타임마다 공격', defaultIndex: 1 },
     ...skills.map((skill, index) => ({
       id: skill.id,
       name: skill.name,
       icon: skill.icon,
       detail: `Lv.${skill.level}`,
-      defaultIndex: index + 1,
+      defaultIndex: index + 2,
     })),
   ]
-  const enabledQuickButtonCount = quickButtonSettings.filter(button => skillHudConfigs[button.id]?.visible).length
+  const enabledQuickButtonCount = quickButtonSettings.filter(button =>
+    skillHudConfigs[button.id]?.visible
+      ?? createDefaultSkillHudConfig(button.id, button.defaultIndex).visible
+  ).length
   const ownedItems = playerStats?.usableItems ?? []
   const ownedItemIds = new Set(ownedItems.map(item => item.itemDataId))
   const itemButtonSettings = [
@@ -344,7 +352,8 @@ export default function HudSettings({ onClose }: Props) {
             <div className={styles.rowDesc}>공격과 스킬을 켠 뒤 위치 편집 모드에서 각각 옮길 수 있습니다.</div>
             <div className={styles.skillList}>
               {quickButtonSettings.map(button => {
-                const enabled = skillHudConfigs[button.id]?.visible ?? false
+                const enabled = skillHudConfigs[button.id]?.visible
+                  ?? createDefaultSkillHudConfig(button.id, button.defaultIndex).visible
                 return (
                   <div key={button.id} className={styles.skillRow}>
                     <img src={`/icons/${button.icon}.png`} alt="" className={styles.skillIcon} />

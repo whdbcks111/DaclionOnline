@@ -208,6 +208,7 @@ export default abstract class Entity implements TagReadable {
         this._mentality = this.attribute.get(AttributeType.MAX_MENTALITY);
         this._thirsty = this.attribute.get(AttributeType.MAX_THIRSTY);
         this._hungry = this.attribute.get(AttributeType.MAX_HUNGRY);
+        this.equipment.applyOwnerEffects(this);
     }
 
     // -- Getters / Setters --
@@ -783,6 +784,7 @@ export default abstract class Entity implements TagReadable {
 
         this.life = this.life - lifeDamage;
         if (lifeDamage > 0) this.removeStatusEffect('sleep', StatusEffectRemovalReason.INTERACTION);
+        if (this.life <= 0) this.equipment.tryPreventFatalDamage(this);
         if (this.life <= 0) this.clearShields();
         const remainingLife = this.life;
 
@@ -902,10 +904,14 @@ export default abstract class Entity implements TagReadable {
         options: AttackOptions = {},
     ): DamageResult | null {
         if (!this.canAttack(target)) return null;
+        const triggersMainHand = options.triggerMainHandHitEffects ?? type === 'physical';
+        const weaponDamageMultiplier = triggersMainHand
+            ? this.equipment.getEquipped(EquipSlotType.MAIN_HAND.key)?.rollInstanceAttackDamageMultiplier() ?? 1
+            : 1;
         // 기본 공격력: 물리 → atk, 마법 → magicForce
-        const baseAmount = amount ?? (type === 'physical'
+        const baseAmount = (amount ?? (type === 'physical'
             ? this.attribute.get(AttributeType.ATK)
-            : this.attribute.get(AttributeType.MAGIC_FORCE));
+            : this.attribute.get(AttributeType.MAGIC_FORCE))) * weaponDamageMultiplier;
         const combat = createCombatContext(this, target, type, baseAmount, options);
         runCombatStage(CombatStage.PREPARE, combat);
         if (combat.cancelled) {
@@ -984,16 +990,10 @@ export default abstract class Entity implements TagReadable {
         combat.result = damageResult;
         runCombatStage(CombatStage.AFTER_DAMAGE, combat);
         if (damageResult.finalDamage > 0) {
-            const offHand = target.equipment.getEquipped(EquipSlotType.OFF_HAND.key);
             try {
-                offHand?.data?.onDamageTaken?.({
-                    attacker: this,
-                    target,
-                    item: offHand,
-                    result: damageResult,
-                });
+                target.equipment.triggerDamageTakenEffects(this, target, damageResult);
             } catch (error) {
-                logger.error(`아이템 피격 효과 실패: ${offHand?.itemDataId ?? 'unknown'}`, error);
+                logger.error(`장착 아이템 피격 효과 실패: ${target.name}`, error);
             }
         }
         if (critical) {
@@ -1010,7 +1010,7 @@ export default abstract class Entity implements TagReadable {
             const weapon = this.equipment.getEquipped(EquipSlotType.MAIN_HAND.key);
             try {
                 weapon?.data?.onBasicAttackHit?.({ attacker: this, target, weapon, result: damageResult });
-                weapon?.triggerInstanceAttackEffects(target);
+                weapon?.triggerInstanceAttackEffects({ attacker: this, target, result: damageResult });
             } catch (error) {
                 logger.error(`아이템 공격 적중 효과 실패: ${weapon?.itemDataId ?? 'unknown'}`, error);
             }
@@ -1159,6 +1159,7 @@ export default abstract class Entity implements TagReadable {
         this.updateShields(dt);
         this.earlyUpdateStatusEffects(dt);
         this.updateStatusEffects(dt);
+        if (!this.isDefeated) this.equipment.updateOwnerEffects(this, dt);
         this.clampVitals();
 
         if (this._attackCooldown > 0) {
@@ -1211,6 +1212,10 @@ export default abstract class Entity implements TagReadable {
         this.life = 0;
         this.isDead = true;
         this.deathTimer = this.deathDuration;
+        const attackOwner = this.lastDamageCause?.causeEntity?.attackOwner;
+        if (this.hasTag(GameTags.ENTITY_MONSTER) && attackOwner && attackOwner !== this) {
+            attackOwner.equipment.triggerOwnerDefeatedEntity(attackOwner, this);
+        }
         emitGameEvent(GameEventIds.ENTITY_DEFEATED, {
             actor: this.lastDamageCause?.causeEntity ?? undefined,
             subject: this,

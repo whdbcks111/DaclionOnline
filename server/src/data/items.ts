@@ -12,6 +12,7 @@ import logger from '../utils/logger.js';
 import { GameTags } from '../../../shared/tags.js';
 import {
     executeProjectileItemAttack,
+    executeBurstFirearmAttack,
     ItemAttackOverrideKeys,
     registerItemAttackOverride,
 } from '../modules/itemAttack.js';
@@ -19,10 +20,17 @@ import { StatusEffectType } from '../models/StatusEffect.js';
 import { getFishCatalog } from './fishingCatalog.js';
 import { getLocation } from '../models/Location.js';
 import { ShieldType } from '../models/Shield.js';
-import type { ItemBasicAttackHitContext, ItemDamageTakenContext } from '../models/Item.js';
+import type {
+    Item,
+    ItemBasicAttackHitContext,
+    ItemDamageTakenContext,
+    ItemOwnerUpdateContext,
+} from '../models/Item.js';
 import { AttributeType } from '../models/Attribute.js';
+import { ItemAttackEffectType } from '../models/ItemAttackEffect.js';
 
 registerItemAttackOverride(ItemAttackOverrideKeys.PROJECTILE, executeProjectileItemAttack);
+registerItemAttackOverride(ItemAttackOverrideKeys.BURST_FIREARM, executeBurstFirearmAttack);
 
 export const DEFAULT_POTION_THIRST_RESTORE = 5;
 
@@ -89,6 +97,25 @@ function reactiveShield(
             ShieldType.GENERAL,
             duration,
             target,
+        );
+    };
+}
+
+function absorbKarmaWhileEquipped(ratePerSecond: number): (context: ItemOwnerUpdateContext) => void {
+    const elapsedByItem = new WeakMap<Item, number>();
+    return ({ owner, item, dt }) => {
+        const elapsed = (elapsedByItem.get(item) ?? 0) + dt;
+        const wholeSeconds = Math.floor(elapsed);
+        elapsedByItem.set(item, elapsed - wholeSeconds);
+        if (wholeSeconds <= 0 || owner.playerUserId === undefined) return;
+        const player = getPlayerByUserId(owner.playerUserId);
+        if (!player) return;
+        const change = player.reduceKarma(ratePerSecond * wholeSeconds, 'item:karma-devourer');
+        const absorbed = Math.max(0, -change.delta);
+        if (absorbed <= 0) return;
+        item.setMetadata(
+            'absorbedKarma',
+            (item.getMetadata<number>('absorbedKarma') ?? 0) + absorbed,
         );
     };
 }
@@ -2242,6 +2269,333 @@ for (const template of forgedTemplates) defineItem({
         : { role: ItemBalanceRole.WEAPON, attackType: 'physical' },
 });
 
+// TODO(art): 보스 희귀 흉갑 전용 아트 제작 전까지 단조 흉갑 카테고리 아이콘을 사용한다.
+defineItem({
+    id: 'devouring_root_cuirass',
+    name: '포식뿌리 흉갑',
+    description: '쓰러뜨린 생명의 잔향을 뿌리가 삼켜 착용자의 상처를 메우지만 성장의 기억 일부도 함께 먹어 치운다.',
+    image: 'items/forged_chestplate',
+    category: '흉갑',
+    weight: 7.2,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'body',
+    modifiers: [
+        { attribute: 'def', op: 'add', value: 205, source: '' },
+        { attribute: 'magicDef', op: 'add', value: 190, source: '' },
+        { attribute: 'maxLife', op: 'add', value: 3_400, source: '' },
+        { attribute: 'lifeRegen', op: 'add', value: 14, source: '' },
+    ],
+    baseDurability: 1_820,
+    gameplayEffects: [
+        '경험치 획득량 10% 감소',
+        '몬스터 처치 시 잃은 생명력의 12% 회복',
+    ],
+    experienceGainMultiplier: 0.9,
+    onOwnerDefeatedEntity: ({ owner }) => {
+        owner.heal(Math.max(0, owner.maxLife - owner.life) * 0.12, owner);
+    },
+    tags: [
+        GameTags.ITEM_ARMOR,
+        GameTags.MATERIAL_WORLDROOT,
+        GameTags.PROPERTY_NATURAL,
+        GameTags.PROPERTY_DARK,
+    ],
+    balance: {
+        role: ItemBalanceRole.DEFENSE,
+        recommendedJobIds: ['career:warrior', 'career:blacksmith'],
+        notes: ['처치 회복은 전투 대상 수와 처치 빈도에 따라 달라 고정 생존량과 분리합니다.'],
+    },
+});
+
+// TODO(art): 보스 희귀 갑주 전용 아트 제작 전까지 단조 흉갑 카테고리 아이콘을 사용한다.
+defineItem({
+    id: 'golden_resonance_armor',
+    name: '황금반향 갑주',
+    description: '충격을 받을 때마다 갑주의 금빛 공명이 작은 금화 조각을 현실로 밀어낸다.',
+    image: 'items/forged_chestplate',
+    category: '흉갑',
+    weight: 8,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'body',
+    modifiers: [
+        { attribute: 'def', op: 'add', value: 225, source: '' },
+        { attribute: 'magicDef', op: 'add', value: 215, source: '' },
+        { attribute: 'maxLife', op: 'add', value: 3_100, source: '' },
+    ],
+    baseDurability: 1_900,
+    gameplayEffects: ['피해를 받을 때 최대 생명력 대비 피해 비율에 따라 1~10 Gold 획득'],
+    onDamageTaken: ({ target, result }) => {
+        const userId = target.playerUserId;
+        const player = userId === undefined ? undefined : getPlayerByUserId(userId);
+        if (!player) return;
+        const gold = Math.max(1, Math.min(10, Math.ceil(result.finalDamage / Math.max(1, target.maxLife) * 100)));
+        player.gold += gold;
+        sendNotificationToUser(player.userId, {
+            key: 'item:golden-resonance',
+            message: `황금반향 +${gold}G`,
+            length: 900,
+        });
+    },
+    tags: [
+        GameTags.ITEM_ARMOR,
+        GameTags.MATERIAL_NEBULA_CORRIDOR,
+        GameTags.PROPERTY_LIGHT,
+        GameTags.PROPERTY_METAL,
+    ],
+    balance: {
+        role: ItemBalanceRole.DEFENSE,
+        recommendedJobIds: ['career:warrior', 'career:blacksmith'],
+        notes: ['피격 Gold는 적의 공격 빈도와 피해량에 따라 달라 고정 전투 가치와 분리합니다.'],
+    },
+});
+
+// TODO(art): 총포 전용 아트 제작 전까지 원거리 무기 카테고리 아이콘을 사용한다.
+defineItem({
+    id: 'triple_burst_firearm',
+    name: '삼연철포',
+    description: '현실의 3점사 총기를 본뜬 성간 철포. 재장전은 길지만 방아쇠 한 번에 회피할 수 없는 탄환 세 발을 연속 발사한다.',
+    image: 'items/stormstring_bow',
+    category: '총포',
+    weight: 6.4,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.BURST_FIREARM,
+    },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 485, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 155, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.38, source: '' },
+        { attribute: 'attackSpeed', op: 'multiply', value: 0.26, source: '' },
+    ],
+    baseDurability: 1_520,
+    gameplayEffects: [
+        '기본 공격 시 공격력 72%의 회피 불가 탄환 3발을 시간차 발사',
+        '기본 공격 주기가 약 3.85배 길어짐',
+    ],
+    tags: [
+        GameTags.ITEM_WEAPON,
+        GameTags.MATERIAL_CHRONOFROST,
+        GameTags.PROPERTY_METAL,
+        GameTags.PROPERTY_ELECTRIC,
+    ],
+    balance: {
+        role: ItemBalanceRole.WEAPON,
+        attackType: 'physical',
+        recommendedJobIds: ['career:archer', 'career:blacksmith'],
+        notes: ['세 발의 직접 피해와 긴 기본 공격 주기를 함께 비교합니다.'],
+    },
+});
+
+// TODO(art): 악마 무기 전용 아트 제작 전까지 단조 장검 카테고리 아이콘을 사용한다.
+defineItem({
+    id: 'demonic_bloodpact_sword',
+    name: '악마의 검',
+    description: '주인의 생명력을 끊임없이 태워 검붉은 힘으로 바꾸는 계약검. 회복을 거부할수록 칼날은 더 강해진다.',
+    image: 'items/forged_sword',
+    category: '장검',
+    weight: 5.6,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 270, source: '' },
+        { attribute: 'atk', op: 'multiply', value: 1.2, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 82, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.34, source: '' },
+        { attribute: 'lifeRegen', op: 'multiply', value: 0, source: '' },
+    ],
+    baseDurability: 1_180,
+    gameplayEffects: [
+        '공격력 20% 증가',
+        '생명력 재생 억제',
+        '초당 최대 생명력의 1% 소모 (이 효과로는 생명력 1 미만이 되지 않음)',
+    ],
+    onOwnerUpdate: ({ owner, dt }) => {
+        owner.life = Math.max(1, owner.life - owner.maxLife * 0.01 * dt);
+    },
+    tags: [
+        GameTags.ITEM_WEAPON,
+        GameTags.WEAPON_SWORD,
+        GameTags.MATERIAL_ASHEN_ABYSS,
+        GameTags.PROPERTY_FIRE,
+        GameTags.PROPERTY_DARK,
+    ],
+    balance: {
+        role: ItemBalanceRole.WEAPON,
+        attackType: 'physical',
+        recommendedJobIds: ['career:warrior', 'career:blacksmith'],
+        notes: ['지속 생명력 소모와 재생 억제를 공격력 증가의 대가로 함께 평가합니다.'],
+    },
+});
+
+// TODO(art): 회귀 갑주 전용 아트 제작 전까지 단조 흉갑 카테고리 아이콘을 사용한다.
+defineItem({
+    id: 'chronicle_revival_armor',
+    name: '회귀성운 갑주',
+    description: '착용자의 마지막 순간을 별의 기록에 묶어 둔 갑주. 죽음이 닿으면 오래 저장한 시간을 소모해 육체를 되감는다.',
+    image: 'items/forged_chestplate',
+    category: '흉갑',
+    weight: 8.6,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'body',
+    modifiers: [
+        { attribute: 'def', op: 'add', value: 245, source: '' },
+        { attribute: 'magicDef', op: 'add', value: 260, source: '' },
+        { attribute: 'maxLife', op: 'add', value: 4_200, source: '' },
+    ],
+    baseDurability: 2_050,
+    gameplayEffects: [
+        '치명적인 피해를 받으면 사망을 막고 최대 생명력의 30%로 회귀',
+        '회귀 재사용 대기시간 6시간 (장비 교체·재접속 후에도 유지)',
+    ],
+    onOwnerFatalDamage: ({ owner, item }) => {
+        const now = Date.now();
+        const availableAt = item.getMetadata<number>('fatalReviveAvailableAt') ?? 0;
+        if (availableAt > now) return false;
+        item.setMetadata('fatalReviveAvailableAt', now + 6 * 60 * 60 * 1_000);
+        owner.life = Math.max(1, owner.maxLife * 0.3);
+        if (owner.playerUserId !== undefined) {
+            sendNotificationToUser(owner.playerUserId, {
+                key: 'item:chronicle-revival',
+                message: '회귀성운 갑주가 죽음을 되돌렸습니다. 생명력 30%로 회귀합니다.',
+                length: 4_000,
+            });
+        }
+        return true;
+    },
+    tags: [
+        GameTags.ITEM_ARMOR,
+        GameTags.MATERIAL_CHRONOFROST,
+        GameTags.PROPERTY_ICE,
+        GameTags.PROPERTY_LIGHT,
+    ],
+    balance: {
+        role: ItemBalanceRole.DEFENSE,
+        recommendedJobIds: ['career:warrior', 'career:blacksmith'],
+        notes: ['6시간 영속 재사용 대기시간의 사망 방지 효과는 일반 전투 방어력과 분리해 평가합니다.'],
+    },
+});
+
+// TODO(art): 수호 활 전용 아트 제작 전까지 원거리 무기 카테고리 아이콘을 사용한다.
+defineItem({
+    id: 'rampart_string_bow',
+    name: '성벽시위',
+    description: '화살을 적중시킬 때마다 별빛 시위가 주인 둘레에 짧은 성벽을 한 겹씩 세우는 수호궁.',
+    image: 'items/stormstring_bow',
+    category: '활',
+    weight: 3.5,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
+        projectileAttack: {
+            ammunitionItemId: 'wooden_arrow',
+            projectile: { dataId: 'basic_arrow' },
+        },
+    },
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 410, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 105, source: '' },
+        { attribute: 'attackSpeed', op: 'multiply', value: 1.12, source: '' },
+    ],
+    baseDurability: 1_480,
+    gameplayEffects: [
+        '기본 공격 적중 시 5초 동안 방어력 +70',
+        '다시 적중할 때 지속시간이 갱신되며 최대 5중첩',
+    ],
+    onBasicAttackHit: ({ attacker }) => {
+        const guard = StatusEffectType.fromKey('rampart_volley');
+        if (!guard) return;
+        const currentStacks = attacker.getStatusEffect(guard)?.level ?? 0;
+        const applied = attacker.applyStatusEffect(guard, 5, Math.min(5, currentStacks + 1));
+        applied.effect?.start(attacker);
+    },
+    tags: [
+        GameTags.ITEM_WEAPON,
+        GameTags.WEAPON_BOW,
+        GameTags.MATERIAL_ENDSTAR,
+        GameTags.PROPERTY_LIGHT,
+        GameTags.PROPERTY_STONE,
+    ],
+    balance: {
+        role: ItemBalanceRole.WEAPON,
+        attackType: 'physical',
+        recommendedJobIds: ['career:archer'],
+        notes: ['연속 적중으로 유지하는 최대 방어력 +350을 공격 중단 시 사라지는 조건부 생존력으로 평가합니다.'],
+    },
+});
+
+// TODO(art): 저주받은 검 전용 아트 제작 전까지 단조 장검 카테고리 아이콘을 사용한다.
+defineItem({
+    id: 'karma_devourer_sword',
+    name: '업식검 카르마보어',
+    description: '주인의 업을 조금씩 먹어 치우며 검은 윤기를 더하는 저주받은 검. 부서지는 순간 삼킨 업과 저주를 함께 토해낸다.',
+    image: 'items/forged_sword',
+    category: '장검',
+    weight: 5.1,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 310, source: '' },
+        { attribute: 'armorPen', op: 'add', value: 96, source: '' },
+        { attribute: 'critDmg', op: 'add', value: 0.42, source: '' },
+    ],
+    baseDurability: 666,
+    gameplayEffects: [
+        '장착 중 1초마다 카르마 0.2를 검에 흡수',
+        '파괴 시 흡수한 카르마의 50%를 당시 주인에게 되돌림',
+        '파괴 시 7일 동안 Lv.10 쇠약의 저주 부여',
+    ],
+    onOwnerUpdate: absorbKarmaWhileEquipped(0.2),
+    onOwnerItemDestroyed: ({ owner, item }) => {
+        if (owner.playerUserId === undefined) return;
+        const player = getPlayerByUserId(owner.playerUserId);
+        if (!player) return;
+        const absorbed = Math.max(0, item.getMetadata<number>('absorbedKarma') ?? 0);
+        const returned = absorbed * 0.5;
+        if (returned > 0) player.addKarma(returned, 'item:karma-devourer-shatter');
+        const curse = StatusEffectType.fromKey('curse');
+        if (curse) player.applyStatusEffect(curse, 7 * 24 * 60 * 60, 10);
+        sendNotificationToUser(player.userId, {
+            key: 'item:karma-devourer-shatter',
+            message: `업식검이 파괴되어 카르마 ${returned.toFixed(1)}와 7일의 쇠약이 되돌아왔습니다.`,
+            length: 5_000,
+        });
+    },
+    tags: [
+        GameTags.ITEM_WEAPON,
+        GameTags.WEAPON_SWORD,
+        GameTags.MATERIAL_VOIDCROWN,
+        GameTags.PROPERTY_DARK,
+        GameTags.PROPERTY_METAL,
+    ],
+    balance: {
+        role: ItemBalanceRole.WEAPON,
+        attackType: 'physical',
+        recommendedJobIds: ['career:warrior', 'career:assassin'],
+        notes: ['장착 중 카르마 감소 이득과 파괴 시 카르마 반환·7일 쇠약 위험을 함께 평가합니다.'],
+    },
+});
+
 // TODO(art): 엘리트 대장장이 부품 전용 아트 제작 전까지 무기/광물 카테고리 fallback을 사용한다.
 for (const component of [
     {
@@ -3113,6 +3467,13 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
         baseMetadata: {
             [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
             [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
+            [ItemMetadataKeys.ATTACK_EFFECTS]: [{
+                type: ItemAttackEffectType.ECHO_PROJECTILE.id,
+                chance: 0.28,
+                duration: 0.1,
+                level: 12,
+                power: 0.3,
+            }],
         },
         onUse: null, equipSlot: 'mainHand',
         modifiers: [
@@ -3121,7 +3482,10 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
             { attribute: 'projectileAcceleration', op: 'multiply', value: 2.18, source: '' },
         ],
         baseDurability: 1_270,
-        gameplayEffects: ['화살 적중 시 25% 확률로 둔화 Lv.12를 4초간 부여'],
+        gameplayEffects: [
+            '화살 적중 시 25% 확률로 둔화 Lv.12를 4초간 부여',
+            '적중 시 28% 확률로 원래 피해의 30% 메아리 탄환 1개 발사',
+        ],
         onBasicAttackHit: applyHitStatus('slowness', 0.25, 4, 12),
         tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_NEBULA_CORRIDOR, GameTags.PROPERTY_DARK],
         balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },
@@ -3129,7 +3493,16 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     {
         id: 'orbit_fang', name: '궤도이탈 송곳니', description: '궤도편의 방향을 순간적으로 비틀어 방어 틈으로 파고든다. 적중 시 25% 확률로 6초간 방어력 감소 Lv.12를 부여한다.',
         image: 'items/nightglass_dagger', category: '단검', weight: 1.7, stackable: false, maxStack: 1,
-        baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+        baseMetadata: {
+            [ItemMetadataKeys.ATTACK_EFFECTS]: [{
+                type: ItemAttackEffectType.CURRENT_LIFE_BURST.id,
+                chance: 0.25,
+                duration: 0.1,
+                level: 13,
+                power: 0.018,
+            }],
+        },
+        onUse: null, equipSlot: 'mainHand',
         modifiers: [
             { attribute: 'atk', op: 'add', value: 402, source: '' },
             { attribute: 'armorPen', op: 'add', value: 130, source: '' },
@@ -3137,7 +3510,10 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
             { attribute: 'speed', op: 'add', value: 0.28, source: '' },
         ],
         baseDurability: 1_165,
-        gameplayEffects: ['적중 시 25% 확률로 방어력 감소 Lv.12를 6초간 부여'],
+        gameplayEffects: [
+            '적중 시 25% 확률로 방어력 감소 Lv.12를 6초간 부여',
+            '적중 시 25% 확률로 대상 현재 생명력의 1.8% 추가 피해 (원 피해의 150% 상한)',
+        ],
         onBasicAttackHit: applyHitStatus('defense_reduction', 0.25, 6, 12),
         tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_NEBULA_CORRIDOR, GameTags.PROPERTY_ELECTRIC],
         balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
@@ -3238,6 +3614,13 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
             [ItemMetadataKeys.PROJECTILE_ATTACK]: {
                 projectile: { dataId: 'basic_magic_orb', overrides: { tags: [GameTags.PROPERTY_ICE, GameTags.PROPERTY_ELECTRIC] } },
             },
+            [ItemMetadataKeys.ATTACK_EFFECTS]: [{
+                type: ItemAttackEffectType.UNSTABLE_RESONANCE.id,
+                chance: 1,
+                duration: 0.1,
+                level: 10,
+                power: 0.32,
+            }],
         },
         onUse: null, equipSlot: 'mainHand',
         modifiers: [
@@ -3247,7 +3630,10 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
             { attribute: 'projectileAcceleration', op: 'multiply', value: 2.42, source: '' },
         ],
         baseDurability: 1_495,
-        gameplayEffects: ['마력탄 적중 시 22% 확률로 빙결 Lv.10을 3초간 부여'],
+        gameplayEffects: [
+            '마력탄 적중 시 22% 확률로 빙결 Lv.10을 3초간 부여',
+            '기본 공격마다 피해가 68~132% 사이에서 무작위로 변동',
+        ],
         onBasicAttackHit: applyHitStatus('frozen', 0.22, 3, 10),
         tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_STAFF, GameTags.MATERIAL_CHRONOFROST, GameTags.PROPERTY_ICE, GameTags.PROPERTY_ELECTRIC],
         balance: { role: ItemBalanceRole.WEAPON, attackType: 'magic', recommendedJobIds: ['career:mage'] },
@@ -3271,14 +3657,26 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     {
         id: 'endstar_edge', name: '종성단절검', description: '소멸금 칼날이 베어낸 경계에서 빛과 어둠의 연결을 함께 끊는다. 적중 시 32% 확률로 8초간 방어력 감소 Lv.16을 부여한다.',
         image: 'items/windsteel_sword', category: '장검', weight: 5.35, stackable: false, maxStack: 1,
-        baseMetadata: null, onUse: null, equipSlot: 'mainHand',
+        baseMetadata: {
+            [ItemMetadataKeys.ATTACK_EFFECTS]: [{
+                type: ItemAttackEffectType.LIFE_SIPHON.id,
+                chance: 0.3,
+                duration: 0.1,
+                level: 14,
+                power: 0.16,
+            }],
+        },
+        onUse: null, equipSlot: 'mainHand',
         modifiers: [
             { attribute: 'atk', op: 'add', value: 620, source: '' },
             { attribute: 'armorPen', op: 'add', value: 176, source: '' },
             { attribute: 'critDmg', op: 'add', value: 0.48, source: '' },
         ],
         baseDurability: 1_650,
-        gameplayEffects: ['적중 시 32% 확률로 방어력 감소 Lv.16을 8초간 부여'],
+        gameplayEffects: [
+            '적중 시 32% 확률로 방어력 감소 Lv.16을 8초간 부여',
+            '적중 시 30% 확률로 실제 생명력 피해의 16% 회복',
+        ],
         onBasicAttackHit: applyHitStatus('defense_reduction', 0.32, 8, 16),
         tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_ENDSTAR, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL],
         balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
@@ -3289,6 +3687,13 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
         baseMetadata: {
             [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
             [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
+            [ItemMetadataKeys.ATTACK_EFFECTS]: [{
+                type: ItemAttackEffectType.ECHO_PROJECTILE.id,
+                chance: 0.34,
+                duration: 0.1,
+                level: 12,
+                power: 0.38,
+            }],
         },
         onUse: null, equipSlot: 'mainHand',
         modifiers: [
@@ -3297,7 +3702,10 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
             { attribute: 'projectileAcceleration', op: 'multiply', value: 2.68, source: '' },
         ],
         baseDurability: 1_565,
-        gameplayEffects: ['화살 적중 시 24% 확률로 실명 Lv.12를 5초간 부여'],
+        gameplayEffects: [
+            '화살 적중 시 24% 확률로 실명 Lv.12를 5초간 부여',
+            '적중 시 34% 확률로 원래 피해의 38% 메아리 탄환 1개 발사',
+        ],
         onBasicAttackHit: applyHitStatus('blindness', 0.24, 5, 12),
         tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_BOW, GameTags.MATERIAL_ENDSTAR, GameTags.PROPERTY_LIGHT],
         balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:archer'] },

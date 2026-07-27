@@ -1575,6 +1575,7 @@ const ashenAbyssMonsters: WorldMonsterData[] = [
             { itemDataId: 'mourning_eye', minCount: 6, maxCount: 10, chance: 0.85 },
             { itemDataId: 'sovereign_decree_skillbook', minCount: 1, maxCount: 1, chance: 0.03 },
             { itemDataId: 'ashguard_bulwark', minCount: 1, maxCount: 1, chance: 0.02 },
+            { itemDataId: 'demonic_bloodpact_sword', minCount: 1, maxCount: 1, chance: 0.016 },
         ],
         goldReward: { min: 6_200, max: 9_400 },
         skills: [
@@ -1979,6 +1980,7 @@ const voidcrownMonsters: WorldMonsterData[] = [
             { itemDataId: 'crown_glass', minCount: 7, maxCount: 12, chance: 0.88 },
             { itemDataId: 'crown_nullification_skillbook', minCount: 1, maxCount: 1, chance: 0.03 },
             { itemDataId: 'regent_aegis', minCount: 1, maxCount: 1, chance: 0.018 },
+            { itemDataId: 'karma_devourer_sword', minCount: 1, maxCount: 1, chance: 0.012 },
         ],
         goldReward: { min: 10_000, max: 15_000 },
         skills: [
@@ -2390,6 +2392,7 @@ const worldrootMonsters: WorldMonsterData[] = [
             { itemDataId: 'memory_amber', minCount: 8, maxCount: 14, chance: 0.9 },
             { itemDataId: 'primordial_sanctuary_skillbook', minCount: 1, maxCount: 1, chance: 0.03 },
             { itemDataId: 'canopy_heartshield', minCount: 1, maxCount: 1, chance: 0.018 },
+            { itemDataId: 'devouring_root_cuirass', minCount: 1, maxCount: 1, chance: 0.016 },
         ],
         goldReward: { min: 19_000, max: 27_000 },
         skills: [
@@ -2521,6 +2524,7 @@ const nebulaCorridorMonsters: WorldMonsterData[] = [
             { itemDataId: 'orbit_fragment', minCount: 8, maxCount: 14, chance: 0.9 },
             { itemDataId: 'starwell_staff', minCount: 1, maxCount: 1, chance: 0.02 },
             { itemDataId: 'gravity_arc_bow', minCount: 1, maxCount: 1, chance: 0.015 },
+            { itemDataId: 'golden_resonance_armor', minCount: 1, maxCount: 1, chance: 0.016 },
         ],
         goldReward: { min: 27_000, max: 38_000 },
         skills: [
@@ -2651,6 +2655,8 @@ const chronofrostMonsters: WorldMonsterData[] = [
             { itemDataId: 'aeon_thread', minCount: 9, maxCount: 15, chance: 0.9 },
             { itemDataId: 'zero_hour_staff', minCount: 1, maxCount: 1, chance: 0.02 },
             { itemDataId: 'aeon_bulwark', minCount: 1, maxCount: 1, chance: 0.015 },
+            { itemDataId: 'triple_burst_firearm', minCount: 1, maxCount: 1, chance: 0.012 },
+            { itemDataId: 'chronicle_revival_armor', minCount: 1, maxCount: 1, chance: 0.01 },
         ],
         goldReward: { min: 36_000, max: 50_000 },
         skills: [
@@ -2782,6 +2788,7 @@ const endstarMonsters: WorldMonsterData[] = [
             { itemDataId: 'genesis_staff', minCount: 1, maxCount: 1, chance: 0.022 },
             { itemDataId: 'horizon_bulwark', minCount: 1, maxCount: 1, chance: 0.018 },
             { itemDataId: 'constellation_bow', minCount: 1, maxCount: 1, chance: 0.014 },
+            { itemDataId: 'rampart_string_bow', minCount: 1, maxCount: 1, chance: 0.012 },
         ],
         goldReward: { min: 52_000, max: 74_000 },
         skills: [

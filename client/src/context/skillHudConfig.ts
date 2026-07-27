@@ -9,6 +9,7 @@ export interface SkillHudConfig {
 }
 
 export const BASIC_ATTACK_HUD_ID = 'system:basic_attack'
+export const AUTO_ATTACK_HUD_ID = 'system:auto_attack'
 
 export function createDefaultSkillHudConfig(skillId: string, index = 0): SkillHudConfig {
   const viewportWidth = typeof window === 'undefined' ? 1024 : getUiViewportSize().width
@@ -17,7 +18,7 @@ export function createDefaultSkillHudConfig(skillId: string, index = 0): SkillHu
   const row = Math.floor(Math.max(0, index) / columns)
   return {
     skillId,
-    visible: false,
+    visible: skillId === AUTO_ATTACK_HUD_ID,
     x: (column + 1) * 100 / (columns + 1),
     y: Math.max(12, 78 - row * 12),
   }

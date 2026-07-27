@@ -8,7 +8,7 @@ import {
     spawnProjectileFromData,
 } from '../models/Projectile.js';
 import type { ProjectileReference } from '../models/Projectile.js';
-import { isPropertyTag } from '../../../shared/tags.js';
+import { GameTags, isPropertyTag } from '../../../shared/tags.js';
 
 export interface ItemAttackOverrideContext {
     attacker: Entity;
@@ -21,6 +21,7 @@ export type ItemAttackOverride = (context: ItemAttackOverrideContext) => boolean
 
 export const ItemAttackOverrideKeys = Object.freeze({
     PROJECTILE: 'projectile',
+    BURST_FIREARM: 'burst_firearm',
 } as const);
 
 const attackOverrides = new Map<string, ItemAttackOverride>();
@@ -98,6 +99,7 @@ export function executeProjectileItemAttack(context: ItemAttackOverrideContext):
         target: context.target,
         dataId: reference.dataId,
         overrides: reference.overrides,
+        damageScale: context.weapon.rollInstanceAttackDamageMultiplier(),
         onHit: (_projectile, result) => {
             if (!result.evaded && result.finalDamage > 0) {
                 context.weapon.data?.onBasicAttackHit?.({
@@ -106,7 +108,11 @@ export function executeProjectileItemAttack(context: ItemAttackOverrideContext):
                     weapon: context.weapon,
                     result,
                 });
-                context.weapon.triggerInstanceAttackEffects(context.target);
+                context.weapon.triggerInstanceAttackEffects({
+                    attacker: context.attacker,
+                    target: context.target,
+                    result,
+                });
             }
         },
     });
@@ -117,6 +123,49 @@ export function executeProjectileItemAttack(context: ItemAttackOverrideContext):
         return false;
     }
 
+    context.attacker.commitAttack(true);
+    return true;
+}
+
+/** 긴 기본 공격 주기 대신 회피 불가 탄환 세 발을 시간차로 발사하는 총포 공격. */
+export function executeBurstFirearmAttack(context: ItemAttackOverrideContext): boolean {
+    if (!context.attacker.canAttack(context.target)) return true;
+    const travelTimes = [0.16, 0.3, 0.44] as const;
+    const projectiles = travelTimes.map((travelTime, index) => spawnProjectileFromData({
+        owner: context.attacker,
+        target: context.target,
+        dataId: 'basic_arrow',
+        overrides: {
+            name: `삼연철포 탄환 ${index + 1}`,
+            damageType: 'physical',
+            damageMultiplier: 0.72,
+            damageBonus: 0,
+            travelTime,
+            unavoidable: true,
+            tags: [GameTags.PROPERTY_METAL],
+        },
+        damageScale: context.weapon.rollInstanceAttackDamageMultiplier(),
+        onHit: (_projectile, result) => {
+            if (result.evaded || result.finalDamage <= 0) return;
+            context.weapon.data?.onBasicAttackHit?.({
+                attacker: context.attacker,
+                target: context.target,
+                weapon: context.weapon,
+                result,
+            });
+            context.weapon.triggerInstanceAttackEffects({
+                attacker: context.attacker,
+                target: context.target,
+                result,
+            });
+        },
+    }));
+    if (projectiles.some(projectile => !projectile)) {
+        for (const projectile of projectiles) {
+            if (projectile) removeProjectile(projectile);
+        }
+        return false;
+    }
     context.attacker.commitAttack(true);
     return true;
 }

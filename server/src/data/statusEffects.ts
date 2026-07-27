@@ -181,6 +181,21 @@ const STRENGTH_ENHANCEMENT = defineAttributeEffect({
     modifiers: level => [{ attribute: AttributeType.ATK.key, op: 'multiply', value: 1 + level * 0.05 }],
 });
 
+const RAMPART_VOLLEY = defineAttributeEffect({
+    id: 'rampart_volley',
+    label: '성벽 연사',
+    icon: ICON.defense,
+    descriptionTemplate: '성벽시위의 적중 중첩으로 방어력이 [color=orange]{{calc.defense}}[/color] 증가합니다. ({{level}}/5중첩)',
+    aliases: ['성벽 연사'],
+    calculatedFields: {
+        defense: ({ effect }) => effect.level * 70,
+    },
+    calculatedFieldTooltips: {
+        defense: '중첩당 방어력 70, 최대 5중첩',
+    },
+    modifiers: level => [{ attribute: AttributeType.DEF.key, op: 'add', value: Math.min(5, level) * 70 }],
+});
+
 const MENTALITY_REGENERATION = defineAttributeEffect({
     id: 'mentality_regeneration', label: '정신력 재생', icon: ICON.mentality,
     descriptionTemplate: '정신력 재생이 [color=purple]{{calc.increasePercent}}%[/color] 증가합니다.', aliases: ['마나 재생', '정신력 재생'],
@@ -552,7 +567,7 @@ defineStatusEffectInteraction(StatusEffectType.FIRE, INVISIBLE, StatusEffectInte
 
 export const LegacyStatusEffects = Object.freeze({
     POISON, BLEEDING, DECAY, HEAL_REDUCTION, DEFENSE_REDUCTION, MAGIC_DEFENSE_REDUCTION,
-    MAGIC_ENHANCEMENT, STRENGTH_ENHANCEMENT, MENTALITY_REGENERATION, REGENERATION,
+    MAGIC_ENHANCEMENT, STRENGTH_ENHANCEMENT, RAMPART_VOLLEY, MENTALITY_REGENERATION, REGENERATION,
     EXPERIENCE_AMPLIFICATION, HERO, SLOWNESS, SWIFTNESS, CURSE, PETRIFICATION, SUN_FEVER,
     SILENCE, BIND, STUN, OVERMASTER,
     NAUSEA, BLINDNESS, AIRBORNE, CHARM, FEAR, SLEEP, INVULNERABLE, INVISIBLE, EXPOSE,
