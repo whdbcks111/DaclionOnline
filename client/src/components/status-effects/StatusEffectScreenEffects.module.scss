@@ -1,0 +1,60 @@
+.root {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    width: var(--app-viewport-width, 100vw);
+    height: var(--app-viewport-height, 100vh);
+    overflow: hidden;
+    pointer-events: none;
+    contain: strict;
+}
+
+.layer {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border: clamp(4rem, 13vmin, 9.5rem) solid transparent;
+    border-image-slice: 23%;
+    border-image-width: 1;
+    border-image-outset: 0;
+    border-image-repeat: stretch;
+    opacity: 0;
+    transition: opacity 650ms ease;
+    will-change: opacity;
+}
+
+.active {
+    opacity: var(--status-effect-opacity);
+    animation: status-effect-breathe 2.6s ease-in-out infinite alternate;
+}
+
+.fire,
+.electric,
+.frozen {
+    mix-blend-mode: screen;
+}
+
+.poison {
+    mix-blend-mode: multiply;
+}
+
+@keyframes status-effect-breathe {
+    from { opacity: calc(var(--status-effect-opacity) * 0.82); }
+    to { opacity: var(--status-effect-opacity); }
+}
+
+@media (max-width: 600px) {
+    .layer {
+        border-width: clamp(3.2rem, 15vmin, 6.5rem);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .layer {
+        transition: none;
+    }
+
+    .active {
+        animation: none;
+    }
+}

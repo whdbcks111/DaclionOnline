@@ -15,6 +15,8 @@ import HudContainer from '../components/hud/HudContainer'
 import HudSettings from '../components/hud/HudSettings'
 import MiniGameOverlay from '../components/minigame/MiniGameOverlay'
 import HumanVerificationOverlay from '../components/security/HumanVerificationOverlay'
+import StatusEffectScreenEffects from '../components/status-effects/StatusEffectScreenEffects'
+import { resolveStatusScreenVisualState } from '../components/status-effects/statusEffectVisuals'
 import { CHAT_WHISPER_DISPLAY, ChatType, summarizeChatContent } from '@shared/chat'
 import type {
   ChatMessage as ChatMessageType,
@@ -563,9 +565,13 @@ function HomeContent() {
 
   const lifeRatio  = playerStats ? Math.max(0, playerStats.life / playerStats.maxLife) : 1
   const mpRatio    = playerStats ? Math.max(0, playerStats.mentality / playerStats.maxMentality) : 1
+  const statusVisualState = resolveStatusScreenVisualState(playerStats?.statusEffects ?? [])
 
   return (
-    <div className={styles.homeContainer}>
+    <div
+      className={styles.homeContainer}
+      data-status-message-disrupted={statusVisualState.messageDisrupted ? 'true' : undefined}
+    >
       <div className={styles.chatArea}>
         <Header
           totalCount={userCountData.total}
@@ -600,7 +606,13 @@ function HomeContent() {
         </div>
         <div className={styles.statusBars}>
           <div className={styles.hpBar}>
-            <div className={styles.hpFill} style={{ width: `${lifeRatio * 100}%` }} />
+            <div
+              className={styles.hpFill}
+              style={{
+                width: `${lifeRatio * 100}%`,
+                backgroundColor: statusVisualState.lifeColor,
+              }}
+            />
           </div>
           <div className={styles.mpBar}>
             <div className={styles.mpFill} style={{ width: `${mpRatio * 100}%` }} />
@@ -813,6 +825,7 @@ function HomeContent() {
       <HudContainer />
       <MiniGameOverlay />
       <HumanVerificationOverlay />
+      <StatusEffectScreenEffects state={statusVisualState} />
       {hudSettingsOpen && <HudSettings onClose={() => setHudSettingsOpen(false)} />}
     </div>
   )

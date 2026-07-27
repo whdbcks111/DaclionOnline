@@ -72,6 +72,29 @@ $avatar-size: 40px;
     }
 }
 
+:global([data-status-message-disrupted='true']) .body {
+    animation: status-message-disruption 1.15s steps(2, end) infinite;
+}
+
+@keyframes status-message-disruption {
+    0%,
+    45% {
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+    }
+
+    50%,
+    100% {
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.42);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :global([data-status-message-disrupted='true']) .body {
+        animation: none;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
+    }
+}
+
 .replyReference {
     display: flex;
     align-items: center;

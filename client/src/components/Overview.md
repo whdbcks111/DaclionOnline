@@ -12,5 +12,6 @@
 - `dialog/`: portal 기반 공용 Dialog와 필드 정의형 FormDialog. 필수 select는 첫 option을 초기값으로 사용하며, 검색 선택 목록은 별도 body portal과 viewport 기준 위/아래 배치로 다이얼로그 overflow에 잘리지 않는다.
 - `minigame/`: 서버 세션 기반 전체 화면 미니게임 renderer. 낚시는 PC 키보드와 모바일 아날로그 조이스틱의 20ms 병합 입력 trace, 등급·0~100% 단색 변화 포획 게이지·채집 영역을 표시한다.
 - `security/`: 서버가 발급한 일회성 raster 문제를 표시하고 성공 전에는 닫히지 않는 반복 사냥 사람 확인 오버레이.
+- `status-effects/`: 현재 플레이어 상태효과 snapshot을 화염·독·빙결·감전 9-slice 화면 비네트, 독성 HP 색과 마비성 메시지 교란으로 표현하는 입력 비활성 overlay.
 
 컴포넌트 계약이나 하위 폴더 책임이 바뀌면 이 문서와 관련 시스템 문서를 갱신한다. 스타일 변경은 모바일/PC 양쪽 반응형 동작을 확인한다.
