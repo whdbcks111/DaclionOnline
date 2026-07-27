@@ -63,12 +63,17 @@ export default function ImageViewer({ open, src, alt, onClose }: Props) {
   const imageRef = useRef<HTMLImageElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+  const onCloseRef = useRef(onClose)
   const pointersRef = useRef(new Map<number, Point>())
   const pointerStartRef = useRef<Point | null>(null)
   const pinchRef = useRef<PinchGesture | null>(null)
   const draggedRef = useRef(false)
   const viewRef = useRef<ViewState>(INITIAL_VIEW)
   const [view, setViewState] = useState<ViewState>(INITIAL_VIEW)
+
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   const setView = useCallback((next: ViewState | ((current: ViewState) => ViewState)) => {
     setViewState(current => {
@@ -126,7 +131,7 @@ export default function ImageViewer({ open, src, alt, onClose }: Props) {
     document.body.style.overflow = 'hidden'
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') onCloseRef.current()
       if (event.key === '+' || event.key === '=') zoomAt(viewRef.current.scale * ZOOM_STEP)
       if (event.key === '-') zoomAt(viewRef.current.scale / ZOOM_STEP)
       if (event.key === '0') resetView()
@@ -141,7 +146,7 @@ export default function ImageViewer({ open, src, alt, onClose }: Props) {
       pinchRef.current = null
       previousFocusRef.current?.focus()
     }
-  }, [onClose, open, resetView, zoomAt])
+  }, [open, resetView, src, zoomAt])
 
   useEffect(() => {
     if (!open) return
