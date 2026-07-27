@@ -38,6 +38,12 @@
     mix-blend-mode: normal;
 }
 
+.bleeding,
+.dark,
+.stone {
+    mix-blend-mode: normal;
+}
+
 @supports not (mix-blend-mode: plus-lighter) {
     .fire,
     .electric,

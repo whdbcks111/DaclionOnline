@@ -64,7 +64,7 @@ Metadata는 Skill/Item과 같은 원본+top-level delta 방식이다. `getMetada
 
 - `/상태창` 맨 아래는 `Lv.레벨 [아이콘]효과명 MM:SS`를 표시하며 효과명 hover에는 계산된 설명과 현재/최대 지속시간이 나온다.
 - `playerStats.statusEffects`는 `getStatusEffectDisplaySnapshots()`을 ChatNode 설명으로 변환해 전송한다. PlayerStatusHud는 아이콘 위에 남은 지속시간 비율을 반시계 방향 fill로 표시하고 hover/focus 상세 정보를 제공한다.
-- 클라이언트 `StatusScreenEffectPreset`은 같은 HUD snapshot을 화염·독·빙결·감전 화면 피드백으로 가공한다. 투명 알파 가장자리 WebP는 CSS `border-image` 9-slice로 늘려 중앙 UI를 덮지 않으며, `pointer-events: none`, 반응형 테두리 두께와 모션 감소 설정을 유지한다. 화염·빙결·감전은 `plus-lighter` 가산 합성(`screen` fallback)을 사용하고 합성 레이어가 paint containment에 격리되지 않으므로 어두운 사각 배경을 만들지 않는다. 독·맹독·마비독·부패는 메인/상태 HUD의 HP를 보라색으로 바꾸고, 마비독·기절·제압·감전 계열은 채팅 메시지 외곽선을 점멸시킨다. 감전 preset은 이후 해당 서버 효과 ID가 등록되면 별도 UI 수정 없이 활성화된다.
+- 클라이언트 `StatusScreenEffectPreset`은 같은 HUD snapshot을 화염·독·빙결·감전·출혈·어둠성 저주·석화 화면 피드백으로 가공한다. 투명 알파 가장자리 WebP는 CSS `border-image` 9-slice로 늘려 중앙 UI를 덮지 않으며, `pointer-events: none`, 반응형 테두리 두께와 모션 감소 설정을 유지한다. 화염·빙결·감전은 `plus-lighter` 가산 합성(`screen` fallback)을 사용하고 합성 레이어가 paint containment에 격리되지 않으므로 어두운 사각 배경을 만들지 않는다. 독·맹독·마비독은 HP를 보라색으로, 출혈은 붉은색으로 바꾸며, 부패·쇠약의 저주·공포·실명은 어둠 계열 가장자리, 석화는 돌 균열 가장자리를 사용한다. 마비독·기절·제압·감전 계열은 채팅 메시지 외곽선을 점멸시킨다. 감전 preset은 이후 해당 서버 효과 ID가 등록되면 별도 UI 수정 없이 활성화된다. 재생·강화처럼 장시간 유지되는 단순 수치 버프는 화면을 점유하지 않고 기존 HUD 아이콘만 사용한다.
 - 감각 50 이상인 플레이어는 `/상태이상정보 <효과 이름> [레벨]`로 임의 레벨의 가공된 설명을 확인한다. 레벨을 생략하면 1레벨이며, 계산 결과 hover에는 등록된 레벨식·대상 능력치 계수가 표시된다. 명령 출력과 자동완성은 내부 상태이상 ID·metadata key를 노출하지 않는다.
 - 관리자 `/상태이상부여 대상 상태이상코드 레벨 시간`은 온라인 Player만 대상으로 `Entity.applyStatusEffect()`를 호출한다. 상태효과가 런타임 전용이므로 오프라인 객체에 적용하거나 DB에 저장하지 않는다.
 

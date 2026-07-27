@@ -3,20 +3,20 @@ import type { StatusEffectHudData } from '@shared/types'
 /** 화면 상태효과의 시각 규칙을 소유하는 클래스형 enum. */
 export class StatusScreenEffectPreset {
   private static readonly all: StatusScreenEffectPreset[] = []
-  readonly key: 'fire' | 'poison' | 'frozen' | 'electric'
+  readonly key: 'fire' | 'poison' | 'frozen' | 'electric' | 'bleeding' | 'dark' | 'stone'
   readonly effectIds: readonly string[]
   readonly image: string
   readonly lifeColor?: string
 
   static readonly FIRE = new StatusScreenEffectPreset(
     'fire',
-    ['fire', 'burn'],
+    ['fire', 'burn', 'sun_fever'],
     '/effects/status/fire-vignette.webp',
   )
 
   static readonly POISON = new StatusScreenEffectPreset(
     'poison',
-    ['poison', 'deadly_poison', 'paralytic_poison', 'decay'],
+    ['poison', 'deadly_poison', 'paralytic_poison'],
     '/effects/status/poison-vignette.webp',
     '#8951b5',
   )
@@ -34,8 +34,27 @@ export class StatusScreenEffectPreset {
     '/effects/status/electric-vignette.webp',
   )
 
+  static readonly BLEEDING = new StatusScreenEffectPreset(
+    'bleeding',
+    ['bleeding'],
+    '/effects/status/bleeding-vignette.webp',
+    '#c64b52',
+  )
+
+  static readonly DARK = new StatusScreenEffectPreset(
+    'dark',
+    ['decay', 'curse', 'fear', 'blindness'],
+    '/effects/status/dark-vignette.webp',
+  )
+
+  static readonly STONE = new StatusScreenEffectPreset(
+    'stone',
+    ['petrification'],
+    '/effects/status/stone-vignette.webp',
+  )
+
   private constructor(
-    key: 'fire' | 'poison' | 'frozen' | 'electric',
+    key: 'fire' | 'poison' | 'frozen' | 'electric' | 'bleeding' | 'dark' | 'stone',
     effectIds: readonly string[],
     image: string,
     lifeColor?: string,
