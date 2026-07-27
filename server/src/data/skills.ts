@@ -1555,7 +1555,7 @@ defineSkill({
     id: 'ambush', name: '암습', icon: 'skills/ambush', maxLevel: 5,
     descriptionTemplate: '은신을 해제하며 이동속도를 살린 채 대상의 급소를 기습합니다. 이 공격은 회피할 수 없고 반드시 치명타로 적중하며, {{icon.speed}}{{icon.atk}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
-    activationConditionTemplate: activationGuide('대상을 지정하고 단검을 장착한 뒤 은신 상태에서'), activationMessage: '암습!', baseMetadata: null,
+    activationConditionTemplate: activationGuide('대상을 지정하고 은신 상태에서'), activationMessage: '암습!', baseMetadata: null,
     calculatedFields: { damage: context => {
         const damage = combinedAttributeDamage(context, ASSASSIN_AMBUSH_TERMS)
             * context.owner.attribute.get(AttributeType.CRIT_DMG);
@@ -1573,7 +1573,7 @@ defineSkill({
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 10, 0.5, 8),
     sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ASSASSIN),
-    jobRequirement: jobRequirement(JOBS.assassin), weaponRequirement: weaponRequirement('단검을 장착해야 합니다.', GameTags.WEAPON_DAGGER),
+    jobRequirement: jobRequirement(JOBS.assassin),
     canActivate: context => context.owner.getStatusEffect(STEALTH) ? simpleCheck(18)(context) : denySkill('은신 상태에서만 사용할 수 있습니다.'),
     onStart: context => {
         spend(context, 18);
@@ -1589,9 +1589,9 @@ defineSkill({
 
 defineSkill({
     id: 'venom_blade', name: '맹독 칼날', icon: 'skills/venom_blade', maxLevel: 5,
-    descriptionTemplate: '단검에 치명적인 독을 바르고 빠르게 파고들어 대상을 베어 냅니다. {{icon.speed}}{{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입히고, 적중한 대상에게 Lv.{{level}} 맹독을 {{poisonDuration}} 동안 부여합니다.',
+    descriptionTemplate: '손끝과 무기에 치명적인 독을 두르고 빠르게 파고들어 상처를 냅니다. {{icon.speed}}{{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입히고, 적중한 대상에게 Lv.{{level}} 맹독을 {{poisonDuration}} 동안 부여합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 14[/color]',
-    activationConditionTemplate: targetActivationGuide('단검을 장착해야 합니다.'), activationMessage: '맹독 칼날!', baseMetadata: null,
+    activationConditionTemplate: targetActivationGuide(), activationMessage: '맹독 칼날!', baseMetadata: null,
     calculatedFields: {
         damage: context => combinedAttributeDamageTooltip(context, ASSASSIN_VENOM_BLADE_TERMS),
         poisonDuration: context => levelValueTooltip(context, '맹독 지속시간', 8, 1, '초'),
@@ -1604,7 +1604,7 @@ defineSkill({
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 9, 0.5, 7),
     sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ASSASSIN),
-    jobRequirement: jobRequirement(JOBS.assassin), weaponRequirement: weaponRequirement('단검을 장착해야 합니다.', GameTags.WEAPON_DAGGER),
+    jobRequirement: jobRequirement(JOBS.assassin),
     canActivate: simpleCheck(14), onStart: context => {
         const found = targetOrDeny(context);
         if ('reason' in found) throw new Error(found.reason);
@@ -1991,9 +1991,9 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         basePercent: 105, perLevelPercent: 7,
         secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 85, secondaryPerLevelPercent: 6,
         manaCost: 18, cooldown: 8, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 30,
-        weaponDescription: '단검을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_DAGGER], guaranteedCritical: true,
+        guaranteedCritical: true,
         statusEffect: LegacyStatusEffects.BLEEDING, statusLabel: '출혈', statusDuration: 7, statusDurationPerLevel: 0.75,
-        descriptionIntro: '단검으로 급소의 혈맥을 깊게 베어 냅니다.',
+        descriptionIntro: '급소에 파고들어 대상의 혈맥을 깊게 끊어 냅니다.',
     },
     {
         id: 'shadow_dagger', name: '그림자 단검', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
@@ -2939,8 +2939,7 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         damageType: 'physical', attribute: AttributeType.ATK, basePercent: 190, perLevelPercent: 12,
         secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
         secondaryBasePercent: 45, secondaryPerLevelPercent: 3,
-        manaCost: 26, cooldown: 12, weaponDescription: '검 또는 단검을 장착해야 합니다.',
-        weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_DAGGER], guaranteedCritical: true,
+        manaCost: 26, cooldown: 12, guaranteedCritical: true,
         descriptionIntro: '대상의 그림자에 파고들어 드러난 급소를 참수합니다.', propertyTag: GameTags.PROPERTY_DARK,
     },
     {

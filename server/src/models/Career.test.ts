@@ -99,12 +99,13 @@ test('5개 1차 직업은 최소 3개 스킬을 지급하고 서로 다른 20개
     }
 });
 
-test('마법 주문과 자체 생성 투사체는 장착 무기를 요구하지 않는다', () => {
+test('주문·자체 생성 투사체와 무기 비종속 암살 기술은 장착 무기를 요구하지 않는다', () => {
     for (const skillId of [
         'magic_bolt', 'elemental_bind', 'fireball', 'frost_bolt', 'lightning_orb',
         'phantom_shooter_technique', 'arcane_reaper_technique', 'battle_magus_technique',
         'star_weaver_technique', 'hexblade_technique', 'runeforger_technique',
         'artificer_technique', 'arcane_smith_technique',
+        'ambush', 'venom_blade', 'rupture_cut', 'shadow_blade_technique',
     ]) {
         assert.equal(getSkillData(skillId)?.weaponRequirement, undefined, skillId);
     }
@@ -112,7 +113,6 @@ test('마법 주문과 자체 생성 투사체는 장착 무기를 요구하지 
     assert.deepEqual(getSkillData('spellblade_technique')?.weaponRequirement?.mainHandAnyTags, ['weapon:sword']);
     assert.ok(getSkillData('steel_slash')?.weaponRequirement);
     assert.ok(getSkillData('multishot')?.weaponRequirement);
-    assert.ok(getSkillData('venom_blade')?.weaponRequirement);
 });
 
 test('엘리트 직업의 계승 패시브와 액티브는 서로 다른 표시 이름을 가진다', () => {
