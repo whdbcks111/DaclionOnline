@@ -50,8 +50,10 @@ import TitleBook from './Title.js';
 import { evaluatePvpKillCredit, recordPvpRespawn } from './PvpKillCredit.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
+export const LEVEL_SURVIVAL_CAPACITY_PER_LEVEL = 1;
 export const NEWCOMER_PLAY_TIME_SECONDS = 24 * 60 * 60;
 export const NEWCOMER_MAX_LEVEL = 30;
+const PLAYER_LEVEL_SURVIVAL_ATTRIBUTE_SOURCE = 'level:survival-capacity';
 
 export const PlayerRuntimeProgressIds = Object.freeze({
     /** 사망 패널티 적용 완료 여부와 실제 시간 기준 부활 만료 시각을 함께 나타낸다. */
@@ -99,6 +101,12 @@ export function isNewcomerPlayTime(seconds: number): boolean {
 export function isNewcomerProgress(level: number, seconds: number): boolean {
     return Number.isFinite(level) && level >= 1 && level < NEWCOMER_MAX_LEVEL
         && isNewcomerPlayTime(seconds);
+}
+
+/** Lv.1 기본 최대치 이후 레벨업으로 얻는 최대 배고픔·수분 보너스. */
+export function calculateLevelSurvivalCapacityBonus(level: number): number {
+    if (!Number.isFinite(level)) return 0;
+    return Math.max(0, Math.floor(level) - 1) * LEVEL_SURVIVAL_CAPACITY_PER_LEVEL;
 }
 
 export interface PlayerLevelAdjustmentResult {
@@ -266,6 +274,7 @@ export default class Player extends Entity {
             [GameTags.ENTITY_PLAYER, GameTags.TRAIT_LIVING],
             persistentTags,
         );
+        this.applyLevelSurvivalCapacityModifiers();
         this.userId = userId;
         this._nickname = nickname;
         this.inventory = inventory;
@@ -315,9 +324,31 @@ export default class Player extends Entity {
     override get level() { return this._level; }
     override set level(val: number) {
         this._level = val;
+        this.applyLevelSurvivalCapacityModifiers();
+        this.clampVitals();
         this._dirty = true;
         this.career?.evaluateElitePromotion();
         this.quests?.refreshSnapshotObjectives();
+    }
+
+    private applyLevelSurvivalCapacityModifiers(): void {
+        this.attribute.removeBySource(PLAYER_LEVEL_SURVIVAL_ATTRIBUTE_SOURCE);
+        const bonus = calculateLevelSurvivalCapacityBonus(this._level);
+        if (bonus <= 0) return;
+        this.attribute.addModifiers([
+            {
+                attribute: AttributeType.MAX_THIRSTY.key,
+                op: 'add',
+                value: bonus,
+                source: PLAYER_LEVEL_SURVIVAL_ATTRIBUTE_SOURCE,
+            },
+            {
+                attribute: AttributeType.MAX_HUNGRY.key,
+                op: 'add',
+                value: bonus,
+                source: PLAYER_LEVEL_SURVIVAL_ATTRIBUTE_SOURCE,
+            },
+        ]);
     }
 
     override get exp() { return this._exp; }

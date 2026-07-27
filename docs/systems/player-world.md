@@ -47,6 +47,7 @@ Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook�
 ## 능력치와 스탯
 
 - Attribute에는 생명력·정신력·생존 자원·중량·공격/방어·이동/공격속도·치명타 외에 `projectileAcceleration` 투사체 가속과 낚시 능력치가 있다. 투사체 가속 기본값은 1배이며 민첩 1당 +0.003, 정신력 1당 +0.002가 더해진다. 두 재생 능력치의 기본값은 초당 1, 배고픔/수분 감소량은 각각 초당 0.01/0.02다.
+- Player의 최대 배고픔과 최대 수분은 Lv.1에서 각각 기본 100이며, 이후 레벨마다 `level:survival-capacity` modifier로 1씩 증가한다. 따라서 다른 장비·스탯 modifier를 제외하면 `100 + (레벨 - 1)`이고 DB에는 현재 자원만 저장하며 최대치는 접속/레벨 변경 때 현재 레벨에서 다시 계산한다.
 - 모든 `AttributeType`은 `attributes/{key}` 대표색 아이콘을 소유한다. 상태창은 자원 bar와 각 능력치를 `아이콘 + 이름 + 값` 한 행으로 표시해 긴 이름도 겹치지 않으며, 이름 hover에는 계산 설명을 유지한다.
 - 계산 순서: base 복사 → 모든 add modifier 합산 → 모든 multiply modifier 적용.
 - `AttributeType`은 key, label, 기본값, formatter와 설명을 가진 클래스형 enum이다.
