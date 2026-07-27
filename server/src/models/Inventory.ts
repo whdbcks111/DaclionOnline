@@ -71,6 +71,7 @@ export default class Inventory {
     private readonly changeHandlers = new Set<() => void>();
     private changeBatchDepth = 0;
     private changePending = false;
+    private changeRevision = 0;
     private orderDirty = false;
 
     private constructor(playerId: number, maxWeight: number) {
@@ -630,6 +631,7 @@ export default class Inventory {
     }
 
     private dispatchChange(): void {
+        this.changeRevision++;
         for (const handler of [...this.changeHandlers]) handler();
     }
 
@@ -701,60 +703,68 @@ export default class Inventory {
     async save(): Promise<void> {
         if (!this.dirty) return;
 
-        const ops: any[] = [];
+        const revision = this.changeRevision;
+        const persistOrder = this.orderDirty;
         const sortOrders = new Map(this._items.map((item, index) => [item, index]));
+        const changes = [...this._states].map(([item, state]) => ({
+            item,
+            state,
+            id: item.id,
+            sortOrder: sortOrders.get(item),
+            data: {
+                itemDataId: item.itemDataId,
+                count: item.count,
+                durability: item.durability,
+                metadata: item.getPersistedMetadata(),
+                tags: item.tags.persistentValues(),
+                sortOrder: sortOrders.get(item) ?? 0,
+            },
+        }));
 
-        for (const [item, state] of this._states) {
-            const sortOrder = sortOrders.get(item);
-            switch (state) {
-                case ItemState.Clean:
-                    if (this.orderDirty && sortOrder !== undefined) {
-                        ops.push(prisma.item.update({
-                            where: { id: item.id },
-                            data: { sortOrder },
-                        }));
+        await prisma.$transaction(async transaction => {
+            await Promise.all(changes.map(async change => {
+                if (change.state === ItemState.Deleted) {
+                    if (change.id > 0) {
+                        // 이미 다른 성공한 저장에서 삭제된 행도 정상 완료로 취급한다.
+                        await transaction.item.deleteMany({
+                            where: { id: change.id, playerId: this.playerId },
+                        });
                     }
-                    break;
-                case ItemState.New:
-                    ops.push(
-                        prisma.item.create({
-                            data: {
-                                playerId: this.playerId,
-                                itemDataId: item.itemDataId,
-                                count: item.count,
-                                durability: item.durability,
-                                metadata: item.getPersistedMetadata(),
-                                tags: item.tags.persistentValues(),
-                                sortOrder: sortOrder ?? 0,
-                            },
-                        }).then(row => { item.id = row.id; })
-                    );
-                    break;
-                case ItemState.Modified:
-                    ops.push(
-                        prisma.item.update({
-                            where: { id: item.id },
-                            data: {
-                                count: item.count,
-                                durability: item.durability,
-                                metadata: item.getPersistedMetadata(),
-                                tags: item.tags.persistentValues(),
-                                sortOrder: sortOrder ?? 0,
-                            },
-                        })
-                    );
-                    break;
-                case ItemState.Deleted:
-                    ops.push(
-                        prisma.item.delete({
-                            where: { id: item.id },
-                        })
-                    );
-                    break;
-            }
-        }
+                    return;
+                }
+                if (change.state === ItemState.Clean
+                    && (!persistOrder || change.sortOrder === undefined)) return;
 
-        await Promise.all(ops);
+                if (change.id > 0) {
+                    const updated = await transaction.item.updateMany({
+                        where: { id: change.id, playerId: this.playerId },
+                        data: change.data,
+                    });
+                    if (updated.count > 0) return;
+                }
+
+                // 이전 비원자 저장이 일부만 성공했거나 외부 정리로 행이 사라진 경우,
+                // 메모리 aggregate를 권위로 삼아 새 행으로 복구한다.
+                const row = await transaction.item.create({
+                    data: {
+                        playerId: this.playerId,
+                        ...change.data,
+                    },
+                });
+                change.item.id = row.id;
+            }));
+        });
+
+        // 저장 중 들어온 변경을 Clean으로 덮어쓰지 않는다. 특히 아직 DB ID가 없던
+        // New 아이템이 저장 도중 제거됐다면 방금 생성된 행을 다음 pass에서 삭제한다.
+        if (revision !== this.changeRevision) {
+            for (const change of changes) {
+                if (change.state === ItemState.New && !this._states.has(change.item)) {
+                    this._states.set(change.item, ItemState.Deleted);
+                }
+            }
+            return;
+        }
 
         // 상태 초기화
         this.orderDirty = false;

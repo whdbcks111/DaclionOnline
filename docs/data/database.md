@@ -67,7 +67,7 @@ login/session restore
 ```
 
 - Player scalar setter와 Player/Item/Skill/Quest 영속 태그·metadata·내구도 callback, Stat/Inventory/Equipment/PlayerProgress/SkillBook/QuestBook이 dirty 상태를 추적한다.
-- 동일 Player의 save 호출은 진행 중 promise를 공유하고 겹친 요청을 다음 pass로 예약해 자동 저장·보상 저장·unload 저장을 직렬화한다. 신규 Equipment는 `(playerId, slot, slotIndex)` upsert를 사용해 이미 생성된 슬롯 행과 충돌해도 복구한다.
+- 동일 Player의 save 호출은 진행 중 promise를 공유하고 겹친 요청을 다음 pass로 예약해 자동 저장·보상 저장·unload 저장을 직렬화한다. Inventory는 저장 시작 시 dirty snapshot과 revision을 잡고 하나의 transaction에서 `playerId` 범위의 멱등 삭제·수정·누락 행 복구를 처리하며, 저장 중 변경은 Clean으로 덮지 않고 다음 pass로 넘긴다. 신규 Equipment는 `(playerId, slot, slotIndex)` upsert를 사용해 이미 생성된 슬롯 행과 충돌해도 복구한다.
 - `fetchPlayerByUserId()`는 오프라인 Player를 DB에서 읽지만 온라인 Map에는 올리지 않는다.
 - 위치 JSON, 채팅/세션/온라인 상태, 몬스터/드롭, 상점 재고는 DB에 저장되지 않는다.
 - 회원가입은 User와 Player를 nested create하므로 기본 Player 레코드가 즉시 생긴다.

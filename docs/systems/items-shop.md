@@ -66,7 +66,7 @@ Lv.380~500의 역할 장비 15종은 `ItemData.gameplayEffects`와 `onBasicAttac
 - 조건부 선택·교환: `selectItems`는 겹치는 여러 predicate에 아이템 수량을 중복 없이 배정하고, `replaceSelectedItems`는 선택 재료와 결과 snapshot의 수량·무게를 선검증한 뒤 교환한다.
 - 사용: `useItem`이 `ItemData.onUse` handler를 실행하며 동시에 하나의 아이템만 사용할 수 있다.
 - 제거: `removeItem`, `removeItemByData`, `removeItemInstance`가 수량 또는 인스턴스를 dirty/deleted 상태로 바꾼다. 발사는 신규 아이템의 임시 DB ID가 겹쳐도 안전한 `removeItemInstance`로 선택한 탄약만 소비한다.
-- 저장: state map의 New/Modified/Deleted 항목을 Prisma create/update/delete로 반영한다. 표시 순서는 `items.sort_order`로 저장해 재접속 뒤에도 유지한다. 로드 시 과거의 작은 스택 제한 때문에 여러 DB row로 나뉜 동일 상태 아이템은 현재 maxStack까지 자동 병합하고 dirty flush로 중복 row를 정리한다.
+- 저장: state map의 New/Modified/Deleted snapshot을 한 Prisma transaction으로 반영한다. 삭제는 `playerId` 범위의 멱등 `deleteMany`, 수정은 범위가 제한된 `updateMany` 뒤 누락 행 복구를 사용하므로 이전 저장·외부 정리와 겹쳐 이미 사라진 row가 있어도 전체 자동 저장이 중단되지 않는다. 저장 중 새 변경이 생기면 revision을 비교해 dirty 상태를 다음 pass에 남긴다. 표시 순서는 `items.sort_order`로 저장해 재접속 뒤에도 유지하며, 로드 시 과거의 작은 스택 제한 때문에 여러 DB row로 나뉜 동일 상태 아이템은 현재 maxStack까지 자동 병합하고 dirty flush로 중복 row를 정리한다.
 
 바닥 아이템은 `Location.getDroppedItems()`의 복사본으로 표시하고 `pickupItem(index, count?)/pickupAllItems`로만 제거한다. `Location.addDroppedItem()`은 정의 ID·내구도·metadata delta·영속 태그가 같은 stackable 아이템을 공용 안전 상한까지 합치므로 일반 수량에서는 하나의 바닥 스택으로 표시한다. `/버리기 <슬롯> [개수|전체]`는 기본 1개를 버리고, 지정 수량이 보유량을 넘거나 `전체`이면 해당 인스턴스를 전부 버린다. `/줍기 <번호> [개수]`는 개수를 생략하면 해당 스택 전체를, 지정하면 그 수량만 분리해 옮긴다. 전체 줍기는 모든 스택의 중량을 먼저 검사하므로 하나라도 받을 수 없는 경우 바닥 상태를 변경하지 않는다. 몬스터·파괴 가능한 자원 전리품은 `Player.receiveLoot()`로 먼저 인벤토리에 지급하고 중량이 부족하면 `Location.addDroppedItemData()`로 현재 장소에 보존한다.
 
