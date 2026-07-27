@@ -2900,6 +2900,8 @@ interface EliteTechniqueDefinition {
     onHitDescription?: string;
     onHit?: (target: Entity, level: number) => void;
     shieldPercent?: number;
+    /** 기본 물리 3배·마법 4.6배와 다른 엘리트 티어 보정이 필요한 기술만 명시한다. */
+    tierDamageMultiplier?: number;
 }
 
 const eliteTechniques: readonly EliteTechniqueDefinition[] = [
@@ -2927,6 +2929,7 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         secondaryAttribute: AttributeType.MAGIC_FORCE, secondaryBasePercent: 120, secondaryPerLevelPercent: 8,
         tertiaryAttribute: AttributeType.SPEED, tertiaryAttributeScale: MOBILITY_DAMAGE_SCALE,
         tertiaryBasePercent: 25, tertiaryPerLevelPercent: 2,
+        tierDamageMultiplier: 5.8,
         manaCost: 30, cooldown: 11, weaponDescription: '검을 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_SWORD],
         descriptionIntro: '칼날에 응축한 마력을 검파로 터뜨려 대상을 가릅니다.',
@@ -3115,6 +3118,15 @@ const eliteTechniqueGroupByJobId: Readonly<Record<string, TagId>> = Object.freez
     'career:runeforger': GameTags.SKILL_GROUP_BLACKSMITH,
 });
 
+/**
+ * 엘리트 전용기는 Lv.200 전직 시 Lv.1로 시작한다. 이미 높은 레벨로 성장한 1차·서브 기술과
+ * 같은 계수 등급을 쓰면 단발 위력부터 밀리므로, 직접 피해에만 명시적인 기술 티어를 적용한다.
+ * 치명타·상태효과·보호막은 기존 pipeline에서 별도로 계산한다.
+ */
+function eliteTechniqueTierMultiplier(technique: EliteTechniqueDefinition): number {
+    return technique.tierDamageMultiplier ?? (technique.damageType === 'magic' ? 4.6 : 3);
+}
+
 function eliteTechniqueDamage(context: SkillContext, technique: EliteTechniqueDefinition): number {
     const primary = scaledAttributeValue(context, technique.attribute, technique.attributeScale)
         * percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent) / 100;
@@ -3143,7 +3155,7 @@ function eliteTechniqueDamage(context: SkillContext, technique: EliteTechniqueDe
                 technique.forgingPrecisionPerLevelPercent ?? 0,
             ) / 100
         : 0;
-    return primary + secondary + tertiary + precision;
+    return (primary + secondary + tertiary + precision) * eliteTechniqueTierMultiplier(technique);
 }
 
 function eliteTechniqueDamageTooltip(context: SkillContext, technique: EliteTechniqueDefinition): string {
@@ -3160,9 +3172,10 @@ function eliteTechniqueDamageTooltip(context: SkillContext, technique: EliteTech
     const precision = technique.forgingPrecisionBasePercent !== undefined
         ? ` + ${scaledLabel(technique.attribute, technique.attributeScale)} × ${AttributeType.FORGING_PRECISION.label} × ${formatNumber(percentByLevel(context.skill.level, technique.forgingPrecisionBasePercent, technique.forgingPrecisionPerLevelPercent ?? 0))}%`
         : '';
+    const tierMultiplier = eliteTechniqueTierMultiplier(technique);
     return tooltipValue(
         damage,
-        `${scaledLabel(technique.attribute, technique.attributeScale)} × ${formatNumber(primaryPercent)}%${secondary}${tertiary}${precision}`,
+        `(${scaledLabel(technique.attribute, technique.attributeScale)} × ${formatNumber(primaryPercent)}%${secondary}${tertiary}${precision}) × 엘리트 기술 보정 ${formatNumber(tierMultiplier)}`,
     );
 }
 

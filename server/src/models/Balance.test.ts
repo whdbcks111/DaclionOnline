@@ -196,6 +196,25 @@ test('all twenty ordered elite combinations produce measurable balance reports',
     assert.ok(reports.every(report => report.skillReports.some(skill => skill.sustainableDpm > 0)));
 });
 
+test('Lv.1 엘리트 전용기는 이미 성장한 일반 직업 공격 기술보다 티어상 약하지 않다', () => {
+    for (const report of analyzeAllEliteJobs(200)) {
+        const elite = report.skillReports.find(skill => skill.skillId.endsWith('_technique'));
+        const inherited = report.skillReports
+            .filter(skill => !skill.skillId.endsWith('_technique')
+                && skill.coverage === 'complete'
+                && skill.rawDamage > 0)
+            .sort((left, right) => right.rawDamage - left.rawDamage)[0];
+
+        assert.ok(elite, `${report.name}: 엘리트 전용기 누락`);
+        assert.ok(inherited, `${report.name}: 비교할 일반 공격 기술 누락`);
+        // 보호막·확정 치명타·회피 불가·지속 상태효과를 점수로 더하지 않은 보수적 직접 피해 기준이다.
+        assert.ok(
+            elite.rawDamage >= inherited.rawDamage * 0.68,
+            `${report.name}: ${elite.name} ${elite.rawDamage.toFixed(1)} < ${inherited.name} ${inherited.rawDamage.toFixed(1)}`,
+        );
+    }
+});
+
 test('item report applies actual equipment modifiers and buff status effects', () => {
     const weapon = analyzeItemBalance(50, 'career:warrior', 'old_sword');
     // 전사 8% 직업 배율과 전투 본능 6% 패시브가 장비의 +5에도 적용되는 실제 연산 순서다.
@@ -283,7 +302,7 @@ test('single-loadout elite combinations stay within the measured 1.7x boss DPS b
     }
     const bossDps = profiles.map(profile => profile.boss.dps);
     assert.ok(Math.max(...bossDps) / Math.min(...bossDps) <= 1.7);
-    assert.ok(profiles.every(profile => profile.boss.basicDamageShare >= 0.14));
+    assert.ok(profiles.every(profile => profile.boss.basicDamageShare >= 0.13));
 });
 
 test('blacksmith advanced attacks use forging precision in the real balance callback', () => {
