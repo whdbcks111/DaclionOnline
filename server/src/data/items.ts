@@ -24,6 +24,17 @@ import { AttributeType } from '../models/Attribute.js';
 
 registerItemAttackOverride(ItemAttackOverrideKeys.PROJECTILE, executeProjectileItemAttack);
 
+export const DEFAULT_POTION_THIRST_RESTORE = 5;
+
+function restorePotionThirst(player: { thirsty: number; restoreThirst(amount: number): number }, item: {
+    getMetadata<T>(key: string): T | undefined;
+}): number {
+    const before = player.thirsty;
+    const amount = Math.max(0, item.getMetadata<number>('thirst') ?? DEFAULT_POTION_THIRST_RESTORE);
+    player.restoreThirst(amount);
+    return player.thirsty - before;
+}
+
 function applyHitStatus(
     statusEffectId: string,
     chance: number,
@@ -92,7 +103,11 @@ registerItemUse('heal_hp', (inv, item, finish) => {
             sendNotificationToUser(player.userId, { key: 'item:heal_hp', message: '꿀꺽꿀꺽...', length: time * 1000 });
             yield Wait(time);
             const result = player.heal(amount, player);
-            sendNotificationToUser(player.userId, { key: 'item:heal_hp', message: `생명력을 ${result.healedAmount.toFixed(0)}만큼 회복했습니다!` });
+            const thirst = restorePotionThirst(player, item);
+            sendNotificationToUser(player.userId, {
+                key: 'item:heal_hp',
+                message: `생명력을 ${result.healedAmount.toFixed(0)}만큼 회복했습니다!${thirst > 0 ? ` (수분 +${thirst.toFixed(0)})` : ''}`,
+            });
         }
         catch(e) {
             logger.error(e);
@@ -114,7 +129,11 @@ registerItemUse('heal_mp', (inv, item, finish) => {
             sendNotificationToUser(player.userId, { key: 'item:heal_mp', message: '꿀꺽꿀꺽...', length: time * 1000 });
             yield Wait(time);
             player.mentality += amount;
-            sendNotificationToUser(player.userId, { key: 'item:heal_mp', message: `정신력을 ${amount.toFixed(0)}만큼 회복했습니다!` });
+            const thirst = restorePotionThirst(player, item);
+            sendNotificationToUser(player.userId, {
+                key: 'item:heal_mp',
+                message: `정신력을 ${amount.toFixed(0)}만큼 회복했습니다!${thirst > 0 ? ` (수분 +${thirst.toFixed(0)})` : ''}`,
+            });
         }
         catch(e) {
             logger.error(e);
@@ -202,11 +221,12 @@ registerItemUse('apply_status_effect', (inv, item, finish) => {
         if (!inv.removeItemInstance(item, 1)) return;
         const level = Math.max(1, Math.floor(config?.level ?? 1));
         const result = player.applyStatusEffect(effect, config!.duration!, level);
+        const thirst = restorePotionThirst(player, item);
         sendNotificationToUser(player.userId, {
             key: `item:status-effect:${effect.id}`,
             message: result.action.changed
-                ? `${effect.label} Lv.${effect.normalizeLevel(level)} 효과를 얻었습니다. (${config!.duration}초)`
-                : `${effect.label} 효과가 이미 더 강하게 적용되어 있습니다.`,
+                ? `${effect.label} Lv.${effect.normalizeLevel(level)} 효과를 얻었습니다. (${config!.duration}초)${thirst > 0 ? ` · 수분 +${thirst.toFixed(0)}` : ''}`
+                : `${effect.label} 효과가 이미 더 강하게 적용되어 있습니다.${thirst > 0 ? ` (수분 +${thirst.toFixed(0)})` : ''}`,
         });
     } catch (error) {
         logger.error('버프 아이템 사용 실패', error);
@@ -295,7 +315,7 @@ registerItemUse('grant_single_evasion', (inv, item, finish) => {
 defineItem({
     id: 'health_potion',
     name: '체력 포션',
-    description: '마시면 HP를 50 회복한다.',
+    description: '마시면 HP를 50, 수분을 5 회복한다.',
     image: 'items/health_potion',
     category: '소모품',
     weight: 0.5,
@@ -312,7 +332,7 @@ defineItem({
 defineItem({
     id: 'mana_potion',
     name: '마나 포션',
-    description: '마시면 MP를 30 회복한다.',
+    description: '마시면 MP를 50, 수분을 5 회복한다.',
     image: 'items/mana_potion',
     category: '소모품',
     weight: 0.5,
