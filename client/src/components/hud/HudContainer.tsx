@@ -8,6 +8,7 @@ import MinimapHud from './huds/MinimapHud'
 import QuickSlotHud from './huds/QuickSlotHud'
 import PartyHud from './huds/PartyHud'
 import SkillQuickHud from './huds/SkillQuickHud'
+import { getUiScale } from '../../utils/displayPreferences'
 import styles from './HudContainer.module.scss'
 
 const HUD_COMPONENTS: Record<string, React.ComponentType> = {
@@ -72,10 +73,11 @@ export default function HudContainer() {
     const unitY = cfg?.posUnitY ?? '%'
     const isRight  = pa === 'topRight'  || pa === 'bottomRight'
     const isBottom = pa === 'bottomLeft' || pa === 'bottomRight'
+    const uiScale = getUiScale()
 
     const onMouseMove = (ev: MouseEvent) => {
-      const dx = ev.clientX - startMouseX
-      const dy = ev.clientY - startMouseY
+      const dx = (ev.clientX - startMouseX) / uiScale
+      const dy = (ev.clientY - startMouseY) / uiScale
       const newX = unitX === '%'
         ? Math.max(0, Math.min(100, startX + (isRight  ? -(dx / hudViewportWidth)  * 100 : (dx / hudViewportWidth)  * 100)))
         : Math.max(0, startX + (isRight  ? -dx : dx))
@@ -105,11 +107,12 @@ export default function HudContainer() {
     const unitY = cfg?.posUnitY ?? '%'
     const isRight  = pa === 'topRight'  || pa === 'bottomRight'
     const isBottom = pa === 'bottomLeft' || pa === 'bottomRight'
+    const uiScale = getUiScale()
 
     const onTouchMove = (ev: TouchEvent) => {
       const t = ev.touches[0]
-      const dx = t.clientX - startMouseX
-      const dy = t.clientY - startMouseY
+      const dx = (t.clientX - startMouseX) / uiScale
+      const dy = (t.clientY - startMouseY) / uiScale
       const newX = unitX === '%'
         ? Math.max(0, Math.min(100, startX + (isRight  ? -(dx / hudViewportWidth)  * 100 : (dx / hudViewportWidth)  * 100)))
         : Math.max(0, startX + (isRight  ? -dx : dx))

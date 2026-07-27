@@ -1,6 +1,7 @@
 import { useState, useRef, useLayoutEffect } from 'react'
 import type { ChatNode } from '@shared/types'
 import { renderNode } from '../ChatMessage'
+import { getUiScale } from '../../../utils/displayPreferences'
 import styles from './TooltipNode.module.scss'
 
 interface Props {
@@ -20,7 +21,8 @@ export default function TooltipNode({ description, children }: Props) {
     const handleMouseEnter = () => {
         if (triggerRef.current) {
             const rect = triggerRef.current.getBoundingClientRect()
-            setRawPos({ top: rect.top, left: rect.left + rect.width / 2 })
+            const uiScale = getUiScale()
+            setRawPos({ top: rect.top / uiScale, left: (rect.left + rect.width / 2) / uiScale })
         }
         setPhase('measuring')
     }
@@ -30,15 +32,16 @@ export default function TooltipNode({ description, children }: Props) {
         const rect = tooltipRef.current.getBoundingClientRect()
         const margin = 8
         const vw = window.innerWidth
+        const uiScale = getUiScale()
 
         let { top, left } = rawPos
 
         // 좌우 보정
-        if (rect.left < margin) left += margin - rect.left
-        else if (rect.right > vw - margin) left -= rect.right - (vw - margin)
+        if (rect.left < margin) left += (margin - rect.left) / uiScale
+        else if (rect.right > vw - margin) left -= (rect.right - (vw - margin)) / uiScale
 
         // 상단 보정: 위로 잘리면 트리거 아래로 이동
-        if (rect.top < margin) top += margin - rect.top
+        if (rect.top < margin) top += (margin - rect.top) / uiScale
 
         setFinalPos({ top, left })
         setPhase('visible')

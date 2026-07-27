@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { CSSProperties } from 'react'
 import type { FormDialogOption } from './FormDialog'
+import { getUiScale, getUiViewportSize } from '../../utils/displayPreferences'
 import styles from './SearchableSelect.module.scss'
 
 interface SearchableSelectProps {
@@ -35,9 +36,16 @@ export default function SearchableSelect({ value, options, placeholder = '검색
   const updatePopoverPosition = useCallback(() => {
     const trigger = triggerRef.current
     if (!trigger) return
-    const rect = trigger.getBoundingClientRect()
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
+    const physicalRect = trigger.getBoundingClientRect()
+    const uiScale = getUiScale()
+    const rect = {
+      top: physicalRect.top / uiScale,
+      right: physicalRect.right / uiScale,
+      bottom: physicalRect.bottom / uiScale,
+      left: physicalRect.left / uiScale,
+      width: physicalRect.width / uiScale,
+    }
+    const { width: viewportWidth, height: viewportHeight } = getUiViewportSize(uiScale)
     const maxViewportHeight = Math.max(0, viewportHeight - VIEWPORT_EDGE * 2)
 
     if (viewportWidth <= MOBILE_BREAKPOINT) {

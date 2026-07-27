@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import type { PlayerStatsData, LocationInfoData } from '@shared/types'
 import { createDefaultSkillHudConfig } from './skillHudConfig'
 import type { SkillHudConfig } from './skillHudConfig'
+import { getUiViewportSize, UI_SCALE_CHANGE_EVENT } from '../utils/displayPreferences'
 
 export type AnchorPoint = 'topLeft' | 'topMiddle' | 'topRight' | 'middleLeft' | 'center' | 'middleRight' | 'bottomLeft' | 'bottomMiddle' | 'bottomRight'
 export type PosAnchor = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
@@ -183,10 +184,9 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   })
 
   const [editMode, setEditMode] = useState(false)
-  const [hudViewport, setHudViewport] = useState(() => ({
-    width: typeof window === 'undefined' ? 1024 : window.innerWidth,
-    height: typeof window === 'undefined' ? 768 : window.innerHeight,
-  }))
+  const [hudViewport, setHudViewport] = useState(() => (
+    typeof window === 'undefined' ? { width: 1024, height: 768 } : getUiViewportSize()
+  ))
   const [gridSnapEnabled, setGridSnapEnabledState] = useState(() => {
     try { return localStorage.getItem(GRID_SNAP_KEY) === 'true' } catch { return false }
   })
@@ -328,8 +328,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const updateHudViewport = () => {
-      const width = window.innerWidth
-      const height = window.innerHeight
+      const { width, height } = getUiViewportSize()
       setHudViewport(previous => {
         const sameOrientation = (previous.width >= previous.height) === (width >= height)
         const keyboardResize = sameOrientation
@@ -343,9 +342,11 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     }
     window.addEventListener('resize', updateHudViewport)
     window.addEventListener('orientationchange', updateHudViewport)
+    window.addEventListener(UI_SCALE_CHANGE_EVENT, updateHudViewport)
     return () => {
       window.removeEventListener('resize', updateHudViewport)
       window.removeEventListener('orientationchange', updateHudViewport)
+      window.removeEventListener(UI_SCALE_CHANGE_EVENT, updateHudViewport)
     }
   }, [])
 

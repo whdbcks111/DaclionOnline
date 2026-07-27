@@ -3,6 +3,7 @@ import { useHud } from '../../../context/HudContext'
 import { BASIC_ATTACK_HUD_ID, createDefaultSkillHudConfig } from '../../../context/skillHudConfig'
 import { useSocket } from '../../../context/SocketContext'
 import type { SkillHudData } from '@shared/types'
+import { getUiScale } from '../../../utils/displayPreferences'
 import styles from './SkillQuickHud.module.scss'
 
 const EMPTY_SKILLS: SkillHudData[] = []
@@ -81,16 +82,19 @@ export default function SkillQuickHud() {
     const startY = event.clientY
     const isRight = quickButtonPosAnchor === 'topRight' || quickButtonPosAnchor === 'bottomRight'
     const isBottom = quickButtonPosAnchor === 'bottomLeft' || quickButtonPosAnchor === 'bottomRight'
+    const uiScale = getUiScale()
     const onMove = (moveEvent: PointerEvent) => {
       if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) <= 3) return
+      const clientX = moveEvent.clientX / uiScale
+      const clientY = moveEvent.clientY / uiScale
       setSkillHudPosition(
         skillId,
         quickButtonPosUnitX === '%'
-          ? (isRight ? hudViewportWidth - moveEvent.clientX : moveEvent.clientX) / hudViewportWidth * 100
-          : (isRight ? hudViewportWidth - moveEvent.clientX : moveEvent.clientX),
+          ? (isRight ? hudViewportWidth - clientX : clientX) / hudViewportWidth * 100
+          : (isRight ? hudViewportWidth - clientX : clientX),
         quickButtonPosUnitY === '%'
-          ? (isBottom ? hudViewportHeight - moveEvent.clientY : moveEvent.clientY) / hudViewportHeight * 100
-          : (isBottom ? hudViewportHeight - moveEvent.clientY : moveEvent.clientY),
+          ? (isBottom ? hudViewportHeight - clientY : clientY) / hudViewportHeight * 100
+          : (isBottom ? hudViewportHeight - clientY : clientY),
       )
     }
     const cleanup = () => {

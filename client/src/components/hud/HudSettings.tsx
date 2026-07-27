@@ -8,6 +8,7 @@ import {
   type PosAnchor,
 } from '../../context/HudContext'
 import { BASIC_ATTACK_HUD_ID } from '../../context/skillHudConfig'
+import { getUiScale } from '../../utils/displayPreferences'
 import styles from './HudSettings.module.scss'
 
 interface Props {
@@ -46,12 +47,13 @@ export default function HudSettings({ onClose }: Props) {
     quickButtonScale, setQuickButtonScale,
     quickButtonPosAnchor, setQuickButtonPosAnchor,
     quickButtonPosUnitX, quickButtonPosUnitY, setQuickButtonPosUnit,
+    hudViewportWidth, hudViewportHeight,
   } = useHud()
   const [openSettingsId, setOpenSettingsId] = useState<string | null>(null)
   const [isSkillListOpen, setIsSkillListOpen] = useState(false)
   const [isQuickButtonSettingsOpen, setIsQuickButtonSettingsOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
-  const [initialPanelPosition] = useState(() => ({ x: Math.max(8, window.innerWidth - 316), y: 60 }))
+  const [initialPanelPosition] = useState(() => ({ x: Math.max(8, hudViewportWidth - 316), y: 60 }))
   const posRef = useRef(initialPanelPosition)
   const skills = playerStats?.skills ?? []
   const quickButtonSettings = [
@@ -78,10 +80,11 @@ export default function HudSettings({ onClose }: Props) {
     const startY = e.clientY
     const startPanelX = posRef.current.x
     const startPanelY = posRef.current.y
+    const uiScale = getUiScale()
 
     const onMouseMove = (ev: MouseEvent) => {
-      posRef.current.x = Math.max(0, Math.min(window.innerWidth - 300, startPanelX + ev.clientX - startX))
-      posRef.current.y = Math.max(0, Math.min(window.innerHeight - 60, startPanelY + ev.clientY - startY))
+      posRef.current.x = Math.max(0, Math.min(hudViewportWidth - 300, startPanelX + (ev.clientX - startX) / uiScale))
+      posRef.current.y = Math.max(0, Math.min(hudViewportHeight - 60, startPanelY + (ev.clientY - startY) / uiScale))
       if (panelRef.current) {
         panelRef.current.style.left = `${posRef.current.x}px`
         panelRef.current.style.top = `${posRef.current.y}px`
@@ -93,7 +96,7 @@ export default function HudSettings({ onClose }: Props) {
     }
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('mouseup', onMouseUp)
-  }, [])
+  }, [hudViewportHeight, hudViewportWidth])
 
   const handleHeaderTouchStart = useCallback((e: React.TouchEvent) => {
     if ((e.target as HTMLElement).closest('button')) return
@@ -102,11 +105,12 @@ export default function HudSettings({ onClose }: Props) {
     const startY = touch.clientY
     const startPanelX = posRef.current.x
     const startPanelY = posRef.current.y
+    const uiScale = getUiScale()
 
     const onTouchMove = (ev: TouchEvent) => {
       const t = ev.touches[0]
-      posRef.current.x = Math.max(0, Math.min(window.innerWidth - 300, startPanelX + t.clientX - startX))
-      posRef.current.y = Math.max(0, Math.min(window.innerHeight - 60, startPanelY + t.clientY - startY))
+      posRef.current.x = Math.max(0, Math.min(hudViewportWidth - 300, startPanelX + (t.clientX - startX) / uiScale))
+      posRef.current.y = Math.max(0, Math.min(hudViewportHeight - 60, startPanelY + (t.clientY - startY) / uiScale))
       if (panelRef.current) {
         panelRef.current.style.left = `${posRef.current.x}px`
         panelRef.current.style.top = `${posRef.current.y}px`
@@ -120,7 +124,7 @@ export default function HudSettings({ onClose }: Props) {
     window.addEventListener('touchmove', onTouchMove, { passive: true })
     window.addEventListener('touchend', cleanup)
     window.addEventListener('touchcancel', cleanup)
-  }, [])
+  }, [hudViewportHeight, hudViewportWidth])
 
   return (
     <div

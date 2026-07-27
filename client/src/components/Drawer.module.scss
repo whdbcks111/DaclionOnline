@@ -23,7 +23,7 @@ $avatar-size: 80px;
     top: 0;
     left: 0;
     width: $drawer-width;
-    height: 100vh;
+    height: var(--app-viewport-height);
     background-color: $color-bg-tertiary;
     border-right: 1px solid $color-border;
     display: flex;

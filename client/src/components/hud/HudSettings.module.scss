@@ -9,8 +9,8 @@
     border-radius: $border-radius-md;
     box-shadow: $shadow-lg;
     box-sizing: border-box;
-    width: min(18.75rem, calc(100vw - 1rem));
-    max-height: min(88vh, 52rem);
+    width: min(18.75rem, calc(var(--app-viewport-width) - 1rem));
+    max-height: min(88%, 52rem);
     padding: $spacing-md;
     display: flex;
     flex-direction: column;

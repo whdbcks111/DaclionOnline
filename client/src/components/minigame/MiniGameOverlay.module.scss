@@ -13,8 +13,8 @@
 
 .panel {
   display: grid;
-  width: min(94vw, 38rem);
-  max-height: 96vh;
+  width: min(94%, 38rem);
+  max-height: 96%;
   box-sizing: border-box;
   gap: clamp($spacing-sm, 2vh, $spacing-md);
   padding: clamp($spacing-sm, 3vw, $spacing-lg);

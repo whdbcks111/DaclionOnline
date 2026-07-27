@@ -2,7 +2,7 @@
 @use '../styles/themes' as *;
 
 .page {
-  min-height: 100vh;
+  min-height: var(--app-viewport-height);
   box-sizing: border-box;
   padding: clamp($spacing-md, 3vw, $spacing-xl);
   color: $color-text;
@@ -50,7 +50,7 @@
 .chapterNav {
   position: sticky;
   top: $spacing-md;
-  max-height: calc(100vh - 2 * $spacing-md);
+  max-height: calc(var(--app-viewport-height) - 2 * $spacing-md);
   box-sizing: border-box;
   padding: $spacing-md;
   overflow-y: auto;

@@ -1,3 +1,5 @@
+import { getUiViewportSize } from '../utils/displayPreferences'
+
 export interface SkillHudConfig {
   skillId: string
   visible: boolean
@@ -9,7 +11,7 @@ export interface SkillHudConfig {
 export const BASIC_ATTACK_HUD_ID = 'system:basic_attack'
 
 export function createDefaultSkillHudConfig(skillId: string, index = 0): SkillHudConfig {
-  const viewportWidth = typeof window === 'undefined' ? 1024 : window.innerWidth
+  const viewportWidth = typeof window === 'undefined' ? 1024 : getUiViewportSize().width
   const columns = viewportWidth <= 600 ? 4 : 8
   const column = Math.max(0, index) % columns
   const row = Math.floor(Math.max(0, index) / columns)

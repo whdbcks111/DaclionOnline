@@ -14,7 +14,7 @@
 .dialog {
   display: flex;
   width: min(36rem, 100%);
-  max-height: min(88vh, 52rem);
+  max-height: min(88%, 52rem);
   flex-direction: column;
   overflow: hidden;
   color: $color-text;
@@ -72,6 +72,6 @@
 
 @media (max-width: $breakpoint-mobile) {
   .backdrop { align-items: end; padding: 0; }
-  .dialog { width: 100%; max-height: 94vh; border-radius: $border-radius-lg $border-radius-lg 0 0; }
+  .dialog { width: 100%; max-height: 94%; border-radius: $border-radius-lg $border-radius-lg 0 0; }
   .footer > button { flex: 1; }
 }

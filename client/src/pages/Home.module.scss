@@ -16,7 +16,7 @@
 .chatArea {
     position: relative;
     width: 800px;
-    max-width: 100vw;
+    max-width: 100%;
     height: 100%;
     @include flex-column;
     background-color: $color-bg-tertiary;
@@ -175,8 +175,8 @@
         left: 0;
         display: flex;
         flex-direction: column;
-        width: min(11rem, calc(100vw - 1rem));
-        max-height: min(18rem, 45vh);
+        width: min(11rem, calc(var(--app-viewport-width) - 1rem));
+        max-height: min(18rem, var(--app-viewport-menu-height));
         overflow-y: auto;
         padding: $spacing-xs;
         border: 1px solid $color-border;
