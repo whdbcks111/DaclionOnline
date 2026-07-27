@@ -45,6 +45,7 @@ export default function HudSettings({ onClose }: Props) {
     gridSnapEnabled, setGridSnapEnabled, gridExponent, gridSize, setGridExponent,
     playerStats, skillHudConfigs, setSkillHudVisible, resetSkillHudPosition,
     quickButtonScale, setQuickButtonScale,
+    skillQuickButtonOpacity, setSkillQuickButtonOpacity,
     quickButtonPosAnchor, setQuickButtonPosAnchor,
     quickButtonPosUnitX, quickButtonPosUnitY, setQuickButtonPosUnit,
     hudViewportWidth, hudViewportHeight,
@@ -269,6 +270,19 @@ export default function HudSettings({ onClose }: Props) {
               onChange={event => setQuickButtonScale(Number(event.target.value) / 100)}
               className={styles.rangeSlider}
               style={{ '--fill': fill(Math.round(quickButtonScale * 100), 50, 200) } as React.CSSProperties}
+            />
+            <div className={styles.detailSliderLabel}>
+              <span className={styles.detailLabel}>스킬 버튼 투명도</span>
+              <span className={styles.detailValue}>{Math.round(skillQuickButtonOpacity * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min={10}
+              max={100}
+              value={Math.round(skillQuickButtonOpacity * 100)}
+              onChange={event => setSkillQuickButtonOpacity(Number(event.target.value) / 100)}
+              className={styles.rangeSlider}
+              style={{ '--fill': fill(Math.round(skillQuickButtonOpacity * 100), 10, 100) } as React.CSSProperties}
             />
             <div className={styles.quickSettingDivider} />
             <div className={styles.detailRow}>

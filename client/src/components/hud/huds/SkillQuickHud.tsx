@@ -30,6 +30,7 @@ export default function SkillQuickHud() {
     opacity,
     scale,
     quickButtonScale,
+    skillQuickButtonOpacity,
     quickButtonPosAnchor,
     quickButtonPosUnitX,
     quickButtonPosUnitY,
@@ -140,7 +141,7 @@ export default function SkillQuickHud() {
             style={{
               left: `${isRight ? hudViewportWidth - x : x}px`,
               top: `${isBottom ? hudViewportHeight - y : y}px`,
-              opacity,
+              opacity: opacity * skillQuickButtonOpacity,
               transform: `translate(-50%, -50%) scale(${scale * quickButtonScale})`,
             }}
             onPointerDown={event => {

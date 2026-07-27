@@ -28,6 +28,7 @@ const SCALE_KEY = 'hud-scale'
 const QUICK_SLOTS_KEY = 'hud-quick-slots'
 const SKILL_HUD_KEY = 'hud-skill-buttons'
 const QUICK_BUTTON_SCALE_KEY = 'hud-quick-button-scale'
+const SKILL_QUICK_BUTTON_OPACITY_KEY = 'hud-skill-quick-button-opacity'
 const GRID_SNAP_KEY = 'hud-grid-snap'
 const GRID_EXPONENT_KEY = 'hud-grid-exponent'
 const QUICK_BUTTON_POS_ANCHOR_KEY = 'hud-quick-button-pos-anchor'
@@ -149,6 +150,8 @@ interface HudContextType {
   resetSkillHudPosition: (skillId: string, defaultIndex?: number) => void
   quickButtonScale: number
   setQuickButtonScale: (scale: number) => void
+  skillQuickButtonOpacity: number
+  setSkillQuickButtonOpacity: (opacity: number) => void
   quickButtonPosAnchor: PosAnchor
   setQuickButtonPosAnchor: (posAnchor: PosAnchor) => void
   quickButtonPosUnitX: PosUnit
@@ -313,6 +316,20 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     const clamped = Math.max(0.5, Math.min(2, value))
     setQuickButtonScaleState(clamped)
     localStorage.setItem(QUICK_BUTTON_SCALE_KEY, String(clamped))
+  }, [])
+
+  const [skillQuickButtonOpacity, setSkillQuickButtonOpacityState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(SKILL_QUICK_BUTTON_OPACITY_KEY)
+      if (saved !== null) return Math.max(0.1, Math.min(1, parseFloat(saved)))
+    } catch { /* ignore */ }
+    return 1
+  })
+
+  const setSkillQuickButtonOpacity = useCallback((value: number) => {
+    const clamped = Math.max(0.1, Math.min(1, value))
+    setSkillQuickButtonOpacityState(clamped)
+    localStorage.setItem(SKILL_QUICK_BUTTON_OPACITY_KEY, String(clamped))
   }, [])
 
   const setGridSnapEnabled = useCallback((enabled: boolean) => {
@@ -532,6 +549,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
       quickSlots, addQuickSlot, removeQuickSlot, moveQuickSlot, updateQuickSlot,
       skillHudConfigs, setSkillHudVisible, setSkillHudPosition, resetSkillHudPosition,
       quickButtonScale, setQuickButtonScale,
+      skillQuickButtonOpacity, setSkillQuickButtonOpacity,
       quickButtonPosAnchor, setQuickButtonPosAnchor,
       quickButtonPosUnitX, quickButtonPosUnitY, setQuickButtonPosUnit,
     }}>
