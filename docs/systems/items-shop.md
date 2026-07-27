@@ -61,7 +61,7 @@ Lv.380~500의 역할 장비 15종은 `ItemData.gameplayEffects`와 `onBasicAttac
 - 정렬: `InventorySortMode.values/fromKey/fromInput`이 `종류별`, `이름순`, `자동` 기준을 소유하고 `sortItems(mode)`가 raw 배열을 노출하지 않은 채 표시 순서를 바꾼다. 자동은 사용 가능한 아이템을 먼저, 내구도 아이템을 마지막에 두며 각 묶음은 종류·이름순으로 정렬한다.
 - 변경 구독: `subscribeChanges`는 수량·metadata·내구도·태그 변화 뒤 호출되며 QuestBook 같은 소유 기능의 현재 보유 조건 갱신에 사용한다. `replaceSelectedItems` 안의 연속 변경은 한 번으로 묶는다.
 - metadata 변경: `setItemMetadata`, `resetItemMetadata`가 대상 Item API를 호출하고 Inventory를 dirty로 표시한다. 조회는 반환된 Item의 `getMetadata`를 사용한다.
-- 내구도 변경: `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`가 Item API를 호출하고 Inventory를 dirty로 표시한다.
+- 내구도 변경: `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `increaseItemDurabilityByIndex`, `decreaseItemDurability`가 Item API를 호출하고 Inventory를 dirty로 표시한다. 인벤토리 번호와 장착칸을 함께 받는 `/수리`는 대상 해석기가 제공하는 owner callback으로 이 API를 호출한다.
 - 추가: `canAdd`, `canAddSnapshot(s)`이 총 무게와 아이템 정의를 검사하고 `addItem`이 stackable/maxStack 규칙에 따라 병합 또는 새 인스턴스를 만든다. 일반 stackable 마스터 데이터의 maxStack은 공용 안전 상한이라 중량이 실질 한계다. 기존 인스턴스를 이동할 때는 `addItemSnapshot`을 사용한다.
 - 조건부 선택·교환: `selectItems`는 겹치는 여러 predicate에 아이템 수량을 중복 없이 배정하고, `replaceSelectedItems`는 선택 재료와 결과 snapshot의 수량·무게를 선검증한 뒤 교환한다.
 - 사용: `useItem`이 `ItemData.onUse` handler를 실행하며 동시에 하나의 아이템만 사용할 수 있다.

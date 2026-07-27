@@ -33,7 +33,7 @@ const firstJobs = [
         // TODO: 대장장이 전용 직업 아트 제작 전까지 채굴 도구 카테고리 아이콘을 사용한다.
         id: 'career:blacksmith', name: '대장장이', icon: 'items/iron_pickaxe',
         description: '튼튼한 체력과 예리한 감각으로 적의 결을 파쇄하고, 광물 제련과 리듬 단조로 장비를 제작하는 생산·근접 혼합 직업.',
-        skills: ['blacksmith_temper', 'precision_break', 'arcane_smelting', 'metal_forging'],
+        skills: ['blacksmith_temper', 'precision_break', 'arcane_smelting', 'metal_forging', 'equipment_repair'],
         main: [{ attribute: 'maxWeight', op: 'add', value: 20 }, { attribute: 'def', op: 'multiply', value: 1.1 }, { attribute: 'maxLife', op: 'multiply', value: 1.15 }, { attribute: 'critRate', op: 'add', value: 0.04 }],
         sub: [{ attribute: 'maxWeight', op: 'add', value: 10 }, { attribute: 'def', op: 'multiply', value: 1.05 }, { attribute: 'maxLife', op: 'multiply', value: 1.08 }],
     },

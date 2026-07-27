@@ -8,6 +8,8 @@ export const SENSIBILITY_CRIT_RATE_CAP = 0.5
 export const SENSIBILITY_CRIT_RATE_SCALE = SENSIBILITY_CRIT_RATE_CAP / 0.001
 /** 정신력 스탯 1포인트가 제공하는 최대 정신력. */
 export const MENTALITY_MAX_MENTALITY_PER_POINT = 5.25
+/** 정신력 스탯 1포인트가 제공하는 마법 저항력. */
+export const MENTALITY_MAGIC_DEF_PER_POINT = 0.5
 /** 낮은 구간에서 체력 1포인트가 제공하는 초당 생명력 재생량. */
 export const VITALITY_LIFE_REGEN_PER_POINT = 0.025
 /** 낮은 구간에서 정신력 1포인트가 제공하는 초당 정신력 재생량. */
@@ -95,6 +97,12 @@ export class StatType {
                 source,
             })
             entity.attribute.addModifier({ attribute: 'magicForce', op: 'add', value: 2 * points, source })
+            entity.attribute.addModifier({
+                attribute: 'magicDef',
+                op: 'add',
+                value: MENTALITY_MAGIC_DEF_PER_POINT * points,
+                source,
+            })
             entity.attribute.addModifier({ attribute: 'projectileAcceleration', op: 'add', value: 0.002 * points, source })
             entity.attribute.addModifier({
                 attribute: 'mentalityRegen',
@@ -103,7 +111,7 @@ export class StatType {
                 source,
             })
         },
-        p => `정신력 1 → 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT}, 마법력 +2, 투사체 가속 +0.002, 정신력 재생 증가(높을수록 포인트 효율 완만히 감소)\n현재 정신력 ${p}: 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT * p}, 마법력 +${2 * p}, 투사체 가속 +${(0.002 * p).toFixed(3)}, 정신력 재생 +${calculateMentalityRegenBonus(p).toFixed(2)}/초`
+        p => `정신력 1 → 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT}, 마법력 +2, 마법 저항력 +${MENTALITY_MAGIC_DEF_PER_POINT}, 투사체 가속 +0.002, 정신력 재생 증가(높을수록 포인트 효율 완만히 감소)\n현재 정신력 ${p}: 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT * p}, 마법력 +${2 * p}, 마법 저항력 +${MENTALITY_MAGIC_DEF_PER_POINT * p}, 투사체 가속 +${(0.002 * p).toFixed(3)}, 정신력 재생 +${calculateMentalityRegenBonus(p).toFixed(2)}/초`
     )
 
     readonly key: StatKey

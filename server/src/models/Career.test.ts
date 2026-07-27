@@ -57,6 +57,8 @@ test('5개 1차 직업은 최소 3개 스킬을 지급하고 서로 다른 20개
         .some(grant => grant.skillDataId === 'staff_infusing'));
     assert.ok(getJob('career:artificer')?.grantedSkills
         .some(grant => grant.skillDataId === 'artificer_manufacturing'));
+    assert.ok(getJob('career:blacksmith')?.grantedSkills
+        .some(grant => grant.skillDataId === 'equipment_repair'));
     for (const skill of getAllSkillData()) {
         const png = readFileSync(new URL(`../../../client/public/icons/${skill.icon}.png`, import.meta.url));
         assert.equal(png.readUInt32BE(16), 128, `${skill.id} icon width`);
@@ -127,7 +129,13 @@ test('대장장이는 현재 조건에 맞는 메인 또는 서브 직업 슬롯
     assert.equal(mainCase.career.getAssignableSlot('career:blacksmith'), JobSlotType.MAIN);
     assert.equal(mainCase.career.assignAvailable('career:blacksmith').success, true);
     assert.equal(mainCase.career.mainJobId, 'career:blacksmith');
-    assert.deepEqual(mainCase.granted, ['blacksmith_temper', 'precision_break', 'arcane_smelting', 'metal_forging']);
+    assert.deepEqual(mainCase.granted, [
+        'blacksmith_temper',
+        'precision_break',
+        'arcane_smelting',
+        'metal_forging',
+        'equipment_repair',
+    ]);
 
     const subCase = createCareer(50);
     subCase.player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');

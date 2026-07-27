@@ -35,6 +35,7 @@ export const STATUS_EFFECT_INFO_SENSIBILITY = 50;
 export interface ItemInspectionTarget {
     item: Item;
     sourceLabel: string;
+    increaseDurability(amount: number): number | null | undefined;
 }
 
 function sensibilityOf(player: Player): number {
@@ -72,7 +73,11 @@ export function resolveItemInspectionTarget(player: Player, rawInput: string): I
     if (/^\d+$/.test(input)) {
         const index = Number(input) - 1;
         const item = player.inventory.getItemByIndex(index);
-        return item ? { item, sourceLabel: `인벤토리 ${index + 1}번` } : undefined;
+        return item ? {
+            item,
+            sourceLabel: `인벤토리 ${index + 1}번`,
+            increaseDurability: amount => player.inventory.increaseItemDurabilityByIndex(index, amount),
+        } : undefined;
     }
 
     const parsed = parseEquipmentInput(input);
@@ -82,6 +87,7 @@ export function resolveItemInspectionTarget(player: Player, rawInput: string): I
         return item ? {
             item,
             sourceLabel: parsed.slot.max > 1 ? `${parsed.slot.label}${parsed.index + 1}` : parsed.slot.label,
+            increaseDurability: amount => player.equipment.increaseItemDurability(parsed.slot.key, parsed.index!, amount),
         } : undefined;
     }
 
@@ -90,6 +96,7 @@ export function resolveItemInspectionTarget(player: Player, rawInput: string): I
         if (item) return {
             item,
             sourceLabel: parsed.slot.max > 1 ? `${parsed.slot.label}${index + 1}` : parsed.slot.label,
+            increaseDurability: amount => player.equipment.increaseItemDurability(parsed.slot.key, index, amount),
         };
     }
     return undefined;

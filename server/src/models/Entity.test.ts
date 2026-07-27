@@ -9,6 +9,7 @@ import Stat, {
     calculateMentalityRegenBonus,
     calculateSensibilityCritRateBonus,
     calculateVitalityLifeRegenBonus,
+    MENTALITY_MAGIC_DEF_PER_POINT,
     MENTALITY_MAX_MENTALITY_PER_POINT,
     SENSIBILITY_CRIT_RATE_CAP,
     StatType,
@@ -164,6 +165,10 @@ test('민첩과 정신력은 레벨 성장에 쓰이는 투사체 가속 능력�
         entity.maxMentality,
         80 + 100 * MENTALITY_MAX_MENTALITY_PER_POINT,
     );
+    assert.equal(
+        entity.attribute.get(AttributeType.MAGIC_DEF),
+        100 * MENTALITY_MAGIC_DEF_PER_POINT,
+    );
     assert.ok(Math.abs(
         entity.attribute.get(AttributeType.MENTALITY_REGEN)
             - (1 + calculateMentalityRegenBonus(100)),
@@ -171,6 +176,7 @@ test('민첩과 정신력은 레벨 성장에 쓰이는 투사체 가속 능력�
     assert.match(StatType.MENTALITY.getDescription(100), /최대 정신력 \+525/);
     assert.match(StatType.AGILITY.getDescription(100), /투사체 가속/);
     assert.match(StatType.MENTALITY.getDescription(100), /투사체 가속/);
+    assert.match(StatType.MENTALITY.getDescription(100), /마법 저항력 \+50/);
     assert.match(StatType.MENTALITY.getDescription(100), /정신력 재생 \+1\.19\/초/);
 });
 

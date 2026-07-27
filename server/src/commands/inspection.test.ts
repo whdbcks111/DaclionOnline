@@ -131,6 +131,7 @@ test('감각 요구 조건과 인벤토리·장착칸 감정 대상을 공개 AP
     assert.equal(resolveItemInspectionTarget(player, '1')?.item.itemDataId, 'inspection_test_potion');
     assert.equal(resolveItemInspectionTarget(player, '손')?.item.itemDataId, 'inspection_test_sword');
     assert.equal(resolveItemInspectionTarget(player, '주무기')?.sourceLabel, '손');
+    assert.equal(resolveItemInspectionTarget(player, '손')?.increaseDurability(5), 25);
     assert.equal(resolveItemInspectionTarget(player, '999'), undefined);
 });
 

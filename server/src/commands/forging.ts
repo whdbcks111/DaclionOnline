@@ -62,6 +62,52 @@ export function initForgingCommands(): void {
     });
 
     registerCommand({
+        name: '수리', aliases: ['repair', 'rp'], description: '대장장이 기술로 손상된 장비의 내구도를 복구합니다.',
+        showCommandUse: 'private',
+        args: [{
+            name: '아이템 번호 또는 장착칸', description: '인벤토리 번호 또는 손, 몸 같은 장착칸', required: true,
+            completions: itemTargetCompletions,
+        }],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            const skill = player.skills.get('equipment_repair');
+            if (!skill) {
+                sendBotMessageToUser(userId, '대장장이의 [ 야전 수리 ] 스킬이 필요합니다.');
+                return;
+            }
+            const target = resolveItemInspectionTarget(player, args[0] ?? '');
+            if (!target) {
+                sendBotMessageToUser(userId, '유효한 인벤토리 번호 또는 장착칸을 입력해주세요.');
+                return;
+            }
+            const current = target.item.durability;
+            const maximum = target.item.baseDurability;
+            if (current === null || maximum === null) {
+                sendBotMessageToUser(userId, '내구도가 존재하는 장비만 수리할 수 있습니다.');
+                return;
+            }
+            if (current >= maximum) {
+                sendBotMessageToUser(userId, '이미 내구도가 최대인 장비입니다.');
+                return;
+            }
+            const mentalityCost = 20;
+            if (!player.canSpendMentality(mentalityCost)) {
+                sendBotMessageToUser(userId, `정신력이 ${mentalityCost} 필요합니다.`);
+                return;
+            }
+            const amount = Math.max(1, Math.ceil(maximum * (0.2 + skill.level * 0.1)));
+            const repaired = target.increaseDurability(amount);
+            if (repaired === null || repaired === undefined || !player.spendMentality(mentalityCost)) {
+                sendBotMessageToUser(userId, '장비 상태가 변경되어 수리를 완료하지 못했습니다.');
+                return;
+            }
+            skill.addExperience(player, skill.getExperienceGain(player));
+            sendBotMessageToUser(userId, `[ ${target.item.name} ]을 수리했습니다. (내구도 ${current} → ${repaired} / ${maximum})`);
+        },
+    });
+
+    registerCommand({
         name: '지팡이부여',
         aliases: ['지팡이마법부여', 'staffinfuse', 'sfi'],
         description: '단조한 지팡이 틀에 마력 회로를 열어 실제 지팡이로 완성합니다.',

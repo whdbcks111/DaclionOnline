@@ -39,7 +39,7 @@ Entity/Resource/SkillBook
 
 제작법 발견은 새 테이블을 추가하지 않고 `crafting:recipe/{namespace}/{path}` 형식의 숨김 FLAG를 사용한다. 정의와 자동 발견 흐름은 [crafting.md](crafting.md)를 참고한다.
 
-대장장이는 `career:blacksmith` 정식 1차 직업으로 메인/서브 Progress STATE 중 하나에 저장된다. 구형 `profession:blacksmith` FLAG 정의는 기존 보유자를 빈 슬롯으로 자동 이전하기 위한 숨은 호환 값이며 신규 획득에는 사용하지 않는다. 마력 제련은 대장장이 계보 조건을, 단조 명령은 대장장이 계보 또는 별도 `금속 단조` 스킬 보유 여부를 공개 API로 확인한다.
+대장장이는 `career:blacksmith` 정식 1차 직업으로 메인/서브 Progress STATE 중 하나에 저장된다. 구형 `profession:blacksmith` FLAG 정의는 기존 보유자를 빈 슬롯으로 자동 이전하기 위한 숨은 호환 값이며 신규 획득에는 사용하지 않는다. 마력 제련은 대장장이 계보 조건을, 단조 명령은 대장장이 계보 또는 별도 `금속 단조` 스킬 보유 여부를 공개 API로 확인한다. `야전 수리`는 대장장이 전직 시 지급되는 5레벨 생활 스킬이며 성공한 `/수리`에서만 경험치를 얻는다.
 
 NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 현재 `npc:monster-hunt-question` 숨김 FLAG가 안내인 대화 분기에 쓰이며 자세한 흐름은 [NPC·대화 시스템](npc-dialogue.md)을 참고한다.
 

@@ -347,6 +347,10 @@ export default class Inventory {
         return this.getItem(itemId)?.increaseDurability(amount);
     }
 
+    increaseItemDurabilityByIndex(index: number, amount = 1): number | null | undefined {
+        return this.getItemByIndex(index)?.increaseDurability(amount);
+    }
+
     decreaseItemDurability(itemId: number, amount = 1): number | null | undefined {
         return this.getItem(itemId)?.decreaseDurability(amount);
     }
