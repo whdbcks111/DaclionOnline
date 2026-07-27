@@ -60,6 +60,13 @@
     gap: 5px;
 }
 
+.npcRow {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+}
+
 .entityIndex {
     opacity: 0.5;
     min-width: 14px;
@@ -83,6 +90,41 @@
     white-space: nowrap;
     min-width: 0;
     max-width: 100px;
+}
+
+.npcName {
+    color: var(--color-warning);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.npcDescription {
+    flex: 1;
+    min-width: 0;
+    max-width: clamp(5rem, 12vw, 10rem);
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.58);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.questMarker {
+    flex: 0 0 auto;
+    min-width: 0.8em;
+    font-weight: 800;
+    text-align: center;
+}
+
+.questReady {
+    color: var(--color-primary);
+}
+
+.questAvailable {
+    color: var(--color-warning);
+}
+
+.questActive {
+    color: rgba(255, 255, 255, 0.58);
 }
 
 .respawn {

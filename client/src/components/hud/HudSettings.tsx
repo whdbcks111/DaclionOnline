@@ -490,7 +490,7 @@ export default function HudSettings({ onClose }: Props) {
 
                   {def.id === 'player-location' && (
                     <div className={styles.detailRow}>
-                      <span className={styles.detailLabel}>오브젝트 공격·대상 버튼</span>
+                      <span className={styles.detailLabel}>오브젝트·NPC 행동 버튼</span>
                       <label className={styles.switch}>
                         <input
                           type="checkbox"

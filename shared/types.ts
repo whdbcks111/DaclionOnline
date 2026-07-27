@@ -240,6 +240,22 @@ export interface EntityBarInfo {
     userId?: number  // 플레이어만 존재
 }
 
+export type LocationObjectAction = 'attack' | 'target' | 'interact'
+
+export interface LocationObjectBarInfo extends EntityBarInfo {
+    actions: LocationObjectAction[]
+}
+
+export interface LocationNpcInfo {
+    name: string
+    description?: string
+    questMarker?: {
+        key: string
+        symbol: string
+        label: string
+    }
+}
+
 // 인접 위치 데이터 (미니맵용)
 export interface AdjacentLocationData {
     locationId: string
@@ -268,7 +284,8 @@ export interface LocationInfoData extends SnapshotRevision {
     x: number
     y: number
     z: number
-    objects: EntityBarInfo[]
+    objects: LocationObjectBarInfo[]
+    npcs: LocationNpcInfo[]
     players: EntityBarInfo[]
     adjacentLocations: AdjacentLocationData[]
 }

@@ -2,7 +2,7 @@ import logger from "../utils/logger.js";
 import Player from "../models/Player.js";
 import { getSessionByUserId, isUserOnline } from "./login.js";
 import { getLocation } from "../models/Location.js";
-import type { LocationInfoData } from "../../../shared/types.js";
+import type { LocationInfoData, LocationObjectAction } from "../../../shared/types.js";
 import { cancelCrafting } from "../models/Crafting.js";
 import {
     getOnlinePlayer,
@@ -200,6 +200,14 @@ export function sendLocationInfo(userId: number): void {
                 ? object.getRespawnDisplaySnapshot()
                 : undefined;
             const icon = object.getDisplayIcon();
+            const actions: LocationObjectAction[] = object.isDefeated
+                ? []
+                : [
+                    ...(object.isInteractable ? ['interact' as const] : []),
+                    ...(object.getAttackDeniedReason(player) === undefined
+                        ? ['attack' as const, 'target' as const]
+                        : []),
+                ];
             return {
                 ...(icon ? { icon } : {}),
                 name: object.name,
@@ -208,6 +216,21 @@ export function sendLocationInfo(userId: number): void {
                 maxLife: object.maxLife,
                 shields: object.getShieldBarSegments(),
                 ...(respawn ? { respawn } : {}),
+                actions,
+            };
+        }),
+        npcs: location.getNpcs().map(npc => {
+            const marker = player.quests.getNpcMarker(npc.id);
+            return {
+                name: npc.name,
+                ...(npc.description ? { description: npc.description } : {}),
+                ...(marker ? {
+                    questMarker: {
+                        key: marker.key,
+                        symbol: marker.symbol,
+                        label: marker.label,
+                    },
+                } : {}),
             };
         }),
         players: getOnlinePlayers()

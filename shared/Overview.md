@@ -4,7 +4,7 @@
 
 서버와 클라이언트가 함께 사용하는 네트워크 계약과 리소스를 둔다.
 
-`PlayerStatsData.target`은 nullable 현재 대상의 선택적 표시 아이콘·HP/MP·보호막·상태이상과 감각 단계별 몬스터 분석 DTO를 공유한다. `LocationInfoData.objects`도 선택적 표시 아이콘을 가져 위치 HUD가 Monster 내부 데이터를 직접 읽지 않는다. `tags.ts`의 `material:mana_crystal`은 원광·정제 소재·단조 결과가 같은 마력 재료 계보를 유지하게 한다.
+`PlayerStatsData.target`은 nullable 현재 대상의 선택적 표시 아이콘·HP/MP·보호막·상태이상과 감각 단계별 몬스터 분석 DTO를 공유한다. `LocationInfoData.objects`는 선택적 표시 아이콘과 서버가 판정한 `attack | target | interact` 행동을, `npcs`는 이름·설명·퀘스트 표식을 가져 위치 HUD가 Entity·NPC·QuestBook 내부 데이터를 직접 읽지 않는다. `tags.ts`의 `material:mana_crystal`은 원광·정제 소재·단조 결과가 같은 마력 재료 계보를 유지하게 한다.
 
 - `types.ts`: 태그, `monster | resource` 통합 오브젝트·NPC ID·지도 아이콘·대표색이 포함된 LocationData, 플레이어별 `WorldMapData`와 `worldMap` ChatNode, 타입색 `ShieldBarSegment`와 재사용 채팅 노드, `level/exp/maxExp/equippedTitle`을 가진 플레이어 HUD DTO, `newcomer/karmaMarked/equippedTitle` 메시지 헤더 표식, 서버 검증 `ChatReplyReference`, 자유 텍스트/허용 목록 구분이 포함된 명령 인자, 채팅 타입을 포함한 단일 호환·최대 10장 묶음 이미지 메시지·정보 공개·채널·온라인 mention·화면 전용 채팅 청소 Socket.io 이벤트 map의 단일 기준. Player/Location HUD는 `syncId/revision`을 포함해 중복·역순 snapshot을 거르며, `AdjacentLocationData`는 플레이어 기준 `visible | locked`와 공개 잠금 사유를 포함한다. 관리자 계약에는 칭호 마스터 option·보유/장착 snapshot·부여/회수 action, 사람 확인 상태·강제 실행/해제 action, 카르마 설정과 실제 장비·스킬 로테이션을 실행하는 `analyze_balance_profile`이 포함된다. 사람 확인 계약은 정답을 제외한 raster 문제·만료 시각과 답안 제출만 공유한다.
 - `chat.ts`: 채널·근처·파티·광고·권한 10 공지의 `ChatType` 표시 메타데이터와 광고 제한·귓속말 회색 token을 공유하고, 구조화 ChatNode를 답장용 최대 120자 한 줄로 요약하며 서버 메시지 ID 형식을 검증한다.

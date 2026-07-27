@@ -2,7 +2,7 @@
 
 `partyManager.areInSameParty()`는 내부 멤버 Map을 노출하지 않고 PVP 아군 공격을 차단하며, `getEventAudienceUserIds()`는 스킬·공격·회피 파티 피드 수신자 snapshot을 제공한다. `sendLocationInfo()`는 위험도 표시명과 PVP 허용 여부를 가공된 HUD snapshot으로 제공한다.
 
-`sendLocationInfo()`의 오브젝트 행은 5분을 초과해 리젠되는 보스에만 기본 주기와 현재 남은 시간을 선택적으로 포함한다.
+`sendLocationInfo()`의 오브젝트 행은 5분을 초과해 리젠되는 보스에만 기본 주기와 현재 남은 시간을 선택적으로 포함하고, 현재 플레이어 기준 가능한 공격·대상·상호작용 행동만 전송한다. NPC 행은 `Location`과 `QuestBook` 공개 API로 가공한 이름·설명·퀘스트 표식을 전송한다.
 
 Socket/HTTP 요청, 세션과 온라인 상태, 주기 작업, 도메인 객체 수명처럼 애플리케이션 수준의 조정을 담당한다.
 

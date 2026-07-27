@@ -1,8 +1,24 @@
 import { useHud } from '../../../context/HudContext'
 import { useSocket } from '../../../context/SocketContext'
-import type { EntityBarInfo } from '@shared/types'
+import type {
+  EntityBarInfo,
+  LocationNpcInfo,
+  LocationObjectAction,
+} from '@shared/types'
 import HealthBarNode from '../../chat/nodes/HealthBarNode'
 import styles from './LocationHud.module.scss'
+
+const OBJECT_ACTIONS: Record<LocationObjectAction, { command: string; label: string }> = {
+  attack: { command: '공격', label: '공격' },
+  target: { command: '대상지정', label: '대상 지정' },
+  interact: { command: '상호작용', label: '상호작용' },
+}
+
+const QUEST_MARKER_CLASSES: Record<string, string> = {
+  ready: styles.questReady,
+  available: styles.questAvailable,
+  active: styles.questActive,
+}
 
 function formatRespawnTime(seconds: number): string {
   const total = Math.max(0, Math.ceil(seconds))
@@ -18,19 +34,21 @@ function EntityRow({
   entity,
   index,
   color,
-  showActions = false,
+  objectActions,
+  showPvpAction = false,
   actionsDisabled = false,
 }: {
   entity: EntityBarInfo
   index: number
   color: string
-  showActions?: boolean
+  objectActions?: readonly LocationObjectAction[]
+  showPvpAction?: boolean
   actionsDisabled?: boolean
 }) {
   const { socket } = useSocket()
   const label = entity.userId !== undefined ? `#${entity.userId}` : `${index}.`
   const defeated = entity.life <= 0
-  const runObjectCommand = (command: '공격' | '대상지정') => {
+  const runObjectCommand = (command: string) => {
     if (actionsDisabled || defeated) return
     const action = entity.userId !== undefined
       ? `/대상지정p #${entity.userId}`
@@ -52,20 +70,68 @@ function EntityRow({
         </span>
       )}
       <HealthBarNode life={entity.life} maxLife={entity.maxLife} shields={entity.shields ?? []} length={60} color={color} thickness={5} shape="rounded" />
-      {showActions && (
+      {objectActions && objectActions.length > 0 && (
         <span className={styles.entityActions}>
-          {entity.userId === undefined && <button
-            type="button"
-            disabled={actionsDisabled || defeated}
-            title={`${index}번 오브젝트 공격`}
-            onClick={() => runObjectCommand('공격')}
-          >공격</button>}
+          {objectActions.map(action => {
+            const presentation = OBJECT_ACTIONS[action]
+            return <button
+              key={action}
+              type="button"
+              disabled={actionsDisabled || defeated}
+              title={`${index}번 오브젝트 ${presentation.label}`}
+              onClick={() => runObjectCommand(presentation.command)}
+            >{presentation.label}</button>
+          })}
+        </span>
+      )}
+      {showPvpAction && (
+        <span className={styles.entityActions}>
           <button
             type="button"
             disabled={actionsDisabled || defeated}
-            title={entity.userId !== undefined ? `${entity.name} PVP 대상 지정` : `${index}번 오브젝트 대상 지정`}
+            title={`${entity.name} PVP 대상 지정`}
             onClick={() => runObjectCommand('대상지정')}
-          >{entity.userId !== undefined ? 'PVP 대상' : '대상 지정'}</button>
+          >PVP 대상</button>
+        </span>
+      )}
+    </div>
+  )
+}
+
+function NpcRow({
+  npc,
+  index,
+  showAction,
+  actionDisabled,
+}: {
+  npc: LocationNpcInfo
+  index: number
+  showAction: boolean
+  actionDisabled: boolean
+}) {
+  const { socket } = useSocket()
+  const markerClass = npc.questMarker
+    ? QUEST_MARKER_CLASSES[npc.questMarker.key]
+    : undefined
+  return (
+    <div className={styles.npcRow}>
+      <span className={styles.entityIndex}>{index}.</span>
+      {npc.questMarker && (
+        <span
+          className={`${styles.questMarker} ${markerClass ?? ''}`}
+          title={npc.questMarker.label}
+        >{npc.questMarker.symbol}</span>
+      )}
+      <span className={styles.npcName} title={npc.description || undefined}>{npc.name}</span>
+      {npc.description && <span className={styles.npcDescription}>{npc.description}</span>}
+      {showAction && (
+        <span className={styles.entityActions}>
+          <button
+            type="button"
+            disabled={actionDisabled}
+            title={`${npc.name}과 대화`}
+            onClick={() => socket?.emit('chatButtonClick', { action: `/대화 ${index}` })}
+          >대화</button>
         </span>
       )}
     </div>
@@ -93,8 +159,22 @@ export default function LocationHud() {
               entity={object}
               index={i + 1}
               color="$enemy"
-              showActions={showObjectActions}
+              objectActions={showObjectActions ? object.actions : undefined}
               actionsDisabled={editMode}
+            />
+          ))}
+        </div>
+      )}
+      {locationInfo.npcs.length > 0 && (
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>NPC</div>
+          {locationInfo.npcs.map((npc, i) => (
+            <NpcRow
+              key={`${npc.name}-${i}`}
+              npc={npc}
+              index={i + 1}
+              showAction={showObjectActions}
+              actionDisabled={editMode}
             />
           ))}
         </div>
@@ -108,7 +188,7 @@ export default function LocationHud() {
               entity={p}
               index={i + 1}
               color="$life"
-              showActions={showObjectActions && locationInfo.pvpAllowed && p.userId !== playerStats?.userId}
+              showPvpAction={showObjectActions && locationInfo.pvpAllowed && p.userId !== playerStats?.userId}
               actionsDisabled={editMode}
             />
           ))}
