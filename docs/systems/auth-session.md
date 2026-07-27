@@ -19,12 +19,12 @@
 
 1. `sendVerifyCode(email)`은 socket ID 단위로 6자리 코드를 만들고 HTML 메일을 전송한다.
 2. 코드는 5분 뒤 만료되며 재전송은 60초 후 가능하다.
-3. `verifyCode(code)` 성공 시 해당 socket의 인증 엔트리를 verified로 표시한다.
-4. `register`는 verified 상태, ID/PW/email/nickname 형식, DB 중복을 검사한다.
+3. `verifyCode(code)` 성공 시 해당 socket의 인증 엔트리를 verified로 표시한다. 엔트리는 코드를 발송한 정규화 이메일도 함께 소유한다.
+4. `register`는 verified 상태와 만료 시각을 다시 확인하고, 가입 payload의 이메일을 소문자·공백 제거 후 인증 엔트리 이메일과 정확히 대조한다. 이후 ID/PW/email/nickname 형식과 DB 중복을 검사한다.
 5. 비밀번호는 32-byte hex salt와 PBKDF2-SHA512(10,000회, 64-byte) 해시로 저장한다.
 6. Prisma nested create로 `User`와 기본 `Player`를 만들고 인메모리 세션 토큰을 발급한다.
 
-검증 상태는 socket ID에 묶여 있으므로 연결이 바뀌면 다시 인증해야 한다. 현재 인증된 이메일과 `register` payload의 이메일을 별도로 대조하는 필드는 없다. 이 동작을 바꿀 때는 `VerifyEntry`와 등록 검증을 함께 바꾼다.
+검증 상태는 socket ID와 정규화 이메일에 함께 묶이므로 연결이 바뀌거나 이메일 입력을 바꾸면 다시 인증해야 한다. 클라이언트는 이메일 입력 변경 즉시 인증 완료 표시와 입력 코드를 초기화하지만 최종 권한 검사는 항상 서버의 `VerifyEntry.email` 대조가 담당한다.
 
 ## 로그인과 세션 수명
 

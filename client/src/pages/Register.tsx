@@ -143,7 +143,18 @@ function Register() {
         <div className={styles.registerContainer}>
             <div className={styles.label}>회원가입</div>
             <input type='text' name='id' ref={idRef} className={styles.inputField} placeholder='아이디' />
-            <input type='email' name='email' ref={emailRef} className={styles.inputField} placeholder='이메일' />
+            <input
+                type='email'
+                name='email'
+                ref={emailRef}
+                className={styles.inputField}
+                placeholder='이메일'
+                onChange={() => {
+                    setCodeVerified(false);
+                    setVerifyCodeSent(false);
+                    if (verifyCodeRef.current) verifyCodeRef.current.value = '';
+                }}
+            />
             <button onClick={sendVerifyCode}>{isVerifyCodeSent ? '다시 전송' : '인증번호 발송'}</button>
             <div className={styles.verifyField}>
                 <input type='text' name='verify-code' ref={verifyCodeRef} placeholder='인증번호 입력' />

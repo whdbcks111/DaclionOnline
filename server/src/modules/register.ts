@@ -13,6 +13,20 @@ const verifyMap: { [key: string]: VerifyEntry } = {}
 const expiryMinute = 5;
 const cooldownSeconds = 60;
 
+export function normalizeRegistrationEmail(email: string): string {
+    return email.trim().toLowerCase();
+}
+
+export function isVerifiedRegistrationEmail(
+    entry: VerifyEntry | undefined,
+    email: string,
+    now = Date.now(),
+): boolean {
+    return entry?.verified === true
+        && entry.expirationDate.getTime() >= now
+        && entry.email === normalizeRegistrationEmail(email);
+}
+
 export const initRegister = () => {
     const io = getIO();
 
@@ -25,19 +39,9 @@ export const initRegister = () => {
                     return;
                 }
 
-                if(!(socket.id in verifyMap)) {
-                    socket.emit('registerResult', { error: '인증번호를 보내지 않았습니다.' });
-                    return;
-                }
-
-                if(!verifyMap[socket.id].verified) {
-                    socket.emit('registerResult', { error: '인증이 완료되지 않았습니다.' });
-                    return;
-                }
-
                 let id = data.id;
                 let pw = data.pw;
-                let email = data.email;
+                let email = normalizeRegistrationEmail(data.email);
                 let nickname = data.nickname;
 
                 let idValidateResult = validateId(id);
@@ -55,6 +59,24 @@ export const initRegister = () => {
                 let emailValidateResult = validateEmail(email);
                 if(emailValidateResult) {
                     socket.emit('registerResult', { error: emailValidateResult });
+                    return;
+                }
+
+                const verification = verifyMap[socket.id];
+                if (!verification) {
+                    socket.emit('registerResult', { error: '인증번호를 보내지 않았습니다.' });
+                    return;
+                }
+                if (!verification.verified) {
+                    socket.emit('registerResult', { error: '인증이 완료되지 않았습니다.' });
+                    return;
+                }
+                if (verification.expirationDate.getTime() < Date.now()) {
+                    socket.emit('registerResult', { error: '이메일 인증이 만료되었습니다. 다시 인증해 주세요.' });
+                    return;
+                }
+                if (!isVerifiedRegistrationEmail(verification, email)) {
+                    socket.emit('registerResult', { error: '인증한 이메일과 가입 이메일이 일치하지 않습니다.' });
                     return;
                 }
 
@@ -113,6 +135,12 @@ export const initRegister = () => {
         socket.on('sendVerifyCode', async (email: unknown) => {
             if (typeof email !== 'string') return;
             try {
+                const normalizedEmail = normalizeRegistrationEmail(email);
+                const emailValidation = validateEmail(normalizedEmail);
+                if (emailValidation) {
+                    socket.emit('verifyCodeSendResult', { error: emailValidation });
+                    return;
+                }
                 const existing = verifyMap[socket.id];
                 if (existing) {
                     const elapsed = (Date.now() - existing.sentAt.getTime()) / 1000;
@@ -127,12 +155,17 @@ export const initRegister = () => {
                 const verifyHtmlTemplate = loadTemplate('verify-code', { code: verifyCode, expiry: `${expiryMinute}분` });
 
                 await sendMail({
-                    to: email,
+                    to: normalizedEmail,
                     subject: '[Daclion Online] 회원가입 인증번호 안내',
                     html: verifyHtmlTemplate
                 });
 
-                verifyMap[socket.id] = { code: verifyCode, expirationDate: new Date(Date.now() + expiryMinute * 60 * 1000), sentAt: new Date() }
+                verifyMap[socket.id] = {
+                    email: normalizedEmail,
+                    code: verifyCode,
+                    expirationDate: new Date(Date.now() + expiryMinute * 60 * 1000),
+                    sentAt: new Date(),
+                }
                 socket.emit('verifyCodeSendResult', { ok: true });
             }
             catch(e) {
