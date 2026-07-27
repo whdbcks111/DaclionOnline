@@ -390,10 +390,10 @@ export function initPlayerCommands(): void {
                 return;
             }
 
-            const idx = parseInt(args[0], 10) - 1;
-            if (isNaN(idx)) return;
-
-            const item = player.inventory.getItemByIndex(idx);
+            const input = args[0] ?? '';
+            const item = input.startsWith('item:')
+                ? player.inventory.getFirstUsableItemByData(input.slice('item:'.length))
+                : player.inventory.getItemByIndex(parseInt(input, 10) - 1);
             if (!item) {
                 sendBotMessageToUser(userId, '인벤토리에 해당 아이템이 없습니다.');
                 return;

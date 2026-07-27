@@ -2,6 +2,9 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import type { PlayerStatsData, LocationInfoData } from '@shared/types'
 import { createDefaultSkillHudConfig } from './skillHudConfig'
 import type { SkillHudConfig } from './skillHudConfig'
+import { createDefaultItemHudConfig } from './itemHudConfig'
+import type { ItemHudConfig } from './itemHudConfig'
+import type { UsableItemHudData } from '@shared/types'
 import { getUiViewportSize, UI_SCALE_CHANGE_EVENT } from '../utils/displayPreferences'
 
 export type AnchorPoint = 'topLeft' | 'topMiddle' | 'topRight' | 'middleLeft' | 'center' | 'middleRight' | 'bottomLeft' | 'bottomMiddle' | 'bottomRight'
@@ -27,6 +30,7 @@ const OPACITY_KEY = 'hud-opacity'
 const SCALE_KEY = 'hud-scale'
 const QUICK_SLOTS_KEY = 'hud-quick-slots'
 const SKILL_HUD_KEY = 'hud-skill-buttons'
+const ITEM_HUD_KEY = 'hud-item-buttons'
 const QUICK_BUTTON_SCALE_KEY = 'hud-quick-button-scale'
 const SKILL_QUICK_BUTTON_OPACITY_KEY = 'hud-skill-quick-button-opacity'
 const GRID_SNAP_KEY = 'hud-grid-snap'
@@ -68,6 +72,27 @@ function createAnchoredSkillHudConfig(
   viewportHeight: number,
 ): SkillHudConfig {
   const defaults = createDefaultSkillHudConfig(skillId, index)
+  const isRight = posAnchor === 'topRight' || posAnchor === 'bottomRight'
+  const isBottom = posAnchor === 'bottomLeft' || posAnchor === 'bottomRight'
+  const xPercent = isRight ? 100 - defaults.x : defaults.x
+  const yPercent = isBottom ? 100 - defaults.y : defaults.y
+  return {
+    ...defaults,
+    x: unitX === '%' ? xPercent : xPercent / 100 * viewportWidth,
+    y: unitY === '%' ? yPercent : yPercent / 100 * viewportHeight,
+  }
+}
+
+function createAnchoredItemHudConfig(
+  item: Pick<ItemHudConfig, 'itemDataId' | 'name' | 'icon'>,
+  index: number,
+  posAnchor: PosAnchor,
+  unitX: PosUnit,
+  unitY: PosUnit,
+  viewportWidth: number,
+  viewportHeight: number,
+): ItemHudConfig {
+  const defaults = createDefaultItemHudConfig(item, index)
   const isRight = posAnchor === 'topRight' || posAnchor === 'bottomRight'
   const isBottom = posAnchor === 'bottomLeft' || posAnchor === 'bottomRight'
   const xPercent = isRight ? 100 - defaults.x : defaults.x
@@ -148,6 +173,10 @@ interface HudContextType {
   setSkillHudVisible: (skillId: string, visible: boolean, defaultIndex?: number) => void
   setSkillHudPosition: (skillId: string, x: number, y: number) => void
   resetSkillHudPosition: (skillId: string, defaultIndex?: number) => void
+  itemHudConfigs: Record<string, ItemHudConfig>
+  setItemHudVisible: (item: UsableItemHudData, visible: boolean, defaultIndex?: number) => void
+  setItemHudPosition: (itemDataId: string, x: number, y: number) => void
+  resetItemHudPosition: (itemDataId: string, defaultIndex?: number) => void
   quickButtonScale: number
   setQuickButtonScale: (scale: number) => void
   skillQuickButtonOpacity: number
@@ -248,6 +277,29 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
           x: Math.max(0, quickButtonPosUnitX === '%' ? Math.min(100, config.x!) : config.x!),
           y: Math.max(0, quickButtonPosUnitY === '%' ? Math.min(100, config.y!) : config.y!),
         } satisfies SkillHudConfig]]
+      }))
+    } catch { /* ignore */ }
+    return {}
+  })
+  const [itemHudConfigs, setItemHudConfigs] = useState<Record<string, ItemHudConfig>>(() => {
+    try {
+      const saved = localStorage.getItem(ITEM_HUD_KEY)
+      if (!saved) return {}
+      const parsed = JSON.parse(saved) as Record<string, Partial<ItemHudConfig>>
+      return Object.fromEntries(Object.entries(parsed).flatMap(([itemDataId, config]) => {
+        if (!config
+          || typeof config.name !== 'string'
+          || typeof config.icon !== 'string'
+          || !Number.isFinite(config.x)
+          || !Number.isFinite(config.y)) return []
+        return [[itemDataId, {
+          itemDataId,
+          name: config.name,
+          icon: config.icon,
+          visible: config.visible === true,
+          x: Math.max(0, quickButtonPosUnitX === '%' ? Math.min(100, config.x!) : config.x!),
+          y: Math.max(0, quickButtonPosUnitY === '%' ? Math.min(100, config.y!) : config.y!),
+        } satisfies ItemHudConfig]]
       }))
     } catch { /* ignore */ }
     return {}
@@ -375,6 +427,10 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(SKILL_HUD_KEY, JSON.stringify(skillHudConfigs))
   }, [skillHudConfigs])
 
+  useEffect(() => {
+    localStorage.setItem(ITEM_HUD_KEY, JSON.stringify(itemHudConfigs))
+  }, [itemHudConfigs])
+
   const patchConfig = useCallback((id: string, patch: Partial<HudConfig>) => {
     setConfigs(prev => ({
       ...prev,
@@ -497,6 +553,76 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     patchSkillHudConfig(skillId, { x: defaults.x, y: defaults.y }, defaultIndex)
   }, [hudViewport, patchSkillHudConfig, quickButtonPosAnchor, quickButtonPosUnitX, quickButtonPosUnitY])
 
+  const patchItemHudConfig = useCallback((
+    item: Pick<ItemHudConfig, 'itemDataId' | 'name' | 'icon'>,
+    patch: Partial<ItemHudConfig>,
+    defaultIndex = 0,
+  ) => {
+    setItemHudConfigs(prev => ({
+      ...prev,
+      [item.itemDataId]: {
+        ...(prev[item.itemDataId] ?? createAnchoredItemHudConfig(
+          item,
+          defaultIndex,
+          quickButtonPosAnchor,
+          quickButtonPosUnitX,
+          quickButtonPosUnitY,
+          hudViewport.width,
+          hudViewport.height,
+        )),
+        ...patch,
+        itemDataId: item.itemDataId,
+        name: item.name,
+        icon: item.icon,
+      },
+    }))
+  }, [hudViewport, quickButtonPosAnchor, quickButtonPosUnitX, quickButtonPosUnitY])
+
+  const setItemHudVisible = useCallback((item: UsableItemHudData, visible: boolean, defaultIndex = 0) => {
+    patchItemHudConfig(item, { visible }, defaultIndex)
+  }, [patchItemHudConfig])
+
+  const setItemHudPosition = useCallback((itemDataId: string, x: number, y: number) => {
+    const config = itemHudConfigs[itemDataId]
+    if (!config) return
+    const nextX = gridSnapEnabled ? snapHudCoordinate(x, quickButtonPosUnitX, hudViewport.width, gridSize) : x
+    const nextY = gridSnapEnabled ? snapHudCoordinate(y, quickButtonPosUnitY, hudViewport.height, gridSize) : y
+    patchItemHudConfig(config, {
+      x: Math.max(0, quickButtonPosUnitX === '%' ? Math.min(100, nextX) : nextX),
+      y: Math.max(0, quickButtonPosUnitY === '%' ? Math.min(100, nextY) : nextY),
+    })
+  }, [
+    gridSnapEnabled,
+    gridSize,
+    hudViewport,
+    itemHudConfigs,
+    patchItemHudConfig,
+    quickButtonPosUnitX,
+    quickButtonPosUnitY,
+  ])
+
+  const resetItemHudPosition = useCallback((itemDataId: string, defaultIndex = 0) => {
+    const config = itemHudConfigs[itemDataId]
+    if (!config) return
+    const defaults = createAnchoredItemHudConfig(
+      config,
+      defaultIndex,
+      quickButtonPosAnchor,
+      quickButtonPosUnitX,
+      quickButtonPosUnitY,
+      hudViewport.width,
+      hudViewport.height,
+    )
+    patchItemHudConfig(config, { x: defaults.x, y: defaults.y }, defaultIndex)
+  }, [
+    hudViewport,
+    itemHudConfigs,
+    patchItemHudConfig,
+    quickButtonPosAnchor,
+    quickButtonPosUnitX,
+    quickButtonPosUnitY,
+  ])
+
   const setQuickButtonPosAnchor = useCallback((posAnchor: PosAnchor) => {
     if (posAnchor === quickButtonPosAnchor) return
     const oldIsRight = quickButtonPosAnchor === 'topRight' || quickButtonPosAnchor === 'bottomRight'
@@ -513,6 +639,14 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
         y: oldIsBottom !== newIsBottom ? Math.max(0, maxY - config.y) : config.y,
       },
     ])))
+    setItemHudConfigs(prev => Object.fromEntries(Object.entries(prev).map(([itemDataId, config]) => [
+      itemDataId,
+      {
+        ...config,
+        x: oldIsRight !== newIsRight ? Math.max(0, maxX - config.x) : config.x,
+        y: oldIsBottom !== newIsBottom ? Math.max(0, maxY - config.y) : config.y,
+      },
+    ])))
     setQuickButtonPosAnchorState(posAnchor)
     localStorage.setItem(QUICK_BUTTON_POS_ANCHOR_KEY, posAnchor)
   }, [hudViewport, quickButtonPosAnchor, quickButtonPosUnitX, quickButtonPosUnitY])
@@ -523,6 +657,13 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     const viewportSize = axis === 'x' ? hudViewport.width : hudViewport.height
     setSkillHudConfigs(prev => Object.fromEntries(Object.entries(prev).map(([skillId, config]) => [
       skillId,
+      {
+        ...config,
+        [axis]: currentUnit === '%' ? config[axis] / 100 * viewportSize : config[axis] / viewportSize * 100,
+      },
+    ])))
+    setItemHudConfigs(prev => Object.fromEntries(Object.entries(prev).map(([itemDataId, config]) => [
+      itemDataId,
       {
         ...config,
         [axis]: currentUnit === '%' ? config[axis] / 100 * viewportSize : config[axis] / viewportSize * 100,
@@ -548,6 +689,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
       opacity, setOpacity, scale, setScale,
       quickSlots, addQuickSlot, removeQuickSlot, moveQuickSlot, updateQuickSlot,
       skillHudConfigs, setSkillHudVisible, setSkillHudPosition, resetSkillHudPosition,
+      itemHudConfigs, setItemHudVisible, setItemHudPosition, resetItemHudPosition,
       quickButtonScale, setQuickButtonScale,
       skillQuickButtonOpacity, setSkillQuickButtonOpacity,
       quickButtonPosAnchor, setQuickButtonPosAnchor,

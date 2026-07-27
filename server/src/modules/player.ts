@@ -149,6 +149,7 @@ export function sendPlayerStats(userId: number): void {
         attackCooldown:    player.attackCooldown,
         maxAttackCooldown: player.maxAttackCooldown,
         skills:             player.skills.getHudSnapshots(),
+        usableItems:        player.inventory.getUsableItemHudSnapshots(),
         statusEffects:     player.getStatusEffectDisplaySnapshots().map(effect => ({
             ...effect,
             description: parseChatMessage(effect.description),

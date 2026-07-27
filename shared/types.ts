@@ -379,6 +379,14 @@ export interface SkillHudData {
     maxCooldown: number
 }
 
+/** 인벤토리 원본이나 슬롯 번호에 의존하지 않는 사용 아이템 퀵 HUD 요약. */
+export interface UsableItemHudData {
+    itemDataId: string
+    name: string
+    icon: string
+    count: number
+}
+
 export interface PlayerStatsData extends SnapshotRevision {
     userId: number
     nickname: string
@@ -398,6 +406,7 @@ export interface PlayerStatsData extends SnapshotRevision {
     attackCooldown: number
     maxAttackCooldown: number
     skills: SkillHudData[]
+    usableItems: UsableItemHudData[]
     statusEffects: StatusEffectHudData[]
     target: TargetHudData | null
     party: PartyHudData | null

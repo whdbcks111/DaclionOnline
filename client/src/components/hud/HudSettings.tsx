@@ -44,6 +44,7 @@ export default function HudSettings({ onClose }: Props) {
     editMode, setEditMode, opacity, setOpacity, scale, setScale,
     gridSnapEnabled, setGridSnapEnabled, gridExponent, gridSize, setGridExponent,
     playerStats, skillHudConfigs, setSkillHudVisible, resetSkillHudPosition,
+    itemHudConfigs, setItemHudVisible, resetItemHudPosition,
     quickButtonScale, setQuickButtonScale,
     skillQuickButtonOpacity, setSkillQuickButtonOpacity,
     quickButtonPosAnchor, setQuickButtonPosAnchor,
@@ -52,6 +53,7 @@ export default function HudSettings({ onClose }: Props) {
   } = useHud()
   const [openSettingsId, setOpenSettingsId] = useState<string | null>(null)
   const [isSkillListOpen, setIsSkillListOpen] = useState(false)
+  const [isItemListOpen, setIsItemListOpen] = useState(false)
   const [isQuickButtonSettingsOpen, setIsQuickButtonSettingsOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const [initialPanelPosition] = useState(() => ({ x: Math.max(8, hudViewportWidth - 316), y: 60 }))
@@ -68,6 +70,17 @@ export default function HudSettings({ onClose }: Props) {
     })),
   ]
   const enabledQuickButtonCount = quickButtonSettings.filter(button => skillHudConfigs[button.id]?.visible).length
+  const ownedItems = playerStats?.usableItems ?? []
+  const ownedItemIds = new Set(ownedItems.map(item => item.itemDataId))
+  const itemButtonSettings = [
+    ...ownedItems,
+    ...Object.values(itemHudConfigs)
+      .filter(config => config.visible && !ownedItemIds.has(config.itemDataId))
+      .map(config => ({ ...config, count: 0 })),
+  ]
+  const enabledItemButtonCount = itemButtonSettings
+    .filter(item => itemHudConfigs[item.itemDataId]?.visible)
+    .length
 
   const handleClose = () => {
     setEditMode(false)
@@ -357,6 +370,67 @@ export default function HudSettings({ onClose }: Props) {
                   </div>
                 )
               })}
+            </div>
+          </div>
+        )}
+      </section>
+
+      <div className={styles.divider} />
+
+      <section className={styles.skillSection}>
+        <div className={styles.skillSectionHeader}>
+          <button
+            type="button"
+            className={styles.skillSectionToggle}
+            aria-expanded={isItemListOpen}
+            aria-controls="hud-item-quick-list"
+            onClick={() => setIsItemListOpen(open => !open)}
+          >
+            <span className={styles.sectionTitle}>
+              아이템 퀵 버튼
+              <span className={styles.skillCount}>{enabledItemButtonCount}/{itemButtonSettings.length}</span>
+            </span>
+            <span className={`${styles.sectionChevron} ${isItemListOpen ? styles.sectionChevronOpen : ''}`} aria-hidden>▾</span>
+          </button>
+        </div>
+        {isItemListOpen && (
+          <div id="hud-item-quick-list" className={styles.skillSectionContent}>
+            <div className={styles.rowDesc}>
+              현재 가진 사용 아이템만 등록할 수 있습니다. 수량이 0이면 버튼은 회색으로 유지됩니다.
+            </div>
+            <div className={styles.skillList}>
+              {itemButtonSettings.map((item, index) => {
+                const enabled = itemHudConfigs[item.itemDataId]?.visible ?? false
+                return (
+                  <div key={item.itemDataId} className={styles.skillRow}>
+                    <img src={`/icons/${item.icon}.png`} alt="" className={styles.skillIcon} />
+                    <div className={styles.skillInfo}>
+                      <span className={styles.skillLabel}>{item.name}</span>
+                      <span className={styles.skillLevel}>
+                        {item.count > 0 ? `${item.count}개 보유` : '보유 없음'}
+                      </span>
+                    </div>
+                    {enabled && (
+                      <button
+                        className={styles.skillResetBtn}
+                        title="버튼 위치 초기화"
+                        onClick={() => resetItemHudPosition(item.itemDataId, index)}
+                      >↺</button>
+                    )}
+                    <label className={styles.switch}>
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={event => setItemHudVisible(item, event.target.checked, index)}
+                      />
+                      <span className={styles.slider} />
+                    </label>
+                  </div>
+                )
+              })}
+              {itemButtonSettings.length === 0 && (
+                <div className={styles.rowDesc}>현재 퀵 버튼에 등록할 수 있는 사용 아이템이 없습니다.</div>
+              )}
             </div>
           </div>
         )}

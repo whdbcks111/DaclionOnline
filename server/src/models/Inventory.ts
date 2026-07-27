@@ -3,6 +3,7 @@ import { executeItemUse } from "../modules/itemUse.js";
 import { Item, createItemMetadataDelta, getItemData } from "./Item.js";
 import type { ItemMetadata, ItemSnapshot } from "./Item.js";
 import type { TagId } from "../../../shared/tags.js";
+import type { UsableItemHudData } from "../../../shared/types.js";
 
 export type { ItemData } from "./Item.js";
 export { Item, getItemData, getAllItemData } from "./Item.js";
@@ -170,6 +171,39 @@ export default class Inventory {
     /** 특정 아이템 정의의 총 수량 */
     getCount(itemDataId: string): number {
         return this.getItemsByData(itemDataId).reduce((sum, e) => sum + e.count, 0);
+    }
+
+    /**
+     * 퀵 HUD용 사용 가능 아이템 정의 요약.
+     * 슬롯·인스턴스 ID를 노출하지 않고 같은 마스터 데이터의 수량을 합산한다.
+     */
+    getUsableItemHudSnapshots(): readonly UsableItemHudData[] {
+        const snapshots = new Map<string, UsableItemHudData>();
+        for (const item of this._items) {
+            if (!item.data?.onUse || item.count <= 0) continue;
+            const previous = snapshots.get(item.itemDataId);
+            if (previous) {
+                snapshots.set(item.itemDataId, { ...previous, count: previous.count + item.count });
+                continue;
+            }
+            snapshots.set(item.itemDataId, {
+                itemDataId: item.itemDataId,
+                name: item.data.name,
+                icon: item.image,
+                count: item.count,
+            });
+        }
+        return [...snapshots.values()].sort((left, right) =>
+            inventoryCollator.compare(left.name, right.name)
+            || inventoryCollator.compare(left.itemDataId, right.itemDataId));
+    }
+
+    /** 퀵 사용처럼 정의 ID가 고정된 호출에서 사용할 수 있는 첫 인스턴스를 찾는다. */
+    getFirstUsableItemByData(itemDataId: string): Item | undefined {
+        return this._items.find(item =>
+            item.itemDataId === itemDataId
+            && item.count > 0
+            && Boolean(item.data?.onUse));
     }
 
     /**

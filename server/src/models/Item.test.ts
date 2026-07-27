@@ -85,6 +85,30 @@ test('metadata setter는 delta만 저장하고 변경 callback을 호출한다',
     assert.equal(changes, 2);
 });
 
+test('인벤토리 퀵 HUD는 사용 가능한 아이템을 정의별로 합산한다', () => {
+    defineItem({
+        ...itemData('test_quick_potion', 'items/health_potion'),
+        name: '시험 포션',
+        stackable: true,
+        maxStack: 999,
+        onUse: 'test_use_handler',
+    });
+    defineItem(itemData('test_quick_material'));
+    const inventory = Inventory.createEmpty(1, 100);
+    inventory.addItem('test_quick_potion', 2);
+    inventory.addItem('test_quick_potion', 3);
+    inventory.addItem('test_quick_material', 4);
+
+    assert.deepEqual(inventory.getUsableItemHudSnapshots(), [{
+        itemDataId: 'test_quick_potion',
+        name: '시험 포션',
+        icon: 'items/health_potion',
+        count: 5,
+    }]);
+    assert.equal(inventory.getFirstUsableItemByData('test_quick_potion')?.itemDataId, 'test_quick_potion');
+    assert.equal(inventory.getFirstUsableItemByData('test_quick_material'), undefined);
+});
+
 test('제작 장비 metadata는 이름·설명·최대 내구도·인스턴스 능력치를 안전하게 재정의한다', () => {
     defineItem({
         ...itemData('test_forged_weapon', 'items/old_sword', null, 50),

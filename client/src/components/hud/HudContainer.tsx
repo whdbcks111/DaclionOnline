@@ -8,6 +8,7 @@ import MinimapHud from './huds/MinimapHud'
 import QuickSlotHud from './huds/QuickSlotHud'
 import PartyHud from './huds/PartyHud'
 import SkillQuickHud from './huds/SkillQuickHud'
+import ItemQuickHud from './huds/ItemQuickHud'
 import { getUiScale } from '../../utils/displayPreferences'
 import styles from './HudContainer.module.scss'
 
@@ -145,6 +146,7 @@ export default function HudContainer() {
         />
       )}
       <SkillQuickHud />
+      <ItemQuickHud />
       {HUD_DEFINITIONS.map(def => {
         const cfg = configs[def.id]
         if (!cfg?.visible) return null
