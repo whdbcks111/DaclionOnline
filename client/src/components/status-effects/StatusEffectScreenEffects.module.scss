@@ -6,7 +6,6 @@
     height: var(--app-viewport-height, 100vh);
     overflow: hidden;
     pointer-events: none;
-    contain: strict;
 }
 
 .layer {
@@ -18,6 +17,7 @@
     border-image-width: 1;
     border-image-outset: 0;
     border-image-repeat: stretch;
+    background: transparent;
     opacity: 0;
     transition: opacity 650ms ease;
     will-change: opacity;
@@ -31,11 +31,19 @@
 .fire,
 .electric,
 .frozen {
-    mix-blend-mode: screen;
+    mix-blend-mode: plus-lighter;
 }
 
 .poison {
-    mix-blend-mode: multiply;
+    mix-blend-mode: normal;
+}
+
+@supports not (mix-blend-mode: plus-lighter) {
+    .fire,
+    .electric,
+    .frozen {
+        mix-blend-mode: screen;
+    }
 }
 
 @keyframes status-effect-breathe {
