@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import { Item, getItemData } from "./Item.js";
+import type { ItemDurabilityRepairResult } from "./Item.js";
 import type Attribute from "./Attribute.js";
 import { GameTags } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
@@ -170,6 +171,15 @@ export default class Equipment implements TagReadable {
 
     increaseItemDurability(slot: EquipSlot, slotIndex: number, amount = 1): number | null | undefined {
         return this.getEquipped(slot, slotIndex)?.increaseDurability(amount);
+    }
+
+    repairItemDurability(
+        slot: EquipSlot,
+        slotIndex: number,
+        amount: number,
+        maxDurabilityLossRate = 0,
+    ): ItemDurabilityRepairResult | null | undefined {
+        return this.getEquipped(slot, slotIndex)?.repairDurability(amount, maxDurabilityLossRate);
     }
 
     decreaseItemDurability(slot: EquipSlot, slotIndex: number, amount = 1): number | null | undefined {

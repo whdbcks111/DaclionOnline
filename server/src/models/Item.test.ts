@@ -192,6 +192,25 @@ test('내구도 API는 설정·증가·차감을 범위 안에서 처리하고 �
     assert.throws(() => item.changeDurability(Number.NaN));
 });
 
+test('수리는 손상률에 따라 최대 내구도를 영구 감소시키고 새 상한 안에서 복구한다', () => {
+    defineItem(itemData('test_degrading_repair', undefined, null, 100));
+    const item = new Item('test_degrading_repair', 1, 80, null);
+
+    assert.deepEqual(item.repairDurability(10, 0), {
+        durability: 90,
+        maxDurability: 100,
+        lostMaxDurability: 0,
+    });
+    item.setDurability(10);
+    assert.deepEqual(item.repairDurability(30, 0.12), {
+        durability: 40,
+        maxDurability: 88,
+        lostMaxDurability: 12,
+    });
+    assert.equal(item.baseDurability, 88);
+    assert.equal(item.getMetadata<number>('maxDurability'), 88);
+});
+
 test('소유 중인 아이템 내구도가 0이 되면 인벤토리 또는 장비에서 파괴된다', () => {
     defineItem(itemData('test_break_inventory', undefined, null, 2));
     defineItem({

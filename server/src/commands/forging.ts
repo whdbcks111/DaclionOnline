@@ -10,10 +10,12 @@ import {
     STAFF_INFUSION_MENTALITY_COST,
     ForgeForm,
     ForgeMaterial,
+    createEquipmentRepairPlan,
     createInfusedStaffSnapshot,
     enchantWeapon,
     reinforceWeapon,
     renameForgedItem,
+    selectEquipmentRepairMaterials,
 } from '../models/Forging.js';
 import { StatType } from '../models/Stat.js';
 import { AttributeType } from '../models/Attribute.js';
@@ -91,19 +93,43 @@ export function initForgingCommands(): void {
                 sendBotMessageToUser(userId, '이미 내구도가 최대인 장비입니다.');
                 return;
             }
+            const plan = createEquipmentRepairPlan(target.item, skill.level);
+            if (!plan) {
+                sendBotMessageToUser(userId, '수리가 필요하지 않은 장비입니다.');
+                return;
+            }
+            const materialSelection = selectEquipmentRepairMaterials(player.inventory, target.item, plan);
+            if (!materialSelection) {
+                const preferred = plan.preferredMaterialLabel
+                    ? `원 제작 소재 [ ${plan.preferredMaterialLabel} ] 또는 `
+                    : '';
+                sendBotMessageToUser(
+                    userId,
+                    `${preferred}장비와 같은 재질·속성의 수리 소재가 ${plan.requiredMaterialCount}개 필요합니다.`,
+                );
+                return;
+            }
             const mentalityCost = 20;
             if (!player.canSpendMentality(mentalityCost)) {
                 sendBotMessageToUser(userId, `정신력이 ${mentalityCost} 필요합니다.`);
                 return;
             }
-            const amount = Math.max(1, Math.ceil(maximum * (0.2 + skill.level * 0.1)));
-            const repaired = target.increaseDurability(amount);
-            if (repaired === null || repaired === undefined || !player.spendMentality(mentalityCost)) {
+            const repaired = target.repairDurability(plan.repairAmount, plan.maxDurabilityLossRate);
+            if (!repaired
+                || !player.spendMentality(mentalityCost)
+                || !player.inventory.consumeSelectedItems(materialSelection.selections)) {
                 sendBotMessageToUser(userId, '장비 상태가 변경되어 수리를 완료하지 못했습니다.');
                 return;
             }
             skill.addExperience(player, skill.getExperienceGain(player));
-            sendBotMessageToUser(userId, `[ ${target.item.name} ]을 수리했습니다. (내구도 ${current} → ${repaired} / ${maximum})`);
+            const degradation = repaired.lostMaxDurability > 0
+                ? ` 최대 내구도 ${maximum} → ${repaired.maxDurability}.`
+                : '';
+            sendBotMessageToUser(
+                userId,
+                `[ ${target.item.name} ]을 ${materialSelection.materialNames.join(', ')} ${plan.requiredMaterialCount}개로 수리했습니다. `
+                + `(내구도 ${current} → ${repaired.durability} / ${repaired.maxDurability})${degradation}`,
+            );
         },
     });
 

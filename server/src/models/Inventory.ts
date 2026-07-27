@@ -1,7 +1,7 @@
 import prisma from "../config/prisma.js";
 import { executeItemUse } from "../modules/itemUse.js";
 import { Item, createItemMetadataDelta, getItemData } from "./Item.js";
-import type { ItemMetadata, ItemSnapshot } from "./Item.js";
+import type { ItemDurabilityRepairResult, ItemMetadata, ItemSnapshot } from "./Item.js";
 import type { TagId } from "../../../shared/tags.js";
 import type { UsableItemHudData } from "../../../shared/types.js";
 
@@ -268,6 +268,27 @@ export default class Inventory {
         return removed;
     }
 
+    /** selectItems가 검증한 재료 배정을 결과물 없이 한 메모리 batch로 소비한다. */
+    consumeSelectedItems(selections: readonly InventoryItemSelection[]): boolean {
+        const totals = new Map<Item, number>();
+        for (const selection of selections) {
+            if (!Number.isSafeInteger(selection.count) || selection.count <= 0) return false;
+            totals.set(selection.item, (totals.get(selection.item) ?? 0) + selection.count);
+        }
+        for (const [item, count] of totals) {
+            if (!this._items.includes(item) || item.count < count) return false;
+        }
+        this.beginChangeBatch();
+        try {
+            for (const [item, count] of totals) {
+                if (!this.removeItemInstance(item, count)) return false;
+            }
+        } finally {
+            this.endChangeBatch();
+        }
+        return true;
+    }
+
     /**
      * 여러 필터 요구량에 실제 아이템 수량을 중복 없이 배정한다.
      * 최대 유량으로 겹치는 필터도 가능한 조합이 있으면 찾아낸다.
@@ -383,6 +404,14 @@ export default class Inventory {
 
     increaseItemDurabilityByIndex(index: number, amount = 1): number | null | undefined {
         return this.getItemByIndex(index)?.increaseDurability(amount);
+    }
+
+    repairItemDurabilityByIndex(
+        index: number,
+        amount: number,
+        maxDurabilityLossRate = 0,
+    ): ItemDurabilityRepairResult | null | undefined {
+        return this.getItemByIndex(index)?.repairDurability(amount, maxDurabilityLossRate);
     }
 
     decreaseItemDurability(itemId: number, amount = 1): number | null | undefined {

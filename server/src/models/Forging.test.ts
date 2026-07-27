@@ -4,17 +4,20 @@ import { GameTags } from '../../../shared/tags.js';
 import { Item } from './Item.js';
 import {
     MAX_WEAPON_REINFORCEMENT,
+    calculateRepairMaxDurabilityLossRate,
     calculateForgeCraftsmanship,
     calculateForgedItemLevel,
     createAssembledBowSnapshot,
     createForgedArrowSnapshot,
     createForgedItemSnapshot,
     createInfusedStaffSnapshot,
+    createEquipmentRepairPlan,
     ForgeForm,
     ForgeMaterial,
     ForgeQuality,
     reinforceWeapon,
     renameForgedItem,
+    selectEquipmentRepairMaterials,
 } from './Forging.js';
 import { PlayerProgress } from './Progress.js';
 import Skill from './Skill.js';
@@ -119,6 +122,42 @@ test('마나 수정 단조 재료는 원석·정제 명칭과 공백 없는 입�
     assert.equal(ForgeMaterial.fromInput('마나수정'), ForgeMaterial.MANA_CRYSTAL);
     assert.equal(ForgeMaterial.fromInput('정제 마나 수정'), ForgeMaterial.MANA_CRYSTAL);
     assert.equal(ForgeMaterial.fromInput('정제마나수정'), ForgeMaterial.MANA_CRYSTAL);
+});
+
+test('야전 수리는 원 단조 소재를 우선하고 없으면 같은 속성 소재를 선택한다', () => {
+    const item = Item.fromSnapshot(createForgedItemSnapshot(
+        ForgeForm.SWORD,
+        ForgeMaterial.RUBY,
+        { accuracy: 0.8, random: () => 0 },
+    ));
+    item.setDurability(Math.floor(item.baseDurability! * 0.2));
+    const plan = createEquipmentRepairPlan(item, 1)!;
+    assert.equal(plan.requiredMaterialCount, 2);
+    assert.equal(plan.preferredMaterialItemDataId, 'refined_ruby');
+    assert.equal(plan.maxDurabilityLossRate, 0.12);
+
+    const preferredInventory = Inventory.createEmpty(801, 100);
+    preferredInventory.addItem('refined_ruby', 2);
+    preferredInventory.addItem('ember_alloy', 2);
+    const preferred = selectEquipmentRepairMaterials(preferredInventory, item, plan)!;
+    assert.deepEqual(preferred.materialNames, ['제련된 루비']);
+    assert.equal(preferredInventory.consumeSelectedItems(preferred.selections), true);
+    assert.equal(preferredInventory.getCount('refined_ruby'), 0);
+    assert.equal(preferredInventory.getCount('ember_alloy'), 2);
+
+    const compatibleInventory = Inventory.createEmpty(802, 100);
+    compatibleInventory.addItem('ember_alloy', 2);
+    const compatible = selectEquipmentRepairMaterials(compatibleInventory, item, plan)!;
+    assert.deepEqual(compatible.materialNames, ['홍염강']);
+    assert.equal(compatibleInventory.consumeSelectedItems(compatible.selections), true);
+    assert.equal(compatibleInventory.getCount('ember_alloy'), 0);
+});
+
+test('가벼운 손상은 최대 내구도를 보존하고 심각한 손상은 10% 넘게 열화된다', () => {
+    assert.equal(calculateRepairMaxDurabilityLossRate(0.2), 0);
+    assert.equal(calculateRepairMaxDurabilityLossRate(0.4), 0.02);
+    assert.equal(calculateRepairMaxDurabilityLossRate(0.7), 0.06);
+    assert.equal(calculateRepairMaxDurabilityLossRate(0.9), 0.12);
 });
 
 test('원석 마나 수정만 가진 단조 시 정제 방법을 안내한다', () => {

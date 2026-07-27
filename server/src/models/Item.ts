@@ -176,6 +176,12 @@ export interface ItemInspectionSnapshot {
     readonly attackEffects: readonly ItemAttackEffectSnapshot[];
 }
 
+export interface ItemDurabilityRepairResult {
+    readonly durability: number;
+    readonly maxDurability: number;
+    readonly lostMaxDurability: number;
+}
+
 /** 아이템 인스턴스 (인벤토리/장비 공용) */
 export class Item implements TagReadable {
     id: number;
@@ -382,6 +388,28 @@ export class Item implements TagReadable {
     increaseDurability(amount = 1): number | null {
         if (!Number.isFinite(amount) || amount < 0) throw new Error('Durability increase must be a non-negative number');
         return this.changeDurability(amount);
+    }
+
+    /**
+     * 손상 장비를 복구하면서 선택적으로 최대 내구도를 영구 감소시킨다.
+     * 소유 계층의 dirty callback을 유지하기 위해 metadata와 현재 내구도 변경을 Item이 직접 소유한다.
+     */
+    repairDurability(amount: number, maxDurabilityLossRate = 0): ItemDurabilityRepairResult | null {
+        if (!Number.isFinite(amount) || amount < 0) throw new Error('Durability repair amount must be a non-negative number');
+        if (!Number.isFinite(maxDurabilityLossRate) || maxDurabilityLossRate < 0 || maxDurabilityLossRate >= 1) {
+            throw new Error('Max durability loss rate must be between 0 and 1');
+        }
+        const previousMax = this.baseDurability;
+        if (previousMax === null || this._durability === null) return null;
+        const lostMaxDurability = maxDurabilityLossRate <= 0
+            ? 0
+            : Math.min(previousMax - 1, Math.max(1, Math.round(previousMax * maxDurabilityLossRate)));
+        const maxDurability = previousMax - lostMaxDurability;
+        if (lostMaxDurability > 0) {
+            this.setMetadata(ItemMetadataKeys.MAX_DURABILITY, maxDurability);
+        }
+        const durability = this.setDurability(Math.min(this._durability, maxDurability) + amount);
+        return durability === null ? null : { durability, maxDurability, lostMaxDurability };
     }
 
     decreaseDurability(amount = 1): number | null {

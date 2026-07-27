@@ -1,6 +1,6 @@
 import type Player from '../models/Player.js';
 import Monster from '../models/Monster.js';
-import type { Item, ItemInspectionSnapshot } from '../models/Item.js';
+import type { Item, ItemDurabilityRepairResult, ItemInspectionSnapshot } from '../models/Item.js';
 import { getItemData, MAX_STACKABLE_ITEM_COUNT } from '../models/Item.js';
 import { getSkillData } from '../models/Skill.js';
 import { EquipSlotType } from '../models/Equipment.js';
@@ -36,6 +36,7 @@ export interface ItemInspectionTarget {
     item: Item;
     sourceLabel: string;
     increaseDurability(amount: number): number | null | undefined;
+    repairDurability(amount: number, maxDurabilityLossRate: number): ItemDurabilityRepairResult | null | undefined;
 }
 
 function sensibilityOf(player: Player): number {
@@ -77,6 +78,8 @@ export function resolveItemInspectionTarget(player: Player, rawInput: string): I
             item,
             sourceLabel: `인벤토리 ${index + 1}번`,
             increaseDurability: amount => player.inventory.increaseItemDurabilityByIndex(index, amount),
+            repairDurability: (amount, lossRate) =>
+                player.inventory.repairItemDurabilityByIndex(index, amount, lossRate),
         } : undefined;
     }
 
@@ -88,6 +91,8 @@ export function resolveItemInspectionTarget(player: Player, rawInput: string): I
             item,
             sourceLabel: parsed.slot.max > 1 ? `${parsed.slot.label}${parsed.index + 1}` : parsed.slot.label,
             increaseDurability: amount => player.equipment.increaseItemDurability(parsed.slot.key, parsed.index!, amount),
+            repairDurability: (amount, lossRate) =>
+                player.equipment.repairItemDurability(parsed.slot.key, parsed.index!, amount, lossRate),
         } : undefined;
     }
 
@@ -97,6 +102,8 @@ export function resolveItemInspectionTarget(player: Player, rawInput: string): I
             item,
             sourceLabel: parsed.slot.max > 1 ? `${parsed.slot.label}${index + 1}` : parsed.slot.label,
             increaseDurability: amount => player.equipment.increaseItemDurability(parsed.slot.key, index, amount),
+            repairDurability: (amount, lossRate) =>
+                player.equipment.repairItemDurability(parsed.slot.key, index, amount, lossRate),
         };
     }
     return undefined;

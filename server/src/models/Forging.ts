@@ -1,4 +1,6 @@
 import { ItemMetadataKeys, type Item, type ItemMetadata, type ItemSnapshot } from './Item.js';
+import type Inventory from './Inventory.js';
+import type { InventoryItemSelection } from './Inventory.js';
 import type { AttributeKey, ModifierOp } from './Attribute.js';
 import type { MetadataValue } from './Metadata.js';
 import { GameTags, isPropertyTag } from '../../../shared/tags.js';
@@ -38,6 +40,89 @@ export interface ForgedComponentResult {
     success: boolean;
     snapshot?: ItemSnapshot;
     reason?: string;
+}
+
+export interface EquipmentRepairPlan {
+    readonly damageRatio: number;
+    readonly repairAmount: number;
+    readonly requiredMaterialCount: number;
+    readonly maxDurabilityLossRate: number;
+    readonly preferredMaterialItemDataId?: string;
+    readonly preferredMaterialLabel?: string;
+}
+
+export interface EquipmentRepairMaterialSelection {
+    readonly selections: readonly InventoryItemSelection[];
+    readonly materialNames: readonly string[];
+}
+
+/** 손상률이 25% 이하인 간단 수리는 열화되지 않고, 심각한 손상은 최대 내구도를 12% 잃는다. */
+export function calculateRepairMaxDurabilityLossRate(damageRatio: number): number {
+    const ratio = Math.max(0, Math.min(1, damageRatio));
+    if (ratio <= 0.25) return 0;
+    if (ratio <= 0.5) return 0.02;
+    if (ratio <= 0.75) return 0.06;
+    return 0.12;
+}
+
+export function createEquipmentRepairPlan(item: Item, skillLevel: number): EquipmentRepairPlan | null {
+    const durability = item.durability;
+    const maxDurability = item.baseDurability;
+    if (durability === null || maxDurability === null || durability >= maxDurability) return null;
+    const damageRatio = Math.max(0, Math.min(1, (maxDurability - durability) / maxDurability));
+    const forgeMaterialKey = item.getMetadata<Record<string, unknown>>(ItemMetadataKeys.FORGE)?.material;
+    const forgeMaterial = typeof forgeMaterialKey === 'string'
+        ? ForgeMaterial.fromKey(forgeMaterialKey)
+        : undefined;
+    return {
+        damageRatio,
+        repairAmount: Math.max(1, Math.ceil(maxDurability * (0.2 + Math.max(1, skillLevel) * 0.1))),
+        requiredMaterialCount: damageRatio > 0.5 ? 2 : 1,
+        maxDurabilityLossRate: calculateRepairMaxDurabilityLossRate(damageRatio),
+        preferredMaterialItemDataId: forgeMaterial?.itemDataId,
+        preferredMaterialLabel: forgeMaterial?.label,
+    };
+}
+
+function isCompatibleRepairMaterial(target: Item, candidate: Item): boolean {
+    if (!candidate.stackable || candidate.durability !== null || candidate.equipSlot !== null || candidate.data?.onUse) {
+        return false;
+    }
+    const targetTags = target.tags.values();
+    const materialTags = targetTags.filter(tag => tag.startsWith('material:'));
+    const propertyTags = targetTags.filter(tag => tag.startsWith('property:'));
+    if (materialTags.length > 0 && candidate.tags.hasAny(materialTags)) return true;
+    if (propertyTags.length > 0 && candidate.tags.hasAny(propertyTags)) return true;
+    return materialTags.length === 0
+        && propertyTags.length === 0
+        && candidate.itemDataId === ForgeMaterial.IRON.itemDataId;
+}
+
+/**
+ * 원 단조 소재를 우선하고, 없으면 장비와 같은 material/property 태그를 가진 비장비 소재를 선택한다.
+ * 호출자는 반환 selection을 Inventory.consumeSelectedItems로 소비한다.
+ */
+export function selectEquipmentRepairMaterials(
+    inventory: Inventory,
+    item: Item,
+    plan: EquipmentRepairPlan,
+): EquipmentRepairMaterialSelection | null {
+    const count = plan.requiredMaterialCount;
+    const preferred = plan.preferredMaterialItemDataId
+        ? inventory.selectItems([{
+            count,
+            matches: candidate => candidate.itemDataId === plan.preferredMaterialItemDataId,
+        }])
+        : null;
+    const selections = preferred ?? inventory.selectItems([{
+        count,
+        matches: candidate => isCompatibleRepairMaterial(item, candidate),
+    }]);
+    if (!selections) return null;
+    return {
+        selections,
+        materialNames: [...new Set(selections.map(selection => selection.item.name))],
+    };
 }
 
 /** 전투 대장장이의 무기 강화. 실패·하락 없이 +5까지 긍정 modifier만 누적한다. */

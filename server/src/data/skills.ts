@@ -1076,9 +1076,9 @@ defineSkill({
     // TODO(art): 수리 전용 스킬 아이콘 제작 전까지 금속 단조 아이콘을 사용한다.
     icon: 'skills/metal_forging',
     maxLevel: 5,
-    descriptionTemplate: '손상된 장비의 내구도를 최대 내구도의 [color=gold]{{repairPercent}}%[/color]만큼 복구합니다. 이미 부서져 사라진 장비는 복구할 수 없습니다.',
-    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
-    activationConditionTemplate: '내구도가 남아 있는 장비를 지정해 `/수리 <아이템 번호 또는 장착칸>`을 입력합니다.',
+    descriptionTemplate: '손상된 장비의 내구도를 최대 내구도의 [color=gold]{{repairPercent}}%[/color]만큼 복구합니다. 원 제작 소재 또는 장비의 재질·속성과 맞는 소재가 필요합니다. 손상이 25% 이하인 간단한 수리는 열화되지 않지만, 크게 손상된 장비는 수리할 때 최대 내구도가 영구 감소합니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color] + 호환 수리 소재 1~2개',
+    activationConditionTemplate: '내구도가 남아 있는 장비와 호환 수리 소재를 준비한 뒤 `/수리 <아이템 번호 또는 장착칸>`을 입력합니다.',
     baseMetadata: { baseManaCost: 20 },
     calculatedFields: {
         repairPercent: context => 20 + context.skill.level * 10,
