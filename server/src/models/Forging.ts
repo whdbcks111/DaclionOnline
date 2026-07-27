@@ -441,10 +441,11 @@ export function calculateForgeCraftsmanship(options: ForgeResultOptions): ForgeC
     const forgingPrecision = Math.max(0, options.forgingPrecision ?? 0);
     const levelGrowth = Math.min(1.5, creatorLevel / 150);
     const senseGrowth = Math.min(2.25, Math.max(0, sensibility - 100) * 0.0015);
-    const precisionGrowth = Math.min(0.4, forgingPrecision * 0.2);
+    const precisionScale = Math.log1p(forgingPrecision) / Math.log(3);
+    const precisionGrowth = precisionScale * 0.4;
     const primaryPower = Math.max(0, creatorLevel - 10) * 0.45
         + Math.max(0, sensibility - 50) * 0.22
-        + Math.min(2, forgingPrecision) * 15;
+        + precisionScale * 30;
     return {
         creatorLevel,
         sensibility,

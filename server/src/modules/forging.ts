@@ -71,13 +71,23 @@ export function grantBlacksmithProfession(player: Player): boolean {
     return player.career.assignAvailable(BLACKSMITH_JOB_ID).success;
 }
 
+/**
+ * 제련 정밀도의 리듬 판정 보정.
+ * 45%까지는 그대로 반영하고 이후에는 90%를 향해 점근해 높은 성장도 버리지 않는다.
+ */
+export function calculateForgingRhythmPrecisionBonus(forgingPrecision: number): number {
+    const precision = Math.max(0, forgingPrecision);
+    if (precision <= 0.45) return precision;
+    return 0.45 + 0.45 * (1 - Math.exp(-(precision - 0.45) / 0.75));
+}
+
 /** 재료 난도와 장비 크기로 엇박·연속박자와 성공 품질 보정을 함께 확정한다. */
 export function createForgingRhythmConfig(
     form: ForgeForm,
     material: ForgeMaterial,
     forgingPrecision: number,
 ): ForgeRhythmConfig {
-    const precision = Math.max(0, Math.min(0.45, forgingPrecision));
+    const precision = calculateForgingRhythmPrecisionBonus(forgingPrecision);
     const difficulty = Math.max(1, Math.min(10, Math.round(1 + material.power * 2 + form.materialCount * 0.3)));
     const interval = Math.max(390, 680 - material.power * 115);
     const beatTimesMs = createForgeBeatTimesMs(interval, difficulty, 12 + difficulty);
@@ -121,7 +131,7 @@ export function startForging(player: Player, form: ForgeForm, material: ForgeMat
         return { success: false, reason: `${material.label} 제련 소재가 ${form.materialCount}개 필요합니다.` };
     }
 
-    const precision = Math.max(0, Math.min(0.45, player.attribute.get(AttributeType.FORGING_PRECISION)));
+    const precision = Math.max(0, player.attribute.get(AttributeType.FORGING_PRECISION));
     const config = createForgingRhythmConfig(form, material, precision);
     const started = startMiniGame({
         userId: player.userId,

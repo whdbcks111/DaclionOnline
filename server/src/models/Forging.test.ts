@@ -4,6 +4,7 @@ import { GameTags } from '../../../shared/tags.js';
 import { Item } from './Item.js';
 import {
     MAX_WEAPON_REINFORCEMENT,
+    calculateForgeCraftsmanship,
     calculateForgedItemLevel,
     createAssembledBowSnapshot,
     createForgedArrowSnapshot,
@@ -483,6 +484,18 @@ test('홍염강은 화산 전용 화염 합금이며 일반 철보다 어려운 
     assert.ok(ember.difficulty > iron.difficulty);
     assert.ok(ember.qualityBonus > iron.qualityBonus);
     assert.ok(ember.beatTimesMs.length > iron.beatTimesMs.length);
+});
+
+test('제련 정밀도는 45% 이후에도 리듬 판정과 완성품 숙련을 계속 높인다', () => {
+    const precision45 = createForgingRhythmConfig(ForgeForm.CHESTPLATE, ForgeMaterial.IRON, 0.45);
+    const precision100 = createForgingRhythmConfig(ForgeForm.CHESTPLATE, ForgeMaterial.IRON, 1);
+    const precision200 = calculateForgeCraftsmanship({ accuracy: 1, forgingPrecision: 2 });
+    const precision300 = calculateForgeCraftsmanship({ accuracy: 1, forgingPrecision: 3 });
+
+    assert.ok(precision100.hitWindowMs > precision45.hitWindowMs);
+    assert.ok(precision100.perfectWindowMs > precision45.perfectWindowMs);
+    assert.ok(precision300.primaryPower > precision200.primaryPower);
+    assert.ok(precision300.multiplier > precision200.multiplier);
 });
 
 test('금속 단조 스킬만 보유해도 단조 권한을 가진다', () => {
