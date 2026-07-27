@@ -1,0 +1,124 @@
+@use '../../../styles/variables' as *;
+
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 3600;
+  display: grid;
+  width: var(--app-viewport-width, 100vw);
+  height: var(--app-viewport-height, 100dvh);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  color: rgb(245 247 250);
+  background: rgb(10 12 15 / 96%);
+}
+
+.toolbar {
+  z-index: 1;
+  display: flex;
+  min-height: clamp(3rem, 7vh, 4rem);
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  padding: $spacing-sm clamp($spacing-sm, 2vw, $spacing-lg);
+  border-bottom: 1px solid rgb(255 255 255 / 14%);
+  background: rgb(10 12 15 / 88%);
+
+  button {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0 $spacing-sm;
+    color: inherit;
+    background: rgb(255 255 255 / 8%);
+    border: 1px solid rgb(255 255 255 / 16%);
+    border-radius: $border-radius-md;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled), &:focus-visible {
+      background: rgb(255 255 255 / 14%);
+    }
+
+    &:disabled {
+      opacity: .38;
+      cursor: default;
+    }
+  }
+}
+
+.zoomValue {
+  min-width: 3.5rem;
+  color: rgb(255 255 255 / 72%);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.toolbar .close {
+  margin-left: clamp($spacing-xs, 1vw, $spacing-md);
+  font-size: 1.55rem;
+  font-weight: 400;
+}
+
+.viewport {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: zoom-in;
+  touch-action: none;
+  user-select: none;
+}
+
+.viewport.zoomed {
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.image {
+  display: block;
+  max-width: calc(100% - clamp(1rem, 4vw, 3rem));
+  max-height: calc(100% - clamp(1rem, 4vh, 3rem));
+  object-fit: contain;
+  transform-origin: center;
+  will-change: transform;
+  user-select: none;
+}
+
+.hint {
+  padding: $spacing-sm clamp($spacing-sm, 2vw, $spacing-lg);
+  color: rgb(255 255 255 / 58%);
+  background: rgb(10 12 15 / 88%);
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  text-align: center;
+  font-size: $font-size-sm;
+}
+
+@media (max-width: $breakpoint-mobile) {
+  .toolbar {
+    justify-content: center;
+  }
+
+  .zoomValue {
+    min-width: 3rem;
+  }
+
+  .toolbar .close {
+    margin-left: auto;
+  }
+
+  .hint {
+    font-size: .78rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image {
+    will-change: auto;
+  }
+}

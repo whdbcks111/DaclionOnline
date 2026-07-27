@@ -2,10 +2,20 @@
   display: inline-flex;
   max-width: 100%;
   min-width: 0;
+  padding: 0;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  color: inherit;
+  background: transparent;
+  border: 0;
   vertical-align: top;
+  cursor: zoom-in;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 }
 
 .image {
