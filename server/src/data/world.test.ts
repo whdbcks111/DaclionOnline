@@ -1258,6 +1258,42 @@ test('잡화점은 배고픔과 수분을 회복하는 음식과 음료를 판�
     }
 });
 
+test('대용량 체력·마나 포션은 후반 거점의 고가 반복 골드 소모품으로 제공된다', () => {
+    const potionDefinitions = [
+        ['large_health_potion', 'heal_hp', 'items/health_potion'],
+        ['large_mana_potion', 'heal_mp', 'items/mana_potion'],
+    ] as const;
+    for (const [itemDataId, onUse, image] of potionDefinitions) {
+        const item = getItemData(itemDataId);
+        assert.equal(item?.onUse, onUse);
+        assert.equal(item?.image, image);
+        assert.equal(item?.baseMetadata?.amount, 10_000);
+        assert.equal(item?.baseMetadata?.thirst, 10);
+        assert.equal(item?.baseMetadata?.time, 2.5);
+        assert.equal(item?.weight, 1.5);
+    }
+
+    for (const shopId of [
+        'paradox_relay_store',
+        'ashen_waystation_store',
+        'voidcrown_waystation_store',
+        'eclipse_dock_store',
+        'worldroot_waystation_store',
+        'nebula_waystation_store',
+        'chronofrost_refuge_store',
+        'endstar_bastion_store',
+    ]) {
+        const entries = getShop(shopId)?.data.buyList.filter(entry =>
+            entry.create().itemDataId === 'large_health_potion'
+            || entry.create().itemDataId === 'large_mana_potion'
+        );
+        assert.equal(entries?.length, 2, shopId);
+        assert.ok(entries?.every(entry =>
+            entry.price === 100_000 && entry.stock === 20 && entry.restockTime === 180
+        ), shopId);
+    }
+});
+
 test('물빛 연못 낚시상점은 낚시 품목을 전담하고 잡화점은 초급 지팡이 성장 장비를 판매한다', () => {
     const rod = getItemData('beginner_fishing_rod');
     const refinedRod = getItemData('refined_fishing_rod');

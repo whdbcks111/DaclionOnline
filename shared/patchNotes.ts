@@ -73,6 +73,14 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.14', '2026-07-28',
+        [CONTENT,
+            'HP 또는 MP를 10,000 회복하는 대용량 체력·마나 포션을 추가했습니다.',
+        ],
+        [CHANGED,
+            '역설기계고 이후 성장 거점 상점에서 대용량 포션을 제한 재고로 판매해 고레벨 긴급 회복과 반복 골드 사용처를 마련했습니다.',
+        ],
+    ),
     definePatchNote('1.0.13', '2026-07-27',
         [FEATURE,
             'HUD 위치 편집에 4·8·16·32·64px 단위의 그리드 스냅과 화면 안내선을 추가했습니다.',

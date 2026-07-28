@@ -13,6 +13,27 @@ function bagStock(label: string, itemDataId: string, price: number, restockTime:
     };
 }
 
+function largePotionStock() {
+    return [
+        {
+            label: '대용량 체력 포션',
+            create: () => ({ itemDataId: 'large_health_potion', count: 1 }),
+            count: 1,
+            price: 100_000,
+            stock: 20,
+            restockTime: 180,
+        },
+        {
+            label: '대용량 마나 포션',
+            create: () => ({ itemDataId: 'large_mana_potion', count: 1 }),
+            count: 1,
+            price: 100_000,
+            stock: 20,
+            restockTime: 180,
+        },
+    ];
+}
+
 defineShop({
     id: 'general_store',
     buyList: [
@@ -512,6 +533,7 @@ defineShop({
     id: 'paradox_relay_store',
     buyList: [
         bagStock('역설 접이가방', 'paradox_fold_pack', 11_000, 1_800),
+        ...largePotionStock(),
         {
             label: '태엽 작업식', create: () => ({ itemDataId: 'cogwork_ration', count: 1 }),
             count: 1, price: 165, stock: 24, restockTime: 50,
@@ -565,6 +587,7 @@ defineShop({
     id: 'ashen_waystation_store',
     buyList: [
         bagStock('재길 운반구', 'ashroad_carrier', 16_500, 2_100),
+        ...largePotionStock(),
         {
             label: '재길 행군식', create: () => ({ itemDataId: 'ashmarch_ration', count: 1 }),
             count: 1, price: 220, stock: 24, restockTime: 50,
@@ -613,6 +636,7 @@ defineShop({
     id: 'voidcrown_waystation_store',
     buyList: [
         bagStock('공허비단 차원배낭', 'voidsilk_dimension_pack', 25_000, 2_400),
+        ...largePotionStock(),
         {
             label: '무광 행군식', create: () => ({ itemDataId: 'voidcrown_ration', count: 1 }),
             count: 1, price: 285, stock: 24, restockTime: 50,
@@ -655,6 +679,7 @@ defineShop({
     id: 'eclipse_dock_store',
     buyList: [
         bagStock('해구 내압배낭', 'eclipse_pressure_pack', 34_000, 2_700),
+        ...largePotionStock(),
         {
             label: '월식 해초말이', create: () => ({ itemDataId: 'eclipse_ration', count: 1 }),
             count: 1, price: 340, stock: 24, restockTime: 50,
@@ -697,6 +722,7 @@ defineShop({
     id: 'worldroot_waystation_store',
     buyList: [
         bagStock('천근수피 생장배낭', 'worldroot_living_pack', 45_000, 3_000),
+        ...largePotionStock(),
         {
             label: '천근수피 빵', create: () => ({ itemDataId: 'worldroot_ration', count: 1 }),
             count: 1, price: 410, stock: 24, restockTime: 50,
@@ -739,6 +765,7 @@ defineShop({
     id: 'nebula_waystation_store',
     buyList: [
         bagStock('성운궤도 배낭', 'nebula_orbit_pack', 58_000, 3_300),
+        ...largePotionStock(),
         { label: '유성등 건량', create: () => ({ itemDataId: 'nebula_ration', count: 1 }), count: 1, price: 520, stock: 24, restockTime: 50 },
         { label: '성운맥 영약', create: () => ({ itemDataId: 'nebula_tonic', count: 1 }), count: 1, price: 820, stock: 12, restockTime: 120 },
         { label: '화살 180개', create: () => ({ itemDataId: 'wooden_arrow', count: 180 }), count: 180, price: 590, stock: 20, restockTime: 40 },
@@ -768,6 +795,7 @@ defineShop({
     id: 'chronofrost_refuge_store',
     buyList: [
         bagStock('영시 보존배낭', 'chronofrost_vault_pack', 76_000, 3_600),
+        ...largePotionStock(),
         { label: '영겁 보존식', create: () => ({ itemDataId: 'chronofrost_ration', count: 1 }), count: 1, price: 650, stock: 24, restockTime: 50 },
         { label: '영시 회복약', create: () => ({ itemDataId: 'chronofrost_tonic', count: 1 }), count: 1, price: 1_020, stock: 12, restockTime: 120 },
         { label: '화살 210개', create: () => ({ itemDataId: 'wooden_arrow', count: 210 }), count: 210, price: 700, stock: 20, restockTime: 40 },
@@ -797,6 +825,7 @@ defineShop({
     id: 'endstar_bastion_store',
     buyList: [
         bagStock('최후지평 차원배낭', 'endstar_horizon_pack', 100_000, 3_900),
+        ...largePotionStock(),
         { label: '마지막 별찬', create: () => ({ itemDataId: 'endstar_ration', count: 1 }), count: 1, price: 820, stock: 24, restockTime: 50 },
         { label: '창세맥 영약', create: () => ({ itemDataId: 'endstar_tonic', count: 1 }), count: 1, price: 1_300, stock: 12, restockTime: 120 },
         { label: '화살 250개', create: () => ({ itemDataId: 'wooden_arrow', count: 250 }), count: 250, price: 850, stock: 20, restockTime: 40 },

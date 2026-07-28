@@ -373,6 +373,42 @@ defineItem({
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER],
 });
 
+// TODO(전용 아트 제작): 대용량 병 실루엣이 구분되는 전용 아이콘으로 교체한다.
+defineItem({
+    id: 'large_health_potion',
+    name: '대용량 체력 포션',
+    description: '긴급 전투용으로 고농축한 대형 포션. 2.5초 동안 마시면 HP를 10,000, 수분을 10 회복한다.',
+    image: 'items/health_potion',
+    category: '소모품',
+    weight: 1.5,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: { amount: 10_000, thirst: 10, time: 2.5 },
+    onUse: 'heal_hp',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_NATURAL],
+});
+
+// TODO(전용 아트 제작): 대용량 병 실루엣이 구분되는 전용 아이콘으로 교체한다.
+defineItem({
+    id: 'large_mana_potion',
+    name: '대용량 마나 포션',
+    description: '긴급 전투용으로 고농축한 대형 포션. 2.5초 동안 마시면 MP를 10,000, 수분을 10 회복한다.',
+    image: 'items/mana_potion',
+    category: '소모품',
+    weight: 1.5,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: { amount: 10_000, thirst: 10, time: 2.5 },
+    onUse: 'heal_mp',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER],
+});
+
 defineItem({
     id: 'battle_tonic',
     name: '전투 강장제',
