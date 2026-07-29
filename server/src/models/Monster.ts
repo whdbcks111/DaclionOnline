@@ -154,6 +154,20 @@ export interface MonsterRespawnDisplaySnapshot {
 }
 
 export const LONG_BOSS_RESPAWN_THRESHOLD_SECONDS = 5 * 60;
+/** 일반 사냥터의 몬스터 밀도가 레벨 구간에 따라 달라지지 않도록 사용하는 표준 리젠 시간. */
+export const STANDARD_MONSTER_RESPAWN_SECONDS = 30;
+
+export function resolveMonsterRespawnTime(
+    monsterDataId: string,
+    configuredRespawnTime: number,
+): number {
+    const data = getMonsterData(monsterDataId);
+    if (!data) throw new Error(`MonsterData not found: ${monsterDataId}`);
+    if (!data.tags.includes(GameTags.ENTITY_BOSS)) return STANDARD_MONSTER_RESPAWN_SECONDS;
+    return Number.isFinite(configuredRespawnTime)
+        ? Math.max(0, configuredRespawnTime)
+        : STANDARD_MONSTER_RESPAWN_SECONDS;
+}
 
 export default class Monster extends Entity {
     readonly monsterDataId: string;
@@ -212,7 +226,7 @@ export default class Monster extends Entity {
         this.drops = data.drops;
         this.expReward = data.expReward;
         this.goldReward = data.goldReward ?? 0;
-        this.respawnTime = respawnTime;
+        this.respawnTime = resolveMonsterRespawnTime(monsterDataId, respawnTime);
         this.isOneShot = isOneShot;
         this.attackProfile = data.attack ? {
             ...data.attack,

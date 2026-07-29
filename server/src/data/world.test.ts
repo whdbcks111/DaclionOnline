@@ -78,7 +78,7 @@ test('일반 스택 아이템은 중량 한도까지 하나의 사실상 무제�
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, 276);
+    assert.equal(locations.length, 292);
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -114,7 +114,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 18, neutral: 49, hostile: 209 },
+        { safe: 18, neutral: 54, hostile: 220 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -174,6 +174,36 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     );
 });
 
+test('성장 구간별 대체 사냥터는 기존 관문을 건너뛰지 않는 양방향 루프를 이룬다', () => {
+    const loops = [
+        ['ember_foothills', 'ember_hunt_ashplain', 'ember_hunt_basalt', 'volcanic_slope'],
+        ['glassdune_border', 'glassdune_hunt_drysea', 'glassdune_hunt_mirage', 'glassdune_sea'],
+        ['frostveil_pass', 'frostveil_hunt_whitewood', 'frostveil_hunt_iceweb', 'frostveil_pinewood'],
+        ['paradox_foundry_threshold', 'paradox_hunt_scrapfield', 'paradox_hunt_geargrave', 'paradox_rusted_conveyor'],
+        ['voidcrown_threshold', 'voidcrown_hunt_drymoat', 'voidcrown_hunt_brokenwall', 'voidcrown_lower_court'],
+        ['worldroot_threshold', 'worldroot_hunt_skygrove', 'worldroot_hunt_rotgrove', 'worldroot_lower_fork'],
+        ['chronofrost_threshold', 'chronofrost_hunt_secondfield', 'chronofrost_hunt_icegear', 'chronofrost_lower_fork'],
+        ['endstar_threshold', 'endstar_hunt_ashorbit', 'endstar_hunt_fallenzodiac', 'endstar_lower_fork'],
+    ];
+
+    for (const [entry, firstHunt, secondHunt, rejoin] of loops) {
+        const route = [entry, firstHunt, secondHunt, rejoin];
+        for (let index = 0; index < route.length - 1; index++) {
+            const from = locations.find(location => location.id === route[index]);
+            const to = locations.find(location => location.id === route[index + 1]);
+            assert.ok(from?.connections.some(connection => connection.locationId === to?.id), `${from?.id} -> ${to?.id}`);
+            assert.ok(to?.connections.some(connection => connection.locationId === from?.id), `${to?.id} -> ${from?.id}`);
+        }
+        for (const huntingId of [firstHunt, secondHunt]) {
+            const huntingLocation = locations.find(location => location.id === huntingId);
+            assert.ok(huntingLocation?.objects.some(object => object.type === 'monster'), huntingId);
+            assert.ok(huntingLocation?.objects
+                .filter(object => object.type === 'monster')
+                .every(object => object.respawnTime === 30), huntingId);
+        }
+    }
+});
+
 test('모든 몬스터는 고유한 64px 투명 아이콘을 제공한다', () => {
     const monsters = getAllMonsterData();
     const icons = new Set<string>();
@@ -213,7 +243,8 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
         ['silverweb_trail', 'silverweb_outpost', 'red_mane_hill', 'silverweb_grove',
             'silverweb_cavern', 'silverweb_queen_nest'],
         ['swamp_edge', 'swamp_basin', 'swamp_reedway', 'swamp_heart'],
-        ['ember_foothills', 'volcanic_slope', 'ember_ravine', 'obsidian_shelf', 'volcanic_crater', 'volcanic_core'],
+        ['ember_foothills', 'volcanic_slope', 'ember_ravine', 'obsidian_shelf', 'volcanic_crater',
+            'volcanic_core', 'ember_hunt_ashplain', 'ember_hunt_basalt'],
         ['feveric_mine', 'feveric_mine_shop', 'mine_junction', 'mine_east_tunnel', 'mine_west_tunnel',
             'abandoned_rail', 'flooded_tunnel', 'crystal_gallery', 'deep_shaft', 'crystal_throne'],
         ['tempest_gate', 'conductor_ridge', 'storm_nest', 'lightning_spur', 'tempest_peak'],
@@ -228,11 +259,13 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
             'twilight_crown_hall', 'twilight_oath_hall', 'twilight_secret_ossuary'],
         ['glassdune_border', 'glassdune_caravan', 'glassdune_sea', 'glassdune_mirage_path',
             'glassdune_sunken_colonnade', 'glassdune_scorpion_nest', 'glassdune_observatory',
-            'glassdune_glass_canyon', 'glassdune_sun_vault', 'glassdune_hidden_oasis'],
+            'glassdune_glass_canyon', 'glassdune_sun_vault', 'glassdune_hidden_oasis',
+            'glassdune_hunt_drysea', 'glassdune_hunt_mirage'],
         ['frostveil_pass', 'frostveil_outpost', 'frostveil_pinewood', 'frostveil_hunting_field',
             'frostveil_frozen_lake', 'frostveil_ravine', 'frostveil_spider_nest', 'frostveil_palace_gate',
             'frostveil_mirror_hall', 'frostveil_arsenal', 'frostveil_oracle_gallery', 'frostveil_throne',
-            'frostveil_hidden_grotto', 'frostveil_aurora_bridge'],
+            'frostveil_hidden_grotto', 'frostveil_aurora_bridge',
+            'frostveil_hunt_whitewood', 'frostveil_hunt_iceweb'],
         ['misttide_headland', 'misttide_harbor', 'misttide_saltwind_flats', 'misttide_wreckshore',
             'misttide_kelp_inlet', 'misttide_blackcoral_reef', 'misttide_fogbank_channel',
             'misttide_siren_shallows', 'misttide_siren_amphitheater', 'misttide_tidewatch_cliffs',
@@ -246,7 +279,7 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
             'paradox_lost_workshop', 'paradox_equation_bridge', 'paradox_inverse_hall',
             'paradox_causality_lock', 'paradox_hidden_prototype_vault', 'paradox_stage',
             'paradox_puppet_hall', 'paradox_abandoned_test_chamber', 'paradox_architect_core',
-            'paradox_endless_observatory'],
+            'paradox_endless_observatory', 'paradox_hunt_scrapfield', 'paradox_hunt_geargrave'],
         ['ashen_gate_chasm', 'ashen_waystation', 'ashen_dead_valley_west', 'ashen_dead_valley_east',
             'ashen_lament_basin', 'ashen_hollowfang_den', 'ashen_bonewind_ravine',
             'ashen_three_maw_gate', 'ashen_blackflame_outer_fork', 'ashen_soot_cloister',
@@ -263,7 +296,7 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
             'voidcrown_crownworkshop', 'voidcrown_oath_chapel', 'voidcrown_hidden_vault',
             'voidcrown_upper_stair', 'voidcrown_celestial_balcony', 'voidcrown_null_library',
             'voidcrown_guardian_hall', 'voidcrown_crown_spire', 'voidcrown_throne_antechamber',
-            'voidcrown_throne'],
+            'voidcrown_throne', 'voidcrown_hunt_drymoat', 'voidcrown_hunt_brokenwall'],
         ['eclipse_threshold', 'eclipse_dock', 'eclipse_lower_crossing', 'eclipse_luminous_reef',
             'eclipse_drowned_convoy', 'eclipse_brine_shelf', 'eclipse_silver_sink',
             'eclipse_tide_confluence', 'eclipse_deep_gate', 'eclipse_kelp_cloister',
@@ -279,7 +312,8 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
             'worldroot_vein_gallery', 'worldroot_seed_archive', 'worldroot_memory_altar',
             'worldroot_hidden_reliquary', 'worldroot_root_bridge', 'worldroot_holy_canopy',
             'worldroot_dark_canopy', 'worldroot_forgotten_ring', 'worldroot_pulse_chamber',
-            'worldroot_heart_antechamber', 'worldroot_primordial_heart'],
+            'worldroot_heart_antechamber', 'worldroot_primordial_heart',
+            'worldroot_hunt_skygrove', 'worldroot_hunt_rotgrove'],
         ['nebula_threshold', 'nebula_waystation', 'nebula_lower_fork', 'nebula_stardust_terrace',
             'nebula_comet_foundry', 'nebula_echo_archive', 'nebula_silent_orbit',
             'nebula_gravity_confluence', 'nebula_meteor_warden_hall', 'nebula_upper_fork',
@@ -291,12 +325,13 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
             'chronofrost_pendulum_confluence', 'chronofrost_sentinel_court',
             'chronofrost_upper_fork', 'chronofrost_yesterday_gallery',
             'chronofrost_tomorrow_vault', 'chronofrost_zero_antechamber',
-            'chronofrost_zero_throne'],
+            'chronofrost_zero_throne', 'chronofrost_hunt_secondfield', 'chronofrost_hunt_icegear'],
         ['endstar_threshold', 'endstar_bastion', 'endstar_lower_fork', 'endstar_ash_field',
             'endstar_broken_constellation', 'endstar_silent_sun', 'endstar_oath_comet',
             'endstar_confluence', 'endstar_herald_ring', 'endstar_upper_fork',
             'endstar_genesis_lane', 'endstar_entropy_lane', 'endstar_last_horizon',
-            'endstar_final_approach', 'endstar_last_constellation'],
+            'endstar_final_approach', 'endstar_last_constellation',
+            'endstar_hunt_ashorbit', 'endstar_hunt_fallenzodiac'],
     ];
 
     for (const ids of regions) {
@@ -522,7 +557,7 @@ test('유리모래 사막은 분기·필드 보스·해시계·거울 기둥·�
     const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('glassdune:'));
     const quests = getAllQuestData().filter(quest => quest.id.startsWith('glassdune:'));
 
-    assert.equal(region.length, 10);
+    assert.equal(region.length, 12);
     assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
     assert.ok(region.every(location => location.tags.includes('location:desert')));
     assert.equal(scorpionQueen?.level, 82);
@@ -577,7 +612,7 @@ test('서리잔향 설원과 빙경궁은 두 보스·분광 퍼즐·왕실 유�
     const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('frostveil:'));
     const quests = getAllQuestData().filter(quest => quest.id.startsWith('frostveil:'));
 
-    assert.equal(region.length, 14);
+    assert.equal(region.length, 16);
     assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
     assert.ok(region.every(location => location.tags.includes('location:frozen')));
     assert.equal(spiderQueen?.level, 136);
@@ -667,7 +702,7 @@ test('역설기계고는 분기 조립선·인과 퍼즐·시제품고·고정�
     const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('paradox:'));
     const quests = getAllQuestData().filter(quest => quest.id.startsWith('paradox:'));
 
-    assert.equal(region.length, 22);
+    assert.equal(region.length, 24);
     assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
     assert.ok(region.every(location => location.tags.includes(GameTags.LOCATION_CLOCKWORK)));
     assert.equal(colossus?.level, 220);
@@ -782,7 +817,7 @@ test('잿빛성흔 심연은 다중 분기·세 보스·봉인 퍼즐·밤쇠 �
     assert.equal(NPC.getNpc('ashen_wayfinder')?.name, '회색불길 길잡이 타렌');
 });
 
-test('공허왕관 성채는 25개 분기 층·서약 퍼즐·기둥 보호 보스·지역 경제를 연결한다', () => {
+test('공허왕관 성채는 27개 분기 층·서약 퍼즐·기둥 보호 보스·지역 경제를 연결한다', () => {
     const region = locations.filter(location => location.id.startsWith('voidcrown_'));
     const castellan = getMonsterData('crownless_castellan');
     const regent = getMonsterData('voidcrown_regent');
@@ -790,7 +825,7 @@ test('공허왕관 성채는 25개 분기 층·서약 퍼즐·기둥 보호 보�
     const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('voidcrown:'));
     const quests = getAllQuestData().filter(quest => quest.id.startsWith('voidcrown:'));
 
-    assert.equal(region.length, 25);
+    assert.equal(region.length, 27);
     assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
     assert.ok(region.every(location => location.tags.includes(GameTags.LOCATION_VOIDCROWN)));
     assert.equal(castellan?.level, 290);
@@ -907,7 +942,7 @@ test('월식해구는 24개 분기 수로·조류제단·거울 보호 보스·�
     assert.equal(runtimeBoss?.getDamageReceivedModifier(), 1);
 });
 
-test('역근수해는 24개 분기 뿌리·기억 제단·씨앗 보호 보스·최종 지역 경제를 연결한다', () => {
+test('역근수해는 26개 분기 뿌리·기억 제단·씨앗 보호 보스·최종 지역 경제를 연결한다', () => {
     const region = locations.filter(location => location.tags.includes(GameTags.LOCATION_WORLDROOT));
     const devourer = getMonsterData('inverse_root_devourer');
     const heart = getMonsterData('primordial_heart_arbor');
@@ -915,7 +950,7 @@ test('역근수해는 24개 분기 뿌리·기억 제단·씨앗 보호 보스·
     const recipes = getAllCraftingRecipes().filter(recipe => recipe.id.startsWith('worldroot:'));
     const quests = getAllQuestData().filter(quest => quest.id.startsWith('worldroot:'));
 
-    assert.equal(region.length, 24);
+    assert.equal(region.length, 26);
     assert.equal(new Set(region.map(location => location.mapColor)).size, 1);
     assert.equal(devourer?.level, 360);
     assert.equal(heart?.level, 380);
@@ -990,7 +1025,7 @@ test('Lv.380~500 세 후반 권역은 분기 동선·지역 경제·연속 퀘�
         {
             tag: GameTags.LOCATION_CHRONOFROST,
             material: GameTags.MATERIAL_CHRONOFROST,
-            count: 14,
+            count: 16,
             storeId: 'chronofrost_refuge_store',
             recipePrefix: 'chronofrost:',
             questPrefix: 'chronofrost:',
@@ -1003,7 +1038,7 @@ test('Lv.380~500 세 후반 권역은 분기 동선·지역 경제·연속 퀘�
         {
             tag: GameTags.LOCATION_ENDSTAR,
             material: GameTags.MATERIAL_ENDSTAR,
-            count: 15,
+            count: 17,
             storeId: 'endstar_bastion_store',
             recipePrefix: 'endstar:',
             questPrefix: 'endstar:',

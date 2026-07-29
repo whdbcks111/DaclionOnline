@@ -8,7 +8,7 @@
 
 `AttackOptions.effectTags`는 그림자 추격처럼 투사체가 없는 속성 기술이 한 번의 직접 공격에만 사용할 상성 공격원 태그를 전달한다. 값이 없으면 Entity 본체의 공격원 태그를 사용하며 장착 장비의 속성은 섞지 않는다.
 
-`Monster.getRespawnDisplaySnapshot()`은 일회성 소환을 제외한 보스의 기본 리젠 주기와 처치 후 남은 시간을 반환하며 위치 UI가 5분 초과 대상을 선별할 수 있게 한다. `Entity.getDisplayIcon()`은 표시용 아이콘이 없는 기본 구현을 제공하고 Monster가 `MonsterData.icon ?? monsters/{id}`를 반환해 위치·타게팅·정보 UI가 raw 마스터 데이터 없이 같은 초상을 재사용한다.
+`resolveMonsterRespawnTime()`은 일반 몬스터를 권역과 관계없이 30초 표준 리젠으로 맞추고 `entity:boss`만 장소별 특수 시간을 유지한다. `Monster.getRespawnDisplaySnapshot()`은 일회성 소환을 제외한 보스의 기본 리젠 주기와 처치 후 남은 시간을 반환하며 위치 UI가 5분 초과 대상을 선별할 수 있게 한다. `Entity.getDisplayIcon()`은 표시용 아이콘이 없는 기본 구현을 제공하고 Monster가 `MonsterData.icon ?? monsters/{id}`를 반환해 위치·타게팅·정보 UI가 raw 마스터 데이터 없이 같은 초상을 재사용한다.
 
 `Inspection`은 `/몬스터정보`와 타게팅 HUD가 공유하는 감각 100/125/150 공개 단계와 내부 ID를 제거한 속성·능력치·공격·보상 DTO를 만든다.
 

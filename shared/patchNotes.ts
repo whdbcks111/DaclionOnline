@@ -73,6 +73,15 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.16', '2026-07-29',
+        [CONTENT,
+            '홍염산지부터 종언성단까지 8개 성장 구간에 같은 레벨대 몬스터를 사냥할 수 있는 대체 사냥터 16곳을 추가했습니다.',
+        ],
+        [CHANGED,
+            '마검사의 마력 검파를 검뿐 아니라 도끼를 장착한 상태에서도 사용할 수 있도록 변경했습니다.',
+            '일반 몬스터 리젠 시간을 권역과 관계없이 30초로 통일하고, 보스의 특수 리젠 시간은 기존대로 유지했습니다.',
+        ],
+    ),
     definePatchNote('1.0.15', '2026-07-29',
         [CHANGED,
             '보스 미니게임을 새로고침하거나 연결을 끊어 건너뛰면 취소가 아닌 실패로 판정되도록 수정했습니다.',

@@ -110,7 +110,10 @@ test('주문·자체 생성 투사체와 무기 비종속 암살 기술은 장�
         assert.equal(getSkillData(skillId)?.weaponRequirement, undefined, skillId);
     }
 
-    assert.deepEqual(getSkillData('spellblade_technique')?.weaponRequirement?.mainHandAnyTags, ['weapon:sword']);
+    assert.deepEqual(
+        getSkillData('spellblade_technique')?.weaponRequirement?.mainHandAnyTags,
+        ['weapon:axe', 'weapon:sword'],
+    );
     assert.ok(getSkillData('steel_slash')?.weaponRequirement);
     assert.ok(getSkillData('multishot')?.weaponRequirement);
 });

@@ -2949,8 +2949,8 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         tertiaryAttribute: AttributeType.SPEED, tertiaryAttributeScale: MOBILITY_DAMAGE_SCALE,
         tertiaryBasePercent: 25, tertiaryPerLevelPercent: 2,
         tierDamageMultiplier: 5.8,
-        manaCost: 30, cooldown: 11, weaponDescription: '검을 장착해야 합니다.',
-        weaponTags: [GameTags.WEAPON_SWORD],
+        manaCost: 30, cooldown: 11, weaponDescription: '검 또는 도끼를 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],
         descriptionIntro: '칼날에 응축한 마력을 검파로 터뜨려 대상을 가릅니다.',
     },
     {

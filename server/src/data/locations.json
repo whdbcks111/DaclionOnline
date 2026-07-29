@@ -364,7 +364,8 @@
     "connections": [
       { "locationId": "swamp_heart" },
       { "locationId": "volcanic_slope" },
-      { "locationId": "ember_ravine" }
+      { "locationId": "ember_ravine" },
+      { "locationId": "ember_hunt_ashplain" }
     ]
   },
   {
@@ -384,7 +385,8 @@
     "connections": [
       { "locationId": "ember_foothills" },
       { "locationId": "obsidian_shelf" },
-      { "locationId": "volcanic_crater", "condition": "level_36" }
+      { "locationId": "volcanic_crater", "condition": "level_36" },
+      { "locationId": "ember_hunt_basalt" }
     ]
   },
   {
@@ -1387,7 +1389,8 @@
     "connections": [
       { "locationId": "tempest_peak" },
       { "locationId": "glassdune_caravan" },
-      { "locationId": "glassdune_sea" }
+      { "locationId": "glassdune_sea" },
+      { "locationId": "glassdune_hunt_drysea" }
     ]
   },
   {
@@ -1427,7 +1430,8 @@
     "connections": [
       { "locationId": "glassdune_border" },
       { "locationId": "glassdune_mirage_path" },
-      { "locationId": "glassdune_sunken_colonnade" }
+      { "locationId": "glassdune_sunken_colonnade" },
+      { "locationId": "glassdune_hunt_mirage" }
     ]
   },
   {
@@ -1588,7 +1592,8 @@
     "connections": [
       { "locationId": "dawn_sanctum" },
       { "locationId": "frostveil_outpost" },
-      { "locationId": "frostveil_pinewood" }
+      { "locationId": "frostveil_pinewood" },
+      { "locationId": "frostveil_hunt_whitewood" }
     ]
   },
   {
@@ -1629,7 +1634,8 @@
     "connections": [
       { "locationId": "frostveil_pass" },
       { "locationId": "frostveil_hunting_field" },
-      { "locationId": "frostveil_frozen_lake" }
+      { "locationId": "frostveil_frozen_lake" },
+      { "locationId": "frostveil_hunt_iceweb" }
     ]
   },
   {
@@ -2251,7 +2257,8 @@
     "connections": [
       { "locationId": "astral_nexus", "condition": "level_200" },
       { "locationId": "paradox_relay_station" },
-      { "locationId": "paradox_rusted_conveyor" }
+      { "locationId": "paradox_rusted_conveyor" },
+      { "locationId": "paradox_hunt_scrapfield" }
     ]
   },
   {
@@ -2292,7 +2299,8 @@
       { "locationId": "paradox_foundry_threshold" },
       { "locationId": "paradox_relay_station" },
       { "locationId": "paradox_scrap_reservoir" },
-      { "locationId": "paradox_lens_corridor" }
+      { "locationId": "paradox_lens_corridor" },
+      { "locationId": "paradox_hunt_geargrave" }
     ]
   },
   {
@@ -3156,7 +3164,8 @@
     "connections": [
       { "locationId": "ashen_sovereign_throne", "condition": "level_275" },
       { "locationId": "voidcrown_waystation" },
-      { "locationId": "voidcrown_lower_court" }
+      { "locationId": "voidcrown_lower_court" },
+      { "locationId": "voidcrown_hunt_drymoat" }
     ]
   },
   {
@@ -3190,7 +3199,8 @@
       { "locationId": "voidcrown_threshold" },
       { "locationId": "voidcrown_waystation" },
       { "locationId": "voidcrown_west_battlement" },
-      { "locationId": "voidcrown_starved_garden" }
+      { "locationId": "voidcrown_starved_garden" },
+      { "locationId": "voidcrown_hunt_brokenwall" }
     ]
   },
   {
@@ -4036,7 +4046,8 @@
     ],
     "connections": [
       { "locationId": "eclipse_white_night_altar", "condition": "level_345" },
-      { "locationId": "worldroot_waystation" }
+      { "locationId": "worldroot_waystation" },
+      { "locationId": "worldroot_hunt_skygrove" }
     ]
   },
   {
@@ -4072,7 +4083,8 @@
     "connections": [
       { "locationId": "worldroot_waystation" },
       { "locationId": "worldroot_luminous_root" },
-      { "locationId": "worldroot_rot_hollow" }
+      { "locationId": "worldroot_rot_hollow" },
+      { "locationId": "worldroot_hunt_rotgrove" }
     ]
   },
   {
@@ -4693,7 +4705,8 @@
     ],
     "connections": [
       { "locationId": "nebula_sovereign_throne" },
-      { "locationId": "chronofrost_refuge" }
+      { "locationId": "chronofrost_refuge" },
+      { "locationId": "chronofrost_hunt_secondfield" }
     ]
   },
   {
@@ -4726,7 +4739,8 @@
     "connections": [
       { "locationId": "chronofrost_refuge" },
       { "locationId": "chronofrost_frozen_minute" },
-      { "locationId": "chronofrost_hourglass_cemetery" }
+      { "locationId": "chronofrost_hourglass_cemetery" },
+      { "locationId": "chronofrost_hunt_icegear" }
     ]
   },
   {
@@ -4931,7 +4945,8 @@
     ],
     "connections": [
       { "locationId": "chronofrost_zero_throne" },
-      { "locationId": "endstar_bastion" }
+      { "locationId": "endstar_bastion" },
+      { "locationId": "endstar_hunt_ashorbit" }
     ]
   },
   {
@@ -4964,7 +4979,8 @@
     "connections": [
       { "locationId": "endstar_bastion" },
       { "locationId": "endstar_ash_field" },
-      { "locationId": "endstar_silent_sun" }
+      { "locationId": "endstar_silent_sun" },
+      { "locationId": "endstar_hunt_fallenzodiac" }
     ]
   },
   {
@@ -5170,6 +5186,278 @@
     ],
     "connections": [
       { "locationId": "endstar_final_approach" }
+    ]
+  },
+  {
+    "id": "ember_hunt_ashplain",
+    "name": "홍염산지 잿바람 사냥벌",
+    "mapColor": "#bb6542",
+    "zoneType": "neutral",
+    "x": 570, "y": 300, "z": 14,
+    "tags": ["location:wilderness", "location:volcanic", "property:fire", "property:earth"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ember_slime", "maxCount": 4, "respawnTime": 30 },
+      { "type": "monster", "dataId": "ash_wraith", "maxCount": 2, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "ember_foothills" },
+      { "locationId": "ember_hunt_basalt" }
+    ]
+  },
+  {
+    "id": "ember_hunt_basalt",
+    "name": "홍염산지 현무암 수렵골",
+    "mapColor": "#bb6542",
+    "zoneType": "hostile",
+    "x": 660, "y": 280, "z": 28,
+    "tags": ["location:wilderness", "location:volcanic", "property:fire", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ash_wraith", "maxCount": 4, "respawnTime": 30 },
+      { "type": "monster", "dataId": "lava_armor", "maxCount": 2, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "ember_hunt_ashplain" },
+      { "locationId": "volcanic_slope" }
+    ]
+  },
+  {
+    "id": "glassdune_hunt_drysea",
+    "name": "유리모래 메마른 사해",
+    "mapColor": "#756344",
+    "zoneType": "neutral",
+    "x": 1100, "y": -310, "z": 82,
+    "tags": ["location:wilderness", "location:desert", "property:earth", "property:stone"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "glassdune_skitterer", "maxCount": 4, "respawnTime": 30 },
+      { "type": "monster", "dataId": "sunscarab", "maxCount": 2, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "glassdune_border" },
+      { "locationId": "glassdune_hunt_mirage" }
+    ]
+  },
+  {
+    "id": "glassdune_hunt_mirage",
+    "name": "유리모래 흔들린 신기루터",
+    "mapColor": "#756344",
+    "zoneType": "hostile",
+    "x": 1190, "y": -320, "z": 70,
+    "tags": ["location:wilderness", "location:desert", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "sunscarab", "maxCount": 3, "respawnTime": 30 },
+      { "type": "monster", "dataId": "mirage_jackal", "maxCount": 3, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "glassdune_hunt_drysea" },
+      { "locationId": "glassdune_sea" }
+    ]
+  },
+  {
+    "id": "frostveil_hunt_whitewood",
+    "name": "서리잔향 흰숨 자작숲",
+    "mapColor": "#536773",
+    "zoneType": "neutral",
+    "x": 1460, "y": 365, "z": 90,
+    "tags": ["location:wilderness", "location:forest", "location:frozen", "property:ice", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "snowfield_hare", "maxCount": 4, "respawnTime": 30 },
+      { "type": "monster", "dataId": "rimeclaw_wolf", "maxCount": 3, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_pass" },
+      { "locationId": "frostveil_hunt_iceweb" }
+    ]
+  },
+  {
+    "id": "frostveil_hunt_iceweb",
+    "name": "서리잔향 얼음실 굴",
+    "mapColor": "#536773",
+    "zoneType": "hostile",
+    "x": 1550, "y": 375, "z": 78,
+    "tags": ["location:wilderness", "location:cave", "location:frozen", "property:ice", "property:natural"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "rimeclaw_wolf", "maxCount": 3, "respawnTime": 30 },
+      { "type": "monster", "dataId": "icesilk_spider", "maxCount": 3, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "frostveil_hunt_whitewood" },
+      { "locationId": "frostveil_pinewood" }
+    ]
+  },
+  {
+    "id": "paradox_hunt_scrapfield",
+    "name": "역설기계고 톱니 고철벌",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2290, "y": -235, "z": 24,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:metal", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "gearmite_scavenger", "maxCount": 4, "respawnTime": 30 },
+      { "type": "monster", "dataId": "clockwork_hound", "maxCount": 3, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "paradox_foundry_threshold" },
+      { "locationId": "paradox_hunt_geargrave" }
+    ]
+  },
+  {
+    "id": "paradox_hunt_geargrave",
+    "name": "역설기계고 멈춘 기어묘지",
+    "mapColor": "#5b5264",
+    "zoneType": "hostile",
+    "x": 2380, "y": -240, "z": 14,
+    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "gearmite_scavenger", "maxCount": 3, "respawnTime": 30 },
+      { "type": "monster", "dataId": "clockwork_hound", "maxCount": 4, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "paradox_hunt_scrapfield" },
+      { "locationId": "paradox_rusted_conveyor" }
+    ]
+  },
+  {
+    "id": "voidcrown_hunt_drymoat",
+    "name": "공허왕관 마른 해자",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4250, "y": -340, "z": -452,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "nullsilver_sentinel", "maxCount": 3, "respawnTime": 30 },
+      { "type": "monster", "dataId": "voidsilk_moth", "maxCount": 3, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_threshold" },
+      { "locationId": "voidcrown_hunt_brokenwall" }
+    ]
+  },
+  {
+    "id": "voidcrown_hunt_brokenwall",
+    "name": "공허왕관 무너진 외성벽",
+    "mapColor": "#44455b",
+    "zoneType": "hostile",
+    "x": 4340, "y": -350, "z": -462,
+    "tags": ["location:wilderness", "location:dungeon", "location:voidcrown", "property:metal", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "nullsilver_sentinel", "maxCount": 4, "respawnTime": 30 },
+      { "type": "monster", "dataId": "voidsilk_moth", "maxCount": 2, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "voidcrown_hunt_drymoat" },
+      { "locationId": "voidcrown_lower_court" }
+    ]
+  },
+  {
+    "id": "worldroot_hunt_skygrove",
+    "name": "역근수해 하늘수관 사냥숲",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 6830, "y": -420, "z": -1390,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:light"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "skyroot_husk", "maxCount": 4, "respawnTime": 30 },
+      { "type": "monster", "dataId": "memory_amber_moth", "maxCount": 3, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_threshold" },
+      { "locationId": "worldroot_hunt_rotgrove" }
+    ]
+  },
+  {
+    "id": "worldroot_hunt_rotgrove",
+    "name": "역근수해 부패수액 사냥숲",
+    "mapColor": "#40513f",
+    "zoneType": "hostile",
+    "x": 6940, "y": -425, "z": -1425,
+    "tags": ["location:wilderness", "location:dungeon", "location:worldroot", "property:natural", "property:poison"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "skyroot_husk", "maxCount": 3, "respawnTime": 30 },
+      { "type": "monster", "dataId": "forgetting_spore_shaman", "maxCount": 3, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "worldroot_hunt_skygrove" },
+      { "locationId": "worldroot_lower_fork" }
+    ]
+  },
+  {
+    "id": "chronofrost_hunt_secondfield",
+    "name": "동결시계원 멎은 초원",
+    "mapColor": "#36454b",
+    "zoneType": "neutral",
+    "x": 9570, "y": -420, "z": -2530,
+    "tags": ["location:wilderness", "location:chronofrost", "property:ice", "property:electric"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "frozen_minute_wraith", "maxCount": 4, "respawnTime": 30 },
+      { "type": "monster", "dataId": "pendulum_colossus", "maxCount": 2, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_threshold" },
+      { "locationId": "chronofrost_hunt_icegear" }
+    ]
+  },
+  {
+    "id": "chronofrost_hunt_icegear",
+    "name": "동결시계원 얼음톱니 뜰",
+    "mapColor": "#36454b",
+    "zoneType": "hostile",
+    "x": 9680, "y": -430, "z": -2570,
+    "tags": ["location:wilderness", "location:dungeon", "location:chronofrost", "property:ice", "property:metal"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "frozen_minute_wraith", "maxCount": 3, "respawnTime": 30 },
+      { "type": "monster", "dataId": "pendulum_colossus", "maxCount": 4, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "chronofrost_hunt_secondfield" },
+      { "locationId": "chronofrost_lower_fork" }
+    ]
+  },
+  {
+    "id": "endstar_hunt_ashorbit",
+    "name": "종언성단 잿빛 궤도",
+    "mapColor": "#493d49",
+    "zoneType": "neutral",
+    "x": 10690, "y": -420, "z": -2970,
+    "tags": ["location:wilderness", "location:endstar", "property:fire", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "ash_star_beast", "maxCount": 4, "respawnTime": 30 },
+      { "type": "monster", "dataId": "entropy_seraph", "maxCount": 3, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "endstar_threshold" },
+      { "locationId": "endstar_hunt_fallenzodiac" }
+    ]
+  },
+  {
+    "id": "endstar_hunt_fallenzodiac",
+    "name": "종언성단 추락성좌 사냥터",
+    "mapColor": "#493d49",
+    "zoneType": "hostile",
+    "x": 10800, "y": -430, "z": -3010,
+    "tags": ["location:wilderness", "location:dungeon", "location:endstar", "property:light", "property:dark"],
+    "npcIds": [],
+    "objects": [
+      { "type": "monster", "dataId": "constellation_hunter", "maxCount": 3, "respawnTime": 30 },
+      { "type": "monster", "dataId": "ash_star_beast", "maxCount": 3, "respawnTime": 30 }
+    ],
+    "connections": [
+      { "locationId": "endstar_hunt_ashorbit" },
+      { "locationId": "endstar_lower_fork" }
     ]
   }
 ]
