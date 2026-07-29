@@ -118,7 +118,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 28, neutral: 64, hostile: 330 },
+        { safe: 28, neutral: 64, hostile: 510 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -1124,14 +1124,33 @@ test('Lv.500~1000 승천 권역은 50레벨 단위 미궁·선택형 보스·환
         const bossRoom = locations.find(location => location.id === `${regionData.id}_boss_sanctum`);
         const altar = locations.find(location => location.id === `${regionData.id}_sealed_altar`);
         const reliquary = locations.find(location => location.id === `${regionData.id}_reliquary`);
+        const innerCrossroads = locations.find(location => location.id === `${regionData.id}_inner_crossroads`);
+        const spiralEntry = locations.find(location => location.id === `${regionData.id}_spiral_entry`);
+        const spiralNexus = locations.find(location => location.id === `${regionData.id}_spiral_nexus`);
+        const hunterCache = locations.find(location => location.id === `${regionData.id}_hunter_cache`);
+        const materialCache = locations.find(location => location.id === `${regionData.id}_material_cache`);
+        const finalFork = locations.find(location => location.id === `${regionData.id}_final_fork`);
+        const falseEnd = locations.find(location => location.id === `${regionData.id}_false_end`);
         const boss = getMonsterData(`${regionData.id}_sovereign`);
         const store = getShop(`${regionData.id}_waystation_store`);
 
-        assert.equal(regionLocations.length, 13, regionData.id);
+        assert.equal(regionLocations.length, 31, regionData.id);
         assert.ok(regionLocations.every(location => location.mapColor === regionData.mapColor), regionData.id);
-        assert.ok(regionLocations.filter(location => location.tags.includes(GameTags.LOCATION_DUNGEON)).length >= 5);
+        assert.ok(regionLocations.filter(location => location.tags.includes(GameTags.LOCATION_DUNGEON)).length >= 23);
         assert.ok(transition?.connections.some(connection => connection.locationId === bossRoom?.id));
         assert.ok(bossRoom?.connections.some(connection => connection.locationId === transition?.id));
+        assert.ok(innerCrossroads?.connections.some(connection => connection.locationId === spiralEntry?.id));
+        assert.ok(spiralEntry?.connections.some(connection => connection.locationId === `${regionData.id}_spiral_upper`));
+        assert.ok(spiralEntry?.connections.some(connection => connection.locationId === `${regionData.id}_spiral_lower`));
+        assert.ok(spiralNexus?.connections.some(connection => connection.locationId === `${regionData.id}_spiral_upper`));
+        assert.ok(spiralNexus?.connections.some(connection => connection.locationId === `${regionData.id}_spiral_lower`));
+        assert.deepEqual(hunterCache?.connections.map(connection => connection.locationId), [`${regionData.id}_north_archive`]);
+        assert.deepEqual(materialCache?.connections.map(connection => connection.locationId), [`${regionData.id}_south_archive`]);
+        assert.ok(hunterCache?.objects.some(object => object.dataId === `${regionData.id}_reliquary`));
+        assert.ok(materialCache?.objects.some(object => object.dataId === `${regionData.id}_reliquary`));
+        assert.ok(finalFork?.connections.some(connection => connection.locationId === transition?.id));
+        assert.ok(finalFork?.connections.some(connection => connection.locationId === falseEnd?.id));
+        assert.deepEqual(falseEnd?.connections.map(connection => connection.locationId), [finalFork?.id]);
         assert.ok(bossRoom?.tags.includes(GameTags.LOCATION_BOSS_ROOM));
         assert.ok(altar?.tags.includes(GameTags.LOCATION_HIDDEN));
         assert.ok(altar?.objects.some(object => object.dataId === `${regionData.id}_altar`));

@@ -405,7 +405,12 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
     const environmentEffect = environmentEffects[index];
     const affectedLocationSuffixes = [
         'threshold', 'outer_fork', 'upper_bend', 'upper_gallery', 'lower_bend', 'lower_gallery',
-        'inner_crossroads', 'deep_loop', 'reliquary', 'sealed_altar', 'transition', 'boss_sanctum',
+        'west_rise', 'echo_balcony', 'broken_span',
+        'north_fork', 'north_archive', 'north_loop', 'hunter_cache',
+        'south_fork', 'south_archive', 'south_loop', 'material_cache',
+        'inner_crossroads', 'spiral_entry', 'spiral_upper', 'spiral_lower', 'spiral_nexus',
+        'deep_loop', 'reliquary', 'altar_antechamber', 'sealed_altar',
+        'final_fork', 'false_end', 'transition', 'boss_sanctum',
     ];
     for (const suffix of affectedLocationSuffixes) {
         registerLocationPassive(`${region.id}_${suffix}`, (location, _dt, onlinePlayers) => {
