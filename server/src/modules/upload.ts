@@ -133,7 +133,8 @@ export async function cleanupOrphanedProfileImages(now = Date.now()): Promise<nu
     const referenced = new Set(users.flatMap(user => user.profileImage ? [user.profileImage] : []))
     const targets: string[] = []
     for (const entry of entries) {
-        if (!entry.isFile() || referenced.has(entry.name)) continue
+        // .gitkeep 같은 저장소·운영 sentinel은 업로드 산출물이 아니므로 정리하지 않는다.
+        if (!entry.isFile() || entry.name.startsWith('.') || referenced.has(entry.name)) continue
         const filePath = path.join(PROFILE_IMAGE_DIR, entry.name)
         const stat = await fsPromises.stat(filePath).catch(() => undefined)
         if (stat && now - stat.mtimeMs >= PROFILE_ORPHAN_GRACE_MS) targets.push(filePath)
