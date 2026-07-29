@@ -20,6 +20,12 @@ export interface AscendantRegionDefinition {
     };
 }
 
+export interface AscendantRegionLayout {
+    readonly x: number;
+    readonly y: number;
+    readonly quarterTurns: 0 | 1 | 2 | 3;
+}
+
 /**
  * Lv.500 이후 50레벨 단위 권역의 단일 원본.
  * 전용 아트 제작 전에는 속성·장비 카테고리 fallback을 명시적으로 재사용한다.
@@ -137,12 +143,36 @@ export const ASCENDANT_REGIONS: readonly AscendantRegionDefinition[] = Object.fr
     },
 ]);
 
+/**
+ * 권역 진행선을 한 방향으로 늘이지 않고 큰 순환 대륙처럼 배치한다.
+ * 각 좌표는 경계문의 위치이며 quarterTurns만큼 권역 내부 미궁 전체를 회전한다.
+ */
+export const ASCENDANT_REGION_LAYOUTS: readonly AscendantRegionLayout[] = Object.freeze([
+    { x: 3_800, y: -3_650, quarterTurns: 0 },
+    { x: 4_950, y: -3_650, quarterTurns: 3 },
+    { x: 4_950, y: -4_800, quarterTurns: 0 },
+    { x: 6_100, y: -4_800, quarterTurns: 3 },
+    { x: 6_100, y: -5_950, quarterTurns: 2 },
+    { x: 4_950, y: -5_950, quarterTurns: 2 },
+    { x: 3_800, y: -5_950, quarterTurns: 1 },
+    { x: 4_100, y: -4_800, quarterTurns: 1 },
+    { x: 4_100, y: -3_650, quarterTurns: 1 },
+    { x: 4_100, y: -2_500, quarterTurns: 0 },
+]);
+
 function connect(locationId: string, condition?: string): LocationData['connections'][number] {
     return condition ? { locationId, condition } : { locationId };
 }
 
 function spawn(dataId: string, maxCount = 2): LocationData['objects'][number] {
     return { type: 'monster', dataId, maxCount, respawnTime: 30 };
+}
+
+function rotateMapOffset(x: number, y: number, quarterTurns: AscendantRegionLayout['quarterTurns']): [number, number] {
+    if (quarterTurns === 1) return [-y, x];
+    if (quarterTurns === 2) return [-x, -y];
+    if (quarterTurns === 3) return [y, -x];
+    return [x, y];
 }
 
 /** 분기·교차·순환·막다른 보물방과 선택형 보스 가지를 가진 권역 장소를 생성한다. */
@@ -424,7 +454,16 @@ export function buildAscendantLocations(): LocationData[] {
                 connections: [connect(`${id}_transition`)],
             },
         ];
-        return locations;
+        const layout = ASCENDANT_REGION_LAYOUTS[index];
+        if (!layout) throw new Error(`Missing ascendant region layout: ${region.id}`);
+        return locations.map(location => {
+            const [mapX, mapY] = rotateMapOffset(location.x - x, location.y - y, layout.quarterTurns);
+            return {
+                ...location,
+                x: layout.x + mapX,
+                y: layout.y + mapY,
+            };
+        });
     });
 }
 

@@ -126,6 +126,12 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     assert.equal(locations.filter(location => location.mapColor).length, locations.length);
     assert.ok(locations.every(location => /^#[0-9a-f]{6}$/i.test(location.mapColor ?? '')));
     assert.equal(locations.filter(location => location.mapIcon === 'town-plaza').length, 11);
+    const mapWidth = Math.max(...locations.map(location => location.x))
+        - Math.min(...locations.map(location => location.x));
+    const mapHeight = Math.max(...locations.map(location => location.y))
+        - Math.min(...locations.map(location => location.y));
+    assert.ok(mapWidth / mapHeight >= 0.75 && mapWidth / mapHeight <= 1.25);
+    assert.equal(new Set(locations.map(location => `${location.x}:${location.y}`)).size, locations.length);
     for (const icon of new Set(locations.flatMap(location => location.mapIcon ? [location.mapIcon] : []))) {
         const png = readFileSync(new URL(`../../../client/public/icons/map/${icon}.png`, import.meta.url));
         assert.equal(png.readUInt32BE(16), 128, icon);
@@ -1116,6 +1122,7 @@ test('Lv.500~1000 승천 권역은 50레벨 단위 미궁·선택형 보스·환
     assert.deepEqual(ASCENDANT_REGIONS.map(region => region.bossLevel), [
         550, 600, 650, 700, 750, 800, 850, 900, 950, 1000,
     ]);
+    const mapDirections = new Set<string>();
 
     for (const [index, regionData] of ASCENDANT_REGIONS.entries()) {
         const regionTag = `location:${regionData.id}`;
@@ -1135,6 +1142,11 @@ test('Lv.500~1000 승천 권역은 50레벨 단위 미궁·선택형 보스·환
         const store = getShop(`${regionData.id}_waystation_store`);
 
         assert.equal(regionLocations.length, 31, regionData.id);
+        if (transition) {
+            const threshold = locations.find(location => location.id === `${regionData.id}_threshold`);
+            assert.ok(threshold);
+            mapDirections.add(`${Math.sign(transition.x - threshold.x)}:${Math.sign(transition.y - threshold.y)}`);
+        }
         assert.ok(regionLocations.every(location => location.mapColor === regionData.mapColor), regionData.id);
         assert.ok(regionLocations.filter(location => location.tags.includes(GameTags.LOCATION_DUNGEON)).length >= 23);
         assert.ok(transition?.connections.some(connection => connection.locationId === bossRoom?.id));
@@ -1171,6 +1183,7 @@ test('Lv.500~1000 승천 권역은 50레벨 단위 미궁·선택형 보스·환
             );
         }
     }
+    assert.deepEqual(mapDirections, new Set(['1:0', '0:-1', '-1:0', '0:1']));
 });
 
 test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {
