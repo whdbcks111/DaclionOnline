@@ -53,7 +53,7 @@ export function registerConnectionCondition(conditionId: string, handler: Condit
 }
 
 // -- 패시브 콜백 레지스트리 --
-type PassiveCallback = (location: Location, dt: number) => void;
+type PassiveCallback = (location: Location, dt: number, onlinePlayers: readonly Player[]) => void;
 const passiveCallbacks = new Map<string, PassiveCallback>();
 
 /** 장소 패시브 함수 등록 */
@@ -364,7 +364,7 @@ export default class Location implements TagReadable {
 
         // 패시브 콜백
         const passive = passiveCallbacks.get(this.id);
-        if (passive) passive(this, dt);
+        if (passive) passive(this, dt, onlinePlayers);
     }
 }
 

@@ -136,6 +136,8 @@ export const GameTags = Object.freeze({
     LOCATION_NEBULA_CORRIDOR: 'location:nebula-corridor',
     LOCATION_CHRONOFROST: 'location:chronofrost',
     LOCATION_ENDSTAR: 'location:endstar',
+    /** 분기·순환·막다른 방으로 구성된 탐험형 장소. */
+    LOCATION_DUNGEON: 'location:dungeon',
     /** 전용 보스 전투 공간. 살아 있는 보스가 입장한 플레이어를 먼저 감지한다. */
     LOCATION_BOSS_ROOM: 'location:boss_room',
     LOCATION_HIDDEN: 'location:hidden',

@@ -15,9 +15,13 @@ import '../data/npcs.js';
 import '../data/monsters.js';
 import '../data/bossPatterns.js';
 import '../data/fishing.js';
+import '../data/ascendantFrontier.js';
+import { mergeAscendantLocations } from '../data/ascendantRegions.js';
 import { validateMasterData } from '../modules/masterDataValidation.js';
 
-const locations = JSON.parse(readFileSync(new URL('../data/locations.json', import.meta.url), 'utf8')) as LocationData[];
+const locations = mergeAscendantLocations(
+    JSON.parse(readFileSync(new URL('../data/locations.json', import.meta.url), 'utf8')) as LocationData[],
+);
 const issues = validateMasterData({ locations });
 if (issues.length > 0) {
     for (const issue of issues) console.error(`[${issue.scope}] ${issue.id}: ${issue.message}`);

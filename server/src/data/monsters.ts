@@ -14,7 +14,7 @@ import {
 } from '../models/MonsterStats.js';
 import type { AttributeRecord } from '../models/Attribute.js';
 
-type WorldMonsterData = Omit<
+export type WorldMonsterData = Omit<
     MonsterData,
     'exp' | 'expReward' | 'equipments' | 'baseAttribute' | 'statProfile' | 'statRank' | 'statWeights'
 > & Partial<Pick<MonsterData, 'expReward' | 'equipments'>>
@@ -28,7 +28,7 @@ type WorldMonsterData = Omit<
     };
 
 /** 동급 몬스터 한 마리의 기준 보상은 level * 20 EXP다. */
-function defineWorldMonster(data: WorldMonsterData): void {
+export function defineWorldMonster(data: WorldMonsterData): void {
     const {
         baseAttribute: authoredAttributes = {},
         statProfile: explicitProfile,

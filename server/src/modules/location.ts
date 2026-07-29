@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import logger from "../utils/logger.js";
 import { getAllLocationData, getAllLocations, normalizeLocationData, reloadAllLocations } from "../models/Location.js";
 import type { LocationData } from "../models/Location.js";
+import { mergeAscendantLocations } from '../data/ascendantRegions.js';
 import type Player from "../models/Player.js";
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
@@ -17,7 +18,7 @@ const LOCATIONS_JSON = path.join(__dirname, '../data/locations.json');
 export function loadLocationsFromJson(): void {
     try {
         const raw = fs.readFileSync(LOCATIONS_JSON, 'utf-8');
-        const locations: LocationData[] = JSON.parse(raw);
+        const locations = mergeAscendantLocations(JSON.parse(raw) as LocationData[]);
         reloadAllLocations(locations);
         logger.success(`장소 ${locations.length}개 로드 완료 (${LOCATIONS_JSON})`);
     } catch (e) {

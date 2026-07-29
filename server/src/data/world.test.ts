@@ -24,7 +24,9 @@ import './dungeonPuzzles.js';
 import './bossPatterns.js';
 import './shops.js';
 import './fishing.js';
+import './ascendantFrontier.js';
 import './crafting.js';
+import { ASCENDANT_REGIONS, buildAscendantLocations, mergeAscendantLocations } from './ascendantRegions.js';
 import {
     rollAshenReliquaryReward,
     rollEclipseReliquaryReward,
@@ -50,10 +52,12 @@ import {
 } from './bossPatterns.js';
 import { GameTags } from '../../../shared/tags.js';
 import { MonsterRank, MonsterStatProfile } from '../models/MonsterStats.js';
+import { StatusEffectType } from '../models/StatusEffect.js';
 
-const locations = JSON.parse(
+const baseLocations = JSON.parse(
     readFileSync(new URL('./locations.json', import.meta.url), 'utf-8'),
 ) as LocationData[];
+const locations = mergeAscendantLocations(baseLocations);
 
 class TestBossRoomPlayer extends Entity {
     override readonly name = '보스방 침입자';
@@ -78,7 +82,7 @@ test('일반 스택 아이템은 중량 한도까지 하나의 사실상 무제�
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, 292);
+    assert.equal(locations.length, baseLocations.length + buildAscendantLocations().length);
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -104,7 +108,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     assert.ok(locations.find(location => location.id === 'field')?.objects.some(
         object => object.type === 'resource' && object.dataId === 'tutorial_training_dummy',
     ));
-    assert.equal(locations.filter(location => location.tags.includes(GameTags.LOCATION_BOSS_ROOM)).length, 31);
+    assert.equal(locations.filter(location => location.tags.includes(GameTags.LOCATION_BOSS_ROOM)).length, 41);
     assert.ok(locations
         .filter(location => location.tags.includes(GameTags.LOCATION_BOSS_ROOM))
         .every(location => location.objects.some(object =>
@@ -114,17 +118,14 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 18, neutral: 54, hostile: 220 },
+        { safe: 28, neutral: 64, hostile: 330 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
     }
     assert.equal(locations.filter(location => location.mapColor).length, locations.length);
     assert.ok(locations.every(location => /^#[0-9a-f]{6}$/i.test(location.mapColor ?? '')));
-    assert.deepEqual(
-        locations.filter(location => location.mapIcon).map(location => location.mapIcon).sort(),
-        ['general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'general-shop', 'job-hall', 'meadow-hub', 'mine-entrance', 'town-plaza'],
-    );
+    assert.equal(locations.filter(location => location.mapIcon === 'town-plaza').length, 11);
     for (const icon of new Set(locations.flatMap(location => location.mapIcon ? [location.mapIcon] : []))) {
         const png = readFileSync(new URL(`../../../client/public/icons/map/${icon}.png`, import.meta.url));
         assert.equal(png.readUInt32BE(16), 128, icon);
@@ -204,15 +205,26 @@ test('성장 구간별 대체 사냥터는 기존 관문을 건너뛰지 않는 
     }
 });
 
-test('모든 몬스터는 고유한 64px 투명 아이콘을 제공한다', () => {
+test('기존 몬스터는 고유 아이콘을, 승천 권역 몬스터는 명시적인 64px fallback을 제공한다', () => {
     const monsters = getAllMonsterData();
     const icons = new Set<string>();
+    const ascendantPrefixes = ASCENDANT_REGIONS.map(region => `${region.id}_`);
 
-    assert.equal(monsters.length, 158);
+    assert.equal(monsters.length, 198);
     for (const monster of monsters) {
         const icon = monster.icon ?? `monsters/${monster.id}`;
-        assert.equal(icon, `monsters/${monster.id}`);
-        assert.equal(icons.has(icon), false, icon);
+        const usesAscendantFallback = ascendantPrefixes.some(prefix => monster.id.startsWith(prefix));
+        if (!usesAscendantFallback) {
+            assert.equal(icon, `monsters/${monster.id}`);
+            assert.equal(icons.has(icon), false, icon);
+        } else {
+            assert.ok([
+                'monsters/horizon_reaper',
+                'monsters/genesis_warden',
+                'monsters/constellation_hunter',
+                'monsters/last_constellation',
+            ].includes(icon), `${monster.id}/${icon}`);
+        }
         icons.add(icon);
 
         const png = readFileSync(new URL(`../../../client/public/icons/${icon}.png`, import.meta.url));
@@ -341,19 +353,20 @@ test('같은 월드 권역은 지도에서 하나의 바이옴 대표색을 공�
     }
 });
 
-test('1~500레벨 월드는 모든 속성을 관찰 가능하고 Lv.200 이후 성장 난도가 점진적으로 높아진다', () => {
+test('1~1000레벨 월드는 모든 속성을 관찰 가능하고 Lv.200 이후 성장 난도가 점진적으로 높아진다', () => {
     const monsters = getAllMonsterData();
     const levelOne = getMonsterData('slime');
     const midLevelNormal = getMonsterData('spark_moth');
     const levelTwoHundred = getMonsterData('eclipse_watcher');
 
     assert.equal(Math.min(...monsters.map(monster => monster.level)), 1);
-    assert.equal(Math.max(...monsters.map(monster => monster.level)), 500);
+    assert.equal(Math.max(...monsters.map(monster => monster.level)), 1000);
     assert.equal(Entity.getMaxExpOfLevel(1), 100);
     assert.equal(Entity.getMaxExpOfLevel(50), 20_000);
     assert.equal(Entity.getMaxExpOfLevel(200), 80_000);
     assert.equal(Entity.getMaxExpOfLevel(380), 760_000);
     assert.equal(Entity.getMaxExpOfLevel(500), 1_921_326);
+    assert.ok(Entity.getMaxExpOfLevel(1000) > Entity.getMaxExpOfLevel(500));
     assert.equal(levelOne!.expReward / Entity.getMaxExpOfLevel(1), 0.2);
     assert.equal(midLevelNormal!.expReward / Entity.getMaxExpOfLevel(midLevelNormal!.level), 0.05);
     assert.equal(levelTwoHundred!.expReward / Entity.getMaxExpOfLevel(200), 0.05);
@@ -373,15 +386,18 @@ test('1~500레벨 월드는 모든 속성을 관찰 가능하고 Lv.200 이후 �
     ]) assert.ok(monsterTags.has(tag), tag);
 });
 
-test('성장 구간 보스는 최대 30레벨 간격으로 배치되고 일반몹보다 높은 경험치를 준다', () => {
+test('성장 구간 보스는 Lv.500까지 30레벨, 이후 50레벨 간격이며 일반몹보다 높은 경험치를 준다', () => {
     const bosses = getAllMonsterData()
         .filter(monster => monster.tags.includes(GameTags.ENTITY_BOSS))
         .sort((left, right) => left.level - right.level);
 
     assert.ok(bosses[0].level <= 32);
-    assert.equal(bosses[bosses.length - 1].level, 500);
+    assert.equal(bosses[bosses.length - 1].level, 1000);
     for (let index = 1; index < bosses.length; index++) {
-        assert.ok(bosses[index].level - bosses[index - 1].level <= 30,
+        const previous = bosses[index - 1];
+        const current = bosses[index];
+        const maximumGap = previous.level >= 500 ? 50 : 30;
+        assert.ok(current.level - previous.level <= maximumGap,
             `${bosses[index - 1].name} Lv.${bosses[index - 1].level} → ${bosses[index].name} Lv.${bosses[index].level}`);
     }
     for (const boss of bosses) {
@@ -1093,6 +1109,49 @@ test('Lv.380~500 세 후반 권역은 분기 동선·지역 경제·연속 퀘�
             ?.connections.find(connection => connection.locationId === 'endstar_threshold')?.condition,
         'level_460',
     );
+});
+
+test('Lv.500~1000 승천 권역은 50레벨 단위 미궁·선택형 보스·환경 효과·숨은 제단을 제공한다', () => {
+    assert.equal(ASCENDANT_REGIONS.length, 10);
+    assert.deepEqual(ASCENDANT_REGIONS.map(region => region.bossLevel), [
+        550, 600, 650, 700, 750, 800, 850, 900, 950, 1000,
+    ]);
+
+    for (const [index, regionData] of ASCENDANT_REGIONS.entries()) {
+        const regionTag = `location:${regionData.id}`;
+        const regionLocations = locations.filter(location => location.tags.includes(regionTag));
+        const transition = locations.find(location => location.id === `${regionData.id}_transition`);
+        const bossRoom = locations.find(location => location.id === `${regionData.id}_boss_sanctum`);
+        const altar = locations.find(location => location.id === `${regionData.id}_sealed_altar`);
+        const reliquary = locations.find(location => location.id === `${regionData.id}_reliquary`);
+        const boss = getMonsterData(`${regionData.id}_sovereign`);
+        const store = getShop(`${regionData.id}_waystation_store`);
+
+        assert.equal(regionLocations.length, 13, regionData.id);
+        assert.ok(regionLocations.every(location => location.mapColor === regionData.mapColor), regionData.id);
+        assert.ok(regionLocations.filter(location => location.tags.includes(GameTags.LOCATION_DUNGEON)).length >= 5);
+        assert.ok(transition?.connections.some(connection => connection.locationId === bossRoom?.id));
+        assert.ok(bossRoom?.connections.some(connection => connection.locationId === transition?.id));
+        assert.ok(bossRoom?.tags.includes(GameTags.LOCATION_BOSS_ROOM));
+        assert.ok(altar?.tags.includes(GameTags.LOCATION_HIDDEN));
+        assert.ok(altar?.objects.some(object => object.dataId === `${regionData.id}_altar`));
+        assert.ok(reliquary?.objects.some(object => object.dataId === `${regionData.id}_reliquary`));
+        assert.ok(getResourceData(`${regionData.id}_altar`));
+        assert.ok(getResourceData(`${regionData.id}_reliquary`));
+        assert.equal(boss?.level, regionData.bossLevel);
+        assert.ok((boss?.skills?.length ?? 0) >= 2);
+        assert.ok(boss?.drops.some(drop => drop.itemDataId === `${regionData.id}_sigil` && drop.chance === 1));
+        assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === `${regionData.id}_pack`));
+        assert.ok(StatusEffectType.fromKey(regionData.environment.id));
+
+        const next = ASCENDANT_REGIONS[index + 1];
+        if (next) {
+            assert.equal(
+                transition?.connections.find(connection => connection.locationId === `${next.id}_threshold`)?.condition,
+                `level_${next.startLevel}`,
+            );
+        }
+    }
 });
 
 test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {

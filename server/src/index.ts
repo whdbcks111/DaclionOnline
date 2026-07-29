@@ -29,6 +29,7 @@ import './data/crafting.js';
 import './data/quests.js';
 import './data/npcs.js';
 import './data/fishing.js';
+import './data/ascendantFrontier.js';
 import { initLocation } from './modules/location.js';
 import { initUploadMaintenance, uploadRouter } from './modules/upload.js';
 import { initAllCommands } from './commands/index.js';

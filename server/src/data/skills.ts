@@ -3556,7 +3556,7 @@ defineSkill({
     ],
 });
 
-interface BossStrikeSkillDefinition {
+export interface BossStrikeSkillDefinition {
     id: string;
     name: string;
     icon: string;
@@ -3574,7 +3574,7 @@ interface BossStrikeSkillDefinition {
     combatComment?: string;
 }
 
-function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): void {
+export function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): void {
     const damage = (context: SkillContext) => context.owner.attribute.get(definition.attribute)
         * (definition.baseMultiplier + Math.max(0, context.skill.level - 1) * definition.perLevelMultiplier);
     const statusEffect = definition.statusEffectId ? StatusEffectType.fromKey(definition.statusEffectId) : undefined;
