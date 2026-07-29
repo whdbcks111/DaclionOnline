@@ -2945,9 +2945,9 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     {
         id: 'spellblade_technique', name: '마력 검파', jobId: 'career:spellblade', icon: 'jobs/warrior',
         damageType: 'magic', attribute: AttributeType.ATK, basePercent: 180, perLevelPercent: 11,
-        secondaryAttribute: AttributeType.MAGIC_FORCE, secondaryBasePercent: 120, secondaryPerLevelPercent: 8,
+        secondaryAttribute: AttributeType.MAGIC_FORCE, secondaryBasePercent: 130, secondaryPerLevelPercent: 9,
         tertiaryAttribute: AttributeType.SPEED, tertiaryAttributeScale: MOBILITY_DAMAGE_SCALE,
-        tertiaryBasePercent: 25, tertiaryPerLevelPercent: 2,
+        tertiaryBasePercent: 12, tertiaryPerLevelPercent: 1,
         tierDamageMultiplier: 5.8,
         manaCost: 30, cooldown: 11, weaponDescription: '검 또는 도끼를 장착해야 합니다.',
         weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE],

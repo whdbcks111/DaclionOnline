@@ -132,6 +132,46 @@ test('elite hybrid actives keep their main-job coefficient ahead of the sub-job 
     assert.ok(speedGain > magicGain);
 });
 
+test('마력 검파는 이동속도 시너지를 유지하되 두 마궁 조합보다 과도하게 증폭되지 않는다', () => {
+    const spellblade = createBalanceScenario(200, 'career:warrior', 'career:mage', BalanceEncounterType.BOSS);
+    const speedBuffedSpellblade = createBalanceScenario(
+        200, 'career:warrior', 'career:mage', BalanceEncounterType.BOSS,
+    );
+    const magicBuffedSpellblade = createBalanceScenario(
+        200, 'career:warrior', 'career:mage', BalanceEncounterType.BOSS,
+    );
+    const elementalMarksman = createBalanceScenario(
+        200, 'career:archer', 'career:mage', BalanceEncounterType.BOSS,
+    );
+    const starWeaver = createBalanceScenario(
+        200, 'career:mage', 'career:archer', BalanceEncounterType.BOSS,
+    );
+
+    const base = analyzeSkillBalance(spellblade, 'spellblade_technique', 5);
+    speedBuffedSpellblade.entity.attribute.addModifier({
+        attribute: AttributeType.SPEED.key,
+        op: 'multiply',
+        value: 1.2,
+        source: 'test:spellblade-speed-buff',
+    });
+    magicBuffedSpellblade.entity.attribute.addModifier({
+        attribute: AttributeType.MAGIC_FORCE.key,
+        op: 'multiply',
+        value: 1.2,
+        source: 'test:spellblade-magic-buff',
+    });
+    const speedBuffed = analyzeSkillBalance(speedBuffedSpellblade, 'spellblade_technique', 5);
+    const magicBuffed = analyzeSkillBalance(magicBuffedSpellblade, 'spellblade_technique', 5);
+    const elementalShot = analyzeSkillBalance(elementalMarksman, 'elemental_marksman_technique', 5);
+    const fallingStar = analyzeSkillBalance(starWeaver, 'star_weaver_technique', 5);
+
+    assert.ok(speedBuffed.rawDamage > base.rawDamage);
+    assert.ok(speedBuffed.rawDamage - base.rawDamage < magicBuffed.rawDamage - base.rawDamage);
+    assert.ok(base.expectedTotalDamage <= elementalShot.expectedTotalDamage);
+    assert.ok(base.sustainableDpm <= elementalShot.sustainableDpm * 1.2);
+    assert.ok(base.sustainableDpm < fallingStar.sustainableDpm);
+});
+
 test('skill report uses real cooldown, resource and damage callbacks', () => {
     const scenario = createBalanceScenario(50, 'career:mage');
     const report = analyzeSkillBalance(scenario, 'magic_bolt', 5);
