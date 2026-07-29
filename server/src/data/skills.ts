@@ -44,8 +44,7 @@ defineSkillTagDisplay(GameTags.SKILL_GROUP_WARRIOR, '전사 기술', 'skills/car
 defineSkillTagDisplay(GameTags.SKILL_GROUP_ARCHER, '궁술', 'skills/career_archer');
 defineSkillTagDisplay(GameTags.SKILL_GROUP_ASSASSIN, '암살 기술', 'skills/career_assassin');
 defineSkillTagDisplay(GameTags.SKILL_GROUP_MAGIC, '마법', 'skills/career_mage');
-// TODO(icons): 대장장이 직업 전용 아이콘 제작 전까지 금속 단조 아이콘을 사용한다.
-defineSkillTagDisplay(GameTags.SKILL_GROUP_BLACKSMITH, '단조 기술', 'skills/metal_forging');
+defineSkillTagDisplay(GameTags.SKILL_GROUP_BLACKSMITH, '단조 기술', 'skills/career_blacksmith');
 defineSkillTagDisplay(GameTags.SKILL_GROUP_FIRE, '화염 계열', 'affinities/fire');
 defineSkillTagDisplay(GameTags.SKILL_GROUP_ICE, '빙결 계열', 'affinities/ice');
 defineSkillTagDisplay(GameTags.SKILL_GROUP_ELECTRIC, '전격 계열', 'affinities/electric');
@@ -621,7 +620,7 @@ defineJobPassive({
     id: 'blacksmith_temper',
     name: '대장장이의 담금질',
     jobId: JOBS.blacksmith,
-    icon: 'items/iron_pickaxe',
+    icon: 'skills/career_blacksmith',
     description: '{{icon.maxWeight}} 최대 중량이 [color=gold]{{maxWeight}}[/color], {{icon.maxLife}} 최대 생명력이 [color=green]{{maxLife}}[/color], {{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color] 증가합니다.',
     modifiers: [
         { attribute: AttributeType.MAX_WEIGHT.key, op: 'add', value: 10, label: '최대 중량 증가', display: '+10' },
@@ -1073,8 +1072,7 @@ defineSkill({
 defineSkill({
     id: 'equipment_repair',
     name: '야전 수리',
-    // TODO(art): 수리 전용 스킬 아이콘 제작 전까지 금속 단조 아이콘을 사용한다.
-    icon: 'skills/metal_forging',
+    icon: 'skills/equipment_repair',
     maxLevel: 5,
     descriptionTemplate: '손상된 장비의 내구도를 최대 내구도의 [color=gold]{{repairPercent}}%[/color]만큼 복구합니다. 원 제작 소재 또는 장비의 재질·속성과 맞는 소재가 필요합니다. 손상이 25% 이하인 간단한 수리는 열화되지 않지만, 크게 손상된 장비는 수리할 때 최대 내구도가 영구 감소합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color] + 호환 수리 소재 1~2개',
@@ -1093,8 +1091,7 @@ defineSkill({
 defineSkill({
     id: 'artisan_naming',
     name: '장인의 명명',
-    // TODO: 후가공 스킬 전용 아이콘 제작 전까지 단조 장검 아이콘을 사용한다.
-    icon: 'items/forged_sword',
+    icon: 'skills/artisan_naming',
     maxLevel: 1,
     descriptionTemplate: '직접 단조한 장비에 장인이 정한 고유한 이름을 새깁니다. 이름은 장비 인스턴스에 영속되며 같은 마스터 아이템의 다른 장비에는 영향을 주지 않습니다.',
     costTemplate: '소모값 없음',
@@ -1117,8 +1114,7 @@ defineSkill({
 defineSkill({
     id: 'arcane_enchanting',
     name: '마법 부여',
-    // TODO: 후가공 스킬 전용 아이콘 제작 전까지 마법력 능력치 아이콘을 사용한다.
-    icon: 'attributes/magicForce',
+    icon: 'skills/arcane_enchanting',
     maxLevel: 5,
     descriptionTemplate: '무기의 재료·속성을 읽어 화염·맹독·기절·빙결·실명 외에도 추가 피해·생명 흡수·마력 환류·보호막·변동 피해·추가 투사체·현재 생명력 비례 피해 중 하나를 영구히 각인합니다. 장비 속성과 고유 특성이 후보를 편향하며 발동률·효과 레벨·위력은 감각과 서버 난수에 따라 결정됩니다. `/마법부여효과`에서 전체 후보를 확인할 수 있습니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 80[/color]',
@@ -1133,8 +1129,7 @@ defineSkill({
 defineSkill({
     id: 'staff_infusing',
     name: '지팡이 마력 부여',
-    // TODO(art): 전용 스킬 아이콘 제작 전까지 지팡이 카테고리 fallback을 사용한다.
-    icon: 'items/apprentice_staff',
+    icon: 'skills/staff_infusing',
     maxLevel: 1,
     descriptionTemplate: '직접 단조한 지팡이 틀에 마력 회로를 열어 실제 주문과 마력탄을 다룰 수 있는 지팡이로 완성합니다. 틀의 재료·품질·단조 능력치는 유지되며 마법 관통력, 정신력 재생, 투사체 가속이 추가됩니다.',
     costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${STAFF_INFUSION_MENTALITY_COST}[/color]`,
@@ -1149,8 +1144,7 @@ defineSkill({
 defineSkill({
     id: 'artificer_manufacturing',
     name: '정밀 병기 제작',
-    // TODO(art): 전용 스킬 아이콘 제작 전까지 활 카테고리 fallback을 사용한다.
-    icon: 'items/light_bow',
+    icon: 'skills/artificer_manufacturing',
     maxLevel: 1,
     descriptionTemplate: '단조 미니게임으로 활대와 화살촉 묶음을 만들고, 호환되는 시위와 화살대를 제작해 활과 화살로 조립합니다. 단조 재료·품질·특이 각인은 완성 병기와 화살의 공격 성능에 그대로 반영됩니다.',
     costTemplate: '형태별 제련 소재와 제작 부품 소모',
@@ -1165,8 +1159,7 @@ defineSkill({
 defineSkill({
     id: 'weapon_reinforcement',
     name: '무기 강화',
-    // TODO: 후가공 스킬 전용 아이콘 제작 전까지 공격력 능력치 아이콘을 사용한다.
-    icon: 'attributes/atk',
+    icon: 'skills/weapon_reinforcement',
     maxLevel: 5,
     descriptionTemplate: `지핵 강화석을 소모해 무기를 최대 +${MAX_WEAPON_REINFORCEMENT}까지 강화합니다. 높은 단계에서는 실패·단계 하락·장비 파괴 위험이 생기며, 성공할 때마다 공격 계열 능력치와 무기 종류에 맞는 긍정 효과가 영구적으로 누적됩니다.`,
     costTemplate: '지핵 강화석 1개',
@@ -1948,7 +1941,6 @@ function careerMasteryAutoAcquire(
     };
 }
 
-// TODO(icons): 1차 성장기·보스 전승 기술은 전용 아트 제작 전까지 같은 직업/효과의 기존 아이콘과 배너를 재사용한다.
 const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     {
         id: 'fracture_slash', name: '파쇄 베기', icon: 'skills/steel_slash', activationHeader: 'steel_slash',
@@ -2664,8 +2656,8 @@ function growthTechniqueDescription(technique: GrowthTechniqueDefinition): strin
 for (const technique of growthTechniques) defineSkill({
     id: technique.id,
     name: technique.name,
-    icon: technique.icon,
-    activationHeader: technique.activationHeader,
+    icon: `skills/${technique.id}`,
+    activationHeader: technique.id,
     maxLevel: 5,
     unlockLevel: technique.unlockLevel,
     descriptionTemplate: growthTechniqueDescription(technique),
@@ -2851,7 +2843,7 @@ function temperedAegisAmount(context: SkillContext): number {
 }
 
 defineSkill({
-    id: 'tempered_aegis', name: '담금질 방벽', icon: 'skills/indomitable', activationHeader: 'indomitable',
+    id: 'tempered_aegis', name: '담금질 방벽', icon: 'skills/tempered_aegis', activationHeader: 'tempered_aegis',
     maxLevel: 5, unlockLevel: 50,
     descriptionTemplate: '달군 금속의 기운으로 몸을 감싸 {{icon.maxLife}}{{icon.atk}}{{icon.forgingPrecision}} {{shieldAmount}}만큼의 피해를 막는 일반 보호막을 {{duration}} 동안 얻습니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 26[/color]',
@@ -3581,8 +3573,7 @@ export function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): vo
     defineSkill({
         id: definition.id,
         name: definition.name,
-        // TODO: 구간 보스 전용 스킬 아트 제작 전까지 속성 아이콘을 사용한다.
-        icon: definition.icon,
+        icon: `skills/${definition.id}`,
         maxLevel: 5,
         descriptionTemplate: `${definition.name}을 준비해 [color=gold]${formatNumber(definition.castTime)}초[/color] 뒤 위협 대상을 공격합니다. `
             + `{{icon.${definition.attribute.key}}} {{damage}}의 ${definition.damageType === 'magic' ? '마법' : '물리'} 피해를 입힙니다.`
@@ -3590,7 +3581,7 @@ export function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): vo
         costTemplate: '소모값 없음',
         activationConditionTemplate: '몬스터가 현재 위협 대상으로 지정한 대상에게 사용합니다.',
         activationMessage: `${definition.name}!`,
-        activationHeader: definition.activationHeader ?? definition.id,
+        activationHeader: definition.id,
         baseMetadata: null,
         calculatedFields: {
             damage: context => tooltipValue(
@@ -3661,7 +3652,6 @@ export function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): vo
 }
 
 for (const skill of [
-    // TODO: 은빛그물 보스 3종 전용 배너 제작 전까지 돌진·제어·독 계열 기존 헤더를 fallback으로 사용한다.
     {
         id: 'red_mane_pounce', name: '적갈기 도약', icon: 'affinities/natural', damageType: 'physical' as const,
         attribute: AttributeType.ATK, baseMultiplier: 1.35, perLevelMultiplier: 0.12,
@@ -3989,8 +3979,7 @@ for (const skill of [
 defineSkill({
     id: 'nightwood_regrowth',
     name: '검은 심재 재생',
-    // TODO: 구간 보스 전용 스킬 아트 제작 전까지 자연 속성 아이콘을 사용한다.
-    icon: 'affinities/natural',
+    icon: 'skills/nightwood_regrowth',
     maxLevel: 5,
     descriptionTemplate: '2초 동안 뿌리를 내려 주변의 생기를 흡수한 뒤 {{healing}}의 생명력을 회복합니다.',
     costTemplate: '소모값 없음',

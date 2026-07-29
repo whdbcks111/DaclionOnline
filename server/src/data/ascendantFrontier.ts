@@ -16,13 +16,6 @@ import { chat } from '../utils/chatBuilder.js';
 import { GameTags } from '../../../shared/tags.js';
 import { ASCENDANT_REGIONS } from './ascendantRegions.js';
 
-const PHYSICAL_FALLBACK = 'items/windsteel_sword';
-const BOW_FALLBACK = 'items/stormstring_bow';
-const DAGGER_FALLBACK = 'items/nightglass_dagger';
-const STAFF_FALLBACK = 'items/starwood_staff';
-const SHIELD_FALLBACK = 'items/forged_shield';
-const BAG_FALLBACK = 'items/bag_fallback';
-
 function environmentModifierSource(effectId: string): string {
     return `status-effect:${effectId}`;
 }
@@ -119,12 +112,11 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
     const primaryProperty = region.propertyTags[0];
     const secondaryProperty = region.propertyTags[1];
 
-    // TODO(art): Lv.500~1000 전용 소재·장비 제작 전까지 역할별 기존 128×128 fallback을 사용한다.
     defineItem({
         id: materialId,
         name: region.materialName,
         description: `${region.name}의 환경이 오랜 시간 응축되어 생긴 고레벨 제작 소재.`,
-        image: 'items/material_arcane_core',
+        image: `items/${materialId}`,
         category: '재료', weight: 0.7 + index * 0.04, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
         baseMetadata: null, onUse: null, equipSlot: null, modifiers: null, baseDurability: null,
         tags: [regionTag, primaryProperty],
@@ -133,7 +125,7 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
         id: sigilId,
         name: `${region.name} 군주의 인장`,
         description: `${region.bossName}의 권능이 남은 인장. 숨은 제단과 이세계 통로의 열쇠로 쓰일 예정입니다.`,
-        image: 'items/resonance_evasion_shard',
+        image: `items/${sigilId}`,
         category: '인장', weight: 0.2, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
         baseMetadata: null, onUse: null, equipSlot: null, modifiers: null, baseDurability: null,
         tags: [regionTag, 'item:altar-offering', primaryProperty, secondaryProperty],
@@ -151,7 +143,7 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
     defineItem({
         id: equipmentIds.sword, name: `${region.materialName} 단층검`,
         description: `${region.name}의 압력을 견디도록 겹쳐 벼린 전사 계열 장검.`,
-        image: PHYSICAL_FALLBACK, category: '장검', weight: 5.2, stackable: false, maxStack: 1,
+        image: `items/${equipmentIds.sword}`, category: '장검', weight: 5.2, stackable: false, maxStack: 1,
         baseMetadata: null, onUse: null, equipSlot: 'mainHand',
         modifiers: [
             { attribute: AttributeType.ATK.key, op: 'add', value: attackBase, source: '' },
@@ -164,7 +156,7 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
     defineItem({
         id: equipmentIds.bow, name: `${region.materialName} 원환궁`,
         description: `${region.name}의 흐름을 시위에 고정해 고속 화살을 발사하는 장궁.`,
-        image: BOW_FALLBACK, category: '활', weight: 3.5, stackable: false, maxStack: 1,
+        image: `items/${equipmentIds.bow}`, category: '활', weight: 3.5, stackable: false, maxStack: 1,
         baseMetadata: {
             [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
             [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
@@ -181,7 +173,7 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
     defineItem({
         id: equipmentIds.dagger, name: `${region.materialName} 경계송곳니`,
         description: `${region.name}의 균열을 따라 방어 틈으로 미끄러지는 암살자용 단검.`,
-        image: DAGGER_FALLBACK, category: '단검', weight: 1.8, stackable: false, maxStack: 1,
+        image: `items/${equipmentIds.dagger}`, category: '단검', weight: 1.8, stackable: false, maxStack: 1,
         baseMetadata: null, onUse: null, equipSlot: 'mainHand',
         modifiers: [
             { attribute: AttributeType.ATK.key, op: 'add', value: Math.round(attackBase * 0.9), source: '' },
@@ -195,7 +187,7 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
     defineItem({
         id: equipmentIds.staff, name: `${region.materialName} 공명지팡이`,
         description: `${region.name}의 환경 마력을 응축해 마력 구체로 변환하는 지팡이.`,
-        image: STAFF_FALLBACK, category: '지팡이', weight: 3.7, stackable: false, maxStack: 1,
+        image: `items/${equipmentIds.staff}`, category: '지팡이', weight: 3.7, stackable: false, maxStack: 1,
         baseMetadata: {
             [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
             [ItemMetadataKeys.PROJECTILE_ATTACK]: {
@@ -215,7 +207,7 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
     defineItem({
         id: equipmentIds.shield, name: `${region.materialName} 심층방패`,
         description: `${region.name}의 환경 압력을 양면에 분산시키는 대형 방패.`,
-        image: SHIELD_FALLBACK, category: '방패', weight: 5.8, stackable: false, maxStack: 1,
+        image: `items/${equipmentIds.shield}`, category: '방패', weight: 5.8, stackable: false, maxStack: 1,
         baseMetadata: null, onUse: null, equipSlot: 'offHand',
         modifiers: [
             { attribute: AttributeType.DEF.key, op: 'add', value: defenseBase, source: '' },
@@ -228,7 +220,7 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
     defineItem({
         id: equipmentIds.pack, name: `${region.name} 원정가방`,
         description: `${region.name} 장기 탐사를 위해 무게 분산 구조를 적용한 성장 가방.`,
-        image: BAG_FALLBACK, category: '가방', weight: 2.2, stackable: false, maxStack: 1,
+        image: `items/${equipmentIds.pack}`, category: '가방', weight: 2.2, stackable: false, maxStack: 1,
         baseMetadata: null, onUse: null, equipSlot: 'bag',
         modifiers: [{ attribute: AttributeType.MAX_WEIGHT.key, op: 'add', value: 1_100 + index * 190, source: '' }],
         baseDurability: durability, tags: [GameTags.ITEM_BAG, regionTag],
@@ -237,7 +229,7 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
     defineItem({
         id: equipmentIds.relic, name: `${region.bossName}의 잔흔`,
         description: `${region.bossName}의 핵에서 떨어져 나온 보스 전용 장신구.`,
-        image: 'items/resonance_evasion_shard', category: '장신구', weight: 0.35, stackable: false, maxStack: 1,
+        image: `items/${equipmentIds.relic}`, category: '장신구', weight: 0.35, stackable: false, maxStack: 1,
         baseMetadata: null, onUse: null, equipSlot: 'accessory',
         modifiers: [
             { attribute: AttributeType.ATK.key, op: 'add', value: Math.round(attackBase * 0.22), source: '' },

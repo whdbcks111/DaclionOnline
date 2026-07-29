@@ -439,7 +439,7 @@ test('은빛그물 숲은 두 보스·사냥꾼 상점·알주머니 보호 기�
     assert.ok(wolfKing?.tags.includes(GameTags.ENTITY_BOSS));
     assert.ok(spiderQueen?.skillPattern?.randomOrder);
     assert.ok(store?.data.buyList.some(entry => entry.create().itemDataId === 'forest_antidote'));
-    assert.equal(getItemData('silverweb_hunter_bow')?.image, 'items/light_bow');
+    assert.equal(getItemData('silverweb_hunter_bow')?.image, 'items/silverweb_hunter_bow');
     assert.equal(getResourceData('silverweb_egg_cluster')?.attackable, undefined);
 
     reloadAllLocations(locations);
@@ -507,7 +507,7 @@ test('은빛그물 보스는 모든 직업이 배울 수 있는 전승 스킬북
         assert.equal(drop?.chance, chance, bossId);
         assert.equal(book?.onUse, 'learn_skill', bookId);
         assert.equal(book?.baseMetadata?.skillDataId, skillDataId, bookId);
-        assert.equal(book?.image, 'items/seismic_crush_skillbook', bookId);
+        assert.equal(book?.image, `items/${bookId}`, bookId);
     }
 });
 
@@ -1318,7 +1318,7 @@ test('가방은 성장 지역 상점과 희귀 보물함에서 최대 중량 장
     for (const [shopId, itemDataId, capacity] of tiers) {
         const item = getItemData(itemDataId);
         assert.equal(item?.equipSlot, 'bag', itemDataId);
-        assert.equal(item?.image, 'items/bag_fallback', itemDataId);
+        assert.equal(item?.image, `items/${itemDataId}`, itemDataId);
         assert.ok(item?.tags.includes(GameTags.ITEM_BAG), itemDataId);
         assert.ok(item?.modifiers?.some(modifier =>
             modifier.attribute === 'maxWeight' && modifier.op === 'add' && modifier.value === capacity
@@ -1330,26 +1330,15 @@ test('가방은 성장 지역 상점과 희귀 보물함에서 최대 중량 장
     assert.equal(getItemData('resonance_fold_pack')?.equipSlot, 'bag');
     assert.equal(rollWorldrootReliquaryReward(() => 0.83).itemDataId, 'memory_amber_bottomless_pack');
 
-    const png = readFileSync(new URL('../../../client/public/icons/items/bag_fallback.png', import.meta.url));
-    assert.equal(png.readUInt32BE(16), 128);
-    assert.equal(png.readUInt32BE(20), 128);
-    assert.equal(png[25], 6, 'bag fallback must be RGBA');
 });
 
-test('교체한 아이템 폴백은 데이터 ID별 128px RGBA 아이콘을 가진다', () => {
-    for (const id of [
-        'battle_tonic', 'arcane_tonic', 'swift_tonic', 'echo_hourglass',
-        'twisted_labyrinth_compass', 'resonance_evasion_shard',
-        'windsteel_sword', 'stormstring_bow', 'nightglass_dagger', 'starwood_staff',
-        'refined_iron', 'refined_gold', 'refined_ruby', 'refined_emerald', 'refined_diamond',
-        'forged_sword', 'forged_axe', 'forged_dagger', 'forged_shield', 'forged_pickaxe',
-        'enhancement_stone',
-    ]) {
-        assert.equal(getItemData(id)?.image, `items/${id}`);
-        const png = readFileSync(new URL(`../../../client/public/icons/items/${id}.png`, import.meta.url));
-        assert.equal(png.readUInt32BE(16), 128, `${id} icon width`);
-        assert.equal(png.readUInt32BE(20), 128, `${id} icon height`);
-        assert.equal(png[25], 6, `${id} must be RGBA`);
+test('모든 아이템은 데이터 ID별 128px RGBA 전용 아이콘을 가진다', () => {
+    for (const item of getAllItemData()) {
+        assert.equal(item.image, `items/${item.id}`, `${item.id} dedicated icon key`);
+        const png = readFileSync(new URL(`../../../client/public/icons/items/${item.id}.png`, import.meta.url));
+        assert.equal(png.readUInt32BE(16), 128, `${item.id} icon width`);
+        assert.equal(png.readUInt32BE(20), 128, `${item.id} icon height`);
+        assert.equal(png[25], 6, `${item.id} must be RGBA`);
     }
 });
 
@@ -1375,8 +1364,8 @@ test('잡화점은 배고픔과 수분을 회복하는 음식과 음료를 판�
 
 test('대용량 체력·마나 포션은 후반 거점의 고가 반복 골드 소모품으로 제공된다', () => {
     const potionDefinitions = [
-        ['large_health_potion', 'heal_hp', 'items/health_potion'],
-        ['large_mana_potion', 'heal_mp', 'items/mana_potion'],
+        ['large_health_potion', 'heal_hp', 'items/large_health_potion'],
+        ['large_mana_potion', 'heal_mp', 'items/large_mana_potion'],
     ] as const;
     for (const [itemDataId, onUse, image] of potionDefinitions) {
         const item = getItemData(itemDataId);

@@ -373,12 +373,11 @@ defineItem({
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER],
 });
 
-// TODO(전용 아트 제작): 대용량 병 실루엣이 구분되는 전용 아이콘으로 교체한다.
 defineItem({
     id: 'large_health_potion',
     name: '대용량 체력 포션',
     description: '긴급 전투용으로 고농축한 대형 포션. 2.5초 동안 마시면 HP를 10,000, 수분을 10 회복한다.',
-    image: 'items/health_potion',
+    image: 'items/large_health_potion',
     category: '소모품',
     weight: 1.5,
     stackable: true,
@@ -391,12 +390,11 @@ defineItem({
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_NATURAL],
 });
 
-// TODO(전용 아트 제작): 대용량 병 실루엣이 구분되는 전용 아이콘으로 교체한다.
 defineItem({
     id: 'large_mana_potion',
     name: '대용량 마나 포션',
     description: '긴급 전투용으로 고농축한 대형 포션. 2.5초 동안 마시면 MP를 10,000, 수분을 10 회복한다.',
-    image: 'items/mana_potion',
+    image: 'items/large_mana_potion',
     category: '소모품',
     weight: 1.5,
     stackable: true,
@@ -664,8 +662,7 @@ defineItem({
     id: 'silverweb_hunter_bow',
     name: '은빛그물 사냥활',
     description: '숨을 줄인 시위와 가벼운 나무 탄성으로 명중점을 빠르게 잡는 사냥활. 투사체 가속이 8% 증가한다.',
-    // TODO: 은빛그물 사냥활 전용 아트 제작 전까지 활 카테고리 fallback을 사용한다.
-    image: 'items/light_bow',
+    image: 'items/silverweb_hunter_bow',
     category: '활',
     weight: 2,
     stackable: false,
@@ -695,8 +692,7 @@ defineItem({
     id: 'forest_antidote',
     name: '은이파리 해독제',
     description: '독·맹독·마비독을 제거하고 30초 동안 새 중독을 막는 숲의 해독제.',
-    // TODO: 해독제 전용 아트 제작 전까지 포션 카테고리 fallback을 사용한다.
-    image: 'items/health_potion',
+    image: 'items/forest_antidote',
     category: '소모품',
     weight: 0.25,
     stackable: true,
@@ -935,7 +931,6 @@ defineItem({
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_DIAMOND],
 });
 
-// TODO(icons): 보스 전승서 전용 아이콘 제작 전까지 기존 스킬북 카테고리 아이콘을 재사용한다.
 for (const book of [
     {
         id: 'predator_pounce_skillbook',
@@ -955,7 +950,7 @@ for (const book of [
     id: book.id,
     name: book.name,
     description: book.description,
-    image: 'items/seismic_crush_skillbook',
+    image: `items/${book.id}`,
     category: '스킬북',
     weight: 0.3,
     stackable: true,
@@ -976,7 +971,7 @@ const mineralItems = [
     { id: 'ruby', name: '루비', description: '붉게 빛나는 희귀 보석.', image: 'items/ruby', weight: 0.2, tag: GameTags.MATERIAL_RUBY },
     { id: 'emerald', name: '에메랄드', description: '초록빛을 띠는 희귀 보석.', image: 'items/emerald', weight: 0.2, tag: GameTags.MATERIAL_EMERALD },
     { id: 'diamond', name: '다이아몬드', description: '극히 희귀하고 단단한 보석.', image: 'items/diamond', weight: 0.2, tag: GameTags.MATERIAL_DIAMOND },
-    { id: 'mana_crystal', name: '마나 수정', description: '수정 광맥에서 마력이 응결되어 자란 푸른 원석.', image: 'items/material_arcane_core', weight: 0.25, tag: GameTags.MATERIAL_MANA_CRYSTAL },
+    { id: 'mana_crystal', name: '마나 수정', description: '수정 광맥에서 마력이 응결되어 자란 푸른 원석.', image: 'items/mana_crystal', weight: 0.25, tag: GameTags.MATERIAL_MANA_CRYSTAL },
     { id: 'enhancement_stone', name: '지핵 강화석', description: '철근미궁 지핵 수정실의 강화 수정맥에서만 얻는 무기 강화 재료.', image: 'items/enhancement_stone', weight: 0.25, tag: GameTags.MATERIAL_ENHANCEMENT_STONE },
 ] as const;
 
@@ -1003,19 +998,19 @@ for (const material of [
     {
         id: 'wolf_pelt', name: '적갈색 늑대 가죽',
         description: '은빛그물 숲의 늑대에게서 얻는 질긴 가죽.',
-        image: 'items/material_hide', tags: [GameTags.PROPERTY_NATURAL], weight: 0.7,
+        image: 'items/wolf_pelt', tags: [GameTags.PROPERTY_NATURAL], weight: 0.7,
     },
     {
         id: 'silverweb_silk', name: '은빛 거미실',
         description: '빛을 받으면 은빛으로 반사하는 강인한 숲거미의 실.',
-        image: 'items/material_thread',
+        image: 'items/silverweb_silk',
         tags: [GameTags.PROPERTY_INSECT, GameTags.CRAFTING_BOWSTRING_MATERIAL],
         weight: 0.15,
     },
     {
         id: 'venom_gland', name: '자빛 독샘',
         description: '독그물을 짜내는 데 쓰는 농축된 거미 독샘.',
-        image: 'items/material_arcane_core', tags: [GameTags.PROPERTY_POISON, GameTags.PROPERTY_INSECT], weight: 0.2,
+        image: 'items/venom_gland', tags: [GameTags.PROPERTY_POISON, GameTags.PROPERTY_INSECT], weight: 0.2,
     },
 ] as const) defineItem({
     id: material.id,
@@ -1034,30 +1029,29 @@ for (const material of [
     tags: [...material.tags],
 });
 
-// TODO(icons): 황혼왕릉 소재·장비 전용 아트 제작 전까지 의미가 가까운 기존 카테고리 아이콘을 재사용한다.
 for (const material of [
     {
-        id: 'weathered_bone', name: '풍화된 뼛조각', image: 'items/material_bone_horn', weight: 0.25,
+        id: 'weathered_bone', name: '풍화된 뼛조각', image: 'items/weathered_bone', weight: 0.25,
         description: '황혼왕릉의 망자에게서 떨어진 단단한 뼛조각.',
         tags: [GameTags.PROPERTY_UNDEAD],
     },
     {
-        id: 'gravecloth', name: '묘지기 천', image: 'items/material_thread', weight: 0.15,
+        id: 'gravecloth', name: '묘지기 천', image: 'items/gravecloth', weight: 0.15,
         description: '오래된 의복에서 풀어낸 질긴 검푸른 천.',
         tags: [GameTags.PROPERTY_DARK, GameTags.CRAFTING_BOWSTRING_MATERIAL],
     },
     {
-        id: 'broken_oath_badge', name: '깨진 맹세 휘장', image: 'items/material_insignia', weight: 0.2,
+        id: 'broken_oath_badge', name: '깨진 맹세 휘장', image: 'items/broken_oath_badge', weight: 0.2,
         description: '왕릉 기사단의 맹세가 반쪽만 남은 금속 휘장.',
         tags: [GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_METAL],
     },
     {
-        id: 'mourning_lily', name: '애도의 백합', image: 'items/material_botanical', weight: 0.1,
+        id: 'mourning_lily', name: '애도의 백합', image: 'items/mourning_lily', weight: 0.1,
         description: '죽은 자의 마력이 짙은 곳에서만 피어나는 창백한 꽃.',
         tags: [GameTags.PROPERTY_DARK, GameTags.PROPERTY_NATURAL],
     },
     {
-        id: 'soul_ember', name: '혼불 조각', image: 'items/material_arcane_core', weight: 0.12,
+        id: 'soul_ember', name: '혼불 조각', image: 'items/soul_ember', weight: 0.12,
         description: '꺼지지 않은 망자의 의지가 차갑게 응축된 마력 조각.',
         tags: [GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_DARK],
     },
@@ -1082,7 +1076,7 @@ defineItem({
     id: 'graveward_tonic',
     name: '묘지기 향약',
     description: '왕릉의 혼불을 가라앉혀 45초 동안 독·출혈·부패의 지속시간을 빠르게 줄이는 향약.',
-    image: 'items/health_potion',
+    image: 'items/graveward_tonic',
     category: '소모품',
     weight: 0.25,
     stackable: true,
@@ -1099,7 +1093,7 @@ defineItem({
     id: 'oathiron_sword',
     name: '맹세철 장검',
     description: '깨진 기사 휘장을 다시 접어 벼린 장검. 정면의 갑주를 파고드는 데 알맞다.',
-    image: 'items/old_sword',
+    image: 'items/oathiron_sword',
     category: '장검',
     weight: 3.5,
     stackable: false,
@@ -1120,7 +1114,7 @@ defineItem({
     id: 'requiem_bow',
     name: '진혼 시위',
     description: '묘지기 천으로 감아 소리를 죽인 장궁. 화살의 비행 속도와 급소 포착을 함께 높인다.',
-    image: 'items/light_bow',
+    image: 'items/requiem_bow',
     category: '활',
     weight: 2.15,
     stackable: false,
@@ -1145,7 +1139,7 @@ defineItem({
     id: 'mourning_staff',
     name: '애도목 지팡이',
     description: '애도의 백합과 혼불을 매달아 망자의 마력을 빠르게 쏘아 보내는 중급 지팡이.',
-    image: 'items/apprentice_staff',
+    image: 'items/mourning_staff',
     category: '지팡이',
     weight: 2.45,
     stackable: false,
@@ -1173,7 +1167,7 @@ defineItem({
     id: 'gravekeeper_shield',
     name: '묘문 수호방패',
     description: '왕릉 봉인문을 떼어 다시 다듬은 방패. 물리 충격과 망자의 마력을 함께 막는다.',
-    image: 'items/old_shield',
+    image: 'items/gravekeeper_shield',
     category: '방패',
     weight: 3.4,
     stackable: false,
@@ -1191,30 +1185,29 @@ defineItem({
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });
 
-// TODO(icons): 유리모래 사막 전용 아트 제작 전까지 존재하는 광물·보석 카테고리 아이콘을 재사용한다.
 for (const material of [
     {
-        id: 'glass_sand', name: '유리모래', image: 'items/stone', weight: 0.35,
+        id: 'glass_sand', name: '유리모래', image: 'items/glass_sand', weight: 0.35,
         description: '낮의 열기에 녹았다 밤의 냉기에 깨진 사막의 유리 알갱이.',
         tags: [GameTags.MATERIAL_GLASS, GameTags.PROPERTY_STONE],
     },
     {
-        id: 'sunscarab_shell', name: '황금갑 성충갑', image: 'items/material_scale_shell', weight: 0.55,
+        id: 'sunscarab_shell', name: '황금갑 성충갑', image: 'items/sunscarab_shell', weight: 0.55,
         description: '태양빛을 반사하는 두꺼운 성충 등껑질. 방어구와 활장식에 쓴다.',
         tags: [GameTags.PROPERTY_INSECT, GameTags.PROPERTY_LIGHT],
     },
     {
-        id: 'dune_scorpion_venom', name: '모래전갈 독수', image: 'items/ruby', weight: 0.25,
+        id: 'dune_scorpion_venom', name: '모래전갈 독수', image: 'items/dune_scorpion_venom', weight: 0.25,
         description: '모래 전갈이 충격에 맞춰 결정화한 독. 맹독 조합과 단검 제작에 쓴다.',
         tags: [GameTags.PROPERTY_POISON],
     },
     {
-        id: 'mirage_crystal', name: '신기루 수정', image: 'items/diamond', weight: 0.4,
+        id: 'mirage_crystal', name: '신기루 수정', image: 'items/mirage_crystal', weight: 0.4,
         description: '사막의 빛과 그림자를 함께 굴절시키는 투명한 수정.',
         tags: [GameTags.MATERIAL_GLASS, GameTags.MATERIAL_DIAMOND, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'sun_glyph_fragment', name: '태양 문양 파편', image: 'items/refined_gold', weight: 0.45,
+        id: 'sun_glyph_fragment', name: '태양 문양 파편', image: 'items/sun_glyph_fragment', weight: 0.45,
         description: '태양의 고 내부에서 떼어낸 금속 파편. 뜨거운 마력이 흐른다.',
         tags: [GameTags.MATERIAL_GOLD, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_LIGHT],
     },
@@ -1239,7 +1232,7 @@ defineItem({
     id: 'oasis_date',
     name: '오아시스 대추야자',
     description: '대상단이 머나먼 사막길을 건널 때 챙기는 달콤한 열매. 배고픔을 45 회복한다.',
-    image: 'items/traveler_bread',
+    image: 'items/oasis_date',
     category: '음식',
     weight: 0.2,
     stackable: true,
@@ -1256,7 +1249,7 @@ defineItem({
     id: 'shade_canteen',
     name: '그늘 수통',
     description: '기화 열을 낮추는 유리모래 안감을 대어 두어 시원한 물. 수분을 70 회복한다.',
-    image: 'items/fresh_water',
+    image: 'items/shade_canteen',
     category: '음료',
     weight: 0.65,
     stackable: true,
@@ -1269,12 +1262,11 @@ defineItem({
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER],
 });
 
-// TODO(icons): 사막 장비는 전용 아트 전까지 같은 무기 종류의 기존 아이콘을 폴백으로 사용한다.
 defineItem({
     id: 'dunebreaker_sword',
     name: '모래맥 파검',
     description: '유리모래를 겹겹이 접어 만든 넓은 장검. 단단한 갑주와 모래바위를 같이 가른다.',
-    image: 'items/windsteel_sword', category: '장검', weight: 3.7, stackable: false, maxStack: 1,
+    image: 'items/dunebreaker_sword', category: '장검', weight: 3.7, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 70, source: '' },
@@ -1293,7 +1285,7 @@ defineItem({
     id: 'sunwire_bow',
     name: '태양사 장궁',
     description: '황금갑 섬유를 꼬아 화살의 비행을 안정시킨 장궁. 투사체 가속이 25% 증가한다.',
-    image: 'items/stormstring_bow', category: '활', weight: 2.45, stackable: false, maxStack: 1,
+    image: 'items/sunwire_bow', category: '활', weight: 2.45, stackable: false, maxStack: 1,
     baseMetadata: {
         basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
         projectileAttack: { ammunitionItemId: 'wooden_arrow' },
@@ -1313,7 +1305,7 @@ defineItem({
     id: 'mirage_fang_dagger',
     name: '신기루 독아',
     description: '빛을 굴절시켜 칼날의 끝을 숨기는 독단검. 적중 시 22% 확률로 8초간 쇠약의 저주를 남긴다.',
-    image: 'items/nightglass_dagger', category: '단검', weight: 1.45, stackable: false, maxStack: 1,
+    image: 'items/mirage_fang_dagger', category: '단검', weight: 1.45, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 62, source: '' },
@@ -1336,7 +1328,7 @@ defineItem({
     id: 'helioglass_staff',
     name: '태양유리 지팡이',
     description: '태양의 고에서 회수한 굴절경으로 마력을 압축하는 지팡이.',
-    image: 'items/starwood_staff', category: '지팡이', weight: 2.7, stackable: false, maxStack: 1,
+    image: 'items/helioglass_staff', category: '지팡이', weight: 2.7, stackable: false, maxStack: 1,
     baseMetadata: {
         basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
         projectileAttack: {
@@ -1359,7 +1351,7 @@ defineItem({
     id: 'sunmirror_shield',
     name: '태양거울 방패',
     description: '태양의 고를 지키던 거울 기둥을 작게 다듬은 방패. 물리 충격과 마법 열기를 고르게 흘린다.',
-    image: 'items/forged_shield', category: '방패', weight: 3.6, stackable: false, maxStack: 1,
+    image: 'items/sunmirror_shield', category: '방패', weight: 3.6, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'offHand',
     modifiers: [
         { attribute: 'def', op: 'add', value: 22, source: '' },
@@ -1371,20 +1363,19 @@ defineItem({
     balance: { role: ItemBalanceRole.DEFENSE, recommendedJobIds: ['career:warrior', 'career:blacksmith'] },
 });
 
-// TODO(icons): 서리잔향 설원·빙경궁 전용 소재/장비 아트 제작 전까지 같은 카테고리의 기존 아이콘을 사용한다.
 for (const material of [
     {
-        id: 'rime_crystal', name: '상고 수정', image: 'items/diamond', weight: 0.35,
+        id: 'rime_crystal', name: '상고 수정', image: 'items/rime_crystal', weight: 0.35,
         description: '설원 바위의 틈에서 자라난 푸른 수정. 냉기를 오래 붙잡는다.',
         tags: [GameTags.MATERIAL_RIME, GameTags.MATERIAL_DIAMOND, GameTags.PROPERTY_ICE],
     },
     {
-        id: 'frostwolf_hide', name: '서리늑대 가죽', image: 'items/material_hide', weight: 0.8,
+        id: 'frostwolf_hide', name: '서리늑대 가죽', image: 'items/frostwolf_hide', weight: 0.8,
         description: '상고바람을 견딘 늑대의 두꺼운 가죽. 가볍지만 냉기를 잘 막는다.',
         tags: [GameTags.MATERIAL_RIME, GameTags.PROPERTY_NATURAL],
     },
     {
-        id: 'ice_silk', name: '빙실 거미줄', image: 'items/material_thread', weight: 0.18,
+        id: 'ice_silk', name: '빙실 거미줄', image: 'items/ice_silk', weight: 0.18,
         description: '서리가 맺혀도 끊어지지 않는 거미줄. 활시위와 마법 직조에 쓴다.',
         tags: [
             GameTags.MATERIAL_RIME,
@@ -1394,22 +1385,22 @@ for (const material of [
         ],
     },
     {
-        id: 'mirrorsteel_fragment', name: '경철 파편', image: 'items/iron_ore', weight: 0.55,
+        id: 'mirrorsteel_fragment', name: '경철 파편', image: 'items/mirrorsteel_fragment', weight: 0.55,
         description: '빙경궁의 수호병에게서 떨어진 거울빛 금속 조각.',
         tags: [GameTags.MATERIAL_RIME, GameTags.PROPERTY_METAL, GameTags.PROPERTY_ICE],
     },
     {
-        id: 'aurora_shard', name: '극광 파편', image: 'items/material_arcane_core', weight: 0.16,
+        id: 'aurora_shard', name: '극광 파편', image: 'items/aurora_shard', weight: 0.16,
         description: '밤하늘의 빛이 차갑게 굳어 생긴 마력 결정.',
         tags: [GameTags.MATERIAL_RIME, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ICE],
     },
     {
-        id: 'frozen_core', name: '빙결 핵', image: 'items/diamond', weight: 0.7,
+        id: 'frozen_core', name: '빙결 핵', image: 'items/frozen_core', weight: 0.7,
         description: '빙하 수호체의 움직임을 유지하던 고밀도 냉기 핵.',
         tags: [GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_STONE],
     },
     {
-        id: 'snowmoss', name: '눈솔이끼', image: 'items/material_botanical', weight: 0.08,
+        id: 'snowmoss', name: '눈솔이끼', image: 'items/snowmoss', weight: 0.08,
         description: '눈 아래에서도 푸른빛을 잃지 않는 약용 이끼.',
         tags: [GameTags.MATERIAL_RIME, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_ICE],
     },
@@ -1434,7 +1425,7 @@ defineItem({
     id: 'winter_trail_ration',
     name: '설원 행군식',
     description: '눈솔이끼와 말린 고기를 눌러 만든 따뜻한 행군식. 배고픔 65와 수분 15를 회복한다.',
-    image: 'items/traveler_bread', category: '음식', weight: 0.4, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/winter_trail_ration', category: '음식', weight: 0.4, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { hunger: 65, thirst: 15, time: 1.2, useMessage: '설원 행군식을 데워 먹는 중...' },
     onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_NATURAL],
@@ -1444,7 +1435,7 @@ defineItem({
     id: 'frostward_tonic',
     name: '상고막이 영약',
     description: '눈솔이끼와 상고 수정을 달여 60초 동안 빙결 지속시간을 빠르게 줄이는 영약.',
-    image: 'items/health_potion', category: '소모품', weight: 0.25, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/frostward_tonic', category: '소모품', weight: 0.25, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'frozen_resistance', level: 5, duration: 60 } },
     onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE],
@@ -1454,7 +1445,7 @@ defineItem({
     id: 'aurora_recovery_draught',
     name: '극광 회복약',
     description: '극광 파편의 흐름을 안정시켜 35초 동안 생명력 재생을 크게 높이는 회복약.',
-    image: 'items/mana_potion', category: '소모품', weight: 0.25, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/aurora_recovery_draught', category: '소모품', weight: 0.25, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'regeneration', level: 8, duration: 35 } },
     onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ICE],
@@ -1464,7 +1455,7 @@ defineItem({
     id: 'rimecleaver_sword',
     name: '빙맥 절단검',
     description: '경철 사이에 상고 수정을 접어 넣은 장검. 두꺼운 갑주를 가르고 냉기를 남긴다.',
-    image: 'items/windsteel_sword', category: '장검', weight: 3.8, stackable: false, maxStack: 1,
+    image: 'items/rimecleaver_sword', category: '장검', weight: 3.8, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 108, source: '' },
@@ -1483,7 +1474,7 @@ defineItem({
     id: 'icesilk_longbow',
     name: '빙실 연궁',
     description: '빙실 거미줄을 여러 겹 꼬아 만든 장궁. 화살을 빠르게 밀어내며 급소를 안정적으로 노린다.',
-    image: 'items/stormstring_bow', category: '활', weight: 2.5, stackable: false, maxStack: 1,
+    image: 'items/icesilk_longbow', category: '활', weight: 2.5, stackable: false, maxStack: 1,
     baseMetadata: {
         basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
         projectileAttack: { ammunitionItemId: 'wooden_arrow' },
@@ -1503,7 +1494,7 @@ defineItem({
     id: 'mirrorfang_dagger',
     name: '경빙 송곳니',
     description: '거울처럼 적의 움직임을 비추는 경철 단검. 방어 틈을 파고들어 빙결을 쌓는다.',
-    image: 'items/nightglass_dagger', category: '단검', weight: 1.5, stackable: false, maxStack: 1,
+    image: 'items/mirrorfang_dagger', category: '단검', weight: 1.5, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 96, source: '' },
@@ -1526,7 +1517,7 @@ defineItem({
     id: 'auroraprism_staff',
     name: '극광분광 지팡이',
     description: '극광을 여러 갈래의 냉기 마력으로 분해해 쏘는 빙경궁 지팡이.',
-    image: 'items/starwood_staff', category: '지팡이', weight: 2.8, stackable: false, maxStack: 1,
+    image: 'items/auroraprism_staff', category: '지팡이', weight: 2.8, stackable: false, maxStack: 1,
     baseMetadata: {
         basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
         projectileAttack: {
@@ -1549,7 +1540,7 @@ defineItem({
     id: 'frostglass_bulwark',
     name: '빙경 성벽방패',
     description: '깨져도 다시 얼어붙는 경철판을 포갠 방패. 물리 충격과 마법 냉기를 함께 흘린다.',
-    image: 'items/forged_shield', category: '방패', weight: 3.9, stackable: false, maxStack: 1,
+    image: 'items/frostglass_bulwark', category: '방패', weight: 3.9, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'offHand',
     modifiers: [
         { attribute: 'def', op: 'add', value: 34, source: '' },
@@ -1574,7 +1565,7 @@ for (const book of [
     id: book.id,
     name: book.name,
     description: book.description,
-    image: 'items/seismic_crush_skillbook',
+    image: `items/${book.id}`,
     category: '스킬북',
     weight: 0.3,
     stackable: true,
@@ -1587,45 +1578,44 @@ for (const book of [
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.PROPERTY_ICE],
 });
 
-// TODO(icons): 안개파도 해안·침몰왕도 전용 아트 제작 전까지 광물/유기물/동일 무기 카테고리 아이콘을 사용한다.
 for (const material of [
     {
-        id: 'mist_salt', name: '해무 소금', image: 'items/stone', weight: 0.18,
+        id: 'mist_salt', name: '해무 소금', image: 'items/mist_salt', weight: 0.18,
         description: '안개파도 해안의 차가운 물보라가 바위에 남긴 푸른 소금.',
         tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER],
     },
     {
-        id: 'black_coral', name: '흑산호', image: 'items/coal', weight: 0.45,
+        id: 'black_coral', name: '흑산호', image: 'items/black_coral', weight: 0.45,
         description: '빛이 닿지 않는 조류굴에서 자라 금속처럼 단단해진 검은 산호.',
         tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_STONE],
     },
     {
-        id: 'siren_scale', name: '해무비늘', image: 'items/material_scale_shell', weight: 0.22,
+        id: 'siren_scale', name: '해무비늘', image: 'items/siren_scale', weight: 0.22,
         description: '노랫소리에 맞춰 빛을 굴절시키는 세이렌의 얇은 비늘.',
         tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
     },
     {
-        id: 'tide_pearl', name: '조류진주', image: 'items/diamond', weight: 0.2,
+        id: 'tide_pearl', name: '조류진주', image: 'items/tide_pearl', weight: 0.2,
         description: '밀물과 썰물의 마력이 겹친 순간에만 굳어지는 푸른 진주.',
         tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
     },
     {
-        id: 'drowned_insignia', name: '침수 군단 휘장', image: 'items/material_insignia', weight: 0.24,
+        id: 'drowned_insignia', name: '침수 군단 휘장', image: 'items/drowned_insignia', weight: 0.24,
         description: '침몰왕도를 지키던 군단의 녹슨 휘장. 아직 명령 마력이 남아 있다.',
         tags: [GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
     },
     {
-        id: 'abyssal_iron', name: '심해철', image: 'items/iron_ore', weight: 0.72,
+        id: 'abyssal_iron', name: '심해철', image: 'items/abyssal_iron', weight: 0.72,
         description: '수압과 마력을 오랫동안 받아 검푸르게 변한 침몰왕도의 금속.',
         tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
     },
     {
-        id: 'kelp_resin', name: '청해초 수지', image: 'items/material_botanical', weight: 0.12,
+        id: 'kelp_resin', name: '청해초 수지', image: 'items/kelp_resin', weight: 0.12,
         description: '바닷물에서도 접착력을 잃지 않는 청해초의 농축 수지.',
         tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_WATER],
     },
     {
-        id: 'leviathan_bone', name: '해수룡 골편', image: 'items/material_bone_horn', weight: 0.85,
+        id: 'leviathan_bone', name: '해수룡 골편', image: 'items/leviathan_bone', weight: 0.85,
         description: '거대한 해수룡의 뼈가 파도와 마력에 깎여 남은 단단한 골편.',
         tags: [GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_STONE],
     },
@@ -1649,7 +1639,7 @@ for (const material of [
 defineItem({
     id: 'brine_trail_ration', name: '염풍 행군식',
     description: '해무 소금으로 간한 말린 생선과 빵. 배고픔 75와 수분 20을 회복한다.',
-    image: 'items/traveler_bread', category: '음식', weight: 0.45, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/brine_trail_ration', category: '음식', weight: 0.45, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { hunger: 75, thirst: 20, time: 1.2, useMessage: '염풍 행군식을 먹는 중...' },
     onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER, GameTags.PROPERTY_NATURAL],
@@ -1658,7 +1648,7 @@ defineItem({
 defineItem({
     id: 'seafoam_tonic', name: '해포말 영약',
     description: '차가운 포말이 몸을 감싸 70초 동안 화염을 밀어내는 영약.',
-    image: 'items/fresh_water', category: '소모품', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/seafoam_tonic', category: '소모품', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'fire_resistance', level: 6, duration: 70 } },
     onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER],
@@ -1667,7 +1657,7 @@ defineItem({
 defineItem({
     id: 'tideheart_draught', name: '조류심장 회복약',
     description: '조류진주의 박동을 안정시켜 40초 동안 강한 생명력 재생을 제공한다.',
-    image: 'items/mana_potion', category: '소모품', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/tideheart_draught', category: '소모품', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'regeneration', level: 10, duration: 40 } },
     onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT],
@@ -1676,7 +1666,7 @@ defineItem({
 defineItem({
     id: 'tidebreaker_sword', name: '파식 조류검',
     description: '심해철의 무게를 파도처럼 전진시키는 장검. 방어를 깎고 출혈을 남긴다.',
-    image: 'items/windsteel_sword', category: '장검', weight: 4, stackable: false, maxStack: 1,
+    image: 'items/tidebreaker_sword', category: '장검', weight: 4, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 150, source: '' },
@@ -1694,7 +1684,7 @@ defineItem({
 defineItem({
     id: 'mistcurrent_bow', name: '해무 조류궁',
     description: '청해초 수지와 세이렌 비늘로 화살의 흔들림을 지운 장궁.',
-    image: 'items/stormstring_bow', category: '활', weight: 2.6, stackable: false, maxStack: 1,
+    image: 'items/mistcurrent_bow', category: '활', weight: 2.6, stackable: false, maxStack: 1,
     baseMetadata: {
         basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
         projectileAttack: { ammunitionItemId: 'wooden_arrow' },
@@ -1713,7 +1703,7 @@ defineItem({
 defineItem({
     id: 'blackcoral_sting', name: '흑산호 침',
     description: '부러지는 대신 살점을 붙잡는 흑산호 단검. 관통과 치명타 피해에 집중한다.',
-    image: 'items/nightglass_dagger', category: '단검', weight: 1.55, stackable: false, maxStack: 1,
+    image: 'items/blackcoral_sting', category: '단검', weight: 1.55, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 125, source: '' },
@@ -1735,7 +1725,7 @@ defineItem({
 defineItem({
     id: 'deeppearl_staff', name: '심해진주 지팡이',
     description: '조류진주가 심해의 수압처럼 마력을 한 점으로 압축하는 지팡이.',
-    image: 'items/starwood_staff', category: '지팡이', weight: 2.9, stackable: false, maxStack: 1,
+    image: 'items/deeppearl_staff', category: '지팡이', weight: 2.9, stackable: false, maxStack: 1,
     baseMetadata: {
         basicAttackOverride: ItemAttackOverrideKeys.PROJECTILE,
         projectileAttack: {
@@ -1757,7 +1747,7 @@ defineItem({
 defineItem({
     id: 'drowned_admiral_shield', name: '침몰제독 방패',
     description: '해수룡 골편과 심해철을 포갠 방패. 수압 같은 충격과 망자의 주문을 함께 견딘다.',
-    image: 'items/forged_shield', category: '방패', weight: 4.2, stackable: false, maxStack: 1,
+    image: 'items/drowned_admiral_shield', category: '방패', weight: 4.2, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'offHand',
     modifiers: [
         { attribute: 'def', op: 'add', value: 48, source: '' },
@@ -1782,42 +1772,41 @@ for (const book of [
     id: book.id,
     name: book.name,
     description: book.description,
-    image: 'items/seismic_crush_skillbook',
+    image: `items/${book.id}`,
     category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
     modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.PROPERTY_WATER],
 });
 
-// TODO(icons): 역설기계고 전용 아트 제작 전까지 광물·기계 부품과 같은 장비군의 기존 아이콘을 명시적으로 재사용한다.
 for (const material of [
     {
-        id: 'chronosteel_shard', name: '시간강 파편', image: 'items/iron_ore', weight: 0.7,
+        id: 'chronosteel_shard', name: '시간강 파편', image: 'items/chronosteel_shard', weight: 0.7,
         description: '앞으로 휘었다가 되돌아오는 성질을 가진 기계고의 청회색 합금 조각.',
         tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL],
     },
     {
-        id: 'memory_gear', name: '기억 톱니', image: 'items/material_clockwork', weight: 0.24,
+        id: 'memory_gear', name: '기억 톱니', image: 'items/memory_gear', weight: 0.24,
         description: '맞물렸던 장치의 동작 순서를 표면에 새겨 두는 작은 황동 톱니.',
         tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
     },
     {
-        id: 'photon_lens', name: '광자 렌즈', image: 'items/diamond', weight: 0.2,
+        id: 'photon_lens', name: '광자 렌즈', image: 'items/photon_lens', weight: 0.2,
         description: '빛을 한 점이 아니라 정해진 미래의 궤도로 모으는 투명 렌즈.',
         tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT],
     },
     {
-        id: 'void_spring', name: '공허 용수철', image: 'items/coal', weight: 0.18,
+        id: 'void_spring', name: '공허 용수철', image: 'items/void_spring', weight: 0.18,
         description: '압축할수록 주변의 빛과 소리를 삼키는 검은 태엽 용수철.',
         tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL],
     },
     {
-        id: 'logic_core', name: '논리핵', image: 'items/diamond', weight: 0.35,
+        id: 'logic_core', name: '논리핵', image: 'items/logic_core', weight: 0.35,
         description: '자동인형의 판단 순서를 보관하는 다면체 마도 회로.',
         tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ELECTRIC],
     },
     {
-        id: 'paradox_thread', name: '역설 실', image: 'items/material_thread', weight: 0.08,
+        id: 'paradox_thread', name: '역설 실', image: 'items/paradox_thread', weight: 0.08,
         description: '서로 다른 두 순간의 위치를 동시에 잇는 은보랏빛 마력 섬유.',
         tags: [
             GameTags.MATERIAL_CLOCKWORK,
@@ -1827,17 +1816,17 @@ for (const material of [
         ],
     },
     {
-        id: 'automaton_plate', name: '자동인형 장갑판', image: 'items/iron_ore', weight: 1.1,
+        id: 'automaton_plate', name: '자동인형 장갑판', image: 'items/automaton_plate', weight: 1.1,
         description: '관절의 움직임에 맞춰 단단함이 변하는 기계 병사의 외장판.',
         tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL],
     },
     {
-        id: 'fracture_crystal', name: '균열 수정', image: 'items/diamond', weight: 0.28,
+        id: 'fracture_crystal', name: '균열 수정', image: 'items/fracture_crystal', weight: 0.28,
         description: '공간의 금이 결정으로 굳은 조각. 가까운 사물의 윤곽을 겹쳐 보이게 한다.',
         tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'archive_key_fragment', name: '기록고 열쇠 파편', image: 'items/material_clockwork', weight: 0.16,
+        id: 'archive_key_fragment', name: '기록고 열쇠 파편', image: 'items/archive_key_fragment', weight: 0.16,
         description: '기계고의 폐쇄된 기록층을 열던 톱니형 열쇠의 일부.',
         tags: [GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
     },
@@ -1861,7 +1850,7 @@ for (const material of [
 defineItem({
     id: 'cogwork_ration', name: '태엽 작업식',
     description: '자동 공방의 교대 시간을 견디도록 만든 압축 식량. 배고픔 90과 수분 30을 회복한다.',
-    image: 'items/traveler_bread', category: '음식', weight: 0.48, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/cogwork_ration', category: '음식', weight: 0.48, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { hunger: 90, thirst: 30, time: 1.2, useMessage: '태엽 작업식을 풀어 먹는 중...' },
     onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_CLOCKWORK],
@@ -1869,19 +1858,19 @@ defineItem({
 
 for (const tonic of [
     {
-        id: 'phase_tonic', name: '위상 촉진제', image: 'items/fresh_water',
+        id: 'phase_tonic', name: '위상 촉진제', image: 'items/phase_tonic',
         description: '공허 용수철의 반동을 몸에 흘려 55초 동안 움직임을 가속한다.',
         statusEffect: { id: 'swiftness', level: 11, duration: 55 },
         tags: [GameTags.PROPERTY_DARK, GameTags.PROPERTY_ELECTRIC],
     },
     {
-        id: 'logic_elixir', name: '논리회로 영약', image: 'items/mana_potion',
+        id: 'logic_elixir', name: '논리회로 영약', image: 'items/logic_elixir',
         description: '논리핵의 계산 회로를 정신에 겹쳐 55초 동안 마법 위력을 강화한다.',
         statusEffect: { id: 'magic_enhancement', level: 11, duration: 55 },
         tags: [GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_ELECTRIC],
     },
     {
-        id: 'temporal_salve', name: '시간봉합 연고', image: 'items/health_potion',
+        id: 'temporal_salve', name: '시간봉합 연고', image: 'items/temporal_salve',
         description: '상처가 나기 전의 형상을 되짚어 40초 동안 강한 생명력 재생을 부여한다.',
         statusEffect: { id: 'regeneration', level: 12, duration: 40 },
         tags: [GameTags.PROPERTY_LIGHT],
@@ -1897,7 +1886,7 @@ for (const tonic of [
 defineItem({
     id: 'paradox_edge', name: '역설절단검',
     description: '베기 전과 베어 낸 뒤의 궤적을 겹쳐 갑옷의 같은 틈을 두 번 파고드는 시간강 장검.',
-    image: 'items/windsteel_sword', category: '장검', weight: 4.1, stackable: false, maxStack: 1,
+    image: 'items/paradox_edge', category: '장검', weight: 4.1, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 190, source: '' },
@@ -1915,7 +1904,7 @@ defineItem({
 defineItem({
     id: 'photon_repeater', name: '광자연사궁',
     description: '광자 렌즈가 다음 사격 궤도를 미리 잡아 화살을 빠르게 이어 보내는 복합궁.',
-    image: 'items/stormstring_bow', category: '활', weight: 2.75, stackable: false, maxStack: 1,
+    image: 'items/photon_repeater', category: '활', weight: 2.75, stackable: false, maxStack: 1,
     baseMetadata: {
         [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
         [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
@@ -1934,7 +1923,7 @@ defineItem({
 defineItem({
     id: 'voidspring_dagger', name: '공허태엽 단검',
     description: '검신 안의 공허 용수철이 접촉 순간 튀어나와 얕은 상처를 깊게 벌리는 단검.',
-    image: 'items/nightglass_dagger', category: '단검', weight: 1.6, stackable: false, maxStack: 1,
+    image: 'items/voidspring_dagger', category: '단검', weight: 1.6, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 158, source: '' },
@@ -1953,7 +1942,7 @@ defineItem({
 defineItem({
     id: 'logic_core_staff', name: '논리핵 지팡이',
     description: '논리핵이 마력의 낭비 경로를 지우고 가장 짧은 탄도만 남기는 마도 지팡이.',
-    image: 'items/starwood_staff', category: '지팡이', weight: 3, stackable: false, maxStack: 1,
+    image: 'items/logic_core_staff', category: '지팡이', weight: 3, stackable: false, maxStack: 1,
     baseMetadata: {
         [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
         [ItemMetadataKeys.PROJECTILE_ATTACK]: {
@@ -1978,7 +1967,7 @@ defineItem({
 defineItem({
     id: 'causality_aegis', name: '인과율 방패',
     description: '공격이 닿는 원인과 상처가 생기는 결과 사이를 벌려 충격을 흘리는 자동 장갑 방패.',
-    image: 'items/forged_shield', category: '방패', weight: 4.5, stackable: false, maxStack: 1,
+    image: 'items/causality_aegis', category: '방패', weight: 4.5, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'offHand',
     modifiers: [
         { attribute: 'def', op: 'add', value: 64, source: '' },
@@ -1999,16 +1988,15 @@ for (const book of [
     id: book.id,
     name: book.name,
     description: `역설기계고의 전투 연산이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
-    image: 'items/seismic_crush_skillbook', category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: `items/${book.id}`, category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
     modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_CLOCKWORK, book.property],
 });
 
-// TODO: 잿빛성흔 심연 전용 아트 제작 전까지 소재·무기·스킬북 카테고리 fallback을 사용한다.
 for (const material of [
     {
-        id: 'ashen_sinew', name: '잿빛 힘줄', image: 'items/material_thread', weight: 0.22,
+        id: 'ashen_sinew', name: '잿빛 힘줄', image: 'items/ashen_sinew', weight: 0.22,
         description: '심연 짐승의 근육 사이에서 타지 않고 남은 질긴 회색 힘줄.',
         tags: [
             GameTags.MATERIAL_ASHEN_ABYSS,
@@ -2017,37 +2005,37 @@ for (const material of [
         ],
     },
     {
-        id: 'blackflame_residue', name: '흑염 잔재', image: 'items/ember_ore', weight: 0.18,
+        id: 'blackflame_residue', name: '흑염 잔재', image: 'items/blackflame_residue', weight: 0.18,
         description: '빛을 내지 않으면서 주변의 온기만 태우는 검은 불꽃의 응결물.',
         tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'hollow_horn', name: '공허뿔', image: 'items/material_bone_horn', weight: 0.75,
+        id: 'hollow_horn', name: '공허뿔', image: 'items/hollow_horn', weight: 0.75,
         description: '속이 텅 비었지만 두드리면 먼 곳의 포효가 되돌아오는 마수의 뿔.',
         tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'cursebone_fragment', name: '저주뼈 파편', image: 'items/material_bone_horn', weight: 0.42,
+        id: 'cursebone_fragment', name: '저주뼈 파편', image: 'items/cursebone_fragment', weight: 0.42,
         description: '오래된 저주가 골수 대신 차 있는 검붉은 뼛조각.',
         tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_UNDEAD, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'night_iron', name: '밤쇠', image: 'items/iron_ore', weight: 0.86,
+        id: 'night_iron', name: '밤쇠', image: 'items/night_iron', weight: 0.86,
         description: '검은재 지층에서 흑염과 함께 굳어 빛을 거의 반사하지 않는 철광.',
         tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'sovereign_seal_fragment', name: '재왕 인장 파편', image: 'items/material_insignia', weight: 0.2,
+        id: 'sovereign_seal_fragment', name: '재왕 인장 파편', image: 'items/sovereign_seal_fragment', weight: 0.2,
         description: '잿왕성의 명령을 각인하던 인장이 전투 중 부서져 남은 조각.',
         tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_METAL],
     },
     {
-        id: 'abyssal_hide', name: '심연가죽', image: 'items/material_hide', weight: 0.65,
+        id: 'abyssal_hide', name: '심연가죽', image: 'items/abyssal_hide', weight: 0.65,
         description: '어둠 속에서만 결이 드러나는 두껍고 유연한 마수 가죽.',
         tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'mourning_eye', name: '애도의 눈', image: 'items/ruby', weight: 0.12,
+        id: 'mourning_eye', name: '애도의 눈', image: 'items/mourning_eye', weight: 0.12,
         description: '쓰러진 자의 마지막 모습을 반복해 비추는 보랏빛 결정안.',
         tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK, GameTags.PROPERTY_UNDEAD],
     },
@@ -2071,7 +2059,7 @@ for (const material of [
 defineItem({
     id: 'ashmarch_ration', name: '재길 행군식',
     description: '흑염의 열을 밀봉해 차가운 심연에서도 굳지 않는 식량. 배고픔 95와 수분 35를 회복한다.',
-    image: 'items/traveler_bread', category: '음식', weight: 0.52, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/ashmarch_ration', category: '음식', weight: 0.52, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { hunger: 95, thirst: 35, time: 1.2, useMessage: '재길 행군식의 봉인을 푸는 중...' },
     onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_FIRE],
@@ -2079,13 +2067,13 @@ defineItem({
 
 for (const tonic of [
     {
-        id: 'blackflame_ward', name: '흑염막이 영약', image: 'items/arcane_tonic',
+        id: 'blackflame_ward', name: '흑염막이 영약', image: 'items/blackflame_ward',
         description: '흑염 잔재를 역류시켜 60초 동안 화염 저항을 부여한다.',
         statusEffect: { id: 'fire_resistance', level: 12, duration: 60 },
         tags: [GameTags.PROPERTY_FIRE],
     },
     {
-        id: 'ashblood_elixir', name: '회혈 영약', image: 'items/health_potion',
+        id: 'ashblood_elixir', name: '회혈 영약', image: 'items/ashblood_elixir',
         description: '잿빛 힘줄의 생명력을 정제해 45초 동안 강한 생명력 재생을 부여한다.',
         statusEffect: { id: 'regeneration', level: 13, duration: 45 },
         tags: [GameTags.PROPERTY_DARK],
@@ -2101,7 +2089,7 @@ for (const tonic of [
 defineItem({
     id: 'sootcleaver_sword', name: '재가름 장검',
     description: '밤쇠의 무게를 칼끝에 모아 갑옷째 상처를 벌리는 검은 장검.',
-    image: 'items/windsteel_sword', category: '장검', weight: 4.35, stackable: false, maxStack: 1,
+    image: 'items/sootcleaver_sword', category: '장검', weight: 4.35, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 215, source: '' },
@@ -2119,7 +2107,7 @@ defineItem({
 defineItem({
     id: 'hornstring_bow', name: '공허뿔 장궁',
     description: '공허뿔과 잿빛 힘줄을 겹쳐 화살의 첫 가속을 극단적으로 높인 장궁.',
-    image: 'items/stormstring_bow', category: '활', weight: 2.9, stackable: false, maxStack: 1,
+    image: 'items/hornstring_bow', category: '활', weight: 2.9, stackable: false, maxStack: 1,
     baseMetadata: {
         [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
         [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
@@ -2138,7 +2126,7 @@ defineItem({
 defineItem({
     id: 'gloamfang_dagger', name: '황혼송곳',
     description: '그림자가 가장 짙어지는 순간에만 날이 드러나는 밤쇠 단검.',
-    image: 'items/nightglass_dagger', category: '단검', weight: 1.7, stackable: false, maxStack: 1,
+    image: 'items/gloamfang_dagger', category: '단검', weight: 1.7, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 180, source: '' },
@@ -2157,7 +2145,7 @@ defineItem({
 defineItem({
     id: 'blackflame_staff', name: '흑염각 지팡이',
     description: '공허뿔 내부에서 흑염을 순환시켜 빛 없는 마력탄을 발사하는 지팡이.',
-    image: 'items/starwood_staff', category: '지팡이', weight: 3.2, stackable: false, maxStack: 1,
+    image: 'items/blackflame_staff', category: '지팡이', weight: 3.2, stackable: false, maxStack: 1,
     baseMetadata: {
         [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
         [ItemMetadataKeys.PROJECTILE_ATTACK]: {
@@ -2182,7 +2170,7 @@ defineItem({
 defineItem({
     id: 'ashguard_bulwark', name: '재성벽 방패',
     description: '밤쇠와 심연가죽 사이에 저주뼈를 넣어 물리 충격과 마력을 함께 흘리는 대형 방패.',
-    image: 'items/forged_shield', category: '방패', weight: 4.8, stackable: false, maxStack: 1,
+    image: 'items/ashguard_bulwark', category: '방패', weight: 4.8, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'offHand',
     modifiers: [
         { attribute: 'def', op: 'add', value: 73, source: '' },
@@ -2202,7 +2190,7 @@ for (const book of [
     id: book.id,
     name: book.name,
     description: `잿빛성흔 심연의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
-    image: 'items/seismic_crush_skillbook', category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: `items/${book.id}`, category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
     modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_ASHEN_ABYSS, book.property],
@@ -2248,7 +2236,7 @@ const refinedMinerals = [
     { id: 'refined_ruby', name: '제련된 루비', source: 'ruby', image: 'items/refined_ruby', tag: GameTags.MATERIAL_RUBY },
     { id: 'refined_emerald', name: '제련된 에메랄드', source: 'emerald', image: 'items/refined_emerald', tag: GameTags.MATERIAL_EMERALD },
     { id: 'refined_diamond', name: '제련된 다이아몬드', source: 'diamond', image: 'items/refined_diamond', tag: GameTags.MATERIAL_DIAMOND },
-    { id: 'refined_mana_crystal', name: '정제 마나 수정', source: 'mana_crystal', image: 'items/material_arcane_core', tag: GameTags.MATERIAL_MANA_CRYSTAL },
+    { id: 'refined_mana_crystal', name: '정제 마나 수정', source: 'mana_crystal', image: 'items/refined_mana_crystal', tag: GameTags.MATERIAL_MANA_CRYSTAL },
 ] as const;
 
 for (const material of refinedMinerals) defineItem({
@@ -2305,12 +2293,11 @@ for (const template of forgedTemplates) defineItem({
         : { role: ItemBalanceRole.WEAPON, attackType: 'physical' },
 });
 
-// TODO(art): 보스 희귀 흉갑 전용 아트 제작 전까지 단조 흉갑 카테고리 아이콘을 사용한다.
 defineItem({
     id: 'devouring_root_cuirass',
     name: '포식뿌리 흉갑',
     description: '쓰러뜨린 생명의 잔향을 뿌리가 삼켜 착용자의 상처를 메우지만 성장의 기억 일부도 함께 먹어 치운다.',
-    image: 'items/forged_chestplate',
+    image: 'items/devouring_root_cuirass',
     category: '흉갑',
     weight: 7.2,
     stackable: false,
@@ -2346,12 +2333,11 @@ defineItem({
     },
 });
 
-// TODO(art): 보스 희귀 갑주 전용 아트 제작 전까지 단조 흉갑 카테고리 아이콘을 사용한다.
 defineItem({
     id: 'golden_resonance_armor',
     name: '황금반향 갑주',
     description: '충격을 받을 때마다 갑주의 금빛 공명이 작은 금화 조각을 현실로 밀어낸다.',
-    image: 'items/forged_chestplate',
+    image: 'items/golden_resonance_armor',
     category: '흉갑',
     weight: 8,
     stackable: false,
@@ -2391,12 +2377,11 @@ defineItem({
     },
 });
 
-// TODO(art): 총포 전용 아트 제작 전까지 원거리 무기 카테고리 아이콘을 사용한다.
 defineItem({
     id: 'triple_burst_firearm',
     name: '삼연철포',
     description: '현실의 3점사 총기를 본뜬 성간 철포. 재장전은 길지만 방아쇠 한 번에 회피할 수 없는 탄환 세 발을 연속 발사한다.',
-    image: 'items/stormstring_bow',
+    image: 'items/triple_burst_firearm',
     category: '총포',
     weight: 6.4,
     stackable: false,
@@ -2431,12 +2416,11 @@ defineItem({
     },
 });
 
-// TODO(art): 악마 무기 전용 아트 제작 전까지 단조 장검 카테고리 아이콘을 사용한다.
 defineItem({
     id: 'demonic_bloodpact_sword',
     name: '악마의 검',
     description: '주인의 생명력을 끊임없이 태워 검붉은 힘으로 바꾸는 계약검. 회복을 거부할수록 칼날은 더 강해진다.',
-    image: 'items/forged_sword',
+    image: 'items/demonic_bloodpact_sword',
     category: '장검',
     weight: 5.6,
     stackable: false,
@@ -2475,12 +2459,11 @@ defineItem({
     },
 });
 
-// TODO(art): 회귀 갑주 전용 아트 제작 전까지 단조 흉갑 카테고리 아이콘을 사용한다.
 defineItem({
     id: 'chronicle_revival_armor',
     name: '회귀성운 갑주',
     description: '착용자의 마지막 순간을 별의 기록에 묶어 둔 갑주. 죽음이 닿으면 오래 저장한 시간을 소모해 육체를 되감는다.',
-    image: 'items/forged_chestplate',
+    image: 'items/chronicle_revival_armor',
     category: '흉갑',
     weight: 8.6,
     stackable: false,
@@ -2526,12 +2509,11 @@ defineItem({
     },
 });
 
-// TODO(art): 수호 활 전용 아트 제작 전까지 원거리 무기 카테고리 아이콘을 사용한다.
 defineItem({
     id: 'rampart_string_bow',
     name: '성벽시위',
     description: '화살을 적중시킬 때마다 별빛 시위가 주인 둘레에 짧은 성벽을 한 겹씩 세우는 수호궁.',
-    image: 'items/stormstring_bow',
+    image: 'items/rampart_string_bow',
     category: '활',
     weight: 3.5,
     stackable: false,
@@ -2577,12 +2559,11 @@ defineItem({
     },
 });
 
-// TODO(art): 저주받은 검 전용 아트 제작 전까지 단조 장검 카테고리 아이콘을 사용한다.
 defineItem({
     id: 'karma_devourer_sword',
     name: '업식검 카르마보어',
     description: '주인의 업을 조금씩 먹어 치우며 검은 윤기를 더하는 저주받은 검. 부서지는 순간 삼킨 업과 저주를 함께 토해낸다.',
-    image: 'items/forged_sword',
+    image: 'items/karma_devourer_sword',
     category: '장검',
     weight: 5.1,
     stackable: false,
@@ -2632,18 +2613,17 @@ defineItem({
     },
 });
 
-// TODO(art): 엘리트 대장장이 부품 전용 아트 제작 전까지 무기/광물 카테고리 fallback을 사용한다.
 for (const component of [
     {
-        id: 'forged_staff_frame', name: '단조 지팡이 틀', image: 'items/apprentice_staff',
+        id: 'forged_staff_frame', name: '단조 지팡이 틀', image: 'items/forged_staff_frame',
         description: '마도 대장장이가 마력 회로를 열기 전의 단조 지팡이 틀.', weight: 2.5,
     },
     {
-        id: 'forged_bow_limb', name: '단조 활대', image: 'items/light_bow',
+        id: 'forged_bow_limb', name: '단조 활대', image: 'items/forged_bow_limb',
         description: '기계 장인이 장력에 맞는 시위를 연결하기 전의 단조 활대.', weight: 2,
     },
     {
-        id: 'forged_arrowheads', name: '단조 화살촉 묶음', image: 'items/iron_ore',
+        id: 'forged_arrowheads', name: '단조 화살촉 묶음', image: 'items/forged_arrowheads',
         description: '화살대 열 개에 고정할 수 있도록 함께 단조한 화살촉 묶음.', weight: 0.8,
     },
 ] as const) defineItem({
@@ -2668,8 +2648,7 @@ defineItem({
     id: 'forged_staff',
     name: '단조 지팡이',
     description: '단조 틀에 마력 회로를 열어 완성한 주문용 지팡이.',
-    // TODO(art): 전용 아트 제작 전까지 지팡이 카테고리 fallback을 사용한다.
-    image: 'items/apprentice_staff',
+    image: 'items/forged_staff',
     category: '지팡이',
     weight: 2.5,
     stackable: false,
@@ -2694,8 +2673,7 @@ defineItem({
     id: 'forged_bow',
     name: '단조 활',
     description: '단조 활대와 장력에 맞는 시위를 조립해 완성한 활.',
-    // TODO(art): 전용 아트 제작 전까지 활 카테고리 fallback을 사용한다.
-    image: 'items/light_bow',
+    image: 'items/forged_bow',
     category: '활',
     weight: 2.1,
     stackable: false,
@@ -2718,17 +2696,17 @@ defineItem({
 
 for (const component of [
     {
-        id: 'hardwood_stick', name: '단단한 나무 막대기', image: 'items/wooden_arrow',
+        id: 'hardwood_stick', name: '단단한 나무 막대기', image: 'items/hardwood_stick',
         description: '곧게 다듬으면 화살대로 쓸 수 있는 질긴 나무 막대기.',
         count: 99, weight: 0.18, tags: [GameTags.MATERIAL_WOOD],
     },
     {
-        id: 'reinforced_bowstring', name: '강화 활시위', image: 'items/material_thread',
+        id: 'reinforced_bowstring', name: '강화 활시위', image: 'items/reinforced_bowstring',
         description: '질긴 섬유를 여러 겹 꼬아 만든 활 조립용 시위.',
         count: 20, weight: 0.12, tags: [GameTags.CRAFTING_BOWSTRING_MATERIAL],
     },
     {
-        id: 'arrow_shaft', name: '화살대', image: 'items/wooden_arrow',
+        id: 'arrow_shaft', name: '화살대', image: 'items/arrow_shaft',
         description: '화살촉을 끼울 수 있도록 곧고 가볍게 다듬은 나무 화살대.',
         count: 99, weight: 0.08, tags: [GameTags.CRAFTING_ARROW_SHAFT_MATERIAL, GameTags.MATERIAL_WOOD],
     },
@@ -2736,7 +2714,6 @@ for (const component of [
     id: component.id,
     name: component.name,
     description: component.description,
-    // TODO(art): 제작 부품 전용 아트 제작 전까지 가까운 소재 카테고리 fallback을 사용한다.
     image: component.image,
     category: '제작 부품',
     weight: component.weight,
@@ -2880,20 +2857,19 @@ for (const fish of getFishCatalog()) {
     });
 }
 
-// TODO(icons): 공허왕관 성채 전용 아트 제작 전까지 소재·장비·전승서 카테고리 fallback을 사용한다.
 for (const material of [
     {
-        id: 'nullsilver', name: '무광은', image: 'items/refined_iron', weight: 0.72,
+        id: 'nullsilver', name: '무광은', image: 'items/nullsilver', weight: 0.72,
         description: '빛을 반사하지 않고 마력의 흔적만 희미하게 되돌려 보내는 공허왕관의 은빛 합금.',
         tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'crown_glass', name: '왕관유리', image: 'items/resonance_evasion_shard', weight: 0.24,
+        id: 'crown_glass', name: '왕관유리', image: 'items/crown_glass', weight: 0.24,
         description: '깨진 왕관 첨탑의 빛과 어둠이 한 면에 함께 굳은 자색 유리.',
         tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'void_silk', name: '공허비단', image: 'items/material_thread', weight: 0.12,
+        id: 'void_silk', name: '공허비단', image: 'items/void_silk', weight: 0.12,
         description: '허공을 헤엄치는 나방이 남긴, 손끝보다 한 박자 늦게 흔들리는 검은 비단.',
         tags: [
             GameTags.MATERIAL_VOIDCROWN,
@@ -2902,17 +2878,17 @@ for (const material of [
         ],
     },
     {
-        id: 'starved_vine', name: '기아덩굴', image: 'items/material_botanical', weight: 0.3,
+        id: 'starved_vine', name: '기아덩굴', image: 'items/starved_vine', weight: 0.3,
         description: '빛과 수분 대신 마력을 빨아들여 성채의 벽을 타고 자라는 창백한 덩굴.',
         tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'astral_ink', name: '별먹', image: 'items/arcane_tonic', weight: 0.15,
+        id: 'astral_ink', name: '별먹', image: 'items/astral_ink', weight: 0.15,
         description: '별빛이 닿지 않는 문장을 기록하기 위해 왕실 서고에서 쓰던 액체 마력.',
         tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'regent_insignia', name: '섭정 인장', image: 'items/material_insignia', weight: 0.22,
+        id: 'regent_insignia', name: '섭정 인장', image: 'items/regent_insignia', weight: 0.22,
         description: '공허왕관의 명령 체계를 증명하던 금속 인장 조각. 아직도 희미한 복종의 마력이 남아 있다.',
         tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
     },
@@ -2936,7 +2912,7 @@ for (const material of [
 defineItem({
     id: 'voidcrown_ration', name: '무광 행군식',
     description: '기아덩굴의 쓴맛을 별먹으로 눌러 보존한 성채 식량. 배고픔 110과 수분 45를 회복한다.',
-    image: 'items/traveler_bread', category: '음식', weight: 0.5, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/voidcrown_ration', category: '음식', weight: 0.5, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { hunger: 110, thirst: 45, time: 1.1, useMessage: '무광 행군식의 밀봉을 푸는 중...' },
     onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_DARK],
@@ -2945,7 +2921,7 @@ defineItem({
 defineItem({
     id: 'voidcrown_draught', name: '공허맥 회복약',
     description: '기아덩굴과 왕관유리의 흐름을 안정시켜 50초 동안 강한 생명력 재생을 부여한다.',
-    image: 'items/health_potion', category: '소모품', weight: 0.34, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/voidcrown_draught', category: '소모품', weight: 0.34, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'regeneration', level: 15, duration: 50 } },
     onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_DARK],
@@ -2954,7 +2930,7 @@ defineItem({
 defineItem({
     id: 'nullsilver_greatsword', name: '무광은 파성검',
     description: '무광은의 무게중심을 칼끝에 모아 두꺼운 방어선도 한 호흡에 갈라내는 대검.',
-    image: 'items/windsteel_sword', category: '장검', weight: 4.7, stackable: false, maxStack: 1,
+    image: 'items/nullsilver_greatsword', category: '장검', weight: 4.7, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 292, source: '' },
@@ -2969,7 +2945,7 @@ defineItem({
 defineItem({
     id: 'crownstring_longbow', name: '왕관현 장궁',
     description: '공허비단과 왕관유리를 활시위에 겹쳐 먼 거리에서도 화살의 초가속을 잃지 않는 장궁.',
-    image: 'items/stormstring_bow', category: '활', weight: 3.1, stackable: false, maxStack: 1,
+    image: 'items/crownstring_longbow', category: '활', weight: 3.1, stackable: false, maxStack: 1,
     baseMetadata: {
         [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
         [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
@@ -2988,7 +2964,7 @@ defineItem({
 defineItem({
     id: 'voidsilk_stiletto', name: '공허비단 침',
     description: '공허비단의 흔들림을 따라 칼끝이 뒤늦게 나타나는 무광은 단검.',
-    image: 'items/nightglass_dagger', category: '단검', weight: 1.55, stackable: false, maxStack: 1,
+    image: 'items/voidsilk_stiletto', category: '단검', weight: 1.55, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 258, source: '' },
@@ -3004,7 +2980,7 @@ defineItem({
 defineItem({
     id: 'starless_scepter', name: '무성좌 지팡이',
     description: '별먹으로 지운 성좌를 왕관유리에 다시 새겨 공허의 마력을 한 점으로 압축하는 지팡이.',
-    image: 'items/starwood_staff', category: '지팡이', weight: 3.25, stackable: false, maxStack: 1,
+    image: 'items/starless_scepter', category: '지팡이', weight: 3.25, stackable: false, maxStack: 1,
     baseMetadata: {
         [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
         [ItemMetadataKeys.PROJECTILE_ATTACK]: {
@@ -3029,7 +3005,7 @@ defineItem({
 defineItem({
     id: 'regent_aegis', name: '섭정의 무광방패',
     description: '무광은과 왕관유리 사이에 공허비단을 겹쳐 물리 충격과 마력을 서로 다른 층으로 흘리는 방패.',
-    image: 'items/forged_shield', category: '방패', weight: 5, stackable: false, maxStack: 1,
+    image: 'items/regent_aegis', category: '방패', weight: 5, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'offHand',
     modifiers: [
         { attribute: 'def', op: 'add', value: 92, source: '' },
@@ -3048,36 +3024,35 @@ for (const book of [
     id: book.id,
     name: book.name,
     description: `공허왕관 성채의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
-    image: 'items/seismic_crush_skillbook', category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: `items/${book.id}`, category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
     modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_VOIDCROWN, book.property],
 });
 
-// TODO(icons): 월식해구 전용 아트 제작 전까지 물·빛·어둠 계열 소재와 장비 fallback을 사용한다.
 for (const material of [
     {
-        id: 'moon_brine', name: '월염수', image: 'items/mana_potion', weight: 0.38,
+        id: 'moon_brine', name: '월염수', image: 'items/moon_brine', weight: 0.38,
         description: '달빛이 닿지 않는 해구에서만 은빛으로 굳는 고농도 마력 염수.',
         tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'eclipse_scale', name: '월식비늘', image: 'items/material_scale_shell', weight: 0.45,
+        id: 'eclipse_scale', name: '월식비늘', image: 'items/eclipse_scale', weight: 0.45,
         description: '빛과 어둠을 번갈아 반사하는 심해 생물의 단단한 비늘.',
         tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'drowned_silver', name: '침은', image: 'items/refined_iron', weight: 0.78,
+        id: 'drowned_silver', name: '침은', image: 'items/drowned_silver', weight: 0.78,
         description: '깊은 수압과 월염수에 오래 눌려 푸른 결이 생긴 은빛 합금.',
         tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
     },
     {
-        id: 'night_pearl', name: '밤진주', image: 'items/resonance_evasion_shard', weight: 0.18,
+        id: 'night_pearl', name: '밤진주', image: 'items/night_pearl', weight: 0.18,
         description: '어둠 속에서 주변의 희미한 빛을 모아 내부에 보존하는 검푸른 진주.',
         tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'abyss_fiber', name: '해구섬유', image: 'items/material_thread', weight: 0.14,
+        id: 'abyss_fiber', name: '해구섬유', image: 'items/abyss_fiber', weight: 0.14,
         description: '해류가 바뀔 때마다 스스로 꼬임을 바꾸는 질긴 심해 식물 섬유.',
         tags: [
             GameTags.MATERIAL_ECLIPSE_TRENCH,
@@ -3087,7 +3062,7 @@ for (const material of [
         ],
     },
     {
-        id: 'tide_sigil', name: '조류인장', image: 'items/material_insignia', weight: 0.25,
+        id: 'tide_sigil', name: '조류인장', image: 'items/tide_sigil', weight: 0.25,
         description: '백야성소의 수문과 조류를 통제하던 의식용 금속 인장.',
         tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
     },
@@ -3111,7 +3086,7 @@ for (const material of [
 defineItem({
     id: 'eclipse_ration', name: '월식 해초말이',
     description: '해구섬유의 연한 속살과 월염수를 말려 만든 보존식. 배고픔 125와 수분 90을 회복한다.',
-    image: 'items/traveler_bread', category: '음식', weight: 0.55, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/eclipse_ration', category: '음식', weight: 0.55, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { hunger: 125, thirst: 90, time: 1.1, useMessage: '월식 해초말이의 봉인을 푸는 중...' },
     onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER],
@@ -3120,7 +3095,7 @@ defineItem({
 defineItem({
     id: 'tideheart_tonic', name: '조류심장 영약',
     description: '밤진주에 응축한 월염수를 녹여 55초 동안 강한 정신력 재생을 부여한다.',
-    image: 'items/arcane_tonic', category: '소모품', weight: 0.34, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/tideheart_tonic', category: '소모품', weight: 0.34, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'mentality_regeneration', level: 16, duration: 55 } },
     onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_WATER],
@@ -3129,7 +3104,7 @@ defineItem({
 defineItem({
     id: 'drowned_edge', name: '침은 파도검',
     description: '침은의 무게를 칼날 앞쪽에 모아 해류처럼 연속되는 타격을 만드는 장검.',
-    image: 'items/windsteel_sword', category: '장검', weight: 4.8, stackable: false, maxStack: 1,
+    image: 'items/drowned_edge', category: '장검', weight: 4.8, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 338, source: '' },
@@ -3144,7 +3119,7 @@ defineItem({
 defineItem({
     id: 'mooncurrent_bow', name: '월조류 장궁',
     description: '해구섬유로 만든 활시위가 주변 조류를 밀어내 화살의 초가속을 유지하는 장궁.',
-    image: 'items/stormstring_bow', category: '활', weight: 3.2, stackable: false, maxStack: 1,
+    image: 'items/mooncurrent_bow', category: '활', weight: 3.2, stackable: false, maxStack: 1,
     baseMetadata: {
         [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
         [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
@@ -3163,7 +3138,7 @@ defineItem({
 defineItem({
     id: 'nightpearl_knife', name: '밤진주 잠행도',
     description: '밤진주의 빛을 칼등에 가두고 칼끝만 어둠 속에 남기는 침은 단검.',
-    image: 'items/nightglass_dagger', category: '단검', weight: 1.6, stackable: false, maxStack: 1,
+    image: 'items/nightpearl_knife', category: '단검', weight: 1.6, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 298, source: '' },
@@ -3179,7 +3154,7 @@ defineItem({
 defineItem({
     id: 'eclipse_oracle_staff', name: '월식 예언봉',
     description: '밤진주와 조류인장을 겹쳐 빛과 어둠의 마력을 같은 파동으로 발사하는 지팡이.',
-    image: 'items/starwood_staff', category: '지팡이', weight: 3.3, stackable: false, maxStack: 1,
+    image: 'items/eclipse_oracle_staff', category: '지팡이', weight: 3.3, stackable: false, maxStack: 1,
     baseMetadata: {
         [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
         [ItemMetadataKeys.PROJECTILE_ATTACK]: {
@@ -3204,7 +3179,7 @@ defineItem({
 defineItem({
     id: 'white_night_bulwark', name: '백야 조류방패',
     description: '월식비늘 사이로 충격을 순환시켜 물리 피해와 마법 피해를 번갈아 흘려보내는 방패.',
-    image: 'items/forged_shield', category: '방패', weight: 5.2, stackable: false, maxStack: 1,
+    image: 'items/white_night_bulwark', category: '방패', weight: 5.2, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'offHand',
     modifiers: [
         { attribute: 'def', op: 'add', value: 108, source: '' },
@@ -3223,41 +3198,40 @@ for (const book of [
     id: book.id,
     name: book.name,
     description: `월식해구와 백야성소의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
-    image: 'items/seismic_crush_skillbook', category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: `items/${book.id}`, category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
     modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_ECLIPSE_TRENCH, book.property],
 });
 
-// TODO(icons): 역근수해 전용 아트 제작 전까지 자연·땅·빛 계열 소재와 장비 fallback을 사용한다.
 for (const material of [
     {
-        id: 'skyroot_bark', name: '천근수피', image: 'items/material_botanical', weight: 0.64,
+        id: 'skyroot_bark', name: '천근수피', image: 'items/skyroot_bark', weight: 0.64,
         description: '하늘에서 아래로 자라는 역근의 바깥을 감싼 청회색 수피.',
         tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_EARTH],
     },
     {
-        id: 'primal_sap', name: '태초수액', image: 'items/health_potion', weight: 0.32,
+        id: 'primal_sap', name: '태초수액', image: 'items/primal_sap', weight: 0.32,
         description: '세계수가 처음 싹튼 순간의 생명력이 아직도 맥동하는 푸른 수액.',
         tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT],
     },
     {
-        id: 'memory_amber', name: '기억호박', image: 'items/resonance_evasion_shard', weight: 0.28,
+        id: 'memory_amber', name: '기억호박', image: 'items/memory_amber', weight: 0.28,
         description: '수해를 지나간 생명의 기억을 얇은 결로 보존하는 황금빛 호박.',
         tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_LIGHT],
     },
     {
-        id: 'rot_spore', name: '망각포자', image: 'items/material_botanical', weight: 0.12,
+        id: 'rot_spore', name: '망각포자', image: 'items/rot_spore', weight: 0.12,
         description: '기억과 생기를 천천히 분해해 새로운 흙으로 돌려보내는 검은 포자.',
         tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_POISON, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'heart_seed', name: '심장씨앗', image: 'items/refined_emerald', weight: 0.24,
+        id: 'heart_seed', name: '심장씨앗', image: 'items/heart_seed', weight: 0.24,
         description: '태초심장의 박동 하나를 씨앗껍질 안에 가둔 희귀한 생명 결정.',
         tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_HOLY],
     },
     {
-        id: 'rootbone_iron', name: '근골철', image: 'items/refined_iron', weight: 0.86,
+        id: 'rootbone_iron', name: '근골철', image: 'items/rootbone_iron', weight: 0.86,
         description: '오래된 뿌리뼈와 금속 광맥이 한 덩어리로 굳은 역근수해의 합금.',
         tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_METAL, GameTags.PROPERTY_EARTH],
     },
@@ -3281,7 +3255,7 @@ for (const material of [
 defineItem({
     id: 'worldroot_ration', name: '천근수피 빵',
     description: '천근수피 속살과 태초수액을 구워 만든 단단한 보존식. 배고픔 145와 수분 70을 회복한다.',
-    image: 'items/traveler_bread', category: '음식', weight: 0.58, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/worldroot_ration', category: '음식', weight: 0.58, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { hunger: 145, thirst: 70, time: 1.1, useMessage: '천근수피 빵의 단단한 껍질을 자르는 중...' },
     onUse: 'restore_survival', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL],
@@ -3290,7 +3264,7 @@ defineItem({
 defineItem({
     id: 'primordial_draught', name: '태초맥 영약',
     description: '태초수액과 심장씨앗의 맥동을 안정시켜 60초 동안 강한 재생 효과를 부여한다.',
-    image: 'items/health_potion', category: '소모품', weight: 0.36, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: 'items/primordial_draught', category: '소모품', weight: 0.36, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { [ItemMetadataKeys.STATUS_EFFECT]: { id: 'regeneration', level: 18, duration: 60 } },
     onUse: 'apply_status_effect', equipSlot: null, modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_HOLY],
@@ -3299,7 +3273,7 @@ defineItem({
 defineItem({
     id: 'rootbone_cleaver', name: '근골철 수맥검',
     description: '근골철의 결을 뿌리 방향으로 세워 방어를 가르고 생명맥을 끊는 장검.',
-    image: 'items/windsteel_sword', category: '장검', weight: 5, stackable: false, maxStack: 1,
+    image: 'items/rootbone_cleaver', category: '장검', weight: 5, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 392, source: '' },
@@ -3314,7 +3288,7 @@ defineItem({
 defineItem({
     id: 'heartstring_greatbow', name: '심장현 대궁',
     description: '심장씨앗의 맥동을 활시위에 옮겨 화살이 목표에 가까워질수록 더 빠르게 당겨지는 대궁.',
-    image: 'items/stormstring_bow', category: '활', weight: 3.35, stackable: false, maxStack: 1,
+    image: 'items/heartstring_greatbow', category: '활', weight: 3.35, stackable: false, maxStack: 1,
     baseMetadata: {
         [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
         [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
@@ -3333,7 +3307,7 @@ defineItem({
 defineItem({
     id: 'amber_memory_fang', name: '기억호박 송곳니',
     description: '기억호박에 남은 사냥의 순간을 칼끝으로 재생하는 짧은 근골철 단검.',
-    image: 'items/nightglass_dagger', category: '단검', weight: 1.65, stackable: false, maxStack: 1,
+    image: 'items/amber_memory_fang', category: '단검', weight: 1.65, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'mainHand',
     modifiers: [
         { attribute: 'atk', op: 'add', value: 346, source: '' },
@@ -3349,7 +3323,7 @@ defineItem({
 defineItem({
     id: 'origin_heart_staff', name: '기원심장 지팡이',
     description: '태초수액의 맥동을 기억호박에 순환시켜 생명과 신성 마력을 한 점으로 모으는 지팡이.',
-    image: 'items/starwood_staff', category: '지팡이', weight: 3.45, stackable: false, maxStack: 1,
+    image: 'items/origin_heart_staff', category: '지팡이', weight: 3.45, stackable: false, maxStack: 1,
     baseMetadata: {
         [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
         [ItemMetadataKeys.PROJECTILE_ATTACK]: {
@@ -3374,7 +3348,7 @@ defineItem({
 defineItem({
     id: 'canopy_heartshield', name: '천개심 방패',
     description: '천근수피와 근골철 사이에서 태초수액이 순환해 충격을 생명력으로 흩어 보내는 방패.',
-    image: 'items/forged_shield', category: '방패', weight: 5.4, stackable: false, maxStack: 1,
+    image: 'items/canopy_heartshield', category: '방패', weight: 5.4, stackable: false, maxStack: 1,
     baseMetadata: null, onUse: null, equipSlot: 'offHand',
     modifiers: [
         { attribute: 'def', op: 'add', value: 126, source: '' },
@@ -3394,29 +3368,28 @@ for (const book of [
     id: book.id,
     name: book.name,
     description: `역근수해와 태초심장의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
-    image: 'items/seismic_crush_skillbook', category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+    image: `items/${book.id}`, category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
     modifiers: null, baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_SKILL_BOOK, GameTags.MATERIAL_WORLDROOT, book.property],
 });
 
-// TODO(art): Lv.380~500 확장 권역 전용 아트 제작 전까지 역할별 기존 fallback을 명시적으로 재사용한다.
 for (const material of [
-    { id: 'nebula_glass', name: '성운유리', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_LIGHT, image: 'items/resonance_evasion_shard', weight: 0.34, description: '별빛과 먼지가 무중력 속에서 겹쳐 굳은 반투명 결정.' },
-    { id: 'comet_iron', name: '혜철', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_METAL, image: 'items/refined_iron', weight: 0.82, description: '긴 공전 끝에 식은 혜성핵에서 벗겨낸 푸른 합금.' },
-    { id: 'gravity_core', name: '중력핵', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_DARK, image: 'items/material_arcane_core', weight: 0.55, description: '주변 질량을 미세하게 당기는 성운회랑의 응축핵.' },
-    { id: 'star_silk', name: '성사', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_LIGHT, image: 'items/material_thread', weight: 0.12, description: '별빛 누에가 진공 속에 남긴 질기고 가벼운 실.' },
-    { id: 'orbit_fragment', name: '궤도편', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_ELECTRIC, image: 'items/resonance_evasion_shard', weight: 0.24, description: '무너진 천체 궤도의 방향성을 간직한 작은 파편.' },
-    { id: 'chronofrost_ice', name: '시빙정', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_ICE, image: 'items/diamond', weight: 0.38, description: '얼어붙은 한 순간이 결정 내부에서 끝없이 반복되는 얼음.' },
-    { id: 'pendulum_steel', name: '진자강', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_METAL, image: 'items/refined_iron', weight: 0.88, description: '시간 진자의 왕복 운동을 기억해 충격을 되돌리는 강철.' },
-    { id: 'frozen_second', name: '동결초', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_ICE, image: 'items/resonance_evasion_shard', weight: 0.2, description: '흐르지 못한 1초가 얇은 수정막으로 굳은 조각.' },
-    { id: 'aeon_thread', name: '영겁실', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_ELECTRIC, image: 'items/material_thread', weight: 0.1, description: '어제와 내일을 한 매듭으로 잇는 은빛 실.' },
-    { id: 'reverse_sand', name: '역행사', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_EARTH, image: 'items/stone', weight: 0.18, description: '바닥에 닿으면 다시 위로 흐르는 회백색 모래.' },
-    { id: 'endstar_ash', name: '종성재', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_FIRE, image: 'items/ember_alloy', weight: 0.28, description: '마지막 빛을 모두 태운 별이 남긴 따뜻한 재.' },
-    { id: 'genesis_crystal', name: '창세정', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_HOLY, image: 'items/refined_diamond', weight: 0.42, description: '아직 태어나지 않은 별의 첫 빛이 갇힌 결정.' },
-    { id: 'entropy_metal', name: '소멸금', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_DARK, image: 'items/refined_iron', weight: 0.92, description: '시간이 지날수록 표면이 매끄럽게 사라지는 검은 금속.' },
-    { id: 'last_light', name: '잔광편', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_LIGHT, image: 'items/resonance_evasion_shard', weight: 0.16, description: '꺼진 성좌가 마지막으로 내보낸 빛을 붙잡은 파편.' },
-    { id: 'constellation_core', name: '성좌핵', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_ELECTRIC, image: 'items/material_arcane_core', weight: 0.58, description: '여러 별의 연결을 하나의 심장처럼 뛰게 하는 희귀 핵.' },
+    { id: 'nebula_glass', name: '성운유리', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_LIGHT, image: 'items/nebula_glass', weight: 0.34, description: '별빛과 먼지가 무중력 속에서 겹쳐 굳은 반투명 결정.' },
+    { id: 'comet_iron', name: '혜철', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_METAL, image: 'items/comet_iron', weight: 0.82, description: '긴 공전 끝에 식은 혜성핵에서 벗겨낸 푸른 합금.' },
+    { id: 'gravity_core', name: '중력핵', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_DARK, image: 'items/gravity_core', weight: 0.55, description: '주변 질량을 미세하게 당기는 성운회랑의 응축핵.' },
+    { id: 'star_silk', name: '성사', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_LIGHT, image: 'items/star_silk', weight: 0.12, description: '별빛 누에가 진공 속에 남긴 질기고 가벼운 실.' },
+    { id: 'orbit_fragment', name: '궤도편', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_ELECTRIC, image: 'items/orbit_fragment', weight: 0.24, description: '무너진 천체 궤도의 방향성을 간직한 작은 파편.' },
+    { id: 'chronofrost_ice', name: '시빙정', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_ICE, image: 'items/chronofrost_ice', weight: 0.38, description: '얼어붙은 한 순간이 결정 내부에서 끝없이 반복되는 얼음.' },
+    { id: 'pendulum_steel', name: '진자강', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_METAL, image: 'items/pendulum_steel', weight: 0.88, description: '시간 진자의 왕복 운동을 기억해 충격을 되돌리는 강철.' },
+    { id: 'frozen_second', name: '동결초', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_ICE, image: 'items/frozen_second', weight: 0.2, description: '흐르지 못한 1초가 얇은 수정막으로 굳은 조각.' },
+    { id: 'aeon_thread', name: '영겁실', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_ELECTRIC, image: 'items/aeon_thread', weight: 0.1, description: '어제와 내일을 한 매듭으로 잇는 은빛 실.' },
+    { id: 'reverse_sand', name: '역행사', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_EARTH, image: 'items/reverse_sand', weight: 0.18, description: '바닥에 닿으면 다시 위로 흐르는 회백색 모래.' },
+    { id: 'endstar_ash', name: '종성재', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_FIRE, image: 'items/endstar_ash', weight: 0.28, description: '마지막 빛을 모두 태운 별이 남긴 따뜻한 재.' },
+    { id: 'genesis_crystal', name: '창세정', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_HOLY, image: 'items/genesis_crystal', weight: 0.42, description: '아직 태어나지 않은 별의 첫 빛이 갇힌 결정.' },
+    { id: 'entropy_metal', name: '소멸금', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_DARK, image: 'items/entropy_metal', weight: 0.92, description: '시간이 지날수록 표면이 매끄럽게 사라지는 검은 금속.' },
+    { id: 'last_light', name: '잔광편', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_LIGHT, image: 'items/last_light', weight: 0.16, description: '꺼진 성좌가 마지막으로 내보낸 빛을 붙잡은 파편.' },
+    { id: 'constellation_core', name: '성좌핵', region: GameTags.MATERIAL_ENDSTAR, property: GameTags.PROPERTY_ELECTRIC, image: 'items/constellation_core', weight: 0.58, description: '여러 별의 연결을 하나의 심장처럼 뛰게 하는 희귀 핵.' },
 ] as const) defineItem({
     id: material.id,
     name: material.name,
@@ -3435,9 +3408,9 @@ for (const material of [
 });
 
 for (const consumable of [
-    { id: 'nebula_ration', name: '유성등 건량', region: GameTags.MATERIAL_NEBULA_CORRIDOR, hunger: 165, thirst: 90, image: 'items/traveler_bread', description: '성사로 묶은 별열매 건량. 배고픔 165와 수분 90을 회복한다.' },
-    { id: 'chronofrost_ration', name: '영겁 보존식', region: GameTags.MATERIAL_CHRONOFROST, hunger: 185, thirst: 105, image: 'items/traveler_bread', description: '시간이 멈춘 용기 안에서 숙성된 보존식. 배고픔 185와 수분 105를 회복한다.' },
-    { id: 'endstar_ration', name: '마지막 별찬', region: GameTags.MATERIAL_ENDSTAR, hunger: 210, thirst: 125, image: 'items/traveler_bread', description: '종성재의 온기로 익힌 성단의 비상식. 배고픔 210과 수분 125를 회복한다.' },
+    { id: 'nebula_ration', name: '유성등 건량', region: GameTags.MATERIAL_NEBULA_CORRIDOR, hunger: 165, thirst: 90, image: 'items/nebula_ration', description: '성사로 묶은 별열매 건량. 배고픔 165와 수분 90을 회복한다.' },
+    { id: 'chronofrost_ration', name: '영겁 보존식', region: GameTags.MATERIAL_CHRONOFROST, hunger: 185, thirst: 105, image: 'items/chronofrost_ration', description: '시간이 멈춘 용기 안에서 숙성된 보존식. 배고픔 185와 수분 105를 회복한다.' },
+    { id: 'endstar_ration', name: '마지막 별찬', region: GameTags.MATERIAL_ENDSTAR, hunger: 210, thirst: 125, image: 'items/endstar_ration', description: '종성재의 온기로 익힌 성단의 비상식. 배고픔 210과 수분 125를 회복한다.' },
 ] as const) defineItem({
     id: consumable.id,
     name: consumable.name,
@@ -3468,7 +3441,7 @@ for (const tonic of [
     id: tonic.id,
     name: tonic.name,
     description: `${tonic.name}의 응축된 흐름이 60초 동안 강한 재생 효과를 부여합니다.`,
-    image: 'items/health_potion',
+    image: `items/${tonic.id}`,
     category: '소모품',
     weight: 0.38,
     stackable: true,
@@ -3484,7 +3457,7 @@ for (const tonic of [
 const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     {
         id: 'nebula_edge', name: '성운궤도검', description: '혜철 칼날이 목표의 움직임을 따라 미세한 궤도를 수정한다. 적중 시 30% 확률로 5초간 둔화 Lv.10을 부여한다.',
-        image: 'items/windsteel_sword', category: '장검', weight: 5.1, stackable: false, maxStack: 1,
+        image: 'items/nebula_edge', category: '장검', weight: 5.1, stackable: false, maxStack: 1,
         baseMetadata: null, onUse: null, equipSlot: 'mainHand',
         modifiers: [
             { attribute: 'atk', op: 'add', value: 455, source: '' },
@@ -3499,7 +3472,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'gravity_arc_bow', name: '중력호 장궁', description: '중력핵이 화살의 낙차를 지워 먼 목표까지 직선 궤도를 유지한다. 적중 시 25% 확률로 4초간 둔화 Lv.12를 부여한다.',
-        image: 'items/stormstring_bow', category: '활', weight: 3.4, stackable: false, maxStack: 1,
+        image: 'items/gravity_arc_bow', category: '활', weight: 3.4, stackable: false, maxStack: 1,
         baseMetadata: {
             [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
             [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
@@ -3528,7 +3501,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'orbit_fang', name: '궤도이탈 송곳니', description: '궤도편의 방향을 순간적으로 비틀어 방어 틈으로 파고든다. 적중 시 25% 확률로 6초간 방어력 감소 Lv.12를 부여한다.',
-        image: 'items/nightglass_dagger', category: '단검', weight: 1.7, stackable: false, maxStack: 1,
+        image: 'items/orbit_fang', category: '단검', weight: 1.7, stackable: false, maxStack: 1,
         baseMetadata: {
             [ItemMetadataKeys.ATTACK_EFFECTS]: [{
                 type: ItemAttackEffectType.CURRENT_LIFE_BURST.id,
@@ -3556,7 +3529,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'starwell_staff', name: '성정우물 지팡이', description: '성운유리 안쪽에 끝없이 떨어지는 별빛을 마력으로 되돌린다. 마력탄 적중 시 최대 정신력의 1.5%를 회복한다.',
-        image: 'items/starwood_staff', category: '지팡이', weight: 3.5, stackable: false, maxStack: 1,
+        image: 'items/starwell_staff', category: '지팡이', weight: 3.5, stackable: false, maxStack: 1,
         baseMetadata: {
             [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
             [ItemMetadataKeys.PROJECTILE_ATTACK]: {
@@ -3578,7 +3551,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'meteor_bulwark', name: '낙성 방벽', description: '혜철과 중력핵으로 충격을 방패 중심에 붙잡는다. 피격 시 최대 생명력의 2%와 받은 피해의 20%를 합친 보호막을 4초간 얻는다.',
-        image: 'items/forged_shield', category: '방패', weight: 5.6, stackable: false, maxStack: 1,
+        image: 'items/meteor_bulwark', category: '방패', weight: 5.6, stackable: false, maxStack: 1,
         baseMetadata: null, onUse: null, equipSlot: 'offHand',
         modifiers: [
             { attribute: 'def', op: 'add', value: 150, source: '' },
@@ -3594,7 +3567,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'chronoblade', name: '영시 절단검', description: '베인 순간을 짧게 고정해 뒤늦게 같은 상처를 겹친다. 적중 시 30% 확률로 7초간 출혈 Lv.13을 부여한다.',
-        image: 'items/windsteel_sword', category: '장검', weight: 5.2, stackable: false, maxStack: 1,
+        image: 'items/chronoblade', category: '장검', weight: 5.2, stackable: false, maxStack: 1,
         baseMetadata: null, onUse: null, equipSlot: 'mainHand',
         modifiers: [
             { attribute: 'atk', op: 'add', value: 530, source: '' },
@@ -3609,7 +3582,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'pendulum_bow', name: '진자시계궁', description: '영겁실의 왕복 장력으로 화살을 되돌려 보낸다. 적중 시 18% 확률로 1.2초간 기절을 부여한다.',
-        image: 'items/stormstring_bow', category: '활', weight: 3.45, stackable: false, maxStack: 1,
+        image: 'items/pendulum_bow', category: '활', weight: 3.45, stackable: false, maxStack: 1,
         baseMetadata: {
             [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
             [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
@@ -3628,7 +3601,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'yesterglass_dagger', name: '어제유리 비수', description: '공격 직전의 궤적을 되짚어 같은 빈틈을 두 번 찌른다. 적중 시 18% 확률로 2.5초간 빙결 Lv.8을 부여한다.',
-        image: 'items/nightglass_dagger', category: '단검', weight: 1.72, stackable: false, maxStack: 1,
+        image: 'items/yesterglass_dagger', category: '단검', weight: 1.72, stackable: false, maxStack: 1,
         baseMetadata: null, onUse: null, equipSlot: 'mainHand',
         modifiers: [
             { attribute: 'atk', op: 'add', value: 470, source: '' },
@@ -3644,7 +3617,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'zero_hour_staff', name: '영시각 지팡이', description: '동결초를 중심으로 정신력의 흐름만 남기고 주변 시간을 늦춘다. 마력탄 적중 시 22% 확률로 3초간 빙결 Lv.10을 부여한다.',
-        image: 'items/starwood_staff', category: '지팡이', weight: 3.6, stackable: false, maxStack: 1,
+        image: 'items/zero_hour_staff', category: '지팡이', weight: 3.6, stackable: false, maxStack: 1,
         baseMetadata: {
             [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
             [ItemMetadataKeys.PROJECTILE_ATTACK]: {
@@ -3676,7 +3649,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'aeon_bulwark', name: '영겁 진자방패', description: '받은 충격을 영겁실에 저장했다가 보호막으로 되돌린다.',
-        image: 'items/forged_shield', category: '방패', weight: 5.8, stackable: false, maxStack: 1,
+        image: 'items/aeon_bulwark', category: '방패', weight: 5.8, stackable: false, maxStack: 1,
         baseMetadata: null, onUse: null, equipSlot: 'offHand',
         modifiers: [
             { attribute: 'def', op: 'add', value: 180, source: '' },
@@ -3692,7 +3665,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'endstar_edge', name: '종성단절검', description: '소멸금 칼날이 베어낸 경계에서 빛과 어둠의 연결을 함께 끊는다. 적중 시 32% 확률로 8초간 방어력 감소 Lv.16을 부여한다.',
-        image: 'items/windsteel_sword', category: '장검', weight: 5.35, stackable: false, maxStack: 1,
+        image: 'items/endstar_edge', category: '장검', weight: 5.35, stackable: false, maxStack: 1,
         baseMetadata: {
             [ItemMetadataKeys.ATTACK_EFFECTS]: [{
                 type: ItemAttackEffectType.LIFE_SIPHON.id,
@@ -3719,7 +3692,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'constellation_bow', name: '성좌연결궁', description: '별자리의 연결선을 시위로 삼아 목표가 움직일 미래 좌표로 화살을 보낸다. 적중 시 24% 확률로 5초간 실명 Lv.12를 부여한다.',
-        image: 'items/stormstring_bow', category: '활', weight: 3.55, stackable: false, maxStack: 1,
+        image: 'items/constellation_bow', category: '활', weight: 3.55, stackable: false, maxStack: 1,
         baseMetadata: {
             [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
             [ItemMetadataKeys.PROJECTILE_ATTACK]: { ammunitionItemId: 'wooden_arrow' },
@@ -3748,7 +3721,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'entropy_fang', name: '엔트로피 송곳니', description: '소멸금 칼날이 적중할 때마다 주변 질서를 깎는다. 적중 시 28% 확률로 8초간 부패 Lv.14를 부여한다.',
-        image: 'items/nightglass_dagger', category: '단검', weight: 1.78, stackable: false, maxStack: 1,
+        image: 'items/entropy_fang', category: '단검', weight: 1.78, stackable: false, maxStack: 1,
         baseMetadata: null, onUse: null, equipSlot: 'mainHand',
         modifiers: [
             { attribute: 'atk', op: 'add', value: 565, source: '' },
@@ -3764,7 +3737,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'genesis_staff', name: '창세성 지팡이', description: '창세정과 성좌핵 사이에서 새 별의 마력 순환을 재현한다. 마력탄 적중 시 짧은 창세 보호막을 얻는다.',
-        image: 'items/starwood_staff', category: '지팡이', weight: 3.75, stackable: false, maxStack: 1,
+        image: 'items/genesis_staff', category: '지팡이', weight: 3.75, stackable: false, maxStack: 1,
         baseMetadata: {
             [ItemMetadataKeys.BASIC_ATTACK_OVERRIDE]: ItemAttackOverrideKeys.PROJECTILE,
             [ItemMetadataKeys.PROJECTILE_ATTACK]: {
@@ -3786,7 +3759,7 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
     },
     {
         id: 'horizon_bulwark', name: '최후지평 방패', description: '종성재와 소멸금을 겹쳐 충격을 마지막 지평선 바깥으로 밀어낸다.',
-        image: 'items/forged_shield', category: '방패', weight: 6, stackable: false, maxStack: 1,
+        image: 'items/horizon_bulwark', category: '방패', weight: 6, stackable: false, maxStack: 1,
         baseMetadata: null, onUse: null, equipSlot: 'offHand',
         modifiers: [
             { attribute: 'def', op: 'add', value: 220, source: '' },
@@ -3803,7 +3776,6 @@ const frontierEquipment: Parameters<typeof defineItem>[0][] = [
 ];
 for (const item of frontierEquipment) defineItem(item);
 
-// TODO(art): 전용 가방 아트 제작 전까지 모든 성장 가방이 가방 카테고리 fallback을 공유한다.
 for (const bag of [
     {
         id: 'traveler_leather_bag', name: '여행자 가죽가방', capacity: 25, weight: 0.8,
@@ -3877,7 +3849,7 @@ for (const bag of [
     id: bag.id,
     name: bag.name,
     description: `${bag.description} 장착하면 최대 중량이 ${bag.capacity}kg 증가합니다.`,
-    image: 'items/bag_fallback',
+    image: `items/${bag.id}`,
     category: '가방',
     weight: bag.weight,
     stackable: false,
