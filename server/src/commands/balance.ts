@@ -31,7 +31,7 @@ export function initBalanceCommands(): void {
         aliases: ['balanceprofile', 'bp'],
         permission: 10,
         showCommandUse: 'private',
-        description: '실제 장비와 성장 스킬을 적용해 평타·전체 스킬 로테이션으로 동레벨 일반/보스전을 비교합니다.',
+        description: '실제 장비와 성장 스킬로 동레벨 일반/보스전의 화력·선공 폭딜·피격 생존을 비교합니다.',
         args: [
             { name: '레벨', description: `분석 레벨 또는 전체 (생략 시 Lv.${DEFAULT_LEVEL})`, required: false,
                 completions: [{ value: '전체', description: `Lv.${BALANCE_PROFILE_LEVELS.join('/')} 구간 비교` }] },
@@ -191,7 +191,7 @@ function buildBalanceProfileMessage(report: BalanceProfileReport) {
     appendRotation(builder, report.monster);
     appendRotation(builder, report.boss);
     return builder.divider('계산 원칙')
-        .text('평타를 최소 3행동마다 섞고 모든 사용 가능 스킬을 순환합니다. 지속 피해·제어·회피는 직접 피해와 분리됩니다.')
+        .text('평타를 최소 3행동마다 섞고 모든 사용 가능 스킬을 순환합니다. 치명타 포함 최대 적중 단발과 기대 피해 로테이션을 구분하며, 피격 회피·확정 회피는 공격 점수가 아닌 생존 축에만 반영합니다.')
         .build();
 }
 
@@ -200,13 +200,24 @@ function appendRotation(builder: ReturnType<typeof chat>, rotation: CombatRotati
     builder.divider(rotation.encounter.label)
         .text(`대상 Lv.${rotation.targetLevel} ${rotation.targetName}${source}\n`)
         .text(`장비 ${rotation.loadoutName} · ${rotation.basicAttackType === 'magic' ? '마법' : '물리'} 평타\n`)
+        .text(`생명력 본인 ${format(rotation.playerMaxLife)} · 대상 ${format(rotation.targetMaxLife)}\n`)
         .text(`이동속도 ${format(rotation.currentSpeed)} : ${format(rotation.targetSpeed)}\n`)
         .text(`평타 판정속도 ${format(rotation.basicAttackEvasionSpeed)} · 대상 회피 ${format(rotation.evasionChance * 100)}%\n`)
         .text(`90% 회피 기준 속도 ${format(rotation.evasionCapSpeed)} · 필요 민첩 ${rotation.evasionCapAgility}${rotation.evasionCapReached ? ' (현재 도달)' : ''}\n`)
         .text(`${rotation.basicAttackType === 'magic' ? '마법 관통' : '방어 관통'} ${format(rotation.penetration)} · 대상 방어 ${format(rotation.targetDefense)} → 유효 ${format(rotation.effectiveDefense)}\n`)
-        .weight('bold', b => b.text(`DPS ${format(rotation.dps)} · 예상 처치 ${formatSeconds(rotation.estimatedKillSeconds)}\n`))
+        .weight('bold', b => b.text(`DPS ${format(rotation.dps)} · 평균 환산 ${formatSeconds(rotation.estimatedKillSeconds)} · 실제 로테이션 처치 ${formatSeconds(rotation.simulatedKillSeconds)}\n`))
+        .text(`최대 적중 단발 ${rotation.maxOpeningActionName} ${format(rotation.maxOpeningActionDamage)}${rotation.oneActionKill ? ' (치명타 포함 한 방 가능)' : ''}\n`)
+        .text(`첫 반격 ${formatSeconds(rotation.counterattackDelay)} · 선공 ${rotation.openingBurstActions}행동 ${format(rotation.openingBurstDamage)}${rotation.killsBeforeCounterattack ? ` · ${formatSeconds(rotation.openingBurstKillSeconds)}에 반격 전 처치` : ''}\n`)
         .text(`평타 ${rotation.basicAttacks}회 / 피해 ${format(rotation.basicDamage)} (${format(rotation.basicDamageShare * 100)}%)\n`)
-        .text(`스킬 ${rotation.skillCasts}회 / 피해 ${format(rotation.skillDamage)} / 종료 정신력 ${format(rotation.endingMentality)}\n`);
+        .text(`스킬 ${rotation.skillCasts}회 / 피해 ${format(rotation.skillDamage)} / 종료 정신력 ${format(rotation.endingMentality)}\n`)
+        .text(`피격 회피 ${format(rotation.defenderEvasionChance * 100)}% · 확정 회피 가동률 ${format(rotation.guaranteedEvasionCoverage * 100)}%\n`)
+        .text(`적 평타 ${format(rotation.incomingBasicDamage)} / ${formatSeconds(rotation.incomingBasicInterval)}`)
+        .text(rotation.strongestIncomingSkillName
+            ? ` · 최대 기술 ${rotation.strongestIncomingSkillName} ${format(rotation.strongestIncomingSkillDamage)}${rotation.strongestIncomingSkillUnavoidable ? ' (회피 불가)' : ''}${rotation.strongestIncomingSkillOneShots ? ' (즉사)' : ''}\n`
+            : '\n')
+        .text(`생존시간 무회피 ${formatSeconds(rotation.rawSurvivalSeconds)} → 속도 회피 ${formatSeconds(rotation.evasionSurvivalSeconds)} → 방어기 포함 ${formatSeconds(rotation.effectiveSurvivalSeconds)}\n`)
+        .text(`처치 전 예상 피격 ${format(rotation.expectedIncomingHitsBeforeKill)}회 / 피해 ${format(rotation.expectedIncomingDamageBeforeKill)} / 회복·보호막 ${format(rotation.projectedSupportBeforeKill)}\n`)
+        .weight('bold', b => b.text(`처치 후 예상 생명력 ${format(rotation.expectedLifeAfterKill)} · ${rotation.survivesUntilKill ? '생존' : '사망'}${rotation.evasionPreventsDeath ? ' (회피가 사망 방지)' : ''}\n`));
     for (const skill of rotation.skills) {
         builder.text(`- ${skill.name} Lv.${skill.skillLevel}: ${skill.casts}회`)
             .text(skill.damage > 0 ? ` · 피해 ${format(skill.damage)}` : '')
@@ -223,9 +234,10 @@ function buildProfileComparisonMessage(reports: readonly BalanceProfileReport[])
         .divider('직업별 결과');
     for (const report of reports) {
         builder.weight('bold', b => b.text(report.name))
-            .text(`  일반 DPS ${format(report.monster.dps)} / ${formatSeconds(report.monster.estimatedKillSeconds)}`)
-            .text(`  보스 DPS ${format(report.boss.dps)} / ${formatSeconds(report.boss.estimatedKillSeconds)}`)
-            .text(`  평타 ${format(report.boss.basicDamageShare * 100)}%\n`);
+            .text(`  일반 ${format(report.monster.dps)} DPS / ${formatSeconds(report.monster.simulatedKillSeconds)}`)
+            .text(`  보스 ${format(report.boss.dps)} DPS / ${formatSeconds(report.boss.simulatedKillSeconds)}`)
+            .text(`  단발 ${format(report.boss.maxOpeningActionDamage)}${report.boss.oneActionKill ? ' 한 방 가능' : ''}`)
+            .text(`  생존 ${report.boss.survivesUntilKill ? 'O' : 'X'}\n`);
     }
     return builder.build();
 }
@@ -235,7 +247,7 @@ function buildLevelBandProfileMessage(reports: readonly BalanceProfileReport[]) 
     for (const level of [...new Set(reports.map(report => report.level))]) {
         builder.divider(`Lv.${level}`);
         for (const report of reports.filter(value => value.level === level)) {
-            builder.text(`${report.name}: 일반 ${format(report.monster.dps)} DPS · 보스 ${format(report.boss.dps)} DPS · 보스 처치 ${formatSeconds(report.boss.estimatedKillSeconds)}\n`);
+            builder.text(`${report.name}: 일반 ${format(report.monster.dps)} DPS · 보스 ${format(report.boss.dps)} DPS · 실제 처치 ${formatSeconds(report.boss.simulatedKillSeconds)} · 선공 ${format(report.boss.maxOpeningActionDamage)} · ${report.boss.survivesUntilKill ? '생존' : '사망'}\n`);
         }
     }
     return builder.build();
@@ -360,7 +372,7 @@ function format(value: number): string {
     return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, '');
 }
 
-function formatSeconds(value: number): string { return `${format(value)}초`; }
+function formatSeconds(value: number): string { return Number.isFinite(value) ? `${format(value)}초` : '∞'; }
 
 function formatPair(before: number, after: number, suffix = ''): string {
     const delta = after - before;

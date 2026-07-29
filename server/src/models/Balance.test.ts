@@ -295,8 +295,52 @@ test('combat profiles share resources while mixing basics and every available jo
             assert.equal(rotation.effectiveDefense, Math.max(0, rotation.targetDefense - rotation.penetration));
             assert.ok(rotation.currentSpeed > 0 && rotation.targetSpeed > 0);
             assert.ok(rotation.basicAttackEvasionSpeed > 0);
+            assert.ok(rotation.playerMaxLife > 0 && rotation.targetMaxLife > 0);
+            assert.ok(rotation.simulatedKillSeconds > 0);
+            assert.ok(rotation.maxOpeningActionDamage > 0);
+            assert.ok(rotation.openingBurstDamage > 0);
+            assert.ok(rotation.incomingBasicDamage > 0);
+            assert.ok(rotation.defenderEvasionChance >= 0 && rotation.defenderEvasionChance <= 0.9);
+            assert.ok(rotation.evasionSurvivalSeconds >= rotation.rawSurvivalSeconds);
+            assert.ok(rotation.effectiveSurvivalSeconds >= rotation.evasionSurvivalSeconds);
+            assert.ok(rotation.expectedIncomingHitsBeforeKill >= 0);
+            assert.ok(rotation.expectedIncomingDamageBeforeKill >= 0);
         }
     }
+});
+
+test('opening burst reports a real one-action kill before the target can counterattack', () => {
+    const scenario = createBalanceScenario(100, 'career:warrior', undefined, BalanceEncounterType.BOSS);
+    scenario.entity.attribute.addModifier({
+        attribute: AttributeType.ATK.key,
+        op: 'multiply',
+        value: 100,
+        source: 'test:nuking',
+    });
+    const report = analyzeCombatRotation(scenario);
+
+    assert.equal(report.oneActionKill, true);
+    assert.equal(report.killsBeforeCounterattack, true);
+    assert.ok(report.simulatedKillSeconds < report.counterattackDelay);
+    assert.equal(report.expectedIncomingHitsBeforeKill, 0);
+    assert.equal(report.expectedIncomingDamageBeforeKill, 0);
+});
+
+test('guaranteed evasion is measured as defensive uptime instead of arbitrary damage', () => {
+    const report = analyzeBalanceProfile(200, 'career:archer').boss;
+    assert.ok(report.skills.some(skill => skill.skillId === 'wind_evasion' && skill.damage === 0));
+    assert.ok(report.guaranteedEvasionCoverage > 0);
+    assert.ok(report.effectiveSurvivalSeconds >= report.evasionSurvivalSeconds);
+});
+
+test('boss survival profile uses the real monster skill pattern and reports lethal pressure separately', () => {
+    const report = analyzeBalanceProfile(200, 'career:warrior').boss;
+    assert.ok(report.strongestIncomingSkillName);
+    assert.ok(report.strongestIncomingSkillDamage > 0);
+    assert.equal(
+        report.strongestIncomingSkillOneShots,
+        report.strongestIncomingSkillDamage >= report.playerMaxLife,
+    );
 });
 
 test('recommended mage equipment follows the actual early-to-late staff progression', () => {

@@ -180,6 +180,8 @@ export interface SkillData {
         calculateEvasionAttackSpeed?: (context: SkillContext) => number;
         /** 실제 공격 옵션이 회피 불가일 때 밸런스 계산에서도 명중률을 100%로 고정한다. */
         unavoidable?: boolean;
+        /** 지속시간 동안 받는 회피 가능한 공격을 모두 피하는 실제 방어 효과. */
+        guaranteedEvasion?: boolean;
         criticalMode?: SkillCriticalMode;
         hitCount?: number;
         targetCount?: number;

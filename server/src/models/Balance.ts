@@ -21,7 +21,7 @@ import {
 } from './Item.js';
 import { StatusEffectType } from './StatusEffect.js';
 import { GameTags } from '../../../shared/tags.js';
-import Monster, { getAllMonsterData, type MonsterData } from './Monster.js';
+import Monster, { getAllMonsterData, getMonsterData, type MonsterData } from './Monster.js';
 import { applyTagEffectValue } from './TagEffect.js';
 import type { TagId } from '../../../shared/tags.js';
 import {
@@ -139,8 +139,19 @@ export interface CombatRotationReport {
     readonly totalDamage: number;
     readonly dps: number;
     readonly basicDamageShare: number;
+    readonly playerMaxLife: number;
     readonly targetMaxLife: number;
     readonly estimatedKillSeconds: number;
+    /** 로테이션 누적 피해가 실제 대상 최대 생명력을 처음 넘은 행동 종료 시각. */
+    readonly simulatedKillSeconds: number;
+    readonly maxOpeningActionName: string;
+    readonly maxOpeningActionDamage: number;
+    readonly oneActionKill: boolean;
+    readonly counterattackDelay: number;
+    readonly openingBurstActions: number;
+    readonly openingBurstDamage: number;
+    readonly openingBurstKillSeconds: number;
+    readonly killsBeforeCounterattack: boolean;
     readonly currentSpeed: number;
     readonly targetSpeed: number;
     readonly basicAttackEvasionSpeed: number;
@@ -154,8 +165,42 @@ export interface CombatRotationReport {
     readonly endingMentality: number;
     readonly totalHealing: number;
     readonly totalShield: number;
+    /** 몬스터가 플레이어를 공격할 때 플레이어 이동속도로 발생하는 기본 회피율. */
+    readonly defenderEvasionChance: number;
+    readonly guaranteedEvasionCoverage: number;
+    readonly incomingBasicDamage: number;
+    readonly incomingBasicInterval: number;
+    readonly strongestIncomingSkillName?: string;
+    readonly strongestIncomingSkillDamage: number;
+    readonly strongestIncomingSkillUnavoidable: boolean;
+    readonly strongestIncomingSkillOneShots: boolean;
+    readonly rawSurvivalSeconds: number;
+    readonly evasionSurvivalSeconds: number;
+    readonly effectiveSurvivalSeconds: number;
+    readonly expectedIncomingHitsBeforeKill: number;
+    readonly expectedIncomingDamageBeforeKill: number;
+    readonly projectedSupportBeforeKill: number;
+    readonly expectedLifeAfterKill: number;
+    readonly survivesUntilKill: boolean;
+    readonly evasionPreventsDeath: boolean;
     readonly skills: readonly RotationSkillReport[];
     readonly notes: readonly string[];
+}
+
+interface IncomingAttackSnapshot {
+    readonly name: string;
+    readonly damageOnHit: number;
+    readonly expectedDamage: number;
+    readonly evasionChance: number;
+    readonly unavoidable: boolean;
+}
+
+interface OpeningBurstSnapshot {
+    readonly maxActionName: string;
+    readonly maxActionDamage: number;
+    readonly actionCount: number;
+    readonly damage: number;
+    readonly killSeconds: number;
 }
 
 export interface BalanceProfileReport {
@@ -441,6 +486,20 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
     const entity = scenario.entity;
     const target = scenario.target;
     const actionInterval = Math.max(BALANCE_ACTION_FLOOR_SECONDS, 1 / Math.max(0.1, entity.attribute.get(AttributeType.ATTACK_SPEED)));
+    const incomingBasic = calculateIncomingBasicAttack(scenario);
+    const incomingBasicInterval = Math.max(
+        BALANCE_ACTION_FLOOR_SECONDS,
+        1 / Math.max(0.1, target.attribute.get(AttributeType.ATTACK_SPEED)),
+    );
+    const targetData = getMonsterData(scenario.targetDataId);
+    const counterattackDelay = Math.min(
+        incomingBasicInterval,
+        Math.max(0, targetData?.skillPattern?.initialDelay ?? Number.POSITIVE_INFINITY),
+    );
+    const opening = calculateOpeningBurst(scenario, actionInterval, counterattackDelay);
+    const incomingSkills = calculateIncomingSkillAttacks(scenario, targetData);
+    const strongestIncomingSkill = [...incomingSkills.values()]
+        .sort((left, right) => right.damageOnHit - left.damageOnHit)[0];
     // 회피 투자 기준은 로테이션 도중 우연히 남아 있는 짧은 버프가 아니라 상시 장비·직업 modifier로 계산한다.
     const currentSpeed = entity.attribute.get(AttributeType.SPEED);
     const targetSpeed = target.attribute.get(AttributeType.SPEED);
@@ -467,6 +526,10 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
     let skillsSinceBasic = 0;
     let totalHealing = 0;
     let totalShield = 0;
+    let cumulativeDamage = 0;
+    let simulatedKillSeconds = Number.POSITIVE_INFINITY;
+    const supportEvents: Array<{ at: number; amount: number }> = [];
+    const guaranteedEvasionWindows: Array<{ start: number; end: number }> = [];
     while (time < window - 0.0001) {
         for (const entry of entries) {
             if (entry.activeUntil > 0 && entry.activeUntil <= time + 0.0001) {
@@ -484,6 +547,7 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
         if (shouldBasic) {
             const damage = calculateExpectedBasicHit(scenario);
             basicDamage += damage;
+            cumulativeDamage += damage;
             basicAttacks++;
             skillsSinceBasic = 0;
         } else {
@@ -502,6 +566,7 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
             mentality = Math.max(0, mentality - cost);
             entry.casts++;
             entry.damage += report.expectedDamagePerTarget;
+            cumulativeDamage += report.expectedDamagePerTarget;
             entry.healing += report.healing;
             entry.shield += report.shield;
             entry.manaSpent += cost;
@@ -516,6 +581,9 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
             }
             const modifiers = entry.data.balance?.calculateRotationModifiers?.(context) ?? [];
             const effectDuration = finiteNonNegative(entry.data.balance?.calculateEffectDuration?.(context) ?? 0);
+            if (entry.data.balance?.guaranteedEvasion && effectDuration > 0) {
+                guaranteedEvasionWindows.push({ start: time, end: time + effectDuration });
+            }
             if (modifiers.length && effectDuration > 0) {
                 const source = `balance:rotation:${entry.data.id}`;
                 entity.attribute.removeBySource(source);
@@ -524,17 +592,59 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
             }
             totalHealing += report.healing;
             totalShield += report.shield;
+            if (report.healing + report.shield > 0) {
+                supportEvents.push({ at: Math.min(window, time + actionInterval), amount: report.healing + report.shield });
+            }
             skillsSinceBasic++;
+        }
+        const actionEndsAt = Math.min(window, time + actionInterval);
+        if (!Number.isFinite(simulatedKillSeconds) && cumulativeDamage >= target.maxLife) {
+            simulatedKillSeconds = actionEndsAt;
         }
         time += actionInterval;
     }
     const skillDamage = entries.reduce((sum, entry) => sum + entry.damage, 0);
     const totalDamage = basicDamage + skillDamage;
     const dps = totalDamage / window;
+    const fightHorizon = Math.min(window, simulatedKillSeconds);
+    const guaranteedEvasionCoverage = calculateWindowCoverage(guaranteedEvasionWindows, window);
+    const projectedSupportBeforeKill = supportEvents
+        .filter(event => event.at <= fightHorizon + 0.0001)
+        .reduce((sum, event) => sum + event.amount, 0);
+    const incomingBeforeKill = calculateIncomingBeforeHorizon(
+        fightHorizon,
+        incomingBasic,
+        incomingBasicInterval,
+        targetData,
+        incomingSkills,
+        guaranteedEvasionWindows,
+    );
+    const incomingPressure = calculateIncomingPressure(
+        incomingBasic,
+        incomingBasicInterval,
+        targetData,
+        incomingSkills,
+        guaranteedEvasionCoverage,
+    );
+    const supportPerSecond = (totalHealing + totalShield) / window;
+    const rawSurvivalSeconds = survivalSeconds(entity.maxLife, incomingPressure.rawDps);
+    const evasionSurvivalSeconds = survivalSeconds(entity.maxLife, incomingPressure.evasionDps);
+    const effectiveSurvivalSeconds = survivalSeconds(
+        entity.maxLife,
+        Math.max(0, incomingPressure.guaranteedEvasionDps - supportPerSecond),
+    );
+    const expectedLifeAfterKill = Math.min(
+        entity.maxLife,
+        Math.max(0,
+            entity.maxLife + projectedSupportBeforeKill - incomingBeforeKill.expectedDamage,
+        ),
+    );
     for (const entry of entries) entity.attribute.removeBySource(`balance:rotation:${entry.data.id}`);
     const notes = [
         '평타 1회 뒤 스킬을 최대 2회까지 사용하며, 모든 스킬은 같은 행동 시간·정신력·개별 및 태그 공유 재사용 대기시간을 사용합니다.',
-        '제어·확정 회피·은신·지속 피해와 다중 대상 추가 피해는 단일 대상 직접 피해에 임의 점수로 더하지 않습니다.',
+        '선공 폭딜은 모든 기술이 준비된 교전 시작 시점에서 첫 반격 전에 끝낼 수 있는 직접 피해 행동을 큰 순서대로 계산합니다.',
+        '생존은 대상의 실제 평타 피해·공격속도·보스 기술과 플레이어 생명력·속도 회피·확정 회피·직접 회복/보호막을 분리해 계산합니다.',
+        '제어·은신·지속 피해와 다중 대상 추가 피해는 직접 피해나 임의 전투력 점수로 더하지 않습니다.',
     ];
     return {
         encounter: scenario.encounter,
@@ -553,8 +663,18 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
         totalDamage,
         dps,
         basicDamageShare: totalDamage > 0 ? basicDamage / totalDamage : 0,
+        playerMaxLife: entity.maxLife,
         targetMaxLife: target.maxLife,
         estimatedKillSeconds: dps > 0 ? target.maxLife / dps : Number.POSITIVE_INFINITY,
+        simulatedKillSeconds,
+        maxOpeningActionName: opening.maxActionName,
+        maxOpeningActionDamage: opening.maxActionDamage,
+        oneActionKill: opening.maxActionDamage >= target.maxLife,
+        counterattackDelay,
+        openingBurstActions: opening.actionCount,
+        openingBurstDamage: opening.damage,
+        openingBurstKillSeconds: opening.killSeconds,
+        killsBeforeCounterattack: opening.killSeconds < incomingBasicInterval - 0.0001,
         currentSpeed,
         targetSpeed,
         basicAttackEvasionSpeed,
@@ -568,6 +688,24 @@ export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALA
         endingMentality: mentality,
         totalHealing,
         totalShield,
+        defenderEvasionChance: incomingBasic.evasionChance,
+        guaranteedEvasionCoverage,
+        incomingBasicDamage: incomingBasic.damageOnHit,
+        incomingBasicInterval,
+        strongestIncomingSkillName: strongestIncomingSkill?.name,
+        strongestIncomingSkillDamage: strongestIncomingSkill?.damageOnHit ?? 0,
+        strongestIncomingSkillUnavoidable: strongestIncomingSkill?.unavoidable ?? false,
+        strongestIncomingSkillOneShots: (strongestIncomingSkill?.damageOnHit ?? 0) >= entity.maxLife,
+        rawSurvivalSeconds,
+        evasionSurvivalSeconds,
+        effectiveSurvivalSeconds,
+        expectedIncomingHitsBeforeKill: incomingBeforeKill.expectedHits,
+        expectedIncomingDamageBeforeKill: incomingBeforeKill.expectedDamage,
+        projectedSupportBeforeKill,
+        expectedLifeAfterKill,
+        survivesUntilKill: expectedLifeAfterKill > 0,
+        evasionPreventsDeath: incomingBeforeKill.rawDamage >= entity.maxLife + projectedSupportBeforeKill
+            && incomingBeforeKill.expectedDamage < entity.maxLife + projectedSupportBeforeKill,
         skills: Object.freeze(entries.map(entry => Object.freeze({
             skillId: entry.data.id,
             name: entry.data.name,
@@ -907,6 +1045,262 @@ function getRotationSkills(scenario: BalanceScenario): Readonly<SkillData>[] {
     }).sort((left, right) => left.id.localeCompare(right.id));
 }
 
+/** 첫 반격 전에 사용할 수 있는 준비 완료 기술을 직접 피해가 큰 순서로 배치한 선공 폭딜 진단. */
+function calculateOpeningBurst(
+    scenario: BalanceScenario,
+    actionInterval: number,
+    counterattackDelay: number,
+): OpeningBurstSnapshot {
+    const basicDamage = calculateExpectedBasicHit(scenario);
+    const basicMaximumDamage = calculateMaximumBasicHit(scenario, basicDamage);
+    const skillCandidates = getRotationSkills(scenario).map(data => {
+        const skillLevel = projectSkillLevel(scenario.level, data, scenario);
+        const report = analyzeSkillBalance(
+            scenario,
+            data.id,
+            skillLevel,
+        );
+        const expectedCriticalMultiplier = getExpectedCriticalMultiplier(
+            scenario.entity,
+            data.balance?.criticalMode,
+        );
+        const maximumCriticalMultiplier = getMaximumCriticalMultiplier(
+            scenario.entity,
+            data.balance?.criticalMode,
+        );
+        const hitChance = 1 - report.evasionChance;
+        return {
+            name: report.name,
+            damage: report.expectedDamagePerTarget,
+            maximumDamage: hitChance > 0 && expectedCriticalMultiplier > 0
+                ? report.expectedDamagePerTarget / hitChance / expectedCriticalMultiplier * maximumCriticalMultiplier
+                : 0,
+            manaCost: report.manaCost,
+        };
+    }).filter(candidate => candidate.damage > 0)
+        .sort((left, right) => right.damage - left.damage || left.name.localeCompare(right.name));
+    const maxCandidate = [
+        { name: '기본 공격', maximumDamage: basicMaximumDamage },
+        ...skillCandidates.filter(candidate => candidate.manaCost <= scenario.entity.maxMentality + 0.0001),
+    ]
+        .sort((left, right) => right.maximumDamage - left.maximumDamage || left.name.localeCompare(right.name))[0];
+    const actionCount = Math.max(1, Math.floor((counterattackDelay - 0.0001) / actionInterval));
+    let mentality = scenario.entity.maxMentality;
+    let damage = 0;
+    let killSeconds = Number.POSITIVE_INFINITY;
+    const remaining = [...skillCandidates];
+    for (let index = 0; index < actionCount; index++) {
+        const candidateIndex = remaining.findIndex(candidate => candidate.manaCost <= mentality + 0.0001);
+        const candidate = candidateIndex >= 0 ? remaining.splice(candidateIndex, 1)[0] : undefined;
+        if (candidate) mentality -= candidate.manaCost;
+        damage += candidate?.damage ?? basicDamage;
+        if (!Number.isFinite(killSeconds) && damage >= scenario.target.maxLife) {
+            killSeconds = (index + 1) * actionInterval;
+        }
+    }
+    return {
+        maxActionName: maxCandidate?.name ?? '기본 공격',
+        maxActionDamage: maxCandidate?.maximumDamage ?? 0,
+        actionCount,
+        damage,
+        killSeconds,
+    };
+}
+
+function calculateIncomingBasicAttack(scenario: BalanceScenario): IncomingAttackSnapshot {
+    const data = getMonsterData(scenario.targetDataId);
+    const magic = data?.attack?.damageType === 'magic';
+    const absolute = data?.attack?.damageType === 'absolute';
+    const rawPower = scenario.target.attribute.get(magic ? AttributeType.MAGIC_FORCE : AttributeType.ATK)
+        * getExpectedCriticalMultiplier(scenario.target, SkillCriticalMode.NORMAL);
+    const defended = absolute ? rawPower : calculateFinalDamage(
+        rawPower,
+        scenario.entity.attribute.get(magic ? AttributeType.MAGIC_DEF : AttributeType.DEF),
+        scenario.target.attribute.get(magic ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN),
+    );
+    const damageOnHit = applyTagEffectValue(defended, scenario.target, scenario.entity).value;
+    const evasionChance = calculateEvasionChance(
+        scenario.target.getEvasionAttackSpeed(),
+        scenario.entity.attribute.get(AttributeType.SPEED),
+    );
+    return {
+        name: '기본 공격',
+        damageOnHit,
+        expectedDamage: damageOnHit * (1 - evasionChance),
+        evasionChance,
+        unavoidable: false,
+    };
+}
+
+function calculateIncomingSkillAttacks(
+    scenario: BalanceScenario,
+    data: MonsterData | undefined,
+): ReadonlyMap<string, IncomingAttackSnapshot> {
+    const result = new Map<string, IncomingAttackSnapshot>();
+    for (const runtime of data?.skills ?? []) {
+        const skillData = getSkillData(runtime.skillDataId);
+        const calculateDamage = skillData?.balance?.calculateDamage;
+        if (!skillData?.balance || !calculateDamage) continue;
+        const skill = new Skill({
+            playerId: null,
+            skillDataId: skillData.id,
+            level: Math.max(1, Math.min(skillData.maxLevel, runtime.level ?? 1)),
+        });
+        const context = createSkillContext(scenario.target, skill);
+        const balance = skillData.balance;
+        const raw = finiteNonNegative(calculateDamage(context))
+            * getExpectedCriticalMultiplier(scenario.target, balance.criticalMode);
+        const damageType = balance.damageType ?? 'absolute';
+        const defense = damageType === 'physical'
+            ? scenario.entity.attribute.get(AttributeType.DEF)
+            : damageType === 'magic' ? scenario.entity.attribute.get(AttributeType.MAGIC_DEF) : 0;
+        const defaultPenetration = damageType === 'physical'
+            ? scenario.target.attribute.get(AttributeType.ARMOR_PEN)
+            : damageType === 'magic' ? scenario.target.attribute.get(AttributeType.MAGIC_PEN) : 0;
+        const penetration = finiteNonNegative(balance.calculatePenetration?.(context) ?? defaultPenetration);
+        const defended = damageType === 'absolute' ? raw : calculateFinalDamage(raw, defense, penetration);
+        const affinitySource = balance.effectTags?.length ? {
+            hasTag: (tag: TagId) => balance.effectTags!.includes(tag),
+        } : scenario.target;
+        const hitCount = positiveInteger(balance.hitCount ?? 1);
+        const damageOnHit = applyTagEffectValue(defended, affinitySource, scenario.entity).value * hitCount;
+        const attackSpeed = finitePositive(
+            balance.calculateEvasionAttackSpeed?.(context)
+                ?? scenario.target.getEvasionAttackSpeed(),
+        );
+        const evasionChance = balance.unavoidable ? 0 : calculateEvasionChance(
+            attackSpeed,
+            scenario.entity.attribute.get(AttributeType.SPEED),
+        );
+        result.set(skillData.id, {
+            name: skillData.name,
+            damageOnHit,
+            expectedDamage: damageOnHit * (1 - evasionChance),
+            evasionChance,
+            unavoidable: balance.unavoidable ?? false,
+        });
+    }
+    return result;
+}
+
+function calculateIncomingPressure(
+    basic: IncomingAttackSnapshot,
+    basicInterval: number,
+    data: MonsterData | undefined,
+    skills: ReadonlyMap<string, IncomingAttackSnapshot>,
+    guaranteedEvasionCoverage: number,
+): { rawDps: number; evasionDps: number; guaranteedEvasionDps: number } {
+    const rawBasicDps = basic.damageOnHit / basicInterval;
+    const evasionBasicDps = basic.expectedDamage / basicInterval;
+    const pattern = getPatternPressure(data, skills);
+    return {
+        rawDps: rawBasicDps + pattern.rawDps,
+        evasionDps: evasionBasicDps + pattern.evasionDps,
+        guaranteedEvasionDps: (evasionBasicDps + pattern.avoidableDps) * (1 - guaranteedEvasionCoverage)
+            + pattern.unavoidableDps,
+    };
+}
+
+function getPatternPressure(
+    data: MonsterData | undefined,
+    skills: ReadonlyMap<string, IncomingAttackSnapshot>,
+): { rawDps: number; evasionDps: number; avoidableDps: number; unavoidableDps: number } {
+    const sequence = data?.skillPattern?.sequence
+        .map(id => skills.get(id))
+        .filter((attack): attack is IncomingAttackSnapshot => Boolean(attack)) ?? [];
+    if (!sequence.length || !data?.skillPattern) {
+        return { rawDps: 0, evasionDps: 0, avoidableDps: 0, unavoidableDps: 0 };
+    }
+    const interval = Math.max(
+        BALANCE_ACTION_FLOOR_SECONDS,
+        (data.skillPattern.interval.min + data.skillPattern.interval.max) / 2,
+    );
+    const divisor = sequence.length * interval;
+    const unavoidableDamage = sequence
+        .filter(attack => attack.unavoidable)
+        .reduce((sum, attack) => sum + attack.expectedDamage, 0);
+    const avoidableDamage = sequence
+        .filter(attack => !attack.unavoidable)
+        .reduce((sum, attack) => sum + attack.expectedDamage, 0);
+    return {
+        rawDps: sequence.reduce((sum, attack) => sum + attack.damageOnHit, 0) / divisor,
+        evasionDps: (avoidableDamage + unavoidableDamage) / divisor,
+        avoidableDps: avoidableDamage / divisor,
+        unavoidableDps: unavoidableDamage / divisor,
+    };
+}
+
+function calculateIncomingBeforeHorizon(
+    horizon: number,
+    basic: IncomingAttackSnapshot,
+    basicInterval: number,
+    data: MonsterData | undefined,
+    skills: ReadonlyMap<string, IncomingAttackSnapshot>,
+    guaranteedWindows: readonly { start: number; end: number }[],
+): { expectedHits: number; expectedDamage: number; rawDamage: number } {
+    let expectedHits = 0;
+    let expectedDamage = 0;
+    let rawDamage = 0;
+    const basicCount = Math.floor((horizon + 0.0001) / basicInterval);
+    for (let index = 1; index <= basicCount; index++) {
+        const at = index * basicInterval;
+        rawDamage += basic.damageOnHit;
+        if (isTimeCovered(at, guaranteedWindows)) continue;
+        expectedDamage += basic.expectedDamage;
+        expectedHits += 1 - basic.evasionChance;
+    }
+    const pattern = data?.skillPattern;
+    if (!pattern || horizon + 0.0001 < pattern.initialDelay || !pattern.sequence.length) {
+        return { expectedHits, expectedDamage, rawDamage };
+    }
+    const interval = Math.max(
+        BALANCE_ACTION_FLOOR_SECONDS,
+        (pattern.interval.min + pattern.interval.max) / 2,
+    );
+    const patternCount = 1 + Math.floor((horizon - pattern.initialDelay + 0.0001) / interval);
+    for (let index = 0; index < patternCount; index++) {
+        const attack = skills.get(pattern.sequence[index % pattern.sequence.length]);
+        if (!attack) continue;
+        const at = pattern.initialDelay + index * interval;
+        rawDamage += attack.damageOnHit;
+        if (!attack.unavoidable && isTimeCovered(at, guaranteedWindows)) continue;
+        expectedDamage += attack.expectedDamage;
+        expectedHits += attack.unavoidable ? 1 : 1 - attack.evasionChance;
+    }
+    return { expectedHits, expectedDamage, rawDamage };
+}
+
+function calculateWindowCoverage(
+    windows: readonly { start: number; end: number }[],
+    duration: number,
+): number {
+    const clipped = windows
+        .map(window => ({
+            start: Math.max(0, Math.min(duration, window.start)),
+            end: Math.max(0, Math.min(duration, window.end)),
+        }))
+        .filter(window => window.end > window.start)
+        .sort((left, right) => left.start - right.start);
+    let covered = 0;
+    let currentStart = 0;
+    let currentEnd = 0;
+    for (const window of clipped) {
+        if (window.start > currentEnd) {
+            covered += Math.max(0, currentEnd - currentStart);
+            currentStart = window.start;
+            currentEnd = window.end;
+        } else {
+            currentEnd = Math.max(currentEnd, window.end);
+        }
+    }
+    covered += Math.max(0, currentEnd - currentStart);
+    return duration > 0 ? Math.min(1, covered / duration) : 0;
+}
+
+function isTimeCovered(time: number, windows: readonly { start: number; end: number }[]): boolean {
+    return windows.some(window => time >= window.start && time < window.end);
+}
+
 function projectSkillLevel(characterLevel: number, data: Readonly<SkillData>, scenario: BalanceScenario): number {
     const requiresElite = data.jobRequirement?.anyOf.some(id => getJob(id)?.tier.key === 'elite') ?? false;
     const requiresSub = Boolean(scenario.subJob && data.jobRequirement?.anyOf.some(id => isJobDescendant(scenario.subJob!.id, id)));
@@ -938,6 +1332,21 @@ function calculateExpectedBasicHit(scenario: BalanceScenario): number {
         getBasicAttackEvasionSpeed(scenario),
         target.attribute.get(AttributeType.SPEED),
     ));
+}
+
+function calculateMaximumBasicHit(scenario: BalanceScenario, expectedDamage: number): number {
+    const hitChance = 1 - calculateEvasionChance(
+        getBasicAttackEvasionSpeed(scenario),
+        scenario.target.attribute.get(AttributeType.SPEED),
+    );
+    const expectedCriticalMultiplier = getExpectedCriticalMultiplier(
+        scenario.entity,
+        SkillCriticalMode.NORMAL,
+    );
+    return hitChance > 0 && expectedCriticalMultiplier > 0
+        ? expectedDamage / hitChance / expectedCriticalMultiplier
+            * getMaximumCriticalMultiplier(scenario.entity, SkillCriticalMode.NORMAL)
+        : 0;
 }
 
 /** 추천 무기의 실제 투사체 계수까지 반영한 기본 공격 회피 판정 속도. */
@@ -975,6 +1384,16 @@ function getExpectedCriticalMultiplier(entity: Entity, mode = SkillCriticalMode.
     if (mode === SkillCriticalMode.GUARANTEED) return criticalDamage;
     const criticalRate = Math.max(0, Math.min(1, entity.attribute.get(AttributeType.CRIT_RATE)));
     return 1 + criticalRate * (criticalDamage - 1);
+}
+
+function getMaximumCriticalMultiplier(entity: Entity, mode = SkillCriticalMode.NORMAL): number {
+    if (mode === SkillCriticalMode.DISABLED) return 1;
+    if (mode === SkillCriticalMode.GUARANTEED) {
+        return Math.max(0, entity.attribute.get(AttributeType.CRIT_DMG));
+    }
+    return entity.attribute.get(AttributeType.CRIT_RATE) > 0
+        ? Math.max(0, entity.attribute.get(AttributeType.CRIT_DMG))
+        : 1;
 }
 
 function finiteNonNegative(value: number): number {

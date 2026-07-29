@@ -180,8 +180,13 @@ function printProfiles(profileLevel: number): void {
     for (const report of analyzeAllBalanceProfiles(profileLevel)) {
         console.log([
             report.name.padEnd(5),
-            `일반=${report.monster.dps.toFixed(2)}DPS/${formatSeconds(report.monster.estimatedKillSeconds)}`,
-            `보스=${report.boss.dps.toFixed(2)}DPS/${formatSeconds(report.boss.estimatedKillSeconds)}`,
+            `일반=${report.monster.dps.toFixed(2)}DPS/${formatSeconds(report.monster.simulatedKillSeconds)}`,
+            `보스=${report.boss.dps.toFixed(2)}DPS/${formatSeconds(report.boss.simulatedKillSeconds)}`,
+            `HP=${report.boss.playerMaxLife.toFixed(0)}:${report.boss.targetMaxLife.toFixed(0)}`,
+            `단발=${report.boss.maxOpeningActionName}/${report.boss.maxOpeningActionDamage.toFixed(0)}${report.boss.oneActionKill ? '(한방가능)' : ''}`,
+            `반격전=${report.boss.openingBurstDamage.toFixed(0)}${report.boss.killsBeforeCounterattack ? '(처치)' : ''}`,
+            `생존=${formatSeconds(report.boss.effectiveSurvivalSeconds)}/${report.boss.survivesUntilKill ? 'O' : 'X'}`,
+            `피격회피=${(report.boss.defenderEvasionChance * 100).toFixed(1)}%+확정${(report.boss.guaranteedEvasionCoverage * 100).toFixed(1)}%`,
             `평타=${(report.boss.basicDamageShare * 100).toFixed(1)}%`,
             `회피=${(report.boss.evasionChance * 100).toFixed(1)}%(${report.boss.basicAttackEvasionSpeed.toFixed(2)}:${report.boss.targetSpeed.toFixed(2)})`,
             `관통=${report.boss.penetration.toFixed(1)}/${report.boss.targetDefense.toFixed(1)}→${report.boss.effectiveDefense.toFixed(1)}`,
@@ -194,7 +199,7 @@ function printProfiles(profileLevel: number): void {
             for (const sub of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith']) {
                 if (main === sub) continue;
                 const report = analyzeBalanceProfile(profileLevel, `career:${main}`, `career:${sub}`);
-                console.log(`${report.name.padEnd(8)} 보스=${report.boss.dps.toFixed(2)}DPS/${formatSeconds(report.boss.estimatedKillSeconds)} 평타=${(report.boss.basicDamageShare * 100).toFixed(1)}%`);
+                console.log(`${report.name.padEnd(8)} 보스=${report.boss.dps.toFixed(2)}DPS/${formatSeconds(report.boss.simulatedKillSeconds)} 단발=${report.boss.maxOpeningActionDamage.toFixed(0)}${report.boss.oneActionKill ? '(한방가능)' : ''} 생존=${report.boss.survivesUntilKill ? 'O' : 'X'}(${formatSeconds(report.boss.effectiveSurvivalSeconds)}) 평타=${(report.boss.basicDamageShare * 100).toFixed(1)}%`);
             }
         }
     }

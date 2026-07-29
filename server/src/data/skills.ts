@@ -1495,7 +1495,8 @@ defineSkill({
     balance: {
         role: SkillBalanceRole.DEFENSE, calculateManaCost: () => 22,
         calculateEffectDuration: context => speedScaledDuration(context, 7, 0.75, 0.04),
-        notes: ['확정 회피는 적 공격 빈도에 의존하므로 고정 전투력으로 환산하지 않습니다.'],
+        guaranteedEvasion: true,
+        notes: ['확정 회피는 직접 피해에 더하지 않고 상대 공격 주기와 지속시간에 따른 생존 지표로 계산합니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 24, 1.5, 18),
     sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ARCHER),
