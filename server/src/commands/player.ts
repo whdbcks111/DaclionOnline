@@ -484,16 +484,14 @@ export function initPlayerCommands(): void {
                 return;
             }
 
-            const itemName = item.name;
-            const snapshot = item.snapshot(count);
-
-            if (!player.inventory.removeItemInstance(item, count)) {
+            const taken = player.inventory.takeItemSnapshotByIndex(idx, count);
+            if (!taken) {
                 sendBotMessageToUser(userId, '아이템을 버리지 못했습니다. 다시 시도해주세요.');
                 return;
             }
-            location.addDroppedItem(snapshot);
+            location.addDroppedItem(taken.snapshot);
 
-            sendBotMessageToUser(userId, `${itemName} x${count}을(를) 버렸습니다.`);
+            sendBotMessageToUser(userId, `${taken.name} x${count}을(를) 버렸습니다.`);
         },
     });
 

@@ -109,6 +109,19 @@ test('인벤토리 퀵 HUD는 사용 가능한 아이템을 정의별로 합산�
     assert.equal(inventory.getFirstUsableItemByData('test_quick_material'), undefined);
 });
 
+test('인벤토리 슬롯 반출은 snapshot 생성과 수량 제거를 하나의 경계에서 처리한다', () => {
+    defineItem({ ...itemData('test_atomic_take'), stackable: true, maxStack: 999 });
+    const inventory = Inventory.createEmpty(1, 100);
+    inventory.addItem('test_atomic_take', 5);
+
+    const taken = inventory.takeItemSnapshotByIndex(0, 3);
+    assert.equal(taken?.name, 'test_atomic_take');
+    assert.equal(taken?.snapshot.count, 3);
+    assert.equal(inventory.getItemByIndex(0)?.count, 2);
+    assert.equal(inventory.takeItemSnapshotByIndex(0, 3), undefined);
+    assert.equal(inventory.getItemByIndex(0)?.count, 2);
+});
+
 test('제작 장비 metadata는 이름·설명·최대 내구도·인스턴스 능력치를 안전하게 재정의한다', () => {
     defineItem({
         ...itemData('test_forged_weapon', 'items/old_sword', null, 50),

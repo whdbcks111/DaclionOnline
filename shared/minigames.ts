@@ -159,12 +159,28 @@ export type MiniGameStartData = {
     [T in MiniGameType]: MiniGameStartBase<T>
 }[MiniGameType]
 
-export interface MiniGameResultRequest {
+export interface MiniGameSessionRequest {
     sessionId: string
     token: string
+}
+
+export interface MiniGameInputRequest extends MiniGameSessionRequest {
+    x: number
+    y: number
+}
+
+export interface MiniGameActionRequest extends MiniGameSessionRequest {
+    action: 'strike'
+}
+
+/** 클라이언트는 결과 확정을 요청할 뿐 경과 시간이나 입력 trace를 제출하지 않는다. */
+export type MiniGameResultRequest = MiniGameSessionRequest
+
+/** 서버가 실시간으로 수집한 입력만 담아 타입별 validator에 전달하는 권위 snapshot. */
+export interface MiniGameValidationRequest extends MiniGameSessionRequest {
     elapsedMs: number
     inputs: MiniGameInputSample[]
-    actions?: MiniGameActionSample[]
+    actions: MiniGameActionSample[]
 }
 
 export interface MiniGameResolvedData {

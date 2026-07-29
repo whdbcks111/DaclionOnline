@@ -8,6 +8,7 @@ import multer from 'multer'
 import sharp from 'sharp'
 import prisma from '../config/prisma.js'
 import logger from '../utils/logger.js'
+import { FixedWindowRateLimiter } from '../utils/rateLimit.js'
 import { getSession } from './login.js'
 
 const PROFILE_IMAGE_DIR = path.join(process.cwd(), 'uploads', 'profiles')
@@ -15,6 +16,19 @@ const CHAT_IMAGE_DIR = path.join(process.cwd(), 'uploads', 'chat')
 const CHAT_IMAGE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 const CHAT_IMAGE_MAX_FILES = 100
 const CHAT_IMAGE_CLEANUP_INTERVAL_MS = 60 * 60 * 1000
+const PROFILE_ORPHAN_GRACE_MS = 10 * 60 * 1000
+const profileUploadLimiter = new FixedWindowRateLimiter(10, 10 * 60 * 1000, 20_000)
+const chatImageUploadLimiter = new FixedWindowRateLimiter(30, 60_000, 20_000)
+const profileUploadLocks = new Map<number, Promise<void>>()
+// Multer 2.2 runtime supports this limit; DefinitelyTyped의 Multer 선언 갱신 전에도
+// 중첩 multipart field 방어가 실제 옵션에서 빠지지 않게 공통 객체로 전달한다.
+const STRICT_MULTIPART_LIMITS = {
+    files: 1,
+    fields: 0,
+    parts: 1,
+    fieldNameSize: 32,
+    fieldNestingDepth: 0,
+}
 
 fs.mkdirSync(PROFILE_IMAGE_DIR, { recursive: true })
 fs.mkdirSync(CHAT_IMAGE_DIR, { recursive: true })
@@ -29,12 +43,7 @@ function getRequestSession(req: Request) {
     return token ? getSession(token) : undefined
 }
 
-const PROFILE_MIME_TO_EXT: Record<string, string> = {
-    'image/jpeg': '.jpg',
-    'image/png': '.png',
-    'image/gif': '.gif',
-    'image/webp': '.webp',
-}
+const PROFILE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 
 const PROFILE_MAGIC_SIGNATURES = [
     Buffer.from([0xff, 0xd8, 0xff]),
@@ -49,16 +58,22 @@ function hasValidProfileMagicBytes(buffer: Buffer): boolean {
 
 const profileUpload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: {
+        ...STRICT_MULTIPART_LIMITS,
+        fileSize: 5 * 1024 * 1024,
+    },
     fileFilter: (_req, file, callback) => {
-        if (file.mimetype in PROFILE_MIME_TO_EXT) callback(null, true)
+        if (PROFILE_MIME_TYPES.has(file.mimetype)) callback(null, true)
         else callback(new Error('JPEG, PNG, GIF, WebP 이미지만 업로드할 수 있습니다.'))
     },
 })
 
 const chatImageUpload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 15 * 1024 * 1024 },
+    limits: {
+        ...STRICT_MULTIPART_LIMITS,
+        fileSize: 15 * 1024 * 1024,
+    },
     fileFilter: (_req, file, callback) => {
         if (file.mimetype.startsWith('image/')) callback(null, true)
         else callback(new Error('이미지 파일만 업로드할 수 있습니다.'))
@@ -106,10 +121,33 @@ export async function cleanupChatImages(now = Date.now()): Promise<number> {
     return targets.length
 }
 
+/** DB에서 더 이상 참조하지 않는 이전 프로필 이미지를 유예 시간 뒤 정리한다. */
+export async function cleanupOrphanedProfileImages(now = Date.now()): Promise<number> {
+    const [entries, users] = await Promise.all([
+        fsPromises.readdir(PROFILE_IMAGE_DIR, { withFileTypes: true }).catch(() => []),
+        prisma.user.findMany({
+            where: { profileImage: { not: null } },
+            select: { profileImage: true },
+        }),
+    ])
+    const referenced = new Set(users.flatMap(user => user.profileImage ? [user.profileImage] : []))
+    const targets: string[] = []
+    for (const entry of entries) {
+        if (!entry.isFile() || referenced.has(entry.name)) continue
+        const filePath = path.join(PROFILE_IMAGE_DIR, entry.name)
+        const stat = await fsPromises.stat(filePath).catch(() => undefined)
+        if (stat && now - stat.mtimeMs >= PROFILE_ORPHAN_GRACE_MS) targets.push(filePath)
+    }
+    await Promise.all(targets.map(filePath => fsPromises.unlink(filePath).catch(() => undefined)))
+    return targets.length
+}
+
 export function initUploadMaintenance(): void {
     void cleanupChatImages().catch(error => logger.error('채팅 이미지 초기 정리 실패', error))
+    void cleanupOrphanedProfileImages().catch(error => logger.error('프로필 이미지 초기 정리 실패', error))
     const timer = setInterval(() => {
         void cleanupChatImages().catch(error => logger.error('채팅 이미지 주기 정리 실패', error))
+        void cleanupOrphanedProfileImages().catch(error => logger.error('프로필 이미지 주기 정리 실패', error))
     }, CHAT_IMAGE_CLEANUP_INTERVAL_MS)
     timer.unref()
 }
@@ -150,46 +188,127 @@ export async function encodeChatImage(buffer: Buffer): Promise<Buffer> {
         .toBuffer()
 }
 
+export async function encodeProfileImage(buffer: Buffer): Promise<Buffer> {
+    return sharp(buffer, {
+        animated: true,
+        failOn: 'error',
+        limitInputPixels: 20_000_000,
+    })
+        .rotate()
+        .resize({ width: 512, height: 512, fit: 'cover', position: 'centre', withoutEnlargement: true })
+        .webp({ quality: 82, effort: 4 })
+        .toBuffer()
+}
+
+async function withProfileUploadLock<T>(userId: number, task: () => Promise<T>): Promise<T> {
+    let release!: () => void
+    const current = new Promise<void>(resolve => { release = resolve })
+    const previous = profileUploadLocks.get(userId)
+    profileUploadLocks.set(userId, current)
+    if (previous) await previous
+    try {
+        return await task()
+    } finally {
+        if (profileUploadLocks.get(userId) === current) profileUploadLocks.delete(userId)
+        release()
+    }
+}
+
+async function deleteStoredProfileImage(filename: string | null | undefined): Promise<void> {
+    if (!filename || filename !== path.basename(filename)) return
+    await fsPromises.unlink(path.join(PROFILE_IMAGE_DIR, filename)).catch(() => undefined)
+}
+
+function requireUploadRateLimit(
+    limiter: FixedWindowRateLimiter,
+    scope: string,
+): (req: Request, res: Response, next: NextFunction) => void {
+    return (req, res, next) => {
+        const session = getRequestSession(req)
+        if (!session) {
+            res.status(401).json({ error: '로그인이 필요합니다.' })
+            return
+        }
+        const decision = limiter.consume(`${scope}:${session.userId}`)
+        if (!decision.allowed) {
+            const retryAfterSeconds = Math.ceil(decision.retryAfterMs / 1000)
+            res.setHeader('Retry-After', retryAfterSeconds)
+            res.status(429).json({ error: `${retryAfterSeconds}초 후 다시 업로드해 주세요.` })
+            return
+        }
+        next()
+    }
+}
+
 export const uploadRouter = Router()
 
-uploadRouter.post('/profile-image', profileUpload.single('image'), async (req, res) => {
-    const session = getRequestSession(req)
-    if (!session || !req.file) {
-        res.status(400).json({ error: '인증 실패 또는 파일 없음' })
-        return
-    }
-    if (!hasValidProfileMagicBytes(req.file.buffer)) {
-        res.status(400).json({ error: '유효하지 않은 이미지 파일입니다.' })
-        return
-    }
-    const ext = PROFILE_MIME_TO_EXT[req.file.mimetype] ?? '.jpg'
-    const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`
-    fs.writeFileSync(path.join(PROFILE_IMAGE_DIR, filename), req.file.buffer)
-    await prisma.user.update({
-        where: { id: session.userId },
-        data: { profileImage: filename },
-    })
-    session.profileImage = filename
-    res.json({ ok: true, profileImage: filename })
-})
+uploadRouter.post(
+    '/profile-image',
+    requireUploadRateLimit(profileUploadLimiter, 'profile'),
+    profileUpload.single('image'),
+    async (req, res) => {
+        const session = getRequestSession(req)
+        if (!session || !req.file) {
+            res.status(400).json({ error: '인증 실패 또는 파일 없음' })
+            return
+        }
+        if (!hasValidProfileMagicBytes(req.file.buffer)) {
+            res.status(400).json({ error: '유효하지 않은 이미지 파일입니다.' })
+            return
+        }
+        try {
+            const profileImage = await withProfileUploadLock(session.userId, async () => {
+                const encoded = await encodeProfileImage(req.file!.buffer)
+                const filename = `${session.userId}-${Date.now()}-${randomUUID()}.webp`
+                const filePath = path.join(PROFILE_IMAGE_DIR, filename)
+                await fsPromises.writeFile(filePath, encoded, { flag: 'wx' })
+                try {
+                    const previous = await prisma.user.findUnique({
+                        where: { id: session.userId },
+                        select: { profileImage: true },
+                    })
+                    await prisma.user.update({
+                        where: { id: session.userId },
+                        data: { profileImage: filename },
+                    })
+                    await deleteStoredProfileImage(previous?.profileImage)
+                    return filename
+                } catch (error) {
+                    await deleteStoredProfileImage(filename)
+                    throw error
+                }
+            })
+            session.profileImage = profileImage
+            res.json({ ok: true, profileImage })
+        } catch (error) {
+            logger.warn('프로필 이미지 변환 또는 저장 실패', error)
+            res.status(400).json({ error: '지원하지 않거나 손상된 이미지입니다.' })
+        }
+    },
+)
 
-uploadRouter.post('/chat-image', chatImageUpload.single('image'), async (req, res) => {
-    const session = getRequestSession(req)
-    if (!session || !req.file) {
-        res.status(400).json({ error: '인증 실패 또는 파일 없음' })
-        return
-    }
-    try {
-        const encoded = await encodeChatImage(req.file.buffer)
-        const filename = `${session.userId}-${Date.now()}-${randomUUID()}.webp`
-        await fsPromises.writeFile(path.join(CHAT_IMAGE_DIR, filename), encoded, { flag: 'wx' })
-        await cleanupChatImages()
-        res.json({ ok: true, filename, url: `/uploads/chat/${filename}` })
-    } catch (error) {
-        logger.warn('채팅 이미지 변환 실패', error)
-        res.status(400).json({ error: '지원하지 않거나 손상된 이미지입니다.' })
-    }
-})
+uploadRouter.post(
+    '/chat-image',
+    requireUploadRateLimit(chatImageUploadLimiter, 'chat'),
+    chatImageUpload.single('image'),
+    async (req, res) => {
+        const session = getRequestSession(req)
+        if (!session || !req.file) {
+            res.status(400).json({ error: '인증 실패 또는 파일 없음' })
+            return
+        }
+        try {
+            const encoded = await encodeChatImage(req.file.buffer)
+            const filename = `${session.userId}-${Date.now()}-${randomUUID()}.webp`
+            await fsPromises.writeFile(path.join(CHAT_IMAGE_DIR, filename), encoded, { flag: 'wx' })
+            await cleanupChatImages()
+            res.json({ ok: true, filename, url: `/uploads/chat/${filename}` })
+        } catch (error) {
+            logger.warn('채팅 이미지 변환 실패', error)
+            res.status(400).json({ error: '지원하지 않거나 손상된 이미지입니다.' })
+        }
+    },
+)
 
 uploadRouter.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     const message = error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE'

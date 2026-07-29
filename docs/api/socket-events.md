@@ -9,8 +9,8 @@
 | `login` | `LoginRequest { id, pw }` | 불필요 | `modules/login.ts` | `loginResult`; Player 로드, room 참가 |
 | `register` | `RegisterRequest { id, pw, email, nickname }` | 이메일 인증 필요 | `modules/register.ts` | `registerResult`; User+Player 생성, 세션 발급 |
 | `logout` | `token: string` | 토큰 | `modules/login.ts` | `logoutResult`; 마지막 세션이면 Player 저장/언로드 |
-| `sendVerifyCode` | `email: string` | 불필요 | `modules/register.ts` | `verifyCodeSendResult`; 6자리, 5분 만료, 60초 재전송 제한 |
-| `verifyCode` | `code: string` | 불필요 | `modules/register.ts` | `verifyCodeResult` |
+| `sendVerifyCode` | `email: string` | 불필요 | `modules/register.ts` | `verifyCodeSendResult`; 6자리, 5분 만료, 60초 재전송·IP 발송 횟수 제한 |
+| `verifyCode` | `code: string` | 불필요 | `modules/register.ts` | `verifyCodeResult`; 발급 건당 오답 5회·IP+socket 요청 빈도 제한 |
 | `sendMessage` | `string \| { content, replyToId?, chatType? }` | 필요 | `modules/chat.ts` | 최대 500자; `channel/nearby/party/advertisement/notice` 범위와 공지 권한·광고 30초 제한을 서버에서 검증. 답장은 현재 공개 채널 히스토리에서 재검증하고 채널 타입만 허용 |
 | `sendImageMessages` | `{ filenames: string[], replyToId?, chatType? }` (1~10장) | 필요 | `modules/chat.ts` | 모든 HTTP 업로드의 소유권·보관 기간·`ActionType.CHAT`, 선택 범위와 공개 원문을 확인한 뒤 하나의 다중 image ChatNode 메시지 전송 |
 | `sendImageMessage` | `{ filename: string, replyToId?, chatType? }` | 필요 | `modules/chat.ts` | 구형 클라이언트 호환용 단일 이미지 이벤트. `sendImageMessages`와 같은 검증 경계를 사용 |
@@ -22,7 +22,7 @@
 | `requestInformationMode` | 없음 | 필요 | `modules/bot.ts` | 현재 플레이어의 정보 공개 여부를 `informationMode`로 응답 |
 | `setInformationMode` | `isPublic: boolean` | 필요 | `modules/bot.ts` | 런타임 정보 공개 모드 변경, 같은 계정 소켓 동기화와 notification |
 | `requestUserCount` | 없음 | 불필요 | `modules/login.ts` | `userCount` |
-| `joinChannel` | `string \| null` | 필요 | `modules/chat.ts` | room 변경 후 `channelChanged`; `private_{userId}`는 본인만 |
+| `joinChannel` | `string \| null` | 필요 | `modules/chat.ts` | 마스터 공개 채널 또는 본인 `private_{userId}`만 room 변경 후 `channelChanged` |
 | `requestChannelList` | 없음 | 불필요 | `modules/chat.ts` | `channelList` |
 | `changeNickname` | `nickname: string` | 필요 | `modules/login.ts` | `nicknameResult`; DB와 모든 메모리 세션 갱신 |
 | `requestLocationInfo` | 없음 | 필요 | `modules/chat.ts` | `locationInfo` |
@@ -32,7 +32,10 @@
 | `adminPanelRequestPlayers` | 없음 | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayers`; 온라인 우선 전체 캐릭터 목록 |
 | `adminPanelRequestPlayer` | `userId: number` | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayer`; 보유·장착 칭호를 포함한 가공된 캐릭터 상세 snapshot |
 | `adminPanelExecute` | `AdminPanelActionRequest` | 권한 10 | `modules/adminPanel.ts` | 플레이어·월드 action, 칭호 부여·삭제, 전체 채팅/알림·개별 온라인 알림, `analyze_balance_profile` 전투 로테이션 진단을 서버 검증 후 실행하고 result/목록/상세 갱신 |
-| `miniGameResult` | `MiniGameResultRequest` (session/token/경과 시간/20ms 단위 축 입력 trace/선택 action trace) | 필요 | `modules/minigame.ts` | 일회성 세션·token·경과 시간 확인, 축·단조 타격 입력 정규화와 타입별 서버 재현 검증 후 `miniGameResolved` |
+| `miniGameReady` | `{ sessionId, token }` | 필요 | `modules/minigame.ts` | 최초 요청 socket을 입력 소유자로 고정하고 서버 경과 시계 시작 |
+| `miniGameInput` | `{ sessionId, token, x, y }` | 필요 | `modules/minigame.ts` | 이동 축을 clamp하고 서버 수신 시각 기준 20ms trace로 기록 |
+| `miniGameAction` | `{ sessionId, token, action: "strike" }` | 필요 | `modules/minigame.ts` | 단조 타격을 서버 수신 시각으로 즉시 기록 |
+| `miniGameResult` | `{ sessionId, token }` | 필요 | `modules/minigame.ts` | 서버 경과 시간과 서버 수집 trace로 타입별 재현 검증 후 `miniGameResolved`; 입력 socket disconnect는 실패 확정 |
 | `requestHumanVerification` | 없음 | 필요 | `modules/humanVerification.ts` | required FLAG가 있는 플레이어의 기존 문제를 재전송하거나 새 일회성 문제를 발급 |
 | `submitHumanVerification` | `{ sessionId, answer }` | 필요 | `modules/humanVerification.ts` | 서버 메모리의 정답과 session을 검사하고 성공 시 영속 요구 상태와 행동 제한 해제 |
 

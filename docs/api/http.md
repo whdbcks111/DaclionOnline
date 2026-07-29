@@ -9,12 +9,13 @@
 - 인증: `sessionToken` 쿠키. 클라이언트는 `credentials: 'include'`를 사용한다.
 - Content-Type: `multipart/form-data`
 - 필드: `image` 파일 1개
-- 제한: 최대 5MB, JPEG/PNG/GIF/WebP MIME, 파일 magic bytes 검증
+- 제한: 최대 5MB, JPEG/PNG/GIF/WebP MIME, 파일 magic bytes 검증, 사용자당 10분 10회
+- multipart 제한: 파일 1개·field 0개·part 1개·field nesting 0
 
 성공 응답:
 
 ```json
-{ "ok": true, "profileImage": "생성된-파일명.png" }
+{ "ok": true, "profileImage": "사용자ID-시각-UUID.webp" }
 ```
 
 실패 응답은 HTTP 400과 다음 형태를 사용한다.
@@ -23,7 +24,7 @@
 { "error": "오류 설명" }
 ```
 
-파일은 서버 작업 디렉터리의 `uploads/profiles/`에 저장되고 User의 `profileImage` 및 현재 메모리 세션이 갱신된다. 정적 조회 URL은 `GET /uploads/profiles/{filename}`이다.
+입력은 Sharp가 최대 512×512 WebP로 재인코딩한다. 파일은 서버 작업 디렉터리의 `uploads/profiles/`에 저장되고 User의 `profileImage` 및 현재 메모리 세션이 갱신된다. DB 갱신이 성공하면 직전 파일을 삭제하고, DB에서 참조되지 않는 파일은 10분 유예 뒤 시작·매시간 정리한다. 정적 조회 URL은 `GET /uploads/profiles/{filename}`이다.
 
 ## `POST /api/chat-image`
 
@@ -33,6 +34,7 @@
 - Content-Type: `multipart/form-data`
 - 필드: `image` 파일 1개
 - 입력 제한: 최대 15MB, `image/*` MIME, Sharp가 실제 이미지로 해석할 수 있는 형식, 최대 4천만 입력 pixel
+- 요청 제한: 사용자당 분당 30회, 파일 1개·field 0개·part 1개·field nesting 0
 - 저장 규격: 최대 1600×1600, WebP 품질 78. 애니메이션 입력은 프레임을 유지한다.
 
 성공 응답:

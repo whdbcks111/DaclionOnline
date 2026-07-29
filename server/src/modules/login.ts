@@ -1,8 +1,9 @@
-import { pbkdf2Sync } from "crypto";
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js"
 import { randomHex } from "../utils/random.js";
 import { isValidPayload, validateNickname } from "../utils/validators.js";
+import { verifyPasswordHash } from "../utils/password.js";
+import { FixedWindowRateLimiter } from "../utils/rateLimit.js";
 import prisma from "../config/prisma.js";
 import type { LoginRequest } from "../../../shared/types.js";
 import { getUserChannel, getChannelRoomKey, getAvailableChannels } from "./channel.js";
@@ -19,6 +20,17 @@ async function unloadPlayerByUserId(userId: number) {
 
 const sessionMap = new Map<string, Session>()
 export const NICKNAME_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const LOGIN_ATTEMPT_LIMIT = 20;
+const LOGIN_ATTEMPT_WINDOW_MS = 60_000;
+const loginAttemptLimiter = new FixedWindowRateLimiter(
+    LOGIN_ATTEMPT_LIMIT,
+    LOGIN_ATTEMPT_WINDOW_MS,
+    20_000,
+);
+
+function getSocketIp(socket: { handshake: { address?: string } }): string {
+    return socket.handshake.address?.trim() || 'unknown';
+}
 
 /** 일반 계정의 닉네임 변경까지 남은 시간을 반환한다. 권한 10 이상은 제한하지 않는다. */
 export function getNicknameChangeCooldownRemaining(
@@ -157,6 +169,14 @@ export const initLogin = () => {
                     return;
                 }
 
+                const rateLimit = loginAttemptLimiter.consume(getSocketIp(socket));
+                if (!rateLimit.allowed) {
+                    socket.emit('loginResult', {
+                        error: `로그인 요청이 너무 많습니다. ${Math.ceil(rateLimit.retryAfterMs / 1000)}초 후 다시 시도해 주세요.`,
+                    });
+                    return;
+                }
+
                 const { id, pw } = data;
 
                 const user = await prisma.user.findUnique({
@@ -169,9 +189,7 @@ export const initLogin = () => {
                     return;
                 }
 
-                const hash = pbkdf2Sync(pw, user.passwordSalt, 10000, 64, 'sha512').toString('hex');
-
-                if (hash !== user.passwordHash) {
+                if (!await verifyPasswordHash(pw, user.passwordSalt, user.passwordHash)) {
                     socket.emit('loginResult', { error: '아이디 또는 비밀번호가 일치하지 않습니다.' });
                     return;
                 }
@@ -310,10 +328,9 @@ export const initLogin = () => {
             try {
                 if (typeof token !== 'string') return;
                 const logoutSession = getSession(token);
-                if (logoutSession && getUserSessionCount(logoutSession.userId) <= 1) {
-                    await unloadPlayerByUserId(logoutSession.userId);
-                }
                 if (logoutSession) {
+                    // await가 시작되기 전에 토큰과 모든 연결을 먼저 폐기한다.
+                    // 저장 중 지연 전송된 구매·버리기 요청이 기존 Player를 다시 변경하지 못하게 한다.
                     for (const [, connectedSocket] of io.sockets.sockets) {
                         if (connectedSocket.data.sessionToken !== token) continue;
                         const onlineUserId = typeof connectedSocket.data.onlineUserId === 'number'
@@ -325,8 +342,13 @@ export const initLogin = () => {
                         connectedSocket.data.sessionToken = undefined;
                         if (connectedSocket.id !== socket.id) connectedSocket.emit('sessionInvalid');
                     }
+                    removeSession(token);
+                    if (getUserSessionCount(logoutSession.userId) === 0) {
+                        await unloadPlayerByUserId(logoutSession.userId);
+                    }
+                } else {
+                    removeSession(token);
                 }
-                removeSession(token);
                 socket.emit('logoutResult', { ok: true });
             } catch(e) {
                 logger.error('logout 처리 중 오류:', e);

@@ -7,5 +7,7 @@
 - `random.ts`: digits/hex/base64 난수.
 - `logger.ts`: 범주별 컬러 콘솔 로깅.
 - `format.ts`: 인벤토리와 아이템 정보가 공유하는 최대 소수 둘째 자리 `kg` 중량 포맷.
+- `password.ts`: 기존 PBKDF2-SHA512 저장 형식과 호환되는 비동기 worker-pool 해시·상수 시간 검증.
+- `rateLimit.ts`: key 수 상한과 만료 정리를 포함한 로그인·인증·업로드용 인메모리 고정 구간 요청 제한.
 
 공개 함수, 태그 문법, 검증 규칙이 바뀌면 이 문서와 관련 API/시스템 문서를 갱신한다.

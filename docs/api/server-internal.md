@@ -28,7 +28,7 @@
 | Message mutation | `editMessage`, `deleteMessage`, `refreshChannelHistory`, `clearClientChatView`; `sendMessageFiltered/sendPrivateBotMessageToUser` 반환 message ID | 히스토리 수정 후 사용자별 재동기화, 서버 기록을 보존하는 화면 청소와 교체 가능한 비공개 카드 추적 |
 | Coroutine | `startCoroutine`, `Wait`, `tickCoroutines` | 게임 루프 기반 지연 작업 |
 | Scheduler | `scheduleGameTask`, `cancelGameTask`, `cancelGameTasksByPrefix`, `hasGameTask`, `updateGameScheduler` | key 교체·취소·반복을 지원하는 게임 루프 기반 단일 지연 작업 |
-| Minigame | `startMiniGame`, `cancelMiniGame`, `hasActiveMiniGame`, `normalizeMiniGameInputs/Actions`, `initMiniGame` | session/token/만료와 축·단조 타격 trace 정규화, 타입별 결과 validator를 가진 서버 권위 미니게임 |
+| Minigame | `startMiniGame`, `readyMiniGame`, `recordMiniGameInput/Action`, `getMiniGameValidationSnapshot`, `cancelMiniGame`, `failMiniGameOnDisconnect`, `hasActiveMiniGame`, `normalizeMiniGameInputs/Actions`, `initMiniGame` | session/token/만료, 최초 입력 socket 고정, 서버 수신 시각 기반 축·단조 타격 trace와 타입별 결과 validator를 가진 서버 권위 미니게임. 연결 종료·시간초과·조기 확정은 실패 결과로 소비한다. |
 | Human verification | `analyzeHuntingPattern`, `requireHumanVerification`, `requestHumanVerification`, `clearHumanVerification`, `initializeHumanVerification`, `detachHumanVerification`, `initHumanVerification` | 서버 확정 몬스터 처치의 반복 패턴 분석, 영속 검사 요구와 행동 제한·피해 보호, 일회성 raster 문제와 재접속 복원 |
 | Fishing | `startFishing`, `cancelFishing`, `isFishing` | 장소·낚싯대 검증, 미끼 묶음 자동 장착·한 개 소비, 입질 대기, 등급/미니게임/보상 연결 |
 | Karma | `initKarma` | `combat:pvp_kill` 구독, 지역별 카르마 증가와 현상 대상 처치자의 영웅 상태효과·알림 연결 |

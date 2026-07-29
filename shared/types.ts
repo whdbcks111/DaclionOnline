@@ -1,9 +1,12 @@
 // 서버-클라이언트 공통 타입 정의
 import type { TagId } from './tags.js'
 import type {
+    MiniGameActionRequest,
     MiniGameCancelledData,
+    MiniGameInputRequest,
     MiniGameResolvedData,
     MiniGameResultRequest,
+    MiniGameSessionRequest,
     MiniGameStartData,
 } from './minigames.js'
 
@@ -606,6 +609,9 @@ export interface ClientToServerEvents {
     adminPanelRequestPlayers: () => void
     adminPanelRequestPlayer: (userId: number) => void
     adminPanelExecute: (request: AdminPanelActionRequest) => void
+    miniGameReady: (request: MiniGameSessionRequest) => void
+    miniGameInput: (request: MiniGameInputRequest) => void
+    miniGameAction: (request: MiniGameActionRequest) => void
     miniGameResult: (request: MiniGameResultRequest) => void
     requestHumanVerification: () => void
     submitHumanVerification: (request: HumanVerificationSubmitRequest) => void

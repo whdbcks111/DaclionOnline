@@ -28,7 +28,17 @@ const userChannels = new Map<number, string | null>();
 
 /** 사용 가능한 채널 목록 반환 */
 export function getAvailableChannels(): ChannelInfo[] {
-    return CHANNELS;
+    return CHANNELS.map(channel => ({ ...channel }));
+}
+
+/** 클라이언트가 참가할 수 있는 사전 정의 공개 채널인지 검사한다. */
+export function isAvailablePublicChannel(channel: string | null): boolean {
+    return CHANNELS.some(candidate => candidate.id === channel);
+}
+
+/** 개인 채널은 본인 것만, 공개 채널은 마스터 목록에 등록된 것만 허용한다. */
+export function canUserJoinChannel(userId: number, channel: string | null): boolean {
+    return isAvailablePublicChannel(channel) || channel === `private_${userId}`;
 }
 
 /** Socket.io room 이름 변환 */
@@ -75,12 +85,9 @@ export function addToChannelHistory(channel: string | null, msg: ChatMessage): v
     }
 }
 
-/** 모든 채널 히스토리에 메시지 추가 (브로드캐스트용)
- *  CHANNELS 사전 정의 목록 + 런타임에 생성된 채널 모두 포함 */
+/** 모든 사전 정의 공개 채널 히스토리에 메시지 추가한다. */
 export function addToAllChannelHistories(msg: ChatMessage): void {
-    const ids = new Set<string | null>(CHANNELS.map(ch => ch.id));
-    for (const key of channelHistories.keys()) ids.add(key);
-    for (const id of ids) addToChannelHistory(id, msg);
+    for (const channel of CHANNELS) addToChannelHistory(channel.id, msg);
 }
 
 /** 채널 필터 히스토리에 메시지 추가 */

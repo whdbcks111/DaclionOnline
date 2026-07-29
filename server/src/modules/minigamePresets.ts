@@ -6,8 +6,8 @@ import {
     type FishingCaptureConfig,
     type ForgeRhythmConfig,
     type HazardDodgeConfig,
-    type MiniGameResultRequest,
     type MiniGameType,
+    type MiniGameValidationRequest,
 } from '../../../shared/minigames.js';
 import { AttributeType } from '../models/Attribute.js';
 import type Player from '../models/Player.js';
@@ -67,7 +67,7 @@ function fishingPreset(
     };
 }
 
-function validateFishing(config: FishingCaptureConfig, request: MiniGameResultRequest) {
+function validateFishing(config: FishingCaptureConfig, request: MiniGameValidationRequest) {
     const state = simulateFishingCapture(config, normalizeMiniGameInputs(request), request.elapsedMs);
     return state.finished && state.success
         ? { success: true, message: '관리자 낚시 테스트에 성공했습니다.' }

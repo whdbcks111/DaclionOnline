@@ -2,7 +2,7 @@ import {
     simulateHazardDodge,
     type HazardDodgeConfig,
     type HazardDodgeMode,
-    type MiniGameResultRequest,
+    type MiniGameValidationRequest,
 } from '../../../shared/minigames.js';
 import { AttributeType } from '../models/Attribute.js';
 import type Player from '../models/Player.js';
@@ -51,7 +51,7 @@ function createHazardConfig(player: Player, data: HazardBossPatternData, difficu
     };
 }
 
-function validateHazard(config: HazardDodgeConfig, request: MiniGameResultRequest) {
+function validateHazard(config: HazardDodgeConfig, request: MiniGameValidationRequest) {
     const state = simulateHazardDodge(config, normalizeMiniGameInputs(request), request.elapsedMs);
     return state.finished && state.success
         ? { success: true, message: '위험 지대를 완전히 피했습니다.' }

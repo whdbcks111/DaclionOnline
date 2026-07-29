@@ -19,6 +19,11 @@ export interface InventoryItemSelection {
     count: number;
 }
 
+export interface RemovedInventoryItemSnapshot {
+    readonly name: string;
+    readonly snapshot: ItemSnapshot;
+}
+
 /** 인벤토리 정리 명령과 영속 순서가 공유하는 정렬 기준. */
 export class InventorySortMode {
     private static readonly all: InventorySortMode[] = [];
@@ -589,6 +594,21 @@ export default class Inventory {
     }
 
     // -- 제거 --
+
+    /**
+     * 표시 슬롯을 한 번만 해석해 snapshot 생성과 제거를 같은 동기 경계에서 수행한다.
+     * 버리기처럼 외부 소유권으로 옮기는 기능은 조회 후 별도 remove하지 말고 이 API를 사용한다.
+     */
+    takeItemSnapshotByIndex(index: number, count: number): RemovedInventoryItemSnapshot | undefined {
+        if (!Number.isInteger(index) || !Number.isInteger(count) || count < 1) return undefined;
+        const item = this._items[index];
+        if (!item || item.count < count) return undefined;
+        const result = {
+            name: item.name,
+            snapshot: item.snapshot(count),
+        };
+        return this.removeItemInstance(item, count) ? result : undefined;
+    }
 
     /** 아이템 인스턴스에서 수량 제거. 0이 되면 삭제 */
     removeItem(itemId: number, count: number): boolean {

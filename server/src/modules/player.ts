@@ -28,9 +28,12 @@ import { createMonsterTargetAnalysis } from '../models/Inspection.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
+const unloadingPlayers = new Map<number, Promise<void>>();
 
 /** 로그인 시 호출: DB에서 로드하여 메모리에 올림 */
 export async function loadPlayerByUserId(userId: number): Promise<Player> {
+    const unloading = unloadingPlayers.get(userId);
+    if (unloading) await unloading;
     const existing = getOnlinePlayer(userId);
     if (existing) {
         initializeTutorialSession(existing, { newPlayer: false, showCard: false });
@@ -53,27 +56,38 @@ export async function loadPlayerByUserId(userId: number): Promise<Player> {
 
 /** 로그아웃/연결끊김 시 호출: 저장 후 메모리에서 제거. 연결 종료 경로는 재접속 시 제거를 취소한다. */
 export async function unloadPlayerByUserId(userId: number, requireOffline = false): Promise<void> {
+    const inProgress = unloadingPlayers.get(userId);
+    if (inProgress) return inProgress;
     if (requireOffline && isUserOnline(userId)) return;
     const player = getOnlinePlayer(userId);
     if (!player) return;
-    endNpcDialogue(player, DialogueEndReason.UNLOADED, false);
-    cancelCrafting(player);
-    cancelFishing(userId, '접속 종료로 낚시가 취소되었습니다.');
-    cancelNavigation(player, false);
-    detachHumanVerification(player);
-    clearDungeonPuzzleSession(userId);
-    tradeManager.cancelForPlayer(player, '접속이 종료되어 거래가 취소되었습니다.');
-    player.skills.finishAll();
-    partyManager.removeDisconnectedPlayer(player);
-    clearInformationMode(userId);
-    clearUserSnapshotStreams(userId);
-    await player.save();
-    if (requireOffline && isUserOnline(userId)) return;
-    unregisterOnlinePlayer(player.userId);
+    const operation = (async () => {
+        endNpcDialogue(player, DialogueEndReason.UNLOADED, false);
+        cancelCrafting(player);
+        cancelFishing(userId, '접속 종료로 낚시가 취소되었습니다.');
+        cancelNavigation(player, false);
+        detachHumanVerification(player);
+        clearDungeonPuzzleSession(userId);
+        tradeManager.cancelForPlayer(player, '접속이 종료되어 거래가 취소되었습니다.');
+        player.skills.finishAll();
+        partyManager.removeDisconnectedPlayer(player);
+        clearInformationMode(userId);
+        clearUserSnapshotStreams(userId);
+        await player.save();
+        if (requireOffline && isUserOnline(userId)) return;
+        unregisterOnlinePlayer(player.userId);
+    })();
+    unloadingPlayers.set(userId, operation);
+    try {
+        await operation;
+    } finally {
+        if (unloadingPlayers.get(userId) === operation) unloadingPlayers.delete(userId);
+    }
 }
 
 /** 온라인 플레이어 조회 (메모리) */
 export function getPlayerByUserId(userId: number): Player | undefined {
+    if (unloadingPlayers.has(userId)) return undefined;
     return getOnlinePlayer(userId);
 }
 

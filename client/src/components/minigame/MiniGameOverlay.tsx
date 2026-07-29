@@ -14,7 +14,6 @@ import {
   simulateForgeRhythm,
   simulateHazardDodge,
   simulateFishingCapture,
-  snapshotMiniGameInputs,
 } from '@shared/minigames'
 import { useSocket } from '../../context/SocketContext'
 import styles from './MiniGameOverlay.module.scss'
@@ -120,8 +119,13 @@ export default function MiniGameOverlay() {
     const currentElapsed = Math.max(0, performance.now() - startedAt.current)
     const at = resolveForgeStrikeTime(currentElapsed, displayedElapsedRef.current, compensateVisualLag)
     actions.current.push({ at, action: 'strike' })
+    socket?.emit('miniGameAction', {
+      sessionId: game.sessionId,
+      token: game.token,
+      action: 'strike',
+    })
     playForgeSound('strike')
-  }, [game?.type, playForgeSound])
+  }, [game, playForgeSound, socket])
 
   useLayoutEffect(() => {
     displayedElapsedRef.current = elapsed
@@ -136,7 +140,15 @@ export default function MiniGameOverlay() {
     setJoystickDirection(next)
     const at = Math.max(0, performance.now() - startedAt.current)
     appendMiniGameInputSample(inputs.current, { at, ...next })
-  }, [])
+    if (game) {
+      socket?.emit('miniGameInput', {
+        sessionId: game.sessionId,
+        token: game.token,
+        x: next.x,
+        y: next.y,
+      })
+    }
+  }, [game, socket])
 
   const updateKeyboardDirection = useCallback(() => {
     const keys = pressedKeys.current
@@ -171,6 +183,10 @@ export default function MiniGameOverlay() {
       setJoystickDirection({ x: 0, y: 0 })
       pressedKeys.current.clear()
       submitted.current = false
+      socket.emit('miniGameReady', {
+        sessionId: data.sessionId,
+        token: data.token,
+      })
     }
     const onResolved = (data: { sessionId: string; success: boolean; message?: string }) => {
       if (data.sessionId !== game?.sessionId) return
@@ -258,9 +274,6 @@ export default function MiniGameOverlay() {
         socket.emit('miniGameResult', {
           sessionId: game.sessionId,
           token: game.token,
-          elapsedMs,
-          inputs: snapshotMiniGameInputs(inputs.current, elapsedMs),
-          actions: actions.current.filter(action => action.at <= elapsedMs).map(action => ({ ...action })),
         })
         return
       }

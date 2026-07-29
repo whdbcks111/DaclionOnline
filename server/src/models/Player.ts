@@ -242,6 +242,7 @@ export default class Player extends Entity {
     private _gold = 0;
     private readonly karmaState: KarmaState;
     private _dirty = false;
+    private _changeRevision = 0;
     private _moving = false;
     private _statPoint = 0;
     private _deathNotifTimer = 0;
@@ -288,7 +289,10 @@ export default class Player extends Entity {
         this.quests.bindOwner(this);
         this.career = new CareerProfile(this);
         this.titles = new TitleBook(this);
-        this.inventory.subscribeChanges(() => this.quests.refreshSnapshotObjectives());
+        this.inventory.subscribeChanges(() => {
+            this.quests.refreshSnapshotObjectives();
+            if (this._savePromise) this._saveRequested = true;
+        });
         this.progress.subscribeChanges(() => this.quests.refreshSnapshotObjectives());
         this._statPoint = statPoint;
         this._gold = gold;
@@ -335,12 +339,19 @@ export default class Player extends Entity {
 
     // -- Getters / Setters (dirty 추적) --
 
+    private markDirty(): void {
+        this._dirty = true;
+        this._changeRevision += 1;
+        // 저장 도중 생긴 경제·생존 상태 변경은 같은 save() 호출의 다음 pass에서 확정한다.
+        if (this._savePromise) this._saveRequested = true;
+    }
+
     override get level() { return this._level; }
     override set level(val: number) {
         this._level = val;
         this.applyLevelSurvivalCapacityModifiers();
         this.clampVitals();
-        this._dirty = true;
+        this.markDirty();
         this.career?.evaluateElitePromotion();
         this.quests?.refreshSnapshotObjectives();
     }
@@ -366,14 +377,14 @@ export default class Player extends Entity {
     }
 
     override get exp() { return this._exp; }
-    override set exp(val: number) { this._exp = val; this._dirty = true; }
+    override set exp(val: number) { this._exp = val; this.markDirty(); }
 
     override get locationId() { return this._locationId; }
     override set locationId(val: string) {
         const previousLocationId = this._locationId;
         if (val !== previousLocationId) endNpcDialogue(this, DialogueEndReason.MOVED);
         this._locationId = val;
-        this._dirty = true;
+        this.markDirty();
         if (this.progress) markLocationVisited(this, val);
         this.quests?.refreshSnapshotObjectives();
         if (val !== previousLocationId) {
@@ -385,16 +396,16 @@ export default class Player extends Entity {
     }
 
     override get life() { return this._life; }
-    override set life(val: number) { this._life = val; this._dirty = true; }
+    override set life(val: number) { this._life = val; this.markDirty(); }
 
     override get mentality() { return this._mentality; }
-    override set mentality(val: number) { this._mentality = val; this._dirty = true; }
+    override set mentality(val: number) { this._mentality = val; this.markDirty(); }
 
     override get thirsty() { return this._thirsty; }
-    override set thirsty(val: number) { this._thirsty = val; this._dirty = true; }
+    override set thirsty(val: number) { this._thirsty = val; this.markDirty(); }
 
     override get hungry() { return this._hungry; }
-    override set hungry(val: number) { this._hungry = val; this._dirty = true; }
+    override set hungry(val: number) { this._hungry = val; this.markDirty(); }
 
     /** 계산된 최대 중량 (base + modifier) */
     get maxWeight() { return this.attribute.get(AttributeType.MAX_WEIGHT); }
@@ -403,14 +414,14 @@ export default class Player extends Entity {
     set maxWeight(val: number) {
         this.attribute.setBase(AttributeType.MAX_WEIGHT, val);
         this.inventory.maxWeight = this.attribute.get(AttributeType.MAX_WEIGHT);
-        this._dirty = true;
+        this.markDirty();
     }
 
     get statPoint() { return this._statPoint; }
-    set statPoint(val: number) { this._statPoint = val; this._dirty = true; }
+    set statPoint(val: number) { this._statPoint = val; this.markDirty(); }
 
     get gold() { return this._gold; }
-    set gold(val: number) { this._gold = Math.max(0, val); this._dirty = true; }
+    set gold(val: number) { this._gold = Math.max(0, val); this.markDirty(); }
 
     /** 기준 시각 이후 자연 감소까지 반영한 현재 카르마. */
     get karma(): number { return this.karmaState?.value ?? 0; }
@@ -496,7 +507,7 @@ export default class Player extends Entity {
         this.level = targetLevel;
         this.exp = Math.floor(this.maxExp * expPercent / 100);
         this.stat.applyModifiers(this);
-        this._dirty = true;
+        this.markDirty();
         return plan;
     }
 
@@ -510,7 +521,7 @@ export default class Player extends Entity {
             || this.equipment.dirty || this.progress.dirty || this.skills.dirty || this.quests.dirty;
     }
 
-    protected override onPersistentTagsChanged(): void { this._dirty = true; }
+    protected override onPersistentTagsChanged(): void { this.markDirty(); }
 
     override get deathDuration(): number {
         let baseDuration = 10;
@@ -797,7 +808,7 @@ export default class Player extends Entity {
         const protectedBefore = Math.min(experienceBefore, this._pendingDeathPenaltyProtectedExp);
         const appliedGain = Math.floor(amount * this.getExperienceGainModifier());
         this._exp += appliedGain;
-        this._dirty = true;
+        this.markDirty();
 
         const levelsGained: number[] = [];
         while (this._exp >= this.maxExp) {
@@ -835,7 +846,7 @@ export default class Player extends Entity {
         this.stat.add(statType, amount);
         this._statPoint -= amount;
         this.stat.applyModifiers(this);
-        this._dirty = true;
+        this.markDirty();
         emitGameEvent(GameEventIds.STAT_ALLOCATED, {
             actor: this,
             data: { stat: statType.key, amount },
@@ -950,6 +961,7 @@ export default class Player extends Entity {
     }
 
     private async saveDirtyState(): Promise<void> {
+        const playerRevision = this._changeRevision;
         const elapsedSeconds = Math.floor(this._unsavedPlayTime);
         if (elapsedSeconds > 0) {
             this._unsavedPlayTime -= elapsedSeconds;
@@ -980,9 +992,13 @@ export default class Player extends Entity {
                     rankingVisibility: this.rankingVisibility.toPersistence() as any,
                 } as any,
             });
-            this._dirty = false;
-            this.stat.resetDirty();
-            this.rankingVisibility.resetDirty();
+            if (playerRevision === this._changeRevision) {
+                this._dirty = false;
+                this.stat.resetDirty();
+                this.rankingVisibility.resetDirty();
+            } else {
+                this._saveRequested = true;
+            }
         }
         await this.inventory.save();
         await this.equipment.save();
@@ -993,7 +1009,7 @@ export default class Player extends Entity {
 
     private recordKarmaChange(result: KarmaChangeSnapshot, source: string): KarmaChangeSnapshot {
         if (Math.abs(result.delta) < Number.EPSILON) return result;
-        this._dirty = true;
+        this.markDirty();
         emitGameEvent(GameEventIds.KARMA_CHANGED, {
             actor: this,
             data: {

@@ -17,6 +17,7 @@ import {
     getAvailableChannels,
     getFilteredHistoryForUser,
     getPublicReplyReference,
+    canUserJoinChannel,
 } from "./channel.js";
 import { sendPlayerStats, sendLocationInfo, getPlayerByUserId } from "./player.js";
 import { handleCommand, isCommandAliasInput } from "./bot.js";
@@ -251,9 +252,12 @@ export const initChat = () => {
             const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
             if (!session) { socket.emit('sessionInvalid'); return; }
 
-            // 개인 채널은 본인 것만 접근 가능
-            if (typeof channel === 'string' && channel.startsWith('private_')) {
-                if (channel !== `private_${session.userId}`) return;
+            if (!canUserJoinChannel(session.userId, channel)) {
+                sendNotificationToUser(session.userId, {
+                    key: 'channel:invalid',
+                    message: '존재하지 않거나 접근할 수 없는 채널입니다.',
+                });
+                return;
             }
 
             const oldChannel = getUserChannel(session.userId);

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { VerifyEntry } from '../types/index.js';
 import {
+    checkRegistrationVerificationCode,
     isVerifiedRegistrationEmail,
     normalizeRegistrationEmail,
 } from './register.js';
@@ -12,6 +13,7 @@ function verification(email: string, expirationDate: Date, verified = true): Ver
         code: '123456',
         sentAt: new Date(1_000),
         expirationDate,
+        attempts: 0,
         ...(verified ? { verified: true as const } : {}),
     };
 }
@@ -37,4 +39,15 @@ test('만료되거나 아직 확인하지 않은 이메일 인증은 가입에 �
         'player@example.com',
         now,
     ), false);
+});
+
+test('이메일 인증번호는 오답 5회 뒤 같은 발급 건을 폐기한다', () => {
+    const entry = verification('player@example.com', new Date(20_000), false);
+    for (let attempt = 1; attempt < 5; attempt++) {
+        assert.equal(checkRegistrationVerificationCode(entry, '000000', 10_000), 'incorrect');
+        assert.equal(entry.attempts, attempt);
+    }
+    assert.equal(checkRegistrationVerificationCode(entry, '000000', 10_000), 'attempts-exhausted');
+    assert.equal(checkRegistrationVerificationCode(entry, '123456', 10_000), 'expired');
+    assert.equal(entry.verified, undefined);
 });

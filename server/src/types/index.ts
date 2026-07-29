@@ -19,5 +19,6 @@ export interface VerifyEntry {
     code: string
     expirationDate: Date
     sentAt: Date
+    attempts: number
     verified?: true
 }

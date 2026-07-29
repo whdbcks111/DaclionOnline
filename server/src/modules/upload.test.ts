@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import sharp from 'sharp'
-import { encodeChatImage, parseStoredChatImageFilename, selectChatImagesToDelete } from './upload.js'
+import {
+    encodeChatImage,
+    encodeProfileImage,
+    parseStoredChatImageFilename,
+    selectChatImagesToDelete,
+} from './upload.js'
 
 const DAY = 24 * 60 * 60 * 1000
 const NOW = 2_000_000_000_000
@@ -40,4 +45,16 @@ test('채팅 이미지는 원본 형식과 무관하게 보통 화질 WebP로 �
     assert.equal(metadata.width, 4)
     assert.equal(metadata.height, 3)
     await assert.rejects(() => encodeChatImage(Buffer.from('not an image')))
+})
+
+test('프로필 이미지는 서버가 제한된 크기의 WebP로 재인코딩한다', async () => {
+    const input = await sharp({
+        create: { width: 900, height: 600, channels: 4, background: { r: 20, g: 40, b: 60, alpha: 1 } },
+    }).png().toBuffer()
+    const output = await encodeProfileImage(input)
+    const metadata = await sharp(output).metadata()
+    assert.equal(metadata.format, 'webp')
+    assert.equal(metadata.width, 512)
+    assert.equal(metadata.height, 512)
+    await assert.rejects(() => encodeProfileImage(Buffer.from('not an image')))
 })

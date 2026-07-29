@@ -26,7 +26,7 @@
 
 `Home.tsx`의 답장 상태는 원문 `messageId/userId/nickname/preview` snapshot 하나만 소유한다. 공개 메시지의 답장 버튼은 모바일 입력 포커스를 빼앗지 않고 입력창 위 미리보기를 열며, 텍스트 또는 이미지만 전송하는 첫 메시지에 `replyToId`를 붙인다. 전송된 `ChatMessage.replyTo` 카드를 누르면 `chat-message-{id}` 요소로 즉시 이동하고 1.6초 동안 강조한다. 원문이 현재 100개 히스토리에 없으면 입력창 안내를 표시한다.
 
-`components/minigame/MiniGameOverlay`는 서버 `miniGameStart`를 전체 화면 overlay로 렌더링한다. 낚시·위험 회피는 키보드와 pointer 조이스틱의 축 변경을 20ms 단위로 합치고, 단조 리듬은 Space·Enter·터치 버튼의 `strike` 시각을 별도 action trace로 기록한다. 단조는 난이도·원 정확도·보정 품질을 표시하고 첫 사용자 타격 이후 Web Audio 접근 cue와 충격음을 재생한다. 화면은 공용 결정론 시뮬레이터로 미리 계산하지만 성공 권한은 서버에 있으며 전송 시점의 불변 trace snapshot만 `miniGameResult`로 반환한다.
+`components/minigame/MiniGameOverlay`는 서버 `miniGameStart`를 전체 화면 overlay로 렌더링한다. 준비 뒤 키보드와 pointer 조이스틱의 축 변경은 `miniGameInput`, Space·Enter·터치 타격은 `miniGameAction`으로 즉시 전송한다. 단조는 난이도·원 정확도·보정 품질을 표시하고 첫 사용자 타격 이후 Web Audio 접근 cue와 충격음을 재생한다. 화면은 공용 결정론 시뮬레이터로 미리 계산하지만 성공 권한은 서버에 있으며 `miniGameResult`에는 일회성 session/token만 반환한다.
 
 ## 채팅 UI API
 
