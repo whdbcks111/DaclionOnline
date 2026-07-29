@@ -287,32 +287,31 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
         drops: [{ itemDataId: materialId, minCount: 1, maxCount: 4, chance: 0.7 }],
         goldReward: { min: 7_000 + index * 1_400, max: 11_000 + index * 2_100 },
     };
-    // TODO(art): 신규 몬스터 초상 제작 전까지 역할이 가까운 기존 64×64 초상을 명시적으로 재사용한다.
     defineWorldMonster({
         id: `${region.id}_vanguard`, name: region.normalNames[0],
         description: `${region.name} 외곽에서 침입자의 첫 움직임을 시험하는 전위 개체.`,
-        icon: 'monsters/horizon_reaper', level: region.startLevel + 8,
+        icon: `monsters/${region.id}_vanguard`, level: region.startLevel + 8,
         statProfile: MonsterStatProfile.BRUISER, statWeights: { maxLife: 1.08, atk: 1.1 },
         ...monsterCommon, tags: [GameTags.ENTITY_HUMANOID, primaryProperty, regionTag],
     });
     defineWorldMonster({
         id: `${region.id}_keeper`, name: region.normalNames[1],
         description: `${region.name}의 교차로와 보물실을 지키는 고방어 개체.`,
-        icon: 'monsters/genesis_warden', level: region.startLevel + 24,
+        icon: `monsters/${region.id}_keeper`, level: region.startLevel + 24,
         statProfile: MonsterStatProfile.TANK, statWeights: { maxLife: 1.1, def: 1.12, magicDef: 1.12 },
         ...monsterCommon, tags: [GameTags.ENTITY_ELEMENTAL, GameTags.TRAIT_INANIMATE, secondaryProperty, regionTag],
     });
     defineWorldMonster({
         id: `${region.id}_stalker`, name: region.normalNames[2],
         description: `${region.name}의 순환로를 가로질러 약해진 탐험자를 추격하는 기동 개체.`,
-        icon: 'monsters/constellation_hunter', level: region.startLevel + 39,
+        icon: `monsters/${region.id}_stalker`, level: region.startLevel + 39,
         statProfile: MonsterStatProfile.SKIRMISHER, statWeights: { atk: 1.12, speed: 1.12, critDmg: 1.08 },
         ...monsterCommon, tags: [GameTags.ENTITY_BEAST, primaryProperty, secondaryProperty, regionTag],
     });
     defineWorldMonster({
         id: `${region.id}_sovereign`, name: region.bossName,
         description: `${region.name}의 주 통로 옆 숨은 심층을 지배하며 환경 자체를 무기로 쓰는 선택형 지역 보스.`,
-        icon: 'monsters/last_constellation', level: region.bossLevel,
+        icon: `monsters/${region.id}_sovereign`, level: region.bossLevel,
         statProfile: MonsterStatProfile.HYBRID, statRank: MonsterRank.BOSS,
         statWeights: { maxLife: 1.08 + index * 0.015, atk: 1.1, magicForce: 1.13, def: 1.08, magicDef: 1.1 },
         expReward: region.bossLevel * 20 * 15,

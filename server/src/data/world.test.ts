@@ -211,26 +211,15 @@ test('성장 구간별 대체 사냥터는 기존 관문을 건너뛰지 않는 
     }
 });
 
-test('기존 몬스터는 고유 아이콘을, 승천 권역 몬스터는 명시적인 64px fallback을 제공한다', () => {
+test('모든 몬스터는 데이터 ID별 64px RGBA 전용 아이콘을 제공한다', () => {
     const monsters = getAllMonsterData();
     const icons = new Set<string>();
-    const ascendantPrefixes = ASCENDANT_REGIONS.map(region => `${region.id}_`);
 
     assert.equal(monsters.length, 198);
     for (const monster of monsters) {
         const icon = monster.icon ?? `monsters/${monster.id}`;
-        const usesAscendantFallback = ascendantPrefixes.some(prefix => monster.id.startsWith(prefix));
-        if (!usesAscendantFallback) {
-            assert.equal(icon, `monsters/${monster.id}`);
-            assert.equal(icons.has(icon), false, icon);
-        } else {
-            assert.ok([
-                'monsters/horizon_reaper',
-                'monsters/genesis_warden',
-                'monsters/constellation_hunter',
-                'monsters/last_constellation',
-            ].includes(icon), `${monster.id}/${icon}`);
-        }
+        assert.equal(icon, `monsters/${monster.id}`);
+        assert.equal(icons.has(icon), false, icon);
         icons.add(icon);
 
         const png = readFileSync(new URL(`../../../client/public/icons/${icon}.png`, import.meta.url));

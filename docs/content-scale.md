@@ -27,12 +27,12 @@
 1. 다음 콘텐츠 확장 전에는 `BALANCE_PROFILE_LEVELS`의 공용 회귀 결과와 `balance:report -- 1000`의 최종 구간 결과를 먼저 확인한다.
 2. 관리자 밸런스 명령·페이지와 `balance:report`의 동레벨 일반/보스 프로필에서 회피율·관통 후 방어·처치시간·평타 비중을 확인한다.
 3. 1차 직업 Lv.75~180과 Lv.200 엘리트 조합의 보스 DPS 최고/최저 편차는 자동 검증 상한인 1.5배를 넘기지 않는다.
-4. 확정 전용 아트 대신 존재하는 카테고리 fallback을 사용하고 교체 TODO를 유지한다.
+4. 아직 확정 전용 아트가 없는 아이템·스킬은 존재하는 카테고리 fallback을 사용하고 교체 TODO를 유지한다. 몬스터는 승천 권역까지 데이터 ID별 전용 초상을 유지한다.
 
 ## 검증 기준
 
 - `server/src/data/world.test.ts`가 장소 양방향 연결, 오브젝트 ID, 권역 대표색, 상점·제작법·퀘스트·퍼즐·보물·보스 패턴을 권역 단위로 검증한다.
-- `server/src/scripts/validateMasterData.ts`가 모든 참조와 명시된 fallback 아이콘 경로를 검증한다.
+- `server/src/scripts/validateMasterData.ts`가 모든 참조와 명시된 fallback 아이콘 경로를 검증하며, `server/src/data/world.test.ts`가 몬스터 전용 초상의 64×64 RGBA 규격과 ID별 유일성을 검증한다.
 - `server/src/scripts/reportBalance.ts`가 공용 레벨 구간과 황혼왕릉부터 종언성단까지의 장비를 같은 직업/레벨 기준선에서 비교하고, 지역 전승 기술의 회피·관통·자원·쿨다운을 함께 출력한다.
 - `server/src/models/Balance.test.ts`가 상위 1차 직업과 순서 있는 엘리트 20조합의 보스 DPS 편차 1.5배, 평타 피해 비중 15% 이상을 회귀 검증한다.
 - 수량은 문서의 추정이 아니라 현재 마스터 데이터를 실제로 import한 런타임 레지스트리 수와 `locations.json` 길이로 갱신한다.
