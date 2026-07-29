@@ -17,7 +17,9 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
         origin: corsOrigin,
         methods: ['GET', 'POST'],
         credentials: true
-      }
+      },
+      // 게임 socket payload는 텍스트 명령과 작은 상태 요청뿐이다. 대용량 이미지는 별도 HTTP API를 사용한다.
+      maxHttpBufferSize: 256 * 1024,
     });
 
     // 세션 미들웨어: 모든 연결에서 쿠키 → 세션 자동 바인딩
