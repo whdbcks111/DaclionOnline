@@ -33,6 +33,7 @@ import type {
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
 const MAX_PENDING_IMAGES = 10
 const CHAT_FOLLOW_THRESHOLD_PX = 48
+const MAX_CHAT_INPUT_HISTORY = 100
 
 interface PendingChatImage {
   id: string
@@ -62,6 +63,18 @@ function channelRoomKey(channel: string | null): string {
 function getMentionQuery(input: string): string | null {
   const match = /^@([^\s]*)$/.exec(input.trimStart())
   return match?.[1] ?? null
+}
+
+function isCollapsedCaretAtStart(element: HTMLElement): boolean {
+  const selection = window.getSelection()
+  const anchorNode = selection?.anchorNode
+  if (!selection || !anchorNode || !selection.isCollapsed || selection.rangeCount === 0) return false
+  if (anchorNode !== element && !element.contains(anchorNode)) return false
+
+  const beforeCaret = document.createRange()
+  beforeCaret.selectNodeContents(element)
+  beforeCaret.setEnd(anchorNode, selection.anchorOffset)
+  return beforeCaret.toString().length === 0
 }
 
 function HomeContent() {
@@ -97,6 +110,9 @@ function HomeContent() {
   const followLatestMessageRef = useRef(true)
   const forceLatestMessageRef = useRef(true)
   const isComposing = useRef(false)
+  const inputHistoryRef = useRef<string[]>([])
+  const inputHistoryCursorRef = useRef<number | null>(null)
+  const inputHistoryDraftRef = useRef('')
   const snapshotRevisions = useRef({
     playerStats: { syncId: '', revision: 0 },
     locationInfo: { syncId: '', revision: 0 },
@@ -107,6 +123,9 @@ function HomeContent() {
       playerStats: { syncId: '', revision: 0 },
       locationInfo: { syncId: '', revision: 0 },
     }
+    inputHistoryRef.current = []
+    inputHistoryCursorRef.current = null
+    inputHistoryDraftRef.current = ''
   }, [sessionInfo?.userId])
 
   useEffect(() => {
@@ -257,6 +276,26 @@ function HomeContent() {
     selection?.addRange(range)
   }, [])
 
+  const replaceComposerWithHistory = useCallback((content: string) => {
+    const inputElement = inputRef.current
+    if (!inputElement) return
+    inputElement.textContent = content
+    setCommandFilter(content)
+    setShowAutocomplete(false)
+    setActiveIndex(0)
+    focusComposerEnd()
+  }, [focusComposerEnd])
+
+  const rememberSubmittedInput = useCallback((content: string) => {
+    const history = inputHistoryRef.current
+    if (history.at(-1) !== content) history.push(content)
+    if (history.length > MAX_CHAT_INPUT_HISTORY) {
+      history.splice(0, history.length - MAX_CHAT_INPUT_HISTORY)
+    }
+    inputHistoryCursorRef.current = null
+    inputHistoryDraftRef.current = ''
+  }, [])
+
   const jumpToMessage = useCallback((messageId: string) => {
     const target = document.getElementById(`chat-message-${messageId}`)
     if (!target) {
@@ -365,6 +404,7 @@ function HomeContent() {
           ...chatType,
           ...(replyToId ? { replyToId } : {}),
         })
+        rememberSubmittedInput(content)
       }
       if (filenames.length > 0) {
         socket.emit('sendImageMessages', {
@@ -386,7 +426,7 @@ function HomeContent() {
       imageSendingRef.current = false
       setImageUploading(false)
     }
-  }, [chatTypeKey, clearPendingImages, focusComposerEnd, pendingImages, replyingTo, socket])
+  }, [chatTypeKey, clearPendingImages, focusComposerEnd, pendingImages, rememberSubmittedInput, replyingTo, socket])
 
   const selectCommand = useCallback((name: string) => {
     if (!inputRef.current) return
@@ -404,6 +444,8 @@ function HomeContent() {
 
   const handleInput = useCallback(() => {
     const text = inputRef.current?.textContent ?? ''
+    inputHistoryCursorRef.current = null
+    inputHistoryDraftRef.current = ''
     setCommandFilter(text)
     if (getMentionQuery(text) !== null || isCommandAutocompleteInput(commands, text)) {
       setShowAutocomplete(true)
@@ -560,8 +602,47 @@ function HomeContent() {
       }
       if (e.key === 'Escape') { e.preventDefault(); setShowAutocomplete(false); return }
     }
+    if (e.key === 'Tab' && !isComposing.current) {
+      e.preventDefault()
+      if (availableChatTypes.length === 0) return
+      const currentIndex = availableChatTypes.findIndex(type => type.key === chatTypeKey)
+      const direction = e.shiftKey ? -1 : 1
+      const nextIndex = (Math.max(0, currentIndex) + direction + availableChatTypes.length)
+        % availableChatTypes.length
+      selectChatType(availableChatTypes[nextIndex])
+      return
+    }
+    if (e.key === 'ArrowUp' && !isComposing.current) {
+      const history = inputHistoryRef.current
+      const activeCursor = inputHistoryCursorRef.current
+      if (history.length === 0) return
+      if (activeCursor === null) {
+        const inputElement = inputRef.current
+        if (!inputElement || !isCollapsedCaretAtStart(inputElement)) return
+        inputHistoryDraftRef.current = inputElement.textContent ?? ''
+        inputHistoryCursorRef.current = history.length - 1
+      } else {
+        inputHistoryCursorRef.current = Math.max(0, activeCursor - 1)
+      }
+      e.preventDefault()
+      replaceComposerWithHistory(history[inputHistoryCursorRef.current])
+      return
+    }
+    if (e.key === 'ArrowDown' && !isComposing.current && inputHistoryCursorRef.current !== null) {
+      e.preventDefault()
+      const nextCursor = inputHistoryCursorRef.current + 1
+      if (nextCursor >= inputHistoryRef.current.length) {
+        inputHistoryCursorRef.current = null
+        replaceComposerWithHistory(inputHistoryDraftRef.current)
+        inputHistoryDraftRef.current = ''
+      } else {
+        inputHistoryCursorRef.current = nextCursor
+        replaceComposerWithHistory(inputHistoryRef.current[nextCursor])
+      }
+      return
+    }
     if (e.key === 'Enter' && !e.shiftKey && !isComposing.current) { e.preventDefault(); sendMessage() }
-  }, [showAutocomplete, getFilteredCount, commandFilter, commands, activeIndex, selectCommand, selectCompletion, selectMention, sendMessage, paramMode, dynamicCompletions, mentionQuery, mentionCompletions])
+  }, [showAutocomplete, getFilteredCount, commandFilter, commands, activeIndex, selectCommand, selectCompletion, selectMention, sendMessage, paramMode, dynamicCompletions, mentionQuery, mentionCompletions, availableChatTypes, chatTypeKey, replaceComposerWithHistory, selectChatType])
 
   const lifeRatio  = playerStats ? Math.max(0, playerStats.life / playerStats.maxLife) : 1
   const mpRatio    = playerStats ? Math.max(0, playerStats.mentality / playerStats.maxMentality) : 1
@@ -738,7 +819,7 @@ function HomeContent() {
                 className={styles.chatTypeButton}
                 aria-haspopup="listbox"
                 aria-expanded={chatTypeMenuOpen}
-                title={`${activeChatTypeDisplay.label} 채팅`}
+                title={`${activeChatTypeDisplay.label} 채팅 · 입력 중 Tab으로 전환`}
                 style={activeChatTypeDisplay.color
                   ? { color: activeChatTypeDisplay.color, borderColor: activeChatTypeDisplay.color }
                   : undefined}
