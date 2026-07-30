@@ -41,6 +41,7 @@ cd server && npm run balance:report -- 50  # 실제 전투식으로 Lv.50 직업
 | `server/.env` | `DATABASE_URL` | Prisma CLI가 읽는 MariaDB 연결 문자열 |
 | `server/.env` | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | 런타임 Prisma MariaDB adapter 연결 정보 |
 | `server/.env` | `GMAIL_USER`, `GMAIL_APP_PASSWORD` | 인증 메일 전송 |
+| `server/.env` | `SERVER_BOOT_STATE_PATH` | 선택. 서버 부팅 횟수·시각·적용/다음 패치 버전 상태 파일 경로. 기본값은 루트 `.runtime/server-boot.json` |
 | `client/.env` | `VITE_SERVER_URL` | 기본 `http://localhost:3001` |
 
 비밀값과 실제 `.env` 파일은 문서나 커밋에 넣지 않는다.
@@ -58,7 +59,7 @@ cd server && npm run balance:report -- 50  # 실제 전투식으로 Lv.50 직업
 2. 이벤트 계약 변경은 서버와 클라이언트 양쪽 컴파일로 확인한다.
 3. 수정한 소스 폴더의 `Overview.md`와 관련 `docs/` 문서를 갱신한다.
 4. 생성물(`dist`)이나 비밀 파일이 의도치 않게 변경되지 않았는지 `git status`로 확인한다.
-5. 사용자에게 보이는 변경이면 `shared/patchNotes.ts`의 현재 작업 묶음 버전 항목을 갱신하고 `/패치노트`와 패치노트 화면에 함께 반영되는지 확인한다. 직전 작업과 약 1시간 이상 떨어졌거나 서버 재시작·배포 경계라면 새 버전을 시작한다.
+5. 사용자에게 보이는 변경이면 먼저 `.runtime/server-boot.json`의 `appliedPatchVersion`을 확인한다. 소스 최신 버전과 같으면 이미 적용된 버전이므로 `nextPatchVersion`으로 시작하고, 소스 최신 버전이 더 높고 직전 작업과 약 1시간 이내라면 같은 재부팅 전 버전에 합친다. 이후 `/패치노트`와 패치노트 화면에 함께 반영되는지 확인한다.
 
 ## UI 스타일 기준
 

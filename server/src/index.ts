@@ -39,6 +39,8 @@ import { initMiniGame } from './modules/minigame.js';
 import { initTutorial } from './modules/tutorial.js';
 import { initKarma } from './modules/karma.js';
 import { initHumanVerification } from './modules/humanVerification.js';
+import { recordServerBoot } from './modules/serverBoot.js';
+import { getPatchNotes } from '../../shared/patchNotes.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -115,6 +117,15 @@ app.use((err: any, req: any, res: any, next: any) => {
 });
 
 httpServer.listen(SERVER_PORT, async () => {
+  try {
+    const latestPatchVersion = getPatchNotes()[0]?.version;
+    if (!latestPatchVersion) throw new Error('최신 패치 버전을 찾을 수 없습니다.');
+    const bootState = await recordServerBoot(latestPatchVersion);
+    logger.info(`서버 부팅 #${bootState.bootCount} · 적용 v${bootState.appliedPatchVersion} · 다음 v${bootState.nextPatchVersion} · ${bootState.lastBootAt}`);
+  } catch (error) {
+    // 운영 게임 실행은 추적 파일 실패와 분리하되, 다음 작업자가 경계를 놓치지 않도록 로그를 남긴다.
+    logger.warn('서버 재부팅 상태 기록 실패:', error);
+  }
   logger.divider();
   logger.box('서버 시작 완료', 'green');
   logger.success(`서버 실행 중: http://localhost:${SERVER_PORT}`);

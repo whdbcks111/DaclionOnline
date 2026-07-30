@@ -47,3 +47,9 @@ const result = gameAction('아이템 구매')
 ## 마스터 데이터 검증
 
 `npm run data:validate`는 아이템·스킬·직업·몬스터·자원·제작·퀘스트·NPC·장소 레지스트리의 참조와 필수 아이콘 파일을 검사한다. 루트 `npm run verify`는 서버 빌드/전체 테스트/마스터 검증/클라이언트 빌드를 순서대로 실행하므로 에이전트의 의미 있는 작업 마무리 검증에 사용한다.
+
+## 서버 부팅·패치 적용 경계
+
+`modules/serverBoot.ts`는 HTTP listen이 성공할 때 기본 경로 `.runtime/server-boot.json`에 누적 부팅 횟수, 마지막 부팅 ID·시각, 그 시점 `shared/patchNotes.ts`의 최신 적용 버전과 다음 patch 버전을 원자적으로 기록한다. 임시 파일을 같은 디렉터리에 쓴 뒤 rename하므로 다른 작업자가 부분 JSON을 읽지 않는다. 파일은 운영 상태라 Git에 포함하지 않으며, 별도 영속 볼륨이 필요하면 `SERVER_BOOT_STATE_PATH`로 경로를 지정한다.
+
+에이전트는 사용자에게 보이는 변경의 패치 버전을 정하기 전에 이 파일을 읽는다. `appliedPatchVersion`이 소스 최신 버전과 같으면 그 버전은 이미 재부팅으로 적용됐으므로 `nextPatchVersion`을 시작한다. 소스 최신 버전이 더 높으면 아직 재부팅 전인 같은 작업 묶음에 합칠 수 있다. 파일이 없거나 유효하지 않으면 적용 여부를 추측하지 않는다.
