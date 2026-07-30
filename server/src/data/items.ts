@@ -972,7 +972,7 @@ const mineralItems = [
     { id: 'emerald', name: '에메랄드', description: '초록빛을 띠는 희귀 보석.', image: 'items/emerald', weight: 0.2, tag: GameTags.MATERIAL_EMERALD },
     { id: 'diamond', name: '다이아몬드', description: '극히 희귀하고 단단한 보석.', image: 'items/diamond', weight: 0.2, tag: GameTags.MATERIAL_DIAMOND },
     { id: 'mana_crystal', name: '마나 수정', description: '수정 광맥에서 마력이 응결되어 자란 푸른 원석.', image: 'items/mana_crystal', weight: 0.25, tag: GameTags.MATERIAL_MANA_CRYSTAL },
-    { id: 'enhancement_stone', name: '지핵 강화석', description: '철근미궁 지핵 수정실의 강화 수정맥에서만 얻는 무기 강화 재료.', image: 'items/enhancement_stone', weight: 0.25, tag: GameTags.MATERIAL_ENHANCEMENT_STONE },
+    { id: 'enhancement_stone', name: '지핵 강화석', description: '철근미궁 지핵 수정실의 강화 수정맥에서만 얻는 장비 강화 재료.', image: 'items/enhancement_stone', weight: 0.25, tag: GameTags.MATERIAL_ENHANCEMENT_STONE },
 ] as const;
 
 for (const mineral of mineralItems) {

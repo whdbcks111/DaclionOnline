@@ -7,22 +7,22 @@ import {
     ARCANE_ENCHANT_MENTALITY_COST,
     ENHANCEMENT_STONE_ITEM_ID,
     FORGED_ITEM_NAMING_SENSIBILITY,
-    MAX_WEAPON_REINFORCEMENT,
+    MAX_EQUIPMENT_REINFORCEMENT,
     STAFF_INFUSION_MENTALITY_COST,
+    EquipmentReinforcementStage,
     ForgeForm,
     ForgeMaterial,
-    WeaponReinforcementStage,
     createEquipmentRepairPlan,
     createInfusedStaffSnapshot,
     enchantWeapon,
-    reinforceWeapon,
+    isReinforceableEquipment,
+    reinforceEquipment,
     renameForgedItem,
     selectEquipmentRepairMaterials,
 } from '../models/Forging.js';
 import { StatType } from '../models/Stat.js';
 import { AttributeType } from '../models/Attribute.js';
 import { itemTargetCompletions, resolveItemInspectionTarget } from './inspection.js';
-import { GameTags } from '../../../shared/tags.js';
 import { ItemAttackEffectType } from '../models/ItemAttackEffect.js';
 import { chat } from '../utils/chatBuilder.js';
 
@@ -299,10 +299,10 @@ export function initForgingCommands(): void {
         description: '목표 강화 단계별 성공·유지·하락·파괴 확률을 확인합니다.',
         information: true,
         handler(userId) {
-            const lines = WeaponReinforcementStage.values()
+            const lines = EquipmentReinforcementStage.values()
                 .map(stage => `+${stage.level} 도전: ${stage.chanceDescription}`);
             sendBotMessageToUser(userId, [
-                `[ 무기 강화 확률 · 최대 +${MAX_WEAPON_REINFORCEMENT} ]`,
+                `[ 장비 강화 확률 · 최대 +${MAX_EQUIPMENT_REINFORCEMENT} ]`,
                 ...lines,
                 '강화석은 모든 유효한 시도에 1개 소모됩니다. +7부터 하락, +9부터 파괴가 발생합니다.',
             ].join('\n'));
@@ -310,8 +310,8 @@ export function initForgingCommands(): void {
     });
 
     registerCommand({
-        name: '무기강화', aliases: ['reinforce', 'rf'],
-        description: `지핵 강화석으로 무기를 최대 +${MAX_WEAPON_REINFORCEMENT}까지 확률 강화합니다.`,
+        name: '장비강화', aliases: ['무기강화', 'reinforce', 'rf'],
+        description: `지핵 강화석으로 무기와 방어구를 최대 +${MAX_EQUIPMENT_REINFORCEMENT}까지 확률 강화합니다.`,
         showCommandUse: 'private',
         args: [{
             name: '아이템 번호 또는 장착칸', description: '인벤토리 번호 또는 손 같은 장착칸', required: true,
@@ -335,28 +335,24 @@ export function initForgingCommands(): void {
                 return;
             }
             const before = target.item.reinforcementLevel;
-            const preview = before >= MAX_WEAPON_REINFORCEMENT || !target.item.hasTag(GameTags.ITEM_WEAPON);
+            const preview = before >= MAX_EQUIPMENT_REINFORCEMENT || !isReinforceableEquipment(target.item);
             if (preview) {
                 sendBotMessageToUser(
                     userId,
-                    before >= MAX_WEAPON_REINFORCEMENT
-                        ? `이미 최대 강화 단계(+${MAX_WEAPON_REINFORCEMENT})입니다.`
-                        : '무기 아이템만 강화할 수 있습니다.',
+                    before >= MAX_EQUIPMENT_REINFORCEMENT
+                        ? `이미 최대 강화 단계(+${MAX_EQUIPMENT_REINFORCEMENT})입니다.`
+                        : '긍정 능력치가 있는 무기 또는 방어구만 강화할 수 있습니다.',
                 );
                 return;
             }
-            const stage = WeaponReinforcementStage.fromLevel(before + 1);
+            const stage = EquipmentReinforcementStage.fromLevel(before + 1);
             if (!stage) return;
             const previousName = target.item.name;
             if (!player.inventory.removeItemByData(ENHANCEMENT_STONE_ITEM_ID, 1)) return;
-            const result = reinforceWeapon(target.item, {
-                creatorLevel: player.level,
-                sensibility: player.stat.get(StatType.SENSIBILITY),
-                skillLevel: skill.level,
-            });
+            const result = reinforceEquipment(target.item, {});
             if (!result.outcome) {
                 player.inventory.addItem(ENHANCEMENT_STONE_ITEM_ID, 1);
-                sendBotMessageToUser(userId, result.reason ?? '무기 강화에 실패했습니다.');
+                sendBotMessageToUser(userId, result.reason ?? '장비 강화에 실패했습니다.');
                 return;
             }
             const chance = `+${stage.level} 도전: ${stage.chanceDescription}`;

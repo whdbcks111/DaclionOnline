@@ -83,8 +83,14 @@ export interface ItemBalanceProfile {
  * 일반 플레이에서는 중량이 먼저 한계가 되므로 stackable 아이템에는 사실상 무제한이다.
  */
 export const MAX_STACKABLE_ITEM_COUNT = 2_000_000_000;
-/** 아이템 metadata와 무기 강화 규칙이 공유하는 영속 강화 단계 상한. */
+/** 아이템 metadata와 장비 강화 규칙이 공유하는 영속 강화 단계 상한. */
 export const MAX_ITEM_REINFORCEMENT_LEVEL = 15;
+
+/** 단계당 5%, +5/+10/+15에서 추가 5%를 적용해 +15에서 원래 긍정 능력치의 90%를 더한다. */
+export function calculateItemReinforcementRate(level: number): number {
+    const normalized = Math.max(0, Math.min(MAX_ITEM_REINFORCEMENT_LEVEL, Math.floor(level)));
+    return normalized * 0.05 + Math.floor(normalized / 5) * 0.05;
+}
 
 /** 아이템 정의 (마스터 데이터, 코드에서 직접 정의) */
 export interface ItemData {
@@ -374,11 +380,22 @@ export class Item implements TagReadable {
     /** 장비 슬롯 */
     get equipSlot(): string | null { return this.data?.equipSlot ?? null; }
 
-    /** 능력치 modifier 목록 */
-    get modifiers(): AttributeModifier[] | null {
+    /** 강화 계산의 기준이 되는 마스터/인스턴스 고유 능력치 snapshot. */
+    getReinforcementBaseModifiers(): readonly AttributeModifier[] {
         const instance = normalizeInstanceModifiers(this.getMetadata(ItemMetadataKeys.INSTANCE_MODIFIERS));
         const base = instance ?? this.data?.modifiers ?? [];
-        const reinforcement = normalizeReinforcementModifiers(this.getMetadata(ItemMetadataKeys.REINFORCEMENT));
+        return base.map(modifier => ({ ...modifier }));
+    }
+
+    /** 지정 강화 단계가 원래 긍정 능력치에 비례해 추가하는 modifier snapshot. */
+    getReinforcementModifiersAtLevel(level: number): readonly AttributeModifier[] {
+        return createProportionalReinforcementModifiers(this.getReinforcementBaseModifiers(), level);
+    }
+
+    /** 능력치 modifier 목록 */
+    get modifiers(): AttributeModifier[] | null {
+        const base = this.getReinforcementBaseModifiers();
+        const reinforcement = this.getReinforcementModifiersAtLevel(this.reinforcementLevel);
         const combined = [...base, ...reinforcement];
         return combined.length > 0 ? combined : null;
     }
@@ -555,9 +572,47 @@ function normalizeInstanceModifiers(value: unknown): AttributeModifier[] | null 
     return modifiers.length > 0 ? modifiers : null;
 }
 
-function normalizeReinforcementModifiers(value: unknown): AttributeModifier[] {
-    if (!value || typeof value !== 'object') return [];
-    return normalizeInstanceModifiers((value as { modifiers?: unknown }).modifiers) ?? [];
+function createProportionalReinforcementModifiers(
+    base: readonly AttributeModifier[],
+    level: number,
+): AttributeModifier[] {
+    const rate = calculateItemReinforcementRate(level);
+    if (rate <= 0) return [];
+    const additive = new Map<AttributeKey, number>();
+    const multiplicative = new Map<AttributeKey, number>();
+    for (const modifier of base) {
+        if (modifier.op === 'add' && modifier.value > 0) {
+            additive.set(modifier.attribute, (additive.get(modifier.attribute) ?? 0) + modifier.value);
+        } else if (modifier.op === 'multiply' && modifier.value > 1) {
+            multiplicative.set(
+                modifier.attribute,
+                (multiplicative.get(modifier.attribute) ?? 1) * modifier.value,
+            );
+        }
+    }
+    const result: AttributeModifier[] = [];
+    for (const [attribute, value] of additive) {
+        result.push({
+            attribute,
+            op: 'add',
+            value: roundReinforcementValue(value * rate),
+            source: '',
+        });
+    }
+    for (const [attribute, value] of multiplicative) {
+        const strengthened = 1 + (value - 1) * (1 + rate);
+        result.push({
+            attribute,
+            op: 'multiply',
+            value: roundReinforcementValue(strengthened / value),
+            source: '',
+        });
+    }
+    return result;
+}
+
+function roundReinforcementValue(value: number): number {
+    return Number(value.toFixed(6));
 }
 
 function normalizeDurability(value: number, max: number): number {

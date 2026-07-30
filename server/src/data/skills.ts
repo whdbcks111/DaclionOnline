@@ -34,7 +34,7 @@ import { StatType } from '../models/Stat.js';
 import { calculateSmeltingExperience } from '../modules/forging.js';
 import {
     FORGED_ITEM_NAMING_SENSIBILITY,
-    MAX_WEAPON_REINFORCEMENT,
+    MAX_EQUIPMENT_REINFORCEMENT,
     STAFF_INFUSION_MENTALITY_COST,
 } from '../models/Forging.js';
 
@@ -1158,16 +1158,16 @@ defineSkill({
 
 defineSkill({
     id: 'weapon_reinforcement',
-    name: '무기 강화',
+    name: '장비 강화',
     icon: 'skills/weapon_reinforcement',
     maxLevel: 5,
-    descriptionTemplate: `지핵 강화석을 소모해 무기를 최대 +${MAX_WEAPON_REINFORCEMENT}까지 강화합니다. 높은 단계에서는 실패·단계 하락·장비 파괴 위험이 생기며, 성공할 때마다 공격 계열 능력치와 무기 종류에 맞는 긍정 효과가 영구적으로 누적됩니다.`,
+    descriptionTemplate: `지핵 강화석을 소모해 무기와 방어구를 최대 +${MAX_EQUIPMENT_REINFORCEMENT}까지 강화합니다. 높은 단계에서는 실패·단계 하락·장비 파괴 위험이 생기며, 강화 수치는 장비가 원래 가진 모든 긍정 능력치에 비례해 영구적으로 증가합니다.`,
     costTemplate: '지핵 강화석 1개',
-    activationConditionTemplate: `전투 대장장이가 +${MAX_WEAPON_REINFORCEMENT} 미만인 무기를 지정해 \`/무기강화 <아이템 번호 또는 장착칸>\`을 입력합니다.`,
+    activationConditionTemplate: `전투 대장장이가 +${MAX_EQUIPMENT_REINFORCEMENT} 미만인 무기 또는 방어구를 지정해 \`/장비강화 <아이템 번호 또는 장착칸>\`을 입력합니다.`,
     baseMetadata: null,
     calculateExperienceGain: () => 28,
     jobRequirement: jobRequirement('career:battle_smith'),
-    canActivate: () => denySkill('/무기강화 <아이템 번호 또는 장착칸> 명령어를 사용하세요.'),
+    canActivate: () => denySkill('/장비강화 <아이템 번호 또는 장착칸> 명령어를 사용하세요.'),
     tags: [GameTags.SKILL_PASSIVE],
 });
 

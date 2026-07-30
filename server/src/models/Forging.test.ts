@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { GameTags } from '../../../shared/tags.js';
-import { Item } from './Item.js';
+import { Item, ItemMetadataKeys } from './Item.js';
 import {
-    MAX_WEAPON_REINFORCEMENT,
+    MAX_EQUIPMENT_REINFORCEMENT,
     calculateRepairMaxDurabilityLossRate,
     calculateForgeCraftsmanship,
     calculateForgedItemLevel,
@@ -15,10 +15,10 @@ import {
     ForgeForm,
     ForgeMaterial,
     ForgeQuality,
-    reinforceWeapon,
+    reinforceEquipment,
     renameForgedItem,
     selectEquipmentRepairMaterials,
-    WeaponReinforcementStage,
+    EquipmentReinforcementStage,
 } from './Forging.js';
 import { PlayerProgress } from './Progress.js';
 import Skill from './Skill.js';
@@ -392,7 +392,7 @@ test('장인의 명명은 직접 만든 단조품만 안전한 이름으로 변�
     assert.equal(renameForgedItem(own, 77, '[color=red]검').success, false);
 });
 
-test('전투 대장장이 무기 강화는 성공 시 +15까지 긍정 능력치를 누적한다', () => {
+test('장비 강화는 원래 긍정 능력치에 비례해 +15에서 90%를 추가한다', () => {
     const weapon = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SWORD, ForgeMaterial.IRON, {
         accuracy: 0.8,
         random: () => 0,
@@ -402,13 +402,8 @@ test('전투 대장장이 무기 강화는 성공 시 +15까지 긍정 능력치
     const attackBefore = weapon.modifiers?.filter(modifier => modifier.attribute === 'atk' && modifier.op === 'add')
         .reduce((sum, modifier) => sum + modifier.value, 0) ?? 0;
 
-    for (let level = 1; level <= MAX_WEAPON_REINFORCEMENT; level++) {
-        const result = reinforceWeapon(weapon, {
-            creatorLevel: 200,
-            sensibility: 1_000,
-            skillLevel: level,
-            random: () => 0,
-        });
+    for (let level = 1; level <= MAX_EQUIPMENT_REINFORCEMENT; level++) {
+        const result = reinforceEquipment(weapon, { random: () => 0 });
         assert.equal(result.success, true);
         assert.equal(result.outcome, 'success');
         assert.equal(result.level, level);
@@ -419,13 +414,8 @@ test('전투 대장장이 무기 강화는 성공 시 +15까지 긍정 능력치
         .reduce((sum, modifier) => sum + modifier.value, 0) ?? 0;
     assert.equal(weapon.reinforcementLevel, 15);
     assert.match(weapon.name, / \+15$/);
-    assert.ok(attackAfter >= attackBefore + 150, `강화 전 ${attackBefore}, 강화 후 ${attackAfter}`);
-    assert.equal(reinforceWeapon(weapon, {
-        creatorLevel: 200,
-        sensibility: 1_000,
-        skillLevel: 15,
-        random: () => 0,
-    }).success, false);
+    assert.ok(Math.abs(attackAfter / attackBefore - 1.9) < 0.0001, `강화 전 ${attackBefore}, 강화 후 ${attackAfter}`);
+    assert.equal(reinforceEquipment(weapon, { random: () => 0 }).success, false);
 });
 
 test('고강화 실패는 확률표에 따라 유지·하락·파괴로 갈린다', () => {
@@ -435,42 +425,35 @@ test('고강화 실패는 확률표에 따라 유지·하락·파괴로 갈린�
         { accuracy: 0.8, random: () => 0, creatorLevel: 200, sensibility: 1_000 },
     ));
     const retained = createWeapon();
-    assert.equal(reinforceWeapon(retained, {
-        creatorLevel: 200, sensibility: 1_000, skillLevel: 1, random: () => 0,
-    }).success, true);
-    assert.equal(reinforceWeapon(retained, {
-        creatorLevel: 200, sensibility: 1_000, skillLevel: 2, random: () => 0.99,
-    }).outcome, 'retained');
+    assert.equal(reinforceEquipment(retained, { random: () => 0 }).success, true);
+    assert.equal(reinforceEquipment(retained, { random: () => 0.99 }).outcome, 'retained');
     assert.equal(retained.reinforcementLevel, 1);
 
     const downgraded = createWeapon();
     for (let level = 1; level <= 6; level++) {
-        reinforceWeapon(downgraded, {
-            creatorLevel: 200, sensibility: 1_000, skillLevel: level, random: () => 0,
-        });
+        reinforceEquipment(downgraded, { random: () => 0 });
     }
-    const modifierCount = downgraded.modifiers?.length ?? 0;
-    const downgrade = reinforceWeapon(downgraded, {
-        creatorLevel: 200, sensibility: 1_000, skillLevel: 7, random: () => 0.95,
-    });
+    const attackBeforeDowngrade = downgraded.modifiers?.filter(modifier =>
+        modifier.attribute === 'atk' && modifier.op === 'add'
+    ).reduce((sum, modifier) => sum + modifier.value, 0) ?? 0;
+    const downgrade = reinforceEquipment(downgraded, { random: () => 0.95 });
     assert.equal(downgrade.outcome, 'downgraded');
     assert.equal(downgraded.reinforcementLevel, 5);
-    assert.ok((downgraded.modifiers?.length ?? 0) < modifierCount);
+    const attackAfterDowngrade = downgraded.modifiers?.filter(modifier =>
+        modifier.attribute === 'atk' && modifier.op === 'add'
+    ).reduce((sum, modifier) => sum + modifier.value, 0) ?? 0;
+    assert.ok(attackAfterDowngrade < attackBeforeDowngrade);
 
     const destroyed = createWeapon();
     for (let level = 1; level <= 8; level++) {
-        reinforceWeapon(destroyed, {
-            creatorLevel: 200, sensibility: 1_000, skillLevel: level, random: () => 0,
-        });
+        reinforceEquipment(destroyed, { random: () => 0 });
     }
-    assert.equal(reinforceWeapon(destroyed, {
-        creatorLevel: 200, sensibility: 1_000, skillLevel: 9, random: () => 0.99,
-    }).outcome, 'destroyed');
+    assert.equal(reinforceEquipment(destroyed, { random: () => 0.99 }).outcome, 'destroyed');
     assert.equal(destroyed.reinforcementLevel, 8);
 });
 
 test('모든 강화 단계 확률은 정확히 100%이며 하락과 파괴는 지정 단계부터 시작한다', () => {
-    for (const stage of WeaponReinforcementStage.values()) {
+    for (const stage of EquipmentReinforcementStage.values()) {
         assert.equal(
             stage.successRate + stage.retainRate + stage.downgradeRate + stage.destructionRate,
             100,
@@ -480,13 +463,72 @@ test('모든 강화 단계 확률은 정확히 100%이며 하락과 파괴는 �
     }
 });
 
-test('무기가 아닌 장비는 강화할 수 없다', () => {
+test('방패와 전신 방어구도 원래 방어·생존 부가 수치에 비례해 강화된다', () => {
     const shield = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SHIELD, ForgeMaterial.IRON, {
         accuracy: 0.8,
         random: () => 0,
     }));
-    assert.equal(reinforceWeapon(shield, { creatorLevel: 200, sensibility: 1_000, skillLevel: 1 }).success, false);
-    assert.equal(shield.reinforcementLevel, 0);
+    assert.equal(reinforceEquipment(shield, { random: () => 0 }).success, true);
+    assert.equal(shield.reinforcementLevel, 1);
+
+    const armor = Item.fromSnapshot({
+        itemDataId: 'devouring_root_cuirass',
+        count: 1,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    });
+    const before = armor.getReinforcementBaseModifiers();
+    assert.equal(before.filter(modifier => modifier.op === 'add' && modifier.value > 0).length, 4);
+    assert.equal(reinforceEquipment(armor, { random: () => 0 }).success, true);
+    for (const modifier of before.filter(modifier => modifier.op === 'add' && modifier.value > 0)) {
+        const after = armor.modifiers?.filter(candidate =>
+            candidate.attribute === modifier.attribute && candidate.op === 'add'
+        ).reduce((sum, candidate) => sum + candidate.value, 0) ?? 0;
+        const original = before.filter(candidate =>
+            candidate.attribute === modifier.attribute && candidate.op === 'add'
+        ).reduce((sum, candidate) => sum + candidate.value, 0);
+        assert.ok(Math.abs(after / original - 1.05) < 0.0001, `${modifier.attribute}: ${original} → ${after}`);
+    }
+});
+
+test('곱연산 부가 능력치는 1을 넘는 보너스 부분만 비례 강화한다', () => {
+    const staff = Item.fromSnapshot({
+        itemDataId: 'starwood_staff',
+        count: 1,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    });
+    for (let level = 1; level <= MAX_EQUIPMENT_REINFORCEMENT; level++) {
+        assert.equal(reinforceEquipment(staff, { random: () => 0 }).success, true);
+    }
+    const acceleration = staff.modifiers?.filter(modifier =>
+        modifier.attribute === 'projectileAcceleration' && modifier.op === 'multiply'
+    ).reduce((product, modifier) => product * modifier.value, 1) ?? 1;
+
+    assert.ok(Math.abs(acceleration - (1 + 0.14 * 1.9)) < 0.0001, `투사체 가속 배율 ${acceleration}`);
+});
+
+test('기존 고정 수치 강화 기록도 저장된 단계에 맞는 비례 강화로 소급 계산한다', () => {
+    const weapon = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SWORD, ForgeMaterial.IRON, {
+        accuracy: 0.8,
+        random: () => 0,
+        creatorLevel: 200,
+        sensibility: 1_000,
+    }));
+    const baseAttack = weapon.getReinforcementBaseModifiers().filter(modifier =>
+        modifier.attribute === 'atk' && modifier.op === 'add'
+    ).reduce((sum, modifier) => sum + modifier.value, 0);
+    weapon.setMetadata(ItemMetadataKeys.REINFORCEMENT, {
+        level: 10,
+        modifiers: [{ attribute: 'atk', op: 'add', value: 99_999 }],
+    });
+    const reinforcedAttack = weapon.modifiers?.filter(modifier =>
+        modifier.attribute === 'atk' && modifier.op === 'add'
+    ).reduce((sum, modifier) => sum + modifier.value, 0) ?? 0;
+
+    assert.ok(Math.abs(reinforcedAttack / baseAttack - 1.6) < 0.0001);
 });
 
 test('고레벨 제작자의 감각과 제련 정밀도는 단조 장비를 고레벨 드롭 이상으로 성장시킨다', () => {

@@ -32,24 +32,24 @@ export const ENHANCEMENT_STONE_ITEM_ID = 'enhancement_stone';
  * 목표 강화 단계별 결과 확률. 실패 시 유지 확률은 나머지 세 확률을 뺀 값이다.
  * +7 도전부터 하락하고 +9 도전부터 파괴될 수 있다.
  */
-export class WeaponReinforcementStage {
-    private static readonly all: WeaponReinforcementStage[] = [];
+export class EquipmentReinforcementStage {
+    private static readonly all: EquipmentReinforcementStage[] = [];
 
-    static readonly PLUS_1 = new WeaponReinforcementStage(1, 100, 0, 0);
-    static readonly PLUS_2 = new WeaponReinforcementStage(2, 95, 0, 0);
-    static readonly PLUS_3 = new WeaponReinforcementStage(3, 90, 0, 0);
-    static readonly PLUS_4 = new WeaponReinforcementStage(4, 85, 0, 0);
-    static readonly PLUS_5 = new WeaponReinforcementStage(5, 80, 0, 0);
-    static readonly PLUS_6 = new WeaponReinforcementStage(6, 70, 0, 0);
-    static readonly PLUS_7 = new WeaponReinforcementStage(7, 60, 10, 0);
-    static readonly PLUS_8 = new WeaponReinforcementStage(8, 50, 20, 0);
-    static readonly PLUS_9 = new WeaponReinforcementStage(9, 45, 20, 5);
-    static readonly PLUS_10 = new WeaponReinforcementStage(10, 40, 24, 8);
-    static readonly PLUS_11 = new WeaponReinforcementStage(11, 35, 28, 12);
-    static readonly PLUS_12 = new WeaponReinforcementStage(12, 30, 32, 16);
-    static readonly PLUS_13 = new WeaponReinforcementStage(13, 25, 35, 20);
-    static readonly PLUS_14 = new WeaponReinforcementStage(14, 20, 37, 25);
-    static readonly PLUS_15 = new WeaponReinforcementStage(15, 15, 40, 30);
+    static readonly PLUS_1 = new EquipmentReinforcementStage(1, 100, 0, 0);
+    static readonly PLUS_2 = new EquipmentReinforcementStage(2, 95, 0, 0);
+    static readonly PLUS_3 = new EquipmentReinforcementStage(3, 90, 0, 0);
+    static readonly PLUS_4 = new EquipmentReinforcementStage(4, 85, 0, 0);
+    static readonly PLUS_5 = new EquipmentReinforcementStage(5, 80, 0, 0);
+    static readonly PLUS_6 = new EquipmentReinforcementStage(6, 70, 0, 0);
+    static readonly PLUS_7 = new EquipmentReinforcementStage(7, 60, 10, 0);
+    static readonly PLUS_8 = new EquipmentReinforcementStage(8, 50, 20, 0);
+    static readonly PLUS_9 = new EquipmentReinforcementStage(9, 45, 20, 5);
+    static readonly PLUS_10 = new EquipmentReinforcementStage(10, 40, 24, 8);
+    static readonly PLUS_11 = new EquipmentReinforcementStage(11, 35, 28, 12);
+    static readonly PLUS_12 = new EquipmentReinforcementStage(12, 30, 32, 16);
+    static readonly PLUS_13 = new EquipmentReinforcementStage(13, 25, 35, 20);
+    static readonly PLUS_14 = new EquipmentReinforcementStage(14, 20, 37, 25);
+    static readonly PLUS_15 = new EquipmentReinforcementStage(15, 15, 40, 30);
 
     readonly key: string;
     readonly retainRate: number;
@@ -63,24 +63,24 @@ export class WeaponReinforcementStage {
         this.key = String(level);
         this.retainRate = 100 - successRate - downgradeRate - destructionRate;
         if (this.retainRate < 0) throw new Error(`Invalid reinforcement rates for +${level}`);
-        WeaponReinforcementStage.all.push(this);
+        EquipmentReinforcementStage.all.push(this);
     }
 
-    static values(): readonly WeaponReinforcementStage[] {
-        return WeaponReinforcementStage.all;
+    static values(): readonly EquipmentReinforcementStage[] {
+        return EquipmentReinforcementStage.all;
     }
 
-    static fromKey(key: string): WeaponReinforcementStage | undefined {
-        return WeaponReinforcementStage.all.find(stage => stage.key === key);
+    static fromKey(key: string): EquipmentReinforcementStage | undefined {
+        return EquipmentReinforcementStage.all.find(stage => stage.key === key);
     }
 
-    static fromInput(input: string): WeaponReinforcementStage | undefined {
-        return WeaponReinforcementStage.fromKey(input.trim().replace(/^\+/, ''));
+    static fromInput(input: string): EquipmentReinforcementStage | undefined {
+        return EquipmentReinforcementStage.fromKey(input.trim().replace(/^\+/, ''));
     }
 
-    static fromLevel(level: number): WeaponReinforcementStage | undefined {
+    static fromLevel(level: number): EquipmentReinforcementStage | undefined {
         return Number.isInteger(level)
-            ? WeaponReinforcementStage.fromKey(String(level))
+            ? EquipmentReinforcementStage.fromKey(String(level))
             : undefined;
     }
 
@@ -92,7 +92,7 @@ export class WeaponReinforcementStage {
     }
 }
 
-export const MAX_WEAPON_REINFORCEMENT = MAX_ITEM_REINFORCEMENT_LEVEL;
+export const MAX_EQUIPMENT_REINFORCEMENT = MAX_ITEM_REINFORCEMENT_LEVEL;
 
 export interface WeaponEnchantResult {
     success: boolean;
@@ -101,7 +101,7 @@ export interface WeaponEnchantResult {
     reason?: string;
 }
 
-export interface WeaponReinforcementResult {
+export interface EquipmentReinforcementResult {
     success: boolean;
     outcome?: 'success' | 'retained' | 'downgraded' | 'destroyed';
     previousLevel?: number;
@@ -200,29 +200,6 @@ export function selectEquipmentRepairMaterials(
     };
 }
 
-function normalizeStoredReinforcementModifiers(value: unknown): ForgeModifierSeed[] {
-    if (!Array.isArray(value)) return [];
-    return value.flatMap(entry => {
-        if (!entry || typeof entry !== 'object') return [];
-        const candidate = entry as { attribute?: unknown; op?: unknown; value?: unknown };
-        if (typeof candidate.attribute !== 'string' || !AttributeType.fromKey(candidate.attribute)) return [];
-        if (candidate.op !== 'add' && candidate.op !== 'multiply') return [];
-        if (typeof candidate.value !== 'number' || !Number.isFinite(candidate.value)) return [];
-        return [{
-            attribute: candidate.attribute as AttributeKey,
-            op: candidate.op,
-            value: candidate.value,
-        }];
-    });
-}
-
-function reinforcementModifierCount(level: number): number {
-    return 1
-        + (level >= 2 ? 1 : 0)
-        + (level >= 4 ? 1 : 0)
-        + (level % 5 === 0 ? 1 : 0);
-}
-
 function reinforcementRoll(random: () => number): number {
     const value = random();
     if (!Number.isFinite(value)) return 0;
@@ -230,21 +207,22 @@ function reinforcementRoll(random: () => number): number {
 }
 
 /**
- * 전투 대장장이의 무기 강화.
+ * 전투 대장장이의 장비 강화.
  * 유효한 시도는 성공·유지·하락·파괴 중 하나로 확정되며 호출자가 파괴 결과의 아이템을 소유 계층에서 제거한다.
  */
-export function reinforceWeapon(item: Item, options: {
-    creatorLevel: number;
-    sensibility: number;
-    skillLevel: number;
+export function reinforceEquipment(item: Item, options: {
     random?: () => number;
-}): WeaponReinforcementResult {
-    if (!item.hasTag(GameTags.ITEM_WEAPON)) return { success: false, reason: '무기 아이템만 강화할 수 있습니다.' };
+}): EquipmentReinforcementResult {
+    if (!isReinforceableEquipment(item)) {
+        return { success: false, reason: '긍정 능력치가 있는 무기 또는 방어구만 강화할 수 있습니다.' };
+    }
     const current = item.reinforcementLevel;
-    if (current >= MAX_WEAPON_REINFORCEMENT) return { success: false, reason: `이미 최대 강화 단계(+${MAX_WEAPON_REINFORCEMENT})입니다.` };
+    if (current >= MAX_EQUIPMENT_REINFORCEMENT) {
+        return { success: false, reason: `이미 최대 강화 단계(+${MAX_EQUIPMENT_REINFORCEMENT})입니다.` };
+    }
 
     const level = current + 1;
-    const stage = WeaponReinforcementStage.fromLevel(level);
+    const stage = EquipmentReinforcementStage.fromLevel(level);
     if (!stage) return { success: false, reason: '유효한 강화 단계를 찾지 못했습니다.' };
     const roll = reinforcementRoll(options.random ?? Math.random);
     if (roll >= stage.successRate) {
@@ -254,14 +232,11 @@ export function reinforceWeapon(item: Item, options: {
             return { success: false, outcome: 'retained', previousLevel: current, level: current };
         }
         if (roll < downgradeThreshold) {
-            const previous = item.getMetadata<{ modifiers?: unknown }>(ItemMetadataKeys.REINFORCEMENT);
-            const stored = normalizeStoredReinforcementModifiers(previous?.modifiers);
-            const removedCount = Math.min(stored.length, reinforcementModifierCount(current));
-            const removedModifiers = stored.slice(stored.length - removedCount);
             const downgradedLevel = Math.max(0, current - 1);
+            const removedModifiers = calculateReinforcementDelta(item, downgradedLevel, current);
             item.setMetadata(ItemMetadataKeys.REINFORCEMENT, {
+                version: 2,
                 level: downgradedLevel,
-                modifiers: stored.slice(0, stored.length - removedCount),
             });
             return {
                 success: false,
@@ -274,27 +249,29 @@ export function reinforceWeapon(item: Item, options: {
         return { success: false, outcome: 'destroyed', previousLevel: current, level: current };
     }
 
-    const creatorLevel = Math.max(1, Math.floor(options.creatorLevel));
-    const sensibility = Math.max(0, options.sensibility);
-    const skillLevel = Math.max(1, Math.floor(options.skillLevel));
-    const primaryAttribute: AttributeKey = item.hasTag(GameTags.WEAPON_STAFF) ? 'magicForce' : 'atk';
-    const primaryValue = round(5 + creatorLevel * 0.075 + sensibility * 0.012 + skillLevel * 2.5, 2);
-    const added: ForgeModifierSeed[] = [{ attribute: primaryAttribute, op: 'add', value: primaryValue }];
-
-    if (level >= 2) {
-        if (item.hasTag(GameTags.WEAPON_AXE)) added.push({ attribute: 'critDmg', op: 'add', value: round(0.035 + skillLevel * 0.005, 4) });
-        else if (item.hasTag(GameTags.WEAPON_DAGGER)) added.push({ attribute: 'armorPen', op: 'add', value: round(2 + skillLevel * 0.5, 2) });
-        else if (item.hasTag(GameTags.WEAPON_BOW)) added.push({ attribute: 'critRate', op: 'add', value: round(0.008 + skillLevel * 0.002, 4) });
-        else if (item.hasTag(GameTags.WEAPON_STAFF)) added.push({ attribute: 'magicPen', op: 'add', value: round(2 + skillLevel * 0.5, 2) });
-        else added.push({ attribute: 'attackSpeed', op: 'multiply', value: round(1.008 + skillLevel * 0.002, 4) });
-    }
-    if (level >= 4) added.push({ attribute: 'critDmg', op: 'add', value: round(0.025 + skillLevel * 0.005, 4) });
-    if (level % 5 === 0) added.push({ attribute: primaryAttribute, op: 'multiply', value: round(1.03 + skillLevel * 0.01, 4) });
-
-    const previous = item.getMetadata<{ modifiers?: unknown[] }>(ItemMetadataKeys.REINFORCEMENT);
-    const stored = [...normalizeStoredReinforcementModifiers(previous?.modifiers), ...added];
-    item.setMetadata(ItemMetadataKeys.REINFORCEMENT, { level, modifiers: stored });
+    const added = calculateReinforcementDelta(item, current, level);
+    item.setMetadata(ItemMetadataKeys.REINFORCEMENT, { version: 2, level });
     return { success: true, outcome: 'success', previousLevel: current, level, addedModifiers: added };
+}
+
+export function isReinforceableEquipment(item: Item): boolean {
+    return (item.hasTag(GameTags.ITEM_WEAPON) || item.hasTag(GameTags.ITEM_ARMOR))
+        && item.getReinforcementModifiersAtLevel(1).length > 0;
+}
+
+function calculateReinforcementDelta(item: Item, fromLevel: number, toLevel: number): ForgeModifierSeed[] {
+    const previous = new Map(item.getReinforcementModifiersAtLevel(fromLevel)
+        .map(modifier => [`${modifier.attribute}:${modifier.op}`, modifier] as const));
+    return item.getReinforcementModifiersAtLevel(toLevel).map(modifier => {
+        const before = previous.get(`${modifier.attribute}:${modifier.op}`);
+        return {
+            attribute: modifier.attribute,
+            op: modifier.op,
+            value: modifier.op === 'add'
+                ? round(modifier.value - (before?.value ?? 0), 6)
+                : round(modifier.value / (before?.value ?? 1), 6),
+        };
+    }).filter(modifier => modifier.op === 'add' ? modifier.value > 0 : modifier.value > 1);
 }
 
 /** 마도 대장장이의 무기 후가공. 한 인스턴스에는 한 번만 마법 각인을 확정한다. */
