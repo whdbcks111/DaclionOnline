@@ -48,6 +48,18 @@ class TestWolf extends Entity {
     }
 }
 
+class TestTitleMonster extends Entity {
+    override readonly name = '칭호 대상 시험 몬스터';
+
+    constructor(tags: readonly string[]) {
+        super(1, 0, 'title-test', { maxLife: 100 }, Equipment.createEmpty(), undefined, [
+            GameTags.ENTITY_MONSTER,
+            GameTags.TRAIT_LIVING,
+            ...tags,
+        ]);
+    }
+}
+
 test('늑대 50마리를 처치하면 늑대 학살자를 획득한다', () => {
     const player = new TestTitlePlayer();
     for (let i = 0; i < 50; i++) {
@@ -80,6 +92,26 @@ test('늑대 학살자는 늑대를 대상으로 지정한 동안 공격력과 �
     player.currentTarget = null;
     player.titles.refreshPassiveEffects();
     assert.equal(player.attribute.get(AttributeType.ATK), 100);
+    assert.equal(player.attribute.get(AttributeType.MAGIC_FORCE), 80);
+});
+
+test('삼원소 조율자는 속성 종류와 무관하게 원소 몬스터만 대상으로 판정한다', () => {
+    const player = new TestTitlePlayer();
+    player.titles.grant('title:elemental_tuner', 'test', false);
+    assert.equal(player.titles.equip('삼원소 조율자').success, true);
+
+    player.currentTarget = new TestTitleMonster([
+        GameTags.ENTITY_ELEMENTAL,
+        GameTags.PROPERTY_WATER,
+    ]);
+    player.titles.refreshPassiveEffects();
+    assert.ok(Math.abs(player.attribute.get(AttributeType.MAGIC_FORCE) - 85.6) < 0.000_001);
+
+    player.currentTarget = new TestTitleMonster([
+        GameTags.ENTITY_BEAST,
+        GameTags.PROPERTY_FIRE,
+    ]);
+    player.titles.refreshPassiveEffects();
     assert.equal(player.attribute.get(AttributeType.MAGIC_FORCE), 80);
 });
 

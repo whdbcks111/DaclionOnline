@@ -355,14 +355,7 @@ defineTitle({
     canAcquire: player => counter(player, 'career:mage_fire_kills') >= 100
         && counter(player, 'career:mage_ice_kills') >= 100
         && counter(player, 'career:mage_electric_kills') >= 100,
-    isPassiveActive: player => {
-        const target = livingTarget(player);
-        return Boolean(target && [
-            GameTags.PROPERTY_FIRE,
-            GameTags.PROPERTY_ICE,
-            GameTags.PROPERTY_ELECTRIC,
-        ].some(tag => target.hasTag(tag)));
-    },
+    isPassiveActive: targetHas(GameTags.ENTITY_ELEMENTAL),
     modifiers: () => [{ attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.07 }],
 });
 
