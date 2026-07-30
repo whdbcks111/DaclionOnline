@@ -204,7 +204,11 @@ export const initRegister = () => {
                 }
 
                 const verifyCode = randomDigits(6);
-                const verifyHtmlTemplate = loadTemplate('verify-code', { code: verifyCode, expiry: `${expiryMinute}분` });
+                const verifyHtmlTemplate = loadTemplate('verify-code', {
+                    purpose: '회원가입',
+                    code: verifyCode,
+                    expiry: `${expiryMinute}분`,
+                });
 
                 await sendMail({
                     to: normalizedEmail,

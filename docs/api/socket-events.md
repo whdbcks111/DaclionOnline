@@ -11,6 +11,8 @@
 | `logout` | `token: string` | 토큰 | `modules/login.ts` | `logoutResult`; 마지막 세션이면 Player 저장/언로드 |
 | `sendVerifyCode` | `email: string` | 불필요 | `modules/register.ts` | `verifyCodeSendResult`; 6자리, 5분 만료, 60초 재전송·IP 발송 횟수 제한 |
 | `verifyCode` | `code: string` | 불필요 | `modules/register.ts` | `verifyCodeResult`; 발급 건당 오답 5회·IP+socket 요청 빈도 제한 |
+| `sendPasswordResetCode` | `email: string` | 불필요 | `modules/passwordReset.ts` | `passwordResetCodeSendResult`; 가입 여부 비공개 응답, 6자리·5분 만료·60초 재전송·IP 발송 제한 |
+| `resetPassword` | `PasswordResetRequest { code, pw }` | 이메일 코드 필요 | `modules/passwordReset.ts` | `passwordResetResult`; 오답 5회·요청 제한, 새 PBKDF2 hash 저장과 기존 세션 전체 폐기 |
 | `sendMessage` | `string \| { content, replyToId?, chatType? }` | 필요 | `modules/chat.ts` | 최대 500자; `channel/nearby/party/advertisement/notice` 범위와 공지 권한·광고 30초 제한을 서버에서 검증. 답장은 현재 공개 채널 히스토리에서 재검증하고 채널 타입만 허용 |
 | `sendImageMessages` | `{ filenames: string[], replyToId?, chatType? }` (1~10장) | 필요 | `modules/chat.ts` | 모든 HTTP 업로드의 소유권·보관 기간·`ActionType.CHAT`, 선택 범위와 공개 원문을 확인한 뒤 하나의 다중 image ChatNode 메시지 전송 |
 | `sendImageMessage` | `{ filename: string, replyToId?, chatType? }` | 필요 | `modules/chat.ts` | 구형 클라이언트 호환용 단일 이미지 이벤트. `sendImageMessages`와 같은 검증 경계를 사용 |
@@ -39,7 +41,7 @@
 | `requestHumanVerification` | 없음 | 필요 | `modules/humanVerification.ts` | required FLAG가 있는 플레이어의 기존 문제를 재전송하거나 새 일회성 문제를 발급 |
 | `submitHumanVerification` | `{ sessionId, answer }` | 필요 | `modules/humanVerification.ts` | 서버 메모리의 정답과 session을 검사하고 성공 시 영속 요구 상태와 행동 제한 해제 |
 
-클라이언트 emit 위치는 주로 `pages/Login.tsx`, `pages/Register.tsx`, `pages/Home.tsx`, `pages/LocationEditor.tsx`, `components/chat/nodes/ButtonNode.tsx`, `components/hud/huds/QuickSlotHud.tsx`다.
+클라이언트 emit 위치는 주로 `pages/Login.tsx`, `pages/Register.tsx`, `pages/PasswordReset.tsx`, `pages/Home.tsx`, `pages/LocationEditor.tsx`, `components/chat/nodes/ButtonNode.tsx`, `components/hud/huds/QuickSlotHud.tsx`다.
 
 ## Server → Client
 
@@ -49,18 +51,20 @@
 | `sessionInvalid` | 없음 | `modules/login.ts`, `modules/chat.ts` | `App.tsx` |
 | `loginResult` | `LoginResult` | `modules/login.ts` | `SocketContext.tsx`, `pages/Login.tsx` |
 | `registerResult` | `RegisterResult` | `modules/register.ts` | `pages/Register.tsx` |
-| `logoutResult` | `LogoutResult` | `modules/login.ts` | 현재 명시적 상시 listener 없음 |
+| `logoutResult` | `LogoutResult` | `modules/login.ts` | `SocketContext.tsx`, `pages/Home.tsx` |
 | `verifyCodeSendResult` | `SimpleResult` | `modules/register.ts` | `pages/Register.tsx` |
 | `verifyCodeResult` | `SimpleResult` | `modules/register.ts` | `pages/Register.tsx` |
+| `passwordResetCodeSendResult` | `SimpleResult` | `modules/passwordReset.ts` | `pages/PasswordReset.tsx` |
+| `passwordResetResult` | `SimpleResult` | `modules/passwordReset.ts` | `pages/PasswordReset.tsx` |
 | `chatHistory` | `ChatMessage[]` | `modules/chat.ts` | `pages/Home.tsx` |
 | `chatMessage` | `ChatMessage` (`replyTo?`, `replyable?`, `equippedTitle?` 포함) | `modules/message.ts` | `pages/Home.tsx` |
 | `notification` | `NotificationData` | `modules/message.ts` | `components/Notification.tsx` |
 | `commandList` | `CommandInfo[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `argCompletions` | `CompletionItem[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `mentionCompletions` | `CompletionItem[]` | `modules/chat.ts` | `pages/Home.tsx` |
-| `playerStats` | `PlayerStatsData` (`syncId/revision`, 장착 칭호, 현재 `level/exp/maxExp`·자원·타입색 `shields`·공격 cooldown·`autoAttackEnabled`·`statusEffects`, 표시 가능한 스킬, nullable 파티 HUD, nullable 현재 대상의 선택적 아이콘·HP/MP/보호막/상태이상과 감각 단계별 몬스터 분석). 내용이 바뀐 완전한 snapshot만 socket별 1회 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 `HudContext` → HUD |
+| `playerStats` | `PlayerStatsData` (`syncId/revision`, 장착 칭호, 현재 `level/exp/maxExp`·자원·타입색 `shields`·공격 cooldown·`autoAttackEnabled`·`statusEffects`, 표시 가능한 스킬, nullable 파티 HUD, nullable 현재 대상의 선택적 아이콘·보스 왕관 여부·HP/MP/보호막/상태이상과 감각 단계별 몬스터 분석). 내용이 바뀐 완전한 snapshot만 socket별 1회 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 `HudContext` → HUD |
 | `informationMode` | `isPublic: boolean` | `modules/bot.ts` | `pages/Home.tsx` 입력창 공개/비공개 전환 버튼 |
-| `locationInfo` | `LocationInfoData` (`syncId/revision`, `zoneType/zoneLabel/pvpAllowed`, objects의 선택적 아이콘·생명력·`shields`·가능한 `actions`, NPC 이름·설명·퀘스트 표식, 플레이어 생명력·보호막, 5분 초과 보스의 선택적 `respawn`, 플레이어 기준 인접 장소). 내용 변경 시 완전한 snapshot 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 Location/Minimap HUD |
+| `locationInfo` | `LocationInfoData` (`syncId/revision`, `zoneType/zoneLabel/pvpAllowed`, objects의 선택적 아이콘·보스 왕관 여부·생명력·`shields`·가능한 `actions`, NPC 이름·설명·퀘스트 표식, 플레이어 생명력·보호막, 5분 초과 보스의 선택적 `respawn`, 플레이어 기준 인접 장소). 내용 변경 시 완전한 snapshot 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 Location/Minimap HUD |
 | `userCount` | `UserCountData` (다중 탭을 합친 고유 사용자 기준 전체/채널 인원) | `modules/login.ts` | `pages/Home.tsx` |
 | `channelChanged` | `(channel, history)` | `modules/chat.ts` | `pages/Home.tsx` |
 | `channelList` | `ChannelInfo[]` | `modules/chat.ts` | `pages/Home.tsx` |
@@ -81,7 +85,7 @@
 | `humanVerificationStart` | `HumanVerificationStartData` (session ID, 안내, raster PNG data URL, 만료 시각) | `modules/humanVerification.ts` | `components/security/HumanVerificationOverlay.tsx` |
 | `humanVerificationResult` | `HumanVerificationResultData` (성공 여부, 안내, 재시도 가능 여부) | `modules/humanVerification.ts` | `components/security/HumanVerificationOverlay.tsx` |
 
-`ChatMessage`와 `NotificationData` 안의 progress/health `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다. 플레이어 메시지는 전송 시점의 `newcomer/karmaMarked/equippedTitle`을 선택적으로 포함해 `🌱/🥀` 표식과 `[칭호]`를 히스토리와 실시간 메시지에서 일관되게 표시한다. `newcomer`는 누적 플레이 24시간 미만이면서 Lv.30 미만인 경우에만 서버가 넣는다. health 노드는 생명력·최대 생명력과 `ShieldBarSegment[]`를 한 snapshot으로 전달한다. image 노드는 서버가 정한 `src/alt/maxHeight`와 선택적 원본 `width/height` snapshot으로 채팅 업로드와 향후 스킬 연출 이미지를 공통 렌더링하고, divider는 선택적 제목을 가진 구분선을 렌더링한다. `/지도` private `ChatMessage`의 worldMap 노드는 별도 socket event 없이 방문지·인접 미방문지로 제한된 `WorldMapData` snapshot을 포함하며, 방문 장소의 검증된 `mapColor`만 바이옴 배경에 사용한다.
+`ChatMessage`와 `NotificationData` 안의 progress/health `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다. 플레이어 메시지는 전송 시점의 `newcomer/karmaMarked/equippedTitle`을 선택적으로 포함해 `🌱/🥀` 표식과 `[칭호]`를 히스토리와 실시간 메시지에서 일관되게 표시한다. `newcomer`는 누적 플레이 24시간 미만이면서 Lv.30 미만인 경우에만 서버가 넣는다. health 노드는 생명력·최대 생명력과 `ShieldBarSegment[]`를 한 snapshot으로 전달한다. image 노드는 서버가 정한 `src/alt/maxHeight`와 선택적 원본 `width/height` snapshot으로 채팅 업로드와 향후 스킬 연출 이미지를 공통 렌더링하고, divider는 선택적 제목을 가진 구분선을 렌더링한다. `/지도` private `ChatMessage`의 worldMap 노드는 별도 socket event 없이 방문지·인접 미방문지로 제한된 `WorldMapData` snapshot을 포함하며, 방문 장소의 검증된 `mapColor`와 방문 뒤 공개된 `isBossRoom`만 지도 표시에 사용한다.
 
 ## Room과 전송 범위
 

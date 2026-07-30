@@ -17,6 +17,7 @@ import {
 } from './inspection.js';
 import { buildAffinityMessage } from './affinity.js';
 import { createMonsterTargetAnalysis } from '../models/Inspection.js';
+import { GameTags } from '../../../shared/tags.js';
 import '../data/tagEffects.js';
 
 function collectRenderedText(value: unknown): string {
@@ -179,6 +180,8 @@ test('사용자용 감정·몬스터정보·속성표에는 내부 ID, raw 태�
     const monster = new Monster('inspection_test_monster');
     const monsterText = collectRenderedText(buildMonsterInspection(monster, 1, 150));
     assert.doesNotMatch(monsterText, /inspection_test_monster|property:water|식별 태그/);
+    monster.tags.setRuntime('test:boss-display', [GameTags.ENTITY_BOSS]);
+    assert.match(collectRenderedText(buildMonsterInspection(monster, 1, 150)), /♛ Lv\.10 감정 시험 몬스터/);
     assert.match(monsterText, /감정 시험 몬스터/);
 
     const affinityText = collectRenderedText(buildAffinityMessage());

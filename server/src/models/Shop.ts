@@ -31,6 +31,13 @@ export interface ShopData {
     tags: TagId[];
 }
 
+/** 한 품목이 품절된 뒤 다시 하나 보충되기까지 허용하는 최대 시간. */
+export const MAX_SHOP_RESTOCK_SECONDS = 10 * 60;
+
+export function resolveShopRestockTime(restockTime: number): number {
+    return Math.min(MAX_SHOP_RESTOCK_SECONDS, Math.max(1, restockTime));
+}
+
 export class Shop implements TagReadable {
     readonly data: ShopData;
     readonly tags: TagCollection;
@@ -69,8 +76,9 @@ export class Shop implements TagReadable {
             const entry = this.data.buyList[i];
             if (this._stocks[i] >= entry.stock) continue;
             this._restockTimers[i] += dt;
-            while (this._restockTimers[i] >= entry.restockTime && this._stocks[i] < entry.stock) {
-                this._restockTimers[i] -= entry.restockTime;
+            const restockTime = resolveShopRestockTime(entry.restockTime);
+            while (this._restockTimers[i] >= restockTime && this._stocks[i] < entry.stock) {
+                this._restockTimers[i] -= restockTime;
                 this._stocks[i]++;
             }
         }

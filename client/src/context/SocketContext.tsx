@@ -92,6 +92,15 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       }
     })
 
+    const clearSession = () => {
+      sessionInfoRef.current = null
+      setSessionInfo(null)
+    }
+    socketInstance.on('sessionInvalid', clearSession)
+    socketInstance.on('logoutResult', result => {
+      if (result.ok) clearSession()
+    })
+
     setSocket(socketInstance)
 
     // 클린업: 컴포넌트 언마운트 시 연결 해제

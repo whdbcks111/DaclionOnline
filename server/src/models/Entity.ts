@@ -128,6 +128,7 @@ export interface StatusEffectDisplaySnapshot {
 
 export interface CombatTargetDisplaySnapshot {
     icon?: string;
+    isBoss?: boolean;
     name: string;
     level: number;
     life: number;
@@ -327,6 +328,7 @@ export default abstract class Entity implements TagReadable {
         if (!target) return null;
         return {
             ...(target.getDisplayIcon() ? { icon: target.getDisplayIcon() } : {}),
+            ...(target.hasTag(GameTags.ENTITY_BOSS) ? { isBoss: true } : {}),
             name: target.name,
             level: target.level,
             life: target.life,

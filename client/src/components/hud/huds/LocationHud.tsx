@@ -59,7 +59,11 @@ function EntityRow({
     <div className={styles.entityRow}>
       <span className={styles.entityIndex}>{label}</span>
       {entity.icon && <img className={styles.entityIcon} src={`/icons/${entity.icon}.png`} alt="" />}
-      <span className={styles.entityName}>Lv.{entity.level} {entity.name}</span>
+      <span className={styles.entityName}>
+        {entity.isBoss && <span className={styles.bossCrown} aria-label="보스" title="보스">♛</span>}
+        {entity.isBoss && ' '}
+        Lv.{entity.level} {entity.name}
+      </span>
       {entity.respawn && (
         <span
           className={styles.respawn}

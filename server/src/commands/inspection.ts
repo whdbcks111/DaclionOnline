@@ -24,6 +24,7 @@ import {
     MONSTER_REWARD_SENSIBILITY,
     getMonsterInspectionTier,
 } from '../models/Inspection.js';
+import { GameTags } from '../../../shared/tags.js';
 
 export { getMonsterInspectionTier } from '../models/Inspection.js';
 
@@ -160,7 +161,7 @@ function monsterTargetCompletions(userId: number): CompletionItem[] {
     if (!location) return [];
     return location.getObjects().flatMap((object, index): CompletionItem[] => object instanceof Monster ? [{
         value: String(index + 1),
-        description: `Lv.${object.level} ${object.name}${object.isDefeated ? ` (${object.defeatLabel})` : ''}`,
+        description: `${object.hasTag(GameTags.ENTITY_BOSS) ? '♛ ' : ''}Lv.${object.level} ${object.name}${object.isDefeated ? ` (${object.defeatLabel})` : ''}`,
     }] : []);
 }
 
@@ -338,10 +339,14 @@ export function buildMonsterInspection(monster: Monster, objectNumber: number, s
     const snapshot = monster.getInspectionSnapshot();
     const tier = getMonsterInspectionTier(sensibility);
     const maxLife = snapshot.attributes.maxLife;
-    return chat()
+    const message = chat()
         .text('[ 몬스터 정보 ] ')
         .icon(snapshot.icon)
-        .text(' ')
+        .text(' ');
+    if (monster.hasTag(GameTags.ENTITY_BOSS)) {
+        message.color('gold', crown => crown.text('♛ '));
+    }
+    return message
         .weight('bold', b => b.text(`Lv.${snapshot.level} ${snapshot.name}\n`))
         .hide('상세 보기', builder => {
             builder.text(`${snapshot.description}\n\n`);

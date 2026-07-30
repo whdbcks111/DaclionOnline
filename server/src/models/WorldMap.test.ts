@@ -49,7 +49,7 @@ test('장소 대표색은 6자리 HEX 색상만 허용한다', () => {
 test('지도는 방문 장소와 한 단계 인접 미방문 장소만 공개하고 hidden 장소는 제외한다', () => {
     reloadAllLocations([
         location('start', 0, ['near', 'secret']),
-        { ...location('near', 100, ['start', 'beyond']), mapColor: '#7a8b9c' },
+        { ...location('near', 100, ['start', 'beyond'], ['location:wilderness', 'location:boss_room']), mapColor: '#7a8b9c' },
         location('beyond', 200, ['near']),
         location('secret', -100, ['start'], ['location:hidden']),
         location('isolated', 400, []),
@@ -72,16 +72,20 @@ test('지도는 방문 장소와 한 단계 인접 미방문 장소만 공개하
     assert.equal(snapshot.locations.find(node => node.id === 'start')?.mapIcon, 'town-plaza');
     assert.equal(snapshot.locations.find(node => node.id === 'start')?.mapColor, '#6aa6d8');
     assert.equal(snapshot.locations.find(node => node.id === 'near')?.visited, false);
+    assert.equal(snapshot.locations.find(node => node.id === 'near')?.isBossRoom, false);
     assert.equal(snapshot.locations.find(node => node.id === 'near')?.mapColor, undefined);
     assert.equal(snapshot.locations.some(node => node.id === 'beyond'), false);
     assert.equal(snapshot.locations.some(node => node.id === 'secret'), false);
     assert.deepEqual(snapshot.connections, [{ from: 'near', to: 'start', discovered: false }]);
+
+    assert.equal(markLocationVisited(player, 'near'), true);
+    assert.equal(getWorldMapSnapshot(player).locations.find(node => node.id === 'near')?.isBossRoom, true);
 });
 
 test('관리자 전체 지도는 hidden과 고립 장소를 포함한 모든 장소를 공개한다', () => {
     reloadAllLocations([
         location('start', 0, ['near', 'secret']),
-        location('near', 100, ['start']),
+        location('near', 100, ['start'], ['location:wilderness', 'location:boss_room']),
         location('secret', -100, ['start'], ['location:hidden']),
         location('isolated', 400, []),
     ]);
@@ -95,6 +99,7 @@ test('관리자 전체 지도는 hidden과 고립 장소를 포함한 모든 장
     assert.equal(snapshot.locations.every(node => node.visited), true);
     assert.equal(snapshot.locations.find(node => node.id === 'start')?.current, true);
     assert.equal(snapshot.locations.find(node => node.id === 'start')?.mapColor, '#6aa6d8');
+    assert.equal(snapshot.locations.find(node => node.id === 'near')?.isBossRoom, true);
     assert.deepEqual(snapshot.connections.map(edge => `${edge.from}:${edge.to}`).sort(), ['near:start', 'secret:start']);
 });
 

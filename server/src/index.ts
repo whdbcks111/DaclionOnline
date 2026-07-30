@@ -7,6 +7,7 @@ import logger from './utils/logger.js';
 import prisma from './config/prisma.js';
 import { initSocket } from './modules/socket.js';
 import { initRegister } from './modules/register.js';
+import { initPasswordReset } from './modules/passwordReset.js';
 import { initLogin } from './modules/login.js';
 import { initChat } from './modules/chat.js';
 import { initBot } from './modules/bot.js';
@@ -57,6 +58,7 @@ initUploadMaintenance();
 
 // 모듈들 초기화
 initRegister();
+initPasswordReset();
 initLogin();
 initChat();
 initBot();

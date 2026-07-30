@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { Readable } from 'node:stream'
+import multer from 'multer'
 import sharp from 'sharp'
 import {
     encodeChatImage,
     encodeProfileImage,
+    getUploadErrorMessage,
     parseStoredChatImageFilename,
+    SINGLE_FILE_MULTIPART_LIMITS,
     selectChatImagesToDelete,
 } from './upload.js'
 
@@ -14,6 +18,49 @@ const NOW = 2_000_000_000_000
 function filename(userId: number, createdAt: number, index: number): string {
     return `${userId}-${createdAt}-00000000-0000-4000-8000-${String(index).padStart(12, '0')}.webp`
 }
+
+async function parseSingleImageMultipart(): Promise<Express.Multer.File | undefined> {
+    const boundary = 'daclion-upload-test'
+    const body = Buffer.from([
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="image"; filename="test.png"',
+        'Content-Type: image/png',
+        '',
+        'test-image-body',
+        `--${boundary}--`,
+        '',
+    ].join('\r\n'))
+    const request = Readable.from([body]) as Readable & {
+        headers: Record<string, string>
+        method: string
+        url: string
+        file?: Express.Multer.File
+    }
+    request.headers = {
+        'content-type': `multipart/form-data; boundary=${boundary}`,
+        'content-length': String(body.length),
+    }
+    request.method = 'POST'
+    request.url = '/'
+
+    await new Promise<void>((resolve, reject) => {
+        multer({
+            storage: multer.memoryStorage(),
+            limits: SINGLE_FILE_MULTIPART_LIMITS,
+        }).single('image')(request as never, {} as never, error => error ? reject(error) : resolve())
+    })
+    return request.file
+}
+
+test('단일 이미지 multipart는 parts 한도에 걸리지 않고 파싱된다', async () => {
+    const file = await parseSingleImageMultipart()
+    assert.equal(file?.fieldname, 'image')
+    assert.equal(file?.buffer.toString(), 'test-image-body')
+    assert.equal(
+        getUploadErrorMessage(new multer.MulterError('LIMIT_PART_COUNT')),
+        '한 요청에는 이미지 파일 하나만 업로드할 수 있습니다.',
+    )
+})
 
 test('채팅 이미지 파일명은 소유 사용자와 생성 시각을 복원하고 경로 입력을 거부한다', () => {
     const stored = filename(17, NOW, 1)

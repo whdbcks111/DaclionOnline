@@ -107,6 +107,11 @@ $avatar-size: 80px;
     }
 }
 
+.logoutButton {
+    border-color: $color-danger;
+    color: $color-danger;
+}
+
 .error {
     font-size: $font-size-sm;
     color: $color-danger;

@@ -49,6 +49,16 @@ export type ResourceInteraction = (resource: Resource, player: Player) => boolea
 const resourceDataRegistry = new Map<string, ResourceData>();
 const interactionRegistry = new Map<string, ResourceInteraction>();
 
+/** 초반 광맥의 빠른 리젠은 유지하되 후반 광맥도 이 시간을 넘기지 않는다. */
+export const MAX_ORE_RESPAWN_SECONDS = 3 * 60;
+
+export function resolveResourceRespawnTime(resourceDataId: string, configuredTime: number): number {
+    const normalized = Math.max(0, configuredTime);
+    return getResourceData(resourceDataId)?.tags.includes(GameTags.RESOURCE_ORE)
+        ? Math.min(normalized, MAX_ORE_RESPAWN_SECONDS)
+        : normalized;
+}
+
 /** 일반 공격도 광맥을 손상시킬 수 있지만 마법과 채굴력은 경도 손실을 더 잘 극복한다. */
 export function calculateMiningDamageMultiplier(
     hardness: number,
@@ -106,7 +116,7 @@ export default class Resource extends Entity {
         this.drops = data.drops;
         this.expReward = data.expReward;
         this.interaction = data.interaction;
-        this.respawnTime = respawnTime;
+        this.respawnTime = resolveResourceRespawnTime(resourceDataId, respawnTime);
         this.attackable = data.attackable ?? true;
         this.interactionCooldown = typeof data.interactionCooldown === 'object'
             ? { ...data.interactionCooldown }

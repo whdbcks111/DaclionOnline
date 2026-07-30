@@ -52,6 +52,8 @@ export interface WorldMapLocationData {
     name: string
     zoneType: ZoneType
     zoneLabel: string
+    /** 방문한 보스 구역을 일반 장소와 구분해 표시한다. */
+    isBossRoom: boolean
     x: number
     y: number
     z: number
@@ -112,7 +114,13 @@ export interface RegisterResult {
 }
 
 export interface LogoutResult {
-    ok: boolean
+    ok?: boolean
+    error?: string
+}
+
+export interface PasswordResetRequest {
+    code: string
+    pw: string
 }
 
 export interface SimpleResult {
@@ -231,6 +239,7 @@ export interface UserCountData {
 // 엔티티 HP 바 정보 (위치 HUD용)
 export interface EntityBarInfo {
     icon?: string
+    isBoss?: boolean
     name: string
     level: number
     life: number
@@ -331,6 +340,7 @@ export interface TargetMonsterAnalysisHudData {
 export interface TargetHudData {
     kind: 'monster' | 'player' | 'object'
     icon?: string
+    isBoss?: boolean
     name: string
     level: number
     life: number
@@ -553,6 +563,8 @@ export interface ServerToClientEvents {
     logoutResult: (result: LogoutResult) => void
     verifyCodeSendResult: (result: SimpleResult) => void
     verifyCodeResult: (result: SimpleResult) => void
+    passwordResetCodeSendResult: (result: SimpleResult) => void
+    passwordResetResult: (result: SimpleResult) => void
     chatHistory: (messages: ChatMessage[]) => void
     chatMessage: (msg: ChatMessage) => void
     notification: (data: NotificationData) => void
@@ -588,6 +600,8 @@ export interface ClientToServerEvents {
     logout: (token: string) => void
     sendVerifyCode: (email: string) => void
     verifyCode: (code: string) => void
+    sendPasswordResetCode: (email: string) => void
+    resetPassword: (data: PasswordResetRequest) => void
     sendMessage: (payload: string | SendChatMessageRequest) => void
     sendImageMessage: (payload: SendChatImageRequest) => void
     sendImageMessages: (payload: SendChatImageRequest) => void

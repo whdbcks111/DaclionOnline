@@ -172,6 +172,23 @@ test('마력 검파는 이동속도 시너지를 유지하되 두 마궁 조합�
     assert.ok(base.sustainableDpm < fallingStar.sustainableDpm);
 });
 
+test('낙성은 마법력 주계수를 유지하면서 활의 공격력도 피해에 반영한다', () => {
+    const baseline = createBalanceScenario(200, 'career:mage', 'career:archer');
+    const attackBuffed = createBalanceScenario(200, 'career:mage', 'career:archer');
+    const baseDamage = analyzeSkillBalance(baseline, 'star_weaver_technique', 5).rawDamage;
+
+    attackBuffed.entity.attribute.addModifier({
+        attribute: AttributeType.ATK.key,
+        op: 'add',
+        value: 100,
+        source: 'test:falling-star-attack',
+    });
+
+    const gained = analyzeSkillBalance(attackBuffed, 'star_weaver_technique', 5).rawDamage - baseDamage;
+    assert.ok(gained > 0);
+    assert.ok(gained < baseDamage * 0.25);
+});
+
 test('skill report uses real cooldown, resource and damage callbacks', () => {
     const scenario = createBalanceScenario(50, 'career:mage');
     const report = analyzeSkillBalance(scenario, 'magic_bolt', 5);

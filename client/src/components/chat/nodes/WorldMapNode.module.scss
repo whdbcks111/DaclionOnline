@@ -93,7 +93,7 @@
     white-space: nowrap;
 }
 
-.visitedDot, .unknownDot {
+.visitedDot, .unknownDot, .bossDot {
     width: 0.55rem;
     aspect-ratio: 1;
     border-radius: 50%;
@@ -101,6 +101,7 @@
 }
 
 .unknownDot { background: #77818a; }
+.bossDot { background: #f2c14e; }
 .spacer { flex: 1; }
 
 .gridLine {
@@ -142,10 +143,24 @@
     stroke: #a8afb5;
 }
 
+.boss .nodeDot {
+    fill: #f2c14e;
+    stroke: #fff1b8;
+}
+
 .iconBackdrop {
     fill: rgba(13, 23, 31, 0.92);
     stroke: rgba(255, 255, 255, 0.48);
     stroke-width: 1.5;
+}
+
+.boss .iconBackdrop {
+    fill: rgba(83, 60, 12, 0.94);
+    stroke: #f2c14e;
+}
+
+.boss .nodeLabel {
+    fill: #ffe49a;
 }
 
 .landmarkIcon {

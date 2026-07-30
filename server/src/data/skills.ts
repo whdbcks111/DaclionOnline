@@ -3016,6 +3016,7 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 270, perLevelPercent: 16,
         secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
         secondaryBasePercent: 50, secondaryPerLevelPercent: 3,
+        tertiaryAttribute: AttributeType.ATK, tertiaryBasePercent: 60, tertiaryPerLevelPercent: 4,
         manaCost: 34, cooldown: 15, projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_LIGHT,
         descriptionIntro: '대상의 머리 위에 별빛을 모아 거대한 유성으로 떨어뜨립니다.',
     },

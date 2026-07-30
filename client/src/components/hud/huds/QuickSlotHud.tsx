@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useHud, MAX_QUICK_SLOTS } from '../../../context/HudContext'
 import { useSocket } from '../../../context/SocketContext'
 import styles from './QuickSlotHud.module.scss'
+import { dismissVirtualKeyboard } from '../../../utils/focus'
 
 export default function QuickSlotHud() {
   const { quickSlots, addQuickSlot, removeQuickSlot, moveQuickSlot, updateQuickSlot, editMode } = useHud()
@@ -73,7 +74,10 @@ export default function QuickSlotHud() {
               className={styles.btn}
               title={slot}
               onMouseDown={e => e.preventDefault()}
-              onTouchStart={e => e.preventDefault()}
+              onTouchStart={e => {
+                dismissVirtualKeyboard()
+                e.preventDefault()
+              }}
               onTouchEnd={e => {
                 e.preventDefault()
                 if(editMode) {
@@ -84,7 +88,7 @@ export default function QuickSlotHud() {
                   sendMessage(slot);
                 }
               }}
-              onClick={e => {
+              onClick={() => {
                 if(editMode) {
                   setEditingIndex(i);
                   setEditingValue(slot);

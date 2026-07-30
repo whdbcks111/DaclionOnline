@@ -25,6 +25,7 @@ import { detachHumanVerification, initializeHumanVerification } from './humanVer
 import Monster from '../models/Monster.js';
 import { StatType } from '../models/Stat.js';
 import { createMonsterTargetAnalysis } from '../models/Inspection.js';
+import { GameTags } from '../../../shared/tags.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -226,6 +227,7 @@ export function sendLocationInfo(userId: number): void {
                 ];
             return {
                 ...(icon ? { icon } : {}),
+                ...(object.hasTag(GameTags.ENTITY_BOSS) ? { isBoss: true } : {}),
                 name: object.name,
                 level: object.level,
                 life: object.life,

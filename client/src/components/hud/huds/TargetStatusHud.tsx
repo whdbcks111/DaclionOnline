@@ -38,6 +38,7 @@ export default function TargetStatusHud() {
     <section className={`${styles.hud} ${target ? '' : styles.preview}`} aria-label="타게팅 대상 상태">
       <div className={styles.identity}>
         {preview.icon && <img className={styles.targetIcon} src={`/icons/${preview.icon}.png`} alt="" />}
+        {preview.isBoss && <span className={styles.bossCrown} aria-label="보스" title="보스">♛</span>}
         <span className={styles.name}>{preview.name}</span>
         <span className={styles.level}>Lv.{preview.level}</span>
         {preview.userId !== undefined && <span className={styles.userId}>ID {preview.userId}</span>}

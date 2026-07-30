@@ -7,11 +7,13 @@
 | 공유 계약 | `shared/types.ts` | 로그인/회원가입/세션 복원/결과 타입 |
 | 서버 | `modules/register.ts` | 이메일 코드, 입력 중복 검사, PBKDF2 해시, 계정 생성 |
 | 서버 | `modules/login.ts` | 로그인, 세션, 접속자 수, 닉네임, 로그아웃 |
+| 서버 | `modules/passwordReset.ts` | 가입 이메일 확인 코드와 비밀번호 재설정, 기존 세션 폐기 |
 | 서버 | `modules/socket.ts` | 연결 handshake 쿠키를 `socket.data.sessionToken`에 바인딩 |
 | 서버 | `modules/upload.ts` | 인증된 프로필·채팅 이미지 업로드와 임시 미디어 정리 |
 | 서버 | `modules/mail.ts` | Gmail 전송과 HTML 템플릿 치환 |
 | 클라이언트 | `context/SocketContext.tsx` | 소켓 연결과 현재 `SessionInfo` 보관 |
 | 클라이언트 | `pages/Login.tsx`, `pages/Register.tsx` | 인증 UI와 이벤트 호출 |
+| 클라이언트 | `pages/PasswordReset.tsx` | 이메일 코드 기반 비밀번호 재설정 UI |
 | 클라이언트 | `App.tsx` | 세션 복원/무효에 따른 라우팅 |
 | 클라이언트 | `components/Drawer.tsx` | 닉네임 및 프로필 이미지 변경 UI |
 
@@ -28,6 +30,14 @@
 
 메일 발송은 IP당 10분 5회, 인증 확인은 IP+socket당 분당 12회, 가입 확정은 IP당 10분 8회로 제한한다. 인증 확인의 분당 제한과 별개로 오답 5회에 도달한 코드는 즉시 폐기해 6자리 전수 대입을 허용하지 않는다.
 
+## 비밀번호 재설정
+
+1. 로그인 화면의 비밀번호 찾기는 별도 `/password-reset` 화면으로 이동한다.
+2. `sendPasswordResetCode(email)`은 정규화한 가입 이메일을 조회하고 계정이 있을 때만 6자리 코드를 메일로 보낸다. 응답은 계정 존재 여부와 관계없이 같은 문구를 사용한다.
+3. 코드는 요청 socket과 사용자 ID에 묶여 5분 동안 유효하며, 60초 재전송 제한·IP당 10분 5회 발송 제한·발급 건당 오답 5회·IP+socket당 분당 12회 확인 제한을 적용한다.
+4. `resetPassword({ code, pw })`는 공용 비밀번호 형식을 다시 검증하고 새 salt와 PBKDF2 해시를 즉시 DB에 저장한다.
+5. 변경 성공 뒤 해당 사용자의 모든 세션과 socket 바인딩을 폐기하고 온라인 Player를 저장·unload한다. 다른 기기의 기존 로그인은 `sessionInvalid`를 받아 새 비밀번호로 다시 로그인해야 한다.
+
 ## 로그인과 세션 수명
 
 - 세션 토큰은 `randomHex(32)`로 만들며 `sessionMap`에만 저장된다. 서버 재시작 후에는 복원되지 않는다.
@@ -38,6 +48,7 @@
 - 마지막 세션 로그아웃 시 어떤 저장 `await`보다 먼저 해당 토큰과 연결된 모든 socket 바인딩을 폐기한다. Player는 unload 진행 상태가 되어 지연 도착한 구매·버리기 명령에서 조회되지 않고, 저장을 마친 뒤 온라인 Player 맵에서 내린다.
 - 연결 해제는 온라인 카운트만 내리며 세션 토큰 자체는 제거하지 않는다.
 - 전체 접속자와 채널별 접속자는 소켓/탭 수가 아니라 중복 없는 userId 수로 계산한다. 명시적 로그아웃은 같은 토큰에 연결된 모든 소켓의 온라인 바인딩을 즉시 해제하므로 이후 disconnect 순서와 무관하게 잔여 인원이 남지 않는다.
+- 게임 햄버거 메뉴의 로그아웃 버튼은 현재 cookie token으로 기존 `logout` 이벤트를 호출하며, 성공 응답 뒤 cookie와 클라이언트 세션 상태를 지우고 로그인 화면으로 이동한다.
 
 ## 권한
 

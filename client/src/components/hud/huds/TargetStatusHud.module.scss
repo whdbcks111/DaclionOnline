@@ -33,6 +33,13 @@
     object-fit: contain;
 }
 
+.bossCrown {
+    flex: 0 0 auto;
+    color: #f2c14e;
+    font-size: clamp(0.9rem, 2vw, 1.05rem);
+    font-weight: 800;
+}
+
 .name {
     min-width: 0;
     overflow: hidden;

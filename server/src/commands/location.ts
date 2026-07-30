@@ -10,6 +10,7 @@ import { ActionType } from "../models/Action.js";
 import { getVisitedLocationMatches } from "../models/WorldMap.js";
 import { cancelNavigation, startAutoNavigation, startLocationTravel } from "../modules/navigation.js";
 import Monster from "../models/Monster.js";
+import { GameTags } from "../../../shared/tags.js";
 
 function formatRespawnTime(seconds: number): string {
     const total = Math.max(0, Math.ceil(seconds));
@@ -356,8 +357,11 @@ export function initLocationCommands(): void {
             } else {
                 for (let index = 0; index < objects.length; index++) {
                     const object = objects[index];
-                    b.text(`${index + 1}. `)
-                     .text(`Lv.${object.level} `);
+                    b.text(`${index + 1}. `);
+                    if (object.hasTag(GameTags.ENTITY_BOSS)) {
+                        b.color('gold', crown => crown.text('♛ '));
+                    }
+                    b.text(`Lv.${object.level} `);
                     const icon = object.getDisplayIcon();
                     if (icon) b.icon(icon).text(' ');
                     b.text(`${object.name} `);

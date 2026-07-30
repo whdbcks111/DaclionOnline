@@ -445,6 +445,7 @@ export default function WorldMapNode({ data }: Props) {
             <div className={styles.toolbar}>
                 <span className={styles.legend}><i className={styles.visitedDot} />방문</span>
                 <span className={styles.legend}><i className={styles.unknownDot} />인접 미방문</span>
+                <span className={styles.legend}><i className={styles.bossDot} />보스 구역</span>
                 <span className={styles.spacer} />
                 <button type="button" onClick={() => zoomAt(0.8)} aria-label="지도 확대">＋</button>
                 <button type="button" onClick={() => zoomAt(1.25)} aria-label="지도 축소">－</button>
@@ -518,11 +519,11 @@ export default function WorldMapNode({ data }: Props) {
                     const active = activeLocation?.id === location.id
                     return <g
                         key={location.id}
-                        className={`${styles.blip} ${location.visited ? styles.visited : styles.unknown} ${active ? styles.active : ''}`}
+                        className={`${styles.blip} ${location.visited ? styles.visited : styles.unknown} ${location.isBossRoom ? styles.boss : ''} ${active ? styles.active : ''}`}
                         transform={`translate(${location.x} ${y})`}
                         tabIndex={0}
                         role="button"
-                        aria-label={`${location.name}, ${location.zoneLabel}, 좌표 ${location.x}, ${location.y}, ${location.z}`}
+                        aria-label={`${location.name}, ${location.zoneLabel}${location.isBossRoom ? ', 보스 구역' : ''}, 좌표 ${location.x}, ${location.y}, ${location.z}`}
                         onPointerEnter={() => setHoveredId(location.id)}
                         onPointerLeave={() => setHoveredId(null)}
                         onFocus={() => setHoveredId(location.id)}
@@ -563,7 +564,12 @@ export default function WorldMapNode({ data }: Props) {
             {activeLocation && (
                 <aside className={styles.infoCard} aria-live="polite">
                     <strong>{activeLocation.name}</strong>
-                    <span>{activeLocation.zoneLabel} · {activeLocation.visited ? '방문 완료' : '미방문'}</span>
+                    <span>
+                        {activeLocation.zoneLabel}
+                        {activeLocation.isBossRoom ? ' · 보스 구역' : ''}
+                        {' · '}
+                        {activeLocation.visited ? '방문 완료' : '미방문'}
+                    </span>
                     <span>좌표 {activeLocation.x}, {activeLocation.y}, {activeLocation.z}</span>
                 </aside>
             )}

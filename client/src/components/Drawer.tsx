@@ -24,6 +24,7 @@ interface Props {
     onClearClientChat: () => void
     permission?: number
     onOpenAdmin: () => void
+    onLogout: () => void
 }
 
 function channelRoomKey(channel: string | null): string {
@@ -49,6 +50,7 @@ export default function Drawer({
     onClearClientChat,
     permission = 0,
     onOpenAdmin,
+    onLogout,
 }: Props) {
     const [uploading, setUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -249,6 +251,9 @@ export default function Drawer({
                             관리자 페이지
                         </button>
                     )}
+                    <button className={`${styles.uploadButton} ${styles.logoutButton}`} onClick={onLogout}>
+                        로그아웃
+                    </button>
                 </div>
                 <div className={styles.channelSection}>
                     <button

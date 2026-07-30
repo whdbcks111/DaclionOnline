@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import styles from './Home.module.scss'
 import { useSocket } from '../context/SocketContext'
 import { HudProvider, useHud } from '../context/HudContext'
@@ -78,6 +79,7 @@ function isCollapsedCaretAtStart(element: HTMLElement): boolean {
 }
 
 function HomeContent() {
+  const navigate = useNavigate()
   const { socket, sessionInfo, updateProfileImage, updateNickname } = useSocket()
   const { playerStats, setPlayerStats, setLocationInfo } = useHud()
   const [messages, setMessages] = useState<ChatMessageType[]>([])
@@ -152,6 +154,20 @@ function HomeContent() {
       document.removeEventListener('keydown', closeOnEscape)
     }
   }, [chatTypeMenuOpen])
+
+  useEffect(() => {
+    if (!socket) return
+    const onLogout = (result: { ok?: boolean; error?: string }) => {
+      if (!result.ok) {
+        setMediaError(result.error ?? '로그아웃하지 못했습니다.')
+        return
+      }
+      document.cookie = 'sessionToken=; path=/; max-age=0'
+      navigate('/login', { replace: true })
+    }
+    socket.on('logoutResult', onLogout)
+    return () => { socket.off('logoutResult', onLogout) }
+  }, [navigate, socket])
 
   useEffect(() => {
     if (!socket) return
@@ -901,6 +917,18 @@ function HomeContent() {
           setDrawerOpen(false)
           const adminWindow = window.open('/admin', '_blank')
           if (adminWindow) adminWindow.opener = null
+        }}
+        onLogout={() => {
+          const token = document.cookie
+            .split('; ')
+            .find(value => value.startsWith('sessionToken='))
+            ?.slice('sessionToken='.length)
+          if (!token || !socket) {
+            document.cookie = 'sessionToken=; path=/; max-age=0'
+            navigate('/login', { replace: true })
+            return
+          }
+          socket.emit('logout', decodeURIComponent(token))
         }}
       />
       <HudContainer />

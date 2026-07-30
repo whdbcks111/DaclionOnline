@@ -10,7 +10,7 @@
 - Content-Type: `multipart/form-data`
 - 필드: `image` 파일 1개
 - 제한: 최대 5MB, JPEG/PNG/GIF/WebP MIME, 파일 magic bytes 검증, 사용자당 10분 10회
-- multipart 제한: 파일 1개·field 0개·part 1개·field nesting 0
+- multipart 제한: 실제 파일 part 1개·field 0개·field nesting 0. Busboy의 한도 도달 이벤트가 정상 단일 part를 초과로 오인하지 않도록 내부 `parts` 임계값은 2를 사용한다.
 
 성공 응답:
 
@@ -34,7 +34,7 @@
 - Content-Type: `multipart/form-data`
 - 필드: `image` 파일 1개
 - 입력 제한: 최대 15MB, `image/*` MIME, Sharp가 실제 이미지로 해석할 수 있는 형식, 최대 4천만 입력 pixel
-- 요청 제한: 사용자당 분당 30회, 파일 1개·field 0개·part 1개·field nesting 0
+- 요청 제한: 사용자당 분당 30회, 실제 파일 part 1개·field 0개·field nesting 0. 내부 `parts` 임계값은 Busboy 한도 이벤트 특성 때문에 2를 사용한다.
 - 저장 규격: 최대 1600×1600, WebP 품질 78. 애니메이션 입력은 프레임을 유지한다.
 
 성공 응답:

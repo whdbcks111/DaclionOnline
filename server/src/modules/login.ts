@@ -77,6 +77,22 @@ export function getUserSessionCount(userId: number): number {
     return userSessions.get(userId)?.size ?? 0;
 }
 
+/** 비밀번호 재설정 등 계정 보안 변경 뒤 해당 사용자의 모든 세션과 연결을 폐기한다. */
+export async function revokeUserSessions(userId: number): Promise<void> {
+    const io = getIO();
+    const tokens = new Set(userSessions.get(userId) ?? []);
+    for (const [, connectedSocket] of io.sockets.sockets) {
+        if (!connectedSocket.data.sessionToken || !tokens.has(connectedSocket.data.sessionToken)) continue;
+        connectedSocket.leave(getChannelRoomKey(getUserChannel(userId)));
+        setUserOffline(userId, connectedSocket.id);
+        connectedSocket.data.onlineUserId = undefined;
+        connectedSocket.data.sessionToken = undefined;
+        connectedSocket.emit('sessionInvalid');
+    }
+    for (const token of tokens) removeSession(token);
+    await unloadPlayerByUserId(userId);
+}
+
 // 온라인 유저 추적: userId -> 연결된 socket ID. 같은 소켓의 중복 등록과 다중 탭을 구분한다.
 const onlineUsers = new Map<number, Set<string>>()
 

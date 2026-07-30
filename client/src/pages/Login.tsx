@@ -76,7 +76,7 @@ function Login() {
       <button onClick={login}>로그인</button>
       <div className={styles.nav}>
         <Link to='/register'>회원가입</Link>
-        <Link to='/register'>비밀번호 찾기</Link>
+        <Link to='/password-reset'>비밀번호 찾기</Link>
       </div>
     </div>
   </>;

@@ -28,6 +28,7 @@ import { parseChatMessage } from "../utils/chatParser.js";
 import { formatWeight } from "../utils/format.js";
 import { emitGameEvent, GameEventIds } from "../models/GameEvent.js";
 import { InventorySortMode } from "../models/Inventory.js";
+import { GameTags } from "../../../shared/tags.js";
 
 function formatStatusDuration(seconds: number): string {
     const totalSeconds = Math.max(0, Math.ceil(seconds));
@@ -80,7 +81,7 @@ function getObjectTargetCompletions(userId: number): CompletionItem[] {
         .sort((a, b) => Number(a.object.isDefeated) - Number(b.object.isDefeated))
         .map(({ object, index }) => ({
             value: String(index + 1),
-            description: `Lv.${object.level} ${object.name}${object.isDefeated ? ` (${object.defeatLabel})` : ''}`,
+            description: `${object.hasTag(GameTags.ENTITY_BOSS) ? '♛ ' : ''}Lv.${object.level} ${object.name}${object.isDefeated ? ` (${object.defeatLabel})` : ''}`,
         }));
 }
 
@@ -674,10 +675,14 @@ export function initPlayerCommands(): void {
                     monsterDataId: target instanceof Monster ? target.monsterDataId : null,
                 },
             });
-            sendBotMessageToUser(userId, chat()
+            const message = chat()
                 .color('gold', b => b.text('[대상 지정] '))
-                .text(`${number}. Lv.${target.level} ${target.name}`)
-                .build());
+                .text(`${number}. `);
+            if (target.hasTag(GameTags.ENTITY_BOSS)) {
+                message.color('gold', crown => crown.text('♛ '));
+            }
+            message.text(`Lv.${target.level} ${target.name}`);
+            sendBotMessageToUser(userId, message.build());
         },
     });
 

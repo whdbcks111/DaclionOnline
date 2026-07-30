@@ -22,10 +22,12 @@ const chatImageUploadLimiter = new FixedWindowRateLimiter(30, 60_000, 20_000)
 const profileUploadLocks = new Map<number, Promise<void>>()
 // Multer 2.2 runtime supports this limit; DefinitelyTyped의 Multer 선언 갱신 전에도
 // 중첩 multipart field 방어가 실제 옵션에서 빠지지 않게 공통 객체로 전달한다.
-const STRICT_MULTIPART_LIMITS = {
+export const SINGLE_FILE_MULTIPART_LIMITS = {
     files: 1,
     fields: 0,
-    parts: 1,
+    // Busboy 1.6은 마지막 허용 part에 도달해도 partsLimit을 emit하고
+    // Multer 2.2는 이를 초과 오류로 처리하므로 실제 1 part 허용에는 임계값 2가 필요하다.
+    parts: 2,
     fieldNameSize: 32,
     fieldNestingDepth: 0,
 }
@@ -59,7 +61,7 @@ function hasValidProfileMagicBytes(buffer: Buffer): boolean {
 const profileUpload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        ...STRICT_MULTIPART_LIMITS,
+        ...SINGLE_FILE_MULTIPART_LIMITS,
         fileSize: 5 * 1024 * 1024,
     },
     fileFilter: (_req, file, callback) => {
@@ -71,7 +73,7 @@ const profileUpload = multer({
 const chatImageUpload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        ...STRICT_MULTIPART_LIMITS,
+        ...SINGLE_FILE_MULTIPART_LIMITS,
         fileSize: 15 * 1024 * 1024,
     },
     fileFilter: (_req, file, callback) => {
@@ -311,9 +313,16 @@ uploadRouter.post(
     },
 )
 
+export function getUploadErrorMessage(error: unknown): string {
+    if (error instanceof multer.MulterError) {
+        if (error.code === 'LIMIT_FILE_SIZE') return '이미지 파일 크기 제한을 초과했습니다.'
+        if (error.code === 'LIMIT_FILE_COUNT' || error.code === 'LIMIT_PART_COUNT' || error.code === 'LIMIT_FIELD_COUNT') {
+            return '한 요청에는 이미지 파일 하나만 업로드할 수 있습니다.'
+        }
+    }
+    return error instanceof Error ? error.message : '이미지 업로드에 실패했습니다.'
+}
+
 uploadRouter.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    const message = error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE'
-        ? '이미지 파일 크기 제한을 초과했습니다.'
-        : error instanceof Error ? error.message : '이미지 업로드에 실패했습니다.'
-    res.status(400).json({ error: message })
+    res.status(400).json({ error: getUploadErrorMessage(error) })
 })

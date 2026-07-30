@@ -7,6 +7,7 @@ import Monster, { defineMonster } from './Monster.js';
 import Resource, {
     calculateMiningDamageMultiplier,
     defineResource,
+    MAX_ORE_RESPAWN_SECONDS,
     registerResourceInteraction,
 } from './Resource.js';
 import { defineItem, Item } from './Item.js';
@@ -66,6 +67,16 @@ test('자원 경험치는 정의된 최소·최대 범위 안에서 결정된다
 
     assert.equal(resource.rollExp(() => 0), 3);
     assert.equal(resource.rollExp(() => 0.999999), 7);
+});
+
+test('광맥 리젠은 초반의 짧은 설정을 유지하고 후반에도 3분을 넘지 않는다', () => {
+    defineTestResource('test_respawn_resource');
+
+    assert.equal(new Resource('test_respawn_resource', 'test', 45).deathDuration, 45);
+    assert.equal(
+        new Resource('test_respawn_resource', 'test', 840).deathDuration,
+        MAX_ORE_RESPAWN_SECONDS,
+    );
 });
 
 test('광맥은 무기 제한 없이 공격할 수 있고 마법이 일반 물리 공격보다 경도를 잘 뚫는다', () => {

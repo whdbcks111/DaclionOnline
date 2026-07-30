@@ -91,7 +91,7 @@ test('최대 자원 modifier가 사라지면 현재 생명력과 자원값을 �
 
 test('현재 대상 표시 스냅샷은 같은 장소 대상의 자원·보호막·상태이상만 복제한다', () => {
     const owner = new CombatEntity('공격자');
-    const target = new CombatEntity('대상');
+    const target = new CombatEntity('대상', [GameTags.ENTITY_BOSS]);
     target.life = 720;
     target.mentality = 12;
     target.setShield('test:target-hud', 80, ShieldType.GENERAL, 10, target);
@@ -100,6 +100,7 @@ test('현재 대상 표시 스냅샷은 같은 장소 대상의 자원·보호�
 
     const snapshot = owner.getCurrentTargetDisplaySnapshot();
     assert.equal(snapshot?.name, '대상');
+    assert.equal(snapshot?.isBoss, true);
     assert.equal(snapshot?.life, 720);
     assert.equal(snapshot?.shields[0]?.amount, 80);
     assert.equal(snapshot?.statusEffects[0]?.label, '화염');

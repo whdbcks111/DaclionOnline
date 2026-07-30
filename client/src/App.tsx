@@ -7,6 +7,7 @@ import Notification from './components/Notification'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import Register from './pages/Register'
+import PasswordReset from './pages/PasswordReset'
 import LocationEditor from './pages/LocationEditor'
 import AdminPage from './pages/AdminPage'
 import GameGuide from './pages/GameGuide'
@@ -22,19 +23,22 @@ function SessionHandler() {
     if (!socket) return;
 
     const onSessionInvalid = () => {
-      navigate('/login', { replace: true });
+      if (!['/', '/login', '/register', '/password-reset'].includes(location.pathname)) {
+        navigate('/login', { replace: true });
+      }
     };
 
     socket.on('sessionInvalid', onSessionInvalid);
     return () => { socket.off('sessionInvalid', onSessionInvalid); };
-  }, [socket, navigate]);
+  }, [socket, location.pathname, navigate]);
 
   // 서버에서 세션 복원 시 홈으로
   useEffect(() => {
     if (!socket) return;
 
     const onSessionRestore = () => {
-      if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/') {
+      if (location.pathname === '/login' || location.pathname === '/register'
+          || location.pathname === '/password-reset' || location.pathname === '/') {
         navigate('/home');
       }
     };
@@ -65,6 +69,7 @@ function App() {
 
             {/* 회원가입 페이지 */}
             <Route path="/register" element={<Register />} />
+            <Route path="/password-reset" element={<PasswordReset />} />
 
             {/* 홈 페이지 (로그인 후) */}
             <Route path="/home" element={<Home />} />
