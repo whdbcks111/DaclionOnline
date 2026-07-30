@@ -76,7 +76,7 @@
 | Job registry | `defineJob/getJob/getAllJobs`, `defineEliteJobRecipe/resolveEliteJob`, `isJobDescendant`, `JobTier/JobSlotType` | 1차·엘리트 정의, 동일 직업 금지 순서 조합과 하위 계보 판정 |
 | `CareerProfile` | `main/sub/elite/effectiveMainJob`, `hasJob`, `canAssign/assign`, `getAssignableSlot/assignAvailable`, `migrateLegacyFirstJob`, `setByAdmin`, `evaluateElitePromotion`, `refreshModifiers` | Progress 영속 직업 상태, Lv.20/50 선택과 현재 가용 슬롯 배정, 기존 직업을 덮어쓰지 않는 구형 직업 이전, 운영 조합 교체, 스킬·modifier 지급과 Lv.200 자동 전직 |
 | `Shop` | `getStock`, `consumeStock`, `update`, `resolveShopRestockTime` | 재고와 품목당 최대 10분 재입고 |
-| Shop registry | `defineShop`, `getShop`, `Shop.getAccessDeniedReason`, `updateAllShops` | 상점 정의/조회, lawful 카르마 거래 제한, 프레임 갱신 |
+| Shop registry | `defineShop`, `getShop`, `Shop.getStock/getStockCapacity`, `Shop.getAccessDeniedReason`, `updateAllShops` | 상점 정의/조회, 5인분 공유 재고·재입고 처리량과 실제 상한 snapshot, lawful 카르마 거래 제한, 프레임 갱신 |
 | Game events | `emitGameEvent`, `subscribeGameEvent`, `subscribeAllGameEvents`, `getRecentGameEvents` | 동기식 내부 이벤트와 원시 Entity 없는 최근 trace 스냅샷. 장소 도착·대상 지정·상호작용·장착·사용·낚시 성공·스탯 분배를 포함한 성공 결과와 공격 최종 피해를 primitive data로 제공 |
 | `GameAction` | `gameAction(name).require(...).step(apply, rollback).run()` | 사전 검증 뒤 메모리 변경을 적용하고 실패한 경우 완료 step을 역순 롤백 |
 | `NPC`, `DialogueScenario`, `Dialogue` | `NPC.define/getNpc/getAll`, `getEntryScenario/getScenario`, `say/event/setFlag/acceptQuest/turnInQuest/goto/choice/end` | NPC 정적 정의, 조건부 generator 장면과 타입별 대화·퀘스트 액션 생성 |

@@ -24,7 +24,7 @@
 - `DungeonPuzzle`: userId별 만료 질문 세션, 정규화된 복수 정답·선택지, 영속 Progress 해답 flag, 현재 장소별 목적지를 검증하는 순간이동 유물 registry. 파괴문·보스 수정 조건은 `Location.isResourceDefeated()` 목적형 API로 raw 오브젝트 없이 판정한다.
 - `NPC`/`NpcDialogue`: 정적 NPC 정의와 generator 기반 조건부 시나리오, 대사·이벤트·플래그·전이·선택·종료 액션, player별 비영속 대화 세션. 이동·사망·logout/연결 이탈은 공통 종료 API로 정리하고 교단 시설은 카르마 정책을 진입 전에 검사한다.
 - `Quest`/`QuestBook`: 코드 QuestData 레지스트리, 단계형 이벤트·현재 상태 목표, 제출 조건과 보상, NPC marker/수락/보고, 상태·반복·metadata delta·영속 태그를 가진 플레이어별 versioned dirty 인스턴스. Inventory/Progress 변경과 GameEvent를 공개 API로 받아 진행을 갱신하며 `npc:benevolent` 제공자의 신규 수락에 카르마 정책을 적용한다.
-- `Shop`: 상점 태그, 구매/판매 정의와 품목당 최대 10분 재고 timer, `facility:lawful` 카르마 접근 판정.
+- `Shop`: 상점 태그, 구매/판매 정의와 서버 전체 공유 재고, 마스터 수치 대비 5인분 최대 재고·재입고 처리량 보정, `getStock/getStockCapacity` 표시 API, `facility:lawful` 카르마 접근 판정.
 - `GameEvent`: 동기식 내부 이벤트 발행/구독과 원시 Entity를 제거한 최근 500개 trace 스냅샷. 장소 도착, 대상 지정, 성공한 자원 상호작용·아이템 장착/사용·낚시·스탯 분배와 전투 결과를 소유 모델 경계에서 발행하며 `combat:attack_hit`은 최종 피해·피해 타입·장착 무기 분류를 primitive data로 제공한다.
 - `Karma`: `KarmaState`의 기준 시각형 자연 감소, `KarmaTier/KarmaAccessPolicy` 클래스형 enum, 지역별 PVP 증가·현상 대상 영웅 보상·고카르마 사망 추가 패널티·헌금 견적 계산 API. Player는 `karma/isKarmaMarked/getKarmaSnapshot/addKarma/reduceKarma/setKarma/atoneKarma/getKarmaAccessDeniedReason`만 외부에 제공하고 명시적인 변경을 기존 aggregate dirty 저장에 연결한다.
 - `PvpKillCredit`: 양쪽 누적 플레이 1시간·30레벨 격차·부활 후 60초·동일 공격자→피해자 24시간 조건을 검사하고 Progress에 마지막 인정 시각을 기록한다. 실제 사망·카르마와 분리해 칭호 진행도와 영웅 효과 같은 긍정적 보상에만 결과를 사용한다.

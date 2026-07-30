@@ -73,6 +73,11 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.18', '2026-07-30',
+        [CHANGED,
+            '모든 상점의 공유 최대 재고와 재입고 속도를 5배로 늘려 여러 모험가가 함께 이용해도 품절이 지나치게 오래 이어지지 않도록 조정했습니다.',
+        ],
+    ),
     definePatchNote('1.0.17', '2026-07-30',
         [FEATURE,
             '게임 메뉴에 직접 로그아웃할 수 있는 버튼을 추가했습니다.',

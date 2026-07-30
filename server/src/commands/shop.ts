@@ -66,6 +66,7 @@ export function initShopCommands(): void {
                 for (let i = 0; i < shop.data.buyList.length; i++) {
                     const entry = shop.data.buyList[i];
                     const stock = shop.getStock(i);
+                    const stockCapacity = shop.getStockCapacity(i);
                     const outOfStock = stock <= 0;
 
                     b.color('gray', b2 => b2.text(`[${i + 1}] `));
@@ -76,7 +77,7 @@ export function initShopCommands(): void {
                     b.color('gold', b2 => b2.text(`${entry.price}G`));
                     b.text(` × ${entry.count}개  `);
                     b.color(outOfStock ? 'red' : 'gray', b2 =>
-                        b2.text(outOfStock ? '[품절]' : `[재고 ${stock}/${entry.stock}]`)
+                        b2.text(outOfStock ? '[품절]' : `[재고 ${stock}/${stockCapacity}]`)
                     );
 
                     if (!outOfStock) {
@@ -205,7 +206,9 @@ export function initShopCommands(): void {
                 .text(`  — `)
                 .color('gold', b => b.text(`${totalCost.toLocaleString()}G`))
                 .text(' 지불\n')
-                .color('gray', b => b.text(`남은 골드: ${player.gold.toLocaleString()}G  |  재고: ${shop.getStock(entryIndex)}/${entry.stock}`))
+                .color('gray', b => b.text(
+                    `남은 골드: ${player.gold.toLocaleString()}G  |  재고: ${shop.getStock(entryIndex)}/${shop.getStockCapacity(entryIndex)}`,
+                ))
                 .build()
             );
         },

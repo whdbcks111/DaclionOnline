@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { MAX_SHOP_RESTOCK_SECONDS, Shop, resolveShopRestockTime } from './Shop.js';
+import {
+    MAX_SHOP_RESTOCK_SECONDS,
+    SHOP_SHARED_PLAYER_CAPACITY,
+    Shop,
+    resolveShopRestockTime,
+    resolveShopStockCapacity,
+} from './Shop.js';
 
 function testShop(restockTime: number): Shop {
     return new Shop({
@@ -18,14 +24,21 @@ function testShop(restockTime: number): Shop {
     });
 }
 
-test('상점 재입고 시간은 짧은 주기를 유지하고 10분을 넘지 않는다', () => {
-    assert.equal(resolveShopRestockTime(30), 30);
+test('공유 상점은 다섯 명분 재고와 재입고 처리량을 제공한다', () => {
+    assert.equal(SHOP_SHARED_PLAYER_CAPACITY, 5);
+    assert.equal(resolveShopStockCapacity(1), 5);
+    assert.equal(resolveShopRestockTime(30), 6);
     assert.equal(resolveShopRestockTime(3_900), MAX_SHOP_RESTOCK_SECONDS);
 
     const shop = testShop(3_900);
-    assert.equal(shop.consumeStock(0, 1), true);
+    assert.equal(shop.getStock(0), 5);
+    assert.equal(shop.getStockCapacity(0), 5);
+    assert.equal(shop.consumeStock(0, 5), true);
+    assert.equal(shop.consumeStock(0, 1), false);
     shop.update(MAX_SHOP_RESTOCK_SECONDS - 1);
     assert.equal(shop.getStock(0), 0);
     shop.update(1);
     assert.equal(shop.getStock(0), 1);
+    shop.update(MAX_SHOP_RESTOCK_SECONDS * 4);
+    assert.equal(shop.getStock(0), 5);
 });

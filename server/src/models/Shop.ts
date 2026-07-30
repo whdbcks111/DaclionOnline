@@ -31,11 +31,21 @@ export interface ShopData {
     tags: TagId[];
 }
 
-/** 한 품목이 품절된 뒤 다시 하나 보충되기까지 허용하는 최대 시간. */
-export const MAX_SHOP_RESTOCK_SECONDS = 10 * 60;
+/** 공유 상점을 동시에 이용해도 1인 기준 공급량을 유지할 목표 인원. */
+export const SHOP_SHARED_PLAYER_CAPACITY = 5;
+/** 마스터 데이터에 지정할 수 있는 품목당 1인 기준 최대 재입고 시간. */
+export const MAX_SHOP_CONFIGURED_RESTOCK_SECONDS = 10 * 60;
+/** 다인원 공급 보정 뒤 실제 품목 하나가 재입고되는 최대 시간. */
+export const MAX_SHOP_RESTOCK_SECONDS =
+    MAX_SHOP_CONFIGURED_RESTOCK_SECONDS / SHOP_SHARED_PLAYER_CAPACITY;
 
 export function resolveShopRestockTime(restockTime: number): number {
-    return Math.min(MAX_SHOP_RESTOCK_SECONDS, Math.max(1, restockTime));
+    const configured = Math.min(MAX_SHOP_CONFIGURED_RESTOCK_SECONDS, Math.max(1, restockTime));
+    return Math.max(1, configured / SHOP_SHARED_PLAYER_CAPACITY);
+}
+
+export function resolveShopStockCapacity(stock: number): number {
+    return Math.max(0, Math.floor(stock)) * SHOP_SHARED_PLAYER_CAPACITY;
 }
 
 export class Shop implements TagReadable {
@@ -47,7 +57,7 @@ export class Shop implements TagReadable {
     constructor(data: ShopData) {
         this.data = data;
         this.tags = new TagCollection({ definition: data.tags });
-        this._stocks = data.buyList.map(e => e.stock);
+        this._stocks = data.buyList.map(e => resolveShopStockCapacity(e.stock));
         this._restockTimers = data.buyList.map(() => 0);
     }
 
@@ -64,6 +74,11 @@ export class Shop implements TagReadable {
         return this._stocks[buyIndex] ?? 0;
     }
 
+    getStockCapacity(buyIndex: number): number {
+        const entry = this.data.buyList[buyIndex];
+        return entry ? resolveShopStockCapacity(entry.stock) : 0;
+    }
+
     /** 구매 처리: 재고 amount 감소. 재고 부족 시 false */
     consumeStock(buyIndex: number, amount: number): boolean {
         if ((this._stocks[buyIndex] ?? 0) < amount) return false;
@@ -74,10 +89,11 @@ export class Shop implements TagReadable {
     update(dt: number): void {
         for (let i = 0; i < this.data.buyList.length; i++) {
             const entry = this.data.buyList[i];
-            if (this._stocks[i] >= entry.stock) continue;
+            const capacity = this.getStockCapacity(i);
+            if (this._stocks[i] >= capacity) continue;
             this._restockTimers[i] += dt;
             const restockTime = resolveShopRestockTime(entry.restockTime);
-            while (this._restockTimers[i] >= restockTime && this._stocks[i] < entry.stock) {
+            while (this._restockTimers[i] >= restockTime && this._stocks[i] < capacity) {
                 this._restockTimers[i] -= restockTime;
                 this._stocks[i]++;
             }
