@@ -216,10 +216,13 @@ export function getMiniGameValidationSnapshot(
         && serverElapsed + MINIGAME_RESULT_EARLY_TOLERANCE_MS < active.config.durationMs) {
         return undefined;
     }
+    const validationElapsed = active.type === 'fishing_capture'
+        ? Math.min(active.config.durationMs, serverElapsed)
+        : active.config.durationMs;
     return {
         sessionId: active.sessionId,
         token: active.token,
-        elapsedMs: Math.min(active.config.durationMs, serverElapsed),
+        elapsedMs: validationElapsed,
         inputs: active.inputs.map(input => ({ ...input })),
         actions: active.actions.map(action => ({ ...action })),
     };

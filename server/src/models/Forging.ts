@@ -1,6 +1,11 @@
 import {
+    FORGED_ITEM_BALANCE_VERSION,
     ItemMetadataKeys,
     MAX_ITEM_REINFORCEMENT_LEVEL,
+    calculateForgedPhysicalPenetration,
+    calculateForgedProjectileAcceleration,
+    calculateForgedStaffMentalityRegen,
+    calculateForgedWeaponPowerMultiplier,
     type Item,
     type ItemMetadata,
     type ItemSnapshot,
@@ -659,27 +664,42 @@ function createFormUtilityModifiers(
     itemLevel: number,
     accuracy: number,
 ): readonly ForgeModifierSeed[] {
+    const modifiers: ForgeModifierSeed[] = [];
+    if (form === ForgeForm.SWORD || form === ForgeForm.AXE || form === ForgeForm.DAGGER) {
+        modifiers.push({
+            attribute: 'armorPen',
+            op: 'add',
+            value: calculateForgedPhysicalPenetration(itemLevel, form === ForgeForm.DAGGER),
+        });
+    }
     if (form === ForgeForm.DAGGER) {
-        return [{
+        modifiers.push({
             attribute: 'speed',
             op: 'add',
             value: round(Math.min(
-                0.32,
+                0.7,
                 0.025 + itemLevel * 0.0007 + craftsmanship.forgingPrecision * 0.025 + accuracy * 0.045,
             ), 4),
-        }];
+        });
+    }
+    if (form === ForgeForm.BOW_LIMB) {
+        modifiers.push({
+            attribute: 'critRate',
+            op: 'add',
+            value: round(0.04 + itemLevel * 0.0002, 4),
+        });
     }
     if (form === ForgeForm.SABATONS) {
-        return [{
+        modifiers.push({
             attribute: 'speed',
             op: 'add',
             value: round(Math.min(
                 0.45,
                 0.045 + itemLevel * 0.001 + craftsmanship.forgingPrecision * 0.035 + accuracy * 0.06,
             ), 4),
-        }];
+        });
     }
-    return [];
+    return modifiers;
 }
 
 /** 형태·재료는 결과를 결정하고, 단조 trait만 주입 가능한 random에 따라 달라진다. */
@@ -704,7 +724,8 @@ export function createForgedItemSnapshot(
     const formPowerScale = form.basePower / ForgeForm.SWORD.basePower;
     const power = round(
         (form.basePower + craftsmanship.primaryPower * formPowerScale)
-            * material.power * efficiency * trait.power * (quirk?.power ?? 1),
+            * material.power * efficiency * trait.power * (quirk?.power ?? 1)
+            * calculateForgedWeaponPowerMultiplier(form.key, itemLevel),
         2,
     );
     const durabilityCraftsmanship = 1 + (craftsmanship.multiplier - 1) * 0.4;
@@ -746,6 +767,7 @@ export function createForgedItemSnapshot(
             forgingPrecision: round(craftsmanship.forgingPrecision, 4),
             craftsmanshipMultiplier: craftsmanship.multiplier,
             craftsmanshipPower: craftsmanship.primaryPower,
+            balanceVersion: FORGED_ITEM_BALANCE_VERSION,
             creatorUserId: options.creatorUserId ?? 0,
         },
     };
@@ -798,15 +820,24 @@ export function createInfusedStaffSnapshot(frame: Item): ForgedComponentResult {
     metadata[ItemMetadataKeys.CUSTOM_DESCRIPTION] = `${frame.description} 마도 대장장이가 마력 회로를 열어 실제 주문과 마력탄을 다룰 수 있게 완성했다.`;
     metadata[ItemMetadataKeys.INSTANCE_MODIFIERS] = [
         ...storedItemModifiers(frame),
-        { attribute: 'magicPen', op: 'add', value: round(6 + itemLevel * 0.12 + magicForce * 0.04, 2) },
-        { attribute: 'mentalityRegen', op: 'add', value: round(1 + Math.sqrt(itemLevel) * 0.35, 2) },
+        {
+            attribute: 'magicPen',
+            op: 'add',
+            value: round(6 + itemLevel * 0.17 + magicForce * 0.04 + Math.max(0, itemLevel - 500) * 0.8, 2),
+        },
+        { attribute: 'mentalityRegen', op: 'add', value: calculateForgedStaffMentalityRegen(itemLevel) },
         {
             attribute: 'projectileAcceleration',
             op: 'multiply',
-            value: round(1 + Math.min(0.9, 0.08 + itemLevel * 0.0025), 4),
+            value: calculateForgedProjectileAcceleration(itemLevel),
         },
     ];
-    metadata[ItemMetadataKeys.FORGE] = { ...forge, form: 'staff', generatedName: name };
+    metadata[ItemMetadataKeys.FORGE] = {
+        ...forge,
+        form: 'staff',
+        generatedName: name,
+        balanceVersion: FORGED_ITEM_BALANCE_VERSION,
+    };
 
     return {
         success: true,
@@ -838,10 +869,15 @@ export function createAssembledBowSnapshot(limb: Item): ForgedComponentResult {
         {
             attribute: 'projectileAcceleration',
             op: 'multiply',
-            value: round(1 + Math.min(0.9, 0.08 + itemLevel * 0.0025), 4),
+            value: calculateForgedProjectileAcceleration(itemLevel),
         },
     ];
-    metadata[ItemMetadataKeys.FORGE] = { ...forge, form: 'bow', generatedName: name };
+    metadata[ItemMetadataKeys.FORGE] = {
+        ...forge,
+        form: 'bow',
+        generatedName: name,
+        balanceVersion: FORGED_ITEM_BALANCE_VERSION,
+    };
 
     return {
         success: true,

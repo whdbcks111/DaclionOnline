@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { GameTags } from '../../../shared/tags.js';
-import { Item, ItemMetadataKeys } from './Item.js';
+import {
+    calculateForgedProjectileAcceleration,
+    getItemData,
+    Item,
+    ItemMetadataKeys,
+    type ItemMetadataValue,
+} from './Item.js';
 import {
     MAX_EQUIPMENT_REINFORCEMENT,
     calculateRepairMaxDurabilityLossRate,
@@ -35,6 +41,7 @@ import {
     startForging,
 } from '../modules/forging.js';
 import '../data/items.js';
+import '../data/ascendantFrontier.js';
 import '../data/progress.js';
 import '../data/skills.js';
 
@@ -566,6 +573,147 @@ test('감각 1000의 200레벨 대장장이가 만든 철 장검도 근력 성�
     const attack = weapon.modifiers?.find(modifier => modifier.attribute === 'atk')?.value ?? 0;
     assert.ok(attack >= 450, `장인 철 장검 공격력 ${attack}`);
     assert.ok(attack <= 550, `장인 철 장검 공격력 ${attack}`);
+});
+
+test('후반 명품 단조 무기는 Lv.950 상점 무기의 주·부가 능력치 예산을 따라간다', () => {
+    const options = {
+        accuracy: 0.85,
+        random: () => 0,
+        creatorLevel: 950,
+        sensibility: 2_087,
+        forgingPrecision: 3.13,
+    };
+    const additive = (item: Item, attribute: string) => item.modifiers
+        ?.filter(modifier => modifier.attribute === attribute && modifier.op === 'add')
+        .reduce((sum, modifier) => sum + modifier.value, 0) ?? 0;
+    const multiplier = (item: Item, attribute: string) => item.modifiers
+        ?.filter(modifier => modifier.attribute === attribute && modifier.op === 'multiply')
+        .reduce((product, modifier) => product * modifier.value, 1) ?? 1;
+    const master = (itemDataId: string) => Item.fromSnapshot({
+        itemDataId,
+        count: 1,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    });
+
+    const sword = Item.fromSnapshot(createForgedItemSnapshot(
+        ForgeForm.SWORD, ForgeMaterial.EMBER_ALLOY, options,
+    ));
+    const dagger = Item.fromSnapshot(createForgedItemSnapshot(
+        ForgeForm.DAGGER, ForgeMaterial.EMBER_ALLOY, options,
+    ));
+    const limb = Item.fromSnapshot(createForgedItemSnapshot(
+        ForgeForm.BOW_LIMB, ForgeMaterial.EMBER_ALLOY, options,
+    ));
+    const bowResult = createAssembledBowSnapshot(limb);
+    assert.ok(bowResult.snapshot);
+    const bow = Item.fromSnapshot(bowResult.snapshot);
+    const frame = Item.fromSnapshot(createForgedItemSnapshot(
+        ForgeForm.STAFF_FRAME, ForgeMaterial.MANA_CRYSTAL, options,
+    ));
+    const staffResult = createInfusedStaffSnapshot(frame);
+    assert.ok(staffResult.snapshot);
+    const staff = Item.fromSnapshot(staffResult.snapshot);
+
+    const shopSword = master('originboundary_sword');
+    const shopDagger = master('originboundary_dagger');
+    const shopBow = master('originboundary_bow');
+    const shopStaff = master('originboundary_staff');
+    assert.ok(getItemData('originboundary_staff'));
+
+    assert.ok(additive(sword, 'atk') >= additive(shopSword, 'atk') * 1.15);
+    assert.ok(additive(sword, 'armorPen') >= additive(shopSword, 'armorPen') * 0.85);
+    assert.ok(additive(dagger, 'atk') >= additive(shopDagger, 'atk'));
+    assert.ok(additive(dagger, 'armorPen') >= additive(shopDagger, 'armorPen') * 0.9);
+    assert.ok(additive(dagger, 'speed') >= additive(shopDagger, 'speed'));
+    assert.ok(additive(bow, 'atk') >= additive(shopBow, 'atk') * 1.2);
+    assert.ok(additive(bow, 'critRate') >= additive(shopBow, 'critRate') * 0.9);
+    assert.ok(multiplier(bow, 'projectileAcceleration') >= multiplier(shopBow, 'projectileAcceleration'));
+    assert.ok(additive(staff, 'magicForce') >= additive(shopStaff, 'magicForce') * 1.1);
+    assert.ok(additive(staff, 'magicPen') >= additive(shopStaff, 'magicPen'));
+    assert.ok(additive(staff, 'mentalityRegen') >= additive(shopStaff, 'mentalityRegen') * 0.95);
+    assert.ok(multiplier(staff, 'projectileAcceleration') >= multiplier(shopStaff, 'projectileAcceleration'));
+});
+
+test('기존 후반 단조품도 저장된 단조 기록으로 새 성장 공식을 소급 적용한다', () => {
+    const legacyStaff = Item.fromSnapshot({
+        itemDataId: 'forged_staff',
+        count: 1,
+        durability: 1_000,
+        metadataDelta: {
+            [ItemMetadataKeys.INSTANCE_MODIFIERS]: [
+                { attribute: 'magicForce', op: 'add', value: 1_900 },
+                { attribute: 'magicPen', op: 'add', value: 220 },
+                { attribute: 'mentalityRegen', op: 'add', value: 11.5 },
+                { attribute: 'projectileAcceleration', op: 'multiply', value: 1.9 },
+            ],
+            [ItemMetadataKeys.FORGE]: {
+                form: 'staff',
+                itemLevel: 900,
+                accuracy: 0.85,
+                forgingPrecision: 3,
+            },
+        },
+        tags: [],
+    });
+    const additive = (attribute: string) => legacyStaff.modifiers
+        ?.filter(modifier => modifier.attribute === attribute && modifier.op === 'add')
+        .reduce((sum, modifier) => sum + modifier.value, 0) ?? 0;
+    const acceleration = legacyStaff.modifiers
+        ?.filter(modifier => modifier.attribute === 'projectileAcceleration' && modifier.op === 'multiply')
+        .reduce((product, modifier) => product * modifier.value, 1) ?? 1;
+
+    assert.ok(additive('magicForce') > 2_300);
+    assert.ok(additive('magicPen') > 500);
+    assert.ok(additive('mentalityRegen') >= 67);
+    assert.ok(acceleration >= 4);
+});
+
+test('기존 미완성 지팡이 틀과 활대는 완성 보정을 한 번만 적용한다', () => {
+    const legacyMetadata = (form: string, modifiers: ItemMetadataValue[]) => ({
+        [ItemMetadataKeys.INSTANCE_MODIFIERS]: modifiers,
+        [ItemMetadataKeys.FORGE]: {
+            form,
+            itemLevel: 900,
+            accuracy: 0.85,
+            forgingPrecision: 3,
+        },
+    });
+    const legacyFrame = Item.fromSnapshot({
+        itemDataId: 'forged_staff_frame',
+        count: 1,
+        durability: 1_000,
+        metadataDelta: legacyMetadata('staff_frame', [
+            { attribute: 'magicForce', op: 'add', value: 1_900 },
+        ]),
+        tags: [],
+    });
+    const legacyLimb = Item.fromSnapshot({
+        itemDataId: 'forged_bow_limb',
+        count: 1,
+        durability: 1_000,
+        metadataDelta: legacyMetadata('bow_limb', [
+            { attribute: 'atk', op: 'add', value: 1_900 },
+        ]),
+        tags: [],
+    });
+
+    const staffResult = createInfusedStaffSnapshot(legacyFrame);
+    const bowResult = createAssembledBowSnapshot(legacyLimb);
+    assert.ok(staffResult.snapshot);
+    assert.ok(bowResult.snapshot);
+    const staff = Item.fromSnapshot(staffResult.snapshot);
+    const bow = Item.fromSnapshot(bowResult.snapshot);
+    const staffAcceleration = staff.modifiers
+        ?.filter(modifier => modifier.attribute === 'projectileAcceleration' && modifier.op === 'multiply')
+        .reduce((product, modifier) => product * modifier.value, 1) ?? 1;
+    const bowAcceleration = bow.modifiers
+        ?.filter(modifier => modifier.attribute === 'projectileAcceleration' && modifier.op === 'multiply')
+        .reduce((product, modifier) => product * modifier.value, 1) ?? 1;
+
+    assert.equal(staffAcceleration, calculateForgedProjectileAcceleration(900));
+    assert.equal(bowAcceleration, calculateForgedProjectileAcceleration(900));
 });
 
 test('대장장이 직업의 마력 제련은 원광을 레벨 수량만큼 일괄 교환한다', () => {

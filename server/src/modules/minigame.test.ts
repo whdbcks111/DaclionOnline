@@ -60,6 +60,15 @@ test('미니게임은 서버 수신 입력만 기록하고 조기·사후 조작
         undefined,
     );
 
+    const toleratedSnapshot = getMiniGameValidationSnapshot(
+        userId,
+        socketId,
+        forgedRequest,
+        readyAt + config.durationMs - 50,
+    );
+    assert.ok(toleratedSnapshot);
+    assert.equal(toleratedSnapshot.elapsedMs, config.durationMs);
+
     const snapshot = getMiniGameValidationSnapshot(
         userId,
         socketId,

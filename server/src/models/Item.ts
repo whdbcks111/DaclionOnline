@@ -85,11 +85,31 @@ export interface ItemBalanceProfile {
 export const MAX_STACKABLE_ITEM_COUNT = 2_000_000_000;
 /** 아이템 metadata와 장비 강화 규칙이 공유하는 영속 강화 단계 상한. */
 export const MAX_ITEM_REINFORCEMENT_LEVEL = 15;
+/** 후반 단조 장비 성장 공식을 저장한 metadata 버전. */
+export const FORGED_ITEM_BALANCE_VERSION = 2;
 
 /** 단계당 5%, +5/+10/+15에서 추가 5%를 적용해 +15에서 원래 긍정 능력치의 90%를 더한다. */
 export function calculateItemReinforcementRate(level: number): number {
     const normalized = Math.max(0, Math.min(MAX_ITEM_REINFORCEMENT_LEVEL, Math.floor(level)));
     return normalized * 0.05 + Math.floor(normalized / 5) * 0.05;
+}
+
+export function calculateForgedWeaponPowerMultiplier(formKey: string, itemLevel: number): number {
+    if (!['sword', 'axe', 'dagger', 'staff_frame', 'bow_limb'].includes(formKey)) return 1;
+    return 1 + Math.min(0.28, Math.max(0, itemLevel - 350) * 0.0004);
+}
+
+export function calculateForgedPhysicalPenetration(itemLevel: number, dagger = false): number {
+    const value = itemLevel * 0.16 + Math.max(0, itemLevel - 500) * 0.65;
+    return roundReinforcementValue(value * (dagger ? 1.22 : 1));
+}
+
+export function calculateForgedProjectileAcceleration(itemLevel: number): number {
+    return roundReinforcementValue(1 + itemLevel * 0.0025 + Math.max(0, itemLevel - 350) * 0.0015);
+}
+
+export function calculateForgedStaffMentalityRegen(itemLevel: number): number {
+    return roundReinforcementValue(2 + itemLevel * 0.05 + Math.max(0, itemLevel - 500) * 0.05);
 }
 
 /** 아이템 정의 (마스터 데이터, 코드에서 직접 정의) */
@@ -384,7 +404,13 @@ export class Item implements TagReadable {
     getReinforcementBaseModifiers(): readonly AttributeModifier[] {
         const instance = normalizeInstanceModifiers(this.getMetadata(ItemMetadataKeys.INSTANCE_MODIFIERS));
         const base = instance ?? this.data?.modifiers ?? [];
-        return base.map(modifier => ({ ...modifier }));
+        return [
+            ...base.map(modifier => ({ ...modifier })),
+            ...createLegacyForgedBalanceUpgradeModifiers(
+                base,
+                this.getMetadata(ItemMetadataKeys.FORGE),
+            ),
+        ];
     }
 
     /** 지정 강화 단계가 원래 긍정 능력치에 비례해 추가하는 modifier snapshot. */
@@ -609,6 +635,104 @@ function createProportionalReinforcementModifiers(
         });
     }
     return result;
+}
+
+function createLegacyForgedBalanceUpgradeModifiers(
+    base: readonly AttributeModifier[],
+    value: unknown,
+): AttributeModifier[] {
+    if (!value || typeof value !== 'object') return [];
+    const forge = value as Record<string, unknown>;
+    if (forge.balanceVersion === FORGED_ITEM_BALANCE_VERSION) return [];
+    const form = typeof forge.form === 'string' ? forge.form : '';
+    const itemLevel = typeof forge.itemLevel === 'number' && Number.isFinite(forge.itemLevel)
+        ? Math.max(1, forge.itemLevel)
+        : 1;
+    const normalizedForm = form === 'staff' ? 'staff_frame' : form === 'bow' ? 'bow_limb' : form;
+    const multiplier = calculateForgedWeaponPowerMultiplier(normalizedForm, itemLevel);
+    const primaryAttribute: AttributeKey | undefined = normalizedForm === 'staff_frame'
+        ? 'magicForce'
+        : ['sword', 'axe', 'dagger', 'bow_limb'].includes(normalizedForm) ? 'atk' : undefined;
+    const primary = primaryAttribute
+        ? base.find(modifier => modifier.attribute === primaryAttribute && modifier.op === 'add' && modifier.value > 0)
+        : undefined;
+    const result: AttributeModifier[] = primary && multiplier > 1 ? [{
+        attribute: primary.attribute,
+        op: 'add',
+        value: roundReinforcementValue(primary.value * (multiplier - 1)),
+        source: '',
+    }] : [];
+
+    if (['sword', 'axe', 'dagger'].includes(normalizedForm)) {
+        result.push({
+            attribute: 'armorPen',
+            op: 'add',
+            value: calculateForgedPhysicalPenetration(itemLevel, normalizedForm === 'dagger'),
+            source: '',
+        });
+    }
+    if (normalizedForm === 'dagger') {
+        const accuracy = typeof forge.accuracy === 'number' ? forge.accuracy : 0;
+        const precision = typeof forge.forgingPrecision === 'number' ? forge.forgingPrecision : 0;
+        const rawSpeed = 0.025 + itemLevel * 0.0007 + precision * 0.025 + accuracy * 0.045;
+        const speedDelta = Math.min(0.7, rawSpeed) - Math.min(0.32, rawSpeed);
+        if (speedDelta > 0) {
+            result.push({ attribute: 'speed', op: 'add', value: roundReinforcementValue(speedDelta), source: '' });
+        }
+    }
+    if (normalizedForm === 'bow_limb') {
+        result.push({
+            attribute: 'critRate',
+            op: 'add',
+            value: roundReinforcementValue(0.04 + itemLevel * 0.0002),
+            source: '',
+        });
+    }
+    if (form === 'bow') {
+        const oldAcceleration = 1 + Math.min(0.9, 0.08 + itemLevel * 0.0025);
+        result.push({
+            attribute: 'projectileAcceleration',
+            op: 'multiply',
+            value: roundReinforcementValue(calculateForgedProjectileAcceleration(itemLevel) / oldAcceleration),
+            source: '',
+        });
+    }
+    if (form === 'staff') {
+        const oldMagicForce = sumPositiveAdditiveModifiers(base, 'magicForce');
+        const upgradedMagicForce = oldMagicForce + (primary?.value ?? 0) * (multiplier - 1);
+        const oldPenetration = 6 + itemLevel * 0.12 + oldMagicForce * 0.04;
+        const newPenetration = 6 + itemLevel * 0.17 + upgradedMagicForce * 0.04
+            + Math.max(0, itemLevel - 500) * 0.8;
+        result.push({
+            attribute: 'magicPen',
+            op: 'add',
+            value: roundReinforcementValue(Math.max(0, newPenetration - oldPenetration)),
+            source: '',
+        });
+        result.push({
+            attribute: 'mentalityRegen',
+            op: 'add',
+            value: roundReinforcementValue(Math.max(
+                0,
+                calculateForgedStaffMentalityRegen(itemLevel) - (1 + Math.sqrt(itemLevel) * 0.35),
+            )),
+            source: '',
+        });
+        const oldAcceleration = 1 + Math.min(0.9, 0.08 + itemLevel * 0.0025);
+        result.push({
+            attribute: 'projectileAcceleration',
+            op: 'multiply',
+            value: roundReinforcementValue(calculateForgedProjectileAcceleration(itemLevel) / oldAcceleration),
+            source: '',
+        });
+    }
+    return result.filter(modifier => modifier.op === 'add' ? modifier.value > 0 : modifier.value > 1);
+}
+
+function sumPositiveAdditiveModifiers(base: readonly AttributeModifier[], attribute: AttributeKey): number {
+    return base.filter(modifier =>
+        modifier.attribute === attribute && modifier.op === 'add' && modifier.value > 0
+    ).reduce((sum, modifier) => sum + modifier.value, 0);
 }
 
 function roundReinforcementValue(value: number): number {
