@@ -73,6 +73,12 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.24', '2026-07-31',
+        [CHANGED,
+            '첫 모험 튜토리얼의 다음 단계 안내를 완료 직후가 아닌 1초 뒤에 표시해 메시지를 읽을 여유를 두었습니다.',
+            '튜토리얼 안내 카드의 명령 실행 버튼을 제거하고, 채팅 명령은 직접 입력하되 인벤토리 등 실제 기능 화면 안의 행동 버튼을 사용하도록 안내를 다듬었습니다.',
+        ],
+    ),
     definePatchNote('1.0.23', '2026-07-31',
         [FEATURE,
             '`/낚시도감`에서 캐릭터가 낚은 61종 어종의 영속 수집 현황과 10·20·35·50·61종 단계 보상을 확인할 수 있습니다.',

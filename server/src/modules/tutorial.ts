@@ -16,6 +16,8 @@ import {
 } from '../models/GameEvent.js';
 import { markLocationVisited } from '../models/WorldMap.js';
 import { GameTags } from '../../../shared/tags.js';
+import { cancelGameTask, scheduleGameTask } from './scheduler.js';
+import type { ChatNode } from '../../../shared/types.js';
 
 export const TUTORIAL_QUEST_ID = 'tutorial:first-steps';
 export const TUTORIAL_PRACTICE_QUEST_ID = 'tutorial:basic-practice';
@@ -144,6 +146,8 @@ const CONTENT_STEPS = new Map<string, TutorialStep>([
 ]);
 
 const TUTORIAL_NOTIFICATION_KEY = 'tutorial:current-step';
+const TUTORIAL_STEP_MESSAGE_DELAY_SECONDS = 1;
+const TUTORIAL_STEP_MESSAGE_TASK_PREFIX = 'tutorial:step-message:';
 let initialized = false;
 
 for (const definition of [
@@ -229,6 +233,7 @@ export function initializeTutorialSession(player: Player, options: {
 }
 
 export function startTutorial(player: Player): void {
+    cancelTutorialStepMessage(player.userId);
     player.progress.setState(TutorialProgressIds.STATUS, 'active');
     player.progress.setState(TutorialProgressIds.STEP, TutorialStep.WELCOME.key);
     player.progress.setState(TutorialProgressIds.CONTENT_DONE, '');
@@ -238,6 +243,7 @@ export function startTutorial(player: Player): void {
 }
 
 export function skipTutorial(player: Player): void {
+    cancelTutorialStepMessage(player.userId);
     if (player.quests.isActive(TUTORIAL_PRACTICE_QUEST_ID)) {
         player.quests.abandon(TUTORIAL_PRACTICE_QUEST_ID);
     }
@@ -385,7 +391,7 @@ export function initTutorial(): void {
                 TutorialStep.CONTENT_MINING,
                 TutorialStep.CONTENT_HUNTING,
             ].includes(snapshot.step)) {
-            showTutorialStep(player, true);
+            scheduleTutorialStepMessage(player, snapshot.step);
         }
     });
 }
@@ -422,7 +428,7 @@ function setStep(player: Player, step: TutorialStep): void {
     player.progress.setState(TutorialProgressIds.STEP, step.key);
     if (step === TutorialStep.SKILL_LIST) player.skills.grant('power_strike', 'tutorial');
     ensureTutorialDestinationVisited(player, step);
-    showTutorialStep(player, true);
+    scheduleTutorialStepMessage(player, step);
 }
 
 function ensureTutorialDestinationVisited(player: Player, step: TutorialStep): void {
@@ -453,6 +459,7 @@ function completeTutorialContent(player: Player, content: TutorialContent): void
 }
 
 function completeTutorial(player: Player): void {
+    cancelTutorialStepMessage(player.userId);
     player.progress.setState(TutorialProgressIds.STEP, TutorialStep.COMPLETE.key);
     player.progress.setState(TutorialProgressIds.STATUS, 'completed');
     clearTutorialNotification(player);
@@ -469,6 +476,28 @@ function completeTutorial(player: Player): void {
         message: '첫 모험 안내를 모두 마쳤습니다!',
         length: 5000,
     });
+}
+
+function tutorialStepMessageTaskKey(userId: number): string {
+    return `${TUTORIAL_STEP_MESSAGE_TASK_PREFIX}${userId}`;
+}
+
+function cancelTutorialStepMessage(userId: number): void {
+    cancelGameTask(tutorialStepMessageTaskKey(userId));
+}
+
+function scheduleTutorialStepMessage(player: Player, expectedStep: TutorialStep): void {
+    scheduleGameTask(
+        tutorialStepMessageTaskKey(player.userId),
+        TUTORIAL_STEP_MESSAGE_DELAY_SECONDS,
+        () => {
+            const current = getOnlinePlayer(player.userId);
+            if (current !== player) return;
+            const snapshot = getTutorialSnapshot(current);
+            if (snapshot.status !== 'active' || snapshot.step !== expectedStep) return;
+            showTutorialStep(current, true);
+        },
+    );
 }
 
 function ensureTutorialQuest(player: Player): void {
@@ -529,12 +558,6 @@ function clearTutorialNotification(player: Player): void {
     });
 }
 
-function getTutorialItemNumber(player: Player, itemDataId: string): number | undefined {
-    const entry = player.inventory.getIndexedItems()
-        .find(candidate => candidate.item.itemDataId === itemDataId);
-    return entry ? entry.index + 1 : undefined;
-}
-
 function getTutorialDummyNumber(player: Player): number | undefined {
     return getLocation(player.locationId)?.getResourceObjectNumber(
         TUTORIAL_TRAINING_DUMMY_ID,
@@ -560,7 +583,8 @@ function hasTutorialDummyTarget(player: Player): boolean {
         && !player.currentTarget.isDefeated;
 }
 
-function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
+/** 튜토리얼 카드는 명령 실행 버튼 없이 직접 입력할 명령만 표시한다. */
+export function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
     const b = chat()
         .color('$text-tertiary', x => x.text('[ 첫 모험 안내 ]  '))
         .color('gold', x => x.weight('bold', y => y.text(snapshot.step.label)))
@@ -568,8 +592,8 @@ function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
 
     switch (snapshot.step) {
         case TutorialStep.WELCOME:
-            b.text('DaclionOnline은 채팅 메시지와 버튼, 명령어로 진행하는 텍스트 MUD RPG입니다. ')
-                .text('먼저 버튼을 사용해보고, 같은 기능을 명령어와 짧은 별칭으로도 쓸 수 있다는 순서로 안내합니다.\n')
+            b.text('DaclionOnline은 채팅 명령어로 진행하는 텍스트 MUD RPG입니다. ')
+                .text('안내에 표시된 명령어를 채팅창에 직접 입력하고, 인벤토리·상점 같은 기능 화면에서는 그 안의 행동 버튼을 사용해보세요.\n')
                 .color('$text-tertiary', x => x.text('언제든 /튜토리얼스킵으로 건너뛰고 /튜토리얼시작으로 다시 시작할 수 있습니다.\n\n'))
                 .button('/튜토리얼다음', x => x.text('[안내 시작]'))
                 .text('  ')
@@ -583,14 +607,14 @@ function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
             break;
         case TutorialStep.LOCATION:
             b.text('위치 정보에는 이동할 길, 번호가 붙은 몬스터·자원·NPC, 바닥 아이템이 표시됩니다. ')
-                .text('가능한 행동은 각 항목 옆 버튼으로 먼저 실행해보세요.\n')
+                .text('먼저 명령어로 위치 정보를 열고, 목록 안에서 실제로 제공되는 행동도 확인해보세요.\n')
                 .color('$text-tertiary', x => x.text('명령어 /위치 · 별칭 l, m\n\n'))
                 .button('/위치', x => x.text('[현재 위치 보기]'));
             break;
         case TutorialStep.NPC:
             if (player.locationId === TutorialLocationIds.SQUARE) {
                 const guideNumber = getTutorialGuideNumber(player);
-                b.text('광장에 있는 여행 안내인 옆 [대화] 버튼을 눌러 실제로 대화를 시작하세요. ')
+                b.text('광장에 있는 여행 안내인의 번호를 확인하고 /대화 명령으로 실제 대화를 시작하세요. ')
                     .text('장소를 떠나거나 /대화종료를 입력하면 대화가 끝납니다.\n')
                     .color('$text-tertiary', x => x.text('명령어 /대화 <번호> · 별칭 tk\n\n'));
                 if (guideNumber) {
@@ -605,7 +629,7 @@ function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
             break;
         case TutorialStep.MOVE:
             if (player.locationId === TutorialLocationIds.SQUARE) {
-                b.text('이번에는 광장에서 바로 연결된 [루미나르 물빛 연못]으로 실제 이동해보세요. ')
+                b.text('이번에는 광장에서 바로 연결된 루미나르 물빛 연못으로 실제 이동해보세요. ')
                     .text('도착해야 다음 단계가 진행됩니다.\n')
                     .color('$text-tertiary', x => x.text('명령어 /이동 <장소> · 별칭 v, go, mv\n\n'))
                     .button('/이동 루미나르 물빛 연못', x => x.text('[물빛 연못으로 이동]'));
@@ -616,7 +640,7 @@ function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
             break;
         case TutorialStep.SHOP:
             if (player.locationId === TutorialLocationIds.POND) {
-                b.text('물빛 연못에는 낚시 상점이 있습니다. [상점]을 열어 실제 판매 목록을 확인하세요. ')
+                b.text('물빛 연못에는 낚시 상점이 있습니다. /상점을 입력해 실제 판매 목록과 목록 안의 구매 버튼을 확인하세요. ')
                     .text('상점이 없는 장소에서 같은 명령을 입력해도 이 단계는 완료되지 않습니다.\n')
                     .color('$text-tertiary', x => x.text('명령어 /상점 · 별칭 sh, 구매는 bu\n\n'))
                     .button('/상점', x => x.text('[낚시 상점 열기]'));
@@ -649,7 +673,7 @@ function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
         case TutorialStep.INTERACT: {
             const dummyNumber = getTutorialDummyNumber(player);
             if (player.locationId === TutorialLocationIds.FIELD && dummyNumber) {
-                b.text('위치 정보에서 [초보 모험가 훈련 목인]을 찾고 [상호작용] 버튼을 눌러 살펴보세요. ')
+                b.text('위치 정보에서 초보 모험가 훈련 목인의 번호를 확인하고 /상호작용 명령으로 살펴보세요. ')
                     .text('다른 몬스터나 보물상자와 상호작용해도 이 실습은 완료되지 않습니다.\n')
                     .color('$text-tertiary', x => x.text('명령어 /상호작용 <번호> · 별칭 it\n\n'))
                     .button(`/상호작용 ${dummyNumber}`, x => x.text('[훈련 목인 살펴보기]'))
@@ -666,33 +690,20 @@ function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
                 .color('$text-tertiary', x => x.text('명령어 /인벤토리 · 별칭 i\n\n'))
                 .button('/인벤토리', x => x.text('[인벤토리 열기]'));
             break;
-        case TutorialStep.EQUIP: {
-            const swordNumber = getTutorialItemNumber(player, 'old_sword');
-            b.text('인벤토리의 장비 옆 [장착] 버튼을 먼저 사용해보세요. 장착한 무기와 도구에 따라 평타와 가능한 행동이 달라집니다.\n')
-                .color('$text-tertiary', x => x.text('명령어 /장착 <인벤토리 번호> · 별칭 eq\n\n'));
-            if (swordNumber) {
-                b.button(`/장착 ${swordNumber}`, x => x.text('[낡은 검 장착]'));
-            } else {
-                b.button('/인벤토리', x => x.text('[장착할 아이템 찾기]'));
-            }
+        case TutorialStep.EQUIP:
+            b.text('채팅창에 /인벤토리를 입력한 뒤 낡은 검 옆의 [장착] 버튼을 직접 사용해보세요. ')
+                .text('장착한 무기와 도구에 따라 평타와 가능한 행동이 달라집니다.\n')
+                .color('$text-tertiary', x => x.text('기능 화면 안의 [장착] 버튼을 눌러야 완료됩니다.'));
             break;
-        }
-        case TutorialStep.USE: {
-            const potionNumber = getTutorialItemNumber(player, 'health_potion');
-            b.text('소모품은 인벤토리의 [사용] 버튼으로 사용합니다. 지원품으로 받은 체력 포션도 같은 방식입니다.\n')
-                .color('$text-tertiary', x => x.text('명령어 /사용 <인벤토리 번호> · 별칭 u\n\n'));
-            if (potionNumber) {
-                b.button(`/사용 ${potionNumber}`, x => x.text('[체력 포션 사용]'));
-            } else {
-                b.text('체력 포션이 없다면 상점에서 구매한 뒤 사용하세요.\n')
-                    .button('/인벤토리', x => x.text('[인벤토리 확인]'));
-            }
+        case TutorialStep.USE:
+            b.text('채팅창에 /인벤토리를 입력한 뒤 지원품으로 받은 체력 포션 옆의 [사용] 버튼을 눌러보세요. ')
+                .text('체력 포션이 없다면 상점에서 구매한 뒤 같은 방식으로 사용하면 됩니다.\n')
+                .color('$text-tertiary', x => x.text('기능 화면 안의 [사용] 버튼을 눌러야 완료됩니다.'));
             break;
-        }
         case TutorialStep.TARGET: {
             const dummyNumber = getTutorialDummyNumber(player);
             if (dummyNumber) {
-                b.text('훈련 목인 옆 [대상 지정] 버튼을 눌러 전투 대상을 정하세요. ')
+                b.text('훈련 목인의 번호를 사용해 /대상지정 명령으로 전투 대상을 정하세요. ')
                     .text('다른 대상을 지정해도 이 실습은 완료되지 않습니다.\n')
                     .color('$text-tertiary', x => x.text('명령어 /대상지정 <번호> · 별칭 t\n\n'))
                     .button(`/대상지정 ${dummyNumber}`, x => x.text('[훈련 목인 대상 지정]'));
@@ -725,7 +736,7 @@ function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
                 .button('/스킬목록', x => x.text('[스킬 목록 열기]'));
             break;
         case TutorialStep.SKILL_USE: {
-            b.text('훈련 목인을 대상으로 스킬의 [사용] 버튼을 누르세요. ')
+            b.text('훈련 목인을 대상으로 /스킬 강타 명령을 직접 입력하세요. ')
                 .text('스킬 이름에 느낌표를 붙인 시전어도 같은 스킬을 발동하며, 성공한 사용은 스킬 경험치를 올립니다.\n')
                 .color('$text-tertiary', x => x.text('명령어 /스킬 강타 · 별칭 k 강타 · 시전어 강타!\n\n'));
             const dummyNumber = getTutorialDummyNumber(player);
@@ -776,11 +787,10 @@ function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
                 break;
             }
             const rodEquipped = player.equipment.hasEquippedItemTag('mainHand', GameTags.TOOL_FISHING);
-            const rodNumber = getTutorialItemNumber(player, 'beginner_fishing_rod');
             b.text('낚싯대를 주 손에 장착하고 /낚시를 사용하세요. 미끼가 장착되지 않았다면 보유한 미끼 묶음을 자동 장착합니다. ')
                 .text('입질 뒤 미니게임에 성공해 물고기를 획득해야 이 체험이 완료됩니다.\n\n');
-            if (!rodEquipped && rodNumber) {
-                b.button(`/장착 ${rodNumber}`, x => x.text('[초보자 낚싯대 장착]')).text('  ');
+            if (!rodEquipped) {
+                b.text('먼저 /인벤토리를 입력하고 초보자 낚싯대 옆의 [장착] 버튼을 누르세요.\n');
             }
             b.button('/낚시', x => x.text('[낚시 시작]'))
                 .text('  ')
@@ -795,13 +805,12 @@ function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
                 break;
             }
             const pickaxeEquipped = player.equipment.hasEquippedItemTag('mainHand', GameTags.TOOL_MINING);
-            const pickaxeNumber = getTutorialItemNumber(player, 'basic_pickaxe');
             const oreNumber = getTutorialOreNumber(player);
             b.text('곡괭이를 주 손에 장착하고 광석을 대상 지정한 뒤 파괴될 때까지 공격하세요. ')
                 .text('광석 파괴에 성공해야 경험치와 무작위 재료를 받고 체험이 완료됩니다.\n')
                 .color('$text-tertiary', x => x.text('자원도 몬스터와 같은 오브젝트 번호를 사용하지만 먼저 공격하지 않습니다.\n\n'));
-            if (!pickaxeEquipped && pickaxeNumber) {
-                b.button(`/장착 ${pickaxeNumber}`, x => x.text('[기본 곡괭이 장착]')).text('  ');
+            if (!pickaxeEquipped) {
+                b.text('먼저 /인벤토리를 입력하고 기본 곡괭이 옆의 [장착] 버튼을 누르세요.\n');
             }
             if (oreNumber) {
                 b.button(`/대상지정 ${oreNumber}`, x => x.text('[광석 대상 지정]'))
@@ -819,14 +828,11 @@ function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
                     .button('/자동이동 바람결 초원 1 들머리', x => x.text('[초원으로 자동이동]'));
                 break;
             }
-            const swordNumber = getTutorialItemNumber(player, 'old_sword');
             const monsterNumber = getTutorialMonsterNumber(player);
             b.text('몬스터를 대상 지정하고 기본 공격과 강타를 사용해 직접 처치하세요. ')
                 .text('처치에 성공해야 경험치와 보상을 받고 체험이 완료됩니다.\n')
                 .color('$text-tertiary', x => x.text('속성표와 상태이상, 장비를 활용하면 강한 적을 상대하기 쉬워집니다.\n\n'));
-            if (swordNumber) {
-                b.button(`/장착 ${swordNumber}`, x => x.text('[낡은 검 장착]')).text('  ');
-            }
+            b.text('무기가 없다면 /인벤토리를 입력하고 장비 옆의 [장착] 버튼을 사용하세요.\n');
             if (monsterNumber) {
                 b.button(`/대상지정 ${monsterNumber}`, x => x.text('[몬스터 대상 지정]'))
                     .text('  ')
@@ -839,7 +845,43 @@ function buildTutorialCard(player: Player, snapshot: TutorialSnapshot) {
         default:
             b.text('현재 안내 정보를 불러올 수 없습니다.');
     }
-    return b.build();
+    return replaceTutorialButtonsWithCommandText(b.build());
+}
+
+function replaceTutorialButtonsWithCommandText(nodes: readonly ChatNode[]): ChatNode[] {
+    const result: ChatNode[] = [];
+    for (const node of nodes) {
+        if (node.type === 'button') {
+            result.push({
+                type: 'color',
+                color: '$info',
+                children: [{ type: 'text', text: `채팅 입력: ${node.action}` }],
+            });
+            continue;
+        }
+        if (node.type === 'tooltip') {
+            result.push({
+                ...node,
+                description: replaceTutorialButtonsWithCommandText(node.description),
+                children: replaceTutorialButtonsWithCommandText(node.children),
+            });
+            continue;
+        }
+        if (
+            node.type === 'color'
+            || node.type === 'bg'
+            || node.type === 'deco'
+            || node.type === 'weight'
+            || node.type === 'size'
+            || node.type === 'hide'
+            || node.type === 'tab'
+        ) {
+            result.push({ ...node, children: replaceTutorialButtonsWithCommandText(node.children) });
+            continue;
+        }
+        result.push({ ...node });
+    }
+    return result;
 }
 
 function parseTutorialStatus(value: string): TutorialStatusKey | '' {

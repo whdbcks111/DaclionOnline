@@ -41,7 +41,7 @@ export function initTutorialCommands(): void {
             const player = getPlayerByUserId(userId);
             if (!player) return;
             if (!acknowledgeTutorialStep(player)) {
-                sendBotMessageToUser(userId, '현재 안내 카드의 기능 버튼이나 명령어를 먼저 사용해주세요.');
+                sendBotMessageToUser(userId, '현재 안내에 적힌 명령어나 기능 화면의 행동을 먼저 수행해주세요.');
             }
         },
     });

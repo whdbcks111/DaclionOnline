@@ -1,12 +1,70 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { afterEach } from 'node:test';
 import {
+    acknowledgeTutorialStep,
+    buildTutorialCard,
     doesTutorialEventCompleteStep,
     getNextMainTutorialStep,
     TutorialContent,
+    TutorialProgressIds,
     TutorialStep,
 } from './tutorial.js';
 import { GameEventIds } from '../models/GameEvent.js';
+import type Player from '../models/Player.js';
+import type { ChatNode } from '../../../shared/types.js';
+import { clearGameTasks, hasGameTask, updateGameScheduler } from './scheduler.js';
+
+afterEach(clearGameTasks);
+
+function containsButton(nodes: readonly ChatNode[]): boolean {
+    return nodes.some(node => {
+        if (node.type === 'button') return true;
+        if (node.type === 'tooltip') {
+            return containsButton(node.description) || containsButton(node.children);
+        }
+        return 'children' in node && containsButton(node.children);
+    });
+}
+
+test('튜토리얼 안내 카드는 모든 단계에서 명령 실행 버튼을 제공하지 않는다', () => {
+    const player = {
+        locationId: 'tutorial-card-test',
+        currentTarget: undefined,
+    } as unknown as Player;
+
+    for (const step of TutorialStep.values()) {
+        const card = buildTutorialCard(player, {
+            status: 'active',
+            step,
+            completedContents: [],
+        });
+        assert.equal(containsButton(card), false, `${step.label} 카드에 실행 버튼이 남아 있습니다.`);
+    }
+});
+
+test('단계 완료는 다음 안내를 1초 뒤 실행할 scheduler 작업으로 예약한다', () => {
+    const states = new Map<string, string>([
+        [TutorialProgressIds.STATUS, 'active'],
+        [TutorialProgressIds.STEP, TutorialStep.WELCOME.key],
+    ]);
+    const player = {
+        userId: 91_001,
+        progress: {
+            getState: (key: string) => states.get(key) ?? '',
+            setState: (key: string, value: string) => states.set(key, value),
+        },
+        skills: { grant: () => undefined },
+    } as unknown as Player;
+
+    assert.equal(acknowledgeTutorialStep(player), true);
+    assert.equal(states.get(TutorialProgressIds.STEP), TutorialStep.STATUS.key);
+    const taskKey = `tutorial:step-message:${player.userId}`;
+    assert.equal(hasGameTask(taskKey), true);
+    updateGameScheduler(0.99);
+    assert.equal(hasGameTask(taskKey), true);
+    updateGameScheduler(0.011);
+    assert.equal(hasGameTask(taskKey), false);
+});
 
 test('튜토리얼 단계 enum은 key와 표시 입력을 해석한다', () => {
     assert.equal(TutorialStep.fromKey('skill-use'), TutorialStep.SKILL_USE);
