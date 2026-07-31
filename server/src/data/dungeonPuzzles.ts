@@ -179,7 +179,7 @@ defineProgress({
     id: ParadoxPuzzleIds.CAUSALITY_SEQUENCE_FLAG,
     type: ProgressType.FLAG,
     label: '인과율 수열 복원',
-    description: '역설기계고의 끊어진 연산 순서를 복원해 폐기 시제품고를 열었습니다.',
+    description: '카이로스 공방도시의 끊어진 연산 순서를 복원해 폐기 시제품고를 열었습니다.',
     visible: true,
 });
 
@@ -202,7 +202,7 @@ defineProgress({
     id: AshenAbyssPuzzleIds.SEAL_OATH_FLAG,
     type: ProgressType.FLAG,
     label: '재왕 인장 맹세 해독',
-    description: '잿왕성의 봉인 맹세를 해독해 왕가 유물고의 길을 열었습니다.',
+    description: '카르모르 성의 봉인 맹세를 해독해 왕가 유물고의 길을 열었습니다.',
     visible: true,
 });
 
@@ -225,7 +225,7 @@ defineProgress({
     id: VoidcrownPuzzleIds.EMPTY_THRONE_OATH_FLAG,
     type: ProgressType.FLAG,
     label: '빈 왕좌의 서약 해독',
-    description: '공허왕관 성채의 서약문에서 왕이 사라진 뒤에도 남는 의무를 찾아냈습니다.',
+    description: '벨카인 요새의 서약문에서 왕이 사라진 뒤에도 남는 의무를 찾아냈습니다.',
     visible: true,
 });
 
@@ -270,8 +270,8 @@ defineQuestionPuzzle({
 defineProgress({
     id: WorldrootPuzzleIds.FIRST_MEMORY_FLAG,
     type: ProgressType.FLAG,
-    label: '역근수해 첫 기억 복원',
-    description: '역근수해가 잊고 있던 첫 기억을 되찾아 숨은 기억호박 유물고를 열었습니다.',
+    label: '카미하라 숲 첫 기억 복원',
+    description: '카미하라 숲가 잊고 있던 첫 기억을 되찾아 숨은 기억호박 유물고를 열었습니다.',
     visible: true,
 });
 

@@ -1,4 +1,4 @@
-import { defineFishingTable, FishRarity } from '../models/Fishing.js';
+import { defineFishingTable, defineFishingTreasureTable, FishRarity } from '../models/Fishing.js';
 
 export interface FishCatalogEntry {
     readonly id: string
@@ -52,19 +52,31 @@ const fishCatalog: readonly FishCatalogEntry[] = Object.freeze([
     { id: 'worldroot_turtle', name: '세계수 거북', description: '등껍질 위에 작은 세계수의 뿌리가 자라는 신령한 거북.', weight: 30.0, rarity: FishRarity.MYTHIC },
     { id: 'dragon_tide_oarfish', name: '용조류 산갈치', description: '용의 갈기 같은 지느러미로 거대한 조류를 일으킨다.', weight: 14.0, rarity: FishRarity.MYTHIC },
 
-    { id: 'pressure_lanternfish', name: '압해 등불어', description: '심연유리해의 압력을 푸른 등불로 바꾸는 심해어.', weight: 2.4, rarity: FishRarity.RARE },
+    // TODO: 하위 구간 전용 어종 아트 제작 시 현재 등급·형태별 fallback 원본을 교체한다.
+    { id: 'mirage_killifish', name: '신기루 송사리', description: '유리모래 오아시스의 아지랑이 속에서 무리 지어 반짝이는 작은 물고기.', weight: 0.3, rarity: FishRarity.UNCOMMON },
+    { id: 'oasis_sunray', name: '오아시스 햇살가오리', description: '등에 맺힌 햇빛을 넓은 지느러미로 흩뿌리는 사막의 희귀 가오리.', weight: 3.6, rarity: FishRarity.RARE },
+    { id: 'kelpmoon_cod', name: '청해초 달대구', description: '달빛을 머금은 청해초 사이에서 은빛 무늬를 숨기는 대구.', weight: 2.1, rarity: FishRarity.RARE },
+    { id: 'fogpearl_octopus', name: '안개진주 문어', description: '짙은 해무 속에서 진주빛 먹물을 뿜어 자취를 감추는 문어.', weight: 4.8, rarity: FishRarity.EPIC },
+    { id: 'gearscale_carp', name: '톱니비늘 잉어', description: '카이로스 잔해호의 금속 부스러기가 맞물린 톱니처럼 비늘에 굳은 잉어.', weight: 2.9, rarity: FishRarity.RARE },
+    { id: 'relay_eel', name: '중계전류 장어', description: '몸을 휘감을 때마다 끊어진 마력 회로에 푸른 전류를 전달하는 장어.', weight: 5.4, rarity: FishRarity.EPIC },
+    { id: 'moonbrine_cod', name: '월염수 대구', description: '달빛과 심해 염분이 겹친 루나리스 해구에서 은청색 비늘을 키운 대구.', weight: 4.2, rarity: FishRarity.RARE },
+    { id: 'eclipse_sailfish', name: '월식 돛새치', description: '검은 돛지느러미 가장자리로 백야의 빛을 두른 거대한 돛새치.', weight: 10.5, rarity: FishRarity.LEGENDARY },
+    { id: 'ashstar_tetra', name: '잿별 테트라', description: '라그나벨 성단의 액체 별빛 속에서 재처럼 흩어졌다 다시 모이는 작은 물고기.', weight: 1.3, rarity: FishRarity.RARE },
+    { id: 'lastlight_oarfish', name: '마지막빛 산갈치', description: '사라지는 성좌의 마지막 빛을 긴 지느러미에 간직한 전설어.', weight: 13.8, rarity: FishRarity.LEGENDARY },
+
+    { id: 'pressure_lanternfish', name: '압해 등불어', description: '네레이아 수정바다의 압력을 푸른 등불로 바꾸는 심해어.', weight: 2.4, rarity: FishRarity.RARE },
     { id: 'glassfin_tuna', name: '유리날개 참치', description: '투명한 지느러미로 심해의 수압을 가르는 거어.', weight: 8.2, rarity: FishRarity.EPIC },
     { id: 'trench_crown_eel', name: '해구왕관 장어', description: '왕관 모양 발광기관을 지닌 심연의 포식자.', weight: 11.0, rarity: FishRarity.LEGENDARY },
     { id: 'inkdream_carp', name: '먹꿈 잉어', description: '비늘마다 읽지 못한 꿈의 문장이 흐르는 잉어.', weight: 1.8, rarity: FishRarity.RARE },
     { id: 'memory_manta', name: '기억 만타', description: '날갯짓마다 오래된 기억의 장면을 흩뿌린다.', weight: 7.5, rarity: FishRarity.EPIC },
-    { id: 'sleeping_pagewhale', name: '잠든 장서고래', description: '등가죽이 책장처럼 겹쳐진 몽각서고의 전설어.', weight: 19.0, rarity: FishRarity.LEGENDARY },
+    { id: 'sleeping_pagewhale', name: '잠든 장서고래', description: '등가죽이 책장처럼 겹쳐진 미르엔 꿈서고의 전설어.', weight: 19.0, rarity: FishRarity.LEGENDARY },
     { id: 'rustscale_pike', name: '녹비늘 창꼬치', description: '적철 수로의 금속 침전물을 갑옷처럼 두른다.', weight: 3.0, rarity: FishRarity.RARE },
     { id: 'mercury_catfish', name: '수은수염 메기', description: '액체 금속 같은 수염으로 미세한 진동을 읽는다.', weight: 6.4, rarity: FishRarity.EPIC },
     { id: 'oxidized_leviathan', name: '산화 레비아탄', description: '붉은 철분 폭풍과 함께 나타나는 거대한 고대어.', weight: 26.0, rarity: FishRarity.MYTHIC },
     { id: 'prayer_koi', name: '기도 비단잉어', description: '고요히 헤엄칠 때 물결이 성가의 박자를 그린다.', weight: 2.6, rarity: FishRarity.RARE },
     { id: 'halo_sturgeon', name: '광륜 철갑상어', description: '등지느러미 위로 옅은 광륜이 떠 있는 성수의 어종.', weight: 9.2, rarity: FishRarity.EPIC },
     { id: 'worldleaf_arapaima', name: '세계잎 피라루쿠', description: '거대한 비늘마다 신림의 잎맥이 새겨져 있다.', weight: 21.0, rarity: FishRarity.MYTHIC },
-    { id: 'firstlight_coelacanth', name: '첫빛 실러캔스', description: '세계 최초의 새벽빛을 품었다는 기원경계의 고대어.', weight: 7.1, rarity: FishRarity.EPIC },
+    { id: 'firstlight_coelacanth', name: '첫빛 실러캔스', description: '세계 최초의 새벽빛을 품었다는 아르케 끝자락의 고대어.', weight: 7.1, rarity: FishRarity.EPIC },
     { id: 'endshadow_moonfish', name: '종영 월어', description: '시작의 빛 뒤에 남은 마지막 그림자를 두른 월어.', weight: 8.4, rarity: FishRarity.LEGENDARY },
     { id: 'genesis_dragonfish', name: '창세 용어', description: '빛과 어둠이 갈라지기 전의 비늘을 가진 신화어.', weight: 16.5, rarity: FishRarity.MYTHIC },
 ]);
@@ -74,6 +86,31 @@ export function getFishCatalog(): readonly FishCatalogEntry[] {
 }
 
 for (const [locationId, entries] of Object.entries({
+    glassdune_hidden_oasis: [
+        { fishId: 'silver_minnow', weight: 28 }, { fishId: 'mirage_killifish', weight: 38 },
+        { fishId: 'sunscale_bream', weight: 20 }, { fishId: 'oasis_sunray', weight: 10 },
+        { fishId: 'golden_koi', weight: 4 },
+    ],
+    misttide_kelp_inlet: [
+        { fishId: 'striped_pike', weight: 26 }, { fishId: 'kelpmoon_cod', weight: 38 },
+        { fishId: 'mist_eel', weight: 20 }, { fishId: 'fogpearl_octopus', weight: 11 },
+        { fishId: 'coral_seadragon', weight: 5 },
+    ],
+    paradox_scrap_reservoir: [
+        { fishId: 'thunder_catfish', weight: 24 }, { fishId: 'gearscale_carp', weight: 40 },
+        { fishId: 'relay_eel', weight: 20 }, { fishId: 'crystal_salmon', weight: 11 },
+        { fishId: 'timeglass_coelacanth', weight: 5 },
+    ],
+    eclipse_luminous_reef: [
+        { fishId: 'ruby_lionfish', weight: 22 }, { fishId: 'moonbrine_cod', weight: 40 },
+        { fishId: 'eclipse_sailfish', weight: 12 }, { fishId: 'royal_pearl_ray', weight: 16 },
+        { fishId: 'eclipse_moonfish', weight: 10 },
+    ],
+    endstar_silent_sun: [
+        { fishId: 'prism_seahorse', weight: 20 }, { fishId: 'ashstar_tetra', weight: 40 },
+        { fishId: 'lastlight_oarfish', weight: 16 }, { fishId: 'celestial_swordfish', weight: 14 },
+        { fishId: 'starfall_leviathan', weight: 10 },
+    ],
     abyssglass_pressure_lagoon: [
         { fishId: 'mist_eel', weight: 24 }, { fishId: 'pressure_lanternfish', weight: 38 },
         { fishId: 'glassfin_tuna', weight: 24 }, { fishId: 'trench_crown_eel', weight: 9 },
@@ -101,4 +138,119 @@ for (const [locationId, entries] of Object.entries({
     ],
 } as const)) {
     defineFishingTable(locationId, entries);
+}
+
+for (const [locationId, table] of Object.entries({
+    luminous_pond: {
+        chance: 0.006,
+        entries: [
+            { itemDataId: 'angler_insight_draught', weight: 45 },
+            { itemDataId: 'refined_mana_crystal', weight: 25 },
+            { itemDataId: 'battle_tonic', weight: 14 },
+            { itemDataId: 'arcane_tonic', weight: 14 },
+            { itemDataId: 'predator_pounce_skillbook', weight: 2 },
+        ],
+    },
+    glassdune_hidden_oasis: {
+        chance: 0.01,
+        entries: [
+            { itemDataId: 'angler_insight_draught', weight: 38 },
+            { itemDataId: 'sunsteel', weight: 30 },
+            { itemDataId: 'mirage_crystal', weight: 16 },
+            { itemDataId: 'swift_tonic', weight: 14 },
+            { itemDataId: 'seismic_crush_skillbook', weight: 2 },
+        ],
+    },
+    misttide_kelp_inlet: {
+        chance: 0.012,
+        entries: [
+            { itemDataId: 'deepwater_insight_elixir', weight: 34 },
+            { itemDataId: 'moonfrost_silver', weight: 28 },
+            { itemDataId: 'tide_pearl', weight: 18 },
+            { itemDataId: 'seafoam_tonic', weight: 18 },
+            { itemDataId: 'siren_wave_skillbook', weight: 2 },
+        ],
+    },
+    paradox_scrap_reservoir: {
+        chance: 0.015,
+        entries: [
+            { itemDataId: 'deepwater_insight_elixir', weight: 30 },
+            { itemDataId: 'clockwork_cobalt', weight: 28 },
+            { itemDataId: 'logic_core', weight: 20 },
+            { itemDataId: 'phase_tonic', weight: 20 },
+            { itemDataId: 'gearstorm_skillbook', weight: 2 },
+        ],
+    },
+    eclipse_luminous_reef: {
+        chance: 0.018,
+        entries: [
+            { itemDataId: 'starcurrent_insight_elixir', weight: 28 },
+            { itemDataId: 'tideglass_alloy', weight: 28 },
+            { itemDataId: 'night_pearl', weight: 22 },
+            { itemDataId: 'tideheart_tonic', weight: 20 },
+            { itemDataId: 'eclipse_verdict_skillbook', weight: 2 },
+        ],
+    },
+    endstar_silent_sun: {
+        chance: 0.02,
+        entries: [
+            { itemDataId: 'starcurrent_insight_elixir', weight: 26 },
+            { itemDataId: 'endstar_adamant', weight: 30 },
+            { itemDataId: 'constellation_core', weight: 22 },
+            { itemDataId: 'endstar_tonic', weight: 20 },
+            { itemDataId: 'primordial_sanctuary_skillbook', weight: 2 },
+        ],
+    },
+    abyssglass_pressure_lagoon: {
+        chance: 0.022,
+        entries: [
+            { itemDataId: 'starcurrent_insight_elixir', weight: 25 },
+            { itemDataId: 'astral_steel', weight: 24 },
+            { itemDataId: 'abyssal_silver', weight: 24 },
+            { itemDataId: 'tideheart_tonic', weight: 25 },
+            { itemDataId: 'undertow_step_skillbook', weight: 2 },
+        ],
+    },
+    dreamarchive_inkwater_pool: {
+        chance: 0.024,
+        entries: [
+            { itemDataId: 'starcurrent_insight_elixir', weight: 25 },
+            { itemDataId: 'void_opal', weight: 28 },
+            { itemDataId: 'dream_memory_stew', weight: 20 },
+            { itemDataId: 'logic_elixir', weight: 25 },
+            { itemDataId: 'paradox_reversal_skillbook', weight: 2 },
+        ],
+    },
+    rustworld_mercury_reservoir: {
+        chance: 0.026,
+        entries: [
+            { itemDataId: 'starcurrent_insight_elixir', weight: 24 },
+            { itemDataId: 'storm_quartz', weight: 26 },
+            { itemDataId: 'life_blood_alloy', weight: 26 },
+            { itemDataId: 'rustscale_power_grill', weight: 22 },
+            { itemDataId: 'blackflame_brand_skillbook', weight: 2 },
+        ],
+    },
+    silentdivine_prayer_spring: {
+        chance: 0.028,
+        entries: [
+            { itemDataId: 'starcurrent_insight_elixir', weight: 24 },
+            { itemDataId: 'sacred_prayerstone', weight: 30 },
+            { itemDataId: 'prayer_koi_clear_soup', weight: 22 },
+            { itemDataId: 'primordial_draught', weight: 22 },
+            { itemDataId: 'primordial_sanctuary_skillbook', weight: 2 },
+        ],
+    },
+    originboundary_genesis_tide: {
+        chance: 0.03,
+        entries: [
+            { itemDataId: 'starcurrent_insight_elixir', weight: 22 },
+            { itemDataId: 'origin_prism', weight: 26 },
+            { itemDataId: 'timeglass_crystal', weight: 26 },
+            { itemDataId: 'genesis_dragonfish_platter', weight: 24 },
+            { itemDataId: 'eclipse_verdict_skillbook', weight: 2 },
+        ],
+    },
+} as const)) {
+    defineFishingTreasureTable(locationId, table.chance, table.entries);
 }

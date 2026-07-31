@@ -10,7 +10,7 @@
     "z": 0,
     "mapIcon": "town-plaza",
     "tags": ["location:safe"],
-    "npcIds": ["town_guide"],
+    "npcIds": ["town_guide", "daily_commissioner"],
     "objects": [],
     "connections": [
       { "locationId": "field" },
@@ -1565,7 +1565,7 @@
     "x": 1400,
     "y": -265,
     "z": 28,
-    "tags": ["location:wilderness", "location:desert", "property:water", "property:natural"],
+    "tags": ["location:wilderness", "location:fishing", "location:desert", "property:water", "property:natural"],
     "npcIds": [],
     "objects": [
       { "type": "resource", "dataId": "oasis_date_palm", "maxCount": 3, "respawnTime": 0 },
@@ -1945,7 +1945,7 @@
     "x": 1885,
     "y": 560,
     "z": -10,
-    "tags": ["location:wilderness", "location:coast", "property:water", "property:natural"],
+    "tags": ["location:wilderness", "location:fishing", "location:coast", "property:water", "property:natural"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "kelp_stalker", "maxCount": 3, "respawnTime": 120 },
@@ -2243,7 +2243,7 @@
   },
   {
     "id": "paradox_foundry_threshold",
-    "name": "역설기계고 1 정지된 문턱",
+    "name": "카이로스 공방도시 1 정지된 문턱",
     "mapColor": "#5b5264",
     "zoneType": "neutral",
     "x": 1850,
@@ -2263,7 +2263,7 @@
   },
   {
     "id": "paradox_relay_station",
-    "name": "역설기계고 기록 중계소",
+    "name": "카이로스 공방도시 기록 중계소",
     "mapColor": "#5b5264",
     "zoneType": "safe",
     "x": 1800,
@@ -2282,7 +2282,7 @@
   },
   {
     "id": "paradox_rusted_conveyor",
-    "name": "역설기계고 2 폐철 수거로",
+    "name": "카이로스 공방도시 2 폐철 수거로",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1880,
@@ -2305,7 +2305,7 @@
   },
   {
     "id": "paradox_lens_corridor",
-    "name": "역설기계고 3 광학 회랑",
+    "name": "카이로스 공방도시 3 광학 회랑",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1760,
@@ -2326,13 +2326,13 @@
   },
   {
     "id": "paradox_scrap_reservoir",
-    "name": "역설기계고 4 폐장갑 저수고",
+    "name": "카이로스 공방도시 잔해호",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1910,
     "y": -970,
     "z": 5,
-    "tags": ["location:wilderness", "location:dungeon", "location:clockwork", "property:metal", "property:earth"],
+    "tags": ["location:wilderness", "location:fishing", "location:dungeon", "location:clockwork", "property:water", "property:metal", "property:earth"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "scrap_centurion", "maxCount": 2, "respawnTime": 150 },
@@ -2347,7 +2347,7 @@
   },
   {
     "id": "paradox_gear_chapel",
-    "name": "역설기계고 5 맞물림 예배실",
+    "name": "카이로스 공방도시 5 맞물림 예배실",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1840,
@@ -2368,7 +2368,7 @@
   },
   {
     "id": "paradox_crow_gantry",
-    "name": "역설기계고 6 위상 조류잔교",
+    "name": "카이로스 공방도시 6 위상 조류잔교",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1730,
@@ -2388,7 +2388,7 @@
   },
   {
     "id": "paradox_logic_archive",
-    "name": "역설기계고 7 논리 기록고",
+    "name": "카이로스 공방도시 7 논리 기록고",
     "mapColor": "#5b5264",
     "zoneType": "neutral",
     "x": 1780,
@@ -2409,7 +2409,7 @@
   },
   {
     "id": "paradox_mirrored_assembly",
-    "name": "역설기계고 8 거울 조립선",
+    "name": "카이로스 공방도시 8 거울 조립선",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1880,
@@ -2429,7 +2429,7 @@
   },
   {
     "id": "paradox_chronosteel_foundry",
-    "name": "역설기계고 시간강 주조로",
+    "name": "카이로스 공방도시 시간강 주조로",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1920,
@@ -2448,7 +2448,7 @@
   },
   {
     "id": "paradox_fracture_junction",
-    "name": "역설기계고 9 균열 분기소",
+    "name": "카이로스 공방도시 9 균열 분기소",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1830,
@@ -2469,7 +2469,7 @@
   },
   {
     "id": "paradox_memory_gallery",
-    "name": "역설기계고 10 기억 회랑",
+    "name": "카이로스 공방도시 10 기억 회랑",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1740,
@@ -2490,7 +2490,7 @@
   },
   {
     "id": "paradox_lost_workshop",
-    "name": "역설기계고 잃어버린 공방",
+    "name": "카이로스 공방도시 잃어버린 공방",
     "mapColor": "#5b5264",
     "zoneType": "neutral",
     "x": 1700,
@@ -2510,7 +2510,7 @@
   },
   {
     "id": "paradox_equation_bridge",
-    "name": "역설기계고 11 방정식 교량",
+    "name": "카이로스 공방도시 11 방정식 교량",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1810,
@@ -2531,7 +2531,7 @@
   },
   {
     "id": "paradox_inverse_hall",
-    "name": "역설기계고 12 역행 회랑",
+    "name": "카이로스 공방도시 12 역행 회랑",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1760,
@@ -2551,7 +2551,7 @@
   },
   {
     "id": "paradox_causality_lock",
-    "name": "역설기계고 인과율 연산실",
+    "name": "카이로스 공방도시 인과율 연산실",
     "mapColor": "#5b5264",
     "zoneType": "neutral",
     "x": 1670,
@@ -2572,7 +2572,7 @@
   },
   {
     "id": "paradox_hidden_prototype_vault",
-    "name": "역설기계고 숨은 폐기 시제품고",
+    "name": "카이로스 공방도시 숨은 폐기 시제품고",
     "mapColor": "#5b5264",
     "zoneType": "neutral",
     "x": 1620,
@@ -2591,7 +2591,7 @@
   },
   {
     "id": "paradox_stage",
-    "name": "역설기계고 13 반복 연무대",
+    "name": "카이로스 공방도시 13 반복 연무대",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1880,
@@ -2612,7 +2612,7 @@
   },
   {
     "id": "paradox_puppet_hall",
-    "name": "역설기계고 14 꼭두각시 보관실",
+    "name": "카이로스 공방도시 14 꼭두각시 보관실",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1830,
@@ -2632,7 +2632,7 @@
   },
   {
     "id": "paradox_abandoned_test_chamber",
-    "name": "역설기계고 15 폐쇄 시험실",
+    "name": "카이로스 공방도시 15 폐쇄 시험실",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1920,
@@ -2653,7 +2653,7 @@
   },
   {
     "id": "paradox_architect_core",
-    "name": "역설기계고 중앙 인과기관",
+    "name": "카이로스 공방도시 중앙 인과기관",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1875,
@@ -2673,7 +2673,7 @@
   },
   {
     "id": "paradox_endless_observatory",
-    "name": "역설기계고 무한 관측실",
+    "name": "카이로스 공방도시 무한 관측실",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1730,
@@ -2695,7 +2695,7 @@
   },
   {
     "id": "ashen_gate_chasm",
-    "name": "잿빛성흔 심연 1 끊어진 관문",
+    "name": "아셴바흐 심연 1 끊어진 관문",
     "mapColor": "#563b42",
     "zoneType": "neutral",
     "x": 1900, "y": -1650, "z": -95,
@@ -2713,7 +2713,7 @@
   },
   {
     "id": "ashen_waystation",
-    "name": "잿빛성흔 심연 회색불길 중계소",
+    "name": "아셴바흐 심연 회색불길 중계소",
     "mapColor": "#563b42",
     "zoneType": "safe",
     "x": 1970, "y": -1715, "z": -82,
@@ -2730,7 +2730,7 @@
   },
   {
     "id": "ashen_dead_valley_west",
-    "name": "잿빛성흔 심연 2 서쪽 망자골",
+    "name": "아셴바흐 심연 2 서쪽 망자골",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 1980, "y": -1605, "z": -110,
@@ -2749,7 +2749,7 @@
   },
   {
     "id": "ashen_dead_valley_east",
-    "name": "잿빛성흔 심연 3 동쪽 뿔무덤",
+    "name": "아셴바흐 심연 3 동쪽 뿔무덤",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 1980, "y": -1510, "z": -125,
@@ -2767,7 +2767,7 @@
   },
   {
     "id": "ashen_lament_basin",
-    "name": "잿빛성흔 심연 4 곡성 분지",
+    "name": "아셴바흐 심연 4 곡성 분지",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2060, "y": -1645, "z": -138,
@@ -2787,7 +2787,7 @@
   },
   {
     "id": "ashen_hollowfang_den",
-    "name": "잿빛성흔 심연 5 빈송곳니 굴",
+    "name": "아셴바흐 심연 5 빈송곳니 굴",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2060, "y": -1745, "z": -155,
@@ -2805,7 +2805,7 @@
   },
   {
     "id": "ashen_bonewind_ravine",
-    "name": "잿빛성흔 심연 6 뼛바람 협곡",
+    "name": "아셴바흐 심연 6 뼛바람 협곡",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2060, "y": -1525, "z": -165,
@@ -2824,7 +2824,7 @@
   },
   {
     "id": "ashen_three_maw_gate",
-    "name": "잿빛성흔 심연 삼아귀 관문",
+    "name": "아셴바흐 심연 삼아귀 관문",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2150, "y": -1635, "z": -185,
@@ -2841,7 +2841,7 @@
   },
   {
     "id": "ashen_blackflame_outer_fork",
-    "name": "흑염미로 1 갈라진 불길",
+    "name": "녹스베른 미궁 1 갈라진 불길",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2240, "y": -1635, "z": -205,
@@ -2859,7 +2859,7 @@
   },
   {
     "id": "ashen_soot_cloister",
-    "name": "흑염미로 2 그을음 회랑",
+    "name": "녹스베른 미궁 2 그을음 회랑",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2320, "y": -1725, "z": -220,
@@ -2877,7 +2877,7 @@
   },
   {
     "id": "ashen_ember_furnace",
-    "name": "흑염미로 3 빛없는 화로",
+    "name": "녹스베른 미궁 3 빛없는 화로",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2320, "y": -1545, "z": -225,
@@ -2895,7 +2895,7 @@
   },
   {
     "id": "ashen_ossuary_turn",
-    "name": "흑염미로 4 저주뼈 굽이",
+    "name": "녹스베른 미궁 4 저주뼈 굽이",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2400, "y": -1775, "z": -242,
@@ -2913,7 +2913,7 @@
   },
   {
     "id": "ashen_night_iron_gallery",
-    "name": "흑염미로 5 밤쇠 광랑",
+    "name": "녹스베른 미궁 5 밤쇠 광랑",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2400, "y": -1650, "z": -250,
@@ -2933,7 +2933,7 @@
   },
   {
     "id": "ashen_seal_chapel",
-    "name": "흑염미로 재왕 인장예배실",
+    "name": "녹스베른 미궁 재왕 인장예배실",
     "mapColor": "#563b42",
     "zoneType": "neutral",
     "x": 2400, "y": -1525, "z": -248,
@@ -2952,7 +2952,7 @@
   },
   {
     "id": "ashen_hidden_reliquary",
-    "name": "흑염미로 숨은 왕가 유물고",
+    "name": "녹스베른 미궁 숨은 왕가 유물고",
     "mapColor": "#563b42",
     "zoneType": "neutral",
     "x": 2480, "y": -1465, "z": -270,
@@ -2969,7 +2969,7 @@
   },
   {
     "id": "ashen_ash_spiral",
-    "name": "흑염미로 6 재소용돌이 계단",
+    "name": "녹스베른 미궁 6 재소용돌이 계단",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2480, "y": -1650, "z": -275,
@@ -2988,7 +2988,7 @@
   },
   {
     "id": "ashen_general_parade",
-    "name": "흑염미로 흑염 군세 연무장",
+    "name": "녹스베른 미궁 흑염 군세 연무장",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2560, "y": -1635, "z": -295,
@@ -3004,7 +3004,7 @@
   },
   {
     "id": "ashen_castle_barbican",
-    "name": "잿왕성 1 무너진 외성문",
+    "name": "카르모르 성 1 무너진 외성문",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2640, "y": -1635, "z": -320,
@@ -3023,7 +3023,7 @@
   },
   {
     "id": "ashen_lower_barracks",
-    "name": "잿왕성 2 밤쇠 병영",
+    "name": "카르모르 성 2 밤쇠 병영",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2720, "y": -1715, "z": -338,
@@ -3041,7 +3041,7 @@
   },
   {
     "id": "ashen_cursebone_range",
-    "name": "잿왕성 3 저주뼈 사격장",
+    "name": "카르모르 성 3 저주뼈 사격장",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2800, "y": -1765, "z": -352,
@@ -3059,7 +3059,7 @@
   },
   {
     "id": "ashen_gargoyle_rampart",
-    "name": "잿왕성 4 석익수 성벽",
+    "name": "카르모르 성 4 석익수 성벽",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2720, "y": -1535, "z": -345,
@@ -3077,7 +3077,7 @@
   },
   {
     "id": "ashen_mourning_hall",
-    "name": "잿왕성 5 애도 회랑",
+    "name": "카르모르 성 5 애도 회랑",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2800, "y": -1645, "z": -365,
@@ -3097,7 +3097,7 @@
   },
   {
     "id": "ashen_execution_court",
-    "name": "잿왕성 6 심연 처형정",
+    "name": "카르모르 성 6 심연 처형정",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2880, "y": -1710, "z": -388,
@@ -3116,7 +3116,7 @@
   },
   {
     "id": "ashen_crown_stair",
-    "name": "잿왕성 7 재왕관 계단",
+    "name": "카르모르 성 7 재왕관 계단",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2880, "y": -1575, "z": -405,
@@ -3134,7 +3134,7 @@
   },
   {
     "id": "ashen_sovereign_throne",
-    "name": "잿왕성 최상층 잿빛 왕좌",
+    "name": "카르모르 성 최상층 잿빛 왕좌",
     "mapColor": "#563b42",
     "zoneType": "hostile",
     "x": 2970, "y": -1635, "z": -430,
@@ -3151,7 +3151,7 @@
   },
   {
     "id": "voidcrown_threshold",
-    "name": "공허왕관 성채 1 무광 관문",
+    "name": "벨카인 요새 1 무광 관문",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3100, "y": -1850, "z": -445,
@@ -3170,7 +3170,7 @@
   },
   {
     "id": "voidcrown_waystation",
-    "name": "공허왕관 성채 귀환표식 중계소",
+    "name": "벨카인 요새 귀환표식 중계소",
     "mapColor": "#44455b",
     "zoneType": "safe",
     "x": 3185, "y": -1900, "z": -448,
@@ -3185,7 +3185,7 @@
   },
   {
     "id": "voidcrown_lower_court",
-    "name": "공허왕관 성채 2 하층 안뜰",
+    "name": "벨카인 요새 2 하층 안뜰",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3100, "y": -1940, "z": -455,
@@ -3205,7 +3205,7 @@
   },
   {
     "id": "voidcrown_west_battlement",
-    "name": "공허왕관 외성 1 서쪽 무광성벽",
+    "name": "벨카인 외벽 1 서쪽 무광성벽",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3020, "y": -2000, "z": -468,
@@ -3223,7 +3223,7 @@
   },
   {
     "id": "voidcrown_starved_garden",
-    "name": "공허왕관 외성 2 굶주린 정원",
+    "name": "벨카인 외벽 2 굶주린 정원",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3180, "y": -2000, "z": -466,
@@ -3241,7 +3241,7 @@
   },
   {
     "id": "voidcrown_broken_aqueduct",
-    "name": "공허왕관 외성 3 끊어진 수로",
+    "name": "벨카인 외벽 3 끊어진 수로",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 2965, "y": -2080, "z": -482,
@@ -3258,7 +3258,7 @@
   },
   {
     "id": "voidcrown_east_battlement",
-    "name": "공허왕관 외성 4 동쪽 유리성벽",
+    "name": "벨카인 외벽 4 동쪽 유리성벽",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3235, "y": -2080, "z": -480,
@@ -3275,7 +3275,7 @@
   },
   {
     "id": "voidcrown_gatehouse",
-    "name": "공허왕관 외성문 무관성주의 진",
+    "name": "벨카인 외벽문 무관성주의 진",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3100, "y": -2160, "z": -500,
@@ -3296,7 +3296,7 @@
   },
   {
     "id": "voidcrown_foundry",
-    "name": "공허왕관 내성 1 무광 주조실",
+    "name": "벨카인 성내 1 무광 주조실",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3005, "y": -2240, "z": -520,
@@ -3315,7 +3315,7 @@
   },
   {
     "id": "voidcrown_archive",
-    "name": "공허왕관 내성 2 별먹 기록고",
+    "name": "벨카인 성내 2 별먹 기록고",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3195, "y": -2240, "z": -518,
@@ -3333,7 +3333,7 @@
   },
   {
     "id": "voidcrown_inner_crossing",
-    "name": "공허왕관 내성 3 네갈래 교차정",
+    "name": "벨카인 성내 3 네갈래 교차정",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3100, "y": -2320, "z": -538,
@@ -3353,7 +3353,7 @@
   },
   {
     "id": "voidcrown_mirror_gallery",
-    "name": "공허왕관 상층 1 파경 회랑",
+    "name": "벨카인 상층 1 파경 회랑",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3005, "y": -2390, "z": -562,
@@ -3372,7 +3372,7 @@
   },
   {
     "id": "voidcrown_silent_barracks",
-    "name": "공허왕관 상층 2 침묵 병영",
+    "name": "벨카인 상층 2 침묵 병영",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3195, "y": -2390, "z": -560,
@@ -3391,7 +3391,7 @@
   },
   {
     "id": "voidcrown_observatory",
-    "name": "공허왕관 상층 3 빈별 관측소",
+    "name": "벨카인 상층 3 빈별 관측소",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 2950, "y": -2470, "z": -585,
@@ -3409,7 +3409,7 @@
   },
   {
     "id": "voidcrown_voidwell",
-    "name": "공허왕관 상층 4 공허 우물",
+    "name": "벨카인 상층 4 공허 우물",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3100, "y": -2470, "z": -590,
@@ -3429,7 +3429,7 @@
   },
   {
     "id": "voidcrown_crownworkshop",
-    "name": "공허왕관 상층 5 왕관 공방",
+    "name": "벨카인 상층 5 왕관 공방",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3250, "y": -2470, "z": -584,
@@ -3447,7 +3447,7 @@
   },
   {
     "id": "voidcrown_oath_chapel",
-    "name": "공허왕관 상층 6 빈 왕좌 예배당",
+    "name": "벨카인 상층 6 빈 왕좌 예배당",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3170, "y": -2550, "z": -610,
@@ -3467,7 +3467,7 @@
   },
   {
     "id": "voidcrown_hidden_vault",
-    "name": "공허왕관 숨은 무성좌 금고",
+    "name": "벨카인 숨은 무성좌 금고",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3245, "y": -2620, "z": -625,
@@ -3484,7 +3484,7 @@
   },
   {
     "id": "voidcrown_upper_stair",
-    "name": "공허왕관 최상층 1 무성좌 계단",
+    "name": "벨카인 첨탑 1 무성좌 계단",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3040, "y": -2550, "z": -615,
@@ -3504,7 +3504,7 @@
   },
   {
     "id": "voidcrown_celestial_balcony",
-    "name": "공허왕관 최상층 2 별그늘 발코니",
+    "name": "벨카인 첨탑 2 별그늘 발코니",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 2950, "y": -2630, "z": -640,
@@ -3522,7 +3522,7 @@
   },
   {
     "id": "voidcrown_null_library",
-    "name": "공허왕관 최상층 3 무효 법전고",
+    "name": "벨카인 첨탑 3 무효 법전고",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3090, "y": -2630, "z": -642,
@@ -3539,7 +3539,7 @@
   },
   {
     "id": "voidcrown_guardian_hall",
-    "name": "공허왕관 최상층 4 판결관 회랑",
+    "name": "벨카인 첨탑 4 판결관 회랑",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3020, "y": -2710, "z": -668,
@@ -3557,7 +3557,7 @@
   },
   {
     "id": "voidcrown_crown_spire",
-    "name": "공허왕관 최상층 5 왕관 첨탑",
+    "name": "벨카인 첨탑 5 왕관 첨탑",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3020, "y": -2790, "z": -695,
@@ -3575,7 +3575,7 @@
   },
   {
     "id": "voidcrown_throne_antechamber",
-    "name": "공허왕관 최상층 6 무효 선고실",
+    "name": "벨카인 첨탑 6 무효 선고실",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3020, "y": -2870, "z": -720,
@@ -3592,7 +3592,7 @@
   },
   {
     "id": "voidcrown_throne",
-    "name": "공허왕관 최상층 빈 왕좌",
+    "name": "벨카인 첨탑 빈 왕좌",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 3020, "y": -2960, "z": -750,
@@ -3610,7 +3610,7 @@
   },
   {
     "id": "eclipse_threshold",
-    "name": "월식해구 1 침수 승강정",
+    "name": "루나리스 해구 1 침수 승강정",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 3000, "y": -3100, "z": -790,
@@ -3628,7 +3628,7 @@
   },
   {
     "id": "eclipse_dock",
-    "name": "월식해구 조류관측선 정박지",
+    "name": "루나리스 해구 조류관측선 정박지",
     "mapColor": "#304452",
     "zoneType": "safe",
     "x": 2960, "y": -3140, "z": -815,
@@ -3643,7 +3643,7 @@
   },
   {
     "id": "eclipse_lower_crossing",
-    "name": "월식해구 2 갈라진 조류",
+    "name": "루나리스 해구 2 갈라진 조류",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2910, "y": -3100, "z": -840,
@@ -3662,11 +3662,11 @@
   },
   {
     "id": "eclipse_luminous_reef",
-    "name": "월식해구 3 희미한 산호초",
+    "name": "루나리스 해구 3 희미한 산호초",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2840, "y": -3035, "z": -865,
-    "tags": ["location:wilderness", "location:dungeon", "location:eclipse-trench", "property:water", "property:light"],
+    "tags": ["location:wilderness", "location:fishing", "location:dungeon", "location:eclipse-trench", "property:water", "property:light"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "nightpearl_jelly", "maxCount": 3, "respawnTime": 290 },
@@ -3679,7 +3679,7 @@
   },
   {
     "id": "eclipse_drowned_convoy",
-    "name": "월식해구 4 침몰 순례선단",
+    "name": "루나리스 해구 4 침몰 순례선단",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2840, "y": -3165, "z": -865,
@@ -3696,7 +3696,7 @@
   },
   {
     "id": "eclipse_brine_shelf",
-    "name": "월식해구 5 월염수 단층",
+    "name": "루나리스 해구 5 월염수 단층",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2760, "y": -3035, "z": -900,
@@ -3713,7 +3713,7 @@
   },
   {
     "id": "eclipse_silver_sink",
-    "name": "월식해구 6 침은 함몰광맥",
+    "name": "루나리스 해구 6 침은 함몰광맥",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2760, "y": -3165, "z": -900,
@@ -3730,7 +3730,7 @@
   },
   {
     "id": "eclipse_tide_confluence",
-    "name": "월식해구 7 두 조류의 포식장",
+    "name": "루나리스 해구 7 두 조류의 포식장",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2670, "y": -3100, "z": -940,
@@ -3748,7 +3748,7 @@
   },
   {
     "id": "eclipse_deep_gate",
-    "name": "월식해구 8 심층 수문",
+    "name": "루나리스 해구 8 심층 수문",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2580, "y": -3100, "z": -980,
@@ -3766,7 +3766,7 @@
   },
   {
     "id": "eclipse_kelp_cloister",
-    "name": "월식해구 9 해구숲 회랑",
+    "name": "루나리스 해구 9 해구숲 회랑",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2500, "y": -3035, "z": -1015,
@@ -3783,7 +3783,7 @@
   },
   {
     "id": "eclipse_black_current",
-    "name": "월식해구 10 검은 역조",
+    "name": "루나리스 해구 10 검은 역조",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2500, "y": -3165, "z": -1015,
@@ -3800,7 +3800,7 @@
   },
   {
     "id": "eclipse_basin",
-    "name": "월식해구 11 월식 분지",
+    "name": "루나리스 해구 11 월식 분지",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2415, "y": -3100, "z": -1050,
@@ -3818,7 +3818,7 @@
   },
   {
     "id": "eclipse_sanctuary_threshold",
-    "name": "백야성소 1 잠긴 현관",
+    "name": "에일린 대성당 1 잠긴 현관",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2330, "y": -3100, "z": -1080,
@@ -3836,7 +3836,7 @@
   },
   {
     "id": "eclipse_choir_gallery",
-    "name": "백야성소 2 침수 성가회랑",
+    "name": "에일린 대성당 2 침수 성가회랑",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2250, "y": -3035, "z": -1115,
@@ -3854,7 +3854,7 @@
   },
   {
     "id": "eclipse_floodgate_engine",
-    "name": "백야성소 3 조류기관실",
+    "name": "에일린 대성당 3 조류기관실",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2250, "y": -3165, "z": -1115,
@@ -3872,7 +3872,7 @@
   },
   {
     "id": "eclipse_tide_altar",
-    "name": "백야성소 4 월식 조류제단",
+    "name": "에일린 대성당 4 월식 조류제단",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2175, "y": -2980, "z": -1150,
@@ -3889,7 +3889,7 @@
   },
   {
     "id": "eclipse_sunken_reliquary",
-    "name": "백야성소 숨은 침수보물고",
+    "name": "에일린 대성당 숨은 침수보물고",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2100, "y": -2955, "z": -1180,
@@ -3906,7 +3906,7 @@
   },
   {
     "id": "eclipse_mirror_causeway",
-    "name": "백야성소 5 쌍면 거울길",
+    "name": "에일린 대성당 5 쌍면 거울길",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2160, "y": -3100, "z": -1155,
@@ -3925,7 +3925,7 @@
   },
   {
     "id": "eclipse_white_night_nave",
-    "name": "백야성소 6 끝없는 주랑",
+    "name": "에일린 대성당 6 끝없는 주랑",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2080, "y": -3150, "z": -1190,
@@ -3943,7 +3943,7 @@
   },
   {
     "id": "eclipse_oracle_apse",
-    "name": "백야성소 7 황혼 예언실",
+    "name": "에일린 대성당 7 황혼 예언실",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2080, "y": -3050, "z": -1190,
@@ -3962,7 +3962,7 @@
   },
   {
     "id": "eclipse_drowned_belfry",
-    "name": "백야성소 8 잠긴 종루",
+    "name": "에일린 대성당 8 잠긴 종루",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 2000, "y": -3100, "z": -1225,
@@ -3980,7 +3980,7 @@
   },
   {
     "id": "eclipse_final_crossing",
-    "name": "백야성소 9 일월 교차정",
+    "name": "에일린 대성당 9 일월 교차정",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 1920, "y": -3100, "z": -1260,
@@ -3999,7 +3999,7 @@
   },
   {
     "id": "eclipse_altar_vestibule",
-    "name": "백야성소 10 대제단 전실",
+    "name": "에일린 대성당 10 대제단 전실",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 1840, "y": -3100, "z": -1300,
@@ -4016,7 +4016,7 @@
   },
   {
     "id": "eclipse_white_night_altar",
-    "name": "백야성소 대제단 고정된 월식",
+    "name": "에일린 대성당 대제단 고정된 월식",
     "mapColor": "#304452",
     "zoneType": "hostile",
     "x": 1750, "y": -3100, "z": -1340,
@@ -4034,7 +4034,7 @@
   },
   {
     "id": "worldroot_threshold",
-    "name": "역근수해 1 하늘뿌리 경계",
+    "name": "카미하라 숲 1 하늘뿌리 경계",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1600, "y": -3150, "z": -1370,
@@ -4052,7 +4052,7 @@
   },
   {
     "id": "worldroot_waystation",
-    "name": "역근수해 기억길잡이 둥지",
+    "name": "카미하라 숲 기억길잡이 둥지",
     "mapColor": "#40513f",
     "zoneType": "safe",
     "x": 1600, "y": -3240, "z": -1400,
@@ -4070,7 +4070,7 @@
   },
   {
     "id": "worldroot_lower_fork",
-    "name": "역근수해 2 빛과 부패의 갈림뿌리",
+    "name": "카미하라 숲 2 빛과 부패의 갈림뿌리",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1600, "y": -3330, "z": -1435,
@@ -4089,7 +4089,7 @@
   },
   {
     "id": "worldroot_luminous_root",
-    "name": "역근수해 3 광휘뿌리 회랑",
+    "name": "카미하라 숲 3 광휘뿌리 회랑",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1510, "y": -3410, "z": -1470,
@@ -4106,7 +4106,7 @@
   },
   {
     "id": "worldroot_rot_hollow",
-    "name": "역근수해 4 부패포자 공동",
+    "name": "카미하라 숲 4 부패포자 공동",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1690, "y": -3410, "z": -1470,
@@ -4123,7 +4123,7 @@
   },
   {
     "id": "worldroot_sap_aqueduct",
-    "name": "역근수해 5 태초수액 수로",
+    "name": "카미하라 숲 5 태초수액 수로",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1510, "y": -3490, "z": -1510,
@@ -4140,7 +4140,7 @@
   },
   {
     "id": "worldroot_fossil_bark",
-    "name": "역근수해 6 화석수피 매듭",
+    "name": "카미하라 숲 6 화석수피 매듭",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1690, "y": -3490, "z": -1510,
@@ -4157,7 +4157,7 @@
   },
   {
     "id": "worldroot_devourer_gate",
-    "name": "역근수해 7 포식수의 문",
+    "name": "카미하라 숲 7 포식수의 문",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1600, "y": -3580, "z": -1550,
@@ -4174,7 +4174,7 @@
   },
   {
     "id": "worldroot_inner_gate",
-    "name": "역근수해 8 안쪽 생장문",
+    "name": "카미하라 숲 8 안쪽 생장문",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1600, "y": -3670, "z": -1590,
@@ -4192,7 +4192,7 @@
   },
   {
     "id": "worldroot_spore_garden",
-    "name": "역근수해 9 망각포자 정원",
+    "name": "카미하라 숲 9 망각포자 정원",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1500, "y": -3750, "z": -1630,
@@ -4209,7 +4209,7 @@
   },
   {
     "id": "worldroot_amber_channel",
-    "name": "역근수해 10 기억호박 수로",
+    "name": "카미하라 숲 10 기억호박 수로",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1700, "y": -3750, "z": -1630,
@@ -4226,7 +4226,7 @@
   },
   {
     "id": "worldroot_memory_grove",
-    "name": "역근수해 11 기억이끼 숲",
+    "name": "카미하라 숲 11 기억이끼 숲",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1600, "y": -3840, "z": -1670,
@@ -4244,7 +4244,7 @@
   },
   {
     "id": "worldroot_heart_threshold",
-    "name": "태초심장 성역 1 박동의 문턱",
+    "name": "에오나의 심장 1 박동의 문턱",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1600, "y": -3930, "z": -1710,
@@ -4262,7 +4262,7 @@
   },
   {
     "id": "worldroot_vein_gallery",
-    "name": "태초심장 성역 2 성수관 회랑",
+    "name": "에오나의 심장 2 성수관 회랑",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1500, "y": -4010, "z": -1750,
@@ -4280,7 +4280,7 @@
   },
   {
     "id": "worldroot_seed_archive",
-    "name": "태초심장 성역 3 종자기록고",
+    "name": "에오나의 심장 3 종자기록고",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1700, "y": -4010, "z": -1750,
@@ -4298,7 +4298,7 @@
   },
   {
     "id": "worldroot_memory_altar",
-    "name": "태초심장 성역 4 첫 기억의 제단",
+    "name": "에오나의 심장 4 첫 기억의 제단",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1500, "y": -4090, "z": -1790,
@@ -4315,7 +4315,7 @@
   },
   {
     "id": "worldroot_hidden_reliquary",
-    "name": "태초심장 성역 숨은 기억호박 유물고",
+    "name": "에오나의 심장 숨은 기억호박 유물고",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1450, "y": -4170, "z": -1830,
@@ -4331,7 +4331,7 @@
   },
   {
     "id": "worldroot_root_bridge",
-    "name": "태초심장 성역 5 심장고리 뿌리교",
+    "name": "에오나의 심장 5 심장고리 뿌리교",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1600, "y": -4180, "z": -1830,
@@ -4351,7 +4351,7 @@
   },
   {
     "id": "worldroot_holy_canopy",
-    "name": "태초심장 성역 6 광명의 천개",
+    "name": "에오나의 심장 6 광명의 천개",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1500, "y": -4260, "z": -1870,
@@ -4368,7 +4368,7 @@
   },
   {
     "id": "worldroot_dark_canopy",
-    "name": "태초심장 성역 7 망각의 천개",
+    "name": "에오나의 심장 7 망각의 천개",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1700, "y": -4260, "z": -1870,
@@ -4385,7 +4385,7 @@
   },
   {
     "id": "worldroot_forgotten_ring",
-    "name": "태초심장 성역 8 잊힌 나이테",
+    "name": "에오나의 심장 8 잊힌 나이테",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1600, "y": -4350, "z": -1910,
@@ -4404,7 +4404,7 @@
   },
   {
     "id": "worldroot_pulse_chamber",
-    "name": "태초심장 성역 9 박동 회랑",
+    "name": "에오나의 심장 9 박동 회랑",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1600, "y": -4440, "z": -1950,
@@ -4421,7 +4421,7 @@
   },
   {
     "id": "worldroot_heart_antechamber",
-    "name": "태초심장 성역 10 첫 박동 전실",
+    "name": "에오나의 심장 10 첫 박동 전실",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1600, "y": -4530, "z": -1990,
@@ -4439,7 +4439,7 @@
   },
   {
     "id": "worldroot_primordial_heart",
-    "name": "태초심장 첫 기억의 심실",
+    "name": "에오나의 심장 첫 기억의 심실",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1600, "y": -4620, "z": -2030,
@@ -4457,7 +4457,7 @@
   },
   {
     "id": "nebula_threshold",
-    "name": "성운회랑 별뿌리 관문",
+    "name": "아스트라 회랑 별뿌리 관문",
     "mapColor": "#35434b",
     "zoneType": "neutral",
     "x": 1600, "y": -4750, "z": -2070,
@@ -4473,7 +4473,7 @@
   },
   {
     "id": "nebula_waystation",
-    "name": "성운회랑 유성등 정거장",
+    "name": "아스트라 회랑 유성등 정거장",
     "mapColor": "#35434b",
     "zoneType": "safe",
     "x": 1690, "y": -4750, "z": -2110,
@@ -4488,7 +4488,7 @@
   },
   {
     "id": "nebula_lower_fork",
-    "name": "성운회랑 하층 궤도갈림길",
+    "name": "아스트라 회랑 하층 궤도갈림길",
     "mapColor": "#35434b",
     "zoneType": "hostile",
     "x": 1780, "y": -4750, "z": -2150,
@@ -4506,7 +4506,7 @@
   },
   {
     "id": "nebula_stardust_terrace",
-    "name": "성운회랑 성진 단구",
+    "name": "아스트라 회랑 성진 단구",
     "mapColor": "#35434b",
     "zoneType": "hostile",
     "x": 1870, "y": -4855, "z": -2190,
@@ -4523,7 +4523,7 @@
   },
   {
     "id": "nebula_comet_foundry",
-    "name": "성운회랑 혜철 주조대",
+    "name": "아스트라 회랑 혜철 주조대",
     "mapColor": "#35434b",
     "zoneType": "hostile",
     "x": 1970, "y": -4895, "z": -2230,
@@ -4540,7 +4540,7 @@
   },
   {
     "id": "nebula_echo_archive",
-    "name": "성운회랑 잔향 기록고",
+    "name": "아스트라 회랑 잔향 기록고",
     "mapColor": "#35434b",
     "zoneType": "hostile",
     "x": 1870, "y": -4645, "z": -2190,
@@ -4557,7 +4557,7 @@
   },
   {
     "id": "nebula_silent_orbit",
-    "name": "성운회랑 무음 궤도",
+    "name": "아스트라 회랑 무음 궤도",
     "mapColor": "#35434b",
     "zoneType": "hostile",
     "x": 1970, "y": -4605, "z": -2230,
@@ -4574,7 +4574,7 @@
   },
   {
     "id": "nebula_gravity_confluence",
-    "name": "성운회랑 중력 합류정",
+    "name": "아스트라 회랑 중력 합류정",
     "mapColor": "#35434b",
     "zoneType": "hostile",
     "x": 2070, "y": -4750, "z": -2270,
@@ -4592,7 +4592,7 @@
   },
   {
     "id": "nebula_meteor_warden_hall",
-    "name": "성운회랑 낙성감시전",
+    "name": "아스트라 회랑 낙성감시전",
     "mapColor": "#35434b",
     "zoneType": "hostile",
     "x": 2170, "y": -4750, "z": -2310,
@@ -4608,7 +4608,7 @@
   },
   {
     "id": "nebula_upper_fork",
-    "name": "성운회랑 상층 성도갈림길",
+    "name": "아스트라 회랑 상층 성도갈림길",
     "mapColor": "#35434b",
     "zoneType": "hostile",
     "x": 2270, "y": -4750, "z": -2350,
@@ -4626,7 +4626,7 @@
   },
   {
     "id": "nebula_aurora_bridge",
-    "name": "성운회랑 극광다리",
+    "name": "아스트라 회랑 극광다리",
     "mapColor": "#35434b",
     "zoneType": "hostile",
     "x": 2370, "y": -4855, "z": -2390,
@@ -4643,7 +4643,7 @@
   },
   {
     "id": "nebula_darkmatter_channel",
-    "name": "성운회랑 암흑물질 수로",
+    "name": "아스트라 회랑 암흑물질 수로",
     "mapColor": "#35434b",
     "zoneType": "hostile",
     "x": 2370, "y": -4645, "z": -2390,
@@ -4661,7 +4661,7 @@
   },
   {
     "id": "nebula_crown_approach",
-    "name": "성운회랑 성운관 전실",
+    "name": "아스트라 회랑 성운관 전실",
     "mapColor": "#35434b",
     "zoneType": "hostile",
     "x": 2470, "y": -4750, "z": -2430,
@@ -4678,7 +4678,7 @@
   },
   {
     "id": "nebula_sovereign_throne",
-    "name": "성운회랑 사건지평 왕좌",
+    "name": "아스트라 회랑 사건지평 왕좌",
     "mapColor": "#35434b",
     "zoneType": "hostile",
     "x": 2570, "y": -4750, "z": -2470,
@@ -4694,7 +4694,7 @@
   },
   {
     "id": "chronofrost_threshold",
-    "name": "동결시계원 멈춘 초침문",
+    "name": "에버프로스트 정원 멈춘 초침문",
     "mapColor": "#36454b",
     "zoneType": "neutral",
     "x": 2700, "y": -4750, "z": -2510,
@@ -4711,7 +4711,7 @@
   },
   {
     "id": "chronofrost_refuge",
-    "name": "동결시계원 영시 피난소",
+    "name": "에버프로스트 정원 영시 피난소",
     "mapColor": "#36454b",
     "zoneType": "safe",
     "x": 2700, "y": -4660, "z": -2550,
@@ -4726,7 +4726,7 @@
   },
   {
     "id": "chronofrost_lower_fork",
-    "name": "동결시계원 하층 분침갈림길",
+    "name": "에버프로스트 정원 하층 분침갈림길",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2700, "y": -4570, "z": -2590,
@@ -4745,7 +4745,7 @@
   },
   {
     "id": "chronofrost_frozen_minute",
-    "name": "동결시계원 얼어붙은 분침",
+    "name": "에버프로스트 정원 얼어붙은 분침",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2805, "y": -4480, "z": -2630,
@@ -4762,7 +4762,7 @@
   },
   {
     "id": "chronofrost_pendulum_glacier",
-    "name": "동결시계원 진자빙하",
+    "name": "에버프로스트 정원 진자빙하",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2845, "y": -4380, "z": -2670,
@@ -4779,7 +4779,7 @@
   },
   {
     "id": "chronofrost_hourglass_cemetery",
-    "name": "동결시계원 모래시계 묘역",
+    "name": "에버프로스트 정원 모래시계 묘역",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2595, "y": -4480, "z": -2630,
@@ -4796,7 +4796,7 @@
   },
   {
     "id": "chronofrost_reversed_snowfield",
-    "name": "동결시계원 뒤집힌 설원",
+    "name": "에버프로스트 정원 뒤집힌 설원",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2555, "y": -4380, "z": -2670,
@@ -4813,7 +4813,7 @@
   },
   {
     "id": "chronofrost_pendulum_confluence",
-    "name": "동결시계원 진자 합류정",
+    "name": "에버프로스트 정원 진자 합류정",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2700, "y": -4280, "z": -2710,
@@ -4831,7 +4831,7 @@
   },
   {
     "id": "chronofrost_sentinel_court",
-    "name": "동결시계원 빙시계 수문정",
+    "name": "에버프로스트 정원 빙시계 수문정",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2700, "y": -4180, "z": -2750,
@@ -4847,7 +4847,7 @@
   },
   {
     "id": "chronofrost_upper_fork",
-    "name": "동결시계원 상층 시간갈림길",
+    "name": "에버프로스트 정원 상층 시간갈림길",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2700, "y": -4080, "z": -2790,
@@ -4865,7 +4865,7 @@
   },
   {
     "id": "chronofrost_yesterday_gallery",
-    "name": "동결시계원 어제 회랑",
+    "name": "에버프로스트 정원 어제 회랑",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2805, "y": -3980, "z": -2830,
@@ -4883,7 +4883,7 @@
   },
   {
     "id": "chronofrost_tomorrow_vault",
-    "name": "동결시계원 내일 금고",
+    "name": "에버프로스트 정원 내일 금고",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2595, "y": -3980, "z": -2830,
@@ -4900,7 +4900,7 @@
   },
   {
     "id": "chronofrost_zero_antechamber",
-    "name": "동결시계원 영시 왕좌전실",
+    "name": "에버프로스트 정원 영시 왕좌전실",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2700, "y": -3880, "z": -2870,
@@ -4918,7 +4918,7 @@
   },
   {
     "id": "chronofrost_zero_throne",
-    "name": "동결시계원 멈춘 왕좌",
+    "name": "에버프로스트 정원 멈춘 왕좌",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2700, "y": -3780, "z": -2910,
@@ -4934,7 +4934,7 @@
   },
   {
     "id": "endstar_threshold",
-    "name": "종언성단 마지막 시간문",
+    "name": "라그나벨 성단 마지막 시간문",
     "mapColor": "#493d49",
     "zoneType": "neutral",
     "x": 2700, "y": -3650, "z": -2950,
@@ -4951,7 +4951,7 @@
   },
   {
     "id": "endstar_bastion",
-    "name": "종언성단 잔광 요새",
+    "name": "라그나벨 성단 잔광 요새",
     "mapColor": "#493d49",
     "zoneType": "safe",
     "x": 2790, "y": -3650, "z": -2990,
@@ -4966,7 +4966,7 @@
   },
   {
     "id": "endstar_lower_fork",
-    "name": "종언성단 하층 별자리갈림길",
+    "name": "라그나벨 성단 하층 별자리갈림길",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 2880, "y": -3650, "z": -3030,
@@ -4985,7 +4985,7 @@
   },
   {
     "id": "endstar_ash_field",
-    "name": "종언성단 재별무리",
+    "name": "라그나벨 성단 재별무리",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 2970, "y": -3765, "z": -3070,
@@ -5002,7 +5002,7 @@
   },
   {
     "id": "endstar_broken_constellation",
-    "name": "종언성단 부서진 성좌",
+    "name": "라그나벨 성단 부서진 성좌",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 3070, "y": -3805, "z": -3110,
@@ -5019,11 +5019,11 @@
   },
   {
     "id": "endstar_silent_sun",
-    "name": "종언성단 침묵태양",
+    "name": "라그나벨 저문별 호수",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 2970, "y": -3535, "z": -3070,
-    "tags": ["location:wilderness", "location:endstar", "property:holy", "property:dark"],
+    "tags": ["location:wilderness", "location:fishing", "location:endstar", "property:water", "property:holy", "property:dark"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "entropy_seraph", "maxCount": 3, "respawnTime": 475 },
@@ -5036,7 +5036,7 @@
   },
   {
     "id": "endstar_oath_comet",
-    "name": "종언성단 서약혜성",
+    "name": "라그나벨 성단 서약혜성",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 3070, "y": -3495, "z": -3110,
@@ -5053,7 +5053,7 @@
   },
   {
     "id": "endstar_confluence",
-    "name": "종언성단 종언 합류환",
+    "name": "라그나벨 성단 종언 합류환",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 3170, "y": -3650, "z": -3150,
@@ -5072,7 +5072,7 @@
   },
   {
     "id": "endstar_herald_ring",
-    "name": "종언성단 전령의 고리",
+    "name": "라그나벨 성단 전령의 고리",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 3270, "y": -3650, "z": -3190,
@@ -5088,7 +5088,7 @@
   },
   {
     "id": "endstar_upper_fork",
-    "name": "종언성단 상층 기원갈림길",
+    "name": "라그나벨 성단 상층 기원갈림길",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 3370, "y": -3650, "z": -3230,
@@ -5106,7 +5106,7 @@
   },
   {
     "id": "endstar_genesis_lane",
-    "name": "종언성단 창세 항로",
+    "name": "라그나벨 성단 창세 항로",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 3470, "y": -3765, "z": -3270,
@@ -5123,7 +5123,7 @@
   },
   {
     "id": "endstar_entropy_lane",
-    "name": "종언성단 소멸 항로",
+    "name": "라그나벨 성단 소멸 항로",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 3470, "y": -3535, "z": -3270,
@@ -5140,7 +5140,7 @@
   },
   {
     "id": "endstar_last_horizon",
-    "name": "종언성단 최후지평",
+    "name": "라그나벨 성단 최후지평",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 3570, "y": -3650, "z": -3310,
@@ -5158,7 +5158,7 @@
   },
   {
     "id": "endstar_final_approach",
-    "name": "종언성단 마지막 성도",
+    "name": "라그나벨 성단 마지막 성도",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 3670, "y": -3650, "z": -3350,
@@ -5175,7 +5175,7 @@
   },
   {
     "id": "endstar_last_constellation",
-    "name": "종언성단 최후성좌",
+    "name": "라그나벨 성단 최후성좌",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 3770, "y": -3650, "z": -3390,
@@ -5292,7 +5292,7 @@
   },
   {
     "id": "paradox_hunt_scrapfield",
-    "name": "역설기계고 톱니 고철벌",
+    "name": "카이로스 공방도시 톱니 고철벌",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1715, "y": -820, "z": 24,
@@ -5309,7 +5309,7 @@
   },
   {
     "id": "paradox_hunt_geargrave",
-    "name": "역설기계고 멈춘 기어묘지",
+    "name": "카이로스 공방도시 멈춘 기어묘지",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
     "x": 1710, "y": -910, "z": 14,
@@ -5326,7 +5326,7 @@
   },
   {
     "id": "voidcrown_hunt_drymoat",
-    "name": "공허왕관 마른 해자",
+    "name": "벨카인 마른 해자",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 2965, "y": -1850, "z": -452,
@@ -5343,7 +5343,7 @@
   },
   {
     "id": "voidcrown_hunt_brokenwall",
-    "name": "공허왕관 무너진 외성벽",
+    "name": "벨카인 무너진 외성벽",
     "mapColor": "#44455b",
     "zoneType": "hostile",
     "x": 2955, "y": -1940, "z": -462,
@@ -5360,7 +5360,7 @@
   },
   {
     "id": "worldroot_hunt_skygrove",
-    "name": "역근수해 하늘수관 사냥숲",
+    "name": "카미하라 숲 하늘수관 사냥숲",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1465, "y": -3180, "z": -1390,
@@ -5377,7 +5377,7 @@
   },
   {
     "id": "worldroot_hunt_rotgrove",
-    "name": "역근수해 부패수액 사냥숲",
+    "name": "카미하라 숲 부패수액 사냥숲",
     "mapColor": "#40513f",
     "zoneType": "hostile",
     "x": 1460, "y": -3290, "z": -1425,
@@ -5394,7 +5394,7 @@
   },
   {
     "id": "chronofrost_hunt_secondfield",
-    "name": "동결시계원 멎은 초원",
+    "name": "에버프로스트 정원 멎은 초원",
     "mapColor": "#36454b",
     "zoneType": "neutral",
     "x": 2835, "y": -4720, "z": -2530,
@@ -5411,7 +5411,7 @@
   },
   {
     "id": "chronofrost_hunt_icegear",
-    "name": "동결시계원 얼음톱니 뜰",
+    "name": "에버프로스트 정원 얼음톱니 뜰",
     "mapColor": "#36454b",
     "zoneType": "hostile",
     "x": 2845, "y": -4610, "z": -2570,
@@ -5428,7 +5428,7 @@
   },
   {
     "id": "endstar_hunt_ashorbit",
-    "name": "종언성단 잿빛 궤도",
+    "name": "라그나벨 성단 잿빛 궤도",
     "mapColor": "#493d49",
     "zoneType": "neutral",
     "x": 2730, "y": -3785, "z": -2970,
@@ -5445,7 +5445,7 @@
   },
   {
     "id": "endstar_hunt_fallenzodiac",
-    "name": "종언성단 추락성좌 사냥터",
+    "name": "라그나벨 성단 추락성좌 사냥터",
     "mapColor": "#493d49",
     "zoneType": "hostile",
     "x": 2840, "y": -3795, "z": -3010,

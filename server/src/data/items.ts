@@ -470,6 +470,50 @@ defineItem({
     },
 });
 
+// TODO: 낚시 보물 전용 물약 아트 제작 시 현재 영약 fallback 원본을 교체한다.
+for (const elixir of [
+    {
+        id: 'angler_insight_draught', name: '낚시꾼의 통찰 물약',
+        description: '낚시 보물에서 발견되는 묽은 통찰 물약. 10분 동안 획득 경험치가 10% 증가한다.',
+        level: 2, duration: 600,
+    },
+    {
+        id: 'deepwater_insight_elixir', name: '심층 통찰 영약',
+        description: '깊은 낚시터의 보물에서 발견되는 영약. 15분 동안 획득 경험치가 20% 증가한다.',
+        level: 4, duration: 900,
+    },
+    {
+        id: 'starcurrent_insight_elixir', name: '성류 통찰 영약',
+        description: '별의 조류가 담긴 희귀 영약. 20분 동안 획득 경험치가 30% 증가한다.',
+        level: 6, duration: 1_200,
+    },
+] as const) {
+    defineItem({
+        id: elixir.id,
+        name: elixir.name,
+        description: elixir.description,
+        image: `items/${elixir.id}`,
+        category: '경험치 물약',
+        weight: 0.35,
+        stackable: true,
+        maxStack: MAX_STACKABLE_ITEM_COUNT,
+        baseMetadata: {
+            [ItemMetadataKeys.STATUS_EFFECT]: {
+                id: 'experience_amplification',
+                level: elixir.level,
+                duration: elixir.duration,
+            },
+            thirst: 3,
+        },
+        onUse: 'apply_status_effect',
+        equipSlot: null,
+        modifiers: null,
+        baseDurability: null,
+        tags: [GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER],
+        balance: { role: ItemBalanceRole.BUFF },
+    });
+}
+
 defineItem({
     id: 'traveler_bread',
     name: '여행자 빵',
@@ -1987,7 +2031,7 @@ for (const book of [
 ] as const) defineItem({
     id: book.id,
     name: book.name,
-    description: `역설기계고의 전투 연산이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
+    description: `카이로스 공방도시의 전투 연산이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
     image: `items/${book.id}`, category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
     modifiers: null, baseDurability: null,
@@ -2026,7 +2070,7 @@ for (const material of [
     },
     {
         id: 'sovereign_seal_fragment', name: '재왕 인장 파편', image: 'items/sovereign_seal_fragment', weight: 0.2,
-        description: '잿왕성의 명령을 각인하던 인장이 전투 중 부서져 남은 조각.',
+        description: '카르모르 성의 명령을 각인하던 인장이 전투 중 부서져 남은 조각.',
         tags: [GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_FIRE, GameTags.PROPERTY_METAL],
     },
     {
@@ -2189,7 +2233,7 @@ for (const book of [
 ] as const) defineItem({
     id: book.id,
     name: book.name,
-    description: `잿빛성흔 심연의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
+    description: `아셴바흐 심연의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
     image: `items/${book.id}`, category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
     modifiers: null, baseDurability: null,
@@ -2838,6 +2882,68 @@ defineItem({
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_BAIT, GameTags.PROPERTY_NATURAL],
 });
 
+// TODO: 하위 구간 희귀 광물 전용 아트 제작 시 현재 광석·합금 fallback 원본을 교체한다.
+for (const mineral of [
+    {
+        rawId: 'sun_ore_nodule', rawName: '태양광핵', refinedId: 'sunsteel', refinedName: '태양강',
+        description: '유리모래맥 깊은 곳에서 햇빛을 금속처럼 굳힌 광물',
+        tags: [GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
+    },
+    {
+        rawId: 'moonfrost_ore', rawName: '월빙광', refinedId: 'moonfrost_silver', refinedName: '월빙은',
+        description: '상고 수정맥에서 달빛과 냉기가 은빛 층으로 겹쳐진 광물',
+        tags: [GameTags.PROPERTY_METAL, GameTags.PROPERTY_ICE],
+    },
+    {
+        rawId: 'clockwork_cobalt_ore', rawName: '시계청광', refinedId: 'clockwork_cobalt', refinedName: '시계청강',
+        description: '시간강 광맥의 일정한 진동을 푸른 금속 결정으로 축적한 광물',
+        tags: [GameTags.PROPERTY_METAL, GameTags.PROPERTY_ELECTRIC],
+    },
+    {
+        rawId: 'tideglass_ore', rawName: '심조광', refinedId: 'tideglass_alloy', refinedName: '조류유리합금',
+        description: '침은 광맥에서 심해 조류와 마력이 유리질 금속으로 응축된 광물',
+        tags: [GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
+    },
+    {
+        rawId: 'endstar_adamant_ore', rawName: '종성금강광', refinedId: 'endstar_adamant', refinedName: '종성금강',
+        description: '소멸금 성좌맥에서 마지막 빛과 어둠이 함께 굳은 금강질 광물',
+        tags: [GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+    },
+] as const) {
+    defineItem({
+        id: mineral.rawId,
+        name: mineral.rawName,
+        description: `${mineral.description}의 원광. 마력 제련으로 단조 소재를 얻을 수 있다.`,
+        weight: 0.7,
+        image: `items/${mineral.rawId}`,
+        category: '광물',
+        stackable: true,
+        maxStack: MAX_STACKABLE_ITEM_COUNT,
+        baseMetadata: null,
+        onUse: null,
+        equipSlot: null,
+        modifiers: null,
+        baseDurability: null,
+        tags: [GameTags.RESOURCE_ORE, ...mineral.tags],
+    });
+    defineItem({
+        id: mineral.refinedId,
+        name: mineral.refinedName,
+        description: `${mineral.description}을 정제한 단계별 희귀 단조 소재.`,
+        weight: 0.55,
+        image: `items/${mineral.refinedId}`,
+        category: '제련 재료',
+        stackable: true,
+        maxStack: MAX_STACKABLE_ITEM_COUNT,
+        baseMetadata: null,
+        onUse: null,
+        equipSlot: null,
+        modifiers: null,
+        baseDurability: null,
+        tags: [...mineral.tags],
+    });
+}
+
 for (const fish of getFishCatalog()) {
     defineItem({
         id: fish.id,
@@ -2863,13 +2969,38 @@ for (const fish of getFishCatalog()) {
 
 for (const dish of [
     {
+        id: 'oasis_sunray_skewer', name: '햇살가오리 꼬치', image: 'items/oasis_sunray',
+        description: '오아시스 햇살가오리를 향신료와 함께 구워 초중반 몸놀림을 가볍게 하는 꼬치.',
+        effect: { id: 'swiftness', level: 7, duration: 120 },
+    },
+    {
+        id: 'kelpmoon_chowder', name: '청해초 달대구 차우더', image: 'items/kelpmoon_cod',
+        description: '청해초와 달대구를 푹 끓여 전투 후 생명력 회복을 돕는 해안식 수프.',
+        effect: { id: 'regeneration', level: 10, duration: 135 },
+    },
+    {
+        id: 'gearscale_hotpot', name: '톱니비늘 전류전골', image: 'items/gearscale_carp',
+        description: '톱니비늘 잉어와 중계전류 장어를 조리해 정신의 흐름을 일정하게 만드는 전골.',
+        effect: { id: 'mentality_regeneration', level: 13, duration: 150 },
+    },
+    {
+        id: 'eclipse_sailfish_steak', name: '월식 돛새치 스테이크', image: 'items/eclipse_sailfish',
+        description: '월식 돛새치를 두껍게 구워 심해의 마력을 끌어내는 고급 스테이크.',
+        effect: { id: 'magic_enhancement', level: 16, duration: 165 },
+    },
+    {
+        id: 'lastlight_oarfish_banquet', name: '마지막빛 산갈치 만찬', image: 'items/lastlight_oarfish',
+        description: '라그나벨 성단의 두 전용 어종을 함께 조리해 육체의 힘을 끌어올리는 만찬.',
+        effect: { id: 'strength_enhancement', level: 17, duration: 180 },
+    },
+    {
         id: 'abyss_glass_sashimi', name: '심연유리 회접시', image: 'items/glassfin_tuna',
         description: '유리날개 참치를 얇게 저며 수압에 버티는 회복력을 끌어낸 고급 요리.',
         effect: { id: 'regeneration', level: 20, duration: 180 },
     },
     {
         id: 'dream_memory_stew', name: '기억 만타 몽환탕', image: 'items/memory_manta',
-        description: '기억 만타를 천천히 우려 정신의 흐름을 맑게 하는 몽각서고식 탕.',
+        description: '기억 만타를 천천히 우려 정신의 흐름을 맑게 하는 미르엔 꿈서고식 탕.',
         effect: { id: 'mentality_regeneration', level: 22, duration: 180 },
     },
     {
@@ -2879,7 +3010,7 @@ for (const dish of [
     },
     {
         id: 'prayer_koi_clear_soup', name: '기도잉어 맑은탕', image: 'items/prayer_koi',
-        description: '성수의 향을 살려 감각과 움직임을 가볍게 만드는 무언신림식 맑은탕.',
+        description: '성수의 향을 살려 감각과 움직임을 가볍게 만드는 아오이 고요숲식 맑은탕.',
         effect: { id: 'swiftness', level: 18, duration: 180 },
     },
     {
@@ -2913,7 +3044,7 @@ for (const dish of [
 for (const material of [
     {
         id: 'nullsilver', name: '무광은', image: 'items/nullsilver', weight: 0.72,
-        description: '빛을 반사하지 않고 마력의 흔적만 희미하게 되돌려 보내는 공허왕관의 은빛 합금.',
+        description: '빛을 반사하지 않고 마력의 흔적만 희미하게 되돌려 보내는 벨카인의 은빛 합금.',
         tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
     },
     {
@@ -2942,7 +3073,7 @@ for (const material of [
     },
     {
         id: 'regent_insignia', name: '섭정 인장', image: 'items/regent_insignia', weight: 0.22,
-        description: '공허왕관의 명령 체계를 증명하던 금속 인장 조각. 아직도 희미한 복종의 마력이 남아 있다.',
+        description: '벨카인의 명령 체계를 증명하던 금속 인장 조각. 아직도 희미한 복종의 마력이 남아 있다.',
         tags: [GameTags.MATERIAL_VOIDCROWN, GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK],
     },
 ] as const) defineItem({
@@ -3076,7 +3207,7 @@ for (const book of [
 ] as const) defineItem({
     id: book.id,
     name: book.name,
-    description: `공허왕관 성채의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
+    description: `벨카인 요새의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
     image: `items/${book.id}`, category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
     modifiers: null, baseDurability: null,
@@ -3116,7 +3247,7 @@ for (const material of [
     },
     {
         id: 'tide_sigil', name: '조류인장', image: 'items/tide_sigil', weight: 0.25,
-        description: '백야성소의 수문과 조류를 통제하던 의식용 금속 인장.',
+        description: '에일린 대성당의 수문과 조류를 통제하던 의식용 금속 인장.',
         tags: [GameTags.MATERIAL_ECLIPSE_TRENCH, GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
     },
 ] as const) defineItem({
@@ -3250,7 +3381,7 @@ for (const book of [
 ] as const) defineItem({
     id: book.id,
     name: book.name,
-    description: `월식해구와 백야성소의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
+    description: `루나리스 해구와 에일린 대성당의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
     image: `items/${book.id}`, category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
     modifiers: null, baseDurability: null,
@@ -3280,12 +3411,12 @@ for (const material of [
     },
     {
         id: 'heart_seed', name: '심장씨앗', image: 'items/heart_seed', weight: 0.24,
-        description: '태초심장의 박동 하나를 씨앗껍질 안에 가둔 희귀한 생명 결정.',
+        description: '에오나의 심장의 박동 하나를 씨앗껍질 안에 가둔 희귀한 생명 결정.',
         tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_HOLY],
     },
     {
         id: 'rootbone_iron', name: '근골철', image: 'items/rootbone_iron', weight: 0.86,
-        description: '오래된 뿌리뼈와 금속 광맥이 한 덩어리로 굳은 역근수해의 합금.',
+        description: '오래된 뿌리뼈와 금속 광맥이 한 덩어리로 굳은 카미하라 숲의 합금.',
         tags: [GameTags.MATERIAL_WORLDROOT, GameTags.PROPERTY_METAL, GameTags.PROPERTY_EARTH],
     },
 ] as const) defineItem({
@@ -3420,7 +3551,7 @@ for (const book of [
 ] as const) defineItem({
     id: book.id,
     name: book.name,
-    description: `역근수해와 태초심장의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
+    description: `카미하라 숲과 에오나의 심장의 전투 의식이 기록된 전승서. 사용하면 스킬 [ ${book.name.replace(' 전승서', '')} ] 을(를) 획득합니다.`,
     image: `items/${book.id}`, category: '스킬북', weight: 0.3, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { skillDataId: book.skillDataId }, onUse: 'learn_skill', equipSlot: null,
     modifiers: null, baseDurability: null,
@@ -3430,7 +3561,7 @@ for (const book of [
 for (const material of [
     { id: 'nebula_glass', name: '성운유리', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_LIGHT, image: 'items/nebula_glass', weight: 0.34, description: '별빛과 먼지가 무중력 속에서 겹쳐 굳은 반투명 결정.' },
     { id: 'comet_iron', name: '혜철', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_METAL, image: 'items/comet_iron', weight: 0.82, description: '긴 공전 끝에 식은 혜성핵에서 벗겨낸 푸른 합금.' },
-    { id: 'gravity_core', name: '중력핵', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_DARK, image: 'items/gravity_core', weight: 0.55, description: '주변 질량을 미세하게 당기는 성운회랑의 응축핵.' },
+    { id: 'gravity_core', name: '중력핵', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_DARK, image: 'items/gravity_core', weight: 0.55, description: '주변 질량을 미세하게 당기는 아스트라 회랑의 응축핵.' },
     { id: 'star_silk', name: '성사', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_LIGHT, image: 'items/star_silk', weight: 0.12, description: '별빛 누에가 진공 속에 남긴 질기고 가벼운 실.' },
     { id: 'orbit_fragment', name: '궤도편', region: GameTags.MATERIAL_NEBULA_CORRIDOR, property: GameTags.PROPERTY_ELECTRIC, image: 'items/orbit_fragment', weight: 0.24, description: '무너진 천체 궤도의 방향성을 간직한 작은 파편.' },
     { id: 'chronofrost_ice', name: '시빙정', region: GameTags.MATERIAL_CHRONOFROST, property: GameTags.PROPERTY_ICE, image: 'items/chronofrost_ice', weight: 0.38, description: '얼어붙은 한 순간이 결정 내부에서 끝없이 반복되는 얼음.' },
@@ -3884,7 +4015,7 @@ for (const bag of [
     },
     {
         id: 'endstar_horizon_pack', name: '최후지평 차원배낭', capacity: 960, weight: 2.8,
-        description: '지평선 너머의 접힌 공간에 전리품을 차곡차곡 보존하는 종언성단 배낭.',
+        description: '지평선 너머의 접힌 공간에 전리품을 차곡차곡 보존하는 라그나벨 성단 배낭.',
     },
     {
         id: 'foxtrail_pouch', name: '여우꼬리 허리주머니', capacity: 40, weight: 0.4,

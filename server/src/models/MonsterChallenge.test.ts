@@ -44,6 +44,8 @@ test('보스 challengePattern은 현재 위협 대상에게 실제 미니게임 
     assert.equal(getMonsterData('crystal_vein_overlord')?.challengePattern?.handler, 'crystal:cave-in');
     assert.equal(hasMonsterChallengePattern('crystal:cave-in'), true);
 
+    // 첫 조우 3초 동안은 보스 AI와 challenge timer도 멈춘다.
+    monster.update(3.1);
     monster.update(8.1);
 
     assert.equal(monster.isChallengePatternActive, true);

@@ -1,5 +1,12 @@
 import { AttributeType } from '../models/Attribute.js';
-import { FishRarity, rollFishAtLocation, rollFishingExp, rollFishingWaitSeconds, type FishData } from '../models/Fishing.js';
+import {
+    FishRarity,
+    rollFishAtLocation,
+    rollFishingExp,
+    rollFishingTreasure,
+    rollFishingWaitSeconds,
+    type FishData,
+} from '../models/Fishing.js';
 import { getItemData } from '../models/Item.js';
 import { getLocation } from '../models/Location.js';
 import type Player from '../models/Player.js';
@@ -64,8 +71,21 @@ function finishFishingReward(player: Player, fish: FishData): FishingRewardResul
         placement = '인벤토리가 무거워 발밑에 떨어졌습니다.';
     }
     const levelText = levels.length > 0 ? ` Lv.${levels.at(-1)} 달성!` : '';
+    const treasure = rollFishingTreasure(
+        player.locationId,
+        player.attribute.get(AttributeType.LUCK),
+    );
+    const treasureItem = treasure ? getItemData(treasure.itemDataId) : undefined;
+    const treasureText = treasure && treasureItem
+        ? (() => {
+            const destination = player.receiveLoot(treasure.itemDataId, treasure.count);
+            if (destination === 'failed') return '';
+            const destinationText = destination === 'ground' ? ' 발밑에 떨어졌습니다.' : '';
+            return `\n🎁 낚시 보물: ${treasureItem.name} ×${treasure.count}!${destinationText}`;
+        })()
+        : '';
     return {
-        message: `[${rarity.label}] ${itemData.name}을(를) 낚았습니다! 경험치 +${exp}.${levelText} ${placement}`,
+        message: `[${rarity.label}] ${itemData.name}을(를) 낚았습니다! 경험치 +${exp}.${levelText} ${placement}${treasureText}`,
         itemDataId: fish.itemDataId,
         exp,
     };

@@ -39,10 +39,28 @@ export interface FishData {
 
 const fishRegistry = new Map<string, FishData>();
 const fishingTableRegistry = new Map<string, readonly FishingTableEntry[]>();
+const fishingTreasureTableRegistry = new Map<string, FishingTreasureTable>();
 
 export interface FishingTableEntry {
     readonly fishId: string
     readonly weight: number
+}
+
+export interface FishingTreasureEntry {
+    readonly itemDataId: string
+    readonly weight: number
+    readonly minCount?: number
+    readonly maxCount?: number
+}
+
+export interface FishingTreasureTable {
+    readonly chance: number
+    readonly entries: readonly FishingTreasureEntry[]
+}
+
+export interface FishingTreasureReward {
+    readonly itemDataId: string
+    readonly count: number
 }
 
 export function defineFish(data: FishData): FishData {
@@ -68,6 +86,48 @@ export function defineFishingTable(locationId: string, entries: readonly Fishing
 
 export function getFishingTable(locationId: string): readonly FishingTableEntry[] | undefined {
     return fishingTableRegistry.get(locationId);
+}
+
+/** 물고기 포획 성공 뒤 별도로 추첨할 장소별 희귀 보물 표를 등록한다. */
+export function defineFishingTreasureTable(
+    locationId: string,
+    chance: number,
+    entries: readonly FishingTreasureEntry[],
+): void {
+    if (fishingTreasureTableRegistry.has(locationId)) throw new Error(`중복 낚시 보물 테이블: ${locationId}`);
+    if (!Number.isFinite(chance) || chance <= 0 || chance > 1
+        || entries.length === 0
+        || entries.some(entry => entry.weight <= 0 || !Number.isFinite(entry.weight))) {
+        throw new Error(`잘못된 낚시 보물 테이블: ${locationId}`);
+    }
+    fishingTreasureTableRegistry.set(locationId, Object.freeze({
+        chance,
+        entries: Object.freeze(entries.map(entry => Object.freeze({ ...entry }))),
+    }));
+}
+
+export function getFishingTreasureTable(locationId: string): FishingTreasureTable | undefined {
+    return fishingTreasureTableRegistry.get(locationId);
+}
+
+/** 첫 난수로 희귀 보물 출현 여부, 둘째 난수로 보물 종류, 셋째 난수로 수량을 결정한다. */
+export function rollFishingTreasure(
+    locationId: string,
+    luck: number,
+    random: () => number = Math.random,
+): FishingTreasureReward | undefined {
+    const table = getFishingTreasureTable(locationId);
+    const safeLuck = Number.isFinite(luck) ? Math.max(0, Math.min(100, luck)) : 0;
+    const treasureChance = Math.min(1, table?.chance ?? 0) * (1 + safeLuck * 0.005);
+    if (!table || Math.max(0, Math.min(1, random())) >= treasureChance) return undefined;
+    const total = table.entries.reduce((sum, entry) => sum + entry.weight, 0);
+    let cursor = Math.max(0, Math.min(0.999999, random())) * total;
+    const selected = table.entries.find(entry => (cursor -= entry.weight) < 0) ?? table.entries.at(-1);
+    if (!selected) return undefined;
+    const minCount = Math.max(1, Math.floor(selected.minCount ?? 1));
+    const maxCount = Math.max(minCount, Math.floor(selected.maxCount ?? minCount));
+    const count = minCount + Math.floor(Math.max(0, Math.min(0.999999, random())) * (maxCount - minCount + 1));
+    return { itemDataId: selected.itemDataId, count };
 }
 
 /** 장소 전용 풀이 있으면 등급 확률과 장소 가중치를 합성하고, 없으면 전역 등급 풀을 사용한다. */

@@ -127,6 +127,31 @@ defineCraftingRecipe({
 
 for (const recipe of [
     {
+        id: 'fishing:oasis_sunray_skewer', result: 'oasis_sunray_skewer', time: 4,
+        description: '신기루 송사리와 햇살가오리를 구워 몸놀림을 가볍게 하는 오아시스 꼬치를 만듭니다.',
+        ingredients: [['mirage_killifish', 2], ['oasis_sunray', 1], ['coal', 1]],
+    },
+    {
+        id: 'fishing:kelpmoon_chowder', result: 'kelpmoon_chowder', time: 5,
+        description: '청해초 달대구와 안개진주 문어를 맑은 물에 끓여 회복 차우더를 만듭니다.',
+        ingredients: [['kelpmoon_cod', 2], ['fogpearl_octopus', 1], ['fresh_water', 1]],
+    },
+    {
+        id: 'fishing:gearscale_hotpot', result: 'gearscale_hotpot', time: 6,
+        description: '톱니비늘 잉어와 중계전류 장어를 함께 끓여 정신력 재생을 돕는 전골을 만듭니다.',
+        ingredients: [['gearscale_carp', 2], ['relay_eel', 1], ['fresh_water', 1]],
+    },
+    {
+        id: 'fishing:eclipse_sailfish_steak', result: 'eclipse_sailfish_steak', time: 7,
+        description: '월염수 대구와 월식 돛새치를 구워 마력을 높이는 심해 스테이크를 만듭니다.',
+        ingredients: [['moonbrine_cod', 2], ['eclipse_sailfish', 1], ['coal', 1]],
+    },
+    {
+        id: 'fishing:lastlight_oarfish_banquet', result: 'lastlight_oarfish_banquet', time: 8,
+        description: '잿별 테트라와 마지막빛 산갈치를 조리해 힘을 높이는 라그나벨 성단 만찬을 만듭니다.',
+        ingredients: [['ashstar_tetra', 2], ['lastlight_oarfish', 1]],
+    },
+    {
         id: 'fishing:abyss_glass_sashimi', result: 'abyss_glass_sashimi', time: 5,
         description: '압해 등불어와 유리날개 참치를 손질해 장시간 회복력을 높이는 회접시를 만듭니다.',
         ingredients: [['pressure_lanternfish', 2], ['glassfin_tuna', 1]],
@@ -148,7 +173,7 @@ for (const recipe of [
     },
     {
         id: 'fishing:genesis_dragonfish_platter', result: 'genesis_dragonfish_platter', time: 9,
-        description: '기원경계의 세 희귀 어종을 함께 조리해 마력을 크게 높이는 만찬을 만듭니다.',
+        description: '아르케 끝자락의 세 희귀 어종을 함께 조리해 마력을 크게 높이는 만찬을 만듭니다.',
         ingredients: [['firstlight_coelacanth', 1], ['endshadow_moonfish', 1], ['genesis_dragonfish', 1]],
     },
 ] as const) {

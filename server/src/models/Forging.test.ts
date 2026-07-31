@@ -154,6 +154,28 @@ test('마나 수정 단조 재료는 원석·정제 명칭과 공백 없는 입�
     assert.equal(ForgeMaterial.fromInput('정제마나수정'), ForgeMaterial.MANA_CRYSTAL);
 });
 
+test('Lv.500 이전 희귀 광물은 단계별 제련 소재와 단조 특성을 제공한다', () => {
+    const tiers = [
+        [ForgeMaterial.SUNSTEEL, 'sun_ore_nodule'],
+        [ForgeMaterial.MOONFROST_SILVER, 'moonfrost_ore'],
+        [ForgeMaterial.CLOCKWORK_COBALT, 'clockwork_cobalt_ore'],
+        [ForgeMaterial.TIDEGLASS_ALLOY, 'tideglass_ore'],
+        [ForgeMaterial.ENDSTAR_ADAMANT, 'endstar_adamant_ore'],
+    ] as const;
+    for (const [material, rawItemDataId] of tiers) {
+        assert.equal(material.rawItemDataId, rawItemDataId);
+        assert.equal(ForgeMaterial.fromInput(material.label), material);
+        const forged = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SWORD, material, {
+            accuracy: 0.8,
+            random: () => 0,
+            creatorLevel: 300,
+            sensibility: 300,
+            forgingPrecision: 300,
+        }));
+        assert.ok((forged.modifiers?.length ?? 0) > 0, material.key);
+    }
+});
+
 test('야전 수리는 원 단조 소재를 우선하고 없으면 같은 속성 소재를 선택한다', () => {
     const item = Item.fromSnapshot(createForgedItemSnapshot(
         ForgeForm.SWORD,

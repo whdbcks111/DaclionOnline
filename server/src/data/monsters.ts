@@ -13,6 +13,7 @@ import {
     type MonsterStatWeightMap,
 } from '../models/MonsterStats.js';
 import type { AttributeRecord } from '../models/Attribute.js';
+import { createBossNarrative } from './bossNarratives.js';
 
 export type WorldMonsterData = Omit<
     MonsterData,
@@ -41,6 +42,8 @@ export function defineWorldMonster(data: WorldMonsterData): void {
         ?? inferMonsterStatProfile(authoredAttributes, data.attack?.damageType);
     const statRank = explicitRank
         ?? (data.tags.includes(GameTags.ENTITY_BOSS) ? MonsterRank.BOSS : MonsterRank.NORMAL);
+    const bossNarrative = data.bossNarrative
+        ?? (data.tags.includes(GameTags.ENTITY_BOSS) ? createBossNarrative(data.id, data.tags) : undefined);
     // 명시 프로필로 이전된 마스터만 계산값 전체를 사용한다. 나머지는 기존 전투력을
     // 바꾸지 않되 역할/체급 메타데이터를 등록해 구간별 이전이 가능하게 유지한다.
     const calculatedAttributes = calculateMonsterBaseAttributes({
@@ -56,6 +59,7 @@ export function defineWorldMonster(data: WorldMonsterData): void {
         statProfile,
         statRank,
         statWeights,
+        bossNarrative,
         ai: data.ai ?? (data.tags.includes(GameTags.ENTITY_SLIME) ? {
             intelligence: 5,
             disposition: MonsterAiDisposition.LAST_ATTACKER,
@@ -1328,7 +1332,7 @@ const paradoxClockworkMonsters: readonly WorldMonsterData[] = [
     },
     {
         id: 'paradox_architect', name: '역설설계자 오르도',
-        description: '역설기계고의 모든 인과 연산을 다시 쓰려는 최종 설계자. 세 역설 고정자가 남아 있는 동안 받는 피해가 75% 감소한다.', level: 235,
+        description: '카이로스 공방도시의 모든 인과 연산을 다시 쓰려는 최종 설계자. 세 역설 고정자가 남아 있는 동안 받는 피해가 75% 감소한다.', level: 235,
         baseAttribute: { maxLife: 480_000, atk: 1_010, magicForce: 1_085, def: 690, magicDef: 720, armorPen: 72, magicPen: 78, speed: 2.55, attackSpeed: 0.48, critRate: 0.2, critDmg: 2 },
         expReward: 235 * 20 * 8,
         drops: [
@@ -1406,7 +1410,7 @@ const ashenAbyssMonsters: WorldMonsterData[] = [
     },
     {
         id: 'three_maw_gatekeeper', name: '세 아귀 문지기',
-        description: '세 개의 목이 서로 다른 침입자를 기억하는 잿빛성흔 심연의 첫 관문 보스. 흑염포와 회피할 수 없는 물어뜯기를 번갈아 사용한다.', level: 248,
+        description: '세 개의 목이 서로 다른 침입자를 기억하는 아셴바흐 심연의 첫 관문 보스. 흑염포와 회피할 수 없는 물어뜯기를 번갈아 사용한다.', level: 248,
         baseAttribute: {
             maxLife: 585_000, atk: 1_090, magicForce: 1_105, def: 710, magicDef: 690,
             armorPen: 78, magicPen: 76, speed: 2.55, attackSpeed: 0.44, critRate: 0.2, critDmg: 2.05,
@@ -1435,7 +1439,7 @@ const ashenAbyssMonsters: WorldMonsterData[] = [
     },
     {
         id: 'cursebone_archer', name: '저주뼈 궁병',
-        description: '활시위를 놓는 순간 자신의 뼈를 화살촉으로 부러뜨리는 잿왕성의 불사 궁병.', level: 249,
+        description: '활시위를 놓는 순간 자신의 뼈를 화살촉으로 부러뜨리는 카르모르 성의 불사 궁병.', level: 249,
         baseAttribute: {
             maxLife: 70_200, atk: 1_035, def: 565, magicDef: 605, armorPen: 80,
             projectileAcceleration: 2.35, speed: 3.4, attackSpeed: 1.24, critRate: 0.22, critDmg: 2.05,
@@ -1450,7 +1454,7 @@ const ashenAbyssMonsters: WorldMonsterData[] = [
     },
     {
         id: 'blackflame_priest', name: '흑염 사제',
-        description: '불꽃의 빛을 버리고 열과 저주만 남기는 제례를 반복하는 잿왕성의 사제.', level: 252,
+        description: '불꽃의 빛을 버리고 열과 저주만 남기는 제례를 반복하는 카르모르 성의 사제.', level: 252,
         baseAttribute: {
             maxLife: 72_800, atk: 850, magicForce: 1_075, def: 535, magicDef: 715, magicPen: 84,
             speed: 2.65, attackSpeed: 0.96,
@@ -1480,7 +1484,7 @@ const ashenAbyssMonsters: WorldMonsterData[] = [
     },
     {
         id: 'night_iron_knight', name: '밤쇠 근위기사',
-        description: '갑옷의 빈 틈까지 검은 철판으로 봉한 채 치료와 보호 행동을 먼저 끊는 잿왕성의 근위병.', level: 258,
+        description: '갑옷의 빈 틈까지 검은 철판으로 봉한 채 치료와 보호 행동을 먼저 끊는 카르모르 성의 근위병.', level: 258,
         baseAttribute: {
             maxLife: 91_500, atk: 1_145, def: 805, magicDef: 690, armorPen: 86,
             speed: 2.25, attackSpeed: 0.72, critRate: 0.18, critDmg: 2,
@@ -1500,7 +1504,7 @@ const ashenAbyssMonsters: WorldMonsterData[] = [
     },
     {
         id: 'blackflame_general', name: '흑염대장 모르칸',
-        description: '흩어진 성군을 한 번의 진군 명령으로 다시 세우는 잿왕성 외성의 지휘관. 도발보다 치유와 제어 행위를 높게 평가한다.', level: 260,
+        description: '흩어진 성군을 한 번의 진군 명령으로 다시 세우는 카르모르 성 외성의 지휘관. 도발보다 치유와 제어 행위를 높게 평가한다.', level: 260,
         baseAttribute: {
             maxLife: 735_000, atk: 1_245, magicForce: 1_135, def: 825, magicDef: 755,
             armorPen: 92, magicPen: 80, speed: 2.8, attackSpeed: 0.5, critRate: 0.22, critDmg: 2.1,
@@ -1564,7 +1568,7 @@ const ashenAbyssMonsters: WorldMonsterData[] = [
     },
     {
         id: 'ashen_sovereign', name: '재왕 벨카르',
-        description: '무너진 왕국의 죽음과 흑염을 한 몸에 묶은 잿빛성흔 심연의 군주. 치유·방벽·제어를 읽어 가장 전투를 오래 끌 적부터 심판한다.', level: 275,
+        description: '무너진 왕국의 죽음과 흑염을 한 몸에 묶은 아셴바흐 심연의 군주. 치유·방벽·제어를 읽어 가장 전투를 오래 끌 적부터 심판한다.', level: 275,
         baseAttribute: {
             maxLife: 1_080_000, atk: 1_410, magicForce: 1_465, def: 940, magicDef: 965,
             armorPen: 112, magicPen: 116, speed: 2.7, attackSpeed: 0.46, critRate: 0.25, critDmg: 2.2,
@@ -1874,7 +1878,7 @@ const voidcrownMonsters: WorldMonsterData[] = [
     },
     {
         id: 'crownless_castellan', name: '무관성주 테오른',
-        description: '왕이 사라진 뒤에도 성벽을 자신의 몸처럼 다루는 공허왕관 외성주. 피해와 치유 위협을 읽되 정해진 공허창과 성벽 파단을 교대로 집행한다.', level: 290,
+        description: '왕이 사라진 뒤에도 성벽을 자신의 몸처럼 다루는 벨카인 외벽주. 피해와 치유 위협을 읽되 정해진 공허창과 성벽 파단을 교대로 집행한다.', level: 290,
         baseAttribute: {
             maxLife: 1_320_000, atk: 1_560, magicForce: 1_590, def: 1_070, magicDef: 1_040,
             armorPen: 126, magicPen: 128, speed: 2.4, attackSpeed: 0.44, critRate: 0.23, critDmg: 2.15,
@@ -1969,7 +1973,7 @@ const voidcrownMonsters: WorldMonsterData[] = [
     },
     {
         id: 'voidcrown_regent', name: '공허섭정 라시엘',
-        description: '왕이 없는 왕관에 스스로 법을 새긴 공허왕관의 지배자. 남은 왕관 기둥으로 피해를 흘리고 전투 기여를 계산해 치유자와 제어자를 우선 무효화한다.', level: 310,
+        description: '왕이 없는 왕관에 스스로 법을 새긴 벨카인의 지배자. 남은 왕관 기둥으로 피해를 흘리고 전투 기여를 계산해 치유자와 제어자를 우선 무효화한다.', level: 310,
         baseAttribute: {
             maxLife: 1_920_000, atk: 1_720, magicForce: 1_830, def: 1_180, magicDef: 1_210,
             armorPen: 145, magicPen: 152, speed: 2.9, attackSpeed: 0.43, critRate: 0.26, critDmg: 2.3,
@@ -2036,7 +2040,7 @@ const eclipseTrenchMonsters: WorldMonsterData[] = [
     },
     {
         id: 'drowned_lancer', name: '침은 창병',
-        description: '백야성소로 향하던 순례선을 지키다 해구에 가라앉은 창병. 높은 피해를 준 침입자를 조류인장으로 추적한다.', level: 319,
+        description: '에일린 대성당로 향하던 순례선을 지키다 해구에 가라앉은 창병. 높은 피해를 준 침입자를 조류인장으로 추적한다.', level: 319,
         baseAttribute: {
             maxLife: 196_000, atk: 1_880, def: 1_210, magicDef: 1_100, armorPen: 154,
             speed: 2.75, attackSpeed: 0.84, critRate: 0.24, critDmg: 2.28,
@@ -2076,7 +2080,7 @@ const eclipseTrenchMonsters: WorldMonsterData[] = [
     },
     {
         id: 'moon_tide_leviathan', name: '월조 리바이어던',
-        description: '월식해구의 두 조류가 합쳐지는 곳에서 자란 거대한 포식자. 해일과 수압 분쇄를 번갈아 사용해 느린 대상부터 삼킨다.', level: 325,
+        description: '루나리스 해구의 두 조류가 합쳐지는 곳에서 자란 거대한 포식자. 해일과 수압 분쇄를 번갈아 사용해 느린 대상부터 삼킨다.', level: 325,
         baseAttribute: {
             maxLife: 2_260_000, atk: 2_040, magicForce: 2_110, def: 1_340, magicDef: 1_360,
             armorPen: 168, magicPen: 172, speed: 2.5, attackSpeed: 0.4, critRate: 0.25, critDmg: 2.35,
@@ -2140,7 +2144,7 @@ const eclipseTrenchMonsters: WorldMonsterData[] = [
     },
     {
         id: 'sunken_choir_guard', name: '침수성가 근위',
-        description: '성가의 박자에 맞춰 침은 갑주를 울리고 제어를 시도한 침입자에게 파동을 되돌리는 백야성소 근위.', level: 337,
+        description: '성가의 박자에 맞춰 침은 갑주를 울리고 제어를 시도한 침입자에게 파동을 되돌리는 에일린 대성당 근위.', level: 337,
         baseAttribute: {
             maxLife: 232_000, atk: 2_080, def: 1_420, magicDef: 1_310, armorPen: 176,
             speed: 2.7, attackSpeed: 0.72, critRate: 0.25, critDmg: 2.38,
@@ -2160,7 +2164,7 @@ const eclipseTrenchMonsters: WorldMonsterData[] = [
     },
     {
         id: 'twilight_oracle', name: '황혼 조류예언자',
-        description: '월식이 끝나는 순간을 계산해 다음 공격의 경로를 먼저 봉쇄하는 백야성소의 예언자.', level: 341,
+        description: '월식이 끝나는 순간을 계산해 다음 공격의 경로를 먼저 봉쇄하는 에일린 대성당의 예언자.', level: 341,
         baseAttribute: {
             maxLife: 224_000, atk: 1_660, magicForce: 2_260, def: 1_180, magicDef: 1_470, magicPen: 184,
             projectileAcceleration: 3.1, speed: 3.4, attackSpeed: 0.96, critRate: 0.27, critDmg: 2.4,
@@ -2241,7 +2245,7 @@ const worldrootMonsters: WorldMonsterData[] = [
     },
     {
         id: 'forgetting_spore_shaman', name: '망각포자 주술사',
-        description: '죽은 기억을 포자로 분해하며 파티의 치유 흐름을 가장 먼저 썩히는 역근수해의 주술사.', level: 354,
+        description: '죽은 기억을 포자로 분해하며 파티의 치유 흐름을 가장 먼저 썩히는 카미하라 숲의 주술사.', level: 354,
         baseAttribute: {
             maxLife: 250_000, atk: 1_840, magicForce: 2_520, def: 1_280, magicDef: 1_590, magicPen: 202,
             speed: 3.15, attackSpeed: 0.9,
@@ -2345,7 +2349,7 @@ const worldrootMonsters: WorldMonsterData[] = [
     },
     {
         id: 'canopy_seraph', name: '천개 세라프',
-        description: '역근수해 위의 빛을 여섯 잎 날개에 모아 회피 경로를 먼저 태우는 심장 성역의 수호 생명체.', level: 372,
+        description: '카미하라 숲 위의 빛을 여섯 잎 날개에 모아 회피 경로를 먼저 태우는 심장 성역의 수호 생명체.', level: 372,
         baseAttribute: {
             maxLife: 294_000, atk: 2_020, magicForce: 2_850, def: 1_480, magicDef: 1_790, magicPen: 232,
             projectileAcceleration: 3.35, speed: 4.2, attackSpeed: 1.02, critRate: 0.3, critDmg: 2.58,
@@ -2360,7 +2364,7 @@ const worldrootMonsters: WorldMonsterData[] = [
     },
     {
         id: 'heart_gardener', name: '심장정원사',
-        description: '태초심장의 가지를 다듬으며 치유·방벽·제어 기여도를 비교해 가장 오래 전투를 끌 대상을 가지치기하는 정원사.', level: 376,
+        description: '에오나의 심장의 가지를 다듬으며 치유·방벽·제어 기여도를 비교해 가장 오래 전투를 끌 대상을 가지치기하는 정원사.', level: 376,
         baseAttribute: {
             maxLife: 324_000, atk: 2_410, magicForce: 2_880, def: 1_670, magicDef: 1_820,
             armorPen: 220, magicPen: 236, speed: 2.9, attackSpeed: 0.72, critRate: 0.29, critDmg: 2.6,
@@ -2380,8 +2384,8 @@ const worldrootMonsters: WorldMonsterData[] = [
         tags: [GameTags.ENTITY_HUMANOID, GameTags.PROPERTY_NATURAL, GameTags.PROPERTY_HOLY, GameTags.PROPERTY_DARK],
     },
     {
-        id: 'primordial_heart_arbor', name: '태초심장 아르보르',
-        description: '세계수의 첫 박동과 마지막 망각을 동시에 품은 역근수해의 의지. 남은 심장씨앗으로 피해를 흘리고 파티 기여도를 계산해 심판 대상을 바꾼다.', level: 380,
+        id: 'primordial_heart_arbor', name: '에오나의 심장 아르보르',
+        description: '세계수의 첫 박동과 마지막 망각을 동시에 품은 카미하라 숲의 의지. 남은 심장씨앗으로 피해를 흘리고 파티 기여도를 계산해 심판 대상을 바꾼다.', level: 380,
         baseAttribute: {
             maxLife: 4_350_000, atk: 2_920, magicForce: 3_160, def: 1_940, magicDef: 2_020,
             armorPen: 238, magicPen: 252, speed: 3.25, attackSpeed: 0.4, critRate: 0.31, critDmg: 2.68,
@@ -2457,7 +2461,7 @@ const nebulaCorridorMonsters: WorldMonsterData[] = [
     },
     {
         id: 'meteor_warden', name: '낙성감시자 모르가',
-        description: '성운회랑의 유성 궤도를 감시하며 중력추와 유성편을 번갈아 떨어뜨리는 거대 파수자.', level: 400,
+        description: '아스트라 회랑의 유성 궤도를 감시하며 중력추와 유성편을 번갈아 떨어뜨리는 거대 파수자.', level: 400,
         statProfile: MonsterStatProfile.HYBRID, statRank: MonsterRank.BOSS,
         statWeights: { maxLife: 0.9, atk: 1.05, magicForce: 1.04, def: 1.08 },
         expReward: 400 * 20 * 8,
@@ -2646,7 +2650,7 @@ const chronofrostMonsters: WorldMonsterData[] = [
     },
     {
         id: 'zero_hour_queen', name: '영시여왕 크로니아',
-        description: '어제와 내일을 얼린 왕좌에서 파티의 시간을 분리해 한 사람씩 멈추는 동결시계원의 군주.', level: 460,
+        description: '어제와 내일을 얼린 왕좌에서 파티의 시간을 분리해 한 사람씩 멈추는 에버프로스트 정원의 군주.', level: 460,
         statProfile: MonsterStatProfile.CASTER, statRank: MonsterRank.BOSS,
         statWeights: { maxLife: 1.04, magicForce: 1.15, magicDef: 1.14 },
         expReward: 460 * 20 * 10,
@@ -2778,7 +2782,7 @@ const endstarMonsters: WorldMonsterData[] = [
     },
     {
         id: 'last_constellation', name: '최후성좌 라스트라',
-        description: '창세와 소멸을 하나의 별자리로 묶은 종언성단의 의지. 파티의 가장 큰 기여를 읽고 세 가지 종말을 무작위로 선택한다.', level: 500,
+        description: '창세와 소멸을 하나의 별자리로 묶은 라그나벨 성단의 의지. 파티의 가장 큰 기여를 읽고 세 가지 종말을 무작위로 선택한다.', level: 500,
         statProfile: MonsterStatProfile.HYBRID, statRank: MonsterRank.BOSS,
         statWeights: { maxLife: 1.08, atk: 1.12, magicForce: 1.18, def: 1.12, magicDef: 1.15 },
         expReward: 500 * 20 * 12,

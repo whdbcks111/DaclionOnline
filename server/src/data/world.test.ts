@@ -403,6 +403,9 @@ test('성장 구간 보스는 Lv.500까지 30레벨, 이후 50레벨 간격이�
     }
     for (const boss of bosses) {
         assert.ok(boss.expReward >= boss.level * 20 * 5, `${boss.name} 보스 경험치`);
+        assert.equal(boss.bossNarrative?.introDuration, 3, `${boss.name} 도입 무적`);
+        assert.deepEqual(boss.bossNarrative?.phases.map(phase => phase.lifeRatio), [0.7, 0.35],
+            `${boss.name} 체력 구간 대사`);
         const placements = locations.flatMap(location => location.objects
             .filter(object => object.type === 'monster' && object.dataId === boss.id)
             .map(object => ({ location, object })));
@@ -711,7 +714,7 @@ test('안개파도 해안과 침몰왕도는 분기 항로·두 지휘자·조�
     assert.equal(NPC.getNpc('misttide_navigator')?.name, '염등 항로지기 소마');
 });
 
-test('역설기계고는 분기 조립선·인과 퍼즐·시제품고·고정자 보스 기믹과 지역 경제를 연결한다', () => {
+test('카이로스 공방도시는 분기 조립선·인과 퍼즐·시제품고·고정자 보스 기믹과 지역 경제를 연결한다', () => {
     const region = locations.filter(location => location.id.startsWith('paradox_'));
     const colossus = getMonsterData('chronosteel_colossus');
     const architect = getMonsterData('paradox_architect');
@@ -772,7 +775,7 @@ test('역설기계고는 분기 조립선·인과 퍼즐·시제품고·고정�
     assert.equal(runtimeArchitect?.getDamageReceivedModifier(), 1);
 });
 
-test('잿빛성흔 심연은 다중 분기·세 보스·봉인 퍼즐·밤쇠 경제를 잿왕성까지 연결한다', () => {
+test('아셴바흐 심연은 다중 분기·세 보스·봉인 퍼즐·밤쇠 경제를 카르모르 성까지 연결한다', () => {
     const region = locations.filter(location => location.id.startsWith('ashen_'));
     const gatekeeper = getMonsterData('three_maw_gatekeeper');
     const general = getMonsterData('blackflame_general');
@@ -834,7 +837,7 @@ test('잿빛성흔 심연은 다중 분기·세 보스·봉인 퍼즐·밤쇠 �
     assert.equal(NPC.getNpc('ashen_wayfinder')?.name, '회색불길 길잡이 타렌');
 });
 
-test('공허왕관 성채는 27개 분기 층·서약 퍼즐·기둥 보호 보스·지역 경제를 연결한다', () => {
+test('벨카인 요새는 27개 분기 층·서약 퍼즐·기둥 보호 보스·지역 경제를 연결한다', () => {
     const region = locations.filter(location => location.id.startsWith('voidcrown_'));
     const castellan = getMonsterData('crownless_castellan');
     const regent = getMonsterData('voidcrown_regent');
@@ -897,7 +900,7 @@ test('공허왕관 성채는 27개 분기 층·서약 퍼즐·기둥 보호 보�
     assert.equal(runtimeRegent?.getDamageReceivedModifier(), 1);
 });
 
-test('월식해구는 24개 분기 수로·조류제단·거울 보호 보스·지역 경제를 연결한다', () => {
+test('루나리스 해구는 24개 분기 수로·조류제단·거울 보호 보스·지역 경제를 연결한다', () => {
     const region = locations.filter(location => location.tags.includes(GameTags.LOCATION_ECLIPSE_TRENCH));
     const leviathan = getMonsterData('moon_tide_leviathan');
     const hierophant = getMonsterData('white_night_hierophant');
@@ -959,7 +962,7 @@ test('월식해구는 24개 분기 수로·조류제단·거울 보호 보스·�
     assert.equal(runtimeBoss?.getDamageReceivedModifier(), 1);
 });
 
-test('역근수해는 26개 분기 뿌리·기억 제단·씨앗 보호 보스·최종 지역 경제를 연결한다', () => {
+test('카미하라 숲은 26개 분기 뿌리·기억 제단·씨앗 보호 보스·최종 지역 경제를 연결한다', () => {
     const region = locations.filter(location => location.tags.includes(GameTags.LOCATION_WORLDROOT));
     const devourer = getMonsterData('inverse_root_devourer');
     const heart = getMonsterData('primordial_heart_arbor');
@@ -1199,6 +1202,33 @@ test('고레벨 광산은 전용 희귀 광물 두 종을 낮은 확률로 제�
             4,
             mine.id,
         );
+    }
+});
+
+test('Lv.500 이전 광맥과 낚시터는 성장 구간별 희귀 재료·어종 동선을 제공한다', () => {
+    const miningTiers = [
+        ['glass_sand_vein', 'sun_ore_nodule', 'sunsteel'],
+        ['rime_crystal_vein', 'moonfrost_ore', 'moonfrost_silver'],
+        ['chronosteel_vein', 'clockwork_cobalt_ore', 'clockwork_cobalt'],
+        ['drowned_silver_vein', 'tideglass_ore', 'tideglass_alloy'],
+        ['entropy_metal_vein', 'endstar_adamant_ore', 'endstar_adamant'],
+    ] as const;
+    for (const [resourceId, rawItemDataId, refinedItemDataId] of miningTiers) {
+        const vein = getResourceData(resourceId);
+        assert.equal(vein?.drops.find(drop => drop.itemDataId === rawItemDataId)?.weight, 3, resourceId);
+        assert.ok(getItemData(rawItemDataId), rawItemDataId);
+        assert.ok(getItemData(refinedItemDataId), refinedItemDataId);
+        assert.equal(vein?.drops.reduce((sum, drop) => sum + drop.weight, 0), 100, resourceId);
+    }
+
+    for (const locationId of [
+        'glassdune_hidden_oasis',
+        'misttide_kelp_inlet',
+        'paradox_scrap_reservoir',
+        'eclipse_luminous_reef',
+        'endstar_silent_sun',
+    ]) {
+        assert.ok(getLocation(locationId)?.hasTag(GameTags.LOCATION_FISHING), locationId);
     }
 });
 

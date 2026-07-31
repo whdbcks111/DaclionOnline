@@ -10,12 +10,12 @@
 - `hudPresets.ts`: 이름 있는 HUD snapshot의 버전·허용 좌표/크기·최대 프리셋/퀵슬롯 수와 서버·클라이언트 공용 정규화 API. `types.ts`의 프리셋 소켓 이벤트가 이 계약을 사용한다.
 - `chat.ts`: 채널·근처·파티·광고·권한 10 공지의 `ChatType` 표시 메타데이터와 광고 제한·귓속말 회색 token을 공유하고, 구조화 ChatNode를 답장용 최대 120자 한 줄로 요약하며 서버 메시지 ID 형식을 검증한다.
 - `commandInput.ts`: 슬래시 명령과 슬래시 없는 별칭 입력을 같은 방식으로 첫 토큰/나머지 인자로 분리하는 공용 parser.
-- `patchNotes.ts`: 작업 묶음별 SemVer 사용자 공개 변경 기록, 배포일, `[+] 기능/콘텐츠`, `[/] 수정`, `[-] 삭제` 클래스형 분류와 버전 역순 불변 snapshot 조회 API. 튜토리얼 완성까지는 `0.x.x` 베타로 구분하고, `v` 접두사를 정규화하며 서버 명령과 클라이언트 화면이 같은 데이터를 사용한다. 현재 v1.0.21은 고레벨 광산·낚시터, 희귀 광물·어종, 단조 성능/착용 제한과 상점·보물 아이템 조건을 안내한다.
+- `patchNotes.ts`: 작업 묶음별 SemVer 사용자 공개 변경 기록, 배포일, `[+] 기능/콘텐츠`, `[/] 수정`, `[-] 삭제` 클래스형 분류와 버전 역순 불변 snapshot 조회 API. 튜토리얼 완성까지는 `0.x.x` 베타로 구분하고, `v` 접두사를 정규화하며 서버 명령과 클라이언트 화면이 같은 데이터를 사용한다. 현재 v1.0.22는 단계별 낚시·희귀 광물, 보스 조우 연출, 광장 일일 의뢰와 후반 지역명 개편을 안내한다.
 - `minigames.ts`: 종류별 미니게임 세션, 준비·실시간 축·실시간 action·결과 확정 요청 DTO, 서버 validator 전용 trace snapshot과 20ms 축 입력 병합·2,048개 상한 API. 낚시 포획, 실제 패턴 label·보스별 단색 theme·난이도 1~10·성장형 연쇄 폭발·세 줄 연사·교차 레이저를 지원하는 위험 회피, 난이도별 정박/엇박/연속박자 생성·가장 가까운 note 우선 타격 판정·품질 보정을 서버와 클라이언트가 공유하는 단조 리듬 시뮬레이터를 함께 둔다.
 - `tags.ts`: `namespace:path` 검증, 액티브/패시브와 직업·원소 공유 쿨다운 계열, 무기·Entity·은신·투사체/탄약/도구/미끼/물고기/스킬북/가방, 제작 부품과 활시위/화살대 호환 소재, 분기형 `location:dungeon`을 포함한 지역·속성 공용 태그 ID와 raw Set을 숨기는 `TagCollection/TagReadable/TagQuery` API.
 - 은빛그물 숲 확장은 `location:forest` 권역과 `shop:hunter` 상점 분류를 동일한 공용 태그 API에 추가한다.
 - 카르마 정책은 `npc:benevolent`, `facility:lawful`, `facility:sanctuary` 태그로 NPC·퀘스트·상점·교단의 역할을 마스터 데이터에 선언한다.
-- 유리모래 사막의 `location:desert`, `shop:caravan`, `material:glass`, 서리잔향 설원·빙경궁의 `location:frozen`, `shop:frost`, `material:rime`, 역설기계고의 `location:clockwork`, `shop:clockwork`, `material:clockwork`, 공허왕관·월식해구·역근수해와 Lv.380~500 성운회랑·동결시계원·종언성단의 location/shop/material 분류를 같은 공용 태그 API에서 소유한다.
+- 유리모래 사막의 `location:desert`, `shop:caravan`, `material:glass`, 서리잔향 설원·빙경궁의 `location:frozen`, `shop:frost`, `material:rime`, 카이로스 공방도시의 `location:clockwork`, `shop:clockwork`, `material:clockwork`, 벨카인·루나리스 해구·카미하라 숲과 Lv.380~500 아스트라 회랑·에버프로스트 정원·라그나벨 성단의 location/shop/material 분류를 같은 공용 태그 API에서 소유한다.
 - `package.json`: 서버 빌드와 브라우저 번들에서 공용 런타임 모듈을 ESM으로 일관되게 해석한다.
 - `templates/`: 서버 메일에서 읽는 회원가입·비밀번호 재설정 공용 인증번호 HTML 템플릿.
 

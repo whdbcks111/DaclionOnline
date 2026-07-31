@@ -24,7 +24,9 @@ import {
     getFishByRarity,
     getFishRarityChances,
     getFishingTable,
+    getFishingTreasureTable,
     rollFishAtLocation,
+    rollFishingTreasure,
     rollFishRarity,
     rollFishingExp,
     rollFishingWaitSeconds,
@@ -40,6 +42,46 @@ test('고레벨 낚시터는 장소마다 독립 어종 풀과 가중치를 사�
     assert.ok(abyss?.some(entry => entry.fishId === 'pressure_lanternfish'));
     assert.ok(!origin?.some(entry => entry.fishId === 'pressure_lanternfish'));
     assert.ok(rollFishAtLocation('abyssglass_pressure_lagoon', 0, () => 0));
+});
+
+test('Lv.500 이전 낚시터도 성장 구간별 독립 어종 풀을 사용한다', () => {
+    const spots = [
+        ['glassdune_hidden_oasis', 'mirage_killifish'],
+        ['misttide_kelp_inlet', 'kelpmoon_cod'],
+        ['paradox_scrap_reservoir', 'gearscale_carp'],
+        ['eclipse_luminous_reef', 'moonbrine_cod'],
+        ['endstar_silent_sun', 'ashstar_tetra'],
+    ] as const;
+    for (const [locationId, signatureFishId] of spots) {
+        const table = getFishingTable(locationId);
+        assert.equal(table?.length, 5, locationId);
+        assert.ok(table?.some(entry => entry.fishId === signatureFishId), locationId);
+        assert.ok(rollFishAtLocation(locationId, 0, () => 0), locationId);
+    }
+});
+
+test('낚시 보물은 장소별 희귀 보상표를 사용하고 행운 보정은 1.5배에서 멈춘다', () => {
+    const table = getFishingTreasureTable('endstar_silent_sun');
+    assert.equal(table?.chance, 0.02);
+    const categories = new Set(table?.entries.map(entry => getItemData(entry.itemDataId)?.category));
+    assert.ok(categories.has('경험치 물약'));
+    assert.ok(categories.has('제련 재료'));
+    assert.ok(categories.has('스킬북'));
+    assert.ok(table?.entries.some(entry => {
+        const item = getItemData(entry.itemDataId);
+        return item?.onUse === 'apply_status_effect' && item.category !== '경험치 물약';
+    }));
+
+    const sequence = (...values: number[]) => {
+        let index = 0;
+        return () => values[Math.min(index++, values.length - 1)] ?? 0;
+    };
+    assert.equal(rollFishingTreasure('endstar_silent_sun', 0, sequence(0.024, 0, 0)), undefined);
+    assert.ok(rollFishingTreasure('endstar_silent_sun', 100, sequence(0.024, 0, 0)));
+    assert.equal(
+        rollFishingTreasure('endstar_silent_sun', 10_000, sequence(0.031, 0, 0)),
+        undefined,
+    );
 });
 
 const baseConfig: FishingCaptureConfig = {
@@ -302,13 +344,13 @@ test('입질 대기 시간은 45~65초 기본 범위와 입질 속도를 그대�
 });
 
 test('모든 낚시 보상 아이템은 128px 투명 아이콘을 가진다', () => {
-    assert.equal(getAllFish().length, 51);
+    assert.equal(getAllFish().length, 61);
     const expectedCounts = new Map([
         [FishRarity.COMMON, 6],
-        [FishRarity.UNCOMMON, 6],
-        [FishRarity.RARE, 10],
-        [FishRarity.EPIC, 11],
-        [FishRarity.LEGENDARY, 9],
+        [FishRarity.UNCOMMON, 7],
+        [FishRarity.RARE, 15],
+        [FishRarity.EPIC, 13],
+        [FishRarity.LEGENDARY, 11],
         [FishRarity.MYTHIC, 9],
     ]);
     for (const rarity of FishRarity.values()) {

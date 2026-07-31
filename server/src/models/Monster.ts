@@ -7,14 +7,15 @@ import type { EquipSlot } from "./Equipment.js";
 import { getLocation } from "./Location.js";
 import type Player from "./Player.js";
 import { chat } from "../utils/chatBuilder.js";
-import { sendBotMessageToUser } from "../modules/message.js";
+import { sendBotMessageToUser, sendBotMessageToUsers } from "../modules/message.js";
+import { getOnlinePlayerUserIdsAtLocation } from '../modules/playerRegistry.js';
 import { GameTags, normalizeTags } from "../../../shared/tags.js";
 import type { TagId } from "../../../shared/tags.js";
 import { StatusEffectType } from "./StatusEffect.js";
 import SkillBook from "./SkillBook.js";
 import type { RuntimeSkillEntry, SkillActivationOutcome } from "./SkillBook.js";
 import { partyManager } from '../modules/party.js';
-import type { ShieldBarSegment } from '../../../shared/types.js';
+import type { ChatNode, ShieldBarSegment } from '../../../shared/types.js';
 import { CombatStage, registerCombatHook } from './CombatPipeline.js';
 import {
     MonsterAiDisposition,
@@ -75,6 +76,21 @@ export interface MonsterChallengePattern {
     interval: { min: number; max: number };
 }
 
+export interface BossDialoguePhase {
+    /** 이 생명력 비율 이하로 내려가면 한 전투에서 한 번 출력한다. */
+    lifeRatio: number;
+    line: string;
+}
+
+export interface BossNarrative {
+    /** 도입 대사 동안 보스가 피해를 받지 않고 행동하지 않는 시간(초). */
+    introDuration: number;
+    /** 보스 설명 뒤에 이어지는 첫 조우 대사. */
+    introLine: string;
+    /** 높은 생명력 비율부터 내림차순으로 정렬된 전투 대사. */
+    phases: readonly BossDialoguePhase[];
+}
+
 export interface MonsterChallengeContext {
     monster: Monster;
     target: Entity;
@@ -88,6 +104,11 @@ export interface MonsterChallengeHandle {
 export type MonsterChallengeHandler = (context: MonsterChallengeContext) => MonsterChallengeHandle | false;
 
 const challengeHandlers = new Map<string, MonsterChallengeHandler>();
+
+function sendBotMessageToUsersAtLocation(locationId: string, content: string | ChatNode[]): void {
+    const recipients = getOnlinePlayerUserIdsAtLocation(locationId);
+    if (recipients.length > 0) sendBotMessageToUsers(recipients, content);
+}
 
 export function registerMonsterChallengePattern(id: string, handler: MonsterChallengeHandler): void {
     const key = id.trim();
@@ -121,6 +142,8 @@ export interface MonsterData {
     skills?: RuntimeSkillEntry[];
     skillPattern?: MonsterSkillPattern;
     challengePattern?: MonsterChallengePattern;
+    /** 보스 첫 조우 연출과 생명력 구간별 대사. */
+    bossNarrative?: BossNarrative;
     /** 지능·행동별 위협 가중치·도발 저항을 포함한 AI 마스터 설정. */
     ai?: MonsterAiProfileInput;
     tags: TagId[];
@@ -156,6 +179,10 @@ export interface MonsterRespawnDisplaySnapshot {
 export const LONG_BOSS_RESPAWN_THRESHOLD_SECONDS = 5 * 60;
 /** 일반 사냥터의 몬스터 밀도가 레벨 구간에 따라 달라지지 않도록 사용하는 표준 리젠 시간. */
 export const STANDARD_MONSTER_RESPAWN_SECONDS = 30;
+/** 보스가 마지막 교전 대상을 잃은 뒤 회복을 시작하기까지 기다리는 시간. */
+export const BOSS_RECOVERY_DELAY_SECONDS = 10;
+/** 교전이 끊긴 보스가 초당 회복하는 최대 생명력 비율. */
+export const BOSS_RECOVERY_RATIO_PER_SECOND = 0.1;
 
 export function resolveMonsterRespawnTime(
     monsterDataId: string,
@@ -183,6 +210,7 @@ export default class Monster extends Entity {
     private readonly attackProfile?: Readonly<MonsterAttackProfile>;
     private readonly skillPattern?: Readonly<MonsterSkillPattern>;
     private readonly challengePattern?: Readonly<MonsterChallengePattern>;
+    private readonly bossNarrative?: Readonly<BossNarrative>;
     private readonly threat: ThreatTable;
     /** 최초로 공격한 플레이어와 당시 파티원에게만 허용되는 런타임 교전 선점. */
     private readonly combatClaimUserIds = new Set<number>();
@@ -192,9 +220,16 @@ export default class Monster extends Entity {
     private challengeActive = false;
     private challengeGeneration = 0;
     private challengeCancel?: () => void;
+    private bossEncounterActive = false;
+    private bossIntroTimer = 0;
+    private readonly spokenBossPhases = new Set<number>();
+    private bossRecoveryDelayTimer = 0;
+    private bossRecoveryActive = false;
 
     override get deathDuration(): number { return this.respawnTime; }
     get isChallengePatternActive(): boolean { return this.challengeActive; }
+    get isBossIntroActive(): boolean { return this.bossIntroTimer > 0; }
+    get isBossRecovering(): boolean { return this.bossRecoveryActive; }
     override getDisplayIcon(): string { return getMonsterData(this.monsterDataId)?.icon ?? `monsters/${this.monsterDataId}`; }
 
     /** 위치 UI가 장기 리젠 보스만 가공해 표시하도록 반환하는 공개 스냅샷. */
@@ -240,6 +275,10 @@ export default class Monster extends Entity {
         this.challengePattern = data.challengePattern ? {
             ...data.challengePattern,
             interval: { ...data.challengePattern.interval },
+        } : undefined;
+        this.bossNarrative = data.bossNarrative ? {
+            ...data.bossNarrative,
+            phases: data.bossNarrative.phases.map(phase => ({ ...phase })),
         } : undefined;
         this.skillPatternTimer = this.skillPattern?.initialDelay ?? 0;
         this.challengePatternTimer = this.challengePattern?.initialDelay ?? 0;
@@ -287,7 +326,9 @@ export default class Monster extends Entity {
         const target = actor.attackOwner;
         if (this.isDefeated || target.isDefeated || target.locationId !== this.locationId
             || !this.canJoinCombatClaim(target) || this.threat.hasParticipant(target)) return false;
+        this.resetBossRecovery();
         this.recordThreat(target, ThreatAction.ATTACK, 1);
+        this.startBossEncounter();
         return true;
     }
 
@@ -302,9 +343,11 @@ export default class Monster extends Entity {
     }
 
     override acquireCombatTarget(attacker: Entity): boolean {
+        this.resetBossRecovery();
         this.claimCombat(attacker.attackOwner);
         const previous = this.currentTarget;
         this.recordThreat(attacker, ThreatAction.ATTACK, 1);
+        this.startBossEncounter();
         return previous !== this.currentTarget;
     }
 
@@ -357,6 +400,8 @@ export default class Monster extends Entity {
     override update(dt: number): void {
         if (this.isDead) return;
 
+        if (this.updateBossEncounter(dt)) return;
+
         const location = getLocation(this.locationId);
         if(!location) return;
 
@@ -371,9 +416,12 @@ export default class Monster extends Entity {
             this.currentTarget = null;
             this.skillPatternTimer = this.skillPattern?.initialDelay ?? 0;
             this.resetChallengePattern();
+            this.resetBossEncounter();
+            this.updateBossRecovery(dt);
             return;
         }
 
+        this.resetBossRecovery();
         const wasSkillActive = this.skills.hasActiveSkill();
         this.skills.update(dt);
         if (wasSkillActive || this.skills.hasActiveSkill()) return;
@@ -417,6 +465,8 @@ export default class Monster extends Entity {
     }
 
     override onDeath(): void {
+        this.resetBossRecovery();
+        this.resetBossEncounter();
         this.resetChallengePattern();
         this.skills.finishAll();
         super.onDeath();
@@ -502,6 +552,8 @@ export default class Monster extends Entity {
 
     override respawn(): void {
         super.respawn();
+        this.resetBossRecovery();
+        this.resetBossEncounter();
         this.combatClaimUserIds.clear();
         this.threat.clear();
         this.skillPatternTimer = this.skillPattern?.initialDelay ?? 0;
@@ -544,6 +596,108 @@ export default class Monster extends Entity {
         this.challengeActive = false;
         this.challengePatternTimer = this.challengePattern?.initialDelay ?? 0;
         cancel?.();
+    }
+
+    private startBossEncounter(): void {
+        const narrative = this.bossNarrative;
+        if (!narrative || this.bossEncounterActive || this.isDefeated) return;
+        this.bossEncounterActive = true;
+        this.bossIntroTimer = narrative.introDuration;
+        this.spokenBossPhases.clear();
+        this.setDamageReceivedModifier('boss:introduction', 0);
+
+        const data = getMonsterData(this.monsterDataId);
+        const message = chat()
+            .color('gold', builder => builder.weight('bold', nested => nested.text(`[ 보스 조우 ] ${this.name}`)))
+            .text(data?.description ? `\n${data.description}` : '')
+            .color('#d9b879', builder => builder.text(`\n“${narrative.introLine}”`))
+            .color('$text-tertiary', builder => builder.text(`\n${narrative.introDuration}초 동안 공격이 통하지 않습니다.`))
+            .build();
+        sendBotMessageToUsersAtLocation(this.locationId, message);
+    }
+
+    /** 도입 무적과 체력 구간 대사를 갱신하고, 도입 중이면 AI 정지를 알린다. */
+    private updateBossEncounter(dt: number): boolean {
+        const narrative = this.bossNarrative;
+        if (!narrative || !this.bossEncounterActive) return false;
+        const target = this.currentTarget;
+        if (!target || target.isDefeated || target.locationId !== this.locationId) {
+            this.resetBossEncounter();
+            return false;
+        }
+        if (this.bossIntroTimer > 0) {
+            this.bossIntroTimer = Math.max(0, this.bossIntroTimer - Math.max(0, dt));
+            if (this.bossIntroTimer <= 0) {
+                this.removeDamageReceivedModifier('boss:introduction');
+                sendBotMessageToUsersAtLocation(this.locationId, chat()
+                    .color('red', builder => builder.weight('bold', nested => nested.text(`[ 전투 개시 ] ${this.name}`)))
+                    .text('\n보스의 무적 상태가 해제되었습니다.')
+                    .build());
+            }
+            return true;
+        }
+
+        const lifeRatio = this.maxLife > 0 ? Math.max(0, this.life) / this.maxLife : 0;
+        narrative.phases.forEach((phase, index) => {
+            if (lifeRatio > phase.lifeRatio || this.spokenBossPhases.has(index)) return;
+            this.spokenBossPhases.add(index);
+            sendBotMessageToUsersAtLocation(this.locationId, chat()
+                .color('gold', builder => builder.weight('bold', nested => nested.text(`${this.name}`)))
+                .color('#d9b879', builder => builder.text(`\n“${phase.line}”`))
+                .build());
+        });
+        return false;
+    }
+
+    private resetBossEncounter(): void {
+        this.bossEncounterActive = false;
+        this.bossIntroTimer = 0;
+        this.spokenBossPhases.clear();
+        this.removeDamageReceivedModifier('boss:introduction');
+    }
+
+    /**
+     * 보스가 교전 대상을 잃고 10초가 지나면 누적 시간에 맞춰 최대 생명력의 10%/초를 회복한다.
+     * 프레임 길이가 달라도 회복량과 시작 시점이 달라지지 않도록 지연을 넘긴 dt만 사용한다.
+     */
+    private updateBossRecovery(dt: number): void {
+        if (!this.hasTag(GameTags.ENTITY_BOSS) || this.isDefeated || this.life >= this.maxLife) {
+            this.resetBossRecovery();
+            return;
+        }
+
+        const elapsed = Math.max(0, dt);
+        const previousDelay = this.bossRecoveryDelayTimer;
+        this.bossRecoveryDelayTimer += elapsed;
+        if (this.bossRecoveryDelayTimer < BOSS_RECOVERY_DELAY_SECONDS) return;
+
+        if (!this.bossRecoveryActive) {
+            this.bossRecoveryActive = true;
+            sendBotMessageToUsersAtLocation(this.locationId, chat()
+                .color('gold', builder => builder.weight('bold', nested => nested.text(`[ 전투 이탈 ] ${this.name}`)))
+                .text('\n보스가 침입자를 찾지 못해 생명력을 회복하기 시작합니다.')
+                .build());
+        }
+
+        const recoverySeconds = Math.max(
+            0,
+            this.bossRecoveryDelayTimer - Math.max(previousDelay, BOSS_RECOVERY_DELAY_SECONDS),
+        );
+        if (recoverySeconds <= 0) return;
+        this.life = Math.min(
+            this.maxLife,
+            this.life + this.maxLife * BOSS_RECOVERY_RATIO_PER_SECOND * recoverySeconds,
+        );
+        if (this.life < this.maxLife) return;
+
+        this.combatClaimUserIds.clear();
+        this.threat.clear();
+        this.resetBossRecovery();
+    }
+
+    private resetBossRecovery(): void {
+        this.bossRecoveryDelayTimer = 0;
+        this.bossRecoveryActive = false;
     }
 
     private canJoinCombatClaim(actor: Entity): boolean {
@@ -608,6 +762,7 @@ export function defineMonster(data: MonsterData): void {
     const effect = data.attack?.effect;
     const pattern = data.skillPattern;
     const challengePattern = data.challengePattern;
+    const bossNarrative = data.bossNarrative;
     if (effect && (!StatusEffectType.fromKey(effect.statusEffectId)
         || !Number.isFinite(effect.chance) || effect.chance < 0 || effect.chance > 1
         || !Number.isFinite(effect.duration) || effect.duration <= 0
@@ -626,6 +781,16 @@ export function defineMonster(data: MonsterData): void {
         || !Number.isFinite(challengePattern.interval.min) || !Number.isFinite(challengePattern.interval.max)
         || challengePattern.interval.min <= 0 || challengePattern.interval.max < challengePattern.interval.min)) {
         throw new Error(`Invalid monster challenge pattern: ${data.id}`);
+    }
+    if (bossNarrative && (!Number.isFinite(bossNarrative.introDuration)
+        || bossNarrative.introDuration < 1 || bossNarrative.introDuration > 10
+        || !bossNarrative.introLine.trim()
+        || bossNarrative.phases.length === 0
+        || bossNarrative.phases.some(phase => !Number.isFinite(phase.lifeRatio)
+            || phase.lifeRatio <= 0 || phase.lifeRatio >= 1 || !phase.line.trim())
+        || bossNarrative.phases.some((phase, index) =>
+            index > 0 && phase.lifeRatio >= bossNarrative.phases[index - 1]!.lifeRatio))) {
+        throw new Error(`Invalid boss narrative: ${data.id}`);
     }
     monsterDataCache.set(data.id, {
         ...data,
@@ -646,6 +811,10 @@ export function defineMonster(data: MonsterData): void {
         challengePattern: challengePattern ? {
             ...challengePattern,
             interval: { ...challengePattern.interval },
+        } : undefined,
+        bossNarrative: bossNarrative ? {
+            ...bossNarrative,
+            phases: bossNarrative.phases.map(phase => ({ ...phase })),
         } : undefined,
         ai: data.ai ? {
             ...data.ai,

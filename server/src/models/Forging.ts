@@ -448,6 +448,48 @@ export class ForgeMaterial {
             { attribute: 'magicForce', op: 'add', value: 16 },
             { attribute: 'critDmg', op: 'add', value: 0.12 },
         ]);
+    static readonly SUNSTEEL = new ForgeMaterial(
+        'sunsteel', '태양강', 'sunsteel', 1.28,
+        ['material:sunsteel', GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
+        [{ attribute: 'critRate', op: 'add', value: 0.012 }],
+        craftsmanship => [{ attribute: 'armorPen', op: 'add', value: round(3 + craftsmanship.creatorLevel * 0.035, 2) }],
+    );
+    static readonly MOONFROST_SILVER = new ForgeMaterial(
+        'moonfrost_silver', '월빙은', 'moonfrost_silver', 1.34,
+        ['material:moonfrost_silver', GameTags.PROPERTY_METAL, GameTags.PROPERTY_ICE],
+        [],
+        craftsmanship => [
+            { attribute: 'magicDef', op: 'add', value: round(8 + craftsmanship.creatorLevel * 0.07, 2) },
+            { attribute: 'maxMentality', op: 'add', value: round(15 + craftsmanship.creatorLevel * 0.18, 2) },
+        ],
+    );
+    static readonly CLOCKWORK_COBALT = new ForgeMaterial(
+        'clockwork_cobalt', '시계청강', 'clockwork_cobalt', 1.4,
+        ['material:clockwork_cobalt', GameTags.PROPERTY_METAL, GameTags.PROPERTY_ELECTRIC],
+        [],
+        craftsmanship => [
+            { attribute: 'attackSpeed', op: 'multiply', value: round(1.025 + Math.min(0.06, craftsmanship.creatorLevel * 0.00012), 4) },
+            { attribute: 'projectileAcceleration', op: 'multiply', value: round(1.04 + Math.min(0.14, craftsmanship.creatorLevel * 0.00025), 4) },
+        ],
+    );
+    static readonly TIDEGLASS_ALLOY = new ForgeMaterial(
+        'tideglass_alloy', '조류유리합금', 'tideglass_alloy', 1.47,
+        ['material:tideglass_alloy', GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER],
+        [],
+        craftsmanship => [
+            { attribute: 'magicForce', op: 'add', value: round(6 + craftsmanship.creatorLevel * 0.12, 2) },
+            { attribute: 'mentalityRegen', op: 'add', value: round(1 + craftsmanship.creatorLevel * 0.012, 2) },
+        ],
+    );
+    static readonly ENDSTAR_ADAMANT = new ForgeMaterial(
+        'endstar_adamant', '종성금강', 'endstar_adamant', 1.53,
+        ['material:endstar_adamant', GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK, GameTags.PROPERTY_LIGHT],
+        [{ attribute: 'critDmg', op: 'add', value: 0.08 }],
+        craftsmanship => [
+            { attribute: 'atk', op: 'add', value: round(8 + craftsmanship.creatorLevel * 0.1, 2) },
+            { attribute: 'magicForce', op: 'add', value: round(8 + craftsmanship.creatorLevel * 0.1, 2) },
+        ],
+    );
     static readonly ASTRAL_STEEL = new ForgeMaterial(
         'astral_steel', '성철강', 'astral_steel', 1.55,
         ['material:astral_steel', GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
@@ -556,6 +598,11 @@ export class ForgeMaterial {
             diamond: 'diamond',
             mana_crystal: 'mana_crystal',
             ember_alloy: 'ember_ore',
+            sunsteel: 'sun_ore_nodule',
+            moonfrost_silver: 'moonfrost_ore',
+            clockwork_cobalt: 'clockwork_cobalt_ore',
+            tideglass_alloy: 'tideglass_ore',
+            endstar_adamant: 'endstar_adamant_ore',
             astral_steel: 'astral_iron_ore',
             abyssal_silver: 'abyss_pearl_ore',
             storm_quartz: 'thunder_quartz_ore',

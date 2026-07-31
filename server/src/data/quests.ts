@@ -3,6 +3,7 @@ import {
     defineQuest,
     QuestObjective,
     QuestReward,
+    QuestStatus,
     QuestStage,
 } from '../models/Quest.js';
 import { JobSlotType } from '../models/Job.js';
@@ -18,8 +19,18 @@ import {
 } from '../modules/tutorial.js';
 import type Entity from '../models/Entity.js';
 import type Player from '../models/Player.js';
+import { GameEventIds } from '../models/GameEvent.js';
 
 export const FIRST_SLIME_HUNT_QUEST_ID = 'luminair:first_slime_hunt';
+export const DAILY_COMMISSION_NPC_ID = 'daily_commissioner';
+export const DAILY_COMMISSION_LAST_CLAIM_DAY = 'daily:commission-last-claim-day';
+export const DAILY_COMMISSION_QUESTS = Object.freeze([
+    { id: 'daily:commission-1-49', minLevel: 1, maxLevel: 49, required: 8 },
+    { id: 'daily:commission-50-149', minLevel: 50, maxLevel: 149, required: 12 },
+    { id: 'daily:commission-150-299', minLevel: 150, maxLevel: 299, required: 16 },
+    { id: 'daily:commission-300-499', minLevel: 300, maxLevel: 499, required: 20 },
+    { id: 'daily:commission-500-plus', minLevel: 500, maxLevel: Number.POSITIVE_INFINITY, required: 24 },
+] as const);
 export const TWILIGHT_TOMB_QUEST_IDS = Object.freeze({
     RESTLESS_DEAD: 'twilight-tomb:restless-dead',
     BROKEN_OATH: 'twilight-tomb:broken-oath',
@@ -68,6 +79,81 @@ export const ENDSTAR_QUEST_IDS = Object.freeze({
     RELIGHT_CONSTELLATION: 'endstar:relight-constellation',
     END_LAST_CONSTELLATION: 'endstar:end-last-constellation',
 } as const);
+
+/** 한국 표준시 자정에 초기화되는 일일 의뢰 날짜 key. */
+export function getDailyCommissionDayKey(now = new Date()): string {
+    return new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+export function getDailyCommissionDefinition(level: number) {
+    const normalized = Math.max(1, Math.floor(level));
+    return DAILY_COMMISSION_QUESTS.find(quest =>
+        normalized >= quest.minLevel && normalized <= quest.maxLevel)!;
+}
+
+export function getPlayerDailyCommission(player: Player) {
+    return DAILY_COMMISSION_QUESTS
+        .map(definition => player.quests.get(definition.id))
+        .find(quest => quest?.status === QuestStatus.ACTIVE || quest?.status === QuestStatus.READY);
+}
+
+/** 전날 미완료 의뢰는 NPC를 다시 만날 때 정리해 오늘 기회를 막지 않게 한다. */
+export function expireStaleDailyCommission(player: Player, now = new Date()): void {
+    const quest = getPlayerDailyCommission(player);
+    if (!quest || getDailyCommissionDayKey(quest.acceptedAt) === getDailyCommissionDayKey(now)) return;
+    player.quests.abandon(quest.questDataId);
+}
+
+function isAppropriateDailyTarget(player: Player, target: Entity | undefined): boolean {
+    if (!target?.hasTag(GameTags.ENTITY_MONSTER) || target.hasTag(GameTags.ENTITY_BOSS)) return false;
+    const quest = getPlayerDailyCommission(player);
+    const acceptedLevel = Number(quest?.getMetadata('acceptedLevel') ?? player.level);
+    const minLevel = Math.max(1, Math.floor(acceptedLevel * 0.8));
+    const maxLevel = Math.max(minLevel, Math.ceil(acceptedLevel * 1.2));
+    return target.level >= minLevel && target.level <= maxLevel;
+}
+
+for (const definition of DAILY_COMMISSION_QUESTS) {
+    defineQuest({
+        id: definition.id,
+        name: `오늘의 성장 의뢰 · ${definition.required}체`,
+        aliases: ['일일 의뢰', '오늘의 의뢰'],
+        description: '수락 당시 레벨의 80~120% 구간 일반 몬스터를 처치하는 하루 한 번의 성장 의뢰입니다.',
+        tags: ['quest:daily', 'quest:side'],
+        giverNpcIds: [DAILY_COMMISSION_NPC_ID],
+        turnInNpcIds: [DAILY_COMMISSION_NPC_ID],
+        visible: player => getDailyCommissionDefinition(player.level).id === definition.id
+            || player.quests.get(definition.id) !== undefined,
+        canAccept: player => getDailyCommissionDefinition(player.level).id === definition.id
+            && !getPlayerDailyCommission(player)
+            && player.progress.getState(DAILY_COMMISSION_LAST_CLAIM_DAY) !== getDailyCommissionDayKey(),
+        stages: [new QuestStage({
+            id: 'hunt',
+            description: '수락 당시 레벨을 기준으로 비슷한 수준의 일반 몬스터를 처치하세요.',
+            objectives: [QuestObjective.event({
+                id: 'appropriate-monsters',
+                label: '적정 레벨 일반 몬스터 처치',
+                required: definition.required,
+                eventId: GameEventIds.ENTITY_DEFEATED,
+                matches: (event, player) => isAppropriateDailyTarget(player, event.subject),
+            })],
+        })],
+        rewards: [QuestReward.custom({
+            label: '현재 레벨 필요 경험치의 50%',
+            canGrant: player =>
+                player.progress.getState(DAILY_COMMISSION_LAST_CLAIM_DAY) !== getDailyCommissionDayKey(),
+            grant: player => {
+                const amount = Math.max(1, Math.floor(player.maxExp * 0.5));
+                player.progress.setState(DAILY_COMMISSION_LAST_CLAIM_DAY, getDailyCommissionDayKey());
+                player.gainExp(amount);
+            },
+        })],
+        repeat: { cooldownSeconds: 0 },
+        onAccept: player => {
+            player.quests.get(definition.id)?.setMetadata('acceptedLevel', player.level);
+        },
+    });
+}
 
 defineQuest({
     id: TUTORIAL_QUEST_ID,
@@ -386,7 +472,7 @@ defineQuest({
     id: PARADOX_QUEST_IDS.RESTORE_ARCHIVE,
     name: '기억 톱니의 순서',
     aliases: ['기계고 기록 복원', '기억 톱니'],
-    description: '역설기계고에 흩어진 기억 톱니와 논리핵을 모아 중계소의 항로 기록을 복원하세요.',
+    description: '카이로스 공방도시에 흩어진 기억 톱니와 논리핵을 모아 중계소의 항로 기록을 복원하세요.',
     tags: ['quest:side', 'region:paradox-clockwork'],
     giverNpcIds: ['paradox_curator'],
     turnInNpcIds: ['paradox_curator'],
@@ -475,7 +561,7 @@ defineQuest({
     id: ASHEN_ABYSS_QUEST_IDS.END_ASHEN_COURT,
     name: '재가 된 왕조의 끝',
     aliases: ['잿왕 토벌', '재왕 벨카르'],
-    description: '세 아귀 문지기와 흑염대장을 넘어 잿왕성의 벨카르를 쓰러뜨리세요.',
+    description: '세 아귀 문지기와 흑염대장을 넘어 카르모르 성의 벨카르를 쓰러뜨리세요.',
     tags: ['quest:side', 'quest:boss', 'region:ashen-abyss'],
     giverNpcIds: ['ashen_wayfinder'],
     turnInNpcIds: ['ashen_wayfinder'],
@@ -517,8 +603,8 @@ defineQuest({
 defineQuest({
     id: VOIDCROWN_QUEST_IDS.RESTORE_WARD,
     name: '빛이 닿지 않는 귀환표식',
-    aliases: ['공허왕관 귀환표식', '무광 중계소'],
-    description: '무광은과 별먹을 모아 공허왕관 성채의 귀환표식을 다시 새기세요.',
+    aliases: ['벨카인 귀환표식', '무광 중계소'],
+    description: '무광은과 별먹을 모아 벨카인 요새의 귀환표식을 다시 새기세요.',
     tags: ['quest:side', 'region:voidcrown'],
     giverNpcIds: ['voidcrown_warden'],
     turnInNpcIds: ['voidcrown_warden'],
@@ -544,7 +630,7 @@ defineQuest({
     id: VOIDCROWN_QUEST_IDS.END_REGENCY,
     name: '왕 없는 왕관의 판결',
     aliases: ['공허섭정 토벌', '라시엘'],
-    description: '무관성주 테오른을 넘어 공허왕관 기둥을 부수고 섭정 라시엘의 무효 선고를 끝내세요.',
+    description: '무관성주 테오른을 넘어 벨카인 기둥을 부수고 섭정 라시엘의 무효 선고를 끝내세요.',
     tags: ['quest:side', 'quest:boss', 'region:voidcrown'],
     giverNpcIds: ['voidcrown_warden'],
     turnInNpcIds: ['voidcrown_warden'],
@@ -563,7 +649,7 @@ defineQuest({
             ),
             QuestObjective.destroy(
                 'voidcrown-pillars',
-                '공허왕관 기둥 파괴',
+                '벨카인 기둥 파괴',
                 3,
                 target => target.hasTag('resource:voidcrown-pillar'),
             ),
@@ -586,8 +672,8 @@ defineQuest({
 defineQuest({
     id: ECLIPSE_TRENCH_QUEST_IDS.RESTORE_DOCK,
     name: '달빛 아래 잠긴 정박지',
-    aliases: ['월식해구 정박지', '조류 관측선'],
-    description: '월염수와 침은을 모아 월식해구 관측선의 조류기관을 복구하세요.',
+    aliases: ['루나리스 해구 정박지', '조류 관측선'],
+    description: '월염수와 침은을 모아 루나리스 해구 관측선의 조류기관을 복구하세요.',
     tags: ['quest:side', 'region:eclipse-trench'],
     giverNpcIds: ['eclipse_navigator'],
     turnInNpcIds: ['eclipse_navigator'],
@@ -655,8 +741,8 @@ defineQuest({
 defineQuest({
     id: WORLDROOT_QUEST_IDS.RESTORE_MEMORY,
     name: '수해가 잊은 이름',
-    aliases: ['역근수해 기억', '기억호박 복구'],
-    description: '기억호박과 태초수액을 모아 역근수해의 길잡이 기억을 복원하세요.',
+    aliases: ['카미하라 숲 기억', '기억호박 복구'],
+    description: '기억호박과 태초수액을 모아 카미하라 숲의 길잡이 기억을 복원하세요.',
     tags: ['quest:side', 'region:worldroot'],
     giverNpcIds: ['worldroot_keeper'],
     turnInNpcIds: ['worldroot_keeper'],
@@ -681,8 +767,8 @@ defineQuest({
 defineQuest({
     id: WORLDROOT_QUEST_IDS.AWAKEN_HEART,
     name: '첫 박동과 마지막 망각',
-    aliases: ['태초심장 토벌', '아르보르'],
-    description: '역근 포식수를 넘어 심장씨앗을 부수고 태초심장 아르보르의 뒤틀린 박동을 멈추세요.',
+    aliases: ['에오나의 심장 토벌', '아르보르'],
+    description: '역근 포식수를 넘어 심장씨앗을 부수고 에오나의 심장 아르보르의 뒤틀린 박동을 멈추세요.',
     tags: ['quest:side', 'quest:boss', 'region:worldroot'],
     giverNpcIds: ['worldroot_keeper'],
     turnInNpcIds: ['worldroot_keeper'],
@@ -691,7 +777,7 @@ defineQuest({
     canAccept: player => player.level >= 360,
     stages: [new QuestStage({
         id: 'awaken-primordial-heart',
-        description: '역근의 포식자와 심장씨앗을 제거한 뒤 태초심장의 뒤틀린 의지를 잠재우세요.',
+        description: '역근의 포식자와 심장씨앗을 제거한 뒤 에오나의 심장의 뒤틀린 의지를 잠재우세요.',
         objectives: [
             QuestObjective.kill(
                 'inverse-root-devourer',
@@ -701,13 +787,13 @@ defineQuest({
             ),
             QuestObjective.destroy(
                 'primordial-heart-seeds',
-                '태초심장 씨앗 파괴',
+                '에오나의 심장 씨앗 파괴',
                 3,
                 target => target.hasTag('resource:primordial-heart-seed'),
             ),
             QuestObjective.kill(
                 'primordial-heart-arbor',
-                '태초심장 아르보르 제압',
+                '에오나의 심장 아르보르 제압',
                 1,
                 target => target.hasTag('monster:primordial-heart-arbor'),
             ),
@@ -724,7 +810,7 @@ defineQuest({
 defineQuest({
     id: NEBULA_QUEST_IDS.RESTORE_BEACON,
     name: '별길을 잃은 정거장',
-    aliases: ['성운회랑 보급', '유성등 복구'],
+    aliases: ['아스트라 회랑 보급', '유성등 복구'],
     description: '성운유리와 궤도편을 모아 유성등 정거장의 끊어진 귀환 신호를 복구하세요.',
     tags: ['quest:side', 'region:nebula-corridor'],
     giverNpcIds: ['nebula_navigator'],
@@ -733,7 +819,7 @@ defineQuest({
     canAccept: player => player.level >= 380,
     stages: [new QuestStage({
         id: 'restore-meteor-beacon',
-        description: '성운회랑의 빛나는 생명체와 궤도 사냥꾼에게서 신호 재료를 모으세요.',
+        description: '아스트라 회랑의 빛나는 생명체와 궤도 사냥꾼에게서 신호 재료를 모으세요.',
         objectives: [
             QuestObjective.item('nebula-glass', '성운유리 수집', 18, 'nebula_glass', true),
             QuestObjective.item('orbit-fragment', '궤도편 수집', 14, 'orbit_fragment', true),
@@ -777,7 +863,7 @@ defineQuest({
 defineQuest({
     id: CHRONOFROST_QUEST_IDS.RESTART_CLOCK,
     name: '멈춘 분침을 움직이는 법',
-    aliases: ['동결시계원 보급', '영시계 복구'],
+    aliases: ['에버프로스트 정원 보급', '영시계 복구'],
     description: '시빙정과 역행사를 모아 멈춘 시계원의 하층 진자를 다시 움직이세요.',
     tags: ['quest:side', 'region:chronofrost'],
     giverNpcIds: ['chronofrost_keeper'],
@@ -830,8 +916,8 @@ defineQuest({
 defineQuest({
     id: ENDSTAR_QUEST_IDS.RELIGHT_CONSTELLATION,
     name: '꺼진 별을 잇는 선',
-    aliases: ['종언성단 보급', '성좌 복구'],
-    description: '잔광편과 창세정을 모아 종언성단에서 끊어진 피난 성좌를 다시 연결하세요.',
+    aliases: ['라그나벨 성단 보급', '성좌 복구'],
+    description: '잔광편과 창세정을 모아 라그나벨 성단에서 끊어진 피난 성좌를 다시 연결하세요.',
     tags: ['quest:side', 'region:endstar'],
     giverNpcIds: ['endstar_observer'],
     turnInNpcIds: ['endstar_observer'],

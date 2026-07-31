@@ -5,6 +5,9 @@ import {
     CHRONOFROST_QUEST_IDS,
     ECLIPSE_TRENCH_QUEST_IDS,
     ENDSTAR_QUEST_IDS,
+    DAILY_COMMISSION_LAST_CLAIM_DAY,
+    DAILY_COMMISSION_NPC_ID,
+    expireStaleDailyCommission,
     FIRST_SLIME_HUNT_QUEST_ID,
     FROSTVEIL_QUEST_IDS,
     GLASSDUNE_QUEST_IDS,
@@ -14,6 +17,9 @@ import {
     TWILIGHT_TOMB_QUEST_IDS,
     VOIDCROWN_QUEST_IDS,
     WORLDROOT_QUEST_IDS,
+    getDailyCommissionDayKey,
+    getDailyCommissionDefinition,
+    getPlayerDailyCommission,
 } from './quests.js';
 import { CAREER_QUEST_IDS } from './quests.js';
 import { BLACKSMITH_APPRENTICESHIP_QUEST_ID } from './quests.js';
@@ -97,6 +103,68 @@ NPC.define({
         new DialogueScenario('quest_complete', function* () {
             yield Dialogue.say('초원의 길이 다시 조용해졌네. 약속한 보상이야. 정말 고마워!');
             yield Dialogue.turnInQuest(FIRST_SLIME_HUNT_QUEST_ID);
+            yield Dialogue.end();
+        }),
+    ],
+});
+
+NPC.define({
+    id: DAILY_COMMISSION_NPC_ID,
+    name: '의뢰관리인 세나',
+    description: '매일 모험가의 현재 숙련도에 맞는 성장 의뢰를 배정하는 루미나르 광장 관리인입니다.',
+    tags: ['npc:guide', 'npc:quest', 'quest:daily', GameTags.NPC_BENEVOLENT],
+    entryScenario: ({ player }) => {
+        expireStaleDailyCommission(player);
+        const active = getPlayerDailyCommission(player);
+        if (active && player.quests.canTurnIn(active.questDataId, DAILY_COMMISSION_NPC_ID)) return 'complete';
+        if (active) return 'progress';
+        if (player.progress.getState(DAILY_COMMISSION_LAST_CLAIM_DAY) === getDailyCommissionDayKey()) {
+            return 'claimed';
+        }
+        return 'offer';
+    },
+    scenarios: [
+        new DialogueScenario('offer', function* ({ player }) {
+            const definition = getDailyCommissionDefinition(player.level);
+            const lower = Math.max(1, Math.floor(player.level * 0.8));
+            const upper = Math.max(lower, Math.ceil(player.level * 1.2));
+            yield Dialogue.say(
+                `오늘은 Lv.${lower}~${upper} 일반 몬스터 ${definition.required}체를 정리해 주세요. `
+                + '완료하면 현재 레벨 필요 경험치의 50%를 지급합니다.',
+            );
+            yield Dialogue.choice([
+                { label: '오늘의 의뢰를 받겠습니다.', target: 'accept' },
+                { label: '나중에 다시 오겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('accept', function* ({ player }) {
+            const definition = getDailyCommissionDefinition(player.level);
+            yield Dialogue.acceptQuest(definition.id);
+            yield Dialogue.say('수락한 순간의 레벨을 기준으로 대상 구간이 고정됩니다. 왕관을 쓴 보스는 목표에 포함되지 않습니다.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('progress', function* ({ player }) {
+            const quest = getPlayerDailyCommission(player);
+            const objective = quest ? player.quests.getSnapshot(quest.questDataId)?.objectives[0] : undefined;
+            const acceptedLevel = Number(quest?.getMetadata('acceptedLevel') ?? player.level);
+            yield Dialogue.say(
+                `Lv.${Math.max(1, Math.floor(acceptedLevel * 0.8))}~${Math.ceil(acceptedLevel * 1.2)} `
+                + `일반 몬스터 진행도는 ${objective?.progress ?? 0}/${objective?.required ?? 0}입니다.`,
+            );
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('complete', function* ({ player }) {
+            const quest = getPlayerDailyCommission(player);
+            yield Dialogue.say('오늘의 의뢰를 마쳤군요. 약속한 성장 경험치를 정산하겠습니다.');
+            if (quest) yield Dialogue.turnInQuest(quest.questDataId);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('claimed', function* () {
+            yield Dialogue.say('오늘의 의뢰 보상은 이미 정산했습니다. 한국 표준시 자정이 지나면 새 의뢰를 준비해 두겠습니다.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('준비가 되면 광장으로 다시 찾아오세요.');
             yield Dialogue.end();
         }),
     ],
@@ -399,7 +467,7 @@ NPC.define({
             yield Dialogue.say('이곳의 기계는 움직임을 멈춘 게 아니에요. 실패한 시간을 지우고 같은 하루를 다시 조립하고 있죠. 온전한 기억 톱니 열둘과 논리핵 다섯이면 바깥으로 이어지는 기록부터 복원할 수 있어요.');
             yield Dialogue.choice([
                 { label: '기록 부품을 모아 오겠습니다.', target: 'archive_accept' },
-                { label: '역설기계고에 대해 알려주세요.', target: 'lore' },
+                { label: '카이로스 공방도시에 대해 알려주세요.', target: 'lore' },
                 { label: '지금은 쉬겠습니다.', target: 'end' },
             ]);
         }),
@@ -458,7 +526,7 @@ NPC.define({
 NPC.define({
     id: 'ashen_wayfinder',
     name: '회색불길 길잡이 타렌',
-    description: '잿빛성흔 심연에서 검은 불꽃의 열을 읽어 살아 돌아올 길을 기록하는 길잡이입니다.',
+    description: '아셴바흐 심연에서 검은 불꽃의 열을 읽어 살아 돌아올 길을 기록하는 길잡이입니다.',
     tags: ['npc:guide', 'npc:quest', 'region:ashen-abyss'],
     entryScenario: ({ player }) => {
         if (player.quests.canTurnIn(ASHEN_ABYSS_QUEST_IDS.END_ASHEN_COURT, 'ashen_wayfinder')) return 'court_complete';
@@ -490,7 +558,7 @@ NPC.define({
             yield Dialogue.end();
         }),
         new DialogueScenario('fire_complete', function* () {
-            yield Dialogue.say('회색불길이 다시 길을 비추기 시작했어요. 이제 문지기 너머 흑염 회랑과 잿왕성까지 귀환로가 끊기지 않을 거예요.');
+            yield Dialogue.say('회색불길이 다시 길을 비추기 시작했어요. 이제 문지기 너머 흑염 회랑과 카르모르 성까지 귀환로가 끊기지 않을 거예요.');
             yield Dialogue.turnInQuest(ASHEN_ABYSS_QUEST_IDS.RELIGHT_WAYSTATION);
             yield Dialogue.end();
         }),
@@ -771,7 +839,7 @@ NPC.define({
 NPC.define({
     id: 'eclipse_navigator',
     name: '조류항해사 미레나',
-    description: '월식해구의 빛과 어둠이 바뀌는 주기를 기록하며 침수된 관측선을 지키는 항해사입니다.',
+    description: '루나리스 해구의 빛과 어둠이 바뀌는 주기를 기록하며 침수된 관측선을 지키는 항해사입니다.',
     tags: ['npc:guide', 'npc:quest', 'region:eclipse-trench'],
     entryScenario: ({ player }) => {
         if (player.quests.canTurnIn(ECLIPSE_TRENCH_QUEST_IDS.END_WHITE_NIGHT, 'eclipse_navigator')) return 'white_night_complete';
@@ -783,7 +851,7 @@ NPC.define({
     },
     scenarios: [
         new DialogueScenario('greeting', function* () {
-            yield Dialogue.say('공허왕관 아래의 해구는 달이 보이지 않아도 월식을 반복해요. 관측선을 움직이려면 월염수 열여섯 병과 침은 열두 덩이가 필요합니다.');
+            yield Dialogue.say('벨카인 아래의 해구는 달이 보이지 않아도 월식을 반복해요. 관측선을 움직이려면 월염수 열여섯 병과 침은 열두 덩이가 필요합니다.');
             yield Dialogue.choice([
                 { label: '조류기관을 복구하겠습니다.', target: 'dock_accept' },
                 { label: '해구의 길을 알려주세요.', target: 'lore' },
@@ -803,7 +871,7 @@ NPC.define({
             yield Dialogue.end();
         }),
         new DialogueScenario('dock_complete', function* () {
-            yield Dialogue.say('조류기관이 다시 뛰기 시작했어요. 이제 해구와 백야성소 사이의 귀환 항로를 잃지 않을 겁니다.');
+            yield Dialogue.say('조류기관이 다시 뛰기 시작했어요. 이제 해구와 에일린 대성당 사이의 귀환 항로를 잃지 않을 겁니다.');
             yield Dialogue.turnInQuest(ECLIPSE_TRENCH_QUEST_IDS.RESTORE_DOCK);
             yield Dialogue.end();
         }),
@@ -846,7 +914,7 @@ NPC.define({
 NPC.define({
     id: 'worldroot_keeper',
     name: '기억수호자 오르넬',
-    description: '역근수해가 잊은 이름과 길을 기억호박에 옮겨 기록하는 마지막 수호자입니다.',
+    description: '카미하라 숲가 잊은 이름과 길을 기억호박에 옮겨 기록하는 마지막 수호자입니다.',
     tags: ['npc:guide', 'npc:quest', 'region:worldroot'],
     entryScenario: ({ player }) => {
         if (player.quests.canTurnIn(WORLDROOT_QUEST_IDS.AWAKEN_HEART, 'worldroot_keeper')) return 'heart_complete';
@@ -861,7 +929,7 @@ NPC.define({
             yield Dialogue.say('이 수해는 길을 막는 게 아니라 길의 이름을 잊게 만듭니다. 기억호박 열여섯과 태초수액 열둘이 있으면 귀환로의 기억을 되살릴 수 있어요.');
             yield Dialogue.choice([
                 { label: '수해의 기억을 복원하겠습니다.', target: 'memory_accept' },
-                { label: '역근수해의 구조를 알려주세요.', target: 'lore' },
+                { label: '카미하라 숲의 구조를 알려주세요.', target: 'lore' },
                 { label: '조금 더 준비하겠습니다.', target: 'end' },
             ]);
         }),
@@ -878,7 +946,7 @@ NPC.define({
             yield Dialogue.end();
         }),
         new DialogueScenario('memory_complete', function* () {
-            yield Dialogue.say('잊혔던 길의 이름이 돌아왔습니다. 이제 태초심장으로 향하는 동안에도 되돌아올 방향을 기억할 수 있어요.');
+            yield Dialogue.say('잊혔던 길의 이름이 돌아왔습니다. 이제 에오나의 심장으로 향하는 동안에도 되돌아올 방향을 기억할 수 있어요.');
             yield Dialogue.turnInQuest(WORLDROOT_QUEST_IDS.RESTORE_MEMORY);
             yield Dialogue.end();
         }),
@@ -899,11 +967,11 @@ NPC.define({
             const devourer = objectives.find(objective => objective.id === 'inverse-root-devourer');
             const seeds = objectives.find(objective => objective.id === 'primordial-heart-seeds');
             const heart = objectives.find(objective => objective.id === 'primordial-heart-arbor');
-            yield Dialogue.say(`역근 포식수 ${devourer?.progress ?? 0}/1, 심장씨앗 ${seeds?.progress ?? 0}/3, 태초심장 ${heart?.progress ?? 0}/1. 박동이 강해질수록 본체보다 씨앗의 빛을 먼저 찾으세요.`);
+            yield Dialogue.say(`역근 포식수 ${devourer?.progress ?? 0}/1, 심장씨앗 ${seeds?.progress ?? 0}/3, 에오나의 심장 ${heart?.progress ?? 0}/1. 박동이 강해질수록 본체보다 씨앗의 빛을 먼저 찾으세요.`);
             yield Dialogue.end();
         }),
         new DialogueScenario('heart_complete', function* () {
-            yield Dialogue.say('태초심장이 조용해졌습니다. 수해는 사라지지 않겠지만 이제 첫 기억과 마지막 망각이 서로를 삼키지는 않을 겁니다.');
+            yield Dialogue.say('에오나의 심장이 조용해졌습니다. 수해는 사라지지 않겠지만 이제 첫 기억과 마지막 망각이 서로를 삼키지는 않을 겁니다.');
             yield Dialogue.turnInQuest(WORLDROOT_QUEST_IDS.AWAKEN_HEART);
             yield Dialogue.end();
         }),
@@ -1009,11 +1077,11 @@ function defineFrontierQuestNpc(data: FrontierQuestNpcDefinition): void {
 defineFrontierQuestNpc({
     id: 'nebula_navigator',
     name: '성도항해사 벨라',
-    description: '성운회랑의 오래된 별길과 중력 흐름을 유성등 지도에 다시 기록하는 항해사입니다.',
+    description: '아스트라 회랑의 오래된 별길과 중력 흐름을 유성등 지도에 다시 기록하는 항해사입니다.',
     regionTag: 'region:nebula-corridor',
     firstQuestId: NEBULA_QUEST_IDS.RESTORE_BEACON,
     secondQuestId: NEBULA_QUEST_IDS.END_SOVEREIGN,
-    greeting: '태초심장의 뿌리 위에는 별이 길처럼 흐르는 성운회랑이 있습니다. 하지만 유성등이 꺼져 돌아오는 궤도가 보이지 않아요.',
+    greeting: '에오나의 심장의 뿌리 위에는 별이 길처럼 흐르는 아스트라 회랑이 있습니다. 하지만 유성등이 꺼져 돌아오는 궤도가 보이지 않아요.',
     firstGuidance: '성운유리는 성진 가오리와 중력각에게서, 궤도편은 궤도절단 사냥꾼과 혜철 성운맥에서 얻을 수 있습니다.',
     secondGuidance: '낙성감시자 모르가가 상층 길을 막고 성운제 아스테리온은 사건지평으로 전투자를 고립시킵니다. 빛나는 섬광 뒤의 어두운 봉쇄를 조심하세요.',
     lore: '정거장 뒤 하층 갈림길은 성진 단구와 무음 궤도로 나뉘어 중력 합류정에서 만납니다. 낙성감시자 뒤 상층도 극광다리와 암흑물질 수로로 갈라졌다 왕관 전실에서 합쳐집니다.',
@@ -1023,7 +1091,7 @@ defineFrontierQuestNpc({
 defineFrontierQuestNpc({
     id: 'chronofrost_keeper',
     name: '영시계지기 노엔',
-    description: '얼어붙은 시간의 오차를 역행사 모래시계에 기록하는 동결시계원의 마지막 관리인입니다.',
+    description: '얼어붙은 시간의 오차를 역행사 모래시계에 기록하는 에버프로스트 정원의 마지막 관리인입니다.',
     regionTag: 'region:chronofrost',
     firstQuestId: CHRONOFROST_QUEST_IDS.RESTART_CLOCK,
     secondQuestId: CHRONOFROST_QUEST_IDS.END_ZERO_HOUR,
@@ -1031,7 +1099,7 @@ defineFrontierQuestNpc({
     firstGuidance: '시빙정은 동결분 유령과 진자강 시빙맥에서, 역행사는 역설원 추적자와 뒤집힌 설원에서 회수할 수 있습니다.',
     secondGuidance: '빙시계 파수장은 영시 절단과 진자뢰를 번갈아 쓰고, 크로니아는 가장 위험한 전투자의 시간을 먼저 얼립니다. 이동 제한을 풀 수단을 준비하세요.',
     lore: '피난소 뒤 길은 얼어붙은 분침과 모래시계 묘역으로 갈라져 진자 합류정에서 만납니다. 파수장 뒤에는 어제 회랑과 내일 금고가 각각 왕좌로 이어집니다.',
-    completion: '멈췄던 초침이 한 칸 움직였습니다. 빼앗겼던 내일이 돌아왔고 종언성단으로 향하는 최후의 시간이 열렸습니다.',
+    completion: '멈췄던 초침이 한 칸 움직였습니다. 빼앗겼던 내일이 돌아왔고 라그나벨 성단으로 향하는 최후의 시간이 열렸습니다.',
 });
 
 defineFrontierQuestNpc({

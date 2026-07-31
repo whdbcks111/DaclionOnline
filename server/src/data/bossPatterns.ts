@@ -236,7 +236,7 @@ export function getParadoxAnchorProtectionMultiplier(locationId = 'paradox_archi
     return (getLocation(locationId)?.getActiveResourceCount('paradox_anchor') ?? 0) > 0 ? 0.25 : 1;
 }
 
-/** 공허왕관 기둥이 남아 있을 때 섭정의 60% 피해 감소가 유지되는지 확인한다. */
+/** 벨카인 기둥이 남아 있을 때 섭정의 60% 피해 감소가 유지되는지 확인한다. */
 export function getVoidcrownPillarProtectionMultiplier(locationId = 'voidcrown_throne'): number {
     return (getLocation(locationId)?.getActiveResourceCount('voidcrown_pillar') ?? 0) > 0 ? 0.4 : 1;
 }
@@ -246,7 +246,7 @@ export function getWhiteNightMirrorProtectionMultiplier(locationId = 'eclipse_wh
     return (getLocation(locationId)?.getActiveResourceCount('white_night_tide_mirror') ?? 0) > 0 ? 0.35 : 1;
 }
 
-/** 심장씨앗이 남아 있을 때 태초심장의 70% 피해 감소가 유지되는지 확인한다. */
+/** 심장씨앗이 남아 있을 때 에오나의 심장의 70% 피해 감소가 유지되는지 확인한다. */
 export function getPrimordialSeedProtectionMultiplier(locationId = 'worldroot_primordial_heart'): number {
     return (getLocation(locationId)?.getActiveResourceCount('primordial_heart_seed') ?? 0) > 0 ? 0.3 : 1;
 }

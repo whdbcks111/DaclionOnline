@@ -2606,7 +2606,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         unavoidable: true, propertyTag: GameTags.PROPERTY_HOLY, shieldPercent: 16,
         penetration: { attribute: AttributeType.MAGIC_PEN, base: 66, perLevel: 12 },
         statusEffect: LegacyStatusEffects.SILENCE, statusLabel: '침묵', statusDuration: 4.5, statusDurationPerLevel: 0.45,
-        descriptionIntro: '태초심장의 첫 박동을 성역으로 펼쳐 대상의 마력 흐름을 끊고 남은 생명력을 방벽으로 거둡니다.',
+        descriptionIntro: '에오나의 심장의 첫 박동을 성역으로 펼쳐 대상의 마력 흐름을 끊고 남은 생명력을 방벽으로 거둡니다.',
     },
 ];
 

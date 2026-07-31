@@ -12,6 +12,15 @@ defineProgress({
 });
 
 defineProgress({
+    id: 'daily:commission-last-claim-day',
+    type: ProgressType.STATE,
+    label: '마지막 일일 의뢰 보상일',
+    description: '한국 표준시 기준 하루 한 번만 성장 의뢰 보상을 받도록 마지막 수령 날짜를 보존합니다.',
+    visible: false,
+    tags: ['quest:daily'],
+});
+
+defineProgress({
     id: 'security:human_verification_failures',
     type: ProgressType.COUNTER,
     label: '사람 확인 실패',

@@ -412,7 +412,7 @@ registerResourceInteraction('open_paradox_reliquary', (resource, player) => {
         ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
-        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 역설기계고 시제품 ]')))
+        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 카이로스 공방도시 시제품 ]')))
         .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
         .build());
     return true;
@@ -432,7 +432,7 @@ registerResourceInteraction('open_ashen_reliquary', (resource, player) => {
         ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
-        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 잿왕성의 봉인 유산 ]')))
+        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 카르모르 성의 봉인 유산 ]')))
         .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
         .build());
     return true;
@@ -443,7 +443,7 @@ registerResourceInteraction('open_voidcrown_reliquary', (resource, player) => {
     if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
         sendNotificationToUser(player.userId, {
             key: 'voidcrown-reliquary-full',
-            message: '공허왕관의 유산을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+            message: '벨카인의 유산을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
         });
         return false;
     }
@@ -452,7 +452,7 @@ registerResourceInteraction('open_voidcrown_reliquary', (resource, player) => {
         ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
-        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 공허왕관의 비밀 유산 ]')))
+        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 벨카인의 비밀 유산 ]')))
         .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
         .build());
     return true;
@@ -463,7 +463,7 @@ registerResourceInteraction('open_eclipse_reliquary', (resource, player) => {
     if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
         sendNotificationToUser(player.userId, {
             key: 'eclipse-reliquary-full',
-            message: '월식해구의 유산을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+            message: '루나리스 해구의 유산을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
         });
         return false;
     }
@@ -472,7 +472,7 @@ registerResourceInteraction('open_eclipse_reliquary', (resource, player) => {
         ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
-        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 월식해구의 침수 유산 ]')))
+        .color('purple', builder => builder.weight('bold', nested => nested.text('[ 루나리스 해구의 침수 유산 ]')))
         .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
         .build());
     return true;
@@ -483,7 +483,7 @@ registerResourceInteraction('open_worldroot_reliquary', (resource, player) => {
     if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
         sendNotificationToUser(player.userId, {
             key: 'worldroot-reliquary-full',
-            message: '역근수해의 유산을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
+            message: '카미하라 숲의 유산을 꺼내기에는 인벤토리 여유 공간이 부족합니다.',
         });
         return false;
     }
@@ -492,7 +492,7 @@ registerResourceInteraction('open_worldroot_reliquary', (resource, player) => {
         ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
-        .color('green', builder => builder.weight('bold', nested => nested.text('[ 역근수해의 기억 유산 ]')))
+        .color('green', builder => builder.weight('bold', nested => nested.text('[ 카미하라 숲의 기억 유산 ]')))
         .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
         .build());
     return true;
@@ -717,9 +717,10 @@ defineResource({
     baseAttribute: { maxLife: 3_800, def: 148, magicDef: 118 },
     hardness: 150,
     drops: [
-        { itemDataId: 'glass_sand', weight: 72, minCount: 2, maxCount: 5 },
+        { itemDataId: 'glass_sand', weight: 69, minCount: 2, maxCount: 5 },
         { itemDataId: 'mirage_crystal', weight: 22, minCount: 1, maxCount: 2 },
         { itemDataId: 'sun_glyph_fragment', weight: 6, minCount: 1, maxCount: 1 },
+        { itemDataId: 'sun_ore_nodule', weight: 3, minCount: 1, maxCount: 1 },
     ],
     expReward: { min: 1_450, max: 2_050 },
     interaction: 'inspect_ore',
@@ -771,10 +772,11 @@ defineResource({
     baseAttribute: { maxLife: 7_500, def: 260, magicDef: 215 },
     hardness: 220,
     drops: [
-        { itemDataId: 'rime_crystal', weight: 60, minCount: 1, maxCount: 3 },
+        { itemDataId: 'rime_crystal', weight: 57, minCount: 1, maxCount: 3 },
         { itemDataId: 'frozen_core', weight: 24, minCount: 1, maxCount: 1 },
         { itemDataId: 'aurora_shard', weight: 12, minCount: 1, maxCount: 1 },
         { itemDataId: 'diamond', weight: 4, minCount: 1, maxCount: 1 },
+        { itemDataId: 'moonfrost_ore', weight: 3, minCount: 1, maxCount: 1 },
     ],
     expReward: { min: 1_900, max: 2_700 },
     tags: [GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_RIME, GameTags.MATERIAL_DIAMOND, GameTags.PROPERTY_ICE],
@@ -972,10 +974,11 @@ defineResource({
     baseAttribute: { maxLife: 22_000, def: 285, magicDef: 330 },
     hardness: 350,
     drops: [
-        { itemDataId: 'chronosteel_shard', weight: 58, minCount: 2, maxCount: 5 },
+        { itemDataId: 'chronosteel_shard', weight: 55, minCount: 2, maxCount: 5 },
         { itemDataId: 'fracture_crystal', weight: 24, minCount: 1, maxCount: 2 },
         { itemDataId: 'void_spring', weight: 12, minCount: 1, maxCount: 2 },
         { itemDataId: 'logic_core', weight: 6, minCount: 1, maxCount: 1 },
+        { itemDataId: 'clockwork_cobalt_ore', weight: 3, minCount: 1, maxCount: 1 },
     ],
     expReward: { min: 4_800, max: 6_400 },
     tags: [
@@ -1119,7 +1122,7 @@ defineResource({
 
 defineResource({
     id: 'voidcrown_pillar',
-    name: '공허왕관 기둥',
+    name: '벨카인 기둥',
     level: 310,
     baseAttribute: { maxLife: 48_000, def: 620, magicDef: 680 },
     drops: [], expReward: { min: 8_000, max: 10_500 },
@@ -1137,10 +1140,11 @@ defineResource({
     baseAttribute: { maxLife: 42_000, def: 560, magicDef: 520 },
     hardness: 520,
     drops: [
-        { itemDataId: 'drowned_silver', weight: 54, minCount: 2, maxCount: 5 },
+        { itemDataId: 'drowned_silver', weight: 51, minCount: 2, maxCount: 5 },
         { itemDataId: 'moon_brine', weight: 22, minCount: 1, maxCount: 3 },
         { itemDataId: 'night_pearl', weight: 15, minCount: 1, maxCount: 2 },
         { itemDataId: 'tide_sigil', weight: 9, minCount: 1, maxCount: 1 },
+        { itemDataId: 'tideglass_ore', weight: 3, minCount: 1, maxCount: 1 },
     ],
     expReward: { min: 8_400, max: 10_900 },
     tags: [
@@ -1237,7 +1241,7 @@ defineResource({
 
 defineResource({
     id: 'primordial_heart_seed',
-    name: '태초심장 씨앗',
+    name: '에오나의 심장 씨앗',
     level: 380,
     baseAttribute: { maxLife: 64_000, def: 820, magicDef: 870 },
     drops: [], expReward: { min: 10_800, max: 14_000 },
@@ -1293,11 +1297,12 @@ defineResource({
     baseAttribute: { maxLife: 108_000, def: 1_300, magicDef: 1_250 },
     hardness: 820,
     drops: [
-        { itemDataId: 'entropy_metal', weight: 46, minCount: 2, maxCount: 5 },
+        { itemDataId: 'entropy_metal', weight: 43, minCount: 2, maxCount: 5 },
         { itemDataId: 'endstar_ash', weight: 24, minCount: 1, maxCount: 4 },
         { itemDataId: 'last_light', weight: 19, minCount: 1, maxCount: 3 },
         { itemDataId: 'genesis_crystal', weight: 8, minCount: 1, maxCount: 1 },
         { itemDataId: 'constellation_core', weight: 3, minCount: 1, maxCount: 1 },
+        { itemDataId: 'endstar_adamant_ore', weight: 3, minCount: 1, maxCount: 1 },
     ],
     expReward: { min: 15_200, max: 19_800 },
     tags: [
