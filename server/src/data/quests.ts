@@ -24,13 +24,80 @@ import { GameEventIds } from '../models/GameEvent.js';
 export const FIRST_SLIME_HUNT_QUEST_ID = 'luminair:first_slime_hunt';
 export const DAILY_COMMISSION_NPC_ID = 'daily_commissioner';
 export const DAILY_COMMISSION_LAST_CLAIM_DAY = 'daily:commission-last-claim-day';
-export const DAILY_COMMISSION_QUESTS = Object.freeze([
-    { id: 'daily:commission-1-49', minLevel: 1, maxLevel: 49, required: 8 },
-    { id: 'daily:commission-50-149', minLevel: 50, maxLevel: 149, required: 12 },
-    { id: 'daily:commission-150-299', minLevel: 150, maxLevel: 299, required: 16 },
-    { id: 'daily:commission-300-499', minLevel: 300, maxLevel: 499, required: 20 },
-    { id: 'daily:commission-500-plus', minLevel: 500, maxLevel: Number.POSITIVE_INFINITY, required: 24 },
+
+/** 계정별 오늘의 의뢰를 구성하는 생활·전투 유형. */
+export class DailyCommissionType {
+    private static readonly all: DailyCommissionType[] = [];
+
+    static readonly HUNT = new DailyCommissionType(
+        'hunt', '토벌', '체', 1, 1,
+        '수락 당시 레벨과 비슷한 일반 몬스터를 처치하세요.',
+        '적정 레벨 일반 몬스터 처치',
+    );
+    static readonly MINING = new DailyCommissionType(
+        'mining', '채광', '개', 0.5, 1,
+        '월드의 광맥을 찾아 직접 파괴하세요.',
+        '광맥 채굴 완료',
+    );
+    static readonly GATHERING = new DailyCommissionType(
+        'gathering', '채집', '회', 0.15, 70,
+        '대추야자·눈솔이끼·청해초 수지·기억 톱니 채집지에서 재료를 수집하세요.',
+        '생활 재료 채집',
+    );
+    static readonly FISHING = new DailyCommissionType(
+        'fishing', '낚시', '마리', 0.375, 1,
+        '어느 낚시터에서든 물고기를 낚으세요.',
+        '물고기 포획',
+    );
+
+    private constructor(
+        readonly key: string,
+        readonly label: string,
+        readonly unit: string,
+        readonly requiredRate: number,
+        readonly minimumLevel: number,
+        readonly instruction: string,
+        readonly objectiveLabel: string,
+    ) {
+        DailyCommissionType.all.push(this);
+    }
+
+    static values(): readonly DailyCommissionType[] { return DailyCommissionType.all; }
+    static fromKey(key: string): DailyCommissionType | undefined {
+        return DailyCommissionType.all.find(type => type.key === key.trim().toLowerCase());
+    }
+}
+
+const DAILY_COMMISSION_TIERS = Object.freeze([
+    { legacyId: 'daily:commission-1-49', minLevel: 1, maxLevel: 49, baseRequired: 8, gold: 200, recoveryItemId: 'health_potion', recoveryCount: 2 },
+    { legacyId: 'daily:commission-50-149', minLevel: 50, maxLevel: 149, baseRequired: 12, gold: 2_000, recoveryItemId: 'health_potion', recoveryCount: 4 },
+    { legacyId: 'daily:commission-150-299', minLevel: 150, maxLevel: 299, baseRequired: 16, gold: 12_000, recoveryItemId: 'large_health_potion', recoveryCount: 2 },
+    { legacyId: 'daily:commission-300-499', minLevel: 300, maxLevel: 499, baseRequired: 20, gold: 50_000, recoveryItemId: 'large_health_potion', recoveryCount: 3 },
+    { legacyId: 'daily:commission-500-plus', minLevel: 500, maxLevel: Number.POSITIVE_INFINITY, baseRequired: 24, gold: 180_000, recoveryItemId: 'large_health_potion', recoveryCount: 5 },
 ] as const);
+
+export const DAILY_COMMISSION_QUESTS = Object.freeze(DAILY_COMMISSION_TIERS.flatMap((tier, tierIndex) =>
+    DailyCommissionType.values()
+        .filter(type => tier.maxLevel >= type.minimumLevel)
+        .map(type => Object.freeze({
+            id: type === DailyCommissionType.HUNT ? tier.legacyId : `${tier.legacyId}-${type.key}`,
+            minLevel: tier.minLevel,
+            maxLevel: tier.maxLevel,
+            required: Math.max(2, Math.ceil(tier.baseRequired * type.requiredRate)),
+            gold: tier.gold,
+            recoveryItemId: tier.recoveryItemId,
+            recoveryCount: tier.recoveryCount,
+            tierIndex,
+            type,
+        })),
+));
+
+const DAILY_GATHERING_RESOURCE_IDS = new Set([
+    'oasis_date_palm',
+    'snowmoss_patch',
+    'kelp_resin_patch',
+    'memory_coil',
+]);
 export const TWILIGHT_TOMB_QUEST_IDS = Object.freeze({
     RESTLESS_DEAD: 'twilight-tomb:restless-dead',
     BROKEN_OATH: 'twilight-tomb:broken-oath',
@@ -85,10 +152,16 @@ export function getDailyCommissionDayKey(now = new Date()): string {
     return new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
-export function getDailyCommissionDefinition(level: number) {
+export function getDailyCommissionDefinition(level: number, userId = 0, now = new Date()) {
     const normalized = Math.max(1, Math.floor(level));
+    const tier = DAILY_COMMISSION_TIERS.find(value =>
+        normalized >= value.minLevel && normalized <= value.maxLevel)!;
+    const types = DailyCommissionType.values().filter(type => normalized >= type.minimumLevel);
+    const dayNumber = Math.floor(new Date(`${getDailyCommissionDayKey(now)}T00:00:00.000Z`).getTime() / 86_400_000);
+    const index = ((Math.trunc(userId) + dayNumber) % types.length + types.length) % types.length;
+    const selectedType = types[index];
     return DAILY_COMMISSION_QUESTS.find(quest =>
-        normalized >= quest.minLevel && normalized <= quest.maxLevel)!;
+        quest.minLevel === tier.minLevel && quest.type === selectedType)!;
 }
 
 export function getPlayerDailyCommission(player: Player) {
@@ -113,32 +186,60 @@ function isAppropriateDailyTarget(player: Player, target: Entity | undefined): b
     return target.level >= minLevel && target.level <= maxLevel;
 }
 
-for (const definition of DAILY_COMMISSION_QUESTS) {
-    defineQuest({
-        id: definition.id,
-        name: `오늘의 성장 의뢰 · ${definition.required}체`,
-        aliases: ['일일 의뢰', '오늘의 의뢰'],
-        description: '수락 당시 레벨의 80~120% 구간 일반 몬스터를 처치하는 하루 한 번의 성장 의뢰입니다.',
-        tags: ['quest:daily', 'quest:side'],
-        giverNpcIds: [DAILY_COMMISSION_NPC_ID],
-        turnInNpcIds: [DAILY_COMMISSION_NPC_ID],
-        visible: player => getDailyCommissionDefinition(player.level).id === definition.id
-            || player.quests.get(definition.id) !== undefined,
-        canAccept: player => getDailyCommissionDefinition(player.level).id === definition.id
-            && !getPlayerDailyCommission(player)
-            && player.progress.getState(DAILY_COMMISSION_LAST_CLAIM_DAY) !== getDailyCommissionDayKey(),
-        stages: [new QuestStage({
-            id: 'hunt',
-            description: '수락 당시 레벨을 기준으로 비슷한 수준의 일반 몬스터를 처치하세요.',
-            objectives: [QuestObjective.event({
-                id: 'appropriate-monsters',
-                label: '적정 레벨 일반 몬스터 처치',
-                required: definition.required,
-                eventId: GameEventIds.ENTITY_DEFEATED,
-                matches: (event, player) => isAppropriateDailyTarget(player, event.subject),
-            })],
-        })],
-        rewards: [QuestReward.custom({
+function createDailyCommissionObjective(definition: (typeof DAILY_COMMISSION_QUESTS)[number]): QuestObjective {
+    const type = definition.type;
+    if (type === DailyCommissionType.HUNT) {
+        return QuestObjective.event({
+            id: 'appropriate-monsters',
+            label: type.objectiveLabel,
+            required: definition.required,
+            eventId: GameEventIds.ENTITY_DEFEATED,
+            matches: (event, player) => isAppropriateDailyTarget(player, event.subject),
+        });
+    }
+    if (type === DailyCommissionType.MINING) {
+        return QuestObjective.event({
+            id: 'ore-deposits',
+            label: type.objectiveLabel,
+            required: definition.required,
+            eventId: GameEventIds.RESOURCE_DESTROYED,
+            matches: event => Boolean(event.subject?.hasTag(GameTags.RESOURCE_ORE)),
+        });
+    }
+    if (type === DailyCommissionType.GATHERING) {
+        return QuestObjective.event({
+            id: 'gathering-sites',
+            label: type.objectiveLabel,
+            required: definition.required,
+            eventId: GameEventIds.RESOURCE_INTERACTED,
+            matches: event => DAILY_GATHERING_RESOURCE_IDS.has(String(event.data.resourceDataId ?? '')),
+        });
+    }
+    return QuestObjective.event({
+        id: 'fish-caught',
+        label: type.objectiveLabel,
+        required: definition.required,
+        eventId: GameEventIds.FISH_CAUGHT,
+    });
+}
+
+function createDailyCommissionRewards(definition: (typeof DAILY_COMMISSION_QUESTS)[number]): QuestReward[] {
+    const manaRecoveryItemId = definition.tierIndex >= 2 ? 'large_mana_potion' : 'mana_potion';
+    const activityRewards = definition.type === DailyCommissionType.HUNT
+        ? [
+            QuestReward.item('battle_tonic', 1 + Math.floor(definition.tierIndex / 2), '전투 강장제'),
+            QuestReward.item('arcane_tonic', 1 + Math.floor(definition.tierIndex / 2), '비전 영약'),
+        ]
+        : definition.type === DailyCommissionType.MINING
+            ? [QuestReward.item('mana_crystal', 1 + definition.tierIndex, '마나 수정')]
+            : definition.type === DailyCommissionType.GATHERING
+                ? [QuestReward.item('swift_tonic', 1 + definition.tierIndex, '신속의 물약')]
+                : [
+                    QuestReward.item('earthworm_bait', 8 + definition.tierIndex * 4, '통통한 지렁이 미끼'),
+                    QuestReward.item('angler_insight_draught', 1, '낚시꾼의 통찰 물약'),
+                ];
+    return [
+        QuestReward.custom({
             label: '현재 레벨 필요 경험치의 50%',
             canGrant: player =>
                 player.progress.getState(DAILY_COMMISSION_LAST_CLAIM_DAY) !== getDailyCommissionDayKey(),
@@ -147,7 +248,35 @@ for (const definition of DAILY_COMMISSION_QUESTS) {
                 player.progress.setState(DAILY_COMMISSION_LAST_CLAIM_DAY, getDailyCommissionDayKey());
                 player.gainExp(amount);
             },
+        }),
+        QuestReward.gold(definition.gold),
+        QuestReward.item(definition.recoveryItemId, definition.recoveryCount),
+        QuestReward.item(manaRecoveryItemId, definition.recoveryCount),
+        ...activityRewards,
+    ];
+}
+
+for (const definition of DAILY_COMMISSION_QUESTS) {
+    const taskSummary = `${definition.type.objectiveLabel} ${definition.required}${definition.type.unit}`;
+    defineQuest({
+        id: definition.id,
+        name: `오늘의 ${definition.type.label} 의뢰 · ${definition.required}${definition.type.unit}`,
+        aliases: ['일일 의뢰', '오늘의 의뢰', `오늘의 ${definition.type.label}`],
+        description: `${definition.type.instruction} 하루 한 번 계정별로 고정되는 성장 의뢰입니다.`,
+        tags: ['quest:daily', 'quest:side'],
+        giverNpcIds: [DAILY_COMMISSION_NPC_ID],
+        turnInNpcIds: [DAILY_COMMISSION_NPC_ID],
+        visible: player => getDailyCommissionDefinition(player.level, player.userId).id === definition.id
+            || player.quests.get(definition.id) !== undefined,
+        canAccept: player => getDailyCommissionDefinition(player.level, player.userId).id === definition.id
+            && !getPlayerDailyCommission(player)
+            && player.progress.getState(DAILY_COMMISSION_LAST_CLAIM_DAY) !== getDailyCommissionDayKey(),
+        stages: [new QuestStage({
+            id: definition.type.key,
+            description: `${definition.type.instruction} 목표: ${taskSummary}.`,
+            objectives: [createDailyCommissionObjective(definition)],
         })],
+        rewards: createDailyCommissionRewards(definition),
         repeat: { cooldownSeconds: 0 },
         onAccept: player => {
             player.quests.get(definition.id)?.setMetadata('acceptedLevel', player.level);

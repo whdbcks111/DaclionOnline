@@ -125,12 +125,11 @@ NPC.define({
     },
     scenarios: [
         new DialogueScenario('offer', function* ({ player }) {
-            const definition = getDailyCommissionDefinition(player.level);
-            const lower = Math.max(1, Math.floor(player.level * 0.8));
-            const upper = Math.max(lower, Math.ceil(player.level * 1.2));
+            const definition = getDailyCommissionDefinition(player.level, player.userId);
             yield Dialogue.say(
-                `오늘은 Lv.${lower}~${upper} 일반 몬스터 ${definition.required}체를 정리해 주세요. `
-                + '완료하면 현재 레벨 필요 경험치의 50%를 지급합니다.',
+                `오늘의 배정은 ${definition.type.label}입니다. ${definition.type.instruction} `
+                + `목표는 ${definition.type.objectiveLabel} ${definition.required}${definition.type.unit}입니다. `
+                + `완료하면 필요 경험치 50%, Gold ${definition.gold.toLocaleString('ko-KR')}와 회복·활동 보급품을 지급합니다.`,
             );
             yield Dialogue.choice([
                 { label: '오늘의 의뢰를 받겠습니다.', target: 'accept' },
@@ -138,24 +137,23 @@ NPC.define({
             ]);
         }),
         new DialogueScenario('accept', function* ({ player }) {
-            const definition = getDailyCommissionDefinition(player.level);
+            const definition = getDailyCommissionDefinition(player.level, player.userId);
             yield Dialogue.acceptQuest(definition.id);
-            yield Dialogue.say('수락한 순간의 레벨을 기준으로 대상 구간이 고정됩니다. 왕관을 쓴 보스는 목표에 포함되지 않습니다.');
+            yield Dialogue.say('오늘 배정은 자정까지 유지됩니다. 목표를 달성한 뒤 광장으로 돌아와 정산해 주세요.');
             yield Dialogue.end();
         }),
         new DialogueScenario('progress', function* ({ player }) {
             const quest = getPlayerDailyCommission(player);
             const objective = quest ? player.quests.getSnapshot(quest.questDataId)?.objectives[0] : undefined;
-            const acceptedLevel = Number(quest?.getMetadata('acceptedLevel') ?? player.level);
             yield Dialogue.say(
-                `Lv.${Math.max(1, Math.floor(acceptedLevel * 0.8))}~${Math.ceil(acceptedLevel * 1.2)} `
-                + `일반 몬스터 진행도는 ${objective?.progress ?? 0}/${objective?.required ?? 0}입니다.`,
+                `${objective?.label ?? '오늘의 의뢰'} 진행도는 `
+                + `${objective?.progress ?? 0}/${objective?.required ?? 0}입니다.`,
             );
             yield Dialogue.end();
         }),
         new DialogueScenario('complete', function* ({ player }) {
             const quest = getPlayerDailyCommission(player);
-            yield Dialogue.say('오늘의 의뢰를 마쳤군요. 약속한 성장 경험치를 정산하겠습니다.');
+            yield Dialogue.say('오늘의 의뢰를 마쳤군요. 성장 경험치와 골드, 보급품을 함께 정산하겠습니다.');
             if (quest) yield Dialogue.turnInQuest(quest.questDataId);
             yield Dialogue.end();
         }),
