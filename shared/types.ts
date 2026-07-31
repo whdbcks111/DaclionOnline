@@ -568,6 +568,9 @@ export interface AdminPanelResult extends SimpleResult {
     details?: string
 }
 
+/** 여러 연결 중 실제로 조작 중인 클라이언트를 고르기 위한 화면 활성 상태. */
+export type ClientPresenceState = 'focused' | 'visible' | 'hidden'
+
 // 소켓 이벤트 맵
 export interface ServerToClientEvents {
     sessionRestore: (data: SessionRestoreData) => void
@@ -612,6 +615,7 @@ export interface ServerToClientEvents {
 }
 
 export interface ClientToServerEvents {
+    clientPresence: (state: ClientPresenceState) => void
     login: (data: LoginRequest) => void
     register: (data: RegisterRequest) => void
     logout: (token: string) => void

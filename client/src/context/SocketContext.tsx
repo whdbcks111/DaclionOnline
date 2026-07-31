@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { io } from 'socket.io-client'
 import type { Socket } from 'socket.io-client'
-import type { LoginResult, SessionRestoreData } from '@shared/types'
+import type { ClientPresenceState, LoginResult, SessionRestoreData } from '@shared/types'
 
 // 서버 주소
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
@@ -51,10 +51,19 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       withCredentials: true,
     })
 
+    const getPresenceState = (): ClientPresenceState => {
+      if (document.visibilityState === 'hidden') return 'hidden'
+      return document.hasFocus() ? 'focused' : 'visible'
+    }
+    const reportPresence = () => {
+      if (socketInstance.connected) socketInstance.emit('clientPresence', getPresenceState())
+    }
+
     // 연결 이벤트
     socketInstance.on('connect', () => {
       console.log('✅ 서버 연결됨:', socketInstance.id)
       setIsConnected(true)
+      reportPresence()
     })
 
     // 연결 해제 이벤트
@@ -103,9 +112,20 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
     setSocket(socketInstance)
 
+    document.addEventListener('visibilitychange', reportPresence)
+    window.addEventListener('focus', reportPresence)
+    window.addEventListener('blur', reportPresence)
+    window.addEventListener('pointerdown', reportPresence)
+    window.addEventListener('keydown', reportPresence)
+
     // 클린업: 컴포넌트 언마운트 시 연결 해제
     return () => {
       console.log('🔌 Socket 연결 해제 중...')
+      document.removeEventListener('visibilitychange', reportPresence)
+      window.removeEventListener('focus', reportPresence)
+      window.removeEventListener('blur', reportPresence)
+      window.removeEventListener('pointerdown', reportPresence)
+      window.removeEventListener('keydown', reportPresence)
       socketInstance.disconnect()
     }
   }, [])

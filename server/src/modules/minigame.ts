@@ -5,6 +5,7 @@ import {
     type MiniGameSessionRequest,
 } from '../../../shared/minigames.js';
 import type {
+    FishingSimulationState,
     MiniGameConfigMap,
     MiniGameActionSample,
     MiniGameCancelledData,
@@ -17,7 +18,7 @@ import type {
 } from '../../../shared/minigames.js';
 import { randomHex } from '../utils/random.js';
 import { getSession } from './login.js';
-import { getIO } from './socket.js';
+import { getIO, getPreferredUserSocket } from './socket.js';
 import { cancelGameTask, scheduleGameTask } from './scheduler.js';
 
 export interface MiniGameValidationResult {
@@ -52,22 +53,27 @@ interface ActiveMiniGame extends StartMiniGameOptions {
 }
 
 const activeByUser = new Map<number, ActiveMiniGame>();
-/** 전송·브라우저 frame 순서의 작은 흔들림만 허용한다. 기존 1초 조기 완료 허용은 제거한다. */
-export const MINIGAME_RESULT_EARLY_TOLERANCE_MS = 80;
+/** 전송·브라우저 frame 순서의 작은 흔들림을 흡수하되 비정상 조기 완료는 막는다. */
+export const MINIGAME_RESULT_EARLY_TOLERANCE_MS = 250;
 /** 낚시 성공 경계에서 ready/input/result 패킷의 지연 편차를 서버 시계가 따라잡는 정산 시간. */
 export const FISHING_RESULT_SETTLE_MS = 300;
+/** 화면과 서버 trace 경계의 작은 차이를 흡수하는 낚시 성공 게이지 여유. */
+export const FISHING_CAPTURE_GAUGE_TOLERANCE = 0.04;
+
+export function isFishingCaptureResultAccepted(state: FishingSimulationState): boolean {
+    return state.success || state.gauge >= 1 - FISHING_CAPTURE_GAUGE_TOLERANCE;
+}
 
 function cancelActiveMiniGameTasks(active: ActiveMiniGame): void {
     cancelGameTask(active.timeoutKey);
     if (active.resultSettleKey) cancelGameTask(active.resultSettleKey);
 }
 
-function emitToUser(userId: number, event: 'miniGameStart' | 'miniGameResolved' | 'miniGameCancelled', data: unknown): void {
+function emitToUser(userId: number, event: 'miniGameResolved' | 'miniGameCancelled', data: unknown): void {
     for (const [, socket] of getIO().sockets.sockets) {
         const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
         if (session?.userId !== userId) continue;
-        if (event === 'miniGameStart') socket.emit(event, data as MiniGameStartData);
-        else if (event === 'miniGameResolved') socket.emit(event, data as MiniGameResolvedData);
+        if (event === 'miniGameResolved') socket.emit(event, data as MiniGameResolvedData);
         else socket.emit(event, data as MiniGameCancelledData);
     }
 }
@@ -113,6 +119,7 @@ export function normalizeMiniGameActions(request: MiniGameValidationRequest): Mi
 
 export function startMiniGame<T extends MiniGameType>(options: StartMiniGameOptions<T>): MiniGameStartData | null {
     if (activeByUser.has(options.userId)) return null;
+    const targetSocket = getPreferredUserSocket(options.userId);
     const startedAt = Date.now();
     const sessionId = randomHex(12);
     const token = randomHex(24);
@@ -125,6 +132,7 @@ export function startMiniGame<T extends MiniGameType>(options: StartMiniGameOpti
         startedAt,
         expiresAt,
         timeoutKey,
+        inputSocketId: targetSocket?.id,
         inputs: [],
         actions: [],
     };
@@ -133,7 +141,7 @@ export function startMiniGame<T extends MiniGameType>(options: StartMiniGameOpti
         void failMiniGame(options.userId, '제한 시간 안에 미니게임을 완료하지 못했습니다.');
     });
     const payload = { sessionId, token, type: options.type, expiresAt, config: options.config } as MiniGameStartData;
-    emitToUser(options.userId, 'miniGameStart', payload);
+    targetSocket?.emit('miniGameStart', payload);
     return payload;
 }
 
@@ -150,7 +158,7 @@ function matchesSession(
         && (active.inputSocketId === undefined || active.inputSocketId === socketId);
 }
 
-/** 최초 준비 소켓을 입력 권한 소켓으로 고정하고 서버 기준 미니게임 시계를 시작한다. */
+/** 배정된 소켓의 준비를 확인하고, 배정 정보가 없을 때만 최초 준비 소켓으로 fallback한다. */
 export function readyMiniGame(
     userId: number,
     socketId: string,
@@ -159,8 +167,8 @@ export function readyMiniGame(
 ): boolean {
     const active = activeByUser.get(userId);
     if (!matchesSession(active, socketId, request) || now > active.expiresAt) return false;
-    if (active.inputSocketId === undefined) {
-        active.inputSocketId = socketId;
+    if (active.readyAt === undefined) {
+        if (active.inputSocketId === undefined) active.inputSocketId = socketId;
         active.readyAt = now;
         active.inputs = [{ at: 0, x: 0, y: 0 }];
         active.actions = [];

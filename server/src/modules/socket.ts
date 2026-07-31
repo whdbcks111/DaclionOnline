@@ -1,10 +1,49 @@
-import { Server, Socket } from 'socket.io'
+import { Server, type Socket } from 'socket.io'
 import { Server as HttpServer } from 'http'
+import type { ClientPresenceState } from '../../../shared/types.js'
 import logger from '../utils/logger.js';
 import { getSession, isUserOnline, setUserOnline, setUserOffline } from './login.js';
 import { getUserChannel, getChannelRoomKey } from './channel.js';
 
 let io: Server;
+
+const CLIENT_PRESENCE_RANK: Readonly<Record<ClientPresenceState, number>> = {
+    focused: 2,
+    visible: 1,
+    hidden: 0,
+};
+
+function isClientPresenceState(value: unknown): value is ClientPresenceState {
+    return value === 'focused' || value === 'visible' || value === 'hidden';
+}
+
+/** 같은 계정의 연결 중 최근 실제 입력이 있었던 focused 화면을 우선한다. */
+export function getPreferredUserSocket(userId: number): Socket | undefined {
+    let preferred: Socket | undefined;
+    let preferredRank = -1;
+    let preferredUpdatedAt = -1;
+    for (const [, socket] of getIO().sockets.sockets) {
+        const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+        const socketUserId = typeof socket.data.onlineUserId === 'number'
+            ? socket.data.onlineUserId
+            : session?.userId;
+        if (socketUserId !== userId) continue;
+        const rawPresence: unknown = socket.data.clientPresence;
+        const presence = isClientPresenceState(rawPresence)
+            ? rawPresence
+            : 'visible';
+        const rank = CLIENT_PRESENCE_RANK[presence];
+        const updatedAt = typeof socket.data.clientPresenceUpdatedAt === 'number'
+            ? socket.data.clientPresenceUpdatedAt
+            : 0;
+        if (rank > preferredRank || (rank === preferredRank && updatedAt > preferredUpdatedAt)) {
+            preferred = socket;
+            preferredRank = rank;
+            preferredUpdatedAt = updatedAt;
+        }
+    }
+    return preferred;
+}
 
 function parseCookie(cookie: string, name: string): string | undefined {
     const match = cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
@@ -36,6 +75,8 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
 
     io.on('connection', (socket) => {
         logger.socket('클라이언트 연결됨:', socket.id);
+        socket.data.clientPresence = 'visible' satisfies ClientPresenceState;
+        socket.data.clientPresenceUpdatedAt = performance.now();
         const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
         if (session) {
             socket.data.onlineUserId = session.userId;
@@ -43,6 +84,12 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
             socket.join(getChannelRoomKey(getUserChannel(session.userId)));
             logger.success(`로그인: ${session.username} (${socket.id})`);
         }
+
+        socket.on('clientPresence', (state: unknown) => {
+            if (!isClientPresenceState(state)) return;
+            socket.data.clientPresence = state;
+            socket.data.clientPresenceUpdatedAt = performance.now();
+        });
 
         // 클라이언트 연결 해제
         socket.on('disconnect', () => {

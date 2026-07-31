@@ -8,6 +8,7 @@ import {
     FISHING_RESULT_SETTLE_MS,
     getMiniGameValidationSnapshot,
     hasActiveMiniGame,
+    isFishingCaptureResultAccepted,
     readyMiniGame,
     recordMiniGameAction,
     recordMiniGameInput,
@@ -82,6 +83,59 @@ test('미니게임은 서버 수신 입력만 기록하고 조기·사후 조작
     assert.deepEqual(snapshot.inputs.at(-1), { at: 100, x: 1, y: -1 });
     assert.equal(hasActiveMiniGame(userId), true);
     assert.equal(cancelMiniGame(userId, '테스트 정리'), true);
+});
+
+test('다중 접속에서는 focused 화면 하나에만 미니게임을 시작한다', () => {
+    const userId = 71_005;
+    const emitted: string[] = [];
+    const sockets = getIO().sockets.sockets as unknown as Map<string, {
+        id: string
+        data: Record<string, unknown>
+        emit: (event: string) => void
+    }>;
+    sockets.set('hidden-client', {
+        id: 'hidden-client',
+        data: { onlineUserId: userId, clientPresence: 'hidden', clientPresenceUpdatedAt: 200 },
+        emit: event => { emitted.push(`hidden:${event}`); },
+    });
+    sockets.set('focused-client', {
+        id: 'focused-client',
+        data: { onlineUserId: userId, clientPresence: 'focused', clientPresenceUpdatedAt: 100 },
+        emit: event => { emitted.push(`focused:${event}`); },
+    });
+
+    try {
+        const started = startMiniGame({
+            userId,
+            type: 'forge_rhythm',
+            config,
+            expiresInMs: 6_000,
+            validate: () => ({ success: true }),
+            onResolved: () => undefined,
+        });
+        assert.ok(started);
+        assert.deepEqual(emitted, ['focused:miniGameStart']);
+        assert.equal(readyMiniGame(userId, 'hidden-client', started), false);
+        assert.equal(readyMiniGame(userId, 'focused-client', started), true);
+        assert.equal(cancelMiniGame(userId, '테스트 정리'), true);
+    } finally {
+        sockets.delete('hidden-client');
+        sockets.delete('focused-client');
+    }
+});
+
+test('낚시 서버 판정은 성공 게이지 경계의 작은 시각 오차를 허용한다', () => {
+    const base = {
+        netX: 50,
+        netY: 50,
+        fishX: 50,
+        fishY: 50,
+        caught: true,
+        finished: false,
+        success: false,
+    };
+    assert.equal(isFishingCaptureResultAccepted({ ...base, gauge: 0.97 }), true);
+    assert.equal(isFishingCaptureResultAccepted({ ...base, gauge: 0.94 }), false);
 });
 
 test('입력 소켓 연결 종료는 미니게임 취소가 아니라 실패로 확정한다', async () => {

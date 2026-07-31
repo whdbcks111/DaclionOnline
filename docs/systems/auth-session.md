@@ -43,6 +43,7 @@
 
 - 세션 토큰은 `randomHex(32)`로 만들며 `sessionMap`에만 저장된다. 서버 재시작 후에는 복원되지 않는다.
 - 사용자 한 명이 여러 토큰/소켓으로 로그인할 수 있다. `userSessions`는 userId별 토큰 Set, `onlineUsers`는 userId별 socket ID Set을 가진다.
+- 클라이언트는 연결·화면 표시 상태 변경·focus·포인터/키 입력 때 `clientPresence`를 보내고 서버는 연결별 `focused | visible | hidden`과 갱신 시각을 메모리에 둔다. 미니게임처럼 한 화면에서만 실행해야 하는 상호작용은 `focused`, `visible`, `hidden` 순서와 최근 갱신 시각으로 대상 socket 하나를 고른다.
 - 쿠키는 클라이언트 로그인/가입 화면에서 `sessionToken`으로 설정되고 Socket.io와 HTTP upload에서 사용된다.
 - 유효한 쿠키로 연결하면 `sessionRestore`를 보내고 Player를 메모리에 로드한다.
 - 로그인 요청은 IP당 분당 20회로 제한하고, 비밀번호 일치 여부와 무관하게 같은 제한을 소비한다.

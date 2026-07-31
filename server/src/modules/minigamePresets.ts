@@ -11,7 +11,12 @@ import {
 } from '../../../shared/minigames.js';
 import { AttributeType } from '../models/Attribute.js';
 import type Player from '../models/Player.js';
-import { normalizeMiniGameActions, normalizeMiniGameInputs, startMiniGame } from './minigame.js';
+import {
+    isFishingCaptureResultAccepted,
+    normalizeMiniGameActions,
+    normalizeMiniGameInputs,
+    startMiniGame,
+} from './minigame.js';
 
 export interface MiniGamePresetSummary {
     id: string
@@ -69,7 +74,7 @@ function fishingPreset(
 
 function validateFishing(config: FishingCaptureConfig, request: MiniGameValidationRequest) {
     const state = simulateFishingCapture(config, normalizeMiniGameInputs(request), request.elapsedMs);
-    return state.finished && state.success
+    return isFishingCaptureResultAccepted(state)
         ? { success: true, message: '관리자 낚시 테스트에 성공했습니다.' }
         : { success: false, message: '관리자 낚시 테스트에 실패했습니다.' };
 }

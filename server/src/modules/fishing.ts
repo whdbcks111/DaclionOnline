@@ -17,7 +17,13 @@ import {
     type FishingCaptureShape,
 } from '../../../shared/minigames.js';
 import { sendBotMessageToUser, sendNotificationToUser } from './message.js';
-import { cancelMiniGame, hasActiveMiniGame, normalizeMiniGameInputs, startMiniGame } from './minigame.js';
+import {
+    cancelMiniGame,
+    hasActiveMiniGame,
+    isFishingCaptureResultAccepted,
+    normalizeMiniGameInputs,
+    startMiniGame,
+} from './minigame.js';
 import { getPlayerByUserId } from './player.js';
 import { cancelGameTask, scheduleGameTask } from './scheduler.js';
 import { emitGameEvent, GameEventIds } from '../models/GameEvent.js';
@@ -175,7 +181,7 @@ function beginFishingMiniGame(userId: number, locationId: string, fish: FishData
                 return { success: false, message: '낚시 도중 자리를 벗어났습니다.' };
             }
             const simulation = simulateFishingCapture(config, normalizeMiniGameInputs(request), request.elapsedMs);
-            return simulation.finished && simulation.success
+            return isFishingCaptureResultAccepted(simulation)
                 ? { success: true }
                 : { success: false, message: '물고기가 채집 영역에서 빠져나갔습니다.' };
         },

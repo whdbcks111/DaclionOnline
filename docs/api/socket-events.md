@@ -6,6 +6,7 @@
 
 | 이벤트 | payload | 인증 | 서버 처리 | 주 응답/효과 |
 | --- | --- | --- | --- | --- |
+| `clientPresence` | `"focused" \| "visible" \| "hidden"` | 선택 | `modules/socket.ts` | 연결·화면 상태·실제 입력 때 현재 활성도를 갱신해 다중 접속의 단일 미니게임 대상 선택 |
 | `login` | `LoginRequest { id, pw }` | 불필요 | `modules/login.ts` | `loginResult`; Player 로드, room 참가 |
 | `register` | `RegisterRequest { id, pw, email, nickname }` | 이메일 인증 필요 | `modules/register.ts` | `registerResult`; User+Player 생성, 세션 발급 |
 | `logout` | `token: string` | 토큰 | `modules/login.ts` | `logoutResult`; 마지막 세션이면 Player 저장/언로드 |
@@ -34,10 +35,10 @@
 | `adminPanelRequestPlayers` | 없음 | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayers`; 온라인 우선 전체 캐릭터 목록 |
 | `adminPanelRequestPlayer` | `userId: number` | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayer`; 보유·장착 칭호를 포함한 가공된 캐릭터 상세 snapshot |
 | `adminPanelExecute` | `AdminPanelActionRequest` | 권한 10 | `modules/adminPanel.ts` | 플레이어·월드 action, 칭호 부여·삭제, 전체 채팅/알림·개별 온라인 알림, `analyze_balance_profile` 전투 로테이션 진단을 서버 검증 후 실행하고 result/목록/상세 갱신 |
-| `miniGameReady` | `{ sessionId, token }` | 필요 | `modules/minigame.ts` | 최초 요청 socket을 입력 소유자로 고정하고 서버 경과 시계 시작 |
+| `miniGameReady` | `{ sessionId, token }` | 필요 | `modules/minigame.ts` | 서버가 현재 조작 화면으로 배정한 socket을 확인하고 서버 경과 시계 시작 |
 | `miniGameInput` | `{ sessionId, token, x, y }` | 필요 | `modules/minigame.ts` | 이동 축을 clamp하고 서버 수신 시각 기준 20ms trace로 기록 |
 | `miniGameAction` | `{ sessionId, token, action: "strike" }` | 필요 | `modules/minigame.ts` | 단조 타격을 서버 수신 시각으로 즉시 기록 |
-| `miniGameResult` | `{ sessionId, token }` | 필요 | `modules/minigame.ts` | 서버 경과 시간과 서버 수집 trace로 타입별 재현 검증 후 `miniGameResolved`; 입력 socket disconnect는 실패 확정 |
+| `miniGameResult` | `{ sessionId, token }` | 필요 | `modules/minigame.ts` | 250ms 완료 시각 여유와 서버 수집 trace로 타입별 재현 검증 후 `miniGameResolved`; 입력 socket disconnect는 실패 확정 |
 | `requestHumanVerification` | 없음 | 필요 | `modules/humanVerification.ts` | required FLAG가 있는 플레이어의 기존 문제를 재전송하거나 새 일회성 문제를 발급 |
 | `submitHumanVerification` | `{ sessionId, answer }` | 필요 | `modules/humanVerification.ts` | 서버 메모리의 정답과 session을 검사하고 성공 시 영속 요구 상태와 행동 제한 해제 |
 | `requestHudPresets` | 없음 | 필요 | `modules/hudPreset.ts` | 계정에 저장된 프리셋 이름·수정 시각 목록을 `hudPresetList`로 응답하며 자동 적용하지 않음 |
@@ -83,7 +84,7 @@
 | `adminPanelPlayer` | `AdminPlayerDetailData \| null` | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
 | `adminPanelResult` | `AdminPanelResult` (밸런스 분석 시 `details` 포함) | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
 | `adminPanelResult` | `AdminPanelResult` | `modules/adminPanel.ts` | 요청 소켓 호환용 결과. 사용자 피드백은 같은 요청 소켓의 `notification`으로 표시 |
-| `miniGameStart` | `MiniGameStartData` (session/token/type/만료/config, 위험 회피 config의 실제 패턴 `label`과 단색 `theme`) | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
+| `miniGameStart` | `MiniGameStartData` (session/token/type/만료/config, 위험 회피 config의 실제 패턴 `label`과 단색 `theme`) | `modules/minigame.ts`; 같은 계정의 focused 우선 연결 하나에만 전송 | `components/minigame/MiniGameOverlay.tsx` |
 | `miniGameResolved` | `MiniGameResolvedData` | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 | `miniGameCancelled` | `MiniGameCancelledData` | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 | `humanVerificationStart` | `HumanVerificationStartData` (session ID, 안내, raster PNG data URL, 만료 시각) | `modules/humanVerification.ts` | `components/security/HumanVerificationOverlay.tsx` |

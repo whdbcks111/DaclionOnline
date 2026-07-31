@@ -1,6 +1,6 @@
 # Context Overview
 
-- `SocketContext.tsx`: Socket.io 연결, 연결 상태, 현재 SessionInfo와 프로필/닉네임 갱신 API.
+- `SocketContext.tsx`: Socket.io 연결, 연결 상태, 현재 SessionInfo와 프로필/닉네임 갱신 API. 연결·화면 표시·focus·실제 포인터/키 입력 때 `focused | visible | hidden` 상태를 서버에 보내 다중 접속 중 현재 조작 화면을 식별한다.
 - `ThemeContext.tsx`: light/dark theme 상태와 persistence.
 - `HudContext.tsx`: PlayerStatus/TargetStatus/Party/Location/Minimap HUD 설정, nullable 파티·현재 대상과 스킬 snapshot을 포함한 서버 상태 payload, global/per-HUD 표시 옵션, 위치 HUD 오브젝트·NPC 행동 버튼과 미니맵 이동 목록 표시 API, quick slot과 공격·스킬·아이템 버튼 표시·좌표·전용 크기의 계정별 localStorage persistence. 이름 있는 서버 프리셋은 목록만 자동 조회하고 `saveHudPreset/loadHudPreset/deleteHudPreset` 호출 때만 저장·적용·삭제한다. 위치 편집은 4/8/16/32/64px의 2의 거듭제곱 그리드 스냅을 공통 제공하며, 전투 퀵 버튼도 X/Y `%`·`px` 단위와 네 모서리 좌표 기준점을 Context API로 변경한다. 안정 viewport는 모바일 키보드 높이와 인게임 UI 배율을 함께 보정한다. `skillHudConfig.ts`가 기본 공격 ID와 화면 폭별 기본 전투 버튼 격자 좌표를 제공한다.
 

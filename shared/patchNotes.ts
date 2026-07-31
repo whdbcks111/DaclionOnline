@@ -73,6 +73,12 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.26', '2026-08-01',
+        [CHANGED,
+            '같은 계정으로 여러 클라이언트에 접속해도 실제 조작 중인 화면 한 곳에서만 미니게임이 시작되도록 수정했습니다.',
+            '미니게임의 짧은 통신·화면 시각 차이를 더 여유 있게 보정하고, 낚시 성공 직전 게이지 경계 판정을 완화했습니다.',
+        ],
+    ),
     definePatchNote('1.0.25', '2026-07-31',
         [CHANGED,
             '낚시 포획 게이지가 화면에서 100%에 도달했는데도 통신 시각 차이로 물고기를 놓쳤다고 판정되던 문제를 수정했습니다.',
