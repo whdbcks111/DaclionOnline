@@ -941,8 +941,9 @@ function HomeContent() {
 }
 
 export default function Home() {
+  const { sessionInfo } = useSocket()
   return (
-    <HudProvider>
+    <HudProvider key={sessionInfo?.userId ?? 'no-session'}>
       <HomeContent />
     </HudProvider>
   )

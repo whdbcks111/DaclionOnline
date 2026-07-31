@@ -52,6 +52,7 @@ model Player {
   karmaUpdatedAt      DateTime @default(now()) @map("karma_updated_at")
   rankingMetrics      Json?    @map("ranking_metrics")
   rankingVisibility   Json?    @map("ranking_visibility")
+  hudPresets           Json?    @map("hud_presets")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

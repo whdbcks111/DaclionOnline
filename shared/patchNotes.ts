@@ -73,6 +73,16 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.20', '2026-07-31',
+        [FEATURE,
+            'HUD 설정을 이름 있는 계정 프리셋으로 최대 10개까지 서버에 저장하고, 다른 PC에서도 저장된 이름을 선택해 직접 불러오거나 삭제할 수 있습니다.',
+            '`/소각 <슬롯> [개수|전체]` 명령을 추가해 불필요한 아이템을 바닥에 버리지 않고 영구적으로 없앨 수 있습니다.',
+        ],
+        [CHANGED,
+            '현재 HUD 배치·퀵슬롯·스킬 및 아이템 버튼 설정을 계정별로 분리해 같은 브라우저에서 부계정의 설정이 서로 덮어쓰이지 않도록 수정했습니다.',
+            '정신력 300 이후 자연 재생의 점감분을 부드러운 곡선으로 회복해 고정신력 투자에서도 재생 효율이 지나치게 낮아지지 않도록 조정했습니다.',
+        ],
+    ),
     definePatchNote('1.0.19', '2026-07-30',
         [CHANGED,
             '삼원소 조율자 칭호의 마법력 증가 효과가 불·얼음·전기뿐 아니라 물·자연·어둠·빛·성스러움·금속·땅 등 모든 원소 몬스터를 대상으로 발동하도록 수정했습니다.',

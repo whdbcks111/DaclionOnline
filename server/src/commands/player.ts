@@ -43,7 +43,7 @@ function itemDurabilityColor(ratio: number): string {
     return 'lime';
 }
 
-export function resolveDropCount(input: string | undefined, available: number): number | undefined {
+export function resolveItemRemovalCount(input: string | undefined, available: number): number | undefined {
     if (!Number.isSafeInteger(available) || available <= 0) return undefined;
     const normalized = (input ?? '1').trim().toLocaleLowerCase('ko-KR');
     if (normalized === '전체' || normalized === 'all') return available;
@@ -53,6 +53,9 @@ export function resolveDropCount(input: string | undefined, available: number): 
         ? Math.min(requested, available)
         : undefined;
 }
+
+/** 기존 호출부·테스트 호환용 버리기 수량 해석 API. */
+export const resolveDropCount = resolveItemRemovalCount;
 
 function itemLabel(b: ReturnType<typeof chat>, item: Item): ReturnType<typeof chat> {
     b.icon(item.image).text(item.name || item.itemDataId);
@@ -443,8 +446,8 @@ export function initPlayerCommands(): void {
                 completions(userId) {
                     const player = getPlayerByUserId(userId);
                     if (!player) return [];
-                    return player.inventory.items.map((item, slot): CompletionItem => ({
-                        value: String(slot + 1),
+                    return player.inventory.getIndexedItems().map(({ item, index }): CompletionItem => ({
+                        value: String(index + 1),
                         description: item.name,
                     }));
                 },
@@ -493,6 +496,59 @@ export function initPlayerCommands(): void {
             location.addDroppedItem(taken.snapshot);
 
             sendBotMessageToUser(userId, `${taken.name} x${count}을(를) 버렸습니다.`);
+        },
+    });
+
+    registerCommand({
+        name: '소각',
+        aliases: ['destroy', 'incinerate'],
+        description: '아이템을 바닥에 버리지 않고 영구적으로 없앱니다.',
+        showCommandUse: 'private',
+        args: [
+            { name: '슬롯ID', description: '소각할 아이템 인벤토리 슬롯 ID', required: true,
+                completions(userId) {
+                    const player = getPlayerByUserId(userId);
+                    if (!player) return [];
+                    return player.inventory.getIndexedItems().map(({ item, index }): CompletionItem => ({
+                        value: String(index + 1),
+                        description: item.name,
+                    }));
+                },
+            },
+            { name: '개수', description: '소각할 개수 (기본 1, 전체 가능)' },
+        ],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+
+            if (player.isDead) {
+                sendBotMessageToUser(userId, '사망 상태에서는 행동할 수 없습니다.');
+                return;
+            }
+
+            if (!/^\d+$/.test(args[0] ?? '')) {
+                sendBotMessageToUser(userId, '사용법: /소각 <슬롯ID> [개수|전체]');
+                return;
+            }
+            const idx = Number(args[0]) - 1;
+            const item = player.inventory.getItemByIndex(idx);
+            if (!item) {
+                sendBotMessageToUser(userId, '인벤토리에 해당 아이템이 없습니다.');
+                return;
+            }
+
+            const count = resolveItemRemovalCount(args[1], item.count);
+            if (count === undefined) {
+                sendBotMessageToUser(userId, '소각할 개수는 1 이상의 정수 또는 전체여야 합니다.');
+                return;
+            }
+
+            const taken = player.inventory.takeItemSnapshotByIndex(idx, count);
+            if (!taken) {
+                sendBotMessageToUser(userId, '아이템을 소각하지 못했습니다. 다시 시도해주세요.');
+                return;
+            }
+            sendBotMessageToUser(userId, `${taken.name} x${count}을(를) 소각했습니다.`);
         },
     });
 

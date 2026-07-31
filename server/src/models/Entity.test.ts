@@ -11,7 +11,9 @@ import Stat, {
     calculateVitalityLifeRegenBonus,
     MENTALITY_MAGIC_DEF_PER_POINT,
     MENTALITY_MAX_MENTALITY_PER_POINT,
+    MENTALITY_REGEN_PER_POINT,
     SENSIBILITY_CRIT_RATE_CAP,
+    STAT_REGEN_DIMINISHING_SCALE,
     StatType,
 } from './Stat.js';
 import { GameTags } from '../../../shared/tags.js';
@@ -181,7 +183,7 @@ test('민첩과 정신력은 레벨 성장에 쓰이는 투사체 가속 능력�
     assert.match(StatType.MENTALITY.getDescription(100), /정신력 재생 \+1\.19\/초/);
 });
 
-test('체력과 정신력은 고스탯에서 효율이 완만히 줄어드는 자연 재생을 제공한다', () => {
+test('체력은 점감되고 정신력은 고스탯에서 점감분을 부드럽게 회복한다', () => {
     const entity = new VitalEntity();
     const stat = new Stat({ vitality: 100, mentality: 100 });
     stat.applyModifiers(entity);
@@ -198,10 +200,16 @@ test('체력과 정신력은 고스탯에서 효율이 완만히 줄어드는 �
 
     const vitalityEarlyGain = calculateVitalityLifeRegenBonus(100) - calculateVitalityLifeRegenBonus(0);
     const vitalityLateGain = calculateVitalityLifeRegenBonus(1_000) - calculateVitalityLifeRegenBonus(900);
-    const mentalityEarlyGain = calculateMentalityRegenBonus(100) - calculateMentalityRegenBonus(0);
-    const mentalityLateGain = calculateMentalityRegenBonus(1_000) - calculateMentalityRegenBonus(900);
     assert.ok(vitalityLateGain < vitalityEarlyGain);
-    assert.ok(mentalityLateGain < mentalityEarlyGain);
+
+    const oldDiminishedAt1000 = MENTALITY_REGEN_PER_POINT * 1_000
+        / (1 + 1_000 / STAT_REGEN_DIMINISHING_SCALE);
+    const linearAt1000 = MENTALITY_REGEN_PER_POINT * 1_000;
+    assert.ok(calculateMentalityRegenBonus(1_000) > oldDiminishedAt1000 * 1.3);
+    assert.ok(calculateMentalityRegenBonus(1_000) < linearAt1000);
+
+    const linearAt5000 = MENTALITY_REGEN_PER_POINT * 5_000;
+    assert.ok(Math.abs(calculateMentalityRegenBonus(5_000) - linearAt5000) < 0.01);
 });
 
 test('감각은 치명타 능력치와 대장장이용 제련 정밀도를 함께 높인다', () => {

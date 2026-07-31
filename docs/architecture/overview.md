@@ -52,7 +52,8 @@ Express + Socket.io (`server/src/index.ts`)
 | NPC 정의/활성 대화 | `models/NPC.ts` / `models/NpcDialogue.ts` | 정의는 코드 레지스트리, player별 세션은 메모리이며 이동·사망·logout 시 폐기 |
 | Entity 상태효과/행동 제한 | `models/StatusEffect.ts` / `models/Action.ts` | 효과와 tick/source별 제한은 메모리, 제압·재시작 시 소실 |
 | User/Player/Item/Equipment/PlayerProgress/PlayerSkill | Prisma 모델 | MariaDB 영속 저장 |
-| HUD 배치·투명도·퀵슬롯·스킬별 버튼 On/Off/좌표 | `HudContext.tsx`, `skillHudConfig.ts` | 브라우저 `localStorage` |
+| 현재 HUD 배치·투명도·퀵슬롯·스킬/아이템 버튼 | `HudContext.tsx`, `skillHudConfig.ts` | 계정 ID로 분리한 브라우저 `localStorage` |
+| 이름 있는 HUD 프리셋 | `Player.hudPresets`, `modules/hudPreset.ts` | `players.hud_presets` JSON; 명시적 저장/불러오기/삭제 |
 
 ## 주요 요청 흐름
 

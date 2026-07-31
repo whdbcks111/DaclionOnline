@@ -16,6 +16,10 @@ export const VITALITY_LIFE_REGEN_PER_POINT = 0.025
 export const MENTALITY_REGEN_PER_POINT = 0.0125
 /** 재생 기여 효율이 완만하게 감소하기 시작하는 공통 스탯 척도. */
 export const STAT_REGEN_DIMINISHING_SCALE = 2_000
+/** 정신력 재생이 기존 점감분을 다시 회복하기 시작하는 정신력 수치. */
+export const MENTALITY_REGEN_RECOVERY_START = 300
+/** 고정신력 재생 효율 회복의 부드러움을 결정하는 가우스 곡선 척도. */
+export const MENTALITY_REGEN_RECOVERY_SCALE = 600
 
 /** 감각이 높아질수록 한 포인트의 효율이 감소하며 50%p에 점근하는 치명타율 기여분. */
 export function calculateSensibilityCritRateBonus(points: number): number {
@@ -34,9 +38,14 @@ export function calculateVitalityLifeRegenBonus(points: number): number {
     return calculateDiminishingStatBonus(points, VITALITY_LIFE_REGEN_PER_POINT)
 }
 
-/** 정신력 스탯이 제공하는 초당 정신력 재생량. */
+/** 정신력 스탯이 제공하는 초당 정신력 재생량. 300 이후에는 점감분을 가우스 곡선으로 회복한다. */
 export function calculateMentalityRegenBonus(points: number): number {
-    return calculateDiminishingStatBonus(points, MENTALITY_REGEN_PER_POINT)
+    if (!Number.isFinite(points) || points <= 0) return 0
+    const linearBonus = MENTALITY_REGEN_PER_POINT * points
+    const diminishedBonus = calculateDiminishingStatBonus(points, MENTALITY_REGEN_PER_POINT)
+    const recoveryDistance = Math.max(0, points - MENTALITY_REGEN_RECOVERY_START)
+    const recoveryRatio = 1 - Math.exp(-Math.pow(recoveryDistance / MENTALITY_REGEN_RECOVERY_SCALE, 2))
+    return diminishedBonus + (linearBonus - diminishedBonus) * recoveryRatio
 }
 
 // ── StatType 클래스 열거형 ──
@@ -111,7 +120,7 @@ export class StatType {
                 source,
             })
         },
-        p => `정신력 1 → 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT}, 마법력 +2, 마법 저항력 +${MENTALITY_MAGIC_DEF_PER_POINT}, 투사체 가속 +0.002, 정신력 재생 증가(높을수록 포인트 효율 완만히 감소)\n현재 정신력 ${p}: 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT * p}, 마법력 +${2 * p}, 마법 저항력 +${MENTALITY_MAGIC_DEF_PER_POINT * p}, 투사체 가속 +${(0.002 * p).toFixed(3)}, 정신력 재생 +${calculateMentalityRegenBonus(p).toFixed(2)}/초`
+        p => `정신력 1 → 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT}, 마법력 +2, 마법 저항력 +${MENTALITY_MAGIC_DEF_PER_POINT}, 투사체 가속 +0.002, 정신력 재생 증가(고정신력 구간에서 포인트 효율 회복)\n현재 정신력 ${p}: 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT * p}, 마법력 +${2 * p}, 마법 저항력 +${MENTALITY_MAGIC_DEF_PER_POINT * p}, 투사체 가속 +${(0.002 * p).toFixed(3)}, 정신력 재생 +${calculateMentalityRegenBonus(p).toFixed(2)}/초`
     )
 
     readonly key: StatKey

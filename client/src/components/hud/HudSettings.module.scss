@@ -25,6 +25,84 @@
     gap: $spacing-xs;
 }
 
+.presetSection {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-xs;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.presetRow {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.presetInput,
+.presetSelect {
+    min-width: 0;
+    flex: 1;
+    padding: 0.42rem 0.5rem;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    outline: none;
+    background: $color-bg-secondary;
+    color: $color-text;
+    font: inherit;
+    font-size: 0.72rem;
+
+    &:focus {
+        border-color: var(--color-primary);
+    }
+}
+
+.presetSelect {
+    cursor: pointer;
+}
+
+.presetButton,
+.presetPrimaryButton,
+.presetDeleteButton {
+    flex: 0 0 auto;
+    padding: 0.42rem 0.5rem;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background: $color-bg-secondary;
+    color: $color-text;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 700;
+
+    &:hover:not(:disabled) {
+        border-color: var(--color-primary);
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+    }
+}
+
+.presetPrimaryButton {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.presetDeleteButton {
+    color: #dc5868;
+}
+
+.presetMessage {
+    color: $color-text-tertiary;
+    font-size: 0.66rem;
+    line-height: 1.4;
+}
+
 .skillSectionHeader {
     display: flex;
     align-items: center;

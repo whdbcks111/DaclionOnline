@@ -6,6 +6,16 @@ import { createDefaultItemHudConfig } from './itemHudConfig'
 import type { ItemHudConfig } from './itemHudConfig'
 import type { UsableItemHudData } from '@shared/types'
 import { getUiViewportSize, UI_SCALE_CHANGE_EVENT } from '../utils/displayPreferences'
+import { useSocket } from './SocketContext'
+import {
+  HUD_PRESET_VERSION,
+  MAX_HUD_PRESET_QUICK_SLOTS,
+  normalizeHudPresetData,
+  normalizeHudPresetName,
+  type HudPresetData,
+  type HudPresetOperationResult,
+  type HudPresetSummary,
+} from '@shared/hudPresets'
 
 export type AnchorPoint = 'topLeft' | 'topMiddle' | 'topRight' | 'middleLeft' | 'center' | 'middleRight' | 'bottomLeft' | 'bottomMiddle' | 'bottomRight'
 export type PosAnchor = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
@@ -40,7 +50,50 @@ const QUICK_BUTTON_POS_UNIT_X_KEY = 'hud-quick-button-pos-unit-x'
 const QUICK_BUTTON_POS_UNIT_Y_KEY = 'hud-quick-button-pos-unit-y'
 export const HUD_GRID_EXPONENT_MIN = 2
 export const HUD_GRID_EXPONENT_MAX = 6
-export const MAX_QUICK_SLOTS = 10
+export const MAX_QUICK_SLOTS = MAX_HUD_PRESET_QUICK_SLOTS
+
+const ACCOUNT_STORAGE_MIGRATION_KEY = 'hud-account-storage-migrated-v1'
+const HUD_STORAGE_KEYS = [
+  OPACITY_KEY,
+  SCALE_KEY,
+  QUICK_SLOTS_KEY,
+  SKILL_HUD_KEY,
+  ITEM_HUD_KEY,
+  QUICK_BUTTON_SCALE_KEY,
+  SKILL_QUICK_BUTTON_OPACITY_KEY,
+  GRID_SNAP_KEY,
+  GRID_EXPONENT_KEY,
+  QUICK_BUTTON_POS_ANCHOR_KEY,
+  QUICK_BUTTON_POS_UNIT_X_KEY,
+  QUICK_BUTTON_POS_UNIT_Y_KEY,
+  'hud-configs',
+] as const
+
+export function getAccountHudStorageKey(userId: number, key: string): string {
+  return `account:${userId}:${key}`
+}
+
+function migrateLegacyHudStorage(userId: number): void {
+  try {
+    if (localStorage.getItem(ACCOUNT_STORAGE_MIGRATION_KEY)) return
+    for (const key of HUD_STORAGE_KEYS) {
+      const legacy = localStorage.getItem(key)
+      const scoped = getAccountHudStorageKey(userId, key)
+      if (legacy !== null && localStorage.getItem(scoped) === null) localStorage.setItem(scoped, legacy)
+    }
+    localStorage.setItem(ACCOUNT_STORAGE_MIGRATION_KEY, String(userId))
+  } catch { /* ignore */ }
+}
+
+function getAccountHudStorageItem(userId: number | undefined, key: string): string | null {
+  if (userId === undefined) return null
+  try { return localStorage.getItem(getAccountHudStorageKey(userId, key)) } catch { return null }
+}
+
+function setAccountHudStorageItem(userId: number | undefined, key: string, value: string): void {
+  if (userId === undefined) return
+  try { localStorage.setItem(getAccountHudStorageKey(userId, key), value) } catch { /* ignore */ }
+}
 
 function isPosAnchor(value: unknown): value is PosAnchor {
   return value === 'topLeft' || value === 'topRight' || value === 'bottomLeft' || value === 'bottomRight'
@@ -186,6 +239,12 @@ interface HudContextType {
   quickButtonPosUnitX: PosUnit
   quickButtonPosUnitY: PosUnit
   setQuickButtonPosUnit: (axis: 'x' | 'y', unit: PosUnit) => void
+  hudPresetSummaries: readonly HudPresetSummary[]
+  hudPresetBusy: boolean
+  hudPresetMessage: string
+  saveHudPreset: (name: string) => void
+  loadHudPreset: (name: string) => void
+  deleteHudPreset: (name: string) => void
 }
 
 const HudContext = createContext<HudContextType | null>(null)
@@ -193,9 +252,13 @@ const HudContext = createContext<HudContextType | null>(null)
 const STORAGE_KEY = 'hud-configs'
 
 export function HudProvider({ children }: { children: React.ReactNode }) {
+  const { socket, sessionInfo } = useSocket()
+  const storageUserId = sessionInfo?.userId
+  if (storageUserId !== undefined) migrateLegacyHudStorage(storageUserId)
+
   const [configs, setConfigs] = useState<Record<string, HudConfig>>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY)
+      const saved = getAccountHudStorageItem(storageUserId, STORAGE_KEY)
       if (saved) {
         const parsed = JSON.parse(saved) as Record<string, Partial<HudConfig> & { posUnit?: '%' | 'px' }>
         const merged: Record<string, HudConfig> = {}
@@ -220,11 +283,11 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     typeof window === 'undefined' ? { width: 1024, height: 768 } : getUiViewportSize()
   ))
   const [gridSnapEnabled, setGridSnapEnabledState] = useState(() => {
-    try { return localStorage.getItem(GRID_SNAP_KEY) === 'true' } catch { return false }
+    return getAccountHudStorageItem(storageUserId, GRID_SNAP_KEY) === 'true'
   })
   const [gridExponent, setGridExponentState] = useState(() => {
     try {
-      const raw = localStorage.getItem(GRID_EXPONENT_KEY)
+      const raw = getAccountHudStorageItem(storageUserId, GRID_EXPONENT_KEY)
       if (raw !== null) {
         const saved = Number(raw)
         if (Number.isFinite(saved)) return Math.max(HUD_GRID_EXPONENT_MIN, Math.min(HUD_GRID_EXPONENT_MAX, Math.round(saved)))
@@ -235,21 +298,21 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   const gridSize = getHudGridSize(gridExponent)
   const [quickButtonPosAnchor, setQuickButtonPosAnchorState] = useState<PosAnchor>(() => {
     try {
-      const saved = localStorage.getItem(QUICK_BUTTON_POS_ANCHOR_KEY)
+      const saved = getAccountHudStorageItem(storageUserId, QUICK_BUTTON_POS_ANCHOR_KEY)
       if (isPosAnchor(saved)) return saved
     } catch { /* ignore */ }
     return 'topLeft'
   })
   const [quickButtonPosUnitX, setQuickButtonPosUnitX] = useState<PosUnit>(() => {
     try {
-      const saved = localStorage.getItem(QUICK_BUTTON_POS_UNIT_X_KEY)
+      const saved = getAccountHudStorageItem(storageUserId, QUICK_BUTTON_POS_UNIT_X_KEY)
       if (isPosUnit(saved)) return saved
     } catch { /* ignore */ }
     return '%'
   })
   const [quickButtonPosUnitY, setQuickButtonPosUnitY] = useState<PosUnit>(() => {
     try {
-      const saved = localStorage.getItem(QUICK_BUTTON_POS_UNIT_Y_KEY)
+      const saved = getAccountHudStorageItem(storageUserId, QUICK_BUTTON_POS_UNIT_Y_KEY)
       if (isPosUnit(saved)) return saved
     } catch { /* ignore */ }
     return '%'
@@ -257,16 +320,19 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   const [playerStats, setPlayerStatsState] = useState<PlayerStatsData | null>(null)
   const [playerStatsReceivedAt, setPlayerStatsReceivedAt] = useState(0)
   const [locationInfo, setLocationInfo] = useState<LocationInfoData | null>(null)
+  const [hudPresetSummaries, setHudPresetSummaries] = useState<readonly HudPresetSummary[]>([])
+  const [hudPresetBusy, setHudPresetBusy] = useState(false)
+  const [hudPresetMessage, setHudPresetMessage] = useState('')
   const [quickSlots, setQuickSlots] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem(QUICK_SLOTS_KEY)
+      const saved = getAccountHudStorageItem(storageUserId, QUICK_SLOTS_KEY)
       if (saved) return JSON.parse(saved) as string[]
     } catch { /* ignore */ }
     return []
   })
   const [skillHudConfigs, setSkillHudConfigs] = useState<Record<string, SkillHudConfig>>(() => {
     try {
-      const saved = localStorage.getItem(SKILL_HUD_KEY)
+      const saved = getAccountHudStorageItem(storageUserId, SKILL_HUD_KEY)
       if (!saved) return {}
       const parsed = JSON.parse(saved) as Record<string, Partial<SkillHudConfig>>
       return Object.fromEntries(Object.entries(parsed).flatMap(([skillId, config]) => {
@@ -283,7 +349,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   })
   const [itemHudConfigs, setItemHudConfigs] = useState<Record<string, ItemHudConfig>>(() => {
     try {
-      const saved = localStorage.getItem(ITEM_HUD_KEY)
+      const saved = getAccountHudStorageItem(storageUserId, ITEM_HUD_KEY)
       if (!saved) return {}
       const parsed = JSON.parse(saved) as Record<string, Partial<ItemHudConfig>>
       return Object.fromEntries(Object.entries(parsed).flatMap(([itemDataId, config]) => {
@@ -307,8 +373,8 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
 
   const saveQuickSlots = useCallback((slots: string[]) => {
     setQuickSlots(slots)
-    localStorage.setItem(QUICK_SLOTS_KEY, JSON.stringify(slots))
-  }, [])
+    setAccountHudStorageItem(storageUserId, QUICK_SLOTS_KEY, JSON.stringify(slots))
+  }, [storageUserId])
 
   const setPlayerStats = useCallback((data: PlayerStatsData) => {
     setPlayerStatsState(data)
@@ -330,7 +396,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   }, [quickSlots, saveQuickSlots])
   const [opacity, setOpacityState] = useState<number>(() => {
     try {
-      const saved = localStorage.getItem(OPACITY_KEY)
+      const saved = getAccountHudStorageItem(storageUserId, OPACITY_KEY)
       if (saved !== null) return Math.max(0.1, Math.min(1, parseFloat(saved)))
     } catch { /* ignore */ }
     return 1
@@ -339,12 +405,12 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   const setOpacity = useCallback((v: number) => {
     const clamped = Math.max(0.1, Math.min(1, v))
     setOpacityState(clamped)
-    localStorage.setItem(OPACITY_KEY, String(clamped))
-  }, [])
+    setAccountHudStorageItem(storageUserId, OPACITY_KEY, String(clamped))
+  }, [storageUserId])
 
   const [scale, setScaleState] = useState<number>(() => {
     try {
-      const saved = localStorage.getItem(SCALE_KEY)
+      const saved = getAccountHudStorageItem(storageUserId, SCALE_KEY)
       if (saved !== null) return Math.max(0.1, Math.min(1, parseFloat(saved)))
     } catch { /* ignore */ }
     return 1
@@ -353,12 +419,12 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   const setScale = useCallback((v: number) => {
     const clamped = Math.max(0.1, Math.min(1, v))
     setScaleState(clamped)
-    localStorage.setItem(SCALE_KEY, String(clamped))
-  }, [])
+    setAccountHudStorageItem(storageUserId, SCALE_KEY, String(clamped))
+  }, [storageUserId])
 
   const [quickButtonScale, setQuickButtonScaleState] = useState<number>(() => {
     try {
-      const saved = localStorage.getItem(QUICK_BUTTON_SCALE_KEY)
+      const saved = getAccountHudStorageItem(storageUserId, QUICK_BUTTON_SCALE_KEY)
       if (saved !== null) return Math.max(0.5, Math.min(2, parseFloat(saved)))
     } catch { /* ignore */ }
     return 1
@@ -367,12 +433,12 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   const setQuickButtonScale = useCallback((value: number) => {
     const clamped = Math.max(0.5, Math.min(2, value))
     setQuickButtonScaleState(clamped)
-    localStorage.setItem(QUICK_BUTTON_SCALE_KEY, String(clamped))
-  }, [])
+    setAccountHudStorageItem(storageUserId, QUICK_BUTTON_SCALE_KEY, String(clamped))
+  }, [storageUserId])
 
   const [skillQuickButtonOpacity, setSkillQuickButtonOpacityState] = useState<number>(() => {
     try {
-      const saved = localStorage.getItem(SKILL_QUICK_BUTTON_OPACITY_KEY)
+      const saved = getAccountHudStorageItem(storageUserId, SKILL_QUICK_BUTTON_OPACITY_KEY)
       if (saved !== null) return Math.max(0.1, Math.min(1, parseFloat(saved)))
     } catch { /* ignore */ }
     return 1
@@ -381,19 +447,19 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   const setSkillQuickButtonOpacity = useCallback((value: number) => {
     const clamped = Math.max(0.1, Math.min(1, value))
     setSkillQuickButtonOpacityState(clamped)
-    localStorage.setItem(SKILL_QUICK_BUTTON_OPACITY_KEY, String(clamped))
-  }, [])
+    setAccountHudStorageItem(storageUserId, SKILL_QUICK_BUTTON_OPACITY_KEY, String(clamped))
+  }, [storageUserId])
 
   const setGridSnapEnabled = useCallback((enabled: boolean) => {
     setGridSnapEnabledState(enabled)
-    localStorage.setItem(GRID_SNAP_KEY, String(enabled))
-  }, [])
+    setAccountHudStorageItem(storageUserId, GRID_SNAP_KEY, String(enabled))
+  }, [storageUserId])
 
   const setGridExponent = useCallback((exponent: number) => {
     const normalized = Math.max(HUD_GRID_EXPONENT_MIN, Math.min(HUD_GRID_EXPONENT_MAX, Math.round(exponent)))
     setGridExponentState(normalized)
-    localStorage.setItem(GRID_EXPONENT_KEY, String(normalized))
-  }, [])
+    setAccountHudStorageItem(storageUserId, GRID_EXPONENT_KEY, String(normalized))
+  }, [storageUserId])
 
   useEffect(() => {
     const updateHudViewport = () => {
@@ -420,16 +486,16 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(configs))
-  }, [configs])
+    setAccountHudStorageItem(storageUserId, STORAGE_KEY, JSON.stringify(configs))
+  }, [configs, storageUserId])
 
   useEffect(() => {
-    localStorage.setItem(SKILL_HUD_KEY, JSON.stringify(skillHudConfigs))
-  }, [skillHudConfigs])
+    setAccountHudStorageItem(storageUserId, SKILL_HUD_KEY, JSON.stringify(skillHudConfigs))
+  }, [skillHudConfigs, storageUserId])
 
   useEffect(() => {
-    localStorage.setItem(ITEM_HUD_KEY, JSON.stringify(itemHudConfigs))
-  }, [itemHudConfigs])
+    setAccountHudStorageItem(storageUserId, ITEM_HUD_KEY, JSON.stringify(itemHudConfigs))
+  }, [itemHudConfigs, storageUserId])
 
   const patchConfig = useCallback((id: string, patch: Partial<HudConfig>) => {
     setConfigs(prev => ({
@@ -648,8 +714,8 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
       },
     ])))
     setQuickButtonPosAnchorState(posAnchor)
-    localStorage.setItem(QUICK_BUTTON_POS_ANCHOR_KEY, posAnchor)
-  }, [hudViewport, quickButtonPosAnchor, quickButtonPosUnitX, quickButtonPosUnitY])
+    setAccountHudStorageItem(storageUserId, QUICK_BUTTON_POS_ANCHOR_KEY, posAnchor)
+  }, [hudViewport, quickButtonPosAnchor, quickButtonPosUnitX, quickButtonPosUnitY, storageUserId])
 
   const setQuickButtonPosUnit = useCallback((axis: 'x' | 'y', unit: PosUnit) => {
     const currentUnit = axis === 'x' ? quickButtonPosUnitX : quickButtonPosUnitY
@@ -671,12 +737,146 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     ])))
     if (axis === 'x') {
       setQuickButtonPosUnitX(unit)
-      localStorage.setItem(QUICK_BUTTON_POS_UNIT_X_KEY, unit)
+      setAccountHudStorageItem(storageUserId, QUICK_BUTTON_POS_UNIT_X_KEY, unit)
     } else {
       setQuickButtonPosUnitY(unit)
-      localStorage.setItem(QUICK_BUTTON_POS_UNIT_Y_KEY, unit)
+      setAccountHudStorageItem(storageUserId, QUICK_BUTTON_POS_UNIT_Y_KEY, unit)
     }
-  }, [hudViewport, quickButtonPosUnitX, quickButtonPosUnitY])
+  }, [hudViewport, quickButtonPosUnitX, quickButtonPosUnitY, storageUserId])
+
+  const createHudPresetSnapshot = useCallback((): HudPresetData => ({
+    version: HUD_PRESET_VERSION,
+    configs,
+    quickSlots,
+    skillHudConfigs,
+    itemHudConfigs,
+    opacity,
+    scale,
+    quickButtonScale,
+    skillQuickButtonOpacity,
+    gridSnapEnabled,
+    gridExponent,
+    quickButtonPosAnchor,
+    quickButtonPosUnitX,
+    quickButtonPosUnitY,
+  }), [
+    configs,
+    gridExponent,
+    gridSnapEnabled,
+    itemHudConfigs,
+    opacity,
+    quickButtonPosAnchor,
+    quickButtonPosUnitX,
+    quickButtonPosUnitY,
+    quickButtonScale,
+    quickSlots,
+    scale,
+    skillHudConfigs,
+    skillQuickButtonOpacity,
+  ])
+
+  const applyHudPreset = useCallback((value: unknown) => {
+    const preset = normalizeHudPresetData(value)
+    if (!preset) {
+      setHudPresetMessage('불러온 HUD 프리셋 데이터가 올바르지 않습니다.')
+      return
+    }
+    const mergedConfigs = Object.fromEntries(Object.keys(DEFAULT_CONFIGS).map(id => [
+      id,
+      { ...DEFAULT_CONFIGS[id], ...(preset.configs[id] ?? {}) },
+    ]))
+    setConfigs(mergedConfigs)
+    setQuickSlots(preset.quickSlots)
+    setSkillHudConfigs(preset.skillHudConfigs)
+    setItemHudConfigs(preset.itemHudConfigs)
+    setOpacityState(preset.opacity)
+    setScaleState(preset.scale)
+    setQuickButtonScaleState(preset.quickButtonScale)
+    setSkillQuickButtonOpacityState(preset.skillQuickButtonOpacity)
+    setGridSnapEnabledState(preset.gridSnapEnabled)
+    setGridExponentState(preset.gridExponent)
+    setQuickButtonPosAnchorState(preset.quickButtonPosAnchor)
+    setQuickButtonPosUnitX(preset.quickButtonPosUnitX)
+    setQuickButtonPosUnitY(preset.quickButtonPosUnitY)
+
+    setAccountHudStorageItem(storageUserId, STORAGE_KEY, JSON.stringify(mergedConfigs))
+    setAccountHudStorageItem(storageUserId, QUICK_SLOTS_KEY, JSON.stringify(preset.quickSlots))
+    setAccountHudStorageItem(storageUserId, SKILL_HUD_KEY, JSON.stringify(preset.skillHudConfigs))
+    setAccountHudStorageItem(storageUserId, ITEM_HUD_KEY, JSON.stringify(preset.itemHudConfigs))
+    setAccountHudStorageItem(storageUserId, OPACITY_KEY, String(preset.opacity))
+    setAccountHudStorageItem(storageUserId, SCALE_KEY, String(preset.scale))
+    setAccountHudStorageItem(storageUserId, QUICK_BUTTON_SCALE_KEY, String(preset.quickButtonScale))
+    setAccountHudStorageItem(storageUserId, SKILL_QUICK_BUTTON_OPACITY_KEY, String(preset.skillQuickButtonOpacity))
+    setAccountHudStorageItem(storageUserId, GRID_SNAP_KEY, String(preset.gridSnapEnabled))
+    setAccountHudStorageItem(storageUserId, GRID_EXPONENT_KEY, String(preset.gridExponent))
+    setAccountHudStorageItem(storageUserId, QUICK_BUTTON_POS_ANCHOR_KEY, preset.quickButtonPosAnchor)
+    setAccountHudStorageItem(storageUserId, QUICK_BUTTON_POS_UNIT_X_KEY, preset.quickButtonPosUnitX)
+    setAccountHudStorageItem(storageUserId, QUICK_BUTTON_POS_UNIT_Y_KEY, preset.quickButtonPosUnitY)
+  }, [storageUserId])
+
+  useEffect(() => {
+    if (!socket || storageUserId === undefined) return
+    const onList = (presets: HudPresetSummary[]) => setHudPresetSummaries(presets)
+    const onLoaded = ({ name, preset }: { name: string; preset: HudPresetData }) => {
+      applyHudPreset(preset)
+      setHudPresetMessage(`HUD 프리셋 '${name}'을(를) 불러왔습니다.`)
+    }
+    const onResult = (result: HudPresetOperationResult) => {
+      setHudPresetBusy(false)
+      if (!result.ok) {
+        setHudPresetMessage(result.error ?? 'HUD 프리셋 작업에 실패했습니다.')
+        return
+      }
+      if (result.action === 'save') setHudPresetMessage(`HUD 프리셋 '${result.name}'을(를) 서버에 저장했습니다.`)
+      if (result.action === 'delete') setHudPresetMessage(`HUD 프리셋 '${result.name}'을(를) 삭제했습니다.`)
+    }
+    socket.on('hudPresetList', onList)
+    socket.on('hudPresetLoaded', onLoaded)
+    socket.on('hudPresetResult', onResult)
+    socket.emit('requestHudPresets')
+    return () => {
+      socket.off('hudPresetList', onList)
+      socket.off('hudPresetLoaded', onLoaded)
+      socket.off('hudPresetResult', onResult)
+    }
+  }, [applyHudPreset, socket, storageUserId])
+
+  const saveHudPreset = useCallback((rawName: string) => {
+    const name = normalizeHudPresetName(rawName)
+    if (!name) {
+      setHudPresetMessage('프리셋 이름은 한글·영문·숫자·공백·_-로 1~24자까지 입력해주세요.')
+      return
+    }
+    if (!socket) {
+      setHudPresetMessage('서버에 연결되어 있지 않습니다.')
+      return
+    }
+    setHudPresetBusy(true)
+    setHudPresetMessage('')
+    socket.emit('saveHudPreset', { name, preset: createHudPresetSnapshot() })
+  }, [createHudPresetSnapshot, socket])
+
+  const loadHudPreset = useCallback((rawName: string) => {
+    const name = normalizeHudPresetName(rawName)
+    if (!name || !socket) {
+      setHudPresetMessage(name ? '서버에 연결되어 있지 않습니다.' : '불러올 프리셋 이름을 선택해주세요.')
+      return
+    }
+    setHudPresetBusy(true)
+    setHudPresetMessage('')
+    socket.emit('loadHudPreset', name)
+  }, [socket])
+
+  const deleteHudPreset = useCallback((rawName: string) => {
+    const name = normalizeHudPresetName(rawName)
+    if (!name || !socket) {
+      setHudPresetMessage(name ? '서버에 연결되어 있지 않습니다.' : '삭제할 프리셋 이름을 선택해주세요.')
+      return
+    }
+    setHudPresetBusy(true)
+    setHudPresetMessage('')
+    socket.emit('deleteHudPreset', name)
+  }, [socket])
 
   return (
     <HudContext.Provider value={{
@@ -694,6 +894,8 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
       skillQuickButtonOpacity, setSkillQuickButtonOpacity,
       quickButtonPosAnchor, setQuickButtonPosAnchor,
       quickButtonPosUnitX, quickButtonPosUnitY, setQuickButtonPosUnit,
+      hudPresetSummaries, hudPresetBusy, hudPresetMessage,
+      saveHudPreset, loadHudPreset, deleteHudPreset,
     }}>
       {children}
     </HudContext.Provider>

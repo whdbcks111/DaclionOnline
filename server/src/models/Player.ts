@@ -49,6 +49,7 @@ import {
 import TitleBook from './Title.js';
 import { evaluatePvpKillCredit, recordPvpRespawn } from './PvpKillCredit.js';
 import { ActionType } from './Action.js';
+import HudPresetBook from './HudPreset.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
 export const LEVEL_SURVIVAL_CAPACITY_PER_LEVEL = 1;
@@ -237,6 +238,7 @@ export default class Player extends Entity {
     readonly career: CareerProfile;
     readonly titles: TitleBook;
     readonly rankingVisibility: RankingVisibility;
+    readonly hudPresets: HudPresetBook;
 
     private _nickname: string;
     private _gold = 0;
@@ -266,6 +268,7 @@ export default class Player extends Entity {
         rankingVisibility?: unknown,
         karma = 0,
         karmaUpdatedAt: Date = new Date(),
+        hudPresets?: unknown,
     ) {
         super(
             level,
@@ -298,6 +301,7 @@ export default class Player extends Entity {
         this._gold = gold;
         this.karmaState = new KarmaState(karma, karmaUpdatedAt);
         this.rankingVisibility = new RankingVisibility(rankingVisibility);
+        this.hudPresets = new HudPresetBook(hudPresets, () => this.markDirty());
         if (!isCompleteRankingMetricRecord(rankingMetrics)) this._dirty = true;
 
         if (life      !== undefined) this._life      = life;
@@ -895,6 +899,7 @@ export default class Player extends Entity {
             data.rankingVisibility,
             data.karma,
             data.karmaUpdatedAt,
+            data.hudPresets,
         );
     }
 
@@ -990,6 +995,7 @@ export default class Player extends Entity {
                     tags: this.tags.persistentValues(),
                     rankingMetrics: this.getRankingMetricSnapshot() as any,
                     rankingVisibility: this.rankingVisibility.toPersistence() as any,
+                    hudPresets: this.hudPresets.toPersistence() as any,
                 } as any,
             });
             if (playerRevision === this._changeRevision) {

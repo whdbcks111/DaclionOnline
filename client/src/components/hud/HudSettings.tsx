@@ -54,11 +54,15 @@ export default function HudSettings({ onClose }: Props) {
     quickButtonPosAnchor, setQuickButtonPosAnchor,
     quickButtonPosUnitX, quickButtonPosUnitY, setQuickButtonPosUnit,
     hudViewportWidth, hudViewportHeight,
+    hudPresetSummaries, hudPresetBusy, hudPresetMessage,
+    saveHudPreset, loadHudPreset, deleteHudPreset,
   } = useHud()
   const [openSettingsId, setOpenSettingsId] = useState<string | null>(null)
   const [isSkillListOpen, setIsSkillListOpen] = useState(false)
   const [isItemListOpen, setIsItemListOpen] = useState(false)
   const [isQuickButtonSettingsOpen, setIsQuickButtonSettingsOpen] = useState(false)
+  const [presetName, setPresetName] = useState('')
+  const [selectedPresetName, setSelectedPresetName] = useState('')
   const panelRef = useRef<HTMLDivElement>(null)
   const [initialPanelPosition] = useState(() => ({ x: Math.max(8, hudViewportWidth - 316), y: 60 }))
   const posRef = useRef(initialPanelPosition)
@@ -162,6 +166,61 @@ export default function HudSettings({ onClose }: Props) {
         <span>HUD 설정</span>
         <button className={styles.closeBtn} onClick={handleClose}>✕</button>
       </div>
+
+      <section className={styles.presetSection}>
+        <div>
+          <div className={styles.rowLabel}>계정 HUD 프리셋</div>
+          <div className={styles.rowDesc}>이름별로 서버에 저장하고 다른 PC에서 직접 불러옵니다.</div>
+        </div>
+        <div className={styles.presetRow}>
+          <input
+            className={styles.presetInput}
+            value={presetName}
+            maxLength={24}
+            placeholder="프리셋 이름"
+            aria-label="저장할 HUD 프리셋 이름"
+            onChange={event => setPresetName(event.target.value)}
+          />
+          <button
+            type="button"
+            className={styles.presetPrimaryButton}
+            disabled={hudPresetBusy || !presetName.trim()}
+            onClick={() => saveHudPreset(presetName)}
+          >저장</button>
+        </div>
+        <div className={styles.presetRow}>
+          <select
+            className={styles.presetSelect}
+            value={selectedPresetName}
+            aria-label="불러올 HUD 프리셋"
+            onChange={event => {
+              setSelectedPresetName(event.target.value)
+              if (event.target.value) setPresetName(event.target.value)
+            }}
+          >
+            <option value="">저장된 프리셋 선택</option>
+            {hudPresetSummaries.map(preset => (
+              <option key={preset.name} value={preset.name}>{preset.name}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className={styles.presetButton}
+            disabled={hudPresetBusy || !selectedPresetName}
+            onClick={() => loadHudPreset(selectedPresetName)}
+          >불러오기</button>
+          <button
+            type="button"
+            className={styles.presetDeleteButton}
+            disabled={hudPresetBusy || !selectedPresetName}
+            onClick={() => {
+              deleteHudPreset(selectedPresetName)
+              setSelectedPresetName('')
+            }}
+          >삭제</button>
+        </div>
+        {hudPresetMessage && <div className={styles.presetMessage}>{hudPresetMessage}</div>}
+      </section>
 
       <div className={styles.editModeRow}>
         <div>

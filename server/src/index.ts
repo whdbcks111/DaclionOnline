@@ -39,6 +39,7 @@ import { initMiniGame } from './modules/minigame.js';
 import { initTutorial } from './modules/tutorial.js';
 import { initKarma } from './modules/karma.js';
 import { initHumanVerification } from './modules/humanVerification.js';
+import { initHudPreset } from './modules/hudPreset.js';
 import { recordServerBoot } from './modules/serverBoot.js';
 import { getPatchNotes } from '../../shared/patchNotes.js';
 
@@ -67,6 +68,7 @@ initBot();
 initAllCommands();
 initKarma();
 initHumanVerification();
+initHudPreset();
 initTutorial();
 initPlayer();
 initLocation();

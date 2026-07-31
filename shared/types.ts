@@ -1,6 +1,12 @@
 // 서버-클라이언트 공통 타입 정의
 import type { TagId } from './tags.js'
 import type {
+    HudPresetData,
+    HudPresetOperationResult,
+    HudPresetSaveRequest,
+    HudPresetSummary,
+} from './hudPresets.js'
+import type {
     MiniGameActionRequest,
     MiniGameCancelledData,
     MiniGameInputRequest,
@@ -592,6 +598,9 @@ export interface ServerToClientEvents {
     miniGameCancelled: (data: MiniGameCancelledData) => void
     humanVerificationStart: (data: HumanVerificationStartData) => void
     humanVerificationResult: (data: HumanVerificationResultData) => void
+    hudPresetList: (presets: HudPresetSummary[]) => void
+    hudPresetLoaded: (data: { name: string; preset: HudPresetData }) => void
+    hudPresetResult: (result: HudPresetOperationResult) => void
 }
 
 export interface ClientToServerEvents {
@@ -629,4 +638,8 @@ export interface ClientToServerEvents {
     miniGameResult: (request: MiniGameResultRequest) => void
     requestHumanVerification: () => void
     submitHumanVerification: (request: HumanVerificationSubmitRequest) => void
+    requestHudPresets: () => void
+    saveHudPreset: (request: HudPresetSaveRequest) => void
+    loadHudPreset: (name: string) => void
+    deleteHudPreset: (name: string) => void
 }

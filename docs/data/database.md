@@ -7,7 +7,7 @@ Prisma 스키마는 `server/prisma/schema.prisma`, 런타임 클라이언트 설
 | 모델/테이블 | 키와 관계 | 주요 필드 |
 | --- | --- | --- |
 | `User` / `users` | `id`, Player 1:0..1 | username, email, passwordHash/salt, nickname/nicknameChangedAt, profileImage, permission, timestamps |
-| `Player` / `players` | `userId` PK/FK | level, exp, maxWeight, stats/tags JSON, locationId, life/mentality/thirsty/hungry, statPoint, gold, karma/karmaUpdatedAt, rankingMetrics/rankingVisibility JSON |
+| `Player` / `players` | `userId` PK/FK | level, exp, maxWeight, stats/tags JSON, locationId, life/mentality/thirsty/hungry, statPoint, gold, karma/karmaUpdatedAt, rankingMetrics/rankingVisibility/hudPresets JSON |
 | `Item` / `items` | id, Player N:1 cascade | itemDataId, count, durability, metadata/tags JSON, sortOrder, timestamps |
 | `Equipment` / `equipments` | id, Player N:1 cascade | itemDataId, count, slot, slotIndex, durability, metadata/tags JSON; `(playerId, slot, slotIndex)` unique |
 | `PlayerProgress` / `player_progress` | `(playerId, key)` 복합 PK, Player N:1 cascade | kind, intValue, textValue, updatedAt |
@@ -42,6 +42,8 @@ StatusEffect 인스턴스와 ActionType 제한도 Entity의 런타임 메모리�
 
 `players.karma`와 `karma_updated_at`은 자연 감소의 기준값과 기준 시각이다. 런타임 `KarmaState`가 경과 초에 `0.003`을 곱해 읽을 때 감소시키므로 매 tick dirty 또는 DB write가 발생하지 않는다. 악행·사망 감소·기부·관리자 설정처럼 명시적인 변경만 Player dirty를 만들고 기존 aggregate 저장에서 현재 계산값과 새 기준 시각을 함께 flush한다. 재접속 시 오프라인 경과 시간도 같은 계산에 포함된다.
 
+`players.hud_presets`는 `{ [프리셋 이름]: { updatedAt, preset } }` JSON으로 계정당 최대 10개의 HUD snapshot을 저장한다. `HudPresetBook`이 이름·개수·좌표·크기·배열 상한을 검증하고 Player dirty 상태를 소유한다. 저장·삭제 버튼은 결과를 즉시 확정하기 위해 `Player.save()`를 호출하며, 로그인 때 목록만 조회하고 저장된 프리셋을 자동 적용하지 않는다.
+
 ## 로드와 저장
 
 ```text
@@ -59,6 +61,7 @@ login/session restore
      -> player row + stats JSON
         + karma 기준값/시각
         + ranking metrics/visibility JSON
+        + named HUD presets JSON
      -> Inventory.save
      -> Equipment.save
      -> PlayerProgress.save
@@ -94,6 +97,7 @@ login/session restore
 - 닉네임 24시간 변경 제한 시각 migration은 `20260725000000_add_nickname_change_cooldown`이다.
 - 인벤토리 표시 순서 컬럼 migration은 `20260726000000_add_inventory_sort_order`다.
 - 카르마 기준값·감소 기준 시각 migration은 `20260723000000_add_player_karma`다.
+- 계정별 이름 있는 HUD 프리셋 JSON migration은 `20260731000000_add_player_hud_presets`다.
 - 일반 운영 배포에서는 `cd server && npm run db:migrate:deploy`를 실행한다. 이 명령은 pending schema migration 적용, Prisma Client 생성, 아이템 metadata delta 데이터 마이그레이션을 순서대로 실행한다.
 - metadata 데이터 마이그레이션은 `src/scripts/migrateItemMetadataDeltas.ts`가 담당한다. 이미 버전 1인 행과 `null` 행은 건너뛰므로 재실행할 수 있다. 구형 전체 metadata 중 현재 `baseMetadata`와 같은 값은 기본값으로 간주해 제거하므로, 기본 metadata를 변경하기 전에 서버를 중지한 상태에서 운영 명령을 먼저 실행해야 한다.
 - `migrate reset`은 전체 데이터를 삭제하므로 운영 DB에서 금지한다.
