@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { VerifyEntry } from '../types/index.js';
 import {
+    buildRegistrationUserData,
     checkRegistrationVerificationCode,
     isVerifiedRegistrationEmail,
     normalizeRegistrationEmail,
@@ -17,6 +18,25 @@ function verification(email: string, expirationDate: Date, verified = true): Ver
         ...(verified ? { verified: true as const } : {}),
     };
 }
+
+test('회원가입은 User만 만들고 Player 생성은 인증된 첫 접속에 맡긴다', () => {
+    const data = buildRegistrationUserData({
+        username: 'new-player',
+        email: 'player@example.com',
+        passwordHash: 'hash',
+        passwordSalt: 'salt',
+        nickname: '새모험가',
+    });
+
+    assert.deepEqual(data, {
+        username: 'new-player',
+        email: 'player@example.com',
+        passwordHash: 'hash',
+        passwordSalt: 'salt',
+        nickname: '새모험가',
+    });
+    assert.equal('player' in data, false);
+});
 
 test('회원가입은 인증받은 이메일과 정규화된 가입 이메일이 같을 때만 허용한다', () => {
     const now = 10_000;

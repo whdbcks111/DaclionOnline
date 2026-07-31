@@ -26,6 +26,23 @@ export function normalizeRegistrationEmail(email: string): string {
     return email.trim().toLowerCase();
 }
 
+/** 계정 가입은 User만 만들고, Player는 인증된 첫 접속에서 생성한다. */
+export function buildRegistrationUserData(input: {
+    username: string;
+    email: string;
+    passwordHash: string;
+    passwordSalt: string;
+    nickname: string;
+}) {
+    return {
+        username: input.username,
+        email: input.email,
+        passwordHash: input.passwordHash,
+        passwordSalt: input.passwordSalt,
+        nickname: input.nickname,
+    };
+}
+
 export function isVerifiedRegistrationEmail(
     entry: VerifyEntry | undefined,
     email: string,
@@ -157,14 +174,13 @@ export const initRegister = () => {
                 const hash = await derivePasswordHash(pw, salt);
 
                 const newUser = await prisma.user.create({
-                    data: {
+                    data: buildRegistrationUserData({
                         username: id,
                         email,
                         passwordHash: hash,
                         passwordSalt: salt,
                         nickname,
-                        player: { create: {} },
-                    },
+                    }),
                 });
 
                 delete verifyMap[socket.id!];

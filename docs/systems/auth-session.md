@@ -24,7 +24,8 @@
 3. `verifyCode(code)` 성공 시 해당 socket의 인증 엔트리를 verified로 표시한다. 엔트리는 코드를 발송한 정규화 이메일도 함께 소유하고, 한 발급 건의 오답은 최대 5회까지만 허용한다.
 4. `register`는 verified 상태와 만료 시각을 다시 확인하고, 가입 payload의 이메일을 소문자·공백 제거 후 인증 엔트리 이메일과 정확히 대조한다. 이후 ID/PW/email/nickname 형식과 DB 중복을 검사한다.
 5. 비밀번호는 32-byte hex salt와 PBKDF2-SHA512(10,000회, 64-byte) 해시로 저장한다. 해싱은 기존 DB 문자열과 호환되는 비동기 worker-pool API를 사용해 로그인 요청이 Node 이벤트 루프를 막지 않는다.
-6. Prisma nested create로 `User`와 기본 `Player`를 만들고 인메모리 세션 토큰을 발급한다.
+6. 가입 시에는 `User`와 인메모리 세션 토큰만 만들고, 클라이언트가 새 쿠키로 소켓을 재연결한다.
+7. 재연결된 인증 소켓이 `loadPlayerByUserId()`를 호출하면 DB에 Player가 없는 첫 접속만 `Player.create()`와 첫 모험 튜토리얼·지원품 지급을 한 흐름으로 시작한다.
 
 검증 상태는 socket ID와 정규화 이메일에 함께 묶이므로 연결이 바뀌거나 이메일 입력을 바꾸면 다시 인증해야 한다. 클라이언트는 이메일 입력 변경 즉시 인증 완료 표시와 입력 코드를 초기화하지만 최종 권한 검사는 항상 서버의 `VerifyEntry.email` 대조가 담당한다.
 

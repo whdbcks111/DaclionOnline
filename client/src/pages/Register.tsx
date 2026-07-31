@@ -23,8 +23,10 @@ function Register() {
 
     useEffect(() => {
         socket?.on('registerResult', (result: RegisterResult) => {
-            if(result.ok) {
+            if(result.ok && result.sessionToken) {
                 document.cookie = `sessionToken=${result.sessionToken}; path=/; max-age=${60 * 60 * 24 * 7}`;
+                // 현재 연결은 가입 전에 시작되어 새 쿠키를 모른다. 재연결해 세션 복원과 최초 Player 생성을 시작한다.
+                socket.disconnect().connect();
                 navigate('/home');
             }
             else {
