@@ -1,6 +1,8 @@
 import { defineShop } from '../models/Shop.js';
+import type { SellEntry } from '../models/Shop.js';
 import { GameTags } from '../../../shared/tags.js';
 import { FishRarity } from '../models/Fishing.js';
+import { FISHING_EQUIPMENT_TIERS } from './fishingEquipmentCatalog.js';
 
 function bagStock(label: string, itemDataId: string, price: number, restockTime: number, stock = 2) {
     return {
@@ -31,6 +33,19 @@ function largePotionStock() {
             stock: 20,
             restockTime: 180,
         },
+    ];
+}
+
+function fishingSellList(): SellEntry[] {
+    return [
+        { label: '낚시 도구', filter: item => item.hasTag(GameTags.TOOL_FISHING), count: 1, price: 20 },
+        { label: '미끼', filter: item => item.hasTag(GameTags.ITEM_BAIT), count: 99, price: 1 },
+        { label: '일반 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_COMMON), count: 99, price: FishRarity.COMMON.sellPrice },
+        { label: '고급 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_UNCOMMON), count: 99, price: FishRarity.UNCOMMON.sellPrice },
+        { label: '희귀 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_RARE), count: 99, price: FishRarity.RARE.sellPrice },
+        { label: '서사 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_EPIC), count: 99, price: FishRarity.EPIC.sellPrice },
+        { label: '전설 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_LEGENDARY), count: 99, price: FishRarity.LEGENDARY.sellPrice },
+        { label: '신화 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_MYTHIC), count: 99, price: FishRarity.MYTHIC.sellPrice },
     ];
 }
 
@@ -248,17 +263,33 @@ defineShop({
             restockTime: 30,
         },
     ],
-    sellList: [
-        { label: '낚시 도구', filter: item => item.hasTag(GameTags.TOOL_FISHING), count: 1, price: 20 },
-        { label: '미끼', filter: item => item.hasTag(GameTags.ITEM_BAIT), count: 99, price: 1 },
-        { label: '일반 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_COMMON), count: 99, price: FishRarity.COMMON.sellPrice },
-        { label: '고급 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_UNCOMMON), count: 99, price: FishRarity.UNCOMMON.sellPrice },
-        { label: '희귀 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_RARE), count: 99, price: FishRarity.RARE.sellPrice },
-        { label: '서사 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_EPIC), count: 99, price: FishRarity.EPIC.sellPrice },
-        { label: '전설 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_LEGENDARY), count: 99, price: FishRarity.LEGENDARY.sellPrice },
-        { label: '신화 물고기', filter: item => item.hasTag(GameTags.FISH_RARITY_MYTHIC), count: 99, price: FishRarity.MYTHIC.sellPrice },
-    ],
+    sellList: fishingSellList(),
     tags: [GameTags.SHOP_FISHING, GameTags.FACILITY_LAWFUL],
+});
+
+for (const tier of FISHING_EQUIPMENT_TIERS) defineShop({
+    id: tier.shopId,
+    recommendedLevel: tier.level,
+    buyList: [
+        {
+            label: tier.rod.name,
+            create: () => ({ itemDataId: tier.rod.id, count: 1 }),
+            count: 1,
+            price: tier.rod.price,
+            stock: 2,
+            restockTime: 600,
+        },
+        {
+            label: `${tier.bait.name} 20개`,
+            create: () => ({ itemDataId: tier.bait.id, count: 20 }),
+            count: 20,
+            price: tier.bait.price,
+            stock: 30,
+            restockTime: 45,
+        },
+    ],
+    sellList: fishingSellList(),
+    tags: [GameTags.SHOP_FISHING],
 });
 
 defineShop({

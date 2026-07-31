@@ -7,6 +7,11 @@ import { defineTitle } from '../models/Title.js';
 import type Player from '../models/Player.js';
 import { GameTags } from '../../../shared/tags.js';
 import { LegacyStatusEffects } from './statusEffects.js';
+import {
+    FISHING_CATCH_COUNT_PROGRESS_ID,
+    getFishingCollectionCount,
+    getFishingCollectionTotalCount,
+} from '../models/FishingCollection.js';
 
 const TitleStatisticIds = Object.freeze({
     WOLF_KILLS: 'title-stat:kills/wolf',
@@ -17,7 +22,7 @@ const TitleStatisticIds = Object.freeze({
     PICKAXE_HITS: 'title-stat:hits/pickaxe',
     UNARMED_HITS: 'title-stat:hits/unarmed',
     ORE_DESTROYED: 'title-stat:resources/ore',
-    FISH_CAUGHT: 'title-stat:fishing/caught',
+    FISH_CAUGHT: FISHING_CATCH_COUNT_PROGRESS_ID,
     MYTHIC_FISH_CAUGHT: 'title-stat:fishing/mythic',
     ITEMS_FORGED: 'title-stat:forging/completed',
 });
@@ -332,6 +337,64 @@ defineTitle({
     modifiers: () => [
         { attribute: AttributeType.LUCK.key, op: 'add', value: 10 },
         { attribute: AttributeType.FISHING_BITE_SPEED.key, op: 'multiply', value: 1.05 },
+    ],
+});
+
+for (const title of [
+    {
+        id: 'title:waterside_beginner', name: '물가의 초심자', count: 10,
+        description: '행운이 2 증가합니다.',
+        modifiers: [{ attribute: AttributeType.LUCK.key, op: 'add' as const, value: 2 }],
+    },
+    {
+        id: 'title:ripple_angler', name: '잔물결 낚시꾼', count: 100,
+        description: '입질 속도가 5% 증가합니다.',
+        modifiers: [{ attribute: AttributeType.FISHING_BITE_SPEED.key, op: 'multiply' as const, value: 1.05 }],
+    },
+    {
+        id: 'title:wave_reader', name: '물결을 읽는 자', count: 500,
+        description: '행운이 8 증가하고 채집 영역 이동속도가 5 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.LUCK.key, op: 'add' as const, value: 8 },
+            { attribute: AttributeType.FISHING_NET_SPEED.key, op: 'add' as const, value: 5 },
+        ],
+    },
+    {
+        id: 'title:ocean_hunter', name: '대양의 사냥꾼', count: 2_000,
+        description: '행운이 15 증가하고 채집 영역 크기가 3 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.LUCK.key, op: 'add' as const, value: 15 },
+            { attribute: AttributeType.FISHING_NET_SIZE.key, op: 'add' as const, value: 3 },
+        ],
+    },
+    {
+        id: 'title:myriad_seas_angler_king', name: '만해의 낚시왕', count: 10_000,
+        description: '행운이 25 증가하고 입질 속도가 12%, 시작 게이지가 5%p 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.LUCK.key, op: 'add' as const, value: 25 },
+            { attribute: AttributeType.FISHING_BITE_SPEED.key, op: 'multiply' as const, value: 1.12 },
+            { attribute: AttributeType.FISHING_GAUGE_START.key, op: 'add' as const, value: 0.05 },
+        ],
+    },
+] as const) defineTitle({
+    id: title.id,
+    name: title.name,
+    acquisitionDescription: `낚시 성공 ${title.count.toLocaleString('ko-KR')}회`,
+    description: title.description,
+    canAcquire: player => counter(player, TitleStatisticIds.FISH_CAUGHT) >= title.count,
+    modifiers: () => [...title.modifiers],
+});
+
+defineTitle({
+    id: 'title:master_of_all_fish',
+    name: '만어도감의 주인',
+    acquisitionDescription: '낚시도감의 모든 어종 등록',
+    description: '행운이 20 증가하고 낚시 시작 게이지가 3%p 증가합니다.',
+    canAcquire: player => getFishingCollectionTotalCount() > 0
+        && getFishingCollectionCount(player) >= getFishingCollectionTotalCount(),
+    modifiers: () => [
+        { attribute: AttributeType.LUCK.key, op: 'add', value: 20 },
+        { attribute: AttributeType.FISHING_GAUGE_START.key, op: 'add', value: 0.03 },
     ],
 });
 

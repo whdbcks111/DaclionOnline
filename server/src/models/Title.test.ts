@@ -185,6 +185,20 @@ test('PVP 칭호 통계는 유효 판정을 통과한 처치만 누적한다', (
     assert.equal(player.progress.getCounterNumber('combat:pvp_credited_kills'), 1);
 });
 
+test('낚시 성공 횟수 칭호는 첫 10회부터 단계적으로 획득한다', () => {
+    const player = new TestTitlePlayer();
+    for (let i = 0; i < 10; i++) {
+        emitGameEvent(GameEventIds.FISH_CAUGHT, {
+            actor: player,
+            data: { itemDataId: 'silver_minnow', rarity: 'common', exp: 1 },
+        });
+    }
+    player.titles.refreshAcquisitions(false);
+
+    assert.equal(player.titles.isOwned('물가의 초심자'), true);
+    assert.equal(player.titles.isOwned('잔물결 낚시꾼'), false);
+});
+
 test('레거시 칭호 대부분과 신규 생활·보스 칭호를 등록한다', () => {
     const names = new Set(getAllTitles().map(title => title.name));
     for (const name of [
@@ -192,7 +206,8 @@ test('레거시 칭호 대부분과 신규 생활·보스 칭호를 등록한다
         '곡괭이 살해자', '액스 파이터', '격투가', '광부의 길', '학살자', '몰살자',
         '아크스펠', '마도사', '속사', '페이탈디드', '초감각',
         '슬라임 연구가', '거인에게 맞서는 자', '광맥을 읽는 자', '전설을 낚은 자',
-        '불꽃과 망치의 주인', '삼원소 조율자',
+        '물가의 초심자', '잔물결 낚시꾼', '물결을 읽는 자', '대양의 사냥꾼',
+        '만해의 낚시왕', '만어도감의 주인', '불꽃과 망치의 주인', '삼원소 조율자',
     ]) assert.equal(names.has(name), true, name);
-    assert.equal(names.size, 22);
+    assert.equal(names.size, 28);
 });

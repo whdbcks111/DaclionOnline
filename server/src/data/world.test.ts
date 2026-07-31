@@ -8,7 +8,12 @@ import type Player from '../models/Player.js';
 import { getAllLocations, getLocation, normalizeLocationInput, reloadAllLocations } from '../models/Location.js';
 import { getAllMonsterData, getMonsterData } from '../models/Monster.js';
 import { getResourceData } from '../models/Resource.js';
-import { getAllItemData, getItemData, MAX_STACKABLE_ITEM_COUNT } from '../models/Item.js';
+import {
+    createAcquisitionRequirements,
+    getAllItemData,
+    getItemData,
+    MAX_STACKABLE_ITEM_COUNT,
+} from '../models/Item.js';
 import { getShop } from '../models/Shop.js';
 import { getAllCraftingRecipes } from '../models/Crafting.js';
 import { getAllQuestData } from '../models/Quest.js';
@@ -37,6 +42,7 @@ import {
     rollAshenReliquaryReward,
     rollEclipseReliquaryReward,
     rollFrostveilReliquaryReward,
+    rollFishingSupplyCacheReward,
     rollGlassduneReliquaryReward,
     rollLabyrinthCacheReward,
     rollMisttideReliquaryReward,
@@ -46,6 +52,7 @@ import {
     rollVoidcrownReliquaryReward,
     rollWorldrootReliquaryReward,
 } from './resources.js';
+import { FISHING_EQUIPMENT_TIERS } from './fishingEquipmentCatalog.js';
 import { MonsterAiDisposition } from '../models/Threat.js';
 import {
     getIronrootCrystalProtectionMultiplier,
@@ -1490,6 +1497,41 @@ test('물빛 연못 낚시상점은 낚시 품목을 전담하고 잡화점은 �
     assert.equal(swiftRod?.modifiers?.find(modifier => modifier.attribute === 'fishingNetSize')?.value, -4);
     assert.equal(swiftRod?.modifiers?.find(modifier => modifier.attribute === 'fishingNetSpeed')?.value, 46);
     assert.equal(fishingStore?.data.sellList.find(entry => entry.label === '신화 물고기')?.price, 8000);
+});
+
+test('모든 성장 낚시터는 현지 낚싯대·미끼 상점과 낚싯대 보급상자를 제공한다', () => {
+    let previousLuck = 0;
+    for (const tier of FISHING_EQUIPMENT_TIERS) {
+        const location = locations.find(candidate => candidate.id === tier.locationId);
+        const shop = getShop(tier.shopId);
+        const rod = getItemData(tier.rod.id);
+        const bait = getItemData(tier.bait.id);
+        const cache = getResourceData(tier.cacheResourceId);
+
+        assert.equal(location?.shopId, tier.shopId, tier.locationId);
+        assert.ok(location?.tags.includes(GameTags.LOCATION_SHOP), tier.locationId);
+        assert.ok(location?.objects.some(object =>
+            object.type === 'resource' && object.dataId === tier.cacheResourceId), tier.locationId);
+        assert.ok(shop?.data.buyList.some(entry => entry.create().itemDataId === tier.rod.id), tier.shopId);
+        assert.ok(shop?.data.buyList.some(entry => entry.create().itemDataId === tier.bait.id), tier.shopId);
+        assert.ok(rod?.tags.includes(GameTags.TOOL_FISHING), tier.rod.id);
+        assert.ok(bait?.tags.includes(GameTags.ITEM_BAIT), tier.bait.id);
+        assert.ok(tier.rod.luck > previousLuck, tier.rod.id);
+        previousLuck = tier.rod.luck;
+        assert.deepEqual(cache?.interactionCooldown, { min: 7200, max: 14400 }, tier.cacheResourceId);
+        assert.equal(
+            rollFishingSupplyCacheReward(tier.cacheResourceId, () => 0)?.itemDataId,
+            tier.rod.id,
+        );
+        assert.equal(
+            rollFishingSupplyCacheReward(tier.cacheResourceId, () => 0.5)?.itemDataId,
+            tier.bait.id,
+        );
+        const shopRodRequirements = createAcquisitionRequirements(tier.rod.id, tier.level, 'shop');
+        const shopBaitRequirements = createAcquisitionRequirements(tier.bait.id, tier.level, 'shop');
+        assert.ok((shopRodRequirements?.stats as { sensibility?: number })?.sensibility, tier.rod.id);
+        assert.deepEqual(shopBaitRequirements?.stats, {}, tier.bait.id);
+    }
 });
 
 test('엘리트 대장장이는 지팡이 틀과 활·화살 부품 제작 경로를 가진다', () => {

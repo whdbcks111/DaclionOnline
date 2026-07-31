@@ -1,6 +1,7 @@
 import type { LocationData } from '../../../shared/types.js';
 import type { TagId } from '../../../shared/tags.js';
 import { GameTags } from '../../../shared/tags.js';
+import { getFishingEquipmentTierByLocation } from './fishingEquipmentCatalog.js';
 
 export interface AscendantRegionDefinition {
     readonly id: string;
@@ -533,6 +534,8 @@ export function buildAscendantLocations(): LocationData[] {
         }
         const fishingSpot = HIGH_LEVEL_FISHING_SPOTS.find(candidate => candidate.regionId === id);
         if (fishingSpot) {
+            const equipmentTier = getFishingEquipmentTierByLocation(fishingSpot.id);
+            if (!equipmentTier) throw new Error(`Missing fishing equipment tier: ${fishingSpot.id}`);
             locations.find(location => location.id === `${id}_waystation`)!.connections.push(connect(fishingSpot.id));
             locations.push({
                 id: fishingSpot.id,
@@ -542,15 +545,22 @@ export function buildAscendantLocations(): LocationData[] {
                 z: z - 25,
                 mapColor: region.mapColor,
                 zoneType: 'neutral',
+                shopId: equipmentTier.shopId,
                 tags: [
                     GameTags.LOCATION_WILDERNESS,
                     GameTags.LOCATION_FISHING,
+                    GameTags.LOCATION_SHOP,
                     regionTag,
                     GameTags.PROPERTY_WATER,
                     ...region.propertyTags,
                 ],
                 npcIds: [],
-                objects: [],
+                objects: [{
+                    type: 'resource',
+                    dataId: equipmentTier.cacheResourceId,
+                    maxCount: 1,
+                    respawnTime: 0,
+                }],
                 connections: [connect(`${id}_waystation`)],
             });
         }

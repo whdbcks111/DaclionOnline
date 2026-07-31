@@ -1562,14 +1562,16 @@
     "name": "유리모래 숨은 별빛 오아시스",
     "mapColor": "#756344",
     "zoneType": "neutral",
+    "shopId": "glassdune_fishing_store",
     "x": 1400,
     "y": -265,
     "z": 28,
-    "tags": ["location:wilderness", "location:fishing", "location:desert", "property:water", "property:natural"],
+    "tags": ["location:wilderness", "location:fishing", "location:shop", "location:desert", "property:water", "property:natural"],
     "npcIds": [],
     "objects": [
       { "type": "resource", "dataId": "oasis_date_palm", "maxCount": 3, "respawnTime": 0 },
-      { "type": "resource", "dataId": "glassdune_reliquary", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "glassdune_reliquary", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "glassdune_angler_supply_cache", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "glassdune_observatory" }
@@ -1942,15 +1944,17 @@
     "name": "안개파도 해안 4 청해초 물목",
     "mapColor": "#42666a",
     "zoneType": "hostile",
+    "shopId": "misttide_fishing_store",
     "x": 1885,
     "y": 560,
     "z": -10,
-    "tags": ["location:wilderness", "location:fishing", "location:coast", "property:water", "property:natural"],
+    "tags": ["location:wilderness", "location:fishing", "location:shop", "location:coast", "property:water", "property:natural"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "kelp_stalker", "maxCount": 3, "respawnTime": 120 },
       { "type": "monster", "dataId": "saltplate_crab", "maxCount": 2, "respawnTime": 112 },
-      { "type": "resource", "dataId": "kelp_resin_patch", "maxCount": 2, "respawnTime": 0 }
+      { "type": "resource", "dataId": "kelp_resin_patch", "maxCount": 2, "respawnTime": 0 },
+      { "type": "resource", "dataId": "misttide_angler_supply_cache", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "misttide_harbor" },
@@ -2329,15 +2333,17 @@
     "name": "카이로스 공방도시 잔해호",
     "mapColor": "#5b5264",
     "zoneType": "hostile",
+    "shopId": "paradox_fishing_store",
     "x": 1910,
     "y": -970,
     "z": 5,
-    "tags": ["location:wilderness", "location:fishing", "location:dungeon", "location:clockwork", "property:water", "property:metal", "property:earth"],
+    "tags": ["location:wilderness", "location:fishing", "location:shop", "location:dungeon", "location:clockwork", "property:water", "property:metal", "property:earth"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "scrap_centurion", "maxCount": 2, "respawnTime": 150 },
       { "type": "monster", "dataId": "gearmite_scavenger", "maxCount": 2, "respawnTime": 138 },
-      { "type": "resource", "dataId": "chronosteel_vein", "maxCount": 2, "respawnTime": 260 }
+      { "type": "resource", "dataId": "chronosteel_vein", "maxCount": 2, "respawnTime": 260 },
+      { "type": "resource", "dataId": "paradox_angler_supply_cache", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "paradox_rusted_conveyor" },
@@ -3665,12 +3671,14 @@
     "name": "루나리스 해구 3 희미한 산호초",
     "mapColor": "#304452",
     "zoneType": "hostile",
+    "shopId": "eclipse_fishing_store",
     "x": 2840, "y": -3035, "z": -865,
-    "tags": ["location:wilderness", "location:fishing", "location:dungeon", "location:eclipse-trench", "property:water", "property:light"],
+    "tags": ["location:wilderness", "location:fishing", "location:shop", "location:dungeon", "location:eclipse-trench", "property:water", "property:light"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "nightpearl_jelly", "maxCount": 3, "respawnTime": 290 },
-      { "type": "resource", "dataId": "drowned_silver_vein", "maxCount": 1, "respawnTime": 360 }
+      { "type": "resource", "dataId": "drowned_silver_vein", "maxCount": 1, "respawnTime": 360 },
+      { "type": "resource", "dataId": "eclipse_angler_supply_cache", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "eclipse_lower_crossing" },
@@ -5022,12 +5030,14 @@
     "name": "라그나벨 저문별 호수",
     "mapColor": "#493d49",
     "zoneType": "hostile",
+    "shopId": "endstar_fishing_store",
     "x": 2970, "y": -3535, "z": -3070,
-    "tags": ["location:wilderness", "location:fishing", "location:endstar", "property:water", "property:holy", "property:dark"],
+    "tags": ["location:wilderness", "location:fishing", "location:shop", "location:endstar", "property:water", "property:holy", "property:dark"],
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "entropy_seraph", "maxCount": 3, "respawnTime": 475 },
-      { "type": "monster", "dataId": "genesis_warden", "maxCount": 1, "respawnTime": 495 }
+      { "type": "monster", "dataId": "genesis_warden", "maxCount": 1, "respawnTime": 495 },
+      { "type": "resource", "dataId": "endstar_angler_supply_cache", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "endstar_lower_fork" },

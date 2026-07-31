@@ -28,6 +28,7 @@ import type {
 } from '../models/Item.js';
 import { AttributeType } from '../models/Attribute.js';
 import { ItemAttackEffectType } from '../models/ItemAttackEffect.js';
+import { FISHING_EQUIPMENT_TIERS } from './fishingEquipmentCatalog.js';
 
 registerItemAttackOverride(ItemAttackOverrideKeys.PROJECTILE, executeProjectileItemAttack);
 registerItemAttackOverride(ItemAttackOverrideKeys.BURST_FIREARM, executeBurstFirearmAttack);
@@ -2881,6 +2882,52 @@ defineItem({
     baseDurability: null,
     tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_BAIT, GameTags.PROPERTY_NATURAL],
 });
+
+// TODO: 전용 낚시 장비 아트 제작 전까지 기존 정교한 낚싯대·지렁이 미끼 fallback을 재사용한다.
+for (const tier of FISHING_EQUIPMENT_TIERS) {
+    defineItem({
+        id: tier.rod.id,
+        name: tier.rod.name,
+        description: tier.rod.description,
+        image: `items/${tier.rod.id}`,
+        category: '낚시 도구',
+        weight: 1.8 + tier.level / 2_000,
+        stackable: false,
+        maxStack: 1,
+        baseMetadata: { fishingNetShape: 'circle' },
+        onUse: null,
+        equipSlot: 'mainHand',
+        modifiers: [
+            { attribute: 'luck', op: 'add', value: tier.rod.luck, source: '' },
+            { attribute: 'fishingBiteSpeed', op: 'add', value: tier.rod.biteSpeed, source: '' },
+            { attribute: 'fishingNetSize', op: 'add', value: tier.rod.netSize, source: '' },
+            { attribute: 'fishingNetSpeed', op: 'add', value: tier.rod.netSpeed, source: '' },
+            { attribute: 'fishingGaugeStart', op: 'add', value: tier.rod.gaugeStart, source: '' },
+        ],
+        baseDurability: tier.rod.durability,
+        tags: [GameTags.ITEM_TOOL, GameTags.TOOL_FISHING, ...tier.rod.tags],
+    });
+    defineItem({
+        id: tier.bait.id,
+        name: tier.bait.name,
+        description: tier.bait.description,
+        image: `items/${tier.bait.id}`,
+        category: '미끼',
+        weight: 0.05,
+        stackable: true,
+        maxStack: MAX_STACKABLE_ITEM_COUNT,
+        baseMetadata: null,
+        onUse: null,
+        equipSlot: 'offHand',
+        modifiers: [
+            { attribute: 'luck', op: 'add', value: tier.bait.luck, source: '' },
+            { attribute: 'fishingBiteSpeed', op: 'add', value: tier.bait.biteSpeed, source: '' },
+            { attribute: 'fishingGaugeStart', op: 'add', value: tier.bait.gaugeStart, source: '' },
+        ],
+        baseDurability: null,
+        tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_BAIT, ...tier.bait.tags],
+    });
+}
 
 // TODO: 하위 구간 희귀 광물 전용 아트 제작 시 현재 광석·합금 fallback 원본을 교체한다.
 for (const mineral of [

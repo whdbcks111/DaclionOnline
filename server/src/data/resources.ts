@@ -3,6 +3,10 @@ import { createAcquisitionRequirements, getItemData, ItemMetadataKeys } from '..
 import { sendBotMessageToUser, sendNotificationToUser } from '../modules/message.js';
 import { chat } from '../utils/chatBuilder.js';
 import { GameTags } from '../../../shared/tags.js';
+import {
+    FISHING_EQUIPMENT_TIERS,
+    getFishingEquipmentTierByCache,
+} from './fishingEquipmentCatalog.js';
 
 registerResourceInteraction('inspect_ore', (resource, player) => {
     sendNotificationToUser(player.userId, {
@@ -85,6 +89,55 @@ registerResourceInteraction('open_treasure_chest', (_resource, player) => {
         key: 'treasure-opened',
         message: '보물상자를 열었습니다!',
     });
+    return true;
+});
+
+export interface FishingSupplyCacheReward {
+    itemDataId: string;
+    count: number;
+    isRod: boolean;
+}
+
+/** 현지 보급상자는 8% 확률로 해당 단계 낚싯대, 그 외에는 미끼 10~30개를 준다. */
+export function rollFishingSupplyCacheReward(
+    resourceDataId: string,
+    random = Math.random,
+): FishingSupplyCacheReward | undefined {
+    const tier = getFishingEquipmentTierByCache(resourceDataId);
+    if (!tier) return undefined;
+    if (random() < 0.08) return { itemDataId: tier.rod.id, count: 1, isRod: true };
+    return {
+        itemDataId: tier.bait.id,
+        count: 10 + Math.floor(random() * 21),
+        isRod: false,
+    };
+}
+
+registerResourceInteraction('open_fishing_supply_cache', (resource, player) => {
+    const tier = getFishingEquipmentTierByCache(resource.resourceDataId);
+    const reward = rollFishingSupplyCacheReward(resource.resourceDataId);
+    if (!tier || !reward) return false;
+    const requirements = reward.isRod
+        ? createAcquisitionRequirements(reward.itemDataId, tier.level, 'treasure')
+        : null;
+    const destination = player.receiveLoot(
+        reward.itemDataId,
+        reward.count,
+        requirements ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null,
+    );
+    if (destination === 'failed') {
+        sendNotificationToUser(player.userId, {
+            key: `fishing-supply-cache-failed:${resource.resourceDataId}`,
+            message: '낚시 보급품을 꺼낼 수 없습니다.',
+        });
+        return false;
+    }
+    const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
+    sendBotMessageToUser(player.userId, chat()
+        .color('aqua', builder => builder.weight('bold', nested => nested.text('[ 낚시꾼 보급상자 ]')))
+        .text(`\n${itemName} x${reward.count}을(를) 발견했습니다.`)
+        .text(destination === 'ground' ? '\n인벤토리가 가득 차 발밑에 떨어졌습니다.' : '')
+        .build());
     return true;
 });
 
@@ -1308,5 +1361,23 @@ defineResource({
     tags: [
         GameTags.RESOURCE_ORE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_ENDSTAR,
         GameTags.PROPERTY_METAL, GameTags.PROPERTY_DARK,
+    ],
+});
+
+for (const tier of FISHING_EQUIPMENT_TIERS) defineResource({
+    id: tier.cacheResourceId,
+    name: `${tier.rod.name.replace(' 낚싯대', '')} 낚시꾼 보급상자`,
+    level: tier.level,
+    baseAttribute: { maxLife: 1, def: 9999, magicDef: 9999 },
+    drops: [],
+    expReward: { min: 0, max: 0 },
+    interaction: 'open_fishing_supply_cache',
+    attackable: false,
+    interactionCooldown: { min: 2 * 60 * 60, max: 4 * 60 * 60 },
+    tags: [
+        GameTags.RESOURCE_TREASURE,
+        GameTags.TRAIT_INANIMATE,
+        GameTags.MATERIAL_WOOD,
+        GameTags.PROPERTY_WATER,
     ],
 });

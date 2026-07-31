@@ -21,6 +21,7 @@ import { cancelMiniGame, hasActiveMiniGame, normalizeMiniGameInputs, startMiniGa
 import { getPlayerByUserId } from './player.js';
 import { cancelGameTask, scheduleGameTask } from './scheduler.js';
 import { emitGameEvent, GameEventIds } from '../models/GameEvent.js';
+import { recordFishingCollectionCatch } from '../models/FishingCollection.js';
 
 interface FishingState {
     locationId: string
@@ -185,7 +186,17 @@ function beginFishingMiniGame(userId: number, locationId: string, fish: FishData
             const reward = result.success
                 ? finishFishingReward(current, fish)
                 : { message: result.message ?? '낚시에 실패했습니다.' };
-            const message = reward.message;
+            let message = reward.message;
+            if (reward.itemDataId) {
+                const collection = recordFishingCollectionCatch(current, reward.itemDataId);
+                if (collection.newlyCollected) {
+                    message += `\n📖 낚시도감 등록: ${getItemData(reward.itemDataId)?.name ?? reward.itemDataId}`
+                        + ` (${collection.collectedCount}/${collection.totalCount})`;
+                }
+                for (const grant of collection.grants) {
+                    message += `\n🎖 도감 ${grant.requiredCount}종 보상: ${grant.label}`;
+                }
+            }
             sendBotMessageToUser(userId, message);
             sendNotificationToUser(userId, { key: 'fishing:result', message, length: 4500 });
             if (reward.itemDataId && reward.exp !== undefined) {

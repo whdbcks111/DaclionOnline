@@ -1,6 +1,50 @@
 import { defineProgress, defineStatistic, ProgressType } from '../models/Progress.js';
 import { GameEventIds } from '../models/GameEvent.js';
 import { GameTags } from '../../../shared/tags.js';
+import { defineFishingCollection } from '../models/FishingCollection.js';
+import { getFishCatalog } from './fishingCatalog.js';
+import { FISHING_EQUIPMENT_TIERS } from './fishingEquipmentCatalog.js';
+
+defineFishingCollection(
+    getFishCatalog().map(fish => ({
+        itemDataId: fish.id,
+        name: fish.name,
+        rarityKey: fish.rarity.key,
+        rarityLabel: fish.rarity.label,
+        rarityColor: fish.rarity.color,
+    })),
+    [
+        {
+            requiredCount: 10,
+            label: '최대 경험치 10% + 5,000 Gold + 통통한 지렁이 미끼 100개',
+            experienceRatio: 0.1, gold: 5_000, itemDataId: 'earthworm_bait', itemCount: 100,
+        },
+        {
+            requiredCount: 20,
+            label: '최대 경험치 15% + 20,000 Gold + 태양대추 반죽미끼 100개',
+            experienceRatio: 0.15, gold: 20_000,
+            itemDataId: FISHING_EQUIPMENT_TIERS[0].bait.id, itemCount: 100,
+        },
+        {
+            requiredCount: 35,
+            label: '최대 경험치 25% + 100,000 Gold + 태엽 반짝미끼 100개',
+            experienceRatio: 0.25, gold: 100_000,
+            itemDataId: FISHING_EQUIPMENT_TIERS[2].bait.id, itemCount: 100,
+        },
+        {
+            requiredCount: 50,
+            label: '최대 경험치 35% + 500,000 Gold + 압해 진주미끼 100개',
+            experienceRatio: 0.35, gold: 500_000,
+            itemDataId: FISHING_EQUIPMENT_TIERS[5].bait.id, itemCount: 100,
+        },
+        {
+            requiredCount: getFishCatalog().length,
+            label: '최대 경험치 50% + 2,000,000 Gold + 창세빛 미끼 200개',
+            experienceRatio: 0.5, gold: 2_000_000,
+            itemDataId: FISHING_EQUIPMENT_TIERS.at(-1)!.bait.id, itemCount: 200,
+        },
+    ],
+);
 
 defineProgress({
     id: 'security:human_verification_required',

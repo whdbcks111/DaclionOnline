@@ -1,6 +1,6 @@
 import { AttributeType } from "./Attribute.js";
 import type { AttributeKey, AttributeModifier, ModifierOp } from "./Attribute.js";
-import { TagCollection, normalizeTags } from "../../../shared/tags.js";
+import { GameTags, TagCollection, normalizeTags } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
 import { isDeepStrictEqual } from "node:util";
 import {
@@ -234,6 +234,8 @@ function normalizeItemRequirements(value: unknown): ItemRequirementSnapshot | nu
 
 function requirementStatForItem(data: ItemData): StatType | undefined {
     const category = data.category.replace(/\s+/g, '');
+    if (data.tags.includes(GameTags.TOOL_FISHING)) return StatType.SENSIBILITY;
+    if (data.tags.includes(GameTags.ITEM_BAIT)) return undefined;
     if (data.tags.includes('weapon:staff')) return StatType.MENTALITY;
     if (data.tags.includes('weapon:bow') || data.tags.includes('weapon:dagger')) return StatType.AGILITY;
     if (data.equipSlot === 'mainHand') return StatType.STRENGTH;

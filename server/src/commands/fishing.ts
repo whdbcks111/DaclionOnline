@@ -4,6 +4,10 @@ import { sendBotMessageToUser } from '../modules/message.js';
 import { getPlayerByUserId } from '../modules/player.js';
 import { AttributeType } from '../models/Attribute.js';
 import { getFishRarityChances } from '../models/Fishing.js';
+import {
+    getFishingCollectionSnapshot,
+    type FishingCollectionSnapshot,
+} from '../models/FishingCollection.js';
 import { chat } from '../utils/chatBuilder.js';
 
 function formatProbability(probability: number): string {
@@ -23,6 +27,43 @@ export function buildFishingRarityTable(luck: number) {
     return builder
         .color('$text-tertiary', line => line.text('\n장비·미끼·버프로 행운이 변하면 확률도 함께 변합니다.'))
         .build();
+}
+
+export function buildFishingCollectionMessage(snapshot: FishingCollectionSnapshot) {
+    const builder = chat()
+        .text(`[ 낚시도감 ] ${snapshot.collectedCount}/${snapshot.totalCount}종\n`)
+        .progress({
+            value: snapshot.totalCount > 0 ? snapshot.collectedCount / snapshot.totalCount : 0,
+            length: 'min(68vw, 420px)',
+            color: 'aqua',
+        })
+        .text('\n\n[ 단계 보상 ]');
+    for (const reward of snapshot.rewards) {
+        builder.text('\n')
+            .color(
+                reward.claimed ? '$text-tertiary' : reward.available ? 'gold' : '$text-secondary',
+                line => line.text(`${reward.claimed ? '✓' : reward.available ? '!' : '·'} ${reward.requiredCount}종 — ${reward.label}`),
+            );
+    }
+    builder.text('\n\n').hide('어종 목록', list => {
+        const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+        for (const rarityKey of rarityOrder) {
+            const entries = snapshot.entries.filter(entry => entry.rarityKey === rarityKey);
+            if (entries.length === 0) continue;
+            list.color(entries[0].rarityColor, line => line.weight('bold', text => text.text(`[ ${entries[0].rarityLabel} ]`)));
+            for (const entry of entries) {
+                list.text('\n  ');
+                if (entry.collected) {
+                    list.icon(`items/${entry.itemDataId}`).text(entry.name);
+                } else {
+                    list.color('$text-tertiary', line => line.text('미발견'));
+                }
+            }
+            list.text('\n\n');
+        }
+        return list;
+    });
+    return builder.build();
 }
 
 export function initFishingCommands(): void {
@@ -51,6 +92,20 @@ export function initFishingCommands(): void {
                 userId,
                 buildFishingRarityTable(player.attribute.get(AttributeType.LUCK)),
             );
+        },
+    });
+    registerCommand({
+        name: '낚시도감',
+        aliases: ['fishbook', 'fb'],
+        description: '계정 캐릭터에 영속 저장된 어종 수집 현황과 단계 보상을 확인합니다.',
+        showCommandUse: 'private',
+        information: true,
+        handler(userId) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            sendBotMessageToUser(userId, buildFishingCollectionMessage(
+                getFishingCollectionSnapshot(player),
+            ));
         },
     });
 }
