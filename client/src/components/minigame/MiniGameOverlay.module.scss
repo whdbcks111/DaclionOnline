@@ -121,8 +121,11 @@
   position: absolute;
   z-index: 3;
   display: grid;
-  aspect-ratio: 1;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
   place-items: center;
+  overflow: hidden;
   transform: translate(-50%, -50%);
   color: $color-text-inverse;
   background: $color-primary;
@@ -130,7 +133,9 @@
   border-radius: 50%;
   font-size: clamp(.65rem, 2vw, .9rem);
   font-weight: 900;
+  line-height: 1;
   pointer-events: none;
+  contain: layout paint;
 }
 
 .forgeStats {
@@ -220,12 +225,15 @@
   }
 }
 .joystick {
+  --joystick-size: clamp(5rem, 24vw, 7rem);
   position: relative;
   display: none;
-  width: clamp(5rem, 24vw, 7rem);
-  aspect-ratio: 1;
+  width: var(--joystick-size);
+  height: var(--joystick-size);
   flex: 0 0 auto;
   touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
   background: $color-bg-secondary;
   border: 1px solid $color-border;
   border-radius: 50%;

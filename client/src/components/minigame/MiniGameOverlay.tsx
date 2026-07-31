@@ -307,10 +307,11 @@ export default function MiniGameOverlay() {
     const element = joystickRef.current
     if (!element) return
     const rect = element.getBoundingClientRect()
-    const radius = Math.max(1, rect.width / 2)
+    const radiusX = Math.max(1, rect.width / 2)
+    const radiusY = Math.max(1, rect.height / 2)
     const next = resolveFixedJoystickDirection(
-      (clientX - (rect.left + radius)) / radius,
-      (clientY - (rect.top + radius)) / radius,
+      (clientX - (rect.left + radiusX)) / radiusX,
+      (clientY - (rect.top + radiusY)) / radiusY,
     )
     setDirection(next.x, next.y)
   }
@@ -329,10 +330,13 @@ export default function MiniGameOverlay() {
         if (event.currentTarget.hasPointerCapture(event.pointerId)) updateJoystick(event.clientX, event.clientY)
       }}
       onPointerUp={event => {
-        event.currentTarget.releasePointerCapture(event.pointerId)
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }
         setDirection(0, 0)
       }}
       onPointerCancel={() => setDirection(0, 0)}
+      onLostPointerCapture={() => setDirection(0, 0)}
     >
       {JOYSTICK_MARKERS.map(marker => <i
         key={marker.label}
@@ -366,7 +370,12 @@ export default function MiniGameOverlay() {
           />)}
           <span
             className={styles.playerToken}
-            style={{ left: `${dodgeState.playerX}%`, top: `${dodgeState.playerY}%`, width: `${config.playerSize}%` }}
+            style={{
+              left: `${dodgeState.playerX}%`,
+              top: `${dodgeState.playerY}%`,
+              width: `${config.playerSize}%`,
+              height: `${config.playerSize}%`,
+            }}
           >{config.playerLabel}</span>
         </div>
         {controls}
