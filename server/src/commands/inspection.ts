@@ -287,6 +287,20 @@ export function buildItemInspection(snapshot: ItemInspectionSnapshot, sourceLabe
             if (snapshot.equipSlot) {
                 builder.tab(120, b => b.text('장착 부위')).text(`${EquipSlotType.fromInput(snapshot.equipSlot)?.label ?? snapshot.equipSlot}\n`);
             }
+            if (snapshot.requirements) {
+                const requirementParts = [`Lv.${snapshot.requirements.level}`];
+                for (const stat of StatType.values()) {
+                    const amount = snapshot.requirements.stats[stat.key];
+                    if (amount) requirementParts.push(`${stat.label} ${amount}`);
+                }
+                const sourceLabel = snapshot.requirements.source === 'treasure'
+                    ? '보물 완화'
+                    : snapshot.requirements.source === 'forge' ? '단조품' : '상점품';
+                builder.tab(120, b => b.text('필요 조건'))
+                    .text(`${requirementParts.join(' · ')} `)
+                    .color('$text-tertiary', b => b.text(`(${sourceLabel})`))
+                    .text('\n');
+            }
             appendSection(builder, '속성');
             appendAffinities(builder, snapshot.tags);
 

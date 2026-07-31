@@ -3,6 +3,8 @@ import { sendBotMessageToUser } from "../modules/message.js";
 import { getPlayerByUserId } from "../modules/player.js";
 import { getLocation } from "../models/Location.js";
 import { getShop } from "../models/Shop.js";
+import { createAcquisitionRequirements, ItemMetadataKeys } from "../models/Item.js";
+import { StatType } from "../models/Stat.js";
 import { chat } from "../utils/chatBuilder.js";
 
 function getPlayerShop(userId: number) {
@@ -79,6 +81,20 @@ export function initShopCommands(): void {
                     b.color(outOfStock ? 'red' : 'gray', b2 =>
                         b2.text(outOfStock ? '[품절]' : `[재고 ${stock}/${stockCapacity}]`)
                     );
+                    const preview = entry.create();
+                    const requirements = createAcquisitionRequirements(
+                        preview.itemDataId,
+                        shop.data.recommendedLevel ?? 1,
+                        'shop',
+                    );
+                    if (requirements) {
+                        const parts = [`Lv.${requirements.level}`];
+                        const stats = requirements.stats as Record<string, unknown>;
+                        for (const stat of StatType.values()) {
+                            if (typeof stats[stat.key] === 'number') parts.push(`${stat.label} ${stats[stat.key]}`);
+                        }
+                        b.color('gray', b2 => b2.text(` [조건 ${parts.join(' · ')}]`));
+                    }
 
                     if (!outOfStock) {
                         b.text('  ').button(`/구매 ${i + 1}`, b2 =>
@@ -197,7 +213,15 @@ export function initShopCommands(): void {
 
             shop.consumeStock(entryIndex, amount);
             player.gold -= totalCost;
-            player.inventory.addItem(created.itemDataId, totalItemCount, created.metadata ?? null, created.tags ?? []);
+            const requirements = createAcquisitionRequirements(
+                created.itemDataId,
+                shop.data.recommendedLevel ?? 1,
+                'shop',
+            );
+            const metadata = requirements
+                ? { ...(created.metadata ?? {}), [ItemMetadataKeys.REQUIREMENTS]: requirements }
+                : created.metadata ?? null;
+            player.inventory.addItem(created.itemDataId, totalItemCount, metadata, created.tags ?? []);
 
             sendBotMessageToUser(userId, chat()
                 .color('lime', b => b.text('구매 완료'))

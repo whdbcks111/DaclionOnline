@@ -2848,12 +2848,65 @@ for (const fish of getFishCatalog()) {
         category: '물고기',
         stackable: true,
         maxStack: MAX_STACKABLE_ITEM_COUNT,
-        baseMetadata: null,
-        onUse: null,
+        baseMetadata: {
+            hunger: 6 + fish.rarity.difficulty * 4,
+            time: 1.2,
+            useMessage: '신선한 생선을 손질해 먹는 중...',
+        },
+        onUse: 'restore_survival',
         equipSlot: null,
         modifiers: null,
         baseDurability: null,
-        tags: [GameTags.ITEM_FISH, GameTags.PROPERTY_WATER, fish.rarity.tag],
+        tags: [GameTags.ITEM_FISH, GameTags.ITEM_CONSUMABLE, GameTags.PROPERTY_WATER, fish.rarity.tag],
+    });
+}
+
+for (const dish of [
+    {
+        id: 'abyss_glass_sashimi', name: '심연유리 회접시', image: 'items/glassfin_tuna',
+        description: '유리날개 참치를 얇게 저며 수압에 버티는 회복력을 끌어낸 고급 요리.',
+        effect: { id: 'regeneration', level: 20, duration: 180 },
+    },
+    {
+        id: 'dream_memory_stew', name: '기억 만타 몽환탕', image: 'items/memory_manta',
+        description: '기억 만타를 천천히 우려 정신의 흐름을 맑게 하는 몽각서고식 탕.',
+        effect: { id: 'mentality_regeneration', level: 22, duration: 180 },
+    },
+    {
+        id: 'rustscale_power_grill', name: '녹비늘 철판구이', image: 'items/rustscale_pike',
+        description: '적철 열판에 강하게 구워 근육에 힘을 더하는 고단백 요리.',
+        effect: { id: 'strength_enhancement', level: 18, duration: 180 },
+    },
+    {
+        id: 'prayer_koi_clear_soup', name: '기도잉어 맑은탕', image: 'items/prayer_koi',
+        description: '성수의 향을 살려 감각과 움직임을 가볍게 만드는 무언신림식 맑은탕.',
+        effect: { id: 'swiftness', level: 18, duration: 180 },
+    },
+    {
+        id: 'genesis_dragonfish_platter', name: '창세 용어 만찬', image: 'items/genesis_dragonfish',
+        description: '기원의 빛과 어둠을 한 접시에 담아 마력을 증폭하는 최상급 만찬.',
+        effect: { id: 'magic_enhancement', level: 25, duration: 240 },
+    },
+] as const) {
+    defineItem({
+        id: dish.id,
+        name: dish.name,
+        description: dish.description,
+        image: `items/${dish.id}`, // TODO: 전용 요리 아트 제작 단계에서 현재 어종 fallback을 교체
+        category: '생선 요리',
+        weight: 0.8,
+        stackable: true,
+        maxStack: MAX_STACKABLE_ITEM_COUNT,
+        baseMetadata: {
+            [ItemMetadataKeys.STATUS_EFFECT]: dish.effect,
+            thirst: 3,
+        },
+        onUse: 'apply_status_effect',
+        equipSlot: null,
+        modifiers: null,
+        baseDurability: null,
+        tags: [GameTags.ITEM_CONSUMABLE, GameTags.ITEM_FISH, GameTags.PROPERTY_WATER],
+        balance: { role: ItemBalanceRole.BUFF },
     });
 }
 

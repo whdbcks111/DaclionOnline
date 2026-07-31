@@ -48,6 +48,10 @@ export function initForgingCommands(): void {
                 list: ForgeMaterial.values().flatMap(material => material.getInputValues()),
                 completions: ForgeMaterial.values().map(material => ({ value: material.label, description: material.itemDataId })),
             },
+            {
+                name: '성능상한', description: '완성품 성능 레벨 상한 (생략 시 제한 없음)',
+                completions: ['100', '200', '300', '400', '500', '600', '700', '800', '900', '1000'],
+            },
         ],
         handler(userId, args) {
             const player = getPlayerByUserId(userId);
@@ -60,7 +64,13 @@ export function initForgingCommands(): void {
                 sendBotMessageToUser(userId, `사용법: /단조 <${forms}> <${materials}>`);
                 return;
             }
-            const result = startForging(player, form, material);
+            const performanceLevelCap = args[2] === undefined ? undefined : Number(args[2]);
+            if (performanceLevelCap !== undefined
+                && (!Number.isSafeInteger(performanceLevelCap) || performanceLevelCap < 1 || performanceLevelCap > 10_000)) {
+                sendBotMessageToUser(userId, '성능 상한은 1~10,000 사이의 정수로 입력해주세요.');
+                return;
+            }
+            const result = startForging(player, form, material, performanceLevelCap);
             if (!result.success) sendBotMessageToUser(userId, result.reason ?? '단조를 시작할 수 없습니다.');
         },
     });

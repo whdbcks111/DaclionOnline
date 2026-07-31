@@ -112,7 +112,12 @@ export function migrateLegacyBlacksmithProfession(player: Player): boolean {
     return true;
 }
 
-export function startForging(player: Player, form: ForgeForm, material: ForgeMaterial): { success: boolean; reason?: string } {
+export function startForging(
+    player: Player,
+    form: ForgeForm,
+    material: ForgeMaterial,
+    performanceLevelCap?: number,
+): { success: boolean; reason?: string } {
     if (!canUseMetalForging(player)) {
         return { success: false, reason: '대장장이 전문 직업 또는 금속 단조 스킬이 필요합니다.' };
     }
@@ -163,6 +168,7 @@ export function startForging(player: Player, form: ForgeForm, material: ForgeMat
                 creatorLevel: player.level,
                 sensibility: player.stat.get(StatType.SENSIBILITY),
                 forgingPrecision: player.attribute.get(AttributeType.FORGING_PRECISION),
+                performanceLevelCap,
             };
             const output = createForgedItemSnapshot(form, material, forgeOptions);
             if (!player.inventory.replaceSelectedItems(selections, [output])) {
@@ -181,7 +187,7 @@ export function startForging(player: Player, form: ForgeForm, material: ForgeMat
             const levelText = levelsGained.length ? ` · Lv.${levelsGained.at(-1)} 달성` : '';
             sendBotMessageToUser(player.userId, chat()
                 .color('gold', b => b.text('[ 단조 완료 ] '))
-                .text(`${itemName} · 장비 Lv.${itemLevel} · ${quality.label} · 정확도 ${Math.round(accuracy * 100)}% · 제련 정밀도 ${Math.round(precision * 100)}% · +${experience} EXP${levelText}`)
+                .text(`${itemName} · 성능 Lv.${itemLevel} · 착용 Lv.${Math.ceil(itemLevel * 0.8)}${performanceLevelCap ? ` · 상한 Lv.${performanceLevelCap}` : ''} · ${quality.label} · 정확도 ${Math.round(accuracy * 100)}% · 제련 정밀도 ${Math.round(precision * 100)}% · +${experience} EXP${levelText}`)
                 .build());
             sendNotificationToUser(player.userId, { key: 'forging:complete', message: `${itemName} 단조를 완료했습니다!` });
         },

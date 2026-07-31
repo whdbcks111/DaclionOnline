@@ -127,6 +127,50 @@ defineCraftingRecipe({
 
 for (const recipe of [
     {
+        id: 'fishing:abyss_glass_sashimi', result: 'abyss_glass_sashimi', time: 5,
+        description: '압해 등불어와 유리날개 참치를 손질해 장시간 회복력을 높이는 회접시를 만듭니다.',
+        ingredients: [['pressure_lanternfish', 2], ['glassfin_tuna', 1]],
+    },
+    {
+        id: 'fishing:dream_memory_stew', result: 'dream_memory_stew', time: 6,
+        description: '먹꿈 잉어와 기억 만타를 맑은 물에 우려 정신력 재생을 돕는 탕을 만듭니다.',
+        ingredients: [['inkdream_carp', 2], ['memory_manta', 1], ['fresh_water', 1]],
+    },
+    {
+        id: 'fishing:rustscale_power_grill', result: 'rustscale_power_grill', time: 6,
+        description: '녹비늘 창꼬치와 수은수염 메기를 철판에 구워 근력을 높이는 요리를 만듭니다.',
+        ingredients: [['rustscale_pike', 2], ['mercury_catfish', 1], ['coal', 1]],
+    },
+    {
+        id: 'fishing:prayer_koi_clear_soup', result: 'prayer_koi_clear_soup', time: 6,
+        description: '기도 비단잉어와 광륜 철갑상어로 몸놀림을 가볍게 하는 맑은탕을 만듭니다.',
+        ingredients: [['prayer_koi', 2], ['halo_sturgeon', 1], ['fresh_water', 1]],
+    },
+    {
+        id: 'fishing:genesis_dragonfish_platter', result: 'genesis_dragonfish_platter', time: 9,
+        description: '기원경계의 세 희귀 어종을 함께 조리해 마력을 크게 높이는 만찬을 만듭니다.',
+        ingredients: [['firstlight_coelacanth', 1], ['endshadow_moonfish', 1], ['genesis_dragonfish', 1]],
+    },
+] as const) {
+    defineCraftingRecipe({
+        id: recipe.id,
+        resultItemDataId: recipe.result,
+        description: recipe.description,
+        ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+        craftTime: recipe.time,
+        create: ({ quantity }) => ({
+            itemDataId: recipe.result,
+            count: quantity,
+            durability: null,
+            metadataDelta: null,
+            tags: [],
+        }),
+        tags: ['crafting:consumable', 'crafting:fishing'],
+    });
+}
+
+for (const recipe of [
+    {
         id: 'twilight:graveward_tonic', result: 'graveward_tonic', time: 3,
         description: '애도의 백합과 혼불을 맑은 물에 안정시켜 묘지기 향약을 만듭니다.',
         ingredients: [['mourning_lily', 2], ['soul_ember', 1], ['fresh_water', 1]],

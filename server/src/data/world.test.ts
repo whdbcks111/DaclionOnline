@@ -26,7 +26,13 @@ import './shops.js';
 import './fishing.js';
 import './ascendantFrontier.js';
 import './crafting.js';
-import { ASCENDANT_REGIONS, buildAscendantLocations, mergeAscendantLocations } from './ascendantRegions.js';
+import {
+    ASCENDANT_REGIONS,
+    HIGH_LEVEL_FISHING_SPOTS,
+    HIGH_LEVEL_MINES,
+    buildAscendantLocations,
+    mergeAscendantLocations,
+} from './ascendantRegions.js';
 import {
     rollAshenReliquaryReward,
     rollEclipseReliquaryReward,
@@ -118,7 +124,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 28, neutral: 64, hostile: 510 },
+        { safe: 28, neutral: 69, hostile: 526 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -1130,7 +1136,9 @@ test('Lv.500~1000 승천 권역은 50레벨 단위 미궁·선택형 보스·환
         const boss = getMonsterData(`${regionData.id}_sovereign`);
         const store = getShop(`${regionData.id}_waystation_store`);
 
-        assert.equal(regionLocations.length, 31, regionData.id);
+        const extraMineLocations = HIGH_LEVEL_MINES.some(mine => mine.regionId === regionData.id) ? 4 : 0;
+        const extraFishingLocations = HIGH_LEVEL_FISHING_SPOTS.some(spot => spot.regionId === regionData.id) ? 1 : 0;
+        assert.equal(regionLocations.length, 31 + extraMineLocations + extraFishingLocations, regionData.id);
         if (transition) {
             const threshold = locations.find(location => location.id === `${regionData.id}_threshold`);
             assert.ok(threshold);
@@ -1173,6 +1181,25 @@ test('Lv.500~1000 승천 권역은 50레벨 단위 미궁·선택형 보스·환
         }
     }
     assert.deepEqual(mapDirections, new Set(['1:0', '0:-1', '-1:0', '0:1']));
+});
+
+test('고레벨 광산은 전용 희귀 광물 두 종을 낮은 확률로 제공한다', () => {
+    assert.equal(HIGH_LEVEL_MINES.length, 4);
+    for (const mine of HIGH_LEVEL_MINES) {
+        const vein = getResourceData(`${mine.id}_ore_vein`);
+        assert.ok(vein, mine.id);
+        const rareDrops = vein.drops.filter(drop => mine.rawMineralIds.includes(drop.itemDataId));
+        assert.equal(rareDrops.length, 2, mine.id);
+        assert.ok(rareDrops.every(drop => drop.weight === 2.5), mine.id);
+        for (const itemDataId of mine.rawMineralIds) {
+            assert.ok(getItemData(itemDataId), itemDataId);
+        }
+        assert.equal(
+            locations.filter(location => location.id.startsWith(mine.id)).length,
+            4,
+            mine.id,
+        );
+    }
 });
 
 test('화맥 광맥과 홍염강은 홍염산지 전용 채굴·제련·단조 동선을 가진다', () => {

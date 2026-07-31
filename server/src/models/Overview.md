@@ -1,5 +1,7 @@
 # Models Overview
 
+`Item`의 requirements metadata는 레벨·핵심 스탯·획득처를 정규화하고 `Player`가 사용/장착 거부 사유를 만든다. `Fishing`은 장소 ID별 독립 어종 풀과 가중치 registry를 소유하며 행운 등급 확률을 합성한다. `Forging`은 선택 성능 상한과 최종 성능 레벨 80%의 착용 레벨, 원광 ID를 가진 제련 소재 registry를 소유한다.
+
 `Player.getAttackDeniedReason()`은 지역 PVP·같은 파티·동일 장소 제한을 모든 직접/투사체 공격에 공통 적용한다. `RegionRiskPolicy` 클래스형 enum은 안전·중립·적대 장소의 PVP 허용, 사망 경험치/골드 손실, 부활 시간 배율을 소유한다. `KarmaState`는 저장 기준값·시각으로 초당 감소를 지연 계산해 매 tick dirty를 만들지 않으며, `KarmaTier/KarmaAccessPolicy`는 악명 표시와 선의 의뢰·질서 상점·교단 성소 제한 임계값을 소유한다.
 
 서버가 권위를 갖는 게임 상태와 규칙을 표현한다.

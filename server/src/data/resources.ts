@@ -1,5 +1,5 @@
 import { defineResource, registerResourceInteraction } from '../models/Resource.js';
-import { getItemData } from '../models/Item.js';
+import { createAcquisitionRequirements, getItemData, ItemMetadataKeys } from '../models/Item.js';
 import { sendBotMessageToUser, sendNotificationToUser } from '../modules/message.js';
 import { chat } from '../utils/chatBuilder.js';
 import { GameTags } from '../../../shared/tags.js';
@@ -318,7 +318,7 @@ registerResourceInteraction('open_labyrinth_cache', (resource, player) => {
     return true;
 });
 
-registerResourceInteraction('open_twilight_reliquary', (_resource, player) => {
+registerResourceInteraction('open_twilight_reliquary', (resource, player) => {
     const reward = rollTwilightReliquaryReward();
     if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
         sendNotificationToUser(player.userId, {
@@ -327,7 +327,9 @@ registerResourceInteraction('open_twilight_reliquary', (_resource, player) => {
         });
         return false;
     }
-    player.inventory.addItem(reward.itemDataId, reward.count);
+    const requirements = createAcquisitionRequirements(reward.itemDataId, resource.level, 'treasure');
+    player.inventory.addItem(reward.itemDataId, reward.count, requirements
+        ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('purple', builder => builder.weight('bold', nested => nested.text('[ 황혼왕릉의 유물 ]')))
@@ -336,7 +338,7 @@ registerResourceInteraction('open_twilight_reliquary', (_resource, player) => {
     return true;
 });
 
-registerResourceInteraction('open_glassdune_reliquary', (_resource, player) => {
+registerResourceInteraction('open_glassdune_reliquary', (resource, player) => {
     const reward = rollGlassduneReliquaryReward();
     if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
         sendNotificationToUser(player.userId, {
@@ -345,7 +347,9 @@ registerResourceInteraction('open_glassdune_reliquary', (_resource, player) => {
         });
         return false;
     }
-    player.inventory.addItem(reward.itemDataId, reward.count);
+    const requirements = createAcquisitionRequirements(reward.itemDataId, resource.level, 'treasure');
+    player.inventory.addItem(reward.itemDataId, reward.count, requirements
+        ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('gold', builder => builder.weight('bold', nested => nested.text('[ 태양고의 유물 ]')))
@@ -354,7 +358,7 @@ registerResourceInteraction('open_glassdune_reliquary', (_resource, player) => {
     return true;
 });
 
-registerResourceInteraction('open_frostveil_reliquary', (_resource, player) => {
+registerResourceInteraction('open_frostveil_reliquary', (resource, player) => {
     const reward = rollFrostveilReliquaryReward();
     if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
         sendNotificationToUser(player.userId, {
@@ -363,7 +367,9 @@ registerResourceInteraction('open_frostveil_reliquary', (_resource, player) => {
         });
         return false;
     }
-    player.inventory.addItem(reward.itemDataId, reward.count);
+    const requirements = createAcquisitionRequirements(reward.itemDataId, resource.level, 'treasure');
+    player.inventory.addItem(reward.itemDataId, reward.count, requirements
+        ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('aqua', builder => builder.weight('bold', nested => nested.text('[ 빙경궁의 유물 ]')))
@@ -372,7 +378,7 @@ registerResourceInteraction('open_frostveil_reliquary', (_resource, player) => {
     return true;
 });
 
-registerResourceInteraction('open_misttide_reliquary', (_resource, player) => {
+registerResourceInteraction('open_misttide_reliquary', (resource, player) => {
     const reward = rollMisttideReliquaryReward();
     if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
         sendNotificationToUser(player.userId, {
@@ -381,7 +387,9 @@ registerResourceInteraction('open_misttide_reliquary', (_resource, player) => {
         });
         return false;
     }
-    player.inventory.addItem(reward.itemDataId, reward.count);
+    const requirements = createAcquisitionRequirements(reward.itemDataId, resource.level, 'treasure');
+    player.inventory.addItem(reward.itemDataId, reward.count, requirements
+        ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('aqua', builder => builder.weight('bold', nested => nested.text('[ 침몰왕도의 유산 ]')))
@@ -390,7 +398,7 @@ registerResourceInteraction('open_misttide_reliquary', (_resource, player) => {
     return true;
 });
 
-registerResourceInteraction('open_paradox_reliquary', (_resource, player) => {
+registerResourceInteraction('open_paradox_reliquary', (resource, player) => {
     const reward = rollParadoxReliquaryReward();
     if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
         sendNotificationToUser(player.userId, {
@@ -399,7 +407,9 @@ registerResourceInteraction('open_paradox_reliquary', (_resource, player) => {
         });
         return false;
     }
-    player.inventory.addItem(reward.itemDataId, reward.count);
+    const requirements = createAcquisitionRequirements(reward.itemDataId, resource.level, 'treasure');
+    player.inventory.addItem(reward.itemDataId, reward.count, requirements
+        ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('purple', builder => builder.weight('bold', nested => nested.text('[ 역설기계고 시제품 ]')))
@@ -408,7 +418,7 @@ registerResourceInteraction('open_paradox_reliquary', (_resource, player) => {
     return true;
 });
 
-registerResourceInteraction('open_ashen_reliquary', (_resource, player) => {
+registerResourceInteraction('open_ashen_reliquary', (resource, player) => {
     const reward = rollAshenReliquaryReward();
     if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
         sendNotificationToUser(player.userId, {
@@ -417,7 +427,9 @@ registerResourceInteraction('open_ashen_reliquary', (_resource, player) => {
         });
         return false;
     }
-    player.inventory.addItem(reward.itemDataId, reward.count);
+    const requirements = createAcquisitionRequirements(reward.itemDataId, resource.level, 'treasure');
+    player.inventory.addItem(reward.itemDataId, reward.count, requirements
+        ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('purple', builder => builder.weight('bold', nested => nested.text('[ 잿왕성의 봉인 유산 ]')))
@@ -426,7 +438,7 @@ registerResourceInteraction('open_ashen_reliquary', (_resource, player) => {
     return true;
 });
 
-registerResourceInteraction('open_voidcrown_reliquary', (_resource, player) => {
+registerResourceInteraction('open_voidcrown_reliquary', (resource, player) => {
     const reward = rollVoidcrownReliquaryReward();
     if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
         sendNotificationToUser(player.userId, {
@@ -435,7 +447,9 @@ registerResourceInteraction('open_voidcrown_reliquary', (_resource, player) => {
         });
         return false;
     }
-    player.inventory.addItem(reward.itemDataId, reward.count);
+    const requirements = createAcquisitionRequirements(reward.itemDataId, resource.level, 'treasure');
+    player.inventory.addItem(reward.itemDataId, reward.count, requirements
+        ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('purple', builder => builder.weight('bold', nested => nested.text('[ 공허왕관의 비밀 유산 ]')))
@@ -444,7 +458,7 @@ registerResourceInteraction('open_voidcrown_reliquary', (_resource, player) => {
     return true;
 });
 
-registerResourceInteraction('open_eclipse_reliquary', (_resource, player) => {
+registerResourceInteraction('open_eclipse_reliquary', (resource, player) => {
     const reward = rollEclipseReliquaryReward();
     if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
         sendNotificationToUser(player.userId, {
@@ -453,7 +467,9 @@ registerResourceInteraction('open_eclipse_reliquary', (_resource, player) => {
         });
         return false;
     }
-    player.inventory.addItem(reward.itemDataId, reward.count);
+    const requirements = createAcquisitionRequirements(reward.itemDataId, resource.level, 'treasure');
+    player.inventory.addItem(reward.itemDataId, reward.count, requirements
+        ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('purple', builder => builder.weight('bold', nested => nested.text('[ 월식해구의 침수 유산 ]')))
@@ -462,7 +478,7 @@ registerResourceInteraction('open_eclipse_reliquary', (_resource, player) => {
     return true;
 });
 
-registerResourceInteraction('open_worldroot_reliquary', (_resource, player) => {
+registerResourceInteraction('open_worldroot_reliquary', (resource, player) => {
     const reward = rollWorldrootReliquaryReward();
     if (!player.inventory.canAdd(reward.itemDataId, reward.count)) {
         sendNotificationToUser(player.userId, {
@@ -471,7 +487,9 @@ registerResourceInteraction('open_worldroot_reliquary', (_resource, player) => {
         });
         return false;
     }
-    player.inventory.addItem(reward.itemDataId, reward.count);
+    const requirements = createAcquisitionRequirements(reward.itemDataId, resource.level, 'treasure');
+    player.inventory.addItem(reward.itemDataId, reward.count, requirements
+        ? { [ItemMetadataKeys.REQUIREMENTS]: requirements } : null);
     const itemName = getItemData(reward.itemDataId)?.name ?? reward.itemDataId;
     sendBotMessageToUser(player.userId, chat()
         .color('green', builder => builder.weight('bold', nested => nested.text('[ 역근수해의 기억 유산 ]')))

@@ -1,7 +1,13 @@
 import './items.js';
 import './statusEffects.js';
 import { AttributeType, type AttributeModifier } from '../models/Attribute.js';
-import { defineItem, ItemBalanceRole, ItemMetadataKeys, MAX_STACKABLE_ITEM_COUNT } from '../models/Item.js';
+import {
+    createAcquisitionRequirements,
+    defineItem,
+    ItemBalanceRole,
+    ItemMetadataKeys,
+    MAX_STACKABLE_ITEM_COUNT,
+} from '../models/Item.js';
 import { ItemAttackOverrideKeys } from '../modules/itemAttack.js';
 import { defineWorldMonster } from './monsters.js';
 import { MonsterRank, MonsterStatProfile } from '../models/MonsterStats.js';
@@ -14,7 +20,7 @@ import { registerLocationPassive } from '../models/Location.js';
 import { sendBotMessageToUser, sendNotificationToUser } from '../modules/message.js';
 import { chat } from '../utils/chatBuilder.js';
 import { GameTags } from '../../../shared/tags.js';
-import { ASCENDANT_REGIONS } from './ascendantRegions.js';
+import { ASCENDANT_REGIONS, HIGH_LEVEL_MINES } from './ascendantRegions.js';
 
 function environmentModifierSource(effectId: string): string {
     return `status-effect:${effectId}`;
@@ -354,6 +360,7 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
     const priceBase = 150_000 + index * 125_000;
     defineShop({
         id: `${region.id}_waystation_store`,
+        recommendedLevel: region.startLevel,
         buyList: [
             ...[
                 [equipmentIds.sword, `${region.materialName} 단층검`],
@@ -414,6 +421,61 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
     }
 }
 
+const rareForgeMinerals = [
+    { rawId: 'astral_iron_ore', rawName: '성철 원광', refinedId: 'astral_steel', refinedName: '성철강', description: '별빛 관통 결을 품은 금속', tags: ['material:astral_steel', GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT] },
+    { rawId: 'abyss_pearl_ore', rawName: '심연진주 원광', refinedId: 'abyssal_silver', refinedName: '심연은', description: '수압과 마력을 함께 받아내는 은빛 금속', tags: ['material:abyssal_silver', GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_DARK] },
+    { rawId: 'thunder_quartz_ore', rawName: '뇌광석영 원광', refinedId: 'storm_quartz', refinedName: '폭풍석영', description: '공격과 투사체의 흐름을 가속하는 결정', tags: ['material:storm_quartz', GameTags.MATERIAL_STONE, GameTags.PROPERTY_ELECTRIC] },
+    { rawId: 'life_blood_ore', rawName: '생혈광 원석', refinedId: 'life_blood_alloy', refinedName: '생혈합금', description: '생명력과 회복성을 품은 붉은 합금', tags: ['material:life_blood_alloy', GameTags.PROPERTY_METAL, GameTags.PROPERTY_NATURAL] },
+    { rawId: 'void_opal_ore', rawName: '공허오팔 원석', refinedId: 'void_opal', refinedName: '공허오팔', description: '치명적인 마력 틈을 만드는 검은 보석', tags: ['material:void_opal', GameTags.MATERIAL_STONE, GameTags.PROPERTY_DARK] },
+    { rawId: 'prayerstone_ore', rawName: '기도석 원석', refinedId: 'sacred_prayerstone', refinedName: '성원석', description: '정신력의 흐름과 마법 저항을 고르게 다듬는 성석', tags: ['material:sacred_prayerstone', GameTags.MATERIAL_STONE, GameTags.PROPERTY_HOLY] },
+    { rawId: 'origin_prism_ore', rawName: '기원프리즘 원석', refinedId: 'origin_prism', refinedName: '기원프리즘', description: '물리와 마법 관통을 함께 품은 태초의 결정', tags: ['material:origin_prism', GameTags.MATERIAL_STONE, GameTags.PROPERTY_HOLY, GameTags.PROPERTY_DARK] },
+    { rawId: 'timeglass_ore', rawName: '시류사 원석', refinedId: 'timeglass_crystal', refinedName: '시류결정', description: '이동·공격·투사체의 시간을 앞당기는 결정', tags: ['material:timeglass_crystal', GameTags.MATERIAL_STONE, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK] },
+] as const;
+
+for (const mineral of rareForgeMinerals) {
+    defineItem({
+        id: mineral.rawId,
+        name: mineral.rawName,
+        description: `고레벨 전용 광산에서 낮은 확률로 발견되는 ${mineral.description}의 원광.`,
+        image: `items/${mineral.rawId}`,
+        category: '희귀 원광', weight: 0.9, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+        baseMetadata: null, onUse: null, equipSlot: null, modifiers: null, baseDurability: null,
+        tags: [GameTags.RESOURCE_ORE, ...mineral.tags],
+    });
+    defineItem({
+        id: mineral.refinedId,
+        name: mineral.refinedName,
+        description: `마력 제련으로 불순물을 걷어낸 ${mineral.description}. 단조 재료로 사용할 수 있다.`,
+        image: `items/${mineral.refinedId}`,
+        category: '희귀 제련 소재', weight: 0.65, stackable: true, maxStack: MAX_STACKABLE_ITEM_COUNT,
+        baseMetadata: null, onUse: null, equipSlot: null, modifiers: null, baseDurability: null,
+        tags: [...mineral.tags],
+    });
+}
+
+for (const mine of HIGH_LEVEL_MINES) {
+    const region = ASCENDANT_REGIONS.find(candidate => candidate.id === mine.regionId)!;
+    defineResource({
+        id: `${mine.id}_ore_vein`,
+        name: `${mine.name} 복합 광맥`,
+        level: mine.level,
+        baseAttribute: {
+            maxLife: 140_000 + mine.level * 1_100,
+            def: 300 + mine.level * 0.9,
+            magicDef: 250 + mine.level * 0.7,
+        },
+        hardness: 350 + mine.level * 0.65,
+        drops: [
+            { itemDataId: `${region.id}_material`, weight: 95, minCount: 2, maxCount: 5 },
+            { itemDataId: mine.rawMineralIds[0], weight: 2.5, minCount: 1, maxCount: 1 },
+            { itemDataId: mine.rawMineralIds[1], weight: 2.5, minCount: 1, maxCount: 1 },
+        ],
+        expReward: { min: mine.level * 120, max: mine.level * 175 },
+        interaction: 'inspect_ore',
+        tags: [GameTags.RESOURCE_ORE, GameTags.TRAIT_INANIMATE, GameTags.MATERIAL_STONE, ...region.propertyTags],
+    });
+}
+
 registerResourceInteraction('open_ascendant_reliquary', (resource, player) => {
     const region = ASCENDANT_REGIONS.find(candidate => resource.resourceDataId === `${candidate.id}_reliquary`);
     if (!region) return false;
@@ -426,7 +488,10 @@ registerResourceInteraction('open_ascendant_reliquary', (resource, player) => {
         ? `${region.id}_material`
         : equipment[Math.floor(Math.random() * equipment.length)];
     const count = roll < 0.8 ? 6 + Math.floor(Math.random() * 9) : 1;
-    const destination = player.receiveLoot(itemDataId, count);
+    const requirements = createAcquisitionRequirements(itemDataId, region.startLevel, 'treasure');
+    const destination = player.receiveLoot(itemDataId, count, requirements
+        ? { [ItemMetadataKeys.REQUIREMENTS]: requirements }
+        : null);
     const gold = Math.round(region.bossLevel * (180 + Math.random() * 140));
     player.gold += gold;
     sendBotMessageToUser(player.userId, chat()

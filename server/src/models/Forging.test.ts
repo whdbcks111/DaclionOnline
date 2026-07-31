@@ -13,6 +13,7 @@ import {
     calculateRepairMaxDurabilityLossRate,
     calculateForgeCraftsmanship,
     calculateForgedItemLevel,
+    calculateForgedRequiredLevel,
     createAssembledBowSnapshot,
     createForgedArrowSnapshot,
     createForgedItemSnapshot,
@@ -77,8 +78,29 @@ test('투구·흉갑·각반·철갑화도 각 방어구 슬롯에 단조할 수
         assert.equal(item.data?.equipSlot, slot, form.label);
         assert.equal(item.hasTag(GameTags.ITEM_ARMOR), true, form.label);
         assert.ok(item.modifiers?.some(modifier => modifier.attribute === 'def' && modifier.value > 0), form.label);
-        assert.match(item.description, /^Lv\.\d+ 우수 단조품\./);
+        assert.match(item.description, /^성능 Lv\.\d+ · 착용 Lv\.\d+ 우수 단조품\./);
     }
+});
+
+test('단조 성능 상한은 실제 제작 성장치와 착용 레벨을 함께 제한한다', () => {
+    const uncapped = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SWORD, ForgeMaterial.ORIGIN_PRISM, {
+        accuracy: 1,
+        creatorLevel: 1000,
+        sensibility: 1200,
+        random: () => 0,
+    }));
+    const capped = Item.fromSnapshot(createForgedItemSnapshot(ForgeForm.SWORD, ForgeMaterial.ORIGIN_PRISM, {
+        accuracy: 1,
+        creatorLevel: 1000,
+        sensibility: 1200,
+        performanceLevelCap: 500,
+        random: () => 0,
+    }));
+    const forge = capped.getMetadata<Record<string, unknown>>(ItemMetadataKeys.FORGE);
+    assert.equal(forge?.itemLevel, 500);
+    assert.equal(capped.requirements?.level, 400);
+    assert.equal(calculateForgedRequiredLevel(501), 401);
+    assert.ok((capped.modifiers?.[0].value ?? 0) < (uncapped.modifiers?.[0].value ?? 0));
 });
 
 test('단검과 철갑화는 형태 자체에서 제작 성장에 비례한 이동속도를 얻는다', () => {

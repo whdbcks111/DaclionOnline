@@ -408,6 +408,11 @@ export function initPlayerCommands(): void {
                 sendBotMessageToUser(userId, '인벤토리에 해당 아이템이 없습니다.');
                 return;
             }
+            const requirementDenied = player.getItemRequirementDeniedReason(item);
+            if (requirementDenied) {
+                sendBotMessageToUser(userId, requirementDenied);
+                return;
+            }
 
             if (player.inventory.isUsingItem) {
                 sendBotMessageToUser(userId, '이미 아이템을 사용 중입니다.');
@@ -592,6 +597,11 @@ export function initPlayerCommands(): void {
             const slot = item.equipSlot as EquipSlot | null;
             if (!slot) {
                 sendBotMessageToUser(userId, `${item.name}은(는) 장착할 수 없는 아이템입니다.`);
+                return;
+            }
+            const requirementDenied = player.getItemRequirementDeniedReason(item);
+            if (requirementDenied) {
+                sendBotMessageToUser(userId, requirementDenied);
                 return;
             }
 

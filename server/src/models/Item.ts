@@ -14,6 +14,7 @@ import {
 import type { MetadataRecord, MetadataValue } from './Metadata.js';
 import type Entity from './Entity.js';
 import type { DamageResult } from './Entity.js';
+import { StatType, type StatKey } from './Stat.js';
 import {
     applyItemAttackEffects,
     ItemAttackEffectType,
@@ -39,6 +40,7 @@ export const ItemMetadataKeys = Object.freeze({
     ENCHANTMENT: 'enchantment',
     ATTACK_EFFECTS: 'attackEffects',
     REINFORCEMENT: 'reinforcement',
+    REQUIREMENTS: 'requirements',
 } as const);
 
 const METADATA_STORAGE_KEY = '__daclionItemMetadata';
@@ -201,6 +203,73 @@ export interface ItemDisplaySnapshot {
     readonly image: string;
 }
 
+export type ItemRequirementSource = 'shop' | 'treasure' | 'forge';
+
+export interface ItemRequirementSnapshot {
+    readonly level: number;
+    readonly stats: Readonly<Partial<Record<StatKey, number>>>;
+    readonly source: ItemRequirementSource;
+}
+
+function normalizeItemRequirements(value: unknown): ItemRequirementSnapshot | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const candidate = value as { level?: unknown; stats?: unknown; source?: unknown };
+    const level = typeof candidate.level === 'number' && Number.isFinite(candidate.level)
+        ? Math.max(1, Math.floor(candidate.level))
+        : 1;
+    const stats: Partial<Record<StatKey, number>> = {};
+    if (candidate.stats && typeof candidate.stats === 'object' && !Array.isArray(candidate.stats)) {
+        for (const stat of StatType.values()) {
+            const amount = (candidate.stats as Record<string, unknown>)[stat.key];
+            if (typeof amount === 'number' && Number.isFinite(amount) && amount > 0) {
+                stats[stat.key] = Math.floor(amount);
+            }
+        }
+    }
+    const source: ItemRequirementSource = candidate.source === 'treasure' || candidate.source === 'forge'
+        ? candidate.source
+        : 'shop';
+    return { level, stats, source };
+}
+
+function requirementStatForItem(data: ItemData): StatType | undefined {
+    const category = data.category.replace(/\s+/g, '');
+    if (data.tags.includes('weapon:staff')) return StatType.MENTALITY;
+    if (data.tags.includes('weapon:bow') || data.tags.includes('weapon:dagger')) return StatType.AGILITY;
+    if (data.equipSlot === 'mainHand') return StatType.STRENGTH;
+    if (data.equipSlot === 'body' || data.equipSlot === 'head'
+        || data.equipSlot === 'legs' || data.equipSlot === 'feet'
+        || category.includes('방패') || data.equipSlot === 'offHand') return StatType.VITALITY;
+    return undefined;
+}
+
+/**
+ * 획득처의 권장 레벨에서 실제 사용·장착 조건을 만든다.
+ * 보물 장비는 상점 장비보다 레벨·스탯 요구치를 낮춰 조기 획득 보상을 유지한다.
+ */
+export function createAcquisitionRequirements(
+    itemDataId: string,
+    recommendedLevel: number,
+    source: Exclude<ItemRequirementSource, 'forge'>,
+): MetadataRecord | null {
+    const data = getItemData(itemDataId);
+    if (!data || (!data.equipSlot && !data.onUse)) return null;
+    const progressionLevel = Math.max(1, Math.floor(recommendedLevel));
+    const isEquipment = Boolean(data.equipSlot);
+    const levelFactor = source === 'treasure'
+        ? (isEquipment ? 0.5 : 0.35)
+        : (isEquipment ? 0.72 : 0.55);
+    const level = Math.max(1, Math.floor(progressionLevel * levelFactor));
+    const stats: Partial<Record<StatKey, number>> = {};
+    const stat = isEquipment ? requirementStatForItem(data) : undefined;
+    if (stat && progressionLevel >= 20) {
+        stats[stat.key] = Math.max(1, Math.floor(
+            progressionLevel * (source === 'treasure' ? 0.12 : 0.2),
+        ));
+    }
+    return { level, stats: stats as MetadataRecord, source };
+}
+
 /** 인벤토리·장비·바닥이 같은 규칙으로 두 아이템 스냅샷의 스택 호환성을 검사한다. */
 export function canStackItemSnapshots(left: ItemSnapshot, right: ItemSnapshot): boolean {
     return left.itemDataId === right.itemDataId
@@ -235,6 +304,7 @@ export interface ItemInspectionSnapshot {
     readonly metadata: Readonly<ItemMetadata> | null;
     readonly metadataDelta: Readonly<ItemMetadata> | null;
     readonly attackEffects: readonly ItemAttackEffectSnapshot[];
+    readonly requirements: ItemRequirementSnapshot | null;
 }
 
 export interface ItemDurabilityRepairResult {
@@ -400,6 +470,11 @@ export class Item implements TagReadable {
     /** 장비 슬롯 */
     get equipSlot(): string | null { return this.data?.equipSlot ?? null; }
 
+    /** 획득처 또는 단조 결과가 부여한 사용·장착 조건. */
+    get requirements(): ItemRequirementSnapshot | null {
+        return normalizeItemRequirements(this.getMetadata(ItemMetadataKeys.REQUIREMENTS));
+    }
+
     /** 강화 계산의 기준이 되는 마스터/인스턴스 고유 능력치 snapshot. */
     getReinforcementBaseModifiers(): readonly AttributeModifier[] {
         const instance = normalizeInstanceModifiers(this.getMetadata(ItemMetadataKeys.INSTANCE_MODIFIERS));
@@ -527,6 +602,7 @@ export class Item implements TagReadable {
             metadata: this.getMetadataSnapshot(),
             metadataDelta: this.getMetadataDeltaSnapshot(),
             attackEffects: this.attackEffects,
+            requirements: this.requirements,
         };
     }
 

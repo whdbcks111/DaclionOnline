@@ -160,6 +160,36 @@ export const ASCENDANT_REGION_LAYOUTS: readonly AscendantRegionLayout[] = Object
     { x: 4_100, y: -2_500, quarterTurns: 0 },
 ]);
 
+export interface HighLevelMineDefinition {
+    readonly regionId: string;
+    readonly id: string;
+    readonly name: string;
+    readonly level: number;
+    readonly rawMineralIds: readonly [string, string];
+}
+
+export const HIGH_LEVEL_MINES: readonly HighLevelMineDefinition[] = Object.freeze([
+    { regionId: 'abyssglass', id: 'abyssglass_starfall_mine', name: '성락 심해광산', level: 600, rawMineralIds: ['astral_iron_ore', 'abyss_pearl_ore'] },
+    { regionId: 'rustworld', id: 'rustworld_redcore_mine', name: '적핵 폐광', level: 750, rawMineralIds: ['thunder_quartz_ore', 'life_blood_ore'] },
+    { regionId: 'silentdivine', id: 'silentdivine_votive_mine', name: '봉헌 지하광산', level: 900, rawMineralIds: ['void_opal_ore', 'prayerstone_ore'] },
+    { regionId: 'originboundary', id: 'originboundary_firstvein_mine', name: '태초맥 광산', level: 1000, rawMineralIds: ['origin_prism_ore', 'timeglass_ore'] },
+]);
+
+export interface HighLevelFishingSpotDefinition {
+    readonly regionId: string;
+    readonly id: string;
+    readonly name: string;
+    readonly level: number;
+}
+
+export const HIGH_LEVEL_FISHING_SPOTS: readonly HighLevelFishingSpotDefinition[] = Object.freeze([
+    { regionId: 'abyssglass', id: 'abyssglass_pressure_lagoon', name: '압해 석호', level: 575 },
+    { regionId: 'dreamarchive', id: 'dreamarchive_inkwater_pool', name: '먹물꿈 연못', level: 625 },
+    { regionId: 'rustworld', id: 'rustworld_mercury_reservoir', name: '수은 저수지', level: 725 },
+    { regionId: 'silentdivine', id: 'silentdivine_prayer_spring', name: '무언 기도샘', level: 875 },
+    { regionId: 'originboundary', id: 'originboundary_genesis_tide', name: '창세 조수대', level: 975 },
+]);
+
 function connect(locationId: string, condition?: string): LocationData['connections'][number] {
     return condition ? { locationId, condition } : { locationId };
 }
@@ -454,6 +484,76 @@ export function buildAscendantLocations(): LocationData[] {
                 connections: [connect(`${id}_transition`)],
             },
         ];
+        const mine = HIGH_LEVEL_MINES.find(candidate => candidate.regionId === id);
+        if (mine) {
+            locations.find(location => location.id === `${id}_outer_fork`)!.connections.push(connect(`${mine.id}_entrance`));
+            const mineTags: TagId[] = [
+                GameTags.LOCATION_WILDERNESS,
+                GameTags.LOCATION_MINE,
+                GameTags.LOCATION_DUNGEON,
+                regionTag,
+                GameTags.PROPERTY_STONE,
+                ...region.propertyTags,
+            ];
+            locations.push(
+                {
+                    id: `${mine.id}_entrance`, name: `${mine.name} 입구`,
+                    x: x + 180, y: y + 370, z: z - 90, mapColor: region.mapColor, mapIcon: 'mine-entrance',
+                    zoneType: 'hostile', tags: mineTags, npcIds: [], objects: [spawn(monsterIds[0], 1)],
+                    connections: [connect(`${id}_outer_fork`), connect(`${mine.id}_fork`)],
+                },
+                {
+                    id: `${mine.id}_fork`, name: `${mine.name} 갱도 분기`,
+                    x: x + 370, y: y + 470, z: z - 170, mapColor: region.mapColor,
+                    zoneType: 'hostile', tags: mineTags, npcIds: [],
+                    objects: [
+                        spawn(monsterIds[1], 1),
+                        { type: 'resource', dataId: `${mine.id}_ore_vein`, maxCount: 2, respawnTime: 180 },
+                    ],
+                    connections: [connect(`${mine.id}_entrance`), connect(`${mine.id}_deep`), connect(`${mine.id}_crystal_chamber`)],
+                },
+                {
+                    id: `${mine.id}_deep`, name: `${mine.name} 심층 채굴장`,
+                    x: x + 560, y: y + 420, z: z - 260, mapColor: region.mapColor,
+                    zoneType: 'hostile', tags: mineTags, npcIds: [], objects: [
+                        spawn(monsterIds[2], 2),
+                        { type: 'resource', dataId: `${mine.id}_ore_vein`, maxCount: 3, respawnTime: 180 },
+                    ],
+                    connections: [connect(`${mine.id}_fork`), connect(`${mine.id}_crystal_chamber`)],
+                },
+                {
+                    id: `${mine.id}_crystal_chamber`, name: `${mine.name} 희귀맥 공동`,
+                    x: x + 510, y: y + 610, z: z - 300, mapColor: region.mapColor,
+                    zoneType: 'hostile', tags: [...mineTags, GameTags.LOCATION_HIDDEN], npcIds: [], objects: [
+                        { type: 'resource', dataId: `${mine.id}_ore_vein`, maxCount: 4, respawnTime: 180 },
+                    ],
+                    connections: [connect(`${mine.id}_fork`), connect(`${mine.id}_deep`)],
+                },
+            );
+        }
+        const fishingSpot = HIGH_LEVEL_FISHING_SPOTS.find(candidate => candidate.regionId === id);
+        if (fishingSpot) {
+            locations.find(location => location.id === `${id}_waystation`)!.connections.push(connect(fishingSpot.id));
+            locations.push({
+                id: fishingSpot.id,
+                name: fishingSpot.name,
+                x: x - 80,
+                y: y - 330,
+                z: z - 25,
+                mapColor: region.mapColor,
+                zoneType: 'neutral',
+                tags: [
+                    GameTags.LOCATION_WILDERNESS,
+                    GameTags.LOCATION_FISHING,
+                    regionTag,
+                    GameTags.PROPERTY_WATER,
+                    ...region.propertyTags,
+                ],
+                npcIds: [],
+                objects: [],
+                connections: [connect(`${id}_waystation`)],
+            });
+        }
         const layout = ASCENDANT_REGION_LAYOUTS[index];
         if (!layout) throw new Error(`Missing ascendant region layout: ${region.id}`);
         return locations.map(location => {

@@ -38,6 +38,12 @@ export interface FishData {
 }
 
 const fishRegistry = new Map<string, FishData>();
+const fishingTableRegistry = new Map<string, readonly FishingTableEntry[]>();
+
+export interface FishingTableEntry {
+    readonly fishId: string
+    readonly weight: number
+}
 
 export function defineFish(data: FishData): FishData {
     if (fishRegistry.has(data.id)) throw new Error(`중복 물고기 정의: ${data.id}`);
@@ -49,6 +55,41 @@ export function getFish(id: string): FishData | undefined { return fishRegistry.
 export function getAllFish(): FishData[] { return [...fishRegistry.values()]; }
 export function getFishByRarity(rarity: FishRarity): FishData[] {
     return getAllFish().filter(fish => fish.rarity === rarity);
+}
+
+/** 장소별 독립 어종 풀과 내부 가중치를 등록한다. */
+export function defineFishingTable(locationId: string, entries: readonly FishingTableEntry[]): void {
+    if (fishingTableRegistry.has(locationId)) throw new Error(`중복 낚시 테이블: ${locationId}`);
+    if (entries.length === 0 || entries.some(entry => entry.weight <= 0 || !Number.isFinite(entry.weight))) {
+        throw new Error(`잘못된 낚시 테이블: ${locationId}`);
+    }
+    fishingTableRegistry.set(locationId, Object.freeze(entries.map(entry => Object.freeze({ ...entry }))));
+}
+
+export function getFishingTable(locationId: string): readonly FishingTableEntry[] | undefined {
+    return fishingTableRegistry.get(locationId);
+}
+
+/** 장소 전용 풀이 있으면 등급 확률과 장소 가중치를 합성하고, 없으면 전역 등급 풀을 사용한다. */
+export function rollFishAtLocation(
+    locationId: string,
+    luck: number,
+    random: () => number = Math.random,
+): FishData | undefined {
+    const table = getFishingTable(locationId);
+    if (!table) {
+        const rarity = rollFishRarity(luck, random);
+        return rollFish(rarity, random);
+    }
+    const rarityChance = new Map(getFishRarityChances(luck).map(chance => [chance.rarity.key, chance.probability]));
+    const weighted = table.flatMap(entry => {
+        const fish = getFish(entry.fishId);
+        return fish ? [{ fish, weight: entry.weight * (rarityChance.get(fish.rarity.key) ?? 0) }] : [];
+    });
+    const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+    if (total <= 0) return undefined;
+    let cursor = Math.max(0, Math.min(0.999999, random())) * total;
+    return weighted.find(entry => (cursor -= entry.weight) < 0)?.fish ?? weighted.at(-1)?.fish;
 }
 
 export interface FishRarityChance {

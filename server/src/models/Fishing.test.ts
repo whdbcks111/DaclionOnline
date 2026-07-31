@@ -23,12 +23,24 @@ import {
     getAllFish,
     getFishByRarity,
     getFishRarityChances,
+    getFishingTable,
+    rollFishAtLocation,
     rollFishRarity,
     rollFishingExp,
     rollFishingWaitSeconds,
 } from './Fishing.js';
 import '../data/items.js';
 import '../data/fishing.js';
+
+test('고레벨 낚시터는 장소마다 독립 어종 풀과 가중치를 사용한다', () => {
+    const abyss = getFishingTable('abyssglass_pressure_lagoon');
+    const origin = getFishingTable('originboundary_genesis_tide');
+    assert.equal(abyss?.length, 5);
+    assert.equal(origin?.length, 5);
+    assert.ok(abyss?.some(entry => entry.fishId === 'pressure_lanternfish'));
+    assert.ok(!origin?.some(entry => entry.fishId === 'pressure_lanternfish'));
+    assert.ok(rollFishAtLocation('abyssglass_pressure_lagoon', 0, () => 0));
+});
 
 const baseConfig: FishingCaptureConfig = {
     seed: 12345,
@@ -290,9 +302,17 @@ test('입질 대기 시간은 45~65초 기본 범위와 입질 속도를 그대�
 });
 
 test('모든 낚시 보상 아이템은 128px 투명 아이콘을 가진다', () => {
-    assert.equal(getAllFish().length, 36);
+    assert.equal(getAllFish().length, 51);
+    const expectedCounts = new Map([
+        [FishRarity.COMMON, 6],
+        [FishRarity.UNCOMMON, 6],
+        [FishRarity.RARE, 10],
+        [FishRarity.EPIC, 11],
+        [FishRarity.LEGENDARY, 9],
+        [FishRarity.MYTHIC, 9],
+    ]);
     for (const rarity of FishRarity.values()) {
-        assert.equal(getFishByRarity(rarity).length, 6, rarity.label);
+        assert.equal(getFishByRarity(rarity).length, expectedCounts.get(rarity), rarity.label);
         for (const fish of getFishByRarity(rarity)) {
             assert.ok(getItemData(fish.itemDataId)?.tags.includes(rarity.tag), `${fish.id}: ${rarity.tag}`);
         }

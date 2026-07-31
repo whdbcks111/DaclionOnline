@@ -448,6 +448,77 @@ export class ForgeMaterial {
             { attribute: 'magicForce', op: 'add', value: 16 },
             { attribute: 'critDmg', op: 'add', value: 0.12 },
         ]);
+    static readonly ASTRAL_STEEL = new ForgeMaterial(
+        'astral_steel', '성철강', 'astral_steel', 1.55,
+        ['material:astral_steel', GameTags.PROPERTY_METAL, GameTags.PROPERTY_LIGHT],
+        [{ attribute: 'critRate', op: 'add', value: 0.03 }],
+        craftsmanship => [{ attribute: 'armorPen', op: 'add', value: round(8 + craftsmanship.creatorLevel * 0.15, 2) }],
+    );
+    static readonly ABYSSAL_SILVER = new ForgeMaterial(
+        'abyssal_silver', '심연은', 'abyssal_silver', 1.52,
+        ['material:abyssal_silver', GameTags.PROPERTY_METAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_DARK],
+        [],
+        craftsmanship => [
+            { attribute: 'magicDef', op: 'add', value: round(20 + craftsmanship.creatorLevel * 0.22, 2) },
+            { attribute: 'maxMentality', op: 'add', value: round(50 + craftsmanship.creatorLevel * 0.6, 2) },
+        ],
+    );
+    static readonly STORM_QUARTZ = new ForgeMaterial(
+        'storm_quartz', '폭풍석영', 'storm_quartz', 1.58,
+        ['material:storm_quartz', GameTags.MATERIAL_STONE, GameTags.PROPERTY_ELECTRIC],
+        [],
+        craftsmanship => [
+            { attribute: 'attackSpeed', op: 'multiply', value: round(1.06 + Math.min(0.16, craftsmanship.creatorLevel * 0.00015), 4) },
+            { attribute: 'projectileAcceleration', op: 'multiply', value: round(1.1 + Math.min(0.35, craftsmanship.creatorLevel * 0.0003), 4) },
+        ],
+    );
+    static readonly LIFE_BLOOD_ALLOY = new ForgeMaterial(
+        'life_blood_alloy', '생혈합금', 'life_blood_alloy', 1.6,
+        ['material:life_blood_alloy', GameTags.PROPERTY_METAL, GameTags.PROPERTY_NATURAL],
+        [],
+        craftsmanship => [
+            { attribute: 'maxLife', op: 'add', value: round(250 + craftsmanship.creatorLevel * 5, 2) },
+            { attribute: 'lifeRegen', op: 'add', value: round(2 + craftsmanship.creatorLevel * 0.035, 2) },
+        ],
+    );
+    static readonly VOID_OPAL = new ForgeMaterial(
+        'void_opal', '공허오팔', 'void_opal', 1.66,
+        ['material:void_opal', GameTags.MATERIAL_STONE, GameTags.PROPERTY_DARK],
+        [
+            { attribute: 'critRate', op: 'add', value: 0.05 },
+            { attribute: 'critDmg', op: 'add', value: 0.18 },
+        ],
+        craftsmanship => [{ attribute: 'magicPen', op: 'add', value: round(8 + craftsmanship.creatorLevel * 0.12, 2) }],
+    );
+    static readonly SACRED_PRAYERSTONE = new ForgeMaterial(
+        'sacred_prayerstone', '성원석', 'sacred_prayerstone', 1.64,
+        ['material:sacred_prayerstone', GameTags.MATERIAL_STONE, GameTags.PROPERTY_HOLY],
+        [],
+        craftsmanship => [
+            { attribute: 'mentalityRegen', op: 'add', value: round(3 + craftsmanship.creatorLevel * 0.04, 2) },
+            { attribute: 'magicDef', op: 'add', value: round(15 + craftsmanship.creatorLevel * 0.18, 2) },
+        ],
+    );
+    static readonly ORIGIN_PRISM = new ForgeMaterial(
+        'origin_prism', '기원프리즘', 'origin_prism', 1.72,
+        ['material:origin_prism', GameTags.MATERIAL_STONE, GameTags.PROPERTY_HOLY, GameTags.PROPERTY_DARK],
+        [],
+        craftsmanship => [
+            { attribute: 'magicForce', op: 'add', value: round(20 + craftsmanship.creatorLevel * 0.35, 2) },
+            { attribute: 'armorPen', op: 'add', value: round(10 + craftsmanship.creatorLevel * 0.12, 2) },
+            { attribute: 'magicPen', op: 'add', value: round(10 + craftsmanship.creatorLevel * 0.12, 2) },
+        ],
+    );
+    static readonly TIMEGLASS_CRYSTAL = new ForgeMaterial(
+        'timeglass_crystal', '시류결정', 'timeglass_crystal', 1.68,
+        ['material:timeglass_crystal', GameTags.MATERIAL_STONE, GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_DARK],
+        [],
+        craftsmanship => [
+            { attribute: 'speed', op: 'add', value: round(0.08 + craftsmanship.creatorLevel * 0.00025, 4) },
+            { attribute: 'attackSpeed', op: 'multiply', value: round(1.05 + Math.min(0.15, craftsmanship.creatorLevel * 0.00014), 4) },
+            { attribute: 'projectileAcceleration', op: 'multiply', value: round(1.12 + Math.min(0.32, craftsmanship.creatorLevel * 0.00028), 4) },
+        ],
+    );
 
     private constructor(
         readonly key: string,
@@ -474,6 +545,26 @@ export class ForgeMaterial {
             this.itemDataId,
             ...(this === ForgeMaterial.MANA_CRYSTAL ? ['마나수정', '정제 마나 수정', '정제마나수정'] : []),
         ];
+    }
+
+    get rawItemDataId(): string | undefined {
+        return {
+            iron: 'iron_ore',
+            gold: 'gold_ore',
+            ruby: 'ruby',
+            emerald: 'emerald',
+            diamond: 'diamond',
+            mana_crystal: 'mana_crystal',
+            ember_alloy: 'ember_ore',
+            astral_steel: 'astral_iron_ore',
+            abyssal_silver: 'abyss_pearl_ore',
+            storm_quartz: 'thunder_quartz_ore',
+            life_blood_alloy: 'life_blood_ore',
+            void_opal: 'void_opal_ore',
+            sacred_prayerstone: 'prayerstone_ore',
+            origin_prism: 'origin_prism_ore',
+            timeglass_crystal: 'timeglass_ore',
+        }[this.key];
     }
 
     getBonusModifiers(craftsmanship: ForgeCraftsmanship): readonly ForgeModifierSeed[] {
@@ -614,6 +705,8 @@ export interface ForgeResultOptions {
     creatorLevel?: number;
     sensibility?: number;
     forgingPrecision?: number;
+    /** 최종 장비 성능 레벨 상한. 제작 성장치와 착용 레벨도 함께 제한한다. */
+    performanceLevelCap?: number;
 }
 
 export interface ForgeCraftsmanship {
@@ -627,20 +720,33 @@ export interface ForgeCraftsmanship {
 
 /** 재료의 격과 리듬 품질로 완성품의 장비 레벨을 계산한다. */
 export function calculateForgedItemLevel(material: ForgeMaterial, options: ForgeResultOptions): number {
-    const creatorLevel = Math.max(1, Math.floor(options.creatorLevel ?? 1));
+    const requestedCreatorLevel = Math.max(1, Math.floor(options.creatorLevel ?? 1));
+    const cap = Number.isFinite(options.performanceLevelCap)
+        ? Math.max(1, Math.floor(options.performanceLevelCap!))
+        : Number.POSITIVE_INFINITY;
+    const creatorLevel = Math.min(requestedCreatorLevel, cap);
     const accuracy = Math.max(0, Math.min(1, options.accuracy));
     const levelFactor = Math.max(0.65, Math.min(
         1.1,
         0.65 + accuracy * 0.3 + Math.max(0, material.power - 0.9) * 0.15,
     ));
-    return Math.max(1, Math.round(creatorLevel * levelFactor));
+    return Math.max(1, Math.min(cap, Math.round(creatorLevel * levelFactor)));
+}
+
+/** 단조 장비는 최종 성능 레벨의 약 80%부터 장착할 수 있다. */
+export function calculateForgedRequiredLevel(itemLevel: number): number {
+    return Math.max(1, Math.ceil(Math.max(1, Math.floor(itemLevel)) * 0.8));
 }
 
 /** 레거시의 감각 100 초과분 기반 효율을 현재 장비 수치 규모에 맞춰 완만한 배율로 환산한다. */
 export function calculateForgeCraftsmanship(options: ForgeResultOptions): ForgeCraftsmanship {
-    const creatorLevel = Math.max(1, Math.floor(options.creatorLevel ?? 1));
-    const sensibility = Math.max(0, options.sensibility ?? 0);
-    const forgingPrecision = Math.max(0, options.forgingPrecision ?? 0);
+    const requestedCreatorLevel = Math.max(1, Math.floor(options.creatorLevel ?? 1));
+    const creatorLevel = Number.isFinite(options.performanceLevelCap)
+        ? Math.min(requestedCreatorLevel, Math.max(1, Math.floor(options.performanceLevelCap!)))
+        : requestedCreatorLevel;
+    const growthScale = Math.min(1, creatorLevel / requestedCreatorLevel);
+    const sensibility = Math.max(0, options.sensibility ?? 0) * growthScale;
+    const forgingPrecision = Math.max(0, options.forgingPrecision ?? 0) * growthScale;
     const levelGrowth = Math.min(1.5, creatorLevel / 150);
     const senseGrowth = Math.min(2.25, Math.max(0, sensibility - 100) * 0.0015);
     const precisionScale = Math.log1p(forgingPrecision) / Math.log(3);
@@ -721,6 +827,7 @@ export function createForgedItemSnapshot(
         : undefined;
     const craftsmanship = calculateForgeCraftsmanship(options);
     const itemLevel = calculateForgedItemLevel(material, options);
+    const requiredLevel = calculateForgedRequiredLevel(itemLevel);
     const formPowerScale = form.basePower / ForgeForm.SWORD.basePower;
     const power = round(
         (form.basePower + craftsmanship.primaryPower * formPowerScale)
@@ -749,7 +856,8 @@ export function createForgedItemSnapshot(
     }));
     const metadata: ItemMetadata = {
         [ItemMetadataKeys.CUSTOM_NAME]: customName,
-        [ItemMetadataKeys.CUSTOM_DESCRIPTION]: `Lv.${itemLevel} ${quality.label} 단조품. ${material.label}의 성질과 ${form.label}의 형태가 결합되었다. 단조 정확도 ${Math.round(accuracy * 100)}%, 제작 숙련 배율 ${craftsmanship.multiplier.toFixed(2)}배.${quirk ? ` 특이 각인 [ ${quirk.label} ].` : ''}`,
+        [ItemMetadataKeys.CUSTOM_DESCRIPTION]: `성능 Lv.${itemLevel} · 착용 Lv.${requiredLevel} ${quality.label} 단조품. ${material.label}의 성질과 ${form.label}의 형태가 결합되었다. 단조 정확도 ${Math.round(accuracy * 100)}%, 제작 숙련 배율 ${craftsmanship.multiplier.toFixed(2)}배.${quirk ? ` 특이 각인 [ ${quirk.label} ].` : ''}`,
+        [ItemMetadataKeys.REQUIREMENTS]: { level: requiredLevel, stats: {}, source: 'forge' },
         [ItemMetadataKeys.MAX_DURABILITY]: maxDurability,
         [ItemMetadataKeys.INSTANCE_MODIFIERS]: storedModifiers,
         [ItemMetadataKeys.FORGE]: {
@@ -769,6 +877,9 @@ export function createForgedItemSnapshot(
             craftsmanshipPower: craftsmanship.primaryPower,
             balanceVersion: FORGED_ITEM_BALANCE_VERSION,
             creatorUserId: options.creatorUserId ?? 0,
+            performanceLevelCap: Number.isFinite(options.performanceLevelCap)
+                ? Math.max(1, Math.floor(options.performanceLevelCap!))
+                : 0,
         },
     };
     return {

@@ -36,6 +36,7 @@ import {
     FORGED_ITEM_NAMING_SENSIBILITY,
     MAX_EQUIPMENT_REINFORCEMENT,
     STAFF_INFUSION_MENTALITY_COST,
+    ForgeMaterial,
 } from '../models/Forging.js';
 
 const CRITICAL_HIT_STAT = 'combat:critical_hits';
@@ -941,15 +942,10 @@ for (const mastery of weaponMasteries) {
     });
 }
 
-const smeltingMaterials = [
-    ['iron_ore', 'refined_iron', '철'],
-    ['gold_ore', 'refined_gold', '금'],
-    ['ruby', 'refined_ruby', '루비'],
-    ['emerald', 'refined_emerald', '에메랄드'],
-    ['diamond', 'refined_diamond', '다이아몬드'],
-    ['mana_crystal', 'refined_mana_crystal', '마나 수정'],
-    ['ember_ore', 'ember_alloy', '홍염강'],
-] as const;
+const smeltingMaterials = ForgeMaterial.values().flatMap(material =>
+    material.rawItemDataId
+        ? [[material.rawItemDataId, material.itemDataId, material.label] as const]
+        : []);
 
 function precisionBreakDamage(context: SkillContext): number {
     return context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 135, 10) / 100

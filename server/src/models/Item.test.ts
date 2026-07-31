@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
     defineItem,
+    createAcquisitionRequirements,
     isPersistedItemMetadataDelta,
     Item,
+    ItemMetadataKeys,
     migratePersistedItemMetadata,
     type ItemData,
     type ItemMetadata,
@@ -47,6 +49,41 @@ test('아이템 이미지는 metadata, 정의, ID 기본 경로 순서로 결정
         new Item('test_defined_image', 1, null, { image: 'items/metadata' }).image,
         'items/metadata',
     );
+});
+
+test('아이템 레벨·스탯 조건은 유효한 값만 영속 snapshot으로 정규화한다', () => {
+    defineItem({ ...itemData('required_blade'), equipSlot: 'mainHand' });
+    const item = new Item('required_blade', 1, null, {
+        [ItemMetadataKeys.REQUIREMENTS]: {
+            level: 80.9,
+            stats: { strength: 20.8, unknown: 999, agility: -1 },
+            source: 'treasure',
+        },
+    });
+    assert.deepEqual(item.requirements, {
+        level: 80,
+        stats: { strength: 20 },
+        source: 'treasure',
+    });
+});
+
+test('상점 장비는 완만한 성장 조건을 받고 보물 장비는 같은 구간에서 더 느슨하다', () => {
+    defineItem({
+        ...itemData('high_greatsword'),
+        category: '대검',
+        equipSlot: 'mainHand',
+        tags: ['item:weapon', 'weapon:sword'],
+    });
+    assert.deepEqual(createAcquisitionRequirements('high_greatsword', 1000, 'shop'), {
+        level: 720,
+        stats: { strength: 200 },
+        source: 'shop',
+    });
+    assert.deepEqual(createAcquisitionRequirements('high_greatsword', 1000, 'treasure'), {
+        level: 500,
+        stats: { strength: 120 },
+        source: 'treasure',
+    });
 });
 
 test('안전하지 않은 metadata 이미지 경로는 정의 이미지로 대체한다', () => {

@@ -1,4 +1,4 @@
-import { FishRarity } from '../models/Fishing.js';
+import { defineFishingTable, FishRarity } from '../models/Fishing.js';
 
 export interface FishCatalogEntry {
     readonly id: string
@@ -51,8 +51,54 @@ const fishCatalog: readonly FishCatalogEntry[] = Object.freeze([
     { id: 'eclipse_moonfish', name: '일식 월어', description: '검은 원반 둘레에 태양빛 테두리가 타오르는 월어.', weight: 5.0, rarity: FishRarity.MYTHIC },
     { id: 'worldroot_turtle', name: '세계수 거북', description: '등껍질 위에 작은 세계수의 뿌리가 자라는 신령한 거북.', weight: 30.0, rarity: FishRarity.MYTHIC },
     { id: 'dragon_tide_oarfish', name: '용조류 산갈치', description: '용의 갈기 같은 지느러미로 거대한 조류를 일으킨다.', weight: 14.0, rarity: FishRarity.MYTHIC },
+
+    { id: 'pressure_lanternfish', name: '압해 등불어', description: '심연유리해의 압력을 푸른 등불로 바꾸는 심해어.', weight: 2.4, rarity: FishRarity.RARE },
+    { id: 'glassfin_tuna', name: '유리날개 참치', description: '투명한 지느러미로 심해의 수압을 가르는 거어.', weight: 8.2, rarity: FishRarity.EPIC },
+    { id: 'trench_crown_eel', name: '해구왕관 장어', description: '왕관 모양 발광기관을 지닌 심연의 포식자.', weight: 11.0, rarity: FishRarity.LEGENDARY },
+    { id: 'inkdream_carp', name: '먹꿈 잉어', description: '비늘마다 읽지 못한 꿈의 문장이 흐르는 잉어.', weight: 1.8, rarity: FishRarity.RARE },
+    { id: 'memory_manta', name: '기억 만타', description: '날갯짓마다 오래된 기억의 장면을 흩뿌린다.', weight: 7.5, rarity: FishRarity.EPIC },
+    { id: 'sleeping_pagewhale', name: '잠든 장서고래', description: '등가죽이 책장처럼 겹쳐진 몽각서고의 전설어.', weight: 19.0, rarity: FishRarity.LEGENDARY },
+    { id: 'rustscale_pike', name: '녹비늘 창꼬치', description: '적철 수로의 금속 침전물을 갑옷처럼 두른다.', weight: 3.0, rarity: FishRarity.RARE },
+    { id: 'mercury_catfish', name: '수은수염 메기', description: '액체 금속 같은 수염으로 미세한 진동을 읽는다.', weight: 6.4, rarity: FishRarity.EPIC },
+    { id: 'oxidized_leviathan', name: '산화 레비아탄', description: '붉은 철분 폭풍과 함께 나타나는 거대한 고대어.', weight: 26.0, rarity: FishRarity.MYTHIC },
+    { id: 'prayer_koi', name: '기도 비단잉어', description: '고요히 헤엄칠 때 물결이 성가의 박자를 그린다.', weight: 2.6, rarity: FishRarity.RARE },
+    { id: 'halo_sturgeon', name: '광륜 철갑상어', description: '등지느러미 위로 옅은 광륜이 떠 있는 성수의 어종.', weight: 9.2, rarity: FishRarity.EPIC },
+    { id: 'worldleaf_arapaima', name: '세계잎 피라루쿠', description: '거대한 비늘마다 신림의 잎맥이 새겨져 있다.', weight: 21.0, rarity: FishRarity.MYTHIC },
+    { id: 'firstlight_coelacanth', name: '첫빛 실러캔스', description: '세계 최초의 새벽빛을 품었다는 기원경계의 고대어.', weight: 7.1, rarity: FishRarity.EPIC },
+    { id: 'endshadow_moonfish', name: '종영 월어', description: '시작의 빛 뒤에 남은 마지막 그림자를 두른 월어.', weight: 8.4, rarity: FishRarity.LEGENDARY },
+    { id: 'genesis_dragonfish', name: '창세 용어', description: '빛과 어둠이 갈라지기 전의 비늘을 가진 신화어.', weight: 16.5, rarity: FishRarity.MYTHIC },
 ]);
 
 export function getFishCatalog(): readonly FishCatalogEntry[] {
     return fishCatalog;
+}
+
+for (const [locationId, entries] of Object.entries({
+    abyssglass_pressure_lagoon: [
+        { fishId: 'mist_eel', weight: 24 }, { fishId: 'pressure_lanternfish', weight: 38 },
+        { fishId: 'glassfin_tuna', weight: 24 }, { fishId: 'trench_crown_eel', weight: 9 },
+        { fishId: 'void_angler', weight: 5 },
+    ],
+    dreamarchive_inkwater_pool: [
+        { fishId: 'cloud_loach', weight: 22 }, { fishId: 'inkdream_carp', weight: 38 },
+        { fishId: 'memory_manta', weight: 25 }, { fishId: 'sleeping_pagewhale', weight: 10 },
+        { fishId: 'timeglass_coelacanth', weight: 5 },
+    ],
+    rustworld_mercury_reservoir: [
+        { fishId: 'striped_pike', weight: 20 }, { fishId: 'rustscale_pike', weight: 40 },
+        { fishId: 'mercury_catfish', weight: 25 }, { fishId: 'oxidized_leviathan', weight: 5 },
+        { fishId: 'obsidian_tuna', weight: 10 },
+    ],
+    silentdivine_prayer_spring: [
+        { fishId: 'lotus_ray', weight: 18 }, { fishId: 'prayer_koi', weight: 40 },
+        { fishId: 'halo_sturgeon', weight: 25 }, { fishId: 'worldleaf_arapaima', weight: 5 },
+        { fishId: 'worldroot_turtle', weight: 12 },
+    ],
+    originboundary_genesis_tide: [
+        { fishId: 'prism_seahorse', weight: 18 }, { fishId: 'firstlight_coelacanth', weight: 38 },
+        { fishId: 'endshadow_moonfish', weight: 24 }, { fishId: 'genesis_dragonfish', weight: 8 },
+        { fishId: 'eclipse_moonfish', weight: 12 },
+    ],
+} as const)) {
+    defineFishingTable(locationId, entries);
 }

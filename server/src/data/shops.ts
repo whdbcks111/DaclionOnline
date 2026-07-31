@@ -36,6 +36,7 @@ function largePotionStock() {
 
 defineShop({
     id: 'general_store',
+    recommendedLevel: 1,
     buyList: [
         {
             label: '체력 포션',
@@ -220,6 +221,7 @@ defineShop({
 
 defineShop({
     id: 'fishing_store',
+    recommendedLevel: 1,
     buyList: [
         {
             label: '초보자 낚싯대',
@@ -261,6 +263,7 @@ defineShop({
 
 defineShop({
     id: 'feveric_mine_store',
+    recommendedLevel: 1,
     buyList: [
         {
             label: '곡괭이',
@@ -287,6 +290,7 @@ defineShop({
 
 defineShop({
     id: 'silverweb_hunter_store',
+    recommendedLevel: 20,
     buyList: [
         {
             label: '은빛그물 사냥활',
@@ -324,6 +328,7 @@ defineShop({
 
 defineShop({
     id: 'twilight_memorial_store',
+    recommendedLevel: 40,
     buyList: [
         {
             label: '묘지기 향약',
@@ -387,6 +392,7 @@ defineShop({
 
 defineShop({
     id: 'glassdune_caravan_store',
+    recommendedLevel: 70,
     buyList: [
         bagStock('유리사막 대상가방', 'glassdune_caravan_pack', 2_500, 900),
         {
@@ -436,6 +442,7 @@ defineShop({
 
 defineShop({
     id: 'frostveil_outpost_store',
+    recommendedLevel: 100,
     buyList: [
         bagStock('설원 원정배낭', 'frostveil_expedition_pack', 4_800, 1_200),
         {
@@ -483,6 +490,7 @@ defineShop({
 
 defineShop({
     id: 'misttide_harbor_store',
+    recommendedLevel: 140,
     buyList: [
         bagStock('염등항 화물배낭', 'misttide_cargo_pack', 7_200, 1_500),
         {
@@ -531,6 +539,7 @@ defineShop({
 
 defineShop({
     id: 'paradox_relay_store',
+    recommendedLevel: 180,
     buyList: [
         bagStock('역설 접이가방', 'paradox_fold_pack', 11_000, 1_800),
         ...largePotionStock(),
@@ -585,6 +594,7 @@ defineShop({
 
 defineShop({
     id: 'ashen_waystation_store',
+    recommendedLevel: 200,
     buyList: [
         bagStock('재길 운반구', 'ashroad_carrier', 16_500, 2_100),
         ...largePotionStock(),
@@ -634,6 +644,7 @@ defineShop({
 
 defineShop({
     id: 'voidcrown_waystation_store',
+    recommendedLevel: 250,
     buyList: [
         bagStock('공허비단 차원배낭', 'voidsilk_dimension_pack', 25_000, 2_400),
         ...largePotionStock(),
@@ -677,6 +688,7 @@ defineShop({
 
 defineShop({
     id: 'eclipse_dock_store',
+    recommendedLevel: 300,
     buyList: [
         bagStock('해구 내압배낭', 'eclipse_pressure_pack', 34_000, 2_700),
         ...largePotionStock(),
@@ -720,6 +732,7 @@ defineShop({
 
 defineShop({
     id: 'worldroot_waystation_store',
+    recommendedLevel: 350,
     buyList: [
         bagStock('천근수피 생장배낭', 'worldroot_living_pack', 45_000, 3_000),
         ...largePotionStock(),
@@ -763,6 +776,7 @@ defineShop({
 
 defineShop({
     id: 'nebula_waystation_store',
+    recommendedLevel: 380,
     buyList: [
         bagStock('성운궤도 배낭', 'nebula_orbit_pack', 58_000, 3_300),
         ...largePotionStock(),
@@ -793,6 +807,7 @@ defineShop({
 
 defineShop({
     id: 'chronofrost_refuge_store',
+    recommendedLevel: 440,
     buyList: [
         bagStock('영시 보존배낭', 'chronofrost_vault_pack', 76_000, 3_600),
         ...largePotionStock(),
@@ -823,6 +838,7 @@ defineShop({
 
 defineShop({
     id: 'endstar_bastion_store',
+    recommendedLevel: 500,
     buyList: [
         bagStock('최후지평 차원배낭', 'endstar_horizon_pack', 100_000, 3_900),
         ...largePotionStock(),

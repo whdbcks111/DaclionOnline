@@ -20,7 +20,7 @@ import QuestBook from './QuestBook.js';
 import { markLocationVisited } from './WorldMap.js';
 import { cancelNavigation } from '../modules/navigation.js';
 import CareerProfile from './Career.js';
-import { Item } from './Item.js';
+import { Item, type ItemMetadata } from './Item.js';
 import { SLOT_MAX, type EquipSlot } from './Equipment.js';
 import {
     RankingVisibility,
@@ -751,15 +751,32 @@ export default class Player extends Entity {
     }
 
     /** 전리품을 인벤토리에 넣고, 중량 초과 시 소멸시키지 않고 현재 장소 바닥에 둔다. */
-    receiveLoot(itemDataId: string, count: number): LootReceiveDestination {
-        if (this.inventory.addItem(itemDataId, count)) return 'inventory';
-        return getLocation(this.locationId)?.addDroppedItemData(itemDataId, count) ? 'ground' : 'failed';
+    receiveLoot(itemDataId: string, count: number, metadata: ItemMetadata | null = null): LootReceiveDestination {
+        if (this.inventory.addItem(itemDataId, count, metadata)) return 'inventory';
+        const location = getLocation(this.locationId);
+        if (!location) return 'failed';
+        location.addDroppedItem(new Item(itemDataId, count, null, metadata).snapshot());
+        return 'ground';
+    }
+
+    /** 아이템의 레벨·핵심 스탯 조건을 플레이어 상태에 맞춰 읽기 쉬운 거부 사유로 변환한다. */
+    getItemRequirementDeniedReason(item: Item): string | undefined {
+        const requirement = item.requirements;
+        if (!requirement) return undefined;
+        const missing: string[] = [];
+        if (this.level < requirement.level) missing.push(`레벨 ${requirement.level}`);
+        for (const stat of StatType.values()) {
+            const required = requirement.stats[stat.key];
+            if (required && this.stat.get(stat) < required) missing.push(`${stat.label} ${required}`);
+        }
+        return missing.length > 0 ? `${item.name}의 필요 조건: ${missing.join(' · ')}` : undefined;
     }
 
     /** 인벤토리 아이템을 장착하고 밀려난 장비는 다시 인벤토리로 돌려보낸다. */
     equipInventoryItem(item: Item, targetSlotIndex?: number): { slot: EquipSlot; slotIndex: number; displaced: Item | null } | null {
         const slot = item.equipSlot as EquipSlot | null;
-        if (!slot || this.inventory.getItem(item.id) !== item) return null;
+        if (!slot || this.inventory.getItem(item.id) !== item
+            || Player.prototype.getItemRequirementDeniedReason.call(this, item)) return null;
 
         let slotIndex = targetSlotIndex;
         if (slotIndex === undefined) {

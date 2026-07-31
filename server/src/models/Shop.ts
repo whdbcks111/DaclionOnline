@@ -26,6 +26,8 @@ export interface BuyEntry {
 
 export interface ShopData {
     id: string;
+    /** 이 상점이 담당하는 성장 구간. 구매품 사용·장착 조건 계산에 사용한다. */
+    recommendedLevel?: number;
     sellList: SellEntry[];   // 판매 물품 목록 (플레이어가 상점에 팔 수 있는 것)
     buyList: BuyEntry[];     // 구매 물품 목록 (플레이어가 상점에서 살 수 있는 것)
     tags: TagId[];
