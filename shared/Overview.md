@@ -1,12 +1,12 @@
 # Shared Overview
 
-`ZoneType`은 `safe | neutral | hostile`이며 `LocationInfoData` 위험도는 `zoneType/zoneLabel/pvpAllowed`의 가공된 HUD 계약으로 전달된다. `tags.ts`는 각 위험도에 대응하는 지역 태그를 소유한다.
+`ZoneType`은 `safe | neutral | hostile`이며 `LocationInfoData` 위험도는 `zoneType/zoneLabel/pvpAllowed`의 가공된 HUD 계약으로 전달된다. `LocationInfoData.capabilities`는 현재 플레이어가 실제 이용할 수 있는 낚시·상점 기능의 key·라벨·아이콘만 전달한다. `tags.ts`는 각 위험도에 대응하는 지역 태그를 소유한다.
 
 서버와 클라이언트가 함께 사용하는 네트워크 계약과 리소스를 둔다.
 
 `PlayerStatsData`는 공격 cooldown과 `autoAttackEnabled`, nullable 현재 대상의 선택적 표시 아이콘·HP/MP·보호막·상태이상과 감각 단계별 몬스터 분석 DTO를 공유한다. `LocationInfoData.objects`는 선택적 표시 아이콘과 서버가 판정한 `attack | target | interact` 행동을, `npcs`는 이름·설명·퀘스트 표식을 가져 위치 HUD가 Entity·NPC·QuestBook 내부 데이터를 직접 읽지 않는다. `tags.ts`의 `material:mana_crystal`은 원광·정제 소재·단조 결과가 같은 마력 재료 계보를 유지하게 한다.
 
-- `types.ts`: 로그인·가입·로그아웃·이메일 코드 비밀번호 재설정, 태그, `monster | resource` 통합 오브젝트·NPC ID·지도 아이콘·대표색이 포함된 LocationData, 방문 후 공개되는 보스 구역 여부가 포함된 플레이어별 `WorldMapData`와 `worldMap` ChatNode, 보스 왕관 표시 여부·타입색 `ShieldBarSegment`를 포함한 HUD DTO, `level/exp/maxExp/equippedTitle`을 가진 플레이어 HUD DTO, `newcomer/karmaMarked/equippedTitle` 메시지 헤더 표식, 서버 검증 `ChatReplyReference`, 자유 텍스트/허용 목록 구분이 포함된 명령 인자, 채팅 타입을 포함한 단일 호환·최대 10장 묶음 이미지 메시지·정보 공개·채널·온라인 mention·화면 전용 채팅 청소 Socket.io 이벤트 map의 단일 기준. Player/Location HUD는 `syncId/revision`을 포함해 중복·역순 snapshot을 거르며, `AdjacentLocationData`는 플레이어 기준 `visible | locked`와 공개 잠금 사유를 포함한다. 관리자 계약에는 칭호 마스터 option·보유/장착 snapshot·부여/회수 action, 사람 확인 상태·강제 실행/해제 action, 카르마 설정과 실제 장비·스킬 로테이션을 실행하는 `analyze_balance_profile`이 포함된다. 사람 확인 계약은 정답을 제외한 raster 문제·만료 시각과 답안 제출만 공유한다.
+- `types.ts`: 로그인·가입·로그아웃·이메일 코드 비밀번호 재설정, 태그, `monster | resource` 통합 오브젝트·NPC ID·지도 아이콘·대표색이 포함된 LocationData, 방문 후 공개되는 보스 구역 여부와 안전·중립·적대 위험도가 포함된 플레이어별 `WorldMapData`와 `worldMap` ChatNode, 현재 이용 가능한 낚시·상점 기능과 보스 왕관 표시 여부·타입색 `ShieldBarSegment`를 포함한 HUD DTO, `level/exp/maxExp/equippedTitle`을 가진 플레이어 HUD DTO, `newcomer/karmaMarked/equippedTitle` 메시지 헤더 표식, 서버 검증 `ChatReplyReference`, 자유 텍스트/허용 목록 구분이 포함된 명령 인자, 채팅 타입을 포함한 단일 호환·최대 10장 묶음 이미지 메시지·정보 공개·채널·온라인 mention·화면 전용 채팅 청소 Socket.io 이벤트 map의 단일 기준. Player/Location HUD는 `syncId/revision`을 포함해 중복·역순 snapshot을 거르며, `AdjacentLocationData`는 플레이어 기준 `visible | locked`와 공개 잠금 사유를 포함한다. 관리자 계약에는 칭호 마스터 option·보유/장착 snapshot·부여/회수 action, 사람 확인 상태·강제 실행/해제 action, 카르마 설정과 실제 장비·스킬 로테이션을 실행하는 `analyze_balance_profile`이 포함된다. 사람 확인 계약은 정답을 제외한 raster 문제·만료 시각과 답안 제출만 공유한다.
 - `hudPresets.ts`: 이름 있는 HUD snapshot의 버전·허용 좌표/크기·최대 프리셋/퀵슬롯 수와 서버·클라이언트 공용 정규화 API. `types.ts`의 프리셋 소켓 이벤트가 이 계약을 사용한다.
 - `chat.ts`: 채널·근처·파티·광고·권한 10 공지의 `ChatType` 표시 메타데이터와 광고 제한·귓속말 회색 token을 공유하고, 구조화 ChatNode를 답장용 최대 120자 한 줄로 요약하며 서버 메시지 ID 형식을 검증한다.
 - `commandInput.ts`: 슬래시 명령과 슬래시 없는 별칭 입력을 같은 방식으로 첫 토큰/나머지 인자로 분리하는 공용 parser.

@@ -139,6 +139,10 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     assert.equal(locations.filter(location => location.mapColor).length, locations.length);
     assert.ok(locations.every(location => /^#[0-9a-f]{6}$/i.test(location.mapColor ?? '')));
     assert.equal(locations.filter(location => location.mapIcon === 'town-plaza').length, 11);
+    assert.equal(locations.filter(location => location.tags.includes(GameTags.LOCATION_FISHING)).length, 11);
+    assert.ok(locations
+        .filter(location => location.tags.includes(GameTags.LOCATION_FISHING))
+        .every(location => location.mapIcon === 'fishing-spot'));
     const mapWidth = Math.max(...locations.map(location => location.x))
         - Math.min(...locations.map(location => location.x));
     const mapHeight = Math.max(...locations.map(location => location.y))

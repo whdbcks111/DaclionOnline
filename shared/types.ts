@@ -299,6 +299,7 @@ export interface LocationInfoData extends SnapshotRevision {
     zoneType: ZoneType
     zoneLabel: string
     pvpAllowed: boolean
+    capabilities: LocationCapabilityData[]
     x: number
     y: number
     z: number
@@ -306,6 +307,13 @@ export interface LocationInfoData extends SnapshotRevision {
     npcs: LocationNpcInfo[]
     players: EntityBarInfo[]
     adjacentLocations: AdjacentLocationData[]
+}
+
+/** LocationCapability의 직렬화 경계 key와 HUD 표시 정보. */
+export interface LocationCapabilityData {
+    key: 'fishing' | 'shop'
+    label: string
+    icon: string
 }
 
 // 플레이어 HUD 데이터

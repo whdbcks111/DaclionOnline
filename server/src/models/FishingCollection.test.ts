@@ -5,11 +5,13 @@ import Equipment from './Equipment.js';
 import { PlayerProgress } from './Progress.js';
 import type Player from './Player.js';
 import {
+    claimFishingCollectionRewards,
     getFishingCollectionSnapshot,
     recordFishingCollectionCatch,
 } from './FishingCollection.js';
 import { GameTags } from '../../../shared/tags.js';
 import '../data/items.js';
+import '../data/skills.js';
 import '../data/progress.js';
 
 class TestCollectionPlayer extends Entity {
@@ -18,6 +20,13 @@ class TestCollectionPlayer extends Entity {
     gold = 0;
     gainedExperience = 0;
     readonly loot: Array<{ itemDataId: string; count: number }> = [];
+    readonly grantedSkills: Array<{ skillDataId: string; source: string }> = [];
+    readonly skills = {
+        grant: (skillDataId: string, source: string) => {
+            this.grantedSkills.push({ skillDataId, source });
+            return { skill: { name: skillDataId }, acquired: true };
+        },
+    };
 
     constructor() {
         super(100, 0, 'fishing-test', { maxLife: 100 }, Equipment.createEmpty(), undefined, [
@@ -57,9 +66,37 @@ test('낚시도감은 어종별 최초 포획만 영속 기록하고 단계 보�
     assert.equal(reached.collectedCount, 10);
     assert.equal(reached.rewards[0].claimed, true);
     assert.equal(player.gold, 5_000);
-    assert.deepEqual(player.loot, [{ itemDataId: 'earthworm_bait', count: 100 }]);
+    assert.deepEqual(player.loot, [
+        { itemDataId: 'earthworm_bait', count: 100 },
+        { itemDataId: 'battle_tonic', count: 3 },
+        { itemDataId: 'arcane_tonic', count: 3 },
+        { itemDataId: 'swift_tonic', count: 3 },
+    ]);
 
     recordFishingCollectionCatch(player as unknown as Player, initial.entries[9].itemDataId);
     assert.equal(player.gold, 5_000);
-    assert.equal(player.loot.length, 1);
+    assert.equal(player.loot.length, 4);
+});
+
+test('기존 도감 달성자는 낚시도감 확인 시 신규 전투 보상과 전용 스킬을 소급 수령한다', () => {
+    const player = new TestCollectionPlayer();
+    const initial = getFishingCollectionSnapshot(player as unknown as Player);
+    for (const entry of initial.entries) {
+        player.progress.setFlag(`fishing-collection:fish/${entry.itemDataId}`);
+    }
+    for (const requiredCount of [10, 20, 35, 50, initial.totalCount]) {
+        player.progress.setFlag(`fishing-collection:reward/${requiredCount}`);
+    }
+
+    const grants = claimFishingCollectionRewards(player as unknown as Player);
+    const snapshot = getFishingCollectionSnapshot(player as unknown as Player);
+
+    assert.equal(grants.length, 5);
+    assert.deepEqual(player.grantedSkills, [
+        { skillDataId: 'silver_scale_veil', source: 'fishing-collection:35' },
+        { skillDataId: 'abyssal_harpoon', source: `fishing-collection:${initial.totalCount}` },
+    ]);
+    assert.ok(player.loot.some(item => item.itemDataId === 'large_health_potion' && item.count === 3));
+    assert.equal(snapshot.rewards.at(-1)?.claimed, true);
+    assert.deepEqual(claimFishingCollectionRewards(player as unknown as Player), []);
 });

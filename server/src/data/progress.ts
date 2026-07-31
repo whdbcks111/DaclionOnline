@@ -18,30 +18,64 @@ defineFishingCollection(
             requiredCount: 10,
             label: '최대 경험치 10% + 5,000 Gold + 통통한 지렁이 미끼 100개',
             experienceRatio: 0.1, gold: 5_000, itemDataId: 'earthworm_bait', itemCount: 100,
+            combatBonus: {
+                label: '전투 강장제·비전 영약·신속의 물약 각 3개',
+                items: [
+                    { itemDataId: 'battle_tonic', count: 3 },
+                    { itemDataId: 'arcane_tonic', count: 3 },
+                    { itemDataId: 'swift_tonic', count: 3 },
+                ],
+            },
         },
         {
             requiredCount: 20,
             label: '최대 경험치 15% + 20,000 Gold + 태양대추 반죽미끼 100개',
             experienceRatio: 0.15, gold: 20_000,
             itemDataId: FISHING_EQUIPMENT_TIERS[0].bait.id, itemCount: 100,
+            combatBonus: {
+                label: '대용량 체력·마나 포션 각 3개',
+                items: [
+                    { itemDataId: 'large_health_potion', count: 3 },
+                    { itemDataId: 'large_mana_potion', count: 3 },
+                ],
+            },
         },
         {
             requiredCount: 35,
             label: '최대 경험치 25% + 100,000 Gold + 태엽 반짝미끼 100개',
             experienceRatio: 0.25, gold: 100_000,
             itemDataId: FISHING_EQUIPMENT_TIERS[2].bait.id, itemCount: 100,
+            combatBonus: {
+                label: '도감 전용 전투 스킬 [ 은린 장막 ]',
+                skillDataIds: ['silver_scale_veil'],
+            },
         },
         {
             requiredCount: 50,
             label: '최대 경험치 35% + 500,000 Gold + 압해 진주미끼 100개',
             experienceRatio: 0.35, gold: 500_000,
             itemDataId: FISHING_EQUIPMENT_TIERS[5].bait.id, itemCount: 100,
+            combatBonus: {
+                label: '조류심장 회복약·영약 각 5개',
+                items: [
+                    { itemDataId: 'tideheart_draught', count: 5 },
+                    { itemDataId: 'tideheart_tonic', count: 5 },
+                ],
+            },
         },
         {
             requiredCount: getFishCatalog().length,
             label: '최대 경험치 50% + 2,000,000 Gold + 창세빛 미끼 200개',
             experienceRatio: 0.5, gold: 2_000_000,
             itemDataId: FISHING_EQUIPMENT_TIERS.at(-1)!.bait.id, itemCount: 200,
+            combatBonus: {
+                label: '도감 전용 전투 스킬 [ 해연의 작살 ] + 대용량 체력·마나 포션 각 10개',
+                items: [
+                    { itemDataId: 'large_health_potion', count: 10 },
+                    { itemDataId: 'large_mana_potion', count: 10 },
+                ],
+                skillDataIds: ['abyssal_harpoon'],
+            },
         },
     ],
 );

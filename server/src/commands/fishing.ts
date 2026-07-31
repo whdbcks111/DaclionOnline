@@ -5,6 +5,7 @@ import { getPlayerByUserId } from '../modules/player.js';
 import { AttributeType } from '../models/Attribute.js';
 import { getFishRarityChances } from '../models/Fishing.js';
 import {
+    claimFishingCollectionRewards,
     getFishingCollectionSnapshot,
     type FishingCollectionSnapshot,
 } from '../models/FishingCollection.js';
@@ -103,9 +104,16 @@ export function initFishingCommands(): void {
         handler(userId) {
             const player = getPlayerByUserId(userId);
             if (!player) return;
+            const grants = claimFishingCollectionRewards(player);
             sendBotMessageToUser(userId, buildFishingCollectionMessage(
                 getFishingCollectionSnapshot(player),
             ));
+            if (grants.length > 0) {
+                sendBotMessageToUser(
+                    userId,
+                    grants.map(grant => `🎖 도감 ${grant.requiredCount}종 보상 수령: ${grant.label}`).join('\n'),
+                );
+            }
         },
     });
 }

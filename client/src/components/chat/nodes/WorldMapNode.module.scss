@@ -93,13 +93,15 @@
     white-space: nowrap;
 }
 
-.visitedDot, .unknownDot, .bossDot {
+.visitedDot, .neutralDot, .hostileDot, .unknownDot, .bossDot {
     width: 0.55rem;
     aspect-ratio: 1;
     border-radius: 50%;
     background: var(--color-primary);
 }
 
+.neutralDot { background: #47b8a3; }
+.hostileDot { background: #d86262; }
 .unknownDot { background: #77818a; }
 .bossDot { background: #f2c14e; }
 .spacer { flex: 1; }
@@ -141,6 +143,34 @@
 .unknown .nodeDot {
     fill: #707981;
     stroke: #a8afb5;
+}
+
+.neutralZone .nodeDot {
+    fill: #278b7d;
+    stroke: #9ce5d7;
+}
+
+.hostileZone .nodeDot {
+    fill: #a63f46;
+    stroke: #ffb2b2;
+}
+
+.neutralZone .iconBackdrop {
+    fill: rgba(14, 58, 55, 0.94);
+    stroke: #47b8a3;
+}
+
+.hostileZone .iconBackdrop {
+    fill: rgba(72, 24, 29, 0.94);
+    stroke: #d86262;
+}
+
+.neutralZone .nodeLabel {
+    fill: #bff5e8;
+}
+
+.hostileZone .nodeLabel {
+    fill: #ffc4c4;
 }
 
 .boss .nodeDot {

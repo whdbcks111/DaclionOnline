@@ -2893,6 +2893,120 @@ defineSkill({
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_BLACKSMITH],
 });
 
+function silverScaleVeilAmount(context: SkillContext): number {
+    const lifePercent = percentByLevel(context.skill.level, 10, 1.5);
+    const combatPercent = percentByLevel(context.skill.level, 80, 10);
+    const combatPower = Math.max(
+        context.owner.attribute.get(AttributeType.ATK),
+        context.owner.attribute.get(AttributeType.MAGIC_FORCE),
+    );
+    return context.owner.maxLife * lifePercent / 100 + combatPower * combatPercent / 100;
+}
+
+// TODO: 낚시도감 전용 스킬 아트 제작 시 물 속성·기존 시전 배너 fallback을 교체한다.
+defineSkill({
+    id: 'silver_scale_veil',
+    name: '은린 장막',
+    icon: 'affinities/water',
+    activationHeader: 'mana_barrier',
+    maxLevel: 5,
+    descriptionTemplate:
+        '도감에 기록된 은빛 비늘의 흐름으로 몸을 감싸 {{icon.maxLife}}{{icon.atk}}{{icon.magicForce}} '
+        + '{{shieldAmount}}만큼의 피해를 막는 일반 보호막을 {{duration}} 동안 얻습니다. '
+        + '공격력과 마법력 중 더 높은 수치를 사용합니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 24[/color]',
+    activationConditionTemplate: activationGuide(),
+    activationMessage: '은린 장막!',
+    baseMetadata: null,
+    calculatedFields: {
+        shieldAmount: context => tooltipValue(
+            silverScaleVeilAmount(context),
+            `최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 10, 1.5))}%`
+            + ` + 공격력·마법력 중 높은 값 × ${formatNumber(percentByLevel(context.skill.level, 80, 10))}%`,
+        ),
+        duration: context => levelValueTooltip(context, '보호막 지속시간', 8, 1, '초'),
+    },
+    balance: {
+        role: SkillBalanceRole.DEFENSE,
+        calculateManaCost: () => 24,
+        calculateShield: silverScaleVeilAmount,
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 30, 2, 22),
+    canActivate: simpleCheck(24, false),
+    onStart: context => {
+        spend(context, 24);
+        context.owner.setShield(
+            'skill:silver_scale_veil',
+            silverScaleVeilAmount(context),
+            ShieldType.GENERAL,
+            valueByLevel(context.skill.level, 8, 1),
+            context.owner,
+        );
+    },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.PROPERTY_WATER],
+});
+
+function abyssalHarpoonDamage(context: SkillContext): number {
+    const combatPower = Math.max(
+        context.owner.attribute.get(AttributeType.ATK),
+        context.owner.attribute.get(AttributeType.MAGIC_FORCE),
+    );
+    return combatPower * percentByLevel(context.skill.level, 550, 45) / 100;
+}
+
+defineSkill({
+    id: 'abyssal_harpoon',
+    name: '해연의 작살',
+    icon: 'affinities/water',
+    activationHeader: 'magic_bolt',
+    maxLevel: 5,
+    descriptionTemplate:
+        '도감에 새긴 심해 생물의 흔적을 작살로 응축해 지정한 대상에게 '
+        + '{{icon.atk}}{{icon.magicForce}} [color=$magic]{{damage}}[/color]의 회피 불가 마법 피해를 입힙니다. '
+        + '공격력과 마법력 중 더 높은 수치를 사용하고, 적중한 대상에게 Lv.{{statusLevel}} 둔화를 {{statusDuration}} 동안 부여합니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 58[/color]',
+    activationConditionTemplate: targetActivationGuide(),
+    activationMessage: '해연의 작살!',
+    baseMetadata: null,
+    calculatedFields: {
+        damage: context => tooltipValue(
+            abyssalHarpoonDamage(context),
+            `공격력·마법력 중 높은 값 × ${formatNumber(percentByLevel(context.skill.level, 550, 45))}%`,
+        ),
+        statusLevel: context => context.skill.level,
+        statusDuration: context => levelValueTooltip(context, '둔화 지속시간', 5, 0.5, '초'),
+    },
+    balance: {
+        role: SkillBalanceRole.CONTROL,
+        damageType: 'magic',
+        effectTags: [GameTags.PROPERTY_WATER],
+        calculateDamage: abyssalHarpoonDamage,
+        calculateManaCost: () => 58,
+        unavoidable: true,
+        criticalMode: SkillCriticalMode.NORMAL,
+        notes: ['공격력과 마법력 중 더 높은 수치를 사용하며 둔화의 전술 가치는 직접 피해와 분리합니다.'],
+    },
+    calculateMaxCooldown: () => 18,
+    canActivate: simpleCheck(58),
+    onStart: context => {
+        const found = targetOrDeny(context);
+        if ('reason' in found) throw new Error(found.reason);
+        spend(context, 58);
+        const result = context.owner.attack(found.target, 'magic', abyssalHarpoonDamage(context), {
+            unavoidable: true,
+            effectTags: [GameTags.PROPERTY_WATER],
+        });
+        if (result && !result.evaded && result.finalDamage > 0) {
+            found.target.applyStatusEffect(
+                LegacyStatusEffects.SLOWNESS,
+                valueByLevel(context.skill.level, 5, 0.5),
+                context.skill.level,
+            );
+        }
+    },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.PROPERTY_WATER],
+});
+
 interface EliteTechniqueDefinition {
     id: string;
     name: string;

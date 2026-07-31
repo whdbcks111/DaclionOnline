@@ -443,7 +443,9 @@ export default function WorldMapNode({ data }: Props) {
     return (
         <div className={styles.mapShell} ref={containerRef}>
             <div className={styles.toolbar}>
-                <span className={styles.legend}><i className={styles.visitedDot} />방문</span>
+                <span className={styles.legend}><i className={styles.visitedDot} />안전 지역</span>
+                <span className={styles.legend}><i className={styles.neutralDot} />중립 지역</span>
+                <span className={styles.legend}><i className={styles.hostileDot} />적대 지역</span>
                 <span className={styles.legend}><i className={styles.unknownDot} />인접 미방문</span>
                 <span className={styles.legend}><i className={styles.bossDot} />보스 구역</span>
                 <span className={styles.spacer} />
@@ -517,9 +519,14 @@ export default function WorldMapNode({ data }: Props) {
                 {data.locations.map(location => {
                     const y = mapY(location)
                     const active = activeLocation?.id === location.id
+                    const riskClass = location.visited && !location.isBossRoom
+                        ? location.zoneType === 'neutral'
+                            ? styles.neutralZone
+                            : location.zoneType === 'hostile' ? styles.hostileZone : ''
+                        : ''
                     return <g
                         key={location.id}
-                        className={`${styles.blip} ${location.visited ? styles.visited : styles.unknown} ${location.isBossRoom ? styles.boss : ''} ${active ? styles.active : ''}`}
+                        className={`${styles.blip} ${location.visited ? styles.visited : styles.unknown} ${riskClass} ${location.isBossRoom ? styles.boss : ''} ${active ? styles.active : ''}`}
                         transform={`translate(${location.x} ${y})`}
                         tabIndex={0}
                         role="button"

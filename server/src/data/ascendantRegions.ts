@@ -544,6 +544,7 @@ export function buildAscendantLocations(): LocationData[] {
                 y: y - 330,
                 z: z - 25,
                 mapColor: region.mapColor,
+                mapIcon: 'fishing-spot',
                 zoneType: 'neutral',
                 shopId: equipmentTier.shopId,
                 tags: [

@@ -154,6 +154,16 @@ export default function LocationHud() {
         <span className={styles.zone}>{locationInfo.zoneLabel}</span>
         <span className={styles.coords}>({locationInfo.x}, {locationInfo.y}, {locationInfo.z})</span>
       </div>
+      {Boolean(locationInfo.capabilities?.length) && (
+        <div className={styles.capabilities} aria-label="현재 장소 이용 가능 기능">
+          {locationInfo.capabilities?.map(capability => (
+            <span key={capability.key} className={styles.capability}>
+              <img src={`/icons/${capability.icon}.png`} alt="" aria-hidden="true" />
+              {capability.label}
+            </span>
+          ))}
+        </div>
+      )}
       {locationInfo.objects.length > 0 && (
         <div className={styles.section}>
           <div className={styles.sectionTitle}>오브젝트</div>

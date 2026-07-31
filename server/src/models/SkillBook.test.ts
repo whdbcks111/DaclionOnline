@@ -316,6 +316,22 @@ test('바람 회피는 Lv.1부터 7초 동안 확정 회피 상태를 유지한�
     assert.equal(player.hasPersistentGuaranteedEvasion('status:wind_evasion'), true);
 });
 
+test('낚시도감 전용 스킬은 직업과 무기 없이 보호막과 수속성 둔화 공격을 제공한다', () => {
+    const player = new TestSkillPlayer(9314);
+    const target = new TestTarget();
+    player.currentTarget = target;
+    player.mentality = 100;
+    player.skills.grant('silver_scale_veil', 'fishing-collection:35');
+    player.skills.grant('abyssal_harpoon', 'fishing-collection:61');
+
+    assert.equal(player.skills.activateByInput('은린 장막').activated, true);
+    assert.ok(player.getShield('skill:silver_scale_veil'));
+
+    assert.equal(player.skills.activateByInput('해연의 작살').activated, true);
+    assert.ok(target.life < target.maxLife);
+    assert.equal(target.hasStatusEffect('slowness'), true);
+});
+
 test('직업 패시브는 유효한 직업에서만 적용되고 사용형 HUD에서 제외된다', () => {
     const player = new TestSkillPlayer();
     player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');

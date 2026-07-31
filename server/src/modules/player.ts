@@ -2,7 +2,12 @@ import logger from "../utils/logger.js";
 import Player from "../models/Player.js";
 import { getSessionByUserId, isUserOnline } from "./login.js";
 import { getLocation } from "../models/Location.js";
-import type { LocationInfoData, LocationObjectAction } from "../../../shared/types.js";
+import type Location from "../models/Location.js";
+import type {
+    LocationCapabilityData,
+    LocationInfoData,
+    LocationObjectAction,
+} from "../../../shared/types.js";
 import { cancelCrafting } from "../models/Crafting.js";
 import {
     getOnlinePlayer,
@@ -26,10 +31,56 @@ import Monster from '../models/Monster.js';
 import { StatType } from '../models/Stat.js';
 import { createMonsterTargetAnalysis } from '../models/Inspection.js';
 import { GameTags } from '../../../shared/tags.js';
+import { getShop } from '../models/Shop.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
 const unloadingPlayers = new Map<number, Promise<void>>();
+
+/** 현재 장소에서 실제 사용할 수 있는 생활·시설 기능의 HUD 표시 단일 원본. */
+class LocationCapability {
+    private static readonly all: LocationCapability[] = [];
+
+    static readonly FISHING = new LocationCapability(
+        'fishing',
+        '낚시 가능',
+        'map/fishing-spot',
+        location => location.hasTag(GameTags.LOCATION_FISHING),
+    );
+
+    static readonly SHOP = new LocationCapability(
+        'shop',
+        '상점 이용 가능',
+        'map/general-shop',
+        (location, player) => {
+            const shop = location.data.shopId ? getShop(location.data.shopId) : undefined;
+            return Boolean(shop && !shop.getAccessDeniedReason(player));
+        },
+    );
+
+    private constructor(
+        readonly key: LocationCapabilityData['key'],
+        readonly label: string,
+        readonly icon: string,
+        readonly isAvailable: (location: Location, player: Player) => boolean,
+    ) {
+        LocationCapability.all.push(this);
+    }
+
+    static values(): readonly LocationCapability[] {
+        return [...LocationCapability.all];
+    }
+
+    static fromKey(key: string): LocationCapability | undefined {
+        return LocationCapability.all.find(capability => capability.key === key.trim().toLowerCase());
+    }
+
+    static getAvailable(location: Location, player: Player): LocationCapabilityData[] {
+        return LocationCapability.values()
+            .filter(capability => capability.isAvailable(location, player))
+            .map(({ key, label, icon }) => ({ key, label, icon }));
+    }
+}
 
 /** 로그인 시 호출: DB에서 로드하여 메모리에 올림 */
 export async function loadPlayerByUserId(userId: number): Promise<Player> {
@@ -209,6 +260,7 @@ export function sendLocationInfo(userId: number): void {
         zoneType: location.data.zoneType,
         zoneLabel: location.riskPolicy.label,
         pvpAllowed: location.riskPolicy.pvpAllowed,
+        capabilities: LocationCapability.getAvailable(location, player),
         x: location.data.x,
         y: location.data.y,
         z: location.data.z,
