@@ -947,6 +947,26 @@ const smeltingMaterials = ForgeMaterial.values().flatMap(material =>
         ? [[material.rawItemDataId, material.itemDataId, material.label] as const]
         : []);
 
+function createArcaneSmeltingPlan(player: Player, skillLevel: number) {
+    const material = smeltingMaterials.find(([raw]) => player.inventory.getCount(raw) > 0);
+    if (!material) return undefined;
+    const [raw, refined, label] = material;
+    const count = Math.min(
+        player.inventory.getCount(raw),
+        2 + skillLevel + Math.floor((player.attribute?.get?.(AttributeType.FORGING_PRECISION) ?? 0) * 10),
+    );
+    const selections = player.inventory.selectItems([{ count, matches: item => item.itemDataId === raw }]);
+    if (!selections) return undefined;
+    const outputs = [{
+        itemDataId: refined,
+        count,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    }];
+    return { label, count, selections, outputs };
+}
+
 function precisionBreakDamage(context: SkillContext): number {
     return context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 135, 10) / 100
         + context.owner.maxLife * percentByLevel(context.skill.level, 2, 0.25) / 100
@@ -1020,30 +1040,27 @@ defineSkill({
     canActivate: context => {
         const player = requirePlayer(context);
         if (!hasBlacksmithSkillAccess(player)) return denySkill('대장장이 직업이 필요합니다.');
-        if (!smeltingMaterials.some(([raw]) => player.inventory.getCount(raw) > 0)) return denySkill('제련할 광물이나 보석이 없습니다.');
+        const plan = createArcaneSmeltingPlan(player, context.skill.level);
+        if (!plan) return denySkill('제련할 광물이나 보석이 없습니다.');
+        if (!player.inventory.canReplaceSelectedItems(plan.selections, plan.outputs)) {
+            return denySkill('제련 결과물을 담을 인벤토리 무게 여유가 부족합니다.');
+        }
         const cost = numberMeta(context, 'baseManaCost');
         return player.canSpendMentality(cost) ? { accepted: true } : denySkill(`정신력이 ${cost} 필요합니다.`);
     },
     onStart: context => {
         const player = requirePlayer(context);
-        const material = smeltingMaterials.find(([raw]) => player.inventory.getCount(raw) > 0);
-        if (!material) return;
-        const [raw, refined, label] = material;
-        const count = Math.min(
-            player.inventory.getCount(raw),
-            2 + context.skill.level + Math.floor((player.attribute?.get?.(AttributeType.FORGING_PRECISION) ?? 0) * 10),
-        );
-        const selections = player.inventory.selectItems([{ count, matches: item => item.itemDataId === raw }]);
-        if (!selections || !player.inventory.replaceSelectedItems(selections, [{
-            itemDataId: refined, count, durability: null, metadataDelta: null, tags: [],
-        }])) throw new Error('마력 제련 재료 교환에 실패했습니다.');
+        const plan = createArcaneSmeltingPlan(player, context.skill.level);
+        if (!plan || !player.inventory.replaceSelectedItems(plan.selections, plan.outputs)) {
+            throw new Error('마력 제련 재료 교환에 실패했습니다.');
+        }
         const cost = numberMeta(context, 'baseManaCost');
         if (!player.spendMentality(cost)) throw new Error('마력 제련 정신력 소모에 실패했습니다.');
-        const characterExperience = calculateSmeltingExperience(player, count);
+        const characterExperience = calculateSmeltingExperience(player, plan.count);
         const levelsGained = player.gainExp(characterExperience);
         return { state: {
-            materialLabel: label,
-            processedCount: count,
+            materialLabel: plan.label,
+            processedCount: plan.count,
             characterExperience,
             ...(levelsGained.length ? { reachedLevel: levelsGained.at(-1)! } : {}),
         } };

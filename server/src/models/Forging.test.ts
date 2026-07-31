@@ -789,6 +789,42 @@ test('대장장이 직업의 마력 제련은 원광을 레벨 수량만큼 일�
     assert.equal(characterExperience, 10);
 });
 
+test('마력 제련은 보석·마나 수정도 중량을 늘리지 않고 가득 찬 인벤토리에서 교환한다', () => {
+    for (const material of ForgeMaterial.values()) {
+        if (!material.rawItemDataId) continue;
+        const raw = getItemData(material.rawItemDataId);
+        const refined = getItemData(material.itemDataId);
+        assert.ok(raw && refined, material.label);
+        assert.ok(refined.weight <= raw.weight, `${material.label}: ${raw.weight} → ${refined.weight}`);
+    }
+
+    const inventory = Inventory.createEmpty(78, 0.8);
+    let mentality = 100;
+    const player = {
+        userId: 78,
+        maxExp: 1_000,
+        progress: PlayerProgress.createEmpty(78),
+        inventory,
+        career: { hasJob: (id: string) => id === 'career:blacksmith' },
+        skills: { has: () => false },
+        canSpendMentality: (amount: number) => mentality >= amount,
+        spendMentality: (amount: number) => { mentality -= amount; return true; },
+        gainExp: () => [],
+    } as unknown as Player;
+    inventory.addItem('ruby', 4);
+    assert.equal(inventory.currentWeight, 0.8);
+
+    const skill = new Skill({ playerId: 78, skillDataId: 'arcane_smelting', level: 2 });
+    const context = { owner: player as unknown as Entity, player, skill };
+    assert.equal(skill.data.canActivate?.(context).accepted, true);
+    skill.data.onStart?.(context);
+
+    assert.equal(inventory.getCount('ruby'), 0);
+    assert.equal(inventory.getCount('refined_ruby'), 4);
+    assert.ok(inventory.currentWeight < 0.8);
+    assert.equal(mentality, 82);
+});
+
 test('제련은 요구 경험치에, 단조는 완성품 레벨과 품질에 비례해 성장한다', () => {
     const low = { maxExp: 4_000 };
     const high = { maxExp: 80_000 };

@@ -2276,12 +2276,12 @@ defineItem({
 });
 
 const refinedMinerals = [
-    { id: 'refined_iron', name: '제련된 철', source: 'iron_ore', image: 'items/refined_iron', tag: GameTags.MATERIAL_IRON },
-    { id: 'refined_gold', name: '제련된 금', source: 'gold_ore', image: 'items/refined_gold', tag: GameTags.MATERIAL_GOLD },
-    { id: 'refined_ruby', name: '제련된 루비', source: 'ruby', image: 'items/refined_ruby', tag: GameTags.MATERIAL_RUBY },
-    { id: 'refined_emerald', name: '제련된 에메랄드', source: 'emerald', image: 'items/refined_emerald', tag: GameTags.MATERIAL_EMERALD },
-    { id: 'refined_diamond', name: '제련된 다이아몬드', source: 'diamond', image: 'items/refined_diamond', tag: GameTags.MATERIAL_DIAMOND },
-    { id: 'refined_mana_crystal', name: '정제 마나 수정', source: 'mana_crystal', image: 'items/refined_mana_crystal', tag: GameTags.MATERIAL_MANA_CRYSTAL },
+    { id: 'refined_iron', name: '제련된 철', source: 'iron_ore', image: 'items/refined_iron', weight: 0.55, tag: GameTags.MATERIAL_IRON },
+    { id: 'refined_gold', name: '제련된 금', source: 'gold_ore', image: 'items/refined_gold', weight: 0.48, tag: GameTags.MATERIAL_GOLD },
+    { id: 'refined_ruby', name: '제련된 루비', source: 'ruby', image: 'items/refined_ruby', weight: 0.16, tag: GameTags.MATERIAL_RUBY },
+    { id: 'refined_emerald', name: '제련된 에메랄드', source: 'emerald', image: 'items/refined_emerald', weight: 0.16, tag: GameTags.MATERIAL_EMERALD },
+    { id: 'refined_diamond', name: '제련된 다이아몬드', source: 'diamond', image: 'items/refined_diamond', weight: 0.16, tag: GameTags.MATERIAL_DIAMOND },
+    { id: 'refined_mana_crystal', name: '정제 마나 수정', source: 'mana_crystal', image: 'items/refined_mana_crystal', weight: 0.2, tag: GameTags.MATERIAL_MANA_CRYSTAL },
 ] as const;
 
 for (const material of refinedMinerals) defineItem({
@@ -2290,7 +2290,7 @@ for (const material of refinedMinerals) defineItem({
     description: '마력 제련으로 불순물을 걷어내 단조할 수 있게 만든 소재.',
     image: material.image,
     category: '제련 소재',
-    weight: 0.55,
+    weight: material.weight,
     stackable: true,
     maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: null,

@@ -519,36 +519,53 @@ export default class Inventory {
         return true;
     }
 
-    /** 선택된 재료를 소비하고 결과 snapshot을 추가한다. 실패하면 아무것도 변경하지 않는다. */
-    replaceSelectedItems(
+    private validateReplacement(
         selections: readonly InventoryItemSelection[],
         outputs: readonly ItemSnapshot[],
-    ): boolean {
+    ): Map<Item, number> | null {
         const totals = new Map<Item, number>();
         for (const selection of selections) {
-            if (!Number.isSafeInteger(selection.count) || selection.count <= 0) return false;
+            if (!Number.isSafeInteger(selection.count) || selection.count <= 0) return null;
             totals.set(selection.item, (totals.get(selection.item) ?? 0) + selection.count);
         }
         for (const [item, count] of totals) {
-            if (!this._items.includes(item) || item.count < count) return false;
+            if (!this._items.includes(item) || item.count < count) return null;
         }
 
         let outputWeight = 0;
         try {
             for (const output of outputs) {
                 const data = getItemData(output.itemDataId);
-                if (!data || !Number.isSafeInteger(output.count) || output.count <= 0) return false;
+                if (!data || !Number.isSafeInteger(output.count) || output.count <= 0) return null;
                 Item.fromSnapshot(output);
                 outputWeight += data.weight * output.count;
             }
         } catch {
-            return false;
+            return null;
         }
         const selectedWeight = [...totals].reduce(
             (sum, [item, count]) => sum + item.weight * count,
             0,
         );
-        if (this.currentWeight - selectedWeight + outputWeight > this._maxWeight) return false;
+        if (this.currentWeight - selectedWeight + outputWeight > this._maxWeight) return null;
+        return totals;
+    }
+
+    /** 재료를 실제로 소비하지 않고 같은 원자 교환 규칙으로 결과 수용 가능 여부를 검사한다. */
+    canReplaceSelectedItems(
+        selections: readonly InventoryItemSelection[],
+        outputs: readonly ItemSnapshot[],
+    ): boolean {
+        return this.validateReplacement(selections, outputs) !== null;
+    }
+
+    /** 선택된 재료를 소비하고 결과 snapshot을 추가한다. 실패하면 아무것도 변경하지 않는다. */
+    replaceSelectedItems(
+        selections: readonly InventoryItemSelection[],
+        outputs: readonly ItemSnapshot[],
+    ): boolean {
+        const totals = this.validateReplacement(selections, outputs);
+        if (!totals) return false;
 
         this.beginChangeBatch();
         try {

@@ -79,6 +79,13 @@ test('제작 결과의 무게를 받을 수 없으면 재료를 소비하지 않
     ]);
 
     assert.ok(selected);
+    assert.equal(inventory.canReplaceSelectedItems(selected, [{
+        itemDataId: 'craft_test_result',
+        count: 2,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    }]), false);
     assert.equal(inventory.replaceSelectedItems(selected, [{
         itemDataId: 'craft_test_result',
         count: 2,
