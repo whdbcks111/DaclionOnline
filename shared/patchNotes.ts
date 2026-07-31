@@ -73,6 +73,12 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.25', '2026-07-31',
+        [CHANGED,
+            '낚시 포획 게이지가 화면에서 100%에 도달했는데도 통신 시각 차이로 물고기를 놓쳤다고 판정되던 문제를 수정했습니다.',
+            '모바일 미니게임 조이스틱을 중앙의 큰 정지 구역과 고정 속도 8방향 조작 방식으로 개선했습니다.',
+        ],
+    ),
     definePatchNote('1.0.24', '2026-07-31',
         [FEATURE,
             '월드 지도에서 방문한 안전·중립·적대 지역을 파랑·청록·적색으로 구분하고, 보스 구역은 기존 금색으로 우선 표시하도록 개선했습니다.',

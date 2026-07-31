@@ -5,12 +5,14 @@ import type { ForgeRhythmConfig } from '../../../shared/minigames.js';
 import {
     cancelMiniGame,
     failMiniGameOnDisconnect,
+    FISHING_RESULT_SETTLE_MS,
     getMiniGameValidationSnapshot,
     hasActiveMiniGame,
     readyMiniGame,
     recordMiniGameAction,
     recordMiniGameInput,
     startMiniGame,
+    submitMiniGameResult,
 } from './minigame.js';
 import { updateGameScheduler } from './scheduler.js';
 import { getIO, initSocket } from './socket.js';
@@ -99,6 +101,47 @@ test('입력 소켓 연결 종료는 미니게임 취소가 아니라 실패로 
 
     assert.equal(await failMiniGameOnDisconnect(userId, socketId), true);
     assert.equal(resolvedSuccess, false);
+    assert.equal(hasActiveMiniGame(userId), false);
+});
+
+test('낚시 결과는 짧게 정산한 뒤 그 사이 도착한 서버 입력까지 포함해 확정한다', async () => {
+    const userId = 71_004;
+    const socketId = 'fishing-settle-socket';
+    let resolvedSuccess: boolean | undefined;
+    const started = startMiniGame({
+        userId,
+        type: 'fishing_capture',
+        config: {
+            seed: 1,
+            durationMs: 3_000,
+            rarityLabel: '일반',
+            rarityColor: '#fff',
+            fishIcon: 'items/silver_minnow',
+            difficulty: 1,
+            netShape: 'circle',
+            netWidth: 20,
+            netHeight: 20,
+            netSpeed: 30,
+            initialGauge: 0.5,
+            fillPerSecond: 0.1,
+            drainPerSecond: 0.1,
+        },
+        expiresInMs: 6_000,
+        validate: request => ({ success: request.inputs.at(-1)?.x === 1 }),
+        onResolved: result => { resolvedSuccess = result.success; },
+    });
+    assert.ok(started);
+    const readyAt = Date.now();
+    assert.equal(readyMiniGame(userId, socketId, started, readyAt), true);
+    assert.equal(submitMiniGameResult(userId, socketId, started), true);
+    assert.equal(resolvedSuccess, undefined);
+    assert.equal(hasActiveMiniGame(userId), true);
+
+    assert.equal(recordMiniGameInput(userId, socketId, { ...started, x: 1, y: 0 }, readyAt + 50), true);
+    updateGameScheduler(FISHING_RESULT_SETTLE_MS / 1_000);
+    await new Promise<void>(resolve => setImmediate(resolve));
+
+    assert.equal(resolvedSuccess, true);
     assert.equal(hasActiveMiniGame(userId), false);
 });
 

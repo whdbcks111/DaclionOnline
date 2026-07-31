@@ -48,6 +48,26 @@ const INITIAL_FORGE_STATE: ForgeRhythmSimulationState = {
   success: false,
 }
 
+const JOYSTICK_DEAD_ZONE_RATIO = 0.42
+const JOYSTICK_MARKERS = [
+  { label: '↑', x: 50, y: 12 },
+  { label: '↗', x: 77, y: 23 },
+  { label: '→', x: 88, y: 50 },
+  { label: '↘', x: 77, y: 77 },
+  { label: '↓', x: 50, y: 88 },
+  { label: '↙', x: 23, y: 77 },
+  { label: '←', x: 12, y: 50 },
+  { label: '↖', x: 23, y: 23 },
+] as const
+
+/** 중앙 정지 영역 밖의 포인터를 같은 속도의 8방향 축으로 고정한다. */
+function resolveFixedJoystickDirection(x: number, y: number): { x: number; y: number } {
+  const distance = Math.hypot(x, y)
+  if (distance < JOYSTICK_DEAD_ZONE_RATIO) return { x: 0, y: 0 }
+  const angle = Math.round(Math.atan2(y, x) / (Math.PI / 4)) * (Math.PI / 4)
+  return { x: Math.round(Math.cos(angle)), y: Math.round(Math.sin(angle)) }
+}
+
 function clampGauge(value: number): number {
   return Math.max(0, Math.min(1, value))
 }
@@ -288,7 +308,11 @@ export default function MiniGameOverlay() {
     if (!element) return
     const rect = element.getBoundingClientRect()
     const radius = Math.max(1, rect.width / 2)
-    setDirection((clientX - (rect.left + radius)) / radius, (clientY - (rect.top + radius)) / radius)
+    const next = resolveFixedJoystickDirection(
+      (clientX - (rect.left + radius)) / radius,
+      (clientY - (rect.top + radius)) / radius,
+    )
+    setDirection(next.x, next.y)
   }
 
   if (!game) return null
@@ -310,7 +334,17 @@ export default function MiniGameOverlay() {
       }}
       onPointerCancel={() => setDirection(0, 0)}
     >
-      <span style={{ transform: `translate(${joystickDirection.x * 65}%, ${joystickDirection.y * 65}%)` }} />
+      {JOYSTICK_MARKERS.map(marker => <i
+        key={marker.label}
+        aria-hidden="true"
+        style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
+      >{marker.label}</i>)}
+      <span className={styles.joystickStopZone} aria-hidden="true">정지</span>
+      <span
+        className={styles.joystickKnob}
+        aria-hidden="true"
+        style={{ transform: `translate(${joystickDirection.x * 108}%, ${joystickDirection.y * 108}%)` }}
+      />
     </div>
   </div>
 

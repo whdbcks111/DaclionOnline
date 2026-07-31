@@ -47,11 +47,20 @@ interface ActiveMiniGame extends StartMiniGameOptions {
     readyAt?: number
     inputs: MiniGameInputSample[]
     actions: MiniGameActionSample[]
+    resultRequested?: boolean
+    resultSettleKey?: string
 }
 
 const activeByUser = new Map<number, ActiveMiniGame>();
 /** 전송·브라우저 frame 순서의 작은 흔들림만 허용한다. 기존 1초 조기 완료 허용은 제거한다. */
 export const MINIGAME_RESULT_EARLY_TOLERANCE_MS = 80;
+/** 낚시 성공 경계에서 ready/input/result 패킷의 지연 편차를 서버 시계가 따라잡는 정산 시간. */
+export const FISHING_RESULT_SETTLE_MS = 300;
+
+function cancelActiveMiniGameTasks(active: ActiveMiniGame): void {
+    cancelGameTask(active.timeoutKey);
+    if (active.resultSettleKey) cancelGameTask(active.resultSettleKey);
+}
 
 function emitToUser(userId: number, event: 'miniGameStart' | 'miniGameResolved' | 'miniGameCancelled', data: unknown): void {
     for (const [, socket] of getIO().sockets.sockets) {
@@ -235,7 +244,7 @@ async function failMiniGame(
 ): Promise<boolean> {
     const active = activeByUser.get(userId);
     if (!active || (expectedSocketId !== undefined && active.inputSocketId !== expectedSocketId)) return false;
-    cancelGameTask(active.timeoutKey);
+    cancelActiveMiniGameTasks(active);
     activeByUser.delete(userId);
     const result: MiniGameValidationResult = { success: false, message: reason };
     try {
@@ -259,10 +268,67 @@ export function failMiniGameOnDisconnect(userId: number, socketId: string): Prom
 export function cancelMiniGame(userId: number, reason = '미니게임이 취소되었습니다.'): boolean {
     const active = activeByUser.get(userId);
     if (!active) return false;
-    cancelGameTask(active.timeoutKey);
+    cancelActiveMiniGameTasks(active);
     activeByUser.delete(userId);
     active.onCancelled?.(reason);
     emitToUser(userId, 'miniGameCancelled', { sessionId: active.sessionId, reason });
+    return true;
+}
+
+async function resolveMiniGameResult(
+    userId: number,
+    socketId: string,
+    request: MiniGameResultRequest,
+): Promise<boolean> {
+    const active = activeByUser.get(userId);
+    if (!matchesSession(active, socketId, request)) return false;
+    const validationRequest = getMiniGameValidationSnapshot(userId, socketId, request);
+    if (!validationRequest) {
+        await failMiniGame(userId, '미니게임 진행 시간이 올바르지 않아 실패했습니다.');
+        return false;
+    }
+
+    cancelActiveMiniGameTasks(active);
+    activeByUser.delete(userId);
+    let result: MiniGameValidationResult;
+    try {
+        result = active.validate(validationRequest);
+        await active.onResolved(result);
+    } catch {
+        result = { success: false, message: '미니게임 결과 처리 중 오류가 발생했습니다.' };
+    }
+    emitToUser(userId, 'miniGameResolved', {
+        sessionId: active.sessionId,
+        success: result.success,
+        message: result.message,
+    });
+    return true;
+}
+
+/**
+ * 낚시는 클라이언트 100% 프레임과 서버 수신 trace 사이의 짧은 지연 편차를 정산한 뒤 확정한다.
+ * 정산 중 도착한 최신 입력도 같은 서버 권위 trace에 포함한다.
+ */
+export function submitMiniGameResult(
+    userId: number,
+    socketId: string,
+    request: MiniGameResultRequest,
+): boolean {
+    const active = activeByUser.get(userId);
+    if (!matchesSession(active, socketId, request)) return false;
+    if (active.resultRequested) return true;
+    active.resultRequested = true;
+
+    if (active.type === 'fishing_capture') {
+        const settleKey = `${active.timeoutKey}:result-settle`;
+        active.resultSettleKey = settleKey;
+        scheduleGameTask(settleKey, FISHING_RESULT_SETTLE_MS / 1_000, () => {
+            void resolveMiniGameResult(userId, socketId, request);
+        });
+        return true;
+    }
+
+    void resolveMiniGameResult(userId, socketId, request);
     return true;
 }
 
@@ -280,32 +346,10 @@ export function initMiniGame(): void {
             const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
             if (session) recordMiniGameAction(session.userId, socket.id, request);
         });
-        socket.on('miniGameResult', async (request: MiniGameResultRequest) => {
+        socket.on('miniGameResult', (request: MiniGameResultRequest) => {
             const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
             if (!session || !request || typeof request !== 'object') return;
-            const active = activeByUser.get(session.userId);
-            if (!active || request.sessionId !== active.sessionId || request.token !== active.token) return;
-
-            const validationRequest = getMiniGameValidationSnapshot(session.userId, socket.id, request);
-            if (!validationRequest) {
-                await failMiniGame(session.userId, '미니게임 진행 시간이 올바르지 않아 실패했습니다.');
-                return;
-            }
-
-            cancelGameTask(active.timeoutKey);
-            activeByUser.delete(session.userId);
-            let result: MiniGameValidationResult;
-            try {
-                result = active.validate(validationRequest);
-                await active.onResolved(result);
-            } catch {
-                result = { success: false, message: '미니게임 결과 처리 중 오류가 발생했습니다.' };
-            }
-            emitToUser(session.userId, 'miniGameResolved', {
-                sessionId: active.sessionId,
-                success: result.success,
-                message: result.message,
-            });
+            submitMiniGameResult(session.userId, socket.id, request);
         });
         socket.on('disconnect', () => {
             const userId = typeof socket.data.onlineUserId === 'number'
