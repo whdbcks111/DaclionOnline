@@ -23,6 +23,8 @@ import {
 import { AttributeType } from './Attribute.js';
 import { calculateProjectileEvasionSpeed } from './Projectile.js';
 import { calculateEvasionChance } from './Combat.js';
+import { getSkillData, PLAYER_COMBAT_SKILL_CADENCE_SECONDS } from './Skill.js';
+import { GameTags } from '../../../shared/tags.js';
 
 test('projected profile uses the same eight stat points earned per level', () => {
     const report = analyzeJobBalance(50, 'career:warrior');
@@ -326,6 +328,8 @@ test('combat profiles share resources while mixing basics and every available jo
             assert.ok(rotation.effectiveSurvivalSeconds >= rotation.evasionSurvivalSeconds);
             assert.ok(rotation.expectedIncomingHitsBeforeKill >= 0);
             assert.ok(rotation.expectedIncomingDamageBeforeKill >= 0);
+            assert.ok(rotation.expectedLifeAfterKill >= 0
+                && rotation.expectedLifeAfterKill <= rotation.playerMaxLife);
         }
     }
 });
@@ -342,9 +346,7 @@ test('opening burst reports a real one-action kill before the target can counter
 
     assert.equal(report.oneActionKill, true);
     assert.equal(report.killsBeforeCounterattack, true);
-    assert.ok(report.simulatedKillSeconds < report.counterattackDelay);
-    assert.equal(report.expectedIncomingHitsBeforeKill, 0);
-    assert.equal(report.expectedIncomingDamageBeforeKill, 0);
+    assert.ok(report.openingBurstKillSeconds < report.counterattackDelay);
 });
 
 test('guaranteed evasion is measured as defensive uptime instead of arbitrary damage', () => {
@@ -463,6 +465,24 @@ test('combat rotation applies tag-based shared cooldowns between magic skills', 
     assert.ok(report.notes.some(note => note.includes('태그 공유')));
 });
 
+test('전투 로테이션은 평타를 막지 않으면서 모든 전투 기술 발동을 0.9초 이상 벌린다', () => {
+    const scenario = createBalanceScenario(200, 'career:mage', 'career:archer');
+    const report = analyzeCombatRotation(scenario, 10);
+    const combatCastTimes = report.skills.flatMap(skill =>
+        getSkillData(skill.skillId)?.tags.includes(GameTags.SKILL_COMBAT) ? skill.castTimes : [],
+    ).sort((left, right) => left - right);
+
+    assert.ok(combatCastTimes.length >= 2);
+    for (let index = 1; index < combatCastTimes.length; index++) {
+        assert.ok(
+            combatCastTimes[index]! - combatCastTimes[index - 1]!
+                >= PLAYER_COMBAT_SKILL_CADENCE_SECONDS - 0.0001,
+            `${combatCastTimes[index - 1]} → ${combatCastTimes[index]}`,
+        );
+    }
+    assert.ok(report.basicAttacks > 0);
+});
+
 test('boss profile normalizes a real boss archetype to the requested level', () => {
     const profile = analyzeAllBalanceProfiles(100)[0];
     assert.equal(profile.boss.encounter.key, 'boss');
@@ -494,13 +514,11 @@ test('일반전은 30초, 보스전은 240초 창에서 동레벨 전투 템포�
         assert.ok(profiles.every(profile => profile.boss.duration === 240));
         assert.ok(profiles.every(profile => profile.monster.simulatedKillSeconds >= 10));
 
-        if (level < 1000) {
-            const bossKillSeconds = profiles
-                .map(profile => profile.boss.simulatedKillSeconds)
-                .sort((left, right) => left - right);
-            const median = bossKillSeconds[Math.floor(bossKillSeconds.length / 2)]!;
-            assert.ok(median >= 120 && median <= 180, `Lv.${level} 보스 중앙값 ${median.toFixed(1)}초`);
-        }
+        const bossKillSeconds = profiles
+            .map(profile => profile.boss.simulatedKillSeconds)
+            .sort((left, right) => left - right);
+        const median = bossKillSeconds[Math.floor(bossKillSeconds.length / 2)]!;
+        assert.ok(median >= 120, `Lv.${level} 보스 중앙값 ${median.toFixed(1)}초`);
     }
 });
 

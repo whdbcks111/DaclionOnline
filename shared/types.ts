@@ -404,6 +404,9 @@ export interface SkillHudData {
     isActive: boolean
     remainingCooldown: number
     maxCooldown: number
+    /** 플레이어 전투 기술에만 존재하는 전투 기술 공용 연계 대기시간. */
+    cadenceRemaining?: number
+    cadenceDuration?: number
 }
 
 /** 인벤토리 원본이나 슬롯 번호에 의존하지 않는 사용 아이템 퀵 HUD 요약. */

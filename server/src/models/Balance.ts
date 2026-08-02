@@ -6,6 +6,7 @@ import { calculateEvasionChance, calculateFinalDamage } from './Combat.js';
 import { DEFAULT_PLAYER_BASE_ATTRIBUTE } from './PlayerDefaults.js';
 import { getAllJobs, getJob, isJobDescendant, resolveEliteJob, type JobData } from './Job.js';
 import Skill, {
+    PLAYER_COMBAT_SKILL_CADENCE_SECONDS,
     createSkillContext,
     getAllSkillData,
     getSkillData,
@@ -133,6 +134,8 @@ export interface RotationSkillReport {
     readonly name: string;
     readonly skillLevel: number;
     readonly casts: number;
+    /** 플레이어 전투 기술 공용 연계 간격까지 반영한 발동 시각. */
+    readonly castTimes: readonly number[];
     readonly damage: number;
     readonly healing: number;
     readonly shield: number;
@@ -500,6 +503,7 @@ export function analyzeCombatRotation(
             cooldownEndsAt: 0,
             lastCastAt: Number.NEGATIVE_INFINITY,
             casts: 0,
+            castTimes: [] as number[],
             damage: 0,
             healing: 0,
             shield: 0,
@@ -509,6 +513,7 @@ export function analyzeCombatRotation(
     });
     const entity = scenario.entity;
     const target = scenario.target;
+    const playerMaxLife = entity.maxLife;
     const actionInterval = Math.max(BALANCE_ACTION_FLOOR_SECONDS, 1 / Math.max(0.1, entity.attribute.get(AttributeType.ATTACK_SPEED)));
     const incomingBasic = calculateIncomingBasicAttack(scenario);
     const incomingBasicInterval = Math.max(
@@ -552,6 +557,7 @@ export function analyzeCombatRotation(
     let totalShield = 0;
     let cumulativeDamage = 0;
     let simulatedKillSeconds = Number.POSITIVE_INFINITY;
+    let nextCombatSkillAt = 0;
     const supportEvents: Array<{ at: number; amount: number }> = [];
     const guaranteedEvasionWindows: Array<{ start: number; end: number }> = [];
     while (time < window - 0.0001) {
@@ -565,7 +571,11 @@ export function analyzeCombatRotation(
         const ready = entries.filter(entry => {
             const context = createSkillContext(entity, entry.skill);
             const cost = finiteNonNegative(entry.data.balance?.calculateManaCost?.(context) ?? 0);
-            return entry.cooldownEndsAt <= time + 0.0001 && cost <= mentality + 0.0001;
+            const cadenceReady = !entry.data.tags.includes(GameTags.SKILL_COMBAT)
+                || nextCombatSkillAt <= time + 0.0001;
+            return entry.cooldownEndsAt <= time + 0.0001
+                && cadenceReady
+                && cost <= mentality + 0.0001;
         });
         const shouldBasic = skillsSinceBasic >= 2 || ready.length === 0;
         if (shouldBasic) {
@@ -589,6 +599,7 @@ export function analyzeCombatRotation(
             const cost = finiteNonNegative(entry.data.balance?.calculateManaCost?.(context) ?? 0);
             mentality = Math.max(0, mentality - cost);
             entry.casts++;
+            entry.castTimes.push(time);
             entry.damage += report.expectedDamagePerTarget;
             cumulativeDamage += report.expectedDamagePerTarget;
             entry.healing += report.healing;
@@ -596,6 +607,9 @@ export function analyzeCombatRotation(
             entry.manaSpent += cost;
             entry.lastCastAt = time;
             entry.cooldownEndsAt = time + Math.max(actionInterval, report.cooldown);
+            if (entry.data.tags.includes(GameTags.SKILL_COMBAT)) {
+                nextCombatSkillAt = time + PLAYER_COMBAT_SKILL_CADENCE_SECONDS;
+            }
             for (const rule of entry.data.sharedCooldowns ?? []) {
                 const sharedCooldownEndsAt = time + rule.seconds;
                 for (const targetEntry of entries) {
@@ -651,21 +665,21 @@ export function analyzeCombatRotation(
         guaranteedEvasionCoverage,
     );
     const supportPerSecond = (totalHealing + totalShield) / window;
-    const rawSurvivalSeconds = survivalSeconds(entity.maxLife, incomingPressure.rawDps);
-    const evasionSurvivalSeconds = survivalSeconds(entity.maxLife, incomingPressure.evasionDps);
+    const rawSurvivalSeconds = survivalSeconds(playerMaxLife, incomingPressure.rawDps);
+    const evasionSurvivalSeconds = survivalSeconds(playerMaxLife, incomingPressure.evasionDps);
     const effectiveSurvivalSeconds = survivalSeconds(
-        entity.maxLife,
+        playerMaxLife,
         Math.max(0, incomingPressure.guaranteedEvasionDps - supportPerSecond),
     );
     const expectedLifeAfterKill = Math.min(
-        entity.maxLife,
+        playerMaxLife,
         Math.max(0,
-            entity.maxLife + projectedSupportBeforeKill - incomingBeforeKill.expectedDamage,
+            playerMaxLife + projectedSupportBeforeKill - incomingBeforeKill.expectedDamage,
         ),
     );
     for (const entry of entries) entity.attribute.removeBySource(`balance:rotation:${entry.data.id}`);
     const notes = [
-        '평타 1회 뒤 스킬을 최대 2회까지 사용하며, 모든 스킬은 같은 행동 시간·정신력·개별 및 태그 공유 재사용 대기시간을 사용합니다.',
+        `평타 1회 뒤 스킬을 최대 2회까지 사용하며, 전투 기술은 ${PLAYER_COMBAT_SKILL_CADENCE_SECONDS}초 공용 연계 간격과 같은 행동 시간·정신력·개별 및 태그 공유 재사용 대기시간을 사용합니다.`,
         '선공 폭딜은 모든 기술이 준비된 교전 시작 시점에서 첫 반격 전에 끝낼 수 있는 직접 피해 행동을 큰 순서대로 계산합니다.',
         '생존은 대상의 실제 평타 피해·공격속도·보스 기술과 플레이어 생명력·속도 회피·확정 회피·직접 회복/보호막을 분리해 계산합니다.',
         '제어·은신·지속 피해와 다중 대상 추가 피해는 직접 피해나 임의 전투력 점수로 더하지 않습니다.',
@@ -687,7 +701,7 @@ export function analyzeCombatRotation(
         totalDamage,
         dps,
         basicDamageShare: totalDamage > 0 ? basicDamage / totalDamage : 0,
-        playerMaxLife: entity.maxLife,
+        playerMaxLife,
         targetMaxLife: target.maxLife,
         estimatedKillSeconds: dps > 0 ? target.maxLife / dps : Number.POSITIVE_INFINITY,
         simulatedKillSeconds,
@@ -719,7 +733,7 @@ export function analyzeCombatRotation(
         strongestIncomingSkillName: strongestIncomingSkill?.name,
         strongestIncomingSkillDamage: strongestIncomingSkill?.damageOnHit ?? 0,
         strongestIncomingSkillUnavoidable: strongestIncomingSkill?.unavoidable ?? false,
-        strongestIncomingSkillOneShots: (strongestIncomingSkill?.damageOnHit ?? 0) >= entity.maxLife,
+        strongestIncomingSkillOneShots: (strongestIncomingSkill?.damageOnHit ?? 0) >= playerMaxLife,
         rawSurvivalSeconds,
         evasionSurvivalSeconds,
         effectiveSurvivalSeconds,
@@ -728,13 +742,14 @@ export function analyzeCombatRotation(
         projectedSupportBeforeKill,
         expectedLifeAfterKill,
         survivesUntilKill: expectedLifeAfterKill > 0,
-        evasionPreventsDeath: incomingBeforeKill.rawDamage >= entity.maxLife + projectedSupportBeforeKill
-            && incomingBeforeKill.expectedDamage < entity.maxLife + projectedSupportBeforeKill,
+        evasionPreventsDeath: incomingBeforeKill.rawDamage >= playerMaxLife + projectedSupportBeforeKill
+            && incomingBeforeKill.expectedDamage < playerMaxLife + projectedSupportBeforeKill,
         skills: Object.freeze(entries.map(entry => Object.freeze({
             skillId: entry.data.id,
             name: entry.data.name,
             skillLevel: entry.skill.level,
             casts: entry.casts,
+            castTimes: Object.freeze([...entry.castTimes]),
             damage: entry.damage,
             healing: entry.healing,
             shield: entry.shield,
@@ -1112,6 +1127,7 @@ function calculateOpeningBurst(
                 ? report.expectedDamagePerTarget / hitChance / expectedCriticalMultiplier * maximumCriticalMultiplier
                 : 0,
             manaCost: report.manaCost,
+            combat: data.tags.includes(GameTags.SKILL_COMBAT),
         };
     }).filter(candidate => candidate.damage > 0)
         .sort((left, right) => right.damage - left.damage || left.name.localeCompare(right.name));
@@ -1124,11 +1140,17 @@ function calculateOpeningBurst(
     let mentality = scenario.entity.maxMentality;
     let damage = 0;
     let killSeconds = Number.POSITIVE_INFINITY;
+    let nextCombatSkillAt = 0;
     const remaining = [...skillCandidates];
     for (let index = 0; index < actionCount; index++) {
-        const candidateIndex = remaining.findIndex(candidate => candidate.manaCost <= mentality + 0.0001);
+        const actionAt = index * actionInterval;
+        const candidateIndex = remaining.findIndex(candidate => candidate.manaCost <= mentality + 0.0001
+            && (!candidate.combat || nextCombatSkillAt <= actionAt + 0.0001));
         const candidate = candidateIndex >= 0 ? remaining.splice(candidateIndex, 1)[0] : undefined;
-        if (candidate) mentality -= candidate.manaCost;
+        if (candidate) {
+            mentality -= candidate.manaCost;
+            if (candidate.combat) nextCombatSkillAt = actionAt + PLAYER_COMBAT_SKILL_CADENCE_SECONDS;
+        }
         damage += candidate?.damage ?? basicDamage;
         if (!Number.isFinite(killSeconds) && damage >= scenario.target.maxLife) {
             killSeconds = (index + 1) * actionInterval;

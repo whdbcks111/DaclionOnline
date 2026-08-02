@@ -15,6 +15,7 @@ import '../data/quests.js';
 import '../data/items.js';
 import { getIO, initSocket } from '../modules/socket.js';
 import { GameEventIds } from './GameEvent.js';
+import { GameTags } from '../../../shared/tags.js';
 
 initSocket(createServer(), 'http://localhost');
 test.after(() => { getIO().close(); });
@@ -117,6 +118,17 @@ test('주문·자체 생성 투사체와 무기 비종속 암살 기술은 장�
     );
     assert.ok(getSkillData('steel_slash')?.weaponRequirement);
     assert.ok(getSkillData('multishot')?.weaponRequirement);
+});
+
+test('모든 사용형 전투 스킬은 combat 태그를 가지며 생활 기술만 명시적으로 예외 처리한다', () => {
+    const activeNonCombatAllowlist = ['arcane_smelting'];
+    const activeNonCombatSkills = getAllSkillData()
+        .filter(skill => skill.tags.includes(GameTags.SKILL_ACTIVE)
+            && !skill.tags.includes(GameTags.SKILL_COMBAT))
+        .map(skill => skill.id)
+        .sort();
+
+    assert.deepEqual(activeNonCombatSkills, activeNonCombatAllowlist);
 });
 
 test('엘리트 직업의 계승 패시브와 액티브는 서로 다른 표시 이름을 가진다', () => {

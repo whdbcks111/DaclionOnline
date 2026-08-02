@@ -19,9 +19,21 @@ interface QuickButtonData extends SkillHudData {
 
 function cooldownState(skill: SkillHudData, now: number, receivedAt: number) {
   const elapsed = Math.max(0, now - receivedAt) / 1000
-  const remaining = Math.max(0, skill.remainingCooldown - elapsed)
-  const ratio = skill.maxCooldown > 0 ? Math.min(1, remaining / skill.maxCooldown) : 0
-  return { remaining, progressDegrees: (1 - ratio) * 360 }
+  const personalRemaining = Math.max(0, skill.remainingCooldown - elapsed)
+  const cadenceRemaining = Math.max(0, (skill.cadenceRemaining ?? 0) - elapsed)
+  const cadenceWins = cadenceRemaining > personalRemaining
+  const remaining = cadenceWins ? cadenceRemaining : personalRemaining
+  const duration = cadenceWins ? (skill.cadenceDuration ?? 0) : skill.maxCooldown
+  const ratio = duration > 0 ? Math.min(1, remaining / duration) : 0
+  return {
+    remaining,
+    progressDegrees: (1 - ratio) * 360,
+    waitLabel: cadenceWins ? '전투 기술 연계 대기' : '재사용 대기',
+  }
+}
+
+function hasPendingWait(skill: SkillHudData, elapsedSeconds = 0) {
+  return Math.max(skill.remainingCooldown, skill.cadenceRemaining ?? 0) > elapsedSeconds
 }
 
 export default function SkillQuickHud() {
@@ -82,11 +94,11 @@ export default function SkillQuickHud() {
     const tick = () => {
       const current = Date.now()
       setNow(current)
-      if (quickButtons.some(button => button.remainingCooldown * 1000 > current - playerStatsReceivedAt)) {
+      if (quickButtons.some(button => hasPendingWait(button, (current - playerStatsReceivedAt) / 1000))) {
         timer = window.setTimeout(tick, 100)
       }
     }
-    if (quickButtons.some(button => button.remainingCooldown > 0)) timer = window.setTimeout(tick, 100)
+    if (quickButtons.some(button => hasPendingWait(button))) timer = window.setTimeout(tick, 100)
     return () => { if (timer !== undefined) window.clearTimeout(timer) }
   }, [playerStatsReceivedAt, quickButtons])
 
@@ -167,7 +179,7 @@ export default function SkillQuickHud() {
             <button
               type="button"
               className={`${styles.skillButton} ${skill.isActive ? styles.active : ''}`}
-              title={`${skill.name}${skill.showLevel ? ` Lv.${skill.level}` : ''}${coolingDown ? ` · 재사용 대기 ${cooldown.remaining.toFixed(1)}초` : ''}`}
+              title={`${skill.name}${skill.showLevel ? ` Lv.${skill.level}` : ''}${coolingDown ? ` · ${cooldown.waitLabel} ${cooldown.remaining.toFixed(1)}초` : ''}`}
               aria-label={`${skill.name} 퀵 버튼 사용`}
               aria-disabled={coolingDown}
               onClick={() => activate(skill)}

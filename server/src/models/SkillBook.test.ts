@@ -75,6 +75,23 @@ class TestSkillPlayer extends Entity {
         this.mentality = Math.min(this.maxMentality, this.mentality + amount);
         return this.mentality;
     }
+
+    gainExp(_amount: number): number[] {
+        return [];
+    }
+}
+
+function installManualClock(initialNow = 10_000): {
+    advance: (seconds: number) => void;
+    restore: () => void;
+} {
+    const originalNow = Date.now;
+    let now = initialNow;
+    Date.now = () => now;
+    return {
+        advance: seconds => { now += seconds * 1000; },
+        restore: () => { Date.now = originalNow; },
+    };
 }
 
 class TestTarget extends Entity {
@@ -100,14 +117,15 @@ class TestMonsterSkillOwner extends Entity {
     override readonly name = '보스 시험체';
     readonly skills: SkillBook;
 
-    constructor(skillDataId = 'seismic_crush') {
+    constructor(skillDataIds: string | readonly string[] = 'seismic_crush') {
         super(30, 0, 'test', {
             maxLife: 1000,
             magicForce: 100,
             speed: 1,
             attackSpeed: 0.2,
         }, Equipment.createEmpty());
-        this.skills = SkillBook.createRuntime(this, [{ skillDataId, level: 3 }]);
+        const ids = typeof skillDataIds === 'string' ? [skillDataIds] : skillDataIds;
+        this.skills = SkillBook.createRuntime(this, ids.map(skillDataId => ({ skillDataId, level: 3 })));
     }
 }
 
@@ -244,7 +262,25 @@ test('스킬 HUD snapshot은 표시 가능한 스킬의 아이콘과 남은 쿨�
         isActive: false,
         remainingCooldown: 5,
         maxCooldown: 7.5,
+        cadenceRemaining: 0,
+        cadenceDuration: 0.9,
     }]);
+});
+
+test('HUD 연계 대기 필드는 플레이어 전투 기술에만 포함된다', () => {
+    const player = new TestSkillPlayer();
+    player.progress.setState(CareerProgressIds.MAIN, 'career:blacksmith');
+    player.skills.grant('power_strike', 'test');
+    player.skills.grant('arcane_smelting', 'test');
+
+    const snapshots = player.skills.getHudSnapshots(10_000);
+    const combat = snapshots.find(skill => skill.id === 'power_strike');
+    const lifestyle = snapshots.find(skill => skill.id === 'arcane_smelting');
+
+    assert.equal(combat?.cadenceRemaining, 0);
+    assert.equal(combat?.cadenceDuration, 0.9);
+    assert.equal('cadenceRemaining' in (lifestyle ?? {}), false);
+    assert.equal('cadenceDuration' in (lifestyle ?? {}), false);
 });
 
 test('스킬북 쿨다운 감소 API는 진행 중인 모든 스킬을 지정 초만큼 줄인다', () => {
@@ -282,6 +318,119 @@ test('공유 쿨다운은 보유 스킬의 표시 계열 태그에 최소 시간
     ]);
 });
 
+test('플레이어 전투 기술은 성공 후 0.9초 전역 연계 간격을 공유한다', () => {
+    const clock = installManualClock();
+    try {
+        const player = new TestSkillPlayer();
+        player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+        player.skills.grant('battle_rush', 'test');
+        player.skills.grant('indomitable', 'test');
+
+        assert.equal(player.skills.activateByInput('전투 질주').activated, true);
+        clock.advance(0.899);
+        const denied = player.skills.activateByInput('불굴');
+        assert.equal(denied.activated, false);
+        assert.match(denied.reason ?? '', /전투 기술 연계 대기/);
+
+        clock.advance(0.001);
+        assert.equal(player.skills.activateByInput('불굴').activated, true);
+    } finally {
+        clock.restore();
+    }
+});
+
+test('개인·공유 쿨다운과 전투 연계 대기 중 더 긴 제한을 안내한다', () => {
+    const clock = installManualClock();
+    try {
+        const player = new TestSkillPlayer();
+        player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+        const indomitable = player.skills.grant('indomitable', 'test').skill;
+        player.skills.grant('battle_rush', 'test');
+
+        assert.equal(player.skills.activateByInput('전투 질주').activated, true);
+        assert.match(player.skills.activateByInput('불굴').reason ?? '', /전투 기술 연계 대기/);
+
+        indomitable.startCooldown(2);
+        assert.match(player.skills.activateByInput('불굴').reason ?? '', /재사용 대기시간/);
+    } finally {
+        clock.restore();
+    }
+});
+
+test('발동 조건 실패와 onStart 예외는 전투 기술 연계 대기를 소비하지 않는다', () => {
+    const clock = installManualClock();
+    try {
+        const conditionPlayer = new TestSkillPlayer(9321);
+        conditionPlayer.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+        conditionPlayer.skills.grant('power_strike', 'test');
+        conditionPlayer.skills.grant('battle_rush', 'test');
+        assert.equal(conditionPlayer.skills.activateByInput('강타').activated, false);
+        assert.equal(conditionPlayer.skills.getPlayerCombatSkillCadenceRemaining(), 0);
+        assert.equal(conditionPlayer.skills.activateByInput('전투 질주').activated, true);
+
+        const errorPlayer = new TestSkillPlayer(9322);
+        errorPlayer.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+        errorPlayer.currentTarget = new TestTarget();
+        errorPlayer.equipment.equip('mainHand', new Item('old_sword', 1, 50, null), errorPlayer.attribute);
+        errorPlayer.skills.grant('power_strike', 'test');
+        errorPlayer.skills.grant('battle_rush', 'test');
+        Object.defineProperty(errorPlayer, 'attack', {
+            configurable: true,
+            value: () => { throw new Error('test onStart failure'); },
+        });
+
+        assert.equal(errorPlayer.skills.activateByInput('강타').activated, false);
+        assert.equal(errorPlayer.skills.getPlayerCombatSkillCadenceRemaining(), 0);
+        assert.equal(errorPlayer.skills.activateByInput('전투 질주').activated, true);
+    } finally {
+        clock.restore();
+    }
+});
+
+test('생활 기술은 전투 연계 대기 중에도 사용할 수 있다', () => {
+    const clock = installManualClock();
+    try {
+        const player = new TestSkillPlayer(9323);
+        player.progress.setState(CareerProgressIds.MAIN, 'career:blacksmith');
+        player.inventory.addItem('iron_ore', 1);
+        player.skills.grant('silver_scale_veil', 'test');
+        player.skills.grant('arcane_smelting', 'test');
+
+        assert.equal(player.skills.activateByInput('은린 장막').activated, true);
+        assert.ok(player.skills.getPlayerCombatSkillCadenceRemaining() > 0);
+        assert.equal(player.skills.activateByInput('마력 제련').activated, true);
+    } finally {
+        clock.restore();
+    }
+});
+
+test('쿨다운 감소는 전투 기술 연계 대기를 우회하지 않는다', () => {
+    const clock = installManualClock();
+    try {
+        const player = new TestSkillPlayer(9324);
+        player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+        player.skills.grant('battle_rush', 'test');
+        player.skills.grant('indomitable', 'test');
+
+        assert.equal(player.skills.activateByInput('전투 질주').activated, true);
+        player.skills.reduceCooldowns(100);
+        const denied = player.skills.activateByInput('불굴');
+        assert.equal(denied.activated, false);
+        assert.match(denied.reason ?? '', /전투 기술 연계 대기/);
+    } finally {
+        clock.restore();
+    }
+});
+
+test('몬스터 런타임 스킬북에는 플레이어 전투 연계 대기를 적용하지 않는다', () => {
+    const monster = new TestMonsterSkillOwner(['seismic_crush', 'bone_crown_decree']);
+    monster.currentTarget = new TestTarget();
+
+    assert.equal(monster.skills.activateById('seismic_crush').activated, true);
+    assert.equal(monster.skills.getPlayerCombatSkillCadenceRemaining(), 0);
+    assert.equal(monster.skills.activateById('bone_crown_decree').activated, true);
+});
+
 test('직접 공격과 투사체 발사는 적중 여부를 기다리지 않고 기존 은신을 해제한다', () => {
     const stealth = StatusEffectType.fromKey('stealth');
     assert.ok(stealth);
@@ -305,32 +454,39 @@ test('직접 공격과 투사체 발사는 적중 여부를 기다리지 않고 
 });
 
 test('바람 회피는 Lv.1부터 짧은 확정 회피 상태를 유지하고 지속시간을 4초로 제한한다', () => {
+    const clock = installManualClock();
     const player = new TestSkillPlayer(9313);
     player.progress.setState(CareerProgressIds.MAIN, 'career:archer');
     player.skills.grant('wind_evasion', 'test');
 
-    assert.equal(player.skills.activateByInput('바람 회피').activated, true);
-    const effect = player.getStatusEffect('wind_evasion');
-    assert.equal(effect?.duration, 2.5);
-    assert.equal(effect?.maxDuration, 2.5);
-    assert.equal(player.hasPersistentGuaranteedEvasion('status:wind_evasion'), true);
+    try {
+        assert.equal(player.skills.activateByInput('바람 회피').activated, true);
+        const effect = player.getStatusEffect('wind_evasion');
+        assert.equal(effect?.duration, 2.5);
+        assert.equal(effect?.maxDuration, 2.5);
+        assert.equal(player.hasPersistentGuaranteedEvasion('status:wind_evasion'), true);
 
-    player.removeStatusEffect('wind_evasion');
-    player.skills.setLevel('wind_evasion', 5);
-    player.attribute.addModifier({
-        attribute: AttributeType.SPEED.key,
-        op: 'add',
-        value: 10_000,
-        source: 'test:wind-evasion-cap',
-    });
-    player.skills.get('wind_evasion')!.startCooldown(0);
-    player.mentality = player.maxMentality;
-    assert.equal(player.skills.activateByInput('바람 회피').activated, true);
-    assert.equal(player.getStatusEffect('wind_evasion')?.duration, 4);
-    assert.equal(player.skills.get('wind_evasion')?.getMaxCooldown(player), 20);
+        player.removeStatusEffect('wind_evasion');
+        player.skills.setLevel('wind_evasion', 5);
+        player.attribute.addModifier({
+            attribute: AttributeType.SPEED.key,
+            op: 'add',
+            value: 10_000,
+            source: 'test:wind-evasion-cap',
+        });
+        player.skills.get('wind_evasion')!.startCooldown(0);
+        player.mentality = player.maxMentality;
+        clock.advance(0.9);
+        assert.equal(player.skills.activateByInput('바람 회피').activated, true);
+        assert.equal(player.getStatusEffect('wind_evasion')?.duration, 4);
+        assert.equal(player.skills.get('wind_evasion')?.getMaxCooldown(player), 20);
+    } finally {
+        clock.restore();
+    }
 });
 
 test('낚시도감 전용 스킬은 직업과 무기 없이 보호막과 수속성 둔화 공격을 제공한다', () => {
+    const clock = installManualClock();
     const player = new TestSkillPlayer(9314);
     const target = new TestTarget();
     player.currentTarget = target;
@@ -338,12 +494,17 @@ test('낚시도감 전용 스킬은 직업과 무기 없이 보호막과 수속�
     player.skills.grant('silver_scale_veil', 'fishing-collection:35');
     player.skills.grant('abyssal_harpoon', 'fishing-collection:61');
 
-    assert.equal(player.skills.activateByInput('은린 장막').activated, true);
-    assert.ok(player.getShield('skill:silver_scale_veil'));
+    try {
+        assert.equal(player.skills.activateByInput('은린 장막').activated, true);
+        assert.ok(player.getShield('skill:silver_scale_veil'));
 
-    assert.equal(player.skills.activateByInput('해연의 작살').activated, true);
-    assert.ok(target.life < target.maxLife);
-    assert.equal(target.hasStatusEffect('slowness'), true);
+        clock.advance(0.9);
+        assert.equal(player.skills.activateByInput('해연의 작살').activated, true);
+        assert.ok(target.life < target.maxLife);
+        assert.equal(target.hasStatusEffect('slowness'), true);
+    } finally {
+        clock.restore();
+    }
 });
 
 test('직업 패시브는 유효한 직업에서만 적용되고 사용형 HUD에서 제외된다', () => {

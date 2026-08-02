@@ -1383,7 +1383,7 @@ defineSkill({
         context.owner.applyStatusEffect(INDOMITABLE, valueByLevel(context.skill.level, 10, 1), context.skill.level);
         context.owner.heal(context.owner.maxLife * percentByLevel(context.skill.level, 15, 2) / 100, context.owner);
     },
-    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_WARRIOR],
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_WARRIOR],
 });
 
 defineSkill({
@@ -1521,7 +1521,7 @@ defineSkill({
             calculateWindEvasionDuration(context),
             context.skill.level,
         );
-    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_ARCHER],
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ARCHER],
 });
 
 defineSkill({
@@ -1562,7 +1562,7 @@ defineSkill({
             speedScaledDuration(context, 8, 0.75, 0.05),
             context.skill.level,
         );
-    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_ASSASSIN],
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ASSASSIN],
 });
 
 defineSkill({
@@ -1697,7 +1697,7 @@ defineSkill({
         const duration = valueByLevel(context.skill.level, 10, 1);
         context.owner.setShield('skill:mana_barrier', manaBarrierShieldAmount(context), ShieldType.GENERAL, duration, context.owner);
         context.owner.applyStatusEffect(MANA_BARRIER, duration, context.skill.level);
-    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_MAGIC],
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC],
 });
 
 defineSkill({
@@ -1759,7 +1759,7 @@ defineSkill({
     onStart: context => {
         spend(context, 16);
         context.owner.applyStatusEffect(ELEMENTAL_INSIGHT, valueByLevel(context.skill.level, 12, 1), context.skill.level);
-    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_MAGIC],
+    }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC],
 });
 
 for (const elemental of [
@@ -2897,7 +2897,7 @@ defineSkill({
         context.owner.setShield('skill:tempered_aegis', temperedAegisAmount(context), ShieldType.GENERAL,
             valueByLevel(context.skill.level, 10, 1), context.owner);
     },
-    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_BLACKSMITH],
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_BLACKSMITH],
 });
 
 function silverScaleVeilAmount(context: SkillContext): number {

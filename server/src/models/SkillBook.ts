@@ -2,6 +2,7 @@ import prisma from '../config/prisma.js';
 import type Entity from './Entity.js';
 import type Player from './Player.js';
 import Skill, {
+    PLAYER_COMBAT_SKILL_CADENCE_SECONDS,
     SkillFinishReason,
     acceptSkill,
     createSkillContext,
@@ -25,7 +26,7 @@ import {
 } from '../modules/message.js';
 import { chat } from '../utils/chatBuilder.js';
 import logger from '../utils/logger.js';
-import type { TagId } from '../../../shared/tags.js';
+import { GameTags, type TagId } from '../../../shared/tags.js';
 import type { SkillHudData } from '../../../shared/types.js';
 import { ActionType } from './Action.js';
 import { partyManager } from '../modules/party.js';
@@ -51,6 +52,8 @@ export default class SkillBook {
     private version = 0;
     private autoAcquireTimer = 0;
     private autoActivateTimer = 0;
+    /** 저장하지 않는 플레이어 전투 기술 공용 연계 종료 시각. */
+    private playerCombatSkillCadenceEndsAt = 0;
     private fullAutoAcquireCheck = true;
     private readonly changedProgress = new Set<string>();
 
@@ -156,6 +159,11 @@ export default class SkillBook {
         return affected.size;
     }
 
+    /** 쿨다운 감소와 분리된 플레이어 전투 기술 연계 대기시간을 반환한다. */
+    getPlayerCombatSkillCadenceRemaining(now = Date.now()): number {
+        return Math.max(0, (this.playerCombatSkillCadenceEndsAt - now) / 1000);
+    }
+
     getVisible(): readonly Skill[] {
         const owner = this.requireOwner();
         return this.getAll().filter(skill => {
@@ -173,6 +181,12 @@ export default class SkillBook {
         const owner = this.requireOwner();
         return this.getVisible().filter(skill => !skill.isPassive).map(skill => {
             const remainingCooldown = skill.getRemainingCooldown(now);
+            const combatCadence = this.usesPlayerCombatSkillCadence(skill)
+                ? {
+                    cadenceRemaining: this.getPlayerCombatSkillCadenceRemaining(now),
+                    cadenceDuration: PLAYER_COMBAT_SKILL_CADENCE_SECONDS,
+                }
+                : {};
             return {
                 id: skill.skillDataId,
                 name: skill.name,
@@ -181,6 +195,7 @@ export default class SkillBook {
                 isActive: skill.isActive,
                 remainingCooldown,
                 maxCooldown: skill.getMaxCooldown(owner),
+                ...combatCadence,
             };
         });
     }
@@ -405,7 +420,7 @@ export default class SkillBook {
         const owner = this.requireOwner();
         let denied: SkillCheckResult;
         try {
-            denied = this.checkActivation(skill);
+            denied = this.checkActivation(skill, Date.now());
         } catch (error) {
             logger.error(`스킬 발동 조건 실패: ${skill.skillDataId}`, error);
             denied = { accepted: false, reason: '스킬 발동 조건을 확인할 수 없습니다.' };
@@ -450,6 +465,10 @@ export default class SkillBook {
             const cooldownStartedAt = Date.now();
             skill.startCooldown(skill.getMaxCooldown(owner), cooldownStartedAt);
             this.applySharedCooldowns(skill, cooldownStartedAt);
+            if (this.usesPlayerCombatSkillCadence(skill)) {
+                this.playerCombatSkillCadenceEndsAt = cooldownStartedAt
+                    + PLAYER_COMBAT_SKILL_CADENCE_SECONDS * 1000;
+            }
         } catch (error) {
             logger.error(`스킬 시작 실패: ${skill.skillDataId}`, error);
             const reason = '스킬 발동 중 오류가 발생했습니다.';
@@ -495,7 +514,7 @@ export default class SkillBook {
         return { matched: true, activated: true, skill };
     }
 
-    private checkActivation(skill: Skill): SkillCheckResult {
+    private checkActivation(skill: Skill, now = Date.now()): SkillCheckResult {
         const owner = this.requireOwner();
         if (!skill.isVisibleTo(owner)) return { accepted: false, reason: '현재 표시되지 않는 스킬입니다.' };
         if (owner.isDefeated) return { accepted: false, reason: '사망 상태에서는 스킬을 사용할 수 없습니다.' };
@@ -503,13 +522,23 @@ export default class SkillBook {
             return { accepted: false, reason: '현재 스킬을 사용할 수 없는 상태입니다.' };
         }
         if (skill.isActive) return { accepted: false, reason: '이미 발동 중인 스킬입니다.' };
-        const remaining = skill.getRemainingCooldown();
-        if (remaining > 0) {
-            return { accepted: false, reason: `재사용 대기시간이 ${remaining.toFixed(1)}초 남았습니다.` };
+        const remainingCooldown = skill.getRemainingCooldown(now);
+        const cadenceRemaining = this.usesPlayerCombatSkillCadence(skill)
+            ? this.getPlayerCombatSkillCadenceRemaining(now)
+            : 0;
+        if (remainingCooldown > 0 || cadenceRemaining > 0) {
+            if (cadenceRemaining > remainingCooldown) {
+                return { accepted: false, reason: `전투 기술 연계 대기 ${cadenceRemaining.toFixed(1)}초` };
+            }
+            return { accepted: false, reason: `재사용 대기시간이 ${remainingCooldown.toFixed(1)}초 남았습니다.` };
         }
         const usable = skill.checkUsable(owner);
         if (!usable.accepted) return usable;
         return skill.data.canActivate?.(createSkillContext(owner, skill)) ?? acceptSkill();
+    }
+
+    private usesPlayerCombatSkillCadence(skill: Skill): boolean {
+        return this.getPlayerOwner() !== null && skill.hasTag(GameTags.SKILL_COMBAT);
     }
 
     private awardSuccessfulActivationExperience(player: Player, skill: Skill): void {
