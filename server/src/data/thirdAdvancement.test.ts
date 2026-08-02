@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import test from 'node:test';
 import { GameTags } from '../../../shared/tags.js';
+import { registerOnlinePlayer, unregisterOnlinePlayer } from '../modules/playerRegistry.js';
 import { initSocket } from '../modules/socket.js';
 import CareerProfile, { CareerProgressIds } from '../models/Career.js';
 import Entity from '../models/Entity.js';
@@ -13,6 +14,7 @@ import type Player from '../models/Player.js';
 import { PlayerProgress } from '../models/Progress.js';
 import { getQuestData, QuestStatus } from '../models/Quest.js';
 import QuestBook from '../models/QuestBook.js';
+import { ThreatAction } from '../models/Threat.js';
 import './items.js';
 import './jobs.js';
 import './monsters.js';
@@ -132,6 +134,22 @@ function finishMastery(player: Player, lineage: (typeof LINEAGES)[number]['linea
     }
 }
 
+function advanceToThroneTrial(
+    player: Player,
+    lineage: (typeof LINEAGES)[number],
+    questId: string,
+): void {
+    assert.equal(player.quests.accept(questId, THIRD_ADVANCEMENT_NPC_ID).success, true);
+    for (const locationId of ['nebula_waystation', 'chronofrost_refuge', 'endstar_bastion']) {
+        emitGameEvent(GameEventIds.LOCATION_CHANGED, {
+            actor: player,
+            data: { fromLocationId: 'test', toLocationId: locationId },
+        });
+    }
+    finishMastery(player, lineage.lineage);
+    assert.equal(player.quests.getSnapshot(questId)?.stageId, 'throne-trial');
+}
+
 test('5개 3차 퀘스트는 순례·직업별 숙련·세 왕좌·귀환의 4단계를 갖는다', () => {
     const masteryContracts = new Map([
         ['warrior', [[GameEventIds.ENTITY_DEFEATED, 80]]],
@@ -235,5 +253,41 @@ test('각 3차 계보는 이전 단계 이벤트를 소급하지 않고 정확�
         assert.equal(player.quests.canAccept(definition.questId, THIRD_ADVANCEMENT_NPC_ID), false);
         await Promise.resolve();
         assert.equal(actual.saveCount, 1);
+    }
+});
+
+test('세 왕좌 공동 처치는 막타자와 양수 기여자의 3차 시험을 함께 진행시킨다', () => {
+    const lineage = LINEAGES[0];
+    const definition = THIRD_ADVANCEMENT_DEFINITIONS.find(entry => entry.lineage === lineage.lineage)!;
+    const finisher = new ThirdAdvancementPlayer(98_100, lineage);
+    const contributor = new ThirdAdvancementPlayer(98_101, lineage);
+    const finisherPlayer = finisher as unknown as Player;
+    const contributorPlayer = contributor as unknown as Player;
+    registerOnlinePlayer(finisherPlayer);
+    registerOnlinePlayer(contributorPlayer);
+
+    try {
+        advanceToThroneTrial(finisherPlayer, lineage, definition.questId);
+        advanceToThroneTrial(contributorPlayer, lineage, definition.questId);
+
+        for (const [index, bossId] of ['nebula_sovereign', 'zero_hour_queen', 'last_constellation'].entries()) {
+            const boss = new Monster(bossId, 'job_hall');
+            assert.equal(boss.recordThreat(finisherPlayer, ThreatAction.DAMAGE, 20), true);
+            assert.equal(boss.recordThreat(contributorPlayer, ThreatAction.DAMAGE, 10), true);
+            if (index === 0) {
+                assert.deepEqual(boss.getDefeatCreditUserIds(), [finisher.userId, contributor.userId]);
+                assert.equal(Object.isFrozen(boss.getDefeatCreditUserIds()), true);
+            }
+            emitGameEvent(GameEventIds.ENTITY_DEFEATED, {
+                actor: finisherPlayer,
+                subject: boss,
+            });
+        }
+
+        assert.equal(finisher.quests.getSnapshot(definition.questId)?.stageId, 'return-report');
+        assert.equal(contributor.quests.getSnapshot(definition.questId)?.stageId, 'return-report');
+    } finally {
+        unregisterOnlinePlayer(finisher.userId);
+        unregisterOnlinePlayer(contributor.userId);
     }
 });

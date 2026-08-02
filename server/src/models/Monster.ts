@@ -7,6 +7,7 @@ import type { EquipSlot } from "./Equipment.js";
 import { getLocation } from "./Location.js";
 import type Player from "./Player.js";
 import { chat } from "../utils/chatBuilder.js";
+import logger from '../utils/logger.js';
 import { sendBotMessageToUser, sendBotMessageToUsers } from "../modules/message.js";
 import { getOnlinePlayerUserIdsAtLocation } from '../modules/playerRegistry.js';
 import { GameTags, normalizeTags } from "../../../shared/tags.js";
@@ -25,6 +26,7 @@ import {
     type MonsterAiProfileInput,
 } from './Threat.js';
 import type { MonsterRank, MonsterStatProfile, MonsterStatWeightMap } from './MonsterStats.js';
+import { emitGameEvent, GameEventIds } from './GameEvent.js';
 
 /** 드롭 아이템 정보 */
 export interface DropInfo {
@@ -99,6 +101,8 @@ export interface MonsterChallengeContext {
 
 export interface MonsterChallengeHandle {
     cancel?: () => void;
+    /** 활성 challenge가 보스의 게임 tick을 따라 결정적으로 진행할 수 있는 선택적 갱신 경계. */
+    update?: (dt: number) => void;
 }
 
 export type MonsterChallengeHandler = (context: MonsterChallengeContext) => MonsterChallengeHandle | false;
@@ -220,6 +224,7 @@ export default class Monster extends Entity {
     private challengeActive = false;
     private challengeGeneration = 0;
     private challengeCancel?: () => void;
+    private challengeUpdate?: (dt: number) => void;
     private bossEncounterActive = false;
     private bossIntroTimer = 0;
     private readonly spokenBossPhases = new Set<number>();
@@ -304,14 +309,22 @@ export default class Monster extends Entity {
     }
 
     /** 스킬·상태효과가 raw threat table 없이 행동별 위협도를 기록하는 공개 API. */
-    recordThreat(actor: Entity, action: ThreatAction, amount: number): void {
-        if (!this.canJoinCombatClaim(actor.attackOwner)) return;
-        this.threat.record(actor, action, amount);
+    recordThreat(actor: Entity, action: ThreatAction, amount: number): boolean {
+        if (!this.canJoinCombatClaim(actor.attackOwner)) return false;
+        if (!this.threat.record(actor, action, amount)) return false;
         this.currentTarget = this.threat.selectTarget(this.currentTarget);
+        return true;
     }
 
-    taunt(actor: Entity, power: number): void {
-        this.recordThreat(actor, ThreatAction.TAUNT, power);
+    taunt(actor: Entity, power: number): boolean {
+        const source = actor.attackOwner;
+        if (!this.recordThreat(source, ThreatAction.TAUNT, power)) return false;
+        emitGameEvent(GameEventIds.MONSTER_TAUNTED, {
+            actor: source,
+            subject: this,
+            data: { power },
+        });
+        return true;
     }
 
     getThreatContributions() {
@@ -321,6 +334,12 @@ export default class Monster extends Entity {
     /** 처치 reset 전후 Entity 수명과 무관하게 복사해서 쓸 수 있는 userId 기반 기여 원장. */
     getDefeatContributionSnapshot(): readonly DefeatContributionSnapshot[] {
         return this.threat.getDefeatContributionSnapshot();
+    }
+
+    override getDefeatCreditUserIds(): readonly number[] {
+        return Object.freeze([...new Set(this.getDefeatContributionSnapshot()
+            .filter(contribution => contribution.total > 0)
+            .map(contribution => contribution.userId))]);
     }
 
     getCombatClaimUserIds(): readonly number[] {
@@ -435,7 +454,15 @@ export default class Monster extends Entity {
         this.skills.update(dt);
         if (wasSkillActive || this.skills.hasActiveSkill()) return;
 
-        if (this.challengeActive) return;
+        if (this.challengeActive) {
+            try {
+                this.challengeUpdate?.(Math.max(0, dt));
+            } catch (error) {
+                logger.error(`보스 challenge 갱신 실패: ${this.monsterDataId}`, error);
+                this.resetChallengePattern();
+            }
+            return;
+        }
         if (this.challengePattern) {
             this.challengePatternTimer -= dt;
             if (this.challengePatternTimer <= 0 && this.startChallengePattern(target)) return;
@@ -593,9 +620,10 @@ export default class Monster extends Entity {
             monster: this,
             target,
             complete: () => {
-                if (generation !== this.challengeGeneration) return;
+                if (generation !== this.challengeGeneration || !this.challengeActive) return;
                 this.challengeActive = false;
                 this.challengeCancel = undefined;
+                this.challengeUpdate = undefined;
                 this.challengePatternTimer = rollRange(pattern.interval);
             },
         });
@@ -604,13 +632,16 @@ export default class Monster extends Entity {
             this.challengePatternTimer = 0.5;
             return false;
         }
+        if (generation !== this.challengeGeneration || !this.challengeActive) return true;
         this.challengeCancel = handle.cancel;
+        this.challengeUpdate = handle.update;
         return true;
     }
 
     private resetChallengePattern(): void {
         const cancel = this.challengeCancel;
         this.challengeCancel = undefined;
+        this.challengeUpdate = undefined;
         this.challengeGeneration++;
         this.challengeActive = false;
         this.challengePatternTimer = this.challengePattern?.initialDelay ?? 0;

@@ -287,6 +287,9 @@ export default abstract class Entity implements TagReadable {
     /** 공격 보상·어그로를 귀속할 최종 소유자. Projectile은 owner를 반환한다. */
     get attackOwner(): Entity { return this; }
 
+    /** 처치 퀘스트를 함께 진행할 온라인 플레이어 ID의 불변 스냅샷. */
+    getDefeatCreditUserIds(): readonly number[] { return []; }
+
     /** 피격자의 이동속도 회피 판정에 사용할 공격 측 속도. */
     getEvasionAttackSpeed(): number {
         return this.attribute.get(AttributeType.SPEED);

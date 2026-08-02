@@ -17,7 +17,7 @@ Entity/Resource/SkillBook
 
 `GameEvent`는 도메인 동작을 직접 DB나 스킬에 결합하지 않는 동기식 내부 이벤트다. handler에서는 DB I/O를 하지 않고 Player가 소유한 메모리 상태만 변경한다. 운영 진단용 trace는 최근 500개만 유지하며 `getRecentGameEvents()`가 ID·사용자 ID·이름·primitive data 스냅샷만 반환한다. 프로세스를 재시작하면 trace는 사라진다.
 
-현재 표준 이벤트 ID는 장소 도착, 치명타, 공격 적중·회피, 대상 지정, Entity 제압, Resource 파괴·성공 상호작용, 아이템 장착·성공 사용, 낚시 성공, 스탯 분배, 스킬 획득·시작·종료, 제작법 발견·아이템 제작, NPC 대화, 상태효과, 퀘스트, 직업 배정·엘리트 전직, 칭호 획득·장착·회수다. 새 이벤트는 `GameEventIds`에 넣고 실제 상태가 확정되는 모델 API에서 `emitGameEvent()`를 호출한다. 명령 호출 자체는 성공 증거로 사용하지 않는다. 퀘스트 목표 추적은 [퀘스트 시스템](quests.md), 칭호 획득과 장착 패시브는 [칭호 시스템](titles.md), 종별 기록과 영구 보너스는 [전문 도감 시스템](codex.md)을 참고한다.
+현재 표준 이벤트 ID는 장소 도착, 치명타, 공격 적중·회피, 대상 지정, 유효한 몬스터 도발, Entity 제압, Resource 파괴·성공 상호작용, 아이템 장착·성공 사용, 낚시 성공, 스탯 분배, 스킬 획득·시작·종료, 제작법 발견·아이템 제작, NPC 대화, 상태효과, 퀘스트, 직업 배정·엘리트 전직, 칭호 획득·장착·회수다. 새 이벤트는 `GameEventIds`에 넣고 실제 상태가 확정되는 모델 API에서 `emitGameEvent()`를 호출한다. 명령 호출 자체는 성공 증거로 사용하지 않는다. 퀘스트 목표 추적은 [퀘스트 시스템](quests.md), 칭호 획득과 장착 패시브는 [칭호 시스템](titles.md), 종별 기록과 영구 보너스는 [전문 도감 시스템](codex.md)을 참고한다.
 
 ## 진행 상태와 통계
 
@@ -33,7 +33,7 @@ Entity/Resource/SkillBook
 
 모든 key는 `namespace:path` 형식이고 사용 전에 `defineProgress()` 또는 `defineStatistic()`으로 등록한다. 다른 기능은 내부 Map이나 Prisma row를 참조하지 않고 위 목적형 API와 `getSnapshots()`, `subscribeChanges()`만 사용한다. 기본값인 `0/false/빈 문자열`은 DB row를 만들지 않는다.
 
-`defineStatistic()`은 하나의 게임 이벤트를 구독하고 최종 `attackOwner`가 Player일 때 해당 counter를 증가시킨다. `combat:critical_hits`와 14종 속성 몬스터 처치 횟수가 공개 통계로 등록되어 `/통계`에 표시된다. 불·얼음·전기는 자동 주문 해금과 저장 호환을 위해 기존 `career:mage_*_kills` ID를 유지하고, 물·자연·독·돌·어둠·빛·언데드·신성·벌레·금속·땅은 `combat:property_kills/{key}` ID를 사용한다. 처치 통계는 권위적 `combat:entity_defeated` 이벤트의 subject가 실제 몬스터이면서 해당 `property:*` 태그를 가질 때만 증가하며 `/속성표`의 기존 표시명과 아이콘을 재사용한다.
+`defineStatistic()`은 하나의 게임 이벤트를 구독하고 최종 `attackOwner`가 Player일 때 해당 counter를 증가시킨다. `combat:critical_hits`와 14종 속성 몬스터 처치 횟수가 공개 통계로 등록되어 `/통계`에 표시된다. 불·얼음·전기는 자동 주문 해금과 저장 호환을 위해 기존 `career:mage_*_kills` ID를 유지하고, 물·자연·독·돌·어둠·빛·언데드·신성·벌레·금속·땅은 `combat:property_kills/{key}` ID를 사용한다. 처치 통계는 권위적 `combat:entity_defeated` 이벤트의 subject가 실제 몬스터이면서 해당 `property:*` 태그를 가질 때만 증가하며 `/속성표`의 기존 표시명과 아이콘을 재사용한다. `QuestBook`만 처치 이벤트에서 `Entity.getDefeatCreditUserIds()`의 양수 기여자를 추가 수신자로 확장하고, 통계·도감 구독자는 기존 최종 owner 이벤트 한 번만 처리해 중복 집계를 만들지 않는다.
 
 전문 도감은 총합 통계를 종별 기록으로 추측하지 않고 `codex-entry:*` counter와 `codex-rank:*` 영구 flag를 별도로 사용한다. `CodexBook`이 진행·분류 점수·10%/35%/70% rank 해금을 소유하고 `modules/codex.ts`가 확정 처치·광맥 파괴·장소 도착·요리 제작 이벤트만 연결한다. 기존 `world:visited/*` flag는 로그인 시 탐험 엔트리 0→1 소급의 유일한 원본이다. 기존 `FishingCollection`과 `/낚시도감`은 이 registry에 합치지 않는다.
 

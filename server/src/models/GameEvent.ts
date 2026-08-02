@@ -30,6 +30,7 @@ export const GameEventIds = Object.freeze({
     ATTACK_EVADED: 'combat:attack_evaded',
     TARGET_SELECTED: 'combat:target_selected',
     ENTITY_DEFEATED: 'combat:entity_defeated',
+    MONSTER_TAUNTED: 'combat:monster_taunted',
     PVP_KILL: 'combat:pvp_kill',
     RESOURCE_DESTROYED: 'resource:destroyed',
     RESOURCE_INTERACTED: 'resource:interacted',

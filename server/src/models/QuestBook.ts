@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import prisma from '../config/prisma.js';
 import { sendBotMessageToUser, sendNotificationToUser } from '../modules/message.js';
+import { getOnlinePlayer } from '../modules/playerRegistry.js';
 import { chat } from '../utils/chatBuilder.js';
 import logger from '../utils/logger.js';
 import { GameTags, TagCollection } from '../../../shared/tags.js';
@@ -597,8 +598,30 @@ export default class QuestBook {
 
 subscribeAllGameEvents(event => {
     const owner = event.actor?.attackOwner;
-    if (!owner?.isPlayer) return;
-    (owner as Player).quests?.handleGameEvent(event);
+    if (event.id !== GameEventIds.ENTITY_DEFEATED) {
+        if (!owner?.isPlayer) return;
+        (owner as Player).quests?.handleGameEvent(event);
+        return;
+    }
+
+    const creditedUserIds = new Set<number>();
+    let directOwnerUserId: number | undefined;
+    if (owner?.isPlayer) {
+        (owner as Player).quests?.handleGameEvent(event);
+        directOwnerUserId = owner.playerUserId;
+        if (directOwnerUserId !== undefined) creditedUserIds.add(directOwnerUserId);
+    }
+    const subject = event.subject;
+    if (!subject) return;
+    for (const userId of subject.getDefeatCreditUserIds()) {
+        if (Number.isSafeInteger(userId) && userId > 0) creditedUserIds.add(userId);
+    }
+    for (const userId of creditedUserIds) {
+        if (userId === directOwnerUserId) continue;
+        const player = getOnlinePlayer(userId);
+        if (!player || player.isDefeated || player.locationId !== subject.locationId) continue;
+        player.quests?.handleGameEvent(event);
+    }
 });
 
 function progressKey(stage: QuestStage, objective: QuestObjective): string {

@@ -134,14 +134,14 @@ export class ThreatTable {
         activeTables.add(this);
     }
 
-    record(actor: Entity, action: ThreatAction, amount: number): void {
+    record(actor: Entity, action: ThreatAction, amount: number): boolean {
         const source = actor.attackOwner;
-        if (source === this.owner || !Number.isFinite(amount) || amount <= 0) return;
+        if (source === this.owner || !Number.isFinite(amount) || amount <= 0) return false;
         const contributesToDefeat = action === ThreatAction.DAMAGE
             || action === ThreatAction.HEALING
             || action === ThreatAction.SHIELDING
             || action === ThreatAction.CONTROL;
-        if (contributesToDefeat && !this.canRecordContribution(source)) return;
+        if (!this.canRecordContribution(source) || (!contributesToDefeat && source.isDefeated)) return false;
 
         const userId = source.playerUserId;
         if (contributesToDefeat && userId !== undefined) {
@@ -160,7 +160,7 @@ export class ThreatTable {
         }
 
         // 사망한 source의 지속 효과 기여는 보존하되 새 AI 공격 대상으로 되살리지는 않는다.
-        if (source.isDefeated) return;
+        if (source.isDefeated) return contributesToDefeat;
         const entry = this.entries.get(source) ?? {
             actor: source,
             score: 0,
@@ -178,6 +178,7 @@ export class ThreatTable {
         else if (action === ThreatAction.SHIELDING) entry.shielding += amount;
         else if (action === ThreatAction.CONTROL) entry.control += amount;
         this.entries.set(source, entry);
+        return true;
     }
 
     hasParticipant(entity: Entity): boolean {

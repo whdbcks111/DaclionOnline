@@ -46,6 +46,8 @@ GameEvent + Inventory/Progress 변경
 
 처치·파괴 조건은 개별 데이터 ID에 과도하게 결합하지 않고 `Entity.hasTag()` predicate를 우선한다. 아이템 목표는 raw `items` 배열 대신 `Inventory.countMatching/selectItems/replaceSelectedItems`를 쓴다. Inventory와 PlayerProgress 변경 구독, 레벨·장소 변경 setter가 현재 상태형 목표를 다시 검사한다.
 
+처치 목표의 마지막 공격 `attackOwner`는 기존처럼 직접 이벤트를 받는다. Monster의 양수 처치 기여 원장에 포함된 추가 플레이어는 `playerRegistry`에 온라인으로 등록되어 있고, 처치 대상과 같은 장소에 있으며 생존한 경우에만 같은 이벤트를 한 번 받는다. 막타자 userId가 기여 원장에도 있으면 중복 제거하며, 기여가 없는 파티원·다른 장소·사망·접속 종료 플레이어는 진행하지 않는다. 이 확장은 `combat:entity_defeated`에만 적용해 다른 목표 이벤트와 통계·칭호·도감의 귀속은 유지한다.
+
 최종 단계 목표가 끝나면 기본적으로 `READY`가 되고 지정 NPC에게 보고해야 한다. `completionMode: automatic` 정의만 즉시 보상을 지급한다. 여러 단계는 현재 단계 완료 시 순서대로 진행한다.
 
 ## 3차 전직 장기 시험
@@ -56,7 +58,7 @@ Lv.500이며 현재 메인·서브에 맞는 엘리트 직업을 가진 플레�
 
 1. `pilgrimage`: 수락 후 `성운 길목`, `시계서리 피난처`, `끝별 요새`에 각각 실제로 도착한다. 현재 위치 snapshot인 `visit`이 아니라 이벤트형 `arrive`를 사용한다.
 2. `mastery`: 전사 Lv.380+ 일반몹 80체, 궁수 Lv.380+ 일반몹 치명타 120회, 암살자 Lv.420+ 일반몹 40체+치명타 60회, 마법사 Lv.380+ 불/얼음/전기/어둠 일반몹 각 15체, 대장장이 Lv.380+ 광맥 30개+성공 단조 10회를 요구한다. 보스는 일반몹 숙련 목표에 포함하지 않는다.
-3. `throne-trial`: `nebula_sovereign`, `zero_hour_queen`, `last_constellation`을 각각 처치한다.
+3. `throne-trial`: `nebula_sovereign`, `zero_hour_queen`, `last_constellation`을 각각 처치한다. 같은 왕좌에서 양수 처치 기여를 남긴 온라인·생존 플레이어는 각자 진행 중인 시험을 함께 진행한다.
 4. `return-report`: 아르덴과 대화를 시작해 보고 목표를 완료한다. 대화 진입점은 이벤트 발행 전 선택되므로 progress generator가 이벤트 직후 `canTurnIn`을 다시 검사해 같은 대화에서 보상한다.
 
 ## 보상과 저장
@@ -87,7 +89,7 @@ Lv.500이며 현재 메인·서브에 맞는 엘리트 직업을 가진 플레�
 - 채집: Lv.70부터 오아시스 대추야자·눈솔이끼·청해초 수지·기억 톱니 채집지 2/3/3/4회 성공
 - 낚시: 장소·등급과 무관하게 물고기 3/5/6/8/9마리 포획
 
-완료 보고 시점의 `Player.maxExp` 50%, 성장 구간별 200~180,000 Gold, 체력·정신력 회복약과 유형별 보급품을 함께 지급한다. 일반 토벌은 물리·마법 버프 영약, 보스 토벌은 두 영약과 적대 귀환 두루마리, 채광은 마나 수정, 채집은 신속 물약, 낚시는 미끼와 10% 경험 증폭 물약을 추가로 받는다. 처치 이벤트는 기존 최종 공격 소유자 한 명에게만 전달해 통계·칭호·퀘스트를 중복 집계하지 않으므로 보스 의뢰도 현재는 마지막 처치자 기준이다. `daily:commission-last-claim-day` Progress state에 KST 날짜를 저장해 유형·레벨 구간 사이 하루 보상 중복을 막는다. 전날 미완료 의뢰는 세나와 다시 대화할 때 포기 상태로 정리되며, 진행은 기존 `player_quests` dirty 저장을, 마지막 보상일은 `PlayerProgress` dirty 저장을 사용한다.
+완료 보고 시점의 `Player.maxExp` 50%, 성장 구간별 200~180,000 Gold, 체력·정신력 회복약과 유형별 보급품을 함께 지급한다. 일반 토벌은 물리·마법 버프 영약, 보스 토벌은 두 영약과 적대 귀환 두루마리, 채광은 마나 수정, 채집은 신속 물약, 낚시는 미끼와 10% 경험 증폭 물약을 추가로 받는다. 토벌·보스 의뢰도 공통 처치 크레딧 규칙을 사용해 막타자와 적격 양수 기여자가 각자 진행한다. `daily:commission-last-claim-day` Progress state에 KST 날짜를 저장해 유형·레벨 구간 사이 하루 보상 중복을 막는다. 전날 미완료 의뢰는 세나와 다시 대화할 때 포기 상태로 정리되며, 진행은 기존 `player_quests` dirty 저장을, 마지막 보상일은 `PlayerProgress` dirty 저장을 사용한다.
 
 황혼왕릉의 `꺼지지 않는 장송행렬`은 Lv.28부터 `property:undead` 대상 8기를 추적한다. 완료 뒤 Lv.45부터 선행 퀘스트가 필요한 `왕좌를 훔친 맹세`가 열리며, 개별 구현 ID 대신 `entity:boss + property:undead + property:metal` 조합으로 타락한 기사왕을 판정한다. 두 퀘스트는 마지막 묘지기 이벤에게 수락·보고하고 향약·골드·경험치와 지역 방패를 보상한다.
 

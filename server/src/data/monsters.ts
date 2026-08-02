@@ -14,6 +14,7 @@ import {
 } from '../models/MonsterStats.js';
 import type { AttributeRecord } from '../models/Attribute.js';
 import { createBossNarrative } from './bossNarratives.js';
+import { createBossRoleBreakChallengePattern } from './bossRoleBreakConfig.js';
 
 export type WorldMonsterData = Omit<
     MonsterData,
@@ -2573,6 +2574,7 @@ const nebulaCorridorMonsters: WorldMonsterData[] = [
             sequence: ['nebula_sovereign_event_horizon', 'nebula_sovereign_crownflare', 'meteor_warden_starfall'],
             randomOrder: true, initialDelay: 2.3, interval: { min: 4.5, max: 6.4 },
         },
+        challengePattern: createBossRoleBreakChallengePattern('nebula_sovereign'),
         ai: {
             intelligence: 100, disposition: MonsterAiDisposition.THREAT,
             weights: { attack: 0.01, damage: 0.95, healing: 2.55, shielding: 2.4, control: 2.35, taunt: 4.4 },
@@ -2705,6 +2707,7 @@ const chronofrostMonsters: WorldMonsterData[] = [
             sequence: ['zero_hour_queen_stillness', 'zero_hour_queen_reversal', 'frostclock_sentinel_pendulum'],
             randomOrder: true, initialDelay: 2.2, interval: { min: 4.3, max: 6.2 },
         },
+        challengePattern: createBossRoleBreakChallengePattern('zero_hour_queen'),
         ai: {
             intelligence: 100, disposition: MonsterAiDisposition.THREAT,
             weights: { attack: 0.01, damage: 0.92, healing: 2.5, shielding: 2.5, control: 2.55, taunt: 4.6 },
@@ -2837,6 +2840,7 @@ const endstarMonsters: WorldMonsterData[] = [
             sequence: ['last_constellation_collapse', 'last_constellation_genesis', 'last_constellation_entropy'],
             randomOrder: true, initialDelay: 2, interval: { min: 4, max: 5.8 },
         },
+        challengePattern: createBossRoleBreakChallengePattern('last_constellation'),
         ai: {
             intelligence: 100, disposition: MonsterAiDisposition.THREAT,
             weights: { attack: 0.01, damage: 1, healing: 2.6, shielding: 2.55, control: 2.5, taunt: 4.8 },

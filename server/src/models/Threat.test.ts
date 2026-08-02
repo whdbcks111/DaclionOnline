@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { GameTags } from '../../../shared/tags.js';
 import Entity from './Entity.js';
 import Equipment from './Equipment.js';
+import Monster, { defineMonster } from './Monster.js';
 import {
     MonsterAiDisposition,
     normalizeMonsterAiProfile,
@@ -21,6 +23,19 @@ class ThreatPlayer extends ThreatEntity {
 
     constructor(readonly userId: number, name: string) { super(name); }
 }
+
+defineMonster({
+    id: 'defeat_credit_test_monster',
+    name: '처치 기여 시험 몬스터',
+    description: '',
+    level: 1,
+    exp: 0,
+    baseAttribute: { maxLife: 100 },
+    drops: [],
+    expReward: 0,
+    equipments: [],
+    tags: [GameTags.ENTITY_MONSTER],
+});
 
 test('단순 AI는 누적 피해와 무관하게 마지막 공격자를 선택한다', () => {
     const owner = new ThreatEntity('슬라임');
@@ -95,4 +110,22 @@ test('처치 기여 원장은 AI 대상이 이탈해도 userId 불변 스냅샷�
     table.clear();
     assert.deepEqual(table.getDefeatContributionSnapshot(), []);
     table.dispose();
+});
+
+test('Monster는 양수 처치 기여 userId만 중복 없이 불변 스냅샷으로 공개한다', () => {
+    const monster = new Monster('defeat_credit_test_monster', 'threat-test');
+    const first = new ThreatPlayer(201, '첫 기여자');
+    const duplicate = new ThreatPlayer(201, '같은 계정의 다른 공격체');
+    const second = new ThreatPlayer(202, '둘째 기여자');
+    const noContribution = new ThreatPlayer(203, '도발만 한 플레이어');
+
+    monster.recordThreat(noContribution, ThreatAction.TAUNT, 100);
+    assert.deepEqual(monster.getDefeatCreditUserIds(), []);
+    monster.recordThreat(first, ThreatAction.DAMAGE, 20);
+    monster.recordThreat(duplicate, ThreatAction.CONTROL, 5);
+    monster.recordThreat(second, ThreatAction.HEALING, 10);
+
+    const snapshot = monster.getDefeatCreditUserIds();
+    assert.deepEqual(snapshot, [201, 202]);
+    assert.equal(Object.isFrozen(snapshot), true);
 });

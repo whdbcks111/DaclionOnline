@@ -4,14 +4,36 @@ import {
     type HazardDodgeMode,
     type MiniGameValidationRequest,
 } from '../../../shared/minigames.js';
+import type { ChatNode } from '../../../shared/types.js';
 import { AttributeType } from '../models/Attribute.js';
 import type Player from '../models/Player.js';
 import { getLocation, registerLocationPassive } from '../models/Location.js';
 import { registerMonsterChallengePattern } from '../models/Monster.js';
+import type Monster from '../models/Monster.js';
 import { StatusEffectType } from '../models/StatusEffect.js';
+import {
+    GameEventIds,
+    subscribeGameEvent,
+    type GameEvent,
+} from '../models/GameEvent.js';
 import { cancelMiniGame, normalizeMiniGameInputs, startMiniGame } from '../modules/minigame.js';
-import { sendBotMessageToUser, sendNotificationToUser } from '../modules/message.js';
+import {
+    sendBotMessageToUser,
+    sendBotMessageToUsers,
+    sendNotificationToUser,
+} from '../modules/message.js';
+import {
+    getOnlinePlayer,
+    getOnlinePlayerUserIdsAtLocation,
+} from '../modules/playerRegistry.js';
 import { chat } from '../utils/chatBuilder.js';
+import {
+    BossRoleBreakRequirement,
+    ROLE_BREAK_BOSS_PATTERNS,
+    type BossRoleBreakPatternConfig,
+} from './bossRoleBreakConfig.js';
+
+export { ROLE_BREAK_BOSS_PATTERNS } from './bossRoleBreakConfig.js';
 
 interface HazardBossPatternData {
     id: string;
@@ -151,6 +173,146 @@ registerHazardBossPattern({
     playerSize: 7,
     failureEffect: { statusEffectId: 'blindness', duration: 5, level: 10 },
 });
+
+type RoleBreakState = 'collecting' | 'exposed' | 'done';
+
+function sendRoleBreakMessage(monster: Monster, content: ChatNode[]): void {
+    const userIds = getOnlinePlayerUserIdsAtLocation(monster.locationId);
+    if (userIds.length > 0) sendBotMessageToUsers(userIds, content);
+}
+
+function matchesRoleBreakRequirement(
+    requirement: BossRoleBreakRequirement,
+    event: GameEvent,
+    monster: Monster,
+): boolean {
+    if (event.subject !== monster) return false;
+    if (requirement === BossRoleBreakRequirement.TAUNT) {
+        return event.id === GameEventIds.MONSTER_TAUNTED;
+    }
+    return (event.id === GameEventIds.STATUS_EFFECT_APPLIED
+        || event.id === GameEventIds.STATUS_EFFECT_UPDATED)
+        && event.data.effectId === requirement.statusEffectId;
+}
+
+function getRoleBreakFailurePlayers(monster: Monster): Player[] {
+    const userIds = new Set(monster.getDefeatCreditUserIds());
+    const currentTargetUserId = monster.getCurrentTarget()?.attackOwner.playerUserId;
+    if (currentTargetUserId !== undefined) userIds.add(currentTargetUserId);
+    return [...userIds].flatMap(userId => {
+        const player = getOnlinePlayer(userId);
+        return player && !player.isDefeated && player.locationId === monster.locationId ? [player] : [];
+    });
+}
+
+/** 방어 약화·마법 약화·도발을 조합해 재사용하는 dt 기반 파티 역할 파훼 handler. */
+function registerRoleBreakBossPattern(config: Readonly<BossRoleBreakPatternConfig>): void {
+    registerMonsterChallengePattern(config.handlerId, ({ monster, complete }) => {
+        if (monster.monsterDataId !== config.monsterDataId) return false;
+        const wardSource = `boss:role-break:${config.monsterDataId}:ward`;
+        const vulnerabilitySource = `boss:role-break:${config.monsterDataId}:vulnerability`;
+        const completed = new Set<BossRoleBreakRequirement>();
+        const unsubscribers: Array<() => void> = [];
+        let state: RoleBreakState = 'collecting';
+        let remaining = config.duration;
+
+        const unsubscribeCollection = () => {
+            for (const unsubscribe of unsubscribers.splice(0)) unsubscribe();
+        };
+        const cleanup = () => {
+            unsubscribeCollection();
+            monster.removeDamageReceivedModifier(wardSource);
+            monster.removeDamageReceivedModifier(vulnerabilitySource);
+        };
+        const finish = () => {
+            if (state === 'done') return;
+            state = 'done';
+            cleanup();
+            complete();
+        };
+        const enterExposure = () => {
+            if (state !== 'collecting') return;
+            state = 'exposed';
+            remaining = config.vulnerabilityDuration;
+            unsubscribeCollection();
+            monster.removeDamageReceivedModifier(wardSource);
+            monster.setDamageReceivedModifier(vulnerabilitySource, config.vulnerabilityMultiplier);
+            sendRoleBreakMessage(monster, chat()
+                .color('lime', builder => builder.weight('bold', nested => nested.text(`[ 파훼 성공 ] ${config.label}`)))
+                .text(`\n${config.vulnerabilityDuration}초 동안 ${monster.name}이(가) 받는 피해가 ${Math.round(config.vulnerabilityMultiplier * 100)}%가 됩니다.`)
+                .build());
+        };
+        const recordRequirement = (event: GameEvent) => {
+            if (state !== 'collecting') return;
+            const requirement = config.requirements.find(value =>
+                !completed.has(value) && matchesRoleBreakRequirement(value, event, monster));
+            if (!requirement) return;
+            completed.add(requirement);
+            const remainingLabels = config.requirements.filter(value => !completed.has(value)).map(value => value.label);
+            sendRoleBreakMessage(monster, chat()
+                .color('gold', builder => builder.weight('bold', nested => nested.text(`[ 역할 달성 ] ${requirement.label}`)))
+                .text(remainingLabels.length > 0 ? `\n남은 조건: ${remainingLabels.join(' · ')}` : '')
+                .build());
+            if (completed.size === config.requirements.length) enterExposure();
+        };
+        const fail = () => {
+            if (state !== 'collecting') return;
+            state = 'done';
+            cleanup();
+            try {
+                const players = getRoleBreakFailurePlayers(monster);
+                for (const player of players) {
+                    const result = player.damage(player.maxLife * config.failureLifeRatio, 'absolute', {
+                        type: 'attack',
+                        causeEntity: monster,
+                        fixedDamage: true,
+                    });
+                    sendNotificationToUser(player.userId, {
+                        key: `boss-role-break-failed:${config.monsterDataId}`,
+                        message: `${config.label} 파훼에 실패해 ${result.lifeDamage.toFixed(1)} 고정 피해를 입었습니다.`,
+                    });
+                }
+                sendRoleBreakMessage(monster, chat()
+                    .color('red', builder => builder.weight('bold', nested => nested.text(`[ 파훼 실패 ] ${config.label}`)))
+                    .text(`\n참여자 ${players.length}명이 최대 생명력의 ${Math.round(config.failureLifeRatio * 100)}%에 해당하는 고정 피해를 받았습니다.`)
+                    .build());
+            } finally {
+                complete();
+            }
+        };
+
+        for (const eventId of [
+            GameEventIds.MONSTER_TAUNTED,
+            GameEventIds.STATUS_EFFECT_APPLIED,
+            GameEventIds.STATUS_EFFECT_UPDATED,
+        ]) {
+            unsubscribers.push(subscribeGameEvent(eventId, recordRequirement));
+        }
+        monster.setDamageReceivedModifier(wardSource, config.wardMultiplier);
+        sendRoleBreakMessage(monster, chat()
+            .color('red', builder => builder.weight('bold', nested => nested.text(`[ 역할 파훼 ] ${config.label}`)))
+            .text(`\n${config.duration}초 안에 ${config.requirements.map(value => value.label).join(' · ')}를 패턴 시작 후 적용하세요.`)
+            .text(`\n진행 중 보스가 받는 피해 ${Math.round(config.wardMultiplier * 100)}% · 성공 시 ${config.vulnerabilityDuration}초간 ${Math.round(config.vulnerabilityMultiplier * 100)}% · 실패 시 참여자 최대 생명력 ${Math.round(config.failureLifeRatio * 100)}% 고정 피해`)
+            .build());
+
+        return {
+            update: dt => {
+                if (state === 'done') return;
+                remaining -= Math.max(0, dt);
+                if (remaining > 0) return;
+                if (state === 'collecting') fail();
+                else finish();
+            },
+            cancel: () => {
+                if (state === 'done') return;
+                state = 'done';
+                cleanup();
+            },
+        };
+    });
+}
+
+for (const config of ROLE_BREAK_BOSS_PATTERNS) registerRoleBreakBossPattern(config);
 
 const CRYSTAL_PROTECTION_SOURCE = 'boss:ironroot:resonance-crystals';
 const SILVERWEB_BROOD_PROTECTION_SOURCE = 'boss:silverweb:egg-clusters';
