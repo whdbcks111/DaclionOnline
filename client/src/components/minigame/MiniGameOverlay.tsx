@@ -10,6 +10,7 @@ import type {
 import {
   appendMiniGameInputSample,
   calculateForgeQualityScore,
+  createFishingCaptureProof,
   resolveForgeStrikeTime,
   simulateForgeRhythm,
   simulateHazardDodge,
@@ -291,10 +292,16 @@ export default function MiniGameOverlay() {
       if (next.finished && !submitted.current) {
         submitted.current = true
         setStatus('결과를 확인하는 중...')
-        socket.emit('miniGameResult', {
-          sessionId: game.sessionId,
-          token: game.token,
-        })
+        socket.emit('miniGameResult', game.type === 'fishing_capture'
+          ? {
+              sessionId: game.sessionId,
+              token: game.token,
+              fishingProof: createFishingCaptureProof(game.config, inputs.current, elapsedMs),
+            }
+          : {
+              sessionId: game.sessionId,
+              token: game.token,
+            })
         return
       }
       if (!submitted.current) frame = requestAnimationFrame(tick)

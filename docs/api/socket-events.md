@@ -36,9 +36,9 @@
 | `adminPanelRequestPlayer` | `userId: number` | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayer`; 보유·장착 칭호를 포함한 가공된 캐릭터 상세 snapshot |
 | `adminPanelExecute` | `AdminPanelActionRequest` | 권한 10 | `modules/adminPanel.ts` | 플레이어·월드 action, 칭호 부여·삭제, 전체 채팅/알림·개별 온라인 알림, `analyze_balance_profile` 전투 로테이션 진단을 서버 검증 후 실행하고 result/목록/상세 갱신 |
 | `miniGameReady` | `{ sessionId, token }` | 필요 | `modules/minigame.ts` | 서버가 현재 조작 화면으로 배정한 socket을 확인하고 서버 경과 시계 시작 |
-| `miniGameInput` | `{ sessionId, token, x, y }` | 필요 | `modules/minigame.ts` | 이동 축을 clamp하고 서버 수신 시각 기준 20ms trace로 기록 |
+| `miniGameInput` | `{ sessionId, token, x, y }` | 필요 | `modules/minigame.ts` | 이동 축을 clamp하고 서버 수신 시각 기준 20ms trace로 기록. 회피 성공 권위와 낚시 audit에 유지 |
 | `miniGameAction` | `{ sessionId, token, action: "strike" }` | 필요 | `modules/minigame.ts` | 단조 타격을 서버 수신 시각으로 즉시 기록 |
-| `miniGameResult` | `{ sessionId, token }` | 필요 | `modules/minigame.ts` | 250ms 완료 시각 여유와 서버 수집 trace로 타입별 재현 검증 후 `miniGameResolved`; 입력 socket disconnect는 실패 확정 |
+| `miniGameResult` | `{ sessionId, token, fishingProof? }` | 필요 | `modules/minigame.ts` | 낚시는 version 1 client 입력·100ms 궤적 proof를 서버 발급 config로 즉시 재생 검증하고, 회피·단조는 기존 250ms 완료 여유와 서버 수집 trace로 판정한 뒤 `miniGameResolved`. matching 세션의 잘못된 proof도 소비하며 disconnect는 실패 확정 |
 | `requestHumanVerification` | 없음 | 필요 | `modules/humanVerification.ts` | required FLAG가 있는 플레이어의 기존 문제를 재전송하거나 새 일회성 문제를 발급 |
 | `submitHumanVerification` | `{ sessionId, answer }` | 필요 | `modules/humanVerification.ts` | 서버 메모리의 정답과 session을 검사하고 성공 시 영속 요구 상태와 행동 제한 해제 |
 | `requestHudPresets` | 없음 | 필요 | `modules/hudPreset.ts` | 계정에 저장된 프리셋 이름·수정 시각 목록을 `hudPresetList`로 응답하며 자동 적용하지 않음 |

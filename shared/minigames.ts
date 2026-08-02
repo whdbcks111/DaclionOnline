@@ -22,6 +22,14 @@ export interface MiniGameActionSample {
 export const MINIGAME_INPUT_SAMPLE_INTERVAL_MS = 20
 /** 현재 최장 낚시 미니게임(30초)의 모든 20ms 구간을 충분히 담는 상한이다. */
 export const MAX_MINIGAME_INPUT_SAMPLES = 2_048
+/** 낚시 포획 결과 proof의 현재 wire format 버전. */
+export const FISHING_CAPTURE_PROOF_VERSION = 1 as const
+/** 화면 frame 정체와 무관하게 비교 가능한 낚시 궤적 checkpoint 간격. */
+export const FISHING_CAPTURE_PROOF_CHECKPOINT_INTERVAL_MS = 100
+/** Socket.io 전체 payload 상한보다 작은 낚시 proof 자체의 UTF-8 JSON 상한. */
+export const MAX_FISHING_CAPTURE_PROOF_BYTES = 160 * 1024
+/** 현재 최장 30초 낚시의 100ms checkpoint와 마지막 시점을 담는 상한. */
+export const MAX_FISHING_CAPTURE_TRAJECTORY_SAMPLES = 320
 /** 보스 위험 회피가 사용하는 공용 난이도 상한. 7~10은 후반 보스 전용 밀도다. */
 export const MAX_HAZARD_DODGE_DIFFICULTY = 10
 /** 저사양 터치 화면에서 마지막으로 그려진 note와 입력 시각 차이를 허용하는 최대 보정값. */
@@ -66,6 +74,25 @@ export interface FishingCaptureConfig {
     initialGauge: number
     fillPerSecond: number
     drainPerSecond: number
+}
+
+export interface FishingCaptureTrajectorySample {
+    /** 클라이언트 미니게임 시작점부터의 경과 시간(ms). */
+    at: number
+    netX: number
+    netY: number
+    fishX: number
+    fishY: number
+    gauge: number
+}
+
+/** 낚시 성공 frame에서 고정한 입력과 화면 궤적의 version 1 snapshot. */
+export interface FishingCaptureProof {
+    version: typeof FISHING_CAPTURE_PROOF_VERSION
+    elapsedMs: number
+    success: boolean
+    inputs: MiniGameInputSample[]
+    trajectory: FishingCaptureTrajectorySample[]
 }
 
 export interface HazardDodgeConfig {
@@ -173,14 +200,17 @@ export interface MiniGameActionRequest extends MiniGameSessionRequest {
     action: 'strike'
 }
 
-/** 클라이언트는 결과 확정을 요청할 뿐 경과 시간이나 입력 trace를 제출하지 않는다. */
-export type MiniGameResultRequest = MiniGameSessionRequest
+/** 낚시만 로컬 성공 frame의 proof를 보내며 다른 미니게임은 기존 session/token 계약을 유지한다. */
+export interface MiniGameResultRequest extends MiniGameSessionRequest {
+    fishingProof?: FishingCaptureProof
+}
 
-/** 서버가 실시간으로 수집한 입력만 담아 타입별 validator에 전달하는 권위 snapshot. */
+/** 회피·단조는 서버 실시간 trace, 낚시는 검증을 통과한 client proof snapshot을 validator에 전달한다. */
 export interface MiniGameValidationRequest extends MiniGameSessionRequest {
     elapsedMs: number
     inputs: MiniGameInputSample[]
     actions: MiniGameActionSample[]
+    fishingProof?: FishingCaptureProof
 }
 
 export interface MiniGameResolvedData {
@@ -314,6 +344,51 @@ export function simulateFishingCapture(
         caught,
         finished: timedOut,
         success: timedOut && gauge >= 1,
+    }
+}
+
+/**
+ * 낚시 결과 전송 뒤 UI input ref가 바뀌어도 영향을 받지 않는 version 1 proof를 만든다.
+ * 100ms checkpoint와 정확한 마지막 시점을 같은 결정론 시뮬레이터로 계산한다.
+ */
+export function createFishingCaptureProof(
+    config: FishingCaptureConfig,
+    inputs: readonly MiniGameInputSample[],
+    elapsedMs: number,
+): FishingCaptureProof {
+    const elapsed = clamp(Number.isFinite(elapsedMs) ? elapsedMs : 0, 0, config.durationMs)
+    const inputSnapshot = snapshotMiniGameInputs(inputs, elapsed)
+    const trajectory: FishingCaptureTrajectorySample[] = []
+    const appendCheckpoint = (at: number) => {
+        const state = simulateFishingCapture(config, inputSnapshot, at)
+        trajectory.push({
+            at,
+            netX: state.netX,
+            netY: state.netY,
+            fishX: state.fishX,
+            fishY: state.fishY,
+            gauge: state.gauge,
+        })
+    }
+    for (let at = 0; at < elapsed; at += FISHING_CAPTURE_PROOF_CHECKPOINT_INTERVAL_MS) {
+        appendCheckpoint(at)
+    }
+    const lastCheckpoint = trajectory.at(-1)
+    if (lastCheckpoint?.at !== elapsed) {
+        if (lastCheckpoint
+            && Math.floor(lastCheckpoint.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)
+            === Math.floor(elapsed / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)) {
+            trajectory.pop()
+        }
+        appendCheckpoint(elapsed)
+    }
+    const finalState = simulateFishingCapture(config, inputSnapshot, elapsed)
+    return {
+        version: FISHING_CAPTURE_PROOF_VERSION,
+        elapsedMs: elapsed,
+        success: finalState.success,
+        inputs: inputSnapshot,
+        trajectory,
     }
 }
 

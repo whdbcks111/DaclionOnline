@@ -1,5 +1,13 @@
 import {
     appendMiniGameInputSample,
+    FISHING_CAPTURE_PROOF_VERSION,
+    MAX_FISHING_CAPTURE_PROOF_BYTES,
+    MAX_FISHING_CAPTURE_TRAJECTORY_SAMPLES,
+    MAX_MINIGAME_INPUT_SAMPLES,
+    MINIGAME_INPUT_SAMPLE_INTERVAL_MS,
+    simulateFishingCapture,
+    type FishingCaptureConfig,
+    type FishingCaptureProof,
     type MiniGameActionRequest,
     type MiniGameInputRequest,
     type MiniGameSessionRequest,
@@ -49,24 +57,172 @@ interface ActiveMiniGame extends StartMiniGameOptions {
     inputs: MiniGameInputSample[]
     actions: MiniGameActionSample[]
     resultRequested?: boolean
-    resultSettleKey?: string
 }
 
 const activeByUser = new Map<number, ActiveMiniGame>();
 /** 전송·브라우저 frame 순서의 작은 흔들림을 흡수하되 비정상 조기 완료는 막는다. */
 export const MINIGAME_RESULT_EARLY_TOLERANCE_MS = 250;
-/** 낚시 성공 경계에서 ready/input/result 패킷의 지연 편차를 서버 시계가 따라잡는 정산 시간. */
-export const FISHING_RESULT_SETTLE_MS = 300;
-/** 화면과 서버 trace 경계의 작은 차이를 흡수하는 낚시 성공 게이지 여유. */
-export const FISHING_CAPTURE_GAUGE_TOLERANCE = 0.04;
+/** 클라이언트 성공 frame을 서버 결정론 재생으로 인정하는 최소 최종 게이지. */
+export const FISHING_CAPTURE_REPLAY_GAUGE_MINIMUM = 0.92;
+export const FISHING_CAPTURE_PROOF_ELAPSED_TOLERANCE_MS = 5_000;
+export const FISHING_CAPTURE_PROOF_MAX_CHECKPOINT_GAP_MS = 220;
+export const FISHING_CAPTURE_PROOF_LAST_CHECKPOINT_TOLERANCE_MS = 120;
+export const FISHING_CAPTURE_PROOF_POSITION_TOLERANCE = 2.5;
+export const FISHING_CAPTURE_PROOF_GAUGE_TOLERANCE = 0.06;
+export const FISHING_CAPTURE_PROOF_LAST_POSITION_TOLERANCE = 3;
+export const FISHING_CAPTURE_PROOF_LAST_GAUGE_TOLERANCE = 0.08;
+export const FISHING_CAPTURE_PROOF_MATCH_RATIO = 0.9;
 
-export function isFishingCaptureResultAccepted(state: FishingSimulationState): boolean {
-    return state.success || state.gauge >= 1 - FISHING_CAPTURE_GAUGE_TOLERANCE;
+export function isFishingCaptureResultAccepted(
+    state: FishingSimulationState,
+    proof: Pick<FishingCaptureProof, 'success'> | undefined,
+): boolean {
+    return proof?.success === true && state.gauge >= FISHING_CAPTURE_REPLAY_GAUGE_MINIMUM;
 }
 
 function cancelActiveMiniGameTasks(active: ActiveMiniGame): void {
     cancelGameTask(active.timeoutKey);
-    if (active.resultSettleKey) cancelGameTask(active.resultSettleKey);
+}
+
+export interface FishingCaptureProofValidationResult {
+    valid: boolean
+    accepted: boolean
+    proof?: FishingCaptureProof
+    reason?: string
+}
+
+function invalidFishingProof(reason: string): FishingCaptureProofValidationResult {
+    return { valid: false, accepted: false, reason };
+}
+
+function isFiniteNumber(value: unknown): value is number {
+    return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isBoardCoordinate(value: unknown): value is number {
+    return isFiniteNumber(value) && value >= 0 && value <= 100;
+}
+
+/** 서버 발급 config와 client elapsed 입력만 사용해 낚시 proof의 구조와 궤적을 재생 검증한다. */
+export function validateFishingCaptureProof(
+    config: FishingCaptureConfig,
+    value: unknown,
+    serverElapsedMs: number,
+): FishingCaptureProofValidationResult {
+    if (!value || typeof value !== 'object' || !Number.isFinite(serverElapsedMs) || serverElapsedMs < 0) {
+        return invalidFishingProof('structure');
+    }
+    let encoded: string;
+    try {
+        encoded = JSON.stringify(value);
+    } catch {
+        return invalidFishingProof('encoding');
+    }
+    if (Buffer.byteLength(encoded, 'utf8') > MAX_FISHING_CAPTURE_PROOF_BYTES) {
+        return invalidFishingProof('size');
+    }
+
+    const candidate = value as Partial<FishingCaptureProof>;
+    if (candidate.version !== FISHING_CAPTURE_PROOF_VERSION
+        || typeof candidate.success !== 'boolean'
+        || !isFiniteNumber(candidate.elapsedMs)
+        || candidate.elapsedMs < 0
+        || candidate.elapsedMs > config.durationMs
+        || Math.abs(serverElapsedMs - candidate.elapsedMs) > FISHING_CAPTURE_PROOF_ELAPSED_TOLERANCE_MS
+        || !Array.isArray(candidate.inputs)
+        || !Array.isArray(candidate.trajectory)) {
+        return invalidFishingProof('header');
+    }
+
+    const maximumInputs = Math.min(
+        MAX_MINIGAME_INPUT_SAMPLES,
+        Math.ceil(config.durationMs / MINIGAME_INPUT_SAMPLE_INTERVAL_MS) + 2,
+    );
+    if (candidate.inputs.length === 0 || candidate.inputs.length > maximumInputs
+        || candidate.trajectory.length === 0
+        || candidate.trajectory.length > MAX_FISHING_CAPTURE_TRAJECTORY_SAMPLES) {
+        return invalidFishingProof('count');
+    }
+
+    let previousAt = -1;
+    let previousBucket = -1;
+    for (const input of candidate.inputs) {
+        if (!input || typeof input !== 'object'
+            || !isFiniteNumber(input.at) || input.at < 0 || input.at > candidate.elapsedMs
+            || input.at <= previousAt
+            || Math.floor(input.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS) === previousBucket
+            || !isFiniteNumber(input.x) || input.x < -1 || input.x > 1
+            || !isFiniteNumber(input.y) || input.y < -1 || input.y > 1
+            || Math.hypot(input.x, input.y) > 1.001) {
+            return invalidFishingProof('input');
+        }
+        previousAt = input.at;
+        previousBucket = Math.floor(input.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS);
+    }
+
+    previousAt = -1;
+    previousBucket = -1;
+    for (const checkpoint of candidate.trajectory) {
+        if (!checkpoint || typeof checkpoint !== 'object'
+            || !isFiniteNumber(checkpoint.at) || checkpoint.at < 0 || checkpoint.at > candidate.elapsedMs
+            || checkpoint.at <= previousAt
+            || Math.floor(checkpoint.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS) === previousBucket
+            || (previousAt >= 0 && checkpoint.at - previousAt > FISHING_CAPTURE_PROOF_MAX_CHECKPOINT_GAP_MS)
+            || !isBoardCoordinate(checkpoint.netX) || !isBoardCoordinate(checkpoint.netY)
+            || !isBoardCoordinate(checkpoint.fishX) || !isBoardCoordinate(checkpoint.fishY)
+            || !isFiniteNumber(checkpoint.gauge) || checkpoint.gauge < 0 || checkpoint.gauge > 1) {
+            return invalidFishingProof('trajectory');
+        }
+        previousAt = checkpoint.at;
+        previousBucket = Math.floor(checkpoint.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS);
+    }
+    const firstCheckpoint = candidate.trajectory[0];
+    const lastCheckpoint = candidate.trajectory.at(-1)!;
+    if (firstCheckpoint.at > MINIGAME_INPUT_SAMPLE_INTERVAL_MS
+        || Math.abs(lastCheckpoint.at - candidate.elapsedMs)
+        > FISHING_CAPTURE_PROOF_LAST_CHECKPOINT_TOLERANCE_MS) {
+        return invalidFishingProof('checkpoint-boundary');
+    }
+
+    const inputs = candidate.inputs.map(input => ({ at: input.at, x: input.x, y: input.y }));
+    const trajectory = candidate.trajectory.map(checkpoint => ({ ...checkpoint }));
+    let matchingCheckpoints = 0;
+    for (const checkpoint of trajectory) {
+        const replay = simulateFishingCapture(config, inputs, checkpoint.at);
+        const matches = Math.hypot(checkpoint.netX - replay.netX, checkpoint.netY - replay.netY)
+            <= FISHING_CAPTURE_PROOF_POSITION_TOLERANCE
+            && Math.hypot(checkpoint.fishX - replay.fishX, checkpoint.fishY - replay.fishY)
+            <= FISHING_CAPTURE_PROOF_POSITION_TOLERANCE
+            && Math.abs(checkpoint.gauge - replay.gauge) <= FISHING_CAPTURE_PROOF_GAUGE_TOLERANCE;
+        if (matches) matchingCheckpoints++;
+    }
+    if (matchingCheckpoints / trajectory.length < FISHING_CAPTURE_PROOF_MATCH_RATIO) {
+        return invalidFishingProof('trajectory-replay');
+    }
+
+    const lastReplay = simulateFishingCapture(config, inputs, lastCheckpoint.at);
+    if (Math.hypot(lastCheckpoint.netX - lastReplay.netX, lastCheckpoint.netY - lastReplay.netY)
+        > FISHING_CAPTURE_PROOF_LAST_POSITION_TOLERANCE
+        || Math.hypot(lastCheckpoint.fishX - lastReplay.fishX, lastCheckpoint.fishY - lastReplay.fishY)
+        > FISHING_CAPTURE_PROOF_LAST_POSITION_TOLERANCE
+        || Math.abs(lastCheckpoint.gauge - lastReplay.gauge)
+        > FISHING_CAPTURE_PROOF_LAST_GAUGE_TOLERANCE) {
+        return invalidFishingProof('last-checkpoint');
+    }
+
+    const proof: FishingCaptureProof = {
+        version: FISHING_CAPTURE_PROOF_VERSION,
+        elapsedMs: candidate.elapsedMs,
+        success: candidate.success,
+        inputs,
+        trajectory,
+    };
+    const finalReplay = simulateFishingCapture(config, inputs, proof.elapsedMs);
+    return {
+        valid: true,
+        accepted: isFishingCaptureResultAccepted(finalReplay, proof),
+        proof,
+    };
 }
 
 function emitToUser(userId: number, event: 'miniGameResolved' | 'miniGameCancelled', data: unknown): void {
@@ -97,7 +253,7 @@ export function normalizeMiniGameInputs(request: MiniGameValidationRequest): Min
         }))
         .sort((left, right) => left.at - right.at);
     if (normalized.length === 0) return [{ at: 0, x: 0, y: 0 }];
-    const maximum = 2_048;
+    const maximum = MAX_MINIGAME_INPUT_SAMPLES;
     if (normalized.length <= maximum) return normalized;
     const last = normalized.length - 1;
     return Array.from({ length: maximum }, (_, index) => (
@@ -233,13 +389,30 @@ export function getMiniGameValidationSnapshot(
         && serverElapsed + MINIGAME_RESULT_EARLY_TOLERANCE_MS < active.config.durationMs) {
         return undefined;
     }
-    const validationElapsed = active.type === 'fishing_capture'
-        ? Math.min(active.config.durationMs, serverElapsed)
-        : active.config.durationMs;
+    if (active.type === 'fishing_capture') {
+        const validation = validateFishingCaptureProof(
+            active.config as FishingCaptureConfig,
+            request.fishingProof,
+            serverElapsed,
+        );
+        if (!validation.valid || !validation.proof) return undefined;
+        return {
+            sessionId: active.sessionId,
+            token: active.token,
+            elapsedMs: validation.proof.elapsedMs,
+            inputs: validation.proof.inputs.map(input => ({ ...input })),
+            actions: [],
+            fishingProof: {
+                ...validation.proof,
+                inputs: validation.proof.inputs.map(input => ({ ...input })),
+                trajectory: validation.proof.trajectory.map(checkpoint => ({ ...checkpoint })),
+            },
+        };
+    }
     return {
         sessionId: active.sessionId,
         token: active.token,
-        elapsedMs: validationElapsed,
+        elapsedMs: active.config.durationMs,
         inputs: active.inputs.map(input => ({ ...input })),
         actions: active.actions.map(action => ({ ...action })),
     };
@@ -292,7 +465,9 @@ async function resolveMiniGameResult(
     if (!matchesSession(active, socketId, request)) return false;
     const validationRequest = getMiniGameValidationSnapshot(userId, socketId, request);
     if (!validationRequest) {
-        await failMiniGame(userId, '미니게임 진행 시간이 올바르지 않아 실패했습니다.');
+        await failMiniGame(userId, active.type === 'fishing_capture'
+            ? '낚시 포획 기록을 검증하지 못해 실패했습니다.'
+            : '미니게임 진행 시간이 올바르지 않아 실패했습니다.');
         return false;
     }
 
@@ -301,6 +476,16 @@ async function resolveMiniGameResult(
     let result: MiniGameValidationResult;
     try {
         result = active.validate(validationRequest);
+        if (active.type === 'fishing_capture' && result.success) {
+            const replay = simulateFishingCapture(
+                active.config as FishingCaptureConfig,
+                validationRequest.inputs,
+                validationRequest.elapsedMs,
+            );
+            if (!isFishingCaptureResultAccepted(replay, validationRequest.fishingProof)) {
+                result = { success: false, message: '낚시 포획 기록을 검증하지 못했습니다.' };
+            }
+        }
         await active.onResolved(result);
     } catch {
         result = { success: false, message: '미니게임 결과 처리 중 오류가 발생했습니다.' };
@@ -313,10 +498,7 @@ async function resolveMiniGameResult(
     return true;
 }
 
-/**
- * 낚시는 클라이언트 100% 프레임과 서버 수신 trace 사이의 짧은 지연 편차를 정산한 뒤 확정한다.
- * 정산 중 도착한 최신 입력도 같은 서버 권위 trace에 포함한다.
- */
+/** 낚시는 proof로 즉시 확정하고, 다른 미니게임은 기존 서버 수신 trace 판정을 유지한다. */
 export function submitMiniGameResult(
     userId: number,
     socketId: string,
@@ -326,16 +508,6 @@ export function submitMiniGameResult(
     if (!matchesSession(active, socketId, request)) return false;
     if (active.resultRequested) return true;
     active.resultRequested = true;
-
-    if (active.type === 'fishing_capture') {
-        const settleKey = `${active.timeoutKey}:result-settle`;
-        active.resultSettleKey = settleKey;
-        scheduleGameTask(settleKey, FISHING_RESULT_SETTLE_MS / 1_000, () => {
-            void resolveMiniGameResult(userId, socketId, request);
-        });
-        return true;
-    }
-
     void resolveMiniGameResult(userId, socketId, request);
     return true;
 }

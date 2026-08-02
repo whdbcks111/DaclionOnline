@@ -73,8 +73,8 @@ function fishingPreset(
 }
 
 function validateFishing(config: FishingCaptureConfig, request: MiniGameValidationRequest) {
-    const state = simulateFishingCapture(config, normalizeMiniGameInputs(request), request.elapsedMs);
-    return isFishingCaptureResultAccepted(state)
+    const state = simulateFishingCapture(config, request.inputs, request.elapsedMs);
+    return isFishingCaptureResultAccepted(state, request.fishingProof)
         ? { success: true, message: '관리자 낚시 테스트에 성공했습니다.' }
         : { success: false, message: '관리자 낚시 테스트에 실패했습니다.' };
 }

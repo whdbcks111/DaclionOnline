@@ -21,7 +21,6 @@ import {
     cancelMiniGame,
     hasActiveMiniGame,
     isFishingCaptureResultAccepted,
-    normalizeMiniGameInputs,
     startMiniGame,
 } from './minigame.js';
 import { getPlayerByUserId } from './player.js';
@@ -176,12 +175,11 @@ function beginFishingMiniGame(userId: number, locationId: string, fish: FishData
         config,
         expiresInMs: config.durationMs + 5_000,
         validate: request => {
-            const current = getPlayerByUserId(userId);
-            if (!current || current.isDead || current.locationId !== locationId) {
-                return { success: false, message: '낚시 도중 자리를 벗어났습니다.' };
+            if (!getFishingContext(userId, locationId)) {
+                return { success: false, message: '낚시 도중 자리나 낚싯대 상태가 바뀌었습니다.' };
             }
-            const simulation = simulateFishingCapture(config, normalizeMiniGameInputs(request), request.elapsedMs);
-            return isFishingCaptureResultAccepted(simulation)
+            const simulation = simulateFishingCapture(config, request.inputs, request.elapsedMs);
+            return isFishingCaptureResultAccepted(simulation, request.fishingProof)
                 ? { success: true }
                 : { success: false, message: '물고기가 채집 영역에서 빠져나갔습니다.' };
         },

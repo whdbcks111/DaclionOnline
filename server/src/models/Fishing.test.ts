@@ -4,10 +4,14 @@ import test from 'node:test';
 import {
     appendMiniGameInputSample,
     calculateForgeQualityScore,
+    createFishingCaptureProof,
     createForgeBeatTimesMs,
+    FISHING_CAPTURE_PROOF_VERSION,
     resolveForgeStrikeTime,
     getHazardDodgeHazards,
     MAX_MINIGAME_INPUT_SAMPLES,
+    MAX_FISHING_CAPTURE_PROOF_BYTES,
+    MAX_FISHING_CAPTURE_TRAJECTORY_SAMPLES,
     MINIGAME_INPUT_SAMPLE_INTERVAL_MS,
     simulateFishingCapture,
     simulateForgeRhythm,
@@ -306,6 +310,51 @@ test('연속 조작 trace는 20ms 단위로 합쳐지고 전송 시 불변 snaps
     const originalX = snapshot[0].x;
     inputs[0].x = 99;
     assert.equal(snapshot[0].x, originalX);
+});
+
+test('낚시 proof는 불변 입력과 100ms 궤적 및 정확한 마지막 checkpoint를 생성한다', () => {
+    const source = [
+        { at: 0, x: 0, y: 0 },
+        { at: 400, x: 0, y: 0 },
+    ];
+    const proof = createFishingCaptureProof(baseConfig, source, 5_108);
+    assert.equal(proof.version, FISHING_CAPTURE_PROOF_VERSION);
+    assert.equal(proof.elapsedMs, 5_108);
+    assert.equal(proof.trajectory[0].at, 0);
+    assert.equal(proof.trajectory.at(-1)?.at, 5_108);
+    assert.equal(proof.trajectory.at(-2)?.at, 5_000);
+    assert.ok(proof.trajectory.every((sample, index) => index === 0
+        || Math.floor(sample.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)
+        !== Math.floor(proof.trajectory[index - 1].at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)));
+    assert.ok(proof.trajectory.length <= MAX_FISHING_CAPTURE_TRAJECTORY_SAMPLES);
+
+    source[0].x = 1;
+    assert.equal(proof.inputs[0].x, 0);
+});
+
+test('최장 낚시 proof는 160KiB 상한과 Socket.io 256KiB 상한 안에 머문다', () => {
+    const durationMs = 30_000;
+    const maximumInputs = Array.from(
+        { length: Math.ceil(durationMs / MINIGAME_INPUT_SAMPLE_INTERVAL_MS) + 1 },
+        (_, index) => ({
+            at: index === Math.ceil(durationMs / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)
+                ? durationMs
+                : index * MINIGAME_INPUT_SAMPLE_INTERVAL_MS + 0.123456789,
+            x: index % 2 === 0 ? Math.SQRT1_2 : -Math.SQRT1_2,
+            y: index % 3 === 0 ? Math.SQRT1_2 : -Math.SQRT1_2,
+        }),
+    );
+    const proof = createFishingCaptureProof({
+        ...baseConfig,
+        durationMs,
+        initialGauge: 0.5,
+        fillPerSecond: 0.001,
+        drainPerSecond: 0.001,
+    }, maximumInputs, durationMs);
+    const bytes = Buffer.byteLength(JSON.stringify(proof), 'utf8');
+    assert.ok(bytes <= MAX_FISHING_CAPTURE_PROOF_BYTES, `${bytes} > ${MAX_FISHING_CAPTURE_PROOF_BYTES}`);
+    assert.ok(bytes < 256 * 1024);
+    assert.ok(proof.trajectory.length <= MAX_FISHING_CAPTURE_TRAJECTORY_SAMPLES);
 });
 
 test('행운은 상위 물고기 등급의 가중치를 증가시킨다', () => {
