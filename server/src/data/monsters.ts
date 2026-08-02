@@ -53,10 +53,15 @@ export function defineWorldMonster(data: WorldMonsterData): void {
         weights: statWeights,
         overrides: explicitProfile ? { ...authoredAttributes, ...statOverrides } : undefined,
     });
+    const usesGeneralMonsterOffense = statRank === MonsterRank.NORMAL || statRank === MonsterRank.ELITE;
     defineMonster({
         ...definition,
         baseAttribute: explicitProfile ? calculatedAttributes : {
             ...authoredAttributes,
+            ...(usesGeneralMonsterOffense ? {
+                atk: calculatedAttributes.atk,
+                magicForce: calculatedAttributes.magicForce,
+            } : {}),
             maxLife: calculatedAttributes.maxLife,
         },
         statProfile,
@@ -123,8 +128,8 @@ defineWorldMonster({
     description: '맹독을 농축해 마법 공격에 실어 보내는 보랏빛 슬라임.',
     level: 8,
     statProfile: MonsterStatProfile.HYBRID,
-    statWeights: { maxLife: 0.97, atk: 1.11, def: 0.87 },
-    statOverrides: { magicForce: 22, magicDef: 8, speed: 1 },
+    statWeights: { maxLife: 0.97, atk: 1.11, magicForce: 0.968, def: 0.87 },
+    statOverrides: { magicDef: 8, speed: 1 },
     drops: [{ itemDataId: 'mana_potion', minCount: 1, maxCount: 1, chance: 0.25 }],
     goldReward: { min: 8, max: 18 },
     attack: {
@@ -140,8 +145,8 @@ defineWorldMonster({
     description: '맑은 샘물을 머금어 마법 저항이 높은 슬라임.',
     level: 11,
     statProfile: MonsterStatProfile.HYBRID,
-    statWeights: { maxLife: 0.98, atk: 1.05 },
-    statOverrides: { magicForce: 30, def: 9, magicDef: 14, speed: 1.2 },
+    statWeights: { maxLife: 0.98, atk: 1.05, magicForce: 1.013 },
+    statOverrides: { def: 9, magicDef: 14, speed: 1.2 },
     drops: [
         { itemDataId: 'health_potion', minCount: 1, maxCount: 2, chance: 0.2 },
         { itemDataId: 'mana_potion', minCount: 1, maxCount: 2, chance: 0.2 },

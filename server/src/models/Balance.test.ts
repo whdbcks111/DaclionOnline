@@ -15,6 +15,7 @@ import {
     analyzeAllFirstJobs,
     analyzeItemBalance,
     analyzeJobBalance,
+    analyzeMonsterPressureDistribution,
     analyzeSkillBalance,
     BalanceEncounterType,
     BALANCE_PROFILE_LEVELS,
@@ -519,6 +520,24 @@ test('일반전은 30초, 보스전은 240초 창에서 동레벨 전투 템포�
             .sort((left, right) => left - right);
         const median = bossKillSeconds[Math.floor(bossKillSeconds.length / 2)]!;
         assert.ok(median >= 120, `Lv.${level} 보스 중앙값 ${median.toFixed(1)}초`);
+    }
+});
+
+test('동레벨 일반 몬스터는 추천 성장 프로필의 생명력을 중앙 15~30% 소모시킨다', () => {
+    const distributions = BALANCE_PROFILE_LEVELS.map(analyzeMonsterPressureDistribution);
+    const losses = distributions.flatMap(distribution => [...distribution.lifeLossRatios])
+        .sort((left, right) => left - right);
+    const median = losses[Math.floor((losses.length - 1) * 0.5)]!;
+    const p75 = losses[Math.floor((losses.length - 1) * 0.75)]!;
+    const deaths = distributions.reduce((sum, distribution) => sum + distribution.deathProfiles, 0);
+
+    assert.ok(median >= 0.15 && median <= 0.3, `전체 중앙 HP 소모 ${(median * 100).toFixed(2)}%`);
+    assert.ok(p75 <= 0.5, `전체 p75 HP 소모 ${(p75 * 100).toFixed(2)}%`);
+    assert.ok(deaths <= 2, `예상 사망 프로필 ${deaths}/${losses.length}`);
+    for (const distribution of distributions) {
+        assert.equal(distribution.profileCount, 5);
+        assert.ok(distribution.p25LifeLossRatio <= distribution.medianLifeLossRatio);
+        assert.ok(distribution.medianLifeLossRatio <= distribution.p75LifeLossRatio);
     }
 });
 

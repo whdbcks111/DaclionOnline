@@ -113,7 +113,15 @@ const BLEEDING = StatusEffectType.define({
 
 const DECAY = StatusEffectType.define({
     id: 'decay', label: '부패', icon: ICON.poison,
-    descriptionTemplate: '최대 생명력이 감소하고 시간이 지날수록 초당 부패 피해가 증가합니다.',
+    descriptionTemplate: '최대 생명력이 [color=purple]{{calc.maxLifeReductionPercent}}%[/color] 감소하고 시간이 지날수록 초당 부패 피해가 증가합니다.',
+    calculatedFields: {
+        maxLifeReductionPercent: ({ effect }) => Math.round(
+            (1 - Math.max(0.8, Math.pow(0.99, effect.level))) * 100,
+        ),
+    },
+    calculatedFieldTooltips: {
+        maxLifeReductionPercent: '1 - max(80%, 0.99의 효과 레벨 제곱)',
+    },
     onStart: context => {
         if (livingOnly(context) === 'remove') return 'remove';
         applyDecayModifier(context);
@@ -122,7 +130,11 @@ const DECAY = StatusEffectType.define({
         if (livingOnly(context) === 'remove') return 'remove';
         applyDecayModifier(context);
         const progress = 1 - context.effect.durationRatio;
-        context.target.damage(dt * context.effect.level * (10 + 55 * progress), 'absolute', {
+        const damagePerSecond = Math.min(
+            context.effect.level * (10 + 55 * progress),
+            context.target.maxLife * 0.02,
+        );
+        context.target.damage(dt * damagePerSecond, 'absolute', {
             type: 'decay', causeEntity: null, effectSource: context.effect,
         });
     },
@@ -409,7 +421,7 @@ const DETOXIFICATION = StatusEffectType.define({
 
 const PRESERVATION = StatusEffectType.define({
     id: 'preservation', label: '보존', icon: ICON.life,
-    descriptionTemplate: '부패를 제거하고 지속 중 새 부패를 차단합니다.', aliases: ['보존'], tags: [],
+    descriptionTemplate: '독·맹독·마비독·출혈·부패를 제거하고 지속 중 다시 걸리지 않게 합니다.', aliases: ['보존'], tags: [],
 });
 
 const FROZEN = StatusEffectType.define({
@@ -461,7 +473,7 @@ function applyDecayModifier(context: StatusEffectContext): void {
     refreshModifiers(context, [{
         attribute: AttributeType.MAX_LIFE.key,
         op: 'multiply',
-        value: Math.max(0.3, Math.pow(0.985, context.effect.level)),
+        value: Math.max(0.8, Math.pow(0.99, context.effect.level)),
     }]);
     context.target.clampVitals();
 }
@@ -561,7 +573,6 @@ defineStatusEffectNeutralization(SUN_FEVER, FROZEN);
 for (const [blocked, resistance] of [
     [StatusEffectType.FIRE, FIRE_RESISTANCE],
     [FROZEN, FROZEN_RESISTANCE],
-    [DECAY, PRESERVATION],
 ] as const) {
     defineStatusEffectInteraction(blocked, resistance, StatusEffectInteractionMode.REJECT_INCOMING);
     defineStatusEffectInteraction(resistance, blocked, StatusEffectInteractionMode.REMOVE_EXISTING);
@@ -570,6 +581,17 @@ for (const [blocked, resistance] of [
 for (const poison of [POISON, StatusEffectType.DEADLY_POISON, StatusEffectType.PARALYTIC_POISON]) {
     defineStatusEffectInteraction(poison, DETOXIFICATION, StatusEffectInteractionMode.REJECT_INCOMING);
     defineStatusEffectInteraction(DETOXIFICATION, poison, StatusEffectInteractionMode.REMOVE_EXISTING);
+}
+
+for (const ailment of [
+    POISON,
+    StatusEffectType.DEADLY_POISON,
+    StatusEffectType.PARALYTIC_POISON,
+    BLEEDING,
+    DECAY,
+]) {
+    defineStatusEffectInteraction(ailment, PRESERVATION, StatusEffectInteractionMode.REJECT_INCOMING);
+    defineStatusEffectInteraction(PRESERVATION, ailment, StatusEffectInteractionMode.REMOVE_EXISTING);
 }
 
 defineStatusEffectInteraction(INVISIBLE, EXPOSE, StatusEffectInteractionMode.REJECT_INCOMING);

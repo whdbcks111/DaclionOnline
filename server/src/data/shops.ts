@@ -1,5 +1,5 @@
 import { defineShop } from '../models/Shop.js';
-import type { SellEntry } from '../models/Shop.js';
+import type { BuyEntry, SellEntry } from '../models/Shop.js';
 import { GameTags } from '../../../shared/tags.js';
 import { FishRarity } from '../models/Fishing.js';
 import { FISHING_EQUIPMENT_TIERS } from './fishingEquipmentCatalog.js';
@@ -34,6 +34,22 @@ function largePotionStock() {
             restockTime: 180,
         },
     ];
+}
+
+/** 각 거점 Shop 인스턴스가 독립 재고를 갖는 묘지기 향약 판매 항목. */
+export function gravewardTonicStock(
+    price = 38,
+    stock = 12,
+    restockTime = 60,
+): BuyEntry {
+    return {
+        label: '묘지기 향약',
+        create: () => ({ itemDataId: 'graveward_tonic', count: 1 }),
+        count: 1,
+        price,
+        stock,
+        restockTime,
+    };
 }
 
 function fishingSellList(): SellEntry[] {
@@ -361,14 +377,7 @@ defineShop({
     id: 'twilight_memorial_store',
     recommendedLevel: 40,
     buyList: [
-        {
-            label: '묘지기 향약',
-            create: () => ({ itemDataId: 'graveward_tonic', count: 1 }),
-            count: 1,
-            price: 38,
-            stock: 12,
-            restockTime: 90,
-        },
+        gravewardTonicStock(38, 24, 60),
         {
             label: '화살 20개',
             create: () => ({ itemDataId: 'wooden_arrow', count: 20 }),
@@ -524,6 +533,7 @@ defineShop({
     recommendedLevel: 140,
     buyList: [
         bagStock('염등항 화물배낭', 'misttide_cargo_pack', 7_200, 1_500),
+        gravewardTonicStock(),
         {
             label: '염풍 행군식', create: () => ({ itemDataId: 'brine_trail_ration', count: 1 }),
             count: 1, price: 115, stock: 24, restockTime: 50,
@@ -573,6 +583,7 @@ defineShop({
     recommendedLevel: 180,
     buyList: [
         bagStock('역설 접이가방', 'paradox_fold_pack', 11_000, 1_800),
+        gravewardTonicStock(),
         ...largePotionStock(),
         {
             label: '태엽 작업식', create: () => ({ itemDataId: 'cogwork_ration', count: 1 }),
@@ -628,6 +639,7 @@ defineShop({
     recommendedLevel: 200,
     buyList: [
         bagStock('재길 운반구', 'ashroad_carrier', 16_500, 2_100),
+        gravewardTonicStock(),
         ...largePotionStock(),
         {
             label: '재길 행군식', create: () => ({ itemDataId: 'ashmarch_ration', count: 1 }),
@@ -766,6 +778,7 @@ defineShop({
     recommendedLevel: 350,
     buyList: [
         bagStock('천근수피 생장배낭', 'worldroot_living_pack', 45_000, 3_000),
+        gravewardTonicStock(),
         ...largePotionStock(),
         {
             label: '천근수피 빵', create: () => ({ itemDataId: 'worldroot_ration', count: 1 }),
@@ -872,6 +885,7 @@ defineShop({
     recommendedLevel: 500,
     buyList: [
         bagStock('최후지평 차원배낭', 'endstar_horizon_pack', 100_000, 3_900),
+        gravewardTonicStock(),
         ...largePotionStock(),
         { label: '마지막 별찬', create: () => ({ itemDataId: 'endstar_ration', count: 1 }), count: 1, price: 820, stock: 24, restockTime: 50 },
         { label: '창세맥 영약', create: () => ({ itemDataId: 'endstar_tonic', count: 1 }), count: 1, price: 1_300, stock: 12, restockTime: 120 },

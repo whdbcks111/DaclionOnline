@@ -1120,7 +1120,7 @@ for (const material of [
 defineItem({
     id: 'graveward_tonic',
     name: '묘지기 향약',
-    description: '왕릉의 혼불을 가라앉혀 45초 동안 독·출혈·부패의 지속시간을 빠르게 줄이는 향약.',
+    description: '독·맹독·마비독·출혈·부패를 즉시 제거하고 45초 동안 다시 걸리지 않게 하는 향약.',
     image: 'items/graveward_tonic',
     category: '소모품',
     weight: 0.25,

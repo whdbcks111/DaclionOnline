@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
     calculateMonsterBaseAttributes,
+    getMonsterOffensePressureScale,
     inferMonsterStatProfile,
     MonsterRank,
     MonsterStatProfile,
@@ -33,6 +34,32 @@ test('같은 레벨에서도 역할과 체급에 따라 일관된 능력치 예�
     assert.ok((caster.magicForce ?? 0) > (bruiser.magicForce ?? 0));
     assert.ok((boss.maxLife ?? 0) > (bruiser.maxLife ?? 0) * 6);
     assert.ok((boss.attackSpeed ?? 0) < (bruiser.attackSpeed ?? 0));
+});
+
+test('일반 몬스터 공격 압력은 후반 플레이어 성장선에 맞춰 낮아지고 보스 공격은 보존된다', () => {
+    assert.ok(getMonsterOffensePressureScale(MonsterRank.NORMAL, 20) > 0.3);
+    assert.ok(getMonsterOffensePressureScale(MonsterRank.ELITE, 180) > 0.2);
+    assert.ok(getMonsterOffensePressureScale(MonsterRank.NORMAL, 500) < 0.07);
+    assert.ok(getMonsterOffensePressureScale(MonsterRank.NORMAL, 1000) < 0.04);
+    assert.equal(getMonsterOffensePressureScale(MonsterRank.FIELD_BOSS, 1000), 1);
+    assert.equal(getMonsterOffensePressureScale(MonsterRank.BOSS, 1000), 1);
+
+    let previous = 0;
+    for (let level = 1; level <= 1000; level++) {
+        const offense = calculateMonsterBaseAttributes({
+            level,
+            profile: MonsterStatProfile.BALANCED,
+            rank: MonsterRank.NORMAL,
+        }).atk ?? 0;
+        assert.ok(offense >= previous, `Lv.${level}: ${offense} >= ${previous}`);
+        previous = offense;
+    }
+    const level1200Offense = calculateMonsterBaseAttributes({
+        level: 1200,
+        profile: MonsterStatProfile.BALANCED,
+        rank: MonsterRank.NORMAL,
+    }).atk ?? 0;
+    assert.ok(level1200Offense > previous);
 });
 
 test('표준 일반·보스 생명력은 고레벨 폭증을 제한하는 공용 곡선을 따른다', () => {
@@ -95,8 +122,9 @@ test('고유 가중치와 최종 오버라이드는 프로필을 복제하지 �
         level: 80,
         profile: MonsterStatProfile.TANK,
         weights: { maxLife: 1.2, magicDef: 0.8 },
-        overrides: { speed: 0.42, critRate: 0 },
+        overrides: { atk: 777, speed: 0.42, critRate: 0 },
     });
+    assert.equal(attributes.atk, 777);
     assert.equal(attributes.speed, 0.42);
     assert.equal(attributes.critRate, 0);
     assert.ok((attributes.maxLife ?? 0) > 0);

@@ -232,6 +232,16 @@ export interface BalanceProfileReport {
     readonly boss: CombatRotationReport;
 }
 
+export interface MonsterPressureDistribution {
+    readonly level: number;
+    readonly p25LifeLossRatio: number;
+    readonly medianLifeLossRatio: number;
+    readonly p75LifeLossRatio: number;
+    readonly deathProfiles: number;
+    readonly profileCount: number;
+    readonly lifeLossRatios: readonly number[];
+}
+
 export interface SkillBalanceReport {
     readonly skillId: string;
     readonly name: string;
@@ -774,6 +784,24 @@ export function analyzeBalanceProfile(level: number, mainJobId: string, subJobId
 
 export function analyzeAllBalanceProfiles(level: number): readonly BalanceProfileReport[] {
     return getAllJobs().filter(job => job.tier.key === 'first').map(job => analyzeBalanceProfile(level, job.id));
+}
+
+/** 추천 장비 1차 직업들이 동레벨 일반 몬스터 한 마리를 잡을 때의 순 생명력 소모 분포. */
+export function analyzeMonsterPressureDistribution(level: number): MonsterPressureDistribution {
+    const profiles = analyzeAllBalanceProfiles(level);
+    const lifeLossRatios = profiles.map(({ monster }) => Math.max(
+        0,
+        Math.min(1, 1 - monster.expectedLifeAfterKill / monster.playerMaxLife),
+    ));
+    return Object.freeze({
+        level: normalizeLevel(level),
+        p25LifeLossRatio: percentile(lifeLossRatios, 0.25),
+        medianLifeLossRatio: percentile(lifeLossRatios, 0.5),
+        p75LifeLossRatio: percentile(lifeLossRatios, 0.75),
+        deathProfiles: profiles.filter(({ monster }) => !monster.survivesUntilKill).length,
+        profileCount: profiles.length,
+        lifeLossRatios: Object.freeze(lifeLossRatios),
+    });
 }
 
 /** 장비 modifier 또는 버프 아이템의 실제 상태효과를 적용한 전후 전투 지표를 계산한다. */
@@ -1468,6 +1496,12 @@ function finitePositive(value: number): number {
 
 function positiveInteger(value: number): number {
     return Number.isInteger(value) && value > 0 ? value : 1;
+}
+
+function percentile(values: readonly number[], ratio: number): number {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((left, right) => left - right);
+    return sorted[Math.floor((sorted.length - 1) * Math.max(0, Math.min(1, ratio)))];
 }
 
 function normalizeLevel(level: number): number {

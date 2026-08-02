@@ -66,6 +66,28 @@ test('해독과 속성 저항은 기존 효과를 제거하고 새 효과를 차
     assert.equal(target.applyStatusEffect(StatusEffectType.FIRE, 10, 10).action, StatusEffectApplyAction.REJECTED);
 });
 
+test('묘지기 향약의 보존은 다섯 지속 피해를 즉시 제거하고 45초 동안 차단한다', () => {
+    const target = new InteractionEntity('묘지기 향약 대상');
+    const ailments = [
+        LegacyStatusEffects.POISON,
+        StatusEffectType.DEADLY_POISON,
+        StatusEffectType.PARALYTIC_POISON,
+        LegacyStatusEffects.BLEEDING,
+        LegacyStatusEffects.DECAY,
+    ] as const;
+
+    for (const ailment of ailments) target.applyStatusEffect(ailment, 20, 3);
+    assert.equal(ailments.every(ailment => target.hasStatusEffect(ailment)), true);
+
+    const applied = target.applyStatusEffect(LegacyStatusEffects.PRESERVATION, 45, 2);
+    assert.equal(applied.action, StatusEffectApplyAction.ADDED);
+    assert.equal(applied.effect?.duration, 45);
+    assert.equal(ailments.every(ailment => !target.hasStatusEffect(ailment)), true);
+    for (const ailment of ailments) {
+        assert.equal(target.applyStatusEffect(ailment, 20, 10).action, StatusEffectApplyAction.REJECTED);
+    }
+});
+
 test('무적·수면·실명은 피해와 행동 경계 API로 작동한다', () => {
     const target = new InteractionEntity('제어 대상');
     target.applyStatusEffect(LegacyStatusEffects.INVULNERABLE, 10, 1);

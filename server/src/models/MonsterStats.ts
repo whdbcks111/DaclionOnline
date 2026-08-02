@@ -226,6 +226,40 @@ export interface MonsterStatCalculation {
     readonly overrides?: Partial<AttributeRecord>;
 }
 
+const GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS = Object.freeze([
+    { level: 1, offense: 5 },
+    { level: 50, offense: 38 },
+    { level: 100, offense: 90 },
+    { level: 200, offense: 175 },
+    { level: 350, offense: 185 },
+    { level: 1000, offense: 400 },
+] as const);
+
+/**
+ * 일반·정예 몬스터의 동레벨 전투 압력을 플레이어 성장선에 맞추는 공용 배율.
+ * 보스 계열은 별도 패턴과 파티 압력을 보존하기 위해 기존 공격 예산을 그대로 쓴다.
+ */
+export function getMonsterOffensePressureScale(rank: MonsterRank, level: number): number {
+    const normalizedLevel = normalizeMonsterLevel(level);
+    if (rank === MonsterRank.FIELD_BOSS || rank === MonsterRank.BOSS) return 1;
+    return getGeneralMonsterOffenseBudget(normalizedLevel) / getRawMonsterOffenseBudget(normalizedLevel);
+}
+
+function getGeneralMonsterOffenseBudget(level: number): number {
+    const upperIndex = GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS.findIndex(anchor => anchor.level >= level);
+    if (upperIndex < 0) {
+        const last = GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS.at(-1)!;
+        const previous = GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS.at(-2)!;
+        const slope = (last.offense - previous.offense) / (last.level - previous.level);
+        return last.offense + (level - last.level) * slope;
+    }
+    if (upperIndex === 0) return GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS[0].offense;
+    const lower = GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS[upperIndex - 1];
+    const upper = GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS[upperIndex];
+    const progress = (level - lower.level) / (upper.level - lower.level);
+    return lower.offense + (upper.offense - lower.offense) * progress;
+}
+
 /**
  * 레벨 성장 예산을 역할과 체급에 배분해 몬스터 baseAttribute를 만든다.
  * 같은 입력은 항상 같은 결과를 반환하며 런타임 상태나 난수를 사용하지 않는다.
@@ -235,13 +269,15 @@ export function calculateMonsterBaseAttributes(input: MonsterStatCalculation): P
     const rank = input.rank ?? MonsterRank.NORMAL;
     const weights = validateWeights(input.weights);
     const base = getLevelStatBudget(level);
+    const offensePressureScale = getMonsterOffensePressureScale(rank, level);
     const result: Partial<AttributeRecord> = {};
 
     for (const key of COMBAT_STAT_KEYS) {
         const profileRatio = input.profile.coefficients[key];
         const weight = weights[key] ?? 1;
         const rankRatio = getRankMultiplier(rank, key, level);
-        result[key] = roundMonsterStat(key, base[key] * profileRatio * weight * rankRatio);
+        const pressureScale = key === 'atk' || key === 'magicForce' ? offensePressureScale : 1;
+        result[key] = roundMonsterStat(key, base[key] * profileRatio * weight * rankRatio * pressureScale);
     }
 
     for (const [rawKey, value] of Object.entries(input.overrides ?? {})) {
@@ -288,7 +324,7 @@ function validateWeights(weights?: MonsterStatWeightMap): MonsterStatWeightMap {
 }
 
 function getLevelStatBudget(level: number): Record<MonsterCombatStatKey, number> {
-    const offense = 5 + 2 * level + 0.01 * level ** 2;
+    const offense = getRawMonsterOffenseBudget(level);
     const defense = 0.9 * level + 0.007 * level ** 2;
     const penetration = Math.max(0, (level - 25) * 0.55);
     return {
@@ -304,6 +340,10 @@ function getLevelStatBudget(level: number): Record<MonsterCombatStatKey, number>
         critRate: Math.min(0.28, 0.05 + level * 0.00065),
         critDmg: 1.5 + Math.min(0.95, level * 0.0027),
     };
+}
+
+function getRawMonsterOffenseBudget(level: number): number {
+    return 5 + 2 * level + 0.01 * level ** 2;
 }
 
 function getRankMultiplier(rank: MonsterRank, key: MonsterCombatStatKey, level: number): number {

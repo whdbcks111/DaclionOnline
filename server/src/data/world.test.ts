@@ -402,7 +402,7 @@ test('1~1000레벨 월드는 모든 속성을 관찰 가능하고 Lv.200 이후 
     ]) assert.ok(monsterTags.has(tag), tag);
 });
 
-test('모든 월드 몬스터의 생명력은 저장된 프로필·체급·가중치 계산값과 일치한다', () => {
+test('모든 월드 몬스터의 생명력과 일반 몬스터 공격력은 공용 성장 계산값과 일치한다', () => {
     for (const monster of getAllMonsterData()) {
         assert.ok(monster.statProfile, `${monster.id}: statProfile`);
         assert.ok(monster.statRank, `${monster.id}: statRank`);
@@ -411,13 +411,26 @@ test('모든 월드 몬스터의 생명력은 저장된 프로필·체급·가�
             profile: monster.statProfile!,
             rank: monster.statRank!,
             weights: monster.statWeights,
-        }).maxLife;
-        assert.equal(monster.baseAttribute.maxLife, expected, monster.id);
+        });
+        assert.equal(monster.baseAttribute.maxLife, expected.maxLife, monster.id);
+        if (monster.statRank === MonsterRank.NORMAL || monster.statRank === MonsterRank.ELITE) {
+            assert.equal(monster.baseAttribute.atk, expected.atk, `${monster.id}: atk`);
+            assert.equal(monster.baseAttribute.magicForce, expected.magicForce, `${monster.id}: magicForce`);
+            assert.ok(
+                Math.max(monster.baseAttribute.atk ?? 0, monster.baseAttribute.magicForce ?? 0) >= 1,
+                `${monster.id}: offense`,
+            );
+        }
     }
 
     const legacy = getMonsterData('silverweb_briar_wolf');
     assert.notEqual(legacy?.baseAttribute.maxLife, 120);
-    assert.equal(legacy?.baseAttribute.atk, 24);
+    assert.equal(legacy?.baseAttribute.atk, calculateMonsterBaseAttributes({
+        level: legacy!.level,
+        profile: legacy!.statProfile!,
+        rank: legacy!.statRank!,
+        weights: legacy!.statWeights,
+    }).atk);
     assert.equal(legacy?.baseAttribute.def, 7);
     assert.equal(legacy?.baseAttribute.speed, 1.55);
 });
@@ -1488,6 +1501,30 @@ test('대용량 체력·마나 포션은 후반 거점의 고가 반복 골드 �
             entry.price === 100_000 && entry.stock === 20 && entry.restockTime === 180
         ), shopId);
     }
+});
+
+test('묘지기 향약은 황혼왕릉 증량 재고와 여섯 안전 거점의 독립 재고로 공급된다', () => {
+    const stores = [
+        { id: 'twilight_memorial_store', stock: 24 },
+        { id: 'misttide_harbor_store', stock: 12 },
+        { id: 'paradox_relay_store', stock: 12 },
+        { id: 'ashen_waystation_store', stock: 12 },
+        { id: 'worldroot_waystation_store', stock: 12 },
+        { id: 'endstar_bastion_store', stock: 12 },
+        { id: 'silentdivine_waystation_store', stock: 12 },
+    ] as const;
+
+    const instances = stores.map(({ id, stock }) => {
+        const shop = getShop(id);
+        assert.ok(shop, id);
+        const index = shop.data.buyList.findIndex(entry => entry.create().itemDataId === 'graveward_tonic');
+        assert.ok(index >= 0, `${id} 향약 항목`);
+        assert.equal(shop.data.buyList[index].stock, stock, `${id} 마스터 재고`);
+        assert.equal(shop.data.buyList[index].restockTime, 60, `${id} 재입고`);
+        assert.equal(shop.getStock(index), stock * 5, `${id} 공유 재고`);
+        return shop;
+    });
+    assert.equal(new Set(instances).size, stores.length);
 });
 
 test('물빛 연못 낚시상점은 낚시 품목을 전담하고 잡화점은 초급 지팡이 성장 장비를 판매한다', () => {

@@ -387,6 +387,47 @@ test('맹독은 생명체에게만 적용되고 0.5초마다 잃은 체력·레�
     assert.equal(living.getHealingReceivedModifier(), 1);
 });
 
+test('실전 부패 레벨은 플레이어급 생명력에서 초당 2% 상한을 지키며 단독 처형하지 않는다', () => {
+    const decay = StatusEffectType.fromKey('decay')!;
+    for (const sample of [
+        { effectLevel: 3, duration: 8, maxLife: 2_000 },
+        { effectLevel: 8, duration: 10, maxLife: 8_000 },
+        { effectLevel: 10, duration: 12, maxLife: 12_000 },
+        { effectLevel: 24, duration: 14, maxLife: 25_000 },
+    ]) {
+        const target = new TestStatusEntity(
+            `부패 Lv.${sample.effectLevel} 대상`,
+            [GameTags.TRAIT_LIVING],
+            sample.maxLife,
+        );
+        target.applyStatusEffect(decay, sample.duration, sample.effectLevel);
+        const expectedMultiplier = Math.max(0.8, Math.pow(0.99, sample.effectLevel));
+        assert.ok(Math.abs(target.maxLife - sample.maxLife * expectedMultiplier) < 0.001);
+
+        for (let second = 0; second < sample.duration; second++) {
+            const lifeBeforeTick = target.life;
+            const maxLifeBeforeTick = target.maxLife;
+            target.updateStatusEffects(1);
+            const lifeDamage = lifeBeforeTick - target.life;
+            assert.ok(
+                lifeDamage <= maxLifeBeforeTick * 0.02 + 0.001,
+                `부패 Lv.${sample.effectLevel} ${second + 1}초 피해 ${lifeDamage}`,
+            );
+        }
+        const lostRatio = 1 - target.life / sample.maxLife;
+        assert.ok(lostRatio >= 0.05, `부패 Lv.${sample.effectLevel} 위험도 ${(lostRatio * 100).toFixed(2)}%`);
+        assert.equal(target.isDefeated, false);
+    }
+
+    const refreshTarget = new TestStatusEntity('부패 갱신 대상', [GameTags.TRAIT_LIVING], 2_000);
+    const applied = refreshTarget.applyStatusEffect(decay, 8, 3);
+    refreshTarget.updateStatusEffects(2);
+    const refreshed = refreshTarget.applyStatusEffect(decay, 8, 3);
+    assert.equal(refreshed.action, StatusEffectApplyAction.REFRESHED);
+    assert.equal(refreshed.effect, applied.effect);
+    assert.equal(refreshTarget.getStatusEffects().filter(effect => effect.type === decay).length, 1);
+});
+
 test('마비독 earlyUpdate 제한은 source별로 한 tick만 유지되고 다른 제한과 충돌하지 않는다', () => {
     const living = new TestStatusEntity('마비 대상', [GameTags.TRAIT_LIVING]);
     const paralysis = living.applyStatusEffect(StatusEffectType.PARALYTIC_POISON, 10, 1).effect!;

@@ -21,6 +21,7 @@ import { sendBotMessageToUser, sendNotificationToUser } from '../modules/message
 import { chat } from '../utils/chatBuilder.js';
 import { GameTags } from '../../../shared/tags.js';
 import { ASCENDANT_REGIONS, HIGH_LEVEL_MINES } from './ascendantRegions.js';
+import { gravewardTonicStock } from './shops.js';
 
 function environmentModifierSource(effectId: string): string {
     return `status-effect:${effectId}`;
@@ -362,6 +363,7 @@ for (const [index, region] of ASCENDANT_REGIONS.entries()) {
         id: `${region.id}_waystation_store`,
         recommendedLevel: region.startLevel,
         buyList: [
+            ...(region.id === 'silentdivine' ? [gravewardTonicStock()] : []),
             ...[
                 [equipmentIds.sword, `${region.materialName} 단층검`],
                 [equipmentIds.bow, `${region.materialName} 원환궁`],

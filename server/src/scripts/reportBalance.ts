@@ -11,6 +11,7 @@ import {
     analyzeAllFirstJobs,
     analyzeBalanceProfile,
     analyzeItemBalance,
+    analyzeMonsterPressureDistribution,
     analyzeSkillBalance,
     BalanceEncounterType,
     BALANCE_PROFILE_LEVELS,
@@ -20,13 +21,18 @@ import {
 const levelInput = process.argv[2] ?? '50';
 const requestedLevel = Number.parseInt(levelInput, 10);
 const level = Number.isInteger(requestedLevel) && requestedLevel > 0 ? requestedLevel : 50;
-const reports = analyzeAllFirstJobs(level);
+
+if (levelInput.toLowerCase() === 'pressure') {
+    printMonsterPressureSummary();
+    process.exit(0);
+}
 
 if (levelInput.toLowerCase() === 'all') {
     for (const band of BALANCE_PROFILE_LEVELS) printProfiles(band);
     process.exit(0);
 }
 
+const reports = analyzeAllFirstJobs(level);
 printProfiles(level);
 
 console.log(`DaclionOnline 직업 밸런스 기준선 · Lv.${level}`);
@@ -206,4 +212,42 @@ function printProfiles(profileLevel: number): void {
             }
         }
     }
+}
+
+function printMonsterPressureSummary(): void {
+    const allLosses: number[] = [];
+    let totalDeaths = 0;
+    console.log('동레벨 일반 몬스터 피격 압력 · 추천 장비 5개 1차 직업');
+    for (const profileLevel of BALANCE_PROFILE_LEVELS) {
+        const distribution = analyzeMonsterPressureDistribution(profileLevel);
+        const losses = [...distribution.lifeLossRatios];
+        const deaths = distribution.deathProfiles;
+        allLosses.push(...losses);
+        totalDeaths += deaths;
+        console.log([
+            `Lv.${profileLevel}`,
+            `p25=${formatPercent(distribution.p25LifeLossRatio)}`,
+            `median=${formatPercent(distribution.medianLifeLossRatio)}`,
+            `p75=${formatPercent(distribution.p75LifeLossRatio)}`,
+            `사망=${deaths}/${distribution.profileCount}`,
+        ].join('  '));
+    }
+    console.log([
+        '전체',
+        `p25=${formatPercent(percentile(allLosses, 0.25))}`,
+        `median=${formatPercent(percentile(allLosses, 0.5))}`,
+        `p75=${formatPercent(percentile(allLosses, 0.75))}`,
+        `10~40%=${allLosses.filter(loss => loss >= 0.1 && loss <= 0.4).length}/${allLosses.length}`,
+        `사망=${totalDeaths}/${allLosses.length}`,
+    ].join('  '));
+}
+
+function percentile(values: readonly number[], ratio: number): number {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((left, right) => left - right);
+    return sorted[Math.floor((sorted.length - 1) * ratio)];
+}
+
+function formatPercent(value: number): string {
+    return `${(value * 100).toFixed(1)}%`;
 }
