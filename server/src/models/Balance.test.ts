@@ -5,7 +5,7 @@ import '../data/items.js';
 import '../data/jobs.js';
 import '../data/statusEffects.js';
 import '../data/tagEffects.js';
-import '../data/skills.js';
+import { calculateFinaleExecutionDamage } from '../data/skills.js';
 import '../data/monsters.js';
 import {
     analyzeAllBalanceProfiles,
@@ -24,7 +24,7 @@ import {
 import { AttributeType } from './Attribute.js';
 import { calculateProjectileEvasionSpeed } from './Projectile.js';
 import { calculateEvasionChance } from './Combat.js';
-import { getSkillData, PLAYER_COMBAT_SKILL_CADENCE_SECONDS } from './Skill.js';
+import Skill, { createSkillContext, getSkillData, PLAYER_COMBAT_SKILL_CADENCE_SECONDS } from './Skill.js';
 import { GameTags } from '../../../shared/tags.js';
 
 test('projected profile uses the same eight stat points earned per level', () => {
@@ -35,6 +35,58 @@ test('projected profile uses the same eight stat points earned per level', () =>
 
 test('밸런스 프로필은 Lv.1000까지의 고레벨 회귀 구간을 포함한다', () => {
     assert.deepEqual(BALANCE_PROFILE_LEVELS, [20, 50, 75, 100, 140, 180, 200, 350, 500, 750, 1000]);
+});
+
+test('후반 직업 패시브와 역할기는 Lv.240·320 경계 및 메인 계보만 밸런스 프로필에 반영한다', () => {
+    const definitions = [
+        ['career:warrior', 'unyielding_constitution', 'vanguard_command'],
+        ['career:archer', 'trajectory_analysis', 'armor_break_mark'],
+        ['career:assassin', 'slayers_breath', 'finale_execution'],
+        ['career:mage', 'deep_mana_cycle', 'mana_rift'],
+        ['career:blacksmith', 'master_heat_treatment', 'structural_dismantling'],
+    ] as const;
+
+    for (const [jobId, passiveId, activeId] of definitions) {
+        const beforePassive = createBalanceScenario(239, jobId);
+        const afterPassive = createBalanceScenario(240, jobId);
+        assert.equal(beforePassive.entity.attribute.hasSource(`skill:${passiveId}:passive`), false);
+        assert.equal(afterPassive.entity.attribute.hasSource(`skill:${passiveId}:passive`), true);
+
+        const beforeActive = analyzeCombatRotation(createBalanceScenario(319, jobId));
+        const afterActive = analyzeCombatRotation(createBalanceScenario(320, jobId));
+        assert.equal(beforeActive.skills.some(skill => skill.skillId === activeId), false, `${jobId} Lv.319`);
+        const roleSkill = afterActive.skills.find(skill => skill.skillId === activeId);
+        assert.ok(roleSkill, `${jobId} Lv.320`);
+        assert.equal(roleSkill.skillLevel, 1, `${jobId} projected skill level`);
+    }
+
+    const elite = createBalanceScenario(320, 'career:warrior', 'career:mage');
+    assert.equal(elite.entity.attribute.hasSource('skill:unyielding_constitution:passive'), true);
+    assert.equal(elite.entity.attribute.hasSource('skill:deep_mana_cycle:passive'), false);
+    const eliteRotation = analyzeCombatRotation(elite);
+    assert.equal(eliteRotation.skills.some(skill => skill.skillId === 'vanguard_command'), true);
+    assert.equal(eliteRotation.skills.some(skill => skill.skillId === 'mana_rift'), false);
+});
+
+test('명시된 unlockLevel은 서브 직업 추론 시점보다 우선해 스킬 레벨을 계산한다', () => {
+    const rotation = analyzeCombatRotation(createBalanceScenario(180, 'career:warrior', 'career:mage'));
+    const skill = rotation.skills.find(entry => entry.skillId === 'constellation_rupture');
+
+    assert.ok(skill);
+    assert.equal(skill.skillLevel, 1);
+});
+
+test('종막 밸런스 metadata는 실제 잃은 생명·보너스·총 피해 상한 helper를 그대로 사용한다', () => {
+    const scenario = createBalanceScenario(320, 'career:assassin', undefined, BalanceEncounterType.BOSS);
+    scenario.target.life = scenario.target.maxLife * 0.1;
+    const skill = new Skill({ playerId: null, skillDataId: 'finale_execution', level: 1 });
+    const expected = calculateFinaleExecutionDamage(createSkillContext(scenario.entity, skill), scenario.target);
+    const report = analyzeSkillBalance(scenario, 'finale_execution', 1);
+
+    assert.equal(report.rawDamage, expected.totalDamage);
+    assert.equal(expected.missingLifeBonus, expected.missingLifeBonusCap);
+    assert.ok(expected.totalDamage <= expected.totalDamageCap);
+    assert.ok(report.cooldown >= 20 && report.cooldown <= 30);
 });
 
 test('projected profiles follow the intended primary stat order for every first job', () => {

@@ -61,13 +61,13 @@ test('5개 1차 직업은 최소 3개 스킬을 지급하고 서로 다른 20개
     assert.ok(getJob('career:blacksmith')?.grantedSkills
         .some(grant => grant.skillDataId === 'equipment_repair'));
     for (const skill of getAllSkillData()) {
-        assert.equal(skill.icon, `skills/${skill.id}`, `${skill.id} dedicated icon key`);
+        assert.match(skill.icon, /^(skills|items|affinities|jobs)\/[a-z0-9_-]+$/, `${skill.id} declared icon key`);
         const png = readFileSync(new URL(`../../../client/public/icons/${skill.icon}.png`, import.meta.url));
         assert.equal(png.readUInt32BE(16), 128, `${skill.id} icon width`);
         assert.equal(png.readUInt32BE(20), 128, `${skill.id} icon height`);
     }
     for (const skill of getAllSkillData().filter(data => data.activationMessage)) {
-        assert.equal(skill.activationHeader, skill.id, `${skill.id} dedicated cast header key`);
+        assert.match(skill.activationHeader ?? '', /^[a-z0-9_-]+$/, `${skill.id} declared cast header key`);
         const icon = readFileSync(new URL(`../../../client/public/icons/${skill.icon}.png`, import.meta.url));
         assert.equal(icon.readUInt32BE(16), 128, `${skill.id} icon width`);
         assert.equal(icon.readUInt32BE(20), 128, `${skill.id} icon height`);

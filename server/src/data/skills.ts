@@ -28,6 +28,8 @@ import {
 import { getLocation } from '../models/Location.js';
 import { ActionType } from '../models/Action.js';
 import type Entity from '../models/Entity.js';
+import Monster from '../models/Monster.js';
+import { JobSlotType } from '../models/Job.js';
 import { ShieldType } from '../models/Shield.js';
 import { LegacyStatusEffects } from './statusEffects.js';
 import { StatType } from '../models/Stat.js';
@@ -516,7 +518,9 @@ const JOBS = {
     blacksmith: 'career:blacksmith',
 } as const;
 
-function jobRequirement(jobId: string) { return { anyOf: [jobId], slot: undefined }; }
+function jobRequirement(jobId: string, slot?: JobSlotType) { return { anyOf: [jobId], slot }; }
+
+function mainJobRequirement(jobId: string) { return jobRequirement(jobId, JobSlotType.MAIN); }
 
 function hasBlacksmithSkillAccess(player?: Player | null): boolean {
     return Boolean(player && (player.career.hasJob(JOBS.blacksmith)
@@ -536,17 +540,22 @@ function defineJobPassive(options: {
     icon: string;
     description: string;
     modifiers: readonly JobPassiveModifier[];
+    unlockLevel?: number;
+    slot?: JobSlotType;
     isVisible?: (player?: Player | null) => boolean;
 }): void {
     const source = `skill:${options.id}:passive`;
     defineSkill({
         id: options.id,
         name: options.name,
-        icon: `skills/${options.id}`,
+        icon: options.icon,
         maxLevel: 1,
+        unlockLevel: options.unlockLevel,
         descriptionTemplate: options.description,
         costTemplate: '소모값 없음',
-        activationConditionTemplate: '해당 직업이 활성화되어 있는 동안 항상 적용됩니다.',
+        activationConditionTemplate: options.slot === JobSlotType.MAIN
+            ? '해당 메인 직업 계열이 활성화되어 있는 동안 항상 적용됩니다.'
+            : '해당 직업이 활성화되어 있는 동안 항상 적용됩니다.',
         baseMetadata: null,
         calculatedFields: Object.fromEntries(options.modifiers.map(modifier => [
             modifier.attribute,
@@ -554,7 +563,10 @@ function defineJobPassive(options: {
         ])),
         calculateExperienceGain: () => 0,
         calculateRequiredExperience: () => 0,
-        jobRequirement: options.isVisible ? undefined : jobRequirement(options.jobId),
+        autoAcquire: options.unlockLevel
+            ? careerLevelAutoAcquire(options.jobId, options.unlockLevel, options.slot)
+            : undefined,
+        jobRequirement: options.isVisible ? undefined : jobRequirement(options.jobId, options.slot),
         isVisible: options.isVisible ? ({ player }) => options.isVisible!(player) : undefined,
         canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
         onPassiveUpdate: ({ owner }) => {
@@ -1951,12 +1963,12 @@ function growthTechniqueDamageTooltip(context: SkillContext, definition: GrowthT
     return tooltipValue(growthTechniqueDamage(context, definition), formulas.join(' + '));
 }
 
-function careerLevelAutoAcquire(jobId: string, unlockLevel: number) {
+function careerLevelAutoAcquire(jobId: string, unlockLevel: number, slot?: JobSlotType) {
     return {
         watchedProgress: [] as readonly string[],
         alwaysEvaluate: true,
         check: ({ player }: SkillContext) => Boolean(
-            player && player.level >= unlockLevel && player.career.hasJob(jobId),
+            player && player.level >= unlockLevel && player.career.hasJob(jobId, slot),
         ),
     };
 }
@@ -1979,6 +1991,342 @@ function careerMasteryAutoAcquire(
         ),
     };
 }
+
+interface LateCareerPassiveDefinition {
+    readonly id: string;
+    readonly name: string;
+    readonly jobId: string;
+    readonly icon: string;
+    readonly description: string;
+    readonly modifiers: readonly JobPassiveModifier[];
+}
+
+// TODO(art): 1차 콘텐츠 확장 종료 후 각 스킬의 전용 128×128 아이콘으로 교체한다.
+const lateCareerPassives: readonly LateCareerPassiveDefinition[] = [
+    {
+        id: 'unyielding_constitution',
+        name: '불퇴의 체질',
+        jobId: JOBS.warrior,
+        icon: 'skills/career_warrior',
+        description: '{{icon.maxLife}} 최대 생명력이 [color=green]{{maxLife}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.04, label: '최대 생명력 증가', display: '+4%' },
+            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.03, label: '방어력 증가', display: '+3%' },
+        ],
+    },
+    {
+        id: 'trajectory_analysis',
+        name: '궤적 해석',
+        jobId: JOBS.archer,
+        icon: 'skills/career_archer',
+        description: '{{icon.projectileAcceleration}} 투사체 가속이 [color=cyan]{{projectileAcceleration}}[/color], {{icon.armorPen}} 물리 관통력이 [color=orange]{{armorPen}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.PROJECTILE_ACCELERATION.key, op: 'multiply', value: 1.05, label: '투사체 가속 증가', display: '+5%' },
+            { attribute: AttributeType.ARMOR_PEN.key, op: 'add', value: 4, label: '물리 관통력 증가', display: '+4' },
+        ],
+    },
+    {
+        id: 'slayers_breath',
+        name: '살수의 호흡',
+        jobId: JOBS.assassin,
+        icon: 'skills/career_assassin',
+        description: '{{icon.speed}} 이동속도가 [color=cyan]{{speed}}[/color], {{icon.critRate}} 치명타 확률이 [color=gold]{{critRate}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.04, label: '이동속도 증가', display: '+4%' },
+            { attribute: AttributeType.CRIT_RATE.key, op: 'add', value: 0.02, label: '치명타 확률 증가', display: '+2%p' },
+        ],
+    },
+    {
+        id: 'deep_mana_cycle',
+        name: '심층 마력순환',
+        jobId: JOBS.mage,
+        icon: 'skills/career_mage',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.maxMentality}} 최대 정신력이 [color=$magic]{{maxMentality}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.04, label: '마법력 증가', display: '+4%' },
+            { attribute: AttributeType.MAX_MENTALITY.key, op: 'multiply', value: 1.05, label: '최대 정신력 증가', display: '+5%' },
+        ],
+    },
+    {
+        id: 'master_heat_treatment',
+        name: '명장의 열처리',
+        jobId: JOBS.blacksmith,
+        icon: 'skills/career_blacksmith',
+        description: '{{icon.def}} 방어력과 {{icon.magicDef}} 마법 저항력이 각각 [color=yellow]{{def}}[/color], [color=$magic]{{magicDef}}[/color] 증가하고 {{icon.forgingPrecision}} 제련 정밀도가 [color=gold]{{forgingPrecision}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.03, label: '방어력 증가', display: '+3%' },
+            { attribute: AttributeType.MAGIC_DEF.key, op: 'multiply', value: 1.03, label: '마법 저항력 증가', display: '+3%' },
+            { attribute: AttributeType.FORGING_PRECISION.key, op: 'add', value: 0.03, label: '제련 정밀도 증가', display: '+3%p' },
+        ],
+    },
+];
+
+for (const passive of lateCareerPassives) defineJobPassive({
+    ...passive,
+    unlockLevel: 240,
+    slot: JobSlotType.MAIN,
+});
+
+const LATE_TACTICAL_UNLOCK_LEVEL = 320;
+const LATE_TACTICAL_DURATION = 10;
+
+function tacticalEffectLevel(skillLevel: number): number {
+    return 2 + skillLevel;
+}
+
+function structureBreakEffectLevel(skillLevel: number): number {
+    return 1 + Math.ceil(skillLevel / 2);
+}
+
+function engageTacticalTarget(context: SkillContext, target: Entity): void {
+    if (target instanceof Monster) target.acquireCombatTarget(context.owner);
+}
+
+function vanguardCommandShield(context: SkillContext): number {
+    return context.owner.maxLife * percentByLevel(context.skill.level, 10, 1) / 100
+        + context.owner.attribute.get(AttributeType.DEF) * valueByLevel(context.skill.level, 1.5, 0.15);
+}
+
+function vanguardCommandTauntPower(context: SkillContext): number {
+    return context.owner.maxLife * percentByLevel(context.skill.level, 60, 5) / 100
+        + context.owner.attribute.get(AttributeType.DEF) * valueByLevel(context.skill.level, 8, 1);
+}
+
+// TODO(art): 전용 아트 제작 단계에서 기존 전사 방어기 fallback을 고유 아이콘·배너로 교체한다.
+defineSkill({
+    id: 'vanguard_command',
+    name: '선봉의 호령',
+    icon: 'skills/indomitable',
+    activationHeader: 'indomitable',
+    maxLevel: 5,
+    unlockLevel: LATE_TACTICAL_UNLOCK_LEVEL,
+    descriptionTemplate: '지정한 몬스터의 위협을 자신에게 끌어오고, {{duration}} 동안 {{icon.maxLife}}{{icon.def}} [color=green]{{shield}}[/color]만큼의 피해를 막는 일반 보호막을 얻습니다. 도발은 대상의 도발 저항과 위협도 규칙을 그대로 따릅니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 40[/color]',
+    activationConditionTemplate: activationGuide('몬스터를 대상으로 지정하고'),
+    activationMessage: '선봉의 호령!',
+    baseMetadata: null,
+    calculatedFields: {
+        duration: () => `${LATE_TACTICAL_DURATION}초`,
+        shield: context => tooltipValue(
+            vanguardCommandShield(context),
+            `최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 10, 1))}% + 방어력 × ${formatNumber(valueByLevel(context.skill.level, 1.5, 0.15))}`,
+        ),
+    },
+    balance: {
+        role: SkillBalanceRole.DEFENSE,
+        calculateManaCost: () => 40,
+        calculateShield: vanguardCommandShield,
+        calculateEffectDuration: () => LATE_TACTICAL_DURATION,
+        notes: ['도발은 몬스터의 도발 저항과 현재 위협도에 따라 대상을 전환하며 피해량으로 환산하지 않습니다.'],
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 24, 1, 20),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_WARRIOR),
+    autoAcquire: careerLevelAutoAcquire(JOBS.warrior, LATE_TACTICAL_UNLOCK_LEVEL, JobSlotType.MAIN),
+    jobRequirement: mainJobRequirement(JOBS.warrior),
+    canActivate: context => {
+        const found = targetOrDeny(context);
+        if ('reason' in found) return denySkill(found.reason);
+        if (!(found.target instanceof Monster)) return denySkill('선봉의 호령은 몬스터에게만 사용할 수 있습니다.');
+        return simpleCheck(40, true, false)(context);
+    },
+    onStart: context => {
+        const found = targetOrDeny(context);
+        if ('reason' in found || !(found.target instanceof Monster)) {
+            throw new Error('도발할 몬스터가 발동 직전에 사라졌습니다.');
+        }
+        spend(context, 40);
+        found.target.acquireCombatTarget(context.owner);
+        found.target.taunt(context.owner, vanguardCommandTauntPower(context));
+        context.owner.setShield(
+            'skill:vanguard_command',
+            vanguardCommandShield(context),
+            ShieldType.GENERAL,
+            LATE_TACTICAL_DURATION,
+            context.owner,
+        );
+    },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_WARRIOR],
+});
+
+interface DefenseDebuffTacticDefinition {
+    readonly id: string;
+    readonly name: string;
+    readonly jobId: string;
+    readonly icon: string;
+    readonly activationHeader: string;
+    readonly groupTag: TagId;
+    readonly manaCost: number;
+    readonly cooldown: number;
+    readonly minimumCooldown: number;
+    readonly intro: string;
+    readonly effects: readonly StatusEffectType[];
+    readonly effectLevel: (skillLevel: number) => number;
+}
+
+// TODO(art): 전용 아트 제작 단계에서 아래 역할기의 기존 계열 fallback 아이콘·배너를 교체한다.
+const defenseDebuffTactics: readonly DefenseDebuffTacticDefinition[] = [
+    {
+        id: 'armor_break_mark', name: '파갑 표식', jobId: JOBS.archer,
+        icon: 'skills/stunning_shot', activationHeader: 'stunning_shot',
+        groupTag: GameTags.SKILL_GROUP_ARCHER, manaCost: 34, cooldown: 24, minimumCooldown: 20,
+        intro: '대상의 갑옷 이음새를 추적하는 표식을 새깁니다.',
+        effects: [LegacyStatusEffects.DEFENSE_REDUCTION], effectLevel: tacticalEffectLevel,
+    },
+    {
+        id: 'mana_rift', name: '마력 균열', jobId: JOBS.mage,
+        icon: 'skills/elemental_bind', activationHeader: 'elemental_bind',
+        groupTag: GameTags.SKILL_GROUP_MAGIC, manaCost: 42, cooldown: 24, minimumCooldown: 20,
+        intro: '대상을 감싼 마력 방벽의 흐름에 균열을 만듭니다.',
+        effects: [LegacyStatusEffects.MAGIC_DEFENSE_REDUCTION], effectLevel: tacticalEffectLevel,
+    },
+    {
+        id: 'structural_dismantling', name: '구조 해체', jobId: JOBS.blacksmith,
+        icon: 'skills/precision_break', activationHeader: 'precision_break',
+        groupTag: GameTags.SKILL_GROUP_BLACKSMITH, manaCost: 44, cooldown: 30, minimumCooldown: 26,
+        intro: '물질과 마력의 하중점을 함께 읽어 방어 구조 전체를 해체합니다.',
+        effects: [LegacyStatusEffects.DEFENSE_REDUCTION, LegacyStatusEffects.MAGIC_DEFENSE_REDUCTION],
+        effectLevel: structureBreakEffectLevel,
+    },
+];
+
+for (const tactic of defenseDebuffTactics) defineSkill({
+    id: tactic.id,
+    name: tactic.name,
+    icon: tactic.icon,
+    activationHeader: tactic.activationHeader,
+    maxLevel: 5,
+    unlockLevel: LATE_TACTICAL_UNLOCK_LEVEL,
+    descriptionTemplate: `${tactic.intro} 대상에게 {{effectLevel}}레벨 ${tactic.effects.map(effect => effect.label).join('·')} 효과를 {{duration}} 동안 부여합니다. 이 약화는 행동을 막는 군중 제어 효과가 아닙니다.`,
+    costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${tactic.manaCost}[/color]`,
+    activationConditionTemplate: targetActivationGuide(),
+    activationMessage: `${tactic.name}!`,
+    baseMetadata: null,
+    calculatedFields: {
+        effectLevel: context => tooltipValue(
+            tactic.effectLevel(context.skill.level),
+            `스킬 레벨 ${context.skill.level} 기준 약화 효과 레벨`,
+        ),
+        duration: () => `${LATE_TACTICAL_DURATION}초`,
+    },
+    balance: {
+        role: SkillBalanceRole.SUPPORT,
+        calculateManaCost: () => tactic.manaCost,
+        calculateEffectDuration: () => LATE_TACTICAL_DURATION,
+        notes: [`${tactic.effects.map(effect => effect.label).join('·')}의 파티 전술 가치는 직접 피해로 환산하지 않습니다.`],
+    },
+    calculateMaxCooldown: context => cooldownByLevel(
+        context,
+        tactic.cooldown,
+        1,
+        tactic.minimumCooldown,
+    ),
+    sharedCooldowns: combatSharedCooldowns(tactic.groupTag),
+    autoAcquire: careerLevelAutoAcquire(tactic.jobId, LATE_TACTICAL_UNLOCK_LEVEL, JobSlotType.MAIN),
+    jobRequirement: mainJobRequirement(tactic.jobId),
+    canActivate: simpleCheck(tactic.manaCost, true, false),
+    onStart: context => {
+        const found = targetOrDeny(context);
+        if ('reason' in found) throw new Error(found.reason);
+        spend(context, tactic.manaCost);
+        engageTacticalTarget(context, found.target);
+        for (const effect of tactic.effects) {
+            found.target.applyStatusEffect(
+                effect,
+                LATE_TACTICAL_DURATION,
+                tactic.effectLevel(context.skill.level),
+                context.owner,
+            );
+        }
+    },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, tactic.groupTag],
+});
+
+export interface FinaleExecutionDamageSnapshot {
+    readonly baseDamage: number;
+    readonly missingLifeBonus: number;
+    readonly missingLifeBonusCap: number;
+    readonly totalDamageCap: number;
+    readonly totalDamage: number;
+}
+
+/** 설명·밸런스 분석·실제 타격이 공유하는 보스 원킬 방지형 처형 피해식. */
+export function calculateFinaleExecutionDamage(
+    context: SkillContext,
+    target: Entity | null = context.owner.currentTarget,
+): FinaleExecutionDamageSnapshot {
+    const levelOffset = Math.max(0, context.skill.level - 1);
+    const attack = Math.max(0, context.owner.attribute.get(AttributeType.ATK));
+    const mobilityPower = Math.max(0, context.owner.attribute.get(AttributeType.SPEED)) * MOBILITY_DAMAGE_SCALE;
+    const referencePower = attack + mobilityPower;
+    const baseDamage = attack * (1.6 + levelOffset * 0.1)
+        + mobilityPower * (0.55 + levelOffset * 0.05);
+    const missingLife = target
+        ? Math.max(0, Math.min(target.maxLife, target.maxLife - target.life))
+        : 0;
+    const missingLifeRatio = 0.04 + levelOffset * 0.005;
+    const missingLifeBonusCap = referencePower * (1.25 + levelOffset * 0.1);
+    const missingLifeBonus = Math.min(missingLife * missingLifeRatio, missingLifeBonusCap);
+    const totalDamageCap = referencePower * (2.25 + levelOffset * 0.15);
+    return {
+        baseDamage,
+        missingLifeBonus,
+        missingLifeBonusCap,
+        totalDamageCap,
+        totalDamage: Math.min(baseDamage + missingLifeBonus, totalDamageCap),
+    };
+}
+
+// TODO(art): 전용 아트 제작 단계에서 기존 암살 기술 fallback 아이콘·배너를 교체한다.
+defineSkill({
+    id: 'finale_execution',
+    name: '종막',
+    icon: 'skills/ambush',
+    activationHeader: 'ambush',
+    maxLevel: 5,
+    unlockLevel: LATE_TACTICAL_UNLOCK_LEVEL,
+    descriptionTemplate: '대상의 남은 힘이 무너지는 순간을 베어 {{icon.atk}}{{icon.speed}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다. 잃은 생명력의 {{missingRatio}}를 보너스로 더하지만 보너스는 {{bonusCap}}, 최종 피해는 {{totalCap}}을 넘지 않으며 치명타와 군중 제어는 발생하지 않습니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 48[/color]',
+    activationConditionTemplate: targetActivationGuide(),
+    activationMessage: '종막!',
+    baseMetadata: null,
+    calculatedFields: {
+        damage: context => {
+            const result = calculateFinaleExecutionDamage(context);
+            return tooltipValue(
+                result.totalDamage,
+                `기본 피해 ${formatNumber(result.baseDamage)} + 잃은 생명력 보너스 ${formatNumber(result.missingLifeBonus)} · 최종 상한 ${formatNumber(result.totalDamageCap)}`,
+            );
+        },
+        missingRatio: context => `${formatNumber(percentByLevel(context.skill.level, 4, 0.5))}%`,
+        bonusCap: context => formatNumber(calculateFinaleExecutionDamage(context).missingLifeBonusCap),
+        totalCap: context => formatNumber(calculateFinaleExecutionDamage(context).totalDamageCap),
+    },
+    balance: {
+        role: SkillBalanceRole.DAMAGE,
+        damageType: 'physical',
+        calculateDamage: context => calculateFinaleExecutionDamage(context).totalDamage,
+        criticalMode: SkillCriticalMode.DISABLED,
+        calculateManaCost: () => 48,
+        notes: ['잃은 생명력 보너스와 총 피해에 공격력·기동력 기반 상한을 각각 적용해 보스 체력에 비례한 즉사를 막습니다.'],
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 28, 1, 24),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ASSASSIN),
+    autoAcquire: careerLevelAutoAcquire(JOBS.assassin, LATE_TACTICAL_UNLOCK_LEVEL, JobSlotType.MAIN),
+    jobRequirement: mainJobRequirement(JOBS.assassin),
+    canActivate: simpleCheck(48),
+    onStart: context => {
+        const found = targetOrDeny(context);
+        if ('reason' in found) throw new Error(found.reason);
+        spend(context, 48);
+        const damage = calculateFinaleExecutionDamage(context, found.target).totalDamage;
+        const result = context.owner.attack(found.target, 'physical', damage, {
+            criticalRate: 0,
+            consumeMainHandDurability: false,
+        });
+        if (!result) throw new Error('종막 공격이 확정되지 않았습니다.');
+    },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ASSASSIN],
+});
 
 const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     {

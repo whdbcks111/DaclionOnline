@@ -4,7 +4,7 @@ import { AttributeType } from './Attribute.js';
 import type { AttributeModifier, AttributeRecord } from './Attribute.js';
 import { calculateEvasionChance, calculateFinalDamage } from './Combat.js';
 import { DEFAULT_PLAYER_BASE_ATTRIBUTE } from './PlayerDefaults.js';
-import { getAllJobs, getJob, isJobDescendant, resolveEliteJob, type JobData } from './Job.js';
+import { getAllJobs, getJob, isJobDescendant, JobSlotType, resolveEliteJob, type JobData } from './Job.js';
 import Skill, {
     PLAYER_COMBAT_SKILL_CADENCE_SECONDS,
     createSkillContext,
@@ -340,8 +340,9 @@ export function createBalanceScenario(
     const loadout = applyProjectedLoadout(entity, projectedLoadoutJobId, normalizedLevel, loadoutItemDataId);
     applyJobModifiers(entity, effectiveJob.mainModifiers, 'balance:main');
     if (subJob) applyJobModifiers(entity, subJob.subModifiers, 'balance:sub');
-    applyJobPassives(entity, [mainJob, subJob, effectiveJob]);
+    applyJobPassives(entity, normalizedLevel, mainJob, subJob, effectiveJob);
     const targetProfile = createEncounterTarget(normalizedLevel, encounter);
+    entity.currentTarget = targetProfile.target;
     return {
         level: normalizedLevel,
         mainJob,
@@ -905,8 +906,40 @@ function applyJobModifiers(entity: Entity, modifiers: readonly Omit<AttributeMod
 }
 
 /** 실제 패시브 callback을 적용해 런타임과 밸런스 진단의 계산식을 동일하게 유지한다. */
-function applyJobPassives(entity: Entity, jobs: readonly (Readonly<JobData> | undefined)[]): void {
+function matchesProjectedJobRequirement(
+    data: Readonly<SkillData>,
+    mainJob: Readonly<JobData>,
+    subJob: Readonly<JobData> | undefined,
+    effectiveJob: Readonly<JobData>,
+): boolean {
+    const requirement = data.jobRequirement;
+    if (!requirement) return false;
+    return requirement.anyOf.some(required => {
+        const mainCompatible = isJobDescendant(effectiveJob.id, required)
+            || isJobDescendant(mainJob.id, required);
+        if (requirement.slot === JobSlotType.MAIN) return mainCompatible;
+        if (requirement.slot === JobSlotType.SUB) return subJob?.id === required;
+        return mainCompatible || subJob?.id === required;
+    });
+}
+
+/** 실제 패시브 callback과 레벨·메인 계보 조건을 함께 적용한다. */
+function applyJobPassives(
+    entity: Entity,
+    level: number,
+    mainJob: Readonly<JobData>,
+    subJob: Readonly<JobData> | undefined,
+    effectiveJob: Readonly<JobData>,
+): void {
+    const jobs = [mainJob, subJob, effectiveJob];
     const skillIds = new Set(jobs.flatMap(job => job?.grantedSkills.map(grant => grant.skillDataId) ?? []));
+    for (const data of getAllSkillData()) {
+        if (!data.tags.includes(GameTags.SKILL_PASSIVE)
+            || data.unlockLevel === undefined
+            || data.unlockLevel > level
+            || !matchesProjectedJobRequirement(data, mainJob, subJob, effectiveJob)) continue;
+        skillIds.add(data.id);
+    }
     for (const skillDataId of skillIds) {
         const data = getSkillData(skillDataId);
         if (!data?.tags.includes(GameTags.SKILL_PASSIVE) || !data.onPassiveUpdate) continue;
@@ -1113,14 +1146,18 @@ function getRotationSkills(scenario: BalanceScenario): Readonly<SkillData>[] {
         ...(scenario.subJob?.grantedSkills.map(value => value.skillDataId) ?? []),
         ...scenario.effectiveJob.grantedSkills.map(value => value.skillDataId),
     ]);
-    const ownedJobs = [scenario.mainJob.id, scenario.subJob?.id, scenario.effectiveJob.id].filter((id): id is string => Boolean(id));
     return getAllSkillData().filter(data => {
         if (!data.balance || data.tags.includes(GameTags.SKILL_PASSIVE)) return false;
         if (scenario.level < (data.unlockLevel ?? PROJECTED_SKILL_UNLOCK_LEVELS.get(data.id) ?? 1)) return false;
         if (data.weaponRequirement && !data.weaponRequirement.mainHandAnyTags.some(tag =>
             scenario.mainHandTags.includes(tag))) return false;
         if (granted.has(data.id) || data.id === 'power_strike') return true;
-        return data.jobRequirement?.anyOf.some(required => ownedJobs.some(job => isJobDescendant(job, required))) ?? false;
+        return matchesProjectedJobRequirement(
+            data,
+            scenario.mainJob,
+            scenario.subJob,
+            scenario.effectiveJob,
+        );
     }).sort((left, right) => left.id.localeCompare(right.id));
 }
 
@@ -1393,8 +1430,8 @@ function isTimeCovered(time: number, windows: readonly { start: number; end: num
 function projectSkillLevel(characterLevel: number, data: Readonly<SkillData>, scenario: BalanceScenario): number {
     const requiresElite = data.jobRequirement?.anyOf.some(id => getJob(id)?.tier.key === 'elite') ?? false;
     const requiresSub = Boolean(scenario.subJob && data.jobRequirement?.anyOf.some(id => isJobDescendant(scenario.subJob!.id, id)));
-    const unlockLevel = requiresElite ? 200 : requiresSub ? 50
-        : data.unlockLevel ?? PROJECTED_SKILL_UNLOCK_LEVELS.get(data.id) ?? 20;
+    const unlockLevel = data.unlockLevel
+        ?? (requiresElite ? 200 : requiresSub ? 50 : PROJECTED_SKILL_UNLOCK_LEVELS.get(data.id) ?? 20);
     return Math.max(1, Math.min(data.maxLevel, 1 + Math.floor(Math.max(0, characterLevel - unlockLevel) / 20)));
 }
 
