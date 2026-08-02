@@ -32,7 +32,7 @@ function handlePvpKill(event: GameEvent): void {
             logger.error('영웅 상태효과가 등록되지 않아 현상 대상 처치 보상을 적용하지 못했습니다.');
             return;
         }
-        killer.applyStatusEffect(hero, heroReward.durationSeconds, heroReward.level);
+        killer.applyStatusEffect(hero, heroReward.durationSeconds, heroReward.level, killer);
         const message = chat()
             .color('gold', b => b.weight('bold', inner => inner.text('영웅의 증표')))
             .text(`  악명 높은 ${victim.name}을(를) 처치해 `)

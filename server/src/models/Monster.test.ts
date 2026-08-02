@@ -10,13 +10,28 @@ import Monster, {
 import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import { defineLocation } from './Location.js';
+import { StatusEffectType } from './StatusEffect.js';
+import { ShieldType } from './Shield.js';
+import '../data/statusEffects.js';
 
 const LONG_RESPAWN_BOSS_ID = 'test:long_respawn_boss';
 const STANDARD_RESPAWN_MONSTER_ID = 'test:standard_respawn_monster';
+const CONTRIBUTION_MONSTER_ID = 'test:contribution_monster';
 const MONSTER_TEST_LOCATION_ID = 'monster-test';
 
 class TestMonsterAttacker extends Entity {
     override readonly name = '보스 도입 시험 공격자';
+}
+
+class TestContributionPlayer extends Entity {
+    override readonly name: string;
+    override get isPlayer(): boolean { return true; }
+    override get playerUserId(): number { return this.userId; }
+
+    constructor(readonly userId: number, locationId: string, name = `기여자 ${userId}`) {
+        super(1, 0, locationId, { maxLife: 100, atk: 10, speed: 1 }, Equipment.createEmpty());
+        this.name = name;
+    }
 }
 
 defineMonster({
@@ -50,6 +65,20 @@ defineMonster({
     baseAttribute: { maxLife: 100, atk: 1, speed: 1 },
     drops: [],
     expReward: 0,
+    goldReward: 0,
+    equipments: [],
+    tags: [],
+});
+
+defineMonster({
+    id: CONTRIBUTION_MONSTER_ID,
+    name: '기여 원장 시험 몬스터',
+    description: '실제 전투 기여 원장 시험용 몬스터',
+    level: 1,
+    exp: 0,
+    baseAttribute: { maxLife: 100, atk: 1, speed: 1, def: 0, magicDef: 0 },
+    drops: [],
+    expReward: 100,
     goldReward: 0,
     equipments: [],
     tags: [],
@@ -180,4 +209,91 @@ test('보스가 새 전투 대상을 얻으면 이탈 대기와 회복이 즉시
     boss.update(3);
     boss.update(2);
     assert.equal(boss.life, recoveredLife);
+});
+
+test('직접 피해와 source가 있는 DoT는 실제 피해만 각각 한 번 기여 원장에 기록한다', () => {
+    const locationId = 'contribution-direct-dot';
+    const monster = new Monster(CONTRIBUTION_MONSTER_ID, locationId);
+    const attacker = new TestContributionPlayer(10_001, locationId);
+    const direct = monster.damage(10, 'absolute', {
+        type: 'attack',
+        causeEntity: attacker,
+        fixedDamage: true,
+    });
+    assert.equal(direct.lifeDamage, 10);
+    assert.equal(monster.getDefeatContributionSnapshot()[0]?.damage, 10);
+
+    monster.applyStatusEffect(StatusEffectType.FIRE, 3, 1, attacker);
+    monster.updateStatusEffects(1);
+
+    const snapshot = monster.getDefeatContributionSnapshot()[0];
+    assert.equal(snapshot?.userId, attacker.userId);
+    assert.equal(snapshot?.damage, 13.5);
+    assert.equal(monster.lastDamageCause?.causeEntity?.attackOwner, attacker);
+});
+
+test('과잉 피해는 남은 생명력까지만 lifeDamage와 기여도로 인정한다', () => {
+    const locationId = 'contribution-overkill';
+    const monster = new Monster(CONTRIBUTION_MONSTER_ID, locationId);
+    const attacker = new TestContributionPlayer(10_002, locationId);
+
+    const result = monster.damage(1_000, 'absolute', {
+        type: 'attack',
+        causeEntity: attacker,
+        fixedDamage: true,
+    });
+
+    assert.equal(result.finalDamage, 1_000);
+    assert.equal(result.lifeDamage, 100);
+    assert.equal(result.remainingLife, 0);
+    assert.equal(monster.getDefeatContributionSnapshot()[0]?.damage, 100);
+});
+
+test('치유와 보호막은 claim 안 source의 실제 회복·흡수량만 기록하고 미사용량은 제외한다', () => {
+    const locationId = 'contribution-support';
+    const monster = new Monster(CONTRIBUTION_MONSTER_ID, locationId);
+    const tank = new TestContributionPlayer(10_003, locationId, '탱커');
+    const outsider = new TestContributionPlayer(10_004, locationId, '외부 지원자');
+    monster.acquireCombatTarget(tank);
+
+    assert.equal(tank.heal(50, tank).healedAmount, 0);
+    tank.damage(20, 'absolute');
+    assert.equal(tank.heal(50, outsider).healedAmount, 20);
+    assert.deepEqual(monster.getDefeatContributionSnapshot(), []);
+
+    tank.damage(20, 'absolute');
+    assert.equal(tank.heal(10, tank).healedAmount, 10);
+    tank.setShield('test:used', 50, ShieldType.GENERAL, 10, tank);
+    assert.equal(monster.getDefeatContributionSnapshot()[0]?.shielding ?? 0, 0);
+    tank.damage(30, 'absolute');
+    tank.setShield('test:unused', 40, ShieldType.GENERAL, 0.5, tank);
+    tank.earlyUpdate(1);
+
+    const snapshot = monster.getDefeatContributionSnapshot()[0];
+    assert.equal(snapshot?.healing, 10);
+    assert.equal(snapshot?.shielding, 30);
+    assert.equal(snapshot?.total, 40);
+});
+
+test('제어 기여는 저항·점감 후 실제 가동 시간만 환산하고 조기 제거·만료를 중복 집계하지 않는다', () => {
+    const locationId = 'contribution-control';
+    const monster = new Monster(CONTRIBUTION_MONSTER_ID, locationId);
+    const controller = new TestContributionPlayer(10_005, locationId);
+    const stun = StatusEffectType.fromKey('stun')!;
+    const sleep = StatusEffectType.fromKey('sleep')!;
+    monster.acquireCombatTarget(controller);
+
+    const first = monster.applyStatusEffect(stun, 10, 1, controller).effect!;
+    assert.equal(first.duration, 2.5);
+    monster.updateStatusEffects(1);
+    monster.removeStatusEffect(stun);
+    monster.updateStatusEffects(5);
+
+    const diminished = monster.applyStatusEffect(sleep, 10, 1, controller).effect!;
+    assert.equal(diminished.duration, 1.25);
+    monster.updateStatusEffects(5);
+    monster.updateStatusEffects(5);
+
+    // 최대 생명력 100의 1% × (1초 + 1.25초)
+    assert.equal(monster.getDefeatContributionSnapshot()[0]?.control, 2.25);
 });

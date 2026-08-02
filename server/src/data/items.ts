@@ -50,9 +50,9 @@ function applyHitStatus(
     duration: number,
     level: number,
 ): (context: ItemBasicAttackHitContext) => void {
-    return ({ target }) => {
+    return ({ target, attacker }) => {
         const effect = StatusEffectType.fromKey(statusEffectId);
-        if (effect && Math.random() < chance) target.applyStatusEffect(effect, duration, level);
+        if (effect && Math.random() < chance) target.applyStatusEffect(effect, duration, level, attacker);
     };
 }
 
@@ -248,7 +248,7 @@ registerItemUse('apply_status_effect', (inv, item, finish) => {
         }
         if (!inv.removeItemInstance(item, 1)) return;
         const level = Math.max(1, Math.floor(config?.level ?? 1));
-        const result = player.applyStatusEffect(effect, config!.duration!, level);
+        const result = player.applyStatusEffect(effect, config!.duration!, level, player);
         const thirst = restorePotionThirst(player, item);
         sendNotificationToUser(player.userId, {
             key: `item:status-effect:${effect.id}`,
@@ -661,9 +661,9 @@ defineItem({
     ],
     baseDurability: 60,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.PROPERTY_POISON],
-    onBasicAttackHit: ({ target }) => {
+    onBasicAttackHit: ({ target, attacker }) => {
         if (Math.random() < 0.5) {
-            target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 8, 1);
+            target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 8, 1, attacker);
         }
     },
     balance: {
@@ -856,9 +856,9 @@ defineItem({
     ],
     baseDurability: 270,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.PROPERTY_DARK],
-    onBasicAttackHit: ({ target }) => {
+    onBasicAttackHit: ({ target, attacker }) => {
         const decay = StatusEffectType.fromKey('decay');
-        if (decay && Math.random() < 0.25) target.applyStatusEffect(decay, 8, 3);
+        if (decay && Math.random() < 0.25) target.applyStatusEffect(decay, 8, 3, attacker);
     },
     balance: {
         role: ItemBalanceRole.WEAPON,
@@ -1319,9 +1319,9 @@ defineItem({
     ],
     baseDurability: 435,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_GLASS, GameTags.PROPERTY_EARTH],
-    onBasicAttackHit: ({ target }) => {
+    onBasicAttackHit: ({ target, attacker }) => {
         const fever = StatusEffectType.fromKey('sun_fever');
-        if (fever && Math.random() < 0.16) target.applyStatusEffect(fever, 7, 3);
+        if (fever && Math.random() < 0.16) target.applyStatusEffect(fever, 7, 3, attacker);
     },
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
 });
@@ -1359,9 +1359,9 @@ defineItem({
     ],
     baseDurability: 368,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.PROPERTY_POISON, GameTags.PROPERTY_DARK],
-    onBasicAttackHit: ({ target }) => {
+    onBasicAttackHit: ({ target, attacker }) => {
         const curse = StatusEffectType.fromKey('curse');
-        if (curse && Math.random() < 0.22) target.applyStatusEffect(curse, 8, 4);
+        if (curse && Math.random() < 0.22) target.applyStatusEffect(curse, 8, 4, attacker);
     },
     balance: {
         role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'],
@@ -1508,9 +1508,9 @@ defineItem({
     ],
     baseDurability: 540,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_METAL],
-    onBasicAttackHit: ({ target }) => {
+    onBasicAttackHit: ({ target, attacker }) => {
         const slowness = StatusEffectType.fromKey('slowness');
-        if (slowness && Math.random() < 0.18) target.applyStatusEffect(slowness, 6, 5);
+        if (slowness && Math.random() < 0.18) target.applyStatusEffect(slowness, 6, 5, attacker);
     },
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
 });
@@ -1548,9 +1548,9 @@ defineItem({
     ],
     baseDurability: 473,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_RIME, GameTags.PROPERTY_ICE, GameTags.PROPERTY_METAL],
-    onBasicAttackHit: ({ target }) => {
+    onBasicAttackHit: ({ target, attacker }) => {
         const frozen = StatusEffectType.fromKey('frozen');
-        if (frozen && Math.random() < 0.14) target.applyStatusEffect(frozen, 2.5, 4);
+        if (frozen && Math.random() < 0.14) target.applyStatusEffect(frozen, 2.5, 4, attacker);
     },
     balance: {
         role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'],
@@ -1719,9 +1719,9 @@ defineItem({
     ],
     baseDurability: 683,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.PROPERTY_WATER, GameTags.PROPERTY_METAL],
-    onBasicAttackHit: ({ target }) => {
+    onBasicAttackHit: ({ target, attacker }) => {
         const bleeding = StatusEffectType.fromKey('bleeding');
-        if (bleeding && Math.random() < 0.2) target.applyStatusEffect(bleeding, 8, 8);
+        if (bleeding && Math.random() < 0.2) target.applyStatusEffect(bleeding, 8, 8, attacker);
     },
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
 });
@@ -1757,9 +1757,9 @@ defineItem({
     ],
     baseDurability: 585,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_CORAL, GameTags.PROPERTY_WATER, GameTags.PROPERTY_STONE],
-    onBasicAttackHit: ({ target }) => {
+    onBasicAttackHit: ({ target, attacker }) => {
         const defenseReduction = StatusEffectType.fromKey('defense_reduction');
-        if (defenseReduction && Math.random() < 0.17) target.applyStatusEffect(defenseReduction, 8, 7);
+        if (defenseReduction && Math.random() < 0.17) target.applyStatusEffect(defenseReduction, 8, 7, attacker);
     },
     balance: {
         role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'],
@@ -1939,9 +1939,9 @@ defineItem({
     ],
     baseDurability: 780,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_METAL],
-    onBasicAttackHit: ({ target }) => {
+    onBasicAttackHit: ({ target, attacker }) => {
         const effect = StatusEffectType.fromKey('defense_reduction');
-        if (effect && Math.random() < 0.22) target.applyStatusEffect(effect, 9, 10);
+        if (effect && Math.random() < 0.22) target.applyStatusEffect(effect, 9, 10, attacker);
     },
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
 });
@@ -1977,9 +1977,9 @@ defineItem({
     ],
     baseDurability: 683,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_CLOCKWORK, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL],
-    onBasicAttackHit: ({ target }) => {
+    onBasicAttackHit: ({ target, attacker }) => {
         const effect = StatusEffectType.fromKey('slowness');
-        if (effect && Math.random() < 0.18) target.applyStatusEffect(effect, 6, 9);
+        if (effect && Math.random() < 0.18) target.applyStatusEffect(effect, 6, 9, attacker);
     },
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
 });
@@ -2142,9 +2142,9 @@ defineItem({
     ],
     baseDurability: 833,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_SWORD, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_METAL],
-    onBasicAttackHit: ({ target }) => {
+    onBasicAttackHit: ({ target, attacker }) => {
         const effect = StatusEffectType.fromKey('bleeding');
-        if (effect && Math.random() < 0.24) target.applyStatusEffect(effect, 10, 11);
+        if (effect && Math.random() < 0.24) target.applyStatusEffect(effect, 10, 11, attacker);
     },
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:warrior'] },
 });
@@ -2180,9 +2180,9 @@ defineItem({
     ],
     baseDurability: 728,
     tags: [GameTags.ITEM_WEAPON, GameTags.WEAPON_DAGGER, GameTags.MATERIAL_ASHEN_ABYSS, GameTags.PROPERTY_DARK, GameTags.PROPERTY_METAL],
-    onBasicAttackHit: ({ target }) => {
+    onBasicAttackHit: ({ target, attacker }) => {
         const effect = StatusEffectType.fromKey('curse');
-        if (effect && Math.random() < 0.2) target.applyStatusEffect(effect, 8, 10);
+        if (effect && Math.random() < 0.2) target.applyStatusEffect(effect, 8, 10, attacker);
     },
     balance: { role: ItemBalanceRole.WEAPON, attackType: 'physical', recommendedJobIds: ['career:assassin'] },
 });
@@ -2586,7 +2586,7 @@ defineItem({
         const guard = StatusEffectType.fromKey('rampart_volley');
         if (!guard) return;
         const currentStacks = attacker.getStatusEffect(guard)?.level ?? 0;
-        const applied = attacker.applyStatusEffect(guard, 5, Math.min(5, currentStacks + 1));
+        const applied = attacker.applyStatusEffect(guard, 5, Math.min(5, currentStacks + 1), attacker);
         applied.effect?.start(attacker);
     },
     tags: [
@@ -2636,7 +2636,7 @@ defineItem({
         const returned = absorbed * 0.5;
         if (returned > 0) player.addKarma(returned, 'item:karma-devourer-shatter');
         const curse = StatusEffectType.fromKey('curse');
-        if (curse) player.applyStatusEffect(curse, 7 * 24 * 60 * 60, 10);
+        if (curse) player.applyStatusEffect(curse, 7 * 24 * 60 * 60, 10, player);
         sendNotificationToUser(player.userId, {
             key: 'item:karma-devourer-shatter',
             message: `업식검이 파괴되어 카르마 ${returned.toFixed(1)}와 7일의 쇠약이 되돌아왔습니다.`,

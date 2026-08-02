@@ -611,9 +611,8 @@ export default abstract class Entity implements TagReadable {
         if (!Number.isFinite(amount) || amount <= 0) throw new Error('Shield amount must be a positive finite number');
         if (!Number.isFinite(duration) || duration <= 0) throw new Error('Shield duration must be a positive finite number');
         if (this.isDefeated) return undefined;
-        const shield = new Shield(normalizedKey, amount, type, duration);
+        const shield = new Shield(normalizedKey, amount, type, duration, source?.attackOwner);
         this.shields.set(normalizedKey, shield);
-        if (source) reportSupportThreat(source, this, ThreatAction.SHIELDING, amount);
         return shield.toSnapshot();
     }
 
@@ -654,6 +653,9 @@ export default abstract class Entity implements TagReadable {
             const consumed = shield.absorb(remaining);
             absorbed += consumed;
             remaining -= consumed;
+            if (shield.source && consumed > 0) {
+                reportSupportThreat(shield.source, this, ThreatAction.SHIELDING, consumed);
+            }
             if (shield.amount <= 0) this.shields.delete(shield.key);
             if (remaining <= 0) break;
         }
@@ -741,7 +743,12 @@ export default abstract class Entity implements TagReadable {
         return Date.now();
     }
 
-    applyStatusEffect(type: StatusEffectType, duration: number, level: number): StatusEffectApplyResult {
+    applyStatusEffect(
+        type: StatusEffectType,
+        duration: number,
+        level: number,
+        source?: Entity,
+    ): StatusEffectApplyResult {
         if (!Number.isFinite(duration) || duration <= 0) {
             throw new Error(`StatusEffect duration must be a positive finite number: ${duration}`);
         }
@@ -768,6 +775,7 @@ export default abstract class Entity implements TagReadable {
                 action = StatusEffectApplyAction.REFRESHED;
             }
             if (action.changed) {
+                existing.replaceSource(source);
                 this.recordControlApplication(type);
                 emitGameEvent(GameEventIds.STATUS_EFFECT_UPDATED, {
                     subject: this,
@@ -780,7 +788,7 @@ export default abstract class Entity implements TagReadable {
         if (this.isDefeated) return { action: StatusEffectApplyAction.REJECTED };
         duration = this.previewControlDuration(type, duration);
         if (duration <= 0) return { action: StatusEffectApplyAction.REJECTED };
-        const effect = new StatusEffect(type, duration, normalizedLevel);
+        const effect = new StatusEffect(type, duration, normalizedLevel, source);
         this.statusEffects.set(type.id, effect);
         try {
             if (effect.start(this) === 'remove') {
@@ -841,6 +849,7 @@ export default abstract class Entity implements TagReadable {
             if (this.statusEffects.get(effect.type.id) !== effect) continue;
             try {
                 const state = effect.advance(this, dt);
+                if (state.activeDuration > 0) this.onStatusEffectUptime(effect, state.activeDuration);
                 if (this.isDefeated) {
                     this.clearStatusEffects(StatusEffectRemovalReason.TARGET_DEFEATED);
                     return;
@@ -858,6 +867,12 @@ export default abstract class Entity implements TagReadable {
     }
 
     // -- 전투 --
+
+    /** Monster가 실제 제어 가동 시간만 보상 원장에 기록하는 확장 경계. */
+    protected onStatusEffectUptime(_effect: StatusEffect, _activeDuration: number): void {}
+
+    /** Monster가 직접/지속 피해의 실제 결과를 한 경로에서 기록하는 확장 경계. */
+    protected onDamageResolved(_result: DamageResult, _cause: DamageCause | null): void {}
 
     /** 현재 대상이 비어 있으면 공격자의 최종 owner를 전투 대상으로 획득한다. */
     acquireCombatTarget(attacker: Entity): boolean {
@@ -895,9 +910,10 @@ export default abstract class Entity implements TagReadable {
             ? Math.max(0, rawAmount)
             : calculateFinalDamage(effect.value, defense, penetration, this.level)) * receivedModifier;
         const absorbedDamage = this.absorbShieldDamage(finalDamage, type);
-        const lifeDamage = Math.max(0, finalDamage - absorbedDamage);
+        const beforeLife = Math.max(0, this.life);
+        const lifeDamage = Math.min(beforeLife, Math.max(0, finalDamage - absorbedDamage));
 
-        this.life = this.life - lifeDamage;
+        this.life = Math.max(0, beforeLife - lifeDamage);
         if (lifeDamage > 0) this.removeStatusEffect('sleep', StatusEffectRemovalReason.INTERACTION);
         if (this.life <= 0) this.equipment.tryPreventFatalDamage(this);
         if (this.life <= 0) this.clearShields();
@@ -923,7 +939,7 @@ export default abstract class Entity implements TagReadable {
             }
         }
 
-        return {
+        const result: DamageResult = {
             type,
             rawAmount,
             modifiedAmount: effect.value * receivedModifier,
@@ -939,6 +955,8 @@ export default abstract class Entity implements TagReadable {
             effectSourceTag: effect.sourceTag || undefined,
             effectTargetTag: effect.targetTag || undefined,
         };
+        this.onDamageResolved(result, cause);
+        return result;
     }
 
     get attackCooldown(): number { return this._attackCooldown; }

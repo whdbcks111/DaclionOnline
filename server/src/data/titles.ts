@@ -177,7 +177,7 @@ defineTitle({
     isPassiveActive: player => mainHandHas(player, GameTags.TOOL_MINING),
     onCombatAfterDamage: (player, context) => {
         if (context.attacker !== player || !context.result || context.result.finalDamage <= 0 || Math.random() >= 0.1) return;
-        context.target.applyStatusEffect(LegacyStatusEffects.STUN, 1, 1);
+        context.target.applyStatusEffect(LegacyStatusEffects.STUN, 1, 1, player);
     },
 });
 
@@ -190,7 +190,7 @@ defineTitle({
     isPassiveActive: player => mainHandHas(player, GameTags.WEAPON_AXE),
     onCombatAfterDamage: (player, context) => {
         if (context.attacker !== player || !context.result || context.result.finalDamage <= 0 || Math.random() >= 0.3) return;
-        context.target.applyStatusEffect(LegacyStatusEffects.BLEEDING, 5, 1);
+        context.target.applyStatusEffect(LegacyStatusEffects.BLEEDING, 5, 1, player);
     },
 });
 

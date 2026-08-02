@@ -23,7 +23,7 @@ Entity
 외부 기능은 raw Map을 읽지 않고 다음 `Entity` 공개 API를 사용한다.
 
 - 조회: `getStatusEffects`, `getStatusEffect`, `hasStatusEffect`, `getStatusEffectDisplaySnapshots`
-- 적용: `applyStatusEffect(type, duration, level)`
+- 적용: `applyStatusEffect(type, duration, level, source?)`
 - 제거: `removeStatusEffect`, `clearStatusEffects`
 - lifecycle: `updateStatusEffects`는 일반적으로 게임 루프가 호출한다.
 - 상쇄 정의: `defineStatusEffectInteraction`, `defineStatusEffectNeutralization`, 조회용 `getStatusEffectInteractionSnapshots`.
@@ -41,6 +41,8 @@ Entity
 
 모든 갱신은 기존 `StatusEffect` 객체를 유지한다. `onStart`를 재실행하지 않고 `metadataDelta`, 누적 틱 시간과 기존 `onUpdate` 흐름이 이어진다. 결과는 클래스형 enum `StatusEffectApplyAction`의 `ADDED/UPGRADED/REFRESHED/IGNORED/REJECTED`로 확인할 수 있다.
 
+선택적인 source는 적용자의 최종 `attackOwner`만 비영속으로 보관한다. 신규 추가는 그 source를 저장하고, source가 명시된 강화·시간 갱신이 실제로 성공했을 때만 기존 source를 교체한다. `IGNORED/REJECTED` 결과나 source 없는 재적용은 기존 source를 유지하므로 약한 재적용으로 지속 피해의 보상 귀속을 가로챌 수 없다.
+
 ### 전투 제어 저항과 연속 적용 점감
 
 `StatusEffectType.controlCategory`는 클래스형 enum `ControlCategory`의 `HARD`, `SOFT`, `NONE` 중 하나다. 행동 불가에 가까운 석화·기절·제압·에어본·매혹·공포·수면은 hard, 행동 일부나 속도를 제한하는 둔화·침묵·속박·멀미·실명·빙결은 soft다. 일반 피해·버프와 확률적으로 한 tick만 행동을 막는 마비독은 `NONE`이라 이 규칙을 사용하지 않는다.
@@ -54,6 +56,8 @@ Entity
 | 플레이어 | 55% / 2초 | 75% / 4초 |
 
 hard와 soft는 서로 독립된 12초 기록을 사용한다. 같은 범주가 연속으로 실제 적용되면 `100% → 50% → 25% → 면역`이 되며, 효과를 직접 제거하거나 먼저 만료시켜도 기록은 남는다. 마지막 성공 후 12초가 지나거나 대상이 사망·부활하면 초기화된다. 상호작용 거부, 낮은 레벨 재적용, 더 짧은 동일 레벨 재적용, 대상 조건 거부처럼 결과가 `IGNORED/REJECTED`인 시도는 횟수를 소모하지 않는다. 점감 중 더 높은 레벨로 강화할 때도 기존 남은 시간을 더 짧게 만들지 않는다.
+
+몬스터에게 실제로 유지된 제어 시간은 최초 저항·상한과 연속 적용 점감을 모두 거친 뒤의 시간만 source의 처치 기여도로 기록한다. 직접 해제되면 그 시점까지만, 자연 만료되면 마지막 짧은 update까지 합산하므로 요청한 원래 지속시간이나 거절된 시도는 포함하지 않는다.
 
 ### 효과 상호작용
 
@@ -89,7 +93,7 @@ Metadata는 Skill/Item과 같은 원본+top-level delta 방식이다. `getMetada
 - `onUpdate(context, dt)`: duration 감소와 함께 실행. 누적 시간·주기 피해 등 일반 효과를 처리한다.
 - `onRemove(context, reason)`: 만료, 직접 제거, 대상 제압, 조건 불충족, 오류에서 한 번 실행하며 modifier를 정리한다.
 
-callback은 대상의 raw 필드를 우회하지 않고 `damage`, `heal`, 상태효과, 태그, 행동 제한 같은 Entity 공개 API를 사용한다.
+callback은 대상의 raw 필드를 우회하지 않고 `damage`, `heal`, 상태효과, 태그, 행동 제한 같은 Entity 공개 API를 사용한다. `StatusEffect.source`는 등록 당시의 최종 공격 소유자를 제공하며, 지속 피해는 `damage()`의 원인으로, 재생은 `heal()`의 source로 전달한다. source가 없는 자체 재생은 대상 자신을 사용한다.
 
 ## 기본 상태효과
 
@@ -99,7 +103,7 @@ callback은 대상의 raw 필드를 우회하지 않고 `damage`, `heal`, 상태
 
 `부패`의 최대 생명력 배율은 `max(80%, 0.99^효과 레벨)`이라 고레벨에서도 최대 20%까지만 감소한다. 초당 피해는 남은 시간 진행도 `p`에 대해 `min(효과 레벨 × (10 + 55p), 현재 최대 생명력 × 2%)`이며, 실제 배치된 3·8·10·24레벨 효과도 단독으로 대상을 확정 처형하지 않는다. 같은 레벨 재적용은 별도 중첩을 만들지 않고 기존 인스턴스의 시간만 갱신한다.
 
-지속 modifier는 모두 `status-effect:{id}` source로 매 update 교체하고 제거 callback에서 자기 source만 정리한다. 무적은 `Entity`의 source 기반 받는 피해 배율을 0으로 만들고, 경험 증폭은 source 기반 경험치 획득 배율을 적용한다. 독·출혈·부패·빙결은 현재 속성 태그와 피해 API를 사용하므로 보호막·사망 처리·속성 관계를 우회하지 않는다.
+지속 modifier는 모두 `status-effect:{id}` source로 매 update 교체하고 제거 callback에서 자기 source만 정리한다. 무적은 `Entity`의 source 기반 받는 피해 배율을 0으로 만들고, 경험 증폭은 source 기반 경험치 획득 배율을 적용한다. 독·출혈·부패·빙결·화염·맹독은 적용 source를 피해 원인으로 유지한 채 현재 속성 태그와 피해 API를 사용하므로 보호막·사망 처리·속성 관계·처치 기여도를 우회하지 않는다.
 
 `영웅`은 카르마 `100` 이상 현상 대상을 PVP로 처치하면 15~60분 동안 부여되며 레벨에 따라 획득 경험치를 15~35% 높인다. 1차 콘텐츠 기간에는 `attributes/luck` 아이콘을 명시적 fallback으로 사용하고 전용 아트 교체 TODO를 유지한다.
 

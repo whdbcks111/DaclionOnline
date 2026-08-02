@@ -92,7 +92,7 @@ function registerHazardBossPattern(data: HazardBossPatternData): void {
                         ? StatusEffectType.fromKey(failureEffect.statusEffectId)
                         : undefined;
                     if (failureEffect && effectType) {
-                        player.applyStatusEffect(effectType, failureEffect.duration, failureEffect.level);
+                        player.applyStatusEffect(effectType, failureEffect.duration, failureEffect.level, monster);
                     }
                     sendNotificationToUser(player.userId, {
                         key: `boss-pattern-hit:${data.id}`,

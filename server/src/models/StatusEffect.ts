@@ -336,18 +336,22 @@ export default class StatusEffect implements TagReadable {
     private _duration: number;
     private _maxDuration: number;
     private _level: number;
+    private _source?: Entity;
     private _metadataDelta: StatusEffectMetadata = {};
 
-    constructor(type: StatusEffectType, duration: number, level: number) {
+    constructor(type: StatusEffectType, duration: number, level: number, source?: Entity) {
         this.type = type;
         this._duration = normalizeDuration(duration);
         this._maxDuration = this._duration;
         this._level = type.normalizeLevel(level);
+        this._source = source?.attackOwner;
     }
 
     get duration(): number { return this._duration; }
     get maxDuration(): number { return this._maxDuration; }
     get level(): number { return this._level; }
+    /** 지속 피해·치유·제어의 보상 귀속에만 쓰는 비영속 최종 소유자. */
+    get source(): Entity | undefined { return this._source; }
     get durationRatio(): number { return this._maxDuration > 0 ? this._duration / this._maxDuration : 0; }
 
     hasTag(tag: TagId): boolean { return this.type.hasTag(tag); }
@@ -438,6 +442,11 @@ export default class StatusEffect implements TagReadable {
         return true;
     }
 
+    /** 실제 추가·강화·갱신이 확정된 경우에만 호출한다. */
+    replaceSource(source?: Entity): void {
+        if (source) this._source = source.attackOwner;
+    }
+
     /** 상쇄 규칙이 인스턴스와 metadata를 유지한 채 남은 시간만 소모한다. */
     reduceDuration(duration: number): number {
         if (!Number.isFinite(duration) || duration < 0) {
@@ -455,7 +464,11 @@ export default class StatusEffect implements TagReadable {
         return this.type.onEarlyUpdate?.({ target, effect: this }, normalizeDeltaTime(dt));
     }
 
-    advance(target: Entity, dt: number): { result?: StatusEffectLifecycleResult; expired: boolean } {
+    advance(target: Entity, dt: number): {
+        result?: StatusEffectLifecycleResult;
+        expired: boolean;
+        activeDuration: number;
+    } {
         const activeDt = Math.min(normalizeDeltaTime(dt), this._duration);
         const callbackResult = activeDt > 0
             ? this.type.onUpdate?.({ target, effect: this }, activeDt)
@@ -464,7 +477,7 @@ export default class StatusEffect implements TagReadable {
             ? callbackResult
             : undefined;
         this._duration = Math.max(0, this._duration - activeDt);
-        return { result, expired: this._duration <= 0 };
+        return { result, expired: this._duration <= 0, activeDuration: activeDt };
     }
 
     remove(target: Entity, reason: StatusEffectRemovalReason): void {
@@ -496,7 +509,7 @@ function updateFireEffect({ target, effect }: StatusEffectContext, dt: number): 
         tickElapsed -= interval;
         const result = target.damage(getFireDamage(effect), 'absolute', {
             type: 'fire',
-            causeEntity: null,
+            causeEntity: effect.source ?? null,
             effectSource: effect,
         });
         if (target.isPlayer && target.playerUserId !== undefined) {
@@ -523,6 +536,7 @@ function updateFireEffect({ target, effect }: StatusEffectContext, dt: number): 
             StatusEffectType.BURN,
             getBurnDurationFromFire(effect.level),
             getBurnLevelFromFire(effect.level),
+            effect.source,
         );
     }
     return target.isDefeated ? 'remove' : undefined;
@@ -564,7 +578,7 @@ function updateDeadlyPoisonEffect(
         const damage = target.maxLife * getDeadlyPoisonDamageRatio(target, effect);
         const result = target.damage(damage, 'absolute', {
             type: 'poison',
-            causeEntity: null,
+            causeEntity: effect.source ?? null,
             effectSource: effect,
         });
         if (target.isPlayer && target.playerUserId !== undefined) {

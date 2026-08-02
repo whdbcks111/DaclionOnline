@@ -1343,7 +1343,7 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.warrior), canActivate: simpleCheck(14, false),
     onStart: context => {
         spend(context, 14);
-        context.owner.applyStatusEffect(BATTLE_RUSH, valueByLevel(context.skill.level, 8, 1), context.skill.level);
+        context.owner.applyStatusEffect(BATTLE_RUSH, valueByLevel(context.skill.level, 8, 1), context.skill.level, context.owner);
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_WARRIOR],
 });
@@ -1380,7 +1380,7 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.warrior), canActivate: simpleCheck(18, false),
     onStart: context => {
         spend(context, 18);
-        context.owner.applyStatusEffect(INDOMITABLE, valueByLevel(context.skill.level, 10, 1), context.skill.level);
+        context.owner.applyStatusEffect(INDOMITABLE, valueByLevel(context.skill.level, 10, 1), context.skill.level, context.owner);
         context.owner.heal(context.owner.maxLife * percentByLevel(context.skill.level, 15, 2) / 100, context.owner);
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_WARRIOR],
@@ -1484,6 +1484,7 @@ defineSkill({
                 STUN,
                 speedScaledDuration(context, 2, 0.25, 0.02),
                 context.skill.level,
+                context.owner,
             );
         }, { damage: combinedAttributeDamage(context, ARCHER_STUNNING_SHOT_TERMS) });
     },
@@ -1520,6 +1521,7 @@ defineSkill({
             WIND_EVASION,
             calculateWindEvasionDuration(context),
             context.skill.level,
+            context.owner,
         );
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ARCHER],
 });
@@ -1561,6 +1563,7 @@ defineSkill({
             STEALTH,
             speedScaledDuration(context, 8, 0.75, 0.05),
             context.skill.level,
+            context.owner,
         );
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ASSASSIN],
 });
@@ -1627,7 +1630,12 @@ defineSkill({
             consumeMainHandDurability: true,
         });
         if (!result.evaded && result.finalDamage > 0) {
-            found.target.applyStatusEffect(StatusEffectType.DEADLY_POISON, valueByLevel(context.skill.level, 8, 1), context.skill.level);
+            found.target.applyStatusEffect(
+                StatusEffectType.DEADLY_POISON,
+                valueByLevel(context.skill.level, 8, 1),
+                context.skill.level,
+                context.owner,
+            );
         }
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.PROPERTY_POISON, GameTags.SKILL_GROUP_ASSASSIN],
@@ -1696,7 +1704,7 @@ defineSkill({
         spend(context, 22);
         const duration = valueByLevel(context.skill.level, 10, 1);
         context.owner.setShield('skill:mana_barrier', manaBarrierShieldAmount(context), ShieldType.GENERAL, duration, context.owner);
-        context.owner.applyStatusEffect(MANA_BARRIER, duration, context.skill.level);
+        context.owner.applyStatusEffect(MANA_BARRIER, duration, context.skill.level, context.owner);
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC],
 });
 
@@ -1723,7 +1731,12 @@ defineSkill({
     canActivate: simpleCheck(24), onStart: context => {
         spend(context, 24);
         projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 75, 6) / 100, [GameTags.PROPERTY_ICE], (_p, result) => {
-            if (!result.evaded) _p.target.applyStatusEffect(STUN, valueByLevel(context.skill.level, 1.5, 0.2), context.skill.level);
+            if (!result.evaded) _p.target.applyStatusEffect(
+                STUN,
+                valueByLevel(context.skill.level, 1.5, 0.2),
+                context.skill.level,
+                context.owner,
+            );
         });
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.PROPERTY_ICE,
         ...combatSkillGroups(GameTags.SKILL_GROUP_MAGIC, GameTags.PROPERTY_ICE)],
@@ -1758,7 +1771,12 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.mage), canActivate: simpleCheck(16, false),
     onStart: context => {
         spend(context, 16);
-        context.owner.applyStatusEffect(ELEMENTAL_INSIGHT, valueByLevel(context.skill.level, 12, 1), context.skill.level);
+        context.owner.applyStatusEffect(
+            ELEMENTAL_INSIGHT,
+            valueByLevel(context.skill.level, 12, 1),
+            context.skill.level,
+            context.owner,
+        );
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC],
 });
 
@@ -1797,6 +1815,7 @@ for (const elemental of [
                     elemental.effect,
                     valueByLevel(context.skill.level, elemental.duration, elemental.durationPerLevel),
                     context.skill.level,
+                    context.owner,
                 );
             }
         });
@@ -2777,6 +2796,7 @@ for (const technique of growthTechniques) defineSkill({
                 technique.statusEffect,
                 valueByLevel(context.skill.level, technique.statusDuration ?? 0, technique.statusDurationPerLevel ?? 0),
                 technique.statusLevel?.(context.skill.level) ?? context.skill.level,
+                context.owner,
             );
         };
         if (technique.projectile) {
@@ -3008,6 +3028,7 @@ defineSkill({
                 LegacyStatusEffects.SLOWNESS,
                 valueByLevel(context.skill.level, 5, 0.5),
                 context.skill.level,
+                context.owner,
             );
         }
     },
@@ -3045,7 +3066,7 @@ interface EliteTechniqueDefinition {
     unavoidable?: boolean;
     descriptionIntro: string;
     onHitDescription?: string;
-    onHit?: (target: Entity, level: number) => void;
+    onHit?: (target: Entity, level: number, source: Entity) => void;
     shieldPercent?: number;
     /** 기본 물리 3배·마법 4.6배와 다른 엘리트 티어 보정이 필요한 기술만 명시한다. */
     tierDamageMultiplier?: number;
@@ -3108,7 +3129,7 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_ELECTRIC,
         descriptionIntro: '번개를 두른 마력 화살로 대상의 신경을 꿰뚫습니다.',
         onHitDescription: '적중한 대상에게 같은 레벨의 마비독을 4초 동안 부여합니다.',
-        onHit: (target, level) => target.applyStatusEffect(StatusEffectType.PARALYTIC_POISON, 4, level),
+        onHit: (target, level, source) => target.applyStatusEffect(StatusEffectType.PARALYTIC_POISON, 4, level, source),
     },
     {
         id: 'executioner_technique', name: '최후 집행', jobId: 'career:executioner', icon: 'jobs/assassin',
@@ -3136,7 +3157,7 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         manaCost: 30, cooldown: 12, propertyTag: GameTags.PROPERTY_POISON,
         descriptionIntro: '비전 마력으로 대상의 생명력을 베어 독성 잔재를 남깁니다.',
         onHitDescription: '적중한 대상에게 같은 레벨의 맹독을 6초 동안 부여합니다.',
-        onHit: (target, level) => target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 6, level),
+        onHit: (target, level, source) => target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 6, level, source),
     },
     {
         id: 'battle_magus_technique', name: '마력갑 돌진', jobId: 'career:battle_magus', icon: 'jobs/mage',
@@ -3162,7 +3183,7 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         manaCost: 29, cooldown: 11, propertyTag: GameTags.PROPERTY_DARK,
         descriptionIntro: '대상의 몸에 불길한 주술 각인을 새겨 움직임을 뒤틀어 놓습니다.',
         onHitDescription: '적중한 대상에게 같은 레벨의 마비독을 3초 동안 부여합니다.',
-        onHit: (target, level) => target.applyStatusEffect(StatusEffectType.PARALYTIC_POISON, 3, level),
+        onHit: (target, level, source) => target.applyStatusEffect(StatusEffectType.PARALYTIC_POISON, 3, level, source),
     },
     {
         id: 'weapon_master_technique', name: '완성의 일격', jobId: 'career:weapon_master', icon: 'jobs/warrior',
@@ -3229,7 +3250,7 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         propertyTag: GameTags.PROPERTY_POISON,
         descriptionIntro: '독성 금속으로 벼린 칼날을 대상의 방어 틈새에 찔러 넣습니다.',
         onHitDescription: '적중한 대상에게 같은 레벨의 맹독을 7초 동안 부여합니다.',
-        onHit: (target, level) => target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 7, level),
+        onHit: (target, level, source) => target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 7, level, source),
     },
     {
         id: 'arcane_smith_technique', name: '마도 용융탄', jobId: 'career:arcane_smith', icon: 'items/iron_pickaxe',
@@ -3434,7 +3455,9 @@ for (const technique of eliteTechniques) {
                     1,
                     technique.propertyTag ? [technique.propertyTag] : undefined,
                     (_projectile, result) => {
-                        if (!result.evaded && result.finalDamage > 0) technique.onHit?.(_projectile.target, context.skill.level);
+                        if (!result.evaded && result.finalDamage > 0) {
+                            technique.onHit?.(_projectile.target, context.skill.level, context.owner);
+                        }
                     },
                     {
                         damage,
@@ -3454,7 +3477,9 @@ for (const technique of eliteTechniques) {
                         consumeMainHandDurability: Boolean(technique.weaponTags?.length),
                     });
                 if (!result) throw new Error(`${technique.name} 공격이 확정되지 않았습니다.`);
-                if (!result.evaded && result.finalDamage > 0) technique.onHit?.(found.target, context.skill.level);
+                if (!result.evaded && result.finalDamage > 0) {
+                    technique.onHit?.(found.target, context.skill.level, context.owner);
+                }
             }
             if (technique.shieldPercent) {
                 context.owner.setShield(
@@ -3595,6 +3620,7 @@ defineSkill({
                 StatusEffectType.PARALYTIC_POISON,
                 numberMeta(context, 'paralysisDuration'),
                 Math.max(1, context.skill.level),
+                context.owner,
             );
         }
         return 'finish';
@@ -3673,6 +3699,7 @@ defineSkill({
                 LegacyStatusEffects.OVERMASTER,
                 numberMeta(context, 'controlDuration'),
                 Math.max(1, context.skill.level * 2),
+                context.owner,
             );
         }
         return 'finish';
@@ -3778,7 +3805,12 @@ export function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): vo
             });
             if (result && !result.evaded && definition.statusEffectId) {
                 const effect = StatusEffectType.fromKey(definition.statusEffectId);
-                if (effect) target.applyStatusEffect(effect, definition.statusDuration ?? 5, context.skill.level);
+                if (effect) target.applyStatusEffect(
+                    effect,
+                    definition.statusDuration ?? 5,
+                    context.skill.level,
+                    context.owner,
+                );
             }
             return 'finish';
         },

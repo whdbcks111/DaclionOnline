@@ -1,5 +1,6 @@
 import type { ShieldBarSegment, ShieldTypeKey } from '../../../shared/types.js';
 import type { DamageType } from './Entity.js';
+import type Entity from './Entity.js';
 
 export class ShieldType {
     private static readonly all: ShieldType[] = [];
@@ -54,6 +55,7 @@ export default class Shield {
         amount: number,
         readonly type: ShieldType,
         duration: number,
+        readonly source?: Entity,
     ) {
         this.amount = amount;
         this.duration = duration;

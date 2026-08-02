@@ -15,6 +15,13 @@ class ThreatEntity extends Entity {
     }
 }
 
+class ThreatPlayer extends ThreatEntity {
+    override get isPlayer(): boolean { return true; }
+    override get playerUserId(): number { return this.userId; }
+
+    constructor(readonly userId: number, name: string) { super(name); }
+}
+
 test('단순 AI는 누적 피해와 무관하게 마지막 공격자를 선택한다', () => {
     const owner = new ThreatEntity('슬라임');
     const first = new ThreatEntity('첫 공격자');
@@ -61,5 +68,31 @@ test('교전 대상 치유는 source가 명시되면 관련 위협 테이블에 
     tank.heal(20, healer);
     assert.equal(table.selectTarget(tank), healer);
     assert.equal(table.getContributionSnapshots().find(entry => entry.actor === healer)?.healing, 20);
+    table.dispose();
+});
+
+test('처치 기여 원장은 AI 대상이 이탈해도 userId 불변 스냅샷으로 보존되고 clear에서만 초기화된다', () => {
+    const owner = new ThreatEntity('보스');
+    const dealer = new ThreatPlayer(101, '딜러');
+    const table = new ThreatTable(owner, normalizeMonsterAiProfile());
+    table.record(dealer, ThreatAction.DAMAGE, 25);
+
+    dealer.life = 0;
+    table.update(1);
+    assert.deepEqual(table.getContributionSnapshots(), []);
+    const snapshot = table.getDefeatContributionSnapshot();
+    assert.deepEqual(snapshot, [{
+        userId: dealer.userId,
+        damage: 25,
+        healing: 0,
+        shielding: 0,
+        control: 0,
+        total: 25,
+    }]);
+    assert.equal(Object.isFrozen(snapshot), true);
+    assert.equal(Object.isFrozen(snapshot[0]), true);
+
+    table.clear();
+    assert.deepEqual(table.getDefeatContributionSnapshot(), []);
     table.dispose();
 });

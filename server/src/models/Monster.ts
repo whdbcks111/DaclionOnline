@@ -1,5 +1,5 @@
 import Entity from "./Entity.js";
-import type { DamageType } from "./Entity.js";
+import type { DamageCause, DamageResult, DamageType } from "./Entity.js";
 import Equipment from "./Equipment.js";
 import { Item, getItemData } from "./Item.js";
 import type { AttributeRecord } from "./Attribute.js";
@@ -11,17 +11,17 @@ import { sendBotMessageToUser, sendBotMessageToUsers } from "../modules/message.
 import { getOnlinePlayerUserIdsAtLocation } from '../modules/playerRegistry.js';
 import { GameTags, normalizeTags } from "../../../shared/tags.js";
 import type { TagId } from "../../../shared/tags.js";
-import { StatusEffectType } from "./StatusEffect.js";
+import StatusEffect, { ControlCategory, StatusEffectType } from "./StatusEffect.js";
 import SkillBook from "./SkillBook.js";
 import type { RuntimeSkillEntry, SkillActivationOutcome } from "./SkillBook.js";
 import { partyManager } from '../modules/party.js';
 import type { ChatNode, ShieldBarSegment } from '../../../shared/types.js';
-import { CombatStage, registerCombatHook } from './CombatPipeline.js';
 import {
     MonsterAiDisposition,
     normalizeMonsterAiProfile,
     ThreatAction,
     ThreatTable,
+    type DefeatContributionSnapshot,
     type MonsterAiProfileInput,
 } from './Threat.js';
 import type { MonsterRank, MonsterStatProfile, MonsterStatWeightMap } from './MonsterStats.js';
@@ -283,7 +283,11 @@ export default class Monster extends Entity {
         this.skillPatternTimer = this.skillPattern?.initialDelay ?? 0;
         this.challengePatternTimer = this.challengePattern?.initialDelay ?? 0;
         this.skills = SkillBook.createRuntime(this, data.skills ?? []);
-        this.threat = new ThreatTable(this, normalizeMonsterAiProfile(data.ai));
+        this.threat = new ThreatTable(
+            this,
+            normalizeMonsterAiProfile(data.ai),
+            actor => this.canRecordCombatContribution(actor),
+        );
 
         // 기본 장비 장착
         for (const eq of data.equipments) {
@@ -312,6 +316,11 @@ export default class Monster extends Entity {
 
     getThreatContributions() {
         return this.threat.getContributionSnapshots();
+    }
+
+    /** 처치 reset 전후 Entity 수명과 무관하게 복사해서 쓸 수 있는 userId 기반 기여 원장. */
+    getDefeatContributionSnapshot(): readonly DefeatContributionSnapshot[] {
+        return this.threat.getDefeatContributionSnapshot();
     }
 
     getCombatClaimUserIds(): readonly number[] {
@@ -460,21 +469,32 @@ export default class Monster extends Entity {
         const effect = this.attackProfile?.effect;
         if (result && !result.evaded && effect && Math.random() < effect.chance) {
             const type = StatusEffectType.fromKey(effect.statusEffectId);
-            if (type) target.applyStatusEffect(type, effect.duration, effect.level);
+            if (type) target.applyStatusEffect(type, effect.duration, effect.level, this);
         }
     }
 
     override onDeath(): void {
+        // 이후 super/on-shot dispose/reset이 런타임 참조를 정리해도 지급 입력이 바뀌지 않게 먼저 복사한다.
+        const claimedUserIds = this.getCombatClaimUserIds();
+        const contributions = this.getDefeatContributionSnapshot();
+        const rewardOwner = this.threat.getPrimaryContributor()
+            ?? this.lastDamageCause?.causeEntity?.attackOwner;
+        const lastAttackOwnerUserId = this.lastDamageCause?.causeEntity?.attackOwner.playerUserId;
         this.resetBossRecovery();
         this.resetBossEncounter();
         this.resetChallengePattern();
         this.skills.finishAll();
         super.onDeath();
 
-        const attackOwner = this.threat.getPrimaryContributor()
-            ?? this.lastDamageCause?.causeEntity?.attackOwner;
-        if(attackOwner?.isPlayer) {
-            const causePlayer = attackOwner as Player;
+        const expGrants = partyManager.distributeMonsterExp(this.expReward, this.locationId, {
+            claimedUserIds,
+            contributions,
+            ...(lastAttackOwnerUserId !== undefined ? { lastAttackOwnerUserId } : {}),
+        });
+        // 전리품·골드 소유자는 기존 최고 위협 기여자 semantics를 유지하고 EXP eligibility와 분리한다.
+        const causePlayer = rewardOwner?.isPlayer ? rewardOwner as Player : undefined;
+        if(causePlayer) {
+            const attackOwner: Entity = causePlayer;
 
             attackOwner.currentTarget = null;
             causePlayer.titles?.refreshPassiveEffects();
@@ -488,17 +508,16 @@ export default class Monster extends Entity {
             }
             const goldGained = this.rollGold();
             if (goldGained > 0) causePlayer.gold += goldGained;
-            const expGrants = partyManager.distributeMonsterExp(causePlayer, this.expReward, this.locationId);
             const killerGrant = expGrants.find(grant => grant.userId === causePlayer.userId);
             const levelsGained = killerGrant?.levelsGained ?? [];
 
             const killMsg = chat()
                 .color('gold', b => b.text(`${this.name} 처치 완료!\n`))
                 .weight('bold', b => b.text('[ 보상 ]'))
-                .text(`\nEXP +${killerGrant?.amount ?? 0}`);
+                .text(`\nEXP +${killerGrant?.grantedExp ?? 0}`);
 
-            if ((killerGrant?.multiplier ?? 1) < 1) {
-                killMsg.color('red', b => b.text(` (${Math.round((killerGrant?.multiplier ?? 1) * 100)}% · 레벨 차이 ${killerGrant?.levelGap})`));
+            if ((killerGrant?.levelGapMultiplier ?? 1) < 1) {
+                killMsg.color('red', b => b.text(` (${Math.round((killerGrant?.levelGapMultiplier ?? 1) * 100)}% · 레벨 차이 ${killerGrant?.levelGap})`));
             }
 
             if (goldGained > 0) {
@@ -530,9 +549,9 @@ export default class Monster extends Entity {
                 if (grant.userId === causePlayer.userId) continue;
                 const shared = chat()
                     .color('gold', b => b.text(`[ 파티 보상 ] ${this.name} 처치`))
-                    .text(`\nEXP +${grant.amount}`);
-                if (grant.multiplier < 1) {
-                    shared.color('red', b => b.text(` (${Math.round(grant.multiplier * 100)}% · 최고 레벨과 ${grant.levelGap} 차이)`));
+                    .text(`\nEXP +${grant.grantedExp}`);
+                if (grant.levelGapMultiplier < 1) {
+                    shared.color('red', b => b.text(` (${Math.round(grant.levelGapMultiplier * 100)}% · 최고 레벨과 ${grant.levelGap} 차이)`));
                 }
                 if (grant.levelsGained.length > 0) {
                     shared.text('\n').color('aqua', b => b.text(`레벨 업! Lv.${grant.levelsGained[grant.levelsGained.length - 1]}`));
@@ -705,6 +724,27 @@ export default class Monster extends Entity {
         return userId === undefined || this.combatClaimUserIds.size === 0 || this.combatClaimUserIds.has(userId);
     }
 
+    /** 모든 피해·치유·흡수·제어 기여가 공유하는 claim/위치 검증. */
+    private canRecordCombatContribution(actor: Entity): boolean {
+        const owner = actor.attackOwner;
+        return owner.locationId === this.locationId && this.canJoinCombatClaim(owner);
+    }
+
+    protected override onDamageResolved(result: DamageResult, cause: DamageCause | null): void {
+        const actor = cause?.causeEntity;
+        const amount = result.lifeDamage + result.absorbedDamage;
+        if (actor && amount > 0) this.recordThreat(actor, ThreatAction.DAMAGE, amount);
+    }
+
+    protected override onStatusEffectUptime(effect: StatusEffect, activeDuration: number): void {
+        if (effect.type.controlCategory === ControlCategory.NONE || !effect.source) return;
+        this.recordThreat(
+            effect.source,
+            ThreatAction.CONTROL,
+            this.maxLife * 0.01 * activeDuration,
+        );
+    }
+
     private claimCombat(actor: Entity): void {
         const userId = actor.attackOwner.playerUserId;
         if (userId === undefined || this.combatClaimUserIds.size > 0) return;
@@ -739,16 +779,6 @@ export default class Monster extends Entity {
         return result;
     }
 }
-
-registerCombatHook({
-    key: 'monster:threat:damage',
-    stage: CombatStage.AFTER_DAMAGE,
-    filter: context => context.target instanceof Monster && Boolean(context.result),
-    run: context => {
-        const amount = (context.result?.lifeDamage ?? 0) + (context.result?.absorbedDamage ?? 0);
-        if (amount > 0) (context.target as Monster).recordThreat(context.attacker, ThreatAction.DAMAGE, amount);
-    },
-});
 
 // -- MonsterData 캐시 --
 

@@ -86,7 +86,7 @@ const POISON = StatusEffectType.define({
         if (livingOnly(context) === 'remove') return 'remove';
         applyPoisonModifiers(context);
         context.target.damage(dt * context.effect.level * 20, 'absolute', {
-            type: 'poison', causeEntity: null, effectSource: context.effect,
+            type: 'poison', causeEntity: context.effect.source ?? null, effectSource: context.effect,
         });
     },
     onRemove: removeModifiers,
@@ -106,7 +106,11 @@ const BLEEDING = StatusEffectType.define({
     onUpdate: (context, dt) => {
         if (livingOnly(context) === 'remove') return 'remove';
         const damage = context.effect.level * Math.min(context.target.maxLife * 0.005, 50) * dt;
-        context.target.damage(damage, 'absolute', { type: 'bleeding', causeEntity: null, effectSource: context.effect });
+        context.target.damage(damage, 'absolute', {
+            type: 'bleeding',
+            causeEntity: context.effect.source ?? null,
+            effectSource: context.effect,
+        });
     },
     aliases: ['출혈'], tags: [GameTags.PROPERTY_NATURAL],
 });
@@ -135,7 +139,7 @@ const DECAY = StatusEffectType.define({
             context.target.maxLife * 0.02,
         );
         context.target.damage(dt * damagePerSecond, 'absolute', {
-            type: 'decay', causeEntity: null, effectSource: context.effect,
+            type: 'decay', causeEntity: context.effect.source ?? null, effectSource: context.effect,
         });
     },
     onRemove: removeModifiers,
@@ -434,7 +438,7 @@ const FROZEN = StatusEffectType.define({
         if (livingOnly(context) === 'remove') return 'remove';
         applyFrozen(context);
         context.target.damage(dt * context.effect.level * 15, 'absolute', {
-            type: 'frozen', causeEntity: null, effectSource: context.effect,
+            type: 'frozen', causeEntity: context.effect.source ?? null, effectSource: context.effect,
         });
     },
     onRemove: removeModifiers,
@@ -495,7 +499,7 @@ function updateRegeneration(context: StatusEffectContext, dt: number): StatusEff
     let elapsed = (effect.getMetadata<number>('tickElapsed') ?? 0) + dt;
     while (elapsed >= interval && !target.isDefeated) {
         elapsed -= interval;
-        target.heal(target.maxLife * regenerationHealRatio(effect), target);
+        target.heal(target.maxLife * regenerationHealRatio(effect), effect.source ?? target);
     }
     effect.setMetadata('tickElapsed', elapsed);
 }

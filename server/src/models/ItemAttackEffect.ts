@@ -190,7 +190,7 @@ export class ItemAttackEffectType {
         if (this.behavior === 'status') {
             const status = this.statusEffectId ? StatusEffectType.fromKey(this.statusEffectId) : undefined;
             if (!status) return false;
-            context.target.applyStatusEffect(status, effect.duration, effect.level);
+            context.target.applyStatusEffect(status, effect.duration, effect.level, context.attacker);
             return true;
         }
         if (this.behavior === 'bonus_damage') {

@@ -207,6 +207,32 @@ test('같은 상태효과 재적용은 인스턴스와 metadata를 유지하며 
     }]);
 });
 
+test('상태효과 source는 성공한 재적용만 교체하고 무시·무출처 갱신은 기존 귀속을 보존한다', () => {
+    const target = new TestStatusEntity('source 병합 대상');
+    const firstSource = new TestStatusEntity('첫 source');
+    const secondSource = new TestStatusEntity('둘째 source');
+    const effect = target.applyStatusEffect(MERGE_TEST_EFFECT, 10, 2, firstSource).effect!;
+    assert.equal(effect.source, firstSource);
+
+    const ignored = target.applyStatusEffect(MERGE_TEST_EFFECT, 99, 1, secondSource);
+    assert.equal(ignored.action, StatusEffectApplyAction.IGNORED);
+    assert.equal(effect.source, firstSource);
+
+    target.updateStatusEffects(2);
+    const refreshed = target.applyStatusEffect(MERGE_TEST_EFFECT, 9, 2, secondSource);
+    assert.equal(refreshed.action, StatusEffectApplyAction.REFRESHED);
+    assert.equal(effect.source, secondSource);
+
+    target.updateStatusEffects(2);
+    const sourceLessRefresh = target.applyStatusEffect(MERGE_TEST_EFFECT, 8, 2);
+    assert.equal(sourceLessRefresh.action, StatusEffectApplyAction.REFRESHED);
+    assert.equal(effect.source, secondSource);
+
+    const upgraded = target.applyStatusEffect(MERGE_TEST_EFFECT, 4, 3, firstSource);
+    assert.equal(upgraded.action, StatusEffectApplyAction.UPGRADED);
+    assert.equal(effect.source, firstSource);
+});
+
 test('상태효과 레벨은 타입 상한 없이 적용되고 효과별 계산식이 강도를 제어한다', () => {
     const target = new TestStatusEntity('무제한 레벨 대상');
     const effect = target.applyStatusEffect(MERGE_TEST_EFFECT, 10, 100).effect!;

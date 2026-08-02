@@ -21,7 +21,20 @@ export interface PartyParticipant {
     readonly mentality: number;
     readonly maxMentality: number;
     readonly maxExp: number;
+    getExperienceGainModifier(): number;
     gainExp(amount: number, options?: PartyExperienceGainOptions): number[];
+}
+
+export interface PartyMonsterContribution {
+    readonly userId: number;
+    readonly total: number;
+}
+
+/** 몬스터가 reset 전에 복사해 전달하는 Entity 참조 없는 처치 보상 문맥. */
+export interface PartyMonsterExpContext {
+    readonly claimedUserIds: readonly number[];
+    readonly contributions: readonly PartyMonsterContribution[];
+    readonly lastAttackOwnerUserId?: number;
 }
 
 export interface PartySnapshot {
@@ -47,10 +60,24 @@ export interface PartyActionResult {
 export interface PartyExpGrant {
     userId: number;
     nickname: string;
-    amount: number;
+    /** 레벨 차이·개인 경험치 배율을 적용하기 전 Hamilton 정수 몫. */
+    poolShare: number;
+    /** 전체 유효 기여도 중 이 플레이어의 비율. fallback 1인은 1이다. */
+    contributionRatio: number;
+    /** poolShare에 개인 레벨 차이 감쇠와 상한을 적용한 gainExp 입력값. */
+    levelAdjustedShare: number;
+    /** gainExp의 개인 경험치 배율까지 적용해 실제로 지급된 경험치. */
+    grantedExp: number;
     levelGap: number;
-    multiplier: number;
+    levelGapMultiplier: number;
     levelsGained: number[];
+}
+
+export interface ContributionExpShare {
+    readonly userId: number;
+    readonly contribution: number;
+    readonly contributionRatio: number;
+    readonly poolShare: number;
 }
 
 interface PartyState {
@@ -202,30 +229,75 @@ export class PartyManager {
         return this.getPartyState(player.userId) ? this.leave(player) : undefined;
     }
 
-    /** 몬스터 경험치를 같은 장소의 생존 파티원에게 지급하고 적용 결과만 반환한다. */
-    distributeMonsterExp(killer: PartyParticipant, baseExp: number, locationId: string): PartyExpGrant[] {
-        const normalizedExp = Math.max(0, Math.floor(baseExp));
-        const party = this.getPartyState(killer.userId);
-        const participants = party
-            ? party.memberUserIds
-                .flatMap(userId => {
-                    const player = this.resolvePlayer(userId);
-                    return player && player.locationId === locationId && !player.isDefeated ? [player] : [];
-                })
-            : [killer];
-        if (!participants.some(player => player.userId === killer.userId)) participants.push(killer);
-        const highestLevel = Math.max(...participants.map(player => player.level));
+    /** 교전 claim 안에서 실제 기여한 온라인·동일 장소·생존 인원에게만 경험치를 분배한다. */
+    distributeMonsterExp(
+        baseExp: number,
+        locationId: string,
+        context: PartyMonsterExpContext,
+    ): PartyExpGrant[] {
+        const claimedUserIds = new Set(context.claimedUserIds.filter(Number.isInteger));
+        const contributionByUserId = new Map<number, number>();
+        for (const contribution of context.contributions) {
+            if (!claimedUserIds.has(contribution.userId)
+                || !Number.isFinite(contribution.total)
+                || contribution.total <= 0) continue;
+            contributionByUserId.set(
+                contribution.userId,
+                (contributionByUserId.get(contribution.userId) ?? 0) + contribution.total,
+            );
+        }
 
-        return participants.map(player => {
-            const levelGap = Math.max(0, highestLevel - player.level);
-            const { amount, multiplier } = calculatePartyExpGrant(normalizedExp, levelGap, player.maxExp);
+        const resolveEligible = (userId: number): PartyParticipant | undefined => {
+            if (!claimedUserIds.has(userId)) return undefined;
+            const player = this.resolvePlayer(userId);
+            return player && player.locationId === locationId && !player.isDefeated ? player : undefined;
+        };
+        const participants = [...contributionByUserId]
+            .flatMap(([userId, contribution]) => {
+                const player = resolveEligible(userId);
+                return player ? [{ player, contribution }] : [];
+            });
+
+        // 원장에 양수 기여 자체가 없을 때만 유효한 마지막 공격 소유자를 1인 보상 대상으로 삼는다.
+        if (contributionByUserId.size === 0 && context.lastAttackOwnerUserId !== undefined) {
+            const fallback = resolveEligible(context.lastAttackOwnerUserId);
+            if (fallback) participants.push({ player: fallback, contribution: 1 });
+        }
+        if (participants.length === 0) return [];
+
+        // 지급 중 레벨업이 뒤 참가자의 기준값을 바꾸지 않도록 입력을 먼저 primitive로 고정한다.
+        const eligible = participants.map(({ player, contribution }) => ({
+            player,
+            userId: player.userId,
+            nickname: player.name,
+            level: player.level,
+            maxExp: player.maxExp,
+            experienceGainModifier: player.getExperienceGainModifier(),
+            contribution,
+        }));
+        const highestLevel = Math.max(...eligible.map(entry => entry.level));
+        const pool = calculatePartyExpPool(baseExp, eligible.length);
+        const shares = allocateContributionWeightedExp(pool, eligible);
+        const shareByUserId = new Map(shares.map(share => [share.userId, share]));
+
+        return eligible.map(entry => {
+            const share = shareByUserId.get(entry.userId)!;
+            const levelGap = Math.max(0, highestLevel - entry.level);
+            const levelGrant = calculatePartyExpGrant(share.poolShare, levelGap, entry.maxExp);
+            const experienceGainModifier = Number.isFinite(entry.experienceGainModifier)
+                ? Math.max(0, entry.experienceGainModifier)
+                : 0;
+            const grantedExp = Math.floor(levelGrant.amount * experienceGainModifier);
             return {
-                userId: player.userId,
-                nickname: player.name,
-                amount,
+                userId: entry.userId,
+                nickname: entry.nickname,
+                poolShare: share.poolShare,
+                contributionRatio: share.contributionRatio,
+                levelAdjustedShare: levelGrant.amount,
+                grantedExp,
                 levelGap,
-                multiplier,
-                levelsGained: player.gainExp(amount, { protectFromPendingDeathPenalty: true }),
+                levelGapMultiplier: levelGrant.multiplier,
+                levelsGained: entry.player.gainExp(levelGrant.amount, { protectFromPendingDeathPenalty: true }),
             };
         });
     }
@@ -303,6 +375,64 @@ export function calculatePartyExpGrant(baseExp: number, levelGap: number, maxExp
     let amount = Math.max(0, Math.floor(baseExp * multiplier));
     if (levelGap >= 30) amount = Math.min(amount, Math.max(0, Math.floor(maxExp * 0.1)));
     return { amount, multiplier };
+}
+
+/** 유효 인원 1명은 원래 보상, 이후 한 명마다 전체 풀을 20%씩 늘린다. */
+export function calculatePartyExpPool(baseExp: number, eligibleCount: number): number {
+    const normalizedBase = Number.isFinite(baseExp) ? Math.max(0, Math.floor(baseExp)) : 0;
+    const count = Number.isFinite(eligibleCount) ? Math.max(0, Math.floor(eligibleCount)) : 0;
+    return count > 0 ? Math.floor(normalizedBase * (1 + 0.2 * (count - 1))) : 0;
+}
+
+/** 20% 균등 몫과 80% 기여 몫을 Hamilton 최대 나머지법으로 정수 배분한다. */
+export function allocateContributionWeightedExp(
+    poolExp: number,
+    contributions: readonly { readonly userId: number; readonly contribution: number }[],
+): readonly ContributionExpShare[] {
+    const pool = Number.isFinite(poolExp) ? Math.max(0, Math.floor(poolExp)) : 0;
+    const contributionByUserId = new Map<number, number>();
+    for (const entry of contributions) {
+        if (!Number.isInteger(entry.userId)
+            || !Number.isFinite(entry.contribution)
+            || entry.contribution <= 0) continue;
+        contributionByUserId.set(
+            entry.userId,
+            (contributionByUserId.get(entry.userId) ?? 0) + entry.contribution,
+        );
+    }
+    const normalized = [...contributionByUserId]
+        .map(([userId, contribution]) => ({ userId, contribution }))
+        .sort((left, right) => left.userId - right.userId);
+    if (normalized.length === 0) return Object.freeze([]);
+
+    const totalContribution = normalized.reduce((sum, entry) => sum + entry.contribution, 0);
+    const candidates = normalized.map(entry => {
+        const contributionRatio = entry.contribution / totalContribution;
+        const quota = pool * (0.2 / normalized.length + 0.8 * contributionRatio);
+        const floorShare = Math.floor(quota);
+        return {
+            ...entry,
+            contributionRatio,
+            poolShare: floorShare,
+            fraction: quota - floorShare,
+        };
+    });
+    let remaining = pool - candidates.reduce((sum, entry) => sum + entry.poolShare, 0);
+    const remainderOrder = [...candidates].sort((left, right) => {
+        const fractionDifference = right.fraction - left.fraction;
+        if (Math.abs(fractionDifference) > 1e-12) return fractionDifference;
+        return right.contribution - left.contribution || left.userId - right.userId;
+    });
+    for (let index = 0; index < remaining; index++) {
+        remainderOrder[index % remainderOrder.length]!.poolShare++;
+    }
+
+    return Object.freeze(candidates.map(entry => Object.freeze({
+        userId: entry.userId,
+        contribution: entry.contribution,
+        contributionRatio: entry.contributionRatio,
+        poolShare: entry.poolShare,
+    })));
 }
 
 function failure(reason: string): PartyActionResult {

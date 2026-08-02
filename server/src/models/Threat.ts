@@ -55,6 +55,16 @@ export interface ThreatContributionSnapshot {
     total: number
 }
 
+/** 몬스터 처치 시 보상 계산에 넘기는 Entity 참조 없는 기여도 스냅샷. */
+export interface DefeatContributionSnapshot {
+    readonly userId: number
+    readonly damage: number
+    readonly healing: number
+    readonly shielding: number
+    readonly control: number
+    readonly total: number
+}
+
 interface ThreatEntry {
     actor: Entity
     score: number
@@ -64,6 +74,16 @@ interface ThreatEntry {
     shielding: number
     control: number
 }
+
+interface DefeatContributionEntry {
+    userId: number
+    damage: number
+    healing: number
+    shielding: number
+    control: number
+}
+
+type ContributionGuard = (actor: Entity) => boolean;
 
 const activeTables = new Set<ThreatTable>();
 
@@ -100,15 +120,45 @@ export function normalizeMonsterAiProfile(input: MonsterAiProfileInput = {}): Mo
 
 export class ThreatTable {
     private readonly entries = new Map<Entity, ThreatEntry>();
+    /** 대상 전환용 어그로와 분리해 이탈·사망 뒤에도 처치 시점까지 보존한다. */
+    private readonly defeatContributions = new Map<number, DefeatContributionEntry>();
     private sequence = 0;
 
-    constructor(readonly owner: Entity, readonly profile: MonsterAiProfile) {
+    constructor(
+        readonly owner: Entity,
+        readonly profile: MonsterAiProfile,
+        private readonly canRecordContribution: ContributionGuard = () => true,
+    ) {
         activeTables.add(this);
     }
 
     record(actor: Entity, action: ThreatAction, amount: number): void {
         const source = actor.attackOwner;
-        if (source === this.owner || source.isDefeated || !Number.isFinite(amount) || amount <= 0) return;
+        if (source === this.owner || !Number.isFinite(amount) || amount <= 0) return;
+        const contributesToDefeat = action === ThreatAction.DAMAGE
+            || action === ThreatAction.HEALING
+            || action === ThreatAction.SHIELDING
+            || action === ThreatAction.CONTROL;
+        if (contributesToDefeat && !this.canRecordContribution(source)) return;
+
+        const userId = source.playerUserId;
+        if (contributesToDefeat && userId !== undefined) {
+            const contribution = this.defeatContributions.get(userId) ?? {
+                userId,
+                damage: 0,
+                healing: 0,
+                shielding: 0,
+                control: 0,
+            };
+            if (action === ThreatAction.DAMAGE) contribution.damage += amount;
+            else if (action === ThreatAction.HEALING) contribution.healing += amount;
+            else if (action === ThreatAction.SHIELDING) contribution.shielding += amount;
+            else if (action === ThreatAction.CONTROL) contribution.control += amount;
+            this.defeatContributions.set(userId, contribution);
+        }
+
+        // 사망한 source의 지속 효과 기여는 보존하되 새 AI 공격 대상으로 되살리지는 않는다.
+        if (source.isDefeated) return;
         const entry = this.entries.get(source) ?? {
             actor: source,
             score: 0,
@@ -149,6 +199,9 @@ export class ThreatTable {
             const userId = entry.actor.attackOwner.playerUserId;
             if (userId !== undefined && !userIds.has(userId)) this.entries.delete(actor);
         }
+        for (const userId of this.defeatContributions.keys()) {
+            if (!userIds.has(userId)) this.defeatContributions.delete(userId);
+        }
     }
 
     update(dt: number): void {
@@ -185,11 +238,30 @@ export class ThreatTable {
             .sort((left, right) => right.total - left.total || right.damage - left.damage);
     }
 
+    /** 보상·도감·전직 진행이 Entity 수명과 무관하게 사용할 수 있는 불변 원장 복사본. */
+    getDefeatContributionSnapshot(): readonly DefeatContributionSnapshot[] {
+        return Object.freeze([...this.defeatContributions.values()]
+            .map(entry => Object.freeze({
+                userId: entry.userId,
+                damage: entry.damage,
+                healing: entry.healing,
+                shielding: entry.shielding,
+                control: entry.control,
+                total: entry.damage + entry.healing + entry.shielding + entry.control,
+            }))
+            .sort((left, right) => right.total - left.total
+                || right.damage - left.damage
+                || left.userId - right.userId));
+    }
+
     getPrimaryContributor(): Entity | undefined {
         return this.getContributionSnapshots().find(entry => entry.actor.attackOwner.isPlayer)?.actor.attackOwner;
     }
 
-    clear(): void { this.entries.clear(); }
+    clear(): void {
+        this.entries.clear();
+        this.defeatContributions.clear();
+    }
     dispose(): void { this.clear(); activeTables.delete(this); }
 }
 

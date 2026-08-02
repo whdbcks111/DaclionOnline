@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PartyManager, calculatePartyExpGrant } from './party.js';
+import {
+    PartyManager,
+    allocateContributionWeightedExp,
+    calculatePartyExpGrant,
+    calculatePartyExpPool,
+} from './party.js';
 import type { PartyExperienceGainOptions, PartyParticipant } from './party.js';
 
 class FakePlayer implements PartyParticipant {
@@ -12,6 +17,7 @@ class FakePlayer implements PartyParticipant {
     maxExp = 1_000;
     gainedExp = 0;
     lastGainOptions: PartyExperienceGainOptions | undefined;
+    experienceGainModifier = 1;
 
     constructor(
         readonly userId: number,
@@ -20,8 +26,10 @@ class FakePlayer implements PartyParticipant {
         readonly locationId = 'field',
     ) {}
 
+    getExperienceGainModifier(): number { return this.experienceGainModifier; }
+
     gainExp(amount: number, options?: PartyExperienceGainOptions): number[] {
-        this.gainedExp += amount;
+        this.gainedExp += Math.floor(amount * this.experienceGainModifier);
         this.lastGainOptions = options;
         return [];
     }
@@ -78,33 +86,127 @@ test('파티장이 나가면 남은 가입 순서의 첫 파티원에게 파티�
     assert.deepEqual(manager.getParty(first)?.memberUserIds, [first.userId, second.userId]);
 });
 
-test('몬스터 경험치는 같은 장소의 생존 파티원에게 레벨 차이 감쇠 후 지급된다', () => {
+test('몬스터 경험치는 claim 안의 양수 기여·온라인·동일 장소·생존 인원에게만 지급된다', () => {
     const level40 = new FakePlayer(1, 'Lv40', 40);
     const level30 = new FakePlayer(2, 'Lv30', 30);
-    const level20 = new FakePlayer(3, 'Lv20', 20);
-    const level10 = new FakePlayer(4, 'Lv10', 10);
-    const remote = new FakePlayer(5, '원격', 40, 'town');
-    const { manager } = fixture(level40, level30, level20, level10, remote);
+    level30.experienceGainModifier = 1.5;
+    const zero = new FakePlayer(3, '무기여', 20);
+    const defeated = new FakePlayer(4, '사망', 50);
+    defeated.isDefeated = true;
+    const remote = new FakePlayer(5, '원격', 60, 'town');
+    const unclaimed = new FakePlayer(6, '후발 가입', 100);
+    const offline = new FakePlayer(7, '오프라인', 70);
+    const { manager } = fixture(level40, level30, zero, defeated, remote, unclaimed);
 
-    for (const [index, member] of [level30, level20, level10, remote].entries()) {
-        manager.invite(level40, member, 1_000 + index * 2);
-        manager.accept(member, 1_001 + index * 2);
-    }
-
-    const grants = manager.distributeMonsterExp(level40, 100, 'field');
-    assert.deepEqual(grants.map(grant => [grant.userId, grant.amount]), [
-        [level40.userId, 100],
-        [level30.userId, 50],
-        [level20.userId, 20],
-        [level10.userId, 10],
+    const grants = manager.distributeMonsterExp(100, 'field', {
+        claimedUserIds: [level40.userId, level30.userId, zero.userId, defeated.userId, remote.userId, offline.userId],
+        contributions: [
+            { userId: level40.userId, total: 60 },
+            { userId: level30.userId, total: 30 },
+            { userId: defeated.userId, total: 90 },
+            { userId: remote.userId, total: 90 },
+            { userId: offline.userId, total: 90 },
+            { userId: unclaimed.userId, total: 10_000 },
+        ],
+        lastAttackOwnerUserId: zero.userId,
+    });
+    assert.deepEqual(grants.map(grant => [
+        grant.userId,
+        grant.poolShare,
+        grant.levelAdjustedShare,
+        grant.grantedExp,
+    ]), [
+        [level40.userId, 76, 76, 76],
+        [level30.userId, 44, 22, 33],
     ]);
+    assert.equal(grants[0]?.contributionRatio, 2 / 3);
+    assert.equal(grants[1]?.contributionRatio, 1 / 3);
+    assert.equal(grants[1]?.levelGapMultiplier, 0.5);
+    assert.equal(level40.gainedExp, 76);
+    assert.equal(level30.gainedExp, 33);
+    assert.equal(zero.gainedExp, 0);
+    assert.equal(defeated.gainedExp, 0);
     assert.equal(remote.gainedExp, 0);
+    assert.equal(unclaimed.gainedExp, 0);
+    assert.equal(offline.gainedExp, 0);
     assert.equal(
-        [level40, level30, level20, level10]
-            .every(player => player.lastGainOptions?.protectFromPendingDeathPenalty),
+        [level40, level30].every(player => player.lastGainOptions?.protectFromPendingDeathPenalty),
         true,
         '처치 경험치는 바로 이어지는 사망 패널티에서 보호되어야 한다.',
     );
+});
+
+test('양수 기여가 전혀 없을 때만 claim 안의 유효한 마지막 공격자를 fallback으로 쓴다', () => {
+    const fallback = new FakePlayer(1, '막타', 20);
+    const positiveButOffline = new FakePlayer(2, '오프라인 기여자', 20);
+    const { manager } = fixture(fallback);
+
+    const grants = manager.distributeMonsterExp(100, 'field', {
+        claimedUserIds: [fallback.userId],
+        contributions: [],
+        lastAttackOwnerUserId: fallback.userId,
+    });
+    assert.deepEqual(grants.map(grant => [grant.userId, grant.poolShare, grant.contributionRatio]), [
+        [fallback.userId, 100, 1],
+    ]);
+
+    const blockedFallback = manager.distributeMonsterExp(100, 'field', {
+        claimedUserIds: [fallback.userId, positiveButOffline.userId],
+        contributions: [{ userId: positiveButOffline.userId, total: 1 }],
+        lastAttackOwnerUserId: fallback.userId,
+    });
+    assert.deepEqual(blockedFallback, []);
+});
+
+test('파티 경험치 풀은 유효 인원 한 명당 20%씩 늘고 솔로 보상은 그대로다', () => {
+    assert.equal(calculatePartyExpPool(100, 0), 0);
+    assert.equal(calculatePartyExpPool(100, 1), 100);
+    assert.equal(calculatePartyExpPool(100, 2), 120);
+    assert.equal(calculatePartyExpPool(100, 3), 140);
+    assert.equal(calculatePartyExpPool(Number.NaN, 3), 0);
+});
+
+test('Hamilton 분배는 20% 균등 + 80% 기여 가중과 확정 tie-break를 따른다', () => {
+    const equal = allocateContributionWeightedExp(10, [
+        { userId: 1, contribution: 1 },
+        { userId: 2, contribution: 1 },
+        { userId: 3, contribution: 1 },
+    ]);
+    assert.deepEqual(equal.map(entry => entry.poolShare), [4, 3, 3]);
+
+    const twoToOne = allocateContributionWeightedExp(100, [
+        { userId: 1, contribution: 2 },
+        { userId: 2, contribution: 1 },
+    ]);
+    assert.deepEqual(twoToOne.map(entry => entry.poolShare), [63, 37]);
+
+    const tiedRemainders = allocateContributionWeightedExp(100, [
+        { userId: 1, contribution: 2 },
+        { userId: 2, contribution: 1 },
+        { userId: 3, contribution: 1 },
+    ]);
+    assert.deepEqual(tiedRemainders.map(entry => entry.poolShare), [47, 27, 26]);
+});
+
+test('Hamilton 분배는 중복 userId를 합치고 invalid 기여를 버리며 항상 풀 총합을 보존한다', () => {
+    const shares = allocateContributionWeightedExp(101, [
+        { userId: 2, contribution: 1 },
+        { userId: 1, contribution: 1 },
+        { userId: 1, contribution: 2 },
+        { userId: 3, contribution: 0 },
+        { userId: 4, contribution: Number.NaN },
+        { userId: 1.5, contribution: 100 },
+    ]);
+    assert.deepEqual(shares.map(entry => [entry.userId, entry.contribution]), [[1, 3], [2, 1]]);
+    assert.equal(shares.reduce((sum, entry) => sum + entry.poolShare, 0), 101);
+    for (let pool = 0; pool < 50; pool++) {
+        const allocated = allocateContributionWeightedExp(pool, [
+            { userId: 9, contribution: 7 },
+            { userId: 3, contribution: 5 },
+            { userId: 6, contribution: 2 },
+        ]);
+        assert.equal(allocated.reduce((sum, entry) => sum + entry.poolShare, 0), pool);
+    }
 });
 
 test('30레벨 이상 차이는 10% 감쇠와 다음 레벨 요구 경험치 10% 상한을 모두 적용한다', () => {
