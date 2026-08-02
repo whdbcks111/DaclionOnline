@@ -736,7 +736,7 @@ defineItem({
     onUse: null,
     equipSlot: 'mainHand',
     modifiers: [
-        { attribute: 'atk', op: 'add', value: 8, source: '' },
+        { attribute: 'atk', op: 'add', value: 11, source: '' },
         { attribute: 'critRate', op: 'add', value: 0.02, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.08, source: '' },
     ],
@@ -846,7 +846,7 @@ defineItem({
     onUse: null,
     equipSlot: 'mainHand',
     modifiers: [
-        { attribute: 'atk', op: 'add', value: 32, source: '' },
+        { attribute: 'atk', op: 'add', value: 37, source: '' },
         { attribute: 'critRate', op: 'add', value: 0.04, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.18, source: '' },
     ],
@@ -1205,7 +1205,7 @@ defineItem({
     onUse: null,
     equipSlot: 'mainHand',
     modifiers: [
-        { attribute: 'atk', op: 'add', value: 23, source: '' },
+        { attribute: 'atk', op: 'add', value: 31, source: '' },
         { attribute: 'critRate', op: 'add', value: 0.025, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.13, source: '' },
     ],
@@ -1371,7 +1371,7 @@ defineItem({
     },
     onUse: null, equipSlot: 'mainHand',
     modifiers: [
-        { attribute: 'atk', op: 'add', value: 58, source: '' },
+        { attribute: 'atk', op: 'add', value: 84, source: '' },
         { attribute: 'critRate', op: 'add', value: 0.06, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.25, source: '' },
     ],
@@ -1416,7 +1416,7 @@ defineItem({
     },
     onUse: null, equipSlot: 'mainHand',
     modifiers: [
-        { attribute: 'magicForce', op: 'add', value: 76, source: '' },
+        { attribute: 'magicForce', op: 'add', value: 101, source: '' },
         { attribute: 'mentalityRegen', op: 'add', value: 4, source: '' },
         { attribute: 'magicPen', op: 'add', value: 12, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.22, source: '' },
@@ -1560,7 +1560,7 @@ defineItem({
     },
     onUse: null, equipSlot: 'mainHand',
     modifiers: [
-        { attribute: 'atk', op: 'add', value: 80, source: '' },
+        { attribute: 'atk', op: 'add', value: 128, source: '' },
         { attribute: 'critRate', op: 'add', value: 0.06, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.28, source: '' },
     ],
@@ -1770,7 +1770,7 @@ defineItem({
     },
     onUse: null, equipSlot: 'mainHand',
     modifiers: [
-        { attribute: 'atk', op: 'add', value: 112, source: '' },
+        { attribute: 'atk', op: 'add', value: 129, source: '' },
         { attribute: 'critRate', op: 'add', value: 0.075, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.34, source: '' },
     ],
