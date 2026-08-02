@@ -1,7 +1,7 @@
 // 공격 부가효과 ID를 등록 시점에 검증하므로 레지스트리를 먼저 초기화한다.
 import './statusEffects.js';
 import { defineMonster } from '../models/Monster.js';
-import type { MonsterData } from '../models/Monster.js';
+import type { DropInfo, MonsterData } from '../models/Monster.js';
 import Entity from '../models/Entity.js';
 import { GameTags } from '../../../shared/tags.js';
 import { MonsterAiDisposition } from '../models/Threat.js';
@@ -27,6 +27,30 @@ export type WorldMonsterData = Omit<
         statWeights?: MonsterStatWeightMap;
         statOverrides?: Partial<AttributeRecord>;
     };
+
+export const MASTERY_ESSENCE_ITEM_ID = 'mastery_essence';
+
+/** Lv.400 이상 보스의 숙련 정수 드롭을 다른 전리품 순서·수치와 무관하게 하나로 정규화한다. */
+export function normalizeWorldMonsterDrops(
+    drops: readonly DropInfo[],
+    level: number,
+    statRank: MonsterRank,
+): DropInfo[] {
+    if (statRank !== MonsterRank.BOSS || level < 400) {
+        return drops.map(drop => ({ ...drop }));
+    }
+    return [
+        ...drops
+            .filter(drop => drop.itemDataId !== MASTERY_ESSENCE_ITEM_ID)
+            .map(drop => ({ ...drop })),
+        {
+            itemDataId: MASTERY_ESSENCE_ITEM_ID,
+            minCount: 1,
+            maxCount: 1,
+            chance: 1,
+        },
+    ];
+}
 
 /** 동급 몬스터 한 마리의 기준 보상은 level * 20 EXP다. */
 export function defineWorldMonster(data: WorldMonsterData): void {
@@ -56,6 +80,7 @@ export function defineWorldMonster(data: WorldMonsterData): void {
     const usesGeneralMonsterOffense = statRank === MonsterRank.NORMAL || statRank === MonsterRank.ELITE;
     defineMonster({
         ...definition,
+        drops: normalizeWorldMonsterDrops(definition.drops, data.level, statRank),
         baseAttribute: explicitProfile ? calculatedAttributes : {
             ...authoredAttributes,
             ...(usesGeneralMonsterOffense ? {

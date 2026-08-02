@@ -11,6 +11,7 @@ import Skill, {
 import type {
     SkillCheckResult,
     SkillFinishContext,
+    SkillMaxLevelBreakthroughSnapshot,
     SkillStartResult,
     SkillUpdateContext,
 } from './Skill.js';
@@ -31,6 +32,8 @@ import type { SkillHudData } from '../../../shared/types.js';
 import { ActionType } from './Action.js';
 import { partyManager } from '../modules/party.js';
 
+export type { SkillMaxLevelBreakthroughSnapshot } from './Skill.js';
+
 export interface SkillActivationOutcome {
     matched: boolean;
     activated: boolean;
@@ -42,6 +45,25 @@ export interface RuntimeSkillEntry {
     skillDataId: string;
     level?: number;
 }
+
+export type SkillMaxLevelIncreaseResult =
+    | {
+        increased: true;
+        amount: number;
+        previousMaxLevel: number;
+        snapshot: SkillMaxLevelBreakthroughSnapshot;
+    }
+    | {
+        increased: false;
+        reason: 'missing';
+        message: string;
+    }
+    | {
+        increased: false;
+        reason: 'cap';
+        message: string;
+        snapshot: SkillMaxLevelBreakthroughSnapshot;
+    };
 
 export default class SkillBook {
     readonly playerId: number | null;
@@ -117,6 +139,45 @@ export default class SkillBook {
 
     get(skillDataId: string): Skill | undefined {
         return this.skills.get(skillDataId.trim().toLowerCase());
+    }
+
+    /** 현재 표시 여부와 무관하게 패시브를 포함한 보유 스킬 이름·ID·별칭을 찾는다. */
+    findOwnedByInput(input: string): Skill | undefined {
+        const normalized = input.trim().toLowerCase();
+        if (!normalized) return undefined;
+        return this.getAll().find(skill => matchesSkillInput(skill, normalized));
+    }
+
+    /** 최대 레벨 돌파 선택 UI가 raw Skill Map이나 metadata를 읽지 않는 불변 DTO. */
+    getMaxLevelBreakthroughSnapshots(): SkillMaxLevelBreakthroughSnapshot[] {
+        return this.getAll().map(skill => skill.getMaxLevelBreakthroughSnapshot());
+    }
+
+    increaseMaxLevel(skillDataId: string, amount = 1): SkillMaxLevelIncreaseResult {
+        const skill = this.get(skillDataId);
+        if (!skill) {
+            return {
+                increased: false,
+                reason: 'missing',
+                message: '보유한 스킬이 아닙니다.',
+            };
+        }
+        const before = skill.getMaxLevelBreakthroughSnapshot();
+        if (before.remainingMaxLevelBonus <= 0) {
+            return {
+                increased: false,
+                reason: 'cap',
+                message: '이 스킬은 최대 레벨 돌파 상한에 도달했습니다.',
+                snapshot: before,
+            };
+        }
+        const increased = skill.increaseMaxLevelBonus(amount);
+        return {
+            increased: true,
+            amount: increased,
+            previousMaxLevel: before.maxLevel,
+            snapshot: skill.getMaxLevelBreakthroughSnapshot(),
+        };
     }
 
     /** 관리자·보상 기능이 내부 Map을 직접 다루지 않고 보유 스킬 레벨을 설정한다. */
@@ -202,9 +263,7 @@ export default class SkillBook {
 
     findVisibleByInput(input: string): Skill | undefined {
         const normalized = input.trim().toLowerCase();
-        return this.getVisible().find(skill => skill.skillDataId === normalized
-            || skill.name.toLowerCase() === normalized
-            || skill.data.aliases?.some(alias => alias.toLowerCase() === normalized));
+        return this.getVisible().find(skill => matchesSkillInput(skill, normalized));
     }
 
     getActivationStatus(skill: Skill): SkillCheckResult {
@@ -625,4 +684,10 @@ export default class SkillBook {
         const owner = this.owner;
         return owner?.isPlayer ? owner as Player : null;
     }
+}
+
+function matchesSkillInput(skill: Skill, normalizedInput: string): boolean {
+    return skill.skillDataId === normalizedInput
+        || skill.name.toLowerCase() === normalizedInput
+        || skill.data.aliases?.some(alias => alias.toLowerCase() === normalizedInput) === true;
 }

@@ -5,6 +5,8 @@ import { chat } from '../utils/chatBuilder.js';
 import { parseChatMessage } from '../utils/chatParser.js';
 import type { CompletionItem } from '../../../shared/types.js';
 import type Skill from '../models/Skill.js';
+import { performSkillBreakthrough } from '../modules/skillBreakthrough.js';
+import logger from '../utils/logger.js';
 
 interface SkillListStatus {
     label: string;
@@ -28,6 +30,17 @@ function activeSkillCompletions(userId: number): CompletionItem[] {
         .map(skill => ({
             value: skill.name,
             description: `Lv.${skill.level} · ${skill.formatCost(player).replace(/\[[^\]]+\]/g, '')}`,
+        }));
+}
+
+function skillBreakthroughCompletions(userId: number): CompletionItem[] {
+    const player = getPlayerByUserId(userId);
+    if (!player) return [];
+    return player.skills.getMaxLevelBreakthroughSnapshots()
+        .filter(snapshot => snapshot.remainingMaxLevelBonus > 0)
+        .map(snapshot => ({
+            value: snapshot.name,
+            description: `최대 Lv.${snapshot.maxLevel} · 돌파 +${snapshot.maxLevelBonus}/${snapshot.maxLevelBonusCap}`,
         }));
 }
 
@@ -194,6 +207,49 @@ export function initSkillCommands(): void {
                     .build() : []),
             ];
             sendBotMessageToUser(userId, nodes);
+        },
+    });
+
+    registerCommand({
+        name: '스킬돌파',
+        aliases: ['숙련돌파', 'skillbreak'],
+        description: '숙련의 정수 10개로 선택한 보유 스킬의 최대 레벨을 1 높입니다.',
+        showCommandUse: 'private',
+        args: [{
+            name: '스킬이름',
+            description: '최대 레벨을 돌파할 보유 스킬 이름',
+            required: true,
+            isText: true,
+            completions: skillBreakthroughCompletions,
+        }],
+        async handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            try {
+                const result = await performSkillBreakthrough(player, args[0] ?? '');
+                if (!result.success) {
+                    sendBotMessageToUser(userId, result.message);
+                    sendNotificationToUser(userId, {
+                        key: `skill-breakthrough-denied:${result.code}`,
+                        message: result.message,
+                    });
+                    return;
+                }
+                const message = `[ ${result.snapshot.name} ] 최대 레벨 돌파 성공! `
+                    + `Lv.${result.previousMaxLevel} → Lv.${result.snapshot.maxLevel} `
+                    + `(돌파 +${result.snapshot.maxLevelBonus}/${result.snapshot.maxLevelBonusCap}, 숙련의 정수 ${result.consumed}개 소모)`
+                    + (result.saveDeferred ? ' 저장은 자동으로 다시 시도됩니다.' : '');
+                sendBotMessageToUser(userId, chat()
+                    .color('gold', builder => builder.weight('bold', bold => bold.text(message)))
+                    .build());
+                sendNotificationToUser(userId, {
+                    key: `skill-breakthrough:${result.snapshot.id}`,
+                    message,
+                });
+            } catch (error) {
+                logger.error(`스킬 돌파 명령 실패: ${userId}`, error);
+                sendBotMessageToUser(userId, '스킬 돌파 결과를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.');
+            }
         },
     });
 }

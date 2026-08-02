@@ -597,6 +597,58 @@ test('스킬 레벨 설정 API는 보유 스킬만 정의 최대 레벨 안에�
     assert.equal(player.skills.setLevel('unknown_skill', 2), null);
 });
 
+test('최대 레벨 돌파 조회는 패시브를 포함하고 액티브 +5·패시브 +2 상한을 적용한다', () => {
+    const player = new TestSkillPlayer();
+    player.skills.grant('power_strike', 'test', 4);
+    player.skills.grant('warrior_combat_instinct', 'test');
+
+    assert.equal(player.skills.findOwnedByInput('강타')?.skillDataId, 'power_strike');
+    assert.equal(player.skills.findOwnedByInput('전투 본능')?.isPassive, true);
+    assert.equal(player.skills.findVisibleByInput('전투 본능'), undefined);
+
+    const active = player.skills.increaseMaxLevel('power_strike', 99);
+    assert.equal(active.increased, true);
+    if (!active.increased) return;
+    assert.equal(active.amount, 5);
+    assert.equal(active.previousMaxLevel, 5);
+    assert.equal(active.snapshot.maxLevel, 10);
+    assert.equal(active.snapshot.level, 4);
+
+    const passive = player.skills.increaseMaxLevel('warrior_combat_instinct', 99);
+    assert.equal(passive.increased, true);
+    if (!passive.increased) return;
+    assert.equal(passive.amount, 2);
+    assert.equal(passive.snapshot.maxLevel, 3);
+    assert.equal(passive.snapshot.isPassive, true);
+
+    const snapshots = player.skills.getMaxLevelBreakthroughSnapshots();
+    assert.deepEqual(snapshots.map(snapshot => snapshot.id), ['power_strike', 'warrior_combat_instinct']);
+});
+
+test('최대 레벨 돌파는 미보유·상한 도달을 명시적으로 거부하고 cap no-op을 유지한다', () => {
+    const emptyPlayer = new TestSkillPlayer(9_303);
+    assert.deepEqual(emptyPlayer.skills.increaseMaxLevel('missing'), {
+        increased: false,
+        reason: 'missing',
+        message: '보유한 스킬이 아닙니다.',
+    });
+    assert.equal(emptyPlayer.skills.dirty, false);
+
+    const player = new TestSkillPlayer(9_304);
+    const skill = player.skills.grant('power_strike', 'test', 3).skill;
+    let persistentChanges = 0;
+    skill.setPersistentChangeHandler(() => { persistentChanges++; });
+    assert.equal(skill.increaseMaxLevelBonus(5), 5);
+    const before = skill.getPersistedMetadata();
+    const denied = player.skills.increaseMaxLevel('power_strike');
+
+    assert.equal(denied.increased, false);
+    if (denied.increased || denied.reason !== 'cap') return;
+    assert.equal(denied.snapshot.maxLevel, 10);
+    assert.equal(persistentChanges, 1);
+    assert.deepEqual(skill.getPersistedMetadata(), before);
+});
+
 test('강타는 일회성 관통을 제거하고 확정 치명타 공격과 비용을 확정한다', () => {
     const player = new TestSkillPlayer();
     const target = new TestTarget();

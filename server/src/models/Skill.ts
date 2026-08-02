@@ -220,6 +220,9 @@ export interface SkillData {
 
 const METADATA_STORAGE_KEY = '__daclionSkillMetadata';
 const METADATA_STORAGE_VERSION = 1;
+const MAX_LEVEL_BONUS_METADATA_KEY = 'progression.maxLevelBonus';
+const ACTIVE_MAX_LEVEL_BONUS_CAP = 5;
+const PASSIVE_MAX_LEVEL_BONUS_CAP = 2;
 const DEFAULT_EXPERIENCE_GAIN = 10;
 /** 플레이어 전투 기술 사이에 보장하는 최소 발동 간격. 평타·아이템·생활 기술에는 적용하지 않는다. */
 export const PLAYER_COMBAT_SKILL_CADENCE_SECONDS = 0.9;
@@ -232,6 +235,19 @@ export interface SkillExperienceResult {
     levelsGained: number;
     experience: number;
     requiredExperience: number;
+}
+
+export interface SkillMaxLevelBreakthroughSnapshot {
+    id: string;
+    name: string;
+    icon: string;
+    level: number;
+    baseMaxLevel: number;
+    maxLevel: number;
+    maxLevelBonus: number;
+    maxLevelBonusCap: number;
+    remainingMaxLevelBonus: number;
+    isPassive: boolean;
 }
 
 export default class Skill implements TagReadable {
@@ -267,12 +283,13 @@ export default class Skill implements TagReadable {
         if (!data) throw new Error(`SkillData not found: ${options.skillDataId}`);
         this.playerId = options.playerId;
         this.skillDataId = data.id;
-        this._level = normalizeSkillLevel(options.level ?? 1, data.maxLevel);
-        this._experience = this._level >= data.maxLevel
+        this._metadataDelta = normalizeSkillMetadataDelta(options.metadataDelta, data);
+        const maxLevel = data.maxLevel + getSkillMaxLevelBonus(this._metadataDelta, data);
+        this._level = normalizeSkillLevel(options.level ?? 1, maxLevel);
+        this._experience = this._level >= maxLevel
             ? 0
             : normalizeSkillExperience(options.experience ?? 0);
         this._cooldownEndsAt = normalizeCooldownEnd(options.cooldownEndsAt);
-        this._metadataDelta = cloneMetadata(options.metadataDelta ?? {}) as SkillMetadata;
         this.tags = new TagCollection({
             definition: data.tags,
             persistent: options.persistentTags,
@@ -290,7 +307,11 @@ export default class Skill implements TagReadable {
 
     get name(): string { return this.data.name; }
     get level(): number { return this._level; }
-    get maxLevel(): number { return this.data.maxLevel; }
+    get baseMaxLevel(): number { return this.data.maxLevel; }
+    get maxLevelBonus(): number { return getSkillMaxLevelBonus(this._metadataDelta, this.data); }
+    get maxLevelBonusCap(): number { return getSkillMaxLevelBonusCap(this.data); }
+    get remainingMaxLevelBonus(): number { return this.maxLevelBonusCap - this.maxLevelBonus; }
+    get maxLevel(): number { return this.baseMaxLevel + this.maxLevelBonus; }
     get experience(): number { return this._experience; }
     get isActive(): boolean { return this._active; }
     get activeElapsed(): number { return this._activeElapsed; }
@@ -298,6 +319,33 @@ export default class Skill implements TagReadable {
     get isPassive(): boolean { return this.hasTag(GameTags.SKILL_PASSIVE); }
 
     hasTag(tag: TagId): boolean { return this.tags.hasTag(tag); }
+
+    getMaxLevelBreakthroughSnapshot(): SkillMaxLevelBreakthroughSnapshot {
+        return {
+            id: this.skillDataId,
+            name: this.name,
+            icon: this.data.icon,
+            level: this.level,
+            baseMaxLevel: this.baseMaxLevel,
+            maxLevel: this.maxLevel,
+            maxLevelBonus: this.maxLevelBonus,
+            maxLevelBonusCap: this.maxLevelBonusCap,
+            remainingMaxLevelBonus: this.remainingMaxLevelBonus,
+            isPassive: this.isPassive,
+        };
+    }
+
+    /** 돌파 보상처럼 검증이 끝난 기능만 최대 레벨 상한을 늘리는 목적형 API. */
+    increaseMaxLevelBonus(amount = 1): number {
+        if (!Number.isSafeInteger(amount) || amount <= 0) {
+            throw new Error('Skill max level bonus amount must be a positive safe integer');
+        }
+        const increased = Math.min(amount, this.remainingMaxLevelBonus);
+        if (increased <= 0) return 0;
+        this._metadataDelta[MAX_LEVEL_BONUS_METADATA_KEY] = this.maxLevelBonus + increased;
+        this.persistentChangeHandler?.();
+        return increased;
+    }
 
     setLevel(level: number): number {
         const normalized = normalizeSkillLevel(level, this.maxLevel);
@@ -350,6 +398,7 @@ export default class Skill implements TagReadable {
     }
 
     getMetadata<T extends MetadataValue = MetadataValue>(key: string): T | undefined {
+        if (key === MAX_LEVEL_BONUS_METADATA_KEY) return undefined;
         if (Object.hasOwn(this._metadataDelta, key)) {
             return cloneMetadataValue(this._metadataDelta[key]) as T;
         }
@@ -359,17 +408,23 @@ export default class Skill implements TagReadable {
 
     getMetadataSnapshot(): Readonly<SkillMetadata> | null {
         const merged = { ...(this.data.baseMetadata ?? {}), ...this._metadataDelta };
+        delete merged[MAX_LEVEL_BONUS_METADATA_KEY];
         return Object.keys(merged).length > 0 ? cloneMetadata(merged) : null;
     }
 
     getMetadataDeltaSnapshot(): SkillMetadata | null {
-        return Object.keys(this._metadataDelta).length > 0
-            ? cloneMetadata(this._metadataDelta) as SkillMetadata
+        const delta = { ...this._metadataDelta };
+        delete delta[MAX_LEVEL_BONUS_METADATA_KEY];
+        return Object.keys(delta).length > 0
+            ? cloneMetadata(delta) as SkillMetadata
             : null;
     }
 
     setMetadata(key: string, value: unknown): void {
         if (!key.trim()) throw new Error('Skill metadata key must not be empty');
+        if (key === MAX_LEVEL_BONUS_METADATA_KEY) {
+            throw new Error('Skill max level bonus must be changed through its progression API');
+        }
         if (value === undefined) {
             this.resetMetadata(key);
             return;
@@ -386,6 +441,9 @@ export default class Skill implements TagReadable {
     }
 
     resetMetadata(key: string): boolean {
+        if (key === MAX_LEVEL_BONUS_METADATA_KEY) {
+            throw new Error('Skill max level bonus must be changed through its progression API');
+        }
         if (!Object.hasOwn(this._metadataDelta, key)) return false;
         delete this._metadataDelta[key];
         this.persistentChangeHandler?.();
@@ -572,14 +630,15 @@ export default class Skill implements TagReadable {
         acquisitionSource?: string;
     }): Skill {
         const baseMetadata = getSkillData(options.skillDataId)?.baseMetadata;
+        const metadataDelta = decodeMetadataDelta(
+            METADATA_STORAGE_KEY,
+            METADATA_STORAGE_VERSION,
+            baseMetadata,
+            options.metadata,
+        ) as SkillMetadata;
         return new Skill({
             ...options,
-            metadataDelta: decodeMetadataDelta(
-                METADATA_STORAGE_KEY,
-                METADATA_STORAGE_VERSION,
-                baseMetadata,
-                options.metadata,
-            ) as SkillMetadata,
+            metadataDelta,
             persistentTags: options.tags,
         });
     }
@@ -669,6 +728,38 @@ function normalizeSkillId(id: string): string {
 function normalizeSkillLevel(level: number, maxLevel: number): number {
     if (!Number.isInteger(level)) throw new Error(`Skill level must be an integer: ${level}`);
     return Math.max(1, Math.min(maxLevel, level));
+}
+
+function getSkillMaxLevelBonusCap(data: Readonly<SkillData>): number {
+    return data.tags.includes(GameTags.SKILL_PASSIVE)
+        ? PASSIVE_MAX_LEVEL_BONUS_CAP
+        : ACTIVE_MAX_LEVEL_BONUS_CAP;
+}
+
+function normalizeSkillMaxLevelBonus(value: unknown, cap: number): number {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+    return Math.max(0, Math.min(Math.trunc(value), cap));
+}
+
+function getSkillMaxLevelBonus(
+    metadataDelta: Readonly<SkillMetadata>,
+    data: Readonly<SkillData>,
+): number {
+    return normalizeSkillMaxLevelBonus(
+        metadataDelta[MAX_LEVEL_BONUS_METADATA_KEY],
+        getSkillMaxLevelBonusCap(data),
+    );
+}
+
+function normalizeSkillMetadataDelta(
+    metadataDelta: SkillMetadata | null | undefined,
+    data: Readonly<SkillData>,
+): SkillMetadata {
+    const normalized = cloneMetadata(metadataDelta ?? {}) as SkillMetadata;
+    const maxLevelBonus = getSkillMaxLevelBonus(normalized, data);
+    if (maxLevelBonus > 0) normalized[MAX_LEVEL_BONUS_METADATA_KEY] = maxLevelBonus;
+    else delete normalized[MAX_LEVEL_BONUS_METADATA_KEY];
+    return normalized;
 }
 
 function normalizeSkillExperience(experience: number): number {

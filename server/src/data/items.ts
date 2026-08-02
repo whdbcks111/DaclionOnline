@@ -471,6 +471,23 @@ defineItem({
     },
 });
 
+defineItem({
+    id: 'mastery_essence',
+    name: '숙련의 정수',
+    description: '강대한 보스가 축적한 전투 숙련이 응축된 가벼운 정수.',
+    image: 'items/mastery_essence',
+    category: '재료',
+    weight: 0.1,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [],
+});
+
 // TODO: 낚시 보물 전용 물약 아트 제작 시 현재 영약 fallback 원본을 교체한다.
 for (const elixir of [
     {

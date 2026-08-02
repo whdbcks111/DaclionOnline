@@ -47,6 +47,12 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 `data/skills.ts`의 `defineSkill()`이 코드 마스터 데이터를 등록하고, Player별 `Skill`은 레벨·경험치·쿨다운 종료 시각·획득 정보·영속 태그·metadata delta만 가진다. `SkillBook`이 보유 목록과 수명주기, 자동 획득·자동 발동, dirty 저장을 소유한다. `SkillContext.owner`는 실제 시전자 Entity이며 `player`는 플레이어 시전자일 때만 존재하므로 같은 `SkillData`를 Monster도 실행할 수 있다. `SkillBook.createRuntime()`은 몬스터 수명 동안만 유지되는 비영속 스킬북을 만든다.
 
+스킬의 실제 최대 레벨은 마스터 `SkillData.maxLevel`에 인스턴스 delta의 `progression.maxLevelBonus`를 더해 계산한다. 액티브는 누적 +5, `skill:passive` 패시브는 누적 +2까지만 돌파할 수 있으며 저장값이 음수·소수·비정상 범위여도 로드 시 정수 범위로 안전하게 정규화한다. metadata를 먼저 복원한 뒤 동적 상한으로 레벨과 경험치를 정규화하므로 기존 최대 레벨 스킬이 돌파된 뒤 쌓은 경험치도 재접속에서 유지된다. 상한만 올릴 때 현재 레벨은 바뀌지 않고 이후 정상적인 스킬 경험치 획득으로 원래 마스터 상한을 넘어 성장한다.
+
+`/스킬돌파 <보유 스킬 이름>`(`숙련돌파`, `skillbreak`)는 패시브와 현재 숨김 상태를 포함한 보유 스킬을 `SkillBook.findOwnedByInput()`으로 찾고, 숙련의 정수 10개를 소비해 최대 레벨을 1 높인다. 자동완성은 `getMaxLevelBreakthroughSnapshots()`의 돌파 가능 스킬과 현재/누적 상한만 사용한다. `performSkillBreakthrough()`는 재료 소비와 `increaseMaxLevel()`을 동기식 rollback 경계로 묶어 스킬 상태가 바뀌면 정수를 복구하고, 성공 직후 `Player.save()`를 요청한다. 즉시 저장이 실패해도 이미 확정된 돌파를 실패로 안내하지 않으며 남은 dirty 상태를 정기 저장에서 재시도한다.
+
+Lv.400 이상 `MonsterRank.BOSS`는 등록 경계에서 `숙련의 정수` 1개 확정 드롭을 정확히 하나 갖도록 정규화된다. 기존 위협도 우선·마지막 공격 owner 전리품 귀속은 그대로 사용하므로 고레벨 보스 반복 처치가 선택형 스킬 상한 성장의 공급 루프가 된다.
+
 `SkillData`의 확장 지점은 다음과 같다.
 
 - 표시: `icon`, `descriptionTemplate`, `costTemplate`, `activationConditionTemplate`, `isVisible`.
