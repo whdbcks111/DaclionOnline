@@ -8,10 +8,17 @@ import {
     ForgeForm,
 } from '../models/Forging.js';
 import { GameTags } from '../../../shared/tags.js';
+import { canForgeAdvancedWeapon } from '../modules/forging.js';
 
 function artificerDiscovery({ player, recipe }: CraftingDiscoveryContext): boolean {
     return player.skills.has('artificer_manufacturing')
         && recipe.selectIngredients(player.inventory, 1) !== null;
+}
+
+function advancedBowDiscovery(context: CraftingDiscoveryContext): boolean {
+    return (context.player.skills.has('artificer_manufacturing')
+        || canForgeAdvancedWeapon(context.player))
+        && context.recipe.selectIngredients(context.player.inventory, 1) !== null;
 }
 
 function selectedUnits(items: readonly { item: Item; count: number }[]): Item[] {
@@ -48,7 +55,7 @@ defineCraftingRecipe({
         metadataDelta: null,
         tags: [],
     }),
-    discoveryCondition: artificerDiscovery,
+    discoveryCondition: advancedBowDiscovery,
     tags: ['crafting:component', 'crafting:artificer'],
 });
 
@@ -84,7 +91,7 @@ defineCraftingRecipe({
     craftTime: 7,
     create: ({ ingredients }) => selectedUnits(ingredients[0].items)
         .map(limb => unwrapForgedOutput(createAssembledBowSnapshot(limb))),
-    discoveryCondition: artificerDiscovery,
+    discoveryCondition: advancedBowDiscovery,
     tags: ['crafting:weapon', 'crafting:artificer'],
 });
 

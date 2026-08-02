@@ -77,19 +77,73 @@ test('일일 의뢰 날짜는 한국 표준시 자정에 바뀐다', () => {
     assert.equal(getDailyCommissionDayKey(new Date('2026-07-30T15:00:00.000Z')), '2026-07-31');
 });
 
-test('계정별 일일 의뢰는 같은 날 토벌·채광·채집·낚시를 고르게 배정한다', () => {
+test('계정별 일일 의뢰는 레벨별 접근 가능한 유형을 KST 날짜와 userId로 고르게 배정한다', () => {
     const day = new Date();
-    const assigned = Array.from({ length: 4 }, (_, index) =>
+    const assigned = Array.from({ length: 5 }, (_, index) =>
         getDailyCommissionDefinition(200, 89_000 + index, day).type.key);
     assert.deepEqual(new Set(assigned), new Set(DailyCommissionType.values().map(type => type.key)));
 
     const lowLevelAssigned = Array.from({ length: 3 }, (_, index) =>
         getDailyCommissionDefinition(30, 89_100 + index, day).type);
     assert.equal(lowLevelAssigned.includes(DailyCommissionType.GATHERING), false);
+    assert.equal(lowLevelAssigned.includes(DailyCommissionType.BOSS), false);
+
+    const midLevelAssigned = Array.from({ length: 4 }, (_, index) =>
+        getDailyCommissionDefinition(50, 89_200 + index, day).type);
+    assert.deepEqual(
+        new Set(midLevelAssigned),
+        new Set([
+            DailyCommissionType.HUNT,
+            DailyCommissionType.MINING,
+            DailyCommissionType.FISHING,
+            DailyCommissionType.BOSS,
+        ]),
+    );
 
     const today = getDailyCommissionDefinition(200, 89_500, new Date('2026-07-31T03:00:00.000Z'));
     const tomorrow = getDailyCommissionDefinition(200, 89_500, new Date('2026-08-01T03:00:00.000Z'));
     assert.notEqual(today.type, tomorrow.type);
+});
+
+test('보스 일일 의뢰는 수락 레벨 80~120% 보스를 정확히 한 체만 인정한다', () => {
+    const userId = findUserIdForDailyType(200, DailyCommissionType.BOSS);
+    const actual = new DailyQuestPlayer(userId, 200);
+    const player = actual as unknown as Player;
+    const definition = getDailyCommissionDefinition(player.level, player.userId);
+    assert.equal(definition.required, 1);
+    assert.equal(player.quests.accept(definition.id, DAILY_COMMISSION_NPC_ID).success, true);
+
+    emitGameEvent(GameEventIds.ENTITY_DEFEATED, {
+        actor: player,
+        subject: new DailyQuestTarget(200),
+    });
+    emitGameEvent(GameEventIds.ENTITY_DEFEATED, {
+        actor: player,
+        subject: new DailyQuestTarget(159, true),
+    });
+    emitGameEvent(GameEventIds.ENTITY_DEFEATED, {
+        actor: player,
+        subject: new DailyQuestTarget(241, true),
+    });
+    assert.equal(player.quests.getSnapshot(definition.id)?.objectives[0].progress, 0);
+
+    const otherPlayer = new DailyQuestPlayer(userId + 10_000, 200) as unknown as Player;
+    emitGameEvent(GameEventIds.ENTITY_DEFEATED, {
+        actor: otherPlayer,
+        subject: new DailyQuestTarget(200, true),
+    });
+    assert.equal(player.quests.getSnapshot(definition.id)?.objectives[0].progress, 0);
+
+    emitGameEvent(GameEventIds.ENTITY_DEFEATED, {
+        actor: player,
+        subject: new DailyQuestTarget(200, true),
+    });
+    assert.equal(player.quests.canTurnIn(definition.id, DAILY_COMMISSION_NPC_ID), true);
+    assert.equal(player.quests.turnIn(definition.id, DAILY_COMMISSION_NPC_ID).success, true);
+    assert.equal(actual.gainedExp, 500);
+    assert.equal(actual.inventory.getCount('battle_tonic') > 0, true);
+    assert.equal(actual.inventory.getCount('arcane_tonic') > 0, true);
+    assert.equal(actual.inventory.getCount('hostile_return_scroll'), 1);
 });
 
 test('Lv.200 토벌 일일 의뢰는 적정 일반 몬스터만 세고 복합 보상을 지급한다', () => {

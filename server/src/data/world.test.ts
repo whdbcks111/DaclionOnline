@@ -1240,9 +1240,18 @@ test('고레벨 광산은 전용 희귀 광물 두 종을 낮은 확률로 제�
     for (const mine of HIGH_LEVEL_MINES) {
         const vein = getResourceData(`${mine.id}_ore_vein`);
         assert.ok(vein, mine.id);
+        const region = ASCENDANT_REGIONS.find(candidate => candidate.id === mine.regionId);
+        assert.ok(region, mine.regionId);
         const rareDrops = vein.drops.filter(drop => mine.rawMineralIds.includes(drop.itemDataId));
         assert.equal(rareDrops.length, 2, mine.id);
-        assert.ok(rareDrops.every(drop => drop.weight === 2.5), mine.id);
+        assert.ok(rareDrops.every(drop => drop.weight === 3), mine.id);
+        assert.equal(rareDrops.reduce((sum, drop) => sum + drop.weight, 0), 6, mine.id);
+        assert.deepEqual(vein.drops, [
+            { itemDataId: `${region.id}_material`, weight: 94, minCount: 2, maxCount: 5 },
+            { itemDataId: mine.rawMineralIds[0], weight: 3, minCount: 1, maxCount: 1 },
+            { itemDataId: mine.rawMineralIds[1], weight: 3, minCount: 1, maxCount: 1 },
+        ], mine.id);
+        assert.equal(vein.drops.reduce((sum, drop) => sum + drop.weight, 0), 100, mine.id);
         for (const itemDataId of mine.rawMineralIds) {
             assert.ok(getItemData(itemDataId), itemDataId);
         }
@@ -1662,7 +1671,7 @@ test('모든 성장 낚시터는 현지 낚싯대·미끼 상점과 낚싯대 �
     }
 });
 
-test('엘리트 대장장이는 지팡이 틀과 활·화살 부품 제작 경로를 가진다', () => {
+test('원거리 단조 장비는 지팡이 틀과 활·화살 부품 제작 경로를 가진다', () => {
     const recipeIds = new Set(getAllCraftingRecipes().map(recipe => recipe.id));
     const generalStore = getShop('general_store');
 

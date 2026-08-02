@@ -49,6 +49,11 @@ export class DailyCommissionType {
         '어느 낚시터에서든 물고기를 낚으세요.',
         '물고기 포획',
     );
+    static readonly BOSS = new DailyCommissionType(
+        'boss', '보스 토벌', '체', 1, 50,
+        '수락 당시 레벨과 비슷한 보스 몬스터를 처치하세요.',
+        '적정 레벨 보스 몬스터 처치',
+    );
 
     private constructor(
         readonly key: string,
@@ -83,7 +88,9 @@ export const DAILY_COMMISSION_QUESTS = Object.freeze(DAILY_COMMISSION_TIERS.flat
             id: type === DailyCommissionType.HUNT ? tier.legacyId : `${tier.legacyId}-${type.key}`,
             minLevel: tier.minLevel,
             maxLevel: tier.maxLevel,
-            required: Math.max(2, Math.ceil(tier.baseRequired * type.requiredRate)),
+            required: type === DailyCommissionType.BOSS
+                ? 1
+                : Math.max(2, Math.ceil(tier.baseRequired * type.requiredRate)),
             gold: tier.gold,
             recoveryItemId: tier.recoveryItemId,
             recoveryCount: tier.recoveryCount,
@@ -177,8 +184,13 @@ export function expireStaleDailyCommission(player: Player, now = new Date()): vo
     player.quests.abandon(quest.questDataId);
 }
 
-function isAppropriateDailyTarget(player: Player, target: Entity | undefined): boolean {
-    if (!target?.hasTag(GameTags.ENTITY_MONSTER) || target.hasTag(GameTags.ENTITY_BOSS)) return false;
+function isAppropriateDailyTarget(
+    player: Player,
+    target: Entity | undefined,
+    requiresBoss: boolean,
+): boolean {
+    if (!target?.hasTag(GameTags.ENTITY_MONSTER)
+        || target.hasTag(GameTags.ENTITY_BOSS) !== requiresBoss) return false;
     const quest = getPlayerDailyCommission(player);
     const acceptedLevel = Number(quest?.getMetadata('acceptedLevel') ?? player.level);
     const minLevel = Math.max(1, Math.floor(acceptedLevel * 0.8));
@@ -194,7 +206,16 @@ function createDailyCommissionObjective(definition: (typeof DAILY_COMMISSION_QUE
             label: type.objectiveLabel,
             required: definition.required,
             eventId: GameEventIds.ENTITY_DEFEATED,
-            matches: (event, player) => isAppropriateDailyTarget(player, event.subject),
+            matches: (event, player) => isAppropriateDailyTarget(player, event.subject, false),
+        });
+    }
+    if (type === DailyCommissionType.BOSS) {
+        return QuestObjective.event({
+            id: 'appropriate-boss',
+            label: type.objectiveLabel,
+            required: 1,
+            eventId: GameEventIds.ENTITY_DEFEATED,
+            matches: (event, player) => isAppropriateDailyTarget(player, event.subject, true),
         });
     }
     if (type === DailyCommissionType.MINING) {
@@ -230,6 +251,12 @@ function createDailyCommissionRewards(definition: (typeof DAILY_COMMISSION_QUEST
             QuestReward.item('battle_tonic', 1 + Math.floor(definition.tierIndex / 2), '전투 강장제'),
             QuestReward.item('arcane_tonic', 1 + Math.floor(definition.tierIndex / 2), '비전 영약'),
         ]
+        : definition.type === DailyCommissionType.BOSS
+            ? [
+                QuestReward.item('battle_tonic', 1 + Math.floor(definition.tierIndex / 2), '전투 강장제'),
+                QuestReward.item('arcane_tonic', 1 + Math.floor(definition.tierIndex / 2), '비전 영약'),
+                QuestReward.item('hostile_return_scroll', 1, '적대 귀환 두루마리'),
+            ]
         : definition.type === DailyCommissionType.MINING
             ? [QuestReward.item('mana_crystal', 1 + definition.tierIndex, '마나 수정')]
             : definition.type === DailyCommissionType.GATHERING

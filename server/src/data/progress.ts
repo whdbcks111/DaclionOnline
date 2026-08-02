@@ -1,5 +1,7 @@
+import './tagEffects.js';
 import { defineProgress, defineStatistic, ProgressType } from '../models/Progress.js';
 import { GameEventIds } from '../models/GameEvent.js';
+import { getTagEffectTagDisplay } from '../models/TagEffect.js';
 import { GameTags } from '../../../shared/tags.js';
 import { defineFishingCollection } from '../models/FishingCollection.js';
 import { getFishCatalog } from './fishingCatalog.js';
@@ -171,16 +173,34 @@ defineStatistic({
 });
 
 for (const statistic of [
-    { id: 'career:mage_fire_kills', label: '불 속성 몬스터 처치', tag: GameTags.PROPERTY_FIRE },
-    { id: 'career:mage_ice_kills', label: '얼음 속성 몬스터 처치', tag: GameTags.PROPERTY_ICE },
-    { id: 'career:mage_electric_kills', label: '전기 속성 몬스터 처치', tag: GameTags.PROPERTY_ELECTRIC },
-] as const) defineStatistic({
-    id: statistic.id,
-    eventId: GameEventIds.ENTITY_DEFEATED,
-    label: statistic.label,
-    description: '마법사 속성 주문 자동 획득에 사용하는 누적 처치 통계입니다.',
-    visible: true,
-    amount: event => event.subject?.hasTag(GameTags.ENTITY_MONSTER)
-        && event.subject.hasTag(statistic.tag) ? 1 : 0,
-    format: value => `${value}회`,
-});
+    { id: 'career:mage_fire_kills', tag: GameTags.PROPERTY_FIRE, mageProgress: true },
+    { id: 'career:mage_ice_kills', tag: GameTags.PROPERTY_ICE, mageProgress: true },
+    { id: 'career:mage_electric_kills', tag: GameTags.PROPERTY_ELECTRIC, mageProgress: true },
+    { id: 'combat:property_kills/water', tag: GameTags.PROPERTY_WATER, mageProgress: false },
+    { id: 'combat:property_kills/natural', tag: GameTags.PROPERTY_NATURAL, mageProgress: false },
+    { id: 'combat:property_kills/poison', tag: GameTags.PROPERTY_POISON, mageProgress: false },
+    { id: 'combat:property_kills/stone', tag: GameTags.PROPERTY_STONE, mageProgress: false },
+    { id: 'combat:property_kills/dark', tag: GameTags.PROPERTY_DARK, mageProgress: false },
+    { id: 'combat:property_kills/light', tag: GameTags.PROPERTY_LIGHT, mageProgress: false },
+    { id: 'combat:property_kills/undead', tag: GameTags.PROPERTY_UNDEAD, mageProgress: false },
+    { id: 'combat:property_kills/holy', tag: GameTags.PROPERTY_HOLY, mageProgress: false },
+    { id: 'combat:property_kills/insect', tag: GameTags.PROPERTY_INSECT, mageProgress: false },
+    { id: 'combat:property_kills/metal', tag: GameTags.PROPERTY_METAL, mageProgress: false },
+    { id: 'combat:property_kills/earth', tag: GameTags.PROPERTY_EARTH, mageProgress: false },
+] as const) {
+    const display = getTagEffectTagDisplay(statistic.tag);
+    if (!display) throw new Error(`속성 처치 통계 표시 메타데이터가 없습니다: ${statistic.tag}`);
+    defineStatistic({
+        id: statistic.id,
+        eventId: GameEventIds.ENTITY_DEFEATED,
+        label: `${display.label} 속성 몬스터 처치`,
+        description: statistic.mageProgress
+            ? '마법사 속성 주문 자동 획득에 사용하는 누적 처치 통계입니다.'
+            : '해당 속성을 가진 몬스터를 처치한 누적 횟수입니다.',
+        visible: true,
+        tags: [statistic.tag],
+        amount: event => event.subject?.hasTag(GameTags.ENTITY_MONSTER)
+            && event.subject.hasTag(statistic.tag) ? 1 : 0,
+        format: value => `${value}회`,
+    });
+}

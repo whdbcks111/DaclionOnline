@@ -111,7 +111,7 @@ export function calculateForgedProjectileAcceleration(itemLevel: number): number
 }
 
 export function calculateForgedStaffMentalityRegen(itemLevel: number): number {
-    return roundReinforcementValue(2 + itemLevel * 0.05 + Math.max(0, itemLevel - 500) * 0.05);
+    return roundReinforcementValue(2.3 + itemLevel * 0.05 + Math.max(0, itemLevel - 500) * 0.05);
 }
 
 /** 아이템 정의 (마스터 데이터, 코드에서 직접 정의) */

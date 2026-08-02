@@ -33,7 +33,7 @@ Entity/Resource/SkillBook
 
 모든 key는 `namespace:path` 형식이고 사용 전에 `defineProgress()` 또는 `defineStatistic()`으로 등록한다. 다른 기능은 내부 Map이나 Prisma row를 참조하지 않고 위 목적형 API와 `getSnapshots()`, `subscribeChanges()`만 사용한다. 기본값인 `0/false/빈 문자열`은 DB row를 만들지 않는다.
 
-`defineStatistic()`은 하나의 게임 이벤트를 구독하고 최종 `attackOwner`가 Player일 때 해당 counter를 증가시킨다. 현재 `combat:critical_hits`가 공개 통계로 등록되어 `/통계`에 표시된다.
+`defineStatistic()`은 하나의 게임 이벤트를 구독하고 최종 `attackOwner`가 Player일 때 해당 counter를 증가시킨다. `combat:critical_hits`와 14종 속성 몬스터 처치 횟수가 공개 통계로 등록되어 `/통계`에 표시된다. 불·얼음·전기는 자동 주문 해금과 저장 호환을 위해 기존 `career:mage_*_kills` ID를 유지하고, 물·자연·독·돌·어둠·빛·언데드·신성·벌레·금속·땅은 `combat:property_kills/{key}` ID를 사용한다. 처치 통계는 권위적 `combat:entity_defeated` 이벤트의 subject가 실제 몬스터이면서 해당 `property:*` 태그를 가질 때만 증가하며 `/속성표`의 기존 표시명과 아이콘을 재사용한다.
 
 성공한 공격은 `combat:attack_hit` 이벤트에 직렬화 가능한 `weaponType`과 최종 피해량을 담는다. 검·도끼·활·단검·지팡이 적중 통계는 숨김 counter로 누적되며 각 200회에 해당 무기 숙련 패시브를 자동 획득한다. 숙련 효과는 올바른 주무기를 장착한 동안에만 적용되고, 투사체 공격은 최종 `attackOwner`의 장착 무기를 기준으로 분류한다. 활 숙련은 공격력 4%와 치명타율 3%p를 함께 올려 검 숙련으로 갈아타는 편이 유리해지지 않게 한다.
 

@@ -19,6 +19,7 @@ import {
     createForgedItemSnapshot,
     createInfusedStaffSnapshot,
     createEquipmentRepairPlan,
+    enchantWeapon,
     ForgeForm,
     ForgeMaterial,
     ForgeQuality,
@@ -35,16 +36,42 @@ import Inventory from './Inventory.js';
 import {
     calculateForgingExperience,
     calculateSmeltingExperience,
+    canForgeAdvancedWeapon,
     canUseForgeForm,
     canUseMetalForging,
     createForgingRhythmConfig,
+    evaluateForgingRhythm,
     getAvailableForgeForms,
     startForging,
 } from '../modules/forging.js';
+import { getCraftingRecipe } from './Crafting.js';
 import '../data/items.js';
 import '../data/ascendantFrontier.js';
 import '../data/progress.js';
 import '../data/skills.js';
+import '../data/crafting.js';
+
+let forgePermissionUserId = 9_100;
+
+function createForgePermissionPlayer(options: {
+    level: number;
+    blacksmith?: boolean;
+    legacyBlacksmith?: boolean;
+    skills?: readonly string[];
+}): Player {
+    const userId = forgePermissionUserId++;
+    const progress = PlayerProgress.createEmpty(userId);
+    if (options.legacyBlacksmith) progress.setFlag('profession:blacksmith', true);
+    const skills = new Set(options.skills ?? []);
+    return {
+        userId,
+        level: options.level,
+        progress,
+        inventory: Inventory.createEmpty(userId, 100_000),
+        career: { hasJob: (id: string) => options.blacksmith === true && id === 'career:blacksmith' },
+        skills: { has: (id: string) => skills.has(id) },
+    } as unknown as Player;
+}
 
 test('단조 결과는 보통 일반명을 사용하고 완벽한 품질에는 형태 고유명을 만든다', () => {
     const low = createForgedItemSnapshot(ForgeForm.SWORD, ForgeMaterial.IRON, { accuracy: 0.5, random: () => 0 });
@@ -347,9 +374,10 @@ test('완벽한 다이아몬드 도끼는 형태 고유 명명 규칙을 사용�
     assert.equal(Item.fromSnapshot(snapshot).name, '익스클리프 다이아몬드 액스');
 });
 
-test('엘리트 대장장이 전용 단조 형태는 해당 계보 스킬이 있을 때만 열린다', () => {
+test('엘리트 단조 형태는 계보 스킬을 유지하고 화살촉은 기계 장인 전용으로 남긴다', () => {
     const owned = new Set<string>();
-    const player = { skills: { has: (id: string) => owned.has(id) } } as unknown as Player;
+    const player = createForgePermissionPlayer({ level: 199 });
+    (player.skills as unknown as { has: (id: string) => boolean }).has = id => owned.has(id);
 
     assert.equal(canUseForgeForm(player, ForgeForm.SWORD), true);
     assert.equal(canUseForgeForm(player, ForgeForm.STAFF_FRAME), false);
@@ -365,7 +393,50 @@ test('엘리트 대장장이 전용 단조 형태는 해당 계보 스킬이 있
     assert.equal(canUseForgeForm(player, ForgeForm.ARROWHEADS), true);
 });
 
-test('마도 대장장이는 지팡이 틀의 품질을 유지하며 마법 무기로 완성한다', () => {
+test('Lv.200 대장장이와 레거시 전문은 지팡이 틀·활대만 해금하고 화살촉은 해금하지 않는다', () => {
+    const level199 = createForgePermissionPlayer({ level: 199, blacksmith: true });
+    const level200 = createForgePermissionPlayer({ level: 200, blacksmith: true });
+    const legacy = createForgePermissionPlayer({ level: 200, legacyBlacksmith: true });
+    const outsider = createForgePermissionPlayer({ level: 200 });
+
+    assert.equal(canForgeAdvancedWeapon(level199), false);
+    assert.equal(canForgeAdvancedWeapon(level200), true);
+    assert.equal(canForgeAdvancedWeapon(legacy), true);
+    assert.equal(canForgeAdvancedWeapon(outsider), false);
+
+    for (const player of [level200, legacy]) {
+        assert.equal(canUseForgeForm(player, ForgeForm.STAFF_FRAME), true);
+        assert.equal(canUseForgeForm(player, ForgeForm.BOW_LIMB), true);
+        assert.equal(canUseForgeForm(player, ForgeForm.ARROWHEADS), false);
+    }
+    assert.equal(canUseForgeForm(level199, ForgeForm.STAFF_FRAME), false);
+    assert.equal(canUseForgeForm(outsider, ForgeForm.BOW_LIMB), false);
+});
+
+test('Lv.200 대장장이의 제작 발견은 활시위·활 조립만 넓히고 화살대·화살 조립은 기계 장인 전용으로 유지한다', () => {
+    const player = createForgePermissionPlayer({ level: 200, blacksmith: true });
+    player.inventory.addItem('silverweb_silk', 2);
+    player.inventory.addItem('hardwood_stick', 2);
+    player.inventory.addItem('reinforced_bowstring', 1);
+    player.inventory.addItem('arrow_shaft', 10);
+    player.inventory.addItemSnapshot(createForgedItemSnapshot(
+        ForgeForm.BOW_LIMB,
+        ForgeMaterial.IRON,
+        { accuracy: 0.8, creatorLevel: 200, random: () => 0 },
+    ));
+    player.inventory.addItemSnapshot(createForgedItemSnapshot(
+        ForgeForm.ARROWHEADS,
+        ForgeMaterial.IRON,
+        { accuracy: 0.8, creatorLevel: 200, random: () => 0 },
+    ));
+
+    assert.equal(getCraftingRecipe('artificer:reinforced_bowstring')?.canDiscover(player), true);
+    assert.equal(getCraftingRecipe('artificer:forged_bow')?.canDiscover(player), true);
+    assert.equal(getCraftingRecipe('artificer:arrow_shafts')?.canDiscover(player), false);
+    assert.equal(getCraftingRecipe('artificer:forged_arrows')?.canDiscover(player), false);
+});
+
+test('마도 대장장이는 지팡이 틀을 마법 무기로 완성하고 기존 마법 부여도 적용한다', () => {
     const frame = Item.fromSnapshot(createForgedItemSnapshot(
         ForgeForm.STAFF_FRAME,
         ForgeMaterial.RUBY,
@@ -384,6 +455,15 @@ test('마도 대장장이는 지팡이 틀의 품질을 유지하며 마법 무�
     assert.ok(staff.modifiers?.some(modifier =>
         modifier.attribute === 'projectileAcceleration' && modifier.value > 1));
     assert.equal(staff.getMetadata('basicAttackOverride'), 'projectile');
+
+    const enchantment = enchantWeapon(staff, {
+        enchanterUserId: 77,
+        skillLevel: 1,
+        sensibility: 500,
+        random: () => 0,
+    });
+    assert.equal(enchantment.success, true);
+    assert.ok(enchantment.effect);
 });
 
 test('기계 장인은 단조 활대와 화살촉을 기존 투사체 시스템과 호환되는 병기로 조립한다', () => {
@@ -619,7 +699,7 @@ test('감각 1000의 200레벨 대장장이가 만든 철 장검도 근력 성�
     assert.ok(attack <= 550, `장인 철 장검 공격력 ${attack}`);
 });
 
-test('후반 명품 단조 무기는 Lv.950 상점 무기의 주·부가 능력치 예산을 따라간다', () => {
+test('Lv.950 후반 명품 단조 무기는 최종 상점 무기의 주·부가 능력치 예산을 따라간다', () => {
     const options = {
         accuracy: 0.85,
         random: () => 0,
@@ -676,7 +756,9 @@ test('후반 명품 단조 무기는 Lv.950 상점 무기의 주·부가 능력�
     assert.ok(multiplier(bow, 'projectileAcceleration') >= multiplier(shopBow, 'projectileAcceleration'));
     assert.ok(additive(staff, 'magicForce') >= additive(shopStaff, 'magicForce') * 1.1);
     assert.ok(additive(staff, 'magicPen') >= additive(shopStaff, 'magicPen'));
-    assert.ok(additive(staff, 'mentalityRegen') >= additive(shopStaff, 'mentalityRegen') * 0.95);
+    const forgedStaffRegen = additive(staff, 'mentalityRegen');
+    const shopStaffRegen = additive(shopStaff, 'mentalityRegen');
+    assert.ok(forgedStaffRegen >= shopStaffRegen, `${forgedStaffRegen} < ${shopStaffRegen}`);
     assert.ok(multiplier(staff, 'projectileAcceleration') >= multiplier(shopStaff, 'projectileAcceleration'));
 });
 
@@ -869,6 +951,20 @@ test('제련 정밀도는 45% 이후에도 리듬 판정과 완성품 숙련을 
     assert.ok(precision100.perfectWindowMs > precision45.perfectWindowMs);
     assert.ok(precision300.primaryPower > precision200.primaryPower);
     assert.ok(precision300.multiplier > precision200.multiplier);
+});
+
+test('단조 리듬의 모든 박자를 100% 정확히 맞추면 실패 결과나 실패 문구를 반환하지 않는다', () => {
+    const config = createForgingRhythmConfig(ForgeForm.CHESTPLATE, ForgeMaterial.IRON, 1);
+    const result = evaluateForgingRhythm(
+        config,
+        config.beatTimesMs.map(at => ({ action: 'strike' as const, at })),
+        config.durationMs,
+    );
+
+    assert.equal(result.success, true);
+    assert.equal(result.score, 1);
+    assert.doesNotMatch(result.message ?? '', /실패/);
+    assert.match(result.message ?? '', /정확도 100%/);
 });
 
 test('금속 단조 스킬만 보유해도 단조 권한을 가진다', () => {

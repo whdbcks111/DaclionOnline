@@ -469,9 +469,9 @@ for (const mine of HIGH_LEVEL_MINES) {
         },
         hardness: 350 + mine.level * 0.65,
         drops: [
-            { itemDataId: `${region.id}_material`, weight: 95, minCount: 2, maxCount: 5 },
-            { itemDataId: mine.rawMineralIds[0], weight: 2.5, minCount: 1, maxCount: 1 },
-            { itemDataId: mine.rawMineralIds[1], weight: 2.5, minCount: 1, maxCount: 1 },
+            { itemDataId: `${region.id}_material`, weight: 94, minCount: 2, maxCount: 5 },
+            { itemDataId: mine.rawMineralIds[0], weight: 3, minCount: 1, maxCount: 1 },
+            { itemDataId: mine.rawMineralIds[1], weight: 3, minCount: 1, maxCount: 1 },
         ],
         expReward: { min: mine.level * 120, max: mine.level * 175 },
         interaction: 'inspect_ore',

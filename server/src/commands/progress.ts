@@ -7,6 +7,7 @@ import {
     sendPrivateBotMessageToUser,
 } from '../modules/message.js';
 import { getPlayerByUserId } from '../modules/player.js';
+import { getTagEffectTagDisplay } from '../models/TagEffect.js';
 import { chat } from '../utils/chatBuilder.js';
 
 export function initProgressCommands(): void {
@@ -29,8 +30,12 @@ export function initProgressCommands(): void {
                 builder.text('\n표시할 통계가 없습니다.');
             } else {
                 for (const snapshot of snapshots) {
-                    builder.text('\n')
-                        .tooltip(snapshot.description, b => b.weight('bold', b2 => b2.text(snapshot.label)))
+                    builder.text('\n');
+                    const icon = snapshot.tags
+                        .map(tag => getTagEffectTagDisplay(tag)?.icon)
+                        .find(candidate => candidate !== undefined);
+                    if (icon) builder.icon(icon).text(' ');
+                    builder.tooltip(snapshot.description, b => b.weight('bold', b2 => b2.text(snapshot.label)))
                         .text(`  ${snapshot.formattedValue}`);
                 }
             }

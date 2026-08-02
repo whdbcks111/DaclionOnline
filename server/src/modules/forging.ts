@@ -3,6 +3,7 @@ import {
     createForgeBeatTimesMs,
     simulateForgeRhythm,
     type ForgeRhythmConfig,
+    type MiniGameActionSample,
 } from '../../../shared/minigames.js';
 import { emitGameEvent, GameEventIds } from '../models/GameEvent.js';
 import {
@@ -17,7 +18,11 @@ import Entity from '../models/Entity.js';
 import { getItemSnapshotDisplay } from '../models/Item.js';
 import { chat } from '../utils/chatBuilder.js';
 import { sendBotMessageToUser, sendNotificationToUser } from './message.js';
-import { normalizeMiniGameActions, startMiniGame } from './minigame.js';
+import {
+    normalizeMiniGameActions,
+    startMiniGame,
+    type MiniGameValidationResult,
+} from './minigame.js';
 import { AttributeType } from '../models/Attribute.js';
 import { StatType } from '../models/Stat.js';
 
@@ -48,6 +53,11 @@ export function hasBlacksmithProfession(player: Player): boolean {
         || player.progress.getFlag(BLACKSMITH_PROFESSION_FLAG);
 }
 
+/** 엘리트 계보와 별개로 고급 무기 단조·조립을 다룰 수 있는 숙련 대장장이인지 판정한다. */
+export function canForgeAdvancedWeapon(player: Player): boolean {
+    return hasBlacksmithProfession(player) && player.level >= 200;
+}
+
 export function canAcquireBlacksmithProfession(player: Player): boolean {
     return !hasBlacksmithProfession(player) && Boolean(player.career.getAssignableSlot(BLACKSMITH_JOB_ID));
 }
@@ -59,7 +69,9 @@ export function canUseMetalForging(player: Player): boolean {
 
 /** 직업/스킬에 따라 현재 플레이어에게 공개할 수 있는 단조 형태인지 판정한다. */
 export function canUseForgeForm(player: Player, form: ForgeForm): boolean {
-    return form.requiredSkillDataId === null || player.skills.has(form.requiredSkillDataId);
+    if (form.requiredSkillDataId === null || player.skills.has(form.requiredSkillDataId)) return true;
+    return (form === ForgeForm.STAFF_FRAME || form === ForgeForm.BOW_LIMB)
+        && canForgeAdvancedWeapon(player);
 }
 
 export function getAvailableForgeForms(player: Player): readonly ForgeForm[] {
@@ -103,6 +115,27 @@ export function createForgingRhythmConfig(
     };
 }
 
+/** 서버 권위 타격 trace를 단조 성공 여부·품질·사용자 메시지로 한 번에 확정한다. */
+export function evaluateForgingRhythm(
+    config: ForgeRhythmConfig,
+    actions: readonly MiniGameActionSample[],
+    elapsedMs: number,
+): MiniGameValidationResult {
+    const state = simulateForgeRhythm(config, actions, elapsedMs);
+    const quality = calculateForgeQualityScore(config, state.accuracy);
+    return state.finished && state.success
+        ? {
+            success: true,
+            score: quality,
+            message: `단조 성공 · 정확도 ${Math.round(state.accuracy * 100)}% · 난도 보정 품질 ${Math.round(quality * 100)}%`,
+        }
+        : {
+            success: false,
+            score: quality,
+            message: `단조 실패 · 정확도 ${Math.round(state.accuracy * 100)}%`,
+        };
+}
+
 /** 구형 독립 플래그를 빈 메인/서브 슬롯으로 이전한다. 두 슬롯이 차 있으면 덮어쓰지 않는다. */
 export function migrateLegacyBlacksmithProfession(player: Player): boolean {
     if (!player.progress.getFlag(BLACKSMITH_PROFESSION_FLAG)) return false;
@@ -143,13 +176,11 @@ export function startForging(
         type: 'forge_rhythm',
         config,
         expiresInMs: config.durationMs + 3_000,
-        validate: request => {
-            const state = simulateForgeRhythm(config, normalizeMiniGameActions(request), request.elapsedMs);
-            const quality = calculateForgeQualityScore(config, state.accuracy);
-            return state.finished && state.success
-                ? { success: true, score: quality, message: `단조 성공 · 정확도 ${Math.round(state.accuracy * 100)}% · 난도 보정 품질 ${Math.round(quality * 100)}%` }
-                : { success: false, score: quality, message: `단조 실패 · 정확도 ${Math.round(state.accuracy * 100)}%` };
-        },
+        validate: request => evaluateForgingRhythm(
+            config,
+            normalizeMiniGameActions(request),
+            request.elapsedMs,
+        ),
         onResolved: result => {
             const selections = player.inventory.selectItems(requirement);
             if (!selections) {

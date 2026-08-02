@@ -1,6 +1,10 @@
 import type { CompletionItem } from '../../../shared/types.js';
 import { registerCommand } from '../modules/bot.js';
-import { getAvailableForgeForms, startForging } from '../modules/forging.js';
+import {
+    canForgeAdvancedWeapon,
+    getAvailableForgeForms,
+    startForging,
+} from '../modules/forging.js';
 import { sendBotMessageToUser } from '../modules/message.js';
 import { getPlayerByUserId } from '../modules/player.js';
 import {
@@ -166,8 +170,12 @@ export function initForgingCommands(): void {
             const player = getPlayerByUserId(userId);
             if (!player) return;
             const skill = player.skills.get('staff_infusing');
-            if (!skill || !player.career.hasJob('career:arcane_smith')) {
-                sendBotMessageToUser(userId, '마도 대장장이의 [ 지팡이 마력 부여 ] 스킬이 필요합니다.');
+            const hasArcaneInfusion = Boolean(skill && player.career.hasJob('career:arcane_smith'));
+            if (!hasArcaneInfusion && !canForgeAdvancedWeapon(player)) {
+                sendBotMessageToUser(
+                    userId,
+                    '마도 대장장이의 [ 지팡이 마력 부여 ] 스킬 또는 Lv.200 이상 대장장이 직업이 필요합니다.',
+                );
                 return;
             }
             if (!/^\d+$/.test(args[0] ?? '')) {
