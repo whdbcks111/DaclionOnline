@@ -49,7 +49,7 @@
 | `KarmaState`, `KarmaTier`, `KarmaAccessPolicy` | `getValueAt/add/reduce/set/snapshot`, `values/fromKey/forValue`, `getDeniedReason` | 기준 시각 이후 초당 감소를 지연 계산하는 Player 영속 상태와 악명·시설 제한 클래스형 enum |
 | Karma policy | `getPvpKarmaGain`, `getKarmaHeroReward`, `getCreditedKarmaHeroReward`, `getKarmaDeathPenalty`, `getKarmaAtonementQuote`; `Player.karma/isKarmaMarked/getKarmaSnapshot/addKarma/reduceKarma/setKarma/atoneKarma/getKarmaAccessDeniedReason` | 지역별 PVP 악업, 유효 처치에 한정한 현상 대상 보상, 고카르마 사망 규칙, 교단 헌금 계산과 Player dirty 변경 경계 |
 | PVP reward credit | `PvpKillCreditRules`, `evaluatePvpKillCredit`, `recordPvpRespawn` | 양쪽 플레이시간·레벨차·부활 보호·동일 피해자 쿨다운을 검사하고 칭호·영웅 같은 긍정적 PVP 보상만 제한 |
-| Combat | `calculateEvasionChance`, `rollEvasion`, `applyCritical`, `calculateFinalDamage` | 부작용 없는 속도 회피율·치명타·방어/관통 최종 대미지 계산 |
+| Combat | `calculateEvasionChance`, `rollEvasion`, `applyCritical`, `calculateDefenseScale(level)`, `calculateFinalDamage(raw, defense, penetration, defenderLevel)` | 부작용 없는 속도 회피율·치명타와 피격자 레벨 기반 비례 감산·나눗셈 혼합 방어/관통 최종 대미지 계산 |
 | Combat pipeline | `CombatStage.values/fromKey`, `register/unregisterCombatHook`, `runCombatStage` | 준비·회피·피해 전후·완료 단계에서 스킬/장비/효과가 전투를 확장하는 key registry |
 | Balance | `BALANCE_PROFILE_LEVELS`, `createBalanceScenario(level, mainJobId, subJobId?, encounter?, loadoutItemDataId?)`, `analyzeSkill/Job/ItemBalance`, `analyzeCombatRotation`, `analyzeBalanceProfile`, `analyzeAllBalanceProfiles` | 공용 회귀 레벨·추천 또는 명시 주무기 태그·일반/보스 정규화 대상과 실제 무기 조건·투사체 상성을 반영한 평타+가용 스킬 공유 자원 로테이션 진단 |
 | Threat | `ThreatAction.values/fromKey`, `MonsterAiDisposition.values/fromKey`, `normalizeMonsterAiProfile`, `ThreatTable`, `reportSupportThreat` | 마스터 AI 성향·지능·행동 가중치·도발 저항, 대상 선택과 기여도/지원 위협 추적 |

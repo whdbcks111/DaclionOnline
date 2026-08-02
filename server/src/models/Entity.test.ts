@@ -15,6 +15,7 @@ import Stat, {
     SENSIBILITY_CRIT_RATE_CAP,
     STAT_REGEN_DIMINISHING_SCALE,
     StatType,
+    VITALITY_LIFE_REGEN_PER_POINT,
 } from './Stat.js';
 import { GameTags } from '../../../shared/tags.js';
 import { StatusEffectType } from './StatusEffect.js';
@@ -119,6 +120,7 @@ test('피해를 받은 대상의 보조 장비는 실제 피해가 발생한 뒤
         target.setShield('test:reactive-offhand', result.finalDamage, ShieldType.GENERAL, 5, target);
     }));
     const attacker = new CombatEntity('공격자');
+    attacker.attribute.setBase(AttributeType.CRIT_RATE, 0);
     const target = new CombatEntity('방어자');
     target.equipment.equip(
         'offHand',
@@ -156,6 +158,21 @@ test('재생 능력치는 상태창 순회 목록과 표시 메타데이터를 �
     assert.equal(AttributeType.fromKey('mentalityRegen'), AttributeType.MENTALITY_REGEN);
     assert.equal(AttributeType.LIFE_REGEN.format(1), '1.00/초');
     assert.equal(AttributeType.MENTALITY_REGEN.getDescription(1), '초당 정신력을 1.00 회복합니다.');
+    assert.match(AttributeType.DEF.getDescription(100), /비례 감산·나눗셈 혼합/);
+    assert.match(AttributeType.MAGIC_DEF.getDescription(100), /비례 감산·나눗셈 혼합/);
+});
+
+test('근력은 공격력과 함께 물리 관통력과 최대 중량을 높인다', () => {
+    const entity = new VitalEntity();
+    const stat = new Stat({ strength: 100 });
+    stat.applyModifiers(entity);
+
+    assert.equal(entity.attribute.get(AttributeType.ATK), 210);
+    assert.equal(entity.attribute.get(AttributeType.ARMOR_PEN), 50);
+    assert.equal(entity.attribute.get(AttributeType.MAX_WEIGHT), 70);
+    assert.match(StatType.STRENGTH.getDescription(100), /공격력 \+200/);
+    assert.match(StatType.STRENGTH.getDescription(100), /물리 관통력 \+50/);
+    assert.match(StatType.STRENGTH.getDescription(100), /최대 중량 \+20kg/);
 });
 
 test('민첩과 정신력은 레벨 성장에 쓰이는 투사체 가속 능력치를 높인다', () => {
@@ -183,7 +200,7 @@ test('민첩과 정신력은 레벨 성장에 쓰이는 투사체 가속 능력�
     assert.match(StatType.MENTALITY.getDescription(100), /정신력 재생 \+1\.19\/초/);
 });
 
-test('체력은 점감되고 정신력은 고스탯에서 점감분을 부드럽게 회복한다', () => {
+test('체력과 정신력 재생은 저스탯 기울기를 유지하고 고스탯에서 점감분을 회복한다', () => {
     const entity = new VitalEntity();
     const stat = new Stat({ vitality: 100, mentality: 100 });
     stat.applyModifiers(entity);
@@ -198,9 +215,23 @@ test('체력은 점감되고 정신력은 고스탯에서 점감분을 부드럽
     ) < 1e-10);
     assert.match(StatType.VITALITY.getDescription(100), /생명력 재생 \+2\.38\/초/);
 
-    const vitalityEarlyGain = calculateVitalityLifeRegenBonus(100) - calculateVitalityLifeRegenBonus(0);
-    const vitalityLateGain = calculateVitalityLifeRegenBonus(1_000) - calculateVitalityLifeRegenBonus(900);
-    assert.ok(vitalityLateGain < vitalityEarlyGain);
+    const oldVitalityAt100 = VITALITY_LIFE_REGEN_PER_POINT * 100
+        / (1 + 100 / STAT_REGEN_DIMINISHING_SCALE);
+    const oldMentalityAt100 = MENTALITY_REGEN_PER_POINT * 100
+        / (1 + 100 / STAT_REGEN_DIMINISHING_SCALE);
+    assert.ok(Math.abs(calculateVitalityLifeRegenBonus(100) - oldVitalityAt100) < 1e-12);
+    assert.ok(Math.abs(calculateMentalityRegenBonus(100) - oldMentalityAt100) < 1e-12);
+
+    let previousVitality = 0;
+    let previousMentality = 0;
+    for (let points = 1; points <= 5_000; points++) {
+        const vitality = calculateVitalityLifeRegenBonus(points);
+        const mentality = calculateMentalityRegenBonus(points);
+        assert.ok(vitality > previousVitality);
+        assert.ok(mentality > previousMentality);
+        previousVitality = vitality;
+        previousMentality = mentality;
+    }
 
     const oldDiminishedAt1000 = MENTALITY_REGEN_PER_POINT * 1_000
         / (1 + 1_000 / STAT_REGEN_DIMINISHING_SCALE);
@@ -210,6 +241,8 @@ test('체력은 점감되고 정신력은 고스탯에서 점감분을 부드럽
 
     const linearAt5000 = MENTALITY_REGEN_PER_POINT * 5_000;
     assert.ok(Math.abs(calculateMentalityRegenBonus(5_000) - linearAt5000) < 0.01);
+    assert.ok(calculateVitalityLifeRegenBonus(5_000) > 50);
+    assert.ok(calculateMentalityRegenBonus(5_000) > 50);
 });
 
 test('감각은 치명타 능력치와 대장장이용 제련 정밀도를 함께 높인다', () => {

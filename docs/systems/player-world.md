@@ -39,7 +39,7 @@ Location ── objects[] (Monster | Resource)
 - 일회성 미니게임과 낚시 대기는 전투 Entity 프레임과 별도의 런타임 세션이다. 마지막 연결 종료·명시적 unload에서는 `cancelFishing()`이 대기 timer와 미니게임을 함께 정리하며 장소/생존/장비 유효성은 입질과 결과 확정 시 다시 검사한다.
 - `modules/player.ts`: 500ms마다 현재 경험치/다음 레벨 요구량을 포함한 `playerStats`와 `locationInfo`를 계산하되, `stateSync.ts`가 내용이 바뀐 완전한 snapshot만 socket별로 전송한다. `locationInfo.players`는 메모리 등록 여부만 믿지 않고 실제 연결 중인 userId만 포함한다. 각 payload의 `syncId/revision`으로 오래된 순서를 거르고, 30초마다 dirty 상태를 DB에 저장한다.
 - `Entity.earlyUpdate`: tick 행동 제한 초기화 → Shield 만료 갱신 → StatusEffect early/update → 공격 cooldown 감소 → `lifeRegen` 생명력 및 `mentalityRegen` 정신력 자연 회복 → 사망 timer와 respawn. 생명력 재생은 받는 치유량 modifier를 적용하고 정신력 재생은 최대 정신력까지만 직접 회복한다.
-- 자연 재생의 기본값은 각 1/초이다. 체력의 생명력 재생 기여는 `0.025 × 체력 / (1 + 체력 / 2000)`으로 점감한다. 정신력의 정신력 재생은 300까지 기존 `0.0125 × 정신력 / (1 + 정신력 / 2000)`을 유지하고, 300 이후 `1 - e^-((정신력-300)/600)^2` 비율로 선형값과의 차이를 부드럽게 회복한다. 따라서 저수치 체감은 유지하면서 고정신력에서는 포인트당 효율이 다시 `0.0125/초`에 가까워진다. 상태창 능력치와 실제 `earlyUpdate` 회복은 모두 이 modifier 결과를 사용한다.
+- 자연 재생의 기본값은 각 1/초이다. 체력의 생명력 재생과 정신력의 정신력 재생은 300까지 각각 기존 `포인트당 계수 × 스탯 / (1 + 스탯 / 2000)` 점감식을 유지한다. 포인트당 계수는 체력 `0.025/초`, 정신력 `0.0125/초`다. 300 이후에는 둘 다 `1 - e^-((스탯-300)/600)^2` 비율로 선형값과의 차이를 부드럽게 회복한다. 따라서 저수치 기울기는 그대로지만 고스탯에서 고정된 50/초 한계에 점근하지 않고 원래 포인트당 효율로 돌아간다. 상태창 능력치와 실제 `earlyUpdate` 회복은 모두 이 modifier 결과를 사용한다.
 - `Player.earlyUpdate`: Entity 공통 갱신 뒤 생존 중에만 `hungerDrain`과 `thirstDrain`을 초 단위로 적용한다. 두 자원 모두 0 아래로 내려가지 않으며 0이면 공복·갈증 StatusEffect를 적용하고 회복되면 제거한다.
 - StatusEffect나 장비·스탯 modifier 제거로 최대 생명력·정신력·목마름·배고픔이 감소하면 `clampVitals()`가 같은 earlyUpdate에서 현재값을 새 최대값 이하로 보정한다. Player override setter를 통과하므로 변경은 dirty 저장 대상이다.
 - `Entity.lateUpdate`: life가 0 이하가 된 엔티티의 사망 처리.

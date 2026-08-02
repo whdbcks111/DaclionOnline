@@ -411,7 +411,7 @@ test('스탯 달성형 히든 패시브는 Progress 변경 없이도 자동 획�
 
     assert.equal(player.skills.has('titan_strength'), true);
     assert.ok(Math.abs(player.attribute.get(AttributeType.ATK) - 226.8) < 0.0001);
-    assert.equal(player.attribute.get(AttributeType.ARMOR_PEN), 8);
+    assert.equal(player.attribute.get(AttributeType.ARMOR_PEN), 58);
     assert.equal(player.skills.getHudSnapshots().some(skill => skill.id === 'titan_strength'), false);
 });
 

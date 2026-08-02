@@ -893,7 +893,7 @@ export default abstract class Entity implements TagReadable {
         const receivedModifier = this.getDamageReceivedModifier();
         const finalDamage = (fixedDamage
             ? Math.max(0, rawAmount)
-            : calculateFinalDamage(effect.value, defense, penetration)) * receivedModifier;
+            : calculateFinalDamage(effect.value, defense, penetration, this.level)) * receivedModifier;
         const absorbedDamage = this.absorbShieldDamage(finalDamage, type);
         const lifeDamage = Math.max(0, finalDamage - absorbedDamage);
 

@@ -16,10 +16,10 @@ export const VITALITY_LIFE_REGEN_PER_POINT = 0.025
 export const MENTALITY_REGEN_PER_POINT = 0.0125
 /** 재생 기여 효율이 완만하게 감소하기 시작하는 공통 스탯 척도. */
 export const STAT_REGEN_DIMINISHING_SCALE = 2_000
-/** 정신력 재생이 기존 점감분을 다시 회복하기 시작하는 정신력 수치. */
-export const MENTALITY_REGEN_RECOVERY_START = 300
-/** 고정신력 재생 효율 회복의 부드러움을 결정하는 가우스 곡선 척도. */
-export const MENTALITY_REGEN_RECOVERY_SCALE = 600
+/** 생명력·정신력 재생이 기존 점감분을 다시 회복하기 시작하는 스탯 수치. */
+export const STAT_REGEN_RECOVERY_START = 300
+/** 고스탯 재생 효율 회복의 부드러움을 결정하는 가우스 곡선 척도. */
+export const STAT_REGEN_RECOVERY_SCALE = 600
 
 /** 감각이 높아질수록 한 포인트의 효율이 감소하며 50%p에 점근하는 치명타율 기여분. */
 export function calculateSensibilityCritRateBonus(points: number): number {
@@ -33,19 +33,24 @@ function calculateDiminishingStatBonus(points: number, perPoint: number): number
     return perPoint * points / (1 + points / STAT_REGEN_DIMINISHING_SCALE)
 }
 
-/** 체력 스탯이 제공하는 초당 생명력 재생량. */
-export function calculateVitalityLifeRegenBonus(points: number): number {
-    return calculateDiminishingStatBonus(points, VITALITY_LIFE_REGEN_PER_POINT)
+/** 낮은 구간의 점감 기울기를 유지하고 300 이후 선형값과의 차이를 부드럽게 회복한다. */
+function calculateRecoveredStatRegenBonus(points: number, perPoint: number): number {
+    if (!Number.isFinite(points) || points <= 0) return 0
+    const linearBonus = perPoint * points
+    const diminishedBonus = calculateDiminishingStatBonus(points, perPoint)
+    const recoveryDistance = Math.max(0, points - STAT_REGEN_RECOVERY_START)
+    const recoveryRatio = 1 - Math.exp(-Math.pow(recoveryDistance / STAT_REGEN_RECOVERY_SCALE, 2))
+    return diminishedBonus + (linearBonus - diminishedBonus) * recoveryRatio
 }
 
-/** 정신력 스탯이 제공하는 초당 정신력 재생량. 300 이후에는 점감분을 가우스 곡선으로 회복한다. */
+/** 체력 스탯이 제공하는 초당 생명력 재생량. 300 이후에는 점감분을 가우스 곡선으로 회복한다. */
+export function calculateVitalityLifeRegenBonus(points: number): number {
+    return calculateRecoveredStatRegenBonus(points, VITALITY_LIFE_REGEN_PER_POINT)
+}
+
+/** 정신력 스탯이 제공하는 초당 정신력 재생량. 기존 회복 곡선을 유지한다. */
 export function calculateMentalityRegenBonus(points: number): number {
-    if (!Number.isFinite(points) || points <= 0) return 0
-    const linearBonus = MENTALITY_REGEN_PER_POINT * points
-    const diminishedBonus = calculateDiminishingStatBonus(points, MENTALITY_REGEN_PER_POINT)
-    const recoveryDistance = Math.max(0, points - MENTALITY_REGEN_RECOVERY_START)
-    const recoveryRatio = 1 - Math.exp(-Math.pow(recoveryDistance / MENTALITY_REGEN_RECOVERY_SCALE, 2))
-    return diminishedBonus + (linearBonus - diminishedBonus) * recoveryRatio
+    return calculateRecoveredStatRegenBonus(points, MENTALITY_REGEN_PER_POINT)
 }
 
 // ── StatType 클래스 열거형 ──
@@ -61,8 +66,10 @@ export class StatType {
     static readonly STRENGTH = new StatType('strength', '근력',
         (entity, points, source) => {
             entity.attribute.addModifier({ attribute: 'atk', op: 'add', value: 2 * points, source })
+            entity.attribute.addModifier({ attribute: 'armorPen', op: 'add', value: 0.5 * points, source })
+            entity.attribute.addModifier({ attribute: 'maxWeight', op: 'add', value: 0.2 * points, source })
         },
-        p => `근력 1 → 공격력 +2\n현재 근력 ${p}: 공격력 +${2 * p}`
+        p => `근력 1 → 공격력 +2, 물리 관통력 +0.5, 최대 중량 +0.2kg\n현재 근력 ${p}: 공격력 +${2 * p}, 물리 관통력 +${0.5 * p}, 최대 중량 +${0.2 * p}kg`
     )
 
     static readonly AGILITY = new StatType('agility', '민첩',
@@ -85,7 +92,7 @@ export class StatType {
                 source,
             })
         },
-        p => `체력 1 → 최대 생명력 +10, 방어력 +1, 생명력 재생 증가(높을수록 포인트 효율 완만히 감소)\n현재 체력 ${p}: 최대 생명력 +${10 * p}, 방어력 +${p}, 생명력 재생 +${calculateVitalityLifeRegenBonus(p).toFixed(2)}/초`
+        p => `체력 1 → 최대 생명력 +10, 방어력 +1, 생명력 재생 증가(고체력 구간에서 포인트 효율 회복)\n현재 체력 ${p}: 최대 생명력 +${10 * p}, 방어력 +${p}, 생명력 재생 +${calculateVitalityLifeRegenBonus(p).toFixed(2)}/초`
     )
 
     static readonly SENSIBILITY = new StatType('sensibility', '감각',

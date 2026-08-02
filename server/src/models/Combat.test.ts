@@ -4,14 +4,19 @@ import type { AttributeRecord } from './Attribute.js';
 import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import { ActionType } from './Action.js';
-import { calculateEvasionChance, rollEvasion } from './Combat.js';
+import {
+    calculateDefenseScale,
+    calculateEvasionChance,
+    calculateFinalDamage,
+    rollEvasion,
+} from './Combat.js';
 import { CombatStage, registerCombatHook } from './CombatPipeline.js';
 
 class TestEntity extends Entity {
     override readonly name: string;
 
-    constructor(name: string, attributes: Partial<AttributeRecord> = {}) {
-        super(1, 0, 'combat-test', { maxLife: 100, ...attributes }, Equipment.createEmpty());
+    constructor(name: string, attributes: Partial<AttributeRecord> = {}, level = 1) {
+        super(level, 0, 'combat-test', { maxLife: 100, ...attributes }, Equipment.createEmpty());
         this.name = name;
     }
 }
@@ -24,6 +29,62 @@ test('속도 비율 2배는 50%, 3배 이상은 최대 90% 회피율을 만든�
     assert.equal(rollEvasion(0.5, () => 0.49), true);
     assert.equal(rollEvasion(0.5, () => 0.5), false);
     assert.equal(rollEvasion(1, () => 0.999999), true);
+});
+
+test('혼합 방어 공식은 방어가 높을수록 피해를 줄이고 관통이 높을수록 피해를 복원한다', () => {
+    const rawDamage = 1_000;
+    const level = 100;
+    assert.equal(calculateFinalDamage(rawDamage, 0, 0, level), rawDamage);
+    assert.equal(calculateFinalDamage(rawDamage, 500, 500, level), rawDamage);
+
+    const byDefense = [0, 100, 250, 500, 1_000]
+        .map(defense => calculateFinalDamage(rawDamage, defense, 0, level));
+    for (let index = 1; index < byDefense.length; index++) {
+        assert.ok(byDefense[index] < byDefense[index - 1]);
+    }
+
+    const byPenetration = [0, 100, 250, 500]
+        .map(penetration => calculateFinalDamage(rawDamage, 500, penetration, level));
+    for (let index = 1; index < byPenetration.length; index++) {
+        assert.ok(byPenetration[index] > byPenetration[index - 1]);
+    }
+
+    const scale = calculateDefenseScale(level);
+    const effectiveDefense = 500;
+    const ratio = effectiveDefense / (scale + effectiveDefense);
+    const expected = (rawDamage - rawDamage * ratio * 0.25)
+        / (1 + 0.75 * effectiveDefense / scale);
+    assert.ok(Math.abs(byDefense[3] - expected) < 1e-10);
+});
+
+test('치명타 배율은 방어 적용 뒤에도 정확히 같은 비율을 유지한다', () => {
+    const normal = calculateFinalDamage(100, 400, 75, 200);
+    const critical = calculateFinalDamage(200, 400, 75, 200);
+    assert.equal(critical, normal * 2);
+});
+
+test('Entity 피해 계산은 피격자의 현재 레벨을 방어 척도로 전달한다', () => {
+    const lowLevelTarget = new TestEntity('저레벨 방어자', { def: 100, speed: 1 }, 1);
+    const highLevelTarget = new TestEntity('고레벨 방어자', { def: 100, speed: 1 }, 1_000);
+
+    const lowDamage = lowLevelTarget.damage(100, 'physical').finalDamage;
+    const highDamage = highLevelTarget.damage(100, 'physical').finalDamage;
+    assert.equal(lowDamage, calculateFinalDamage(100, 100, 0, 1));
+    assert.equal(highDamage, calculateFinalDamage(100, 100, 0, 1_000));
+    assert.ok(highDamage > lowDamage);
+});
+
+test('혼합 방어 공식은 Lv.1~1000에서 유한하고 잘못된 입력을 거부한다', () => {
+    for (let level = 1; level <= 1_000; level++) {
+        const damage = calculateFinalDamage(1_000_000, level * 10, level, level);
+        assert.ok(Number.isFinite(damage));
+        assert.ok(damage > 0 && damage <= 1_000_000);
+    }
+
+    assert.throws(() => calculateFinalDamage(-1, 0, 0, 1), /rawAmount/);
+    assert.throws(() => calculateFinalDamage(1, Number.POSITIVE_INFINITY, 0, 1), /defense/);
+    assert.throws(() => calculateFinalDamage(1, 0, -1, 1), /penetration/);
+    assert.throws(() => calculateFinalDamage(1, 0, 0, Number.NaN), /defenderLevel/);
 });
 
 test('일반 공격은 회피되지만 회피 불가 옵션과 이동 제한은 회피를 무시한다', () => {

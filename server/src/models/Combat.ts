@@ -30,8 +30,34 @@ export function applyCritical(baseAmount: number, critRate: number, critDmg: num
     };
 }
 
-/** 방어와 관통을 반영한 최종 damage 계산 */
-export function calculateFinalDamage(rawAmount: number, defense: number, penetration: number): number {
+/** 레벨에 따라 방어 효율을 정규화하는 척도. */
+export function calculateDefenseScale(defenderLevel: number): number {
+    assertFiniteNonNegative('defenderLevel', defenderLevel);
+    const scale = 100 + 2 * defenderLevel + 0.005 * defenderLevel * defenderLevel;
+    if (!Number.isFinite(scale)) throw new RangeError(`defense scale must be finite: ${scale}`);
+    return scale;
+}
+
+/** 방어와 관통을 비례 감산·나눗셈 혼합 방식으로 반영한 최종 damage 계산. */
+export function calculateFinalDamage(
+    rawAmount: number,
+    defense: number,
+    penetration: number,
+    defenderLevel: number,
+): number {
+    assertFiniteNonNegative('rawAmount', rawAmount);
+    assertFiniteNonNegative('defense', defense);
+    assertFiniteNonNegative('penetration', penetration);
+    const defenseScale = calculateDefenseScale(defenderLevel);
     const effectiveDefense = Math.max(0, defense - penetration);
-    return Math.max(0, rawAmount - effectiveDefense);
+    if (rawAmount === 0 || effectiveDefense === 0) return rawAmount;
+    const proportionalReduction = effectiveDefense / (defenseScale + effectiveDefense);
+    const afterSubtraction = rawAmount - rawAmount * proportionalReduction * 0.25;
+    return afterSubtraction / (1 + 0.75 * effectiveDefense / defenseScale);
+}
+
+function assertFiniteNonNegative(label: string, value: number): void {
+    if (!Number.isFinite(value) || value < 0) {
+        throw new RangeError(`${label} must be finite and non-negative: ${value}`);
+    }
 }

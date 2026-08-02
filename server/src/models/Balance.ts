@@ -364,7 +364,7 @@ export function analyzeSkillBalance(
     );
     const defendedDamage = damageType === 'absolute'
         ? rawDamage * criticalMultiplier
-        : calculateFinalDamage(rawDamage * criticalMultiplier, defense, penetration);
+        : calculateFinalDamage(rawDamage * criticalMultiplier, defense, penetration, scenario.target.level);
     const evasion = balance?.unavoidable || balance?.criticalMode === SkillCriticalMode.DISABLED && damageType === 'absolute'
         ? 0
         : calculateEvasionChance(
@@ -422,6 +422,7 @@ export function analyzeJobBalance(level: number, mainJobId: string, subJobId?: s
         entity.attribute.get(AttributeType.ATK) * expectedCrit,
         target.attribute.get(AttributeType.DEF),
         entity.attribute.get(AttributeType.ARMOR_PEN),
+        target.level,
     );
     const hitChance = 1 - calculateEvasionChance(
         entity.attribute.get(AttributeType.SPEED),
@@ -439,11 +440,13 @@ export function analyzeJobBalance(level: number, mainJobId: string, subJobId?: s
         target.attribute.get(AttributeType.ATK) * targetExpectedCrit,
         entity.attribute.get(AttributeType.DEF),
         target.attribute.get(AttributeType.ARMOR_PEN),
+        entity.level,
     ) * targetHitChance * target.attribute.get(AttributeType.ATTACK_SPEED);
     const incomingMagicDps = calculateFinalDamage(
         target.attribute.get(AttributeType.MAGIC_FORCE) * targetExpectedCrit,
         entity.attribute.get(AttributeType.MAGIC_DEF),
         target.attribute.get(AttributeType.MAGIC_PEN),
+        entity.level,
     ) * targetHitChance * target.attribute.get(AttributeType.ATTACK_SPEED);
     return {
         jobId: scenario.effectiveJob.id,
@@ -859,11 +862,13 @@ function createCombatSnapshot(entity: Entity, target: Entity): CombatBalanceSnap
         entity.attribute.get(AttributeType.ATK) * expectedCrit,
         target.attribute.get(AttributeType.DEF),
         entity.attribute.get(AttributeType.ARMOR_PEN),
+        target.level,
     ) * hitChance * attacksPerSecond;
     const magicBasicDps = calculateFinalDamage(
         entity.attribute.get(AttributeType.MAGIC_FORCE) * expectedCrit,
         target.attribute.get(AttributeType.MAGIC_DEF),
         entity.attribute.get(AttributeType.MAGIC_PEN),
+        target.level,
     ) * hitChance * attacksPerSecond;
     const targetCrit = getExpectedCriticalMultiplier(target, SkillCriticalMode.NORMAL);
     const targetHitChance = 1 - calculateEvasionChance(
@@ -875,11 +880,13 @@ function createCombatSnapshot(entity: Entity, target: Entity): CombatBalanceSnap
         target.attribute.get(AttributeType.ATK) * targetCrit,
         entity.attribute.get(AttributeType.DEF),
         target.attribute.get(AttributeType.ARMOR_PEN),
+        entity.level,
     ) * targetHitChance * targetAttackSpeed;
     const incomingMagicDps = calculateFinalDamage(
         target.attribute.get(AttributeType.MAGIC_FORCE) * targetCrit,
         entity.attribute.get(AttributeType.MAGIC_DEF),
         target.attribute.get(AttributeType.MAGIC_PEN),
+        entity.level,
     ) * targetHitChance * targetAttackSpeed;
     return {
         attack: entity.attribute.get(AttributeType.ATK),
@@ -1117,6 +1124,7 @@ function calculateIncomingBasicAttack(scenario: BalanceScenario): IncomingAttack
         rawPower,
         scenario.entity.attribute.get(magic ? AttributeType.MAGIC_DEF : AttributeType.DEF),
         scenario.target.attribute.get(magic ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN),
+        scenario.entity.level,
     );
     const damageOnHit = applyTagEffectValue(defended, scenario.target, scenario.entity).value;
     const evasionChance = calculateEvasionChance(
@@ -1158,7 +1166,9 @@ function calculateIncomingSkillAttacks(
             ? scenario.target.attribute.get(AttributeType.ARMOR_PEN)
             : damageType === 'magic' ? scenario.target.attribute.get(AttributeType.MAGIC_PEN) : 0;
         const penetration = finiteNonNegative(balance.calculatePenetration?.(context) ?? defaultPenetration);
-        const defended = damageType === 'absolute' ? raw : calculateFinalDamage(raw, defense, penetration);
+        const defended = damageType === 'absolute'
+            ? raw
+            : calculateFinalDamage(raw, defense, penetration, scenario.entity.level);
         const affinitySource = balance.effectTags?.length ? {
             hasTag: (tag: TagId) => balance.effectTags!.includes(tag),
         } : scenario.target;
@@ -1323,6 +1333,7 @@ function calculateExpectedBasicHit(scenario: BalanceScenario): number {
         raw,
         target.attribute.get(magic ? AttributeType.MAGIC_DEF : AttributeType.DEF),
         entity.attribute.get(magic ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN),
+        target.level,
     );
     const affinitySource = projectile ? {
         hasTag: (tag: TagId) => projectile.tags.includes(tag),
