@@ -19,6 +19,7 @@ import type { ChatNode } from "../../../shared/types.js";
 import type Player from "./Player.js";
 import { emitGameEvent, GameEventIds } from "./GameEvent.js";
 import StatusEffect, {
+    ControlCategory,
     StatusEffectApplyAction,
     StatusEffectRemovalReason,
     StatusEffectType,
@@ -126,6 +127,61 @@ export interface StatusEffectDisplaySnapshot {
     description: string;
 }
 
+interface ControlDurationRule {
+    readonly durationMultiplier: number;
+    readonly maxDuration: number;
+}
+
+/** 플레이어·일반 몬스터·보스별 제어 저항과 지속시간 상한. */
+export class ControlTargetProfile {
+    private static readonly all: ControlTargetProfile[] = [];
+
+    static readonly OTHER = new ControlTargetProfile('other', '기타');
+    static readonly PLAYER = new ControlTargetProfile('player', '플레이어',
+        { durationMultiplier: 0.55, maxDuration: 2 },
+        { durationMultiplier: 0.75, maxDuration: 4 });
+    static readonly MONSTER = new ControlTargetProfile('monster', '일반 몬스터',
+        { durationMultiplier: 0.7, maxDuration: 2.5 },
+        { durationMultiplier: 0.85, maxDuration: 6 });
+    static readonly BOSS = new ControlTargetProfile('boss', '보스',
+        { durationMultiplier: 0.35, maxDuration: 1.25 },
+        { durationMultiplier: 0.6, maxDuration: 4 });
+
+    private constructor(
+        readonly key: string,
+        readonly label: string,
+        readonly hard?: ControlDurationRule,
+        readonly soft?: ControlDurationRule,
+    ) {
+        ControlTargetProfile.all.push(this);
+    }
+
+    static values(): readonly ControlTargetProfile[] { return ControlTargetProfile.all; }
+    static fromKey(key: string): ControlTargetProfile | undefined {
+        return ControlTargetProfile.all.find(profile => profile.key === key.trim().toLowerCase());
+    }
+
+    static fromInput(input: string): ControlTargetProfile | undefined {
+        const normalized = input.trim().toLocaleLowerCase('ko-KR');
+        return ControlTargetProfile.all.find(profile => profile.key === normalized
+            || profile.label.toLocaleLowerCase('ko-KR') === normalized);
+    }
+
+    getRule(category: ControlCategory): ControlDurationRule | undefined {
+        if (category === ControlCategory.HARD) return this.hard;
+        if (category === ControlCategory.SOFT) return this.soft;
+        return undefined;
+    }
+}
+
+const CONTROL_DIMINISHING_WINDOW_MS = 12_000;
+const CONTROL_DIMINISHING_MULTIPLIERS = Object.freeze([1, 0.5, 0.25, 0] as const);
+
+interface ControlDiminishingState {
+    applications: number;
+    expiresAt: number;
+}
+
 export interface CombatTargetDisplaySnapshot {
     icon?: string;
     isBoss?: boolean;
@@ -157,6 +213,8 @@ export default abstract class Entity implements TagReadable {
     private readonly experienceGainModifiers = new Map<string, number>();
     private readonly actionDisableSources = new Map<string, Set<string>>();
     private readonly tickActionDisableSources = new Map<string, Set<string>>();
+    /** hard/soft 제어별 12초 연속 적용 점감. 효과가 끝나도 창 만료까지 유지한다. */
+    private readonly controlDiminishingStates = new Map<string, ControlDiminishingState>();
     /** 아이템처럼 다음 공격 한 번에 소비되는 확정 회피 source. */
     private readonly guaranteedEvasionSources = new Set<string>();
     /** 상태효과 지속 중 매 공격에 적용되고 명시적으로 해제되는 확정 회피 source. */
@@ -641,6 +699,48 @@ export default abstract class Entity implements TagReadable {
         return this.getStatusEffect(type) !== undefined;
     }
 
+    /** 대상 종류와 최근 성공한 제어 적용 횟수를 반영한 실제 지속시간을 계산한다. */
+    private previewControlDuration(type: StatusEffectType, requestedDuration: number): number {
+        const rule = this.getControlTargetProfile().getRule(type.controlCategory);
+        if (!rule) return requestedDuration;
+        const now = this.getControlDiminishingTimeMs();
+        const state = this.controlDiminishingStates.get(type.controlCategory.key);
+        const applications = state && state.expiresAt > now ? state.applications : 0;
+        const diminishing = CONTROL_DIMINISHING_MULTIPLIERS[
+            Math.min(applications, CONTROL_DIMINISHING_MULTIPLIERS.length - 1)
+        ];
+        const resistedDuration = Math.min(rule.maxDuration, requestedDuration * rule.durationMultiplier);
+        return resistedDuration * diminishing;
+    }
+
+    /** 실제 추가·강화·갱신된 제어만 hard/soft별 12초 점감 기록에 남긴다. */
+    private recordControlApplication(type: StatusEffectType): void {
+        if (!this.getControlTargetProfile().getRule(type.controlCategory)) return;
+        const now = this.getControlDiminishingTimeMs();
+        const previous = this.controlDiminishingStates.get(type.controlCategory.key);
+        const applications = previous && previous.expiresAt > now ? previous.applications : 0;
+        this.controlDiminishingStates.set(type.controlCategory.key, {
+            applications: Math.min(3, applications + 1),
+            expiresAt: now + CONTROL_DIMINISHING_WINDOW_MS,
+        });
+    }
+
+    private getControlTargetProfile(): ControlTargetProfile {
+        if (this.hasTag(GameTags.ENTITY_BOSS)) return ControlTargetProfile.BOSS;
+        if (this.hasTag(GameTags.ENTITY_PLAYER)) return ControlTargetProfile.PLAYER;
+        if (this.hasTag(GameTags.ENTITY_MONSTER)) return ControlTargetProfile.MONSTER;
+        return ControlTargetProfile.OTHER;
+    }
+
+    private clearControlDiminishing(): void {
+        this.controlDiminishingStates.clear();
+    }
+
+    /** 테스트가 벽시계 대기 없이 12초 점감 창을 검증할 수 있는 단조 시계 경계. */
+    protected getControlDiminishingTimeMs(): number {
+        return Date.now();
+    }
+
     applyStatusEffect(type: StatusEffectType, duration: number, level: number): StatusEffectApplyResult {
         if (!Number.isFinite(duration) || duration <= 0) {
             throw new Error(`StatusEffect duration must be a positive finite number: ${duration}`);
@@ -651,14 +751,24 @@ export default abstract class Entity implements TagReadable {
         duration = interaction.duration;
         const existing = this.statusEffects.get(type.id);
         if (existing) {
+            if (normalizedLevel < existing.level) {
+                return { action: StatusEffectApplyAction.IGNORED, effect: existing };
+            }
+            duration = this.previewControlDuration(type, duration);
+            if (duration <= 0) return { action: StatusEffectApplyAction.REJECTED, effect: existing };
             let action = StatusEffectApplyAction.IGNORED;
             if (normalizedLevel > existing.level) {
-                existing.upgrade(normalizedLevel, duration);
+                // 제어 점감으로 짧아진 상위 레벨 재적용이 이미 남은 시간을 역으로 깎지 않는다.
+                const upgradeDuration = type.controlCategory === ControlCategory.NONE
+                    ? duration
+                    : Math.max(existing.duration, duration);
+                existing.upgrade(normalizedLevel, upgradeDuration);
                 action = StatusEffectApplyAction.UPGRADED;
             } else if (normalizedLevel === existing.level && existing.refreshDuration(duration)) {
                 action = StatusEffectApplyAction.REFRESHED;
             }
             if (action.changed) {
+                this.recordControlApplication(type);
                 emitGameEvent(GameEventIds.STATUS_EFFECT_UPDATED, {
                     subject: this,
                     data: { effectId: type.id, level: existing.level, duration: existing.duration, action: action.key },
@@ -668,6 +778,8 @@ export default abstract class Entity implements TagReadable {
         }
 
         if (this.isDefeated) return { action: StatusEffectApplyAction.REJECTED };
+        duration = this.previewControlDuration(type, duration);
+        if (duration <= 0) return { action: StatusEffectApplyAction.REJECTED };
         const effect = new StatusEffect(type, duration, normalizedLevel);
         this.statusEffects.set(type.id, effect);
         try {
@@ -684,6 +796,7 @@ export default abstract class Entity implements TagReadable {
             subject: this,
             data: { effectId: type.id, level: effect.level, duration: effect.duration },
         });
+        this.recordControlApplication(type);
         return { action: StatusEffectApplyAction.ADDED, effect };
     }
 
@@ -1224,10 +1337,12 @@ export default abstract class Entity implements TagReadable {
             data: { causeType: this.lastDamageCause?.type ?? 'unknown' },
         });
         this.clearStatusEffects(StatusEffectRemovalReason.TARGET_DEFEATED);
+        this.clearControlDiminishing();
         this.clearShields();
     }
 
     respawn(): void {
+        this.clearControlDiminishing();
         this.isDead = false;
         this.deathTimer = 0;
         this.life = this.maxLife;

@@ -41,6 +41,20 @@ Entity
 
 모든 갱신은 기존 `StatusEffect` 객체를 유지한다. `onStart`를 재실행하지 않고 `metadataDelta`, 누적 틱 시간과 기존 `onUpdate` 흐름이 이어진다. 결과는 클래스형 enum `StatusEffectApplyAction`의 `ADDED/UPGRADED/REFRESHED/IGNORED/REJECTED`로 확인할 수 있다.
 
+### 전투 제어 저항과 연속 적용 점감
+
+`StatusEffectType.controlCategory`는 클래스형 enum `ControlCategory`의 `HARD`, `SOFT`, `NONE` 중 하나다. 행동 불가에 가까운 석화·기절·제압·에어본·매혹·공포·수면은 hard, 행동 일부나 속도를 제한하는 둔화·침묵·속박·멀미·실명·빙결은 soft다. 일반 피해·버프와 확률적으로 한 tick만 행동을 막는 마비독은 `NONE`이라 이 규칙을 사용하지 않는다.
+
+대상은 요청 지속시간에 아래 최초 저항과 상한을 먼저 적용한 뒤, 같은 범주의 최근 성공 횟수에 따른 점감 배율을 곱한다.
+
+| 대상 | hard 최초 배율 / 상한 | soft 최초 배율 / 상한 |
+| --- | --- | --- |
+| 보스 | 35% / 1.25초 | 60% / 4초 |
+| 일반 몬스터 | 70% / 2.5초 | 85% / 6초 |
+| 플레이어 | 55% / 2초 | 75% / 4초 |
+
+hard와 soft는 서로 독립된 12초 기록을 사용한다. 같은 범주가 연속으로 실제 적용되면 `100% → 50% → 25% → 면역`이 되며, 효과를 직접 제거하거나 먼저 만료시켜도 기록은 남는다. 마지막 성공 후 12초가 지나거나 대상이 사망·부활하면 초기화된다. 상호작용 거부, 낮은 레벨 재적용, 더 짧은 동일 레벨 재적용, 대상 조건 거부처럼 결과가 `IGNORED/REJECTED`인 시도는 횟수를 소모하지 않는다. 점감 중 더 높은 레벨로 강화할 때도 기존 남은 시간을 더 짧게 만들지 않는다.
+
 ### 효과 상호작용
 
 같은 타입 병합보다 먼저 `StatusEffectInteraction`의 단방향 표를 적용한다. `REJECT_INCOMING`은 저항 효과가 신규 디버프를 막고, `REMOVE_EXISTING`은 해독·노출처럼 새 효과가 기존 효과를 지운다. `NEUTRALIZE`는 양쪽의 `레벨 × 남은 시간`을 세기로 계산해 약한 쪽을 제거하고 강한 쪽 duration만 차이만큼 남긴다. 동일 세기는 둘 다 제거된다. 시간만 줄일 때는 기존 인스턴스와 metadata를 유지하는 `StatusEffect.reduceDuration()`을 사용한다.

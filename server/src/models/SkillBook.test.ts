@@ -304,16 +304,30 @@ test('직접 공격과 투사체 발사는 적중 여부를 기다리지 않고 
     if (projectile) removeProjectile(projectile);
 });
 
-test('바람 회피는 Lv.1부터 7초 동안 확정 회피 상태를 유지한다', () => {
+test('바람 회피는 Lv.1부터 짧은 확정 회피 상태를 유지하고 지속시간을 4초로 제한한다', () => {
     const player = new TestSkillPlayer(9313);
     player.progress.setState(CareerProgressIds.MAIN, 'career:archer');
     player.skills.grant('wind_evasion', 'test');
 
     assert.equal(player.skills.activateByInput('바람 회피').activated, true);
     const effect = player.getStatusEffect('wind_evasion');
-    assert.equal(effect?.duration, 7);
-    assert.equal(effect?.maxDuration, 7);
+    assert.equal(effect?.duration, 2.5);
+    assert.equal(effect?.maxDuration, 2.5);
     assert.equal(player.hasPersistentGuaranteedEvasion('status:wind_evasion'), true);
+
+    player.removeStatusEffect('wind_evasion');
+    player.skills.setLevel('wind_evasion', 5);
+    player.attribute.addModifier({
+        attribute: AttributeType.SPEED.key,
+        op: 'add',
+        value: 10_000,
+        source: 'test:wind-evasion-cap',
+    });
+    player.skills.get('wind_evasion')!.startCooldown(0);
+    player.mentality = player.maxMentality;
+    assert.equal(player.skills.activateByInput('바람 회피').activated, true);
+    assert.equal(player.getStatusEffect('wind_evasion')?.duration, 4);
+    assert.equal(player.skills.get('wind_evasion')?.getMaxCooldown(player), 20);
 });
 
 test('낚시도감 전용 스킬은 직업과 무기 없이 보호막과 수속성 둔화 공격을 제공한다', () => {

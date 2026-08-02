@@ -350,6 +350,16 @@ test('guaranteed evasion is measured as defensive uptime instead of arbitrary da
     assert.ok(report.effectiveSurvivalSeconds >= report.evasionSurvivalSeconds);
 });
 
+test('바람 회피의 성장 구간별 확정 회피 점유율은 20%를 넘지 않는다', () => {
+    for (const level of BALANCE_PROFILE_LEVELS) {
+        const report = analyzeBalanceProfile(level, 'career:archer').boss;
+        assert.ok(
+            report.guaranteedEvasionCoverage <= 0.2 + 0.0001,
+            `Lv.${level} 확정 회피 점유율 ${(report.guaranteedEvasionCoverage * 100).toFixed(2)}%`,
+        );
+    }
+});
+
 test('boss survival profile uses the real monster skill pattern and reports lethal pressure separately', () => {
     const report = analyzeBalanceProfile(200, 'career:warrior').boss;
     assert.ok(report.strongestIncomingSkillName);

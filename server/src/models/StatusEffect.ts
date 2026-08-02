@@ -43,8 +43,34 @@ export interface StatusEffectTypeOptions {
     onEarlyUpdate?: StatusEffectUpdateCallback;
     onUpdate?: StatusEffectUpdateCallback;
     onRemove?: (context: StatusEffectContext, reason: StatusEffectRemovalReason) => void;
+    /** 전투 제어 점감 분류. 피해·지속 피해·일반 버프는 기본 NONE이다. */
+    controlCategory?: ControlCategory;
     tags?: readonly TagId[];
     aliases?: readonly string[];
+}
+
+/** 연속 적용 점감이 공유되는 전투 제어 분류. */
+export class ControlCategory {
+    private static readonly all: ControlCategory[] = [];
+
+    static readonly NONE = new ControlCategory('none', '제어 아님');
+    static readonly HARD = new ControlCategory('hard', '행동 불가');
+    static readonly SOFT = new ControlCategory('soft', '행동 방해');
+
+    private constructor(readonly key: string, readonly label: string) {
+        ControlCategory.all.push(this);
+    }
+
+    static values(): readonly ControlCategory[] { return ControlCategory.all; }
+    static fromKey(key: string): ControlCategory | undefined {
+        return ControlCategory.all.find(category => category.key === key.trim().toLowerCase());
+    }
+
+    static fromInput(input: string): ControlCategory | undefined {
+        const normalized = input.trim().toLocaleLowerCase('ko-KR');
+        return ControlCategory.all.find(category => category.key === normalized
+            || category.label.toLocaleLowerCase('ko-KR') === normalized);
+    }
 }
 
 /** 상태효과 제거 사유를 나타내는 클래스형 enum. */
@@ -238,6 +264,7 @@ export class StatusEffectType implements TagReadable {
     readonly onEarlyUpdate?: StatusEffectUpdateCallback;
     readonly onUpdate?: StatusEffectUpdateCallback;
     readonly onRemove?: (context: StatusEffectContext, reason: StatusEffectRemovalReason) => void;
+    readonly controlCategory: ControlCategory;
     readonly tags: readonly TagId[];
     readonly aliases: readonly string[];
 
@@ -255,6 +282,7 @@ export class StatusEffectType implements TagReadable {
         this.onEarlyUpdate = options.onEarlyUpdate;
         this.onUpdate = options.onUpdate;
         this.onRemove = options.onRemove;
+        this.controlCategory = options.controlCategory ?? ControlCategory.NONE;
         this.tags = Object.freeze(normalizeTags(options.tags ?? []));
         this.aliases = Object.freeze((options.aliases ?? []).map(alias => alias.trim()).filter(Boolean));
         if (!this.label) throw new Error(`StatusEffectType label must not be empty: ${this.id}`);

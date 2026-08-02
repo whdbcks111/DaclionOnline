@@ -1,6 +1,7 @@
 import { AttributeType, type AttributeModifier } from '../models/Attribute.js';
 import { ActionType } from '../models/Action.js';
 import StatusEffect, {
+    ControlCategory,
     StatusEffectType,
     type StatusEffectContext,
     type StatusEffectLifecycleResult,
@@ -54,6 +55,7 @@ function defineAttributeEffect(options: {
     tags?: readonly string[];
     calculatedFields?: Readonly<Record<string, (context: StatusEffectContext) => string | number | boolean>>;
     calculatedFieldTooltips?: Readonly<Record<string, string | ((context: StatusEffectContext) => string)>>;
+    controlCategory?: ControlCategory;
     modifiers: (level: number) => readonly Omit<AttributeModifier, 'source'>[];
 }): StatusEffectType {
     const apply = (context: StatusEffectContext) => refreshModifiers(context, options.modifiers(context.effect.level));
@@ -230,6 +232,7 @@ const SLOWNESS = defineAttributeEffect({
     calculatedFieldTooltips: {
         reductionPercent: '(1 - 0.95의 효과 레벨 제곱) × 100',
     },
+    controlCategory: ControlCategory.SOFT,
     modifiers: level => [{ attribute: AttributeType.SPEED.key, op: 'multiply', value: Math.pow(0.95, level) }],
 });
 
@@ -274,6 +277,7 @@ const PETRIFICATION = StatusEffectType.define({
         context.target.releaseActionDisableSource(modifierSource(context.effect));
         removeModifiers(context);
     },
+    controlCategory: ControlCategory.HARD,
     aliases: ['석화', '돌이 됨'], tags: [GameTags.PROPERTY_STONE],
 });
 
@@ -330,13 +334,13 @@ const HERO = StatusEffectType.define({
     tags: [],
 });
 
-const SILENCE = defineActionEffect('silence', '침묵', [ActionType.SKILL], ['침묵']);
-const BIND = defineActionEffect('bind', '속박', [ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['속박']);
-const STUN = defineActionEffect('stun', '기절', [ActionType.SKILL, ActionType.ITEM_USE, ActionType.ATTACK, ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['기절']);
-const OVERMASTER = defineActionEffect('overmaster', '제압', [ActionType.SKILL, ActionType.ITEM_USE, ActionType.ATTACK, ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['제압']);
-const AIRBORNE = defineActionEffect('airborne', '공중에 뜸', [ActionType.ITEM_USE, ActionType.ATTACK, ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['에어본', '공중']);
-const CHARM = defineActionEffect('charm', '매혹', [ActionType.SKILL, ActionType.ITEM_USE, ActionType.ATTACK, ActionType.EVASION], ['매혹']);
-const SLEEP = defineActionEffect('sleep', '수면', [ActionType.SKILL, ActionType.ITEM_USE, ActionType.ATTACK, ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['수면', '잠']);
+const SILENCE = defineActionEffect('silence', '침묵', [ActionType.SKILL], ['침묵'], ControlCategory.SOFT);
+const BIND = defineActionEffect('bind', '속박', [ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['속박'], ControlCategory.SOFT);
+const STUN = defineActionEffect('stun', '기절', [ActionType.SKILL, ActionType.ITEM_USE, ActionType.ATTACK, ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['기절'], ControlCategory.HARD);
+const OVERMASTER = defineActionEffect('overmaster', '제압', [ActionType.SKILL, ActionType.ITEM_USE, ActionType.ATTACK, ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['제압'], ControlCategory.HARD);
+const AIRBORNE = defineActionEffect('airborne', '공중에 뜸', [ActionType.ITEM_USE, ActionType.ATTACK, ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['에어본', '공중'], ControlCategory.HARD);
+const CHARM = defineActionEffect('charm', '매혹', [ActionType.SKILL, ActionType.ITEM_USE, ActionType.ATTACK, ActionType.EVASION], ['매혹'], ControlCategory.HARD);
+const SLEEP = defineActionEffect('sleep', '수면', [ActionType.SKILL, ActionType.ITEM_USE, ActionType.ATTACK, ActionType.MOVEMENT, ActionType.EVASION, ActionType.LOCATION_TRAVEL], ['수면', '잠'], ControlCategory.HARD);
 
 const NAUSEA = StatusEffectType.define({
     id: 'nausea', label: '멀미', icon: ICON.control,
@@ -345,10 +349,10 @@ const NAUSEA = StatusEffectType.define({
         const source = modifierSource(effect);
         target.disableActionsForTick([ActionType.ITEM_USE, ActionType.SKILL], source);
         if (Math.random() < Math.min(1, 0.5 + 0.05 * effect.level)) target.disableActionForTick(ActionType.ATTACK, source);
-    }, aliases: ['멀미'], tags: [],
+    }, controlCategory: ControlCategory.SOFT, aliases: ['멀미'], tags: [],
 });
 
-const BLINDNESS = defineActionEffect('blindness', '실명', [ActionType.ATTACK, ActionType.EVASION], ['실명']);
+const BLINDNESS = defineActionEffect('blindness', '실명', [ActionType.ATTACK, ActionType.EVASION], ['실명'], ControlCategory.SOFT);
 
 const FEAR = StatusEffectType.define({
     id: 'fear', label: '공포', icon: ICON.control,
@@ -361,7 +365,7 @@ const FEAR = StatusEffectType.define({
     onRemove: context => {
         context.target.releaseActionDisableSource(modifierSource(context.effect));
         removeModifiers(context);
-    }, aliases: ['공포'], tags: [],
+    }, controlCategory: ControlCategory.HARD, aliases: ['공포'], tags: [],
 });
 
 const INVULNERABLE = StatusEffectType.define({
@@ -422,10 +426,17 @@ const FROZEN = StatusEffectType.define({
         });
     },
     onRemove: removeModifiers,
+    controlCategory: ControlCategory.SOFT,
     aliases: ['빙결', '동결'], tags: [GameTags.PROPERTY_ICE],
 });
 
-function defineActionEffect(id: string, label: string, actions: readonly ActionType[], aliases: readonly string[]): StatusEffectType {
+function defineActionEffect(
+    id: string,
+    label: string,
+    actions: readonly ActionType[],
+    aliases: readonly string[],
+    controlCategory: ControlCategory,
+): StatusEffectType {
     const apply = ({ target, effect }: StatusEffectContext) => target.disableActions(actions, modifierSource(effect));
     return StatusEffectType.define({
         id, label, icon: ICON.control,
@@ -433,6 +444,7 @@ function defineActionEffect(id: string, label: string, actions: readonly ActionT
         onStart: apply,
         onEarlyUpdate: apply,
         onRemove: ({ target, effect }) => { target.releaseActionDisableSource(modifierSource(effect)); },
+        controlCategory,
         aliases, tags: [],
     });
 }

@@ -1285,6 +1285,13 @@ function speedScaledDuration(
         + Math.max(0, context.owner.attribute.get(AttributeType.SPEED) - AttributeType.SPEED.defaultValue) * speedRatio;
 }
 
+const WIND_EVASION_MAX_DURATION = 4;
+
+/** 표시·밸런스 진단·실제 상태효과가 공유하는 바람 회피 지속시간 공식. */
+export function calculateWindEvasionDuration(context: SkillContext): number {
+    return Math.min(WIND_EVASION_MAX_DURATION, speedScaledDuration(context, 2.5, 0.25, 0.005));
+}
+
 defineSkill({
     id: 'steel_slash', name: '강철 베기', icon: 'skills/steel_slash', maxLevel: 5,
     descriptionTemplate: '검 또는 도끼에 힘을 실어 대상을 힘껏 베어 냅니다. {{icon.atk}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
@@ -1490,28 +1497,28 @@ defineSkill({
     activationConditionTemplate: activationGuide(), activationMessage: '바람 회피!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
-        speedScaledDuration(context, 7, 0.75, 0.04),
+        calculateWindEvasionDuration(context),
         '이동 가능한 동안 공격 확정 회피',
     ),
     calculatedFields: { duration: context => tooltipValue(
-        speedScaledDuration(context, 7, 0.75, 0.04),
-        `기본 ${formatNumber(valueByLevel(context.skill.level, 7, 0.75))}초 + 기본치를 넘는 이동속도 × 0.04초`,
+        calculateWindEvasionDuration(context),
+        `기본 ${formatNumber(valueByLevel(context.skill.level, 2.5, 0.25))}초 + 기본치를 넘는 이동속도 × 0.005초 (최대 ${WIND_EVASION_MAX_DURATION}초)`,
         '초',
     ) },
     balance: {
         role: SkillBalanceRole.DEFENSE, calculateManaCost: () => 22,
-        calculateEffectDuration: context => speedScaledDuration(context, 7, 0.75, 0.04),
+        calculateEffectDuration: calculateWindEvasionDuration,
         guaranteedEvasion: true,
         notes: ['확정 회피는 직접 피해에 더하지 않고 상대 공격 주기와 지속시간에 따른 생존 지표로 계산합니다.'],
     },
-    calculateMaxCooldown: context => cooldownByLevel(context, 24, 1.5, 18),
+    calculateMaxCooldown: context => cooldownByLevel(context, 24, 1, 20),
     sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ARCHER),
     jobRequirement: jobRequirement(JOBS.archer), canActivate: simpleCheck(22, false),
     onStart: context => {
         spend(context, 22);
         context.owner.applyStatusEffect(
             WIND_EVASION,
-            speedScaledDuration(context, 7, 0.75, 0.04),
+            calculateWindEvasionDuration(context),
             context.skill.level,
         );
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_GROUP_ARCHER],

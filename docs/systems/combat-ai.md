@@ -29,6 +29,10 @@ const unregister = registerCombatHook({
 
 hook은 key 재등록으로 교체되고 반환 함수 또는 `unregisterCombatHook`으로 해제한다. 낮은 `priority`부터 실행한다. 영속 상태나 무기 raw data를 hook에서 직접 읽지 않고 Entity/Equipment/SkillBook 공개 API를 사용한다. `GameEvent`는 확정된 사실의 통계·퀘스트 전달용이고 전투 수치를 바꾸는 용도로 사용하지 않는다.
 
+## 전투 제어 저항
+
+상태효과의 hard/soft 제어 분류와 대상별 지속시간 상한·12초 연속 적용 점감은 `Entity.applyStatusEffect()`에서 최종 대상 기준으로 처리한다. 보스는 hard 제어가 최초에도 요청 시간의 35%, 최대 1.25초만 적용되고 같은 범주의 두 번째·세 번째 성공은 다시 50%·25%로 줄어든 뒤 네 번째부터 면역이 된다. 일반 몬스터와 플레이어도 각자 더 완만한 저항값을 사용하며 soft는 hard와 별도 기록을 사용한다. 이 규칙과 전체 분류표는 [상태효과 시스템](status-effects.md)을 참고한다.
+
 ## 몬스터 위협도
 
 각 Monster는 자기 `ThreatTable`을 소유한다. 다른 기능은 테이블 Map을 읽지 않고 다음 API만 사용한다.

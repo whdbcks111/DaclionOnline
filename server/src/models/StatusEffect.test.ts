@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { GameTags } from '../../../shared/tags.js';
-import Entity from './Entity.js';
+import Entity, { ControlTargetProfile } from './Entity.js';
 import Equipment from './Equipment.js';
 import {
+    ControlCategory,
     StatusEffectApplyAction,
     StatusEffectRemovalReason,
     StatusEffectType,
@@ -16,11 +17,14 @@ import '../data/statusEffects.js';
 
 class TestStatusEntity extends Entity {
     override readonly name: string;
+    controlTimeMs = 0;
 
     constructor(name: string, tags: readonly TagId[] = [], maxLife = 1000) {
         super(1, 0, 'status_test', { maxLife }, Equipment.createEmpty(), undefined, tags);
         this.name = name;
     }
+
+    protected override getControlDiminishingTimeMs(): number { return this.controlTimeMs; }
 }
 
 class TestSurvivalPlayer extends TestStatusEntity {
@@ -50,6 +54,103 @@ const MERGE_TEST_EFFECT = StatusEffectType.define({
         effect.setMetadata('elapsedByCallback', (effect.getMetadata<number>('elapsedByCallback') ?? 0) + dt);
     },
     onRemove: () => { removes++; },
+});
+
+const REJECTED_HARD_CONTROL = StatusEffectType.define({
+    id: 'test_rejected_hard_control',
+    label: '거부 제어 시험',
+    descriptionTemplate: '항상 거부됩니다.',
+    controlCategory: ControlCategory.HARD,
+    onStart: () => 'remove',
+});
+
+test('제어 분류는 클래스형 enum 조회 API를 제공하고 일반 효과는 NONE을 사용한다', () => {
+    assert.equal(ControlCategory.fromKey('hard'), ControlCategory.HARD);
+    assert.equal(ControlCategory.fromInput('행동 방해'), ControlCategory.SOFT);
+    assert.equal(ControlTargetProfile.fromInput('보스'), ControlTargetProfile.BOSS);
+    assert.equal(MERGE_TEST_EFFECT.controlCategory, ControlCategory.NONE);
+    assert.equal(StatusEffectType.fromKey('stun')?.controlCategory, ControlCategory.HARD);
+    assert.equal(StatusEffectType.fromKey('silence')?.controlCategory, ControlCategory.SOFT);
+    assert.equal(StatusEffectType.PARALYTIC_POISON.controlCategory, ControlCategory.NONE);
+
+    const other = new TestStatusEntity('제어 저항 미적용 대상');
+    const stun = StatusEffectType.fromKey('stun')!;
+    const sleep = StatusEffectType.fromKey('sleep')!;
+    assert.equal(other.applyStatusEffect(stun, 10, 1).effect?.duration, 10);
+    other.removeStatusEffect(stun);
+    assert.equal(other.applyStatusEffect(sleep, 10, 1).effect?.duration, 10);
+});
+
+test('hard 제어는 대상별 최초 저항과 12초 공유 점감 100/50/25/면역을 적용한다', () => {
+    const cases = [
+        { tags: [GameTags.ENTITY_BOSS, GameTags.ENTITY_MONSTER], durations: [1.25, 0.625, 0.3125] },
+        { tags: [GameTags.ENTITY_MONSTER], durations: [2.5, 1.25, 0.625] },
+        { tags: [GameTags.ENTITY_PLAYER], durations: [2, 1, 0.5] },
+    ] as const;
+    const controls = ['stun', 'sleep', 'charm', 'overmaster'].map(id => StatusEffectType.fromKey(id)!);
+
+    for (const [caseIndex, scenario] of cases.entries()) {
+        const target = new TestStatusEntity(`제어 대상 ${caseIndex}`, scenario.tags);
+        for (let index = 0; index < 3; index++) {
+            const result = target.applyStatusEffect(controls[index], 10, 1);
+            assert.equal(result.action, StatusEffectApplyAction.ADDED);
+            assert.equal(result.effect?.duration, scenario.durations[index]);
+            target.removeStatusEffect(controls[index]);
+        }
+        assert.equal(
+            target.applyStatusEffect(controls[3], 10, 1).action,
+            StatusEffectApplyAction.REJECTED,
+        );
+    }
+});
+
+test('soft 제어는 hard와 별도 점감 bucket 및 더 완만한 대상 저항을 사용한다', () => {
+    const boss = new TestStatusEntity('보스 제어 대상', [GameTags.ENTITY_BOSS, GameTags.ENTITY_MONSTER]);
+    const stun = StatusEffectType.fromKey('stun')!;
+    const slowness = StatusEffectType.fromKey('slowness')!;
+    const silence = StatusEffectType.fromKey('silence')!;
+
+    assert.equal(boss.applyStatusEffect(stun, 10, 1).effect?.duration, 1.25);
+    boss.removeStatusEffect(stun);
+    assert.equal(boss.applyStatusEffect(slowness, 10, 1).effect?.duration, 4);
+    boss.removeStatusEffect(slowness);
+    assert.equal(boss.applyStatusEffect(silence, 10, 1).effect?.duration, 2);
+});
+
+test('무시·거부된 제어는 점감 횟수를 소모하지 않고 사망 시 기록이 초기화된다', () => {
+    const target = new TestStatusEntity('점감 기록 대상', [GameTags.ENTITY_BOSS, GameTags.ENTITY_MONSTER]);
+    const stun = StatusEffectType.fromKey('stun')!;
+    const sleep = StatusEffectType.fromKey('sleep')!;
+
+    assert.equal(target.applyStatusEffect(stun, 1, 1).effect?.duration, 0.35);
+    assert.equal(target.applyStatusEffect(stun, 1, 1).action, StatusEffectApplyAction.IGNORED);
+    assert.equal(target.applyStatusEffect(REJECTED_HARD_CONTROL, 10, 1).action, StatusEffectApplyAction.REJECTED);
+    target.removeStatusEffect(stun);
+    assert.equal(target.applyStatusEffect(sleep, 10, 1).effect?.duration, 0.625);
+
+    target.onDeath();
+    target.respawn();
+    assert.equal(target.applyStatusEffect(stun, 10, 1).effect?.duration, 1.25);
+
+    target.removeStatusEffect(stun);
+    target.controlTimeMs += 12_001;
+    assert.equal(target.applyStatusEffect(sleep, 10, 1).effect?.duration, 1.25);
+});
+
+test('점감된 상위 레벨 제어는 기존 남은 시간을 줄이지 않으면서 실제 갱신만 charge를 사용한다', () => {
+    const target = new TestStatusEntity('제어 강화 대상', [GameTags.ENTITY_MONSTER]);
+    const stun = StatusEffectType.fromKey('stun')!;
+    const sleep = StatusEffectType.fromKey('sleep')!;
+
+    const first = target.applyStatusEffect(stun, 10, 1).effect!;
+    assert.equal(first.duration, 2.5);
+    const upgraded = target.applyStatusEffect(stun, 10, 2);
+    assert.equal(upgraded.action, StatusEffectApplyAction.UPGRADED);
+    assert.equal(first.duration, 2.5);
+    target.removeStatusEffect(stun);
+
+    // 추가와 실제 강화 두 번만 charge되어 세 번째 성공은 25% 점감이다.
+    assert.equal(target.applyStatusEffect(sleep, 10, 1).effect?.duration, 0.625);
 });
 
 test('같은 상태효과 재적용은 인스턴스와 metadata를 유지하며 레벨·지속시간 규칙을 따른다', () => {

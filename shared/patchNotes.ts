@@ -73,6 +73,13 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.27', '2026-08-02',
+        [CHANGED,
+            '보스·일반 몬스터·플레이어에게 기절·제압 같은 행동 불가 효과와 둔화·침묵 같은 행동 방해 효과의 대상별 지속시간 저항을 적용했습니다.',
+            '같은 분류의 제어 효과를 12초 안에 연속으로 적용하면 지속시간이 100%·50%·25%로 줄고 이후 잠시 면역이 되도록 변경했습니다.',
+            '궁수의 바람 회피 지속시간을 2.5~4초로 조정하고, 재사용 대기시간 대비 확정 회피 가동률이 20%를 넘지 않도록 변경했습니다.',
+        ],
+    ),
     definePatchNote('1.0.26', '2026-08-01',
         [CHANGED,
             '같은 계정으로 여러 클라이언트에 접속해도 실제 조작 중인 화면 한 곳에서만 미니게임이 시작되도록 수정했습니다.',
