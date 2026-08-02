@@ -41,11 +41,23 @@ GameEvent + Inventory/Progress 변경
 | `craft` | 지정 제작법의 `crafting:item_crafted`와 제작 수량 |
 | `possess/item` | Inventory predicate의 현재 보유 수량, 선택적으로 보고 시 제출 |
 | `visit` | 현재 `Player.locationId` |
+| `arrive` | 수락 후 발생한 `world:location_changed`의 도착 장소 |
 | `custom` | Player 공개 API로 계산한 현재값 |
 
 처치·파괴 조건은 개별 데이터 ID에 과도하게 결합하지 않고 `Entity.hasTag()` predicate를 우선한다. 아이템 목표는 raw `items` 배열 대신 `Inventory.countMatching/selectItems/replaceSelectedItems`를 쓴다. Inventory와 PlayerProgress 변경 구독, 레벨·장소 변경 setter가 현재 상태형 목표를 다시 검사한다.
 
 최종 단계 목표가 끝나면 기본적으로 `READY`가 되고 지정 NPC에게 보고해야 한다. `completionMode: automatic` 정의만 즉시 보상을 지급한다. 여러 단계는 현재 단계 완료 시 순서대로 진행한다.
+
+## 3차 전직 장기 시험
+
+Lv.500이며 현재 메인·서브에 맞는 엘리트 직업을 가진 플레이어는 계승관 아르덴에게 자기 메인 계보의 시험 하나만 수락할 수 있다. 다섯 시험은 반복 불가이며 다른 3차 시험의 `ACTIVE/READY` 상태가 있으면 동시 수락을 막는다. 보상 시점에도 `CareerProfile.canPromoteThird`를 다시 검사하고 `promoteThird(..., { persist: false })`를 호출한 뒤 QuestBook의 단일 완료 저장 경계를 사용한다.
+
+단계는 정확히 네 개이며 현재 단계의 이벤트만 누적한다.
+
+1. `pilgrimage`: 수락 후 `성운 길목`, `시계서리 피난처`, `끝별 요새`에 각각 실제로 도착한다. 현재 위치 snapshot인 `visit`이 아니라 이벤트형 `arrive`를 사용한다.
+2. `mastery`: 전사 Lv.380+ 일반몹 80체, 궁수 Lv.380+ 일반몹 치명타 120회, 암살자 Lv.420+ 일반몹 40체+치명타 60회, 마법사 Lv.380+ 불/얼음/전기/어둠 일반몹 각 15체, 대장장이 Lv.380+ 광맥 30개+성공 단조 10회를 요구한다. 보스는 일반몹 숙련 목표에 포함하지 않는다.
+3. `throne-trial`: `nebula_sovereign`, `zero_hour_queen`, `last_constellation`을 각각 처치한다.
+4. `return-report`: 아르덴과 대화를 시작해 보고 목표를 완료한다. 대화 진입점은 이벤트 발행 전 선택되므로 progress generator가 이벤트 직후 `canTurnIn`을 다시 검사해 같은 대화에서 보상한다.
 
 ## 보상과 저장
 

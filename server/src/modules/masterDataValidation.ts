@@ -4,7 +4,7 @@ import type { LocationData } from '../../../shared/types.js';
 import { GameTags } from '../../../shared/tags.js';
 import { getAllCraftingRecipes } from '../models/Crafting.js';
 import { getAllItemData, getItemData } from '../models/Item.js';
-import { getAllJobs, getJob } from '../models/Job.js';
+import { getAllJobs, getJob, JobTier, resolveThirdJob } from '../models/Job.js';
 import { getAllMonsterData, getMonsterData, hasMonsterChallengePattern } from '../models/Monster.js';
 import NPC from '../models/NPC.js';
 import { getAllQuestData, getQuestData } from '../models/Quest.js';
@@ -41,6 +41,21 @@ export function validateMasterData(options: MasterDataValidationOptions = {}): M
         icon('job', job.id, job.icon);
         for (const parentId of job.parentJobIds) if (!getJob(parentId)) issue('job', job.id, `상위 직업이 없습니다: ${parentId}`);
         for (const grant of job.grantedSkills) if (!getSkillData(grant.skillDataId)) issue('job', job.id, `지급 스킬이 없습니다: ${grant.skillDataId}`);
+        if (job.tier === JobTier.THIRD) {
+            const parent = job.parentJobIds.length === 1 ? getJob(job.parentJobIds[0]) : undefined;
+            if (!parent || parent.tier !== JobTier.FIRST) {
+                issue('job', job.id, '3차 직업은 원래 1차 메인 계보 하나만 가져야 합니다.');
+            } else if (resolveThirdJob(parent.id)?.id !== job.id) {
+                issue('job', job.id, `3차 계보 매핑이 일치하지 않습니다: ${parent.id}`);
+            }
+            for (const grant of job.grantedSkills) {
+                const skill = getSkillData(grant.skillDataId);
+                if (skill && (!skill.tags.includes(GameTags.SKILL_PASSIVE)
+                    || !skill.jobRequirement?.anyOf.includes(job.id))) {
+                    issue('job', job.id, `3차 지급 스킬의 패시브·계보 조건이 올바르지 않습니다: ${grant.skillDataId}`);
+                }
+            }
+        }
     }
     for (const monster of getAllMonsterData()) {
         icon('monster', monster.id, monster.icon ?? `monsters/${monster.id}`);

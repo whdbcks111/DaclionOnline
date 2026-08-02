@@ -47,7 +47,7 @@
     "z": 0,
     "mapIcon": "job-hall",
     "tags": ["location:safe"],
-    "npcIds": ["job_master", "atonement_priest"],
+    "npcIds": ["job_master", "atonement_priest", "inheritance_warden_arden"],
     "objects": [],
     "connections": [
       { "locationId": "town_square" }

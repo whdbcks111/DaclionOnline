@@ -201,6 +201,18 @@ export class QuestObjective {
         });
     }
 
+    /** 현재 스냅샷이 아닌, 퀘스트 수락 후 해당 장소에 직접 도착한 이력을 판정한다. */
+    static arrive(id: string, label: string, locationId: string): QuestObjective {
+        const normalizedLocationId = normalizeLocalId(locationId, '장소');
+        return QuestObjective.event({
+            id,
+            label,
+            required: 1,
+            eventId: GameEventIds.LOCATION_CHANGED,
+            matches: event => event.data.toLocationId === normalizedLocationId,
+        });
+    }
+
     static custom(
         id: string,
         label: string,

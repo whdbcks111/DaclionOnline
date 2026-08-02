@@ -6,6 +6,7 @@ export class JobTier {
     private static readonly all: JobTier[] = [];
     static readonly FIRST = new JobTier('first', '1차 직업');
     static readonly ELITE = new JobTier('elite', '엘리트 직업');
+    static readonly THIRD = new JobTier('third', '3차 직업');
     private constructor(readonly key: string, readonly label: string) { JobTier.all.push(this); }
     static values(): readonly JobTier[] { return JobTier.all; }
     static fromKey(key: string): JobTier | undefined { return JobTier.all.find(value => value.key === key); }
@@ -57,6 +58,7 @@ export interface JobData extends Omit<JobDataDefinition, 'parentJobIds' | 'grant
 
 const jobs = new Map<string, Readonly<JobData>>();
 const eliteRecipes = new Map<string, string>();
+const thirdLineages = new Map<string, string>();
 
 export function defineJob(definition: JobDataDefinition): void {
     const id = normalizeTag(definition.id);
@@ -64,6 +66,9 @@ export function defineJob(definition: JobDataDefinition): void {
     const parentJobIds = (definition.parentJobIds ?? []).map(normalizeTag);
     if (definition.tier === JobTier.FIRST && parentJobIds.length > 0) {
         throw new Error(`1차 직업에는 상위 계보를 지정할 수 없습니다: ${id}`);
+    }
+    if (definition.tier === JobTier.THIRD && parentJobIds.length !== 1) {
+        throw new Error(`3차 직업은 원래 메인 계보 하나를 지정해야 합니다: ${id}`);
     }
     jobs.set(id, Object.freeze({
         ...definition,
@@ -95,6 +100,27 @@ export function defineEliteJobRecipe(mainJobId: string, subJobId: string, eliteJ
 export function resolveEliteJob(mainJobId: string, subJobId: string): Readonly<JobData> | undefined {
     if (!mainJobId.trim() || !subJobId.trim()) return undefined;
     const id = eliteRecipes.get(`${normalizeTag(mainJobId)}>${normalizeTag(subJobId)}`);
+    return id ? getJob(id) : undefined;
+}
+
+export function defineThirdJobLineage(mainJobId: string, thirdJobId: string): void {
+    const main = getJob(mainJobId);
+    const third = getJob(thirdJobId);
+    if (!main || main.tier !== JobTier.FIRST) {
+        throw new Error(`3차 직업의 원래 메인 계보가 올바르지 않습니다: ${mainJobId}`);
+    }
+    if (!third || third.tier !== JobTier.THIRD || third.parentJobIds[0] !== main.id) {
+        throw new Error(`3차 직업 계보 정의가 올바르지 않습니다: ${thirdJobId}`);
+    }
+    if (thirdLineages.has(main.id)) {
+        throw new Error(`3차 직업 계보가 이미 등록되어 있습니다: ${main.id}`);
+    }
+    thirdLineages.set(main.id, third.id);
+}
+
+export function resolveThirdJob(mainJobId: string): Readonly<JobData> | undefined {
+    if (!mainJobId.trim()) return undefined;
+    const id = thirdLineages.get(normalizeTag(mainJobId));
     return id ? getJob(id) : undefined;
 }
 

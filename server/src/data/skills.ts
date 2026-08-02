@@ -33,6 +33,7 @@ import { JobSlotType } from '../models/Job.js';
 import { ShieldType } from '../models/Shield.js';
 import { LegacyStatusEffects } from './statusEffects.js';
 import { StatType } from '../models/Stat.js';
+import { THIRD_JOB_IDS } from './jobs.js';
 import { calculateSmeltingExperience } from '../modules/forging.js';
 import {
     FORGED_ITEM_NAMING_SENSIBILITY,
@@ -2067,8 +2068,81 @@ for (const passive of lateCareerPassives) defineJobPassive({
     slot: JobSlotType.MAIN,
 });
 
+// TODO(art): 3차 전직 전용 패시브 아트 제작 전까지 원래 메인 계보 아이콘을 재사용한다.
+const thirdCareerPassives: readonly LateCareerPassiveDefinition[] = [
+    {
+        id: 'ironblood_sovereignty',
+        name: '철혈의 주권',
+        jobId: THIRD_JOB_IDS.warrior,
+        icon: 'skills/career_warrior',
+        description: '{{icon.maxLife}} 최대 생명력이 [color=green]{{maxLife}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.03, label: '최대 생명력 증가', display: '+3%' },
+            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.02, label: '방어력 증가', display: '+2%' },
+        ],
+    },
+    {
+        id: 'starseal_focus',
+        name: '성흔 집중',
+        jobId: THIRD_JOB_IDS.archer,
+        icon: 'skills/career_archer',
+        description: '{{icon.atk}} 공격력과 {{icon.projectileAcceleration}} 투사체 가속이 각각 [color=orange]{{atk}}[/color], [color=cyan]{{projectileAcceleration}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.03, label: '공격력 증가', display: '+3%' },
+            { attribute: AttributeType.PROJECTILE_ACCELERATION.key, op: 'multiply', value: 1.03, label: '투사체 가속 증가', display: '+3%' },
+        ],
+    },
+    {
+        id: 'moonshadow_sentence',
+        name: '월영의 판결',
+        jobId: THIRD_JOB_IDS.assassin,
+        icon: 'skills/career_assassin',
+        description: '{{icon.speed}} 이동속도가 [color=cyan]{{speed}}[/color], {{icon.critDmg}} 치명타 피해가 [color=gold]{{critDmg}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.03, label: '이동속도 증가', display: '+3%' },
+            { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.08, label: '치명타 피해 증가', display: '+8%p' },
+        ],
+    },
+    {
+        id: 'astral_wisdom',
+        name: '성계의 지혜',
+        jobId: THIRD_JOB_IDS.mage,
+        icon: 'skills/career_mage',
+        description: '{{icon.magicForce}} 마법력과 {{icon.maxMentality}} 최대 정신력이 각각 [color=$magic]{{magicForce}}[/color], [color=$magic]{{maxMentality}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.03, label: '마법력 증가', display: '+3%' },
+            { attribute: AttributeType.MAX_MENTALITY.key, op: 'multiply', value: 1.03, label: '최대 정신력 증가', display: '+3%' },
+        ],
+    },
+    {
+        id: 'mythic_craft',
+        name: '신화의 공정',
+        jobId: THIRD_JOB_IDS.blacksmith,
+        icon: 'skills/career_blacksmith',
+        description: '{{icon.def}} 방어력과 {{icon.magicDef}} 마법 저항력이 각각 [color=yellow]{{def}}[/color], [color=$magic]{{magicDef}}[/color] 증가하고 {{icon.forgingPrecision}} 제련 정밀도가 [color=gold]{{forgingPrecision}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.02, label: '방어력 증가', display: '+2%' },
+            { attribute: AttributeType.MAGIC_DEF.key, op: 'multiply', value: 1.02, label: '마법 저항력 증가', display: '+2%' },
+            { attribute: AttributeType.FORGING_PRECISION.key, op: 'add', value: 0.02, label: '제련 정밀도 증가', display: '+2%p' },
+        ],
+    },
+];
+
+for (const passive of thirdCareerPassives) defineJobPassive(passive);
+
 const LATE_TACTICAL_UNLOCK_LEVEL = 320;
 const LATE_TACTICAL_DURATION = 10;
+const THIRD_ROLE_POWER_MULTIPLIER = 1.22;
+const THIRD_EXECUTION_CAP_MULTIPLIER = 1.18;
+
+function hasThirdRole(context: SkillContext, thirdJobId: string): boolean {
+    return Boolean(context.player?.career.hasJob(thirdJobId, JobSlotType.MAIN)
+        || (typeof context.owner.hasTag === 'function' && context.owner.hasTag(thirdJobId)));
+}
+
+function thirdRolePowerMultiplier(context: SkillContext, thirdJobId: string): number {
+    return hasThirdRole(context, thirdJobId) ? THIRD_ROLE_POWER_MULTIPLIER : 1;
+}
 
 function tacticalEffectLevel(skillLevel: number): number {
     return 2 + skillLevel;
@@ -2083,13 +2157,15 @@ function engageTacticalTarget(context: SkillContext, target: Entity): void {
 }
 
 function vanguardCommandShield(context: SkillContext): number {
-    return context.owner.maxLife * percentByLevel(context.skill.level, 10, 1) / 100
+    const base = context.owner.maxLife * percentByLevel(context.skill.level, 10, 1) / 100
         + context.owner.attribute.get(AttributeType.DEF) * valueByLevel(context.skill.level, 1.5, 0.15);
+    return base * thirdRolePowerMultiplier(context, THIRD_JOB_IDS.warrior);
 }
 
 function vanguardCommandTauntPower(context: SkillContext): number {
-    return context.owner.maxLife * percentByLevel(context.skill.level, 60, 5) / 100
+    const base = context.owner.maxLife * percentByLevel(context.skill.level, 60, 5) / 100
         + context.owner.attribute.get(AttributeType.DEF) * valueByLevel(context.skill.level, 8, 1);
+    return base * thirdRolePowerMultiplier(context, THIRD_JOB_IDS.warrior);
 }
 
 // TODO(art): 전용 아트 제작 단계에서 기존 전사 방어기 fallback을 고유 아이콘·배너로 교체한다.
@@ -2100,7 +2176,7 @@ defineSkill({
     activationHeader: 'indomitable',
     maxLevel: 5,
     unlockLevel: LATE_TACTICAL_UNLOCK_LEVEL,
-    descriptionTemplate: '지정한 몬스터의 위협을 자신에게 끌어오고, {{duration}} 동안 {{icon.maxLife}}{{icon.def}} [color=green]{{shield}}[/color]만큼의 피해를 막는 일반 보호막을 얻습니다. 도발은 대상의 도발 저항과 위협도 규칙을 그대로 따릅니다.',
+    descriptionTemplate: '지정한 몬스터의 위협을 자신에게 끌어오고, {{duration}} 동안 {{icon.maxLife}}{{icon.def}} [color=green]{{shield}}[/color]만큼의 피해를 막는 일반 보호막을 얻습니다. 도발은 대상의 도발 저항과 위협도 규칙을 그대로 따르며, 철혈군주는 보호막과 도발 위력이 22% 증가합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 40[/color]',
     activationConditionTemplate: activationGuide('몬스터를 대상으로 지정하고'),
     activationMessage: '선봉의 호령!',
@@ -2109,7 +2185,7 @@ defineSkill({
         duration: () => `${LATE_TACTICAL_DURATION}초`,
         shield: context => tooltipValue(
             vanguardCommandShield(context),
-            `최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 10, 1))}% + 방어력 × ${formatNumber(valueByLevel(context.skill.level, 1.5, 0.15))}`,
+            `최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 10, 1))}% + 방어력 × ${formatNumber(valueByLevel(context.skill.level, 1.5, 0.15))}${hasThirdRole(context, THIRD_JOB_IDS.warrior) ? ' · 철혈군주 × 122%' : ''}`,
         ),
     },
     balance: {
@@ -2161,6 +2237,7 @@ interface DefenseDebuffTacticDefinition {
     readonly intro: string;
     readonly effects: readonly StatusEffectType[];
     readonly effectLevel: (skillLevel: number) => number;
+    readonly thirdJobId: string;
 }
 
 // TODO(art): 전용 아트 제작 단계에서 아래 역할기의 기존 계열 fallback 아이콘·배너를 교체한다.
@@ -2171,6 +2248,7 @@ const defenseDebuffTactics: readonly DefenseDebuffTacticDefinition[] = [
         groupTag: GameTags.SKILL_GROUP_ARCHER, manaCost: 34, cooldown: 24, minimumCooldown: 20,
         intro: '대상의 갑옷 이음새를 추적하는 표식을 새깁니다.',
         effects: [LegacyStatusEffects.DEFENSE_REDUCTION], effectLevel: tacticalEffectLevel,
+        thirdJobId: THIRD_JOB_IDS.archer,
     },
     {
         id: 'mana_rift', name: '마력 균열', jobId: JOBS.mage,
@@ -2178,6 +2256,7 @@ const defenseDebuffTactics: readonly DefenseDebuffTacticDefinition[] = [
         groupTag: GameTags.SKILL_GROUP_MAGIC, manaCost: 42, cooldown: 24, minimumCooldown: 20,
         intro: '대상을 감싼 마력 방벽의 흐름에 균열을 만듭니다.',
         effects: [LegacyStatusEffects.MAGIC_DEFENSE_REDUCTION], effectLevel: tacticalEffectLevel,
+        thirdJobId: THIRD_JOB_IDS.mage,
     },
     {
         id: 'structural_dismantling', name: '구조 해체', jobId: JOBS.blacksmith,
@@ -2186,8 +2265,13 @@ const defenseDebuffTactics: readonly DefenseDebuffTacticDefinition[] = [
         intro: '물질과 마력의 하중점을 함께 읽어 방어 구조 전체를 해체합니다.',
         effects: [LegacyStatusEffects.DEFENSE_REDUCTION, LegacyStatusEffects.MAGIC_DEFENSE_REDUCTION],
         effectLevel: structureBreakEffectLevel,
+        thirdJobId: THIRD_JOB_IDS.blacksmith,
     },
 ];
+
+function defenseDebuffEffectLevel(context: SkillContext, tactic: DefenseDebuffTacticDefinition): number {
+    return tactic.effectLevel(context.skill.level) + (hasThirdRole(context, tactic.thirdJobId) ? 1 : 0);
+}
 
 for (const tactic of defenseDebuffTactics) defineSkill({
     id: tactic.id,
@@ -2196,15 +2280,15 @@ for (const tactic of defenseDebuffTactics) defineSkill({
     activationHeader: tactic.activationHeader,
     maxLevel: 5,
     unlockLevel: LATE_TACTICAL_UNLOCK_LEVEL,
-    descriptionTemplate: `${tactic.intro} 대상에게 {{effectLevel}}레벨 ${tactic.effects.map(effect => effect.label).join('·')} 효과를 {{duration}} 동안 부여합니다. 이 약화는 행동을 막는 군중 제어 효과가 아닙니다.`,
+    descriptionTemplate: `${tactic.intro} 대상에게 {{effectLevel}}레벨 ${tactic.effects.map(effect => effect.label).join('·')} 효과를 {{duration}} 동안 부여합니다. 3차 계보에서는 약화 레벨이 1 증가하며, 이 약화는 행동을 막는 군중 제어 효과가 아닙니다.`,
     costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${tactic.manaCost}[/color]`,
     activationConditionTemplate: targetActivationGuide(),
     activationMessage: `${tactic.name}!`,
     baseMetadata: null,
     calculatedFields: {
         effectLevel: context => tooltipValue(
-            tactic.effectLevel(context.skill.level),
-            `스킬 레벨 ${context.skill.level} 기준 약화 효과 레벨`,
+            defenseDebuffEffectLevel(context, tactic),
+            `스킬 레벨 ${context.skill.level} 기준${hasThirdRole(context, tactic.thirdJobId) ? ' + 3차 계보 1레벨' : ''}`,
         ),
         duration: () => `${LATE_TACTICAL_DURATION}초`,
     },
@@ -2233,7 +2317,7 @@ for (const tactic of defenseDebuffTactics) defineSkill({
             found.target.applyStatusEffect(
                 effect,
                 LATE_TACTICAL_DURATION,
-                tactic.effectLevel(context.skill.level),
+                defenseDebuffEffectLevel(context, tactic),
                 context.owner,
             );
         }
@@ -2264,9 +2348,12 @@ export function calculateFinaleExecutionDamage(
         ? Math.max(0, Math.min(target.maxLife, target.maxLife - target.life))
         : 0;
     const missingLifeRatio = 0.04 + levelOffset * 0.005;
-    const missingLifeBonusCap = referencePower * (1.25 + levelOffset * 0.1);
+    const thirdCapMultiplier = hasThirdRole(context, THIRD_JOB_IDS.assassin)
+        ? THIRD_EXECUTION_CAP_MULTIPLIER
+        : 1;
+    const missingLifeBonusCap = referencePower * (1.25 + levelOffset * 0.1) * thirdCapMultiplier;
     const missingLifeBonus = Math.min(missingLife * missingLifeRatio, missingLifeBonusCap);
-    const totalDamageCap = referencePower * (2.25 + levelOffset * 0.15);
+    const totalDamageCap = referencePower * (2.25 + levelOffset * 0.15) * thirdCapMultiplier;
     return {
         baseDamage,
         missingLifeBonus,
@@ -2284,7 +2371,7 @@ defineSkill({
     activationHeader: 'ambush',
     maxLevel: 5,
     unlockLevel: LATE_TACTICAL_UNLOCK_LEVEL,
-    descriptionTemplate: '대상의 남은 힘이 무너지는 순간을 베어 {{icon.atk}}{{icon.speed}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다. 잃은 생명력의 {{missingRatio}}를 보너스로 더하지만 보너스는 {{bonusCap}}, 최종 피해는 {{totalCap}}을 넘지 않으며 치명타와 군중 제어는 발생하지 않습니다.',
+    descriptionTemplate: '대상의 남은 힘이 무너지는 순간을 베어 {{icon.atk}}{{icon.speed}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다. 잃은 생명력의 {{missingRatio}}를 보너스로 더하지만 보너스는 {{bonusCap}}, 최종 피해는 {{totalCap}}을 넘지 않습니다. 월영집행자는 두 상한이 18% 증가하며, 치명타와 군중 제어는 발생하지 않습니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 48[/color]',
     activationConditionTemplate: targetActivationGuide(),
     activationMessage: '종막!',

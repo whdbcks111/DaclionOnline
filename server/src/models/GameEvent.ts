@@ -57,6 +57,7 @@ export const GameEventIds = Object.freeze({
     QUEST_ABANDONED: 'quest:abandoned',
     CAREER_ASSIGNED: 'career:assigned',
     CAREER_ELITE_PROMOTED: 'career:elite_promoted',
+    CAREER_THIRD_PROMOTED: 'career:third_promoted',
     TITLE_ACQUIRED: 'title:acquired',
     TITLE_EQUIPPED: 'title:equipped',
     TITLE_REVOKED: 'title:revoked',

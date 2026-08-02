@@ -21,6 +21,7 @@ import '../data/items.js';
 import '../data/jobs.js';
 import '../data/projectiles.js';
 import CareerProfile, { CareerProgressIds } from './Career.js';
+import { getAllJobs, JobTier, resolveEliteJob } from './Job.js';
 import { ShieldType } from './Shield.js';
 import Stat, { StatType } from './Stat.js';
 import { partyManager } from '../modules/party.js';
@@ -232,13 +233,16 @@ test('성장 기술 정보는 내부 태그 대신 속성·계열·공유 쿨다
 });
 
 test('모든 엘리트 직업은 계승 패시브와 조합 전용 액티브를 정의한다', () => {
-    const eliteIds = [
-        'blade_ranger', 'shadow_blade', 'spellblade', 'siege_bow', 'night_hunter', 'elemental_marksman',
-        'executioner', 'phantom_shooter', 'arcane_reaper', 'battle_magus', 'star_weaver', 'hexblade',
-    ];
     const player = new TestSkillPlayer();
-    for (const eliteId of eliteIds) {
-        player.progress.setState(CareerProgressIds.ELITE, `career:${eliteId}`);
+    const firstJobs = getAllJobs().filter(job => job.tier === JobTier.FIRST);
+    for (const elite of getAllJobs().filter(job => job.tier === JobTier.ELITE)) {
+        const eliteId = elite.id.slice('career:'.length);
+        const recipe = firstJobs.flatMap(main => firstJobs.map(sub => ({ main, sub })))
+            .find(({ main, sub }) => resolveEliteJob(main.id, sub.id)?.id === elite.id);
+        assert.ok(recipe, `${eliteId}: 엘리트 조합`);
+        player.progress.setState(CareerProgressIds.MAIN, recipe.main.id);
+        player.progress.setState(CareerProgressIds.SUB, recipe.sub.id);
+        player.progress.setState(CareerProgressIds.ELITE, elite.id);
         const passive = player.skills.grant(`${eliteId}_mastery`, 'test').skill;
         const active = player.skills.grant(`${eliteId}_technique`, 'test').skill;
         assert.equal(passive.isPassive, true, eliteId);

@@ -1,5 +1,7 @@
 # Modules Overview
 
+`adminPanel.ts`의 플레이어 상세 snapshot은 원래 메인·서브·엘리트와 함께 `thirdJobId/thirdJobName`을 제공한다. `masterDataValidation.ts`는 3차가 정확히 하나의 1차 메인을 부모로 갖는지, 메인→3차 매핑과 지급 패시브의 직업 요구 조건이 일치하는지 검증한다.
+
 `forging.ts`는 선택 성능 상한을 단조 세션 결과까지 보존하고, `fishing.ts`는 입질이 시작될 때 장소별 테이블에서 확정한 물고기를 미니게임 완료까지 유지해 다른 풀의 물고기로 바뀌지 않게 한다. 포획 성공 뒤에는 현재 장소와 행운으로 희귀 보물을 별도 추첨해 인벤토리 또는 바닥에 안전하게 지급한다.
 
 `partyManager.areInSameParty()`는 내부 멤버 Map을 노출하지 않고 PVP 아군 공격을 차단하며, `getEventAudienceUserIds()`는 스킬·공격·회피 파티 피드 수신자 snapshot을 제공한다. `sendLocationInfo()`는 위험도 표시명과 PVP 허용 여부, 장소 태그·등록 상점·카르마 접근 조건으로 판정한 `낚시 가능`·`상점 이용 가능` 기능을 가공된 HUD snapshot으로 제공한다.

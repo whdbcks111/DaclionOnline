@@ -48,6 +48,8 @@ export interface MonsterAiProfile {
 
 export interface ThreatContributionSnapshot {
     actor: Entity
+    /** 도발·위협 가중치와 도발 저항을 모두 반영한 현재 AI 위협도. */
+    threat: number
     damage: number
     healing: number
     shielding: number
@@ -229,6 +231,7 @@ export class ThreatTable {
         return [...this.entries.values()]
             .map(entry => ({
                 actor: entry.actor,
+                threat: entry.score,
                 damage: entry.damage,
                 healing: entry.healing,
                 shielding: entry.shielding,

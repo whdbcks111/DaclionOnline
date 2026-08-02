@@ -1,5 +1,7 @@
 # Models Overview
 
+`JobTier.THIRD`와 메인별 `defineThirdJobLineage/resolveThirdJob`, `CareerProfile.thirdJob/canPromoteThird/promoteThird`가 Lv.500 퀘스트 전용 3차 계승을 소유한다. 원래 메인·서브·정확한 엘리트 ID를 보존하고 손상된 조합은 무시하며 `effectiveMainJob`만 3차를 우선한다. `QuestObjective.arrive`는 현재 장소 snapshot과 달리 수락 후 도착 이벤트만 인정한다. `BalanceScenario`는 Lv.500부터 3차 완수를 가정하되 엘리트와 3차를 별도 필드로 유지해 기존 modifier·스킬을 누락하지 않는다. `ThreatContributionSnapshot.threat`는 도발 저항과 행동 가중치를 적용한 현재 AI 위협 점수를 복사한다.
+
 `Item`의 requirements metadata는 레벨·핵심 스탯·획득처를 정규화하고 `Player`가 사용/장착 거부 사유를 만든다. `Fishing`은 장소 ID별 독립 어종 풀과 가중치 registry를 소유하며 행운 등급 확률을 합성한다. `Forging`은 선택 성능 상한과 최종 성능 레벨 80%의 착용 레벨, 원광 ID를 가진 제련 소재 registry를 소유한다.
 
 `Player.getAttackDeniedReason()`은 지역 PVP·같은 파티·동일 장소 제한을 모든 직접/투사체 공격에 공통 적용한다. `RegionRiskPolicy` 클래스형 enum은 안전·중립·적대 장소의 PVP 허용, 사망 경험치/골드 손실, 부활 시간 배율을 소유한다. 적대 구역 사망은 중복 처리 guard 뒤 `Inventory.removeMatching` 공개 API로 적대 귀환 두루마리 한 장을 자동 소모하고, 지역·카르마가 모두 반영된 대기를 절반으로 줄인 절대 만료 시각을 저장한다. `KarmaState`는 저장 기준값·시각으로 초당 감소를 지연 계산해 매 tick dirty를 만들지 않으며, `KarmaTier/KarmaAccessPolicy`는 악명 표시와 선의 의뢰·질서 상점·교단 성소 제한 임계값을 소유한다.

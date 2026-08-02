@@ -210,6 +210,31 @@ function createRolePlayer(jobId: string, userId: number): LateCareerPlayer {
     return player;
 }
 
+const thirdRoleLineages = {
+    warrior: { main: 'career:warrior', sub: 'career:mage', elite: 'career:spellblade', third: 'career:ironblood_lord' },
+    archer: { main: 'career:archer', sub: 'career:mage', elite: 'career:elemental_marksman', third: 'career:starseal_tracker' },
+    assassin: { main: 'career:assassin', sub: 'career:mage', elite: 'career:arcane_reaper', third: 'career:moonshadow_executor' },
+    mage: { main: 'career:mage', sub: 'career:warrior', elite: 'career:battle_magus', third: 'career:astral_sage' },
+    blacksmith: { main: 'career:blacksmith', sub: 'career:warrior', elite: 'career:battle_smith', third: 'career:mythic_artisan' },
+} as const;
+
+function createAdvancedRolePlayer(
+    lineage: keyof typeof thirdRoleLineages,
+    userId: number,
+    third = false,
+): LateCareerPlayer {
+    const jobs = thirdRoleLineages[lineage];
+    const player = new LateCareerPlayer(userId);
+    player.level = 500;
+    player.progress.setState(CareerProgressIds.MAIN, jobs.main);
+    player.progress.setState(CareerProgressIds.SUB, jobs.sub);
+    player.progress.setState(CareerProgressIds.ELITE, jobs.elite);
+    if (third) player.progress.setState(CareerProgressIds.THIRD, jobs.third);
+    player.career.initialize();
+    player.skills.update(0.5);
+    return player;
+}
+
 function createRoleTarget(): Monster {
     return new Monster(LATE_ROLE_TARGET_ID, 'late-career-test');
 }
@@ -302,4 +327,72 @@ test('종막은 잃은 생명력에 따라 증가하지만 보너스·총 피해
     assert.ok(dealt > 0);
     assert.ok(dealt <= low.totalDamageCap);
     assert.equal(target.getStatusEffects().length, 0);
+});
+
+test('3차 패시브는 한 소스로만 유지되고 선봉의 호령·종막의 상한을 정확히 강화한다', () => {
+    const baseWarrior = createAdvancedRolePlayer('warrior', 95_300);
+    const thirdWarrior = createAdvancedRolePlayer('warrior', 95_301, true);
+    assert.equal(thirdWarrior.attribute.hasSource('skill:ironblood_sovereignty:passive'), true);
+    const passiveLife = thirdWarrior.maxLife;
+    thirdWarrior.skills.update(0.5);
+    thirdWarrior.skills.update(0.5);
+    assert.equal(thirdWarrior.maxLife, passiveLife);
+    // 역할기 자체의 22% 계수만 비교하도록 별도 3차 패시브 증분을 제거한다.
+    thirdWarrior.attribute.removeBySource('skill:ironblood_sovereignty:passive');
+    const baseWarriorTarget = createRoleTarget();
+    const thirdWarriorTarget = createRoleTarget();
+    baseWarrior.currentTarget = baseWarriorTarget;
+    thirdWarrior.currentTarget = thirdWarriorTarget;
+    assert.equal(baseWarrior.skills.activateByInput('선봉의 호령').activated, true);
+    assert.equal(thirdWarrior.skills.activateByInput('선봉의 호령').activated, true);
+    const baseShield = baseWarrior.getShield('skill:vanguard_command')!.amount;
+    const thirdShield = thirdWarrior.getShield('skill:vanguard_command')!.amount;
+    assert.ok(Math.abs(thirdShield / baseShield - 1.22) < 1e-9);
+    const baseThreat = baseWarriorTarget.getThreatContributions()[0]!.threat;
+    const thirdThreat = thirdWarriorTarget.getThreatContributions()[0]!.threat;
+    // 선봉의 호령이 교전 선점용 기본 위협도 1을 먼저 더하므로 그 값을 제외해 도발 분만 비교한다.
+    assert.ok(Math.abs((thirdThreat - 1) / (baseThreat - 1) - 1.22) < 1e-9);
+
+    const baseAssassin = createAdvancedRolePlayer('assassin', 95_302);
+    const thirdAssassin = createAdvancedRolePlayer('assassin', 95_303, true);
+    assert.equal(thirdAssassin.attribute.hasSource('skill:moonshadow_sentence:passive'), true);
+    thirdAssassin.attribute.removeBySource('skill:moonshadow_sentence:passive');
+    const baseTarget = createRoleTarget();
+    const thirdTarget = createRoleTarget();
+    baseTarget.life = thirdTarget.life = 1;
+    const base = calculateFinaleExecutionDamage(
+        createSkillContext(baseAssassin, baseAssassin.skills.get('finale_execution')!),
+        baseTarget,
+    );
+    const strengthened = calculateFinaleExecutionDamage(
+        createSkillContext(thirdAssassin, thirdAssassin.skills.get('finale_execution')!),
+        thirdTarget,
+    );
+    assert.ok(Math.abs(strengthened.missingLifeBonusCap / base.missingLifeBonusCap - 1.18) < 1e-9);
+    assert.ok(Math.abs(strengthened.totalDamageCap / base.totalDamageCap - 1.18) < 1e-9);
+    assert.ok(strengthened.totalDamage <= strengthened.totalDamageCap);
+});
+
+test('3차 궁수·마법사·대장장이는 역할기의 non-CC 약화 레벨을 1씩 더 높인다', () => {
+    const cases = [
+        { lineage: 'archer', name: '파갑 표식', effect: LegacyStatusEffects.DEFENSE_REDUCTION },
+        { lineage: 'mage', name: '마력 균열', effect: LegacyStatusEffects.MAGIC_DEFENSE_REDUCTION },
+        { lineage: 'blacksmith', name: '구조 해체', effect: LegacyStatusEffects.DEFENSE_REDUCTION },
+    ] as const;
+
+    for (const [index, definition] of cases.entries()) {
+        const base = createAdvancedRolePlayer(definition.lineage, 95_310 + index * 2);
+        const third = createAdvancedRolePlayer(definition.lineage, 95_311 + index * 2, true);
+        const baseTarget = createRoleTarget();
+        const thirdTarget = createRoleTarget();
+        base.currentTarget = baseTarget;
+        third.currentTarget = thirdTarget;
+        assert.equal(base.skills.activateByInput(definition.name).activated, true);
+        assert.equal(third.skills.activateByInput(definition.name).activated, true);
+        const baseEffect = baseTarget.getStatusEffect(definition.effect)!;
+        const thirdEffect = thirdTarget.getStatusEffect(definition.effect)!;
+        assert.equal(thirdEffect.level, baseEffect.level + 1);
+        assert.equal(thirdEffect.duration, 10);
+        assert.equal(definition.effect.controlCategory, ControlCategory.NONE);
+    }
 });

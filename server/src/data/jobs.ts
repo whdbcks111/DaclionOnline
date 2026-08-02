@@ -1,4 +1,9 @@
-import { defineEliteJobRecipe, defineJob, JobTier } from '../models/Job.js';
+import {
+    defineEliteJobRecipe,
+    defineJob,
+    defineThirdJobLineage,
+    JobTier,
+} from '../models/Job.js';
 
 const firstJobs = [
     {
@@ -108,6 +113,55 @@ for (const [main, sub, eliteId, name, offenseFactor = 1] of eliteRecipes) {
         tags: ['career:elite'],
     });
     defineEliteJobRecipe(mainId, subId, id);
+}
+
+export const THIRD_JOB_IDS = Object.freeze({
+    warrior: 'career:ironblood_lord',
+    archer: 'career:starseal_tracker',
+    assassin: 'career:moonshadow_executor',
+    mage: 'career:astral_sage',
+    blacksmith: 'career:mythic_artisan',
+} as const);
+
+const thirdJobs = [
+    {
+        main: 'warrior', id: THIRD_JOB_IDS.warrior, name: '철혈군주', skill: 'ironblood_sovereignty',
+        description: '수많은 전장을 버텨낸 육체와 지휘로 전열의 중심을 지키는 전사의 3차 계보.',
+    },
+    {
+        main: 'archer', id: THIRD_JOB_IDS.archer, name: '성흔추적자', skill: 'starseal_focus',
+        description: '별빛이 남긴 흔적을 읽어 가장 단단한 표적의 틈을 찾아내는 궁수의 3차 계보.',
+    },
+    {
+        main: 'assassin', id: THIRD_JOB_IDS.assassin, name: '월영집행자', skill: 'moonshadow_sentence',
+        description: '달빛 아래 무너지는 순간을 판결해 전투의 종결을 앞당기는 암살자의 3차 계보.',
+    },
+    {
+        main: 'mage', id: THIRD_JOB_IDS.mage, name: '성계현자', skill: 'astral_wisdom',
+        description: '별과 마력 방벽의 흐름을 하나의 성계처럼 해석하는 마법사의 3차 계보.',
+    },
+    {
+        main: 'blacksmith', id: THIRD_JOB_IDS.blacksmith, name: '신화장인', skill: 'mythic_craft',
+        description: '물질과 마력의 하중을 함께 벼려 전설을 실물로 만드는 대장장이의 3차 계보.',
+    },
+] as const;
+
+// TODO(art): 3차 직업 전용 아트 제작 전까지 원래 메인 계보의 128×128 직업 아이콘을 재사용한다.
+for (const third of thirdJobs) {
+    const mainId = `career:${third.main}`;
+    const parent = firstJobs.find(job => job.id === mainId)!;
+    defineJob({
+        id: third.id,
+        name: third.name,
+        icon: parent.icon,
+        tier: JobTier.THIRD,
+        description: third.description,
+        parentJobIds: [mainId],
+        grantedSkills: [{ skillDataId: third.skill }],
+        mainModifiers: [],
+        tags: ['career:third'],
+    });
+    defineThirdJobLineage(mainId, third.id);
 }
 
 function getFirstName(id: string): string {

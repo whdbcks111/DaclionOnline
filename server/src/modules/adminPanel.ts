@@ -161,7 +161,9 @@ export async function getAdminPlayerDetail(userId: number): Promise<AdminPlayerD
         mainJobName: player.career.mainJob?.name ?? '(없음)',
         subJobId: player.career.subJobId,
         subJobName: player.career.subJob?.name ?? '(없음)',
+        thirdJobId: player.career.thirdJobId,
         eliteJobName: player.career.eliteJob?.name ?? '(없음)',
+        thirdJobName: player.career.thirdJob?.name ?? '(없음)',
         stats: StatType.values().map(stat => ({ key: stat.key, label: stat.label, value: player.stat.get(stat) })),
         inventory: player.inventory.getIndexedItems().map(({ index, item }) => ({
             index,

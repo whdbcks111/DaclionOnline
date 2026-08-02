@@ -167,7 +167,9 @@ export function initPlayerCommands(): void {
                     .text(` ${player.titles.equippedName || '(미장착)'}\n`)
                     .weight('bold', b => b.text('메인 직업'))
                     .text(` ${player.career.effectiveMainJob?.name ?? '(미선택)'}`)
-                    .text(player.career.eliteJob ? ` (${player.career.mainJob?.name} 계보)` : '')
+                    .text(player.career.thirdJob
+                        ? ` (3차 · ${player.career.eliteJob?.name} / ${player.career.mainJob?.name} 계보)`
+                        : player.career.eliteJob ? ` (${player.career.mainJob?.name} 계보)` : '')
                     .text('\n')
                     .weight('bold', b => b.text('서브 직업'))
                     .text(` ${player.career.subJob?.name ?? '(미선택)'}\n`)

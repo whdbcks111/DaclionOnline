@@ -68,6 +68,23 @@ test('후반 직업 패시브와 역할기는 Lv.240·320 경계 및 메인 계�
     assert.equal(eliteRotation.skills.some(skill => skill.skillId === 'mana_rift'), false);
 });
 
+test('Lv.500 밸런스 표준은 3차 완수를 가정하되 엘리트 스킬과 패시브를 함께 유지한다', () => {
+    const before = createBalanceScenario(499, 'career:warrior', 'career:mage');
+    const after = createBalanceScenario(500, 'career:warrior', 'career:mage');
+
+    assert.equal(before.thirdJob, undefined);
+    assert.equal(before.effectiveJob.id, 'career:spellblade');
+    assert.equal(after.eliteJob?.id, 'career:spellblade');
+    assert.equal(after.thirdJob?.id, 'career:ironblood_lord');
+    assert.equal(after.effectiveJob.id, 'career:ironblood_lord');
+    assert.equal(after.entity.attribute.hasSource('skill:spellblade_mastery:passive'), true);
+    assert.equal(after.entity.attribute.hasSource('skill:ironblood_sovereignty:passive'), true);
+    const rotation = analyzeCombatRotation(after);
+    assert.equal(rotation.skills.some(skill => skill.skillId === 'spellblade_technique'), true);
+    assert.equal(rotation.skills.some(skill => skill.skillId === 'vanguard_command'), true);
+    assert.equal(rotation.skills.some(skill => skill.skillId === 'mana_rift'), false);
+});
+
 test('명시된 unlockLevel은 서브 직업 추론 시점보다 우선해 스킬 레벨을 계산한다', () => {
     const rotation = analyzeCombatRotation(createBalanceScenario(180, 'career:warrior', 'career:mage'));
     const skill = rotation.skills.find(entry => entry.skillId === 'constellation_rupture');

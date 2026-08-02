@@ -1,5 +1,7 @@
 # Shared Overview
 
+`AdminPlayerDetailData`는 `thirdJobId/thirdJobName`을 포함해 서버 관리자 snapshot과 클라이언트 상세 화면이 3차 직업을 같은 계약으로 표시한다.
+
 `ZoneType`은 `safe | neutral | hostile`이며 `LocationInfoData` 위험도는 `zoneType/zoneLabel/pvpAllowed`의 가공된 HUD 계약으로 전달된다. `LocationInfoData.capabilities`는 현재 플레이어가 실제 이용할 수 있는 낚시·상점 기능의 key·라벨·아이콘만 전달한다. `tags.ts`는 각 위험도에 대응하는 지역 태그를 소유한다.
 
 서버와 클라이언트가 함께 사용하는 네트워크 계약과 리소스를 둔다.

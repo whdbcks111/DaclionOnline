@@ -1,7 +1,14 @@
 import type Player from './Player.js';
 import type { AttributeModifier } from './Attribute.js';
 import { emitGameEvent, GameEventIds } from './GameEvent.js';
-import { JobSlotType, JobTier, getJob, isJobDescendant, resolveEliteJob } from './Job.js';
+import {
+    JobSlotType,
+    JobTier,
+    getJob,
+    isJobDescendant,
+    resolveEliteJob,
+    resolveThirdJob,
+} from './Job.js';
 import { ProgressType, defineProgress } from './Progress.js';
 import { sendBotMessageToUser, sendNotificationToUser } from '../modules/message.js';
 import { chat } from '../utils/chatBuilder.js';
@@ -10,12 +17,14 @@ export const CareerProgressIds = Object.freeze({
     MAIN: 'career:main_job',
     SUB: 'career:sub_job',
     ELITE: 'career:elite_job',
+    THIRD: 'career:third_job',
 });
 
 for (const [id, label] of [
     [CareerProgressIds.MAIN, '메인 직업'],
     [CareerProgressIds.SUB, '서브 직업'],
     [CareerProgressIds.ELITE, '엘리트 직업'],
+    [CareerProgressIds.THIRD, '3차 직업'],
 ] as const) defineProgress({ id, type: ProgressType.STATE, label, description: `${label} ID` });
 
 export interface CareerOperationResult { success: boolean; reason?: string }
@@ -26,19 +35,34 @@ export default class CareerProfile {
     get mainJobId(): string { return this.player.progress.getState(CareerProgressIds.MAIN); }
     get subJobId(): string { return this.player.progress.getState(CareerProgressIds.SUB); }
     get eliteJobId(): string { return this.player.progress.getState(CareerProgressIds.ELITE); }
+    get thirdJobId(): string { return this.player.progress.getState(CareerProgressIds.THIRD); }
     get mainJob() { return getJob(this.mainJobId); }
     get subJob() { return getJob(this.subJobId); }
-    get eliteJob() { return getJob(this.eliteJobId); }
-    get effectiveMainJob() { return this.eliteJob ?? this.mainJob; }
+    get eliteJob() {
+        const expected = resolveEliteJob(this.mainJobId, this.subJobId);
+        return expected?.id === this.eliteJobId ? expected : undefined;
+    }
+    get thirdJob() {
+        const expected = resolveThirdJob(this.mainJobId);
+        return this.eliteJob && expected?.id === this.thirdJobId ? expected : undefined;
+    }
+    get effectiveMainJob() { return this.thirdJob ?? this.eliteJob ?? this.mainJob; }
 
     hasJob(jobId: string, slot?: JobSlotType): boolean {
         const normalizedJobId = getJob(jobId)?.id;
         if (!normalizedJobId) return false;
         if (slot === JobSlotType.SUB) return this.subJobId === normalizedJobId;
-        const mainCompatible = Boolean(this.mainJobId && (this.mainJobId === normalizedJobId
-            || (this.eliteJobId && isJobDescendant(this.eliteJobId, normalizedJobId))));
+        const eliteJobId = this.eliteJob?.id ?? '';
+        const thirdJobId = this.thirdJob?.id ?? '';
+        const mainCompatible = Boolean(this.mainJobId && (
+            this.mainJobId === normalizedJobId
+            || eliteJobId === normalizedJobId
+            || thirdJobId === normalizedJobId
+            || (eliteJobId && isJobDescendant(eliteJobId, normalizedJobId))
+            || (thirdJobId && isJobDescendant(thirdJobId, normalizedJobId))
+        ));
         if (slot === JobSlotType.MAIN) return mainCompatible;
-        return mainCompatible || this.subJobId === normalizedJobId || this.eliteJobId === normalizedJobId;
+        return mainCompatible || this.subJobId === normalizedJobId;
     }
 
     canAssign(slot: JobSlotType, jobId: string): CareerOperationResult {
@@ -97,6 +121,7 @@ export default class CareerProfile {
 
     /** 관리자 도구가 레벨·선행 조건과 무관하게 1차 직업 조합을 교체한다. 빈 ID는 해당 슬롯을 해제한다. */
     setByAdmin(mainJobId: string, subJobId: string): CareerOperationResult {
+        const previousThird = getJob(this.thirdJobId);
         const main = mainJobId ? getJob(mainJobId) : undefined;
         const sub = subJobId ? getJob(subJobId) : undefined;
         if (mainJobId && (!main || main.tier !== JobTier.FIRST)) {
@@ -113,6 +138,10 @@ export default class CareerProfile {
         this.player.progress.setState(CareerProgressIds.MAIN, main?.id ?? '');
         this.player.progress.setState(CareerProgressIds.SUB, sub?.id ?? '');
         this.player.progress.setState(CareerProgressIds.ELITE, '');
+        this.player.progress.setState(CareerProgressIds.THIRD, '');
+        if (previousThird?.tier === JobTier.THIRD) {
+            for (const grant of previousThird.grantedSkills) this.player.skills.revoke(grant.skillDataId);
+        }
         if (main) this.grantSkills(main.id, 'career:admin-main');
         if (sub) this.grantSkills(sub.id, 'career:admin-sub');
         this.refreshModifiers();
@@ -121,7 +150,7 @@ export default class CareerProfile {
     }
 
     evaluateElitePromotion(options: { persist?: boolean } = {}): boolean {
-        if (this.player.level < 200 || !this.mainJobId || !this.subJobId || this.eliteJobId) return false;
+        if (this.player.level < 200 || !this.mainJobId || !this.subJobId || this.eliteJob) return false;
         if (this.mainJobId === this.subJobId) return false;
         const elite = resolveEliteJob(this.mainJobId, this.subJobId);
         if (!elite) return false;
@@ -137,23 +166,69 @@ export default class CareerProfile {
         return true;
     }
 
+    canPromoteThird(jobId: string): CareerOperationResult {
+        const job = getJob(jobId);
+        if (!job || job.tier !== JobTier.THIRD) {
+            return { success: false, reason: '선택할 수 없는 3차 직업입니다.' };
+        }
+        if (this.player.level < 500) {
+            return { success: false, reason: '3차 전직은 Lv.500부터 가능합니다.' };
+        }
+        if (this.thirdJobId) return { success: false, reason: '이미 3차 전직 정보가 있습니다.' };
+        const expectedElite = resolveEliteJob(this.mainJobId, this.subJobId);
+        if (!expectedElite || this.eliteJob?.id !== expectedElite.id) {
+            return { success: false, reason: '현재 메인·서브 계보의 엘리트 전직을 먼저 완료해야 합니다.' };
+        }
+        if (resolveThirdJob(this.mainJobId)?.id !== job.id) {
+            return { success: false, reason: '현재 메인 계보와 맞지 않는 3차 직업입니다.' };
+        }
+        return { success: true };
+    }
+
+    /** 장기 전직 퀘스트 보상 경계에서만 호출하는 3차 승급 API. */
+    promoteThird(jobId: string, options: { persist?: boolean } = {}): CareerOperationResult {
+        const checked = this.canPromoteThird(jobId);
+        if (!checked.success) return checked;
+        const job = getJob(jobId)!;
+        this.player.progress.setState(CareerProgressIds.THIRD, job.id);
+        this.grantSkills(job.id, 'career:third');
+        this.refreshModifiers();
+        this.notify(`3차 직업 [ ${job.name} ](으)로 승급했습니다!`, `career:third:${job.id}`);
+        emitGameEvent(GameEventIds.CAREER_THIRD_PROMOTED, {
+            actor: this.player,
+            data: {
+                mainJobId: this.mainJobId,
+                subJobId: this.subJobId,
+                eliteJobId: this.eliteJobId,
+                thirdJobId: job.id,
+            },
+        });
+        if (options.persist !== false) void this.player.save();
+        return { success: true };
+    }
+
     /**
      * 저장 데이터 복원 중에는 Player 생성이 끝나기 전 save를 시작하지 않는다.
      * 신규 엘리트 전직 여부를 호출자에게 돌려주면 Player가 모든 영속 필드를 초기화한 뒤 저장한다.
      */
     initialize(): boolean {
-        for (const job of [this.mainJob, this.subJob, this.eliteJob]) if (job) this.grantSkills(job.id, 'career:restore');
+        for (const job of [this.mainJob, this.subJob, this.eliteJob, this.thirdJob]) {
+            if (job) this.grantSkills(job.id, 'career:restore');
+        }
         this.refreshModifiers();
         return this.evaluateElitePromotion({ persist: false });
     }
 
     refreshModifiers(): void {
-        for (const source of ['career:main', 'career:sub', 'career:elite']) this.player.attribute.removeBySource(source);
+        for (const source of ['career:main', 'career:sub', 'career:elite', 'career:third']) {
+            this.player.attribute.removeBySource(source);
+        }
         const add = (source: string, modifiers: readonly Omit<AttributeModifier, 'source'>[]) => {
             this.player.attribute.addModifiers(modifiers.map(modifier => ({ ...modifier, source })));
         };
         if (this.eliteJob) add('career:elite', this.eliteJob.mainModifiers);
         else if (this.mainJob) add('career:main', this.mainJob.mainModifiers);
+        if (this.thirdJob) add('career:third', this.thirdJob.mainModifiers);
         if (this.subJob) add('career:sub', this.subJob.subModifiers);
     }
 

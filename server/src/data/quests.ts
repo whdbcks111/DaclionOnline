@@ -7,7 +7,7 @@ import {
     QuestStage,
 } from '../models/Quest.js';
 import { JobSlotType } from '../models/Job.js';
-import './jobs.js';
+import { THIRD_JOB_IDS } from './jobs.js';
 import { canAcquireBlacksmithProfession, grantBlacksmithProfession } from '../modules/forging.js';
 import {
     getTutorialSnapshot,
@@ -20,6 +20,7 @@ import {
 import type Entity from '../models/Entity.js';
 import type Player from '../models/Player.js';
 import { GameEventIds } from '../models/GameEvent.js';
+import Monster from '../models/Monster.js';
 
 export const FIRST_SLIME_HUNT_QUEST_ID = 'luminair:first_slime_hunt';
 export const DAILY_COMMISSION_NPC_ID = 'daily_commissioner';
@@ -1229,3 +1230,197 @@ for (const slot of JobSlotType.values()) for (const job of careerQuestDefinition
         ],
     });
 }
+
+export const THIRD_ADVANCEMENT_NPC_ID = 'inheritance_warden_arden';
+export const THIRD_ADVANCEMENT_QUEST_IDS = Object.freeze({
+    warrior: 'career:third_warrior_promotion',
+    archer: 'career:third_archer_promotion',
+    assassin: 'career:third_assassin_promotion',
+    mage: 'career:third_mage_promotion',
+    blacksmith: 'career:third_blacksmith_promotion',
+} as const);
+
+interface ThirdAdvancementDefinition {
+    readonly lineage: keyof typeof THIRD_JOB_IDS;
+    readonly mainJobId: string;
+    readonly thirdJobId: string;
+    readonly thirdJobName: string;
+    readonly questId: string;
+    readonly questName: string;
+}
+
+/** NPC 분기와 퀘스트 등록이 같은 계보 마스터를 공유한다. */
+export const THIRD_ADVANCEMENT_DEFINITIONS: readonly ThirdAdvancementDefinition[] = Object.freeze([
+    {
+        lineage: 'warrior', mainJobId: 'career:warrior', thirdJobId: THIRD_JOB_IDS.warrior,
+        thirdJobName: '철혈군주', questId: THIRD_ADVANCEMENT_QUEST_IDS.warrior,
+        questName: '철혈의 왕관',
+    },
+    {
+        lineage: 'archer', mainJobId: 'career:archer', thirdJobId: THIRD_JOB_IDS.archer,
+        thirdJobName: '성흔추적자', questId: THIRD_ADVANCEMENT_QUEST_IDS.archer,
+        questName: '성흔의 길',
+    },
+    {
+        lineage: 'assassin', mainJobId: 'career:assassin', thirdJobId: THIRD_JOB_IDS.assassin,
+        thirdJobName: '월영집행자', questId: THIRD_ADVANCEMENT_QUEST_IDS.assassin,
+        questName: '월영의 판결',
+    },
+    {
+        lineage: 'mage', mainJobId: 'career:mage', thirdJobId: THIRD_JOB_IDS.mage,
+        thirdJobName: '성계현자', questId: THIRD_ADVANCEMENT_QUEST_IDS.mage,
+        questName: '성계의 문',
+    },
+    {
+        lineage: 'blacksmith', mainJobId: 'career:blacksmith', thirdJobId: THIRD_JOB_IDS.blacksmith,
+        thirdJobName: '신화장인', questId: THIRD_ADVANCEMENT_QUEST_IDS.blacksmith,
+        questName: '신화의 대장간',
+    },
+]);
+
+function hasActiveThirdAdvancement(player: Player): boolean {
+    return THIRD_ADVANCEMENT_DEFINITIONS.some(definition =>
+        player.quests.isActive(definition.questId) || player.quests.canTurnIn(definition.questId));
+}
+
+function isExactBoss(target: Entity, monsterDataId: string): boolean {
+    return target instanceof Monster && target.monsterDataId === monsterDataId;
+}
+
+function isHighLevelNormalMonster(target: Entity | undefined, minimumLevel: number): target is Entity {
+    return Boolean(target
+        && target.level >= minimumLevel
+        && target.hasTag(GameTags.ENTITY_MONSTER)
+        && !target.hasTag(GameTags.ENTITY_BOSS));
+}
+
+function highLevelCriticalObjective(
+    id: string,
+    label: string,
+    required: number,
+    minimumLevel: number,
+): QuestObjective {
+    return QuestObjective.event({
+        id,
+        label,
+        required,
+        eventId: GameEventIds.CRITICAL_HIT,
+        matches: event => isHighLevelNormalMonster(event.subject, minimumLevel),
+    });
+}
+
+/** 직업별 실전 역할을 서로 다른 공개 게임 이벤트로 검증한다. */
+function createThirdMasteryObjectives(lineage: keyof typeof THIRD_JOB_IDS): readonly QuestObjective[] {
+    switch (lineage) {
+        case 'warrior':
+            return [QuestObjective.kill(
+                'high-level-vanguard',
+                'Lv.380+ 일반 몬스터 처치',
+                80,
+                target => isHighLevelNormalMonster(target, 380),
+            )];
+        case 'archer':
+            return [highLevelCriticalObjective(
+                'high-level-critical-hits',
+                'Lv.380+ 일반 몬스터에게 치명타 적중',
+                120,
+                380,
+            )];
+        case 'assassin':
+            return [
+                QuestObjective.kill(
+                    'high-level-executions',
+                    'Lv.420+ 일반 몬스터 처치',
+                    40,
+                    target => isHighLevelNormalMonster(target, 420),
+                ),
+                highLevelCriticalObjective(
+                    'high-level-critical-hits',
+                    'Lv.420+ 일반 몬스터에게 치명타 적중',
+                    60,
+                    420,
+                ),
+            ];
+        case 'mage': {
+            const elements = [
+                ['fire-monsters', '불', GameTags.PROPERTY_FIRE],
+                ['ice-monsters', '얼음', GameTags.PROPERTY_ICE],
+                ['electric-monsters', '전기', GameTags.PROPERTY_ELECTRIC],
+                ['dark-monsters', '어둠', GameTags.PROPERTY_DARK],
+            ] as const;
+            return elements.map(([id, label, tag]) => QuestObjective.kill(
+                id,
+                `Lv.380+ ${label} 속성 일반 몬스터 처치`,
+                15,
+                target => isHighLevelNormalMonster(target, 380) && target.hasTag(tag),
+            ));
+        }
+        case 'blacksmith':
+            return [
+                QuestObjective.destroy(
+                    'high-level-ore',
+                    'Lv.380+ 광맥 파괴',
+                    30,
+                    target => target.level >= 380 && target.hasTag(GameTags.RESOURCE_ORE),
+                ),
+                QuestObjective.event({
+                    id: 'successful-forging',
+                    label: '장비 단조 성공',
+                    required: 10,
+                    eventId: GameEventIds.ITEM_FORGED,
+                }),
+            ];
+    }
+}
+
+for (const definition of THIRD_ADVANCEMENT_DEFINITIONS) defineQuest({
+    id: definition.questId,
+    name: definition.questName,
+    description: `세 성역을 순례하고 ${definition.thirdJobName}의 숙련도를 증명한 뒤, 세 왕좌의 주인을 넘어 계승관 아르덴에게 보고하세요.`,
+    tags: ['quest:career', 'career:third'],
+    giverNpcIds: [THIRD_ADVANCEMENT_NPC_ID],
+    turnInNpcIds: [THIRD_ADVANCEMENT_NPC_ID],
+    visible: player => player.career.canPromoteThird(definition.thirdJobId).success,
+    canAccept: player => player.career.canPromoteThird(definition.thirdJobId).success
+        && !hasActiveThirdAdvancement(player),
+    stages: [
+        new QuestStage({
+            id: 'pilgrimage',
+            description: '계승의 길을 기억하는 세 요새를 직접 순례하세요.',
+            objectives: [
+                QuestObjective.arrive('nebula-waystation', '성운 길목 도착', 'nebula_waystation'),
+                QuestObjective.arrive('chronofrost-refuge', '시계서리 피난처 도착', 'chronofrost_refuge'),
+                QuestObjective.arrive('endstar-bastion', '끝별 요새 도착', 'endstar_bastion'),
+            ],
+        }),
+        new QuestStage({
+            id: 'mastery',
+            description: `${definition.thirdJobName}의 계보를 지탱하는 전술을 반복해 숙련도를 증명하세요.`,
+            objectives: createThirdMasteryObjectives(definition.lineage),
+        }),
+        new QuestStage({
+            id: 'throne-trial',
+            description: '세 왕좌의 주인을 각각 물리쳐 계승자의 한계를 증명하세요.',
+            objectives: [
+                QuestObjective.kill('nebula-sovereign', '성운제 아스테리온 처치', 1, target => isExactBoss(target, 'nebula_sovereign')),
+                QuestObjective.kill('zero-hour-queen', '영시여왕 크로니아 처치', 1, target => isExactBoss(target, 'zero_hour_queen')),
+                QuestObjective.kill('last-constellation', '최후성좌 라스트라 처치', 1, target => isExactBoss(target, 'last_constellation')),
+            ],
+        }),
+        new QuestStage({
+            id: 'return-report',
+            description: '전직소의 계승관 아르덴에게 세 왕좌의 시험을 완수했음을 보고하세요.',
+            objectives: [QuestObjective.talk('report-to-arden', '계승관 아르덴에게 보고', THIRD_ADVANCEMENT_NPC_ID)],
+        }),
+    ],
+    rewards: [QuestReward.custom({
+        label: `3차 직업 [ ${definition.thirdJobName} ] 계승`,
+        canGrant: player => player.career.canPromoteThird(definition.thirdJobId).success,
+        grant: player => {
+            const result = player.career.promoteThird(definition.thirdJobId, { persist: false });
+            if (!result.success) throw new Error(result.reason ?? '3차 전직에 실패했습니다.');
+        },
+    })],
+    repeat: false,
+    abandonable: true,
+});

@@ -81,7 +81,7 @@
 | `adminSaveResult` | `SimpleResult` | `modules/location.ts` | `pages/LocationEditor.tsx` |
 | `adminPanelBootstrap` | `AdminPanelBootstrapData` | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
 | `adminPanelPlayers` | `AdminPlayerListItem[]` | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
-| `adminPanelPlayer` | `AdminPlayerDetailData \| null` | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
+| `adminPanelPlayer` | `AdminPlayerDetailData \| null` (원래 메인·서브, 엘리트, `thirdJobId/thirdJobName` 포함) | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
 | `adminPanelResult` | `AdminPanelResult` (밸런스 분석 시 `details` 포함) | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
 | `adminPanelResult` | `AdminPanelResult` | `modules/adminPanel.ts` | 요청 소켓 호환용 결과. 사용자 피드백은 같은 요청 소켓의 `notification`으로 표시 |
 | `miniGameStart` | `MiniGameStartData` (session/token/type/만료/config, 위험 회피 config의 실제 패턴 `label`과 단색 `theme`) | `modules/minigame.ts`; 같은 계정의 focused 우선 연결 하나에만 전송 | `components/minigame/MiniGameOverlay.tsx` |

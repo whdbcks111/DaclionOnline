@@ -533,7 +533,9 @@ export interface AdminPlayerDetailData extends AdminPlayerListItem {
     mainJobName: string
     subJobId: string
     subJobName: string
+    thirdJobId: string
     eliteJobName: string
+    thirdJobName: string
     stats: Array<{ key: string; label: string; value: number }>
     inventory: AdminInventoryItemData[]
     equipment: Array<{ slot: string; slotLabel: string; index: number; itemDataId: string; name: string }>

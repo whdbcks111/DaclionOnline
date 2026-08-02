@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { createServer } from 'node:http';
-import Attribute from './Attribute.js';
+import Attribute, { AttributeType } from './Attribute.js';
 import CareerProfile, { CareerProgressIds } from './Career.js';
-import { getAllJobs, getJob, JobSlotType, JobTier, resolveEliteJob } from './Job.js';
+import { getAllJobs, getJob, JobSlotType, JobTier, resolveEliteJob, resolveThirdJob } from './Job.js';
 import { PlayerProgress } from './Progress.js';
 import type Player from './Player.js';
 import '../data/jobs.js';
@@ -14,7 +14,7 @@ import { getAllQuestData } from './Quest.js';
 import '../data/quests.js';
 import '../data/items.js';
 import { getIO, initSocket } from '../modules/socket.js';
-import { GameEventIds } from './GameEvent.js';
+import { clearRecentGameEvents, GameEventIds, getRecentGameEvents } from './GameEvent.js';
 import { GameTags } from '../../../shared/tags.js';
 
 initSocket(createServer(), 'http://localhost');
@@ -24,30 +24,37 @@ function createCareer(level = 200): {
     career: CareerProfile;
     player: Player;
     granted: string[];
+    revoked: string[];
     getSaveCount: () => number;
 } {
     const progress = PlayerProgress.createEmpty(901);
     const granted: string[] = [];
+    const revoked: string[] = [];
     let saveCount = 0;
     const player = {
         userId: 901,
         level,
         progress,
         attribute: new Attribute(),
-        skills: { grant: (id: string) => { granted.push(id); return { acquired: true }; } },
+        skills: {
+            grant: (id: string) => { granted.push(id); return { acquired: true }; },
+            revoke: (id: string) => { revoked.push(id); return true; },
+        },
         save: async () => { saveCount++; },
     } as unknown as Player;
     Object.assign(player, { attackOwner: player, name: '직업 시험 플레이어', playerUserId: 901 });
     const career = new CareerProfile(player);
     Object.assign(player, { career });
-    return { career, player, granted, getSaveCount: () => saveCount };
+    return { career, player, granted, revoked, getSaveCount: () => saveCount };
 }
 
-test('5개 1차 직업은 최소 3개 스킬을 지급하고 서로 다른 20개 순서 조합이 엘리트 직업을 가진다', () => {
+test('5개 1차·20개 엘리트·5개 3차 계보가 완전한 마스터 데이터를 가진다', () => {
     const firstJobs = getAllJobs().filter(job => job.tier === JobTier.FIRST);
     const eliteJobs = getAllJobs().filter(job => job.tier === JobTier.ELITE);
+    const thirdJobs = getAllJobs().filter(job => job.tier === JobTier.THIRD);
     assert.equal(firstJobs.length, 5);
     assert.equal(eliteJobs.length, 20);
+    assert.equal(thirdJobs.length, 5);
     assert.ok(firstJobs.every(job => job.grantedSkills.length >= 3));
     assert.ok(firstJobs.every(job => job.grantedSkills.some(grant =>
         getSkillData(grant.skillDataId)?.tags.includes('skill:passive'))));
@@ -75,7 +82,8 @@ test('5개 1차 직업은 최소 3개 스킬을 지급하고 서로 다른 20개
         assert.equal(banner.readUInt32BE(16), 256, `${skill.id} cast header width`);
         assert.equal(banner.readUInt32BE(20), 64, `${skill.id} cast header height`);
     }
-    assert.equal(getAllQuestData().filter(quest => quest.tags.includes('quest:career')).length, 10);
+    assert.equal(getAllQuestData().filter(quest => quest.tags.includes('quest:career')).length, 15);
+    assert.equal(getAllQuestData().filter(quest => quest.tags.includes('career:third')).length, 5);
     const mageTrial = getAllQuestData().find(quest => quest.id === 'career:main_mage_promotion');
     assert.equal(mageTrial?.stages[0].objectives[0].label, '불·얼음·독·자연 속성 적 처치');
     assert.ok(mageTrial?.rewards.some(reward => reward.label === '견습 마법 지팡이 x1'));
@@ -86,6 +94,23 @@ test('5개 1차 직업은 최소 3개 스킬을 지급하고 서로 다른 20개
     assert.ok(blacksmithTrials.find(quest => quest.id.includes(':main_'))?.rewards.some(reward => reward.label === '철 곡괭이 x1'));
     for (const main of firstJobs) for (const sub of firstJobs) {
         assert.equal(Boolean(resolveEliteJob(main.id, sub.id)), main.id !== sub.id, `${main.id}>${sub.id}`);
+    }
+    const thirdNames = new Map([
+        ['career:warrior', '철혈군주'],
+        ['career:archer', '성흔추적자'],
+        ['career:assassin', '월영집행자'],
+        ['career:mage', '성계현자'],
+        ['career:blacksmith', '신화장인'],
+    ]);
+    for (const main of firstJobs) {
+        const third = resolveThirdJob(main.id);
+        assert.equal(third?.name, thirdNames.get(main.id), main.id);
+        assert.deepEqual(third?.parentJobIds, [main.id]);
+        assert.equal(third?.grantedSkills.length, 1);
+        assert.equal(getSkillData(third!.grantedSkills[0].skillDataId)?.tags.includes(GameTags.SKILL_PASSIVE), true);
+        const png = readFileSync(new URL(`../../../client/public/icons/${third!.icon}.png`, import.meta.url));
+        assert.equal(png.readUInt32BE(16), 128);
+        assert.equal(png.readUInt32BE(20), 128);
     }
     for (const icon of new Set(firstJobs.map(job => job.icon))) {
         const png = readFileSync(new URL(`../../../client/public/icons/${icon}.png`, import.meta.url));
@@ -200,6 +225,100 @@ test('Lv.200에는 서로 다른 메인·서브 순서 조합으로 엘리트 �
     assert.equal(career.evaluateElitePromotion(), true);
     assert.equal(career.eliteJobId, 'career:spellblade');
     assert.equal(career.evaluateElitePromotion(), false);
+});
+
+test('3차 계승은 Lv.500·정확한 엘리트·원래 메인 계보를 모두 검증한다', () => {
+    const below = createCareer(499);
+    below.player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+    below.player.progress.setState(CareerProgressIds.SUB, 'career:mage');
+    below.player.progress.setState(CareerProgressIds.ELITE, 'career:spellblade');
+    assert.equal(below.career.canPromoteThird('career:ironblood_lord').success, false);
+
+    const noElite = createCareer(500);
+    noElite.player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+    noElite.player.progress.setState(CareerProgressIds.SUB, 'career:mage');
+    assert.equal(noElite.career.canPromoteThird('career:ironblood_lord').success, false);
+
+    const wrongElite = createCareer(500);
+    wrongElite.player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+    wrongElite.player.progress.setState(CareerProgressIds.SUB, 'career:mage');
+    wrongElite.player.progress.setState(CareerProgressIds.ELITE, 'career:night_hunter');
+    assert.equal(wrongElite.career.eliteJob, undefined);
+    assert.equal(wrongElite.career.canPromoteThird('career:ironblood_lord').success, false);
+
+    const wrongLineage = createCareer(500);
+    wrongLineage.player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+    wrongLineage.player.progress.setState(CareerProgressIds.SUB, 'career:mage');
+    wrongLineage.player.progress.setState(CareerProgressIds.ELITE, 'career:spellblade');
+    assert.equal(wrongLineage.career.canPromoteThird('career:starseal_tracker').success, false);
+});
+
+test('3차 계승 후에도 엘리트·원본 계보와 스킬을 유지하고 중복 승급을 막는다', () => {
+    const { career, player, granted } = createCareer(500);
+    player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+    player.progress.setState(CareerProgressIds.SUB, 'career:mage');
+    player.progress.setState(CareerProgressIds.ELITE, 'career:spellblade');
+    career.initialize();
+    clearRecentGameEvents();
+
+    assert.equal(career.promoteThird('career:ironblood_lord', { persist: false }).success, true);
+    assert.equal(career.thirdJobId, 'career:ironblood_lord');
+    assert.equal(career.effectiveMainJob?.id, 'career:ironblood_lord');
+    assert.equal(career.mainJobId, 'career:warrior');
+    assert.equal(career.subJobId, 'career:mage');
+    assert.equal(career.eliteJobId, 'career:spellblade');
+    assert.equal(career.hasJob('career:warrior', JobSlotType.MAIN), true);
+    assert.equal(career.hasJob('career:spellblade', JobSlotType.MAIN), true);
+    assert.equal(career.hasJob('career:ironblood_lord', JobSlotType.MAIN), true);
+    assert.equal(career.hasJob('career:mage', JobSlotType.SUB), true);
+    assert.equal(career.hasJob('career:mage', JobSlotType.MAIN), false);
+    assert.equal(career.hasJob('career:shadow_blade', JobSlotType.MAIN), false);
+    assert.ok(granted.includes('spellblade_mastery'));
+    assert.ok(granted.includes('spellblade_technique'));
+    assert.ok(granted.includes('ironblood_sovereignty'));
+
+    const before = player.attribute.get(AttributeType.MAX_LIFE);
+    career.refreshModifiers();
+    career.refreshModifiers();
+    assert.equal(player.attribute.get(AttributeType.MAX_LIFE), before);
+    assert.equal(player.attribute.hasSource('career:third'), false);
+    assert.equal(career.promoteThird('career:ironblood_lord', { persist: false }).success, false);
+    assert.deepEqual(
+        getRecentGameEvents({ id: GameEventIds.CAREER_THIRD_PROMOTED, actorUserId: player.userId, limit: 1 })[0]?.data,
+        {
+            mainJobId: 'career:warrior',
+            subJobId: 'career:mage',
+            eliteJobId: 'career:spellblade',
+            thirdJobId: 'career:ironblood_lord',
+        },
+    );
+});
+
+test('저장된 3차를 중간 저장 없이 복원하고 관리자 직업 변경은 3차를 초기화한다', async () => {
+    const restored = createCareer(500);
+    restored.player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+    restored.player.progress.setState(CareerProgressIds.SUB, 'career:mage');
+    restored.player.progress.setState(CareerProgressIds.ELITE, 'career:spellblade');
+    restored.player.progress.setState(CareerProgressIds.THIRD, 'career:ironblood_lord');
+
+    assert.equal(restored.career.initialize(), false);
+    await Promise.resolve();
+    assert.equal(restored.getSaveCount(), 0);
+    assert.ok(restored.granted.includes('spellblade_technique'));
+    assert.ok(restored.granted.includes('ironblood_sovereignty'));
+
+    assert.equal(restored.career.setByAdmin('career:archer', 'career:mage').success, true);
+    assert.equal(restored.career.thirdJobId, '');
+    assert.equal(restored.career.eliteJobId, 'career:elemental_marksman');
+    assert.deepEqual(restored.revoked, ['ironblood_sovereignty']);
+
+    const corrupt = createCareer(500);
+    corrupt.player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+    corrupt.player.progress.setState(CareerProgressIds.SUB, 'career:mage');
+    corrupt.player.progress.setState(CareerProgressIds.ELITE, 'career:spellblade');
+    corrupt.player.progress.setState(CareerProgressIds.THIRD, 'career:starseal_tracker');
+    assert.equal(corrupt.career.thirdJob, undefined);
+    assert.equal(corrupt.career.hasJob('career:starseal_tracker', JobSlotType.MAIN), false);
 });
 
 test('플레이어 로드 중 엘리트 전직 복원은 생성자 중간 저장을 시작하지 않는다', async () => {

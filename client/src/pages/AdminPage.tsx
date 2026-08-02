@@ -270,7 +270,7 @@ export default function AdminPage() {
                 <div className={styles.summaryGrid}>
                   <div className={styles.summaryCard}><h3>현재 상태</h3><Meter tone="life" label="생명력" value={detail.life} max={detail.maxLife} /><Meter tone="mentality" label="정신력" value={detail.mentality} max={detail.maxMentality} /><Meter tone="hunger" label="배고픔" value={detail.hungry} max={detail.maxHungry} /><Meter tone="thirst" label="수분" value={detail.thirsty} max={detail.maxThirsty} /></div>
                   <div className={`${styles.summaryCard} ${styles.overviewCard}`}>
-                    <section><h3>진행 정보</h3><dl><dt>위치</dt><dd>{detail.locationName}</dd><dt>골드</dt><dd>{detail.gold.toLocaleString()}</dd><dt>카르마</dt><dd>{detail.karma.toFixed(1)} ({detail.karmaTier})</dd><dt>스탯 포인트</dt><dd>{detail.statPoint}</dd><dt>직업</dt><dd>{detail.mainJobName} / {detail.subJobName}</dd><dt>엘리트</dt><dd>{detail.eliteJobName}</dd></dl></section>
+                    <section><h3>진행 정보</h3><dl><dt>위치</dt><dd>{detail.locationName}</dd><dt>골드</dt><dd>{detail.gold.toLocaleString()}</dd><dt>카르마</dt><dd>{detail.karma.toFixed(1)} ({detail.karmaTier})</dd><dt>스탯 포인트</dt><dd>{detail.statPoint}</dd><dt>직업</dt><dd>{detail.mainJobName} / {detail.subJobName}</dd><dt>엘리트</dt><dd>{detail.eliteJobName}</dd><dt>3차</dt><dd>{detail.thirdJobName}</dd></dl></section>
                     <section><h3>보유 현황</h3><dl><dt>인벤토리</dt><dd>{detail.inventory.length}종</dd><dt>장비</dt><dd>{detail.equipment.length}개</dd><dt>스킬</dt><dd>{detail.skills.length}개</dd><dt>칭호</dt><dd>{detail.titles.length}개</dd><dt>상태이상</dt><dd>{detail.statusEffects.length}개</dd></dl></section>
                   </div>
                 </div>

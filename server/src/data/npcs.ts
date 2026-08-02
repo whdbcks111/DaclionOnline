@@ -15,6 +15,8 @@ import {
     NEBULA_QUEST_IDS,
     PARADOX_QUEST_IDS,
     TWILIGHT_TOMB_QUEST_IDS,
+    THIRD_ADVANCEMENT_DEFINITIONS,
+    THIRD_ADVANCEMENT_NPC_ID,
     VOIDCROWN_QUEST_IDS,
     WORLDROOT_QUEST_IDS,
     getDailyCommissionDayKey,
@@ -710,6 +712,85 @@ NPC.define({
             new DialogueScenario(`complete_${entry.key}`, function* () {
                 yield Dialogue.say(`시험을 통과했습니다. 지금부터 ${entry.job.name}의 힘을 다룰 자격이 있어요.`);
                 yield Dialogue.turnInQuest(entry.questId);
+                yield Dialogue.end();
+            }),
+        ]),
+    ],
+});
+
+NPC.define({
+    id: THIRD_ADVANCEMENT_NPC_ID,
+    name: '계승관 아르덴',
+    description: '세 왕좌를 넘을 준비가 된 엘리트 모험가의 마지막 계보를 심판하는 계승관입니다.',
+    tags: ['npc:career', GameTags.NPC_BENEVOLENT],
+    entryScenario: ({ player }) => {
+        const ready = THIRD_ADVANCEMENT_DEFINITIONS.find(definition =>
+            player.quests.canTurnIn(definition.questId, THIRD_ADVANCEMENT_NPC_ID));
+        if (ready) return `complete_${ready.lineage}`;
+        if (THIRD_ADVANCEMENT_DEFINITIONS.some(definition => player.quests.isActive(definition.questId))) {
+            return 'progress';
+        }
+        const available = THIRD_ADVANCEMENT_DEFINITIONS.find(definition =>
+            player.quests.canAccept(definition.questId, THIRD_ADVANCEMENT_NPC_ID));
+        if (available) return `offer_${available.lineage}`;
+        return player.career.thirdJob ? 'inherited' : 'locked';
+    },
+    scenarios: [
+        new DialogueScenario('progress', function* ({ player }) {
+            // 대화 시작 이벤트가 4단계 귀환 보고를 완료했다면 같은 대화에서 바로 보상한다.
+            const ready = THIRD_ADVANCEMENT_DEFINITIONS.find(definition =>
+                player.quests.canTurnIn(definition.questId, THIRD_ADVANCEMENT_NPC_ID));
+            if (ready) {
+                yield Dialogue.goto(`complete_${ready.lineage}`);
+                return;
+            }
+            const active = THIRD_ADVANCEMENT_DEFINITIONS.find(definition =>
+                player.quests.isActive(definition.questId));
+            const snapshot = active ? player.quests.getSnapshot(active.questId) : undefined;
+            if (!active || !snapshot) {
+                yield Dialogue.say('현재 진행 중인 계승 시험을 확인할 수 없군.');
+                yield Dialogue.end();
+                return;
+            }
+            const progress = snapshot.objectives
+                .map(objective => `${objective.label} ${objective.progress}/${objective.required}`)
+                .join(', ');
+            yield Dialogue.say(`${snapshot.stageDescription}\n현재 진행: ${progress}`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('locked', function* ({ player }) {
+            const reason = player.level < 500
+                ? '3차 계승의 문은 Lv.500에 열린다. 그때까지 너의 길을 더 단련해라.'
+                : !player.career.eliteJob
+                    ? '원래 메인과 서브 계보에 맞는 엘리트 직업을 먼저 완성해라.'
+                    : '다른 계승 시험이 진행 중이거나, 아직 계승의 조건을 갖추지 못했다.';
+            yield Dialogue.say(reason);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('inherited', function* ({ player }) {
+            yield Dialogue.say(`${player.career.thirdJob?.name ?? '3차 직업'}의 계보는 이미 너에게 이어졌다. 세 왕좌의 기억을 잃지 마라.`);
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('왕관은 도망가지 않는다. 준비되면 다시 와라.');
+            yield Dialogue.end();
+        }),
+        ...THIRD_ADVANCEMENT_DEFINITIONS.flatMap(definition => [
+            new DialogueScenario(`offer_${definition.lineage}`, function* () {
+                yield Dialogue.say(`${definition.thirdJobName}의 길은 단순한 수치로 열리지 않는다. 세 성역을 순례하고, 너의 전술을 증명한 후, 세 왕좌를 모두 넘어라.`);
+                yield Dialogue.choice([
+                    { label: `${definition.thirdJobName} 계승 시험을 시작한다.`, target: `accept_${definition.lineage}` },
+                    { label: '아직은 준비되지 않았다.', target: 'end' },
+                ]);
+            }),
+            new DialogueScenario(`accept_${definition.lineage}`, function* () {
+                yield Dialogue.acceptQuest(definition.questId);
+                yield Dialogue.say('첫 번째 시험은 순례다. 성운 길목, 시계서리 피난처, 끝별 요새에 수락 후 직접 도착해라.');
+                yield Dialogue.end();
+            }),
+            new DialogueScenario(`complete_${definition.lineage}`, function* () {
+                yield Dialogue.say(`세 왕좌의 증표가 하나의 왕관으로 연결됐다. 지금부터 너는 ${definition.thirdJobName}다.`);
+                yield Dialogue.turnInQuest(definition.questId);
                 yield Dialogue.end();
             }),
         ]),
