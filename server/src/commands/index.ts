@@ -23,6 +23,7 @@ import { initTutorialCommands } from './tutorial.js';
 import { initKarmaCommands } from './karma.js';
 import { initPatchNoteCommands } from './patchNotes.js';
 import { initTitleCommands } from './title.js';
+import { initCodexCommands } from './codex.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -50,4 +51,5 @@ export function initAllCommands(): void {
     initKarmaCommands();
     initPatchNoteCommands();
     initTitleCommands();
+    initCodexCommands();
 }

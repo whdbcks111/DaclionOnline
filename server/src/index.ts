@@ -31,6 +31,7 @@ import './data/quests.js';
 import './data/npcs.js';
 import './data/fishing.js';
 import './data/ascendantFrontier.js';
+import { initializeCodexData } from './data/codex.js';
 import { initLocation } from './modules/location.js';
 import { initUploadMaintenance, uploadRouter } from './modules/upload.js';
 import { initAllCommands } from './commands/index.js';
@@ -40,6 +41,7 @@ import { initTutorial } from './modules/tutorial.js';
 import { initKarma } from './modules/karma.js';
 import { initHumanVerification } from './modules/humanVerification.js';
 import { initHudPreset } from './modules/hudPreset.js';
+import { initCodexEventTracking } from './modules/codex.js';
 import { recordServerBoot } from './modules/serverBoot.js';
 import { getPatchNotes } from '../../shared/patchNotes.js';
 
@@ -70,8 +72,10 @@ initKarma();
 initHumanVerification();
 initHudPreset();
 initTutorial();
-initPlayer();
 initLocation();
+initializeCodexData();
+initCodexEventTracking();
+initPlayer();
 initAdminPanel();
 initGame();
 

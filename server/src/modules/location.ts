@@ -9,6 +9,7 @@ import type Player from "../models/Player.js";
 import { getIO } from "./socket.js";
 import { getSession } from "./login.js";
 import '../data/locations.js'
+import { initializeCodexData } from '../data/codex.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -68,6 +69,7 @@ export function initLocation(): void {
                 const data = (locations as LocationData[]).map(location => normalizeLocationData(location));
                 saveLocationsToJson(data);
                 reloadAllLocations(data);
+                initializeCodexData();
                 logger.success(`어드민 ${session.username}: 장소 데이터 저장 (${data.length}개)`);
                 socket.emit('adminSaveResult', { ok: true });
             } catch (e) {

@@ -51,6 +51,8 @@ import { evaluatePvpKillCredit, recordPvpRespawn } from './PvpKillCredit.js';
 import { ActionType } from './Action.js';
 import HudPresetBook from './HudPreset.js';
 import { RegionRiskPolicy } from './RegionRisk.js';
+import CodexBook from './Codex.js';
+import { initializePlayerCodex } from '../modules/codex.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
 export const LEVEL_SURVIVAL_CAPACITY_PER_LEVEL = 1;
@@ -235,6 +237,7 @@ export default class Player extends Entity {
     readonly userId: number;
     readonly inventory: Inventory;
     readonly progress: PlayerProgress;
+    readonly codex: CodexBook;
     readonly skills: SkillBook;
     readonly quests: QuestBook;
     readonly career: CareerProfile;
@@ -288,6 +291,8 @@ export default class Player extends Entity {
         this.inventory = inventory;
         this.progress = progress;
         markLocationVisited(this, locationId);
+        this.codex = new CodexBook(progress);
+        initializePlayerCodex(this);
         this.skills = skills;
         this.skills.bindOwner(this);
         this.quests = quests;

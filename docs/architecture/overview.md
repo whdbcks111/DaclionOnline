@@ -17,8 +17,8 @@ Browser
 Express + Socket.io (`server/src/index.ts`)
   ├─ modules: 인증, 채팅, 정보 공개 모드, 채널, 플레이어, 파티, 위치, 게임 루프
   ├─ commands: 채팅 명령을 도메인 호출로 변환
-  ├─ models: Entity/Player/Monster/Resource/Projectile/Location/NPC/StatusEffect/Inventory/Progress/Skill/Crafting
-  ├─ data: 아이템·몬스터·자원·투사체·상점·위치·NPC·통계·스킬·제작법 마스터 데이터
+  ├─ models: Entity/Player/Monster/Resource/Projectile/Location/NPC/StatusEffect/Inventory/Progress/Codex/Skill/Crafting
+  ├─ data: 아이템·몬스터·자원·투사체·상점·위치·NPC·통계·도감·스킬·제작법 마스터 데이터
   └─ Prisma ─────────────────────────────── MariaDB
 ```
 
@@ -28,8 +28,8 @@ Express + Socket.io (`server/src/index.ts`)
 
 1. 환경 변수와 Express/HTTP 서버를 준비한다.
 2. `initSocket()`으로 Socket.io와 쿠키 기반 세션 바인딩 미들웨어를 연다.
-3. 회원가입, 로그인, 채팅, 봇/명령어, 플레이어, 위치, 게임 루프를 초기화한다.
-4. `data/items.ts`, `data/monsters.ts`, `data/resources.ts`, `data/projectiles.ts`, `data/shops.ts`, `data/progress.ts`, `data/skills.ts`, `data/crafting.ts`, `data/npcs.ts`의 import 부작용으로 마스터 데이터를 레지스트리에 등록한다. 통계/플래그 정의가 참조 기능보다 먼저 등록되도록 순서를 유지한다.
+3. `data/items.ts`, `data/monsters.ts`, `data/resources.ts`, `data/projectiles.ts`, `data/shops.ts`, `data/progress.ts`, `data/skills.ts`, `data/crafting.ts`, `data/npcs.ts`의 import 부작용으로 마스터 데이터를 레지스트리에 등록한다. 통계/플래그 정의가 참조 기능보다 먼저 등록되도록 순서를 유지한다.
+4. 회원가입, 로그인, 채팅과 봇/명령어를 초기화한 뒤 Location JSON·승천 권역을 등록한다. 그 다음 `initializeCodexData()`로 전문 도감 엔트리를 만들고 확정 이벤트 구독을 시작한 후 Player 로드와 게임 루프를 초기화한다.
 5. `/uploads` 정적 파일과 `/api/profile-image` 라우트를 연결한다.
 6. 리슨 시작 후 Prisma 연결을 확인한다. 종료 신호에서는 온라인 플레이어를 저장한 후 DB 연결을 닫는다.
 
@@ -47,6 +47,7 @@ Express + Socket.io (`server/src/index.ts`)
 | 위치 런타임, Monster/Resource 통합 오브젝트, 바닥 아이템 | `models/Location.ts` | 프로세스 메모리; 위치 정의만 JSON 저장 |
 | 상점 재고/재입고 타이머 | `models/Shop.ts` | 프로세스 메모리 |
 | Player Progress/Skill | `Player.progress`, `Player.skills` | 로그인 중 메모리, Player와 같은 30초/unload/종료 dirty flush |
+| 전문 도감 진행/rank | `Player.codex` → `Player.progress` | 로그인 중 CodexBook snapshot, 횟수·해금 flag는 기존 PlayerProgress dirty flush; 능력치 보너스는 flag에서 source별 복원 |
 | 제작법 발견/진행 | `Player.progress` flag / `models/Crafting.ts` | 발견은 PlayerProgress로 영속, 진행 작업은 접속 중 메모리에만 유지 |
 | 최근 GameEvent trace | `models/GameEvent.ts` | 최근 500개 메모리 스냅샷, 재시작 시 소실 |
 | NPC 정의/활성 대화 | `models/NPC.ts` / `models/NpcDialogue.ts` | 정의는 코드 레지스트리, player별 세션은 메모리이며 이동·사망·logout 시 폐기 |

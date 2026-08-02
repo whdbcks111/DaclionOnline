@@ -38,6 +38,7 @@ v1.0.9 데이터는 Lv.1~345 안전 거점의 최대 중량 성장 가방 11종�
 - `ascendantFrontier.ts`: 승천 권역 환경 상태효과, 90개 아이템, 40개 몬스터, 20개 보스 SkillData, 유물함·봉인 제단 Resource와 적대 귀환 두루마리를 넉넉히 공급하는 10개 전초 상점을 등록한다. 군주 인장은 후속 `지옥문` 히든 스킬 의식 재료 기반이다.
 - `dungeonPuzzles.ts`: 기존 질문 퍼즐과 월식 조류제단의 해답 Progress, Resource interaction과 hidden 경로 condition을 연결한다.
 - `progress.ts`: 게임 이벤트에 연결되는 통계와 낚시도감 정의. 공개 치명타 누적과 불·물·얼음·자연·독·전기·돌·어둠·빛·언데드·신성·벌레·금속·땅 14종 몬스터 처치, 전체 PVP 처치와 반복 처치 방지 조건을 통과한 유효 PVP 처치, 숨김 검·도끼·활·단검·지팡이 적중 횟수, 61종 어종별 최초 포획·일반 및 전투 단계 보상 flag와 KST 일일 의뢰 마지막 보상일이 있다. 속성 처치는 권위적 처치 subject의 몬스터·속성 태그를 판정하고 기존 속성표 아이콘을 표시한다. 도감 전투 보상은 버프·회복 소모품과 35종 `은린 장막`, 61종 `해연의 작살` 전용 스킬을 포함한다.
+- `codex.ts`: 몬스터·자원·장소·제작법·아이템 공개 snapshot으로 일반 몬스터 153종, 보스 45종, 광맥 18종, 숨김 포함 장소 623곳, 음식/생선 요리 recipe 19종의 전문 도감 엔트리를 만든다. 모든 마스터와 장소 JSON을 등록한 뒤 `initializeCodexData()`로 전체 registry를 교체하며 관리자 장소 저장 뒤에도 재실행한다. 기존 `FishingCollection`은 합치지 않는다.
 - `progress.ts`의 숨은 `security:human_verification_required/failures`는 반복 사냥 사람 확인의 재접속 복원과 운영 실패 기록을 기존 PlayerProgress dirty 저장으로 유지한다.
 - `progress.ts`의 숨은 `profession:blacksmith` flag는 구형 독립 대장장이 데이터를 정식 직업 슬롯으로 이전하는 호환 값이다.
 - `titles.ts`: 레거시 획득 가능 칭호 16종과 신규 사냥·보스·채광·낚시·단조·원소 칭호 12종, 태그 기반 처치/행동 통계와 장착 패시브 정의. 낚시는 성공 10~10,000회 5단계와 도감 완성 칭호를 제공한다. PVP 칭호는 유효 처치만 세어 학살자 100킬에서 몰살자 500킬로 순차 성장한다. `entity:wolf`, `entity:elemental` 등 대상 분류 태그, source 능력치·경험치 modifier와 실제 피해 후 기절·출혈 CombatPipeline hook을 사용한다.

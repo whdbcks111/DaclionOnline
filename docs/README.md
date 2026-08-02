@@ -26,6 +26,7 @@
 | 태그·속성 상성·효과 배율 | [systems/tags-effects.md](systems/tags-effects.md) |
 | 상태효과·행동 제한·지속 피해 | [systems/status-effects.md](systems/status-effects.md) |
 | 이벤트·통계·플래그·스킬 | [systems/progress-skills.md](systems/progress-skills.md) |
+| 몬스터·보스·광물·탐험·요리 전문 도감 | [systems/codex.md](systems/codex.md) |
 | 업적형 칭호·장착 패시브 | [systems/titles.md](systems/titles.md) |
 | 메인·서브·엘리트 직업과 전직 | [systems/careers.md](systems/careers.md) |
 | 파티 초대·HUD·몬스터 경험치 공유 | [systems/party.md](systems/party.md) |
