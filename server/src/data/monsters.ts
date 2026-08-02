@@ -44,18 +44,21 @@ export function defineWorldMonster(data: WorldMonsterData): void {
         ?? (data.tags.includes(GameTags.ENTITY_BOSS) ? MonsterRank.BOSS : MonsterRank.NORMAL);
     const bossNarrative = data.bossNarrative
         ?? (data.tags.includes(GameTags.ENTITY_BOSS) ? createBossNarrative(data.id, data.tags) : undefined);
-    // 명시 프로필로 이전된 마스터만 계산값 전체를 사용한다. 나머지는 기존 전투력을
-    // 바꾸지 않되 역할/체급 메타데이터를 등록해 구간별 이전이 가능하게 유지한다.
+    // 명시 프로필로 이전된 마스터는 기존처럼 계산값 전체를 사용한다.
+    // 레거시 마스터는 authored 전투 성향을 유지하되 최대 생명력만 공용 성장식으로 통일한다.
     const calculatedAttributes = calculateMonsterBaseAttributes({
         level: data.level,
         profile: statProfile,
         rank: statRank,
         weights: statWeights,
-        overrides: { ...authoredAttributes, ...statOverrides },
+        overrides: explicitProfile ? { ...authoredAttributes, ...statOverrides } : undefined,
     });
     defineMonster({
         ...definition,
-        baseAttribute: explicitProfile ? calculatedAttributes : authoredAttributes,
+        baseAttribute: explicitProfile ? calculatedAttributes : {
+            ...authoredAttributes,
+            maxLife: calculatedAttributes.maxLife,
+        },
         statProfile,
         statRank,
         statWeights,

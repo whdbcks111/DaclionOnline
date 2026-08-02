@@ -175,13 +175,16 @@ function formatSeconds(value: number): string {
 }
 
 function printProfiles(profileLevel: number): void {
+    const profiles = analyzeAllBalanceProfiles(profileLevel);
+    const monsterDuration = profiles[0]?.monster.duration ?? 0;
+    const bossDuration = profiles[0]?.boss.duration ?? 0;
     console.log(`\n전투 로테이션 프로파일 · Lv.${profileLevel}`);
-    console.log('조건: 추천 장비 / 동레벨 일반·보스 / 평타 최소 3행동당 1회 / 모든 사용 가능 스킬 / 공유 정신력·쿨다운 / 60초');
-    for (const report of analyzeAllBalanceProfiles(profileLevel)) {
+    console.log(`조건: 추천 장비 / 동레벨 일반·보스 / 평타 최소 3행동당 1회 / 모든 사용 가능 스킬 / 공유 정신력·쿨다운 / 일반 ${monsterDuration}초·보스 ${bossDuration}초`);
+    for (const report of profiles) {
         console.log([
             report.name.padEnd(5),
-            `일반=${report.monster.dps.toFixed(2)}DPS/${formatSeconds(report.monster.simulatedKillSeconds)}`,
-            `보스=${report.boss.dps.toFixed(2)}DPS/${formatSeconds(report.boss.simulatedKillSeconds)}`,
+            `일반(${report.monster.duration}초)=${report.monster.dps.toFixed(2)}DPS/${formatSeconds(report.monster.simulatedKillSeconds)}`,
+            `보스(${report.boss.duration}초)=${report.boss.dps.toFixed(2)}DPS/${formatSeconds(report.boss.simulatedKillSeconds)}`,
             `HP=${report.boss.playerMaxLife.toFixed(0)}:${report.boss.targetMaxLife.toFixed(0)}`,
             `단발=${report.boss.maxOpeningActionName}/${report.boss.maxOpeningActionDamage.toFixed(0)}${report.boss.oneActionKill ? '(한방가능)' : ''}`,
             `반격전=${report.boss.openingBurstDamage.toFixed(0)}${report.boss.killsBeforeCounterattack ? '(처치)' : ''}`,
@@ -199,7 +202,7 @@ function printProfiles(profileLevel: number): void {
             for (const sub of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith']) {
                 if (main === sub) continue;
                 const report = analyzeBalanceProfile(profileLevel, `career:${main}`, `career:${sub}`);
-                console.log(`${report.name.padEnd(8)} 보스=${report.boss.dps.toFixed(2)}DPS/${formatSeconds(report.boss.simulatedKillSeconds)} 단발=${report.boss.maxOpeningActionDamage.toFixed(0)}${report.boss.oneActionKill ? '(한방가능)' : ''} 생존=${report.boss.survivesUntilKill ? 'O' : 'X'}(${formatSeconds(report.boss.effectiveSurvivalSeconds)}) 평타=${(report.boss.basicDamageShare * 100).toFixed(1)}%`);
+                console.log(`${report.name.padEnd(8)} 보스(${report.boss.duration}초)=${report.boss.dps.toFixed(2)}DPS/${formatSeconds(report.boss.simulatedKillSeconds)} 단발=${report.boss.maxOpeningActionDamage.toFixed(0)}${report.boss.oneActionKill ? '(한방가능)' : ''} 생존=${report.boss.survivesUntilKill ? 'O' : 'X'}(${formatSeconds(report.boss.effectiveSurvivalSeconds)}) 평타=${(report.boss.basicDamageShare * 100).toFixed(1)}%`);
             }
         }
     }

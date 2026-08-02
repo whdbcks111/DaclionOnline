@@ -31,8 +31,63 @@ test('같은 레벨에서도 역할과 체급에 따라 일관된 능력치 예�
 
     assert.ok((bruiser.atk ?? 0) > (caster.atk ?? 0));
     assert.ok((caster.magicForce ?? 0) > (bruiser.magicForce ?? 0));
-    assert.ok((boss.maxLife ?? 0) >= (bruiser.maxLife ?? 0) * 7);
+    assert.ok((boss.maxLife ?? 0) > (bruiser.maxLife ?? 0) * 6);
     assert.ok((boss.attackSpeed ?? 0) < (bruiser.attackSpeed ?? 0));
+});
+
+test('표준 일반·보스 생명력은 고레벨 폭증을 제한하는 공용 곡선을 따른다', () => {
+    const expected = [
+        { level: 20, normal: 3_416, boss: 30_192 },
+        { level: 50, normal: 14_300, boss: 116_688 },
+        { level: 100, normal: 49_800, boss: 343_620 },
+        { level: 200, normal: 191_300, boss: 1_078_932 },
+        { level: 500, normal: 1_287_800, boss: 6_389_469 },
+        { level: 1000, normal: 6_075_300, boss: 29_414_076 },
+    ] as const;
+
+    for (const sample of expected) {
+        const normal = calculateMonsterBaseAttributes({
+            level: sample.level,
+            profile: MonsterStatProfile.BALANCED,
+            rank: MonsterRank.NORMAL,
+        }).maxLife;
+        const boss = calculateMonsterBaseAttributes({
+            level: sample.level,
+            profile: MonsterStatProfile.BALANCED,
+            rank: MonsterRank.BOSS,
+        }).maxLife;
+        const fieldBoss = calculateMonsterBaseAttributes({
+            level: sample.level,
+            profile: MonsterStatProfile.BALANCED,
+            rank: MonsterRank.FIELD_BOSS,
+        }).maxLife;
+
+        assert.equal(normal, sample.normal, `Lv.${sample.level} 일반`);
+        assert.equal(boss, sample.boss, `Lv.${sample.level} 보스`);
+        assert.ok((fieldBoss ?? 0) < (boss ?? 0), `Lv.${sample.level} 필드 보스 < 보스`);
+    }
+
+    assert.ok(expected.at(-1)!.boss < 40_000_000);
+    assert.ok(expected.at(-1)!.boss / expected.at(-2)!.boss < 5);
+});
+
+test('일반·필드 보스·보스 생명력은 Lv.1~1000에서 단조 증가한다', () => {
+    const previous = new Map<MonsterRank, number>();
+    for (let level = 1; level <= 1000; level++) {
+        for (const rank of [MonsterRank.NORMAL, MonsterRank.FIELD_BOSS, MonsterRank.BOSS]) {
+            const life = calculateMonsterBaseAttributes({
+                level,
+                profile: MonsterStatProfile.BALANCED,
+                rank,
+            }).maxLife ?? 0;
+            assert.ok(life > (previous.get(rank) ?? 0), `${rank.label} Lv.${level}`);
+            previous.set(rank, life);
+        }
+        assert.ok(
+            (previous.get(MonsterRank.FIELD_BOSS) ?? 0) < (previous.get(MonsterRank.BOSS) ?? 0),
+            `Lv.${level} 필드 보스 < 보스`,
+        );
+    }
 });
 
 test('고유 가중치와 최종 오버라이드는 프로필을 복제하지 않고 개체 특성을 만든다', () => {

@@ -64,7 +64,11 @@ import {
     getPrimordialSeedProtectionMultiplier,
 } from './bossPatterns.js';
 import { GameTags } from '../../../shared/tags.js';
-import { MonsterRank, MonsterStatProfile } from '../models/MonsterStats.js';
+import {
+    calculateMonsterBaseAttributes,
+    MonsterRank,
+    MonsterStatProfile,
+} from '../models/MonsterStats.js';
 import { StatusEffectType } from '../models/StatusEffect.js';
 
 const baseLocations = JSON.parse(
@@ -396,6 +400,26 @@ test('1~1000레벨 월드는 모든 속성을 관찰 가능하고 Lv.200 이후 
         'property:electric', 'property:stone', 'property:dark', 'property:light', 'property:undead',
         'property:holy', 'property:insect', 'property:metal', 'property:earth',
     ]) assert.ok(monsterTags.has(tag), tag);
+});
+
+test('모든 월드 몬스터의 생명력은 저장된 프로필·체급·가중치 계산값과 일치한다', () => {
+    for (const monster of getAllMonsterData()) {
+        assert.ok(monster.statProfile, `${monster.id}: statProfile`);
+        assert.ok(monster.statRank, `${monster.id}: statRank`);
+        const expected = calculateMonsterBaseAttributes({
+            level: monster.level,
+            profile: monster.statProfile!,
+            rank: monster.statRank!,
+            weights: monster.statWeights,
+        }).maxLife;
+        assert.equal(monster.baseAttribute.maxLife, expected, monster.id);
+    }
+
+    const legacy = getMonsterData('silverweb_briar_wolf');
+    assert.notEqual(legacy?.baseAttribute.maxLife, 120);
+    assert.equal(legacy?.baseAttribute.atk, 24);
+    assert.equal(legacy?.baseAttribute.def, 7);
+    assert.equal(legacy?.baseAttribute.speed, 1.55);
 });
 
 test('성장 구간 보스는 Lv.500까지 30레벨, 이후 50레벨 간격이며 일반몹보다 높은 경험치를 준다', () => {

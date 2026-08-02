@@ -30,6 +30,10 @@ test('projected profile uses the same eight stat points earned per level', () =>
     assert.equal(total, (50 - 1) * 8);
 });
 
+test('밸런스 프로필은 Lv.1000까지의 고레벨 회귀 구간을 포함한다', () => {
+    assert.deepEqual(BALANCE_PROFILE_LEVELS, [20, 50, 75, 100, 140, 180, 200, 350, 500, 750, 1000]);
+});
+
 test('projected profiles follow the intended primary stat order for every first job', () => {
     const warrior = createBalanceScenario(200, 'career:warrior').stats;
     const archer = createBalanceScenario(200, 'career:archer').stats;
@@ -331,7 +335,7 @@ test('opening burst reports a real one-action kill before the target can counter
     scenario.entity.attribute.addModifier({
         attribute: AttributeType.ATK.key,
         op: 'multiply',
-        value: 100,
+        value: 200,
         source: 'test:nuking',
     });
     const report = analyzeCombatRotation(scenario);
@@ -392,14 +396,17 @@ test('전투 로테이션은 추천 무기로 실제 사용할 수 있는 스킬
     assert.equal(warrior.skills.some(skill => skill.skillId === 'power_strike'), true);
 });
 
-test('advanced first-job profiles stay within the measured 1.55x boss DPS band', () => {
+test('advanced first-job 60-second damage baselines stay within the measured 1.55x boss DPS band', () => {
     for (const level of [75, 100, 140, 180]) {
-        const profiles = analyzeAllBalanceProfiles(level);
-        const bossDps = profiles.map(profile => profile.boss.dps);
+        const profiles = ['warrior', 'archer', 'assassin', 'mage', 'blacksmith'].map(job =>
+            analyzeCombatRotation(createBalanceScenario(
+                level, `career:${job}`, undefined, BalanceEncounterType.BOSS,
+            ), 60));
+        const bossDps = profiles.map(profile => profile.dps);
         const spread = Math.max(...bossDps) / Math.min(...bossDps);
         assert.ok(spread <= 1.55, `Lv.${level} spread=${spread.toFixed(3)}`);
         assert.ok(profiles.every(profile =>
-            profile.boss.basicDamageShare >= 0.15 && profile.boss.basicDamageShare <= 0.75));
+            profile.basicDamageShare >= 0.15 && profile.basicDamageShare <= 0.75));
     }
 });
 
@@ -463,6 +470,38 @@ test('boss profile normalizes a real boss archetype to the requested level', () 
     assert.notEqual(profile.boss.targetSourceLevel, 100);
     assert.equal(profile.boss.targetNormalized, true);
     assert.ok(profile.boss.targetMaxLife > profile.monster.targetMaxLife);
+});
+
+test('고레벨 대상 투영은 몬스터 공식과 authored 보정만 사용한다', () => {
+    const jobIds = ['career:warrior', 'career:archer', 'career:assassin', 'career:mage', 'career:blacksmith'];
+    const monsters = jobIds.map(jobId => createBalanceScenario(
+        1000, jobId, undefined, BalanceEncounterType.MONSTER,
+    ));
+    const bosses = jobIds.map(jobId => createBalanceScenario(
+        1000, jobId, undefined, BalanceEncounterType.BOSS,
+    ));
+
+    assert.ok(monsters.every(scenario => scenario.targetDataId === 'horizon_reaper'));
+    assert.ok(bosses.every(scenario => scenario.targetDataId === 'last_constellation'));
+    assert.deepEqual(new Set(monsters.map(scenario => scenario.target.maxLife)), new Set([4_738_734]));
+    assert.deepEqual(new Set(bosses.map(scenario => scenario.target.maxLife)), new Set([30_178_842]));
+});
+
+test('일반전은 30초, 보스전은 240초 창에서 동레벨 전투 템포를 진단한다', () => {
+    for (const level of BALANCE_PROFILE_LEVELS) {
+        const profiles = analyzeAllBalanceProfiles(level);
+        assert.ok(profiles.every(profile => profile.monster.duration === 30));
+        assert.ok(profiles.every(profile => profile.boss.duration === 240));
+        assert.ok(profiles.every(profile => profile.monster.simulatedKillSeconds >= 10));
+
+        if (level < 1000) {
+            const bossKillSeconds = profiles
+                .map(profile => profile.boss.simulatedKillSeconds)
+                .sort((left, right) => left - right);
+            const median = bossKillSeconds[Math.floor(bossKillSeconds.length / 2)]!;
+            assert.ok(median >= 120 && median <= 180, `Lv.${level} 보스 중앙값 ${median.toFixed(1)}초`);
+        }
+    }
 });
 
 test('elite profile starts its technique at level one and excludes inherited skills incompatible with its loadout', () => {

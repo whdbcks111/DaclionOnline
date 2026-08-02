@@ -1,7 +1,7 @@
 import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import { AttributeType } from './Attribute.js';
-import type { AttributeModifier } from './Attribute.js';
+import type { AttributeModifier, AttributeRecord } from './Attribute.js';
 import { calculateEvasionChance, calculateFinalDamage } from './Combat.js';
 import { DEFAULT_PLAYER_BASE_ATTRIBUTE } from './PlayerDefaults.js';
 import { getAllJobs, getJob, isJobDescendant, resolveEliteJob, type JobData } from './Job.js';
@@ -29,11 +29,16 @@ import {
     calculateProjectileEvasionSpeed,
     getProjectileData,
 } from './Projectile.js';
+import { calculateMonsterBaseAttributes } from './MonsterStats.js';
 
-const BALANCE_WINDOW_SECONDS = 60;
+const BALANCE_SKILL_WINDOW_SECONDS = 60;
+const BALANCE_MONSTER_WINDOW_SECONDS = 30;
+const BALANCE_BOSS_WINDOW_SECONDS = 240;
 const BALANCE_ACTION_FLOOR_SECONDS = 0.45;
-/** 1차 성장기와 2차 전직 경계를 모두 포함하는 공용 밸런스 회귀 구간. */
-export const BALANCE_PROFILE_LEVELS = Object.freeze([20, 50, 75, 100, 140, 180, 200] as const);
+/** 1차 성장기·2차 전직 경계·Lv.1000 후반기를 포함하는 공용 밸런스 회귀 구간. */
+export const BALANCE_PROFILE_LEVELS = Object.freeze([
+    20, 50, 75, 100, 140, 180, 200, 350, 500, 750, 1000,
+] as const);
 const PROJECTED_SKILL_UNLOCK_LEVELS = new Map<string, number>([
     ['power_strike', 10],
     ['fireball', 40],
@@ -87,6 +92,18 @@ class BalanceEntity extends Entity {
         tags: readonly TagId[] = [],
     ) {
         super(level, 0, 'balance:void', DEFAULT_PLAYER_BASE_ATTRIBUTE, Equipment.createEmpty(), stats, tags);
+    }
+    get name(): string { return this.balanceName; }
+}
+
+class BalanceTargetEntity extends Entity {
+    constructor(
+        readonly balanceName: string,
+        level: number,
+        baseAttribute: Partial<AttributeRecord>,
+        tags: readonly TagId[],
+    ) {
+        super(level, 0, 'balance:void', baseAttribute, Equipment.createEmpty(), undefined, tags);
     }
     get name(): string { return this.balanceName; }
 }
@@ -377,9 +394,9 @@ export function analyzeSkillBalance(
     const affinityDamage = applyTagEffectValue(defendedDamage, affinitySource, scenario.target).value;
     const expectedDamagePerTarget = affinityDamage * hitCount * (1 - evasion);
     const expectedTotalDamage = expectedDamagePerTarget * targetCount;
-    const cooldownLimitedCasts = cooldown > 0 ? Math.ceil(BALANCE_WINDOW_SECONDS / cooldown) : 1;
+    const cooldownLimitedCasts = cooldown > 0 ? Math.ceil(BALANCE_SKILL_WINDOW_SECONDS / cooldown) : 1;
     const availableMentality = scenario.entity.maxMentality
-        + scenario.entity.attribute.get(AttributeType.MENTALITY_REGEN) * BALANCE_WINDOW_SECONDS;
+        + scenario.entity.attribute.get(AttributeType.MENTALITY_REGEN) * BALANCE_SKILL_WINDOW_SECONDS;
     const resourceLimitedCasts = manaCost > 0 ? Math.floor(availableMentality / manaCost) : cooldownLimitedCasts;
     const sustainableCasts = Math.max(0, Math.min(cooldownLimitedCasts, resourceLimitedCasts));
     const notes = [...(balance?.notes ?? [])];
@@ -469,8 +486,12 @@ export function analyzeJobBalance(level: number, mainJobId: string, subJobId?: s
 }
 
 /** 한 전투의 시간·정신력·쿨다운을 모든 스킬과 평타가 공유하는 결정론적 로테이션 진단. */
-export function analyzeCombatRotation(scenario: BalanceScenario, duration = BALANCE_WINDOW_SECONDS): CombatRotationReport {
-    const window = Math.max(5, Math.min(600, finiteNonNegative(duration) || BALANCE_WINDOW_SECONDS));
+export function analyzeCombatRotation(
+    scenario: BalanceScenario,
+    duration = scenario.encounter.boss ? BALANCE_BOSS_WINDOW_SECONDS : BALANCE_MONSTER_WINDOW_SECONDS,
+): CombatRotationReport {
+    const fallbackWindow = scenario.encounter.boss ? BALANCE_BOSS_WINDOW_SECONDS : BALANCE_MONSTER_WINDOW_SECONDS;
+    const window = Math.max(5, Math.min(600, finiteNonNegative(duration) || fallbackWindow));
     const entries = getRotationSkills(scenario).map(data => {
         const level = projectSkillLevel(scenario.level, data, scenario);
         return {
@@ -964,11 +985,8 @@ const PROJECTED_WEAPONS = Object.freeze({
     ],
 } satisfies Record<string, readonly { level: number; id: string }[]>);
 
-const COMBAT_ATTRIBUTE_TYPES = Object.freeze([
+const MONSTER_PROJECTED_ATTRIBUTE_TYPES = Object.freeze([
     AttributeType.MAX_LIFE,
-    AttributeType.MAX_MENTALITY,
-    AttributeType.LIFE_REGEN,
-    AttributeType.MENTALITY_REGEN,
     AttributeType.ATK,
     AttributeType.MAGIC_FORCE,
     AttributeType.DEF,
@@ -1018,20 +1036,31 @@ function createEncounterTarget(level: number, encounter: BalanceEncounterType): 
     const native = new Monster(data.id, 'balance:void');
     if (data.level === level) return { target: native, data };
 
-    const nativeBaseline = new BalanceEntity('원본 레벨 표준 대상', data.level, createProjectedStats(data.level, DEFAULT_ALLOCATION));
-    const target = new BalanceEntity(
+    if (!data.statProfile || !data.statRank) {
+        throw new Error(`밸런스 대상의 몬스터 스탯 메타데이터가 없습니다: ${data.id}`);
+    }
+    const calculation = {
+        profile: data.statProfile,
+        rank: data.statRank,
+        weights: data.statWeights,
+    };
+    const nativeCalculated = calculateMonsterBaseAttributes({ level: data.level, ...calculation });
+    const targetCalculated = calculateMonsterBaseAttributes({ level, ...calculation });
+    const projectedAttributes: Partial<AttributeRecord> = { ...native.attribute.base };
+    for (const type of MONSTER_PROJECTED_ATTRIBUTE_TYPES) {
+        const nativeBudget = nativeCalculated[type.key] ?? 0;
+        const targetBudget = targetCalculated[type.key] ?? 0;
+        const nativeValue = native.attribute.get(type);
+        projectedAttributes[type.key] = nativeBudget > 0
+            ? targetBudget * Math.max(0, nativeValue / nativeBudget)
+            : nativeValue;
+    }
+    const target = new BalanceTargetEntity(
         `Lv.${level} 환산 ${data.name}`,
         level,
-        createProjectedStats(level, DEFAULT_ALLOCATION),
+        projectedAttributes,
         native.tags.values(),
     );
-    for (const type of COMBAT_ATTRIBUTE_TYPES) {
-        const baseline = nativeBaseline.attribute.get(type);
-        const ratio = baseline > 0 ? native.attribute.get(type) / baseline : 1;
-        const current = target.attribute.get(type);
-        const desired = current * Math.max(0, ratio);
-        target.attribute.addModifier({ attribute: type.key, op: 'add', value: desired - current, source: 'balance:target-normalization' });
-    }
     return { target, data };
 }
 

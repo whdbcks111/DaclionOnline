@@ -174,7 +174,7 @@ export class MonsterRank {
         critical: 1.06,
     });
     static readonly FIELD_BOSS = new MonsterRank('field-boss', '필드 보스', {
-        life: level => 4 + level / 90,
+        life: level => 4 + 2 / (1 + level / 150),
         offense: 1.16,
         defense: 1.12,
         penetration: 1.12,
@@ -183,7 +183,7 @@ export class MonsterRank {
         critical: 1.08,
     });
     static readonly BOSS = new MonsterRank('boss', '보스', {
-        life: level => 5 + level / 35,
+        life: level => 4.8 + 4.2 / (1 + (level / 100) ** 2),
         offense: 1.2,
         defense: 1.16,
         penetration: 1.15,
@@ -292,7 +292,7 @@ function getLevelStatBudget(level: number): Record<MonsterCombatStatKey, number>
     const defense = 0.9 * level + 0.007 * level ** 2;
     const penetration = Math.max(0, (level - 25) * 0.55);
     return {
-        maxLife: 8 + 17 * level + 0.005 * level ** 3,
+        maxLife: 300 + 75 * level + 4 * level ** 2 + 0.002 * level ** 3,
         atk: offense,
         magicForce: offense,
         def: defense,
