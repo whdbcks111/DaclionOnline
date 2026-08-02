@@ -8,7 +8,7 @@
 - `data/items.ts`가 `defineItem()`으로 마스터 데이터를 프로세스 레지스트리에 등록한다.
 - DB `Item`과 런타임 `Item` 객체는 플레이어가 실제 보유한 수량·내구도와 인스턴스 metadata delta를 표현한다.
 - 장착된 항목은 DB `Equipment`와 런타임 `Equipment` 슬롯 맵에 별도로 존재한다.
-- 주무기를 소모하는 공격과 직접 피격으로 각각 무기·머리/몸통/다리/발 방어구 내구도가 감소한다. 내구도가 0이 되면 장비와 modifier를 즉시 제거하고, 파괴된 인스턴스 이름을 본인 채팅 메시지와 notification에 함께 표시한다.
+- 주무기를 소모하는 공격은 무기 내구도를 감소시킨다. 직접 피격은 보호막을 뚫고 실제 생명력 피해가 생겼을 때만 방어구 손상을 판정한다. 일반 공격은 `clamp(0.10 + 1.20 × 실제 피해/최대 생명력, 0.10, 0.70)` 확률로 장착 중인 몸통 40·다리 25·머리 20·발 15 가중치 중 한 부위만 감소시키며, 없는 부위는 남은 후보끼리 재정규화한다. 명시적인 전 부위 손상 특수 공격만 모든 방어구를 한 번씩 감소시킨다. 내구도가 0이 되면 장비와 modifier를 즉시 제거하고, 파괴된 인스턴스 이름을 본인 채팅 메시지와 notification에 함께 표시한다.
 - 내구도가 있는 마스터 아이템의 최대 내구도는 이전 수치 대비 1.5배로 조정한다. 기존 인스턴스의 현재 내구도는 임의로 회복하지 않으며 새 최대값까지만 수리할 수 있다.
 
 - Item 인스턴스의 추가 태그는 DB JSON에 저장되며 정의 태그와 합쳐 조회한다.
@@ -157,6 +157,7 @@ HP·MP 포션과 `apply_status_effect` 영약·회복약은 음용 성공 시 �
 - `applyOwnerEffects`, `updateOwnerEffects`, `triggerOwnerDefeatedEntity`, `triggerDamageTakenEffects`, `tryPreventFatalDamage`: 장착자의 경험치 배율과 처치·피격·지속·치명적 피해 효과를 내부 슬롯 노출 없이 실행한다.
 - `setItemMetadata/resetItemMetadata`: 장착 아이템의 delta를 변경하고 해당 슬롯을 dirty로 표시한다.
 - `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `decreaseItemDurability`: 장착 아이템 내구도를 변경하고 해당 슬롯을 dirty로 표시한다.
+- `ArmorDurabilityDamageMode.values/fromKey/fromInput`과 `damageArmorDurability(lifeDamage, maxLife, mode, random?)`: 일반 `SINGLE` 확률·가중 선택과 명시적 특수 공격용 `ALL`을 적용하고, 손상 슬롯·직전/현재 내구도·파괴 여부의 불변 snapshot을 반환한다. 확률·부위 난수는 테스트에서 각각 주입할 수 있다.
 - `save`: 슬롯별 state와 스택 `count`를 Prisma에 반영한다. DB ID가 없는 신규 슬롯은 `(playerId, slot, slotIndex)` upsert로 저장해 겹친 저장이나 이전 성공 뒤 재시도에도 유니크 오류를 내지 않는다.
 
 장비 modifier의 `source`는 데이터 정의 값 대신 실제 슬롯 기반 source로 치환되어, 특정 장비 해제 시 정확히 제거된다.
@@ -176,6 +177,8 @@ HP·MP 포션과 `apply_status_effect` 영약·회복약은 음용 성공 시 �
 은빛그물 숲 사냥꾼 거점의 `silverweb_hunter_store`는 사냥활·화살·해독제를 판매하고 `wolf_pelt`, `silverweb_silk`, `venom_gland`를 희귀도에 따라 매입한다.
 
 황혼왕릉 마지막 등불 야영지의 `twilight_memorial_store`는 묘지기 향약을 마스터 재고 24개·60초 재입고로 공급하고 Lv.30~50 성장 구간용 `맹세철 장검`, `진혼 시위`, `애도목 지팡이`, `묘문 수호방패`를 판매한다. 풍화된 뼛조각·묘지기 천·깨진 맹세 휘장·애도의 백합·혼불 조각을 매입하며 같은 재료는 자동 발견 조합법에도 사용된다. 안개파도·카이로스·아셴바흐·카미하라·라그나벨·아오이의 안전 거점도 각각 독립된 향약 재고 12개와 60초 재입고를 제공한다. 5인 공유 공급 보정 뒤 실제 최대 재고는 황혼왕릉 120개, 각 후속 거점 60개이고 실제 재입고 간격은 12초다.
+
+`적대 귀환 두루마리`는 사용 handler가 없는 자동 전용 stackable 아이템이다. 적대 구역 사망이 처음 확정될 때만 한 장을 소모하고 지역 위험도와 악명 가산까지 반영된 전체 부활 대기를 절반으로 줄인다. Lv.40~500 성장 상점 12곳은 마스터 재고 16개·90초 재입고로 공급해 실제 공유 재고 80개·18초 재입고를 제공하고, Lv.550~1000 승천 전초 10곳은 마스터 재고 20개·75초로 실제 100개·15초를 제공한다. 카이로스 잔해호 이후 후반 낚시터 8곳의 희귀 보물 표에서도 한두 장을 얻을 수 있다.
 
 유리모래 대상단 야영지의 `glassdune_caravan_store`는 대추야자·물통·해독제·화살과 사막 직업 장비 다섯 종을 제한 재고로 판매하고, 유리모래 권역 소재 다섯 종을 희귀도에 따라 매입한다. 같은 소재는 여섯 자동 발견 조합법과 성물함 보상에도 재사용되어 사냥·채집·제작·상점 회수 경로를 이룬다.
 

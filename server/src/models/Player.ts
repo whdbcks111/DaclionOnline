@@ -50,11 +50,13 @@ import TitleBook from './Title.js';
 import { evaluatePvpKillCredit, recordPvpRespawn } from './PvpKillCredit.js';
 import { ActionType } from './Action.js';
 import HudPresetBook from './HudPreset.js';
+import { RegionRiskPolicy } from './RegionRisk.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
 export const LEVEL_SURVIVAL_CAPACITY_PER_LEVEL = 1;
 export const NEWCOMER_PLAY_TIME_SECONDS = 24 * 60 * 60;
 export const NEWCOMER_MAX_LEVEL = 30;
+export const HOSTILE_RETURN_SCROLL_ITEM_DATA_ID = 'hostile_return_scroll';
 const PLAYER_LEVEL_SURVIVAL_ATTRIBUTE_SOURCE = 'level:survival-capacity';
 
 export const PlayerRuntimeProgressIds = Object.freeze({
@@ -633,11 +635,20 @@ export default class Player extends Entity {
     }
 
     override onDeath(): void {
+        // 저장된 사망 상태나 같은 틱의 중복 호출이 자동 소모품을 다시 쓰지 않게 한다.
+        if (this.isDead) return;
         super.onDeath();
+        const location = getLocation(this.locationId);
+        const originalDeathTimer = this.deathTimer;
+        const usedHostileReturnScroll = location?.riskPolicy === RegionRiskPolicy.HOSTILE
+            && this.inventory.removeMatching(
+                item => item.itemDataId === HOSTILE_RETURN_SCROLL_ITEM_DATA_ID,
+                1,
+            ) === 1;
+        if (usedHostileReturnScroll) this.deathTimer = originalDeathTimer / 2;
         cancelNavigation(this, false);
         this._deathExpiresAtMs = Date.now() + this.deathTimer * 1_000;
         this.persistDeathState();
-        const location = getLocation(this.locationId);
         const killer = this.lastDamageCause?.causeEntity?.attackOwner;
         if (killer instanceof Player && killer !== this) {
             const credit = evaluatePvpKillCredit(killer, this);
@@ -678,6 +689,11 @@ export default class Player extends Entity {
             message.color('#dc5868', b => b.text(
                 `악명 패널티: 카르마 -${penalty.karmaReduced.toFixed(1)}`
                 + ` · 부활 대기 +${Math.ceil(penalty.karmaRespawnSeconds / 60)}분\n`,
+            ));
+        }
+        if (usedHostileReturnScroll) {
+            message.color('gold', b => b.text(
+                `적대 귀환 두루마리 자동 소모: ${originalDeathTimer.toFixed(0)}초 → ${this.deathTimer.toFixed(0)}초\n`,
             ));
         }
         message.text(`${this.deathTimer.toFixed(0)}초 후 리스폰됩니다.`);

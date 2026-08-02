@@ -1135,6 +1135,23 @@ defineItem({
 });
 
 defineItem({
+    id: 'hostile_return_scroll',
+    name: '적대 귀환 두루마리',
+    description: '적대 구역에서 사망하면 자동으로 1개를 소모해 지역 위험도와 악명까지 반영된 부활 대기시간을 절반으로 줄인다. 직접 사용할 수는 없다.',
+    image: 'items/hostile_return_scroll',
+    category: '자동 소모품',
+    weight: 0.1,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE],
+});
+
+defineItem({
     id: 'oathiron_sword',
     name: '맹세철 장검',
     description: '깨진 기사 휘장을 다시 접어 벼린 장검. 정면의 갑주를 파고드는 데 알맞다.',

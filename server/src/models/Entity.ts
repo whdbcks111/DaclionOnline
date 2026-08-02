@@ -1,6 +1,6 @@
 import Attribute, { AttributeType } from "./Attribute.js";
 import type { AttributeRecord } from "./Attribute.js";
-import Equipment, { EquipSlotType } from "./Equipment.js";
+import Equipment, { ArmorDurabilityDamageMode, EquipSlotType } from "./Equipment.js";
 import Stat from "./Stat.js";
 import type { StatRecord } from "./Stat.js";
 import {
@@ -66,6 +66,8 @@ export interface AttackOptions {
     criticalDamage?: number;
     /** 생략하면 물리 직접 공격에서만 주무기 내구도를 소모한다. */
     consumeMainHandDurability?: boolean;
+    /** 생략하면 실제 생명력 피해 시 SINGLE, 명시적 특수 공격만 ALL을 사용한다. */
+    armorDurabilityDamageMode?: ArmorDurabilityDamageMode;
     /** true이면 대상의 이동속도와 행동 가능 여부에 관계없이 회피할 수 없다. */
     unavoidable?: boolean;
     /** true이면 치명타·속성 상성·방어·관통을 적용하지 않고 지정한 피해량을 그대로 준다. */
@@ -101,6 +103,8 @@ export interface DamageCause {
     effectSource?: TagEffectReadable;
     /** 자원 경도 판정에 사용할 공격별 채굴력 override. */
     miningPower?: number;
+    /** AttackOptions에서 확정한 방어구 내구도 손상 범위. */
+    armorDurabilityDamageMode?: ArmorDurabilityDamageMode;
 }
 
 export interface HealingResult {
@@ -920,12 +924,16 @@ export default abstract class Entity implements TagReadable {
         const remainingLife = this.life;
 
         if (cause) this.lastDamageCause = cause;
-        if (cause?.type === 'attack' && finalDamage > 0) {
-            const brokenArmor = this.equipment.damageArmorDurability();
+        if (cause?.type === 'attack' && lifeDamage > 0) {
+            const damagedArmor = this.equipment.damageArmorDurability(
+                lifeDamage,
+                this.maxLife,
+                cause.armorDurabilityDamageMode,
+            );
             const userId = this.playerUserId;
             if (userId !== undefined) {
-                for (const armor of brokenArmor) {
-                    const message = `${armor.name}의 내구도가 다해 파괴되었습니다.`;
+                for (const armor of damagedArmor.filter(snapshot => snapshot.broken)) {
+                    const message = `${armor.itemName}의 내구도가 다해 파괴되었습니다.`;
                     sendBotMessageToUser(userId, chat()
                         .color('red', builder => builder.weight('bold', nested => nested.text('[ 장비 파괴 ]')))
                         .text(`\n${message}`)
@@ -1119,6 +1127,7 @@ export default abstract class Entity implements TagReadable {
             fixedDamage: combatOptions.fixedDamage,
             effectSource,
             miningPower: combatOptions.miningPower,
+            armorDurabilityDamageMode: combatOptions.armorDurabilityDamageMode,
         });
         combat.result = damageResult;
         runCombatStage(CombatStage.AFTER_DAMAGE, combat);

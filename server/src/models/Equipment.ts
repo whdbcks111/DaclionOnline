@@ -11,6 +11,76 @@ import logger from '../utils/logger.js';
 /** 장비 슬롯 키 */
 export type EquipSlot = 'head' | 'body' | 'legs' | 'feet' | 'accessory' | 'mainHand' | 'offHand' | 'bag';
 
+export type ArmorDurabilityDamageModeKey = 'single' | 'all';
+
+/** 방어구 내구도 손상 범위 — 일반 공격은 SINGLE, 명시적 특수 공격만 ALL을 사용한다. */
+export class ArmorDurabilityDamageMode {
+    private static readonly all: ArmorDurabilityDamageMode[] = [];
+
+    static readonly SINGLE = new ArmorDurabilityDamageMode(
+        'single', '단일 부위', false, ['단일', '한부위', '일반'],
+    );
+    static readonly ALL = new ArmorDurabilityDamageMode(
+        'all', '전 부위', true, ['전체', '전부위', '특수'],
+    );
+
+    private constructor(
+        readonly key: ArmorDurabilityDamageModeKey,
+        readonly label: string,
+        /** true인 모드는 AttackOptions에서 명시한 공격에만 적용한다. */
+        readonly explicitOnly: boolean,
+        readonly aliases: readonly string[],
+    ) {
+        ArmorDurabilityDamageMode.all.push(this);
+    }
+
+    static values(): readonly ArmorDurabilityDamageMode[] { return [...ArmorDurabilityDamageMode.all]; }
+
+    static fromKey(key: string): ArmorDurabilityDamageMode | undefined {
+        const normalized = key.trim().toLowerCase();
+        return ArmorDurabilityDamageMode.all.find(mode => mode.key === normalized);
+    }
+
+    static fromInput(input: string): ArmorDurabilityDamageMode | undefined {
+        const normalized = input.trim().toLocaleLowerCase('ko-KR');
+        return ArmorDurabilityDamageMode.all.find(mode => mode.key === normalized
+            || mode.label.toLocaleLowerCase('ko-KR') === normalized
+            || mode.aliases.some(alias => alias.toLocaleLowerCase('ko-KR') === normalized));
+    }
+
+    toString(): string { return this.key; }
+}
+
+export interface ArmorDurabilityDamageRandom {
+    /** 손상 확률 판정용 0~1 난수. */
+    readonly chance: () => number;
+    /** 가중치 부위 선정용 0~1 난수. */
+    readonly slot: () => number;
+}
+
+export interface ArmorDurabilityDamageSnapshot {
+    readonly slot: EquipSlot;
+    readonly slotIndex: number;
+    readonly itemDataId: string;
+    readonly itemName: string;
+    readonly previousDurability: number;
+    readonly durability: number;
+    readonly broken: boolean;
+}
+
+const DEFAULT_ARMOR_DURABILITY_DAMAGE_RANDOM: ArmorDurabilityDamageRandom = Object.freeze({
+    chance: () => Math.random(),
+    slot: () => Math.random(),
+});
+
+/** 실제 생명력 피해 비율을 방어구 단일 부위 손상 확률 10~70%로 환산한다. */
+export function calculateArmorDurabilityDamageChance(lifeDamage: number, maxLife: number): number {
+    const ratio = Number.isFinite(lifeDamage) && Number.isFinite(maxLife) && maxLife > 0
+        ? Math.max(0, lifeDamage) / maxLife
+        : 0;
+    return Math.max(0.1, Math.min(0.7, 0.1 + 1.2 * ratio));
+}
+
 /** 장비 슬롯 종류 — Java 클래스 열거형 패턴 */
 export class EquipSlotType {
     /** @internal 자기 등록용 레지스트리. 인스턴스 선언보다 먼저 초기화되어야 함 */
@@ -55,6 +125,17 @@ export class EquipSlotType {
     }
 
     toString(): string { return this.key }
+}
+
+const ARMOR_DURABILITY_SLOT_WEIGHTS = Object.freeze([
+    Object.freeze({ slot: EquipSlotType.BODY, weight: 40 }),
+    Object.freeze({ slot: EquipSlotType.LEGS, weight: 25 }),
+    Object.freeze({ slot: EquipSlotType.HEAD, weight: 20 }),
+    Object.freeze({ slot: EquipSlotType.FEET, weight: 15 }),
+] as const);
+
+function normalizeArmorDurabilityRandom(value: number, fallback: number): number {
+    return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : fallback;
 }
 
 /** 슬롯별 최대 장착 수 (호환성 유지) */
@@ -217,24 +298,66 @@ export default class Equipment implements TagReadable {
     }
 
     /**
-     * 직접 피격 한 번에 내구도가 있는 방어구를 감소시키고 파괴된 아이템을 반환한다.
-     * 공격 계산 계층은 슬롯 Map을 직접 순회하지 않고 이 API만 사용한다.
+     * 실제 생명력 피해가 발생한 피격의 방어구 내구도를 손상시킨다.
+     * SINGLE은 피해 비율 확률과 부위 가중치를, ALL은 명시적 특수 공격의 전 부위 손상을 사용한다.
+     * 공격 계산 계층은 슬롯 Map을 직접 순회하지 않고 이 API의 불변 결과만 사용한다.
      */
-    damageArmorDurability(amount = 1): readonly Item[] {
-        if (!Number.isFinite(amount) || amount <= 0) return [];
-        const broken: Item[] = [];
-        const armorSlots = [
-            EquipSlotType.HEAD,
-            EquipSlotType.BODY,
-            EquipSlotType.LEGS,
-            EquipSlotType.FEET,
-        ] as const;
-        for (const slot of armorSlots) {
+    damageArmorDurability(
+        lifeDamage: number,
+        maxLife: number,
+        mode: ArmorDurabilityDamageMode = ArmorDurabilityDamageMode.SINGLE,
+        random: ArmorDurabilityDamageRandom = DEFAULT_ARMOR_DURABILITY_DAMAGE_RANDOM,
+    ): readonly ArmorDurabilityDamageSnapshot[] {
+        if (!Number.isFinite(lifeDamage) || lifeDamage <= 0) return Object.freeze([]);
+
+        const candidates: Array<{
+            slot: EquipSlotType;
+            slotIndex: number;
+            item: Item;
+            weight: number;
+            durability: number;
+        }> = [];
+        for (const { slot, weight } of ARMOR_DURABILITY_SLOT_WEIGHTS) {
             const item = this.getEquipped(slot.key);
-            if (!item || item.durability === null) continue;
-            if (item.decreaseDurability(amount) === 0) broken.push(item);
+            const durability = item?.durability;
+            if (!item || durability === null || durability === undefined || durability <= 0) continue;
+            candidates.push({ slot, slotIndex: 0, item, weight, durability });
         }
-        return broken;
+        if (candidates.length === 0) return Object.freeze([]);
+
+        const resolvedMode = mode === ArmorDurabilityDamageMode.ALL
+            ? ArmorDurabilityDamageMode.ALL
+            : ArmorDurabilityDamageMode.SINGLE;
+        let damagedCandidates = candidates;
+        if (resolvedMode === ArmorDurabilityDamageMode.SINGLE) {
+            const chance = calculateArmorDurabilityDamageChance(lifeDamage, maxLife);
+            const chanceRoll = normalizeArmorDurabilityRandom(random.chance(), 1);
+            if (chanceRoll >= chance) return Object.freeze([]);
+
+            const totalWeight = candidates.reduce((sum, candidate) => sum + candidate.weight, 0);
+            const weightedRoll = normalizeArmorDurabilityRandom(random.slot(), 0) * totalWeight;
+            let cumulativeWeight = 0;
+            const selected = candidates.find((candidate, index) => {
+                cumulativeWeight += candidate.weight;
+                return weightedRoll < cumulativeWeight || index === candidates.length - 1;
+            })!;
+            damagedCandidates = [selected];
+        }
+
+        return Object.freeze(damagedCandidates.map(candidate => {
+            const itemDataId = candidate.item.itemDataId;
+            const itemName = candidate.item.name;
+            const durability = candidate.item.decreaseDurability(1) ?? candidate.durability;
+            return Object.freeze({
+                slot: candidate.slot.key,
+                slotIndex: candidate.slotIndex,
+                itemDataId,
+                itemName,
+                previousDurability: candidate.durability,
+                durability,
+                broken: durability === 0,
+            });
+        }));
     }
 
     /** 장착 아이템의 정의/영속/런타임 태그를 엔티티 유효 태그로 제공 */

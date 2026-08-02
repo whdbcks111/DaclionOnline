@@ -1,8 +1,78 @@
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 import test from 'node:test';
 import Entity from './Entity.js';
-import Player, { PlayerRuntimeProgressIds } from './Player.js';
+import Player, {
+    HOSTILE_RETURN_SCROLL_ITEM_DATA_ID,
+    PlayerRuntimeProgressIds,
+} from './Player.js';
 import { PlayerProgress } from './Progress.js';
+import Inventory from './Inventory.js';
+import Equipment from './Equipment.js';
+import SkillBook from './SkillBook.js';
+import QuestBook from './QuestBook.js';
+import { reloadAllLocations } from './Location.js';
+import { getKarmaDeathPenalty } from './Karma.js';
+import { RegionRiskPolicy } from './RegionRisk.js';
+import { initSocket } from '../modules/socket.js';
+import '../data/items.js';
+
+initSocket(createServer(), '*');
+
+reloadAllLocations([
+    {
+        id: 'death-test-safe', name: '사망 테스트 안전 구역', zoneType: 'safe',
+        x: 0, y: 0, z: 0, isRespawnLocation: true,
+        npcIds: [], objects: [], connections: [], tags: [],
+    },
+    {
+        id: 'death-test-neutral', name: '사망 테스트 중립 구역', zoneType: 'neutral',
+        x: 1, y: 0, z: 0,
+        npcIds: [], objects: [], connections: [], tags: [],
+    },
+    {
+        id: 'death-test-hostile', name: '사망 테스트 적대 구역', zoneType: 'hostile',
+        x: 2, y: 0, z: 0,
+        npcIds: [], objects: [], connections: [], tags: [],
+    },
+]);
+
+let nextPlayerId = 20_000;
+
+function createLivePlayer(
+    locationId: string,
+    options: { scrolls?: number; storedDeadline?: number; life?: number } = {},
+): Player {
+    const playerId = nextPlayerId++;
+    const inventory = Inventory.createEmpty(playerId, 1_000);
+    const scrollCount = options.scrolls ?? 0;
+    if (scrollCount > 0) {
+        assert.equal(inventory.addItem(HOSTILE_RETURN_SCROLL_ITEM_DATA_ID, scrollCount), true);
+    }
+    const progress = PlayerProgress.createEmpty(playerId);
+    if (options.storedDeadline !== undefined) {
+        progress.setState(PlayerRuntimeProgressIds.DEATH_EXPIRES_AT, String(options.storedDeadline));
+    }
+    return Reflect.construct(Player, [
+        playerId,
+        `사망테스트${playerId}`,
+        50,
+        0,
+        locationId,
+        1_000,
+        inventory,
+        Equipment.createEmpty(),
+        progress,
+        SkillBook.createEmpty(playerId),
+        QuestBook.createEmpty(playerId),
+        undefined,
+        options.life,
+    ]) as Player;
+}
+
+function countReturnScrolls(player: Player): number {
+    return player.inventory.countMatching(item => item.itemDataId === HOSTILE_RETURN_SCROLL_ITEM_DATA_ID);
+}
 
 function createDeathShell(storedRemaining = '', storedDeadline = ''): Player {
     const player = Object.create(Player.prototype) as Player;
@@ -75,4 +145,69 @@ test('살아 있는 플레이어에 남은 오래된 사망 상태는 제거한�
     assert.equal(player.isDead, false);
     assert.equal(player.progress.getState(PlayerRuntimeProgressIds.DEATH_REMAINING), '');
     assert.equal(player.progress.getState(PlayerRuntimeProgressIds.DEATH_EXPIRES_AT), '');
+});
+
+test('적대 구역 사망은 두루마리 하나를 자동 소모하고 최종 부활 대기와 저장 만료 시각을 절반으로 줄인다', () => {
+    const player = createLivePlayer('death-test-hostile', { scrolls: 2 });
+    const originalDuration = RegionRiskPolicy.HOSTILE.calculateRespawnDuration(300);
+    const before = Date.now();
+
+    player.onDeath();
+
+    const after = Date.now();
+    assert.equal(player.deathTimer, originalDuration / 2);
+    assert.equal(countReturnScrolls(player), 1);
+    const deadline = Number(player.progress.getState(PlayerRuntimeProgressIds.DEATH_EXPIRES_AT));
+    assert.ok(deadline >= before + originalDuration * 500);
+    assert.ok(deadline <= after + originalDuration * 500);
+});
+
+test('적대 귀환 두루마리는 지역 배율과 악명 가산까지 끝난 총 부활 대기시간을 절반으로 줄인다', () => {
+    const player = createLivePlayer('death-test-hostile', { scrolls: 1 });
+    player.setKarma(100, 'test', Date.now());
+    const originalDuration = RegionRiskPolicy.HOSTILE.calculateRespawnDuration(300)
+        + getKarmaDeathPenalty(100).respawnSeconds;
+
+    player.onDeath();
+
+    assert.equal(player.deathTimer, originalDuration / 2);
+    assert.equal(countReturnScrolls(player), 0);
+});
+
+test('안전·중립 구역이나 두루마리가 없는 적대 구역에서는 부활 대기와 인벤토리가 바뀌지 않는다', () => {
+    for (const [locationId, policy] of [
+        ['death-test-safe', RegionRiskPolicy.SAFE],
+        ['death-test-neutral', RegionRiskPolicy.NEUTRAL],
+    ] as const) {
+        const player = createLivePlayer(locationId, { scrolls: 1 });
+        player.onDeath();
+        assert.equal(player.deathTimer, policy.calculateRespawnDuration(300), locationId);
+        assert.equal(countReturnScrolls(player), 1, locationId);
+    }
+
+    const noItemPlayer = createLivePlayer('death-test-hostile');
+    noItemPlayer.onDeath();
+    assert.equal(noItemPlayer.deathTimer, RegionRiskPolicy.HOSTILE.calculateRespawnDuration(300));
+    assert.equal(countReturnScrolls(noItemPlayer), 0);
+});
+
+test('중복 onDeath 호출과 저장된 사망 상태 복원은 적대 귀환 두루마리를 추가로 소모하지 않는다', () => {
+    const player = createLivePlayer('death-test-hostile', { scrolls: 2 });
+    player.onDeath();
+    const firstDeadline = player.progress.getState(PlayerRuntimeProgressIds.DEATH_EXPIRES_AT);
+
+    player.onDeath();
+
+    assert.equal(countReturnScrolls(player), 1);
+    assert.equal(player.progress.getState(PlayerRuntimeProgressIds.DEATH_EXPIRES_AT), firstDeadline);
+
+    const reconnectDeadline = Date.now() + 90_000;
+    const restored = createLivePlayer('death-test-hostile', {
+        scrolls: 2,
+        storedDeadline: reconnectDeadline,
+        life: 0,
+    });
+    assert.equal(restored.isDead, true);
+    assert.equal(countReturnScrolls(restored), 2);
+    assert.ok(restored.deathTimer > 89 && restored.deathTimer <= 90);
 });

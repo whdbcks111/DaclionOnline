@@ -174,6 +174,7 @@ for (const [locationId, table] of Object.entries({
     paradox_scrap_reservoir: {
         chance: 0.015,
         entries: [
+            { itemDataId: 'hostile_return_scroll', weight: 10, minCount: 1, maxCount: 2 },
             { itemDataId: 'deepwater_insight_elixir', weight: 30 },
             { itemDataId: 'clockwork_cobalt', weight: 28 },
             { itemDataId: 'logic_core', weight: 20 },
@@ -184,6 +185,7 @@ for (const [locationId, table] of Object.entries({
     eclipse_luminous_reef: {
         chance: 0.018,
         entries: [
+            { itemDataId: 'hostile_return_scroll', weight: 10, minCount: 1, maxCount: 2 },
             { itemDataId: 'starcurrent_insight_elixir', weight: 28 },
             { itemDataId: 'tideglass_alloy', weight: 28 },
             { itemDataId: 'night_pearl', weight: 22 },
@@ -194,6 +196,7 @@ for (const [locationId, table] of Object.entries({
     endstar_silent_sun: {
         chance: 0.02,
         entries: [
+            { itemDataId: 'hostile_return_scroll', weight: 10, minCount: 1, maxCount: 2 },
             { itemDataId: 'starcurrent_insight_elixir', weight: 26 },
             { itemDataId: 'endstar_adamant', weight: 30 },
             { itemDataId: 'constellation_core', weight: 22 },
@@ -204,6 +207,7 @@ for (const [locationId, table] of Object.entries({
     abyssglass_pressure_lagoon: {
         chance: 0.022,
         entries: [
+            { itemDataId: 'hostile_return_scroll', weight: 10, minCount: 1, maxCount: 2 },
             { itemDataId: 'starcurrent_insight_elixir', weight: 25 },
             { itemDataId: 'astral_steel', weight: 24 },
             { itemDataId: 'abyssal_silver', weight: 24 },
@@ -214,6 +218,7 @@ for (const [locationId, table] of Object.entries({
     dreamarchive_inkwater_pool: {
         chance: 0.024,
         entries: [
+            { itemDataId: 'hostile_return_scroll', weight: 10, minCount: 1, maxCount: 2 },
             { itemDataId: 'starcurrent_insight_elixir', weight: 25 },
             { itemDataId: 'void_opal', weight: 28 },
             { itemDataId: 'dream_memory_stew', weight: 20 },
@@ -224,6 +229,7 @@ for (const [locationId, table] of Object.entries({
     rustworld_mercury_reservoir: {
         chance: 0.026,
         entries: [
+            { itemDataId: 'hostile_return_scroll', weight: 10, minCount: 1, maxCount: 2 },
             { itemDataId: 'starcurrent_insight_elixir', weight: 24 },
             { itemDataId: 'storm_quartz', weight: 26 },
             { itemDataId: 'life_blood_alloy', weight: 26 },
@@ -234,6 +240,7 @@ for (const [locationId, table] of Object.entries({
     silentdivine_prayer_spring: {
         chance: 0.028,
         entries: [
+            { itemDataId: 'hostile_return_scroll', weight: 10, minCount: 1, maxCount: 2 },
             { itemDataId: 'starcurrent_insight_elixir', weight: 24 },
             { itemDataId: 'sacred_prayerstone', weight: 30 },
             { itemDataId: 'prayer_koi_clear_soup', weight: 22 },
@@ -244,6 +251,7 @@ for (const [locationId, table] of Object.entries({
     originboundary_genesis_tide: {
         chance: 0.03,
         entries: [
+            { itemDataId: 'hostile_return_scroll', weight: 10, minCount: 1, maxCount: 2 },
             { itemDataId: 'starcurrent_insight_elixir', weight: 22 },
             { itemDataId: 'origin_prism', weight: 26 },
             { itemDataId: 'timeglass_crystal', weight: 26 },

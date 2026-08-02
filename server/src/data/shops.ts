@@ -52,6 +52,22 @@ export function gravewardTonicStock(
     };
 }
 
+/** 적대 구역 도전자가 여러 명이어도 충분히 순환하도록 넉넉한 공유 재고를 제공한다. */
+export function hostileReturnScrollStock(
+    recommendedLevel: number,
+    stock = 16,
+    restockTime = 90,
+): BuyEntry {
+    return {
+        label: '적대 귀환 두루마리',
+        create: () => ({ itemDataId: 'hostile_return_scroll', count: 1 }),
+        count: 1,
+        price: Math.max(240, Math.round(Math.max(1, recommendedLevel) * 24)),
+        stock,
+        restockTime,
+    };
+}
+
 function fishingSellList(): SellEntry[] {
     return [
         { label: '낚시 도구', filter: item => item.hasTag(GameTags.TOOL_FISHING), count: 1, price: 20 },
@@ -377,6 +393,7 @@ defineShop({
     id: 'twilight_memorial_store',
     recommendedLevel: 40,
     buyList: [
+        hostileReturnScrollStock(40),
         gravewardTonicStock(38, 24, 60),
         {
             label: '화살 20개',
@@ -434,6 +451,7 @@ defineShop({
     id: 'glassdune_caravan_store',
     recommendedLevel: 70,
     buyList: [
+        hostileReturnScrollStock(70),
         bagStock('유리사막 대상가방', 'glassdune_caravan_pack', 2_500, 900),
         {
             label: '오아시스 대추야자',
@@ -484,6 +502,7 @@ defineShop({
     id: 'frostveil_outpost_store',
     recommendedLevel: 100,
     buyList: [
+        hostileReturnScrollStock(100),
         bagStock('설원 원정배낭', 'frostveil_expedition_pack', 4_800, 1_200),
         {
             label: '설원 행군식', create: () => ({ itemDataId: 'winter_trail_ration', count: 1 }),
@@ -532,6 +551,7 @@ defineShop({
     id: 'misttide_harbor_store',
     recommendedLevel: 140,
     buyList: [
+        hostileReturnScrollStock(140),
         bagStock('염등항 화물배낭', 'misttide_cargo_pack', 7_200, 1_500),
         gravewardTonicStock(),
         {
@@ -582,6 +602,7 @@ defineShop({
     id: 'paradox_relay_store',
     recommendedLevel: 180,
     buyList: [
+        hostileReturnScrollStock(180),
         bagStock('역설 접이가방', 'paradox_fold_pack', 11_000, 1_800),
         gravewardTonicStock(),
         ...largePotionStock(),
@@ -638,6 +659,7 @@ defineShop({
     id: 'ashen_waystation_store',
     recommendedLevel: 200,
     buyList: [
+        hostileReturnScrollStock(200),
         bagStock('재길 운반구', 'ashroad_carrier', 16_500, 2_100),
         gravewardTonicStock(),
         ...largePotionStock(),
@@ -689,6 +711,7 @@ defineShop({
     id: 'voidcrown_waystation_store',
     recommendedLevel: 250,
     buyList: [
+        hostileReturnScrollStock(250),
         bagStock('공허비단 차원배낭', 'voidsilk_dimension_pack', 25_000, 2_400),
         ...largePotionStock(),
         {
@@ -733,6 +756,7 @@ defineShop({
     id: 'eclipse_dock_store',
     recommendedLevel: 300,
     buyList: [
+        hostileReturnScrollStock(300),
         bagStock('해구 내압배낭', 'eclipse_pressure_pack', 34_000, 2_700),
         ...largePotionStock(),
         {
@@ -777,6 +801,7 @@ defineShop({
     id: 'worldroot_waystation_store',
     recommendedLevel: 350,
     buyList: [
+        hostileReturnScrollStock(350),
         bagStock('천근수피 생장배낭', 'worldroot_living_pack', 45_000, 3_000),
         gravewardTonicStock(),
         ...largePotionStock(),
@@ -822,6 +847,7 @@ defineShop({
     id: 'nebula_waystation_store',
     recommendedLevel: 380,
     buyList: [
+        hostileReturnScrollStock(380),
         bagStock('성운궤도 배낭', 'nebula_orbit_pack', 58_000, 3_300),
         ...largePotionStock(),
         { label: '유성등 건량', create: () => ({ itemDataId: 'nebula_ration', count: 1 }), count: 1, price: 520, stock: 24, restockTime: 50 },
@@ -853,6 +879,7 @@ defineShop({
     id: 'chronofrost_refuge_store',
     recommendedLevel: 440,
     buyList: [
+        hostileReturnScrollStock(440),
         bagStock('영시 보존배낭', 'chronofrost_vault_pack', 76_000, 3_600),
         ...largePotionStock(),
         { label: '영겁 보존식', create: () => ({ itemDataId: 'chronofrost_ration', count: 1 }), count: 1, price: 650, stock: 24, restockTime: 50 },
@@ -884,6 +911,7 @@ defineShop({
     id: 'endstar_bastion_store',
     recommendedLevel: 500,
     buyList: [
+        hostileReturnScrollStock(500),
         bagStock('최후지평 차원배낭', 'endstar_horizon_pack', 100_000, 3_900),
         gravewardTonicStock(),
         ...largePotionStock(),

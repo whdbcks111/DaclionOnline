@@ -11,7 +11,11 @@ import {
     type ItemMetadata,
 } from './Item.js';
 import Attribute, { AttributeType } from './Attribute.js';
-import Equipment, { EquipSlotType } from './Equipment.js';
+import Equipment, {
+    ArmorDurabilityDamageMode,
+    calculateArmorDurabilityDamageChance,
+    EquipSlotType,
+} from './Equipment.js';
 import Inventory, { InventorySortMode } from './Inventory.js';
 import Player from './Player.js';
 
@@ -286,19 +290,129 @@ test('소유 중인 아이템 내구도가 0이 되면 인벤토리 또는 장�
     assert.equal(attribute.get(AttributeType.ATK), 10);
 });
 
-test('직접 피격용 방어구 내구도 API는 방어 슬롯만 감소시키고 파괴 장비를 반환한다', () => {
-    defineItem({ ...itemData('test_armor_head', undefined, null, 2), equipSlot: 'head' });
-    defineItem({ ...itemData('test_armor_body', undefined, null, 1), equipSlot: 'body' });
-    defineItem({ ...itemData('test_armor_accessory', undefined, null, 2), equipSlot: 'accessory' });
+test('방어구 내구도 손상 모드와 실제 생명력 피해 확률은 경계값을 안정적으로 제공한다', () => {
+    assert.deepEqual(
+        ArmorDurabilityDamageMode.values().map(mode => mode.key),
+        ['single', 'all'],
+    );
+    assert.equal(ArmorDurabilityDamageMode.fromKey('SINGLE'), ArmorDurabilityDamageMode.SINGLE);
+    assert.equal(ArmorDurabilityDamageMode.fromInput('전 부위'), ArmorDurabilityDamageMode.ALL);
+    assert.equal(ArmorDurabilityDamageMode.SINGLE.explicitOnly, false);
+    assert.equal(ArmorDurabilityDamageMode.ALL.explicitOnly, true);
+
+    assert.equal(calculateArmorDurabilityDamageChance(0, 100), 0.1);
+    assert.ok(Math.abs(calculateArmorDurabilityDamageChance(10, 100) - 0.22) < 1e-12);
+    assert.equal(calculateArmorDurabilityDamageChance(50, 100), 0.7);
+    assert.equal(calculateArmorDurabilityDamageChance(1_000, 100), 0.7);
+});
+
+test('SINGLE 방어구 내구도 손상은 확률 경계와 부위 가중치를 따라 한 부위만 선택한다', () => {
+    const definitions = [
+        ['test_armor_weighted_body', 'body'],
+        ['test_armor_weighted_legs', 'legs'],
+        ['test_armor_weighted_head', 'head'],
+        ['test_armor_weighted_feet', 'feet'],
+    ] as const;
     const equipment = Equipment.createEmpty();
     const attribute = new Attribute({});
-    equipment.equip('head', new Item('test_armor_head', 1, 2, null), attribute);
-    equipment.equip('body', new Item('test_armor_body', 1, 1, null), attribute);
-    equipment.equip('accessory', new Item('test_armor_accessory', 1, 2, null), attribute);
+    for (const [id, slot] of definitions) {
+        defineItem({ ...itemData(id, undefined, null, 20), equipSlot: slot });
+        assert.equal(equipment.equip(slot, new Item(id, 1, 20, null), attribute), true);
+    }
 
-    const broken = equipment.damageArmorDurability();
+    const miss = equipment.damageArmorDurability(10, 100, ArmorDurabilityDamageMode.SINGLE, {
+        chance: () => 0.22,
+        slot: () => 0,
+    });
+    assert.deepEqual(miss, []);
 
-    assert.deepEqual(broken.map(item => item.itemDataId), ['test_armor_body']);
+    const cases = [
+        [0, 'body'],
+        [0.399_999, 'body'],
+        [0.4, 'legs'],
+        [0.649_999, 'legs'],
+        [0.65, 'head'],
+        [0.849_999, 'head'],
+        [0.85, 'feet'],
+        [1, 'feet'],
+    ] as const;
+    for (const [slotRoll, expectedSlot] of cases) {
+        const result = equipment.damageArmorDurability(10, 100, ArmorDurabilityDamageMode.SINGLE, {
+            chance: () => 0.219_999,
+            slot: () => slotRoll,
+        });
+        assert.equal(result.length, 1);
+        assert.equal(result[0]?.slot, expectedSlot);
+    }
+
+    assert.equal(equipment.getEquipped('body')?.durability, 18);
+    assert.equal(equipment.getEquipped('legs')?.durability, 18);
+    assert.equal(equipment.getEquipped('head')?.durability, 18);
+    assert.equal(equipment.getEquipped('feet')?.durability, 18);
+});
+
+test('SINGLE 방어구 내구도 부위 가중치는 장착 중인 후보만으로 재정규화한다', () => {
+    defineItem({ ...itemData('test_armor_present_body', undefined, null, 3), equipSlot: 'body' });
+    defineItem({ ...itemData('test_armor_present_feet', undefined, null, 3), equipSlot: 'feet' });
+    const equipment = Equipment.createEmpty();
+    const attribute = new Attribute({});
+    equipment.equip('body', new Item('test_armor_present_body', 1, 3, null), attribute);
+    equipment.equip('feet', new Item('test_armor_present_feet', 1, 3, null), attribute);
+
+    const body = equipment.damageArmorDurability(1, 100, ArmorDurabilityDamageMode.SINGLE, {
+        chance: () => 0,
+        slot: () => (40 / 55) - 1e-6,
+    });
+    const feet = equipment.damageArmorDurability(1, 100, ArmorDurabilityDamageMode.SINGLE, {
+        chance: () => 0,
+        slot: () => 40 / 55,
+    });
+
+    assert.equal(body[0]?.slot, 'body');
+    assert.equal(feet[0]?.slot, 'feet');
+});
+
+test('ALL 방어구 내구도 손상은 전 부위를 감소시키고 파괴된 장비의 modifier를 제거한다', () => {
+    defineItem({ ...itemData('test_armor_all_head', undefined, null, 2), equipSlot: 'head' });
+    defineItem({
+        ...itemData('test_armor_all_body', undefined, null, 1),
+        equipSlot: 'body',
+        modifiers: [{ attribute: 'def', op: 'add', value: 5, source: '' }],
+    });
+    defineItem({ ...itemData('test_armor_all_accessory', undefined, null, 2), equipSlot: 'accessory' });
+    const equipment = Equipment.createEmpty();
+    const attribute = new Attribute({ def: 10 });
+    equipment.equip('head', new Item('test_armor_all_head', 1, 2, null), attribute);
+    equipment.equip('body', new Item('test_armor_all_body', 1, 1, null), attribute);
+    equipment.equip('accessory', new Item('test_armor_all_accessory', 1, 2, null), attribute);
+    assert.equal(attribute.get(AttributeType.DEF), 15);
+
+    const damaged = equipment.damageArmorDurability(1, 100, ArmorDurabilityDamageMode.ALL, {
+        chance: () => { throw new Error('ALL은 확률 RNG를 사용하지 않아야 합니다.'); },
+        slot: () => { throw new Error('ALL은 부위 RNG를 사용하지 않아야 합니다.'); },
+    });
+
+    assert.deepEqual(damaged, [
+        {
+            slot: 'body',
+            slotIndex: 0,
+            itemDataId: 'test_armor_all_body',
+            itemName: 'test_armor_all_body',
+            previousDurability: 1,
+            durability: 0,
+            broken: true,
+        },
+        {
+            slot: 'head',
+            slotIndex: 0,
+            itemDataId: 'test_armor_all_head',
+            itemName: 'test_armor_all_head',
+            previousDurability: 2,
+            durability: 1,
+            broken: false,
+        },
+    ]);
+    assert.equal(attribute.get(AttributeType.DEF), 10);
     assert.equal(equipment.getEquipped('head')?.durability, 1);
     assert.equal(equipment.getEquipped('body'), undefined);
     assert.equal(equipment.getEquipped('accessory')?.durability, 2);

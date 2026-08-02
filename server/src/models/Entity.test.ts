@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import Entity from './Entity.js';
-import Equipment from './Equipment.js';
+import Equipment, { ArmorDurabilityDamageMode } from './Equipment.js';
 import { AttributeType } from './Attribute.js';
 import { defineItem, Item, type ItemData } from './Item.js';
 import Stat, {
@@ -70,6 +70,28 @@ function defensiveTestItemData(
     };
 }
 
+function armorTestItemData(
+    id: string,
+    equipSlot: 'head' | 'body' | 'legs' | 'feet',
+    baseDurability = 2,
+): ItemData {
+    return {
+        id,
+        name: id,
+        description: '',
+        category: '방어구',
+        weight: 0,
+        stackable: false,
+        maxStack: 1,
+        baseMetadata: null,
+        onUse: null,
+        equipSlot,
+        modifiers: null,
+        baseDurability,
+        tags: [],
+    };
+}
+
 test('최대 자원 modifier가 사라지면 현재 생명력과 자원값을 새 최대값으로 clamp한다', () => {
     const entity = new VitalEntity();
     entity.attribute.addModifiers([
@@ -133,6 +155,54 @@ test('피해를 받은 대상의 보조 장비는 실제 피해가 발생한 뒤
     assert.equal(result?.finalDamage, 100);
     assert.equal(triggers, 1);
     assert.equal(target.getTotalShield(), 100);
+});
+
+test('완전히 보호막에 흡수된 공격은 명시적 ALL 특수 공격이어도 방어구 내구도를 손상시키지 않는다', () => {
+    defineItem(armorTestItemData('test_shielded_armor', 'body'));
+    const attacker = new CombatEntity('공격자');
+    const target = new CombatEntity('방어자');
+    target.equipment.equip(
+        'body',
+        new Item('test_shielded_armor', 1, 2, null),
+        target.attribute,
+    );
+    target.setShield('test:full-absorb', 100, ShieldType.GENERAL, 10, target);
+
+    const result = attacker.attack(target, 'absolute', 100, {
+        unavoidable: true,
+        criticalRate: 0,
+        armorDurabilityDamageMode: ArmorDurabilityDamageMode.ALL,
+    });
+
+    assert.equal(result?.absorbedDamage, 100);
+    assert.equal(result?.lifeDamage, 0);
+    assert.equal(target.equipment.getEquipped('body')?.durability, 2);
+});
+
+test('명시적 ALL 특수 공격은 실제 생명력 피해 시 장착한 방어구 전 부위를 한 번씩 손상시킨다', () => {
+    const definitions = [
+        ['test_all_attack_head', 'head'],
+        ['test_all_attack_body', 'body'],
+        ['test_all_attack_legs', 'legs'],
+        ['test_all_attack_feet', 'feet'],
+    ] as const;
+    const attacker = new CombatEntity('공격자');
+    const target = new CombatEntity('방어자');
+    for (const [id, slot] of definitions) {
+        defineItem(armorTestItemData(id, slot));
+        target.equipment.equip(slot, new Item(id, 1, 2, null), target.attribute);
+    }
+
+    const result = attacker.attack(target, 'absolute', 100, {
+        unavoidable: true,
+        criticalRate: 0,
+        armorDurabilityDamageMode: ArmorDurabilityDamageMode.ALL,
+    });
+
+    assert.equal(result?.lifeDamage, 100);
+    for (const [, slot] of definitions) {
+        assert.equal(target.equipment.getEquipped(slot)?.durability, 1);
+    }
 });
 
 test('생명력과 정신력 재생 능력치는 매초 실제 자원을 회복한다', () => {
@@ -331,6 +401,7 @@ test('직접 스킬 공격은 지정한 속성 태그로 상성을 계산한다'
 
     const result = attacker.attack(target, 'physical', 100, {
         unavoidable: true,
+        criticalRate: 0,
         effectTags: [GameTags.PROPERTY_DARK],
         consumeMainHandDurability: false,
         triggerMainHandHitEffects: false,

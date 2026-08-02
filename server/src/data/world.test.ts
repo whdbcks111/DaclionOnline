@@ -70,6 +70,7 @@ import {
     MonsterStatProfile,
 } from '../models/MonsterStats.js';
 import { StatusEffectType } from '../models/StatusEffect.js';
+import { getFishingTreasureTable } from '../models/Fishing.js';
 
 const baseLocations = JSON.parse(
     readFileSync(new URL('./locations.json', import.meta.url), 'utf-8'),
@@ -1525,6 +1526,68 @@ test('묘지기 향약은 황혼왕릉 증량 재고와 여섯 안전 거점의 
         return shop;
     });
     assert.equal(new Set(instances).size, stores.length);
+});
+
+test('적대 귀환 두루마리는 자동 전용 아이템이며 성장 상점과 후반 낚시 보물에서 넉넉히 공급된다', () => {
+    const item = getItemData('hostile_return_scroll');
+    assert.equal(item?.image, 'items/hostile_return_scroll');
+    assert.equal(item?.onUse, null);
+    assert.equal(item?.stackable, true);
+    assert.equal(item?.maxStack, MAX_STACKABLE_ITEM_COUNT);
+    const png = readFileSync(new URL('../../../client/public/icons/items/hostile_return_scroll.png', import.meta.url));
+    assert.equal(png.readUInt32BE(16), 128);
+    assert.equal(png.readUInt32BE(20), 128);
+    assert.equal(png[25], 6, 'hostile_return_scroll must be RGBA');
+
+    for (const shopId of [
+        'twilight_memorial_store',
+        'glassdune_caravan_store',
+        'frostveil_outpost_store',
+        'misttide_harbor_store',
+        'paradox_relay_store',
+        'ashen_waystation_store',
+        'voidcrown_waystation_store',
+        'eclipse_dock_store',
+        'worldroot_waystation_store',
+        'nebula_waystation_store',
+        'chronofrost_refuge_store',
+        'endstar_bastion_store',
+    ]) {
+        const shop = getShop(shopId);
+        assert.ok(shop, shopId);
+        const index = shop.data.buyList.findIndex(entry => entry.create().itemDataId === 'hostile_return_scroll');
+        assert.ok(index >= 0, `${shopId} 두루마리 항목`);
+        assert.equal(shop.data.buyList[index].stock, 16, `${shopId} 마스터 재고`);
+        assert.equal(shop.data.buyList[index].restockTime, 90, `${shopId} 재입고`);
+        assert.equal(shop.getStockCapacity(index), 80, `${shopId} 공유 재고`);
+    }
+
+    for (const region of ASCENDANT_REGIONS) {
+        const shopId = `${region.id}_waystation_store`;
+        const shop = getShop(shopId);
+        assert.ok(shop, shopId);
+        const index = shop.data.buyList.findIndex(entry => entry.create().itemDataId === 'hostile_return_scroll');
+        assert.ok(index >= 0, `${shopId} 두루마리 항목`);
+        assert.equal(shop.data.buyList[index].stock, 20, `${shopId} 마스터 재고`);
+        assert.equal(shop.data.buyList[index].restockTime, 75, `${shopId} 재입고`);
+        assert.equal(shop.getStockCapacity(index), 100, `${shopId} 공유 재고`);
+    }
+
+    for (const locationId of [
+        'paradox_scrap_reservoir',
+        'eclipse_luminous_reef',
+        'endstar_silent_sun',
+        'abyssglass_pressure_lagoon',
+        'dreamarchive_inkwater_pool',
+        'rustworld_mercury_reservoir',
+        'silentdivine_prayer_spring',
+        'originboundary_genesis_tide',
+    ]) {
+        const entry = getFishingTreasureTable(locationId)?.entries.find(
+            candidate => candidate.itemDataId === 'hostile_return_scroll',
+        );
+        assert.deepEqual(entry, { itemDataId: 'hostile_return_scroll', weight: 10, minCount: 1, maxCount: 2 }, locationId);
+    }
 });
 
 test('물빛 연못 낚시상점은 낚시 품목을 전담하고 잡화점은 초급 지팡이 성장 장비를 판매한다', () => {
