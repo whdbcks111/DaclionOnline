@@ -2,10 +2,15 @@ import { ItemMetadataKeys, type ItemMetadata, type ItemSnapshot } from './Item.j
 import { cloneMetadataValue } from './Metadata.js';
 import { ProgressType, defineProgress } from './Progress.js';
 import type { PlayerProgress } from './Progress.js';
+import { GameTags } from '../../../shared/tags.js';
 
 export const ALCHEMY_WATER_BOTTLE_ITEM_ID = 'alchemy_water_bottle';
 export const FAILED_ALCHEMY_POTION_ITEM_ID = 'failed_alchemy_potion';
 export const ALCHEMIST_JOB_ID = 'career:alchemist';
+export const ALCHEMY_FEATURE_SKILL_ID = 'cauldron_alchemy';
+export const ALCHEMY_MAX_DISTINCT_REAGENTS = 5;
+export const ALCHEMY_MAX_TOTAL_REAGENT_COUNT = 90;
+export const ALCHEMY_HARMFUL_DAMAGE_SCALE = 80;
 const ALCHEMY_REAGENT_EXPERIMENT_PREFIX = 'alchemy:reagent-experimented/';
 
 function clamp(value: number, minimum: number, maximum: number): number {
@@ -50,6 +55,8 @@ export class AlchemyEffectType {
     static readonly RESTORE_MENTALITY = new AlchemyEffectType('restore_mentality', '정신력 회복', 'beneficial');
     static readonly BENEFICIAL_STATUS = new AlchemyEffectType('beneficial_status', '강화 효과', 'beneficial');
     static readonly HARMFUL_STATUS = new AlchemyEffectType('harmful_status', '공격 효과', 'harmful');
+    static readonly UNSTABLE = new AlchemyEffectType('unstable', '불안정 피해', 'harmful');
+    /** profile 도입 전 저장된 실패약의 약한 회복 효과. 신규 실패약에는 사용하지 않는다. */
     static readonly FAILED = new AlchemyEffectType('failed', '변칙 효과', 'beneficial');
 
     private constructor(
@@ -357,6 +364,106 @@ export interface AlchemyIngredientSelectionInput {
     readonly count: number;
 }
 
+function normalizeFailureIngredients(
+    ingredients: readonly AlchemyIngredientSelectionInput[],
+): readonly AlchemyIngredientSelectionInput[] | undefined {
+    const totals = new Map<string, number>();
+    for (const ingredient of ingredients) {
+        const itemDataId = ingredient.itemDataId.trim();
+        if (!getAlchemyReagent(itemDataId) || !Number.isSafeInteger(ingredient.count)
+            || ingredient.count <= 0 || ingredient.count > 99) return undefined;
+        totals.set(itemDataId, (totals.get(itemDataId) ?? 0) + ingredient.count);
+    }
+    if (totals.size < 1 || totals.size > ALCHEMY_MAX_DISTINCT_REAGENTS) return undefined;
+    const normalized = [...totals]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([itemDataId, count]) => Object.freeze({ itemDataId, count }));
+    const totalCount = normalized.reduce((sum, ingredient) => sum + ingredient.count, 0);
+    return totalCount <= ALCHEMY_MAX_TOTAL_REAGENT_COUNT
+        && normalized.every(ingredient => ingredient.count <= 99)
+        ? Object.freeze(normalized)
+        : undefined;
+}
+
+/** 미확인 조합의 실제 재료 성질로만 결정되는 제한된 실패약 결과 프로필. */
+export class AlchemyFailureProfile {
+    private static readonly all: AlchemyFailureProfile[] = [];
+
+    static readonly TOXIC = new AlchemyFailureProfile(
+        'toxic', '독성', AlchemyEffectType.HARMFUL_STATUS, 1.25, 6, 'poison', 'magic',
+    );
+    static readonly RESTORATIVE = new AlchemyFailureProfile(
+        'restorative', '회복성', AlchemyEffectType.RESTORE_LIFE, 75, 0,
+    );
+    static readonly MENTAL = new AlchemyFailureProfile(
+        'mental', '정신성', AlchemyEffectType.RESTORE_MENTALITY, 42, 0,
+    );
+    static readonly UNSTABLE = new AlchemyFailureProfile(
+        'unstable', '불안정', AlchemyEffectType.UNSTABLE, 1, 0, undefined, 'magic',
+    );
+
+    private constructor(
+        readonly key: 'toxic' | 'restorative' | 'mental' | 'unstable',
+        readonly label: string,
+        readonly effectType: AlchemyEffectType,
+        readonly basePower: number,
+        readonly baseDuration: number,
+        readonly statusEffectId?: string,
+        readonly damageType?: 'physical' | 'magic' | 'absolute',
+    ) {
+        AlchemyFailureProfile.all.push(this);
+    }
+
+    static values(): readonly AlchemyFailureProfile[] { return AlchemyFailureProfile.all; }
+    static fromKey(key: string): AlchemyFailureProfile | undefined {
+        return AlchemyFailureProfile.all.find(value => value.key === key.trim().toLowerCase());
+    }
+
+    static fromIngredients(
+        ingredients: readonly AlchemyIngredientSelectionInput[],
+    ): AlchemyFailureProfile | undefined {
+        const normalized = normalizeFailureIngredients(ingredients);
+        if (!normalized) return undefined;
+        let restorativeScore = 0;
+        let mentalScore = 0;
+        for (const ingredient of normalized) {
+            const traits = getAlchemyReagent(ingredient.itemDataId)!.traits;
+            if (traits.includes(AlchemyReagentTrait.TOXIN)) return AlchemyFailureProfile.TOXIC;
+            if (traits.includes(AlchemyReagentTrait.LIFE) || traits.includes(AlchemyReagentTrait.GROWTH)) {
+                restorativeScore += ingredient.count;
+            }
+            if (traits.includes(AlchemyReagentTrait.MIND)) mentalScore += ingredient.count;
+        }
+        if (restorativeScore > mentalScore) return AlchemyFailureProfile.RESTORATIVE;
+        if (mentalScore > restorativeScore) return AlchemyFailureProfile.MENTAL;
+        return AlchemyFailureProfile.UNSTABLE;
+    }
+}
+
+/** 신규 실패약 metadata가 원재료 profile을 서버에서 재구성할 수 있는 정규 signature. */
+export function createAlchemyFailureIngredientSignature(
+    ingredients: readonly AlchemyIngredientSelectionInput[],
+): string | undefined {
+    return normalizeFailureIngredients(ingredients)
+        ?.map(ingredient => `${ingredient.itemDataId}:${ingredient.count}`)
+        .join('|');
+}
+
+function parseAlchemyFailureIngredientSignature(
+    signature: string,
+): readonly AlchemyIngredientSelectionInput[] | undefined {
+    if (!signature || signature.length > 512) return undefined;
+    const parsed = signature.split('|').map(entry => {
+        const matched = entry.match(/^([a-z0-9_-]+):(\d+)$/);
+        return matched ? { itemDataId: matched[1], count: Number(matched[2]) } : undefined;
+    });
+    if (parsed.some(ingredient => ingredient === undefined)) return undefined;
+    const ingredients = normalizeFailureIngredients(parsed as AlchemyIngredientSelectionInput[]);
+    return ingredients && createAlchemyFailureIngredientSignature(ingredients) === signature
+        ? ingredients
+        : undefined;
+}
+
 function ingredientKey(ingredients: readonly AlchemyIngredientSelectionInput[]): string | undefined {
     const totals = new Map<string, number>();
     for (const ingredient of ingredients) {
@@ -451,6 +558,9 @@ export interface AlchemyPotionEffectSnapshot {
 
 export interface AlchemyPotionMetadataSnapshot {
     readonly formulaId: string;
+    /** 신규 미확인 조합에만 존재한다. 둘 다 없으면 profile 도입 전 legacy 실패약이다. */
+    readonly failureProfile?: string;
+    readonly failureIngredientSignature?: string;
     readonly delivery: 'drink' | 'throw';
     readonly quality: string;
     readonly qualityScore: number;
@@ -464,6 +574,7 @@ export interface AlchemyPotionMetadataSnapshot {
 export interface ResolvedAlchemyPotionUse {
     readonly metadata: AlchemyPotionMetadataSnapshot;
     readonly formula?: Readonly<AlchemyFormulaData>;
+    readonly failureProfile?: AlchemyFailureProfile;
     readonly delivery: AlchemyDelivery;
     readonly quality: AlchemyQuality;
     readonly effectType: AlchemyEffectType;
@@ -485,8 +596,18 @@ export function normalizeAlchemyPotionMetadata(value: unknown): AlchemyPotionMet
         && Object.prototype.hasOwnProperty.call(effectCandidate, 'statusEffectId');
     const hasDamageType = effectCandidate !== undefined
         && Object.prototype.hasOwnProperty.call(effectCandidate, 'damageType');
+    const hasFailureProfile = Object.prototype.hasOwnProperty.call(candidate, 'failureProfile');
+    const hasFailureSignature = Object.prototype.hasOwnProperty.call(candidate, 'failureIngredientSignature');
+    const failureProfile = typeof candidate.failureProfile === 'string'
+        ? AlchemyFailureProfile.fromKey(candidate.failureProfile)
+        : undefined;
     if (!delivery || !quality || !effectType || typeof candidate.formulaId !== 'string'
         || !candidate.formulaId || candidate.formulaId.length > 80
+        || hasFailureProfile !== hasFailureSignature
+        || (hasFailureProfile && (!failureProfile
+            || typeof candidate.failureIngredientSignature !== 'string'
+            || !parseAlchemyFailureIngredientSignature(candidate.failureIngredientSignature)))
+        || (candidate.formulaId !== 'failed' && hasFailureProfile)
         || !effectCandidate || effectCandidate.audience !== effectType.audience
         || typeof effectCandidate.power !== 'number' || !Number.isFinite(effectCandidate.power)
         || effectCandidate.power < 0
@@ -506,6 +627,10 @@ export function normalizeAlchemyPotionMetadata(value: unknown): AlchemyPotionMet
             && effectCandidate.damageType !== 'magic' && effectCandidate.damageType !== 'absolute')) return undefined;
     return {
         formulaId: candidate.formulaId,
+        ...(failureProfile && typeof candidate.failureIngredientSignature === 'string' ? {
+            failureProfile: failureProfile.key,
+            failureIngredientSignature: candidate.failureIngredientSignature,
+        } : {}),
         delivery: delivery.key,
         quality: quality.key,
         qualityScore: candidate.qualityScore,
@@ -528,6 +653,7 @@ export function normalizeAlchemyPotionMetadata(value: unknown): AlchemyPotionMet
 
 function createCanonicalAlchemyPotionMetadata(options: {
     readonly formula: Readonly<AlchemyFormulaData> | undefined;
+    readonly ingredients?: readonly AlchemyIngredientSelectionInput[];
     readonly delivery: AlchemyDelivery;
     readonly accuracy: number;
     readonly sensibility: number;
@@ -539,11 +665,32 @@ function createCanonicalAlchemyPotionMetadata(options: {
     const qualityScore = calculateAlchemyQualityScore(accuracy, sensibility);
     const quality = AlchemyQuality.fromScore(qualityScore);
     const formula = options.formula;
-    const effectType = formula?.effect.type ?? AlchemyEffectType.FAILED;
-    const basePower = formula?.effect.basePower ?? (formula ? 0 : 12);
-    const baseDuration = formula?.effect.baseDuration ?? 0;
+    const failureProfile = formula || options.ingredients === undefined
+        ? undefined
+        : AlchemyFailureProfile.fromIngredients(options.ingredients);
+    const failureIngredientSignature = formula || options.ingredients === undefined
+        ? undefined
+        : createAlchemyFailureIngredientSignature(options.ingredients);
+    if (!formula && options.ingredients !== undefined && (!failureProfile || !failureIngredientSignature)) {
+        throw new Error('실패약 재료 profile을 만들 수 없습니다.');
+    }
+    const effectType = formula?.effect.type
+        ?? failureProfile?.effectType
+        ?? AlchemyEffectType.FAILED;
+    const basePower = formula?.effect.basePower
+        ?? failureProfile?.basePower
+        ?? (formula ? 0 : 12);
+    const baseDuration = formula?.effect.baseDuration
+        ?? failureProfile?.baseDuration
+        ?? 0;
+    const statusEffectId = formula?.effect.statusEffectId ?? failureProfile?.statusEffectId;
+    const damageType = formula?.effect.damageType ?? failureProfile?.damageType;
     return {
         formulaId: formula?.id ?? 'failed',
+        ...(failureProfile && failureIngredientSignature ? {
+            failureProfile: failureProfile.key,
+            failureIngredientSignature,
+        } : {}),
         delivery: options.delivery.key,
         quality: quality.key,
         qualityScore,
@@ -555,8 +702,8 @@ function createCanonicalAlchemyPotionMetadata(options: {
             audience: effectType.audience,
             power: roundPotionValue(basePower * quality.powerMultiplier),
             duration: roundPotionValue(baseDuration * quality.durationMultiplier),
-            ...(formula?.effect.statusEffectId ? { statusEffectId: formula.effect.statusEffectId } : {}),
-            ...(formula?.effect.damageType ? { damageType: formula.effect.damageType } : {}),
+            ...(statusEffectId ? { statusEffectId } : {}),
+            ...(damageType ? { damageType } : {}),
         },
     };
 }
@@ -580,13 +727,24 @@ export function resolveAlchemyPotionUse(
         || (formula && (stored.formulaId !== formula.id || itemDataId !== formula.resultItemDataId))) return undefined;
     const delivery = AlchemyDelivery.fromKey(stored.delivery);
     if (!delivery) return undefined;
+    const failureIngredients = stored.failureIngredientSignature
+        ? parseAlchemyFailureIngredientSignature(stored.failureIngredientSignature)
+        : undefined;
+    const failureProfile = failureIngredients
+        ? AlchemyFailureProfile.fromIngredients(failureIngredients)
+        : undefined;
+    if ((stored.failureProfile !== undefined || stored.failureIngredientSignature !== undefined)
+        && (!failureProfile || stored.failureProfile !== failureProfile.key)) return undefined;
     const canonical = createCanonicalAlchemyPotionMetadata({
         formula,
+        ...(failureIngredients ? { ingredients: failureIngredients } : {}),
         delivery,
         accuracy: stored.accuracy,
         sensibility: stored.sensibility,
     });
-    if (stored.quality !== canonical.quality
+    if (stored.failureProfile !== canonical.failureProfile
+        || stored.failureIngredientSignature !== canonical.failureIngredientSignature
+        || stored.quality !== canonical.quality
         || !nearlyEqual(stored.qualityScore, canonical.qualityScore)
         || stored.areaTargetCap !== canonical.areaTargetCap
         || stored.effect.type !== canonical.effect.type
@@ -598,11 +756,19 @@ export function resolveAlchemyPotionUse(
     const quality = AlchemyQuality.fromKey(canonical.quality);
     const effectType = AlchemyEffectType.fromKey(canonical.effect.type);
     if (!quality || !effectType) return undefined;
-    return { metadata: canonical, formula, delivery, quality, effectType };
+    return {
+        metadata: canonical,
+        formula,
+        ...(failureProfile ? { failureProfile } : {}),
+        delivery,
+        quality,
+        effectType,
+    };
 }
 
 export function createAlchemyPotionSnapshot(options: {
     readonly formula: Readonly<AlchemyFormulaData> | undefined;
+    readonly ingredients?: readonly AlchemyIngredientSelectionInput[];
     readonly delivery: AlchemyDelivery;
     readonly bottleCount: number;
     readonly accuracy: number;
@@ -612,16 +778,25 @@ export function createAlchemyPotionSnapshot(options: {
     const alchemy = createCanonicalAlchemyPotionMetadata(options);
     const quality = AlchemyQuality.fromKey(alchemy.quality)!;
     const failed = !formula;
+    const failureProfile = alchemy.failureProfile
+        ? AlchemyFailureProfile.fromKey(alchemy.failureProfile)
+        : undefined;
     const effectType = AlchemyEffectType.fromKey(alchemy.effect.type)!;
     const power = alchemy.effect.power;
     const duration = alchemy.effect.duration;
     const deliveryLabel = options.delivery === AlchemyDelivery.THROW ? '투척형 ' : '';
-    const resultName = failed ? '실패한 조제약' : formula.name;
+    const resultName = failed
+        ? failureProfile ? `${failureProfile.label} 실패약` : '실패한 조제약'
+        : formula.name;
     const audienceLabel = effectType.audience === 'beneficial' ? '아군' : '적';
     const effectText = effectType === AlchemyEffectType.RESTORE_LIFE ? `생명력 ${power} 회복`
         : effectType === AlchemyEffectType.RESTORE_MENTALITY ? `정신력 ${power} 회복`
             : effectType === AlchemyEffectType.FAILED ? `생명력 ${power} 회복`
-                : `${formula?.effect.statusEffectId ?? effectType.label} Lv.${Math.max(1, Math.round(power))} · ${duration}초`;
+                : effectType === AlchemyEffectType.UNSTABLE
+                    ? `불안정 마법 피해 ${roundPotionValue(power * ALCHEMY_HARMFUL_DAMAGE_SCALE)}`
+                    : failureProfile === AlchemyFailureProfile.TOXIC
+                        ? `독성 마법 피해 ${roundPotionValue(power * ALCHEMY_HARMFUL_DAMAGE_SCALE)} · 독 ${duration}초`
+                        : `${alchemy.effect.statusEffectId ?? effectType.label} Lv.${Math.max(1, Math.round(power))} · ${duration}초`;
     const areaText = options.delivery === AlchemyDelivery.THROW
         ? ` · 대상 중심 ${audienceLabel} 최대 ${quality.areaTargetCap}명`
         : '';
@@ -636,6 +811,8 @@ export function createAlchemyPotionSnapshot(options: {
         count: clamp(Math.floor(options.bottleCount), 1, 3),
         durability: null,
         metadataDelta: metadata,
-        tags: [],
+        tags: failureProfile === AlchemyFailureProfile.TOXIC
+            ? [GameTags.PROPERTY_POISON]
+            : [],
     };
 }

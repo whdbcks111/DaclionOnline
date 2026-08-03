@@ -4,6 +4,7 @@ import {
     defineThirdJobLineage,
     JobTier,
 } from '../models/Job.js';
+import { ALCHEMY_FEATURE_SKILL_ID } from '../models/Alchemy.js';
 
 const firstJobs = [
     {
@@ -133,6 +134,7 @@ for (const [main, sub, eliteId, name, offenseFactor = 1] of eliteRecipes) {
                 { skillDataId: 'arcane_enchanting' },
                 { skillDataId: 'staff_infusing' },
             ] : []),
+            ...(eliteId === 'alchemist' ? [{ skillDataId: ALCHEMY_FEATURE_SKILL_ID }] : []),
         ],
         mainModifiers: [
             ...parent.main,

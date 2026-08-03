@@ -5,6 +5,7 @@ import {
     createAlchemyTrackingProof,
     getAlchemyTrackingTargetPosition,
     type AlchemyTrackingConfig,
+    type ForgeRhythmConfig,
 } from '../../../shared/minigames.js';
 import { GameTags } from '../../../shared/tags.js';
 import '../data/items.js';
@@ -13,6 +14,7 @@ import '../data/statusEffects.js';
 import '../data/alchemy.js';
 import {
     ALCHEMIST_JOB_ID,
+    ALCHEMY_FEATURE_SKILL_ID,
     ALCHEMY_WATER_BOTTLE_ITEM_ID,
     AlchemyDelivery,
     createAlchemyPotionSnapshot,
@@ -30,9 +32,20 @@ import type Player from '../models/Player.js';
 import Stat, { StatType } from '../models/Stat.js';
 import { PlayerProgress } from '../models/Progress.js';
 import {
+    ALCHEMY_DRAFT_TTL_MS,
+    adjustAlchemyDraftReagent,
+    cancelAlchemyDraft,
+    canUseAlchemy,
+    clearAlchemyDraft,
     createAlchemyTrackingConfig,
+    getAlchemyDraftSnapshot,
+    initAlchemyDraftLifecycle,
+    openAlchemyDraft,
     resolveAlchemyPotionTargets,
+    setAlchemyDraftBottleCount,
+    setAlchemyDraftDelivery,
     startAlchemy,
+    startAlchemyDraft,
     useAlchemyPotion,
 } from './alchemy.js';
 import { createSession, removeSession, setUserOffline, setUserOnline } from './login.js';
@@ -40,12 +53,14 @@ import {
     cancelMiniGame,
     failMiniGameOnDisconnect,
     readyMiniGame,
+    startMiniGame,
     submitMiniGameResult,
 } from './minigame.js';
 import { partyManager } from './party.js';
 import { registerOnlinePlayer, unregisterOnlinePlayer } from './playerRegistry.js';
 import { getIO, initSocket } from './socket.js';
 import {
+    buildAlchemyDraftCard,
     createAlchemyReagentInformationMessage,
     getAlchemyReagentCompletions,
     getAlchemyReagentInfoCompletions,
@@ -106,10 +121,16 @@ class TestAlchemyPlayer extends Entity {
     readonly stat = new Stat({ sensibility: 240 });
     readonly progress: PlayerProgress;
     readonly career: { hasJob: (jobId: string) => boolean };
+    readonly skills: { has: (skillDataId: string) => boolean };
     lastAttackOptions: AttackOptions | undefined;
     rejectNextAttack = false;
 
-    constructor(readonly userId: number, locationId = LOCATION_ID, alchemist = true) {
+    constructor(
+        readonly userId: number,
+        locationId = LOCATION_ID,
+        hasAlchemySkill = true,
+        alchemistJob = hasAlchemySkill,
+    ) {
         super(200, 0, locationId, {
             maxLife: 2_000,
             maxMentality: 1_000,
@@ -122,7 +143,8 @@ class TestAlchemyPlayer extends Entity {
         this.name = `연금 시험자 ${userId}`;
         this.inventory = Inventory.createEmpty(userId, 100_000);
         this.progress = PlayerProgress.createEmpty(userId);
-        this.career = { hasJob: jobId => alchemist && jobId === ALCHEMIST_JOB_ID };
+        this.career = { hasJob: jobId => alchemistJob && jobId === ALCHEMIST_JOB_ID };
+        this.skills = { has: skillDataId => hasAlchemySkill && skillDataId === ALCHEMY_FEATURE_SKILL_ID };
     }
 
     override get isPlayer(): boolean { return true; }
@@ -139,6 +161,16 @@ class TestAlchemyPlayer extends Entity {
         return super.attack(...args);
     }
 }
+
+test('연금 기능 권한은 현재 연금술사 직업과 가마솥 연성 패시브를 모두 요구한다', () => {
+    const jobWithoutSkill = new TestAlchemyPlayer(78_090, LOCATION_ID, false, true);
+    const skillWithoutJob = new TestAlchemyPlayer(78_091, LOCATION_ID, true, false);
+    const eligible = new TestAlchemyPlayer(78_092, LOCATION_ID, true, true);
+
+    assert.equal(canUseAlchemy(asPlayer(jobWithoutSkill)), false);
+    assert.equal(canUseAlchemy(asPlayer(skillWithoutJob)), false);
+    assert.equal(canUseAlchemy(asPlayer(eligible)), true);
+});
 
 function asPlayer(player: TestAlchemyPlayer): Player {
     return player as unknown as Player;
@@ -160,6 +192,161 @@ function lifeAlchemyOptions() {
         ],
     } as const;
 }
+
+test('버튼형 연금 준비는 사용자별 불변 snapshot과 병수·방식·재료 inventory 경계를 지킨다', () => {
+    const player = new TestAlchemyPlayer(78_093);
+    for (const itemDataId of [
+        'dune_scorpion_venom',
+        'mourning_lily',
+        'oasis_date',
+        'mana_crystal',
+        'tide_pearl',
+        'snowmoss',
+    ]) player.inventory.addItem(itemDataId, 1);
+    player.inventory.addItem(ALCHEMY_WATER_BOTTLE_ITEM_ID, 3);
+
+    const opened = openAlchemyDraft(asPlayer(player));
+    assert.equal(opened.success, true, opened.reason);
+    const draftId = opened.draft!.id;
+    let revision = opened.draft!.revision;
+    assert.equal(Object.isFrozen(opened.draft), true);
+    assert.equal(Object.isFrozen(opened.draft!.ingredients), true);
+    assert.equal(setAlchemyDraftBottleCount(asPlayer(player), 'stale-id', revision, 3).success, false);
+    const bottleResult = setAlchemyDraftBottleCount(asPlayer(player), draftId, revision, 3);
+    assert.equal(bottleResult.success, true);
+    const staleRevision = revision;
+    revision = bottleResult.draft!.revision;
+    assert.equal(
+        setAlchemyDraftDelivery(asPlayer(player), draftId, staleRevision, AlchemyDelivery.THROW).success,
+        false,
+    );
+    const deliveryResult = setAlchemyDraftDelivery(
+        asPlayer(player),
+        draftId,
+        revision,
+        AlchemyDelivery.THROW,
+    );
+    assert.equal(deliveryResult.success, true);
+    revision = deliveryResult.draft!.revision;
+
+    for (const itemDataId of ['dune_scorpion_venom', 'mourning_lily', 'oasis_date', 'mana_crystal', 'tide_pearl']) {
+        const result = adjustAlchemyDraftReagent(asPlayer(player), draftId, revision, itemDataId, 1);
+        assert.equal(result.success, true);
+        revision = result.draft!.revision;
+    }
+    assert.match(
+        adjustAlchemyDraftReagent(asPlayer(player), draftId, revision, 'snowmoss', 1).reason ?? '',
+        /최대 5종/,
+    );
+    assert.match(
+        adjustAlchemyDraftReagent(
+            asPlayer(player),
+            draftId,
+            revision,
+            'dune_scorpion_venom',
+            1,
+        ).reason ?? '',
+        /보유한 수량/,
+    );
+    const snapshot = getAlchemyDraftSnapshot(asPlayer(player), draftId)!;
+    assert.equal(snapshot.bottleCount, 3);
+    assert.equal(snapshot.deliveryKey, 'throw');
+    assert.equal(snapshot.ingredients.length, 5);
+    assert.equal(snapshot.totalIngredientCount, 5);
+    assert.equal(snapshot.waterBottleCount, 3);
+    assert.equal(snapshot.revision, revision);
+    assert.equal(Object.isFrozen(snapshot.ingredients[0]), true);
+
+    const cardJson = JSON.stringify(buildAlchemyDraftCard(asPlayer(player), snapshot));
+    assert.match(cardJson, new RegExp(`/연금준비병 ${draftId} ${revision} 1`));
+    assert.match(cardJson, new RegExp(`/연금준비방식 ${draftId} ${revision} drink`));
+    assert.match(cardJson, new RegExp(`/연금준비재료 ${draftId} ${revision} dune_scorpion_venom -1`));
+    assert.match(cardJson, new RegExp(`/연금준비시작 ${draftId} ${revision}`));
+    assert.match(cardJson, new RegExp(`/연금준비취소 ${draftId} ${revision}`));
+    assert.equal(cancelAlchemyDraft(player.userId, draftId, revision).success, true);
+    assert.equal(getAlchemyDraftSnapshot(asPlayer(player), draftId), undefined);
+});
+
+test('버튼형 연금 시작은 중복 시작을 막고 ready 전에는 재료를 소비하지 않는다', () => {
+    const player = new TestAlchemyPlayer(78_094);
+    player.inventory.addItem('dune_scorpion_venom', 3);
+    player.inventory.addItem(ALCHEMY_WATER_BOTTLE_ITEM_ID, 3);
+    const sparse = startAlchemy(asPlayer(player), {
+        bottleCount: 3,
+        delivery: AlchemyDelivery.DRINK,
+        ingredients: [{ itemDataId: 'dune_scorpion_venom', count: 1 }],
+    });
+    assert.equal(sparse.success, false);
+    assert.match(sparse.reason ?? '', /한 병마다/);
+
+    const opened = openAlchemyDraft(asPlayer(player));
+    const draftId = opened.draft!.id;
+    let revision = opened.draft!.revision;
+    const bottleResult = setAlchemyDraftBottleCount(asPlayer(player), draftId, revision, 3);
+    assert.equal(bottleResult.success, true);
+    revision = bottleResult.draft!.revision;
+    for (let count = 0; count < 3; count++) {
+        const reagentResult = adjustAlchemyDraftReagent(
+            asPlayer(player),
+            draftId,
+            revision,
+            'dune_scorpion_venom',
+            1,
+        );
+        assert.equal(reagentResult.success, true);
+        revision = reagentResult.draft!.revision;
+    }
+
+    const started = startAlchemyDraft(asPlayer(player), draftId, revision);
+    assert.equal(started.success, true, started.reason);
+    assert.ok(started.miniGame);
+    assert.equal(player.inventory.getCount('dune_scorpion_venom'), 3);
+    assert.equal(player.inventory.getCount(ALCHEMY_WATER_BOTTLE_ITEM_ID), 3);
+    assert.equal(startAlchemyDraft(asPlayer(player), draftId, revision).success, false);
+    assert.equal(cancelMiniGame(player.userId, '버튼형 시작 전 취소 시험'), true);
+    assert.equal(player.inventory.getCount('dune_scorpion_venom'), 3);
+    assert.equal(player.inventory.getCount(ALCHEMY_WATER_BOTTLE_ITEM_ID), 3);
+});
+
+test('연금 준비는 만료·이동·다른 미니게임 시작에서 정리된다', () => {
+    const player = new TestAlchemyPlayer(78_095);
+    const now = Date.now();
+    const expired = openAlchemyDraft(asPlayer(player), now).draft!;
+    assert.equal(
+        getAlchemyDraftSnapshot(asPlayer(player), expired.id, now + ALCHEMY_DRAFT_TTL_MS),
+        undefined,
+    );
+
+    const moved = openAlchemyDraft(asPlayer(player)).draft!;
+    player.locationId = 'alchemy-draft-other-location';
+    assert.equal(getAlchemyDraftSnapshot(asPlayer(player), moved.id), undefined);
+    player.locationId = LOCATION_ID;
+
+    initAlchemyDraftLifecycle();
+    const conflicted = openAlchemyDraft(asPlayer(player)).draft!;
+    const forgeConfig: ForgeRhythmConfig = {
+        durationMs: 1_000,
+        label: '연금 준비 충돌 시험',
+        difficulty: 1,
+        qualityBonus: 0,
+        beatTimesMs: [500],
+        hitWindowMs: 200,
+        perfectWindowMs: 60,
+        requiredAccuracy: 0.5,
+    };
+    const other = startMiniGame({
+        userId: player.userId,
+        type: 'forge_rhythm',
+        config: forgeConfig,
+        expiresInMs: 2_000,
+        validate: () => ({ success: false }),
+        onResolved: () => undefined,
+    });
+    assert.ok(other);
+    assert.equal(cancelAlchemyDraft(player.userId, conflicted.id, conflicted.revision).success, false);
+    assert.equal(cancelMiniGame(player.userId, '다른 미니게임 충돌 시험 정리'), true);
+    clearAlchemyDraft(player.userId, '테스트 정리');
+});
 
 function trackingInputs(config: AlchemyTrackingConfig, elapsedMs: number) {
     return Array.from({ length: Math.floor(elapsedMs / 20) + 1 }, (_, index) => {
@@ -193,8 +380,10 @@ test('연금 자동완성은 보유·실험 경계를 지키고 재료 정보에
     registerOnlinePlayer(asPlayer(outsider));
     try {
         player.inventory.addItem('mourning_lily', 1);
-        assert.equal(getAlchemyReagentCompletions(player.userId).some(value =>
-            (typeof value === 'string' ? value : value.value).startsWith('애도의 백합')), true);
+        const initialCompletion = getAlchemyReagentCompletions(player.userId).find(value =>
+            (typeof value === 'string' ? value : value.value).startsWith('애도의 백합'));
+        assert.ok(initialCompletion);
+        assert.match(typeof initialCompletion === 'string' ? initialCompletion : initialCompletion.value, /,$/);
         assert.deepEqual(getAlchemyReagentInfoCompletions(player.userId), []);
         assert.match(createAlchemyReagentInformationMessage(asPlayer(player), '애도의 백합'), /실험 기록이 없습니다/);
         assert.deepEqual(getAlchemyReagentCompletions(outsider.userId), []);
@@ -457,6 +646,49 @@ test('독성 조제약 음용은 자기 공격 경로 없이 자신에게 독 �
         assert.equal(player.inventory.getCount('alchemy_toxic_flask'), 0);
     } finally {
         unregisterOnlinePlayer(player.userId);
+    }
+});
+
+test('독성 실패약은 회복하지 않고 독 피해를 주며 불안정 실패약은 일반 마법 피해만 준다', () => {
+    const toxicPlayer = new TestAlchemyPlayer(78_132);
+    const unstablePlayer = new TestAlchemyPlayer(78_133);
+    registerOnlinePlayer(asPlayer(toxicPlayer));
+    registerOnlinePlayer(asPlayer(unstablePlayer));
+    try {
+        const toxicSnapshot = createAlchemyPotionSnapshot({
+            formula: undefined,
+            ingredients: [{ itemDataId: 'dune_scorpion_venom', count: 1 }],
+            delivery: AlchemyDelivery.DRINK,
+            bottleCount: 1,
+            accuracy: 0.82,
+            sensibility: 240,
+        });
+        assert.equal(toxicPlayer.inventory.addItemSnapshot(toxicSnapshot), true);
+        const toxicPotion = toxicPlayer.inventory.getFirstItemByData(toxicSnapshot.itemDataId)!;
+        const toxicLifeBefore = toxicPlayer.life;
+        useAlchemyPotion(toxicPlayer.inventory, toxicPotion, () => undefined);
+        assert.ok(toxicPlayer.life < toxicLifeBefore);
+        assert.equal(toxicPlayer.hasStatusEffect('poison'), true);
+        assert.equal(toxicPlayer.lastDamageCause?.effectSource?.hasTag(GameTags.PROPERTY_POISON), true);
+
+        const unstableSnapshot = createAlchemyPotionSnapshot({
+            formula: undefined,
+            ingredients: [{ itemDataId: 'wolf_pelt', count: 1 }],
+            delivery: AlchemyDelivery.DRINK,
+            bottleCount: 1,
+            accuracy: 0.82,
+            sensibility: 240,
+        });
+        assert.equal(unstablePlayer.inventory.addItemSnapshot(unstableSnapshot), true);
+        const unstablePotion = unstablePlayer.inventory.getFirstItemByData(unstableSnapshot.itemDataId)!;
+        const unstableLifeBefore = unstablePlayer.life;
+        useAlchemyPotion(unstablePlayer.inventory, unstablePotion, () => undefined);
+        assert.ok(unstablePlayer.life < unstableLifeBefore);
+        assert.equal(unstablePlayer.hasStatusEffect('poison'), false);
+        assert.equal(unstablePlayer.lastDamageCause?.effectSource?.hasTag(GameTags.PROPERTY_POISON), false);
+    } finally {
+        unregisterOnlinePlayer(toxicPlayer.userId);
+        unregisterOnlinePlayer(unstablePlayer.userId);
     }
 });
 

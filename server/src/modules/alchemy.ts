@@ -7,6 +7,11 @@ import {
 import type Inventory from '../models/Inventory.js';
 import {
     ALCHEMIST_JOB_ID,
+    ALCHEMY_FEATURE_SKILL_ID,
+    ALCHEMY_HARMFUL_DAMAGE_SCALE,
+    ALCHEMY_MAX_DISTINCT_REAGENTS,
+    ALCHEMY_MAX_TOTAL_REAGENT_COUNT,
+    ALCHEMY_WATER_BOTTLE_ITEM_ID,
     AlchemyDelivery,
     AlchemyEffectType,
     createAlchemyInventoryRequirements,
@@ -18,6 +23,7 @@ import {
     type AlchemyFormulaData,
     type AlchemyIngredientSelectionInput,
 } from '../models/Alchemy.js';
+import { GameEventIds, subscribeGameEvent } from '../models/GameEvent.js';
 import { Item, ItemMetadataKeys, getItemSnapshotDisplay, type ItemSnapshot } from '../models/Item.js';
 import { getLocation } from '../models/Location.js';
 import Monster from '../models/Monster.js';
@@ -27,9 +33,16 @@ import { StatusEffectType } from '../models/StatusEffect.js';
 import { partyManager } from './party.js';
 import { getOnlinePlayers, getPlayerByUserId } from './player.js';
 import { sendBotMessageToUser, sendNotificationToUser } from './message.js';
-import { hasActiveMiniGame, startMiniGame, type MiniGameValidationResult } from './minigame.js';
+import {
+    hasActiveMiniGame,
+    startMiniGame,
+    subscribeMiniGameStarted,
+    type MiniGameValidationResult,
+} from './minigame.js';
+import { cancelGameTask, scheduleGameTask } from './scheduler.js';
 import logger from '../utils/logger.js';
 import { GameTags, TagCollection } from '../../../shared/tags.js';
+import { randomHex } from '../utils/random.js';
 
 export interface StartAlchemyOptions {
     readonly bottleCount: number;
@@ -42,6 +55,318 @@ export interface StartAlchemyResult {
     readonly reason?: string;
     /** 내부 호출자와 통합 테스트가 ready/result를 이어갈 수 있는 서버 발급 세션 snapshot. */
     readonly miniGame?: MiniGameStartData;
+}
+
+/** 직업 변경 뒤 남은 스킬이 권한이 되지 않도록 현재 연금술사 직업과 기능 패시브를 함께 검사한다. */
+export function canUseAlchemy(player: Pick<Player, 'career' | 'skills'>): boolean {
+    return player.career.hasJob(ALCHEMIST_JOB_ID)
+        && player.skills.has(ALCHEMY_FEATURE_SKILL_ID);
+}
+
+export const ALCHEMY_DRAFT_TTL_MS = 10 * 60_000;
+export { ALCHEMY_MAX_DISTINCT_REAGENTS, ALCHEMY_MAX_TOTAL_REAGENT_COUNT };
+
+export interface AlchemyDraftIngredientSnapshot {
+    readonly itemDataId: string;
+    readonly count: number;
+    readonly ownedCount: number;
+}
+
+/** 버튼 카드가 받는 깊게 불변인 사용자별 조제 준비 snapshot. */
+export interface AlchemyDraftSnapshot {
+    readonly id: string;
+    /** 이전 카드 버튼의 재사용을 막는 단조 증가 상태 revision. */
+    readonly revision: number;
+    readonly userId: number;
+    readonly bottleCount: number;
+    readonly deliveryKey: 'drink' | 'throw';
+    readonly deliveryLabel: string;
+    readonly ingredients: readonly AlchemyDraftIngredientSnapshot[];
+    readonly totalIngredientCount: number;
+    readonly waterBottleCount: number;
+    readonly locationId: string;
+    readonly expiresAt: number;
+}
+
+export interface AlchemyDraftMutationResult {
+    readonly success: boolean;
+    readonly reason?: string;
+    readonly draft?: AlchemyDraftSnapshot;
+}
+
+export type AlchemyDraftEvent =
+    | { readonly type: 'updated'; readonly draft: AlchemyDraftSnapshot }
+    | {
+        readonly type: 'ended';
+        readonly userId: number;
+        readonly draftId: string;
+        readonly reason: string;
+    };
+
+type AlchemyDraftEventHandler = (event: AlchemyDraftEvent) => void;
+
+interface AlchemyDraftState {
+    readonly id: string;
+    revision: number;
+    readonly userId: number;
+    readonly locationId: string;
+    bottleCount: number;
+    delivery: AlchemyDelivery;
+    readonly ingredients: Map<string, number>;
+    expiresAt: number;
+}
+
+const alchemyDrafts = new Map<number, AlchemyDraftState>();
+const alchemyDraftHandlers = new Set<AlchemyDraftEventHandler>();
+let alchemyDraftLifecycleInitialized = false;
+
+function alchemyDraftTaskKey(userId: number): string {
+    return `alchemy-draft:${userId}`;
+}
+
+function emitAlchemyDraftEvent(event: AlchemyDraftEvent): void {
+    for (const handler of [...alchemyDraftHandlers]) {
+        try {
+            handler(event);
+        } catch (error) {
+            logger.error('연금술 준비 event 처리 실패:', error);
+        }
+    }
+}
+
+function createAlchemyDraftSnapshot(player: Player, state: AlchemyDraftState): AlchemyDraftSnapshot {
+    const ingredients = [...state.ingredients]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([itemDataId, count]) => Object.freeze({
+            itemDataId,
+            count,
+            ownedCount: player.inventory.getCount(itemDataId),
+        }));
+    return Object.freeze({
+        id: state.id,
+        revision: state.revision,
+        userId: state.userId,
+        bottleCount: state.bottleCount,
+        deliveryKey: state.delivery.key,
+        deliveryLabel: state.delivery.label,
+        ingredients: Object.freeze(ingredients),
+        totalIngredientCount: ingredients.reduce((sum, ingredient) => sum + ingredient.count, 0),
+        waterBottleCount: player.inventory.getCount(ALCHEMY_WATER_BOTTLE_ITEM_ID),
+        locationId: state.locationId,
+        expiresAt: state.expiresAt,
+    });
+}
+
+function scheduleAlchemyDraftExpiry(state: AlchemyDraftState): void {
+    scheduleGameTask(alchemyDraftTaskKey(state.userId), ALCHEMY_DRAFT_TTL_MS / 1_000, () => {
+        if (alchemyDrafts.get(state.userId) === state) {
+            clearAlchemyDraft(state.userId, '연금술 준비 시간이 만료되었습니다.');
+        }
+    });
+}
+
+function touchAlchemyDraft(state: AlchemyDraftState, now: number): void {
+    state.expiresAt = now + ALCHEMY_DRAFT_TTL_MS;
+    scheduleAlchemyDraftExpiry(state);
+}
+
+function failAlchemyDraft(reason: string): AlchemyDraftMutationResult {
+    return { success: false, reason };
+}
+
+function getValidAlchemyDraftState(
+    player: Player,
+    draftId?: string,
+    expectedRevision?: number,
+    now = Date.now(),
+): AlchemyDraftState | undefined {
+    const state = alchemyDrafts.get(player.userId);
+    if (!state) return undefined;
+    if (now >= state.expiresAt) {
+        clearAlchemyDraft(player.userId, '연금술 준비 시간이 만료되었습니다.');
+        return undefined;
+    }
+    if (state.locationId !== player.locationId) {
+        clearAlchemyDraft(player.userId, '장소를 이동해 연금술 준비가 취소되었습니다.');
+        return undefined;
+    }
+    if (!canUseAlchemy(player)) {
+        clearAlchemyDraft(player.userId, '가마솥 연성 스킬을 사용할 수 없어 준비가 취소되었습니다.');
+        return undefined;
+    }
+    if (hasActiveMiniGame(player.userId)) {
+        clearAlchemyDraft(player.userId, '다른 미니게임이 시작되어 연금술 준비가 취소되었습니다.');
+        return undefined;
+    }
+    return (draftId === undefined || state.id === draftId)
+        && (expectedRevision === undefined || state.revision === expectedRevision)
+        ? state
+        : undefined;
+}
+
+function updateAlchemyDraft(player: Player, state: AlchemyDraftState, now = Date.now()): AlchemyDraftMutationResult {
+    state.revision++;
+    touchAlchemyDraft(state, now);
+    const draft = createAlchemyDraftSnapshot(player, state);
+    emitAlchemyDraftEvent({ type: 'updated', draft });
+    return { success: true, draft };
+}
+
+/** 카드 presenter는 갱신·정리 event만 구독하며 내부 Map을 직접 보지 않는다. */
+export function subscribeAlchemyDraftEvents(handler: AlchemyDraftEventHandler): () => void {
+    alchemyDraftHandlers.add(handler);
+    return () => { alchemyDraftHandlers.delete(handler); };
+}
+
+/** 기존 준비를 새로 만들거나 만료 시간을 갱신해 불변 snapshot을 반환한다. */
+export function openAlchemyDraft(player: Player, now = Date.now()): AlchemyDraftMutationResult {
+    if (!canUseAlchemy(player)) {
+        return failAlchemyDraft('현재 연금술사 직업과 패시브 스킬 [ 가마솥 연성 ]이 모두 필요합니다.');
+    }
+    if (player.isDefeated) return failAlchemyDraft('사망 상태에서는 연금술을 준비할 수 없습니다.');
+    if (hasActiveMiniGame(player.userId)) {
+        clearAlchemyDraft(player.userId, '다른 미니게임이 진행 중이라 연금술 준비가 취소되었습니다.');
+        return failAlchemyDraft('다른 미니게임을 마친 뒤 연금술을 준비해주세요.');
+    }
+    let state = getValidAlchemyDraftState(player, undefined, undefined, now);
+    if (!state) {
+        state = {
+            id: randomHex(12),
+            revision: 0,
+            userId: player.userId,
+            locationId: player.locationId,
+            bottleCount: 1,
+            delivery: AlchemyDelivery.DRINK,
+            ingredients: new Map(),
+            expiresAt: now + ALCHEMY_DRAFT_TTL_MS,
+        };
+        alchemyDrafts.set(player.userId, state);
+    }
+    return updateAlchemyDraft(player, state, now);
+}
+
+/** 읽기는 세션 수명을 연장하지 않으며 inventory 현재 수량만 새 snapshot에 반영한다. */
+export function getAlchemyDraftSnapshot(
+    player: Player,
+    draftId?: string,
+    now = Date.now(),
+): AlchemyDraftSnapshot | undefined {
+    const state = getValidAlchemyDraftState(player, draftId, undefined, now);
+    return state ? createAlchemyDraftSnapshot(player, state) : undefined;
+}
+
+export function setAlchemyDraftBottleCount(
+    player: Player,
+    draftId: string,
+    revision: number,
+    bottleCount: number,
+): AlchemyDraftMutationResult {
+    const state = getValidAlchemyDraftState(player, draftId, revision);
+    if (!state) return failAlchemyDraft('현재 연금술 준비 카드가 만료되었거나 바뀌었습니다.');
+    if (!Number.isSafeInteger(bottleCount) || bottleCount < 1 || bottleCount > 3) {
+        return failAlchemyDraft('조제 병 수는 1~3 사이여야 합니다.');
+    }
+    state.bottleCount = bottleCount;
+    return updateAlchemyDraft(player, state);
+}
+
+export function setAlchemyDraftDelivery(
+    player: Player,
+    draftId: string,
+    revision: number,
+    delivery: AlchemyDelivery,
+): AlchemyDraftMutationResult {
+    const state = getValidAlchemyDraftState(player, draftId, revision);
+    if (!state) return failAlchemyDraft('현재 연금술 준비 카드가 만료되었거나 바뀌었습니다.');
+    if (!AlchemyDelivery.values().includes(delivery)) return failAlchemyDraft('전달 방식이 올바르지 않습니다.');
+    state.delivery = delivery;
+    return updateAlchemyDraft(player, state);
+}
+
+export function adjustAlchemyDraftReagent(
+    player: Player,
+    draftId: string,
+    revision: number,
+    itemDataId: string,
+    delta: 1 | -1,
+): AlchemyDraftMutationResult {
+    const state = getValidAlchemyDraftState(player, draftId, revision);
+    if (!state) return failAlchemyDraft('현재 연금술 준비 카드가 만료되었거나 바뀌었습니다.');
+    const normalizedItemDataId = itemDataId.trim();
+    if (!getAlchemyReagent(normalizedItemDataId) || (delta !== 1 && delta !== -1)) {
+        return failAlchemyDraft('등록된 연금 재료와 +1 또는 -1 조작만 사용할 수 있습니다.');
+    }
+    const current = state.ingredients.get(normalizedItemDataId) ?? 0;
+    const next = current + delta;
+    if (next < 0) return failAlchemyDraft('선택하지 않은 재료는 뺄 수 없습니다.');
+    if (delta > 0 && current === 0 && state.ingredients.size >= ALCHEMY_MAX_DISTINCT_REAGENTS) {
+        return failAlchemyDraft(`연금 재료는 최대 ${ALCHEMY_MAX_DISTINCT_REAGENTS}종까지 선택할 수 있습니다.`);
+    }
+    const total = [...state.ingredients.values()].reduce((sum, count) => sum + count, 0);
+    if (delta > 0 && total >= ALCHEMY_MAX_TOTAL_REAGENT_COUNT) {
+        return failAlchemyDraft(`한 번에 넣는 재료는 총 ${ALCHEMY_MAX_TOTAL_REAGENT_COUNT}개를 넘을 수 없습니다.`);
+    }
+    if (delta > 0 && next > player.inventory.getCount(normalizedItemDataId)) {
+        return failAlchemyDraft('현재 인벤토리에 보유한 수량보다 많이 선택할 수 없습니다.');
+    }
+    if (next === 0) state.ingredients.delete(normalizedItemDataId);
+    else state.ingredients.set(normalizedItemDataId, next);
+    return updateAlchemyDraft(player, state);
+}
+
+/** 버튼 준비 snapshot을 기존 권위 startAlchemy에 넘기고 성공했을 때만 준비 상태를 끝낸다. */
+export function startAlchemyDraft(player: Player, draftId: string, revision: number): StartAlchemyResult {
+    const state = getValidAlchemyDraftState(player, draftId, revision);
+    if (!state) return { success: false, reason: '현재 연금술 준비 카드가 만료되었거나 바뀌었습니다.' };
+    if (state.ingredients.size < 1 || state.ingredients.size > ALCHEMY_MAX_DISTINCT_REAGENTS) {
+        return { success: false, reason: '연금 재료를 1~5종 선택해주세요.' };
+    }
+    const ingredients = [...state.ingredients].map(([itemDataId, count]) => ({ itemDataId, count }));
+    if (ingredients.some(ingredient => ingredient.count > player.inventory.getCount(ingredient.itemDataId))) {
+        return { success: false, reason: '선택한 재료 수량이 현재 인벤토리 보유량보다 많습니다.' };
+    }
+    const result = startAlchemy(player, {
+        bottleCount: state.bottleCount,
+        delivery: state.delivery,
+        ingredients,
+    });
+    if (result.success) clearAlchemyDraft(player.userId, '연금술 조제를 시작했습니다.');
+    else if (hasActiveMiniGame(player.userId)) {
+        clearAlchemyDraft(player.userId, '다른 미니게임과 충돌해 연금술 준비가 취소되었습니다.');
+    }
+    return result;
+}
+
+export function cancelAlchemyDraft(userId: number, draftId: string, revision: number): AlchemyDraftMutationResult {
+    const state = alchemyDrafts.get(userId);
+    if (!state || state.id !== draftId || state.revision !== revision) {
+        return failAlchemyDraft('현재 연금술 준비 카드가 만료되었거나 바뀌었습니다.');
+    }
+    clearAlchemyDraft(userId, '연금술 준비를 취소했습니다.');
+    return { success: true };
+}
+
+/** logout·이동·만료·미니게임 시작이 공유하는 단일 정리 API. */
+export function clearAlchemyDraft(userId: number, reason = '연금술 준비가 취소되었습니다.'): boolean {
+    const state = alchemyDrafts.get(userId);
+    if (!state) return false;
+    alchemyDrafts.delete(userId);
+    cancelGameTask(alchemyDraftTaskKey(userId));
+    emitAlchemyDraftEvent({ type: 'ended', userId, draftId: state.id, reason });
+    return true;
+}
+
+/** command 초기화 때 이동·다른 미니게임 시작 정리를 한 번만 연결한다. */
+export function initAlchemyDraftLifecycle(): void {
+    if (alchemyDraftLifecycleInitialized) return;
+    alchemyDraftLifecycleInitialized = true;
+    subscribeGameEvent(GameEventIds.LOCATION_CHANGED, event => {
+        const userId = event.actor?.attackOwner.playerUserId;
+        if (userId !== undefined) clearAlchemyDraft(userId, '장소를 이동해 연금술 준비가 취소되었습니다.');
+    });
+    subscribeMiniGameStarted(event => {
+        clearAlchemyDraft(event.userId, '미니게임이 시작되어 연금술 준비를 종료했습니다.');
+    });
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {
@@ -58,12 +383,13 @@ function normalizeIngredientSelections(
             || ingredient.count <= 0 || ingredient.count > 99) return undefined;
         totals.set(itemDataId, (totals.get(itemDataId) ?? 0) + ingredient.count);
     }
-    if (totals.size < 2 || totals.size > 5) return undefined;
+    if (totals.size < 1 || totals.size > ALCHEMY_MAX_DISTINCT_REAGENTS) return undefined;
     const normalized = [...totals]
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([itemDataId, count]) => ({ itemDataId, count }));
     const totalCount = normalized.reduce((sum, ingredient) => sum + ingredient.count, 0);
-    return totalCount <= 90 && normalized.every(ingredient => ingredient.count <= 99)
+    return totalCount <= ALCHEMY_MAX_TOTAL_REAGENT_COUNT
+        && normalized.every(ingredient => ingredient.count <= 99)
         ? normalized
         : undefined;
 }
@@ -117,10 +443,11 @@ export function createAlchemyTrackingConfig(
     };
 }
 
-/** 성공한 유효 조합은 정상 약, 성공한 미확인 조합은 안전한 실패약, 미니게임 실패는 무산으로 확정한다. */
+/** 성공한 유효 조합은 정상 약, 미확인 조합은 투입 성질 기반 실패약, 미니게임 실패는 무산으로 확정한다. */
 export function createAlchemyCompletionOutputs(options: {
     readonly result: Pick<MiniGameValidationResult, 'success' | 'score'>;
     readonly formula: Readonly<AlchemyFormulaData> | undefined;
+    readonly ingredients: readonly AlchemyIngredientSelectionInput[];
     readonly delivery: AlchemyDelivery;
     readonly bottleCount: number;
     readonly sensibility: number;
@@ -128,6 +455,7 @@ export function createAlchemyCompletionOutputs(options: {
     if (!options.result.success) return [];
     return [createAlchemyPotionSnapshot({
         formula: options.formula,
+        ingredients: options.ingredients,
         delivery: options.delivery,
         bottleCount: options.bottleCount,
         accuracy: clamp(options.result.score ?? 0, 0, 1),
@@ -137,8 +465,8 @@ export function createAlchemyCompletionOutputs(options: {
 
 /** `/연금술` 시작점. 첫 ready에서 재료를 한 번만 원자 소비하고 이후 성공 결과만 별도로 지급한다. */
 export function startAlchemy(player: Player, options: StartAlchemyOptions): StartAlchemyResult {
-    if (!player.career.hasJob(ALCHEMIST_JOB_ID)) {
-        return { success: false, reason: '엘리트 직업 [ 연금술사 ]만 조제할 수 있습니다.' };
+    if (!canUseAlchemy(player)) {
+        return { success: false, reason: '현재 연금술사 직업과 패시브 스킬 [ 가마솥 연성 ]이 모두 필요합니다.' };
     }
     if (player.isDefeated) return { success: false, reason: '사망 상태에서는 연금술을 사용할 수 없습니다.' };
     if (hasActiveMiniGame(player.userId)) {
@@ -150,7 +478,11 @@ export function startAlchemy(player: Player, options: StartAlchemyOptions): Star
     }
     const ingredients = normalizeIngredientSelections(options.ingredients);
     if (!ingredients) {
-        return { success: false, reason: '서로 다른 연금 재료를 2~5종, 올바른 수량으로 지정해야 합니다.' };
+        return { success: false, reason: '연금 재료를 1~5종, 올바른 수량으로 지정해야 합니다.' };
+    }
+    const totalIngredientCount = ingredients.reduce((sum, ingredient) => sum + ingredient.count, 0);
+    if (totalIngredientCount < options.bottleCount) {
+        return { success: false, reason: '조제약 한 병마다 연금 재료를 최소 1개 이상 넣어야 합니다.' };
     }
     const requirements = createAlchemyInventoryRequirements(ingredients, options.bottleCount);
     if (!player.inventory.selectItems(requirements)) {
@@ -199,6 +531,7 @@ export function startAlchemy(player: Player, options: StartAlchemyOptions): Star
             const outputs = createAlchemyCompletionOutputs({
                 result,
                 formula,
+                ingredients,
                 delivery: options.delivery,
                 bottleCount: options.bottleCount,
                 sensibility: committedSensibility,
@@ -225,7 +558,7 @@ export function startAlchemy(player: Player, options: StartAlchemyOptions): Star
             const output = outputs[0];
             const display = getItemSnapshotDisplay(output);
             const accuracy = Math.round(clamp(result.score ?? 0, 0, 1) * 100);
-            const formulaText = formula ? '' : ' · 미확인 조합이라 약한 실패약으로 굳었습니다.';
+            const formulaText = formula ? '' : ' · 미확인 조합이 재료 성질에 따른 실패약으로 굳었습니다.';
             const dropText = outputDropped ? ' · 중량 초과로 현재 위치 바닥에 놓였습니다.' : '';
             const message = `[ 연금술 완료 ] ${display.name} x${output.count} · 추적 정확도 ${accuracy}%${formulaText}${dropText}`;
             sendBotMessageToUser(player.userId, message);
@@ -271,7 +604,7 @@ function harmfulPotionTargets(player: Player, targetCap: number): AlchemyPotionT
     const center = player.currentTarget;
     if (!location || !(center instanceof Monster) || center.locationId !== player.locationId
         || center.isDefeated || !location.hasObject(center)) {
-        return { targets: [], reason: '독성 투척약은 현재 장소의 살아 있는 몬스터를 먼저 대상으로 지정해야 합니다.' };
+        return { targets: [], reason: '유해 투척약은 현재 장소의 살아 있는 몬스터를 먼저 대상으로 지정해야 합니다.' };
     }
     const attackable = location.getAttackableObjects(player)
         .filter((target): target is Monster => target instanceof Monster && !target.isDefeated);
@@ -333,21 +666,22 @@ function applyHarmfulAlchemyEffect(
     useThrownAttack = false,
 ): string | undefined {
     const status = statusEffectId ? StatusEffectType.fromKey(statusEffectId) : undefined;
-    const rawDamage = Math.max(1, power * 80);
+    const effectTags = statusEffectId === 'poison' ? [GameTags.PROPERTY_POISON] : [];
+    const rawDamage = Math.max(1, power * ALCHEMY_HARMFUL_DAMAGE_SCALE);
     const damage = useThrownAttack
         ? source.attack(target, damageType, rawDamage, {
             criticalRate: 0,
             criticalDamage: 1,
             consumeMainHandDurability: false,
             triggerMainHandHitEffects: false,
-            effectTags: [GameTags.PROPERTY_POISON],
+            effectTags,
             unavoidable: true,
         })
         : target.damage(rawDamage, damageType, {
             type: 'attack',
             causeEntity: source,
             critical: false,
-            effectSource: new TagCollection({ definition: [GameTags.PROPERTY_POISON] }),
+            effectSource: new TagCollection({ definition: effectTags }),
         });
     if (!damage) return undefined;
     if (status && duration > 0 && !target.isDefeated) {
@@ -422,7 +756,7 @@ export function useAlchemyPotion(inventory: Inventory, item: Item, finish: () =>
                     inventory.restoreItemSnapshot(consumedSnapshot);
                     sendNotificationToUser(player.userId, {
                         key: 'alchemy:potion-attack-cancelled',
-                        message: '현재 대상에게 독성 조제약을 적용하지 못해 소비하지 않았습니다.',
+                        message: '현재 대상에게 유해 조제약을 적용하지 못해 소비하지 않았습니다.',
                     });
                     return;
                 }

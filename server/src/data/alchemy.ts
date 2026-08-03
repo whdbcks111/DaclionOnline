@@ -80,7 +80,7 @@ const alchemyPotionItems = [
     },
     {
         id: FAILED_ALCHEMY_POTION_ITEM_ID, name: '실패한 조제약', image: 'items/fresh_water',
-        description: '조합이 맞지 않아 색과 맛이 불안정한 약. 약한 변칙 효과만 남아 있다.',
+        description: '조합이 맞지 않아 색과 맛이 불안정한 약. 투입한 재료의 독성·생명·정신 성질에 따라 약한 효과나 피해가 남는다.',
         property: GameTags.PROPERTY_WATER, role: ItemBalanceRole.UTILITY,
     },
 ] as const;

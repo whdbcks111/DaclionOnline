@@ -3,10 +3,13 @@ import test from 'node:test';
 import '../data/items.js';
 import '../data/statusEffects.js';
 import '../data/alchemy.js';
+import { GameTags } from '../../../shared/tags.js';
 import {
     ALCHEMY_WATER_BOTTLE_ITEM_ID,
     FAILED_ALCHEMY_POTION_ITEM_ID,
     AlchemyDelivery,
+    AlchemyEffectType,
+    AlchemyFailureProfile,
     AlchemyQuality,
     AlchemyReagentInsightTier,
     calculateAlchemyQualityScore,
@@ -151,6 +154,111 @@ test('조제약 사용 해석은 결과 아이템과 조합식을 대조하고 c
     assert.equal(resolveAlchemyPotionUse('alchemy_life_draught', raw), undefined);
 });
 
+test('미확인 조합 실패약은 독성 우선과 생명·정신 가중치로 제한된 profile을 정한다', () => {
+    assert.equal(AlchemyFailureProfile.fromIngredients([
+        { itemDataId: 'dune_scorpion_venom', count: 1 },
+        { itemDataId: 'mourning_lily', count: 30 },
+    ]), AlchemyFailureProfile.TOXIC);
+    assert.equal(AlchemyFailureProfile.fromIngredients([
+        { itemDataId: 'mourning_lily', count: 2 },
+    ]), AlchemyFailureProfile.RESTORATIVE);
+    assert.equal(AlchemyFailureProfile.fromIngredients([
+        { itemDataId: 'mana_crystal', count: 3 },
+        { itemDataId: 'mourning_lily', count: 1 },
+    ]), AlchemyFailureProfile.MENTAL);
+    assert.equal(AlchemyFailureProfile.fromIngredients([
+        { itemDataId: 'mana_crystal', count: 1 },
+        { itemDataId: 'mourning_lily', count: 1 },
+    ]), AlchemyFailureProfile.UNSTABLE);
+    assert.equal(AlchemyFailureProfile.fromIngredients([
+        { itemDataId: 'wolf_pelt', count: 1 },
+    ]), AlchemyFailureProfile.UNSTABLE);
+});
+
+test('신규 실패약은 profile별 약한 효과와 원재료 signature를 canonical metadata로 저장한다', () => {
+    const createFailed = (itemDataId: string, count = 1) => createAlchemyPotionSnapshot({
+        formula: undefined,
+        ingredients: [{ itemDataId, count }],
+        delivery: AlchemyDelivery.DRINK,
+        bottleCount: 1,
+        accuracy: 0.82,
+        sensibility: 240,
+    });
+    const toxic = createFailed('dune_scorpion_venom');
+    const restorative = createFailed('mourning_lily');
+    const mental = createFailed('mana_crystal');
+    const unstable = createFailed('wolf_pelt');
+    const resolvedToxic = resolveAlchemyPotionUse(
+        toxic.itemDataId,
+        toxic.metadataDelta?.[ItemMetadataKeys.ALCHEMY],
+    );
+    const resolvedRestorative = resolveAlchemyPotionUse(
+        restorative.itemDataId,
+        restorative.metadataDelta?.[ItemMetadataKeys.ALCHEMY],
+    );
+    const resolvedMental = resolveAlchemyPotionUse(
+        mental.itemDataId,
+        mental.metadataDelta?.[ItemMetadataKeys.ALCHEMY],
+    );
+    const resolvedUnstable = resolveAlchemyPotionUse(
+        unstable.itemDataId,
+        unstable.metadataDelta?.[ItemMetadataKeys.ALCHEMY],
+    );
+
+    assert.equal(resolvedToxic?.failureProfile, AlchemyFailureProfile.TOXIC);
+    assert.equal(resolvedToxic?.metadata.failureIngredientSignature, 'dune_scorpion_venom:1');
+    assert.equal(resolvedToxic?.metadata.effect.audience, 'harmful');
+    assert.equal(resolvedToxic?.metadata.effect.statusEffectId, 'poison');
+    assert.equal(resolvedToxic?.metadata.effect.damageType, 'magic');
+    assert.equal(toxic.tags.includes(GameTags.PROPERTY_POISON), true);
+    assert.doesNotMatch(String(toxic.metadataDelta?.[ItemMetadataKeys.CUSTOM_DESCRIPTION]), /회복/);
+
+    assert.equal(resolvedRestorative?.effectType, AlchemyEffectType.RESTORE_LIFE);
+    assert.ok((resolvedRestorative?.metadata.effect.power ?? 750) < 750);
+    assert.equal(resolvedMental?.effectType, AlchemyEffectType.RESTORE_MENTALITY);
+    assert.ok((resolvedMental?.metadata.effect.power ?? 420) < 420);
+    assert.equal(resolvedUnstable?.effectType, AlchemyEffectType.UNSTABLE);
+    assert.equal(resolvedUnstable?.metadata.effect.audience, 'harmful');
+    assert.equal(resolvedUnstable?.metadata.effect.statusEffectId, undefined);
+    assert.equal(unstable.tags.includes(GameTags.PROPERTY_POISON), false);
+});
+
+test('실패약 profile·원재료 signature·효과 위변조는 거부하고 legacy 실패약은 기존 약한 회복을 유지한다', () => {
+    const snapshot = createAlchemyPotionSnapshot({
+        formula: undefined,
+        ingredients: [{ itemDataId: 'dune_scorpion_venom', count: 1 }],
+        delivery: AlchemyDelivery.DRINK,
+        bottleCount: 1,
+        accuracy: 0.71,
+        sensibility: 200,
+    });
+    const raw = snapshot.metadataDelta?.[ItemMetadataKeys.ALCHEMY] as Record<string, unknown>;
+    const mutate = (change: (candidate: Record<string, any>) => void) => {
+        const candidate = JSON.parse(JSON.stringify(raw)) as Record<string, any>;
+        change(candidate);
+        return resolveAlchemyPotionUse(snapshot.itemDataId, candidate);
+    };
+    assert.equal(mutate(candidate => { candidate.failureProfile = 'restorative'; }), undefined);
+    assert.equal(mutate(candidate => { candidate.failureIngredientSignature = 'mourning_lily:1'; }), undefined);
+    assert.equal(mutate(candidate => { candidate.effect.power *= 100; }), undefined);
+
+    const legacy = createAlchemyPotionSnapshot({
+        formula: undefined,
+        delivery: AlchemyDelivery.DRINK,
+        bottleCount: 1,
+        accuracy: 0.71,
+        sensibility: 200,
+    });
+    const legacyResolved = resolveAlchemyPotionUse(
+        legacy.itemDataId,
+        legacy.metadataDelta?.[ItemMetadataKeys.ALCHEMY],
+    );
+    assert.equal(legacyResolved?.failureProfile, undefined);
+    assert.equal(legacyResolved?.metadata.failureIngredientSignature, undefined);
+    assert.equal(legacyResolved?.effectType, AlchemyEffectType.FAILED);
+    assert.equal(legacyResolved?.metadata.effect.audience, 'beneficial');
+});
+
 test('효과·품질·전달 metadata 위변조는 포션 권한 해석 단계에서 거부된다', () => {
     const formula = getAllAlchemyFormulas().find(value => value.id === 'life-restoration')!;
     const snapshot = createAlchemyPotionSnapshot({
@@ -231,6 +339,15 @@ test('연금 명령은 1~3병·음용/투척과 쉼표 재료 수량을 안전�
     const parsed = parseAlchemyCommandRemainder('2 투척 애도의 백합x4, 오아시스 대추야자x2');
     assert.equal(parsed?.bottleCount, 2);
     assert.equal(parsed?.delivery, AlchemyDelivery.THROW);
+    assert.deepEqual(parseAlchemyCommandRemainder('3 음용 모래전갈 독수x1'), {
+        bottleCount: 3,
+        delivery: AlchemyDelivery.DRINK,
+        ingredients: [{ itemDataId: 'dune_scorpion_venom', count: 1 }],
+    });
+    assert.deepEqual(parseAlchemyIngredientList('모래전갈 독수x1,'), [
+        { itemDataId: 'dune_scorpion_venom', count: 1 },
+    ]);
+    assert.equal(parseAlchemyIngredientList('모래전갈 독수x1 모래전갈 독수x1'), undefined);
     assert.equal(parseAlchemyCommandRemainder('4 음용 애도의 백합x8, 오아시스 대추야자x4'), undefined);
     assert.equal(parseAlchemyIngredientList('존재하지 않음x1, 애도의 백합x1'), undefined);
 });
@@ -265,16 +382,19 @@ test('연금 결과 정책은 성공 조합·성공 미확인 조합·추적 실
     const normal = createAlchemyCompletionOutputs({
         ...base,
         formula,
+        ingredients: formula.ingredients,
         result: { success: true, score: 0.84 },
     });
     const unknown = createAlchemyCompletionOutputs({
         ...base,
         formula: undefined,
+        ingredients: [{ itemDataId: 'wolf_pelt', count: 1 }],
         result: { success: true, score: 0.84 },
     });
     const failed = createAlchemyCompletionOutputs({
         ...base,
         formula,
+        ingredients: formula.ingredients,
         result: { success: false, score: 0.96 },
     });
     assert.equal(normal[0]?.itemDataId, formula.resultItemDataId);

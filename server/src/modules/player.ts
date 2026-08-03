@@ -118,6 +118,8 @@ export async function unloadPlayerByUserId(userId: number, requireOffline = fals
         cancelCrafting(player);
         cancelFishing(userId, '접속 종료로 낚시가 취소되었습니다.');
         cancelNavigation(player, false);
+        const { clearAlchemyDraft } = await import('./alchemy.js');
+        clearAlchemyDraft(userId, '접속이 종료되어 연금술 준비가 취소되었습니다.');
         detachHumanVerification(player);
         clearDungeonPuzzleSession(userId);
         tradeManager.cancelForPlayer(player, '접속이 종료되어 거래가 취소되었습니다.');

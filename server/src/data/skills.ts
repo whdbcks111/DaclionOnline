@@ -42,6 +42,7 @@ import {
     STAFF_INFUSION_MENTALITY_COST,
     ForgeMaterial,
 } from '../models/Forging.js';
+import { ALCHEMY_FEATURE_SKILL_ID } from '../models/Alchemy.js';
 
 const CRITICAL_HIT_STAT = 'combat:critical_hits';
 
@@ -1188,6 +1189,21 @@ defineSkill({
     baseMetadata: null,
     calculatedFields: {},
     canActivate: () => denySkill('/단조 <형태> <재료> 명령어를 사용하세요.'),
+    tags: [GameTags.SKILL_PASSIVE],
+});
+
+// TODO(art): 연금술 기능 전용 아이콘 제작 전까지 연금술사 계보 아이콘을 재사용한다.
+defineSkill({
+    id: ALCHEMY_FEATURE_SKILL_ID,
+    name: '가마솥 연성',
+    icon: 'jobs/mage',
+    maxLevel: 1,
+    descriptionTemplate: '등록된 연금 재료 1~5종과 정제수 물병을 가마솥에서 추적해 음용약 또는 투척약을 조제할 수 있습니다.',
+    costTemplate: '선택한 연금 재료 · 완성할 병마다 정제수 물병 1개',
+    activationConditionTemplate: '재료와 정제수 물병을 준비한 뒤 `/연금술`을 입력해 준비 카드를 열어 사용합니다.',
+    baseMetadata: null,
+    calculatedFields: {},
+    canActivate: () => denySkill('/연금술 명령어를 사용하세요.'),
     tags: [GameTags.SKILL_PASSIVE],
 });
 

@@ -20,6 +20,7 @@ import { clearRecentGameEvents, GameEventIds, getRecentGameEvents } from './Game
 import { GameTags } from '../../../shared/tags.js';
 import { getAllMonsterData } from './Monster.js';
 import '../data/monsters.js';
+import { ALCHEMY_FEATURE_SKILL_ID } from './Alchemy.js';
 
 initSocket(createServer(), 'http://localhost');
 test.after(() => { getIO().close(); });
@@ -82,6 +83,10 @@ test('6개 1차·30개 ordered 엘리트·기존 5개 3차 계보가 완전한 �
         .some(grant => grant.skillDataId === 'artificer_manufacturing'));
     assert.ok(getJob('career:blacksmith')?.grantedSkills
         .some(grant => grant.skillDataId === 'equipment_repair'));
+    assert.ok(getJob('career:alchemist')?.grantedSkills
+        .some(grant => grant.skillDataId === ALCHEMY_FEATURE_SKILL_ID));
+    assert.equal(getSkillData(ALCHEMY_FEATURE_SKILL_ID)?.maxLevel, 1);
+    assert.equal(getSkillData(ALCHEMY_FEATURE_SKILL_ID)?.tags.includes(GameTags.SKILL_PASSIVE), true);
     for (const skill of getAllSkillData()) {
         assert.match(skill.icon, /^(skills|items|affinities|jobs)\/[a-z0-9_-]+$/, `${skill.id} declared icon key`);
         const png = readFileSync(new URL(`../../../client/public/icons/${skill.icon}.png`, import.meta.url));
@@ -442,6 +447,21 @@ test('저장된 3차를 중간 저장 없이 복원하고 관리자 직업 변�
     assert.equal(corrupt.career.hasJob('career:starseal_tracker', JobSlotType.MAIN), false);
 });
 
+test('기존 연금술사는 로그인 직업 복원에서 누락된 가마솥 연성을 자동 지급한다', async () => {
+    const restored = createCareer(200);
+    restored.player.progress.setState(CareerProgressIds.MAIN, 'career:mage');
+    restored.player.progress.setState(CareerProgressIds.SUB, 'career:cleric');
+    restored.player.progress.setState(CareerProgressIds.ELITE, 'career:alchemist');
+
+    assert.equal(restored.career.initialize(), false);
+    await Promise.resolve();
+
+    assert.ok(restored.granted.includes('alchemist_mastery'));
+    assert.ok(restored.granted.includes('alchemist_technique'));
+    assert.ok(restored.granted.includes(ALCHEMY_FEATURE_SKILL_ID));
+    assert.equal(restored.getSaveCount(), 0);
+});
+
 test('플레이어 로드 중 엘리트 전직 복원은 생성자 중간 저장을 시작하지 않는다', async () => {
     const { career, player, getSaveCount } = createCareer(200);
     player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
@@ -489,13 +509,16 @@ test('직업 스킬 설명은 현재 수치와 계수 hover를 제공하고 두 
         assert.doesNotMatch(activation, /계보|계승/);
     }
 
-    for (const skillDataId of ['blacksmith_temper', 'precision_break', 'arcane_smelting', 'metal_forging']) {
+    for (const skillDataId of [
+        'blacksmith_temper', 'precision_break', 'arcane_smelting', 'metal_forging', ALCHEMY_FEATURE_SKILL_ID,
+    ]) {
         const skill = new Skill({ playerId: player.userId, skillDataId, level: 1 });
         assert.doesNotMatch(skill.formatDescription(player), /\{\{/);
         assert.doesNotMatch(skill.formatActivationCondition(player), /\{\{/);
     }
     assert.match(new Skill({ playerId: player.userId, skillDataId: 'arcane_smelting' }).formatActivationCondition(player), /\/스킬|!/);
     assert.match(new Skill({ playerId: player.userId, skillDataId: 'metal_forging' }).formatActivationCondition(player), /\/단조/);
+    assert.match(new Skill({ playerId: player.userId, skillDataId: ALCHEMY_FEATURE_SKILL_ID }).formatActivationCondition(player), /\/연금술/);
 
     for (const job of getAllJobs().filter(job => job.tier === JobTier.ELITE)) {
         const skills = job.grantedSkills.map(grant => new Skill({ playerId: player.userId, skillDataId: grant.skillDataId }));

@@ -38,6 +38,7 @@ import type {
     MiniGameValidationRequest,
 } from '../../../shared/minigames.js';
 import { randomHex } from '../utils/random.js';
+import logger from '../utils/logger.js';
 import { getSession } from './login.js';
 import { getIO, getPreferredUserSocket } from './socket.js';
 import { cancelGameTask, scheduleGameTask } from './scheduler.js';
@@ -61,6 +62,13 @@ export interface StartMiniGameOptions<T extends MiniGameType = MiniGameType> {
     onCancelled?: (reason: string) => void
 }
 
+export interface MiniGameStartedEvent {
+    readonly userId: number
+    readonly type: MiniGameType
+}
+
+export type MiniGameStartedHandler = (event: MiniGameStartedEvent) => void
+
 interface ActiveMiniGame extends StartMiniGameOptions {
     sessionId: string
     token: string
@@ -75,6 +83,7 @@ interface ActiveMiniGame extends StartMiniGameOptions {
 }
 
 const activeByUser = new Map<number, ActiveMiniGame>();
+const miniGameStartedHandlers = new Set<MiniGameStartedHandler>();
 /** 전송·브라우저 frame 순서의 작은 흔들림을 흡수하되 비정상 조기 완료는 막는다. */
 export const MINIGAME_RESULT_EARLY_TOLERANCE_MS = 250;
 /** 클라이언트 성공 frame을 서버 결정론 재생으로 인정하는 최소 최종 게이지. */
@@ -101,6 +110,12 @@ export const ALCHEMY_TRACKING_PROOF_MATCH_RATIO = 0.9;
 export const ALCHEMY_TRACKING_START_POSITION_TOLERANCE = 0.75;
 export const ALCHEMY_TRACKING_IDLE_TIMEOUT_MS = 30_000;
 export const ALCHEMY_TRACKING_EXECUTION_GRACE_MS = 5_000;
+
+/** 미니게임 소유 기능이 다른 준비 세션을 raw 상태 접근 없이 정리할 수 있는 시작 구독 경계. */
+export function subscribeMiniGameStarted(handler: MiniGameStartedHandler): () => void {
+    miniGameStartedHandlers.add(handler);
+    return () => { miniGameStartedHandlers.delete(handler); };
+}
 
 export function isFishingCaptureResultAccepted(
     state: FishingSimulationState,
@@ -516,6 +531,13 @@ export function startMiniGame<T extends MiniGameType>(options: StartMiniGameOpti
         actions: [],
     };
     activeByUser.set(options.userId, active);
+    for (const handler of [...miniGameStartedHandlers]) {
+        try {
+            handler({ userId: options.userId, type: options.type });
+        } catch (error) {
+            logger.error('미니게임 시작 구독 처리 실패:', error);
+        }
+    }
     scheduleGameTask(timeoutKey, initialTimeoutMs / 1000 + 1, () => {
         expireMiniGameSession(options.userId, sessionId);
     });
