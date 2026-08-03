@@ -5,6 +5,7 @@ import {
     ADMIN_MAILBOX_BODY,
     ADMIN_MAILBOX_DEFAULT_SUBJECT,
     ADMIN_MAILBOX_OPERATIONAL_COUNT_CAP,
+    formatAdminMailboxSendSuccess,
     initAdminCommands,
     prepareAdminMailboxSend,
     type AdminMailboxPreparationResult,
@@ -27,13 +28,13 @@ function expectRejected(result: AdminMailboxPreparationResult, pattern: RegExp):
 test('관리자 우편 준비는 me와 기본 제목을 안전한 단일 ItemSnapshot으로 만든다', () => {
     const prepared = expectPrepared(prepareAdminMailboxSend(41, ['me', 'health_potion', '25']));
 
-    assert.equal(prepared.recipientId, 41);
+    assert.deepEqual(prepared.target, { kind: 'single', recipientId: 41 });
     assert.equal(prepared.itemDataId, 'health_potion');
     assert.equal(prepared.itemName, '체력 포션');
     assert.equal(prepared.count, 25);
     assert.equal(prepared.maxCount, ADMIN_MAILBOX_OPERATIONAL_COUNT_CAP);
     assert.equal(prepared.subject, ADMIN_MAILBOX_DEFAULT_SUBJECT);
-    assert.equal(prepared.mail.recipientId, 41);
+    assert.equal(Object.hasOwn(prepared.mail, 'recipientId'), false);
     assert.equal(prepared.mail.senderLabel, '관리자');
     assert.equal(prepared.mail.subject, ADMIN_MAILBOX_DEFAULT_SUBJECT);
     assert.equal(prepared.mail.body, ADMIN_MAILBOX_BODY);
@@ -50,10 +51,24 @@ test('관리자 우편 준비는 접속 여부를 조회하지 않고 숫자 Pla
         ['987654', 'health_potion', '3', '  여름 이벤트 보상  '],
     ));
 
-    assert.equal(prepared.recipientId, 987654);
+    assert.deepEqual(prepared.target, { kind: 'single', recipientId: 987654 });
     assert.equal(prepared.subject, '여름 이벤트 보상');
     assert.equal(prepared.mail.subject, '여름 이벤트 보상');
     assert.equal(Object.hasOwn(prepared.mail, 'sourceKey'), false);
+});
+
+test('관리자 우편 대상은 exact lowercase online·all을 구분하고 유사 입력은 거부한다', () => {
+    assert.deepEqual(
+        expectPrepared(prepareAdminMailboxSend(7, ['online', 'health_potion', '1'])).target,
+        { kind: 'online' },
+    );
+    assert.deepEqual(
+        expectPrepared(prepareAdminMailboxSend(7, ['all', 'health_potion', '1'])).target,
+        { kind: 'all' },
+    );
+    for (const target of ['Online', 'ONLINE', 'All', 'ALL', 'online ', ' all']) {
+        expectRejected(prepareAdminMailboxSend(7, [target, 'health_potion', '1']), /online 또는 all/);
+    }
 });
 
 test('내구도 아이템 우편은 실제 Item 생성자가 복원한 기본 내구도를 snapshot에 담는다', () => {
@@ -127,7 +142,11 @@ test('우편발송 명령은 권한 10과 대상·아이템 자동완성 metadat
     const targetCompletions = typeof targetSource === 'function'
         ? targetSource(7, [], '/우편발송 ')
         : targetSource ?? [];
-    assert.deepEqual(targetCompletions[0], { value: 'me', description: '나 자신' });
+    assert.deepEqual(targetCompletions.slice(0, 3), [
+        { value: 'me', description: '나 자신' },
+        { value: 'online', description: '현재 접속 중인 플레이어 전체' },
+        { value: 'all', description: '캐릭터가 생성된 전체 플레이어 (오프라인 포함)' },
+    ]);
 
     const itemSource = command.args?.[1]?.completions;
     assert.equal(typeof itemSource, 'function');
@@ -142,4 +161,15 @@ test('우편발송 명령은 권한 10과 대상·아이템 자동완성 metadat
     assert.equal(publicMetadata?.args?.[0]?.dynamicCompletions, true);
     assert.equal(publicMetadata?.args?.[1]?.dynamicCompletions, true);
     assert.equal(publicMetadata?.args?.[3]?.isText, true);
+});
+
+test('관리자 우편 결과 문구는 대상별 실제 수신자 수와 0명 no-op을 분명히 표시한다', () => {
+    const online = expectPrepared(prepareAdminMailboxSend(7, ['online', 'health_potion', '2']));
+    const all = expectPrepared(prepareAdminMailboxSend(7, ['all', 'health_potion', '2']));
+    const single = expectPrepared(prepareAdminMailboxSend(7, ['99', 'health_potion', '2']));
+
+    assert.match(formatAdminMailboxSendSuccess(online, 3), /현재 접속 중인 플레이어 3명/);
+    assert.match(formatAdminMailboxSendSuccess(all, 1_234), /전체 플레이어 1,234명/);
+    assert.match(formatAdminMailboxSendSuccess(online, 0), /수신자 0명/);
+    assert.match(formatAdminMailboxSendSuccess(single, 1, 456), /플레이어 #99 1명[\s\S]*우편 #456/);
 });

@@ -4,11 +4,13 @@
 
 ## 악보와 장소 변주
 
-`shared/adaptiveMusic.ts`의 `LocationMusicTheme` 클래스형 enum이 현재 월드의 기본 대표색 25개와 승천 권역 10개, 총 35개 악보를 소유한다. 각 악보에는 권역명, BPM, root MIDI, `MusicScale`, 8~16 step motif, 네 chord, bass/pad/lead 음역, timbre와 rhythm character가 명시되어 있다.
+`shared/adaptiveMusic.ts`의 `LocationMusicTheme` 클래스형 enum이 현재 월드의 기본 대표색 25개와 승천 권역 10개, 총 35개 악보를 소유한다. 각 악보에는 권역명, BPM, root MIDI, `MusicScale`, 16 step leitmotif, 네 chord, bass/pad/lead 음역, timbre와 rhythm character가 명시되어 있다. 35개 원형 leitmotif는 같은 짧은 문법을 옮겨 쓴 형태가 되지 않도록 음정 간격과 쉼 배치를 각각 다시 구성했다.
 
-`composeLocationScore(locationId, mapColor)`가 WebAudio와 무관한 유일한 작곡 진입점이다. FNV-1a seed는 표시명·좌표가 아니라 안정적인 장소 ID와 theme key만 사용한다. 같은 권역의 root·scale·기본 motif와 네 화음의 기능·순서를 유지하면서 장소마다 motif를 4-step 구절 경계에서 회전하고 쉼, 강세, octave, rhythm phase와 counter line을 결정한다. seed가 선율을 다른 scale degree로 전조하거나 화음을 회전시키지 않으므로 장조 권역이 임의의 단·감화음 진행으로 바뀌지 않는다. 등록되지 않은 색은 루미나르 악보로 안전하게 폴백한다.
+`composeLocationScore(locationId, mapColor)`가 WebAudio와 무관한 유일한 작곡 진입점이다. FNV-1a seed는 표시명·좌표가 아니라 안정적인 장소 ID와 theme key만 사용한다. 같은 권역의 root·scale·기본 motif와 네 화음의 기능·순서를 유지하면서 4-step 구절의 첫 음은 고정하고 약박만 원 motif 음역 안에서 scale degree ornament한다. 첫 두 마디 A에 이어지는 두 마디 B는 A를 회전 복사하지 않고 별도 seed로 음 진행·쉼·박자를 만든 독립 응답구이며, 마지막은 으뜸음으로 종지한다. 등록되지 않은 색은 루미나르 악보로 안전하게 폴백한다.
 
-탐험 lead와 보스 counter 구절은 전체를 12반음 단위로 옮겨 `G4~C7(MIDI 67~96)`, pad 화음은 화음 단위로 `C4~C6(MIDI 60~84)`에 둔다. 현재 회귀 테스트는 병합된 623개 장소와 35개 색의 양방향 완전 일치, 권역 안 모든 장소의 실제 melody signature 고유성, 4-step 구절 회전, 고정 화음 순서, 전 음표·chord·bass의 MIDI 범위와 scale membership, 불변 snapshot, 결정론을 검사한다.
+각 `rhythm`은 32개 16분음표 grid 안의 서로 다른 16개 onset, 음 길이, 네 pad onset·길이·velocity를 소유한다. A는 이 기본 박자를 사용하고 B는 두 번째 grid에서 장소 seed로 onset과 음 길이까지 변주한다. 따라서 탐험 lead와 pad부터 steady·waltz·syncopated·march·pulse·broken·swing의 박자감이 실제로 달라진다. `timbre` 8종도 bright 여부와 관계없이 고유한 Tone Omni oscillator와 lead/pad envelope를 사용한다. 밝은 테마를 모두 triangle로 덮어쓰는 예외는 없다.
+
+탐험 lead와 보스 counter 구절은 `G4~C7(MIDI 67~96)`, pad 화음은 `C4~C6(MIDI 60~84)`에 둔다. 회귀 테스트는 병합된 623개 장소와 35개 색의 양방향 완전 일치뿐 아니라 강세·BPM·보스 counter를 제외한 실제 pitch/rest motif의 전 지역 고유성을 검사한다. 반복 시작점을 32칸 모두 회전하고 중앙 전조 차이를 제거해 같은 곡으로 비교해도 pitch·duration·onset loop가 623개 모두 달라야 한다. 같은 권역의 장소끼리도 정규화한 32칸 음정·쉼 중 최소 10칸, 음 길이와 onset 간격을 합산하면 최소 24칸 이상 달라야 한다.
 
 ## 실제 교전 상태
 
@@ -20,11 +22,11 @@
 
 `client/src/audio/AdaptiveMusicEngine.ts`는 Home route 하나가 소유한다. 탐험 bank는 저밀도 lead/pluck와 pad를 항상 재생한다. `combat`은 bass와 가벼운 percussion을 gain ramp로 더하고, `boss`는 counter melody, harmony와 무거운 percussion을 추가한다. 상태 snapshot 변화는 Part를 다시 만들지 않고 layer gain만 변경한다.
 
-장소 이동 때 비활성 voice bank에 다음 score를 준비하고 Tone Transport의 다음 마디 경계부터 3.5초 equal-power crossfade한다. BPM도 같은 시간에 ramp한다. 빠른 연속 이동은 진행 중 전환을 끊지 않고 마지막 요청 하나로 합쳐 다음 전환으로 잇는다. compressor와 -4dB limiter 뒤에 사용자 gain을 두며 bank당 pad 6성, boss harmony 3성 이내로 제한한다.
+장소 이동 때 비활성 voice bank에 다음 score를 준비하고 Tone Transport의 다음 4분음표 경계부터 1.9초 equal-power crossfade한다. BPM도 같은 시간에 ramp한다. 빠른 연속 이동은 진행 중 전환을 끊지 않고 마지막 요청 하나로 합쳐 다음 전환으로 잇는다. 이전처럼 최대 한 마디를 기다린 뒤 기존 곡이 오래 남는 현상을 피하면서도 abrupt cut은 만들지 않는다. compressor와 -4dB limiter 뒤에 사용자 gain을 두며 bank당 pad 6성, boss harmony 3성 이내로 제한한다.
 
-기본 음량 35는 사용자 gain 약 -12.05dB로 변환한다. 탐험 레이어는 평시 0.58로 유지한다. 일반 탐험 mix는 180Hz high-pass와 저/중/고역 `-4.5/+1.5/+1dB`, pad/lead `-17/-11dB`를 사용한다. 밝은 탐험 mix는 260Hz high-pass와 `-7/+2/+3dB`, pad/lead `-16/-9dB`로 선율을 더 앞세운다. pad는 `4n` 길이, release `0.22~0.25초`, 최대 6성으로 다음 화음과 긴 release가 겹쳐 음이 누락되거나 저음 drone이 생기지 않게 한다. 전투·보스에서는 탐험·저음·타악·대선율이 합쳐지므로 각 레이어 gain을 별도로 낮춘다. 사용자 최대 gain도 0.88 이하이고 마지막 -4dB limiter를 통과하므로 합산 peak가 출력 clipping으로 이어지지 않는다.
+기본 음량 35는 사용자 gain 약 -12.05dB로 변환한다. 탐험 레이어는 평시 0.58로 유지한다. 일반 탐험 mix는 180Hz high-pass와 저/중/고역 `-4.5/+1.5/+1dB`, pad/lead `-17/-11dB`를 사용한다. 밝은 탐험 mix는 260Hz high-pass와 `-7/+2/+3dB`, pad/lead `-16/-9dB`로 선율을 더 앞세운다. pad는 rhythm별 `16n~4n.` 길이와 timbre별 envelope, 최대 6성으로 연주해 음색을 구분하면서 과도한 저음 drone과 voice drop을 막는다. 전투·보스에서는 탐험·저음·타악·대선율이 합쳐지므로 각 레이어 gain을 별도로 낮춘다. 사용자 최대 gain도 0.88 이하이고 마지막 -4dB limiter를 통과하므로 합산 peak가 출력 clipping으로 이어지지 않는다.
 
-루미나르, 물빛 연못, 바람결 초원, 은빛그물 숲, 여명의 성소는 밝은 탐험 테마로 분류한다. Ionian·Mixolydian·Lydian·장조 pentatonic 기반의 원 화성을 seed가 바꾸지 않고, 실제 lead 최저음이 pad 최저음보다 최소 한 옥타브 높게 유지된다. 저음 bass와 긴장성 counter·추가 화성·강한 타악은 탐험 출력에 연결하지 않고 전투 또는 보스 레이어에서만 연주한다.
+루미나르, 물빛 연못, 바람결 초원, 은빛그물 숲, 여명의 성소는 밝은 탐험 테마로 분류한다. 각각 I-IV-V-I, 장조 pentatonic 개방화음, I-vi-IV-V, I-♭VII-IV-I, I-II-V-I 진행을 사용하며 seed가 이를 회전하거나 감화음화하지 않는다. 실제 lead 최저음은 pad 최저음보다 최소 한 옥타브 높다. 저음 bass와 긴장성 counter·추가 화성·강한 타악은 탐험 출력에 연결하지 않고 전투 또는 보스 레이어에서만 연주한다.
 
 ## 사용자 입력과 수명주기
 
@@ -34,6 +36,6 @@
 
 ## 검증
 
-- `server/src/data/adaptiveMusic.test.ts`: 35 악보·623 장소 coverage, 결정론, signature, scale/MIDI, 전투 resolver, 음량·storage.
+- `server/src/data/adaptiveMusic.test.ts`: 35 원형 leitmotif 최소 거리·623 장소 coverage, 전조·시작점 정규화 뒤에도 고유한 실제 loop, 같은 권역 장소 간 최소 pitch/rest·연주 차이, 독립 A/B schedule, rhythm/timbre profile, 밝은 화성, scale/MIDI, 전투 resolver, 음량·storage.
 - `server/src/models/AdaptiveMusicCombat.test.ts`: 실제 공격·회피·피격·보스 우선순위·9초 만료·이동/사망 초기화·자원 제외.
 - 클라이언트는 TypeScript/Vite build와 ESLint로 Tone node·React lifecycle 계약을 검증하고, 첫 gesture·모바일 autoplay·두 탭·숨김/복귀·빠른 연속 이동은 실제 브라우저에서 확인한다.

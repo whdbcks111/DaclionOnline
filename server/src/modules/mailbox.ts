@@ -18,7 +18,11 @@ export const MAILBOX_MAX_TOTAL_ITEM_COUNT = 1_000_000;
 export const MAILBOX_MAX_ATTACHMENT_JSON_BYTES = 32 * 1024;
 export const MAILBOX_CLAIM_ALL_MAIL_LIMIT = 20;
 export const MAILBOX_CLAIM_ALL_ROW_LIMIT = 100;
+/** 32KiB 첨부와 긴 본문을 함께 발송해도 MySQL packet 여유를 남기는 대량 INSERT 크기. */
+export const MAILBOX_BULK_INSERT_BATCH_SIZE = 100;
 export const MAILBOX_SOURCE_KEY_PATTERN = /^[a-z0-9][a-z0-9:_./-]{0,149}$/;
+const MAILBOX_BULK_RECIPIENT_QUERY_BATCH_SIZE = 1_000;
+const MAILBOX_BULK_TRANSACTION_TIMEOUT_MS = 120_000;
 
 interface StoredMailboxAttachmentsV1 {
     readonly version: typeof MAILBOX_ATTACHMENT_VERSION;
@@ -34,6 +38,24 @@ export interface SendSystemMailInput {
     /** 같은 수신자에게 동일 보상을 재시도해도 한 통만 생성하기 위한 멱등 key. */
     readonly sourceKey?: string;
     readonly expiresAt?: Date;
+}
+
+/**
+ * 같은 내용의 독립 우편을 여러 플레이어에게 발송하는 입력이다.
+ * 관리자 수동 발송은 반복 실행 자체가 새 지급 의도이므로 sourceKey를 받지 않는다.
+ */
+export interface SendBulkSystemMailInput {
+    readonly senderLabel?: string;
+    readonly subject: string;
+    readonly body: string;
+    readonly items?: readonly ItemSnapshot[];
+    readonly expiresAt?: Date;
+    readonly recipientId?: never;
+    readonly sourceKey?: never;
+}
+
+export interface SendBulkSystemMailResult {
+    readonly recipientCount: number;
 }
 
 export interface MailboxMessageSummary {
@@ -104,6 +126,15 @@ type MailboxRow = {
     expiresAt: Date | null;
 };
 
+type NormalizedSystemMailPayload = {
+    readonly senderLabel: string;
+    readonly subject: string;
+    readonly body: string;
+    readonly attachments: StoredMailboxAttachmentsV1 | null;
+    readonly attachmentCount: number;
+    readonly expiresAt: Date | undefined;
+};
+
 const claimQueues = new Map<number, Promise<unknown>>();
 
 function normalizeText(value: string, label: string, maxLength: number): string {
@@ -112,6 +143,87 @@ function normalizeText(value: string, label: string, maxLength: number): string 
         throw new Error(`${label}은(는) 1~${maxLength}자여야 합니다.`);
     }
     return normalized;
+}
+
+function normalizeSystemMailPayload(
+    input: Pick<SendSystemMailInput, 'senderLabel' | 'subject' | 'body' | 'items' | 'expiresAt'>,
+): NormalizedSystemMailPayload {
+    const senderLabel = normalizeText(input.senderLabel ?? '시스템', '발신자', 50);
+    const subject = normalizeText(input.subject, '우편 제목', 120);
+    const body = normalizeText(input.body, '우편 본문', 10_000);
+    if (input.expiresAt && (!Number.isFinite(input.expiresAt.getTime())
+        || input.expiresAt.getTime() <= Date.now())) {
+        throw new Error('우편 만료 시각은 현재보다 뒤여야 합니다.');
+    }
+    const attachments = encodeMailboxAttachments(input.items ?? []);
+    return Object.freeze({
+        senderLabel,
+        subject,
+        body,
+        attachments,
+        attachmentCount: attachments?.items.reduce((sum, item) => sum + item.count, 0) ?? 0,
+        expiresAt: input.expiresAt,
+    });
+}
+
+function normalizeBulkRecipientIds(recipientIds: readonly number[]): readonly number[] {
+    const uniqueRecipientIds = new Set<number>();
+    for (const recipientId of recipientIds) {
+        if (!Number.isSafeInteger(recipientId) || recipientId <= 0) {
+            throw new Error('우편 수신자 ID가 올바르지 않습니다.');
+        }
+        uniqueRecipientIds.add(recipientId);
+    }
+    return Object.freeze([...uniqueRecipientIds].sort((left, right) => left - right));
+}
+
+function assertBulkInputHasNoSingleRecipientFields(input: SendBulkSystemMailInput): void {
+    if (Object.hasOwn(input, 'recipientId') || Object.hasOwn(input, 'sourceKey')) {
+        throw new Error('대량 우편에는 개별 수신자 ID나 멱등 키를 지정할 수 없습니다.');
+    }
+}
+
+function chunkValues<T>(values: readonly T[], size: number): readonly (readonly T[])[] {
+    const chunks: T[][] = [];
+    for (let offset = 0; offset < values.length; offset += size) {
+        chunks.push(values.slice(offset, offset + size));
+    }
+    return chunks;
+}
+
+function toBulkCreateInput(
+    recipientId: number,
+    payload: NormalizedSystemMailPayload,
+): Prisma.MailboxMessageCreateManyInput {
+    return {
+        recipientId,
+        senderLabel: payload.senderLabel,
+        subject: payload.subject,
+        body: payload.body,
+        ...(payload.attachments
+            ? { attachments: payload.attachments as unknown as Prisma.InputJsonValue }
+            : {}),
+        attachmentCount: payload.attachmentCount,
+        expiresAt: payload.expiresAt,
+    };
+}
+
+async function createBulkSystemMailInTransaction(
+    transaction: Prisma.TransactionClient,
+    recipientIds: readonly number[],
+    payload: NormalizedSystemMailPayload,
+): Promise<SendBulkSystemMailResult> {
+    let recipientCount = 0;
+    for (const batch of chunkValues(recipientIds, MAILBOX_BULK_INSERT_BATCH_SIZE)) {
+        const result = await transaction.mailboxMessage.createMany({
+            data: batch.map(recipientId => toBulkCreateInput(recipientId, payload)),
+        });
+        if (result.count !== batch.length) {
+            throw new Error('대량 우편 일부를 생성하지 못했습니다.');
+        }
+        recipientCount += result.count;
+    }
+    return Object.freeze({ recipientCount });
 }
 
 function normalizeAttachmentSnapshots(items: readonly ItemSnapshot[]): readonly ItemSnapshot[] {
@@ -241,21 +353,13 @@ export async function sendSystemMail(input: SendSystemMailInput): Promise<Mailbo
     if (!Number.isSafeInteger(input.recipientId) || input.recipientId <= 0) {
         throw new Error('우편 수신자 ID가 올바르지 않습니다.');
     }
-    const senderLabel = normalizeText(input.senderLabel ?? '시스템', '발신자', 50);
-    const subject = normalizeText(input.subject, '우편 제목', 120);
-    const body = normalizeText(input.body, '우편 본문', 10_000);
+    const payload = normalizeSystemMailPayload(input);
     const sourceKey = input.sourceKey === undefined
         ? undefined
         : normalizeText(input.sourceKey, '우편 멱등 키', 150);
     if (sourceKey !== undefined && !MAILBOX_SOURCE_KEY_PATTERN.test(sourceKey)) {
         throw new Error('우편 멱등 키는 소문자 영문·숫자로 시작하고 소문자 영문, 숫자, :, _, ., /, -만 사용할 수 있습니다.');
     }
-    if (input.expiresAt && (!Number.isFinite(input.expiresAt.getTime())
-        || input.expiresAt.getTime() <= Date.now())) {
-        throw new Error('우편 만료 시각은 현재보다 뒤여야 합니다.');
-    }
-    const attachments = encodeMailboxAttachments(input.items ?? []);
-    const attachmentCount = attachments?.items.reduce((sum, item) => sum + item.count, 0) ?? 0;
     const exists = await prisma.player.findUnique({
         where: { userId: input.recipientId },
         select: { userId: true },
@@ -263,13 +367,15 @@ export async function sendSystemMail(input: SendSystemMailInput): Promise<Mailbo
     if (!exists) throw new Error('우편을 받을 플레이어가 존재하지 않습니다.');
     const create = {
         recipientId: input.recipientId,
-        senderLabel,
-        subject,
-        body,
-        ...(attachments ? { attachments: attachments as any } : {}),
-        attachmentCount,
+        senderLabel: payload.senderLabel,
+        subject: payload.subject,
+        body: payload.body,
+        ...(payload.attachments
+            ? { attachments: payload.attachments as unknown as Prisma.InputJsonValue }
+            : {}),
+        attachmentCount: payload.attachmentCount,
         sourceKey,
-        expiresAt: input.expiresAt,
+        expiresAt: payload.expiresAt,
     };
     const row = sourceKey
         ? await prisma.mailboxMessage.upsert({
@@ -279,6 +385,64 @@ export async function sendSystemMail(input: SendSystemMailInput): Promise<Mailbo
         })
         : await prisma.mailboxMessage.create({ data: create });
     return toSummary(row);
+}
+
+/**
+ * 지정 Player ID 집합에 같은 내용의 독립 우편을 원자적으로 발송한다.
+ * ID는 검증·중복 제거되며 한 명이라도 존재하지 않으면 아무 우편도 생성하지 않는다.
+ */
+export async function sendSystemMailToRecipients(
+    recipientIds: readonly number[],
+    input: SendBulkSystemMailInput,
+): Promise<SendBulkSystemMailResult> {
+    assertBulkInputHasNoSingleRecipientFields(input);
+    const payload = normalizeSystemMailPayload(input);
+    const normalizedRecipientIds = normalizeBulkRecipientIds(recipientIds);
+    if (normalizedRecipientIds.length === 0) {
+        return Object.freeze({ recipientCount: 0 });
+    }
+
+    return prisma.$transaction(async transaction => {
+        const existingRecipientIds = new Set<number>();
+        for (const batch of chunkValues(
+            normalizedRecipientIds,
+            MAILBOX_BULK_RECIPIENT_QUERY_BATCH_SIZE,
+        )) {
+            const players = await transaction.player.findMany({
+                where: { userId: { in: [...batch] } },
+                select: { userId: true },
+            });
+            for (const player of players) existingRecipientIds.add(player.userId);
+        }
+        if (existingRecipientIds.size !== normalizedRecipientIds.length
+            || normalizedRecipientIds.some(recipientId => !existingRecipientIds.has(recipientId))) {
+            throw new Error('우편을 받을 플레이어가 존재하지 않습니다.');
+        }
+        return createBulkSystemMailInTransaction(transaction, normalizedRecipientIds, payload);
+    }, {
+        maxWait: 10_000,
+        timeout: MAILBOX_BULK_TRANSACTION_TIMEOUT_MS,
+    });
+}
+
+/** DB의 Player 행 전체(오프라인 포함)에 같은 내용의 독립 우편을 원자적으로 발송한다. */
+export async function sendSystemMailToAllPlayers(
+    input: SendBulkSystemMailInput,
+): Promise<SendBulkSystemMailResult> {
+    assertBulkInputHasNoSingleRecipientFields(input);
+    const payload = normalizeSystemMailPayload(input);
+
+    return prisma.$transaction(async transaction => {
+        const players = await transaction.player.findMany({
+            select: { userId: true },
+            orderBy: { userId: 'asc' },
+        });
+        const recipientIds = normalizeBulkRecipientIds(players.map(player => player.userId));
+        return createBulkSystemMailInTransaction(transaction, recipientIds, payload);
+    }, {
+        maxWait: 10_000,
+        timeout: MAILBOX_BULK_TRANSACTION_TIMEOUT_MS,
+    });
 }
 
 export async function listMailboxMessages(

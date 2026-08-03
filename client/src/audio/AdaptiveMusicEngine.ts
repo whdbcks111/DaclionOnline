@@ -1,16 +1,19 @@
 import * as Tone from 'tone'
 import {
+  EXPLORATION_LOOP_MEASURES,
+  MUSIC_SCENE_TRANSITION,
   MusicCombatState,
   composeLocationScore,
   getExplorationMixProfile,
+  getExplorationTimbreProfile,
   type LocationMusicArrangement,
+  type MusicNoteLength,
   type MusicRhythmKey,
-  type MusicTimbreKey,
   normalizeMusicVolume,
 } from '@shared/adaptiveMusic'
 
-const LOOP_LENGTH = '2m'
-const CROSSFADE_SECONDS = 3.5
+const LOOP_LENGTH = `${EXPLORATION_LOOP_MEASURES}m`
+const CROSSFADE_SECONDS = MUSIC_SCENE_TRANSITION.crossFadeSeconds
 const LAYER_RAMP_SECONDS = 0.9
 const VISIBILITY_FADE_SECONDS = 0.35
 const MASTER_OUTPUT_CEILING = 0.88
@@ -26,12 +29,14 @@ interface NoteEvent {
   time: string
   note: number
   velocity: number
+  duration: MusicNoteLength
 }
 
 interface ChordEvent {
   time: string
   notes: readonly number[]
   velocity: number
+  duration: MusicNoteLength
 }
 
 interface PercussionEvent {
@@ -50,17 +55,6 @@ interface DisposablePart extends DisposableAudio {
   cancel(): unknown
 }
 
-const TIMBRE_OSCILLATOR = {
-  warm: 'triangle',
-  water: 'sine',
-  wood: 'triangle',
-  dark: 'sine',
-  metal: 'square',
-  air: 'sine',
-  holy: 'triangle',
-  cosmic: 'sine',
-} as const satisfies Record<MusicTimbreKey, Tone.ToneOscillatorType>
-
 const RHYTHM_KICKS: Readonly<Record<MusicRhythmKey, readonly number[]>> = {
   steady: [0, 4, 8, 12],
   waltz: [0, 6, 10],
@@ -71,9 +65,10 @@ const RHYTHM_KICKS: Readonly<Record<MusicRhythmKey, readonly number[]>> = {
   swing: [0, 3, 6, 8, 11, 14],
 }
 
-function stepTime(step: number): string {
-  const normalized = ((step % 16) + 16) % 16
-  return `${Math.floor(normalized / 8)}:${Math.floor((normalized % 8) / 2)}:${(normalized % 2) * 2}`
+function sixteenthTime(step: number): string {
+  const loopSixteenths = EXPLORATION_LOOP_MEASURES * 16
+  const normalized = ((step % loopSixteenths) + loopSixteenths) % loopSixteenths
+  return `${Math.floor(normalized / 16)}:${Math.floor((normalized % 16) / 4)}:${normalized % 4}`
 }
 
 function volumeToGain(volume: number): number {
@@ -125,31 +120,19 @@ class MusicVoiceBank {
     }).connect(explorationEq)
     this.explorationGain.connect(explorationHighpass)
 
-    const oscillator: Tone.ToneOscillatorType = arrangement.theme.brightExploration
-      ? 'triangle'
-      : TIMBRE_OSCILLATOR[arrangement.theme.timbre]
-    const padOscillator: Tone.ToneOscillatorType = arrangement.theme.brightExploration
-      || arrangement.theme.timbre === 'warm'
-      || arrangement.theme.timbre === 'wood'
-      ? 'triangle'
-      : 'sine'
+    const timbreProfile = getExplorationTimbreProfile(arrangement.theme.timbre)
     const pad = new Tone.PolySynth({
       maxPolyphony: explorationMix.padMaxPolyphony,
       voice: Tone.Synth,
       options: {
-        oscillator: { type: padOscillator },
-        envelope: {
-          attack: explorationMix.padAttackSeconds,
-          decay: 0.18,
-          sustain: 0.3,
-          release: explorationMix.padReleaseSeconds,
-        },
+        oscillator: { type: timbreProfile.padOscillator },
+        envelope: { ...timbreProfile.padEnvelope },
       },
     }).connect(this.explorationGain)
     pad.volume.value = explorationMix.padVolumeDb
     const lead = new Tone.Synth({
-      oscillator: { type: oscillator },
-      envelope: { attack: 0.025, decay: 0.16, sustain: 0.12, release: 0.42 },
+      oscillator: { type: timbreProfile.leadOscillator },
+      envelope: { ...timbreProfile.leadEnvelope },
     }).connect(this.explorationGain)
     lead.volume.value = explorationMix.leadVolumeDb
     const bass = new Tone.MonoSynth({
@@ -210,52 +193,69 @@ class MusicVoiceBank {
       explorationEq,
     )
 
-    const chordEvents: ChordEvent[] = arrangement.chordMidi.map((notes, index) => ({
-      time: `${Math.floor(index / 2)}:${(index % 2) * 2}:0`,
-      notes,
-      velocity: 0.25,
+    const chordEvents: ChordEvent[] = arrangement.explorationChordSchedule.map(event => ({
+      time: sixteenthTime(event.stepSixteenths),
+      notes: event.notes,
+      velocity: event.velocity,
+      duration: event.duration,
     }))
-    const leadEvents: NoteEvent[] = arrangement.motifMidi.flatMap((note, index) => note === null ? [] : [{
-      time: stepTime(index), note, velocity: arrangement.motifAccents[index] ? 0.42 : 0.24,
-    }])
-    const bassEvents: NoteEvent[] = Array.from({ length: 8 }, (_, index) => ({
-      time: stepTime(index * 2),
+    const leadEvents: NoteEvent[] = arrangement.explorationLeadSchedule.flatMap(event => (
+      event.note === null ? [] : [{
+        time: sixteenthTime(event.stepSixteenths),
+        note: event.note,
+        velocity: event.accent ? 0.42 : 0.24,
+        duration: event.duration,
+      }]
+    ))
+    const bassEvents: NoteEvent[] = Array.from({ length: 16 }, (_, index) => ({
+      time: sixteenthTime(index * 4),
       note: arrangement.bassMidi[Math.floor(index / 2) % arrangement.bassMidi.length],
       velocity: index % 2 === 0 ? 0.54 : 0.34,
+      duration: '8n',
     }))
-    const counterEvents: NoteEvent[] = arrangement.counterMidi.flatMap((note, index) => note === null ? [] : [{
-      time: stepTime(index), note, velocity: arrangement.motifAccents[index] ? 0.42 : 0.28,
-    }])
+    const counterEvents: NoteEvent[] = arrangement.counterMidi.flatMap((note, index) => {
+      if (note === null) return []
+      const leadEvent = arrangement.explorationLeadSchedule[index]
+      return [{
+        time: sixteenthTime(leadEvent.stepSixteenths),
+        note,
+        velocity: arrangement.motifAccents[index] ? 0.42 : 0.28,
+        duration: '16n' as const,
+      }]
+    })
     const combatPercussionEvents: PercussionEvent[] = []
     const bossPercussionEvents: PercussionEvent[] = []
     const kickSteps = RHYTHM_KICKS[arrangement.theme.rhythm]
-    for (const step of kickSteps) {
-      const shifted = (step + arrangement.rhythmPhase) % 16
-      combatPercussionEvents.push({ time: stepTime(shifted), kind: 'kick', note: 42, velocity: 0.45 })
-      bossPercussionEvents.push({ time: stepTime(shifted), kind: 'kick', note: 38, velocity: 0.56 })
-    }
-    for (let step = 2; step < 16; step += 4) {
-      combatPercussionEvents.push({ time: stepTime(step), kind: 'noise', note: 0, velocity: 0.22 })
-    }
-    for (let step = 0; step < 16; step += 2) {
-      bossPercussionEvents.push({ time: stepTime(step), kind: 'noise', note: 0, velocity: step % 4 === 0 ? 0.32 : 0.2 })
+    for (let pass = 0; pass < 2; pass++) {
+      const passOffset = pass * 32
+      for (const step of kickSteps) {
+        const shifted = (step + arrangement.rhythmPhase) % 16
+        combatPercussionEvents.push({ time: sixteenthTime(passOffset + shifted * 2), kind: 'kick', note: 42, velocity: 0.45 })
+        bossPercussionEvents.push({ time: sixteenthTime(passOffset + shifted * 2), kind: 'kick', note: 38, velocity: 0.56 })
+      }
+      for (let step = 4; step < 32; step += 8) {
+        combatPercussionEvents.push({ time: sixteenthTime(passOffset + step), kind: 'noise', note: 0, velocity: 0.22 })
+      }
+      for (let step = 0; step < 32; step += 4) {
+        bossPercussionEvents.push({ time: sixteenthTime(passOffset + step), kind: 'noise', note: 0, velocity: step % 8 === 0 ? 0.32 : 0.2 })
+      }
     }
 
     this.parts.push(
       createLoopingPart<ChordEvent>((time, event) => pad.triggerAttackRelease(
         [...event.notes],
-        explorationMix.padNoteLength,
+        event.duration,
         time,
         event.velocity,
       ), chordEvents),
-      createLoopingPart<NoteEvent>((time, event) => lead.triggerAttackRelease(event.note, '8n', time, event.velocity), leadEvents),
-      createLoopingPart<NoteEvent>((time, event) => bass.triggerAttackRelease(event.note, '8n', time, event.velocity), bassEvents),
+      createLoopingPart<NoteEvent>((time, event) => lead.triggerAttackRelease(event.note, event.duration, time, event.velocity), leadEvents),
+      createLoopingPart<NoteEvent>((time, event) => bass.triggerAttackRelease(event.note, event.duration, time, event.velocity), bassEvents),
       createLoopingPart<PercussionEvent>((time, event) => {
         if (event.kind === 'kick') kick.triggerAttackRelease(event.note, '16n', time, event.velocity)
         else noise.triggerAttackRelease('32n', time, event.velocity)
       }, combatPercussionEvents),
-      createLoopingPart<NoteEvent>((time, event) => counter.triggerAttackRelease(event.note, '16n', time, event.velocity), counterEvents),
-      createLoopingPart<ChordEvent>((time, event) => bossHarmony.triggerAttackRelease([...event.notes], '4n', time, event.velocity), chordEvents),
+      createLoopingPart<NoteEvent>((time, event) => counter.triggerAttackRelease(event.note, event.duration, time, event.velocity), counterEvents),
+      createLoopingPart<ChordEvent>((time, event) => bossHarmony.triggerAttackRelease([...event.notes], event.duration, time, event.velocity), chordEvents),
       createLoopingPart<PercussionEvent>((time, event) => {
         if (event.kind === 'kick') bossKick.triggerAttackRelease(event.note, '16n', time, event.velocity)
         else bossNoise.triggerAttackRelease('32n', time, event.velocity)
@@ -467,7 +467,7 @@ export class AdaptiveMusicEngine {
         this.queuedScene = null
         if (queuedScene && !this.disposed) this.transitionToScene(queuedScene)
       }, (CROSSFADE_SECONDS + 0.08) * 1000)
-    }, '@1m')
+    }, `@${MUSIC_SCENE_TRANSITION.quantize}`)
   }
 
   dispose(): void {

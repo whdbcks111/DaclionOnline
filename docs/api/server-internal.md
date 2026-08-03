@@ -41,7 +41,9 @@
 | Item use | `registerItemUse`, `executeItemUse`, `hasItemUseHandler` | 아이템 효과 ID와 실행 함수 연결 |
 | Item attack | `registerItemAttackOverride`, `executeItemAttackOverride`, `hasItemAttackOverride`, `executeProjectileItemAttack` | `basicAttackOverride` key와 기본 공격 함수 연결, 일반 물리 화살의 재료 속성 정규화, 탄약/무탄약 투사체 발사·발사 무기 적중 효과와 근접 폴백 신호 |
 | Mail | `loadTemplate`, `sendMail` | 공유 HTML 템플릿과 Nodemailer |
-| System mailbox | `sendSystemMail`, `listMailboxMessages`, `readMailboxMessage`, `claimMailboxMessage`, `claimAllMailboxAttachments`, `cleanupCompletedMailboxMessages` | 시스템→플레이어 영속 우편, versioned 아이템 첨부, 소문자 ASCII source key 멱등 발송, DB 원자 수령과 완료 정리. 플레이어 간 발송·골드 첨부는 제외 |
+| System mailbox | `sendSystemMail`, `sendSystemMailToRecipients`, `sendSystemMailToAllPlayers`, `listMailboxMessages`, `readMailboxMessage`, `claimMailboxMessage`, `claimAllMailboxAttachments`, `cleanupCompletedMailboxMessages` | 시스템→플레이어 영속 우편, 지정 ID·전체 Player 대량 발송, versioned 아이템 첨부, 소문자 ASCII source key 단일 멱등 발송, DB 원자 발송·수령과 완료 정리. 플레이어 간 발송·골드 첨부는 제외 |
+
+`sendSystemMailToRecipients(ids, input)`은 ID를 정렬·중복 제거하고 같은 transaction에서 존재를 확인하며, `sendSystemMailToAllPlayers(input)`은 오프라인을 포함한 `Player` 행 전체를 transaction 안에서 조회한다. 후자는 가입 `User` 전체가 아니라 캐릭터가 생성된 행만 대상으로 한다. 두 API는 payload를 호출당 한 번 정규화하고 수신자 100명씩 `createMany`를 하나의 interactive transaction에서 순차 실행하므로 한 청크라도 실패하면 전부 rollback한다. 0명은 생성 없이 `{ recipientCount: 0 }`을 반환한다. 대량 입력은 `recipientId/sourceKey`를 받지 않아 같은 관리자 발송을 반복하면 새 우편이 만들어지며 결과 count는 관리자 비공개 피드백에만 사용한다.
 
 ## 게임 모델 (`server/src/models`)
 

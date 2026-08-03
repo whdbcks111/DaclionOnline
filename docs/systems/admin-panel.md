@@ -21,7 +21,11 @@ PC에서는 목록·상세·작업 패널을 다열로 배치한다. 상세 패�
 3. `adminPanelExecute`는 action union과 입력값을 서버에서 다시 검증하고 도메인 목적형 API를 호출한다. 공지는 `broadcastBotMessageAll/broadcastNotification`, 개별 알림은 온라인 여부를 확인한 뒤 `sendNotificationToUser`를 사용한다.
 4. 처리 후 호환용 `adminPanelResult`, 갱신된 플레이어 목록과 대상 상세가 요청 소켓에만 돌아온다. 일반 작업 피드백은 기존 `notification`으로 자동 소멸하며, 긴 밸런스 보고서만 `details`를 공용 Dialog로 연다. 전투 로테이션 보고서는 공격자와 피격자 양방향 회피, 90% 회피 요구치, 관통 적용 뒤 유효 방어, 첫 반격 전 처치와 처치 전 예상 피격·남은 생명력을 함께 표시한다.
 
-관리자 UI가 Inventory/SkillBook/TitleBook/Progress 내부 컬렉션이나 DB row를 직접 수정하지 않도록 `Player.adjustLevel`, `Inventory.clear`, `SkillBook.revoke`, `TitleBook.grant/revoke`, `CareerProfile.setByAdmin`, `Resource.resetInteractionCooldown`, `markAllLocationsVisited`, `discoverAllCraftingRecipes`를 사용한다. 고빈도 플레이어 상태는 기존 Player dirty save 경계를 그대로 통과한다. 채팅 관리자 명령 `/레벨조정 <대상|me> <레벨>`, `/칭호부여 <대상|me> <칭호>`, `/칭호삭제 <대상|me> <칭호>`도 같은 Player API를 사용한다. `/우편발송 <유저ID|me> <아이템ID> <수량> [제목]`은 온라인 Player 객체나 DB row를 직접 수정하지 않고 `sendSystemMail()`로 오프라인 수신자에게도 아이템 snapshot을 영속 발송하며 실행 결과를 관리자에게만 알린다.
+관리자 UI가 Inventory/SkillBook/TitleBook/Progress 내부 컬렉션이나 DB row를 직접 수정하지 않도록 `Player.adjustLevel`, `Inventory.clear`, `SkillBook.revoke`, `TitleBook.grant/revoke`, `CareerProfile.setByAdmin`, `Resource.resetInteractionCooldown`, `markAllLocationsVisited`, `discoverAllCraftingRecipes`를 사용한다. 고빈도 플레이어 상태는 기존 Player dirty save 경계를 그대로 통과한다. 채팅 관리자 명령 `/레벨조정 <대상|me> <레벨>`, `/칭호부여 <대상|me> <칭호>`, `/칭호삭제 <대상|me> <칭호>`도 같은 Player API를 사용한다.
+
+채팅 관리자 명령 `/우편발송 <유저ID|me|online|all> <아이템ID> <수량> [제목]`은 온라인 Player 객체나 우편 DB row를 직접 수정하지 않는다. `me`, `online`, `all`은 정확한 영문 소문자만 허용하고 대상 자동완성은 `me` → `online` → `all` → 중복 제거한 온라인 Player ID 순서다. 단일 대상은 `sendSystemMail()`, 실행 시점 온라인 snapshot은 ID를 다시 정렬·중복 제거하는 `sendSystemMailToRecipients()`, 오프라인을 포함해 캐릭터가 생성된 `Player` 행 전체는 `sendSystemMailToAllPlayers()`로 발송한다. `all`은 `User` 계정 전체를 뜻하지 않는다.
+
+대량 우편은 입력 payload를 한 번만 정규화하고 수신자 100명씩 `createMany`하되 모든 청크를 하나의 interactive transaction 안에서 처리한다. 대상 누락이나 어느 청크의 실패든 전체를 rollback하며 0명은 우편을 만들지 않는 정상 no-op이다. 관리자 발송 payload에는 `sourceKey`가 없어 같은 명령을 반복하면 새 우편이 생기고, 성공·실패·0명과 최종 수신자 수는 실행한 관리자에게만 표시한다.
 
 ## 공용 다이얼로그
 

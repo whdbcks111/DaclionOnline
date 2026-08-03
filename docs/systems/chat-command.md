@@ -149,7 +149,7 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 | 관리자 | `/상태변경` | life/mentality/thirsty/hungry 설정, 권한 10 |
 | 관리자 | `/상태이상부여 대상 코드 레벨 시간` (`effectgive`) | 온라인 Player에게 초 단위 런타임 상태이상 적용, 권한 10 |
 | 관리자 | `/아이템추가` | 대상 인벤토리에 아이템 추가, 권한 10 |
-| 관리자 | `/우편발송 <유저ID\|me> <아이템ID> <수량> [제목]` (`mailsend`) | 온라인·오프라인 Player ID에 아이템 시스템 우편 발송, 권한 10. 결과는 실행 관리자에게만 표시 |
+| 관리자 | `/우편발송 <유저ID\|me\|online\|all> <아이템ID> <수량> [제목]` (`mailsend`) | 권한 10. 단일 캐릭터, 실행 시점 온라인 snapshot 또는 오프라인 포함 전체 Player 행에 아이템 시스템 우편 발송. 0명 no-op·수신자 수·성공·실패는 실행 관리자에게만 표시 |
 | 관리자 | `/스탯설정` | 대상 스탯 값 설정, 권한 10 |
 | 관리자 | `/스탯포인트설정` | 가용 포인트 설정, 권한 10 |
 | 관리자 | `/골드설정` | 골드 설정, 권한 10 |
@@ -164,6 +164,8 @@ modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notifica
 5. `Home.tsx`가 입력 중 `requestCompletions(raw)`을 보내고 서버가 현재 사용자 상태를 이용해 `argCompletions`를 응답한다. 서버도 같은 `parseCommandInput` 규칙으로 슬래시 없는 별칭을 해석한다.
 6. 입력의 첫 토큰이 `@닉네임prefix`이면 `requestMentionCompletions`로 자기 자신을 제외한 온라인 플레이어를 조회한다. 선택하면 `@정확한닉네임 `을 입력하고 이후 본문을 작성할 수 있다.
 7. mention과 파티 초대의 공개 신원 자동완성은 레벨 순위를 비공개한 플레이어의 레벨 설명을 생략한다.
+
+`/우편발송` 대상 예약어는 정확한 영문 소문자 `me`, `online`, `all`만 허용한다. 대상 자동완성은 `me` → `online` → `all` → 중복 제거한 현재 온라인 Player ID 순서다. `online` 실행은 그 시점의 온라인 Player snapshot에서 ID를 추출하고 서비스에서 정렬·중복 제거하며, `all`은 `users` 계정 전체가 아니라 캐릭터가 생성된 `Player` 행 전체를 조회한다. 대량 발송은 payload를 한 번 정규화하고 100명 청크를 하나의 interactive transaction에서 처리해 일부 실패 시 모두 rollback한다. 관리자 발송에는 `sourceKey`가 없으므로 같은 명령을 다시 실행하면 새 우편이 생성된다.
 
 PC 채팅 입력창은 자동완성이 닫힌 상태에서 `Tab`으로 현재 권한에 허용된 채널 → 근처 → 파티 → 광고 → 공지 타입을 순환하며 `Shift+Tab`은 반대 방향으로 이동한다. 자동완성이 열려 있으면 기존처럼 `Tab`이 선택 동작을 우선하므로 채팅 타입은 바뀌지 않는다.
 
