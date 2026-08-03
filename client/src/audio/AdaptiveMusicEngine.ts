@@ -1,23 +1,25 @@
 import * as Tone from 'tone'
 import {
-  EXPLORATION_LOOP_MEASURES,
   MUSIC_SCENE_TRANSITION,
+  MUSIC_TICKS_PER_QUARTER,
+  MUSIC_TICKS_PER_SIXTEENTH,
   MusicCombatState,
   composeLocationScore,
   getExplorationMixProfile,
   getExplorationTimbreProfile,
   type LocationMusicArrangement,
-  type MusicNoteLength,
   type MusicRhythmKey,
   normalizeMusicVolume,
 } from '@shared/adaptiveMusic'
 
-const LOOP_LENGTH = `${EXPLORATION_LOOP_MEASURES}m`
 const CROSSFADE_SECONDS = MUSIC_SCENE_TRANSITION.crossFadeSeconds
 const LAYER_RAMP_SECONDS = 0.9
 const VISIBILITY_FADE_SECONDS = 0.35
 const MASTER_OUTPUT_CEILING = 0.88
 const VOLUME_TAPER_EXPONENT = 1.2
+const COMMON_SPACE_SEND = 0.08
+
+type TickTime = `${number}i`
 
 interface MusicScene {
   readonly locationId: string
@@ -26,24 +28,25 @@ interface MusicScene {
 }
 
 interface NoteEvent {
-  time: string
+  time: TickTime
   note: number
   velocity: number
-  duration: MusicNoteLength
+  duration: TickTime
 }
 
 interface ChordEvent {
-  time: string
+  time: TickTime
   notes: readonly number[]
   velocity: number
-  duration: MusicNoteLength
+  duration: TickTime
 }
 
 interface PercussionEvent {
-  time: string
+  time: TickTime
   kind: 'kick' | 'noise'
   note: number
   velocity: number
+  duration: TickTime
 }
 
 interface DisposableAudio {
@@ -51,6 +54,7 @@ interface DisposableAudio {
 }
 
 interface DisposablePart extends DisposableAudio {
+  start(time: TickTime, offset: TickTime): unknown
   stop(): unknown
   cancel(): unknown
 }
@@ -65,10 +69,17 @@ const RHYTHM_KICKS: Readonly<Record<MusicRhythmKey, readonly number[]>> = {
   swing: [0, 3, 6, 8, 11, 14],
 }
 
-function sixteenthTime(step: number): string {
-  const loopSixteenths = EXPLORATION_LOOP_MEASURES * 16
-  const normalized = ((step % loopSixteenths) + loopSixteenths) % loopSixteenths
-  return `${Math.floor(normalized / 16)}:${Math.floor((normalized % 16) / 4)}:${normalized % 4}`
+function tickTime(ticks: number): TickTime {
+  return `${Math.max(0, Math.round(ticks))}i`
+}
+
+function sixteenthTime(step: number): TickTime {
+  return tickTime(step * MUSIC_TICKS_PER_SIXTEENTH)
+}
+
+function nextQuarterTick(): number {
+  const currentTicks = Tone.getTransport().getTicksAtTime(Tone.now())
+  return Math.ceil((currentTicks + 1) / MUSIC_TICKS_PER_QUARTER) * MUSIC_TICKS_PER_QUARTER
 }
 
 function volumeToGain(volume: number): number {
@@ -79,14 +90,15 @@ function volumeToGain(volume: number): number {
 function createLoopingPart<Value extends { time: string }>(
   callback: (time: number, value: Value) => void,
   events: Value[],
+  loopTicks: number,
 ): Tone.Part<Value> {
   const part = new Tone.Part<Value>()
   part.callback = callback
   for (const event of events) part.add(event)
   part.loop = true
-  part.loopEnd = LOOP_LENGTH
-  part.humanize = 0.012
-  part.start(0)
+  part.loopStart = tickTime(0)
+  part.loopEnd = tickTime(loopTicks)
+  part.humanize = false
   return part
 }
 
@@ -97,6 +109,7 @@ class MusicVoiceBank {
   private readonly bossGain: Tone.Gain
   private readonly parts: DisposablePart[] = []
   private readonly nodes: DisposableAudio[] = []
+  private started = false
   private disposed = false
 
   constructor(arrangement: LocationMusicArrangement, destination: Tone.InputNode) {
@@ -159,7 +172,7 @@ class MusicVoiceBank {
     }).connect(this.bossGain)
     counter.volume.value = -18
     const bossHarmony = new Tone.PolySynth({
-      maxPolyphony: 3,
+      maxPolyphony: 4,
       voice: Tone.Synth,
       options: {
         oscillator: { type: arrangement.theme.timbre === 'dark' ? 'sine' : 'triangle' },
@@ -197,21 +210,21 @@ class MusicVoiceBank {
       time: sixteenthTime(event.stepSixteenths),
       notes: event.notes,
       velocity: event.velocity,
-      duration: event.duration,
+      duration: sixteenthTime(event.durationSixteenths),
     }))
     const leadEvents: NoteEvent[] = arrangement.explorationLeadSchedule.flatMap(event => (
       event.note === null ? [] : [{
         time: sixteenthTime(event.stepSixteenths),
         note: event.note,
         velocity: event.accent ? 0.42 : 0.24,
-        duration: event.duration,
+        duration: sixteenthTime(event.durationSixteenths),
       }]
     ))
-    const bassEvents: NoteEvent[] = Array.from({ length: 16 }, (_, index) => ({
-      time: sixteenthTime(index * 4),
-      note: arrangement.bassMidi[Math.floor(index / 2) % arrangement.bassMidi.length],
-      velocity: index % 2 === 0 ? 0.54 : 0.34,
-      duration: '8n',
+    const bassEvents: NoteEvent[] = arrangement.explorationChordSchedule.map((event, index) => ({
+      time: sixteenthTime(event.stepSixteenths),
+      note: event.bassNote,
+      velocity: index % 4 === 0 ? 0.54 : 0.34,
+      duration: sixteenthTime(event.durationSixteenths),
     }))
     const counterEvents: NoteEvent[] = arrangement.counterMidi.flatMap((note, index) => {
       if (note === null) return []
@@ -219,25 +232,59 @@ class MusicVoiceBank {
       return [{
         time: sixteenthTime(leadEvent.stepSixteenths),
         note,
-        velocity: arrangement.motifAccents[index] ? 0.42 : 0.28,
-        duration: '16n' as const,
+        velocity: leadEvent.accent ? 0.42 : 0.28,
+        duration: sixteenthTime(leadEvent.durationSixteenths),
       }]
     })
     const combatPercussionEvents: PercussionEvent[] = []
     const bossPercussionEvents: PercussionEvent[] = []
-    const kickSteps = RHYTHM_KICKS[arrangement.theme.rhythm]
-    for (let pass = 0; pass < 2; pass++) {
-      const passOffset = pass * 32
+    const measureSixteenths = arrangement.meter.sixteenthsPerMeasure
+    const sourceMeasureSixteenths = arrangement.theme.rhythm === 'waltz' ? 12 : 16
+    const kickVariation = (arrangement.rhythmPhase % 3) - 1
+    const kickSteps = [...new Set(RHYTHM_KICKS[arrangement.theme.rhythm].map(step => {
+      const meterStep = Math.floor(step * measureSixteenths / sourceMeasureSixteenths)
+      if (meterStep === 0) return 0
+      return Math.min(measureSixteenths - 1, Math.max(1, meterStep + kickVariation))
+    }))]
+    const kickDuration = sixteenthTime(1)
+    const noiseDuration = tickTime(MUSIC_TICKS_PER_SIXTEENTH / 2)
+    for (let measure = 0; measure < arrangement.loopMeasures; measure++) {
+      const measureStart = measure * measureSixteenths
       for (const step of kickSteps) {
-        const shifted = (step + arrangement.rhythmPhase) % 16
-        combatPercussionEvents.push({ time: sixteenthTime(passOffset + shifted * 2), kind: 'kick', note: 42, velocity: 0.45 })
-        bossPercussionEvents.push({ time: sixteenthTime(passOffset + shifted * 2), kind: 'kick', note: 38, velocity: 0.56 })
+        const eventTime = sixteenthTime(measureStart + step)
+        combatPercussionEvents.push({
+          time: eventTime,
+          kind: 'kick',
+          note: 42,
+          velocity: step === 0 ? 0.49 : 0.42,
+          duration: kickDuration,
+        })
+        bossPercussionEvents.push({
+          time: eventTime,
+          kind: 'kick',
+          note: 38,
+          velocity: step === 0 ? 0.6 : 0.52,
+          duration: kickDuration,
+        })
       }
-      for (let step = 4; step < 32; step += 8) {
-        combatPercussionEvents.push({ time: sixteenthTime(passOffset + step), kind: 'noise', note: 0, velocity: 0.22 })
-      }
-      for (let step = 0; step < 32; step += 4) {
-        bossPercussionEvents.push({ time: sixteenthTime(passOffset + step), kind: 'noise', note: 0, velocity: step % 8 === 0 ? 0.32 : 0.2 })
+      for (let beat = 0; beat < arrangement.meter.beatsPerMeasure; beat++) {
+        const eventTime = sixteenthTime(measureStart + beat * 4)
+        if (beat % 2 === 1) {
+          combatPercussionEvents.push({
+            time: eventTime,
+            kind: 'noise',
+            note: 0,
+            velocity: 0.22,
+            duration: noiseDuration,
+          })
+        }
+        bossPercussionEvents.push({
+          time: eventTime,
+          kind: 'noise',
+          note: 0,
+          velocity: beat === 0 ? 0.32 : 0.2,
+          duration: noiseDuration,
+        })
       }
     }
 
@@ -247,20 +294,26 @@ class MusicVoiceBank {
         event.duration,
         time,
         event.velocity,
-      ), chordEvents),
-      createLoopingPart<NoteEvent>((time, event) => lead.triggerAttackRelease(event.note, event.duration, time, event.velocity), leadEvents),
-      createLoopingPart<NoteEvent>((time, event) => bass.triggerAttackRelease(event.note, event.duration, time, event.velocity), bassEvents),
+      ), chordEvents, arrangement.loopTicks),
+      createLoopingPart<NoteEvent>((time, event) => lead.triggerAttackRelease(event.note, event.duration, time, event.velocity), leadEvents, arrangement.loopTicks),
+      createLoopingPart<NoteEvent>((time, event) => bass.triggerAttackRelease(event.note, event.duration, time, event.velocity), bassEvents, arrangement.loopTicks),
       createLoopingPart<PercussionEvent>((time, event) => {
-        if (event.kind === 'kick') kick.triggerAttackRelease(event.note, '16n', time, event.velocity)
-        else noise.triggerAttackRelease('32n', time, event.velocity)
-      }, combatPercussionEvents),
-      createLoopingPart<NoteEvent>((time, event) => counter.triggerAttackRelease(event.note, event.duration, time, event.velocity), counterEvents),
-      createLoopingPart<ChordEvent>((time, event) => bossHarmony.triggerAttackRelease([...event.notes], event.duration, time, event.velocity), chordEvents),
+        if (event.kind === 'kick') kick.triggerAttackRelease(event.note, event.duration, time, event.velocity)
+        else noise.triggerAttackRelease(event.duration, time, event.velocity)
+      }, combatPercussionEvents, arrangement.loopTicks),
+      createLoopingPart<NoteEvent>((time, event) => counter.triggerAttackRelease(event.note, event.duration, time, event.velocity), counterEvents, arrangement.loopTicks),
+      createLoopingPart<ChordEvent>((time, event) => bossHarmony.triggerAttackRelease([...event.notes], event.duration, time, event.velocity), chordEvents, arrangement.loopTicks),
       createLoopingPart<PercussionEvent>((time, event) => {
-        if (event.kind === 'kick') bossKick.triggerAttackRelease(event.note, '16n', time, event.velocity)
-        else bossNoise.triggerAttackRelease('32n', time, event.velocity)
-      }, bossPercussionEvents),
+        if (event.kind === 'kick') bossKick.triggerAttackRelease(event.note, event.duration, time, event.velocity)
+        else bossNoise.triggerAttackRelease(event.duration, time, event.velocity)
+      }, bossPercussionEvents, arrangement.loopTicks),
     )
+  }
+
+  startAtTick(startTick: number): void {
+    if (this.disposed || this.started) return
+    this.started = true
+    for (const part of this.parts) part.start(`${startTick}i`, '0i')
   }
 
   setCombatState(state: MusicCombatState, time = Tone.now(), immediate = false): void {
@@ -306,6 +359,8 @@ export class AdaptiveMusicEngine {
   private unlockPromise: Promise<boolean> | null = null
   private scene: MusicScene | null = null
   private crossFade: Tone.CrossFade | null = null
+  private spaceSend: Tone.Gain | null = null
+  private freeverb: Tone.Freeverb | null = null
   private compressor: Tone.Compressor | null = null
   private limiter: Tone.Limiter | null = null
   private userGain: Tone.Gain | null = null
@@ -390,12 +445,18 @@ export class AdaptiveMusicEngine {
 
   private initializeGraph(): void {
     if (this.crossFade || this.disposed) return
+    Tone.getTransport().PPQ = MUSIC_TICKS_PER_QUARTER
     this.crossFade = new Tone.CrossFade(0)
+    this.spaceSend = new Tone.Gain(COMMON_SPACE_SEND)
+    this.freeverb = new Tone.Freeverb({ roomSize: 0.62, dampening: 3_200, wet: 1 })
     this.compressor = new Tone.Compressor({ threshold: -20, ratio: 2.4, attack: 0.03, release: 0.22, knee: 12 })
     this.limiter = new Tone.Limiter(-4)
     this.userGain = new Tone.Gain(volumeToGain(this.volume))
     this.audibilityGain = new Tone.Gain(this.audible ? 1 : 0)
     this.crossFade.connect(this.compressor)
+    this.crossFade.connect(this.spaceSend)
+    this.spaceSend.connect(this.freeverb)
+    this.freeverb.connect(this.compressor)
     this.compressor.connect(this.limiter)
     this.limiter.connect(this.userGain)
     this.userGain.connect(this.audibilityGain)
@@ -437,6 +498,8 @@ export class AdaptiveMusicEngine {
       nextBank === 0 ? this.crossFade.a : this.crossFade.b,
     )
     this.banks[nextBank]?.setCombatState(scene.combatState, Tone.now(), true)
+    const startTick = nextQuarterTick()
+    this.banks[nextBank]?.startAtTick(startTick)
 
     if (firstScene || !this.banks[this.activeBank]) {
       this.crossFade.fade.value = nextBank
@@ -446,13 +509,14 @@ export class AdaptiveMusicEngine {
       return
     }
 
-    transport.bpm.rampTo(arrangement.bpm, CROSSFADE_SECONDS)
     this.transitionInProgress = true
     this.transitionStarted = false
     this.transitionEventId = transport.scheduleOnce(time => {
       this.transitionEventId = null
       if (!this.crossFade || this.disposed) return
       this.transitionStarted = true
+      transport.bpm.cancelAndHoldAtTime(time)
+      transport.bpm.linearRampToValueAtTime(arrangement.bpm, time + CROSSFADE_SECONDS)
       this.crossFade.fade.cancelAndHoldAtTime(time)
       this.crossFade.fade.linearRampToValueAtTime(nextBank, time + CROSSFADE_SECONDS)
       const previousBank = this.activeBank
@@ -467,7 +531,8 @@ export class AdaptiveMusicEngine {
         this.queuedScene = null
         if (queuedScene && !this.disposed) this.transitionToScene(queuedScene)
       }, (CROSSFADE_SECONDS + 0.08) * 1000)
-    }, `@${MUSIC_SCENE_TRANSITION.quantize}`)
+    }, tickTime(startTick))
+    if (this.audible && transport.state !== 'started') transport.start('+0.03')
   }
 
   dispose(): void {
@@ -484,12 +549,16 @@ export class AdaptiveMusicEngine {
     this.transitionInProgress = false
     this.transitionStarted = false
     this.crossFade?.dispose()
+    this.spaceSend?.dispose()
+    this.freeverb?.dispose()
     this.compressor?.dispose()
     this.limiter?.dispose()
     this.userGain?.dispose()
     this.audibilityGain?.dispose()
     if (transport.state === 'started') transport.pause()
     this.crossFade = null
+    this.spaceSend = null
+    this.freeverb = null
     this.compressor = null
     this.limiter = null
     this.userGain = null

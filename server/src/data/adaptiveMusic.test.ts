@@ -4,30 +4,36 @@ import test from 'node:test';
 import {
     BRIGHT_EXPLORATION_MIX,
     DEFAULT_MUSIC_VOLUME,
-    EXPLORATION_LOOP_MEASURES,
     EXPLORATION_HARMONY_MAX_MIDI,
     EXPLORATION_HARMONY_MIN_MIDI,
+    EXPLORATION_LOOP_MEASURES,
     EXPLORATION_MELODY_MAX_MIDI,
     EXPLORATION_MELODY_MIN_MIDI,
     MUSIC_SCENE_TRANSITION,
-    MUSIC_THEME_MOTIF_STEPS,
-    LocationMusicTheme,
+    MUSIC_TICKS_PER_QUARTER,
+    MUSIC_TICKS_PER_SIXTEENTH,
     MUSIC_VOLUME_STORAGE_KEY,
+    LocationMusicTheme,
     MusicCombatState,
+    MusicMeter,
     MusicScale,
     STANDARD_EXPLORATION_MIX,
     composeLocationScore,
-    getLocationMusicThemeByColor,
     getExplorationMixProfile,
     getExplorationRhythmProfile,
     getExplorationTimbreProfile,
+    getLocationMusicThemeByColor,
     normalizeMusicVolume,
     readMusicVolume,
-    resolveMusicCombatState,
     resolveLocationMusicArrangement,
+    resolveMusicCombatState,
     scaleDegreeToMidi,
     writeMusicVolume,
+    type ExplorationChordScheduleEvent,
     type LocationMusicArrangement,
+    type MusicFormSectionKey,
+    type MusicPhraseCell,
+    type MusicPhraseKey,
     type MusicRhythmKey,
     type MusicStorageLike,
     type MusicTimbreKey,
@@ -50,6 +56,12 @@ const TIMBRE_KEY_VALUES: readonly MusicTimbreKey[] = [
 const RHYTHM_KEY_VALUES: readonly MusicRhythmKey[] = [
     'steady', 'waltz', 'syncopated', 'march', 'pulse', 'broken', 'swing',
 ];
+const PHRASE_KEYS: readonly MusicPhraseKey[] = ['motifA', 'responseA', 'motifB', 'cadence'];
+const SECTION_KEYS: readonly MusicFormSectionKey[] = ['A', 'A-prime', 'B', 'A-return'];
+const ANGULAR_LEAP_THEME_EXCEPTIONS = new Set([
+    'nightwood', 'necropolis', 'ironroot', 'astral-rift', 'twilight-tomb', 'voidcrown',
+    'lunaris-trench', 'endstar', 'rustworld', 'crimsongravity', 'silentdivine',
+]);
 const TIMBRE_KEYS = new Set(TIMBRE_KEY_VALUES);
 const RHYTHM_KEYS = new Set(RHYTHM_KEY_VALUES);
 const NOTE_PITCH_CLASS: Readonly<Record<string, number>> = Object.freeze({
@@ -89,14 +101,95 @@ function assertScaleNote(
     );
 }
 
+function assertPhraseIsExactTwoBars(theme: LocationMusicTheme, cell: MusicPhraseCell): void {
+    const expectedLength = theme.meter.sixteenthsPerMeasure * 2;
+    assert.equal(cell.lengthSixteenths, expectedLength, `${theme.key}/${cell.key}/two bars`);
+    assert.ok(cell.tokens.length >= 4, `${theme.key}/${cell.key}/audible phrase detail`);
+    assert.equal(cell.tokens[0]?.onsetSixteenths, 0, `${theme.key}/${cell.key}/start`);
+    for (let index = 0; index < cell.tokens.length; index++) {
+        const token = cell.tokens[index];
+        assert.equal(Object.isFrozen(token), true, `${theme.key}/${cell.key}/token ${index}`);
+        assert.ok(Number.isInteger(token.onsetSixteenths) && token.onsetSixteenths >= 0,
+            `${theme.key}/${cell.key}/onset ${index}`);
+        assert.ok(Number.isInteger(token.durationSixteenths) && token.durationSixteenths > 0,
+            `${theme.key}/${cell.key}/duration ${index}`);
+        if (index > 0) {
+            const previous = cell.tokens[index - 1];
+            assert.equal(token.onsetSixteenths,
+                previous.onsetSixteenths + previous.durationSixteenths,
+                `${theme.key}/${cell.key}/contiguous token ${index}`);
+        }
+        assert.ok(token.degree === null || Number.isInteger(token.degree),
+            `${theme.key}/${cell.key}/degree ${index}`);
+    }
+    const last = cell.tokens.at(-1);
+    assert.ok(last, `${theme.key}/${cell.key}/last token`);
+    assert.equal(last.onsetSixteenths + last.durationSixteenths, expectedLength,
+        `${theme.key}/${cell.key}/exact ending`);
+    assert.ok(cell.tokens.filter(token => token.degree !== null).length >= 4,
+        `${theme.key}/${cell.key}/sounding notes`);
+}
+
+/** 조옮김을 없앤 뒤 음정 진행·onset 간격·음 길이가 모두 같은 훅만 같은 것으로 본다. */
+function normalizedHookSignature(theme: LocationMusicTheme): string {
+    const cell = theme.phrases.motifA;
+    let previousPitch: number | undefined;
+    return cell.tokens.map((token, index) => {
+        const pitch = token.degree === null
+            ? null
+            : scaleDegreeToMidi(60, theme.scale, token.degree);
+        const interval = pitch === null
+            ? 'r'
+            : previousPitch === undefined ? '0' : String(pitch - previousPitch);
+        if (pitch !== null) previousPitch = pitch;
+        const nextOnset = cell.tokens[index + 1]?.onsetSixteenths ?? cell.lengthSixteenths;
+        return `${interval}:${nextOnset - token.onsetSixteenths}:${token.durationSixteenths}`;
+    }).join('|');
+}
+
+function firstHookSignature(arrangement: LocationMusicArrangement): string {
+    const phraseLength = arrangement.meter.sixteenthsPerMeasure * 2;
+    return arrangement.explorationLeadSchedule
+        .filter(event => event.section === 'A' && event.hook && event.stepSixteenths < phraseLength)
+        .map(event => `${event.stepSixteenths}:${event.note ?? 'r'}:${event.durationSixteenths}`)
+        .join('|');
+}
+
+function normalizedScheduledHookSignature(arrangement: LocationMusicArrangement): string {
+    const phraseLength = arrangement.meter.sixteenthsPerMeasure * 2;
+    const events = arrangement.explorationLeadSchedule
+        .filter(event => event.section === 'A' && event.hook && event.stepSixteenths < phraseLength);
+    let previousPitch: number | undefined;
+    return events.map((event, index) => {
+        const interval = event.note === null
+            ? 'r'
+            : previousPitch === undefined ? '0' : String(event.note - previousPitch);
+        if (event.note !== null) previousPitch = event.note;
+        const nextOnset = events[index + 1]?.stepSixteenths ?? phraseLength;
+        return `${interval}:${nextOnset - event.stepSixteenths}:${event.durationSixteenths}`;
+    }).join('|');
+}
+
 function assertArrangementIsDeepFrozen(arrangement: LocationMusicArrangement): void {
     assert.equal(Object.isFrozen(arrangement), true, arrangement.locationId);
     assert.equal(Object.isFrozen(arrangement.theme), true, `${arrangement.locationId}/theme`);
     assert.equal(Object.isFrozen(arrangement.theme.scale), true, `${arrangement.locationId}/scale`);
-    assert.equal(Object.isFrozen(arrangement.theme.scale.intervals), true, `${arrangement.locationId}/intervals`);
-    assert.equal(Object.isFrozen(arrangement.theme.motif), true, `${arrangement.locationId}/authored motif`);
-    assert.equal(Object.isFrozen(arrangement.theme.chords), true, `${arrangement.locationId}/authored chords`);
-    assert.ok(arrangement.theme.chords.every(Object.isFrozen), `${arrangement.locationId}/authored chord`);
+    assert.equal(Object.isFrozen(arrangement.theme.scale.intervals), true,
+        `${arrangement.locationId}/intervals`);
+    assert.equal(Object.isFrozen(arrangement.theme.phrases), true,
+        `${arrangement.locationId}/phrase book`);
+    for (const key of PHRASE_KEYS) {
+        assert.equal(Object.isFrozen(arrangement.theme.phrases[key]), true,
+            `${arrangement.locationId}/${key}`);
+        assert.equal(Object.isFrozen(arrangement.theme.phrases[key].tokens), true,
+            `${arrangement.locationId}/${key}/tokens`);
+        assert.ok(arrangement.theme.phrases[key].tokens.every(Object.isFrozen),
+            `${arrangement.locationId}/${key}/token`);
+    }
+    assert.equal(Object.isFrozen(arrangement.theme.chords), true,
+        `${arrangement.locationId}/authored chords`);
+    assert.ok(arrangement.theme.chords.every(Object.isFrozen),
+        `${arrangement.locationId}/authored chord`);
     assert.equal(Object.isFrozen(arrangement.theme.register), true, `${arrangement.locationId}/register`);
     assert.equal(Object.isFrozen(arrangement.motifMidi), true, `${arrangement.locationId}/motif`);
     assert.equal(Object.isFrozen(arrangement.motifAccents), true, `${arrangement.locationId}/accents`);
@@ -104,127 +197,45 @@ function assertArrangementIsDeepFrozen(arrangement: LocationMusicArrangement): v
     assert.equal(Object.isFrozen(arrangement.chordMidi), true, `${arrangement.locationId}/chords`);
     assert.ok(arrangement.chordMidi.every(Object.isFrozen), `${arrangement.locationId}/chord`);
     assert.equal(Object.isFrozen(arrangement.bassMidi), true, `${arrangement.locationId}/bass`);
-    assert.equal(Object.isFrozen(arrangement.explorationLeadSchedule), true, `${arrangement.locationId}/lead schedule`);
-    assert.ok(arrangement.explorationLeadSchedule.every(Object.isFrozen), `${arrangement.locationId}/lead event`);
-    assert.equal(Object.isFrozen(arrangement.explorationChordSchedule), true, `${arrangement.locationId}/chord schedule`);
+    assert.equal(Object.isFrozen(arrangement.explorationLeadSchedule), true,
+        `${arrangement.locationId}/lead schedule`);
+    assert.ok(arrangement.explorationLeadSchedule.every(Object.isFrozen),
+        `${arrangement.locationId}/lead event`);
+    assert.equal(Object.isFrozen(arrangement.explorationChordSchedule), true,
+        `${arrangement.locationId}/chord schedule`);
     assert.ok(arrangement.explorationChordSchedule.every(event => Object.isFrozen(event)
         && Object.isFrozen(event.notes)), `${arrangement.locationId}/chord event`);
 }
 
-function canonicalAudibleExplorationLoop(arrangement: LocationMusicArrangement): string {
-    const loopSixteenths = EXPLORATION_LOOP_MEASURES * 16;
-    const events = arrangement.explorationLeadSchedule.filter(
-        (event): event is typeof event & { note: number } => event.note !== null,
+function findActiveChord(
+    arrangement: LocationMusicArrangement,
+    stepSixteenths: number,
+): ExplorationChordScheduleEvent | undefined {
+    return arrangement.explorationChordSchedule.find(event => (
+        event.stepSixteenths <= stepSixteenths
+        && stepSixteenths < event.stepSixteenths + event.durationSixteenths
+    ));
+}
+
+function chordContainsPitch(chord: ExplorationChordScheduleEvent, pitch: number): boolean {
+    const pitchClass = ((pitch % 12) + 12) % 12;
+    return chord.notes.some(note => ((note % 12) + 12) % 12 === pitchClass);
+}
+
+function sectionRetention(arrangement: LocationMusicArrangement): number {
+    const sectionLength = arrangement.meter.sixteenthsPerMeasure * 8;
+    const signature = (section: MusicFormSectionKey, start: number): Set<string> => new Set(
+        arrangement.explorationLeadSchedule
+            .filter(event => event.section === section)
+            .map(event => `${event.stepSixteenths - start}:${event.note ?? 'r'}:${event.durationSixteenths}`),
     );
-    assert.ok(events.length > 0, arrangement.locationId);
-    const tokens = events.map((event, index) => {
-        const next = events[(index + 1) % events.length];
-        const onsetGap = (next.stepSixteenths - event.stepSixteenths + loopSixteenths)
-            % loopSixteenths;
-        return { note: event.note, duration: event.duration, onsetGap };
-    });
-    return tokens.map((_, offset) => [
-        ...tokens.slice(offset),
-        ...tokens.slice(0, offset),
-    ]).map(rotated => {
-        const root = rotated[0].note;
-        return rotated.map(token => `${token.note - root}:${token.duration}:${token.onsetGap}`).join('|');
-    }).sort()[0];
+    const a = signature('A', 0);
+    const aReturn = signature('A-return', sectionLength * 3);
+    const retained = [...a].filter(token => aReturn.has(token)).length;
+    return retained / Math.max(a.size, aReturn.size);
 }
 
-function normalizeThemeMotif(
-    theme: LocationMusicTheme,
-    rotation: number,
-): readonly (number | null)[] {
-    const rotated = [
-        ...theme.motif.slice(rotation),
-        ...theme.motif.slice(0, rotation),
-    ].map(degree => degree === null ? null : scaleDegreeToMidi(0, theme.scale, degree));
-    const first = rotated.find((note): note is number => note !== null) ?? 0;
-    return rotated.map(note => note === null ? null : note - first);
-}
-
-function calculateThemeMotifDistances(
-    left: LocationMusicTheme,
-    right: LocationMusicTheme,
-): { readonly weighted: number; readonly hamming: number } {
-    const normalizedLeft = normalizeThemeMotif(left, 0);
-    let minimumWeighted = 1;
-    let minimumHamming = 1;
-    for (let rotation = 0; rotation < MUSIC_THEME_MOTIF_STEPS; rotation++) {
-        const normalizedRight = normalizeThemeMotif(right, rotation);
-        let weighted = 0;
-        let hamming = 0;
-        for (let index = 0; index < MUSIC_THEME_MOTIF_STEPS; index++) {
-            const leftNote = normalizedLeft[index];
-            const rightNote = normalizedRight[index];
-            if (leftNote === null && rightNote === null) continue;
-            if (leftNote === null || rightNote === null) {
-                weighted += 1;
-                hamming += 1;
-                continue;
-            }
-            weighted += Math.min(1, Math.abs(leftNote - rightNote) / 6);
-            if (leftNote !== rightNote) hamming += 1;
-        }
-        minimumWeighted = Math.min(minimumWeighted, weighted / MUSIC_THEME_MOTIF_STEPS);
-        minimumHamming = Math.min(minimumHamming, hamming / MUSIC_THEME_MOTIF_STEPS);
-    }
-    return { weighted: minimumWeighted, hamming: minimumHamming };
-}
-
-function calculateLocationArrangementDifferences(
-    left: LocationMusicArrangement,
-    right: LocationMusicArrangement,
-): { readonly pitchRest: number; readonly combined: number } {
-    assert.equal(left.theme, right.theme, 'location distance is only comparable inside one theme');
-    assert.equal(left.explorationLeadSchedule.length, right.explorationLeadSchedule.length);
-    const leftEvents = left.explorationLeadSchedule;
-    const rightEvents = right.explorationLeadSchedule;
-    const loopSixteenths = EXPLORATION_LOOP_MEASURES * 16;
-    let minimumPitchRest = Number.POSITIVE_INFINITY;
-    let minimumCombined = Number.POSITIVE_INFINITY;
-
-    for (let rotation = 0; rotation < rightEvents.length; rotation++) {
-        const transpositionCandidates = leftEvents.flatMap((leftEvent, index) => {
-            const rightEvent = rightEvents[(index + rotation) % rightEvents.length];
-            return leftEvent.note === null || rightEvent.note === null
-                ? []
-                : [leftEvent.note - rightEvent.note];
-        }).sort((leftValue, rightValue) => leftValue - rightValue);
-        assert.ok(transpositionCandidates.length > 0,
-            `${left.locationId}/${right.locationId}/rotation ${rotation}: sounding note pair`);
-        const transposition = transpositionCandidates[Math.floor(transpositionCandidates.length / 2)];
-        let pitchRest = 0;
-        let duration = 0;
-        let onsetGap = 0;
-
-        for (let index = 0; index < leftEvents.length; index++) {
-            const rightIndex = (index + rotation) % rightEvents.length;
-            const leftEvent = leftEvents[index];
-            const rightEvent = rightEvents[rightIndex];
-            if (leftEvent.note === null || rightEvent.note === null) {
-                if (leftEvent.note !== rightEvent.note) pitchRest += 1;
-            } else if (leftEvent.note !== rightEvent.note + transposition) {
-                pitchRest += 1;
-            }
-            if (leftEvent.duration !== rightEvent.duration) duration += 1;
-
-            const leftNext = leftEvents[(index + 1) % leftEvents.length];
-            const rightNext = rightEvents[(rightIndex + 1) % rightEvents.length];
-            const leftGap = (leftNext.stepSixteenths - leftEvent.stepSixteenths + loopSixteenths)
-                % loopSixteenths;
-            const rightGap = (rightNext.stepSixteenths - rightEvent.stepSixteenths + loopSixteenths)
-                % loopSixteenths;
-            if (leftGap !== rightGap) onsetGap += 1;
-        }
-        minimumPitchRest = Math.min(minimumPitchRest, pitchRest);
-        minimumCombined = Math.min(minimumCombined, pitchRest + duration + onsetGap);
-    }
-    return { pitchRest: minimumPitchRest, combined: minimumCombined };
-}
-
-test('35개 권역 악보는 고유 색·유효 음계·16-step 권역 leitmotif와 움직이는 화성 저음을 제공한다', () => {
+test('35개 권역은 고정된 2마디 A·응답·B·종지 악구와 조옮김에도 고유한 훅을 갖는다', () => {
     const themes = LocationMusicTheme.values();
     const scales = MusicScale.values();
 
@@ -233,6 +244,9 @@ test('35개 권역 악보는 고유 색·유효 음계·16-step 권역 leitmotif
     assert.equal(new Set(themes.map(theme => theme.mapColor)).size, themes.length);
     assert.equal(scales.length, 13);
     assert.equal(new Set(scales.map(scale => scale.key)).size, scales.length);
+    assert.deepEqual(MusicMeter.values(), [MusicMeter.COMMON, MusicMeter.WALTZ]);
+    assert.equal(MusicMeter.fromKey('4/4'), MusicMeter.COMMON);
+    assert.equal(MusicMeter.fromKey('3/4'), MusicMeter.WALTZ);
 
     for (const scale of scales) {
         assert.equal(Object.isFrozen(scale), true, scale.key);
@@ -252,22 +266,22 @@ test('35개 권역 악보는 고유 색·유효 음계·16-step 권역 leitmotif
         assert.match(theme.key, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
         assert.match(theme.mapColor, /^#[0-9a-f]{6}$/);
         assert.match(theme.root, /^[A-G](?:#|b)?[0-8]$/);
-        assert.ok(Number.isInteger(theme.rootMidi) && theme.rootMidi >= 24 && theme.rootMidi <= 103, theme.key);
         assert.equal(rootLabelToMidi(theme.root), theme.rootMidi, theme.key);
         assert.ok(Number.isInteger(theme.bpm) && theme.bpm >= 40 && theme.bpm <= 180, theme.key);
-        assert.equal(theme.motif.length, MUSIC_THEME_MOTIF_STEPS, theme.key);
-        assert.equal(theme.motif.length % 4, 0, `${theme.key}/four-step phrases`);
-        assert.ok(theme.motif.some(degree => degree !== null), theme.key);
-        assert.ok(theme.motif.every(degree => degree === null
-            || (Number.isInteger(degree) && Math.abs(degree) <= theme.scale.intervals.length * 2)), theme.key);
+        assert.equal(theme.rhythm === 'waltz', theme.meter === MusicMeter.WALTZ,
+            `${theme.key}/real meter`);
+        assert.equal(Object.isFrozen(theme.phrases), true, `${theme.key}/phrase book`);
+        for (const key of PHRASE_KEYS) {
+            const phrase = theme.phrases[key];
+            assert.equal(phrase.key, key, `${theme.key}/${key}`);
+            assert.equal(Object.isFrozen(phrase), true, `${theme.key}/${key}`);
+            assert.equal(Object.isFrozen(phrase.tokens), true, `${theme.key}/${key}/tokens`);
+            assertPhraseIsExactTwoBars(theme, phrase);
+        }
         assert.equal(theme.chords.length, 4, theme.key);
         assert.ok(theme.chords.every(chord => chord.length === 3
-            && chord.every(degree => Number.isInteger(degree)
-                && Math.abs(degree) <= theme.scale.intervals.length * 2)), theme.key);
+            && chord.every(Number.isInteger)), theme.key);
         assert.ok(new Set(theme.chords.map(chord => chord[0])).size >= 2, `${theme.key}/authored roots`);
-        assert.ok(Number.isInteger(theme.register.bassOctave), theme.key);
-        assert.ok(Number.isInteger(theme.register.padOctave), theme.key);
-        assert.ok(Number.isInteger(theme.register.leadOctave), theme.key);
         assert.ok(theme.register.bassOctave <= theme.register.padOctave, theme.key);
         assert.ok(theme.register.padOctave <= theme.register.leadOctave, theme.key);
         assert.ok(TIMBRE_KEYS.has(theme.timbre), theme.key);
@@ -276,36 +290,54 @@ test('35개 권역 악보는 고유 색·유효 음계·16-step 권역 leitmotif
         assert.equal(LocationMusicTheme.fromInput(theme.name), theme);
         assert.equal(LocationMusicTheme.fromMapColor(theme.mapColor.toUpperCase()), theme);
         assert.equal(getLocationMusicThemeByColor(theme.mapColor), theme);
-
-        for (const degree of theme.motif) {
-            if (degree === null) continue;
-            const midi = scaleDegreeToMidi(theme.rootMidi, theme.scale, degree);
-            assert.ok(theme.scale.intervals.includes(pitchClassFromRoot(midi, theme.rootMidi)), theme.key);
-        }
-        const arrangement = composeLocationScore(`catalog:${theme.key}`, theme.mapColor);
-        assert.ok(new Set(arrangement.bassMidi).size >= 2, `${theme.key}/arranged bass roots`);
     }
 
-    const weightedDistances: number[] = [];
-    const hammingDistances: number[] = [];
-    for (let leftIndex = 0; leftIndex < themes.length; leftIndex++) {
-        for (let rightIndex = leftIndex + 1; rightIndex < themes.length; rightIndex++) {
-            const distance = calculateThemeMotifDistances(themes[leftIndex], themes[rightIndex]);
-            weightedDistances.push(distance.weighted);
-            hammingDistances.push(distance.hamming);
-        }
+    const hooks = new Map<string, string[]>();
+    for (const theme of themes) {
+        const signature = normalizedHookSignature(theme);
+        hooks.set(signature, [...(hooks.get(signature) ?? []), theme.key]);
     }
-    weightedDistances.sort((left, right) => left - right);
-    hammingDistances.sort((left, right) => left - right);
-    assert.ok(weightedDistances[0] >= 0.18,
-        `theme leitmotif minimum weighted distance: ${weightedDistances[0]}`);
-    assert.ok(weightedDistances[Math.floor(weightedDistances.length / 2)] >= 0.5,
-        `theme leitmotif median weighted distance: ${weightedDistances[Math.floor(weightedDistances.length / 2)]}`);
-    assert.ok(hammingDistances[0] >= 0.25,
-        `theme leitmotif minimum pitch/rest Hamming: ${hammingDistances[0]}`);
+    const collisions = [...hooks.values()].filter(keys => keys.length > 1);
+    assert.equal(hooks.size, themes.length,
+        `조옮김 정규화 훅 충돌: ${JSON.stringify(collisions)}`);
 });
 
-test('merged 623개 장소의 35색은 누락·고아 테마 없이 정확히 하나의 권역 악보를 갖는다', () => {
+test('32마디 권역 선율은 계단 진행 중심이고 큰 도약을 절제한다', () => {
+    const perTheme = LocationMusicTheme.values().map(theme => {
+        const arrangement = resolveLocationMusicArrangement(theme.key, `motion-contract:${theme.key}`);
+        const notes = arrangement.explorationLeadSchedule
+            .flatMap(event => event.note === null ? [] : [event.note]);
+        let stepwise = 0;
+        let largeLeaps = 0;
+        for (let index = 1; index < notes.length; index++) {
+            const distance = Math.abs(notes[index] - notes[index - 1]);
+            if (distance <= 3) stepwise++;
+            if (distance >= 7) largeLeaps++;
+        }
+        return { theme: theme.key, motions: notes.length - 1, stepwise, largeLeaps };
+    });
+    const totalMotions = perTheme.reduce((sum, metric) => sum + metric.motions, 0);
+    const totalStepwise = perTheme.reduce((sum, metric) => sum + metric.stepwise, 0);
+    const totalLargeLeaps = perTheme.reduce((sum, metric) => sum + metric.largeLeaps, 0);
+    const stepwiseRate = totalStepwise / totalMotions;
+    const largeLeapRate = totalLargeLeaps / totalMotions;
+
+    assert.ok(stepwiseRate >= 0.65 && stepwiseRate <= 0.82,
+        `전체 훅 계단 진행 비율 ${(stepwiseRate * 100).toFixed(1)}% (목표 65~82%)`);
+    assert.ok(largeLeapRate <= 0.05,
+        `전체 훅 7반음 이상 도약 비율 ${(largeLeapRate * 100).toFixed(1)}% (최대 5%)`);
+    for (const metric of perTheme) {
+        const stepwise = metric.stepwise / metric.motions;
+        const largeLeaps = metric.largeLeaps / metric.motions;
+        const leapCeiling = ANGULAR_LEAP_THEME_EXCEPTIONS.has(metric.theme) ? 0.12 : 0.05;
+        assert.ok(stepwise >= 0.55,
+            `${metric.theme}/계단 진행 ${(stepwise * 100).toFixed(1)}% (최소 55%)`);
+        assert.ok(largeLeaps <= leapCeiling,
+            `${metric.theme}/7반음 이상 도약 ${(largeLeaps * 100).toFixed(1)}% (최대 ${leapCeiling * 100}%)`);
+    }
+});
+
+test('623개 장소의 35색은 누락·고아 테마 없이 대응하고 같은 권역은 훅을 보존한 채 편곡만 달라진다', () => {
     assert.equal(baseLocations.length, 292);
     assert.equal(generatedLocations.length, 331);
     assert.equal(locations.length, 623);
@@ -317,66 +349,117 @@ test('merged 623개 장소의 35색은 누락·고아 테마 없이 정확히 �
     assert.equal(worldColors.length, 35);
     assert.deepEqual(themeColors, worldColors);
 
-    const locationsByColor = new Map<string, LocationData[]>();
-    const allArrangements: LocationMusicArrangement[] = [];
+    const arrangementsByColor = new Map<string, LocationMusicArrangement[]>();
     for (const location of locations) {
         const color = location.mapColor!.toLowerCase();
-        const grouped = locationsByColor.get(color) ?? [];
-        grouped.push(location);
-        locationsByColor.set(color, grouped);
-
         const arrangement = composeLocationScore(location.id, color);
-        allArrangements.push(arrangement);
         assert.equal(arrangement.theme.mapColor, color, location.id);
         assert.equal(arrangement.theme, getLocationMusicThemeByColor(color), location.id);
+        arrangementsByColor.set(color, [...(arrangementsByColor.get(color) ?? []), arrangement]);
     }
 
-    let minimumPitchRestDifference = Number.POSITIVE_INFINITY;
-    let minimumCombinedDifference = Number.POSITIVE_INFINITY;
-    let minimumPitchRestPair = '';
-    let minimumCombinedPair = '';
-    for (const [color, regionLocations] of locationsByColor) {
-        const arrangements = regionLocations.map(location => composeLocationScore(location.id, color));
+    for (const [color, arrangements] of arrangementsByColor) {
         assert.equal(new Set(arrangements.map(arrangement => arrangement.theme.key)).size, 1, color);
+        const hook = firstHookSignature(arrangements[0]);
+        assert.ok(hook.length > 0, `${color}/hook`);
+        assert.ok(arrangements.every(arrangement => firstHookSignature(arrangement) === hook),
+            `${color}/seed must not rewrite hook`);
         assert.equal(
-            new Set(arrangements.map(arrangement => arrangement.melodySignature)).size,
-            regionLocations.length,
-            `${color}: location melody signatures`,
+            new Set(arrangements.map(arrangement => arrangement.arrangementSignature)).size,
+            arrangements.length,
+            `${color}/location arrangement signatures`,
         );
-        for (let leftIndex = 0; leftIndex < arrangements.length; leftIndex++) {
-            for (let rightIndex = leftIndex + 1; rightIndex < arrangements.length; rightIndex++) {
-                const left = arrangements[leftIndex];
-                const right = arrangements[rightIndex];
-                const differences = calculateLocationArrangementDifferences(left, right);
-                if (differences.pitchRest < minimumPitchRestDifference) {
-                    minimumPitchRestDifference = differences.pitchRest;
-                    minimumPitchRestPair = `${left.locationId}/${right.locationId}`;
-                }
-                if (differences.combined < minimumCombinedDifference) {
-                    minimumCombinedDifference = differences.combined;
-                    minimumCombinedPair = `${left.locationId}/${right.locationId}`;
-                }
-            }
-        }
     }
-    assert.ok(minimumPitchRestDifference >= 10,
-        `same-theme location minimum normalized pitch/rest difference: ${minimumPitchRestDifference}/32 (${minimumPitchRestPair})`);
-    assert.ok(minimumCombinedDifference >= 24,
-        `same-theme location minimum pitch/rest+duration+onset difference: ${minimumCombinedDifference} (${minimumCombinedPair})`);
-    assert.equal(
-        new Set(allArrangements.map(arrangement => arrangement.motifMidi
-            .map(note => note ?? 'r').join(','))).size,
-        locations.length,
-        'accent·counter·BPM 없이 실제 4마디 pitch/rest motif가 전 지역에서 고유해야 한다.',
-    );
-    assert.equal(
-        new Set(allArrangements.map(canonicalAudibleExplorationLoop)).size,
-        locations.length,
-        '반복 시작점을 회전해도 실제 pitch·duration·onset loop가 전 지역에서 고유해야 한다.',
-    );
 });
 
-test('초반 밝은 권역은 seed가 장조 화성과 높은 선율을 어둡게 바꾸지 않는다', () => {
+test('장소 악보는 32마디 A8–A′8–B8–A″8 형식과 반복 가능한 으뜸음 종지를 지킨다', () => {
+    for (const theme of LocationMusicTheme.values()) {
+        const arrangement = resolveLocationMusicArrangement(theme.key, `form-contract:${theme.key}`);
+        const measureLength = theme.meter.sixteenthsPerMeasure;
+        const sectionLength = measureLength * 8;
+
+        assert.equal(arrangement.meter, theme.meter, theme.key);
+        assert.equal(arrangement.loopMeasures, 32, theme.key);
+        assert.equal(arrangement.loopMeasures, EXPLORATION_LOOP_MEASURES, theme.key);
+        assert.equal(arrangement.loopSixteenths, measureLength * 32, theme.key);
+        assert.equal(arrangement.loopTicks,
+            arrangement.loopSixteenths * MUSIC_TICKS_PER_SIXTEENTH, theme.key);
+        assert.equal(MUSIC_TICKS_PER_QUARTER, 192);
+        assert.equal(MUSIC_TICKS_PER_SIXTEENTH, 48);
+        assert.equal(normalizedScheduledHookSignature(arrangement), normalizedHookSignature(theme),
+            `${theme.key}/authored hook must survive composition exactly`);
+
+        SECTION_KEYS.forEach((section, index) => {
+            const events = arrangement.explorationLeadSchedule.filter(event => event.section === section);
+            assert.ok(events.length > 0, `${theme.key}/${section}`);
+            assert.equal(events[0].stepSixteenths, index * sectionLength,
+                `${theme.key}/${section}/start measure ${index * 8}`);
+            assert.ok(events.every(event => event.stepSixteenths >= index * sectionLength
+                && event.stepSixteenths < (index + 1) * sectionLength),
+            `${theme.key}/${section}/eight bars`);
+        });
+
+        const hookNotes = theme.phrases.motifA.tokens.filter(token => token.degree !== null).length;
+        const hookStarts = arrangement.explorationLeadSchedule.filter(event => event.hook
+            && event.stepSixteenths % (measureLength * 2) === 0).length;
+        assert.ok(hookNotes >= 4, `${theme.key}/hook sounding notes`);
+        assert.ok(hookStarts >= 4, `${theme.key}/hook occurrences: ${hookStarts}`);
+
+        const retention = sectionRetention(arrangement);
+        assert.ok(retention >= 0.75,
+            `${theme.key}/A-return pitch+rhythm retention ${(retention * 100).toFixed(1)}%`);
+
+        const finalEvent = arrangement.explorationLeadSchedule.at(-1);
+        assert.ok(finalEvent, `${theme.key}/final event`);
+        assert.notEqual(finalEvent.note, null, `${theme.key}/final sounding tonic`);
+        assert.equal(pitchClassFromRoot(finalEvent.note!, theme.rootMidi), 0, `${theme.key}/final tonic`);
+        assert.ok(finalEvent.durationSixteenths >= 8 && finalEvent.durationSixteenths <= 16,
+            `${theme.key}/final duration 2~4 beats`);
+        assert.equal(finalEvent.stepSixteenths + finalEvent.durationSixteenths,
+            arrangement.loopSixteenths, `${theme.key}/final event closes loop`);
+    }
+});
+
+test('강박 선율은 현재 화음에 70% 이상 정착하고 화음은 활성 선율 시간의 80% 이상을 덮는다', () => {
+    for (const theme of LocationMusicTheme.values()) {
+        const arrangement = resolveLocationMusicArrangement(theme.key, `harmony-contract:${theme.key}`);
+        const sounding = arrangement.explorationLeadSchedule.filter(
+            (event): event is typeof event & { note: number } => event.note !== null,
+        );
+        const strongBeat = sounding.filter(event => (
+            event.stepSixteenths % arrangement.meter.sixteenthsPerMeasure === 0
+        ));
+        const strongChordTones = strongBeat.filter(event => {
+            const chord = findActiveChord(arrangement, event.stepSixteenths);
+            return chord !== undefined && chordContainsPitch(chord, event.note);
+        });
+        const allChordTones = sounding.filter(event => {
+            const chord = findActiveChord(arrangement, event.stepSixteenths);
+            return chord !== undefined && chordContainsPitch(chord, event.note);
+        });
+        const totalLeadDuration = sounding.reduce((sum, event) => sum + event.durationSixteenths, 0);
+        const harmonyCoveredDuration = sounding.reduce((sum, event) => {
+            const start = event.stepSixteenths;
+            const end = start + event.durationSixteenths;
+            const covered = arrangement.explorationChordSchedule.reduce((duration, chord) => {
+                const overlapStart = Math.max(start, chord.stepSixteenths);
+                const overlapEnd = Math.min(end, chord.stepSixteenths + chord.durationSixteenths);
+                return duration + Math.max(0, overlapEnd - overlapStart);
+            }, 0);
+            return sum + Math.min(event.durationSixteenths, covered);
+        }, 0);
+
+        assert.ok(strongBeat.length >= 8, `${theme.key}/strong beat sample`);
+        assert.ok(strongChordTones.length / strongBeat.length >= 0.7,
+            `${theme.key}/strong chord-tone ${(strongChordTones.length / strongBeat.length * 100).toFixed(1)}%`);
+        assert.ok(allChordTones.length / sounding.length >= 0.5,
+            `${theme.key}/all-onset chord-tone ${(allChordTones.length / sounding.length * 100).toFixed(1)}%`);
+        assert.ok(harmonyCoveredDuration / totalLeadDuration >= 0.8,
+            `${theme.key}/active harmony coverage ${(harmonyCoveredDuration / totalLeadDuration * 100).toFixed(1)}%`);
+    }
+});
+
+test('초반 밝은 권역은 장조 화성·높은 선율·가벼운 mix를 유지한다', () => {
     assert.deepEqual(LocationMusicTheme.LUMINAR.register, {
         bassOctave: -2,
         padOctave: 1,
@@ -396,64 +479,29 @@ test('초반 밝은 권역은 seed가 장조 화성과 높은 선율을 어둡�
     const luminar = composeLocationScore('town_square', '#d6a85f');
     const jobHall = composeLocationScore('job_hall', '#d6a85f');
     const pond = composeLocationScore('luminous_pond', '#63a9bf');
-    const meadowOne = composeLocationScore('field', '#6fa85d');
-    const meadowTwo = composeLocationScore('meadow_2', '#6fa85d');
-    const meadowThree = composeLocationScore('meadow_3', '#6fa85d');
+    const meadow = composeLocationScore('field', '#6fa85d');
     const silverweb = composeLocationScore('silverweb_contract', '#4f7857');
     const dawn = composeLocationScore('dawn_contract', '#ddd19a');
 
-    assert.deepEqual(luminar.chordMidi, [
-        [67, 71, 74],
-        [72, 76, 79],
-        [74, 78, 81],
-        [67, 71, 74],
-    ], '루미나르는 I-IV-V-I 장조 종지를 유지해야 한다.');
-    assert.deepEqual(pond.chordMidi, [
-        [62, 66, 69],
-        [71, 74, 78],
-        [64, 69, 74],
-        [69, 74, 78],
-    ]);
-    assert.deepEqual(meadowOne.chordMidi, [
-        [60, 64, 67],
-        [69, 72, 76],
-        [65, 69, 72],
-        [67, 71, 74],
-    ]);
-    assert.deepEqual(silverweb.chordMidi, [
-        [64, 68, 71],
-        [74, 78, 81],
-        [69, 73, 76],
-        [64, 68, 71],
-    ]);
-    assert.deepEqual(dawn.chordMidi, [
-        [62, 66, 69],
-        [64, 68, 71],
-        [69, 73, 76],
-        [62, 66, 69],
-    ]);
+    assert.deepEqual(luminar.chordMidi, [[67, 71, 74], [72, 76, 79], [74, 78, 81], [67, 71, 74]]);
+    assert.deepEqual(pond.chordMidi, [[62, 66, 69], [71, 74, 78], [64, 69, 74], [69, 74, 78]]);
+    assert.deepEqual(meadow.chordMidi, [[60, 64, 67], [69, 72, 76], [65, 69, 72], [67, 71, 74]]);
+    assert.deepEqual(silverweb.chordMidi, [[64, 68, 71], [74, 78, 81], [69, 73, 76], [64, 68, 71]]);
+    assert.deepEqual(dawn.chordMidi, [[62, 66, 69], [64, 68, 71], [69, 73, 76], [62, 66, 69]]);
     assert.deepEqual(jobHall.chordMidi, luminar.chordMidi);
 
-    for (const arrangement of [
-        luminar, jobHall, pond, meadowOne, meadowTwo, meadowThree, silverweb, dawn,
-    ]) {
-        assert.ok(
-            midiRange(arrangement.motifMidi)[0] - midiRange(arrangement.chordMidi.flat())[0] >= 12,
-            `${arrangement.locationId}/bright lead-pad separation`,
-        );
+    for (const arrangement of [luminar, jobHall, pond, meadow, silverweb, dawn]) {
+        const hookNotes = arrangement.explorationLeadSchedule
+            .flatMap(event => event.hook && event.note !== null ? [event.note] : []);
+        assert.ok(midiRange(hookNotes)[0]
+            - midiRange(arrangement.chordMidi.flat())[0] >= 12,
+        `${arrangement.locationId}/bright lead-pad separation`);
         for (const chord of arrangement.chordMidi) {
             const intervals = chord.slice(1).map((note, index) => note - chord[index]);
             assert.ok(Math.min(...intervals) >= 3, `${arrangement.locationId}/consonant chord`);
         }
     }
 
-    meadowOne.motifMidi.forEach((note, index) => assertScaleNote(meadowOne, note, `mobile/motif/${index}`));
-    meadowTwo.motifMidi.forEach((note, index) => assertScaleNote(meadowTwo, note, `mobile/motif/${index}`));
-    meadowThree.motifMidi.forEach((note, index) => assertScaleNote(meadowThree, note, `mobile/motif/${index}`));
-    luminar.chordMidi.flat().forEach((note, index) => assertScaleNote(luminar, note, `mobile/chord/${index}`));
-});
-
-test('탐험 mix는 저음 드론과 pad 겹침을 줄이고 밝은 권역에서 선율을 앞세운다', () => {
     assert.equal(getExplorationMixProfile(LocationMusicTheme.LUMINAR), BRIGHT_EXPLORATION_MIX);
     assert.equal(getExplorationMixProfile(LocationMusicTheme.NECROPOLIS), STANDARD_EXPLORATION_MIX);
     for (const profile of [STANDARD_EXPLORATION_MIX, BRIGHT_EXPLORATION_MIX]) {
@@ -462,30 +510,83 @@ test('탐험 mix는 저음 드론과 pad 겹침을 줄이고 밝은 권역에서
         assert.ok(profile.leadVolumeDb - profile.padVolumeDb >= 6);
         assert.ok(profile.lowEqDb <= -4.5);
     }
-    assert.ok(BRIGHT_EXPLORATION_MIX.highpassHz > STANDARD_EXPLORATION_MIX.highpassHz);
-    assert.ok(BRIGHT_EXPLORATION_MIX.highEqDb > STANDARD_EXPLORATION_MIX.highEqDb);
 });
 
-test('탐험 rhythm과 timbre profile은 실제 onset·길이·Omni 음색·envelope를 서로 다르게 제공한다', () => {
+test('장소 편곡은 결정론적·불변이고 전 음역과 음계 및 chord-linked bass 계약을 지킨다', () => {
+    for (const location of locations) {
+        const first = composeLocationScore(location.id, location.mapColor);
+        const second = composeLocationScore(location.id, location.mapColor);
+        assert.deepEqual(second, first, location.id);
+        assert.notEqual(second, first, location.id);
+        assertArrangementIsDeepFrozen(first);
+
+        assert.ok(first.seed >= 0 && first.seed <= 0xffff_ffff, location.id);
+        assert.ok(Math.abs(first.bpm - first.theme.bpm) <= 1, location.id);
+        assert.ok(first.rhythmPhase >= 0 && first.rhythmPhase < 8, location.id);
+        assert.equal(first.motifMidi.length, first.explorationLeadSchedule.length, location.id);
+        assert.equal(first.motifAccents.length, first.motifMidi.length, location.id);
+        assert.equal(first.counterMidi.length, first.motifMidi.length, location.id);
+        assert.equal(first.chordMidi.length, first.theme.chords.length, location.id);
+        assert.equal(first.bassMidi.length, first.theme.chords.length, location.id);
+        assert.equal(first.explorationChordSchedule.length, first.loopMeasures, location.id);
+        assert.ok(first.explorationLeadSchedule.every((event, index) => (
+            event.stepSixteenths >= 0
+            && event.stepSixteenths < first.loopSixteenths
+            && event.durationSixteenths > 0
+            && event.stepSixteenths + event.durationSixteenths <= first.loopSixteenths
+            && (index === 0
+                || event.stepSixteenths > first.explorationLeadSchedule[index - 1].stepSixteenths)
+            && event.note === first.motifMidi[index]
+            && event.accent === first.motifAccents[index]
+        )), `${location.id}/lead schedule`);
+        assert.ok(first.explorationChordSchedule.every((event, index) => (
+            event.stepSixteenths >= 0
+            && event.stepSixteenths < first.loopSixteenths
+            && event.durationSixteenths > 0
+            && event.stepSixteenths === index * first.meter.sixteenthsPerMeasure
+            && event.durationSixteenths === first.meter.sixteenthsPerMeasure
+            && event.notes.length >= 3
+            && event.notes.length <= 4
+            && first.bassMidi.includes(event.bassNote)
+        )), `${location.id}/chord schedule`);
+        assert.ok(first.melodySignature.length > 0, location.id);
+        assert.ok(first.arrangementSignature.includes(first.melodySignature), location.id);
+        assert.ok(first.motifAccents.some(Boolean), `${location.id}/accent`);
+        assert.ok(first.counterMidi.some(note => note !== null), `${location.id}/boss counter`);
+
+        first.motifMidi.forEach((note, index) => assertScaleNote(first, note, `motif/${index}`));
+        first.counterMidi.forEach((note, index) => assertScaleNote(first, note, `counter/${index}`));
+        first.chordMidi.flat().forEach((note, index) => assertScaleNote(first, note, `chord/${index}`));
+        first.explorationChordSchedule.flatMap(event => [...event.notes, event.bassNote])
+            .forEach((note, index) => assertScaleNote(first, note, `scheduled harmony/${index}`));
+        assert.ok(midiRange(first.motifMidi)[0] >= EXPLORATION_MELODY_MIN_MIDI,
+            `${location.id}/melody floor`);
+        assert.ok(midiRange(first.motifMidi)[1] <= EXPLORATION_MELODY_MAX_MIDI,
+            `${location.id}/melody ceiling`);
+        assert.ok(midiRange(first.chordMidi.flat())[0] >= EXPLORATION_HARMONY_MIN_MIDI,
+            `${location.id}/harmony floor`);
+        assert.ok(midiRange(first.chordMidi.flat())[1] <= EXPLORATION_HARMONY_MAX_MIDI,
+            `${location.id}/harmony ceiling`);
+        assert.ok(midiRange(first.counterMidi)[0] >= EXPLORATION_MELODY_MIN_MIDI,
+            `${location.id}/counter floor`);
+        assert.ok(midiRange(first.counterMidi)[1] <= EXPLORATION_MELODY_MAX_MIDI,
+            `${location.id}/counter ceiling`);
+        first.bassMidi.forEach((note, index) => {
+            assert.ok(note >= 24 && note <= 55, `${location.id}/bass/${index}: ${note}`);
+            assertScaleNote(first, note, `bass/${index}`);
+        });
+        assert.ok(new Set(first.bassMidi).size >= 2, `${location.id}/moving bass`);
+    }
+});
+
+test('rhythm·timbre profile과 엔진은 PPQ 192 tick 악보·동적 loop·공통 Freeverb를 사용한다', () => {
     const rhythmSignatures = new Set<string>();
     for (const key of RHYTHM_KEY_VALUES) {
         const profile = getExplorationRhythmProfile(key);
         assert.equal(Object.isFrozen(profile), true, key);
-        assert.equal(Object.isFrozen(profile.leadStepSixteenths), true, key);
-        assert.equal(Object.isFrozen(profile.leadNoteLengths), true, key);
-        assert.equal(Object.isFrozen(profile.chordStepSixteenths), true, key);
-        assert.equal(Object.isFrozen(profile.chordNoteLengths), true, key);
         assert.equal(Object.isFrozen(profile.chordVelocities), true, key);
-        assert.equal(profile.leadStepSixteenths.length, MUSIC_THEME_MOTIF_STEPS, key);
-        assert.equal(profile.leadNoteLengths.length, MUSIC_THEME_MOTIF_STEPS, key);
-        assert.equal(profile.chordStepSixteenths.length, 4, key);
-        assert.equal(profile.chordNoteLengths.length, 4, key);
         assert.equal(profile.chordVelocities.length, 4, key);
-        assert.ok(profile.leadStepSixteenths.every((step, index) => step >= 0 && step < 32
-            && (index === 0 || step > profile.leadStepSixteenths[index - 1])), key);
-        assert.ok(profile.chordStepSixteenths.every((step, index) => step >= 0 && step < 32
-            && (index === 0 || step > profile.chordStepSixteenths[index - 1])), key);
-        assert.ok(new Set(profile.leadNoteLengths).size >= 2, key);
+        assert.ok(profile.chordVelocities.every(velocity => velocity > 0 && velocity <= 1), key);
         rhythmSignatures.add(JSON.stringify(profile));
     }
     assert.equal(rhythmSignatures.size, RHYTHM_KEY_VALUES.length);
@@ -501,142 +602,45 @@ test('탐험 rhythm과 timbre profile은 실제 onset·길이·Omni 음색·enve
         timbreSignatures.add(JSON.stringify(profile));
     }
     assert.equal(timbreSignatures.size, TIMBRE_KEY_VALUES.length);
-    assert.equal(new Set(TIMBRE_KEY_VALUES.map(key => getExplorationTimbreProfile(key).leadOscillator)).size,
-        TIMBRE_KEY_VALUES.length);
 
-    assert.equal(EXPLORATION_LOOP_MEASURES, 4);
-    assert.deepEqual(MUSIC_SCENE_TRANSITION, { quantize: '4n', crossFadeSeconds: 1.9 });
+    assert.equal(EXPLORATION_LOOP_MEASURES, 32);
+    assert.equal(MUSIC_SCENE_TRANSITION.crossFadeSeconds, 1.9);
     const engineSource = readFileSync(
         new URL('../../../client/src/audio/AdaptiveMusicEngine.ts', import.meta.url),
         'utf8',
     );
     assert.match(engineSource, /arrangement\.explorationLeadSchedule/);
     assert.match(engineSource, /arrangement\.explorationChordSchedule/);
-    assert.match(engineSource, /getExplorationTimbreProfile\(arrangement\.theme\.timbre\)/);
-    assert.doesNotMatch(engineSource, /brightExploration\s*\?/);
-    assert.match(engineSource, /`@\$\{MUSIC_SCENE_TRANSITION\.quantize\}`/);
+    assert.match(engineSource, /arrangement\.loopTicks/);
+    assert.match(engineSource, /loopEnd\s*=\s*tickTime\(loopTicks\)/);
+    assert.match(engineSource,
+        /Tone\.getTransport\(\)\.PPQ\s*=\s*MUSIC_TICKS_PER_QUARTER/);
+    assert.match(engineSource, /getTicksAtTime\(Tone\.now\(\)\)/);
+    assert.match(engineSource, /part\.start\((?:tickTime\(startTick\)|`\$\{startTick\}i`),\s*(?:tickTime\(0\)|'0i')\)/);
+    assert.match(engineSource, /}, tickTime\(startTick\)\)/);
+    assert.ok(engineSource.indexOf('startAtTick(startTick)')
+        < engineSource.indexOf('transport.scheduleOnce'),
+        'Parts must be armed at the explicit start tick before the transition callback');
+    assert.match(engineSource, /new Tone\.Freeverb/);
+    assert.doesNotMatch(engineSource, /new Tone\.Reverb/);
+    assert.match(engineSource,
+        /const bossHarmony = new Tone\.PolySynth\(\{\s*maxPolyphony: 4,/);
+    assert.doesNotMatch(engineSource, /@4n|MUSIC_SCENE_TRANSITION\.quantize/);
+    assert.doesNotMatch(engineSource, /\.start\(0\)/);
+    assert.doesNotMatch(engineSource, /['"`]\d+(?:n|m|t)\.?['"`]/,
+        'Tone Transport event times and durations must be PPQ tick strings');
+    assert.doesNotMatch(engineSource, /['"`]\d+:\d+:\d+['"`]/,
+        'global Transport meter makes bars:beats:sixteenths unsafe');
 });
 
-test('장소 편곡은 결정론적·불변이며 모든 변주 음과 저음이 원 권역 음계를 지킨다', () => {
-    const harmonyByTheme = new Map(LocationMusicTheme.values().map(theme => {
-        const reference = resolveLocationMusicArrangement(theme.key, `harmony-contract:${theme.key}`);
-        return [theme.key, { chordMidi: reference.chordMidi, bassMidi: reference.bassMidi }] as const;
-    }));
-
-    for (const location of locations) {
-        const first = composeLocationScore(location.id, location.mapColor);
-        const second = composeLocationScore(location.id, location.mapColor);
-        assert.deepEqual(second, first, location.id);
-        assert.notEqual(second, first, location.id);
-        assertArrangementIsDeepFrozen(first);
-
-        assert.ok(first.seed >= 0 && first.seed <= 0xffff_ffff, location.id);
-        assert.ok(first.bpm >= 40 && first.bpm <= 180, location.id);
-        assert.ok(Math.abs(first.bpm - first.theme.bpm) <= 2, location.id);
-        assert.ok(first.rhythmPhase >= 0 && first.rhythmPhase < 8, location.id);
-        assert.equal(first.motifMidi.length, MUSIC_THEME_MOTIF_STEPS * 2, location.id);
-        assert.equal(first.motifAccents.length, first.motifMidi.length, location.id);
-        assert.equal(first.counterMidi.length, first.motifMidi.length, location.id);
-        assert.equal(first.chordMidi.length, first.theme.chords.length, location.id);
-        assert.equal(first.bassMidi.length, first.theme.chords.length, location.id);
-        assert.equal(first.explorationLeadSchedule.length, MUSIC_THEME_MOTIF_STEPS * 2, location.id);
-        assert.equal(first.explorationChordSchedule.length, 8, location.id);
-        assert.ok(first.explorationLeadSchedule.every((event, index) => (
-            event.stepSixteenths >= 0
-            && event.stepSixteenths < EXPLORATION_LOOP_MEASURES * 16
-            && (index === 0
-                || event.stepSixteenths > first.explorationLeadSchedule[index - 1].stepSixteenths)
-            && event.note === first.motifMidi[index]
-            && event.accent === first.motifAccents[index]
-        )), `${location.id}/lead schedule`);
-        assert.ok(first.explorationChordSchedule.every((event, index) => (
-            event.stepSixteenths >= 0
-            && event.stepSixteenths < EXPLORATION_LOOP_MEASURES * 16
-            && (index === 0
-                || event.stepSixteenths > first.explorationChordSchedule[index - 1].stepSixteenths)
-            && event.notes.every((note, noteIndex) => note === first.chordMidi[index % 4][noteIndex])
-        )), `${location.id}/chord schedule`);
-        assert.ok(first.melodySignature.length > 0, location.id);
-        assert.ok(first.motifAccents.some(Boolean), `${location.id}/accent variation`);
-        assert.ok(first.counterMidi.some(note => note !== null), `${location.id}/counter variation`);
-        assert.ok(first.motifAccents.every((accent, index) => typeof accent === 'boolean'
-            && (first.motifMidi[index] !== null || !accent)), location.id);
-
-        const phraseCount = first.theme.motif.length / 4;
-        const phraseRotation = (first.seed % phraseCount) * 4;
-        assert.equal(phraseRotation % 4, 0, `${location.id}/A phrase rotation boundary`);
-        for (let index = 0; index < MUSIC_THEME_MOTIF_STEPS; index += 4) {
-            const note = first.motifMidi[index];
-            const authoredDegree = first.theme.motif[(index + phraseRotation) % first.theme.motif.length];
-            if (authoredDegree === null) {
-                assert.equal(note, null, `${location.id}/authored A anchor rest/${index}`);
-            } else {
-                assert.notEqual(note, null, `${location.id}/authored A anchor/${index}`);
-                const authoredMidi = scaleDegreeToMidi(
-                    first.theme.rootMidi,
-                    first.theme.scale,
-                    authoredDegree,
-                );
-                assert.equal(
-                    pitchClassFromRoot(note!, first.theme.rootMidi),
-                    pitchClassFromRoot(authoredMidi, first.theme.rootMidi),
-                    `${location.id}/authored A anchor degree/${index}`,
-                );
-            }
-            assert.notEqual(
-                first.motifMidi[MUSIC_THEME_MOTIF_STEPS + index],
-                null,
-                `${location.id}/independent B response anchor/${index}`,
-            );
-        }
-        const cadence = first.motifMidi[first.motifMidi.length - 1];
-        assert.notEqual(cadence, null, `${location.id}/B cadence`);
-        assert.equal(pitchClassFromRoot(cadence!, first.theme.rootMidi), 0, `${location.id}/B tonic cadence`);
-
-        const fixedHarmony = harmonyByTheme.get(first.theme.key);
-        assert.ok(fixedHarmony, `${location.id}/fixed harmony`);
-        assert.deepEqual(first.chordMidi, fixedHarmony.chordMidi, `${location.id}/authored chord order`);
-        assert.deepEqual(first.bassMidi, fixedHarmony.bassMidi, `${location.id}/authored bass order`);
-
-        first.motifMidi.forEach((note, index) => assertScaleNote(first, note, `motif/${index}`));
-        first.counterMidi.forEach((note, index) => assertScaleNote(first, note, `counter/${index}`));
-        first.chordMidi.forEach((chord, chordIndex) => {
-            assert.equal(chord.length, 3, `${location.id}/chord/${chordIndex}`);
-            chord.forEach((note, noteIndex) => assertScaleNote(first, note, `chord/${chordIndex}/${noteIndex}`));
-        });
-        assert.ok(midiRange(first.motifMidi)[0] >= EXPLORATION_MELODY_MIN_MIDI,
-            `${location.id}/exploration motif floor`);
-        assert.ok(midiRange(first.motifMidi)[1] <= EXPLORATION_MELODY_MAX_MIDI,
-            `${location.id}/exploration motif ceiling`);
-        assert.ok(midiRange(first.chordMidi.flat())[0] >= EXPLORATION_HARMONY_MIN_MIDI,
-            `${location.id}/exploration harmony floor`);
-        assert.ok(midiRange(first.chordMidi.flat())[1] <= EXPLORATION_HARMONY_MAX_MIDI,
-            `${location.id}/exploration harmony ceiling`);
-        assert.ok(midiRange(first.counterMidi)[0] >= EXPLORATION_MELODY_MIN_MIDI,
-            `${location.id}/boss counter floor`);
-        assert.ok(midiRange(first.counterMidi)[1] <= EXPLORATION_MELODY_MAX_MIDI,
-            `${location.id}/boss counter ceiling`);
-        if (first.theme.brightExploration) {
-            assert.ok(
-                midiRange(first.motifMidi)[0] - midiRange(first.chordMidi.flat())[0] >= 12,
-                `${location.id}/bright lead-pad separation`,
-            );
-        }
-        first.bassMidi.forEach((note, index) => {
-            assert.ok(note >= 24 && note <= 55, `${location.id}/bass/${index}: ${note}`);
-            assertScaleNote(first, note, `bass/${index}`);
-        });
-        assert.ok(new Set(first.bassMidi).size >= 2, `${location.id}/moving bass`);
-    }
-});
-
-test('같은 권역은 테마를 공유하되 장소 seed로 다른 실제 선율을 만들고 알 수 없는 색은 안전하게 폴백한다', () => {
+test('같은 권역의 두 장소는 훅을 그대로 공유하고 seed 기반 편곡만 달라지며 알 수 없는 색은 폴백한다', () => {
     const field = composeLocationScore('field', '#6fa85d');
     const meadow = composeLocationScore('meadow_2', '#6fa85d');
     assert.equal(field.theme, LocationMusicTheme.MEADOW);
     assert.equal(meadow.theme, LocationMusicTheme.MEADOW);
     assert.notEqual(field.seed, meadow.seed);
-    assert.notEqual(field.melodySignature, meadow.melodySignature);
+    assert.equal(firstHookSignature(field), firstHookSignature(meadow));
+    assert.notEqual(field.arrangementSignature, meadow.arrangementSignature);
     assert.deepEqual(composeLocationScore('field', '  #6FA85D  '), field);
 
     const fallback = composeLocationScore('unmapped-place', '#ffffff');
@@ -646,7 +650,7 @@ test('같은 권역은 테마를 공유하되 장소 seed로 다른 실제 선�
     assert.equal(composeLocationScore('   ', null).locationId, 'unknown-location');
 });
 
-test('명시적 전투 상태를 우선하고 구버전 target snapshot은 탐험·일반전투·보스전투로 안전하게 폴백한다', () => {
+test('명시적 전투 상태를 우선하고 구버전 target snapshot은 탐험·일반전투·보스전투로 폴백한다', () => {
     const bossTarget = { kind: 'monster', isBoss: true, life: 100, defeated: false } as const;
     const monsterTarget = { kind: 'monster', life: 100, defeated: false } as const;
     const playerTarget = { kind: 'player', life: 100, defeated: false } as const;
@@ -665,7 +669,7 @@ test('명시적 전투 상태를 우선하고 구버전 target snapshot은 탐�
     assert.equal(MusicCombatState.fromInput('보스 전투'), MusicCombatState.BOSS);
 });
 
-test('음악 음량은 fake storage에서 0~100 정규화·저장·복원하고 storage 오류를 안전하게 무시한다', () => {
+test('음악 음량은 fake storage에서 0~100 정규화·저장·복원하고 storage 오류를 무시한다', () => {
     const values = new Map<string, string>();
     const storage: MusicStorageLike = {
         getItem: key => values.get(key) ?? null,
