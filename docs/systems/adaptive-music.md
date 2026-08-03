@@ -6,9 +6,9 @@
 
 `shared/adaptiveMusic.ts`의 `LocationMusicTheme` 클래스형 enum이 현재 월드의 기본 대표색 25개와 승천 권역 10개, 총 35개 악보를 소유한다. 각 악보에는 권역명, BPM, root MIDI, `MusicScale`, 8~16 step motif, 네 chord, bass/pad/lead 음역, timbre와 rhythm character가 명시되어 있다.
 
-`composeLocationScore(locationId, mapColor)`가 WebAudio와 무관한 유일한 작곡 진입점이다. FNV-1a seed는 표시명·좌표가 아니라 안정적인 장소 ID와 theme key만 사용한다. 같은 권역의 root·scale·기본 motif는 유지하면서 장소마다 motif 회전, scale degree 전조, 음계 안의 미세 변주, 쉼, 강세, octave, rhythm phase와 counter line을 결정한다. MIDI 범위 보정은 12반음 단위로만 움직여 원 음계를 깨지 않는다. 등록되지 않은 색은 루미나르 악보로 안전하게 폴백한다.
+`composeLocationScore(locationId, mapColor)`가 WebAudio와 무관한 유일한 작곡 진입점이다. FNV-1a seed는 표시명·좌표가 아니라 안정적인 장소 ID와 theme key만 사용한다. 같은 권역의 root·scale·기본 motif와 네 화음의 기능·순서를 유지하면서 장소마다 motif를 4-step 구절 경계에서 회전하고 쉼, 강세, octave, rhythm phase와 counter line을 결정한다. seed가 선율을 다른 scale degree로 전조하거나 화음을 회전시키지 않으므로 장조 권역이 임의의 단·감화음 진행으로 바뀌지 않는다. 등록되지 않은 색은 루미나르 악보로 안전하게 폴백한다.
 
-현재 회귀 테스트는 병합된 623개 장소와 35개 색의 양방향 완전 일치, 권역 안 모든 장소의 실제 melody signature 고유성, 전 음표·chord·bass의 MIDI 범위와 scale membership, 불변 snapshot, 결정론을 검사한다.
+탐험 lead와 보스 counter 구절은 전체를 12반음 단위로 옮겨 `G4~C7(MIDI 67~96)`, pad 화음은 화음 단위로 `C4~C6(MIDI 60~84)`에 둔다. 현재 회귀 테스트는 병합된 623개 장소와 35개 색의 양방향 완전 일치, 권역 안 모든 장소의 실제 melody signature 고유성, 4-step 구절 회전, 고정 화음 순서, 전 음표·chord·bass의 MIDI 범위와 scale membership, 불변 snapshot, 결정론을 검사한다.
 
 ## 실제 교전 상태
 
@@ -20,11 +20,11 @@
 
 `client/src/audio/AdaptiveMusicEngine.ts`는 Home route 하나가 소유한다. 탐험 bank는 저밀도 lead/pluck와 pad를 항상 재생한다. `combat`은 bass와 가벼운 percussion을 gain ramp로 더하고, `boss`는 counter melody, harmony와 무거운 percussion을 추가한다. 상태 snapshot 변화는 Part를 다시 만들지 않고 layer gain만 변경한다.
 
-장소 이동 때 비활성 voice bank에 다음 score를 준비하고 Tone Transport의 다음 마디 경계부터 3.5초 equal-power crossfade한다. BPM도 같은 시간에 ramp한다. 빠른 연속 이동은 진행 중 전환을 끊지 않고 마지막 요청 하나로 합쳐 다음 전환으로 잇는다. compressor와 -4dB limiter 뒤에 사용자 gain을 두며 bank당 pad 4성, boss harmony 3성 이내로 제한한다.
+장소 이동 때 비활성 voice bank에 다음 score를 준비하고 Tone Transport의 다음 마디 경계부터 3.5초 equal-power crossfade한다. BPM도 같은 시간에 ramp한다. 빠른 연속 이동은 진행 중 전환을 끊지 않고 마지막 요청 하나로 합쳐 다음 전환으로 잇는다. compressor와 -4dB limiter 뒤에 사용자 gain을 두며 bank당 pad 6성, boss harmony 3성 이내로 제한한다.
 
-기본 음량 35는 사용자 gain 약 -12.05dB로 변환한다. 탐험 레이어는 평시 0.58로 유지하고 pad/lead 자체 음량은 -13dB/-12dB로 구성한다. 탐험 전용 EQ가 저역 -1.5dB, 중역 +2.5dB, 고역 +1.5dB를 적용하며 warm/wood 계열 pad는 sine 대신 triangle 배음을 사용한다. 전투·보스에서는 탐험·저음·타악·대선율이 합쳐지므로 각 레이어 gain을 별도로 낮춘다. 사용자 최대 gain도 0.88 이하이고 마지막 -4dB limiter를 통과하므로 합산 peak가 출력 clipping으로 이어지지 않는다.
+기본 음량 35는 사용자 gain 약 -12.05dB로 변환한다. 탐험 레이어는 평시 0.58로 유지한다. 일반 탐험 mix는 180Hz high-pass와 저/중/고역 `-4.5/+1.5/+1dB`, pad/lead `-17/-11dB`를 사용한다. 밝은 탐험 mix는 260Hz high-pass와 `-7/+2/+3dB`, pad/lead `-16/-9dB`로 선율을 더 앞세운다. pad는 `4n` 길이, release `0.22~0.25초`, 최대 6성으로 다음 화음과 긴 release가 겹쳐 음이 누락되거나 저음 drone이 생기지 않게 한다. 전투·보스에서는 탐험·저음·타악·대선율이 합쳐지므로 각 레이어 gain을 별도로 낮춘다. 사용자 최대 gain도 0.88 이하이고 마지막 -4dB limiter를 통과하므로 합산 peak가 출력 clipping으로 이어지지 않는다.
 
-초반 잔잔한 권역은 모바일 스피커 재생 대역도 별도로 보정한다. 루미나르 pad register는 `-1→0`, 바람결 초원의 pad/lead register는 `0→1`, `1→2`로 한 옥타브씩 올린다. MIDI 음을 12반음 단위로 옮기므로 장소별 seed 변주, 음정 관계와 권역 음계는 바뀌지 않는다.
+루미나르, 물빛 연못, 바람결 초원, 은빛그물 숲, 여명의 성소는 밝은 탐험 테마로 분류한다. Ionian·Mixolydian·Lydian·장조 pentatonic 기반의 원 화성을 seed가 바꾸지 않고, 실제 lead 최저음이 pad 최저음보다 최소 한 옥타브 높게 유지된다. 저음 bass와 긴장성 counter·추가 화성·강한 타악은 탐험 출력에 연결하지 않고 전투 또는 보스 레이어에서만 연주한다.
 
 ## 사용자 입력과 수명주기
 

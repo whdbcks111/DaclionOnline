@@ -21,7 +21,7 @@ PC에서는 목록·상세·작업 패널을 다열로 배치한다. 상세 패�
 3. `adminPanelExecute`는 action union과 입력값을 서버에서 다시 검증하고 도메인 목적형 API를 호출한다. 공지는 `broadcastBotMessageAll/broadcastNotification`, 개별 알림은 온라인 여부를 확인한 뒤 `sendNotificationToUser`를 사용한다.
 4. 처리 후 호환용 `adminPanelResult`, 갱신된 플레이어 목록과 대상 상세가 요청 소켓에만 돌아온다. 일반 작업 피드백은 기존 `notification`으로 자동 소멸하며, 긴 밸런스 보고서만 `details`를 공용 Dialog로 연다. 전투 로테이션 보고서는 공격자와 피격자 양방향 회피, 90% 회피 요구치, 관통 적용 뒤 유효 방어, 첫 반격 전 처치와 처치 전 예상 피격·남은 생명력을 함께 표시한다.
 
-관리자 UI가 Inventory/SkillBook/TitleBook/Progress 내부 컬렉션이나 DB row를 직접 수정하지 않도록 `Player.adjustLevel`, `Inventory.clear`, `SkillBook.revoke`, `TitleBook.grant/revoke`, `CareerProfile.setByAdmin`, `Resource.resetInteractionCooldown`, `markAllLocationsVisited`, `discoverAllCraftingRecipes`를 사용한다. 고빈도 플레이어 상태는 기존 Player dirty save 경계를 그대로 통과한다. 채팅 관리자 명령 `/레벨조정 <대상|me> <레벨>`, `/칭호부여 <대상|me> <칭호>`, `/칭호삭제 <대상|me> <칭호>`도 같은 Player API를 사용한다.
+관리자 UI가 Inventory/SkillBook/TitleBook/Progress 내부 컬렉션이나 DB row를 직접 수정하지 않도록 `Player.adjustLevel`, `Inventory.clear`, `SkillBook.revoke`, `TitleBook.grant/revoke`, `CareerProfile.setByAdmin`, `Resource.resetInteractionCooldown`, `markAllLocationsVisited`, `discoverAllCraftingRecipes`를 사용한다. 고빈도 플레이어 상태는 기존 Player dirty save 경계를 그대로 통과한다. 채팅 관리자 명령 `/레벨조정 <대상|me> <레벨>`, `/칭호부여 <대상|me> <칭호>`, `/칭호삭제 <대상|me> <칭호>`도 같은 Player API를 사용한다. `/우편발송 <유저ID|me> <아이템ID> <수량> [제목]`은 온라인 Player 객체나 DB row를 직접 수정하지 않고 `sendSystemMail()`로 오프라인 수신자에게도 아이템 snapshot을 영속 발송하며 실행 결과를 관리자에게만 알린다.
 
 ## 공용 다이얼로그
 

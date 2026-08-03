@@ -2,13 +2,20 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
+    BRIGHT_EXPLORATION_MIX,
     DEFAULT_MUSIC_VOLUME,
+    EXPLORATION_HARMONY_MAX_MIDI,
+    EXPLORATION_HARMONY_MIN_MIDI,
+    EXPLORATION_MELODY_MAX_MIDI,
+    EXPLORATION_MELODY_MIN_MIDI,
     LocationMusicTheme,
     MUSIC_VOLUME_STORAGE_KEY,
     MusicCombatState,
     MusicScale,
+    STANDARD_EXPLORATION_MIX,
     composeLocationScore,
     getLocationMusicThemeByColor,
+    getExplorationMixProfile,
     normalizeMusicVolume,
     readMusicVolume,
     resolveMusicCombatState,
@@ -118,6 +125,7 @@ test('35개 권역 악보는 고유 색·유효 음계·8~16 step 선율과 움�
         assert.equal(rootLabelToMidi(theme.root), theme.rootMidi, theme.key);
         assert.ok(Number.isInteger(theme.bpm) && theme.bpm >= 40 && theme.bpm <= 180, theme.key);
         assert.ok(theme.motif.length >= 8 && theme.motif.length <= 16, theme.key);
+        assert.equal(theme.motif.length % 4, 0, `${theme.key}/four-step phrases`);
         assert.ok(theme.motif.some(degree => degree !== null), theme.key);
         assert.ok(theme.motif.every(degree => degree === null
             || (Number.isInteger(degree) && Math.abs(degree) <= theme.scale.intervals.length * 2)), theme.key);
@@ -183,32 +191,78 @@ test('merged 623개 장소의 35색은 누락·고아 테마 없이 정확히 �
     }
 });
 
-test('루미나르 화음과 바람결 초원 선율은 모바일 스피커에서 감쇠되지 않는 음역을 유지한다', () => {
+test('초반 밝은 권역은 seed가 장조 화성과 높은 선율을 어둡게 바꾸지 않는다', () => {
     assert.deepEqual(LocationMusicTheme.LUMINAR.register, {
         bassOctave: -2,
-        padOctave: 0,
-        leadOctave: 0,
+        padOctave: 1,
+        leadOctave: 2,
     });
     assert.deepEqual(LocationMusicTheme.MEADOW.register, {
         bassOctave: -1,
         padOctave: 1,
         leadOctave: 2,
     });
+    assert.deepEqual(
+        LocationMusicTheme.values().filter(theme => theme.brightExploration).map(theme => theme.key),
+        ['luminar', 'luminous-pond', 'meadow', 'silverweb', 'dawn-sanctum'],
+    );
+    assert.equal(LocationMusicTheme.SILVERWEB.scale, MusicScale.MIXOLYDIAN);
 
     const luminar = composeLocationScore('town_square', '#d6a85f');
+    const jobHall = composeLocationScore('job_hall', '#d6a85f');
+    const pond = composeLocationScore('luminous_pond', '#63a9bf');
+    const meadowOne = composeLocationScore('field', '#6fa85d');
     const meadowTwo = composeLocationScore('meadow_2', '#6fa85d');
     const meadowThree = composeLocationScore('meadow_3', '#6fa85d');
 
-    assert.deepEqual(midiRange(luminar.chordMidi.flat()), [59, 72]);
-    assert.deepEqual(midiRange(meadowTwo.motifMidi), [57, 65]);
-    assert.deepEqual(midiRange(meadowThree.motifMidi), [59, 67]);
+    assert.deepEqual(luminar.chordMidi, [
+        [67, 71, 74],
+        [72, 76, 79],
+        [74, 78, 81],
+        [67, 71, 76],
+    ], '광장 seed가 I-IV-V-vi6 화성을 회전·감화음화하지 않아야 한다.');
+    assert.deepEqual(jobHall.chordMidi, luminar.chordMidi);
+    assert.deepEqual(midiRange(luminar.motifMidi), [79, 91]);
+    assert.deepEqual(midiRange(jobHall.motifMidi), [79, 91]);
+    assert.deepEqual(midiRange(pond.motifMidi), [74, 83]);
+    assert.deepEqual(midiRange(meadowOne.motifMidi), [72, 81]);
+    assert.deepEqual(midiRange(meadowTwo.motifMidi), [72, 81]);
+    assert.deepEqual(midiRange(meadowThree.motifMidi), [72, 81]);
 
+    for (const arrangement of [luminar, jobHall, pond, meadowOne, meadowTwo, meadowThree]) {
+        assert.ok(
+            midiRange(arrangement.motifMidi)[0] - midiRange(arrangement.chordMidi.flat())[0] >= 12,
+            `${arrangement.locationId}/bright lead-pad separation`,
+        );
+    }
+
+    meadowOne.motifMidi.forEach((note, index) => assertScaleNote(meadowOne, note, `mobile/motif/${index}`));
     meadowTwo.motifMidi.forEach((note, index) => assertScaleNote(meadowTwo, note, `mobile/motif/${index}`));
     meadowThree.motifMidi.forEach((note, index) => assertScaleNote(meadowThree, note, `mobile/motif/${index}`));
     luminar.chordMidi.flat().forEach((note, index) => assertScaleNote(luminar, note, `mobile/chord/${index}`));
 });
 
+test('탐험 mix는 저음 드론과 pad 겹침을 줄이고 밝은 권역에서 선율을 앞세운다', () => {
+    assert.equal(getExplorationMixProfile(LocationMusicTheme.LUMINAR), BRIGHT_EXPLORATION_MIX);
+    assert.equal(getExplorationMixProfile(LocationMusicTheme.NECROPOLIS), STANDARD_EXPLORATION_MIX);
+    for (const profile of [STANDARD_EXPLORATION_MIX, BRIGHT_EXPLORATION_MIX]) {
+        assert.equal(profile.padNoteLength, '4n');
+        assert.ok(profile.padMaxPolyphony >= 6);
+        assert.ok(profile.padReleaseSeconds <= 0.25);
+        assert.ok(profile.highpassHz >= 180);
+        assert.ok(profile.leadVolumeDb - profile.padVolumeDb >= 6);
+        assert.ok(profile.lowEqDb <= -4.5);
+    }
+    assert.ok(BRIGHT_EXPLORATION_MIX.highpassHz > STANDARD_EXPLORATION_MIX.highpassHz);
+    assert.ok(BRIGHT_EXPLORATION_MIX.highEqDb > STANDARD_EXPLORATION_MIX.highEqDb);
+});
+
 test('장소 편곡은 결정론적·불변이며 모든 변주 음과 저음이 원 권역 음계를 지킨다', () => {
+    const harmonyByTheme = new Map(LocationMusicTheme.values().map(theme => {
+        const reference = resolveLocationMusicArrangement(theme.key, `harmony-contract:${theme.key}`);
+        return [theme.key, { chordMidi: reference.chordMidi, bassMidi: reference.bassMidi }] as const;
+    }));
+
     for (const location of locations) {
         const first = composeLocationScore(location.id, location.mapColor);
         const second = composeLocationScore(location.id, location.mapColor);
@@ -231,12 +285,52 @@ test('장소 편곡은 결정론적·불변이며 모든 변주 음과 저음이
         assert.ok(first.motifAccents.every((accent, index) => typeof accent === 'boolean'
             && (first.motifMidi[index] !== null || !accent)), location.id);
 
+        const phraseRotation = (first.seed % Math.max(1, Math.floor(first.theme.motif.length / 4))) * 4;
+        assert.equal(phraseRotation % 4, 0, `${location.id}/phrase rotation boundary`);
+        first.motifMidi.forEach((note, index) => {
+            const authoredDegree = first.theme.motif[(index + phraseRotation) % first.theme.motif.length];
+            if (authoredDegree === null) {
+                assert.equal(note, null, `${location.id}/authored rest/${index}`);
+                return;
+            }
+            if (note === null) return;
+            const authoredMidi = scaleDegreeToMidi(first.theme.rootMidi, first.theme.scale, authoredDegree);
+            assert.equal(
+                pitchClassFromRoot(note, first.theme.rootMidi),
+                pitchClassFromRoot(authoredMidi, first.theme.rootMidi),
+                `${location.id}/authored melody degree/${index}`,
+            );
+        });
+
+        const fixedHarmony = harmonyByTheme.get(first.theme.key);
+        assert.ok(fixedHarmony, `${location.id}/fixed harmony`);
+        assert.deepEqual(first.chordMidi, fixedHarmony.chordMidi, `${location.id}/authored chord order`);
+        assert.deepEqual(first.bassMidi, fixedHarmony.bassMidi, `${location.id}/authored bass order`);
+
         first.motifMidi.forEach((note, index) => assertScaleNote(first, note, `motif/${index}`));
         first.counterMidi.forEach((note, index) => assertScaleNote(first, note, `counter/${index}`));
         first.chordMidi.forEach((chord, chordIndex) => {
             assert.equal(chord.length, 3, `${location.id}/chord/${chordIndex}`);
             chord.forEach((note, noteIndex) => assertScaleNote(first, note, `chord/${chordIndex}/${noteIndex}`));
         });
+        assert.ok(midiRange(first.motifMidi)[0] >= EXPLORATION_MELODY_MIN_MIDI,
+            `${location.id}/exploration motif floor`);
+        assert.ok(midiRange(first.motifMidi)[1] <= EXPLORATION_MELODY_MAX_MIDI,
+            `${location.id}/exploration motif ceiling`);
+        assert.ok(midiRange(first.chordMidi.flat())[0] >= EXPLORATION_HARMONY_MIN_MIDI,
+            `${location.id}/exploration harmony floor`);
+        assert.ok(midiRange(first.chordMidi.flat())[1] <= EXPLORATION_HARMONY_MAX_MIDI,
+            `${location.id}/exploration harmony ceiling`);
+        assert.ok(midiRange(first.counterMidi)[0] >= EXPLORATION_MELODY_MIN_MIDI,
+            `${location.id}/boss counter floor`);
+        assert.ok(midiRange(first.counterMidi)[1] <= EXPLORATION_MELODY_MAX_MIDI,
+            `${location.id}/boss counter ceiling`);
+        if (first.theme.brightExploration) {
+            assert.ok(
+                midiRange(first.motifMidi)[0] - midiRange(first.chordMidi.flat())[0] >= 12,
+                `${location.id}/bright lead-pad separation`,
+            );
+        }
         first.bassMidi.forEach((note, index) => {
             assert.ok(note >= 24 && note <= 55, `${location.id}/bass/${index}: ${note}`);
             assertScaleNote(first, note, `bass/${index}`);

@@ -1,5 +1,48 @@
 export const MUSIC_VOLUME_STORAGE_KEY = 'daclion:adaptive-music-volume'
 export const DEFAULT_MUSIC_VOLUME = 35
+export const EXPLORATION_MELODY_MIN_MIDI = 67
+export const EXPLORATION_MELODY_MAX_MIDI = 96
+export const EXPLORATION_HARMONY_MIN_MIDI = 60
+export const EXPLORATION_HARMONY_MAX_MIDI = 84
+
+export interface ExplorationMixProfile {
+    readonly highpassHz: number
+    readonly lowEqDb: number
+    readonly midEqDb: number
+    readonly highEqDb: number
+    readonly padVolumeDb: number
+    readonly leadVolumeDb: number
+    readonly padAttackSeconds: number
+    readonly padReleaseSeconds: number
+    readonly padNoteLength: '4n'
+    readonly padMaxPolyphony: number
+}
+
+export const STANDARD_EXPLORATION_MIX: Readonly<ExplorationMixProfile> = Object.freeze({
+    highpassHz: 180,
+    lowEqDb: -4.5,
+    midEqDb: 1.5,
+    highEqDb: 1,
+    padVolumeDb: -17,
+    leadVolumeDb: -11,
+    padAttackSeconds: 0.16,
+    padReleaseSeconds: 0.25,
+    padNoteLength: '4n',
+    padMaxPolyphony: 6,
+})
+
+export const BRIGHT_EXPLORATION_MIX: Readonly<ExplorationMixProfile> = Object.freeze({
+    highpassHz: 260,
+    lowEqDb: -7,
+    midEqDb: 2,
+    highEqDb: 3,
+    padVolumeDb: -16,
+    leadVolumeDb: -9,
+    padAttackSeconds: 0.08,
+    padReleaseSeconds: 0.22,
+    padNoteLength: '4n',
+    padMaxPolyphony: 6,
+})
 
 export interface MusicStorageLike {
     getItem(key: string): string | null
@@ -143,6 +186,8 @@ interface LocationMusicThemeInput {
     readonly register: MusicRegister
     readonly timbre: MusicTimbreKey
     readonly rhythm: MusicRhythmKey
+    /** 마을·초반 자연 권역에서 seed가 밝은 화성과 가청 음역을 흐리지 않게 한다. */
+    readonly brightExploration?: boolean
 }
 
 /** 35개 월드 권역의 대표 악보와 음색을 소유하는 클래스형 enum. */
@@ -160,26 +205,27 @@ export class LocationMusicTheme {
     readonly register: Readonly<MusicRegister>
     readonly timbre: MusicTimbreKey
     readonly rhythm: MusicRhythmKey
+    readonly brightExploration: boolean
 
     static readonly LUMINAR = new LocationMusicTheme({
         key: 'luminar', name: '개척의 별등불', mapColor: '#d6a85f', bpm: 96, root: 'G3', rootMidi: 55,
         scale: MusicScale.IONIAN, motif: [0, 2, 4, 5, 4, 2, 1, null, 0, 2, 4, 7, 5, 4, 2, null],
-        chords: [[0, 2, 4], [3, 5, 7], [4, 6, 8], [0, 2, 5]], register: { bassOctave: -2, padOctave: 0, leadOctave: 0 }, timbre: 'warm', rhythm: 'steady',
+        chords: [[0, 2, 4], [3, 5, 7], [4, 6, 8], [0, 2, 5]], register: { bassOctave: -2, padOctave: 1, leadOctave: 2 }, timbre: 'warm', rhythm: 'steady', brightExploration: true,
     })
     static readonly LUMINOUS_POND = new LocationMusicTheme({
         key: 'luminous-pond', name: '물빛의 한가로운 파문', mapColor: '#63a9bf', bpm: 78, root: 'D3', rootMidi: 50,
         scale: MusicScale.MAJOR_PENTATONIC, motif: [0, 1, 2, null, 3, 2, 1, null, 0, 2, 3, 4, 3, 2, null, null],
-        chords: [[0, 2, 4], [1, 3, 5], [2, 4, 6], [0, 2, 5]], register: { bassOctave: -1, padOctave: 0, leadOctave: 1 }, timbre: 'water', rhythm: 'waltz',
+        chords: [[0, 2, 4], [1, 3, 5], [2, 4, 6], [0, 2, 5]], register: { bassOctave: -1, padOctave: 1, leadOctave: 2 }, timbre: 'water', rhythm: 'waltz', brightExploration: true,
     })
     static readonly MEADOW = new LocationMusicTheme({
         key: 'meadow', name: '첫 바람의 길', mapColor: '#6fa85d', bpm: 108, root: 'C3', rootMidi: 48,
         scale: MusicScale.IONIAN, motif: [0, 2, 4, 2, 1, 3, 5, null, 0, 2, 4, 5, 4, 2, 1, null],
-        chords: [[0, 2, 4], [3, 5, 7], [4, 6, 8], [0, 3, 5]], register: { bassOctave: -1, padOctave: 1, leadOctave: 2 }, timbre: 'wood', rhythm: 'steady',
+        chords: [[0, 2, 4], [3, 5, 7], [4, 6, 8], [0, 3, 5]], register: { bassOctave: -1, padOctave: 1, leadOctave: 2 }, timbre: 'wood', rhythm: 'steady', brightExploration: true,
     })
     static readonly SILVERWEB = new LocationMusicTheme({
         key: 'silverweb', name: '은실 아래의 사냥', mapColor: '#4f7857', bpm: 94, root: 'E3', rootMidi: 52,
-        scale: MusicScale.DORIAN, motif: [0, 2, 3, 5, 3, 2, 0, null, 0, 2, 5, 6, 5, 3, 1, null],
-        chords: [[0, 2, 4], [1, 3, 5], [3, 5, 7], [0, 3, 5]], register: { bassOctave: -2, padOctave: -1, leadOctave: 0 }, timbre: 'wood', rhythm: 'syncopated',
+        scale: MusicScale.MIXOLYDIAN, motif: [0, 2, 3, 5, 3, 2, 0, null, 0, 2, 5, 6, 5, 3, 1, null],
+        chords: [[0, 2, 4], [1, 3, 5], [3, 5, 7], [0, 3, 5]], register: { bassOctave: -2, padOctave: 1, leadOctave: 2 }, timbre: 'wood', rhythm: 'syncopated', brightExploration: true,
     })
     static readonly SWAMP = new LocationMusicTheme({
         key: 'swamp', name: '잠든 포자의 숨', mapColor: '#66784f', bpm: 70, root: 'D3', rootMidi: 50,
@@ -209,7 +255,7 @@ export class LocationMusicTheme {
     static readonly DAWN_SANCTUM = new LocationMusicTheme({
         key: 'dawn-sanctum', name: '광륜의 새벽', mapColor: '#ddd19a', bpm: 90, root: 'D3', rootMidi: 50,
         scale: MusicScale.LYDIAN, motif: [0, 1, 3, 4, 6, 4, 3, null, 0, 3, 4, 7, 6, 4, 1, null],
-        chords: [[0, 2, 4], [1, 3, 5], [4, 6, 8], [0, 3, 5]], register: { bassOctave: -1, padOctave: 0, leadOctave: 1 }, timbre: 'holy', rhythm: 'steady',
+        chords: [[0, 2, 4], [1, 3, 5], [4, 6, 8], [0, 3, 5]], register: { bassOctave: -1, padOctave: 1, leadOctave: 2 }, timbre: 'holy', rhythm: 'steady', brightExploration: true,
     })
     static readonly NECROPOLIS = new LocationMusicTheme({
         key: 'necropolis', name: '불멸의 장송', mapColor: '#585365', bpm: 64, root: 'B2', rootMidi: 47,
@@ -350,6 +396,7 @@ export class LocationMusicTheme {
         this.register = Object.freeze({ ...input.register })
         this.timbre = input.timbre
         this.rhythm = input.rhythm
+        this.brightExploration = input.brightExploration ?? false
         LocationMusicTheme.all.push(this)
         Object.freeze(this)
     }
@@ -370,6 +417,10 @@ export class LocationMusicTheme {
             ? LocationMusicTheme.all.find(theme => theme.mapColor === mapColor.trim().toLowerCase())
             : undefined
     }
+}
+
+export function getExplorationMixProfile(theme: LocationMusicTheme): Readonly<ExplorationMixProfile> {
+    return theme.brightExploration ? BRIGHT_EXPLORATION_MIX : STANDARD_EXPLORATION_MIX
 }
 
 export function getLocationMusicThemeByColor(mapColor: unknown): LocationMusicTheme | undefined {
@@ -413,6 +464,20 @@ function clampMidi(value: number): number {
     return normalized
 }
 
+function shiftMidiGroupIntoRange(
+    values: readonly number[],
+    minimum: number,
+    maximum = 103,
+): number[] {
+    if (values.length === 0) return []
+    let shift = 0
+    const lowest = Math.min(...values)
+    const highest = Math.max(...values)
+    while (lowest + shift < minimum) shift += 12
+    while (highest + shift > maximum && lowest + shift - 12 >= minimum) shift -= 12
+    return values.map(value => clampMidi(value + shift))
+}
+
 export interface LocationMusicArrangement {
     readonly theme: LocationMusicTheme
     readonly locationId: string
@@ -433,15 +498,14 @@ export function composeLocationScore(locationId: string, mapColor: unknown): Loc
     return resolveLocationMusicArrangement(theme.key, locationId)
 }
 
-/** 같은 권역 악보의 음계는 보존하면서 장소별 회전·쉼·강세·옥타브·대선율을 결정한다. */
+/** 같은 권역 악보의 조성과 화성을 보존하면서 장소별 선율 회전·쉼·강세·옥타브·대선율을 결정한다. */
 export function resolveLocationMusicArrangement(themeKey: unknown, locationId: string): LocationMusicArrangement {
     const theme = getLocationMusicThemeOrFallback(themeKey)
     const safeLocationId = locationId.trim() || 'unknown-location'
     const seed = createLocationMusicSeed(theme.key, safeLocationId)
     const motifLength = theme.motif.length
-    const rotation = seed % motifLength
-    const transposeDegrees = ((seed >>> 5) % 5) - 2
-    const octaveShift = ((seed >>> 9) % 3) - 1
+    const rotation = (seed % Math.max(1, Math.floor(motifLength / 4))) * 4
+    const octaveShift = theme.brightExploration ? 0 : ((seed >>> 9) % 3) - 1
     const rhythmPhase = (seed >>> 13) % 8
     let random = seed || 0x9e3779b9
     const motifMidi: (number | null)[] = []
@@ -452,8 +516,7 @@ export function resolveLocationMusicArrangement(themeKey: unknown, locationId: s
         random = nextSeed(random)
         const baseDegree = theme.motif[(index + rotation) % motifLength]
         const insertedRest = baseDegree !== null && index > 0 && index < motifLength - 1 && random % 19 === 0
-        const nudge = random % 11 === 0 ? (random & 1 ? 1 : -1) : 0
-        const degree = baseDegree === null || insertedRest ? null : baseDegree + transposeDegrees + nudge
+        const degree = baseDegree === null || insertedRest ? null : baseDegree
         const midi = degree === null
             ? null
             : clampMidi(scaleDegreeToMidi(
@@ -476,28 +539,46 @@ export function resolveLocationMusicArrangement(themeKey: unknown, locationId: s
             )))
     }
 
-    const chordRotation = (seed >>> 18) % theme.chords.length
-    const chordMidi = theme.chords.map((_, index) => {
-        const chord = theme.chords[(index + chordRotation) % theme.chords.length]
+    const liftedMotif = shiftMidiGroupIntoRange(
+        motifMidi.filter((note): note is number => note !== null),
+        EXPLORATION_MELODY_MIN_MIDI,
+        EXPLORATION_MELODY_MAX_MIDI,
+    )
+    let liftedMotifIndex = 0
+    const explorationMotifMidi = motifMidi.map(note => note === null ? null : liftedMotif[liftedMotifIndex++])
+
+    const liftedCounter = shiftMidiGroupIntoRange(
+        counterMidi.filter((note): note is number => note !== null),
+        EXPLORATION_MELODY_MIN_MIDI,
+        EXPLORATION_MELODY_MAX_MIDI,
+    )
+    let liftedCounterIndex = 0
+    const bossCounterMidi = counterMidi.map(note => note === null ? null : liftedCounter[liftedCounterIndex++])
+
+    const rawChordMidi = theme.chords.map(chord => {
         return chord.map(degree => clampMidi(scaleDegreeToMidi(
             theme.rootMidi + theme.register.padOctave * 12,
             theme.scale,
-            degree + transposeDegrees,
+            degree,
         )))
     })
-    const bassMidi = theme.chords.map((_, index) => {
-        const chord = theme.chords[(index + chordRotation) % theme.chords.length]
+    const chordMidi = rawChordMidi.map(chord => shiftMidiGroupIntoRange(
+        chord,
+        EXPLORATION_HARMONY_MIN_MIDI,
+        EXPLORATION_HARMONY_MAX_MIDI,
+    ))
+    const bassMidi = theme.chords.map(chord => {
         return clampMidi(scaleDegreeToMidi(
             theme.rootMidi + theme.register.bassOctave * 12,
             theme.scale,
-            chord[0] + transposeDegrees,
+            chord[0],
         ))
     })
     const bpm = Math.min(180, Math.max(40, theme.bpm + ((seed >>> 25) % 5) - 2))
     const melodySignature = [
-        motifMidi.map(note => note ?? 'r').join(','),
+        explorationMotifMidi.map(note => note ?? 'r').join(','),
         motifAccents.map(accent => accent ? '1' : '0').join(''),
-        counterMidi.map(note => note ?? 'r').join(','),
+        bossCounterMidi.map(note => note ?? 'r').join(','),
         `p${rhythmPhase}`,
     ].join('|')
 
@@ -507,9 +588,9 @@ export function resolveLocationMusicArrangement(themeKey: unknown, locationId: s
         seed,
         bpm,
         rhythmPhase,
-        motifMidi: Object.freeze(motifMidi),
+        motifMidi: Object.freeze(explorationMotifMidi),
         motifAccents: Object.freeze(motifAccents),
-        counterMidi: Object.freeze(counterMidi),
+        counterMidi: Object.freeze(bossCounterMidi),
         chordMidi: Object.freeze(chordMidi.map(chord => Object.freeze(chord))),
         bassMidi: Object.freeze(bassMidi),
         melodySignature,

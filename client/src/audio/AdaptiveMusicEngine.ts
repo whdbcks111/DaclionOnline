@@ -2,6 +2,7 @@ import * as Tone from 'tone'
 import {
   MusicCombatState,
   composeLocationScore,
+  getExplorationMixProfile,
   type LocationMusicArrangement,
   type MusicRhythmKey,
   type MusicTimbreKey,
@@ -108,34 +109,49 @@ class MusicVoiceBank {
     this.explorationGain = new Tone.Gain(0)
     this.combatGain = new Tone.Gain(0).connect(this.output)
     this.bossGain = new Tone.Gain(0).connect(this.output)
+    const explorationMix = getExplorationMixProfile(arrangement.theme)
     const explorationEq = new Tone.EQ3({
-      low: -1.5,
-      mid: 2.5,
-      high: 1.5,
-      lowFrequency: 280,
+      low: explorationMix.lowEqDb,
+      mid: explorationMix.midEqDb,
+      high: explorationMix.highEqDb,
+      lowFrequency: 320,
       highFrequency: 2_400,
     }).connect(this.output)
-    this.explorationGain.connect(explorationEq)
+    const explorationHighpass = new Tone.Filter({
+      type: 'highpass',
+      frequency: explorationMix.highpassHz,
+      rolloff: -24,
+      Q: 0.7,
+    }).connect(explorationEq)
+    this.explorationGain.connect(explorationHighpass)
 
-    const oscillator = TIMBRE_OSCILLATOR[arrangement.theme.timbre]
-    const padOscillator: Tone.ToneOscillatorType = arrangement.theme.timbre === 'warm'
+    const oscillator: Tone.ToneOscillatorType = arrangement.theme.brightExploration
+      ? 'triangle'
+      : TIMBRE_OSCILLATOR[arrangement.theme.timbre]
+    const padOscillator: Tone.ToneOscillatorType = arrangement.theme.brightExploration
+      || arrangement.theme.timbre === 'warm'
       || arrangement.theme.timbre === 'wood'
       ? 'triangle'
       : 'sine'
     const pad = new Tone.PolySynth({
-      maxPolyphony: 4,
+      maxPolyphony: explorationMix.padMaxPolyphony,
       voice: Tone.Synth,
       options: {
         oscillator: { type: padOscillator },
-        envelope: { attack: 0.7, decay: 0.3, sustain: 0.45, release: 1.6 },
+        envelope: {
+          attack: explorationMix.padAttackSeconds,
+          decay: 0.18,
+          sustain: 0.3,
+          release: explorationMix.padReleaseSeconds,
+        },
       },
     }).connect(this.explorationGain)
-    pad.volume.value = -13
+    pad.volume.value = explorationMix.padVolumeDb
     const lead = new Tone.Synth({
       oscillator: { type: oscillator },
       envelope: { attack: 0.025, decay: 0.16, sustain: 0.12, release: 0.42 },
     }).connect(this.explorationGain)
-    lead.volume.value = -12
+    lead.volume.value = explorationMix.leadVolumeDb
     const bass = new Tone.MonoSynth({
       oscillator: { type: arrangement.theme.timbre === 'metal' ? 'square' : 'triangle' },
       filter: { Q: 1.2, type: 'lowpass', rolloff: -12 },
@@ -180,7 +196,19 @@ class MusicVoiceBank {
     }).connect(this.bossGain)
     bossNoise.volume.value = -24
 
-    this.nodes.push(pad, lead, bass, kick, noise, counter, bossHarmony, bossKick, bossNoise, explorationEq)
+    this.nodes.push(
+      pad,
+      lead,
+      bass,
+      kick,
+      noise,
+      counter,
+      bossHarmony,
+      bossKick,
+      bossNoise,
+      explorationHighpass,
+      explorationEq,
+    )
 
     const chordEvents: ChordEvent[] = arrangement.chordMidi.map((notes, index) => ({
       time: `${Math.floor(index / 2)}:${(index % 2) * 2}:0`,
@@ -214,7 +242,12 @@ class MusicVoiceBank {
     }
 
     this.parts.push(
-      createLoopingPart<ChordEvent>((time, event) => pad.triggerAttackRelease([...event.notes], '2n', time, event.velocity), chordEvents),
+      createLoopingPart<ChordEvent>((time, event) => pad.triggerAttackRelease(
+        [...event.notes],
+        explorationMix.padNoteLength,
+        time,
+        event.velocity,
+      ), chordEvents),
       createLoopingPart<NoteEvent>((time, event) => lead.triggerAttackRelease(event.note, '8n', time, event.velocity), leadEvents),
       createLoopingPart<NoteEvent>((time, event) => bass.triggerAttackRelease(event.note, '8n', time, event.velocity), bassEvents),
       createLoopingPart<PercussionEvent>((time, event) => {

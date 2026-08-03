@@ -1,8 +1,14 @@
 import { registerCommand } from "../modules/bot.js";
-import { sendBotMessageToUser } from "../modules/message.js";
+import { sendBotMessageToUser, sendPrivateBotMessageToUser } from "../modules/message.js";
 import { fetchPlayerByUserId, getOnlinePlayers, getPlayerByUserId } from "../modules/player.js";
+import {
+    MAILBOX_MAX_PERSISTED_ITEM_ROWS,
+    MAILBOX_MAX_TOTAL_ITEM_COUNT,
+    sendSystemMail,
+    type SendSystemMailInput,
+} from "../modules/mailbox.js";
 import { getLocation, getAllLocations } from "../models/Location.js";
-import { getItemData, getAllItemData } from "../models/Item.js";
+import { Item, getItemData, getAllItemData } from "../models/Item.js";
 import { StatType } from "../models/Stat.js";
 import { AttributeType } from "../models/Attribute.js";
 import logger from "../utils/logger.js";
@@ -20,6 +26,102 @@ const STAT_MAX_MAP: Record<StatKey, AttributeType> = {
     thirsty:   AttributeType.MAX_THIRSTY,
     hungry:    AttributeType.MAX_HUNGRY,
 };
+
+export const ADMIN_MAILBOX_OPERATIONAL_COUNT_CAP = 10_000;
+export const ADMIN_MAILBOX_DEFAULT_SUBJECT = '관리자 지급 우편';
+export const ADMIN_MAILBOX_BODY = '관리자가 지급한 아이템이 첨부되어 있습니다. 우편함에서 첨부 아이템을 수령해 주세요.';
+const ADMIN_MAILBOX_SUBJECT_MAX_LENGTH = 120;
+
+export interface PreparedAdminMailboxSend {
+    readonly recipientId: number;
+    readonly itemDataId: string;
+    readonly itemName: string;
+    readonly count: number;
+    readonly maxCount: number;
+    readonly subject: string;
+    readonly mail: SendSystemMailInput;
+}
+
+export type AdminMailboxPreparationResult = {
+    readonly success: true;
+    readonly prepared: PreparedAdminMailboxSend;
+} | {
+    readonly success: false;
+    readonly reason: string;
+};
+
+function adminMailboxPreparationFailure(reason: string): AdminMailboxPreparationResult {
+    return { success: false, reason };
+}
+
+/** DB 접근 없이 관리자 우편 인자를 검증하고 공개 우편 API 입력을 만든다. */
+export function prepareAdminMailboxSend(
+    adminUserId: number,
+    args: readonly string[],
+): AdminMailboxPreparationResult {
+    const targetInput = args[0] ?? '';
+    const recipientId = targetInput === 'me'
+        ? adminUserId
+        : /^\d+$/.test(targetInput) ? Number(targetInput) : Number.NaN;
+    if (!Number.isSafeInteger(recipientId) || recipientId <= 0) {
+        return adminMailboxPreparationFailure('유효한 플레이어 ID 또는 me를 입력해 주세요.');
+    }
+
+    const itemDataId = args[1] ?? '';
+    const itemData = getItemData(itemDataId);
+    if (!itemData) {
+        return adminMailboxPreparationFailure(`정확한 아이템 ID '${itemDataId}'을(를) 찾을 수 없습니다.`);
+    }
+
+    const countInput = args[2] ?? '';
+    const count = /^[1-9]\d*$/.test(countInput) ? Number(countInput) : Number.NaN;
+    if (!Number.isSafeInteger(count) || count <= 0) {
+        return adminMailboxPreparationFailure('수량은 1 이상의 정수여야 합니다.');
+    }
+    const maxCount = Math.min(
+        ADMIN_MAILBOX_OPERATIONAL_COUNT_CAP,
+        MAILBOX_MAX_TOTAL_ITEM_COUNT,
+        itemData.maxStack * MAILBOX_MAX_PERSISTED_ITEM_ROWS,
+    );
+    if (count > maxCount) {
+        return adminMailboxPreparationFailure(
+            `${itemData.name}은(는) 우편 한 통에 최대 ${maxCount.toLocaleString()}개까지 발송할 수 있습니다.`,
+        );
+    }
+
+    const customSubject = args[3];
+    const subject = customSubject === undefined || customSubject === ''
+        ? ADMIN_MAILBOX_DEFAULT_SUBJECT
+        : customSubject.trim();
+    if (!subject
+        || subject.length > ADMIN_MAILBOX_SUBJECT_MAX_LENGTH
+        || /[\u0000-\u001f\u007f]/.test(subject)) {
+        return adminMailboxPreparationFailure(
+            `우편 제목은 제어 문자 없이 1~${ADMIN_MAILBOX_SUBJECT_MAX_LENGTH}자여야 합니다.`,
+        );
+    }
+
+    const snapshot = new Item(itemData.id, count, null, null).snapshot(count);
+    const mail: SendSystemMailInput = Object.freeze({
+        recipientId,
+        senderLabel: '관리자',
+        subject,
+        body: ADMIN_MAILBOX_BODY,
+        items: Object.freeze([snapshot]),
+    });
+    return {
+        success: true,
+        prepared: Object.freeze({
+            recipientId,
+            itemDataId: itemData.id,
+            itemName: itemData.name,
+            count,
+            maxCount,
+            subject,
+            mail,
+        }),
+    };
+}
 
 export function initAdminCommands(): void {
     registerCommand({
@@ -423,6 +525,67 @@ export function initAdminCommands(): void {
             } catch (e) {
                 logger.error('상태변경 명령어 처리 중 오류:', e);
                 sendBotMessageToUser(userId, '상태 변경 중 오류가 발생했습니다.');
+            }
+        },
+    });
+
+    registerCommand({
+        name: '우편발송',
+        aliases: ['mailsend'],
+        description: '온라인·오프라인 플레이어에게 아이템 첨부 시스템 우편을 발송합니다.',
+        permission: 10,
+        showCommandUse: 'private',
+        args: [
+            {
+                name: '대상',
+                description: '플레이어 userId 또는 me',
+                required: true,
+                completions() {
+                    return [
+                        { value: 'me', description: '나 자신' },
+                        ...getOnlinePlayers().map((player): CompletionItem => ({
+                            value: String(player.userId),
+                            description: player.name,
+                        })),
+                    ];
+                },
+            },
+            {
+                name: '아이템ID',
+                description: '정확한 아이템 마스터 데이터 ID',
+                required: true,
+                completions() {
+                    return getAllItemData().map((item): CompletionItem => ({
+                        value: item.id,
+                        description: item.name,
+                    }));
+                },
+            },
+            { name: '수량', description: '발송할 수량 (1 이상 정수)', required: true },
+            { name: '제목', description: '선택 우편 제목 (최대 120자)', isText: true },
+        ],
+        async handler(userId, args) {
+            const preparation = prepareAdminMailboxSend(userId, args);
+            if (!preparation.success) {
+                sendPrivateBotMessageToUser(userId, preparation.reason);
+                return;
+            }
+            const { prepared } = preparation;
+            try {
+                const mail = await sendSystemMail(prepared.mail);
+                sendPrivateBotMessageToUser(
+                    userId,
+                    `플레이어 #${prepared.recipientId}에게 ${prepared.itemName}(${prepared.itemDataId}) x${prepared.count.toLocaleString()} 우편을 발송했습니다. (우편 #${mail.id})`,
+                );
+            } catch (error) {
+                logger.error(
+                    `관리자 우편 발송 실패: admin=${userId}, recipient=${prepared.recipientId}, item=${prepared.itemDataId}, count=${prepared.count}`,
+                    error,
+                );
+                sendPrivateBotMessageToUser(
+                    userId,
+                    '우편 발송에 실패했습니다. 플레이어 ID와 우편함 상태를 확인해 주세요.',
+                );
             }
         },
     });
