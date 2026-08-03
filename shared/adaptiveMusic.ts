@@ -164,7 +164,7 @@ export class LocationMusicTheme {
     static readonly LUMINAR = new LocationMusicTheme({
         key: 'luminar', name: '개척의 별등불', mapColor: '#d6a85f', bpm: 96, root: 'G3', rootMidi: 55,
         scale: MusicScale.IONIAN, motif: [0, 2, 4, 5, 4, 2, 1, null, 0, 2, 4, 7, 5, 4, 2, null],
-        chords: [[0, 2, 4], [3, 5, 7], [4, 6, 8], [0, 2, 5]], register: { bassOctave: -2, padOctave: -1, leadOctave: 0 }, timbre: 'warm', rhythm: 'steady',
+        chords: [[0, 2, 4], [3, 5, 7], [4, 6, 8], [0, 2, 5]], register: { bassOctave: -2, padOctave: 0, leadOctave: 0 }, timbre: 'warm', rhythm: 'steady',
     })
     static readonly LUMINOUS_POND = new LocationMusicTheme({
         key: 'luminous-pond', name: '물빛의 한가로운 파문', mapColor: '#63a9bf', bpm: 78, root: 'D3', rootMidi: 50,
@@ -174,7 +174,7 @@ export class LocationMusicTheme {
     static readonly MEADOW = new LocationMusicTheme({
         key: 'meadow', name: '첫 바람의 길', mapColor: '#6fa85d', bpm: 108, root: 'C3', rootMidi: 48,
         scale: MusicScale.IONIAN, motif: [0, 2, 4, 2, 1, 3, 5, null, 0, 2, 4, 5, 4, 2, 1, null],
-        chords: [[0, 2, 4], [3, 5, 7], [4, 6, 8], [0, 3, 5]], register: { bassOctave: -1, padOctave: 0, leadOctave: 1 }, timbre: 'wood', rhythm: 'steady',
+        chords: [[0, 2, 4], [3, 5, 7], [4, 6, 8], [0, 3, 5]], register: { bassOctave: -1, padOctave: 1, leadOctave: 2 }, timbre: 'wood', rhythm: 'steady',
     })
     static readonly SILVERWEB = new LocationMusicTheme({
         key: 'silverweb', name: '은실 아래의 사냥', mapColor: '#4f7857', bpm: 94, root: 'E3', rootMidi: 52,

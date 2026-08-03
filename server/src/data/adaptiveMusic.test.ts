@@ -49,6 +49,12 @@ function rootLabelToMidi(root: string): number | undefined {
     return pitchClass === undefined ? undefined : (Number(match[2]) + 1) * 12 + pitchClass;
 }
 
+function midiRange(notes: readonly (number | null)[]): readonly [number, number] {
+    const soundingNotes = notes.filter((note): note is number => note !== null);
+    assert.ok(soundingNotes.length > 0, 'MIDI range requires at least one sounding note');
+    return [Math.min(...soundingNotes), Math.max(...soundingNotes)];
+}
+
 function assertScaleNote(
     arrangement: LocationMusicArrangement,
     note: number | null,
@@ -175,6 +181,31 @@ test('merged 623개 장소의 35색은 누락·고아 테마 없이 정확히 �
             `${color}: location melody signatures`,
         );
     }
+});
+
+test('루미나르 화음과 바람결 초원 선율은 모바일 스피커에서 감쇠되지 않는 음역을 유지한다', () => {
+    assert.deepEqual(LocationMusicTheme.LUMINAR.register, {
+        bassOctave: -2,
+        padOctave: 0,
+        leadOctave: 0,
+    });
+    assert.deepEqual(LocationMusicTheme.MEADOW.register, {
+        bassOctave: -1,
+        padOctave: 1,
+        leadOctave: 2,
+    });
+
+    const luminar = composeLocationScore('town_square', '#d6a85f');
+    const meadowTwo = composeLocationScore('meadow_2', '#6fa85d');
+    const meadowThree = composeLocationScore('meadow_3', '#6fa85d');
+
+    assert.deepEqual(midiRange(luminar.chordMidi.flat()), [59, 72]);
+    assert.deepEqual(midiRange(meadowTwo.motifMidi), [57, 65]);
+    assert.deepEqual(midiRange(meadowThree.motifMidi), [59, 67]);
+
+    meadowTwo.motifMidi.forEach((note, index) => assertScaleNote(meadowTwo, note, `mobile/motif/${index}`));
+    meadowThree.motifMidi.forEach((note, index) => assertScaleNote(meadowThree, note, `mobile/motif/${index}`));
+    luminar.chordMidi.flat().forEach((note, index) => assertScaleNote(luminar, note, `mobile/chord/${index}`));
 });
 
 test('장소 편곡은 결정론적·불변이며 모든 변주 음과 저음이 원 권역 음계를 지킨다', () => {
