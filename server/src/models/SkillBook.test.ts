@@ -6,6 +6,7 @@ import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import { AttributeType } from './Attribute.js';
 import { PlayerProgress } from './Progress.js';
+import Skill, { getAllSkillData } from './Skill.js';
 import SkillBook from './SkillBook.js';
 import Inventory from './Inventory.js';
 import { Item } from './Item.js';
@@ -624,9 +625,32 @@ test('최대 레벨 돌파 조회는 패시브를 포함하고 액티브 +5·패
     assert.equal(passive.amount, 2);
     assert.equal(passive.snapshot.maxLevel, 3);
     assert.equal(passive.snapshot.isPassive, true);
+    assert.equal(player.skills.get('warrior_combat_instinct')?.getRequiredExperience(player), 100);
 
     const snapshots = player.skills.getMaxLevelBreakthroughSnapshots();
     assert.deepEqual(snapshots.map(snapshot => snapshot.id), ['power_strike', 'warrior_combat_instinct']);
+});
+
+test('모든 패시브 마스터는 돌파 뒤 최대 레벨 미도달 상태에서 양수 요구 경험치를 제공한다', () => {
+    const player = new TestSkillPlayer(9_307);
+    const checked: string[] = [];
+
+    for (const data of getAllSkillData()) {
+        const skill = new Skill({
+            playerId: player.userId,
+            skillDataId: data.id,
+            level: data.maxLevel,
+        });
+        if (!skill.isPassive) continue;
+        assert.equal(skill.increaseMaxLevelBonus(), 1, data.id);
+        assert.ok(skill.getRequiredExperience(player) > 0, data.id);
+        checked.push(data.id);
+    }
+
+    assert.ok(checked.includes('warrior_combat_instinct'));
+    assert.ok(checked.includes('titan_strength'));
+    assert.ok(checked.includes('sword_mastery'));
+    assert.ok(checked.includes('artisan_naming'));
 });
 
 test('최대 레벨 돌파는 미보유·상한 도달을 명시적으로 거부하고 cap no-op을 유지한다', () => {

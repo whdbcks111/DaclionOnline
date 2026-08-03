@@ -1,6 +1,12 @@
 import logger from "../utils/logger.js";
 import { getIO } from "./socket.js";
-import { sendMessageToChannel, sendBotMessageToUser, sendMessageToUser, sendNotificationToUser } from "./message.js";
+import {
+    sendMessageToChannel,
+    sendBotMessageToUser,
+    sendMessageToUser,
+    sendNotificationToUser,
+    sendPrivateBotMessageToUser,
+} from "./message.js";
 import { getUserChannel } from "./channel.js";
 import { getSession } from "./login.js";
 import type { ChatMessage, CommandInfo, CompletionItem } from "../../../shared/types.js";
@@ -46,10 +52,11 @@ export interface CommandExecutionEvent {
 
 const commands = new Map<string, CommandConfig>();
 const aliasMap = new Map<string, string>(); // alias → name
-const commandExecutionHandlers = new Set<(event: CommandExecutionEvent) => void>();
+type CommandExecutionHandler = (event: CommandExecutionEvent) => void | Promise<void>;
+const commandExecutionHandlers = new Set<CommandExecutionHandler>();
 
 /** 버튼·별칭·정식 명령을 canonical 명령 이름 하나로 관찰한다. */
-export function subscribeCommandExecutions(handler: (event: CommandExecutionEvent) => void): () => void {
+export function subscribeCommandExecutions(handler: CommandExecutionHandler): () => void {
     commandExecutionHandlers.add(handler);
     return () => { commandExecutionHandlers.delete(handler); };
 }
@@ -214,8 +221,31 @@ function normalizeListArgument(value: string): string {
     return value.trim().toLocaleLowerCase().replace(/\s+/g, '');
 }
 
-/** 명령어 파싱 및 실행 (chat.ts에서 호출) */
-export function handleCommand(userId: number, raw: string, msg: ChatMessage | null = null, permission = 0): void {
+function reportCommandError(userId: number, commandName: string, error: unknown): void {
+    logger.error(`명령 처리 실패: ${commandName} (userId=${userId})`, error);
+    try {
+        sendNotificationToUser(userId, {
+            key: `command-error:${commandName}`,
+            message: '명령어 처리 중 오류가 발생했습니다.',
+            length: 5_000,
+        });
+    } catch (notificationError) {
+        logger.error(`명령 오류 알림 전송 실패: ${commandName} (userId=${userId})`, notificationError);
+    }
+    try {
+        sendPrivateBotMessageToUser(userId, '명령어 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } catch (messageError) {
+        logger.error(`명령 오류 메시지 전송 실패: ${commandName} (userId=${userId})`, messageError);
+    }
+}
+
+function executeCommand(
+    userId: number,
+    raw: string,
+    msg: ChatMessage | null,
+    permission: number,
+    onResolved: (commandName: string) => void,
+): void {
     const input = parseCommandInput(raw);
     if (!input) {
         if (msg) sendMessageToUser(userId, msg);
@@ -230,6 +260,7 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
         sendBotMessageToUser(userId, `알 수 없는 명령어: /${name}`);
         return;
     }
+    onResolved(cmd.name);
 
     // 권한 검증
     if ((cmd.permission ?? 0) > permission) {
@@ -271,21 +302,45 @@ export function handleCommand(userId: number, raw: string, msg: ChatMessage | nu
         }
     }
 
-    if (cmd.information) runInformationCommand(userId, () => cmd.handler(userId, args, raw, msg, permission), informationPublic);
-    else cmd.handler(userId, args, raw, msg, permission);
-
-    const event: CommandExecutionEvent = Object.freeze({
-        userId,
-        commandName: cmd.name,
-        args: Object.freeze([...args]),
-        raw,
-    });
-    for (const handler of [...commandExecutionHandlers]) {
-        try {
-            handler(event);
-        } catch (error) {
-            logger.error(`명령 실행 구독자 오류: ${cmd.name}`, error);
+    let handlerResult: void | Promise<void>;
+    try {
+        handlerResult = cmd.information
+            ? runInformationCommand(
+                userId,
+                () => cmd.handler(userId, args, raw, msg, permission),
+                informationPublic,
+            )
+            : cmd.handler(userId, args, raw, msg, permission);
+    } finally {
+        const event: CommandExecutionEvent = Object.freeze({
+            userId,
+            commandName: cmd.name,
+            args: Object.freeze([...args]),
+            raw,
+        });
+        for (const handler of [...commandExecutionHandlers]) {
+            try {
+                const result = handler(event);
+                if (result) {
+                    void result.catch(error => logger.error(`명령 실행 구독자 오류: ${cmd.name}`, error));
+                }
+            } catch (error) {
+                logger.error(`명령 실행 구독자 오류: ${cmd.name}`, error);
+            }
         }
+    }
+    if (handlerResult) {
+        void handlerResult.catch(error => reportCommandError(userId, cmd.name, error));
+    }
+}
+
+/** 명령어 파싱 및 실행 (chat.ts에서 호출). 모든 동기 오류와 handler Promise 거부를 이 경계에서 차단한다. */
+export function handleCommand(userId: number, raw: string, msg: ChatMessage | null = null, permission = 0): void {
+    let commandName = 'unknown';
+    try {
+        executeCommand(userId, raw, msg, permission, resolved => { commandName = resolved; });
+    } catch (error) {
+        reportCommandError(userId, commandName, error);
     }
 }
 

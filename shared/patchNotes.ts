@@ -73,6 +73,12 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.34', '2026-08-03',
+        [CHANGED,
+            '최대 레벨을 돌파한 일부 패시브의 `/스킬정보`를 열면 서버가 종료되던 문제를 수정했습니다.',
+            '명령어 처리 중 예기치 않은 오류가 발생해도 서버 전체가 종료되지 않고 해당 사용자에게만 실패 안내를 보내도록 안정성을 강화했습니다.',
+        ],
+    ),
     definePatchNote('1.0.33', '2026-08-03',
         [CHANGED,
             '지역 음악의 MIDI 음정 숫자가 Hz로 잘못 재생되어 음이 지나치게 낮고 작게 들리던 문제를 수정했습니다.',

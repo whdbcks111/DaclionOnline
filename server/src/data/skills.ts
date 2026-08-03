@@ -563,7 +563,6 @@ function defineJobPassive(options: {
             () => `[tooltip=${modifier.label}: ${modifier.display}]${modifier.display}[/tooltip]`,
         ])),
         calculateExperienceGain: () => 0,
-        calculateRequiredExperience: () => 0,
         autoAcquire: options.unlockLevel
             ? careerLevelAutoAcquire(options.jobId, options.unlockLevel, options.slot)
             : undefined,
@@ -870,7 +869,6 @@ for (const awakening of statAwakenings) {
             () => `[tooltip=${modifier.label}: ${modifier.display}]${modifier.display}[/tooltip]`,
         ])),
         calculateExperienceGain: () => 0,
-        calculateRequiredExperience: () => 0,
         autoAcquire: {
             watchedProgress: [],
             alwaysEvaluate: true,
@@ -936,7 +934,6 @@ for (const mastery of weaponMasteries) {
             () => `[tooltip=${modifier.label}: ${modifier.display}]${modifier.display}[/tooltip]`,
         ])),
         calculateExperienceGain: () => 0,
-        calculateRequiredExperience: () => 0,
         autoAcquire: {
             watchedProgress: [`combat:weapon_hits/${mastery.weapon}`],
             check: ({ player }) => (player?.progress.getCounter(`combat:weapon_hits/${mastery.weapon}`) ?? 0n) >= 200n,
@@ -1124,7 +1121,6 @@ defineSkill({
     activationConditionTemplate: `감각 ${FORGED_ITEM_NAMING_SENSIBILITY} 이상일 때 직접 단조한 장비를 지정해 \`/장비명명 <아이템 번호 또는 장착칸> <새 이름>\`을 입력합니다.`,
     baseMetadata: null,
     calculateExperienceGain: () => 0,
-    calculateRequiredExperience: () => 0,
     autoAcquire: {
         watchedProgress: [],
         alwaysEvaluate: true,

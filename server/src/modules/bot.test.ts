@@ -6,6 +6,7 @@ import {
     handleCommand,
     isCommandAliasInput,
     registerCommand,
+    setInformationModeForUser,
     subscribeCommandExecutions,
 } from './bot.js';
 import { parseCommandInput } from '../../../shared/commandInput.js';
@@ -123,6 +124,62 @@ test('명령 실행 구독은 버튼과 별칭 경로를 canonical 이름으로 
     assert.deepEqual(events.map(event => [event.commandName, ...event.args]), [
         ['test_execution_event', 'one'],
         ['test_execution_event', 'two'],
+    ]);
+});
+
+test('명령의 인자·동기 handler 예외와 비동기 거부는 서버 경계를 벗어나지 않고 본인에게만 안내된다', async () => {
+    const publicChannel = 'command-error-public-test';
+    setUserChannel(91_010, publicChannel);
+    setInformationModeForUser(91_010, true);
+    registerCommand({
+        name: 'test_sync_command_failure',
+        description: 'test',
+        information: true,
+        handler: () => { throw new Error('intentional sync command failure'); },
+    });
+    registerCommand({
+        name: 'test_async_command_failure',
+        description: 'test',
+        handler: async () => { throw new Error('intentional async command failure'); },
+    });
+    registerCommand({
+        name: 'test_argument_command_failure',
+        description: 'test',
+        args: [{
+            name: '대상',
+            description: 'test',
+            list: () => { throw new Error('intentional argument failure'); },
+        }],
+        handler: () => undefined,
+    });
+    const failureEvents: string[] = [];
+    const unsubscribe = subscribeCommandExecutions(event => {
+        if (event.commandName.startsWith('test_') && event.commandName.endsWith('_command_failure')) {
+            failureEvents.push(event.commandName);
+        }
+    });
+    const unsubscribeRejecting = subscribeCommandExecutions(event => event.commandName === 'test_sync_command_failure'
+        ? Promise.reject(new Error('intentional execution subscriber failure'))
+        : undefined);
+
+    const publicCount = getChannelHistory(publicChannel).length;
+    assert.doesNotThrow(() => handleCommand(91_010, '/test_sync_command_failure'));
+    handleCommand(91_011, '/test_async_command_failure');
+    assert.doesNotThrow(() => handleCommand(91_012, '/test_argument_command_failure 대상'));
+    await new Promise(resolve => setImmediate(resolve));
+    unsubscribe();
+    unsubscribeRejecting();
+    setInformationModeForUser(91_010, false);
+
+    assert.equal(getChannelHistory(publicChannel).length, publicCount);
+    assert.equal(getFilteredHistoryForUser(91_010, publicChannel).at(-1)?.private, true);
+    assert.deepEqual(getFilteredHistoryForUser(91_010, publicChannel).at(-1)?.content, [{
+        type: 'text',
+        text: '명령어 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+    }]);
+    assert.deepEqual(failureEvents, [
+        'test_sync_command_failure',
+        'test_async_command_failure',
     ]);
 });
 
