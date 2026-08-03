@@ -1,11 +1,26 @@
 export const MUSIC_VOLUME_STORAGE_KEY = 'daclion:adaptive-music-volume'
-export const DEFAULT_MUSIC_VOLUME = 35
-export const EXPLORATION_MELODY_MIN_MIDI = 67
-export const EXPLORATION_MELODY_MAX_MIDI = 96
-export const EXPLORATION_HARMONY_MIN_MIDI = 60
-export const EXPLORATION_HARMONY_MAX_MIDI = 84
+export const DEFAULT_MUSIC_VOLUME = 50
+export const MUSIC_MELODY_TRANSPOSE_SEMITONES = 0
+export const MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES = 12
+export const MUSIC_OUTPUT_CEILING = 0.88
+export const MUSIC_VOLUME_TAPER_EXPONENT = 0.9
+export const EXPLORATION_MELODY_MIN_MIDI = 67 + MUSIC_MELODY_TRANSPOSE_SEMITONES
+export const EXPLORATION_MELODY_MAX_MIDI = 96 + MUSIC_MELODY_TRANSPOSE_SEMITONES
+export const EXPLORATION_HARMONY_MIN_MIDI = 60 + MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES
+export const EXPLORATION_HARMONY_MAX_MIDI = 84 + MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES
+export const COMBAT_BASS_MIN_MIDI = 24 + MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES
+export const COMBAT_BASS_MAX_MIDI = 55 + MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES
 export const MUSIC_TICKS_PER_QUARTER = 192
 export const MUSIC_TICKS_PER_SIXTEENTH = MUSIC_TICKS_PER_QUARTER / 4
+
+const BASE_EXPLORATION_MELODY_MIN_MIDI = EXPLORATION_MELODY_MIN_MIDI
+    - MUSIC_MELODY_TRANSPOSE_SEMITONES
+const BASE_EXPLORATION_MELODY_MAX_MIDI = EXPLORATION_MELODY_MAX_MIDI
+    - MUSIC_MELODY_TRANSPOSE_SEMITONES
+const BASE_EXPLORATION_HARMONY_MIN_MIDI = EXPLORATION_HARMONY_MIN_MIDI
+    - MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES
+const BASE_EXPLORATION_HARMONY_MAX_MIDI = EXPLORATION_HARMONY_MAX_MIDI
+    - MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES
 
 export interface ExplorationMixProfile {
     readonly highpassHz: number
@@ -21,18 +36,18 @@ export const STANDARD_EXPLORATION_MIX: Readonly<ExplorationMixProfile> = Object.
     highpassHz: 180,
     lowEqDb: -4.5,
     midEqDb: 1.5,
-    highEqDb: 1,
-    padVolumeDb: -17,
-    leadVolumeDb: -11,
+    highEqDb: 0,
+    padVolumeDb: -15,
+    leadVolumeDb: -8,
     padMaxPolyphony: 6,
 })
 
 export const BRIGHT_EXPLORATION_MIX: Readonly<ExplorationMixProfile> = Object.freeze({
     highpassHz: 260,
-    lowEqDb: -7,
-    midEqDb: 2,
-    highEqDb: 3,
-    padVolumeDb: -16,
+    lowEqDb: -5,
+    midEqDb: 1,
+    highEqDb: -1,
+    padVolumeDb: -15,
     leadVolumeDb: -9,
     padMaxPolyphony: 6,
 })
@@ -52,6 +67,14 @@ export function normalizeMusicVolume(value: unknown, fallback = DEFAULT_MUSIC_VO
     const numeric = typeof value === 'number' ? value : Number(value)
     if (!Number.isFinite(numeric)) return normalizeMusicVolume(fallback, DEFAULT_MUSIC_VOLUME)
     return Math.min(100, Math.max(0, Math.round(numeric)))
+}
+
+/** 최대 출력 여유는 유지하면서 작은 슬라이더 값이 지나치게 작아지지 않게 변환한다. */
+export function musicVolumeToGain(value: unknown): number {
+    const normalized = normalizeMusicVolume(value) / 100
+    return normalized === 0
+        ? 0
+        : Math.pow(normalized, MUSIC_VOLUME_TAPER_EXPONENT) * MUSIC_OUTPUT_CEILING
 }
 
 export function readMusicVolume(storage: MusicStorageLike | null | undefined): number {
@@ -810,9 +833,9 @@ function resolveThemeLeadShift(theme: LocationMusicTheme): number {
         degree,
     ))
     let shift = 0
-    while (Math.min(...values) + shift < EXPLORATION_MELODY_MIN_MIDI) shift += 12
-    while (Math.max(...values) + shift > EXPLORATION_MELODY_MAX_MIDI
-        && Math.min(...values) + shift - 12 >= EXPLORATION_MELODY_MIN_MIDI) shift -= 12
+    while (Math.min(...values) + shift < BASE_EXPLORATION_MELODY_MIN_MIDI) shift += 12
+    while (Math.max(...values) + shift > BASE_EXPLORATION_MELODY_MAX_MIDI
+        && Math.min(...values) + shift - 12 >= BASE_EXPLORATION_MELODY_MIN_MIDI) shift -= 12
     return shift
 }
 
@@ -832,7 +855,8 @@ function createChordVoicingCandidates(chord: readonly number[]): readonly (reado
 }
 
 function voiceLeadingCost(left: readonly number[] | undefined, right: readonly number[]): number {
-    if (!left) return right.reduce((sum, note) => sum + Math.abs(note - 72), 0)
+    const harmonyCenter = 72 + MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES
+    if (!left) return right.reduce((sum, note) => sum + Math.abs(note - harmonyCenter), 0)
     return right.reduce((sum, note) => {
         const closest = Math.min(...left.map(previous => Math.abs(note - previous)))
         return sum + closest
@@ -868,7 +892,10 @@ function addChordTonesForLead(
         for (let note = EXPLORATION_HARMONY_MIN_MIDI; note <= EXPLORATION_HARMONY_MAX_MIDI; note++) {
             if (note % 12 === pitchClass) candidates.push(note)
         }
-        const added = candidates.sort((left, right) => Math.abs(left - 72) - Math.abs(right - 72))[0]
+        const harmonyCenter = 72 + MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES
+        const added = candidates.sort((left, right) => (
+            Math.abs(left - harmonyCenter) - Math.abs(right - harmonyCenter)
+        ))[0]
         result.push(added)
     }
     return Object.freeze(result.sort((left, right) => left - right))
@@ -911,7 +938,7 @@ export function resolveLocationMusicArrangement(themeKey: unknown, locationId: s
                     theme.rootMidi + theme.register.leadOctave * 12 + leadShift,
                     theme.scale,
                     degree,
-                )
+                ) + MUSIC_MELODY_TRANSPOSE_SEMITONES
             const stepSixteenths = phraseStart + token.onsetSixteenths
             const hook = placement.phrase === 'motifA'
             const accent = note !== null && (
@@ -926,11 +953,15 @@ export function resolveLocationMusicArrangement(themeKey: unknown, locationId: s
                 : degree + (placement.section === 'B' ? -2 : 2)
             counterMidi.push(counterDegree === null
                 ? null
-                : shiftMidiIntoRange(scaleDegreeToMidi(
-                    theme.rootMidi + theme.register.leadOctave * 12 + leadShift,
-                    theme.scale,
-                    counterDegree,
-                ), EXPLORATION_MELODY_MIN_MIDI, EXPLORATION_MELODY_MAX_MIDI))
+                : shiftMidiIntoRange(
+                    scaleDegreeToMidi(
+                        theme.rootMidi + theme.register.leadOctave * 12 + leadShift,
+                        theme.scale,
+                        counterDegree,
+                    ),
+                    BASE_EXPLORATION_MELODY_MIN_MIDI,
+                    BASE_EXPLORATION_MELODY_MAX_MIDI,
+                ) + MUSIC_MELODY_TRANSPOSE_SEMITONES)
             explorationLeadSchedule.push(Object.freeze({
                 stepSixteenths,
                 note,
@@ -952,15 +983,20 @@ export function resolveLocationMusicArrangement(themeKey: unknown, locationId: s
     })
     const chordMidi = rawChordMidi.map(chord => shiftMidiGroupIntoRange(
         chord,
-        EXPLORATION_HARMONY_MIN_MIDI,
-        EXPLORATION_HARMONY_MAX_MIDI,
-    ))
+        BASE_EXPLORATION_HARMONY_MIN_MIDI,
+        BASE_EXPLORATION_HARMONY_MAX_MIDI,
+    ).map(note => note + MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES))
     const bassMidi = theme.chords.map(chord => {
-        return clampMidi(scaleDegreeToMidi(
+        const original = clampMidi(scaleDegreeToMidi(
             theme.rootMidi + theme.register.bassOctave * 12,
             theme.scale,
             chord[0],
         ))
+        return shiftMidiIntoRange(
+            original + MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES,
+            COMBAT_BASS_MIN_MIDI,
+            COMBAT_BASS_MAX_MIDI,
+        )
     })
     const bpm = Math.min(180, Math.max(40, theme.bpm + ((seed >>> 25) % 3) - 1))
     const rhythmProfile = getExplorationRhythmProfile(theme.rhythm)

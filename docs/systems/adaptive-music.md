@@ -14,7 +14,7 @@ FNV-1a seed는 표시명·좌표가 아니라 안정적인 장소 ID와 theme ke
 
 `waltz` 테마인 물빛 연못·안개조류·태초뿌리는 실제 `3/4`이고 나머지는 `4/4`다. 두 경우 모두 32마디지만 반복 길이는 각각 384·512개의 16분음표다. `steady·waltz·syncopated·march·pulse·broken·swing`의 accent와 타악 배치, `timbre` 8종의 Tone Omni oscillator·lead/pad envelope가 권역 성격을 나눈다.
 
-탐험 lead와 보스 counter 구절은 `G4~C7(MIDI 67~96)`, pad 화음은 `C4~C6(MIDI 60~84)`에 둔다. 연속 발음음은 65~82%를 3반음 이내 계단 진행으로 두고, 7반음 이상 도약은 전체 5% 이하로 절제한다. 회귀 테스트는 35개 고유 훅, 병합된 623개 장소와 35개 색의 양방향 일치, 같은 권역의 훅 보존과 장소별 편곡 signature 고유성을 함께 검사한다.
+탐험 lead와 보스 counter 구절은 자연스러운 `G4~C7(MIDI 67~96)` 음역에 둔다. pad 화음은 원 악보보다 한 옥타브 높인 `C5~C7(MIDI 72~96)`, 전투 bass의 안전 범위도 한 옥타브 높인 `C2~G4(MIDI 36~67)`다. 타격감을 만드는 kick의 38/42Hz는 음표가 아닌 실제 주파수이므로 조옮김하지 않는다. 연속 발음음은 65~82%를 3반음 이내 계단 진행으로 두고, 7반음 이상 도약은 전체 5% 이하로 절제한다. 회귀 테스트는 35개 고유 훅, 병합된 623개 장소와 35개 색의 양방향 일치, 같은 권역의 훅 보존과 장소별 편곡 signature 고유성을 함께 검사한다.
 
 ### 작곡 참고
 
@@ -28,24 +28,24 @@ FNV-1a seed는 표시명·좌표가 아니라 안정적인 장소 ID와 theme ke
 
 ## 재생과 전환
 
-`client/src/audio/AdaptiveMusicEngine.ts`는 Home route 하나가 소유한다. 탐험 bank는 저밀도 lead/pluck와 pad를 항상 재생한다. `combat`은 bass와 가벼운 percussion을 gain ramp로 더하고, `boss`는 counter melody, harmony와 무거운 percussion을 추가한다. 상태 snapshot 변화는 Part를 다시 만들지 않고 layer gain만 변경한다.
+`client/src/audio/AdaptiveMusicEngine.ts`는 Home route 하나가 소유한다. 탐험 bank는 저밀도 lead/pluck와 pad를 항상 재생한다. `combat`은 bass와 가벼운 percussion을 gain ramp로 더하고, `boss`는 counter melody, harmony와 무거운 percussion을 추가한다. 상태 snapshot 변화는 Part를 다시 만들지 않고 layer gain만 변경한다. 공용 악보의 숫자는 MIDI note이므로 모든 음정 악기는 `Tone.Frequency(midi, 'midi')`로 Hz에 명시 변환한 뒤 연주한다. 숫자를 Tone.js의 기본 숫자 단위인 Hz로 직접 전달하지 않는다.
 
 Transport의 PPQ는 192로 고정하고 Part의 event·duration·loop·start를 모두 정수 tick(`i`)으로 예약한다. `4/4`와 `3/4`의 반복 길이를 각 arrangement의 `loopTicks`에서 읽으므로 전역 Transport 박자표에 기대지 않는다. 새 bank의 모든 Part는 다음 4분음표 tick에서 offset `0i`, 즉 A구간 첫 음부터 함께 시작하며 교차 전환 예약도 같은 tick을 사용한다.
 
 장소 이동 때 비활성 voice bank에 다음 score를 준비하고 다음 4분음표 경계부터 1.9초 equal-power crossfade한다. BPM도 같은 시간에 ramp한다. 빠른 연속 이동은 진행 중 전환을 끊지 않고 마지막 요청 하나로 합쳐 다음 전환으로 잇는다. compressor와 -4dB limiter 뒤에 사용자 gain을 두며 bank당 pad 6성, boss harmony 4성 이내로 제한한다. 두 bank가 각각 잔향기를 만들지 않고 공용 synchronous `Freeverb` send 하나를 공유해 전환 중 이펙트 중첩을 막는다.
 
-기본 음량 35는 사용자 gain 약 -12.05dB로 변환한다. 탐험 레이어는 평시 0.58로 유지한다. 일반 탐험 mix는 180Hz high-pass와 저/중/고역 `-4.5/+1.5/+1dB`, pad/lead `-17/-11dB`를 사용한다. 밝은 탐험 mix는 260Hz high-pass와 `-7/+2/+3dB`, pad/lead `-16/-9dB`로 선율을 더 앞세운다. pad는 악보의 tick 길이와 timbre별 envelope, 최대 6성으로 연주해 음색을 구분하면서 과도한 저음 drone과 voice drop을 막는다. 전투·보스에서는 탐험·저음·타악·대선율이 합쳐지므로 각 레이어 gain을 별도로 낮춘다. 사용자 최대 gain도 0.88 이하이고 마지막 -4dB limiter를 통과하므로 합산 peak가 출력 clipping으로 이어지지 않는다.
+기본 음량 50은 사용자 gain 약 `0.472(-6.53dB)`로 변환한다. 기존에 저장된 35도 값 자체는 유지하면서 새 완만한 곡선에서 약 `0.342(-9.32dB)`로 재생한다. 탐험 레이어는 평시 `0.64`, 일반 전투 중 `0.44`, 보스전 중 `0.38`이고, 전투·보스 추가 레이어는 각각 최대 `0.31/0.30`이다. 일반 탐험 mix는 180Hz high-pass와 저/중/고역 `-4.5/+1.5/0dB`, pad/lead `-15/-8dB`를 사용한다. 밝은 탐험 mix는 높아진 화음이 날카롭지 않도록 260Hz high-pass와 `-5/+1/-1dB`, pad/lead `-15/-9dB`를 사용한다. 전투 kick/noise는 `-8/-18dB`, 보스 kick/noise는 `-5/-15dB`로 두어 저음 선율과 별개로 박자가 분명히 들리게 한다. pad는 악보의 tick 길이와 timbre별 envelope, 최대 6성으로 연주해 음색을 구분하면서 과도한 저음 drone과 voice drop을 막는다. 사용자 최대 gain은 여전히 0.88 이하이고 마지막 -4dB limiter를 통과하므로 합산 peak가 출력 clipping으로 이어지지 않는다.
 
-루미나르, 물빛 연못, 바람결 초원, 은빛그물 숲, 여명의 성소는 밝은 탐험 테마로 분류한다. 각각 I-IV-V-I, 장조 pentatonic 개방화음, I-vi-IV-V, I-♭VII-IV-I, I-II-V-I 진행을 사용하며 seed가 이를 회전하거나 감화음화하지 않는다. 실제 lead 최저음은 pad 최저음보다 최소 한 옥타브 높다. 저음 bass와 긴장성 counter·추가 화성·강한 타악은 탐험 출력에 연결하지 않고 전투 또는 보스 레이어에서만 연주한다.
+루미나르, 물빛 연못, 바람결 초원, 은빛그물 숲, 여명의 성소는 밝은 탐험 테마로 분류한다. 각각 I-IV-V-I, 장조 pentatonic 개방화음, I-vi-IV-V, I-♭VII-IV-I, I-II-V-I 진행을 사용하며 seed가 이를 회전하거나 감화음화하지 않는다. lead는 G4~C7 안에서 화음과 겹치는 자연스러운 중·고음역을 사용한다. 저음 bass와 긴장성 counter·추가 화성·강한 타악은 탐험 출력에 연결하지 않고 전투 또는 보스 레이어에서만 연주한다.
 
 ## 사용자 입력과 수명주기
 
-브라우저 autoplay 정책 때문에 `Tone.start()`는 Home에서 받은 첫 실제 pointer, keyboard 또는 touch 이벤트 안에서만 호출한다. 저장 음량이 0이면 시작하지 않으며, 햄버거 메뉴에서 0~100 배경음악 음량과 음소거·이전 음량 복원을 조작한다. 기본값은 35이고 기기 localStorage에 저장한다.
+브라우저 autoplay 정책 때문에 `Tone.start()`는 Home에서 받은 첫 실제 pointer, keyboard 또는 touch 이벤트 안에서만 호출한다. 저장 음량이 0이면 시작하지 않으며, 햄버거 메뉴에서 0~100 배경음악 음량과 음소거·이전 음량 복원을 조작한다. 미저장 기본값은 50이고 기기 localStorage에 저장한다.
 
 숨김·focus를 잃은 탭과 socket 연결이 끊긴 화면은 별도 audibility gain으로 fade out한 뒤 Transport를 일시 정지한다. 이 정책은 같은 브라우저의 여러 탭에서 비활성 화면이 함께 소리 나는 것을 막으며 사용자 저장 음량을 바꾸지 않는다. 로그아웃, 계정 key 변경 또는 Home unmount 때 엔진은 자신이 만든 Part, Transport 예약 ID, timeout, synth, effect와 gain node를 모두 정리한다.
 
 ## 검증
 
-- `server/src/data/adaptiveMusic.test.ts`: 35개 고정 2마디 악구와 전조 정규화 훅 고유성, 623 장소 coverage·동일 권역 훅 보존·편곡 고유성, 32마디 A/A′/B/A″ 형식, 선율 진행·도약·음역·종지, 강박 chord-tone·화음 coverage·chord-linked bass, 실제 3/4, PPQ 192 tick engine, 전투 resolver, 음량·storage.
+- `server/src/data/adaptiveMusic.test.ts`: 35개 고정 2마디 악구와 전조 정규화 훅 고유성, 623 장소 coverage·동일 권역 훅 보존·편곡 고유성, 32마디 A/A′/B/A″ 형식, 선율 진행·도약·파트별 음역·종지, 강박 chord-tone·화음 coverage·chord-linked bass, MIDI→Hz 경계, 실제 3/4, PPQ 192 tick engine, 전투 resolver, 음량 곡선·storage.
 - `server/src/models/AdaptiveMusicCombat.test.ts`: 실제 공격·회피·피격·보스 우선순위·9초 만료·이동/사망 초기화·자원 제외.
 - 클라이언트는 TypeScript/Vite build와 ESLint로 Tone node·React lifecycle 계약을 검증하고, 첫 gesture·모바일 autoplay·두 탭·숨김/복귀·빠른 연속 이동은 실제 브라우저에서 확인한다.

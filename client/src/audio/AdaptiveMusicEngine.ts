@@ -1,5 +1,6 @@
 import * as Tone from 'tone'
 import {
+  DEFAULT_MUSIC_VOLUME,
   MUSIC_SCENE_TRANSITION,
   MUSIC_TICKS_PER_QUARTER,
   MUSIC_TICKS_PER_SIXTEENTH,
@@ -7,6 +8,7 @@ import {
   composeLocationScore,
   getExplorationMixProfile,
   getExplorationTimbreProfile,
+  musicVolumeToGain,
   type LocationMusicArrangement,
   type MusicRhythmKey,
   normalizeMusicVolume,
@@ -15,9 +17,11 @@ import {
 const CROSSFADE_SECONDS = MUSIC_SCENE_TRANSITION.crossFadeSeconds
 const LAYER_RAMP_SECONDS = 0.9
 const VISIBILITY_FADE_SECONDS = 0.35
-const MASTER_OUTPUT_CEILING = 0.88
-const VOLUME_TAPER_EXPONENT = 1.2
 const COMMON_SPACE_SEND = 0.08
+const COMBAT_KICK_VOLUME_DB = -8
+const COMBAT_NOISE_VOLUME_DB = -18
+const BOSS_KICK_VOLUME_DB = -5
+const BOSS_NOISE_VOLUME_DB = -15
 
 type TickTime = `${number}i`
 
@@ -29,14 +33,14 @@ interface MusicScene {
 
 interface NoteEvent {
   time: TickTime
-  note: number
+  frequency: number
   velocity: number
   duration: TickTime
 }
 
 interface ChordEvent {
   time: TickTime
-  notes: readonly number[]
+  frequencies: readonly number[]
   velocity: number
   duration: TickTime
 }
@@ -44,7 +48,7 @@ interface ChordEvent {
 interface PercussionEvent {
   time: TickTime
   kind: 'kick' | 'noise'
-  note: number
+  frequencyHz: number
   velocity: number
   duration: TickTime
 }
@@ -82,9 +86,9 @@ function nextQuarterTick(): number {
   return Math.ceil((currentTicks + 1) / MUSIC_TICKS_PER_QUARTER) * MUSIC_TICKS_PER_QUARTER
 }
 
-function volumeToGain(volume: number): number {
-  const normalized = normalizeMusicVolume(volume) / 100
-  return normalized === 0 ? 0 : Math.pow(normalized, VOLUME_TAPER_EXPONENT) * MASTER_OUTPUT_CEILING
+/** 악보 경계의 MIDI 정수를 Tone.js가 숫자 Hz로 오해하지 않도록 명시적으로 변환한다. */
+function midiToFrequency(midi: number): number {
+  return Tone.Frequency(midi, 'midi').toFrequency()
 }
 
 function createLoopingPart<Value extends { time: string }>(
@@ -160,12 +164,12 @@ class MusicVoiceBank {
       octaves: 3,
       envelope: { attack: 0.002, decay: 0.13, sustain: 0, release: 0.08 },
     }).connect(this.combatGain)
-    kick.volume.value = -18
+    kick.volume.value = COMBAT_KICK_VOLUME_DB
     const noise = new Tone.NoiseSynth({
       noise: { type: arrangement.theme.timbre === 'water' ? 'pink' : 'white' },
       envelope: { attack: 0.002, decay: 0.05, sustain: 0, release: 0.03 },
     }).connect(this.combatGain)
-    noise.volume.value = -27
+    noise.volume.value = COMBAT_NOISE_VOLUME_DB
     const counter = new Tone.Synth({
       oscillator: { type: arrangement.theme.timbre === 'cosmic' ? 'sine' : 'triangle' },
       envelope: { attack: 0.015, decay: 0.1, sustain: 0.08, release: 0.25 },
@@ -185,12 +189,12 @@ class MusicVoiceBank {
       octaves: 4,
       envelope: { attack: 0.002, decay: 0.16, sustain: 0, release: 0.08 },
     }).connect(this.bossGain)
-    bossKick.volume.value = -15
+    bossKick.volume.value = BOSS_KICK_VOLUME_DB
     const bossNoise = new Tone.NoiseSynth({
       noise: { type: 'brown' },
       envelope: { attack: 0.002, decay: 0.08, sustain: 0, release: 0.04 },
     }).connect(this.bossGain)
-    bossNoise.volume.value = -24
+    bossNoise.volume.value = BOSS_NOISE_VOLUME_DB
 
     this.nodes.push(
       pad,
@@ -208,21 +212,21 @@ class MusicVoiceBank {
 
     const chordEvents: ChordEvent[] = arrangement.explorationChordSchedule.map(event => ({
       time: sixteenthTime(event.stepSixteenths),
-      notes: event.notes,
+      frequencies: event.notes.map(midiToFrequency),
       velocity: event.velocity,
       duration: sixteenthTime(event.durationSixteenths),
     }))
     const leadEvents: NoteEvent[] = arrangement.explorationLeadSchedule.flatMap(event => (
       event.note === null ? [] : [{
         time: sixteenthTime(event.stepSixteenths),
-        note: event.note,
+        frequency: midiToFrequency(event.note),
         velocity: event.accent ? 0.42 : 0.24,
         duration: sixteenthTime(event.durationSixteenths),
       }]
     ))
     const bassEvents: NoteEvent[] = arrangement.explorationChordSchedule.map((event, index) => ({
       time: sixteenthTime(event.stepSixteenths),
-      note: event.bassNote,
+      frequency: midiToFrequency(event.bassNote),
       velocity: index % 4 === 0 ? 0.54 : 0.34,
       duration: sixteenthTime(event.durationSixteenths),
     }))
@@ -231,7 +235,7 @@ class MusicVoiceBank {
       const leadEvent = arrangement.explorationLeadSchedule[index]
       return [{
         time: sixteenthTime(leadEvent.stepSixteenths),
-        note,
+        frequency: midiToFrequency(note),
         velocity: leadEvent.accent ? 0.42 : 0.28,
         duration: sixteenthTime(leadEvent.durationSixteenths),
       }]
@@ -255,14 +259,14 @@ class MusicVoiceBank {
         combatPercussionEvents.push({
           time: eventTime,
           kind: 'kick',
-          note: 42,
+          frequencyHz: 42,
           velocity: step === 0 ? 0.49 : 0.42,
           duration: kickDuration,
         })
         bossPercussionEvents.push({
           time: eventTime,
           kind: 'kick',
-          note: 38,
+          frequencyHz: 38,
           velocity: step === 0 ? 0.6 : 0.52,
           duration: kickDuration,
         })
@@ -273,7 +277,7 @@ class MusicVoiceBank {
           combatPercussionEvents.push({
             time: eventTime,
             kind: 'noise',
-            note: 0,
+            frequencyHz: 0,
             velocity: 0.22,
             duration: noiseDuration,
           })
@@ -281,7 +285,7 @@ class MusicVoiceBank {
         bossPercussionEvents.push({
           time: eventTime,
           kind: 'noise',
-          note: 0,
+          frequencyHz: 0,
           velocity: beat === 0 ? 0.32 : 0.2,
           duration: noiseDuration,
         })
@@ -290,21 +294,21 @@ class MusicVoiceBank {
 
     this.parts.push(
       createLoopingPart<ChordEvent>((time, event) => pad.triggerAttackRelease(
-        [...event.notes],
+        [...event.frequencies],
         event.duration,
         time,
         event.velocity,
       ), chordEvents, arrangement.loopTicks),
-      createLoopingPart<NoteEvent>((time, event) => lead.triggerAttackRelease(event.note, event.duration, time, event.velocity), leadEvents, arrangement.loopTicks),
-      createLoopingPart<NoteEvent>((time, event) => bass.triggerAttackRelease(event.note, event.duration, time, event.velocity), bassEvents, arrangement.loopTicks),
+      createLoopingPart<NoteEvent>((time, event) => lead.triggerAttackRelease(event.frequency, event.duration, time, event.velocity), leadEvents, arrangement.loopTicks),
+      createLoopingPart<NoteEvent>((time, event) => bass.triggerAttackRelease(event.frequency, event.duration, time, event.velocity), bassEvents, arrangement.loopTicks),
       createLoopingPart<PercussionEvent>((time, event) => {
-        if (event.kind === 'kick') kick.triggerAttackRelease(event.note, event.duration, time, event.velocity)
+        if (event.kind === 'kick') kick.triggerAttackRelease(event.frequencyHz, event.duration, time, event.velocity)
         else noise.triggerAttackRelease(event.duration, time, event.velocity)
       }, combatPercussionEvents, arrangement.loopTicks),
-      createLoopingPart<NoteEvent>((time, event) => counter.triggerAttackRelease(event.note, event.duration, time, event.velocity), counterEvents, arrangement.loopTicks),
-      createLoopingPart<ChordEvent>((time, event) => bossHarmony.triggerAttackRelease([...event.notes], event.duration, time, event.velocity), chordEvents, arrangement.loopTicks),
+      createLoopingPart<NoteEvent>((time, event) => counter.triggerAttackRelease(event.frequency, event.duration, time, event.velocity), counterEvents, arrangement.loopTicks),
+      createLoopingPart<ChordEvent>((time, event) => bossHarmony.triggerAttackRelease([...event.frequencies], event.duration, time, event.velocity), chordEvents, arrangement.loopTicks),
       createLoopingPart<PercussionEvent>((time, event) => {
-        if (event.kind === 'kick') bossKick.triggerAttackRelease(event.note, event.duration, time, event.velocity)
+        if (event.kind === 'kick') bossKick.triggerAttackRelease(event.frequencyHz, event.duration, time, event.velocity)
         else bossNoise.triggerAttackRelease(event.duration, time, event.velocity)
       }, bossPercussionEvents, arrangement.loopTicks),
     )
@@ -319,11 +323,11 @@ class MusicVoiceBank {
   setCombatState(state: MusicCombatState, time = Tone.now(), immediate = false): void {
     if (this.disposed) return
     const duration = immediate ? 0.02 : LAYER_RAMP_SECONDS
-    const explorationLevel = state === MusicCombatState.EXPLORATION ? 0.58
-      : state === MusicCombatState.COMBAT ? 0.36 : 0.3
+    const explorationLevel = state === MusicCombatState.EXPLORATION ? 0.64
+      : state === MusicCombatState.COMBAT ? 0.44 : 0.38
     const combatLevel = state === MusicCombatState.EXPLORATION ? 0
-      : state === MusicCombatState.COMBAT ? 0.29 : 0.26
-    const bossLevel = state === MusicCombatState.BOSS ? 0.27 : 0
+      : state === MusicCombatState.COMBAT ? 0.31 : 0.29
+    const bossLevel = state === MusicCombatState.BOSS ? 0.3 : 0
     for (const [gain, target] of [
       [this.explorationGain, explorationLevel],
       [this.combatGain, combatLevel],
@@ -352,7 +356,7 @@ class MusicVoiceBank {
 
 /** Home route 하나가 소유하는 Tone Transport·노드·예약의 전체 수명주기. */
 export class AdaptiveMusicEngine {
-  private volume = 35
+  private volume = DEFAULT_MUSIC_VOLUME
   private audible = true
   private unlocked = false
   private disposed = false
@@ -379,7 +383,7 @@ export class AdaptiveMusicEngine {
     if (!this.userGain) return
     const now = Tone.now()
     this.userGain.gain.cancelAndHoldAtTime(now)
-    this.userGain.gain.linearRampToValueAtTime(volumeToGain(this.volume), now + 0.08)
+    this.userGain.gain.linearRampToValueAtTime(musicVolumeToGain(this.volume), now + 0.08)
   }
 
   setAudible(audible: boolean): void {
@@ -451,7 +455,7 @@ export class AdaptiveMusicEngine {
     this.freeverb = new Tone.Freeverb({ roomSize: 0.62, dampening: 3_200, wet: 1 })
     this.compressor = new Tone.Compressor({ threshold: -20, ratio: 2.4, attack: 0.03, release: 0.22, knee: 12 })
     this.limiter = new Tone.Limiter(-4)
-    this.userGain = new Tone.Gain(volumeToGain(this.volume))
+    this.userGain = new Tone.Gain(musicVolumeToGain(this.volume))
     this.audibilityGain = new Tone.Gain(this.audible ? 1 : 0)
     this.crossFade.connect(this.compressor)
     this.crossFade.connect(this.spaceSend)

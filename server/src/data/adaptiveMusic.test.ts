@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
     BRIGHT_EXPLORATION_MIX,
+    COMBAT_BASS_MAX_MIDI,
+    COMBAT_BASS_MIN_MIDI,
     DEFAULT_MUSIC_VOLUME,
     EXPLORATION_HARMONY_MAX_MIDI,
     EXPLORATION_HARMONY_MIN_MIDI,
@@ -10,8 +12,12 @@ import {
     EXPLORATION_MELODY_MAX_MIDI,
     EXPLORATION_MELODY_MIN_MIDI,
     MUSIC_SCENE_TRANSITION,
+    MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES,
+    MUSIC_MELODY_TRANSPOSE_SEMITONES,
+    MUSIC_OUTPUT_CEILING,
     MUSIC_TICKS_PER_QUARTER,
     MUSIC_TICKS_PER_SIXTEENTH,
+    MUSIC_VOLUME_TAPER_EXPONENT,
     MUSIC_VOLUME_STORAGE_KEY,
     LocationMusicTheme,
     MusicCombatState,
@@ -23,6 +29,7 @@ import {
     getExplorationRhythmProfile,
     getExplorationTimbreProfile,
     getLocationMusicThemeByColor,
+    musicVolumeToGain,
     normalizeMusicVolume,
     readMusicVolume,
     resolveLocationMusicArrangement,
@@ -94,7 +101,8 @@ function assertScaleNote(
 ): void {
     if (note === null) return;
     assert.equal(Number.isInteger(note), true, `${arrangement.locationId}/${source}: integer MIDI`);
-    assert.ok(note >= 24 && note <= 103, `${arrangement.locationId}/${source}: MIDI ${note}`);
+    assert.ok(note >= 24 && note <= EXPLORATION_MELODY_MAX_MIDI,
+        `${arrangement.locationId}/${source}: MIDI ${note}`);
     assert.ok(
         arrangement.theme.scale.intervals.includes(pitchClassFromRoot(note, arrangement.theme.rootMidi)),
         `${arrangement.locationId}/${source}: ${note} is outside ${arrangement.theme.scale.key}`,
@@ -459,7 +467,7 @@ test('강박 선율은 현재 화음에 70% 이상 정착하고 화음은 활성
     }
 });
 
-test('초반 밝은 권역은 장조 화성·높은 선율·가벼운 mix를 유지한다', () => {
+test('초반 밝은 권역은 장조 화성·자연스러운 선율·가벼운 mix를 유지한다', () => {
     assert.deepEqual(LocationMusicTheme.LUMINAR.register, {
         bassOctave: -2,
         padOctave: 1,
@@ -483,19 +491,19 @@ test('초반 밝은 권역은 장조 화성·높은 선율·가벼운 mix를 유
     const silverweb = composeLocationScore('silverweb_contract', '#4f7857');
     const dawn = composeLocationScore('dawn_contract', '#ddd19a');
 
-    assert.deepEqual(luminar.chordMidi, [[67, 71, 74], [72, 76, 79], [74, 78, 81], [67, 71, 74]]);
-    assert.deepEqual(pond.chordMidi, [[62, 66, 69], [71, 74, 78], [64, 69, 74], [69, 74, 78]]);
-    assert.deepEqual(meadow.chordMidi, [[60, 64, 67], [69, 72, 76], [65, 69, 72], [67, 71, 74]]);
-    assert.deepEqual(silverweb.chordMidi, [[64, 68, 71], [74, 78, 81], [69, 73, 76], [64, 68, 71]]);
-    assert.deepEqual(dawn.chordMidi, [[62, 66, 69], [64, 68, 71], [69, 73, 76], [62, 66, 69]]);
+    assert.deepEqual(luminar.chordMidi, [[79, 83, 86], [84, 88, 91], [86, 90, 93], [79, 83, 86]]);
+    assert.deepEqual(pond.chordMidi, [[74, 78, 81], [83, 86, 90], [76, 81, 86], [81, 86, 90]]);
+    assert.deepEqual(meadow.chordMidi, [[72, 76, 79], [81, 84, 88], [77, 81, 84], [79, 83, 86]]);
+    assert.deepEqual(silverweb.chordMidi, [[76, 80, 83], [86, 90, 93], [81, 85, 88], [76, 80, 83]]);
+    assert.deepEqual(dawn.chordMidi, [[74, 78, 81], [76, 80, 83], [81, 85, 88], [74, 78, 81]]);
     assert.deepEqual(jobHall.chordMidi, luminar.chordMidi);
 
     for (const arrangement of [luminar, jobHall, pond, meadow, silverweb, dawn]) {
         const hookNotes = arrangement.explorationLeadSchedule
             .flatMap(event => event.hook && event.note !== null ? [event.note] : []);
-        assert.ok(midiRange(hookNotes)[0]
-            - midiRange(arrangement.chordMidi.flat())[0] >= 12,
-        `${arrangement.locationId}/bright lead-pad separation`);
+        assert.ok(midiRange(hookNotes)[0] >= EXPLORATION_MELODY_MIN_MIDI
+            && midiRange(hookNotes)[1] <= EXPLORATION_MELODY_MAX_MIDI,
+        `${arrangement.locationId}/bright lead range`);
         for (const chord of arrangement.chordMidi) {
             const intervals = chord.slice(1).map((note, index) => note - chord[index]);
             assert.ok(Math.min(...intervals) >= 3, `${arrangement.locationId}/consonant chord`);
@@ -572,7 +580,8 @@ test('장소 편곡은 결정론적·불변이고 전 음역과 음계 및 chord
         assert.ok(midiRange(first.counterMidi)[1] <= EXPLORATION_MELODY_MAX_MIDI,
             `${location.id}/counter ceiling`);
         first.bassMidi.forEach((note, index) => {
-            assert.ok(note >= 24 && note <= 55, `${location.id}/bass/${index}: ${note}`);
+            assert.ok(note >= COMBAT_BASS_MIN_MIDI && note <= COMBAT_BASS_MAX_MIDI,
+                `${location.id}/bass/${index}: ${note}`);
             assertScaleNote(first, note, `bass/${index}`);
         });
         assert.ok(new Set(first.bassMidi).size >= 2, `${location.id}/moving bass`);
@@ -623,6 +632,18 @@ test('rhythm·timbre profile과 엔진은 PPQ 192 tick 악보·동적 loop·공�
         'Parts must be armed at the explicit start tick before the transition callback');
     assert.match(engineSource, /new Tone\.Freeverb/);
     assert.doesNotMatch(engineSource, /new Tone\.Reverb/);
+    assert.match(engineSource, /Tone\.Frequency\(midi, 'midi'\)\.toFrequency\(\)/);
+    assert.match(engineSource, /frequencies: event\.notes\.map\(midiToFrequency\)/);
+    assert.match(engineSource, /frequency: midiToFrequency\(event\.note\)/);
+    assert.match(engineSource, /frequency: midiToFrequency\(event\.bassNote\)/);
+    assert.match(engineSource, /frequencyHz: 42/);
+    assert.match(engineSource, /frequencyHz: 38/);
+    assert.match(engineSource, /const COMBAT_KICK_VOLUME_DB = -8/);
+    assert.match(engineSource, /const COMBAT_NOISE_VOLUME_DB = -18/);
+    assert.match(engineSource, /const BOSS_KICK_VOLUME_DB = -5/);
+    assert.match(engineSource, /const BOSS_NOISE_VOLUME_DB = -15/);
+    assert.match(engineSource, /kick\.volume\.value = COMBAT_KICK_VOLUME_DB/);
+    assert.match(engineSource, /bossKick\.volume\.value = BOSS_KICK_VOLUME_DB/);
     assert.match(engineSource,
         /const bossHarmony = new Tone\.PolySynth\(\{\s*maxPolyphony: 4,/);
     assert.doesNotMatch(engineSource, /@4n|MUSIC_SCENE_TRANSITION\.quantize/);
@@ -669,14 +690,30 @@ test('명시적 전투 상태를 우선하고 구버전 target snapshot은 탐�
     assert.equal(MusicCombatState.fromInput('보스 전투'), MusicCombatState.BOSS);
 });
 
-test('음악 음량은 fake storage에서 0~100 정규화·저장·복원하고 storage 오류를 무시한다', () => {
+test('음악 음량은 들리는 곡선으로 변환하고 fake storage에서 정규화·저장·복원한다', () => {
     const values = new Map<string, string>();
     const storage: MusicStorageLike = {
         getItem: key => values.get(key) ?? null,
         setItem: (key, value) => { values.set(key, value); },
     };
 
-    assert.equal(DEFAULT_MUSIC_VOLUME, 35);
+    assert.equal(DEFAULT_MUSIC_VOLUME, 50);
+    assert.equal(MUSIC_MELODY_TRANSPOSE_SEMITONES, 0);
+    assert.equal(MUSIC_ACCOMPANIMENT_TRANSPOSE_SEMITONES, 12);
+    assert.equal(EXPLORATION_MELODY_MIN_MIDI, 67);
+    assert.equal(EXPLORATION_MELODY_MAX_MIDI, 96);
+    assert.equal(EXPLORATION_HARMONY_MIN_MIDI, 72);
+    assert.equal(EXPLORATION_HARMONY_MAX_MIDI, 96);
+    assert.equal(COMBAT_BASS_MIN_MIDI, 36);
+    assert.equal(COMBAT_BASS_MAX_MIDI, 67);
+    assert.equal(MUSIC_OUTPUT_CEILING, 0.88);
+    assert.equal(MUSIC_VOLUME_TAPER_EXPONENT, 0.9);
+    assert.equal(musicVolumeToGain(0), 0);
+    assert.equal(musicVolumeToGain(100), MUSIC_OUTPUT_CEILING);
+    assert.equal(musicVolumeToGain(35), Math.pow(0.35, MUSIC_VOLUME_TAPER_EXPONENT)
+        * MUSIC_OUTPUT_CEILING);
+    assert.ok(musicVolumeToGain(35) < musicVolumeToGain(50));
+    assert.ok(musicVolumeToGain(50) < musicVolumeToGain(100));
     assert.equal(normalizeMusicVolume(undefined), DEFAULT_MUSIC_VOLUME);
     assert.equal(normalizeMusicVolume('invalid'), DEFAULT_MUSIC_VOLUME);
     assert.equal(normalizeMusicVolume(-10), 0);
