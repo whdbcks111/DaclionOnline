@@ -17,6 +17,8 @@ import {
     AlchemyDelivery,
     createAlchemyPotionSnapshot,
     getAlchemyFormula,
+    hasExperimentedAlchemyReagent,
+    recordAlchemyReagentExperiments,
 } from '../models/Alchemy.js';
 import Entity, { type AttackOptions } from '../models/Entity.js';
 import Equipment from '../models/Equipment.js';
@@ -25,7 +27,8 @@ import { ItemMetadataKeys } from '../models/Item.js';
 import { defineLocation, getLocation } from '../models/Location.js';
 import Monster, { defineMonster } from '../models/Monster.js';
 import type Player from '../models/Player.js';
-import Stat from '../models/Stat.js';
+import Stat, { StatType } from '../models/Stat.js';
+import { PlayerProgress } from '../models/Progress.js';
 import {
     createAlchemyTrackingConfig,
     resolveAlchemyPotionTargets,
@@ -42,6 +45,11 @@ import {
 import { partyManager } from './party.js';
 import { registerOnlinePlayer, unregisterOnlinePlayer } from './playerRegistry.js';
 import { getIO, initSocket } from './socket.js';
+import {
+    createAlchemyReagentInformationMessage,
+    getAlchemyReagentCompletions,
+    getAlchemyReagentInfoCompletions,
+} from '../commands/alchemy.js';
 
 const LOCATION_ID = 'alchemy-authority-test';
 const INSECT_MONSTER_ID = 'alchemy-authority-insect';
@@ -96,6 +104,7 @@ class TestAlchemyPlayer extends Entity {
     override readonly name: string;
     readonly inventory: Inventory;
     readonly stat = new Stat({ sensibility: 240 });
+    readonly progress: PlayerProgress;
     readonly career: { hasJob: (jobId: string) => boolean };
     lastAttackOptions: AttackOptions | undefined;
     rejectNextAttack = false;
@@ -112,6 +121,7 @@ class TestAlchemyPlayer extends Entity {
         }, Equipment.createEmpty(), undefined, [GameTags.ENTITY_PLAYER, GameTags.TRAIT_LIVING]);
         this.name = `연금 시험자 ${userId}`;
         this.inventory = Inventory.createEmpty(userId, 100_000);
+        this.progress = PlayerProgress.createEmpty(userId);
         this.career = { hasJob: jobId => alchemist && jobId === ALCHEMIST_JOB_ID };
     }
 
@@ -176,6 +186,49 @@ function addPotion(
     return player.inventory.getFirstItemByData(snapshot.itemDataId)!;
 }
 
+test('연금 자동완성은 보유·실험 경계를 지키고 재료 정보에는 실험한 이름만 노출한다', () => {
+    const player = new TestAlchemyPlayer(78_100);
+    const outsider = new TestAlchemyPlayer(78_099, LOCATION_ID, false);
+    registerOnlinePlayer(asPlayer(player));
+    registerOnlinePlayer(asPlayer(outsider));
+    try {
+        player.inventory.addItem('mourning_lily', 1);
+        assert.equal(getAlchemyReagentCompletions(player.userId).some(value =>
+            (typeof value === 'string' ? value : value.value).startsWith('애도의 백합')), true);
+        assert.deepEqual(getAlchemyReagentInfoCompletions(player.userId), []);
+        assert.match(createAlchemyReagentInformationMessage(asPlayer(player), '애도의 백합'), /실험 기록이 없습니다/);
+        assert.deepEqual(getAlchemyReagentCompletions(outsider.userId), []);
+        assert.deepEqual(getAlchemyReagentInfoCompletions(outsider.userId), []);
+
+        recordAlchemyReagentExperiments(player.progress, ['mourning_lily']);
+        player.stat.set(StatType.SENSIBILITY, 199);
+        assert.match(createAlchemyReagentInformationMessage(asPlayer(player), '애도의 백합'), /감각 200 이상.*현재 199/);
+        player.stat.set(StatType.SENSIBILITY, 200);
+        const basic = createAlchemyReagentInformationMessage(asPlayer(player), '애도의 백합');
+        assert.match(basic, /분류: 몬스터 소재/);
+        assert.match(basic, /죽은 자의 마력이 짙은 곳/);
+        assert.doesNotMatch(basic, /성질:|배합 추론|병당 재료/);
+        player.stat.set(StatType.SENSIBILITY, 300);
+        const information = getAlchemyReagentInfoCompletions(player.userId);
+        assert.deepEqual(information.map(value => typeof value === 'string' ? value : value.value), ['애도의 백합']);
+        const completion = getAlchemyReagentCompletions(player.userId)[0];
+        assert.match(typeof completion === 'string' ? '' : completion.description ?? '', /생명.*정화/);
+        const traits = createAlchemyReagentInformationMessage(asPlayer(player), '애도의 백합');
+        assert.match(traits, /분류: 몬스터 소재/);
+        assert.match(traits, /성질: 생명 · 정화/);
+        assert.doesNotMatch(traits, /병당 재료|난이도/);
+        player.stat.set(StatType.SENSIBILITY, 500);
+        const formula = createAlchemyReagentInformationMessage(asPlayer(player), '애도의 백합');
+        assert.match(formula, /병당 재료: 애도의 백합 x2, 오아시스 대추야자 x1/);
+        assert.match(formula, /난이도 3/);
+        assert.match(formula, /생명력 회복 · 기본 위력 750/);
+        assert.doesNotMatch(formula, /restore_life|mourning_lily/);
+    } finally {
+        unregisterOnlinePlayer(player.userId);
+        unregisterOnlinePlayer(outsider.userId);
+    }
+});
+
 test('연금술은 ready 전 취소에는 재료를 보존하고 최초 ready에서만 비용을 확정한다', async () => {
     const player = new TestAlchemyPlayer(78_101);
     addLifeIngredients(player);
@@ -186,6 +239,8 @@ test('연금술은 ready 전 취소에는 재료를 보존하고 최초 ready에
     assert.equal(player.inventory.getCount('mourning_lily'), 2);
     assert.equal(player.inventory.getCount('oasis_date'), 1);
     assert.equal(player.inventory.getCount(ALCHEMY_WATER_BOTTLE_ITEM_ID), 1);
+    assert.equal(hasExperimentedAlchemyReagent(player.progress, 'mourning_lily'), false);
+    assert.equal(hasExperimentedAlchemyReagent(player.progress, 'oasis_date'), false);
 
     const running = startAlchemy(asPlayer(player), lifeAlchemyOptions());
     assert.ok(running.miniGame);
@@ -194,10 +249,28 @@ test('연금술은 ready 전 취소에는 재료를 보존하고 최초 ready에
     assert.equal(player.inventory.getCount('oasis_date'), 0);
     assert.equal(player.inventory.getCount(ALCHEMY_WATER_BOTTLE_ITEM_ID), 0);
     assert.equal(player.inventory.removeItemByData('mourning_lily', 1), false);
+    assert.equal(hasExperimentedAlchemyReagent(player.progress, 'mourning_lily'), true);
+    assert.equal(hasExperimentedAlchemyReagent(player.progress, 'oasis_date'), true);
 
     assert.equal(await failMiniGameOnDisconnect(player.userId, 'alchemy-cost-socket'), true);
     assert.equal(player.inventory.getCount('alchemy_life_draught'), 0);
     assert.equal(player.inventory.getCount(ALCHEMY_WATER_BOTTLE_ITEM_ID), 0);
+    assert.equal(hasExperimentedAlchemyReagent(player.progress, 'mourning_lily'), true);
+    assert.equal(hasExperimentedAlchemyReagent(player.progress, 'oasis_date'), true);
+    assert.equal(hasExperimentedAlchemyReagent(player.progress, ALCHEMY_WATER_BOTTLE_ITEM_ID), false);
+});
+
+test('ready 직전 재료가 바뀌면 아무 비용과 실험 기록도 확정하지 않는다', () => {
+    const player = new TestAlchemyPlayer(78_101_1);
+    addLifeIngredients(player);
+    const started = startAlchemy(asPlayer(player), lifeAlchemyOptions());
+    assert.ok(started.miniGame);
+    assert.equal(player.inventory.removeItemByData('oasis_date', 1), true);
+    assert.equal(readyMiniGame(player.userId, 'alchemy-missing-cost-socket', started.miniGame), false);
+    assert.equal(player.inventory.getCount('mourning_lily'), 2);
+    assert.equal(player.inventory.getCount(ALCHEMY_WATER_BOTTLE_ITEM_ID), 1);
+    assert.equal(hasExperimentedAlchemyReagent(player.progress, 'mourning_lily'), false);
+    assert.equal(hasExperimentedAlchemyReagent(player.progress, 'oasis_date'), false);
 });
 
 test('ready에서 확정한 재료는 성공 결과를 정확히 한 번만 지급한다', async () => {
@@ -222,6 +295,8 @@ test('ready에서 확정한 재료는 성공 결과를 정확히 한 번만 지�
     }), true);
     await new Promise<void>(resolve => setImmediate(resolve));
     assert.equal(player.inventory.getCount('alchemy_life_draught'), 1);
+    assert.equal(hasExperimentedAlchemyReagent(player.progress, 'mourning_lily'), true);
+    assert.equal(hasExperimentedAlchemyReagent(player.progress, 'oasis_date'), true);
     assert.equal(submitMiniGameResult(player.userId, socketId, {
         ...started.miniGame,
         alchemyTrackingProof: proof,

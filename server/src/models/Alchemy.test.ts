@@ -8,17 +8,23 @@ import {
     FAILED_ALCHEMY_POTION_ITEM_ID,
     AlchemyDelivery,
     AlchemyQuality,
+    AlchemyReagentInsightTier,
     calculateAlchemyQualityScore,
     createAlchemyInventoryRequirements,
     createAlchemyPotionSnapshot,
+    getAlchemyReagentExperimentProgressId,
+    getAlchemyReagentInsight,
     getAllAlchemyFormulas,
     getAllAlchemyReagents,
+    hasExperimentedAlchemyReagent,
     normalizeAlchemyPotionMetadata,
     resolveAlchemyPotionUse,
     resolveAlchemyFormula,
+    recordAlchemyReagentExperiments,
 } from './Alchemy.js';
 import Inventory from './Inventory.js';
 import { ItemMetadataKeys } from './Item.js';
+import { PlayerProgress, ProgressType } from './Progress.js';
 import { parseAlchemyCommandRemainder, parseAlchemyIngredientList } from '../commands/alchemy.js';
 import { createAlchemyCompletionOutputs, createAlchemyTrackingConfig } from '../modules/alchemy.js';
 
@@ -29,6 +35,53 @@ test('지역 재료 reagent와 여러 목적의 조합식이 공개 레지스트
     for (const type of ['restore_life', 'restore_mentality', 'beneficial_status', 'harmful_status']) {
         assert.equal(effectTypes.has(type), true, type);
     }
+});
+
+test('실제로 사용한 연금 재료는 PlayerProgress 영구 flag로 중복 없이 기록된다', () => {
+    const progress = PlayerProgress.createEmpty(77_001);
+    assert.equal(hasExperimentedAlchemyReagent(progress, 'mourning_lily'), false);
+    assert.deepEqual(recordAlchemyReagentExperiments(progress, [
+        'mourning_lily', 'oasis_date', 'mourning_lily', 'not-a-reagent',
+    ]), ['mourning_lily', 'oasis_date']);
+    assert.equal(hasExperimentedAlchemyReagent(progress, 'mourning_lily'), true);
+    assert.equal(hasExperimentedAlchemyReagent(progress, 'oasis_date'), true);
+    assert.deepEqual(recordAlchemyReagentExperiments(progress, ['mourning_lily']), []);
+    const stored = progress.getSnapshots().find(snapshot =>
+        snapshot.id === getAlchemyReagentExperimentProgressId('mourning_lily'));
+    assert.equal(stored?.type, ProgressType.FLAG);
+    assert.equal(stored?.value, true);
+    assert.equal(progress.dirty, true);
+});
+
+test('연금 재료 정보는 감각 200·300·400·500 단계에서 허용된 정보만 연다', () => {
+    const below = getAlchemyReagentInsight('mourning_lily', 199)!;
+    const basic = getAlchemyReagentInsight('mourning_lily', 200)!;
+    const traits = getAlchemyReagentInsight('mourning_lily', 300)!;
+    const compatibility = getAlchemyReagentInsight('mourning_lily', 400)!;
+    const formula = getAlchemyReagentInsight('mourning_lily', 500)!;
+
+    assert.equal(below.tier, undefined);
+    assert.equal(below.nextTier, AlchemyReagentInsightTier.BASIC);
+    assert.deepEqual(below.traitLabels, []);
+    assert.equal(basic.tier, AlchemyReagentInsightTier.BASIC);
+    assert.deepEqual(basic.traitLabels, []);
+    assert.deepEqual(basic.compatibleFormulas, []);
+    assert.equal(traits.tier, AlchemyReagentInsightTier.TRAITS);
+    assert.deepEqual(traits.traitLabels, ['생명', '정화']);
+    assert.deepEqual(traits.compatibleFormulas, []);
+    assert.equal(compatibility.tier, AlchemyReagentInsightTier.COMPATIBILITY);
+    assert.deepEqual(compatibility.compatibleFormulas.map(value => value.id), [
+        'life-restoration', 'preservation',
+    ]);
+    assert.deepEqual(compatibility.formulaDetails, []);
+    assert.equal(formula.tier, AlchemyReagentInsightTier.FORMULA);
+    assert.equal(formula.nextTier, undefined);
+    assert.equal(formula.formulaDetails[0].difficulty, 3);
+    assert.deepEqual(formula.formulaDetails[0].ingredients, [
+        { itemDataId: 'mourning_lily', count: 2 },
+        { itemDataId: 'oasis_date', count: 1 },
+    ]);
+    assert.equal(formula.formulaDetails[0].effect.basePower, 750);
 });
 
 test('재료 순서와 무관하게 1~3병 배수만 정확한 조합으로 판정한다', () => {

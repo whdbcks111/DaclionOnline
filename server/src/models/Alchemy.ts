@@ -1,9 +1,12 @@
 import { ItemMetadataKeys, type ItemMetadata, type ItemSnapshot } from './Item.js';
 import { cloneMetadataValue } from './Metadata.js';
+import { ProgressType, defineProgress } from './Progress.js';
+import type { PlayerProgress } from './Progress.js';
 
 export const ALCHEMY_WATER_BOTTLE_ITEM_ID = 'alchemy_water_bottle';
 export const FAILED_ALCHEMY_POTION_ITEM_ID = 'failed_alchemy_potion';
 export const ALCHEMIST_JOB_ID = 'career:alchemist';
+const ALCHEMY_REAGENT_EXPERIMENT_PREFIX = 'alchemy:reagent-experimented/';
 
 function clamp(value: number, minimum: number, maximum: number): number {
     return Math.max(minimum, Math.min(maximum, value));
@@ -88,6 +91,31 @@ export class AlchemyReagentTrait {
     }
 }
 
+/** 감각으로 해석할 수 있는 영구 연금 재료 실험 기록의 깊이. */
+export class AlchemyReagentInsightTier {
+    private static readonly all: AlchemyReagentInsightTier[] = [];
+
+    static readonly BASIC = new AlchemyReagentInsightTier('basic', '기초 감별', 200);
+    static readonly TRAITS = new AlchemyReagentInsightTier('traits', '성질 분석', 300);
+    static readonly COMPATIBILITY = new AlchemyReagentInsightTier('compatibility', '배합 추론', 400);
+    static readonly FORMULA = new AlchemyReagentInsightTier('formula', '정밀 해석', 500);
+
+    private constructor(
+        readonly key: string,
+        readonly label: string,
+        readonly minimumSensibility: number,
+    ) {
+        AlchemyReagentInsightTier.all.push(this);
+    }
+
+    static values(): readonly AlchemyReagentInsightTier[] { return AlchemyReagentInsightTier.all; }
+    static fromSensibility(sensibility: number): AlchemyReagentInsightTier | undefined {
+        const normalized = Number.isFinite(sensibility) ? Math.max(0, Math.floor(sensibility)) : 0;
+        return [...AlchemyReagentInsightTier.all].reverse()
+            .find(tier => normalized >= tier.minimumSensibility);
+    }
+}
+
 export interface AlchemyReagentDefinition {
     readonly itemDataId: string;
     readonly traits: readonly AlchemyReagentTrait[];
@@ -111,6 +139,14 @@ export function defineAlchemyReagent(definition: AlchemyReagentDefinition): void
         itemDataId,
         traits: Object.freeze(traits),
     }));
+    defineProgress({
+        id: getAlchemyReagentExperimentProgressId(itemDataId),
+        type: ProgressType.FLAG,
+        label: `연금 재료 실험: ${itemDataId}`,
+        description: '가마솥에 실제로 투입해 본 연금 재료의 영구 기록',
+        visible: false,
+        tags: ['progress:alchemy-reagent-experiment'],
+    });
 }
 
 export function getAlchemyReagent(itemDataId: string): Readonly<AlchemyReagentData> | undefined {
@@ -119,6 +155,40 @@ export function getAlchemyReagent(itemDataId: string): Readonly<AlchemyReagentDa
 
 export function getAllAlchemyReagents(): readonly Readonly<AlchemyReagentData>[] {
     return [...reagentByItemDataId.values()];
+}
+
+export function getAlchemyReagentExperimentProgressId(itemDataId: string): string {
+    return `${ALCHEMY_REAGENT_EXPERIMENT_PREFIX}${itemDataId.trim()}`;
+}
+
+export function hasExperimentedAlchemyReagent(
+    progress: PlayerProgress,
+    itemDataId: string,
+): boolean {
+    return Boolean(getAlchemyReagent(itemDataId))
+        && progress.getFlag(getAlchemyReagentExperimentProgressId(itemDataId));
+}
+
+/** 실제 ready 비용 확정 뒤 호출해 등록된 재료별 영구 실험 flag를 남긴다. */
+export function recordAlchemyReagentExperiments(
+    progress: PlayerProgress,
+    itemDataIds: readonly string[],
+): readonly string[] {
+    const registered = [...new Set(itemDataIds.map(value => value.trim()))]
+        .filter(itemDataId => Boolean(getAlchemyReagent(itemDataId)));
+    const newlyRecorded: string[] = [];
+    for (const itemDataId of registered) {
+        if (!hasExperimentedAlchemyReagent(progress, itemDataId)) newlyRecorded.push(itemDataId);
+        progress.setFlag(getAlchemyReagentExperimentProgressId(itemDataId));
+    }
+    return Object.freeze(newlyRecorded);
+}
+
+export function getExperimentedAlchemyReagents(
+    progress: PlayerProgress,
+): readonly Readonly<AlchemyReagentData>[] {
+    return Object.freeze(getAllAlchemyReagents()
+        .filter(reagent => hasExperimentedAlchemyReagent(progress, reagent.itemDataId)));
 }
 
 export interface AlchemyFormulaIngredient {
@@ -150,6 +220,33 @@ export interface AlchemyFormulaData extends Omit<AlchemyFormulaDefinition, 'alia
     readonly aliases: readonly string[];
     readonly ingredients: readonly AlchemyFormulaIngredient[];
     readonly effect: Readonly<AlchemyFormulaEffectDefinition>;
+}
+
+export interface AlchemyReagentFormulaCompatibilitySnapshot {
+    readonly id: string;
+    readonly name: string;
+    readonly resultItemDataId: string;
+    readonly partnerItemDataIds: readonly string[];
+}
+
+export interface AlchemyReagentFormulaDetailSnapshot {
+    readonly id: string;
+    readonly name: string;
+    readonly resultItemDataId: string;
+    readonly description: string;
+    readonly difficulty: number;
+    readonly ingredients: readonly Readonly<AlchemyFormulaIngredient>[];
+    readonly effect: Readonly<AlchemyFormulaEffectDefinition>;
+}
+
+export interface AlchemyReagentInsightSnapshot {
+    readonly itemDataId: string;
+    readonly sensibility: number;
+    readonly tier?: AlchemyReagentInsightTier;
+    readonly nextTier?: AlchemyReagentInsightTier;
+    readonly traitLabels: readonly string[];
+    readonly compatibleFormulas: readonly AlchemyReagentFormulaCompatibilitySnapshot[];
+    readonly formulaDetails: readonly AlchemyReagentFormulaDetailSnapshot[];
 }
 
 const formulaById = new Map<string, Readonly<AlchemyFormulaData>>();
@@ -198,6 +295,51 @@ export function getAlchemyFormula(id: string): Readonly<AlchemyFormulaData> | un
 
 export function getAllAlchemyFormulas(): readonly Readonly<AlchemyFormulaData>[] {
     return [...formulaById.values()];
+}
+
+/** 명령이 감각 단계 밖의 원본 성질·조합 수치를 실수로 노출하지 않도록 가공한 불변 정보. */
+export function getAlchemyReagentInsight(
+    itemDataId: string,
+    sensibility: number,
+): AlchemyReagentInsightSnapshot | undefined {
+    const reagent = getAlchemyReagent(itemDataId);
+    if (!reagent) return undefined;
+    const normalizedSensibility = Number.isFinite(sensibility) ? Math.max(0, Math.floor(sensibility)) : 0;
+    const tier = AlchemyReagentInsightTier.fromSensibility(normalizedSensibility);
+    const nextTier = AlchemyReagentInsightTier.values()
+        .find(candidate => normalizedSensibility < candidate.minimumSensibility);
+    const formulas = getAllAlchemyFormulas()
+        .filter(formula => formula.ingredients.some(ingredient => ingredient.itemDataId === reagent.itemDataId));
+    const revealTraits = tier !== undefined
+        && tier.minimumSensibility >= AlchemyReagentInsightTier.TRAITS.minimumSensibility;
+    const revealCompatibility = tier !== undefined
+        && tier.minimumSensibility >= AlchemyReagentInsightTier.COMPATIBILITY.minimumSensibility;
+    const revealFormula = tier !== undefined
+        && tier.minimumSensibility >= AlchemyReagentInsightTier.FORMULA.minimumSensibility;
+    return Object.freeze({
+        itemDataId: reagent.itemDataId,
+        sensibility: normalizedSensibility,
+        ...(tier ? { tier } : {}),
+        ...(nextTier ? { nextTier } : {}),
+        traitLabels: Object.freeze(revealTraits ? reagent.traits.map(trait => trait.label) : []),
+        compatibleFormulas: Object.freeze(revealCompatibility ? formulas.map(formula => Object.freeze({
+            id: formula.id,
+            name: formula.name,
+            resultItemDataId: formula.resultItemDataId,
+            partnerItemDataIds: Object.freeze(formula.ingredients
+                .filter(ingredient => ingredient.itemDataId !== reagent.itemDataId)
+                .map(ingredient => ingredient.itemDataId)),
+        })) : []),
+        formulaDetails: Object.freeze(revealFormula ? formulas.map(formula => Object.freeze({
+            id: formula.id,
+            name: formula.name,
+            resultItemDataId: formula.resultItemDataId,
+            description: formula.description,
+            difficulty: formula.difficulty,
+            ingredients: Object.freeze(formula.ingredients.map(ingredient => Object.freeze({ ...ingredient }))),
+            effect: Object.freeze({ ...formula.effect }),
+        })) : []),
+    });
 }
 
 export function findAlchemyFormulaByInput(input: string): Readonly<AlchemyFormulaData> | undefined {

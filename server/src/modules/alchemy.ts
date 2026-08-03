@@ -12,6 +12,7 @@ import {
     createAlchemyInventoryRequirements,
     createAlchemyPotionSnapshot,
     getAlchemyReagent,
+    recordAlchemyReagentExperiments,
     resolveAlchemyPotionUse,
     resolveAlchemyFormula,
     type AlchemyFormulaData,
@@ -178,6 +179,10 @@ export function startAlchemy(player: Player, options: StartAlchemyOptions): Star
                     message: '조제 시작 전에 재료나 정제수 물병이 변경되어 취소되었습니다.',
                 };
             }
+            recordAlchemyReagentExperiments(
+                player.progress,
+                ingredients.map(ingredient => ingredient.itemDataId),
+            );
             committedSensibility = sensibility;
             materialsCommitted = true;
             return { success: true };
