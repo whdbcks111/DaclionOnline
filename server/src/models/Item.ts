@@ -41,6 +41,7 @@ export const ItemMetadataKeys = Object.freeze({
     ATTACK_EFFECTS: 'attackEffects',
     REINFORCEMENT: 'reinforcement',
     REQUIREMENTS: 'requirements',
+    ALCHEMY: 'alchemy',
 } as const);
 
 const METADATA_STORAGE_KEY = '__daclionItemMetadata';

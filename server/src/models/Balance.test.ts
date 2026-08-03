@@ -20,6 +20,7 @@ import {
     BalanceEncounterType,
     BALANCE_PROFILE_LEVELS,
     createBalanceScenario,
+    replayBalanceSurvival,
 } from './Balance.js';
 import { AttributeType } from './Attribute.js';
 import { calculateProjectileEvasionSpeed } from './Projectile.js';
@@ -44,6 +45,7 @@ test('후반 직업 패시브와 역할기는 Lv.240·320 경계 및 메인 계�
         ['career:assassin', 'slayers_breath', 'finale_execution'],
         ['career:mage', 'deep_mana_cycle', 'mana_rift'],
         ['career:blacksmith', 'master_heat_treatment', 'structural_dismantling'],
+        ['career:cleric', 'unfading_devotion', 'dawn_covenant'],
     ] as const;
 
     for (const [jobId, passiveId, activeId] of definitions) {
@@ -112,12 +114,14 @@ test('projected profiles follow the intended primary stat order for every first 
     const assassin = createBalanceScenario(200, 'career:assassin').stats;
     const mage = createBalanceScenario(200, 'career:mage').stats;
     const blacksmith = createBalanceScenario(200, 'career:blacksmith').stats;
+    const cleric = createBalanceScenario(200, 'career:cleric').stats;
 
     assert.ok(warrior.strength > warrior.vitality && warrior.vitality > warrior.agility);
     assert.ok(archer.strength > archer.agility && archer.agility > archer.sensibility);
     assert.ok(assassin.agility > assassin.strength && assassin.strength > assassin.sensibility);
     assert.ok(mage.mentality > mage.sensibility && mage.sensibility > mage.vitality);
     assert.ok(blacksmith.sensibility > blacksmith.vitality && blacksmith.vitality > blacksmith.strength);
+    assert.ok(cleric.mentality > cleric.sensibility && cleric.sensibility > cleric.vitality);
 });
 
 test('궁수 투사체 가속 환산은 성장 구간에서 근접 명중률과 15%p 안으로 균형을 유지한다', () => {
@@ -287,6 +291,30 @@ test('고레벨 마법사 보호막은 마법력과 최대 정신력 성장에 �
     assert.ok(armorCharge.shield >= battleMage.entity.maxLife);
 });
 
+test('성역의 가호 밸런스 정보는 같은 장소 파티원 최대 3명의 회복과 보호막을 함께 보고한다', () => {
+    const scenario = createBalanceScenario(50, 'career:cleric');
+    const report = analyzeSkillBalance(scenario, 'sanctuary_aegis', 3);
+    assert.equal(getSkillData('sanctuary_aegis')?.balance?.targetCount, 3);
+    assert.ok(report.healing > 0);
+    assert.ok(report.shield > 0);
+});
+
+test('성직자 성장기는 광휘 공격·파티 회복·메인 계보 역할기를 같은 밸런스 공식으로 보고한다', () => {
+    const scenario = createBalanceScenario(320, 'career:cleric');
+    const benediction = analyzeSkillBalance(scenario, 'benediction_wave', 5);
+    const descent = analyzeSkillBalance(scenario, 'seraphic_descent', 5);
+    const covenant = analyzeSkillBalance(scenario, 'dawn_covenant', 1);
+
+    assert.ok(benediction.rawDamage > 0);
+    assert.ok(benediction.healing > 0);
+    assert.ok(descent.rawDamage > benediction.rawDamage);
+    assert.ok(descent.shield > 0);
+    assert.equal(getSkillData('dawn_covenant')?.balance?.targetCount, 3);
+    assert.ok(covenant.healing > 0);
+    assert.ok(covenant.shield > 0);
+    assert.ok(covenant.cooldown >= 20 && covenant.cooldown <= 30);
+});
+
 test('skill report applies skill-specific penetration and unavoidable attacks', () => {
     const scenario = createBalanceScenario(220, 'career:mage', undefined, BalanceEncounterType.BOSS);
     const lock = analyzeSkillBalance(scenario, 'causality_lock', 5);
@@ -301,7 +329,7 @@ test('skill report applies skill-specific penetration and unavoidable attacks', 
 
 test('all first jobs produce finite offensive and defensive baselines', () => {
     const reports = analyzeAllFirstJobs(50);
-    assert.equal(reports.length, 5);
+    assert.equal(reports.length, 6);
     for (const report of reports) {
         assert.ok(Number.isFinite(report.basicPhysicalDps));
         assert.ok(report.physicalSurvivalSeconds > 0);
@@ -321,10 +349,10 @@ test('Lv.200 elite profile applies its inherited passive and reports its active 
     assert.equal(report.skillReports.some(skill => skill.skillId === 'spellblade_technique'), true);
 });
 
-test('all twenty ordered elite combinations produce measurable balance reports', () => {
+test('all thirty ordered elite combinations produce measurable balance reports', () => {
     const reports = analyzeAllEliteJobs(200);
-    assert.equal(reports.length, 20);
-    assert.equal(new Set(reports.map(report => report.jobId)).size, 20);
+    assert.equal(reports.length, 30);
+    assert.equal(new Set(reports.map(report => report.jobId)).size, 30);
     assert.ok(reports.every(report => report.skillReports.some(skill => skill.skillId.endsWith('_technique'))));
     assert.ok(reports.every(report => report.skillReports.some(skill => skill.sustainableDpm > 0)));
 });
@@ -375,7 +403,7 @@ test('high-level job weapons expose measurable role-specific gains', () => {
 
 test('combat profiles share resources while mixing basics and every available job skill', () => {
     const profiles = analyzeAllBalanceProfiles(100);
-    assert.equal(profiles.length, 5);
+    assert.equal(profiles.length, 6);
     for (const profile of profiles) {
         for (const rotation of [profile.monster, profile.boss]) {
             assert.ok(rotation.basicAttacks > 0);
@@ -402,6 +430,51 @@ test('combat profiles share resources while mixing basics and every available jo
                 && rotation.expectedLifeAfterKill <= rotation.playerMaxLife);
         }
     }
+});
+
+test('생존 replay는 같은 시각의 피해를 회복·보호막보다 먼저 확정한다', () => {
+    const report = replayBalanceSurvival(
+        100,
+        [{ at: 1, expectedDamage: 100, rawDamage: 100, expectedHits: 1 }],
+        [{ at: 1, sourceId: 'skill:test_aegis', healing: 100, shield: 100, shieldDuration: 10 }],
+    );
+
+    assert.equal(report.expected.endingLife, 0);
+    assert.equal(report.expected.diedAt, 1);
+    assert.equal(report.expected.effectiveSupport, 0);
+});
+
+test('생존 replay는 같은 source 보호막을 교체하고 만료 뒤 남은 피해만 생명력에 적용한다', () => {
+    const report = replayBalanceSurvival(
+        100,
+        [{ at: 2, expectedDamage: 60, rawDamage: 60, expectedHits: 1 }],
+        [
+            { at: 0, sourceId: 'skill:test_aegis', healing: 0, shield: 80, shieldDuration: 10 },
+            { at: 1, sourceId: 'skill:test_aegis', healing: 0, shield: 30, shieldDuration: 10 },
+            { at: 1, sourceId: 'skill:expiring_aegis', healing: 0, shield: 20, shieldDuration: 1 },
+        ],
+    );
+
+    assert.equal(report.expected.effectiveSupport, 30);
+    assert.equal(report.expected.endingLife, 70);
+    assert.equal(report.expected.diedAt, undefined);
+});
+
+test('생존 replay는 평타·패턴 피격을 시간순으로 섞고 회복을 최대 생명력까지만 반영한다', () => {
+    const report = replayBalanceSurvival(
+        100,
+        [
+            { at: 3, expectedDamage: 90, rawDamage: 90, expectedHits: 1 },
+            { at: 1, expectedDamage: 40, rawDamage: 40, expectedHits: 1 },
+        ],
+        [{ at: 2, sourceId: 'skill:test_heal', healing: 50, shield: 0, shieldDuration: 0 }],
+    );
+
+    assert.equal(report.expectedHits, 2);
+    assert.equal(report.expectedDamage, 130);
+    assert.equal(report.expected.effectiveSupport, 40);
+    assert.equal(report.expected.endingLife, 10);
+    assert.equal(report.expected.diedAt, undefined);
 });
 
 test('opening burst reports a real one-action kill before the target can counterattack', () => {
@@ -484,8 +557,8 @@ test('advanced first-job 60-second damage baselines stay within the measured 1.5
 
 test('single-loadout elite combinations stay within the measured 1.7x boss DPS band', () => {
     const profiles = [];
-    for (const main of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith']) {
-        for (const sub of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith']) {
+    for (const main of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith', 'cleric']) {
+        for (const sub of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith', 'cleric']) {
             if (main === sub) continue;
             profiles.push(analyzeBalanceProfile(200, `career:${main}`, `career:${sub}`));
         }
@@ -563,7 +636,7 @@ test('boss profile normalizes a real boss archetype to the requested level', () 
 });
 
 test('고레벨 대상 투영은 몬스터 공식과 authored 보정만 사용한다', () => {
-    const jobIds = ['career:warrior', 'career:archer', 'career:assassin', 'career:mage', 'career:blacksmith'];
+    const jobIds = ['career:warrior', 'career:archer', 'career:assassin', 'career:mage', 'career:blacksmith', 'career:cleric'];
     const monsters = jobIds.map(jobId => createBalanceScenario(
         1000, jobId, undefined, BalanceEncounterType.MONSTER,
     ));
@@ -604,7 +677,7 @@ test('동레벨 일반 몬스터는 추천 성장 프로필의 생명력을 중�
     assert.ok(p75 <= 0.5, `전체 p75 HP 소모 ${(p75 * 100).toFixed(2)}%`);
     assert.ok(deaths <= 2, `예상 사망 프로필 ${deaths}/${losses.length}`);
     for (const distribution of distributions) {
-        assert.equal(distribution.profileCount, 5);
+        assert.equal(distribution.profileCount, 6);
         assert.ok(distribution.p25LifeLossRatio <= distribution.medianLifeLossRatio);
         assert.ok(distribution.medianLifeLossRatio <= distribution.p75LifeLossRatio);
     }

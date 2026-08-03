@@ -35,10 +35,10 @@
 | `adminPanelRequestPlayers` | 없음 | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayers`; 온라인 우선 전체 캐릭터 목록 |
 | `adminPanelRequestPlayer` | `userId: number` | 권한 10 | `modules/adminPanel.ts` | `adminPanelPlayer`; 보유·장착 칭호를 포함한 가공된 캐릭터 상세 snapshot |
 | `adminPanelExecute` | `AdminPanelActionRequest` | 권한 10 | `modules/adminPanel.ts` | 플레이어·월드 action, 칭호 부여·삭제, 전체 채팅/알림·개별 온라인 알림, `analyze_balance_profile` 전투 로테이션 진단을 서버 검증 후 실행하고 result/목록/상세 갱신 |
-| `miniGameReady` | `{ sessionId, token }` | 필요 | `modules/minigame.ts` | 서버가 현재 조작 화면으로 배정한 socket을 확인하고 서버 경과 시계 시작 |
+| `miniGameReady` | `{ sessionId, token }` | 필요 | `modules/minigame.ts` | 서버가 현재 조작 화면으로 배정한 socket을 확인한다. 선택적 `onReady` 비용 callback이 성공한 최초 요청만 서버 경과 시계를 시작하며 실패/예외면 시작 전 취소한다. `alchemy_tracking`은 t=0 목표 원 내부 primary pointerdown에서만 보내고 이 시점에 재료·정제수를 원자 소비하며 proof의 최초 표본도 서버가 재검증 |
 | `miniGameInput` | `{ sessionId, token, x, y }` | 필요 | `modules/minigame.ts` | 이동 축을 clamp하고 서버 수신 시각 기준 20ms trace로 기록. 회피 성공 권위와 낚시 audit에 유지 |
 | `miniGameAction` | `{ sessionId, token, action: "strike" }` | 필요 | `modules/minigame.ts` | 단조 타격을 서버 수신 시각으로 즉시 기록 |
-| `miniGameResult` | `{ sessionId, token, fishingProof? }` | 필요 | `modules/minigame.ts` | 낚시는 version 1 client 입력·100ms 궤적 proof를 서버 발급 config로 즉시 재생 검증하고, 회피·단조는 기존 250ms 완료 여유와 서버 수집 trace로 판정한 뒤 `miniGameResolved`. matching 세션의 잘못된 proof도 소비하며 disconnect는 실패 확정 |
+| `miniGameResult` | `{ sessionId, token, fishingProof?, alchemyTrackingProof? }` | 필요 | `modules/minigame.ts` | 낚시와 가마솥 추적은 version 1 client 입력·100ms 궤적 proof를 서버 발급 config로 즉시 재생 검증하고, 회피·단조는 기존 250ms 완료 여유와 서버 수집 trace로 판정한 뒤 `miniGameResolved`. matching 세션의 잘못된 proof도 소비한다. 가마솥 시작 전 idle/disconnect는 취소, ready 뒤 disconnect/시간초과는 실패 확정 |
 | `requestHumanVerification` | 없음 | 필요 | `modules/humanVerification.ts` | required FLAG가 있는 플레이어의 기존 문제를 재전송하거나 새 일회성 문제를 발급 |
 | `submitHumanVerification` | `{ sessionId, answer }` | 필요 | `modules/humanVerification.ts` | 서버 메모리의 정답과 session을 검사하고 성공 시 영속 요구 상태와 행동 제한 해제 |
 | `requestHudPresets` | 없음 | 필요 | `modules/hudPreset.ts` | 계정에 저장된 프리셋 이름·수정 시각 목록을 `hudPresetList`로 응답하며 자동 적용하지 않음 |
@@ -47,6 +47,14 @@
 | `deleteHudPreset` | `name: string` | 필요 | `modules/hudPreset.ts` | 이름으로 삭제하고 즉시 Player 저장 후 결과와 목록 응답 |
 
 클라이언트 emit 위치는 주로 `pages/Login.tsx`, `pages/Register.tsx`, `pages/PasswordReset.tsx`, `pages/Home.tsx`, `pages/LocationEditor.tsx`, `components/chat/nodes/ButtonNode.tsx`, `components/hud/huds/QuickSlotHud.tsx`다.
+
+### `alchemy_tracking` proof 계약
+
+`MiniGameStartData.config`의 `AlchemyTrackingConfig`는 서버가 발급한 `seed`, `durationMs`, 표시 `label`, `liquidRadius`, 모바일 터치용 4.5~6 반경 `targetRadius`, `patternKey`, `speedProfileKey`, `lapDurationMs`, 오름차순 `reverseAtMs`, 게이지 시작값·증감률을 포함한다. 경로 key는 `orbit | figure_eight | clover | spiral | zigzag`, 속도 key는 `steady | pulse | surge`다. 클라이언트와 서버는 이 config를 바꾸지 않고 같은 공용 simulator에 전달한다.
+
+`AlchemyTrackingProof`는 `version`, `elapsedMs`, `success`, 20ms bucket의 `{ at, x, y, dragging }[]`, 100ms 간격과 정확한 마지막 시각의 `{ at, targetX, targetY, pointerX, pointerY, gauge }[]`를 보낸다. 좌표는 보드 좌상단 기준 0~100이다. 최초 down 표본은 같은 20ms bucket의 move/up으로 덮지 않고 보존한다.
+
+서버는 payload 160KiB, 표본 수, 유한 수치·좌표 범위, 단조 증가 시각, checkpoint 간격, session/token/focused socket을 검사한다. 최초 입력은 20ms 이내의 `dragging: true`이며 서버 config의 t=0 목표 원 내부여야 한다. client elapsed가 서버 시계보다 앞서는 경우는 500ms까지만, proof가 늦게 도착하는 경우는 5초까지 허용한다. 서버 발급 seed로 목표·pointer·게이지 궤적을 재생해 허용 오차 안의 checkpoint 비율과 최종 상태를 확인하고, 목표 안 유지 비율 70%와 원 중심 근접도 30%를 합친 0~1 `score`만 조제 품질 계산에 전달한다. matching 결과 요청은 성공·실패와 관계없이 한 번만 소비한다.
 
 ## Server → Client
 
@@ -84,7 +92,7 @@
 | `adminPanelPlayer` | `AdminPlayerDetailData \| null` (원래 메인·서브, 엘리트, `thirdJobId/thirdJobName` 포함) | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
 | `adminPanelResult` | `AdminPanelResult` (밸런스 분석 시 `details` 포함) | `modules/adminPanel.ts` | `pages/AdminPage.tsx` |
 | `adminPanelResult` | `AdminPanelResult` | `modules/adminPanel.ts` | 요청 소켓 호환용 결과. 사용자 피드백은 같은 요청 소켓의 `notification`으로 표시 |
-| `miniGameStart` | `MiniGameStartData` (session/token/type/만료/config, 위험 회피 config의 실제 패턴 `label`과 단색 `theme`) | `modules/minigame.ts`; 같은 계정의 focused 우선 연결 하나에만 전송 | `components/minigame/MiniGameOverlay.tsx` |
+| `miniGameStart` | `MiniGameStartData` (session/token/type/만료/config, 위험 회피의 실제 `label/theme`, 가마솥의 seed·5종 경로·속도 프로필·반전 일정·액체/목표 반경) | `modules/minigame.ts`; 같은 계정의 focused 우선 연결 하나에만 전송 | `components/minigame/MiniGameOverlay.tsx` |
 | `miniGameResolved` | `MiniGameResolvedData` | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 | `miniGameCancelled` | `MiniGameCancelledData` | `modules/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
 | `humanVerificationStart` | `HumanVerificationStartData` (session ID, 안내, raster PNG data URL, 만료 시각) | `modules/humanVerification.ts` | `components/security/HumanVerificationOverlay.tsx` |

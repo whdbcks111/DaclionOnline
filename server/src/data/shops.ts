@@ -118,6 +118,14 @@ defineShop({
             restockTime: 20,
         },
         {
+            label: '정제수 물병',
+            create: () => ({ itemDataId: 'alchemy_water_bottle', count: 1 }),
+            count: 1,
+            price: 4,
+            stock: 100,
+            restockTime: 10,
+        },
+        {
             label: '전투 강장제',
             create: () => ({ itemDataId: 'battle_tonic', count: 1 }),
             count: 1,

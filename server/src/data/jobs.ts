@@ -35,6 +35,13 @@ const firstJobs = [
         sub: [{ attribute: 'maxMentality', op: 'multiply', value: 1.1 }, { attribute: 'magicForce', op: 'multiply', value: 1.06 }, { attribute: 'projectileAcceleration', op: 'multiply', value: 1.06 }],
     },
     {
+        id: 'career:cleric', name: '성직자', icon: 'jobs/cleric',
+        description: '빛의 권능과 굳은 신앙으로 적을 심판하고 자신과 동료를 지키는 교단 전투 직업.',
+        skills: ['cleric_devotion', 'radiant_bolt', 'sanctuary_aegis'],
+        main: [{ attribute: 'maxMentality', op: 'multiply', value: 1.18 }, { attribute: 'magicForce', op: 'multiply', value: 1.1 }, { attribute: 'magicDef', op: 'multiply', value: 1.08 }],
+        sub: [{ attribute: 'maxMentality', op: 'multiply', value: 1.08 }, { attribute: 'magicForce', op: 'multiply', value: 1.05 }, { attribute: 'magicDef', op: 'multiply', value: 1.04 }],
+    },
+    {
         // TODO: 대장장이 전용 직업 아트 제작 전까지 채굴 도구 카테고리 아이콘을 사용한다.
         id: 'career:blacksmith', name: '대장장이', icon: 'items/iron_pickaxe',
         description: '튼튼한 체력과 예리한 감각으로 적의 결을 파쇄하고, 광물 제련과 리듬 단조로 장비를 제작하는 생산·근접 혼합 직업.',
@@ -77,7 +84,32 @@ const eliteRecipes = [
     ['blacksmith', 'archer', 'artificer', '기계 장인'],
     ['blacksmith', 'assassin', 'venom_smith', '독금 장인'],
     ['blacksmith', 'mage', 'arcane_smith', '마도 대장장이', 0.93],
+    // 성직자를 서브로 택한 조합은 원래 메인 직업의 전투 정체성을 유지한다.
+    ['warrior', 'cleric', 'vanguard', '선봉장', 1.25],
+    ['archer', 'cleric', 'pathfinder', '길잡이'],
+    ['assassin', 'cleric', 'blade_dancer', '검무사', 1.15],
+    ['mage', 'cleric', 'alchemist', '연금술사'],
+    ['blacksmith', 'cleric', 'master_craftsman', '명장'],
+    // 성직자를 메인으로 택한 조합은 빛과 교단의 역할을 다른 직업 방식과 융합한다.
+    ['cleric', 'warrior', 'saint_knight', '세인트 나이트'],
+    ['cleric', 'archer', 'dawn_ranger', '여명 순찰자'],
+    ['cleric', 'assassin', 'light_judicator', '빛의 심판자', 0.9],
+    ['cleric', 'mage', 'priest_of_light', '빛의 사제', 0.8],
+    ['cleric', 'blacksmith', 'relic_keeper', '성물지기'],
 ] as const;
+
+const eliteDescriptions: Readonly<Record<string, string>> = Object.freeze({
+    vanguard: '전사의 선두 돌파를 중심으로 성직자의 보호 서약을 더해 아군의 진형을 여는 엘리트 전위.',
+    pathfinder: '궁수의 궤적 감각과 성직자의 인도를 결합해 안전한 사로와 진군로를 찾아내는 원거리 길잡이.',
+    blade_dancer: '암살자의 기동과 성직자의 절제된 의식을 검무로 다듬어 빈틈을 연속해서 베는 근접 엘리트.',
+    alchemist: '마법 이론과 성직자의 정제 의식을 결합해 지역 재료의 성질을 회복약·강화약·투척약으로 변성하는 연성가.',
+    master_craftsman: '대장장이의 제작 기술을 성직자의 엄격한 규율로 완성해 장비와 전열을 함께 받치는 최고 장인.',
+    saint_knight: '성직자의 빛과 전사의 강인함으로 최전선에서 동료를 지키고 적을 심판하는 교단 기사.',
+    dawn_ranger: '성직자의 광휘를 궁수의 시야와 화살에 실어 먼 위협을 밝히고 아군의 길을 여는 여명 사수.',
+    light_judicator: '성직자의 심판을 암살자의 은밀한 기동으로 집행해 지정한 죄인을 단숨에 끊는 교단 집행자.',
+    priest_of_light: '성직자의 신앙을 마법사의 정교한 술식으로 증폭해 광휘 공격과 파티 보호를 함께 펼치는 빛의 사제.',
+    relic_keeper: '성직자의 성역과 대장장이의 금속 지식을 결합해 성물의 힘으로 아군을 보호하는 교단 수호 장인.',
+});
 
 for (const [main, sub, eliteId, name, offenseFactor = 1] of eliteRecipes) {
     const mainId = `career:${main}`;
@@ -89,7 +121,8 @@ for (const [main, sub, eliteId, name, offenseFactor = 1] of eliteRecipes) {
         name,
         icon: parent.icon,
         tier: JobTier.ELITE,
-        description: `${getFirstName(main)}의 전투 방식을 중심으로 ${getFirstName(sub)}의 장점을 융합한 엘리트 직업.`,
+        description: eliteDescriptions[eliteId]
+            ?? `${getFirstName(main)}의 전투 방식을 중심으로 ${getFirstName(sub)}의 장점을 융합한 엘리트 직업.`,
         parentJobIds: [mainId],
         grantedSkills: [
             { skillDataId: `${eliteId}_mastery` },
@@ -103,8 +136,8 @@ for (const [main, sub, eliteId, name, offenseFactor = 1] of eliteRecipes) {
         ],
         mainModifiers: [
             ...parent.main,
-            { attribute: main === 'mage' ? 'magicForce' : 'atk', op: 'multiply', value: 1.15 },
-            { attribute: main === 'warrior' ? 'maxLife' : 'speed', op: 'multiply', value: 1.12 },
+            { attribute: main === 'mage' || main === 'cleric' ? 'magicForce' : 'atk', op: 'multiply', value: 1.15 },
+            { attribute: main === 'warrior' || main === 'cleric' ? 'maxLife' : 'speed', op: 'multiply', value: 1.12 },
             ...(offenseFactor === 1 ? [] : [
                 { attribute: 'atk' as const, op: 'multiply' as const, value: offenseFactor },
                 { attribute: 'magicForce' as const, op: 'multiply' as const, value: offenseFactor },

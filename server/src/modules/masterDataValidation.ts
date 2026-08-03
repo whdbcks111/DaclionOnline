@@ -2,6 +2,15 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { LocationData } from '../../../shared/types.js';
 import { GameTags } from '../../../shared/tags.js';
+import {
+    ALCHEMY_WATER_BOTTLE_ITEM_ID,
+    AlchemyEffectType,
+    FAILED_ALCHEMY_POTION_ITEM_ID,
+    getAllAlchemyFormulas,
+    getAllAlchemyReagents,
+    type AlchemyFormulaData,
+    type AlchemyReagentData,
+} from '../models/Alchemy.js';
 import { getAllCraftingRecipes } from '../models/Crafting.js';
 import { getAllItemData, getItemData } from '../models/Item.js';
 import { getAllJobs, getJob, JobTier, resolveThirdJob } from '../models/Job.js';
@@ -23,6 +32,66 @@ export interface MasterDataValidationOptions {
     iconRoot?: string
 }
 
+/** 연금술 registry가 참조하는 아이템·상태효과와 실행 handler를 독립적으로 검증한다. */
+export function validateAlchemyMasterData(
+    reagents: readonly Readonly<AlchemyReagentData>[] = getAllAlchemyReagents(),
+    formulas: readonly Readonly<AlchemyFormulaData>[] = getAllAlchemyFormulas(),
+): MasterDataIssue[] {
+    const issues: MasterDataIssue[] = [];
+    const issue = (id: string, message: string) => issues.push({ scope: 'alchemy', id, message });
+    const reagentIds = new Set(reagents.map(reagent => reagent.itemDataId));
+
+    for (const reagent of reagents) {
+        if (!getItemData(reagent.itemDataId)) {
+            issue(reagent.itemDataId, `재료 아이템이 없습니다: ${reagent.itemDataId}`);
+        }
+        if (reagent.traits.length === 0) issue(reagent.itemDataId, '재료 성질이 비어 있습니다.');
+    }
+
+    for (const formula of formulas) {
+        const result = getItemData(formula.resultItemDataId);
+        if (!result) issue(formula.id, `결과 아이템이 없습니다: ${formula.resultItemDataId}`);
+        else if (result.onUse !== 'alchemy_potion') {
+            issue(formula.id, `결과 아이템의 사용 handler가 조제약이 아닙니다: ${formula.resultItemDataId}`);
+        }
+        if (formula.ingredients.length < 2) issue(formula.id, '조합식은 서로 다른 재료가 2종 이상이어야 합니다.');
+        for (const ingredient of formula.ingredients) {
+            if (!Number.isSafeInteger(ingredient.count) || ingredient.count <= 0) {
+                issue(formula.id, `재료 수량은 양의 정수여야 합니다: ${ingredient.itemDataId}`);
+            }
+            if (!getItemData(ingredient.itemDataId)) {
+                issue(formula.id, `재료 아이템이 없습니다: ${ingredient.itemDataId}`);
+            }
+            if (!reagentIds.has(ingredient.itemDataId)) {
+                issue(formula.id, `등록된 연금술 재료가 아닙니다: ${ingredient.itemDataId}`);
+            }
+        }
+        if (!Number.isFinite(formula.effect.basePower) || (formula.effect.basePower ?? 0) <= 0) {
+            issue(formula.id, '효과 기본 위력은 양수여야 합니다.');
+        }
+        if (formula.effect.type === AlchemyEffectType.BENEFICIAL_STATUS
+            || formula.effect.type === AlchemyEffectType.HARMFUL_STATUS) {
+            if (!Number.isFinite(formula.effect.baseDuration) || (formula.effect.baseDuration ?? 0) <= 0) {
+                issue(formula.id, '상태효과 지속시간은 양수여야 합니다.');
+            }
+            if (!formula.effect.statusEffectId || !StatusEffectType.fromKey(formula.effect.statusEffectId)) {
+                issue(formula.id, `상태이상이 없습니다: ${formula.effect.statusEffectId ?? '(비어 있음)'}`);
+            }
+        } else if (formula.effect.statusEffectId && !StatusEffectType.fromKey(formula.effect.statusEffectId)) {
+            issue(formula.id, `상태이상이 없습니다: ${formula.effect.statusEffectId}`);
+        }
+    }
+
+    const water = getItemData(ALCHEMY_WATER_BOTTLE_ITEM_ID);
+    if (!water) issue(ALCHEMY_WATER_BOTTLE_ITEM_ID, '정제수 물병 아이템이 없습니다.');
+    const failedPotion = getItemData(FAILED_ALCHEMY_POTION_ITEM_ID);
+    if (!failedPotion) issue(FAILED_ALCHEMY_POTION_ITEM_ID, '실패 조제약 아이템이 없습니다.');
+    else if (failedPotion.onUse !== 'alchemy_potion') {
+        issue(FAILED_ALCHEMY_POTION_ITEM_ID, '실패 조제약의 사용 handler가 올바르지 않습니다.');
+    }
+    return issues;
+}
+
 export function validateMasterData(options: MasterDataValidationOptions = {}): MasterDataIssue[] {
     const issues: MasterDataIssue[] = [];
     const iconRoot = options.iconRoot ?? resolve(process.cwd(), '../client/public/icons');
@@ -36,6 +105,7 @@ export function validateMasterData(options: MasterDataValidationOptions = {}): M
         if (item.weight < 0) issue('item', item.id, '중량은 음수일 수 없습니다.');
         if (item.maxStack < 1) issue('item', item.id, '최대 스택은 1 이상이어야 합니다.');
     }
+    issues.push(...validateAlchemyMasterData());
     for (const skill of getAllSkillData()) icon('skill', skill.id, skill.icon);
     for (const job of getAllJobs()) {
         icon('job', job.id, job.icon);

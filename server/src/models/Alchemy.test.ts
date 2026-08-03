@@ -1,0 +1,231 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import '../data/items.js';
+import '../data/statusEffects.js';
+import '../data/alchemy.js';
+import {
+    ALCHEMY_WATER_BOTTLE_ITEM_ID,
+    FAILED_ALCHEMY_POTION_ITEM_ID,
+    AlchemyDelivery,
+    AlchemyQuality,
+    calculateAlchemyQualityScore,
+    createAlchemyInventoryRequirements,
+    createAlchemyPotionSnapshot,
+    getAllAlchemyFormulas,
+    getAllAlchemyReagents,
+    normalizeAlchemyPotionMetadata,
+    resolveAlchemyPotionUse,
+    resolveAlchemyFormula,
+} from './Alchemy.js';
+import Inventory from './Inventory.js';
+import { ItemMetadataKeys } from './Item.js';
+import { parseAlchemyCommandRemainder, parseAlchemyIngredientList } from '../commands/alchemy.js';
+import { createAlchemyCompletionOutputs, createAlchemyTrackingConfig } from '../modules/alchemy.js';
+
+test('지역 재료 reagent와 여러 목적의 조합식이 공개 레지스트리에 등록된다', () => {
+    assert.ok(getAllAlchemyReagents().length >= 14);
+    assert.ok(getAllAlchemyFormulas().length >= 9);
+    const effectTypes = new Set(getAllAlchemyFormulas().map(formula => formula.effect.type.key));
+    for (const type of ['restore_life', 'restore_mentality', 'beneficial_status', 'harmful_status']) {
+        assert.equal(effectTypes.has(type), true, type);
+    }
+});
+
+test('재료 순서와 무관하게 1~3병 배수만 정확한 조합으로 판정한다', () => {
+    const one = resolveAlchemyFormula([
+        { itemDataId: 'oasis_date', count: 1 },
+        { itemDataId: 'mourning_lily', count: 2 },
+    ], 1);
+    const three = resolveAlchemyFormula([
+        { itemDataId: 'mourning_lily', count: 6 },
+        { itemDataId: 'oasis_date', count: 3 },
+    ], 3);
+    assert.equal(one?.id, 'life-restoration');
+    assert.equal(three?.id, 'life-restoration');
+    assert.equal(resolveAlchemyFormula([
+        { itemDataId: 'mourning_lily', count: 6 },
+        { itemDataId: 'oasis_date', count: 2 },
+    ], 3), undefined);
+    assert.equal(resolveAlchemyFormula(one!.ingredients, 0), undefined);
+    assert.equal(resolveAlchemyFormula(one!.ingredients, 4), undefined);
+});
+
+test('정확도와 감각은 상한 안에서 품질·효율·지속·투척 대상 수를 함께 높인다', () => {
+    const lowScore = calculateAlchemyQualityScore(0.5, 0);
+    const highScore = calculateAlchemyQualityScore(0.92, 600);
+    assert.ok(highScore > lowScore);
+    const low = AlchemyQuality.fromScore(lowScore);
+    const high = AlchemyQuality.fromScore(highScore);
+    assert.ok(high.powerMultiplier > low.powerMultiplier);
+    assert.ok(high.durationMultiplier > low.durationMultiplier);
+    assert.ok(high.areaTargetCap > low.areaTargetCap);
+    assert.equal(calculateAlchemyQualityScore(1, Number.POSITIVE_INFINITY), 0.9);
+});
+
+test('완성 스냅샷은 병 수와 전달 방식, 품질, 효과를 인스턴스 metadata에 영속화한다', () => {
+    const formula = getAllAlchemyFormulas().find(value => value.id === 'toxic')!;
+    const snapshot = createAlchemyPotionSnapshot({
+        formula,
+        delivery: AlchemyDelivery.THROW,
+        bottleCount: 3,
+        accuracy: 0.86,
+        sensibility: 320,
+    });
+    const metadata = normalizeAlchemyPotionMetadata(snapshot.metadataDelta?.[ItemMetadataKeys.ALCHEMY]);
+    assert.equal(snapshot.count, 3);
+    assert.equal(snapshot.itemDataId, formula.resultItemDataId);
+    assert.equal(metadata?.delivery, 'throw');
+    assert.equal(metadata?.effect.audience, 'harmful');
+    assert.ok((metadata?.areaTargetCap ?? 0) >= 3);
+    assert.match(String(snapshot.metadataDelta?.[ItemMetadataKeys.CUSTOM_DESCRIPTION]), /연금 정확도/);
+});
+
+test('조제약 사용 해석은 결과 아이템과 조합식을 대조하고 canonical 효과만 반환한다', () => {
+    const formula = getAllAlchemyFormulas().find(value => value.id === 'toxic')!;
+    const snapshot = createAlchemyPotionSnapshot({
+        formula,
+        delivery: AlchemyDelivery.THROW,
+        bottleCount: 1,
+        accuracy: 0.86,
+        sensibility: 320,
+    });
+    const raw = snapshot.metadataDelta?.[ItemMetadataKeys.ALCHEMY];
+    const resolved = resolveAlchemyPotionUse(snapshot.itemDataId, raw);
+    assert.equal(resolved?.formula?.id, formula.id);
+    assert.equal(resolved?.effectType.key, 'harmful_status');
+    assert.equal(resolved?.metadata.effect.statusEffectId, 'poison');
+    assert.equal(resolved?.metadata.effect.damageType, 'magic');
+    assert.equal(resolveAlchemyPotionUse('alchemy_life_draught', raw), undefined);
+});
+
+test('효과·품질·전달 metadata 위변조는 포션 권한 해석 단계에서 거부된다', () => {
+    const formula = getAllAlchemyFormulas().find(value => value.id === 'life-restoration')!;
+    const snapshot = createAlchemyPotionSnapshot({
+        formula,
+        delivery: AlchemyDelivery.DRINK,
+        bottleCount: 1,
+        accuracy: 0.73,
+        sensibility: 240,
+    });
+    const raw = snapshot.metadataDelta?.[ItemMetadataKeys.ALCHEMY] as Record<string, unknown>;
+    const clone = () => JSON.parse(JSON.stringify(raw)) as Record<string, any>;
+    const mutations: Array<[string, (candidate: Record<string, any>) => void]> = [
+        ['power', candidate => { candidate.effect.power *= 100; }],
+        ['duration', candidate => { candidate.effect.duration = 999; }],
+        ['status', candidate => { candidate.effect.statusEffectId = 'deadly_poison'; }],
+        ['audience', candidate => { candidate.effect.audience = 'harmful'; }],
+        ['quality', candidate => { candidate.quality = 'masterwork'; }],
+        ['score', candidate => { candidate.qualityScore = 1; }],
+        ['cap', candidate => { candidate.areaTargetCap = 5; }],
+        ['accuracy range', candidate => { candidate.accuracy = 2; }],
+        ['sensibility range', candidate => { candidate.sensibility = Number.MAX_VALUE; }],
+        ['formula', candidate => { candidate.formulaId = 'mind-restoration'; }],
+        ['delivery', candidate => { candidate.delivery = 'teleport'; }],
+    ];
+    for (const [label, mutate] of mutations) {
+        const candidate = clone();
+        mutate(candidate);
+        assert.equal(resolveAlchemyPotionUse(snapshot.itemDataId, candidate), undefined, label);
+    }
+    assert.equal(resolveAlchemyPotionUse(snapshot.itemDataId, raw)?.formula?.id, formula.id);
+});
+
+test('2병 조제는 재료와 정제수 물병을 정확한 배수로 한 번에 교환한다', () => {
+    const inventory = Inventory.createEmpty(7710, 1_000);
+    inventory.addItem('mourning_lily', 4);
+    inventory.addItem('oasis_date', 2);
+    inventory.addItem(ALCHEMY_WATER_BOTTLE_ITEM_ID, 2);
+    const ingredients = [
+        { itemDataId: 'mourning_lily', count: 4 },
+        { itemDataId: 'oasis_date', count: 2 },
+    ];
+    const formula = resolveAlchemyFormula(ingredients, 2)!;
+    const selections = inventory.selectItems(createAlchemyInventoryRequirements(ingredients, 2));
+    assert.ok(selections);
+    const output = createAlchemyPotionSnapshot({
+        formula,
+        delivery: AlchemyDelivery.DRINK,
+        bottleCount: 2,
+        accuracy: 0.8,
+        sensibility: 200,
+    });
+    assert.equal(inventory.replaceSelectedItems(selections, [output]), true);
+    assert.equal(inventory.getCount('mourning_lily'), 0);
+    assert.equal(inventory.getCount('oasis_date'), 0);
+    assert.equal(inventory.getCount(ALCHEMY_WATER_BOTTLE_ITEM_ID), 0);
+    assert.equal(inventory.getCount(formula.resultItemDataId), 2);
+});
+
+test('물병이나 재료가 한 개라도 부족하면 조제 교환은 시작 전부터 거부된다', () => {
+    const inventory = Inventory.createEmpty(7711, 1_000);
+    inventory.addItem('mourning_lily', 6);
+    inventory.addItem('oasis_date', 3);
+    inventory.addItem(ALCHEMY_WATER_BOTTLE_ITEM_ID, 2);
+    const ingredients = [
+        { itemDataId: 'mourning_lily', count: 6 },
+        { itemDataId: 'oasis_date', count: 3 },
+    ];
+    assert.equal(inventory.selectItems(createAlchemyInventoryRequirements(ingredients, 3)), null);
+    assert.equal(inventory.getCount('mourning_lily'), 6);
+    assert.equal(inventory.getCount(ALCHEMY_WATER_BOTTLE_ITEM_ID), 2);
+});
+
+test('연금 명령은 1~3병·음용/투척과 쉼표 재료 수량을 안전하게 해석한다', () => {
+    assert.deepEqual(parseAlchemyIngredientList('애도의 백합x4, 오아시스 대추야자:2'), [
+        { itemDataId: 'mourning_lily', count: 4 },
+        { itemDataId: 'oasis_date', count: 2 },
+    ]);
+    const parsed = parseAlchemyCommandRemainder('2 투척 애도의 백합x4, 오아시스 대추야자x2');
+    assert.equal(parsed?.bottleCount, 2);
+    assert.equal(parsed?.delivery, AlchemyDelivery.THROW);
+    assert.equal(parseAlchemyCommandRemainder('4 음용 애도의 백합x8, 오아시스 대추야자x4'), undefined);
+    assert.equal(parseAlchemyIngredientList('존재하지 않음x1, 애도의 백합x1'), undefined);
+});
+
+test('조합식·재료 hash는 순서와 무관한 결정론 config와 유효한 추적 패턴을 만든다', () => {
+    const formula = getAllAlchemyFormulas().find(value => value.id === 'life-restoration')!;
+    const ingredients = [
+        { itemDataId: 'mourning_lily', count: 2 },
+        { itemDataId: 'oasis_date', count: 1 },
+    ];
+    const first = createAlchemyTrackingConfig(formula, ingredients, 1);
+    const reordered = createAlchemyTrackingConfig(formula, [...ingredients].reverse(), 1);
+    assert.deepEqual(reordered, first);
+    assert.ok(['orbit', 'figure_eight', 'clover', 'spiral', 'zigzag'].includes(first.patternKey));
+    assert.ok(['steady', 'pulse', 'surge'].includes(first.speedProfileKey));
+    assert.ok(first.targetRadius >= 4.5 && first.targetRadius <= 6);
+    assert.ok(first.reverseAtMs.every((value, index) => value > (first.reverseAtMs[index - 1] ?? 0)
+        && value < first.durationMs));
+    assert.notEqual(createAlchemyTrackingConfig(formula, ingredients.map(ingredient => ({
+        ...ingredient,
+        count: ingredient.count * 2,
+    })), 2).seed, first.seed);
+});
+
+test('연금 결과 정책은 성공 조합·성공 미확인 조합·추적 실패를 구분한다', () => {
+    const formula = getAllAlchemyFormulas().find(value => value.id === 'life-restoration')!;
+    const base = {
+        delivery: AlchemyDelivery.DRINK,
+        bottleCount: 2,
+        sensibility: 300,
+    } as const;
+    const normal = createAlchemyCompletionOutputs({
+        ...base,
+        formula,
+        result: { success: true, score: 0.84 },
+    });
+    const unknown = createAlchemyCompletionOutputs({
+        ...base,
+        formula: undefined,
+        result: { success: true, score: 0.84 },
+    });
+    const failed = createAlchemyCompletionOutputs({
+        ...base,
+        formula,
+        result: { success: false, score: 0.96 },
+    });
+    assert.equal(normal[0]?.itemDataId, formula.resultItemDataId);
+    assert.equal(normal[0]?.count, 2);
+    assert.equal(unknown[0]?.itemDataId, FAILED_ALCHEMY_POTION_ITEM_ID);
+    assert.deepEqual(failed, []);
+});

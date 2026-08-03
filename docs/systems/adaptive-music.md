@@ -14,7 +14,7 @@ FNV-1a seed는 표시명·좌표가 아니라 안정적인 장소 ID와 theme ke
 
 `waltz` 테마인 물빛 연못·안개조류·태초뿌리는 실제 `3/4`이고 나머지는 `4/4`다. 두 경우 모두 32마디지만 반복 길이는 각각 384·512개의 16분음표다. `steady·waltz·syncopated·march·pulse·broken·swing`의 accent와 타악 배치, `timbre` 8종의 Tone Omni oscillator·lead/pad envelope가 권역 성격을 나눈다.
 
-탐험 lead와 보스 counter 구절은 자연스러운 `G4~C7(MIDI 67~96)` 음역에 둔다. pad 화음은 원 악보보다 한 옥타브 높인 `C5~C7(MIDI 72~96)`, 전투 bass의 안전 범위도 한 옥타브 높인 `C2~G4(MIDI 36~67)`다. 타격감을 만드는 kick의 38/42Hz는 음표가 아닌 실제 주파수이므로 조옮김하지 않는다. 연속 발음음은 65~82%를 3반음 이내 계단 진행으로 두고, 7반음 이상 도약은 전체 5% 이하로 절제한다. 회귀 테스트는 35개 고유 훅, 병합된 623개 장소와 35개 색의 양방향 일치, 같은 권역의 훅 보존과 장소별 편곡 signature 고유성을 함께 검사한다.
+탐험 lead와 보스 counter 구절은 자연스러운 `G4~C7(MIDI 67~96)` 음역에 둔다. pad 화음은 원 악보보다 한 옥타브 높인 `C5~C7(MIDI 72~96)`, 전투 bass의 안전 범위도 한 옥타브 높인 `C2~G4(MIDI 36~67)`다. 타격감을 만드는 kick의 38/42Hz는 음표가 아닌 실제 주파수이므로 조옮김하지 않는다. 연속 발음음은 65~82%를 3반음 이내 계단 진행으로 두고, 7반음 이상 도약은 전체 5% 이하로 절제한다. 회귀 테스트는 35개 고유 훅, 병합된 624개 장소와 35개 색의 양방향 일치, 같은 권역의 훅 보존과 장소별 편곡 signature 고유성을 함께 검사한다.
 
 ### 작곡 참고
 
@@ -46,6 +46,6 @@ Transport의 PPQ는 192로 고정하고 Part의 event·duration·loop·start를 
 
 ## 검증
 
-- `server/src/data/adaptiveMusic.test.ts`: 35개 고정 2마디 악구와 전조 정규화 훅 고유성, 623 장소 coverage·동일 권역 훅 보존·편곡 고유성, 32마디 A/A′/B/A″ 형식, 선율 진행·도약·파트별 음역·종지, 강박 chord-tone·화음 coverage·chord-linked bass, MIDI→Hz 경계, 실제 3/4, PPQ 192 tick engine, 전투 resolver, 음량 곡선·storage.
+- `server/src/data/adaptiveMusic.test.ts`: 35개 고정 2마디 악구와 전조 정규화 훅 고유성, 624 장소 coverage·동일 권역 훅 보존·편곡 고유성, 32마디 A/A′/B/A″ 형식, 선율 진행·도약·파트별 음역·종지, 강박 chord-tone·화음 coverage·chord-linked bass, MIDI→Hz 경계, 실제 3/4, PPQ 192 tick engine, 전투 resolver, 음량 곡선·storage.
 - `server/src/models/AdaptiveMusicCombat.test.ts`: 실제 공격·회피·피격·보스 우선순위·9초 만료·이동/사망 초기화·자원 제외.
 - 클라이언트는 TypeScript/Vite build와 ESLint로 Tone node·React lifecycle 계약을 검증하고, 첫 gesture·모바일 autoplay·두 탭·숨김/복귀·빠른 연속 이동은 실제 브라우저에서 확인한다.

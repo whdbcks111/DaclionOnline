@@ -1,4 +1,4 @@
-export type MiniGameType = 'fishing_capture' | 'hazard_dodge' | 'forge_rhythm'
+export type MiniGameType = 'fishing_capture' | 'hazard_dodge' | 'forge_rhythm' | 'alchemy_tracking'
 export type FishingCaptureShape = 'circle' | 'square' | 'rectangle'
 export type HazardDodgeMode = 'bombs' | 'lasers' | 'mixed' | 'chain_bombs' | 'resonance' | 'crossfire'
 export type HazardDodgeTheme = 'neutral' | 'crystal' | 'ironroot' | 'astral'
@@ -30,6 +30,19 @@ export const FISHING_CAPTURE_PROOF_CHECKPOINT_INTERVAL_MS = 100
 export const MAX_FISHING_CAPTURE_PROOF_BYTES = 160 * 1024
 /** 현재 최장 30초 낚시의 100ms checkpoint와 마지막 시점을 담는 상한. */
 export const MAX_FISHING_CAPTURE_TRAJECTORY_SAMPLES = 320
+/** 가마솥 추적 결과 proof의 현재 wire format 버전. */
+export const ALCHEMY_TRACKING_PROOF_VERSION = 1 as const
+/** 화면 frame 정체와 무관하게 비교 가능한 가마솥 추적 궤적 checkpoint 간격. */
+export const ALCHEMY_TRACKING_PROOF_CHECKPOINT_INTERVAL_MS = 100
+/** Socket.io 전체 payload 상한보다 작은 가마솥 추적 proof 자체의 UTF-8 JSON 상한. */
+export const MAX_ALCHEMY_TRACKING_PROOF_BYTES = 160 * 1024
+/** 최장 30초 추적의 100ms checkpoint와 마지막 시점을 담는 상한. */
+export const MAX_ALCHEMY_TRACKING_TRAJECTORY_SAMPLES = 320
+/** 보드 중심에서 액체로 인정하는 최대 반경(보드 100 기준). */
+export const MAX_ALCHEMY_LIQUID_RADIUS = 30
+/** 터치 화면에서도 손가락으로 안정적으로 따라갈 수 있는 목표 반경 범위(보드 100 기준). */
+export const MIN_ALCHEMY_TARGET_RADIUS = 4.5
+export const MAX_ALCHEMY_TARGET_RADIUS = 6
 /** 보스 위험 회피가 사용하는 공용 난이도 상한. 7~10은 후반 보스 전용 밀도다. */
 export const MAX_HAZARD_DODGE_DIFFICULTY = 10
 /** 저사양 터치 화면에서 마지막으로 그려진 note와 입력 시각 차이를 허용하는 최대 보정값. */
@@ -93,6 +106,159 @@ export interface FishingCaptureProof {
     success: boolean
     inputs: MiniGameInputSample[]
     trajectory: FishingCaptureTrajectorySample[]
+}
+
+export class AlchemyTrackingPattern {
+    private static readonly all: AlchemyTrackingPattern[] = []
+    readonly key: 'orbit' | 'figure_eight' | 'clover' | 'spiral' | 'zigzag'
+    readonly label: string
+
+    static readonly ORBIT = new AlchemyTrackingPattern('orbit', '궤도')
+    static readonly FIGURE_EIGHT = new AlchemyTrackingPattern('figure_eight', '팔자')
+    static readonly CLOVER = new AlchemyTrackingPattern('clover', '네잎')
+    static readonly SPIRAL = new AlchemyTrackingPattern('spiral', '나선')
+    static readonly ZIGZAG = new AlchemyTrackingPattern('zigzag', '번개')
+
+    private constructor(
+        key: AlchemyTrackingPattern['key'],
+        label: string,
+    ) {
+        this.key = key
+        this.label = label
+        AlchemyTrackingPattern.all.push(this)
+        Object.freeze(this)
+    }
+
+    static values(): readonly AlchemyTrackingPattern[] { return [...AlchemyTrackingPattern.all] }
+    static fromKey(key: unknown): AlchemyTrackingPattern | undefined {
+        return typeof key === 'string'
+            ? AlchemyTrackingPattern.all.find(pattern => pattern.key === key.trim().toLowerCase())
+            : undefined
+    }
+    static fromInput(input: string): AlchemyTrackingPattern | undefined {
+        const normalized = input.trim().toLocaleLowerCase('ko-KR')
+        return AlchemyTrackingPattern.all.find(pattern => pattern.key === normalized
+            || pattern.label.toLocaleLowerCase('ko-KR') === normalized)
+    }
+}
+
+export class AlchemyTrackingSpeedProfile {
+    private static readonly all: AlchemyTrackingSpeedProfile[] = []
+    readonly key: 'steady' | 'pulse' | 'surge'
+    readonly label: string
+
+    static readonly STEADY = new AlchemyTrackingSpeedProfile('steady', '등속')
+    static readonly PULSE = new AlchemyTrackingSpeedProfile('pulse', '맥동')
+    static readonly SURGE = new AlchemyTrackingSpeedProfile('surge', '급가속')
+
+    private constructor(
+        key: AlchemyTrackingSpeedProfile['key'],
+        label: string,
+    ) {
+        this.key = key
+        this.label = label
+        AlchemyTrackingSpeedProfile.all.push(this)
+        Object.freeze(this)
+    }
+
+    static values(): readonly AlchemyTrackingSpeedProfile[] { return [...AlchemyTrackingSpeedProfile.all] }
+    static fromKey(key: unknown): AlchemyTrackingSpeedProfile | undefined {
+        return typeof key === 'string'
+            ? AlchemyTrackingSpeedProfile.all.find(profile => profile.key === key.trim().toLowerCase())
+            : undefined
+    }
+    static fromInput(input: string): AlchemyTrackingSpeedProfile | undefined {
+        const normalized = input.trim().toLocaleLowerCase('ko-KR')
+        return AlchemyTrackingSpeedProfile.all.find(profile => profile.key === normalized
+            || profile.label.toLocaleLowerCase('ko-KR') === normalized)
+    }
+}
+
+export interface AlchemyTrackingConfig {
+    seed: number
+    durationMs: number
+    label: string
+    /** 보드 중심에서 추적이 이루어지는 액체 반경. 100 기준 최대 30. */
+    liquidRadius: number
+    /** 움직이는 목표 원의 반경. 보드 100 기준 4.5~6. */
+    targetRadius: number
+    /** 재료 조합이 고르고 wire에는 key만 직렬화하는 경로 패턴. */
+    patternKey: AlchemyTrackingPattern['key']
+    /** 한 바퀴 안에서도 seed 위상에 따라 속도가 달라지는 프로필. */
+    speedProfileKey: AlchemyTrackingSpeedProfile['key']
+    lapDurationMs: number
+    /** 이 시각을 지날 때마다 현재 진행 방향을 반전한다. 오름차순 ms. */
+    reverseAtMs: number[]
+    initialGauge: number
+    fillPerSecond: number
+    drainPerSecond: number
+}
+
+export interface AlchemyTrackingPathPoint {
+    x: number
+    y: number
+}
+
+export interface AlchemyTrackingPointerSample {
+    /** 첫 가마솥 pointerdown부터의 경과 시간(ms). */
+    at: number
+    /** 보드 좌상단 기준 0~100 절대 좌표. */
+    x: number
+    y: number
+    dragging: boolean
+}
+
+export interface AlchemyTrackingTrajectorySample {
+    at: number
+    targetX: number
+    targetY: number
+    pointerX: number
+    pointerY: number
+    gauge: number
+}
+
+export interface AlchemyTrackingProof {
+    version: typeof ALCHEMY_TRACKING_PROOF_VERSION
+    elapsedMs: number
+    success: boolean
+    inputs: AlchemyTrackingPointerSample[]
+    trajectory: AlchemyTrackingTrajectorySample[]
+}
+
+/** 같은 20ms 재생 구간의 pointer 이벤트는 마지막 상태 하나로 합친다. */
+export function appendAlchemyTrackingPointerSample(
+    inputs: AlchemyTrackingPointerSample[],
+    sample: AlchemyTrackingPointerSample,
+): void {
+    const lastIndex = inputs.length - 1
+    const previous = inputs[lastIndex]
+    const normalizedSample = previous && sample.at < previous.at
+        ? { ...sample, at: previous.at }
+        : sample
+    if (previous && Math.floor(previous.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)
+        === Math.floor(normalizedSample.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)) {
+        if (inputs.length === 1 && previous.dragging) {
+            inputs.push({
+                ...normalizedSample,
+                at: (Math.floor(previous.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS) + 1)
+                    * MINIGAME_INPUT_SAMPLE_INTERVAL_MS,
+            })
+            return
+        }
+        inputs[lastIndex] = normalizedSample
+        return
+    }
+    if (inputs.length < MAX_MINIGAME_INPUT_SAMPLES) inputs.push(normalizedSample)
+    else inputs[lastIndex] = normalizedSample
+}
+
+export function snapshotAlchemyTrackingInputs(
+    inputs: readonly AlchemyTrackingPointerSample[],
+    elapsedMs: number,
+): AlchemyTrackingPointerSample[] {
+    return inputs
+        .filter(input => input.at <= elapsedMs)
+        .map(input => ({ ...input }))
 }
 
 export interface HazardDodgeConfig {
@@ -172,6 +338,7 @@ export interface MiniGameConfigMap {
     fishing_capture: FishingCaptureConfig
     hazard_dodge: HazardDodgeConfig
     forge_rhythm: ForgeRhythmConfig
+    alchemy_tracking: AlchemyTrackingConfig
 }
 
 interface MiniGameStartBase<T extends MiniGameType> {
@@ -200,17 +367,21 @@ export interface MiniGameActionRequest extends MiniGameSessionRequest {
     action: 'strike'
 }
 
-/** 낚시만 로컬 성공 frame의 proof를 보내며 다른 미니게임은 기존 session/token 계약을 유지한다. */
+/** 낚시와 가마솥 추적은 로컬 궤적 proof를 보내며 다른 미니게임은 기존 session/token 계약을 유지한다. */
 export interface MiniGameResultRequest extends MiniGameSessionRequest {
     fishingProof?: FishingCaptureProof
+    alchemyTrackingProof?: AlchemyTrackingProof
 }
 
-/** 회피·단조는 서버 실시간 trace, 낚시는 검증을 통과한 client proof snapshot을 validator에 전달한다. */
+/** 회피·단조는 서버 실시간 trace, 낚시·가마솥 추적은 검증된 client proof snapshot을 전달한다. */
 export interface MiniGameValidationRequest extends MiniGameSessionRequest {
     elapsedMs: number
     inputs: MiniGameInputSample[]
     actions: MiniGameActionSample[]
     fishingProof?: FishingCaptureProof
+    alchemyTrackingProof?: AlchemyTrackingProof
+    /** 공용 proof validator가 서버 재생으로 계산한 0~1 권위 점수. */
+    score?: number
 }
 
 export interface MiniGameResolvedData {
@@ -260,6 +431,20 @@ export interface ForgeRhythmSimulationState {
     perfectCount: number
     missCount: number
     maxCombo: number
+    accuracy: number
+    finished: boolean
+    success: boolean
+}
+
+export interface AlchemyTrackingSimulationState {
+    gauge: number
+    pointerX: number
+    pointerY: number
+    targetX: number
+    targetY: number
+    dragging: boolean
+    onTarget: boolean
+    /** 실제 진행 시간 중 목표 안에서 추적한 시간 비율. */
     accuracy: number
     finished: boolean
     success: boolean
@@ -385,6 +570,242 @@ export function createFishingCaptureProof(
     const finalState = simulateFishingCapture(config, inputSnapshot, elapsed)
     return {
         version: FISHING_CAPTURE_PROOF_VERSION,
+        elapsedMs: elapsed,
+        success: finalState.success,
+        inputs: inputSnapshot,
+        trajectory,
+    }
+}
+
+function normalizeAlchemyPhase(value: number): number {
+    return ((value % 1) + 1) % 1
+}
+
+function getAlchemyZigzagPoint(phase: number): AlchemyTrackingPathPoint {
+    const vertices: readonly AlchemyTrackingPathPoint[] = [
+        { x: -0.88, y: -0.62 },
+        { x: -0.52, y: 0.62 },
+        { x: -0.17, y: -0.62 },
+        { x: 0.17, y: 0.62 },
+        { x: 0.52, y: -0.62 },
+        { x: 0.88, y: 0.62 },
+        { x: 0.52, y: 0.18 },
+        { x: 0.17, y: 0.62 },
+        { x: -0.17, y: 0.18 },
+        { x: -0.52, y: 0.62 },
+    ]
+    const progress = normalizeAlchemyPhase(phase) * vertices.length
+    const index = Math.floor(progress) % vertices.length
+    const nextIndex = (index + 1) % vertices.length
+    const local = progress - Math.floor(progress)
+    return {
+        x: vertices[index].x + (vertices[nextIndex].x - vertices[index].x) * local,
+        y: vertices[index].y + (vertices[nextIndex].y - vertices[index].y) * local,
+    }
+}
+
+function getAlchemyPatternPoint(config: AlchemyTrackingConfig, phase: number): AlchemyTrackingPathPoint {
+    const pattern = AlchemyTrackingPattern.fromKey(config.patternKey) ?? AlchemyTrackingPattern.ORBIT
+    const normalized = normalizeAlchemyPhase(phase)
+    const angle = normalized * Math.PI * 2
+    let point: AlchemyTrackingPathPoint
+    if (pattern === AlchemyTrackingPattern.FIGURE_EIGHT) {
+        point = { x: Math.sin(angle) * 0.92, y: Math.sin(angle * 2) * 0.46 }
+    } else if (pattern === AlchemyTrackingPattern.CLOVER) {
+        const radius = 0.62 + Math.cos(angle * 4) * 0.3
+        point = { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius }
+    } else if (pattern === AlchemyTrackingPattern.SPIRAL) {
+        const radius = normalized <= 0.5
+            ? 0.18 + normalized * 1.5
+            : 0.93 - (normalized - 0.5) * 1.5
+        point = { x: Math.cos(angle * 2) * radius, y: Math.sin(angle * 2) * radius }
+    } else if (pattern === AlchemyTrackingPattern.ZIGZAG) {
+        point = getAlchemyZigzagPoint(normalized)
+    } else {
+        const verticalScale = 0.74 + randomUnit(config.seed, 0, 103) * 0.18
+        point = { x: Math.cos(angle) * 0.94, y: Math.sin(angle) * verticalScale }
+    }
+
+    const magnitude = Math.hypot(point.x, point.y)
+    if (magnitude > 1) point = { x: point.x / magnitude, y: point.y / magnitude }
+    const rotation = randomUnit(config.seed, 0, 109) * Math.PI * 2
+    const mirror = randomUnit(config.seed, 0, 127) < 0.5 ? -1 : 1
+    const rotatedX = point.x * mirror * Math.cos(rotation) - point.y * Math.sin(rotation)
+    const rotatedY = point.x * mirror * Math.sin(rotation) + point.y * Math.cos(rotation)
+    const liquidRadius = clamp(config.liquidRadius, 0, MAX_ALCHEMY_LIQUID_RADIUS)
+    const targetRadius = clamp(config.targetRadius, MIN_ALCHEMY_TARGET_RADIUS, MAX_ALCHEMY_TARGET_RADIUS)
+    const availableRadius = Math.max(0, liquidRadius - targetRadius)
+    return {
+        x: 50 + rotatedX * availableRadius,
+        y: 50 + rotatedY * availableRadius,
+    }
+}
+
+function getAlchemyProfileTravel(config: AlchemyTrackingConfig, elapsedMs: number): number {
+    const lapDurationMs = clamp(config.lapDurationMs, 700, 12_000)
+    const normalizedTime = Math.max(0, elapsedMs) / lapDurationMs
+    const profile = AlchemyTrackingSpeedProfile.fromKey(config.speedProfileKey)
+        ?? AlchemyTrackingSpeedProfile.STEADY
+    if (profile === AlchemyTrackingSpeedProfile.STEADY) return normalizedTime
+    const frequency = profile === AlchemyTrackingSpeedProfile.SURGE ? 2 : 1
+    const amplitude = profile === AlchemyTrackingSpeedProfile.SURGE ? 0.68 : 0.38
+    const phase = randomUnit(config.seed, 0, 149) * Math.PI * 2
+    const angularFrequency = Math.PI * 2 * frequency
+    return normalizedTime
+        + amplitude / angularFrequency
+        * (Math.cos(phase) - Math.cos(angularFrequency * normalizedTime + phase))
+}
+
+function getAlchemyTravelPhase(config: AlchemyTrackingConfig, elapsedMs: number): number {
+    const elapsed = Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0)
+    const reversals = config.reverseAtMs
+        .filter(at => Number.isFinite(at) && at > 0 && at < elapsed)
+        .slice()
+        .sort((left, right) => left - right)
+    let direction = randomUnit(config.seed, 0, 163) < 0.5 ? -1 : 1
+    let previousAt = 0
+    let travel = 0
+    for (const reversalAt of reversals) {
+        travel += direction
+            * (getAlchemyProfileTravel(config, reversalAt) - getAlchemyProfileTravel(config, previousAt))
+        previousAt = reversalAt
+        direction *= -1
+    }
+    travel += direction
+        * (getAlchemyProfileTravel(config, elapsed) - getAlchemyProfileTravel(config, previousAt))
+    return randomUnit(config.seed, 0, 181) + travel
+}
+
+/** UI가 서버와 같은 공식으로 미리 보여 주는 재료별 전체 추적 경로. */
+export function getAlchemyTrackingPathPoints(
+    config: AlchemyTrackingConfig,
+    sampleCount = 121,
+): AlchemyTrackingPathPoint[] {
+    const count = Math.round(clamp(sampleCount, 16, 256))
+    return Array.from({ length: count }, (_, index) => (
+        getAlchemyPatternPoint(config, index / (count - 1))
+    ))
+}
+
+/** 재료 패턴·seed 변형·변속·방향 반전 일정을 합쳐 현재 목표 위치를 재생한다. */
+export function getAlchemyTrackingTargetPosition(
+    config: AlchemyTrackingConfig,
+    elapsedMs: number,
+): { x: number; y: number } {
+    return getAlchemyPatternPoint(config, getAlchemyTravelPhase(config, elapsedMs))
+}
+
+/** 절대 pointer trace로 목표 추적 게이지와 최종 정확도를 결정론적으로 재생한다. */
+export function simulateAlchemyTracking(
+    config: AlchemyTrackingConfig,
+    inputs: readonly AlchemyTrackingPointerSample[],
+    elapsedMs: number,
+): AlchemyTrackingSimulationState {
+    const end = clamp(Number.isFinite(elapsedMs) ? elapsedMs : 0, 0, config.durationMs)
+    let gauge = clamp(config.initialGauge, 0, 1)
+    let pointerX = 50
+    let pointerY = 50
+    let dragging = false
+    let inputIndex = 0
+    let trackedMs = 0
+    let centeredMs = 0
+    let playedMs = 0
+    let target = getAlchemyTrackingTargetPosition(config, 0)
+
+    while (inputIndex < inputs.length && inputs[inputIndex].at <= 0) {
+        pointerX = inputs[inputIndex].x
+        pointerY = inputs[inputIndex].y
+        dragging = inputs[inputIndex].dragging
+        inputIndex++
+    }
+    let onTarget = dragging
+        && Math.hypot(pointerX - target.x, pointerY - target.y) <= config.targetRadius
+
+    for (let at = 0; at < end; at += MINIGAME_INPUT_SAMPLE_INTERVAL_MS) {
+        while (inputIndex < inputs.length && inputs[inputIndex].at <= at) {
+            pointerX = inputs[inputIndex].x
+            pointerY = inputs[inputIndex].y
+            dragging = inputs[inputIndex].dragging
+            inputIndex++
+        }
+        const stepMs = Math.min(MINIGAME_INPUT_SAMPLE_INTERVAL_MS, end - at)
+        target = getAlchemyTrackingTargetPosition(config, at + stepMs)
+        const distance = Math.hypot(pointerX - target.x, pointerY - target.y)
+        onTarget = dragging && distance <= config.targetRadius
+        trackedMs += onTarget ? stepMs : 0
+        centeredMs += onTarget ? (1 - distance / config.targetRadius) * stepMs : 0
+        playedMs += stepMs
+        gauge = clamp(gauge + (onTarget ? config.fillPerSecond : -config.drainPerSecond) * stepMs / 1_000, 0, 1)
+        if (gauge >= 1 || gauge <= 0) {
+            return {
+                gauge,
+                pointerX,
+                pointerY,
+                targetX: target.x,
+                targetY: target.y,
+                dragging,
+                onTarget,
+                accuracy: playedMs > 0
+                    ? (trackedMs / playedMs) * 0.7 + (centeredMs / playedMs) * 0.3
+                    : 0,
+                finished: true,
+                success: gauge >= 1,
+            }
+        }
+    }
+
+    const timedOut = elapsedMs >= config.durationMs
+    return {
+        gauge,
+        pointerX,
+        pointerY,
+        targetX: target.x,
+        targetY: target.y,
+        dragging,
+        onTarget,
+        accuracy: playedMs > 0
+            ? (trackedMs / playedMs) * 0.7 + (centeredMs / playedMs) * 0.3
+            : 0,
+        finished: timedOut,
+        success: timedOut && gauge >= 1,
+    }
+}
+
+/** 20ms pointer 입력과 100ms 목표·pointer·게이지 checkpoint를 불변 snapshot으로 만든다. */
+export function createAlchemyTrackingProof(
+    config: AlchemyTrackingConfig,
+    inputs: readonly AlchemyTrackingPointerSample[],
+    elapsedMs: number,
+): AlchemyTrackingProof {
+    const elapsed = clamp(Number.isFinite(elapsedMs) ? elapsedMs : 0, 0, config.durationMs)
+    const inputSnapshot = snapshotAlchemyTrackingInputs(inputs, elapsed)
+    const trajectory: AlchemyTrackingTrajectorySample[] = []
+    const appendCheckpoint = (at: number) => {
+        const state = simulateAlchemyTracking(config, inputSnapshot, at)
+        trajectory.push({
+            at,
+            targetX: state.targetX,
+            targetY: state.targetY,
+            pointerX: state.pointerX,
+            pointerY: state.pointerY,
+            gauge: state.gauge,
+        })
+    }
+    for (let at = 0; at < elapsed; at += ALCHEMY_TRACKING_PROOF_CHECKPOINT_INTERVAL_MS) {
+        appendCheckpoint(at)
+    }
+    const lastCheckpoint = trajectory.at(-1)
+    if (lastCheckpoint?.at !== elapsed) {
+        if (lastCheckpoint
+            && Math.floor(lastCheckpoint.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)
+            === Math.floor(elapsed / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)) {
+            trajectory.pop()
+        }
+        appendCheckpoint(elapsed)
+    }
+    const finalState = simulateAlchemyTracking(config, inputSnapshot, elapsed)
+    return {
+        version: ALCHEMY_TRACKING_PROOF_VERSION,
         elapsedMs: elapsed,
         success: finalState.success,
         inputs: inputSnapshot,

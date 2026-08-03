@@ -31,7 +31,7 @@
 
 `Home.tsx`의 답장 상태는 원문 `messageId/userId/nickname/preview` snapshot 하나만 소유한다. 공개 메시지의 답장 버튼은 모바일 입력 포커스를 빼앗지 않고 입력창 위 미리보기를 열며, 텍스트 또는 이미지만 전송하는 첫 메시지에 `replyToId`를 붙인다. 전송된 `ChatMessage.replyTo` 카드를 누르면 `chat-message-{id}` 요소로 즉시 이동하고 1.6초 동안 강조한다. 원문이 현재 100개 히스토리에 없으면 입력창 안내를 표시한다.
 
-`components/minigame/MiniGameOverlay`는 서버 `miniGameStart`를 전체 화면 overlay로 렌더링한다. 준비 뒤 키보드와 pointer 조이스틱의 축 변경은 `miniGameInput`, Space·Enter·터치 타격은 `miniGameAction`으로 즉시 전송한다. 단조는 난이도·원 정확도·보정 품질을 표시하고 첫 사용자 타격 이후 Web Audio 접근 cue와 충격음을 재생한다. 낚시는 공용 `createFishingCaptureProof()`로 성공/실패 frame의 client elapsed, 불변 입력, 100ms 간격+최종 그물·물고기·게이지 궤적을 만들어 `miniGameResult.fishingProof`에 넣는다. 위험 회피·단조 결과는 기존 session/token만 보내며, 모든 최종 성공 권한은 서버에 있다.
+`components/minigame/MiniGameOverlay`는 서버 `miniGameStart`를 전체 화면 overlay로 렌더링한다. 준비 뒤 키보드와 pointer 조이스틱의 축 변경은 `miniGameInput`, Space·Enter·터치 타격은 `miniGameAction`으로 즉시 전송한다. 단조는 난이도·원 정확도·보정 품질을 표시하고 첫 사용자 타격 이후 Web Audio 접근 cue와 충격음을 재생한다. 낚시는 공용 `createFishingCaptureProof()`로 성공/실패 frame의 client elapsed, 불변 입력, 100ms 간격+최종 그물·물고기·게이지 궤적을 만들어 `miniGameResult.fishingProof`에 넣는다. 가마솥 추적은 768×768 WebP 배경 위 4.5~6 반경 목표를 최초 primary pointerdown한 순간에만 `miniGameReady`를 보내고, 최초 down을 보존한 20ms 절대 pointer trace와 100ms 목표·pointer·게이지 궤적을 `createAlchemyTrackingProof()`로 만들어 `miniGameResult.alchemyTrackingProof`에 넣는다. 위험 회피·단조 결과는 기존 session/token만 보내며, proof의 궤적·경과 시간·최종 성공 권한은 서버 재생 검증에 있다.
 
 ## 채팅 UI API
 

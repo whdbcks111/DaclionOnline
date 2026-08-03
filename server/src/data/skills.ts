@@ -14,7 +14,8 @@ import {
     sendBotMessageToUsers,
     sendNotificationToUsers,
 } from '../modules/message.js';
-import { getOnlinePlayerUserIdsAtLocation } from '../modules/playerRegistry.js';
+import { getOnlinePlayer, getOnlinePlayerUserIdsAtLocation } from '../modules/playerRegistry.js';
+import { partyManager } from '../modules/party.js';
 import { chat } from '../utils/chatBuilder.js';
 import { GameTags } from '../../../shared/tags.js';
 import type { TagId } from '../../../shared/tags.js';
@@ -516,7 +517,7 @@ function applyStealth(target: import('../models/Entity.js').default, id: string,
 
 const JOBS = {
     warrior: 'career:warrior', archer: 'career:archer', assassin: 'career:assassin', mage: 'career:mage',
-    blacksmith: 'career:blacksmith',
+    blacksmith: 'career:blacksmith', cleric: 'career:cleric',
 } as const;
 
 function jobRequirement(jobId: string, slot?: JobSlotType) { return { anyOf: [jobId], slot }; }
@@ -626,6 +627,18 @@ defineJobPassive({
     modifiers: [
         { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.07, label: '마법력 증가', display: '+7%' },
         { attribute: AttributeType.MENTALITY_REGEN.key, op: 'add', value: 1.5, label: '정신력 재생 증가', display: '+1.5/초' },
+    ],
+});
+
+defineJobPassive({
+    id: 'cleric_devotion',
+    name: '새벽의 신심',
+    jobId: JOBS.cleric,
+    icon: 'jobs/cleric',
+    description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.magicDef}} 마법 저항력이 [color=$magic]{{magicDef}}[/color] 증가합니다.',
+    modifiers: [
+        { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.06, label: '마법력 증가', display: '+6%' },
+        { attribute: AttributeType.MAGIC_DEF.key, op: 'multiply', value: 1.08, label: '마법 저항력 증가', display: '+8%' },
     ],
 });
 
@@ -808,6 +821,92 @@ const elitePassives = [
 ] as const;
 
 for (const passive of elitePassives) defineJobPassive(passive);
+
+// TODO(art): 성직자 계열 전용 스킬 아트 제작 전까지 각 메인 계보의 기존 직업 아이콘을 재사용한다.
+const clericElitePassives = [
+    {
+        id: 'vanguard_mastery', name: '전열 지휘', jobId: 'career:vanguard', icon: 'jobs/warrior',
+        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.maxLife}} 최대 생명력이 [color=green]{{maxLife}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.1, label: '공격력 증가', display: '+10%' },
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.08, label: '최대 생명력 증가', display: '+8%' },
+        ],
+    },
+    {
+        id: 'pathfinder_mastery', name: '개척자의 시야', jobId: 'career:pathfinder', icon: 'jobs/archer',
+        description: '{{icon.atk}} 공격력이 [color=orange]{{atk}}[/color], {{icon.projectileAcceleration}} 투사체 가속이 [color=cyan]{{projectileAcceleration}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.1, label: '공격력 증가', display: '+10%' },
+            { attribute: AttributeType.PROJECTILE_ACCELERATION.key, op: 'multiply', value: 1.1, label: '투사체 가속 증가', display: '+10%' },
+        ],
+    },
+    {
+        id: 'blade_dancer_mastery', name: '검무의 호흡', jobId: 'career:blade_dancer', icon: 'jobs/assassin',
+        description: '{{icon.speed}} 이동속도가 [color=cyan]{{speed}}[/color], {{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1.09, label: '이동속도 증가', display: '+9%' },
+            { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.2, label: '치명타 피해 증가', display: '+20%p' },
+        ],
+    },
+    {
+        id: 'alchemist_mastery', name: '연성 순환', jobId: 'career:alchemist', icon: 'jobs/mage',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.mentalityRegen}} 정신력 재생이 [color=$magic]{{mentalityRegen}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.11, label: '마법력 증가', display: '+11%' },
+            { attribute: AttributeType.MENTALITY_REGEN.key, op: 'add', value: 2, label: '정신력 재생 증가', display: '+2/초' },
+        ],
+    },
+    {
+        id: 'master_craftsman_mastery', name: '명장의 안목', jobId: 'career:master_craftsman', icon: 'items/iron_pickaxe',
+        description: '{{icon.forgingPrecision}} 제련 정밀도가 [color=gold]{{forgingPrecision}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.FORGING_PRECISION.key, op: 'add', value: 0.04, label: '제련 정밀도 증가', display: '+4%p' },
+            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.1, label: '방어력 증가', display: '+10%' },
+        ],
+    },
+    {
+        id: 'saint_knight_mastery', name: '성역의 갑주', jobId: 'career:saint_knight', icon: 'jobs/cleric',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.maxLife}} 최대 생명력이 [color=green]{{maxLife}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.1, label: '마법력 증가', display: '+10%' },
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.1, label: '최대 생명력 증가', display: '+10%' },
+        ],
+    },
+    {
+        id: 'dawn_ranger_mastery', name: '여명의 시야', jobId: 'career:dawn_ranger', icon: 'jobs/cleric',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.projectileAcceleration}} 투사체 가속이 [color=cyan]{{projectileAcceleration}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.1, label: '마법력 증가', display: '+10%' },
+            { attribute: AttributeType.PROJECTILE_ACCELERATION.key, op: 'multiply', value: 1.1, label: '투사체 가속 증가', display: '+10%' },
+        ],
+    },
+    {
+        id: 'light_judicator_mastery', name: '심판의 서약', jobId: 'career:light_judicator', icon: 'jobs/cleric',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.critDmg}} 치명타 피해가 [color=orange]{{critDmg}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.1, label: '마법력 증가', display: '+10%' },
+            { attribute: AttributeType.CRIT_DMG.key, op: 'add', value: 0.18, label: '치명타 피해 증가', display: '+18%p' },
+        ],
+    },
+    {
+        id: 'priest_of_light_mastery', name: '광휘의 기도', jobId: 'career:priest_of_light', icon: 'jobs/cleric',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.mentalityRegen}} 정신력 재생이 [color=$magic]{{mentalityRegen}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.12, label: '마법력 증가', display: '+12%' },
+            { attribute: AttributeType.MENTALITY_REGEN.key, op: 'add', value: 2.5, label: '정신력 재생 증가', display: '+2.5/초' },
+        ],
+    },
+    {
+        id: 'relic_keeper_mastery', name: '성물 수호', jobId: 'career:relic_keeper', icon: 'jobs/cleric',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.1, label: '마법력 증가', display: '+10%' },
+            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.1, label: '방어력 증가', display: '+10%' },
+        ],
+    },
+] as const;
+
+for (const passive of clericElitePassives) defineJobPassive(passive);
 
 const statAwakenings = [
     {
@@ -1717,6 +1816,144 @@ defineSkill({
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC],
 });
 
+// TODO(art): 성직자 전용 아이콘·시전 배너 제작 전까지 마력탄/마력 보호막 아트를 명시적으로 재사용한다.
+defineSkill({
+    id: 'radiant_bolt', name: '광휘탄', icon: 'skills/magic_bolt', activationHeader: 'magic_bolt', maxLevel: 5,
+    descriptionTemplate: `빛을 응축한 탄환을 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 11[/color]',
+    activationConditionTemplate: targetActivationGuide(), activationMessage: '광휘탄!', baseMetadata: null,
+    calculatedFields: {
+        damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 105, 8),
+        projectileTravelTime: context => projectileTravelTimeTooltip(context, 'magic_bolt', true),
+    },
+    balance: {
+        role: SkillBalanceRole.DAMAGE,
+        damageType: 'magic',
+        effectTags: [GameTags.PROPERTY_LIGHT],
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE)
+            * percentByLevel(context.skill.level, 105, 8) / 100,
+        calculateEvasionAttackSpeed: context => projectileEvasionAttackSpeed(context, 'magic_bolt', true),
+        calculateManaCost: () => 11,
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 4.5, 0.2, 3.7),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_MAGIC, MAGIC_SHARED_COOLDOWN_SECONDS),
+    jobRequirement: jobRequirement(JOBS.cleric),
+    canActivate: simpleCheck(11),
+    onStart: context => {
+        spend(context, 11);
+        projectileAttack(context, 'magic_bolt', percentByLevel(context.skill.level, 105, 8) / 100, [GameTags.PROPERTY_LIGHT]);
+    },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC, GameTags.PROPERTY_LIGHT],
+});
+
+function sanctuaryAegisAmount(context: SkillContext): number {
+    return context.owner.attribute.get(AttributeType.MAGIC_FORCE)
+            * percentByLevel(context.skill.level, 60, 6) / 100
+        + context.owner.attribute.get(AttributeType.MAX_MENTALITY)
+            * percentByLevel(context.skill.level, 10, 1) / 100
+        + context.owner.maxLife * percentByLevel(context.skill.level, 3, 0.5) / 100;
+}
+
+/** 검증된 파티원 목록 안에서만 현재 아군 대상을 우선하고 최대 3명을 고른다. */
+export function selectSanctuaryAegisTargets(
+    owner: Entity,
+    partyMembers: readonly Entity[],
+): readonly Entity[] {
+    const members = partyMembers.filter(member => member.locationId === owner.locationId && !member.isDefeated);
+    const current = owner.currentTarget;
+    const currentAlly = current?.isPlayer && current.playerUserId !== undefined
+        && members.some(member => member.playerUserId === current.playerUserId)
+        ? current
+        : undefined;
+    return [
+        ...(currentAlly ? [currentAlly] : [owner]),
+        ...members
+            .filter(member => member !== currentAlly && member !== owner)
+            .sort((left, right) => left.life / Math.max(1, left.maxLife) - right.life / Math.max(1, right.maxLife)),
+        ...(currentAlly && currentAlly !== owner ? [owner] : []),
+    ].filter((target, index, values) => values.indexOf(target) === index).slice(0, 3);
+}
+
+/** 공격 대상과 분리해 같은 장소의 부상당한 파티원을 생명력 비율 순으로 고른다. */
+export function selectLowestLifePartyTargets(
+    owner: Entity,
+    partyMembers: readonly Entity[],
+): readonly Entity[] {
+    return [owner, ...partyMembers]
+        .filter(member => member.locationId === owner.locationId && !member.isDefeated)
+        .filter((member, index, values) => values.indexOf(member) === index)
+        .sort((left, right) => left.life / Math.max(1, left.maxLife) - right.life / Math.max(1, right.maxLife))
+        .slice(0, 3);
+}
+
+/** partyManager와 온라인 레지스트리의 공개 snapshot만 사용해 파티 대상 후보를 해석한다. */
+function getClericPartyMembers(context: SkillContext): readonly Entity[] {
+    const player = context.player;
+    if (!player) return [context.owner];
+    const party = partyManager.getParty(player);
+    const partyUserIds = party?.memberUserIds ?? [player.userId];
+    const members = partyUserIds.flatMap(userId => {
+        if (userId === player.userId) return [player];
+        const member = getOnlinePlayer(userId);
+        return member ? [member] : [];
+    });
+    return members;
+}
+
+/** 현재 지정한 아군을 우선하는 성역의 가호 대상을 해석한다. */
+export function getSanctuaryAegisTargets(context: SkillContext): readonly Entity[] {
+    return selectSanctuaryAegisTargets(context.owner, getClericPartyMembers(context));
+}
+
+/** 공격 대상과 무관하게 부상당한 아군을 우선하는 축복의 파동 대상을 해석한다. */
+export function getLowestLifeClericPartyTargets(context: SkillContext): readonly Entity[] {
+    return selectLowestLifePartyTargets(context.owner, getClericPartyMembers(context));
+}
+
+defineSkill({
+    id: 'sanctuary_aegis', name: '성역의 가호', icon: 'skills/mana_barrier', activationHeader: 'mana_barrier', maxLevel: 5,
+    descriptionTemplate: '현재 지정한 생존 파티원을 우선해 같은 장소의 아군 최대 3명을 보호합니다. 대상이 없으면 자신에게 적용하며, '
+        + '각 대상은 생명력을 최대치의 [color=green]{{healPercent}}[/color]만큼 회복하고 {{duration}} 동안 '
+        + '{{icon.magicForce}}{{icon.maxMentality}}{{icon.maxLife}} [color=#d9d9d9]{{shieldAmount}}만큼의 피해를 막는 보호막[/color]을 얻습니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 20[/color]',
+    activationConditionTemplate: activationGuide(), activationMessage: '성역의 가호!', baseMetadata: null,
+    activationFeedback: context => buffFeedback(
+        context.skill.name,
+        valueByLevel(context.skill.level, 8, 1),
+        `아군 최대 3명 · 생명력 ${formatNumber(percentByLevel(context.skill.level, 5, 1))}% 회복 · 일반 보호막 ${formatNumber(sanctuaryAegisAmount(context))}`,
+    ),
+    calculatedFields: {
+        healPercent: context => levelValueTooltip(context, '즉시 회복량', 5, 1, '%'),
+        duration: context => levelValueTooltip(context, '보호막 지속시간', 8, 1, '초'),
+        shieldAmount: context => tooltipValue(
+            sanctuaryAegisAmount(context),
+            `마법력 × ${formatNumber(percentByLevel(context.skill.level, 60, 6))}% + 최대 정신력 × ${formatNumber(percentByLevel(context.skill.level, 10, 1))}% + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 3, 0.5))}%`,
+        ),
+    },
+    balance: {
+        role: SkillBalanceRole.DEFENSE,
+        targetCount: 3,
+        calculateManaCost: () => 20,
+        calculateHealing: context => context.owner.maxLife * percentByLevel(context.skill.level, 5, 1) / 100,
+        calculateShield: sanctuaryAegisAmount,
+        calculateEffectDuration: context => valueByLevel(context.skill.level, 8, 1),
+        notes: ['현재 지정한 생존 아군을 우선하며 같은 장소의 같은 파티원만 최대 3명까지 적용합니다.'],
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 24, 1, 20),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_MAGIC, MAGIC_SHARED_COOLDOWN_SECONDS),
+    jobRequirement: jobRequirement(JOBS.cleric),
+    canActivate: simpleCheck(20, false),
+    onStart: context => {
+        spend(context, 20);
+        const duration = valueByLevel(context.skill.level, 8, 1);
+        for (const target of getSanctuaryAegisTargets(context)) {
+            target.heal(target.maxLife * percentByLevel(context.skill.level, 5, 1) / 100, context.owner);
+            target.setShield('skill:sanctuary_aegis', sanctuaryAegisAmount(context), ShieldType.GENERAL, duration, context.owner);
+        }
+    },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC, GameTags.PROPERTY_LIGHT],
+});
+
 defineSkill({
     id: 'elemental_bind', name: '원소 속박', icon: 'skills/elemental_bind', maxLevel: 5,
     descriptionTemplate: `얼음 마력을 구체로 응축해 대상에게 발사합니다. {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입히고, 적중한 대상을 {{bindDuration}} 동안 속박해 공격·스킬·이동·장소 이동을 막습니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
@@ -1857,6 +2094,7 @@ interface GrowthTechniqueDefinition {
     manaCost: number;
     cooldown: number;
     jobId?: string;
+    jobSlot?: JobSlotType;
     groupTag?: TagId;
     unlockLevel?: number;
     weaponDescription?: string;
@@ -2054,6 +2292,17 @@ const lateCareerPassives: readonly LateCareerPassiveDefinition[] = [
             { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.03, label: '방어력 증가', display: '+3%' },
             { attribute: AttributeType.MAGIC_DEF.key, op: 'multiply', value: 1.03, label: '마법 저항력 증가', display: '+3%' },
             { attribute: AttributeType.FORGING_PRECISION.key, op: 'add', value: 0.03, label: '제련 정밀도 증가', display: '+3%p' },
+        ],
+    },
+    {
+        id: 'unfading_devotion',
+        name: '불멸의 신심',
+        jobId: JOBS.cleric,
+        icon: 'skills/mana_barrier',
+        description: '{{icon.magicForce}} 마법력과 {{icon.maxLife}} 최대 생명력이 각각 [color=$magic]{{magicForce}}[/color], [color=green]{{maxLife}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.04, label: '마법력 증가', display: '+4%' },
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.04, label: '최대 생명력 증가', display: '+4%' },
         ],
     },
 ];
@@ -2411,6 +2660,117 @@ defineSkill({
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ASSASSIN],
 });
 
+const DAWN_COVENANT_FORMULA = Object.freeze({
+    healingMagicBase: 80,
+    healingMagicPerLevel: 8,
+    healingLifeBase: 7,
+    healingLifePerLevel: 0.75,
+    shieldMagicBase: 115,
+    shieldMagicPerLevel: 10,
+    shieldMentalityBase: 12,
+    shieldMentalityPerLevel: 1,
+    shieldLifeBase: 6,
+    shieldLifePerLevel: 0.75,
+});
+
+function dawnCovenantHealing(context: SkillContext): number {
+    return context.owner.attribute.get(AttributeType.MAGIC_FORCE)
+            * percentByLevel(
+                context.skill.level,
+                DAWN_COVENANT_FORMULA.healingMagicBase,
+                DAWN_COVENANT_FORMULA.healingMagicPerLevel,
+            ) / 100
+        + context.owner.maxLife * percentByLevel(
+            context.skill.level,
+            DAWN_COVENANT_FORMULA.healingLifeBase,
+            DAWN_COVENANT_FORMULA.healingLifePerLevel,
+        ) / 100;
+}
+
+function dawnCovenantShield(context: SkillContext): number {
+    return context.owner.attribute.get(AttributeType.MAGIC_FORCE)
+            * percentByLevel(
+                context.skill.level,
+                DAWN_COVENANT_FORMULA.shieldMagicBase,
+                DAWN_COVENANT_FORMULA.shieldMagicPerLevel,
+            ) / 100
+        + context.owner.maxMentality * percentByLevel(
+            context.skill.level,
+            DAWN_COVENANT_FORMULA.shieldMentalityBase,
+            DAWN_COVENANT_FORMULA.shieldMentalityPerLevel,
+        ) / 100
+        + context.owner.maxLife * percentByLevel(
+            context.skill.level,
+            DAWN_COVENANT_FORMULA.shieldLifeBase,
+            DAWN_COVENANT_FORMULA.shieldLifePerLevel,
+        ) / 100;
+}
+
+// TODO(art): 성직자 Lv.320 역할기 전용 아이콘·시전 배너 제작 전까지 마력 보호막 fallback을 재사용한다.
+defineSkill({
+    id: 'dawn_covenant',
+    name: '여명의 서약',
+    icon: 'skills/mana_barrier',
+    activationHeader: 'mana_barrier',
+    maxLevel: 5,
+    unlockLevel: LATE_TACTICAL_UNLOCK_LEVEL,
+    descriptionTemplate: '같은 장소의 생존 파티원 최대 3명과 여명의 서약을 맺습니다. 현재 지정한 파티원을 우선하며, '
+        + '각 대상의 생명력을 {{icon.magicForce}}{{icon.maxLife}} [color=green]{{healing}}[/color] 회복하고 {{duration}} 동안 '
+        + '{{icon.magicForce}}{{icon.maxMentality}}{{icon.maxLife}} [color=#d9d9d9]{{shield}}[/color]만큼의 피해를 막는 일반 보호막을 부여합니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 48[/color]',
+    activationConditionTemplate: activationGuide(),
+    activationMessage: '여명의 서약!',
+    baseMetadata: null,
+    activationFeedback: context => buffFeedback(
+        context.skill.name,
+        valueByLevel(context.skill.level, 10, 1),
+        `아군 최대 3명 · 생명력 ${formatNumber(dawnCovenantHealing(context))} 회복 · 일반 보호막 ${formatNumber(dawnCovenantShield(context))}`,
+    ),
+    calculatedFields: {
+        healing: context => tooltipValue(
+            dawnCovenantHealing(context),
+            `마법력 × ${formatNumber(percentByLevel(context.skill.level, DAWN_COVENANT_FORMULA.healingMagicBase, DAWN_COVENANT_FORMULA.healingMagicPerLevel))}%`
+                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, DAWN_COVENANT_FORMULA.healingLifeBase, DAWN_COVENANT_FORMULA.healingLifePerLevel))}%`,
+        ),
+        shield: context => tooltipValue(
+            dawnCovenantShield(context),
+            `마법력 × ${formatNumber(percentByLevel(context.skill.level, DAWN_COVENANT_FORMULA.shieldMagicBase, DAWN_COVENANT_FORMULA.shieldMagicPerLevel))}%`
+                + ` + 최대 정신력 × ${formatNumber(percentByLevel(context.skill.level, DAWN_COVENANT_FORMULA.shieldMentalityBase, DAWN_COVENANT_FORMULA.shieldMentalityPerLevel))}%`
+                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, DAWN_COVENANT_FORMULA.shieldLifeBase, DAWN_COVENANT_FORMULA.shieldLifePerLevel))}%`,
+        ),
+        duration: context => levelValueTooltip(context, '보호막 지속시간', 10, 1, '초'),
+    },
+    balance: {
+        role: SkillBalanceRole.SUPPORT,
+        targetCount: 3,
+        calculateManaCost: () => 48,
+        calculateHealing: dawnCovenantHealing,
+        calculateShield: dawnCovenantShield,
+        calculateEffectDuration: context => valueByLevel(context.skill.level, 10, 1),
+        notes: ['현재 지정한 생존 아군을 우선하며 같은 장소의 같은 파티원만 최대 3명까지 적용합니다.'],
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 24, 1, 20),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_MAGIC, MAGIC_SHARED_COOLDOWN_SECONDS),
+    autoAcquire: careerLevelAutoAcquire(JOBS.cleric, LATE_TACTICAL_UNLOCK_LEVEL, JobSlotType.MAIN),
+    jobRequirement: mainJobRequirement(JOBS.cleric),
+    canActivate: simpleCheck(48, false),
+    onStart: context => {
+        spend(context, 48);
+        const duration = valueByLevel(context.skill.level, 10, 1);
+        for (const target of getSanctuaryAegisTargets(context)) {
+            target.heal(dawnCovenantHealing(context), context.owner);
+            target.setShield(
+                'skill:dawn_covenant',
+                dawnCovenantShield(context),
+                ShieldType.GENERAL,
+                duration,
+                context.owner,
+            );
+        }
+    },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC, GameTags.PROPERTY_LIGHT],
+});
+
 const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     {
         id: 'fracture_slash', name: '파쇄 베기', icon: 'skills/steel_slash', activationHeader: 'steel_slash',
@@ -2478,7 +2838,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     },
     {
         id: 'flame_wave', name: '홍염 파동', icon: 'skills/fireball', activationHeader: 'fireball',
-        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 170, perLevelPercent: 11,
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 95, perLevelPercent: 6,
         manaCost: 32, cooldown: 12, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 50,
         projectile: 'basic_magic_orb', projectileName: '홍염 파동', propertyTag: GameTags.PROPERTY_FIRE,
         statusEffect: StatusEffectType.FIRE, statusLabel: '화염', statusDuration: 8, statusDurationPerLevel: 1,
@@ -2811,6 +3171,56 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         penetration: { attribute: AttributeType.ARMOR_PEN, base: 64, perLevel: 11 },
         descriptionIntro: '하늘의 별을 거대한 모루로 상상해 대상의 결함점 위로 그대로 떨어뜨립니다.',
     },
+    // TODO(art): 성직자 성장기 전용 128×128 아이콘·256×64 시전 배너 제작 전까지 기존 빛·마법 기술 fallback을 재사용한다.
+    {
+        id: 'dawn_lance', name: '여명창', icon: 'skills/mana_lance', activationHeader: 'mana_lance',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 170, perLevelPercent: 11,
+        manaCost: 22, cooldown: 8, jobId: JOBS.cleric, jobSlot: JobSlotType.MAIN,
+        groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 30,
+        projectile: 'magic_bolt', projectileName: '여명창', propertyTag: GameTags.PROPERTY_LIGHT,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 18, perLevel: 4 },
+        descriptionIntro: '새벽의 첫 빛을 마력의 창으로 압축해 대상에게 발사합니다.',
+    },
+    {
+        id: 'purifying_brand', name: '정화의 낙인', icon: 'skills/sanctum_judgment', activationHeader: 'sanctum_judgment',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 135, perLevelPercent: 9,
+        manaCost: 38, cooldown: 9, jobId: JOBS.cleric, jobSlot: JobSlotType.MAIN,
+        groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 75,
+        projectile: 'magic_bolt', projectileName: '정화의 낙인', propertyTag: GameTags.PROPERTY_HOLY,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 28, perLevel: 6 },
+        statusEffect: LegacyStatusEffects.MAGIC_DEFENSE_REDUCTION, statusLabel: '마법 저항력 감소',
+        statusDuration: 6, statusDurationPerLevel: 0.25,
+        descriptionIntro: '불순한 마력을 드러내는 성스러운 낙인을 대상에게 새깁니다.',
+    },
+    {
+        id: 'halo_burst', name: '광륜 폭발', icon: 'skills/primordial_heart_pulse', activationHeader: 'primordial_heart_pulse',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 170, perLevelPercent: 11,
+        manaCost: 48, cooldown: 13, jobId: JOBS.cleric, jobSlot: JobSlotType.MAIN,
+        groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 100,
+        propertyTag: GameTags.PROPERTY_LIGHT, unavoidable: true, shieldPercent: 8,
+        descriptionIntro: '머리 위의 광륜을 순간적으로 확장해 지정한 대상을 빛으로 태우고 남은 잔광으로 몸을 보호합니다.',
+    },
+    {
+        id: 'radiant_judgment', name: '광휘 심판', icon: 'skills/photon_lance', activationHeader: 'photon_lance',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 210, perLevelPercent: 14,
+        manaCost: 58, cooldown: 15, jobId: JOBS.cleric, jobSlot: JobSlotType.MAIN,
+        groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 140,
+        projectile: 'magic_bolt', projectileName: '광휘 심판', propertyTag: GameTags.PROPERTY_LIGHT,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 45, perLevel: 8 },
+        statusEffect: LegacyStatusEffects.MAGIC_DEFENSE_REDUCTION, statusLabel: '마법 저항력 감소',
+        statusDuration: 8, statusDurationPerLevel: 0.5,
+        descriptionIntro: '모아 둔 기도를 눈부신 심판의 빛으로 바꾸어 대상의 마력 방벽을 꿰뚫습니다.',
+    },
+    {
+        id: 'seraphic_descent', name: '성익 강림', icon: 'skills/primordial_sanctuary', activationHeader: 'primordial_sanctuary',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 675, perLevelPercent: 42,
+        manaCost: 76, cooldown: 18, jobId: JOBS.cleric, jobSlot: JobSlotType.MAIN,
+        groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 180,
+        projectile: 'magic_bolt', projectileName: '성익의 빛', propertyTag: GameTags.PROPERTY_HOLY,
+        unavoidable: true, penetration: { attribute: AttributeType.MAGIC_PEN, base: 62, perLevel: 11 },
+        shieldPercent: 10,
+        descriptionIntro: '거대한 빛의 날개를 펼쳐 피할 수 없는 성광을 내리꽂고 남은 신성력으로 방벽을 세웁니다.',
+    },
     {
         id: 'blazing_spear', name: '작열창', icon: 'affinities/fire', activationHeader: 'fireball',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 240, perLevelPercent: 15,
@@ -3126,8 +3536,8 @@ function growthTechniqueDescription(technique: GrowthTechniqueDefinition): strin
 for (const technique of growthTechniques) defineSkill({
     id: technique.id,
     name: technique.name,
-    icon: `skills/${technique.id}`,
-    activationHeader: technique.id,
+    icon: technique.icon,
+    activationHeader: technique.activationHeader,
     maxLevel: 5,
     unlockLevel: technique.unlockLevel,
     descriptionTemplate: growthTechniqueDescription(technique),
@@ -3201,16 +3611,17 @@ for (const technique of growthTechniques) defineSkill({
                 technique.shieldPercent!,
                 technique.groupTag === GameTags.SKILL_GROUP_MAGIC,
             ) : undefined,
+        calculateEffectDuration: technique.shieldPercent ? () => 8 : undefined,
         notes: technique.statusEffect ? [`${technique.statusLabel}의 전술 가치는 직접 피해와 분리합니다.`] : undefined,
     },
     calculateMaxCooldown: () => technique.cooldown,
     sharedCooldowns: technique.groupTag
         ? combatSharedCooldowns(technique.groupTag, technique.propertyTag) : undefined,
-    jobRequirement: technique.jobId ? jobRequirement(technique.jobId) : undefined,
+    jobRequirement: technique.jobId ? jobRequirement(technique.jobId, technique.jobSlot) : undefined,
     autoAcquire: technique.jobId && technique.unlockLevel
         ? technique.autoAcquireProgress
             ? careerMasteryAutoAcquire(technique.jobId, technique.unlockLevel, technique.autoAcquireProgress)
-            : careerLevelAutoAcquire(technique.jobId, technique.unlockLevel)
+            : careerLevelAutoAcquire(technique.jobId, technique.unlockLevel, technique.jobSlot)
         : undefined,
     ...(technique.weaponDescription && technique.weaponTags?.length ? {
         weaponRequirement: weaponRequirement(technique.weaponDescription, ...technique.weaponTags),
@@ -3302,6 +3713,99 @@ for (const technique of growthTechniques) defineSkill({
     ],
 });
 
+const BENEDICTION_WAVE_FORMULA = Object.freeze({
+    damageBase: 108,
+    damagePerLevel: 7,
+    healingMagicBase: 55,
+    healingMagicPerLevel: 5,
+    healingLifeBase: 3,
+    healingLifePerLevel: 0.5,
+});
+
+function benedictionWaveDamage(context: SkillContext): number {
+    return context.owner.attribute.get(AttributeType.MAGIC_FORCE)
+        * percentByLevel(
+            context.skill.level,
+            BENEDICTION_WAVE_FORMULA.damageBase,
+            BENEDICTION_WAVE_FORMULA.damagePerLevel,
+        ) / 100;
+}
+
+function benedictionWaveHealing(context: SkillContext): number {
+    return context.owner.attribute.get(AttributeType.MAGIC_FORCE)
+            * percentByLevel(
+                context.skill.level,
+                BENEDICTION_WAVE_FORMULA.healingMagicBase,
+                BENEDICTION_WAVE_FORMULA.healingMagicPerLevel,
+            ) / 100
+        + context.owner.maxLife * percentByLevel(
+            context.skill.level,
+            BENEDICTION_WAVE_FORMULA.healingLifeBase,
+            BENEDICTION_WAVE_FORMULA.healingLifePerLevel,
+        ) / 100;
+}
+
+// TODO(art): 성직자 Lv.50 성장기 전용 아이콘·시전 배너 제작 전까지 마나 원천 fallback을 재사용한다.
+defineSkill({
+    id: 'benediction_wave',
+    name: '축복의 파동',
+    icon: 'skills/mana_spring',
+    activationHeader: 'mana_barrier',
+    maxLevel: 5,
+    unlockLevel: 50,
+    descriptionTemplate: `지정한 대상에게 빛의 파동을 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. `
+        + `동시에 같은 장소의 생존 파티원 중 생명력 비율이 낮은 아군 최대 3명의 생명력을 `
+        + `{{icon.magicForce}}{{icon.maxLife}} [color=green]{{healing}}[/color]만큼 회복합니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 30[/color]',
+    activationConditionTemplate: targetActivationGuide(),
+    activationMessage: '축복의 파동!',
+    baseMetadata: null,
+    calculatedFields: {
+        damage: context => tooltipValue(
+            benedictionWaveDamage(context),
+            `마법력 × ${formatNumber(percentByLevel(context.skill.level, BENEDICTION_WAVE_FORMULA.damageBase, BENEDICTION_WAVE_FORMULA.damagePerLevel))}%`,
+        ),
+        healing: context => tooltipValue(
+            benedictionWaveHealing(context),
+            `마법력 × ${formatNumber(percentByLevel(context.skill.level, BENEDICTION_WAVE_FORMULA.healingMagicBase, BENEDICTION_WAVE_FORMULA.healingMagicPerLevel))}%`
+                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, BENEDICTION_WAVE_FORMULA.healingLifeBase, BENEDICTION_WAVE_FORMULA.healingLifePerLevel))}%`,
+        ),
+        projectileTravelTime: context => projectileTravelTimeTooltip(context, 'magic_bolt', true),
+    },
+    balance: {
+        role: SkillBalanceRole.SUPPORT,
+        damageType: 'magic',
+        effectTags: [GameTags.PROPERTY_LIGHT],
+        calculateDamage: benedictionWaveDamage,
+        calculateEvasionAttackSpeed: context => projectileEvasionAttackSpeed(context, 'magic_bolt', true),
+        calculateManaCost: () => 30,
+        calculateHealing: benedictionWaveHealing,
+        notes: ['피해는 지정한 적 1명에게, 회복은 같은 장소의 같은 파티원 중 생명력 비율이 낮은 최대 3명에게 적용합니다.'],
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 12, 0.5, 10),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_MAGIC, MAGIC_SHARED_COOLDOWN_SECONDS),
+    jobRequirement: mainJobRequirement(JOBS.cleric),
+    autoAcquire: careerLevelAutoAcquire(JOBS.cleric, 50, JobSlotType.MAIN),
+    canActivate: simpleCheck(30),
+    onStart: context => {
+        spend(context, 30);
+        projectileAttack(
+            context,
+            'magic_bolt',
+            percentByLevel(
+                context.skill.level,
+                BENEDICTION_WAVE_FORMULA.damageBase,
+                BENEDICTION_WAVE_FORMULA.damagePerLevel,
+            ) / 100,
+            [GameTags.PROPERTY_LIGHT],
+        );
+        for (const target of getLowestLifeClericPartyTargets(context)) {
+            target.heal(benedictionWaveHealing(context), context.owner);
+        }
+    },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC, GameTags.PROPERTY_LIGHT],
+});
+
 function temperedAegisAmount(context: SkillContext): number {
     const lifePercent = percentByLevel(context.skill.level, 12, 1.5);
     const attackPercent = percentByLevel(context.skill.level, 45, 5);
@@ -3337,6 +3841,7 @@ defineSkill({
         role: SkillBalanceRole.DEFENSE,
         calculateManaCost: () => 26,
         calculateShield: temperedAegisAmount,
+        calculateEffectDuration: context => valueByLevel(context.skill.level, 10, 1),
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 22, 1, 18),
     sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_BLACKSMITH),
@@ -3388,6 +3893,7 @@ defineSkill({
         role: SkillBalanceRole.DEFENSE,
         calculateManaCost: () => 24,
         calculateShield: silverScaleVeilAmount,
+        calculateEffectDuration: context => valueByLevel(context.skill.level, 8, 1),
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 30, 2, 22),
     canActivate: simpleCheck(24, false),
@@ -3499,6 +4005,9 @@ interface EliteTechniqueDefinition {
     onHitDescription?: string;
     onHit?: (target: Entity, level: number, source: Entity) => void;
     shieldPercent?: number;
+    /** 전용 아트가 준비되지 않은 확장 직업은 기존 아이콘·배너를 명시적으로 재사용한다. */
+    reuseDeclaredArt?: boolean;
+    activationHeader?: string;
     /** 기본 물리 3배·마법 4.6배와 다른 엘리트 티어 보정이 필요한 기술만 명시한다. */
     tierDamageMultiplier?: number;
 }
@@ -3692,6 +4201,96 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
         projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_FIRE, shieldPercent: 10,
         descriptionIntro: '용융한 금속과 마력을 탄환으로 빚어 대상에게 발사합니다.',
     },
+    // TODO(art): 성직자 조합 전용 아트 제작 전까지 각 메인 계보의 기존 아이콘·시전 배너를 재사용한다.
+    {
+        id: 'vanguard_technique', name: '선봉 돌파', jobId: 'career:vanguard', icon: 'jobs/warrior',
+        reuseDeclaredArt: true, activationHeader: 'steel_slash',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 255, perLevelPercent: 15,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 2.5, secondaryPerLevelPercent: 0.2,
+        manaCost: 28, cooldown: 13, weaponDescription: '검 또는 도끼를 장착해야 합니다.',
+        weaponTags: [GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE], unavoidable: true,
+        descriptionIntro: '전열의 가장 앞에서 적의 방어선을 단숨에 돌파합니다.',
+    },
+    {
+        id: 'pathfinder_technique', name: '개척 사격', jobId: 'career:pathfinder', icon: 'jobs/archer',
+        reuseDeclaredArt: true, activationHeader: 'arcane_arrow',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 225, perLevelPercent: 14,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 50, secondaryPerLevelPercent: 4,
+        manaCost: 27, cooldown: 11, weaponDescription: '활을 장착해야 합니다.', weaponTags: [GameTags.WEAPON_BOW],
+        projectile: 'basic_arrow', unavoidable: true,
+        descriptionIntro: '아직 길이 나지 않은 전장을 가로질러 표적까지 곧게 꿰뚫는 화살을 발사합니다.',
+    },
+    {
+        id: 'blade_dancer_technique', name: '유영 난무', jobId: 'career:blade_dancer', icon: 'jobs/assassin',
+        reuseDeclaredArt: true, activationHeader: 'ambush',
+        damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
+        basePercent: 150, perLevelPercent: 10,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 125, secondaryPerLevelPercent: 8,
+        manaCost: 27, cooldown: 12, guaranteedCritical: true,
+        descriptionIntro: '흐르는 검무로 대상의 사각을 연달아 베어 냅니다.',
+    },
+    {
+        id: 'alchemist_technique', name: '변성 폭발', jobId: 'career:alchemist', icon: 'jobs/mage',
+        reuseDeclaredArt: true, activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 245, perLevelPercent: 15,
+        secondaryAttribute: AttributeType.MAX_MENTALITY, secondaryBasePercent: 2.2, secondaryPerLevelPercent: 0.2,
+        manaCost: 32, cooldown: 13, projectile: 'magic_bolt', propertyTag: GameTags.PROPERTY_POISON,
+        descriptionIntro: '불안정하게 연성한 촉매를 마력탄에 실어 대상 곁에서 폭발시킵니다.',
+        onHitDescription: '적중한 대상에게 같은 레벨의 맹독을 5초 동안 부여합니다.',
+        onHit: (target, level, source) => target.applyStatusEffect(StatusEffectType.DEADLY_POISON, 5, level, source),
+    },
+    {
+        id: 'master_craftsman_technique', name: '명장의 파쇄', jobId: 'career:master_craftsman', icon: 'items/iron_pickaxe',
+        reuseDeclaredArt: true, activationHeader: 'steel_slash',
+        damageType: 'physical', attribute: AttributeType.ATK, basePercent: 260, perLevelPercent: 15,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 2, secondaryPerLevelPercent: 0.15,
+        forgingPrecisionBasePercent: 75, forgingPrecisionPerLevelPercent: 7,
+        manaCost: 30, cooldown: 14,
+        descriptionIntro: '소재의 약점을 읽는 명장의 눈으로 무기와 방어가 맞닿는 지점을 파쇄합니다.', propertyTag: GameTags.PROPERTY_METAL,
+    },
+    {
+        id: 'saint_knight_technique', name: '성역 돌진', jobId: 'career:saint_knight', icon: 'jobs/cleric',
+        reuseDeclaredArt: true, activationHeader: 'mana_barrier',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 225, perLevelPercent: 14,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 2.5, secondaryPerLevelPercent: 0.2,
+        manaCost: 31, cooldown: 14, unavoidable: true, shieldPercent: 12,
+        descriptionIntro: '빛의 갑주를 두르고 정면으로 돌진해 적의 전열을 무너뜨립니다.', propertyTag: GameTags.PROPERTY_LIGHT,
+    },
+    {
+        id: 'dawn_ranger_technique', name: '새벽 유성', jobId: 'career:dawn_ranger', icon: 'jobs/cleric',
+        reuseDeclaredArt: true, activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 235, perLevelPercent: 15,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 48, secondaryPerLevelPercent: 4,
+        manaCost: 30, cooldown: 12, projectile: 'magic_bolt', unavoidable: true,
+        descriptionIntro: '새벽빛으로 궤적을 새긴 유도탄을 쏘아 달아나는 표적을 추적합니다.', propertyTag: GameTags.PROPERTY_LIGHT,
+    },
+    {
+        id: 'light_judicator_technique', name: '광휘 집행', jobId: 'career:light_judicator', icon: 'jobs/cleric',
+        reuseDeclaredArt: true, activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 220, perLevelPercent: 14,
+        secondaryAttribute: AttributeType.SPEED, secondaryAttributeScale: MOBILITY_DAMAGE_SCALE,
+        secondaryBasePercent: 45, secondaryPerLevelPercent: 3,
+        manaCost: 30, cooldown: 12, guaranteedCritical: true,
+        descriptionIntro: '숨겨 둔 죄의 흔적을 빛으로 드러내 단 한 번의 판결로 집행합니다.', propertyTag: GameTags.PROPERTY_LIGHT,
+    },
+    {
+        id: 'priest_of_light_technique', name: '찬란한 기도', jobId: 'career:priest_of_light', icon: 'jobs/cleric',
+        reuseDeclaredArt: true, activationHeader: 'magic_bolt',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 270, perLevelPercent: 16,
+        secondaryAttribute: AttributeType.MAX_MENTALITY, secondaryBasePercent: 2.4, secondaryPerLevelPercent: 0.2,
+        manaCost: 34, cooldown: 15, projectile: 'magic_bolt', shieldPercent: 9,
+        descriptionIntro: '오랜 기도로 모은 광휘를 한 점에 내려 대상과 그 주변의 어둠을 태웁니다.', propertyTag: GameTags.PROPERTY_LIGHT,
+    },
+    {
+        id: 'relic_keeper_technique', name: '성물 해방', jobId: 'career:relic_keeper', icon: 'jobs/cleric',
+        reuseDeclaredArt: true, activationHeader: 'mana_barrier',
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 240, perLevelPercent: 15,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 2, secondaryPerLevelPercent: 0.15,
+        manaCost: 32, cooldown: 14, projectile: 'magic_bolt', shieldPercent: 11,
+        descriptionIntro: '봉인된 성물의 힘을 잠시 해방해 빛의 파동을 내보냅니다.', propertyTag: GameTags.PROPERTY_LIGHT,
+    },
 ];
 
 const eliteTechniqueGroupByJobId: Readonly<Record<string, TagId>> = Object.freeze({
@@ -3715,6 +4314,16 @@ const eliteTechniqueGroupByJobId: Readonly<Record<string, TagId>> = Object.freez
     'career:machinist_archer': GameTags.SKILL_GROUP_BLACKSMITH,
     'career:steel_shadow': GameTags.SKILL_GROUP_BLACKSMITH,
     'career:runeforger': GameTags.SKILL_GROUP_BLACKSMITH,
+    'career:vanguard': GameTags.SKILL_GROUP_WARRIOR,
+    'career:pathfinder': GameTags.SKILL_GROUP_ARCHER,
+    'career:blade_dancer': GameTags.SKILL_GROUP_ASSASSIN,
+    'career:alchemist': GameTags.SKILL_GROUP_MAGIC,
+    'career:master_craftsman': GameTags.SKILL_GROUP_BLACKSMITH,
+    'career:saint_knight': GameTags.SKILL_GROUP_MAGIC,
+    'career:dawn_ranger': GameTags.SKILL_GROUP_MAGIC,
+    'career:light_judicator': GameTags.SKILL_GROUP_MAGIC,
+    'career:priest_of_light': GameTags.SKILL_GROUP_MAGIC,
+    'career:relic_keeper': GameTags.SKILL_GROUP_MAGIC,
 });
 
 /**
@@ -3815,7 +4424,8 @@ for (const technique of eliteTechniques) {
     defineSkill({
         id: technique.id,
         name: technique.name,
-        icon: `skills/${technique.id}`,
+        icon: technique.reuseDeclaredArt ? technique.icon : `skills/${technique.id}`,
+        activationHeader: technique.reuseDeclaredArt ? technique.activationHeader : undefined,
         maxLevel: 5,
         descriptionTemplate: eliteTechniqueDescription(technique),
         costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${technique.manaCost}[/color]`,
@@ -3865,6 +4475,7 @@ for (const technique of eliteTechniques) {
                     groupTag === GameTags.SKILL_GROUP_MAGIC,
                 )
                 : undefined,
+            calculateEffectDuration: technique.shieldPercent ? () => 8 : undefined,
             notes: technique.onHit ? ['상태효과의 가치는 대상과 패턴에 따라 달라 직접 피해와 분리합니다.'] : undefined,
         },
         calculateMaxCooldown: () => technique.cooldown,

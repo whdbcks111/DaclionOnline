@@ -1,6 +1,6 @@
 # 퀘스트 시스템
 
-직업 전직소는 메인/서브 슬롯별 전사·궁수·암살자·마법사·대장장이 시험 10개를 같은 QuestData API로 정의한다. 전투 직업 목표는 실제 predicate와 일치하는 `무생물 속성`, `자연 속성`, `생명체 속성`, `불·얼음·독·자연 속성 적 처치`로 표시하며, 대장장이는 `resource:destroyed`를 추적해 메인 5개·서브 10개 광맥 파괴를 요구한다. 수락/보상 조건은 `CareerProfile.canAssign`을 사용하므로 Lv.20/50 제한, 기존 슬롯 보유와 메인·서브 동일 직업 금지를 보고 시점에도 다시 검증한다. 직업 보상은 `QuestReward.custom`에서 `CareerProfile.assign`만 호출한다.
+직업 전직소는 메인/서브 슬롯별 전사·궁수·암살자·마법사·대장장이 시험 10개를 같은 QuestData API로 정의하고, 광장과 바로 연결된 새벽교단 예배당의 교리사제는 성직자 시험 2개만 별도로 제공·보고한다. 전투 직업 목표는 실제 predicate와 일치하는 `무생물 속성`, `자연 속성`, `생명체 속성`, `불·얼음·독·자연 속성 적 처치`로 표시하며, 성직자는 `독·어둠·언데드` 적을 메인 5체·서브 10체 처치하고 대장장이는 `resource:destroyed`를 추적해 같은 수의 광맥 파괴를 요구한다. 모든 전직 NPC는 다른 전직 시험의 `ACTIVE/READY` 상태가 있으면 새 시험을 열지 않는 공용 guard를 사용한다. 수락/보상 조건은 `CareerProfile.canAssign`을 사용하므로 Lv.20/50 제한, 기존 슬롯 보유와 메인·서브 동일 직업 금지를 보고 시점에도 다시 검증한다. 직업 보상은 `QuestReward.custom`에서 `CareerProfile.assign`만 호출한다.
 
 `QuestReward.item`의 표시명은 퀘스트 정의 시점에 아이템 registry가 아직 준비되지 않았더라도 snapshot을 보여줄 때 `getItemData`로 다시 해석한다. 따라서 전직 보상에는 `apprentice_staff` 같은 내부 ID 대신 `견습 마법 지팡이`가 표시된다.
 

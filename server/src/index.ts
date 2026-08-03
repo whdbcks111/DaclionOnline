@@ -15,6 +15,7 @@ import { initPlayer, saveAllPlayers } from './modules/player.js';
 import { initGame } from './modules/game.js';
 import './data/projectiles.js';
 import './data/items.js';
+import './data/alchemy.js';
 import './data/statusEffects.js';
 import './data/monsters.js';
 import './data/bossPatterns.js';

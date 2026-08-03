@@ -25,6 +25,7 @@ import { initPatchNoteCommands } from './patchNotes.js';
 import { initTitleCommands } from './title.js';
 import { initCodexCommands } from './codex.js';
 import { initMailboxCommands } from './mailbox.js';
+import { initAlchemyCommands } from './alchemy.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -54,4 +55,5 @@ export function initAllCommands(): void {
     initTitleCommands();
     initCodexCommands();
     initMailboxCommands();
+    initAlchemyCommands();
 }

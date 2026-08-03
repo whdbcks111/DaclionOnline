@@ -3,19 +3,23 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { createServer } from 'node:http';
 import Attribute, { AttributeType } from './Attribute.js';
+import Entity from './Entity.js';
+import Equipment from './Equipment.js';
 import CareerProfile, { CareerProgressIds } from './Career.js';
 import { getAllJobs, getJob, JobSlotType, JobTier, resolveEliteJob, resolveThirdJob } from './Job.js';
 import { PlayerProgress } from './Progress.js';
 import type Player from './Player.js';
 import '../data/jobs.js';
-import '../data/skills.js';
+import { selectLowestLifePartyTargets, selectSanctuaryAegisTargets } from '../data/skills.js';
 import Skill, { getAllSkillData, getSkillData } from './Skill.js';
-import { getAllQuestData } from './Quest.js';
+import { getAllQuestData, getQuestData } from './Quest.js';
 import '../data/quests.js';
 import '../data/items.js';
 import { getIO, initSocket } from '../modules/socket.js';
 import { clearRecentGameEvents, GameEventIds, getRecentGameEvents } from './GameEvent.js';
 import { GameTags } from '../../../shared/tags.js';
+import { getAllMonsterData } from './Monster.js';
+import '../data/monsters.js';
 
 initSocket(createServer(), 'http://localhost');
 test.after(() => { getIO().close(); });
@@ -48,12 +52,23 @@ function createCareer(level = 200): {
     return { career, player, granted, revoked, getSaveCount: () => saveCount };
 }
 
-test('5개 1차·20개 엘리트·5개 3차 계보가 완전한 마스터 데이터를 가진다', () => {
+class TestClericPartyEntity extends Entity {
+    override readonly name: string;
+    override get isPlayer(): boolean { return true; }
+    override get playerUserId(): number { return this.userId; }
+
+    constructor(readonly userId: number, locationId = 'test_chapel') {
+        super(20, 0, locationId, { maxLife: 100 }, Equipment.createEmpty());
+        this.name = `성직자 파티원 ${userId}`;
+    }
+}
+
+test('6개 1차·30개 ordered 엘리트·기존 5개 3차 계보가 완전한 마스터 데이터를 가진다', () => {
     const firstJobs = getAllJobs().filter(job => job.tier === JobTier.FIRST);
     const eliteJobs = getAllJobs().filter(job => job.tier === JobTier.ELITE);
     const thirdJobs = getAllJobs().filter(job => job.tier === JobTier.THIRD);
-    assert.equal(firstJobs.length, 5);
-    assert.equal(eliteJobs.length, 20);
+    assert.equal(firstJobs.length, 6);
+    assert.equal(eliteJobs.length, 30);
     assert.equal(thirdJobs.length, 5);
     assert.ok(firstJobs.every(job => job.grantedSkills.length >= 3));
     assert.ok(firstJobs.every(job => job.grantedSkills.some(grant =>
@@ -82,7 +97,31 @@ test('5개 1차·20개 엘리트·5개 3차 계보가 완전한 마스터 데이
         assert.equal(banner.readUInt32BE(16), 256, `${skill.id} cast header width`);
         assert.equal(banner.readUInt32BE(20), 64, `${skill.id} cast header height`);
     }
-    assert.equal(getAllQuestData().filter(quest => quest.tags.includes('quest:career')).length, 15);
+    const clericGrowth = new Map([
+        ['dawn_lance', 30],
+        ['benediction_wave', 50],
+        ['purifying_brand', 75],
+        ['halo_burst', 100],
+        ['radiant_judgment', 140],
+        ['seraphic_descent', 180],
+    ] as const);
+    for (const [skillId, unlockLevel] of clericGrowth) {
+        const skill = getSkillData(skillId);
+        assert.equal(skill?.unlockLevel, unlockLevel, skillId);
+        assert.deepEqual(skill?.jobRequirement?.anyOf, ['career:cleric'], skillId);
+        assert.equal(skill?.jobRequirement?.slot, JobSlotType.MAIN, skillId);
+        assert.ok(skill?.tags.includes(GameTags.SKILL_ACTIVE), skillId);
+    }
+    for (const [skillId, unlockLevel] of [
+        ['unfading_devotion', 240],
+        ['dawn_covenant', 320],
+    ] as const) {
+        const skill = getSkillData(skillId);
+        assert.equal(skill?.unlockLevel, unlockLevel, skillId);
+        assert.deepEqual(skill?.jobRequirement?.anyOf, ['career:cleric'], skillId);
+        assert.equal(skill?.jobRequirement?.slot, JobSlotType.MAIN, skillId);
+    }
+    assert.equal(getAllQuestData().filter(quest => quest.tags.includes('quest:career')).length, 17);
     assert.equal(getAllQuestData().filter(quest => quest.tags.includes('career:third')).length, 5);
     const mageTrial = getAllQuestData().find(quest => quest.id === 'career:main_mage_promotion');
     assert.equal(mageTrial?.stages[0].objectives[0].label, '불·얼음·독·자연 속성 적 처치');
@@ -92,8 +131,30 @@ test('5개 1차·20개 엘리트·5개 3차 계보가 완전한 마스터 데이
     assert.ok(blacksmithTrials.every(quest => quest.giverNpcIds.includes('job_master')));
     assert.ok(blacksmithTrials.every(quest => quest.stages[0].objectives[0].eventId === GameEventIds.RESOURCE_DESTROYED));
     assert.ok(blacksmithTrials.find(quest => quest.id.includes(':main_'))?.rewards.some(reward => reward.label === '철 곡괭이 x1'));
+    const clericTrials = getAllQuestData().filter(quest => /^career:(main|sub)_cleric_promotion$/.test(quest.id));
+    assert.equal(clericTrials.length, 2);
+    assert.ok(clericTrials.every(quest => quest.giverNpcIds.length === 1
+        && quest.giverNpcIds[0] === 'cleric_preceptor'));
+    assert.ok(clericTrials.every(quest => quest.turnInNpcIds.length === 1
+        && quest.turnInNpcIds[0] === 'cleric_preceptor'));
+    assert.ok(clericTrials.every(quest => !quest.giverNpcIds.includes('job_master')));
+    assert.ok(clericTrials.every(quest => quest.stages[0].objectives[0].label === '독·어둠·언데드 속성 적 처치'));
+    assert.ok(getAllMonsterData().some(monster => monster.level <= 20
+        && monster.tags.includes(GameTags.PROPERTY_POISON)), 'Lv.20 이하에서 정화 목표를 진행할 수 있어야 한다');
     for (const main of firstJobs) for (const sub of firstJobs) {
         assert.equal(Boolean(resolveEliteJob(main.id, sub.id)), main.id !== sub.id, `${main.id}>${sub.id}`);
+    }
+    assert.equal(resolveEliteJob('career:mage', 'career:cleric')?.id, 'career:alchemist');
+    assert.equal(resolveEliteJob('career:cleric', 'career:warrior')?.id, 'career:saint_knight');
+    assert.equal(resolveEliteJob('career:cleric', 'career:mage')?.id, 'career:priest_of_light');
+    assert.equal(resolveEliteJob('career:cleric', 'career:assassin')?.id, 'career:light_judicator');
+    for (const id of [
+        'vanguard', 'pathfinder', 'blade_dancer', 'alchemist', 'master_craftsman',
+        'saint_knight', 'dawn_ranger', 'light_judicator', 'priest_of_light', 'relic_keeper',
+    ]) {
+        const description = getJob(`career:${id}`)?.description ?? '';
+        assert.ok(description.length >= 20, `${id} identity description`);
+        assert.doesNotMatch(description, /장점을 융합/, `${id} should not use the generic description`);
     }
     const thirdNames = new Map([
         ['career:warrior', '철혈군주'],
@@ -102,16 +163,17 @@ test('5개 1차·20개 엘리트·5개 3차 계보가 완전한 마스터 데이
         ['career:mage', '성계현자'],
         ['career:blacksmith', '신화장인'],
     ]);
-    for (const main of firstJobs) {
-        const third = resolveThirdJob(main.id);
-        assert.equal(third?.name, thirdNames.get(main.id), main.id);
-        assert.deepEqual(third?.parentJobIds, [main.id]);
+    for (const [mainId, thirdName] of thirdNames) {
+        const third = resolveThirdJob(mainId);
+        assert.equal(third?.name, thirdName, mainId);
+        assert.deepEqual(third?.parentJobIds, [mainId]);
         assert.equal(third?.grantedSkills.length, 1);
         assert.equal(getSkillData(third!.grantedSkills[0].skillDataId)?.tags.includes(GameTags.SKILL_PASSIVE), true);
         const png = readFileSync(new URL(`../../../client/public/icons/${third!.icon}.png`, import.meta.url));
         assert.equal(png.readUInt32BE(16), 128);
         assert.equal(png.readUInt32BE(20), 128);
     }
+    assert.equal(resolveThirdJob('career:cleric'), undefined);
     for (const icon of new Set(firstJobs.map(job => job.icon))) {
         const png = readFileSync(new URL(`../../../client/public/icons/${icon}.png`, import.meta.url));
         assert.equal(png.readUInt32BE(16), 128);
@@ -124,6 +186,65 @@ test('5개 1차·20개 엘리트·5개 3차 계보가 완전한 마스터 데이
         assert.equal(png.readUInt32BE(20), 128);
         assert.equal(png[25], 6);
     }
+});
+
+test('성역의 가호는 현재 지정한 같은 장소 파티원을 우선하고 비파티 대상을 제외한 최대 3명만 고른다', () => {
+    const owner = new TestClericPartyEntity(9101);
+    const first = new TestClericPartyEntity(9102);
+    const selected = new TestClericPartyEntity(9103);
+    const third = new TestClericPartyEntity(9104);
+    const outsider = new TestClericPartyEntity(9199);
+    const elsewhere = new TestClericPartyEntity(9105, 'other_location');
+    owner.currentTarget = selected;
+
+    const targets = selectSanctuaryAegisTargets(owner, [owner, first, selected, third, elsewhere]);
+    assert.equal(targets.length, 3);
+    assert.equal(targets[0], selected);
+    assert.ok(!targets.includes(elsewhere));
+    assert.ok(!targets.includes(outsider));
+
+    owner.currentTarget = outsider;
+    assert.equal(selectSanctuaryAegisTargets(owner, [owner, first])[0], owner);
+});
+
+test('축복의 파동은 공격 대상과 분리해 같은 장소의 부상당한 파티원 3명을 우선한다', () => {
+    const owner = new TestClericPartyEntity(9201);
+    const first = new TestClericPartyEntity(9202);
+    const second = new TestClericPartyEntity(9203);
+    const third = new TestClericPartyEntity(9204);
+    const elsewhere = new TestClericPartyEntity(9205, 'other_location');
+    owner.life = 100;
+    first.life = 70;
+    second.life = 20;
+    third.life = 45;
+    elsewhere.life = 1;
+
+    assert.deepEqual(
+        selectLowestLifePartyTargets(owner, [owner, first, second, third, elsewhere]),
+        [second, third, first],
+    );
+});
+
+test('전직 시험 하나가 진행 또는 보고 대기 중이면 세레나와 교단의 다른 시험을 동시에 노출하지 않는다', () => {
+    const activeIds = new Set<string>();
+    const player = {
+        level: 50,
+        career: { canAssign: () => ({ success: true }) },
+        quests: {
+            isActive: (id: string) => activeIds.has(id),
+            canTurnIn: (id: string) => activeIds.has(id),
+        },
+    } as unknown as Player;
+    const warriorTrial = getQuestData('career:main_warrior_promotion')!;
+    const clericTrial = getQuestData('career:main_cleric_promotion')!;
+
+    assert.equal(warriorTrial.isVisible(player), true);
+    assert.equal(clericTrial.isVisible(player), true);
+    activeIds.add(warriorTrial.id);
+    assert.equal(clericTrial.isVisible(player), false);
+    activeIds.clear();
+    activeIds.add(clericTrial.id);
+    assert.equal(warriorTrial.isVisible(player), false);
 });
 
 test('주문·자체 생성 투사체와 무기 비종속 암살 기술은 장착 무기를 요구하지 않는다', () => {
@@ -347,6 +468,7 @@ test('직업 스킬 설명은 현재 수치와 계수 hover를 제공하고 두 
     const { player } = createCareer();
     const skillIds = [
         'warrior_combat_instinct', 'archer_hawkeye', 'assassin_lethal_instinct', 'mage_mana_cycle',
+        'cleric_devotion', 'radiant_bolt', 'sanctuary_aegis',
         'steel_slash', 'battle_rush', 'indomitable', 'arcane_arrow', 'multishot',
         'stunning_shot', 'wind_evasion', 'stealth', 'ambush', 'venom_blade',
         'magic_bolt', 'mana_barrier', 'elemental_bind', 'elemental_insight',

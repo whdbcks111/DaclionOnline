@@ -1494,7 +1494,7 @@ defineItem({
     },
     onUse: null, equipSlot: 'mainHand',
     modifiers: [
-        { attribute: 'magicForce', op: 'add', value: 101, source: '' },
+        { attribute: 'magicForce', op: 'add', value: 107, source: '' },
         { attribute: 'mentalityRegen', op: 'add', value: 4, source: '' },
         { attribute: 'magicPen', op: 'add', value: 12, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.22, source: '' },

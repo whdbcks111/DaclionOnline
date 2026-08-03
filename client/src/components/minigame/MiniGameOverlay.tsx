@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import type {
+  AlchemyTrackingPointerSample,
+  AlchemyTrackingSimulationState,
   FishingSimulationState,
   ForgeRhythmSimulationState,
   MiniGameActionSample,
@@ -8,10 +10,15 @@ import type {
   MiniGameStartData,
 } from '@shared/minigames'
 import {
+  appendAlchemyTrackingPointerSample,
   appendMiniGameInputSample,
   calculateForgeQualityScore,
+  createAlchemyTrackingProof,
   createFishingCaptureProof,
+  getAlchemyTrackingPathPoints,
+  getAlchemyTrackingTargetPosition,
   resolveForgeStrikeTime,
+  simulateAlchemyTracking,
   simulateForgeRhythm,
   simulateHazardDodge,
   simulateFishingCapture,
@@ -44,6 +51,19 @@ const INITIAL_FORGE_STATE: ForgeRhythmSimulationState = {
   perfectCount: 0,
   missCount: 0,
   maxCombo: 0,
+  accuracy: 0,
+  finished: false,
+  success: false,
+}
+
+const INITIAL_ALCHEMY_STATE: AlchemyTrackingSimulationState = {
+  gauge: 0.5,
+  pointerX: 50,
+  pointerY: 50,
+  targetX: 50,
+  targetY: 50,
+  dragging: false,
+  onTarget: false,
   accuracy: 0,
   finished: false,
   success: false,
@@ -96,12 +116,18 @@ export default function MiniGameOverlay() {
   const [state, setState] = useState(INITIAL_STATE)
   const [dodgeState, setDodgeState] = useState(INITIAL_DODGE_STATE)
   const [forgeState, setForgeState] = useState(INITIAL_FORGE_STATE)
+  const [alchemyState, setAlchemyState] = useState(INITIAL_ALCHEMY_STATE)
+  const [alchemyStarted, setAlchemyStarted] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [joystickDirection, setJoystickDirection] = useState({ x: 0, y: 0 })
   const [status, setStatus] = useState('물고기를 채집 영역 안에 유지하세요!')
   const startedAt = useRef(0)
   const inputs = useRef<MiniGameInputSample[]>([{ at: 0, x: 0, y: 0 }])
   const actions = useRef<MiniGameActionSample[]>([])
+  const alchemyInputs = useRef<AlchemyTrackingPointerSample[]>([])
+  const alchemyStartedRef = useRef(false)
+  const alchemyPointerId = useRef<number | null>(null)
+  const lastAlchemyPointer = useRef({ x: 50, y: 50 })
   const direction = useRef({ x: 0, y: 0 })
   const submitted = useRef(false)
   const pressedKeys = useRef(new Set<string>())
@@ -109,6 +135,9 @@ export default function MiniGameOverlay() {
   const forgeAudioRef = useRef<AudioContext | null>(null)
   const nextForgeCueRef = useRef(0)
   const displayedElapsedRef = useRef(0)
+  const alchemyPathPoints = useMemo(() => game?.type === 'alchemy_tracking'
+    ? getAlchemyTrackingPathPoints(game.config)
+    : [], [game])
 
   const playForgeSound = useCallback((kind: 'cue' | 'strike') => {
     const AudioContextClass = window.AudioContext
@@ -190,24 +219,37 @@ export default function MiniGameOverlay() {
         setDodgeState(INITIAL_DODGE_STATE)
         setElapsed(0)
         setStatus(`위험 구역을 피해 ${(data.config.durationMs / 1_000).toFixed(0)}초 동안 버티세요!`)
-      } else {
+      } else if (data.type === 'forge_rhythm') {
         setForgeState(INITIAL_FORGE_STATE)
         setElapsed(0)
         setStatus('박자에 맞춰 망치를 내리치세요!')
+      } else {
+        const initial = simulateAlchemyTracking(data.config, [], 0)
+        setAlchemyState(initial)
+        setElapsed(0)
+        setStatus('움직이는 목표 원을 눌러 추적을 시작하세요!')
       }
-      startedAt.current = performance.now()
+      const waitsForPointer = data.type === 'alchemy_tracking'
+      startedAt.current = waitsForPointer ? 0 : performance.now()
       displayedElapsedRef.current = 0
       inputs.current = [{ at: 0, x: 0, y: 0 }]
       actions.current = []
+      alchemyInputs.current = []
+      alchemyStartedRef.current = false
+      alchemyPointerId.current = null
+      lastAlchemyPointer.current = { x: 50, y: 50 }
+      setAlchemyStarted(false)
       nextForgeCueRef.current = 0
       direction.current = { x: 0, y: 0 }
       setJoystickDirection({ x: 0, y: 0 })
       pressedKeys.current.clear()
       submitted.current = false
-      socket.emit('miniGameReady', {
-        sessionId: data.sessionId,
-        token: data.token,
-      })
+      if (!waitsForPointer) {
+        socket.emit('miniGameReady', {
+          sessionId: data.sessionId,
+          token: data.token,
+        })
+      }
     }
     const onResolved = (data: { sessionId: string; success: boolean; message?: string }) => {
       if (data.sessionId !== game?.sessionId) return
@@ -241,7 +283,7 @@ export default function MiniGameOverlay() {
   }, [elapsed, game, playForgeSound])
 
   useEffect(() => {
-    if (!game) return
+    if (!game || game.type === 'alchemy_tracking') return
     const relevant = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'])
     const onKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase()
@@ -272,7 +314,7 @@ export default function MiniGameOverlay() {
   }, [game, setDirection, strike, updateKeyboardDirection])
 
   useEffect(() => {
-    if (!game || !socket) return
+    if (!game || !socket || (game.type === 'alchemy_tracking' && !alchemyStarted)) return
     let frame = 0
     const tick = () => {
       const elapsedMs = Math.min(game.config.durationMs, performance.now() - startedAt.current)
@@ -280,35 +322,48 @@ export default function MiniGameOverlay() {
         ? simulateFishingCapture(game.config, inputs.current, elapsedMs)
         : game.type === 'hazard_dodge'
           ? simulateHazardDodge(game.config, inputs.current, elapsedMs)
-          : simulateForgeRhythm(game.config, actions.current, elapsedMs)
+          : game.type === 'forge_rhythm'
+            ? simulateForgeRhythm(game.config, actions.current, elapsedMs)
+            : simulateAlchemyTracking(game.config, alchemyInputs.current, elapsedMs)
       if (game.type === 'fishing_capture') setState(next as FishingSimulationState)
       else if (game.type === 'hazard_dodge') {
         setDodgeState(next as HazardDodgeSimulationState)
         setElapsed(elapsedMs)
-      } else {
+      } else if (game.type === 'forge_rhythm') {
         setForgeState(next as ForgeRhythmSimulationState)
+        setElapsed(elapsedMs)
+      } else {
+        setAlchemyState(next as AlchemyTrackingSimulationState)
         setElapsed(elapsedMs)
       }
       if (next.finished && !submitted.current) {
         submitted.current = true
         setStatus('결과를 확인하는 중...')
-        socket.emit('miniGameResult', game.type === 'fishing_capture'
-          ? {
-              sessionId: game.sessionId,
-              token: game.token,
-              fishingProof: createFishingCaptureProof(game.config, inputs.current, elapsedMs),
-            }
-          : {
-              sessionId: game.sessionId,
-              token: game.token,
-            })
+        if (game.type === 'fishing_capture') {
+          socket.emit('miniGameResult', {
+            sessionId: game.sessionId,
+            token: game.token,
+            fishingProof: createFishingCaptureProof(game.config, inputs.current, elapsedMs),
+          })
+        } else if (game.type === 'alchemy_tracking') {
+          socket.emit('miniGameResult', {
+            sessionId: game.sessionId,
+            token: game.token,
+            alchemyTrackingProof: createAlchemyTrackingProof(game.config, alchemyInputs.current, elapsedMs),
+          })
+        } else {
+          socket.emit('miniGameResult', {
+            sessionId: game.sessionId,
+            token: game.token,
+          })
+        }
         return
       }
       if (!submitted.current) frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [game, socket])
+  }, [alchemyStarted, game, socket])
 
   const updateJoystick = (clientX: number, clientY: number) => {
     const element = joystickRef.current
@@ -321,6 +376,34 @@ export default function MiniGameOverlay() {
       (clientY - (rect.top + radiusY)) / radiusY,
     )
     setDirection(next.x, next.y)
+  }
+
+  const getAlchemyPointerPosition = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    return {
+      x: Math.max(0, Math.min(100, (event.clientX - rect.left) / Math.max(1, rect.width) * 100)),
+      y: Math.max(0, Math.min(100, (event.clientY - rect.top) / Math.max(1, rect.height) * 100)),
+    }
+  }
+
+  const recordAlchemyPointer = (event: ReactPointerEvent<HTMLDivElement>, dragging: boolean) => {
+    if (game?.type !== 'alchemy_tracking' || !alchemyStartedRef.current || submitted.current) return
+    const position = getAlchemyPointerPosition(event)
+    lastAlchemyPointer.current = position
+    appendAlchemyTrackingPointerSample(alchemyInputs.current, {
+      at: Math.max(0, performance.now() - startedAt.current),
+      ...position,
+      dragging,
+    })
+  }
+
+  const stopAlchemyPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (alchemyPointerId.current !== event.pointerId) return
+    recordAlchemyPointer(event, false)
+    alchemyPointerId.current = null
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
   }
 
   if (!game) return null
@@ -358,6 +441,135 @@ export default function MiniGameOverlay() {
       />
     </div>
   </div>
+
+  if (game.type === 'alchemy_tracking') {
+    const config = game.config
+    const gauge = clampGauge(alchemyState.gauge)
+    const gaugePercent = Math.round(gauge * 100)
+    const accuracyPercent = Math.round(alchemyState.accuracy * 100)
+    const remaining = Math.max(0, config.durationMs - elapsed)
+    const pointerSize = Math.max(3.5, config.targetRadius * 1.15)
+    return <div
+      className={styles.backdrop}
+      role="dialog"
+      aria-modal="true"
+      aria-label="가마솥 목표 추적 미니게임"
+      onPointerDownCapture={blurActiveTextEntry}
+    >
+      <section className={styles.panel}>
+        <header>
+          <div><span className={styles.rarity}>{config.label}</span><h2>가마솥 조율</h2></div>
+          <p>움직이는 목표 원을 포인터로 따라가세요</p>
+        </header>
+        <div className={styles.alchemyStats}>
+          <span>{alchemyStarted ? `${(remaining / 1_000).toFixed(1)}초` : '목표 원을 눌러 시작'}</span>
+          <span>추적 정확도 <b>{accuracyPercent}%</b></span>
+        </div>
+        <div
+          className={styles.gauge}
+          role="progressbar"
+          aria-label="가마솥 조율 게이지"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={gaugePercent}
+        >
+          <span style={{ transform: `scaleX(${gauge})`, backgroundColor: getGaugeColor(gauge) }} />
+          <b>{gaugePercent}%</b>
+        </div>
+        <div
+          className={`${styles.board} ${styles.alchemyBoard}`}
+          onContextMenu={event => event.preventDefault()}
+          onPointerDown={event => {
+            if (!event.isPrimary || event.button !== 0 || submitted.current
+              || alchemyPointerId.current !== null) return
+            event.preventDefault()
+            const position = getAlchemyPointerPosition(event)
+            if (!alchemyStartedRef.current) {
+              const initialTarget = getAlchemyTrackingTargetPosition(config, 0)
+              if (Math.hypot(position.x - initialTarget.x, position.y - initialTarget.y) > config.targetRadius) {
+                setStatus('움직이는 목표 원 안을 눌러 시작하세요!')
+                return
+              }
+            }
+            event.currentTarget.setPointerCapture(event.pointerId)
+            alchemyPointerId.current = event.pointerId
+            lastAlchemyPointer.current = position
+            if (!alchemyStartedRef.current) {
+              alchemyStartedRef.current = true
+              startedAt.current = performance.now()
+              alchemyInputs.current = []
+              appendAlchemyTrackingPointerSample(alchemyInputs.current, { at: 0, ...position, dragging: true })
+              setAlchemyStarted(true)
+              setStatus('목표 원 안을 놓치지 마세요!')
+              socket?.emit('miniGameReady', {
+                sessionId: game.sessionId,
+                token: game.token,
+              })
+            } else {
+              recordAlchemyPointer(event, true)
+            }
+          }}
+          onPointerMove={event => {
+            if (alchemyPointerId.current !== event.pointerId
+              || !event.currentTarget.hasPointerCapture(event.pointerId)) return
+            event.preventDefault()
+            recordAlchemyPointer(event, true)
+          }}
+          onPointerUp={stopAlchemyPointer}
+          onPointerCancel={event => {
+            if (alchemyPointerId.current !== event.pointerId) return
+            const position = lastAlchemyPointer.current
+            appendAlchemyTrackingPointerSample(alchemyInputs.current, {
+              at: Math.max(0, performance.now() - startedAt.current),
+              ...position,
+              dragging: false,
+            })
+            alchemyPointerId.current = null
+          }}
+          onLostPointerCapture={event => {
+            if (alchemyPointerId.current !== event.pointerId) return
+            const position = lastAlchemyPointer.current
+            appendAlchemyTrackingPointerSample(alchemyInputs.current, {
+              at: Math.max(0, performance.now() - startedAt.current),
+              ...position,
+              dragging: false,
+            })
+            alchemyPointerId.current = null
+          }}
+        >
+          <svg className={styles.alchemyPath} viewBox="0 0 100 100" aria-hidden="true">
+            <polyline points={alchemyPathPoints.map(point => `${point.x},${point.y}`).join(' ')} />
+          </svg>
+          <span
+            className={styles.alchemyLiquidBoundary}
+            aria-hidden="true"
+            style={{ width: `${config.liquidRadius * 2}%`, height: `${config.liquidRadius * 2}%` }}
+          />
+          <span
+            className={`${styles.alchemyTarget} ${alchemyState.onTarget ? styles.alchemyTargetTracked : ''}`}
+            aria-hidden="true"
+            style={{
+              left: `${alchemyState.targetX}%`,
+              top: `${alchemyState.targetY}%`,
+              width: `${config.targetRadius * 2}%`,
+              height: `${config.targetRadius * 2}%`,
+            }}
+          />
+          {alchemyStarted && <span
+            className={`${styles.alchemyPointer} ${alchemyState.dragging ? styles.alchemyPointerDragging : ''}`}
+            aria-hidden="true"
+            style={{
+              left: `${alchemyState.pointerX}%`,
+              top: `${alchemyState.pointerY}%`,
+              width: `${pointerSize}%`,
+              height: `${pointerSize}%`,
+            }}
+          />}
+        </div>
+        <strong className={styles.alchemyStatus}>{status}</strong>
+      </section>
+    </div>
+  }
 
   if (game.type === 'hazard_dodge') {
     const config = game.config

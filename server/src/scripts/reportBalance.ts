@@ -204,8 +204,8 @@ function printProfiles(profileLevel: number): void {
     }
     if (profileLevel >= 200) {
         console.log('엘리트 조합 로테이션');
-        for (const main of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith']) {
-            for (const sub of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith']) {
+        for (const main of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith', 'cleric']) {
+            for (const sub of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith', 'cleric']) {
                 if (main === sub) continue;
                 const report = analyzeBalanceProfile(profileLevel, `career:${main}`, `career:${sub}`);
                 console.log(`${report.name.padEnd(8)} 보스(${report.boss.duration}초)=${report.boss.dps.toFixed(2)}DPS/${formatSeconds(report.boss.simulatedKillSeconds)} 단발=${report.boss.maxOpeningActionDamage.toFixed(0)}${report.boss.oneActionKill ? '(한방가능)' : ''} 생존=${report.boss.survivesUntilKill ? 'O' : 'X'}(${formatSeconds(report.boss.effectiveSurvivalSeconds)}) 평타=${(report.boss.basicDamageShare * 100).toFixed(1)}%`);
@@ -217,7 +217,7 @@ function printProfiles(profileLevel: number): void {
 function printMonsterPressureSummary(): void {
     const allLosses: number[] = [];
     let totalDeaths = 0;
-    console.log('동레벨 일반 몬스터 피격 압력 · 추천 장비 5개 1차 직업');
+    console.log('동레벨 일반 몬스터 피격 압력 · 추천 장비 6개 1차 직업');
     for (const profileLevel of BALANCE_PROFILE_LEVELS) {
         const distribution = analyzeMonsterPressureDistribution(profileLevel);
         const losses = [...distribution.lifeLossRatios];

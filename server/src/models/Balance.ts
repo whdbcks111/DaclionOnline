@@ -44,6 +44,7 @@ const BALANCE_SKILL_WINDOW_SECONDS = 60;
 const BALANCE_MONSTER_WINDOW_SECONDS = 30;
 const BALANCE_BOSS_WINDOW_SECONDS = 240;
 const BALANCE_ACTION_FLOOR_SECONDS = 0.45;
+const BALANCE_DEFAULT_SHIELD_DURATION_SECONDS = 8;
 /** 1차 성장기·2차 전직 경계·Lv.1000 후반기를 포함하는 공용 밸런스 회귀 구간. */
 export const BALANCE_PROFILE_LEVELS = Object.freeze([
     20, 50, 75, 100, 140, 180, 200, 350, 500, 750, 1000,
@@ -84,6 +85,7 @@ const JOB_ALLOCATIONS = new Map<string, BalanceStatAllocation>([
     ['career:assassin', freezeAllocation('암살자 기준', { agility: 4, strength: 3, sensibility: 2, vitality: 1 })],
     ['career:mage', freezeAllocation('마법사 기준', { mentality: 4, sensibility: 3, vitality: 2, agility: 1 })],
     ['career:blacksmith', freezeAllocation('대장장이 기준', { sensibility: 4, vitality: 3, strength: 2, mentality: 1 })],
+    ['career:cleric', freezeAllocation('성직자 기준', { mentality: 4, sensibility: 3, vitality: 2, agility: 1 })],
 ]);
 
 const BLACKSMITH_ELITE_ALLOCATIONS = new Map<string, BalanceStatAllocation>([
@@ -91,6 +93,7 @@ const BLACKSMITH_ELITE_ALLOCATIONS = new Map<string, BalanceStatAllocation>([
     ['career:archer', freezeAllocation('대장장이·궁수 기준', { sensibility: 4, strength: 3, agility: 2, vitality: 1 })],
     ['career:assassin', freezeAllocation('대장장이·암살자 기준', { sensibility: 4, agility: 3, strength: 2, vitality: 1 })],
     ['career:mage', freezeAllocation('대장장이·마법사 기준', { sensibility: 4, mentality: 3, vitality: 2, agility: 1 })],
+    ['career:cleric', freezeAllocation('대장장이·성직자 기준', { sensibility: 4, mentality: 3, vitality: 2, strength: 1 })],
 ]);
 
 class BalanceEntity extends Entity {
@@ -231,6 +234,37 @@ interface OpeningBurstSnapshot {
     readonly actionCount: number;
     readonly damage: number;
     readonly killSeconds: number;
+}
+
+/** 밸런스 생존 진단이 한 시점에 적용할 피격 입력. */
+export interface BalanceIncomingTimelineEvent {
+    readonly at: number;
+    readonly expectedDamage: number;
+    readonly rawDamage: number;
+    readonly expectedHits: number;
+}
+
+/** 밸런스 생존 진단이 한 시점에 적용할 직접 회복·보호막 입력. */
+export interface BalanceSupportTimelineEvent {
+    readonly at: number;
+    readonly sourceId: string;
+    readonly healing: number;
+    readonly shield: number;
+    readonly shieldDuration: number;
+}
+
+export interface BalanceSurvivalTimelineState {
+    readonly endingLife: number;
+    readonly effectiveSupport: number;
+    readonly diedAt?: number;
+}
+
+export interface BalanceSurvivalTimelineReport {
+    readonly expectedHits: number;
+    readonly expectedDamage: number;
+    readonly rawDamage: number;
+    readonly expected: BalanceSurvivalTimelineState;
+    readonly raw: BalanceSurvivalTimelineState;
 }
 
 export interface BalanceProfileReport {
@@ -594,7 +628,7 @@ export function analyzeCombatRotation(
     let cumulativeDamage = 0;
     let simulatedKillSeconds = Number.POSITIVE_INFINITY;
     let nextCombatSkillAt = 0;
-    const supportEvents: Array<{ at: number; amount: number }> = [];
+    const supportEvents: BalanceSupportTimelineEvent[] = [];
     const guaranteedEvasionWindows: Array<{ start: number; end: number }> = [];
     while (time < window - 0.0001) {
         for (const entry of entries) {
@@ -667,7 +701,15 @@ export function analyzeCombatRotation(
             totalHealing += report.healing;
             totalShield += report.shield;
             if (report.healing + report.shield > 0) {
-                supportEvents.push({ at: Math.min(window, time + actionInterval), amount: report.healing + report.shield });
+                supportEvents.push({
+                    at: Math.min(window, time + actionInterval),
+                    sourceId: `skill:${entry.data.id}`,
+                    healing: report.healing,
+                    shield: report.shield,
+                    shieldDuration: report.shield > 0
+                        ? effectDuration || BALANCE_DEFAULT_SHIELD_DURATION_SECONDS
+                        : 0,
+                });
             }
             skillsSinceBasic++;
         }
@@ -682,10 +724,7 @@ export function analyzeCombatRotation(
     const dps = totalDamage / window;
     const fightHorizon = Math.min(window, simulatedKillSeconds);
     const guaranteedEvasionCoverage = calculateWindowCoverage(guaranteedEvasionWindows, window);
-    const projectedSupportBeforeKill = supportEvents
-        .filter(event => event.at <= fightHorizon + 0.0001)
-        .reduce((sum, event) => sum + event.amount, 0);
-    const incomingBeforeKill = calculateIncomingBeforeHorizon(
+    const incomingTimeline = createIncomingTimeline(
         fightHorizon,
         incomingBasic,
         incomingBasicInterval,
@@ -693,6 +732,12 @@ export function analyzeCombatRotation(
         incomingSkills,
         guaranteedEvasionWindows,
     );
+    const survivalBeforeKill = replayBalanceSurvival(
+        playerMaxLife,
+        incomingTimeline,
+        supportEvents.filter(event => event.at <= fightHorizon + 0.0001),
+    );
+    const projectedSupportBeforeKill = survivalBeforeKill.expected.effectiveSupport;
     const incomingPressure = calculateIncomingPressure(
         incomingBasic,
         incomingBasicInterval,
@@ -707,17 +752,12 @@ export function analyzeCombatRotation(
         playerMaxLife,
         Math.max(0, incomingPressure.guaranteedEvasionDps - supportPerSecond),
     );
-    const expectedLifeAfterKill = Math.min(
-        playerMaxLife,
-        Math.max(0,
-            playerMaxLife + projectedSupportBeforeKill - incomingBeforeKill.expectedDamage,
-        ),
-    );
+    const expectedLifeAfterKill = survivalBeforeKill.expected.endingLife;
     for (const entry of entries) entity.attribute.removeBySource(`balance:rotation:${entry.data.id}`);
     const notes = [
         `평타 1회 뒤 스킬을 최대 2회까지 사용하며, 전투 기술은 ${PLAYER_COMBAT_SKILL_CADENCE_SECONDS}초 공용 연계 간격과 같은 행동 시간·정신력·개별 및 태그 공유 재사용 대기시간을 사용합니다.`,
         '선공 폭딜은 모든 기술이 준비된 교전 시작 시점에서 첫 반격 전에 끝낼 수 있는 직접 피해 행동을 큰 순서대로 계산합니다.',
-        '생존은 대상의 실제 평타 피해·공격속도·보스 기술과 플레이어 생명력·속도 회피·확정 회피·직접 회복/보호막을 분리해 계산합니다.',
+        '생존은 대상의 실제 평타·보스 기술과 직접 회복·보호막을 한 시간축에서 재생하고, 같은 시각에는 피해를 먼저 확정합니다.',
         '제어·은신·지속 피해와 다중 대상 추가 피해는 직접 피해나 임의 전투력 점수로 더하지 않습니다.',
     ];
     return {
@@ -773,13 +813,13 @@ export function analyzeCombatRotation(
         rawSurvivalSeconds,
         evasionSurvivalSeconds,
         effectiveSurvivalSeconds,
-        expectedIncomingHitsBeforeKill: incomingBeforeKill.expectedHits,
-        expectedIncomingDamageBeforeKill: incomingBeforeKill.expectedDamage,
+        expectedIncomingHitsBeforeKill: survivalBeforeKill.expectedHits,
+        expectedIncomingDamageBeforeKill: survivalBeforeKill.expectedDamage,
         projectedSupportBeforeKill,
         expectedLifeAfterKill,
-        survivesUntilKill: expectedLifeAfterKill > 0,
-        evasionPreventsDeath: incomingBeforeKill.rawDamage >= playerMaxLife + projectedSupportBeforeKill
-            && incomingBeforeKill.expectedDamage < playerMaxLife + projectedSupportBeforeKill,
+        survivesUntilKill: survivalBeforeKill.expected.diedAt === undefined,
+        evasionPreventsDeath: survivalBeforeKill.raw.diedAt !== undefined
+            && survivalBeforeKill.expected.diedAt === undefined,
         skills: Object.freeze(entries.map(entry => Object.freeze({
             skillId: entry.data.id,
             name: entry.data.name,
@@ -1068,6 +1108,20 @@ const PROJECTED_WEAPONS = Object.freeze({
         { level: 345, id: 'amber_memory_fang' },
     ],
     'career:mage': [
+        { level: 1, id: 'apprentice_staff' },
+        { level: 20, id: 'starwood_staff' },
+        { level: 40, id: 'mourning_staff' },
+        { level: 70, id: 'helioglass_staff' },
+        { level: 120, id: 'auroraprism_staff' },
+        { level: 150, id: 'deeppearl_staff' },
+        { level: 200, id: 'logic_core_staff' },
+        { level: 235, id: 'blackflame_staff' },
+        { level: 275, id: 'starless_scepter' },
+        { level: 310, id: 'eclipse_oracle_staff' },
+        { level: 345, id: 'origin_heart_staff' },
+    ],
+    'career:cleric': [
+        // TODO(content): 성직자 전용 성구 계열이 추가되기 전까지 같은 정신력 계열의 지팡이 진척을 사용한다.
         { level: 1, id: 'apprentice_staff' },
         { level: 20, id: 'starwood_staff' },
         { level: 40, id: 'mourning_staff' },
@@ -1385,28 +1439,32 @@ function getPatternPressure(
     };
 }
 
-function calculateIncomingBeforeHorizon(
+function createIncomingTimeline(
     horizon: number,
     basic: IncomingAttackSnapshot,
     basicInterval: number,
     data: MonsterData | undefined,
     skills: ReadonlyMap<string, IncomingAttackSnapshot>,
     guaranteedWindows: readonly { start: number; end: number }[],
-): { expectedHits: number; expectedDamage: number; rawDamage: number } {
-    let expectedHits = 0;
-    let expectedDamage = 0;
-    let rawDamage = 0;
+): readonly BalanceIncomingTimelineEvent[] {
+    const events: BalanceIncomingTimelineEvent[] = [];
+    const addEvent = (at: number, attack: IncomingAttackSnapshot): void => {
+        const guaranteedEvaded = !attack.unavoidable && isTimeCovered(at, guaranteedWindows);
+        events.push({
+            at,
+            expectedDamage: guaranteedEvaded ? 0 : attack.expectedDamage,
+            rawDamage: attack.damageOnHit,
+            expectedHits: guaranteedEvaded ? 0 : attack.unavoidable ? 1 : 1 - attack.evasionChance,
+        });
+    };
     const basicCount = Math.floor((horizon + 0.0001) / basicInterval);
     for (let index = 1; index <= basicCount; index++) {
         const at = index * basicInterval;
-        rawDamage += basic.damageOnHit;
-        if (isTimeCovered(at, guaranteedWindows)) continue;
-        expectedDamage += basic.expectedDamage;
-        expectedHits += 1 - basic.evasionChance;
+        addEvent(at, basic);
     }
     const pattern = data?.skillPattern;
     if (!pattern || horizon + 0.0001 < pattern.initialDelay || !pattern.sequence.length) {
-        return { expectedHits, expectedDamage, rawDamage };
+        return Object.freeze(events);
     }
     const interval = Math.max(
         BALANCE_ACTION_FLOOR_SECONDS,
@@ -1417,12 +1475,94 @@ function calculateIncomingBeforeHorizon(
         const attack = skills.get(pattern.sequence[index % pattern.sequence.length]);
         if (!attack) continue;
         const at = pattern.initialDelay + index * interval;
-        rawDamage += attack.damageOnHit;
-        if (!attack.unavoidable && isTimeCovered(at, guaranteedWindows)) continue;
-        expectedDamage += attack.expectedDamage;
-        expectedHits += attack.unavoidable ? 1 : 1 - attack.evasionChance;
+        addEvent(at, attack);
     }
-    return { expectedHits, expectedDamage, rawDamage };
+    return Object.freeze(events.sort((left, right) => left.at - right.at));
+}
+
+/**
+ * 평타·패턴 피격과 직접 회복·보호막을 한 시간축에서 재생한다.
+ * 같은 시각에는 피해가 먼저 확정되며, 스킬 source가 같은 보호막은 누적하지 않고 교체한다.
+ */
+export function replayBalanceSurvival(
+    maxLife: number,
+    incomingEvents: readonly BalanceIncomingTimelineEvent[],
+    supportEvents: readonly BalanceSupportTimelineEvent[],
+): BalanceSurvivalTimelineReport {
+    const normalizedMaxLife = finiteNonNegative(maxLife);
+    const incoming = incomingEvents
+        .filter(event => Number.isFinite(event.at) && event.at >= 0)
+        .map((event, order) => ({
+            kind: 'incoming' as const,
+            at: event.at,
+            order,
+            expectedDamage: finiteNonNegative(event.expectedDamage),
+            rawDamage: finiteNonNegative(event.rawDamage),
+            expectedHits: finiteNonNegative(event.expectedHits),
+        }));
+    const support = supportEvents
+        .filter(event => Number.isFinite(event.at) && event.at >= 0)
+        .map((event, order) => ({
+            kind: 'support' as const,
+            at: event.at,
+            order,
+            sourceId: event.sourceId.trim(),
+            healing: finiteNonNegative(event.healing),
+            shield: finiteNonNegative(event.shield),
+            shieldDuration: finiteNonNegative(event.shieldDuration),
+        }));
+    const timeline = [...incoming, ...support].sort((left, right) => left.at - right.at
+        || Number(left.kind === 'support') - Number(right.kind === 'support')
+        || left.order - right.order);
+    const replay = (damageKey: 'expectedDamage' | 'rawDamage'): BalanceSurvivalTimelineState => {
+        const shields = new Map<string, { amount: number; expiresAt: number }>();
+        let life = normalizedMaxLife;
+        let effectiveSupport = 0;
+        let diedAt: number | undefined;
+        for (const event of timeline) {
+            if (diedAt !== undefined) continue;
+            for (const [sourceId, shield] of shields) {
+                if (shield.expiresAt <= event.at) shields.delete(sourceId);
+            }
+            if (event.kind === 'incoming') {
+                let remainingDamage = event[damageKey];
+                const activeShields = [...shields.entries()].sort((left, right) =>
+                    left[1].expiresAt - right[1].expiresAt || left[0].localeCompare(right[0]));
+                for (const [sourceId, shield] of activeShields) {
+                    if (remainingDamage <= 0) break;
+                    const absorbed = Math.min(shield.amount, remainingDamage);
+                    shield.amount -= absorbed;
+                    remainingDamage -= absorbed;
+                    effectiveSupport += absorbed;
+                    if (shield.amount <= 0) shields.delete(sourceId);
+                }
+                life = Math.max(0, life - remainingDamage);
+                if (life <= 0) diedAt = event.at;
+                continue;
+            }
+            const healing = Math.min(event.healing, Math.max(0, normalizedMaxLife - life));
+            life += healing;
+            effectiveSupport += healing;
+            if (event.shield > 0 && event.shieldDuration > 0) {
+                shields.set(event.sourceId, {
+                    amount: event.shield,
+                    expiresAt: event.at + event.shieldDuration,
+                });
+            }
+        }
+        return {
+            endingLife: life,
+            effectiveSupport,
+            ...(diedAt === undefined ? {} : { diedAt }),
+        };
+    };
+    return {
+        expectedHits: incoming.reduce((sum, event) => sum + event.expectedHits, 0),
+        expectedDamage: incoming.reduce((sum, event) => sum + event.expectedDamage, 0),
+        rawDamage: incoming.reduce((sum, event) => sum + event.rawDamage, 0),
+        expected: replay('expectedDamage'),
+        raw: replay('rawDamage'),
+    };
 }
 
 function calculateWindowCoverage(

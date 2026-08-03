@@ -1125,12 +1125,11 @@ defineQuest({
 
 export const CAREER_QUEST_IDS: Record<string, string> = {};
 export const BLACKSMITH_APPRENTICESHIP_QUEST_ID = 'profession:blacksmith_apprenticeship';
+export const CLERIC_PRECEPTOR_NPC_ID = 'cleric_preceptor';
 
-function hasStandardBlacksmithTrial(player: Player): boolean {
-    return JobSlotType.values().some(slot => {
-        const id = CAREER_QUEST_IDS[`${slot.key}:career:blacksmith`];
-        return Boolean(id && (player.quests.isActive(id) || player.quests.canTurnIn(id)));
-    });
+function hasAnyStandardCareerTrial(player: Player, exceptQuestId?: string): boolean {
+    return Object.values(CAREER_QUEST_IDS).some(id => id !== exceptQuestId
+        && (player.quests.isActive(id) || player.quests.canTurnIn(id)));
 }
 
 function hasLegacyBlacksmithTrial(player: Player): boolean {
@@ -1145,8 +1144,8 @@ defineQuest({
     tags: ['quest:profession', 'profession:blacksmith'],
     giverNpcIds: ['blacksmith_master'],
     turnInNpcIds: ['blacksmith_master'],
-    visible: player => player.level >= 20 && canAcquireBlacksmithProfession(player) && !hasStandardBlacksmithTrial(player),
-    canAccept: player => player.level >= 20 && canAcquireBlacksmithProfession(player) && !hasStandardBlacksmithTrial(player),
+    visible: player => player.level >= 20 && canAcquireBlacksmithProfession(player) && !hasAnyStandardCareerTrial(player),
+    canAccept: player => player.level >= 20 && canAcquireBlacksmithProfession(player) && !hasAnyStandardCareerTrial(player),
     stages: [new QuestStage({
         id: 'read_ore_grain',
         description: '채굴 도구로 광맥을 파괴해 서로 다른 광물의 결을 관찰하세요.',
@@ -1169,6 +1168,7 @@ interface CareerQuestDefinition {
     readonly id: string;
     readonly name: string;
     readonly weapon: string;
+    readonly npcId?: string;
     readonly stageDescription: string;
     readonly createObjective: (slot: JobSlotType) => QuestObjective;
 }
@@ -1186,6 +1186,17 @@ const careerQuestDefinitions: readonly CareerQuestDefinition[] = [
     { id: 'assassin', name: '암살자', weapon: 'venom_dagger', stageDescription: '암살자의 방식에 맞는 전투 경험을 쌓으세요.', createObjective: killTrial('생명체 속성 적 처치', target => target.hasTag(GameTags.TRAIT_LIVING)) },
     { id: 'mage', name: '마법사', weapon: 'apprentice_staff', stageDescription: '마법사의 방식에 맞는 전투 경험을 쌓으세요.', createObjective: killTrial('불·얼음·독·자연 속성 적 처치', target => [GameTags.PROPERTY_FIRE, GameTags.PROPERTY_ICE, GameTags.PROPERTY_POISON, GameTags.PROPERTY_NATURAL].some(tag => target.hasTag(tag))) },
     {
+        id: 'cleric',
+        name: '성직자',
+        weapon: 'apprentice_staff',
+        npcId: CLERIC_PRECEPTOR_NPC_ID,
+        stageDescription: '새벽교단의 가르침에 따라 독·어둠·언데드의 위협을 정화하세요.',
+        createObjective: killTrial('독·어둠·언데드 속성 적 처치', target =>
+            target.hasTag(GameTags.PROPERTY_POISON)
+            || target.hasTag(GameTags.PROPERTY_DARK)
+            || target.hasTag(GameTags.PROPERTY_UNDEAD)),
+    },
+    {
         id: 'blacksmith',
         name: '대장장이',
         weapon: 'iron_pickaxe',
@@ -1202,19 +1213,22 @@ const careerQuestDefinitions: readonly CareerQuestDefinition[] = [
 for (const slot of JobSlotType.values()) for (const job of careerQuestDefinitions) {
     const questId = `career:${slot.key}_${job.id}_promotion`;
     const jobId = `career:${job.id}`;
+    const npcId = job.npcId ?? 'job_master';
     CAREER_QUEST_IDS[`${slot.key}:${jobId}`] = questId;
     defineQuest({
         id: questId,
         name: `${slot.label} ${job.name} 전직 시험`,
         description: `${job.name}의 기본 소양을 증명하고 ${slot.label}(으)로 전직하세요.`,
         tags: ['quest:career', `career:${slot.key}`],
-        giverNpcIds: ['job_master'],
-        turnInNpcIds: ['job_master'],
+        giverNpcIds: [npcId],
+        turnInNpcIds: [npcId],
         visible: player => player.level >= slot.requiredLevel
             && player.career.canAssign(slot, jobId).success
-            && (job.id !== 'blacksmith' || !hasLegacyBlacksmithTrial(player)),
+            && !hasAnyStandardCareerTrial(player, questId)
+            && !hasLegacyBlacksmithTrial(player),
         canAccept: player => player.career.canAssign(slot, jobId).success
-            && (job.id !== 'blacksmith' || !hasLegacyBlacksmithTrial(player)),
+            && !hasAnyStandardCareerTrial(player, questId)
+            && !hasLegacyBlacksmithTrial(player),
         stages: [new QuestStage({
             id: 'trial',
             description: job.stageDescription,

@@ -3,6 +3,7 @@ import { defineProgress, ProgressType } from '../models/Progress.js';
 import {
     ASHEN_ABYSS_QUEST_IDS,
     CHRONOFROST_QUEST_IDS,
+    CLERIC_PRECEPTOR_NPC_ID,
     ECLIPSE_TRENCH_QUEST_IDS,
     ENDSTAR_QUEST_IDS,
     DAILY_COMMISSION_LAST_CLAIM_DAY,
@@ -26,6 +27,7 @@ import {
 import { CAREER_QUEST_IDS } from './quests.js';
 import { BLACKSMITH_APPRENTICESHIP_QUEST_ID } from './quests.js';
 import { JobSlotType, getAllJobs, JobTier } from '../models/Job.js';
+import { getQuestData } from '../models/Quest.js';
 import { canAcquireBlacksmithProfession, hasBlacksmithProfession } from '../modules/forging.js';
 import { GameTags } from '../../../shared/tags.js';
 import type Player from '../models/Player.js';
@@ -663,6 +665,10 @@ const careerQuestEntries = JobSlotType.values().flatMap(slot => careerJobs.flatM
     const questId = CAREER_QUEST_IDS[`${slot.key}:${job.id}`];
     return questId ? [{ slot, job, questId, key: `${slot.key}_${job.id.split(':')[1]}` }] : [];
 }));
+const jobMasterCareerQuestEntries = careerQuestEntries.filter(entry =>
+    getQuestData(entry.questId)?.giverNpcIds.includes('job_master'));
+const clericCareerQuestEntries = careerQuestEntries.filter(entry =>
+    getQuestData(entry.questId)?.giverNpcIds.includes(CLERIC_PRECEPTOR_NPC_ID));
 
 NPC.define({
     id: 'job_master',
@@ -670,7 +676,7 @@ NPC.define({
     description: '모험가의 자질을 살펴 전직 시험을 안내하는 루미나르 전직관입니다.',
     tags: ['npc:career', GameTags.NPC_BENEVOLENT],
     entryScenario: ({ player }) => {
-        const ready = careerQuestEntries.find(entry => player.quests.canTurnIn(entry.questId, 'job_master'));
+        const ready = jobMasterCareerQuestEntries.find(entry => player.quests.canTurnIn(entry.questId, 'job_master'));
         if (ready) return `complete_${ready.key}`;
         const active = careerQuestEntries.find(entry => player.quests.isActive(entry.questId));
         return active ? 'progress' : 'menu';
@@ -678,7 +684,7 @@ NPC.define({
     scenarios: [
         new DialogueScenario('menu', function* ({ player }) {
             yield Dialogue.say('어서 와요. 직업은 힘의 크기보다 앞으로 걸어갈 방식을 정하는 선택이에요.');
-            const choices = careerQuestEntries
+            const choices = jobMasterCareerQuestEntries
                 .filter(entry => player.quests.canAccept(entry.questId, 'job_master'))
                 .map(entry => ({
                     label: `${entry.slot.label}: ${entry.job.name} 시험을 선택한다`,
@@ -703,7 +709,7 @@ NPC.define({
             yield Dialogue.say('서두르지 않아도 괜찮아요. 자신의 전투 방식을 충분히 생각해 보세요.');
             yield Dialogue.end();
         }),
-        ...careerQuestEntries.flatMap(entry => [
+        ...jobMasterCareerQuestEntries.flatMap(entry => [
             new DialogueScenario(`offer_${entry.key}`, function* () {
                 yield Dialogue.say(`${entry.job.name}의 길을 선택했군요. 시험을 마치면 ${entry.slot.label}(으)로 인정하겠습니다.`);
                 yield Dialogue.acceptQuest(entry.questId);
@@ -711,6 +717,63 @@ NPC.define({
             }),
             new DialogueScenario(`complete_${entry.key}`, function* () {
                 yield Dialogue.say(`시험을 통과했습니다. 지금부터 ${entry.job.name}의 힘을 다룰 자격이 있어요.`);
+                yield Dialogue.turnInQuest(entry.questId);
+                yield Dialogue.end();
+            }),
+        ]),
+    ],
+});
+
+NPC.define({
+    id: CLERIC_PRECEPTOR_NPC_ID,
+    name: '새벽교단 교리사제 엘리안',
+    description: '새벽의 빛을 전투와 보호의 기도로 다루는 성직자 후보를 이끄는 교리사제입니다.',
+    tags: ['npc:career', 'npc:priest', GameTags.NPC_BENEVOLENT],
+    entryScenario: ({ player }) => {
+        const ready = clericCareerQuestEntries.find(entry =>
+            player.quests.canTurnIn(entry.questId, CLERIC_PRECEPTOR_NPC_ID));
+        if (ready) return `complete_${ready.key}`;
+        const active = careerQuestEntries.find(entry => player.quests.isActive(entry.questId));
+        return active ? 'progress' : 'menu';
+    },
+    scenarios: [
+        new DialogueScenario('menu', function* ({ player }) {
+            yield Dialogue.say('빛은 힘을 과시하기보다 어둠 속에서 길을 잃지 않도록 지키는 약속입니다. 그 약속을 짊어질 준비가 되었나요?');
+            const choices = clericCareerQuestEntries
+                .filter(entry => player.quests.canAccept(entry.questId, CLERIC_PRECEPTOR_NPC_ID))
+                .map(entry => ({
+                    label: `${entry.slot.label}: 성직자 서약을 시작한다`,
+                    target: `offer_${entry.key}`,
+                }));
+            if (choices.length === 0) {
+                const next = !player.career.mainJobId
+                    ? '성직자의 첫 서약은 Lv.20부터 받아들일 수 있습니다.'
+                    : !player.career.subJobId
+                        ? '두 번째 서약은 Lv.50부터 가능하며 메인 직업과 다른 길이어야 합니다.'
+                        : '두 직업의 서약을 모두 세웠군요. 이제 그 조합에 맞는 엘리트의 길을 닦으세요.';
+                yield Dialogue.say(next);
+                yield Dialogue.end();
+                return;
+            }
+            choices.push({ label: '아직 서약하지 않는다.', target: 'goodbye' });
+            yield Dialogue.choice(choices);
+        }),
+        new DialogueScenario('progress', function* () {
+            yield Dialogue.say('이미 선택한 전직 시험이 진행 중입니다. 퀘스트에 기록된 인도자에게 시험 결과를 보고하세요.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('goodbye', function* () {
+            yield Dialogue.say('준비된 마음으로 돌아오세요. 예배당의 등불은 꺼지지 않습니다.');
+            yield Dialogue.end();
+        }),
+        ...clericCareerQuestEntries.flatMap(entry => [
+            new DialogueScenario(`offer_${entry.key}`, function* () {
+                yield Dialogue.say(`${entry.slot.label} 성직자의 길을 청했군요. 독·어둠·언데드의 위협을 정화해 빛을 지킬 의지를 증명하세요.`);
+                yield Dialogue.acceptQuest(entry.questId);
+                yield Dialogue.end();
+            }),
+            new DialogueScenario(`complete_${entry.key}`, function* () {
+                yield Dialogue.say('정화의 끝에서도 자비와 경계를 잃지 않았군요. 새벽교단의 이름으로 성직자의 서약을 인정합니다.');
                 yield Dialogue.turnInQuest(entry.questId);
                 yield Dialogue.end();
             }),

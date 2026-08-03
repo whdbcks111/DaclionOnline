@@ -107,7 +107,7 @@ test('도감 마스터 데이터는 현재 전체 분류와 미래 등록을 재
             monster: 153,
             boss: 45,
             ore: 18,
-            exploration: 623,
+            exploration: 624,
             cooking: 19,
         });
         assert.equal(locations.filter(location => location.tags.includes(GameTags.LOCATION_HIDDEN)).length, 31);

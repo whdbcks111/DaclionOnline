@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import type { LocationData } from '../../../shared/types.js';
 import '../data/items.js';
+import '../data/statusEffects.js';
+import '../data/alchemy.js';
 import '../data/projectiles.js';
 import '../data/resources.js';
 import '../data/shops.js';
@@ -17,7 +19,8 @@ import '../data/npcs.js';
 import '../data/monsters.js';
 import '../data/bossPatterns.js';
 import '../data/fishing.js';
-import { validateMasterData } from './masterDataValidation.js';
+import { getAllAlchemyFormulas, getAllAlchemyReagents } from '../models/Alchemy.js';
+import { validateAlchemyMasterData, validateMasterData } from './masterDataValidation.js';
 
 const locations = JSON.parse(readFileSync(new URL('../data/locations.json', import.meta.url), 'utf8')) as LocationData[];
 
@@ -30,4 +33,40 @@ test('마스터 데이터 validator는 잘못된 장소 연결을 가공된 issu
         ? { ...location, connections: [...location.connections, { locationId: 'missing_location' }] }
         : location);
     assert.ok(validateMasterData({ locations: broken }).some(issue => issue.scope === 'location' && issue.message.includes('missing_location')));
+});
+
+test('연금술 validator는 재료·결과·상태효과 참조와 양수 수량·사용 handler를 검사한다', () => {
+    const formulas = getAllAlchemyFormulas();
+    const statusFormula = formulas.find(formula => formula.effect.statusEffectId);
+    assert.ok(statusFormula);
+    const brokenFormulas = [
+        {
+            ...formulas[0],
+            id: 'broken-result-handler',
+            resultItemDataId: 'iron_ore',
+            ingredients: [{ itemDataId: 'missing_alchemy_reagent_item', count: 0 }],
+        },
+        {
+            ...formulas[0],
+            id: 'broken-result-item',
+            resultItemDataId: 'missing_alchemy_result_item',
+        },
+        {
+            ...statusFormula,
+            id: 'broken-status-effect',
+            effect: { ...statusFormula.effect, statusEffectId: 'missing_alchemy_status' },
+        },
+    ];
+    const issues = validateAlchemyMasterData(getAllAlchemyReagents(), brokenFormulas);
+    assert.ok(issues.every(issue => issue.scope === 'alchemy'));
+    assert.ok(issues.some(issue => issue.id === 'broken-result-handler'
+        && issue.message.includes('사용 handler')));
+    assert.ok(issues.some(issue => issue.id === 'broken-result-handler'
+        && issue.message.includes('양의 정수')));
+    assert.ok(issues.some(issue => issue.id === 'broken-result-handler'
+        && issue.message.includes('재료 아이템')));
+    assert.ok(issues.some(issue => issue.id === 'broken-result-item'
+        && issue.message.includes('결과 아이템')));
+    assert.ok(issues.some(issue => issue.id === 'broken-status-effect'
+        && issue.message.includes('missing_alchemy_status')));
 });

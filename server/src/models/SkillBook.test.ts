@@ -156,7 +156,7 @@ test('엘리트 직업은 원래 메인 직업 스킬의 표시 조건을 계속
     assert.equal(player.skills.getVisible().some(skill => skill.skillDataId === 'steel_slash'), true);
 });
 
-test('각 1차 직업은 Lv.30부터 Lv.180까지 성장 기술을 단계별로 자동 획득한다', () => {
+test('6개 1차 전투 계보는 Lv.30부터 Lv.180까지 성장 기술을 단계별로 자동 획득한다', () => {
     for (const [jobId, expectedByLevel] of [
         ['career:warrior', [
             [30, ['fracture_slash']], [50, ['iron_tempest']], [75, ['frontline_cleave']],
@@ -177,6 +177,10 @@ test('각 1차 직업은 Lv.30부터 Lv.180까지 성장 기술을 단계별로 
         ['career:blacksmith', [
             [30, ['fault_finder']], [50, ['anvil_resonance', 'tempered_aegis']], [75, ['hotspot_strike']],
             [100, ['steel_pulse']], [140, ['masterwork_break']], [180, ['anvil_starfall']],
+        ]],
+        ['career:cleric', [
+            [30, ['dawn_lance']], [50, ['benediction_wave']], [75, ['purifying_brand']],
+            [100, ['halo_burst']], [140, ['radiant_judgment']], [180, ['seraphic_descent']],
         ]],
     ] as const) {
         const player = new TestSkillPlayer();

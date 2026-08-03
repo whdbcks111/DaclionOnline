@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import type { LocationData } from '../../../shared/types.js';
 import '../data/items.js';
+import '../data/statusEffects.js';
+import '../data/alchemy.js';
 import '../data/projectiles.js';
 import '../data/resources.js';
 import '../data/shops.js';

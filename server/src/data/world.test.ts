@@ -136,7 +136,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 28, neutral: 69, hostile: 526 },
+        { safe: 29, neutral: 69, hostile: 526 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -188,10 +188,21 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             status: 'visible',
         },
     );
-    assert.equal(
+    assert.deepEqual(
         getLocation('town_square')?.findAvailableConnection({ level: 50 } as never, '6'),
-        undefined,
+        {
+            locationId: 'dawn_order_chapel',
+            name: '새벽교단 예배당',
+            status: 'visible',
+        },
     );
+    assert.equal(getLocation('town_square')?.findAvailableConnection({ level: 50 } as never, '7'), undefined);
+    const chapel = locations.find(location => location.id === 'dawn_order_chapel');
+    assert.equal(chapel?.zoneType, 'safe');
+    assert.ok(chapel?.tags.includes(GameTags.PROPERTY_HOLY));
+    assert.ok(chapel?.tags.includes(GameTags.PROPERTY_LIGHT));
+    assert.deepEqual(chapel?.npcIds, ['cleric_preceptor']);
+    assert.equal(NPC.getNpc('cleric_preceptor')?.name, '새벽교단 교리사제 엘리안');
     assert.deepEqual(
         getLocation('deep_shaft')?.findAvailableConnection({ level: 1 } as never, '수정왕좌'),
         {

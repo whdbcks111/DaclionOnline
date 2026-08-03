@@ -17,7 +17,8 @@
       { "locationId": "shop_street" },
       { "locationId": "feveric_mine" },
       { "locationId": "job_hall" },
-      { "locationId": "luminous_pond" }
+      { "locationId": "luminous_pond" },
+      { "locationId": "dawn_order_chapel" }
     ]
   },
   {
@@ -48,6 +49,21 @@
     "mapIcon": "job-hall",
     "tags": ["location:safe"],
     "npcIds": ["job_master", "atonement_priest", "inheritance_warden_arden"],
+    "objects": [],
+    "connections": [
+      { "locationId": "town_square" }
+    ]
+  },
+  {
+    "id": "dawn_order_chapel",
+    "name": "새벽교단 예배당",
+    "mapColor": "#ddd19a",
+    "zoneType": "safe",
+    "x": -35,
+    "y": 42,
+    "z": 0,
+    "tags": ["location:safe", "property:holy", "property:light"],
+    "npcIds": ["cleric_preceptor"],
     "objects": [],
     "connections": [
       { "locationId": "town_square" }
