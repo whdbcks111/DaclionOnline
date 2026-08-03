@@ -22,6 +22,8 @@
 
 장소 이동 때 비활성 voice bank에 다음 score를 준비하고 Tone Transport의 다음 마디 경계부터 3.5초 equal-power crossfade한다. BPM도 같은 시간에 ramp한다. 빠른 연속 이동은 진행 중 전환을 끊지 않고 마지막 요청 하나로 합쳐 다음 전환으로 잇는다. compressor와 -4dB limiter 뒤에 사용자 gain을 두며 bank당 pad 4성, boss harmony 3성 이내로 제한한다.
 
+기본 음량 35는 사용자 gain 약 -12.05dB로 변환한다. 탐험 레이어는 평시 0.58로 유지하고 pad/lead 자체 음량은 -13dB/-12dB로 구성한다. 탐험 전용 EQ가 저역 -1.5dB, 중역 +2.5dB, 고역 +1.5dB를 적용하며 warm/wood 계열 pad는 sine 대신 triangle 배음을 사용한다. 전투·보스에서는 탐험·저음·타악·대선율이 합쳐지므로 각 레이어 gain을 별도로 낮춘다. 사용자 최대 gain도 0.88 이하이고 마지막 -4dB limiter를 통과하므로 합산 peak가 출력 clipping으로 이어지지 않는다.
+
 ## 사용자 입력과 수명주기
 
 브라우저 autoplay 정책 때문에 `Tone.start()`는 Home에서 받은 첫 실제 pointer, keyboard 또는 touch 이벤트 안에서만 호출한다. 저장 음량이 0이면 시작하지 않으며, 햄버거 메뉴에서 0~100 배경음악 음량과 음소거·이전 음량 복원을 조작한다. 기본값은 35이고 기기 localStorage에 저장한다.

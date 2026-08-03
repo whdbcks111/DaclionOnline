@@ -73,6 +73,11 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.29', '2026-08-03',
+        [CHANGED,
+            '루미나르 마을과 바람결 초원처럼 잔잔한 지역에서도 배경음악의 선율이 충분히 들리도록 기본 체감 음량과 중·고역 존재감을 높였습니다. 전투와 보스전에서는 여러 연주가 겹쳐도 소리가 찢어지지 않도록 각 레이어의 여유 음량을 함께 조정했습니다.',
+        ],
+    ),
     definePatchNote('1.0.28', '2026-08-03',
         [FEATURE,
             '현재 장소와 전투 상황에 따라 자연스럽게 달라지는 합성 배경음악을 추가했습니다. 외부 음원 없이 게임 안에서 실시간으로 연주됩니다.',

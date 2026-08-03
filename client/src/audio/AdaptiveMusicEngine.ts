@@ -12,6 +12,8 @@ const LOOP_LENGTH = '2m'
 const CROSSFADE_SECONDS = 3.5
 const LAYER_RAMP_SECONDS = 0.9
 const VISIBILITY_FADE_SECONDS = 0.35
+const MASTER_OUTPUT_CEILING = 0.88
+const VOLUME_TAPER_EXPONENT = 1.2
 
 interface MusicScene {
   readonly locationId: string
@@ -75,7 +77,7 @@ function stepTime(step: number): string {
 
 function volumeToGain(volume: number): number {
   const normalized = normalizeMusicVolume(volume) / 100
-  return normalized === 0 ? 0 : Math.pow(normalized, 1.55) * 0.72
+  return normalized === 0 ? 0 : Math.pow(normalized, VOLUME_TAPER_EXPONENT) * MASTER_OUTPUT_CEILING
 }
 
 function createLoopingPart<Value extends { time: string }>(
@@ -103,25 +105,37 @@ class MusicVoiceBank {
 
   constructor(arrangement: LocationMusicArrangement, destination: Tone.InputNode) {
     this.output = new Tone.Gain(1).connect(destination)
-    this.explorationGain = new Tone.Gain(0).connect(this.output)
+    this.explorationGain = new Tone.Gain(0)
     this.combatGain = new Tone.Gain(0).connect(this.output)
     this.bossGain = new Tone.Gain(0).connect(this.output)
+    const explorationEq = new Tone.EQ3({
+      low: -1.5,
+      mid: 2.5,
+      high: 1.5,
+      lowFrequency: 280,
+      highFrequency: 2_400,
+    }).connect(this.output)
+    this.explorationGain.connect(explorationEq)
 
     const oscillator = TIMBRE_OSCILLATOR[arrangement.theme.timbre]
+    const padOscillator: Tone.ToneOscillatorType = arrangement.theme.timbre === 'warm'
+      || arrangement.theme.timbre === 'wood'
+      ? 'triangle'
+      : 'sine'
     const pad = new Tone.PolySynth({
       maxPolyphony: 4,
       voice: Tone.Synth,
       options: {
-        oscillator: { type: 'sine' },
+        oscillator: { type: padOscillator },
         envelope: { attack: 0.7, decay: 0.3, sustain: 0.45, release: 1.6 },
       },
     }).connect(this.explorationGain)
-    pad.volume.value = -16
+    pad.volume.value = -13
     const lead = new Tone.Synth({
       oscillator: { type: oscillator },
       envelope: { attack: 0.025, decay: 0.16, sustain: 0.12, release: 0.42 },
     }).connect(this.explorationGain)
-    lead.volume.value = -18
+    lead.volume.value = -12
     const bass = new Tone.MonoSynth({
       oscillator: { type: arrangement.theme.timbre === 'metal' ? 'square' : 'triangle' },
       filter: { Q: 1.2, type: 'lowpass', rolloff: -12 },
@@ -166,7 +180,7 @@ class MusicVoiceBank {
     }).connect(this.bossGain)
     bossNoise.volume.value = -24
 
-    this.nodes.push(pad, lead, bass, kick, noise, counter, bossHarmony, bossKick, bossNoise)
+    this.nodes.push(pad, lead, bass, kick, noise, counter, bossHarmony, bossKick, bossNoise, explorationEq)
 
     const chordEvents: ChordEvent[] = arrangement.chordMidi.map((notes, index) => ({
       time: `${Math.floor(index / 2)}:${(index % 2) * 2}:0`,
@@ -219,10 +233,11 @@ class MusicVoiceBank {
   setCombatState(state: MusicCombatState, time = Tone.now(), immediate = false): void {
     if (this.disposed) return
     const duration = immediate ? 0.02 : LAYER_RAMP_SECONDS
-    const explorationLevel = state === MusicCombatState.EXPLORATION ? 0.34
-      : state === MusicCombatState.COMBAT ? 0.27 : 0.23
-    const combatLevel = state === MusicCombatState.EXPLORATION ? 0 : 0.31
-    const bossLevel = state === MusicCombatState.BOSS ? 0.3 : 0
+    const explorationLevel = state === MusicCombatState.EXPLORATION ? 0.58
+      : state === MusicCombatState.COMBAT ? 0.36 : 0.3
+    const combatLevel = state === MusicCombatState.EXPLORATION ? 0
+      : state === MusicCombatState.COMBAT ? 0.29 : 0.26
+    const bossLevel = state === MusicCombatState.BOSS ? 0.27 : 0
     for (const [gain, target] of [
       [this.explorationGain, explorationLevel],
       [this.combatGain, combatLevel],
