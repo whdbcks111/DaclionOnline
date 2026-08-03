@@ -43,6 +43,7 @@ const TREASURE_REWARDS: readonly TreasureReward[] = [
     { label: '너울그물 낚싯대 보관함', weight: 0.75, gold: { min: 20, max: 40 }, itemDataId: 'wide_net_fishing_rod', itemCount: { min: 1, max: 1 } },
     { label: '급류바늘 낚싯대 보관함', weight: 0.75, gold: { min: 20, max: 40 }, itemDataId: 'swift_current_fishing_rod', itemCount: { min: 1, max: 1 } },
     { label: '여우꼬리 수납함', weight: 0.5, gold: { min: 20, max: 40 }, itemDataId: 'foxtrail_pouch', itemCount: { min: 1, max: 1 } },
+    { label: '빛바랜 스탯포인트 초기화권', weight: 1, gold: { min: 20, max: 40 }, itemDataId: 'faded_stat_reset_ticket', itemCount: { min: 1, max: 1 } },
 ];
 
 function randomInt(range: { min: number; max: number }, random: () => number): number {

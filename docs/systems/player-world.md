@@ -59,6 +59,7 @@ Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook�
 - 계산 순서: base 복사 → 모든 add modifier 합산 → 모든 multiply modifier 적용.
 - `AttributeType`은 key, label, 기본값, formatter와 설명을 가진 클래스형 enum이다.
 - Stat: strength, agility, vitality, sensibility, mentality. `StatType` 클래스형 enum의 modify 함수가 Entity를 받아 Attribute modifier를 적용한다. 정신력 스탯 1은 최대 정신력 +5.25, 마법력 +2, 투사체 가속 +0.002를 제공한다.
+- 레벨업마다 모든 Stat에 자동으로 쌓인 `레벨-1` 포인트는 초기화 대상이 아니다. `스탯포인트 초기화권`은 그보다 높은 직접 분배분을 전부, `빛바랜 스탯포인트 초기화권`은 각 스탯에서 최대 10개씩 총 50개까지 미사용 `statPoint`로 환급한다. 환급할 포인트가 없거나 결과 스탯으로 현재 장비 요구치를 충족하지 못하면 티켓을 소비하지 않는다.
 - 장비 modifier source는 슬롯 단위, 스탯 modifier source는 `stat:{type}` 단위로 교체 가능하게 관리한다.
 
 ## 전투·사망·보상

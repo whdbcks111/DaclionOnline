@@ -421,10 +421,9 @@ export function initPlayerCommands(): void {
                 return;
             }
 
-            const itemId = item.id;
             const itemDataId = item.itemDataId;
-            const countBefore = item.count;
-            const result = player.inventory.useItem(itemId);
+            const totalBefore = player.inventory.getCount(itemDataId);
+            const result = player.inventory.useItemInstance(item);
             if (!result) {
                 sendBotMessageToUser(userId, `${item.name}은(는) 사용할 수 없습니다.`);
                 return;
@@ -433,8 +432,7 @@ export function initPlayerCommands(): void {
             sendBotMessageToUser(userId, `${item.name}을(를) 사용합니다.`);
 
             await result;
-            const remaining = player.inventory.getItem(itemId);
-            if (!remaining || remaining.count < countBefore) {
+            if (player.inventory.getCount(itemDataId) < totalBefore) {
                 emitGameEvent(GameEventIds.ITEM_USED, {
                     actor: player,
                     data: { itemDataId },

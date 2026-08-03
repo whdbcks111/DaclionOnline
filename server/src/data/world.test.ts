@@ -1383,20 +1383,25 @@ test('보물상자는 1~2시간 쿨타임과 가중치 기반 골드·아이템 
     assert.equal(coins.label, '묵직한 동전 주머니');
     assert.equal(coins.gold, 35);
 
-    const wideValues = [0.9825, 0, 0];
+    const wideValues = [0.972, 0, 0];
     const wideRod = rollTreasureReward(() => wideValues.shift() ?? 0);
     assert.equal(wideRod.itemDataId, 'wide_net_fishing_rod');
     assert.equal(wideRod.itemCount, 1);
 
-    const swiftValues = [0.9925, 0, 0];
+    const swiftValues = [0.98, 0, 0];
     const swiftRod = rollTreasureReward(() => swiftValues.shift() ?? 0);
     assert.equal(swiftRod.itemDataId, 'swift_current_fishing_rod');
     assert.equal(swiftRod.itemCount, 1);
 
-    const pouchValues = [0.999999, 0, 0];
+    const pouchValues = [0.988, 0, 0];
     const pouch = rollTreasureReward(() => pouchValues.shift() ?? 0);
     assert.equal(pouch.itemDataId, 'foxtrail_pouch');
     assert.equal(pouch.itemCount, 1);
+
+    const fadedValues = [0.999, 0, 0];
+    const faded = rollTreasureReward(() => fadedValues.shift() ?? 0);
+    assert.equal(faded.itemDataId, 'faded_stat_reset_ticket');
+    assert.equal(faded.itemCount, 1);
 });
 
 test('미궁 보물함은 전용 로직 아이템과 전용 아이콘을 사용한다', () => {

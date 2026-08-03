@@ -340,6 +340,49 @@ registerItemUse('grant_single_evasion', (inv, item, finish) => {
     }
 });
 
+registerItemUse('refund_allocated_stats', (inv, item, finish) => {
+    try {
+        const player = getPlayerByUserId(inv.playerId);
+        if (!player) return;
+        const configuredLimit = item.getMetadata<number>('maxRefundPerStat');
+        const maxRefundPerStat = configuredLimit === undefined ? undefined : configuredLimit;
+        const preview = player.previewAllocatedStatReset(maxRefundPerStat);
+        if (preview.refundedStatPoints <= 0) {
+            sendNotificationToUser(player.userId, {
+                key: 'item:stat-reset:no-points',
+                message: '되돌릴 수 있는 직접 분배 스탯 포인트가 없습니다.',
+            });
+            return;
+        }
+        if (preview.deniedReason) {
+            sendNotificationToUser(player.userId, {
+                key: 'item:stat-reset:equipment-requirement',
+                message: preview.deniedReason,
+            });
+            return;
+        }
+        const ticketSnapshot = item.snapshot(1);
+        if (!inv.removeItemInstance(item, 1)) return;
+        let result: ReturnType<typeof player.resetAllocatedStats>;
+        try {
+            result = player.resetAllocatedStats(maxRefundPerStat);
+        } catch (error) {
+            if (!inv.restoreItemSnapshot(ticketSnapshot)) {
+                logger.error(`스탯 초기화 실패 후 티켓 복원 실패: user=${player.userId}`);
+            }
+            throw error;
+        }
+        sendNotificationToUser(player.userId, {
+            key: 'item:stat-reset:complete',
+            message: `직접 분배한 스탯 포인트 ${result.refundedStatPoints}개를 되돌렸습니다.`,
+        });
+    } catch (error) {
+        logger.error('스탯포인트 초기화권 사용 실패', error);
+    } finally {
+        finish();
+    }
+});
+
 defineItem({
     id: 'health_potion',
     name: '체력 포션',
@@ -486,6 +529,41 @@ defineItem({
     modifiers: null,
     baseDurability: null,
     tags: [],
+});
+
+// TODO: 전용 아트 제작 단계에서 두 초기화권에 복제한 hostile_return_scroll fallback을 교체한다.
+defineItem({
+    id: 'stat_point_reset_ticket',
+    name: '스탯포인트 초기화권',
+    description: '레벨업으로 자동 상승한 스탯은 유지하고 직접 분배한 모든 스탯 포인트를 되돌린다.',
+    image: 'items/stat_point_reset_ticket',
+    category: '소모품',
+    weight: 0.05,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: null,
+    onUse: 'refund_allocated_stats',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE],
+});
+
+defineItem({
+    id: 'faded_stat_reset_ticket',
+    name: '빛바랜 스탯포인트 초기화권',
+    description: '레벨업 자동 상승분은 유지하고 직접 분배한 포인트를 스탯마다 최대 10개, 총 50개까지 되돌린다.',
+    image: 'items/faded_stat_reset_ticket',
+    category: '소모품',
+    weight: 0.05,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: { maxRefundPerStat: 10 },
+    onUse: 'refund_allocated_stats',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE],
 });
 
 // TODO: 낚시 보물 전용 물약 아트 제작 시 현재 영약 fallback 원본을 교체한다.

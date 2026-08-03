@@ -260,5 +260,8 @@ for (const [locationId, table] of Object.entries({
         ],
     },
 } as const)) {
-    defineFishingTreasureTable(locationId, table.chance, table.entries);
+    defineFishingTreasureTable(locationId, table.chance, [
+        ...table.entries,
+        { itemDataId: 'faded_stat_reset_ticket', weight: 4 },
+    ]);
 }

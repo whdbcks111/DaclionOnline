@@ -86,6 +86,30 @@ test('낚시 보물은 장소별 희귀 보상표를 사용하고 행운 보정�
         rollFishingTreasure('endstar_silent_sun', 10_000, sequence(0.031, 0, 0)),
         undefined,
     );
+
+    const treasureLocations = [
+        'luminous_pond',
+        'glassdune_hidden_oasis',
+        'misttide_kelp_inlet',
+        'paradox_scrap_reservoir',
+        'eclipse_luminous_reef',
+        'endstar_silent_sun',
+        'abyssglass_pressure_lagoon',
+        'dreamarchive_inkwater_pool',
+        'rustworld_mercury_reservoir',
+        'silentdivine_prayer_spring',
+        'originboundary_genesis_tide',
+    ];
+    for (const locationId of treasureLocations) {
+        const faded = getFishingTreasureTable(locationId)?.entries.find(entry =>
+            entry.itemDataId === 'faded_stat_reset_ticket');
+        assert.equal(faded?.weight, 4, locationId);
+        assert.deepEqual(
+            rollFishingTreasure(locationId, 0, sequence(0, 0.999999, 0)),
+            { itemDataId: 'faded_stat_reset_ticket', count: 1 },
+            locationId,
+        );
+    }
 });
 
 const baseConfig: FishingCaptureConfig = {

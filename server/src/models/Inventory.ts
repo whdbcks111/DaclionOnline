@@ -4,6 +4,7 @@ import { Item, createItemMetadataDelta, getItemData } from "./Item.js";
 import type { ItemDurabilityRepairResult, ItemMetadata, ItemSnapshot } from "./Item.js";
 import type { TagId } from "../../../shared/tags.js";
 import type { UsableItemHudData } from "../../../shared/types.js";
+import type { Prisma } from '../generated/prisma/client.js';
 
 export type { ItemData } from "./Item.js";
 export { Item, getItemData, getAllItemData } from "./Item.js";
@@ -22,6 +23,26 @@ export interface InventoryItemSelection {
 export interface RemovedInventoryItemSnapshot {
     readonly name: string;
     readonly snapshot: ItemSnapshot;
+}
+
+/** 우편처럼 DB transaction이 먼저 확정하는 인벤토리 지급 행의 생성 계획. */
+export interface PersistedInventoryGrantCreateRow {
+    readonly itemDataId: string;
+    readonly count: number;
+    readonly durability: number | null;
+    readonly metadata: unknown;
+    readonly tags: readonly TagId[];
+}
+
+/** 외부 transaction이 생성한 뒤 현재 온라인 인벤토리에 Clean 상태로 흡수할 행. */
+export interface PersistedInventoryGrantRow extends PersistedInventoryGrantCreateRow {
+    readonly id: number;
+    readonly playerId: number;
+    readonly sortOrder: number;
+}
+
+export interface PersistedInventoryGrantPlan {
+    readonly rows: readonly PersistedInventoryGrantCreateRow[];
 }
 
 /** 인벤토리 정리 명령과 영속 순서가 공유하는 정렬 기준. */
@@ -67,6 +88,7 @@ const inventoryCollator = new Intl.Collator('ko-KR', {
     numeric: true,
     sensitivity: 'base',
 });
+const MAX_PERSISTED_GRANT_ROWS = 100;
 
 export default class Inventory {
     readonly playerId: number;
@@ -471,6 +493,119 @@ export default class Inventory {
         return this.addItemSnapshotInternal(snapshot, true);
     }
 
+    /**
+     * 우편 첨부처럼 claim 상태와 Item 행 생성을 같은 DB transaction에서 처리할 기능을 위해
+     * 중량 검증과 스택 분할을 Inventory가 소유한 영속 행 계획으로 변환한다.
+     */
+    preparePersistedGrant(snapshots: readonly ItemSnapshot[]): PersistedInventoryGrantPlan | null {
+        if (snapshots.length === 0 || !this.canAddSnapshots(snapshots)) return null;
+        const rows: PersistedInventoryGrantCreateRow[] = [];
+        for (const snapshot of snapshots) {
+            if (!Number.isSafeInteger(snapshot.count) || snapshot.count <= 0) return null;
+            const data = getItemData(snapshot.itemDataId);
+            if (!data) return null;
+            let remaining = snapshot.count;
+            while (remaining > 0) {
+                const count = data.stackable ? Math.min(remaining, data.maxStack) : 1;
+                if (rows.length >= MAX_PERSISTED_GRANT_ROWS) return null;
+                const item = Item.fromSnapshot({ ...snapshot, count });
+                if (item.isBroken) return null;
+                rows.push(Object.freeze({
+                    itemDataId: item.itemDataId,
+                    count: item.count,
+                    durability: item.durability,
+                    metadata: item.getPersistedMetadata(),
+                    tags: Object.freeze(item.tags.persistentValues()),
+                }));
+                remaining -= count;
+            }
+        }
+        return Object.freeze({ rows: Object.freeze(rows) });
+    }
+
+    /**
+     * 소유 기능의 transaction 안에서 계획된 Item 행을 생성한다. 우편 등 호출자는
+     * items table 구조·정렬 순서·metadata 직렬화에 직접 접근하지 않는다.
+     */
+    async persistPreparedGrant(
+        transaction: Prisma.TransactionClient,
+        plan: PersistedInventoryGrantPlan,
+    ): Promise<PersistedInventoryGrantRow[]> {
+        if (plan.rows.length < 1 || plan.rows.length > MAX_PERSISTED_GRANT_ROWS) {
+            throw new Error('영속 인벤토리 지급 행 수가 올바르지 않습니다.');
+        }
+        const aggregate = await transaction.item.aggregate({
+            where: { playerId: this.playerId },
+            _max: { sortOrder: true },
+        });
+        let sortOrder = (aggregate._max.sortOrder ?? -1) + 1;
+        const persisted: PersistedInventoryGrantRow[] = [];
+        for (const planned of plan.rows) {
+            const row = await transaction.item.create({
+                data: {
+                    playerId: this.playerId,
+                    itemDataId: planned.itemDataId,
+                    count: planned.count,
+                    durability: planned.durability,
+                    metadata: planned.metadata as any,
+                    tags: planned.tags as any,
+                    sortOrder: sortOrder++,
+                },
+            });
+            persisted.push({
+                id: row.id,
+                playerId: row.playerId,
+                itemDataId: row.itemDataId,
+                count: row.count,
+                durability: row.durability,
+                metadata: row.metadata,
+                tags: (Array.isArray(row.tags) ? row.tags : []) as TagId[],
+                sortOrder: row.sortOrder,
+            });
+        }
+        return persisted;
+    }
+
+    /**
+     * 외부 transaction에서 이미 생성된 Item 행만 Clean으로 흡수한다. 기존 dirty/revision과
+     * 정렬 변경 상태는 절대 초기화하지 않으며 같은 DB id 재적용은 멱등적으로 무시한다.
+     */
+    adoptPersistedGrant(rows: readonly PersistedInventoryGrantRow[]): boolean {
+        const knownIds = new Set(
+            [...this._states.keys()].map(item => item.id).filter(id => id > 0),
+        );
+        const adopted: Item[] = [];
+        for (const row of rows) {
+            if (row.playerId !== this.playerId
+                || !Number.isSafeInteger(row.id) || row.id <= 0
+                || !Number.isSafeInteger(row.count) || row.count <= 0) return false;
+            if (knownIds.has(row.id)) continue;
+            knownIds.add(row.id);
+            const data = getItemData(row.itemDataId);
+            if (!data) return false;
+            const tags = Array.isArray(row.tags) ? row.tags : [];
+            const item = Item.fromPersistence(
+                row.itemDataId,
+                row.count,
+                row.durability,
+                row.metadata,
+                row.id,
+                tags,
+            );
+            if (item.isBroken) return false;
+            adopted.push(item);
+        }
+        if (adopted.length === 0) return true;
+        this.beginChangeBatch();
+        try {
+            for (const item of adopted) this.track(item, ItemState.Clean);
+            this.notifyChange();
+        } finally {
+            this.endChangeBatch();
+        }
+        return true;
+    }
+
     /** 거래 에스크로 취소처럼 소유자에게 반드시 돌려줘야 하는 아이템을 중량 초과 상태로도 복구한다. */
     restoreItemSnapshot(snapshot: ItemSnapshot): boolean {
         return this.addItemSnapshotInternal(snapshot, false);
@@ -587,10 +722,13 @@ export default class Inventory {
 
     /** 아이템 사용. finish()가 호출되면 resolve되는 Promise 반환 */
     useItem(itemId: number): Promise<void> | null {
-        if (this._usingItem) return null;
-
         const item = this.getItem(itemId);
-        if (!item) return null;
+        return item ? this.useItemInstance(item) : null;
+    }
+
+    /** 저장 전 id=0 아이템이 여러 개여도 선택한 인스턴스 자체를 정확히 사용한다. */
+    useItemInstance(item: Item): Promise<void> | null {
+        if (this._usingItem || !this._items.includes(item)) return null;
 
         const data = item.data;
         if (!data?.onUse) return null;

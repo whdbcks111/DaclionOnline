@@ -132,6 +132,65 @@ interface PlayerLevelAdjustmentPlan extends PlayerLevelAdjustmentResult {
     readonly statPoint: number;
 }
 
+export interface PlayerStatResetResult {
+    readonly automaticFloor: number;
+    readonly maxRefundPerStat?: number;
+    readonly refundedStatPoints: number;
+    readonly statDeltas: Readonly<StatRecord>;
+    readonly stats: Readonly<StatRecord>;
+    readonly statPoint: number;
+}
+
+export interface PlayerStatResetPreview extends PlayerStatResetResult {
+    readonly deniedReason?: string;
+}
+
+/**
+ * 레벨업으로 자동 지급된 전 스탯 상승분은 남기고, 플레이어가 직접 분배한 포인트만
+ * 환급한다. 하한보다 낮은 구버전 스탯은 이 계산에서 임의로 올리지 않는다.
+ */
+export function calculatePlayerStatReset(
+    level: number,
+    currentStats: Readonly<StatRecord>,
+    currentStatPoint: number,
+    maxRefundPerStat?: number,
+): PlayerStatResetResult {
+    if (!Number.isSafeInteger(level) || level < 1 || level > 10_000) {
+        throw new Error('스탯 초기화 레벨은 1~10000 사이의 정수여야 합니다.');
+    }
+    if (!Number.isSafeInteger(currentStatPoint) || currentStatPoint < 0) {
+        throw new Error('미사용 스탯 포인트가 올바르지 않습니다.');
+    }
+    if (maxRefundPerStat !== undefined
+        && (!Number.isSafeInteger(maxRefundPerStat) || maxRefundPerStat < 1)) {
+        throw new Error('스탯별 최대 환급량은 1 이상의 정수여야 합니다.');
+    }
+    const automaticFloor = Math.max(0, Math.floor(level) - 1);
+    const stats = { ...currentStats };
+    const statDeltas = {} as StatRecord;
+    let refundedStatPoints = 0;
+
+    for (const stat of StatType.values()) {
+        if (!Number.isSafeInteger(stats[stat.key]) || stats[stat.key] < 0) {
+            throw new Error(`${stat.label} 스탯이 올바르지 않습니다.`);
+        }
+        const freelyAllocated = Math.max(0, stats[stat.key] - automaticFloor);
+        const refund = Math.min(freelyAllocated, maxRefundPerStat ?? freelyAllocated);
+        stats[stat.key] -= refund;
+        statDeltas[stat.key] = -refund;
+        refundedStatPoints += refund;
+    }
+
+    return {
+        automaticFloor,
+        maxRefundPerStat,
+        refundedStatPoints,
+        statDeltas,
+        stats,
+        statPoint: currentStatPoint + refundedStatPoints,
+    };
+}
+
 /** 상승은 현재 분배를 건드리지 않고 지급분만 더하며, 하락만 성장 규칙을 역산하는 순수 계산 API. */
 export function calculatePlayerLevelAdjustment(
     currentLevel: number,
@@ -928,6 +987,44 @@ export default class Player extends Entity {
             data: { stat: statType.key, amount },
         });
         return true;
+    }
+
+    /** 스탯 초기화 아이템이 소모 전에 환급 가능 여부를 확인하는 불변 preview. */
+    previewAllocatedStatReset(maxRefundPerStat?: number): PlayerStatResetPreview {
+        const plan = calculatePlayerStatReset(
+            this.level,
+            this.stat.points,
+            this.statPoint,
+            maxRefundPerStat,
+        );
+        const blocked = this.equipment.getAllEquipped().flatMap(({ item }) => {
+            const requirements = item.requirements;
+            if (!requirements) return [];
+            const missing = StatType.values().flatMap(stat => {
+                const required = requirements.stats[stat.key];
+                return required && plan.stats[stat.key] < required
+                    ? [`${stat.label} ${required}`]
+                    : [];
+            });
+            return missing.length > 0 ? [`${item.name}(${missing.join(' · ')})`] : [];
+        });
+        return blocked.length > 0
+            ? { ...plan, deniedReason: `초기화 후 장착 조건이 부족해집니다: ${blocked.join(', ')}. 먼저 장비를 해제해 주세요.` }
+            : plan;
+    }
+
+    /** 자동 성장분을 보존하고 직접 분배한 스탯만 미사용 포인트로 되돌린다. */
+    resetAllocatedStats(maxRefundPerStat?: number): PlayerStatResetResult {
+        const plan = this.previewAllocatedStatReset(maxRefundPerStat);
+        if (plan.deniedReason) throw new Error(plan.deniedReason);
+        if (plan.refundedStatPoints <= 0) return plan;
+        for (const stat of StatType.values()) this.stat.set(stat, plan.stats[stat.key]);
+        this._statPoint = plan.statPoint;
+        this.stat.applyModifiers(this);
+        this.inventory.maxWeight = this.attribute.get(AttributeType.MAX_WEIGHT);
+        this.clampVitals();
+        this.markDirty();
+        return plan;
     }
 
     // -- DB 연동 --

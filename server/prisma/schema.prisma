@@ -62,6 +62,7 @@ model Player {
   progressEntries PlayerProgress[]
   skills          PlayerSkill[]
   quests          PlayerQuest[]
+  mailboxMessages MailboxMessage[]
 
   @@map("players")
 }
@@ -148,6 +149,32 @@ model Item {
 
   @@index([playerId])
   @@map("items")
+}
+
+// 시스템이 발송하고 플레이어가 읽거나 첨부 아이템을 수령하는 영속 우편.
+model MailboxMessage {
+  id              Int       @id @default(autoincrement())
+
+  recipientId     Int       @map("recipient_id")
+  recipient       Player    @relation(fields: [recipientId], references: [userId], onDelete: Cascade)
+
+  senderLabel     String    @db.VarChar(50) @map("sender_label")
+  subject         String    @db.VarChar(120)
+  body            String    @db.Text
+  attachments     Json?
+  attachmentCount Int       @default(0) @map("attachment_count")
+  sourceKey       String?   @db.VarChar(150) @map("source_key")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  readAt          DateTime? @map("read_at")
+  claimedAt       DateTime? @map("claimed_at")
+  expiresAt       DateTime? @map("expires_at")
+  archivedAt      DateTime? @map("archived_at")
+
+  @@unique([recipientId, sourceKey])
+  @@index([recipientId, archivedAt, createdAt])
+  @@index([expiresAt])
+  @@map("mailbox_messages")
 }
 
 // 장비 슬롯 테이블

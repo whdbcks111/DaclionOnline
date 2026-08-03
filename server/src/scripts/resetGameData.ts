@@ -16,6 +16,7 @@ export interface GameDataCounts {
     readonly progress: number;
     readonly skills: number;
     readonly quests: number;
+    readonly mailboxMessages: number;
 }
 
 interface CountDelegate {
@@ -30,6 +31,7 @@ interface GameDataCountClient {
     readonly playerProgress: CountDelegate;
     readonly playerSkill: CountDelegate;
     readonly playerQuest: CountDelegate;
+    readonly mailboxMessage: CountDelegate;
 }
 
 export function parseGameDataResetArguments(args: readonly string[]): GameDataResetArguments {
@@ -54,7 +56,7 @@ export function parseGameDataResetArguments(args: readonly string[]): GameDataRe
 }
 
 export async function countGameData(client: GameDataCountClient): Promise<GameDataCounts> {
-    const [users, players, items, equipments, progress, skills, quests] = await Promise.all([
+    const [users, players, items, equipments, progress, skills, quests, mailboxMessages] = await Promise.all([
         client.user.count(),
         client.player.count(),
         client.item.count(),
@@ -62,8 +64,9 @@ export async function countGameData(client: GameDataCountClient): Promise<GameDa
         client.playerProgress.count(),
         client.playerSkill.count(),
         client.playerQuest.count(),
+        client.mailboxMessage.count(),
     ]);
-    return { users, players, items, equipments, progress, skills, quests };
+    return { users, players, items, equipments, progress, skills, quests, mailboxMessages };
 }
 
 async function resetGameData(): Promise<void> {
@@ -90,7 +93,8 @@ async function resetGameData(): Promise<void> {
         const after = await countGameData(transaction);
         if (after.users !== usersBefore) throw new Error('계정 행 개수가 변경되어 초기화를 취소합니다.');
         if (after.players !== 0 || after.items !== 0 || after.equipments !== 0
-            || after.progress !== 0 || after.skills !== 0 || after.quests !== 0) {
+            || after.progress !== 0 || after.skills !== 0 || after.quests !== 0
+            || after.mailboxMessages !== 0) {
             throw new Error('일부 게임 데이터가 남아 있어 초기화를 취소합니다.');
         }
         return deleted.count;

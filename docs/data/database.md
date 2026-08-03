@@ -13,12 +13,15 @@ Prisma 스키마는 `server/prisma/schema.prisma`, 런타임 클라이언트 설
 | `PlayerProgress` / `player_progress` | `(playerId, key)` 복합 PK, Player N:1 cascade | kind, intValue, textValue, updatedAt |
 | `PlayerSkill` / `player_skills` | `(playerId, skillDataId)` 복합 PK, Player N:1 cascade | level, experience, cooldownEndsAt, metadata/tags JSON, acquisitionSource, timestamps |
 | `PlayerQuest` / `player_quests` | `(playerId, questDataId)` 복합 PK, Player N:1 cascade | status, currentStageId, objectiveProgress/metadata/tags JSON, completionCount, 수락·보고·완료·반복 시각 |
+| `MailboxMessage` / `mailbox_messages` | id, Player N:1 cascade, `(recipientId, sourceKey)` unique | 발신 표시·제목·본문, versioned attachments JSON/수량, 읽음·수령·만료·archive 시각 |
 
 `itemDataId`는 DB 외래키가 아니라 코드의 `data/items.ts` 마스터 데이터 ID다. `locationId`도 JSON 마스터 데이터 ID다. 마스터 ID 변경 시 기존 DB 레코드 호환을 직접 처리해야 한다.
 
 Item/Equipment의 `metadata` JSON은 전체 유효값이 아니라 `{ "__daclionItemMetadata": 1, "values": { ...delta } }` 형식의 top-level delta만 저장한다. 런타임 `Item`이 `ItemData.baseMetadata`와 합쳐 읽으며, Item setter callback이 Inventory/Equipment dirty 상태를 만든다. `PlayerSkill.metadata`도 같은 공용 codec으로 `{ "__daclionSkillMetadata": 1, "values": { ...delta } }`만 저장한다. 이 구조 덕분에 delta에 없는 기본 필드는 기존 아이템과 스킬에도 최신 마스터 값이 적용된다.
 
 `items.sort_order`는 `/인벤토리정리`로 정한 인벤토리 표시 순서를 저장한다. 기존 행은 migration 기본값 0과 ID 보조 정렬로 종전 획득 순서를 유지하며, 최초 정리나 아이템 추가·제거 뒤 Inventory dirty flush가 0부터 시작하는 순서로 다시 저장한다.
+
+`mailbox_messages.attachments`는 `{ version: 1, items: ItemSnapshot[] }`만 허용하며 한 통당 snapshot 20개·생성 Item 행 100개·총수량 1,000,000개·JSON 32KiB 상한을 적용한다. 첨부 수령은 온라인 Player dirty 저장을 먼저 기다린 뒤 `claimed_at IS NULL` 조건 갱신과 실제 `items` 행 생성을 하나의 Prisma transaction에서 확정한다. commit 후 해당 DB id 행을 Inventory에 Clean으로 흡수하므로 재저장 중복이 없고, commit 뒤 프로세스가 종료돼도 다음 로그인 load가 지급 행을 복원한다. `source_key`는 소문자 ASCII 안전 규격만 허용한다. 이 key가 있는 멱등 보상 우편은 정리 시 `archived_at`만 설정해 unique tombstone을 보존하고, 같은 key 재발송이 중복 보상을 만들지 않게 한다. source key 없는 완료 일반 우편은 실제 삭제한다. 플레이어 간 발송과 골드 첨부는 현재 지원하지 않는다.
 
 `Equipment.count`는 미끼처럼 장착 가능한 스택 아이템의 남은 묶음 수량을 저장한다. 장착 시 인벤토리 스택 전체가 이동하고 `consumeEquippedItem(count)`는 필요한 수량만 차감해 남은 스택을 슬롯에 유지한다. 기존 장비 행은 `20260718000000_add_equipment_count` 마이그레이션의 기본값 1로 이행한다.
 
@@ -34,7 +37,7 @@ StatusEffect 인스턴스와 ActionType 제한도 Entity의 런타임 메모리�
 
 ## 계정 보존 운영 초기화
 
-`npm run db:reset:game`은 기본적으로 User와 Player 하위 테이블의 count만 출력하고 변경하지 않는다. 서버를 중지한 뒤 `--confirm RESET-DACLION-GAME-DATA`를 붙였을 때만 하나의 DB 트랜잭션에서 `players`를 삭제한다. `items`, `equipments`, `player_progress`, `player_skills`, `player_quests`는 FK cascade로 함께 삭제되며 트랜잭션 안에서 모두 0인지와 `users` count가 변하지 않았는지 검증한다.
+`npm run db:reset:game`은 기본적으로 User와 Player 하위 테이블의 count만 출력하고 변경하지 않는다. 서버를 중지한 뒤 `--confirm RESET-DACLION-GAME-DATA`를 붙였을 때만 하나의 DB 트랜잭션에서 `players`를 삭제한다. `items`, `equipments`, `player_progress`, `player_skills`, `player_quests`, `mailbox_messages`는 FK cascade로 함께 삭제되며 트랜잭션 안에서 모두 0인지와 `users` count가 변하지 않았는지 검증한다.
 
 `users`의 ID, username/email, password hash/salt, nickname, profile image, permission과 생성·수정 시각은 보존된다. 업로드 파일과 코드 마스터 데이터는 DB 초기화 대상이 아니다. 서버가 실행 중이면 메모리 Player와 저장 작업이 삭제된 행을 계속 참조할 수 있으므로 실제 초기화 전 서버 중지가 필수다. 다음 로그인에서 `Player.create()`가 기본 상태를 만들고 첫 모험 안내, 일회성 지원품과 새싹 누적 시간이 처음부터 시작된다.
 
@@ -91,6 +94,7 @@ login/session restore
 - 태그 JSON 컬럼 추가 migration은 `20260714000000_add_object_tags`다.
 - 통계·플래그와 스킬 인스턴스 테이블 migration은 `20260715000000_add_progress_and_skills`다.
 - 플레이어 퀘스트 인스턴스 테이블 migration은 `20260716000000_add_player_quests`다.
+- 시스템 우편과 원자적 아이템 첨부 수령 테이블 migration은 `20260803020000_add_mailbox_messages`다.
 - 플레이어 스킬 경험치 컬럼 migration은 `20260717000000_add_skill_experience`다.
 - 장착 스택 수량 컬럼 migration은 `20260718000000_add_equipment_count`다.
 - 순위 지표·공개 설정 JSON migration은 `20260718010000_add_player_rankings`다.

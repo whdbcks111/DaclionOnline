@@ -24,6 +24,7 @@ import { initKarmaCommands } from './karma.js';
 import { initPatchNoteCommands } from './patchNotes.js';
 import { initTitleCommands } from './title.js';
 import { initCodexCommands } from './codex.js';
+import { initMailboxCommands } from './mailbox.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -52,4 +53,5 @@ export function initAllCommands(): void {
     initPatchNoteCommands();
     initTitleCommands();
     initCodexCommands();
+    initMailboxCommands();
 }
