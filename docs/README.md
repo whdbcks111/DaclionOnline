@@ -18,6 +18,7 @@
 | 인증·세션·프로필 기능 | [systems/auth-session.md](systems/auth-session.md) |
 | 채팅·채널·명령어 기능 | [systems/chat-command.md](systems/chat-command.md) |
 | 플레이어·전투·위치·게임 루프 | [systems/player-world.md](systems/player-world.md) |
+| 장소별 합성 배경음악·전투 레이어·음량 | [systems/adaptive-music.md](systems/adaptive-music.md) |
 | 전투 pipeline·몬스터 AI·위협/기여도 | [systems/combat-ai.md](systems/combat-ai.md) |
 | PVP 타겟·지역 위험도·사망 패널티 | [systems/pvp-regions.md](systems/pvp-regions.md) |
 | 카르마·악명·현상 대상과 시설 제한 | [systems/karma.md](systems/karma.md) |

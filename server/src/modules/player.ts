@@ -199,6 +199,7 @@ export function sendPlayerStats(userId: number): void {
     const data = {
         userId:            player.userId,
         nickname:          getSessionByUserId(userId)?.nickname ?? '',
+        musicCombatState:  player.musicCombatState.key,
         equippedTitle:     player.titles.equippedName || undefined,
         level:             player.level,
         exp:               player.exp,
@@ -257,6 +258,7 @@ export function sendLocationInfo(userId: number): void {
     const data: Omit<LocationInfoData, 'revision' | 'syncId'> = {
         locationId,
         name: location.data.name,
+        ...(location.data.mapColor ? { mapColor: location.data.mapColor } : {}),
         zoneType: location.data.zoneType,
         zoneLabel: location.riskPolicy.label,
         pvpAllowed: location.riskPolicy.pvpAllowed,

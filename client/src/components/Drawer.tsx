@@ -25,6 +25,10 @@ interface Props {
     permission?: number
     onOpenAdmin: () => void
     onLogout: () => void
+    musicVolume: number
+    musicMuted: boolean
+    onMusicVolumeChange: (volume: number) => void
+    onToggleMusicMute: () => void
 }
 
 function channelRoomKey(channel: string | null): string {
@@ -51,6 +55,10 @@ export default function Drawer({
     permission = 0,
     onOpenAdmin,
     onLogout,
+    musicVolume,
+    musicMuted,
+    onMusicVolumeChange,
+    onToggleMusicMute,
 }: Props) {
     const [uploading, setUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -234,6 +242,34 @@ export default function Drawer({
                             서버 채팅 기록 청소
                         </button>
                     )}
+                    <section className={styles.musicControl} aria-labelledby="background-music-label">
+                        <div className={styles.musicControlHeader}>
+                            <label id="background-music-label" htmlFor="background-music-volume">배경음악 음량</label>
+                            <output htmlFor="background-music-volume">{musicVolume}%</output>
+                        </div>
+                        <div className={styles.musicControlRow}>
+                            <input
+                                id="background-music-volume"
+                                className={styles.musicSlider}
+                                type="range"
+                                min="0"
+                                max="100"
+                                step="1"
+                                value={musicVolume}
+                                aria-label="배경음악 음량"
+                                aria-valuetext={`${musicVolume}%`}
+                                onChange={event => onMusicVolumeChange(Number(event.target.value))}
+                            />
+                            <button
+                                type="button"
+                                className={styles.musicMuteButton}
+                                aria-pressed={musicMuted}
+                                aria-label={musicMuted ? '배경음악 켜기' : '배경음악 음소거'}
+                                title={musicMuted ? '이전 음량으로 복원' : '배경음악 음소거'}
+                                onClick={onToggleMusicMute}
+                            >{musicMuted ? '켜기' : '음소거'}</button>
+                        </div>
+                    </section>
                     <div className={styles.displayActionRow}>
                         <button className={styles.uploadButton} onClick={toggleFullscreen}>
                             {fullscreen ? '전체화면 종료' : '전체화면'}

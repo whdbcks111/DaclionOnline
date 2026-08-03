@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import styles from './Home.module.scss'
 import { useSocket } from '../context/SocketContext'
 import { HudProvider, useHud } from '../context/HudContext'
+import { GameAudioProvider } from '../context/GameAudioContext'
+import { useGameAudio } from '../context/useGameAudio'
 import ChatMessage from '../components/chat/ChatMessage'
 import CommandAutocomplete from '../components/chat/CommandAutocomplete'
 import {
@@ -82,6 +84,7 @@ function HomeContent() {
   const navigate = useNavigate()
   const { socket, sessionInfo, updateProfileImage, updateNickname } = useSocket()
   const { playerStats, setPlayerStats, setLocationInfo } = useHud()
+  const { musicVolume, musicMuted, setMusicVolume, toggleMusicMute } = useGameAudio()
   const [messages, setMessages] = useState<ChatMessageType[]>([])
   const [commands, setCommands] = useState<CommandInfo[]>([])
   const [commandFilter, setCommandFilter] = useState('')
@@ -930,6 +933,10 @@ function HomeContent() {
           }
           socket.emit('logout', decodeURIComponent(token))
         }}
+        musicVolume={musicVolume}
+        musicMuted={musicMuted}
+        onMusicVolumeChange={setMusicVolume}
+        onToggleMusicMute={toggleMusicMute}
       />
       <HudContainer />
       <MiniGameOverlay />
@@ -944,7 +951,9 @@ export default function Home() {
   const { sessionInfo } = useSocket()
   return (
     <HudProvider key={sessionInfo?.userId ?? 'no-session'}>
-      <HomeContent />
+      <GameAudioProvider>
+        <HomeContent />
+      </GameAudioProvider>
     </HudProvider>
   )
 }

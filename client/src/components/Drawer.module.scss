@@ -86,6 +86,66 @@ $avatar-size: 80px;
     }
 }
 
+.musicControl {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    flex-shrink: 0;
+    padding: $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-bg-secondary;
+}
+
+.musicControlHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    color: $color-text;
+    font-size: $font-size-sm;
+
+    output {
+        color: $color-text-tertiary;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.musicControlRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: $spacing-sm;
+}
+
+.musicSlider {
+    width: 100%;
+    min-width: 0;
+    accent-color: $color-primary;
+    cursor: pointer;
+}
+
+.musicMuteButton {
+    min-width: 4.25rem;
+    padding: $spacing-xs $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-sm;
+    background-color: $color-bg-tertiary;
+    color: $color-text;
+    font-size: 0.75rem;
+    cursor: pointer;
+
+    &:hover {
+        border-color: $color-primary;
+        color: $color-primary;
+    }
+
+    &[aria-pressed='true'] {
+        border-color: $color-danger;
+        color: $color-danger;
+    }
+}
+
 .uploadButton {
     width: 100%;
     padding: $spacing-sm $spacing-md;
@@ -250,4 +310,15 @@ $avatar-size: 80px;
     opacity: 0.6;
     flex-shrink: 0;
     margin-left: $spacing-sm;
+}
+
+@media (max-width: 420px) {
+    .drawer {
+        width: min(86vw, 20rem);
+        padding-inline: $spacing-sm;
+    }
+
+    .musicControlRow {
+        gap: $spacing-xs;
+    }
 }

@@ -53,12 +53,14 @@ import HudPresetBook from './HudPreset.js';
 import { RegionRiskPolicy } from './RegionRisk.js';
 import CodexBook from './Codex.js';
 import { initializePlayerCodex } from '../modules/codex.js';
+import { MusicCombatState } from '../../../shared/adaptiveMusic.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
 export const LEVEL_SURVIVAL_CAPACITY_PER_LEVEL = 1;
 export const NEWCOMER_PLAY_TIME_SECONDS = 24 * 60 * 60;
 export const NEWCOMER_MAX_LEVEL = 30;
 export const HOSTILE_RETURN_SCROLL_ITEM_DATA_ID = 'hostile_return_scroll';
+export const MUSIC_COMBAT_HOLD_SECONDS = 9;
 const PLAYER_LEVEL_SURVIVAL_ATTRIBUTE_SOURCE = 'level:survival-capacity';
 
 export const PlayerRuntimeProgressIds = Object.freeze({
@@ -260,6 +262,8 @@ export default class Player extends Entity {
     private _savePromise: Promise<void> | null = null;
     private _saveRequested = false;
     private _autoAttackEnabled = false;
+    private _musicCombatRemaining = 0;
+    private _musicBossRemaining = 0;
 
     private constructor(
         userId: number, nickname: string, level: number, exp: number,
@@ -348,6 +352,32 @@ export default class Player extends Entity {
         return this.setAutoAttackEnabled(!this._autoAttackEnabled);
     }
 
+    /** 서버가 확인한 최근 실제 교전을 적응형 음악용 클래스형 상태로 제공한다. */
+    get musicCombatState(): MusicCombatState {
+        if (this._musicBossRemaining > 0) return MusicCombatState.BOSS;
+        if (this._musicCombatRemaining > 0) return MusicCombatState.COMBAT;
+        return MusicCombatState.EXPLORATION;
+    }
+
+    protected override onCombatEngagement(opponent: Entity): void {
+        if (this.isDefeated) return;
+        this._musicCombatRemaining = MUSIC_COMBAT_HOLD_SECONDS;
+        if (opponent.hasTag(GameTags.ENTITY_BOSS)) {
+            this._musicBossRemaining = MUSIC_COMBAT_HOLD_SECONDS;
+        }
+    }
+
+    private clearMusicCombatState(): void {
+        this._musicCombatRemaining = 0;
+        this._musicBossRemaining = 0;
+    }
+
+    private updateMusicCombatState(dt: number): void {
+        if (!Number.isFinite(dt) || dt <= 0) return;
+        this._musicCombatRemaining = Math.max(0, this._musicCombatRemaining - dt);
+        this._musicBossRemaining = Math.max(0, this._musicBossRemaining - dt);
+    }
+
     // -- Getters / Setters (dirty 추적) --
 
     private markDirty(): void {
@@ -394,6 +424,7 @@ export default class Player extends Entity {
     override set locationId(val: string) {
         const previousLocationId = this._locationId;
         if (val !== previousLocationId) endNpcDialogue(this, DialogueEndReason.MOVED);
+        if (val !== previousLocationId) this.clearMusicCombatState();
         this._locationId = val;
         this.markDirty();
         if (this.progress) markLocationVisited(this, val);
@@ -623,6 +654,7 @@ export default class Player extends Entity {
 
     override update(dt: number): void {
         super.update(dt);
+        this.updateMusicCombatState(dt);
         if (Number.isFinite(dt) && dt > 0) this._unsavedPlayTime += dt;
         this.skills.update(dt);
         this.titles.update(dt);
@@ -642,6 +674,7 @@ export default class Player extends Entity {
     override onDeath(): void {
         // 저장된 사망 상태나 같은 틱의 중복 호출이 자동 소모품을 다시 쓰지 않게 한다.
         if (this.isDead) return;
+        this.clearMusicCombatState();
         super.onDeath();
         const location = getLocation(this.locationId);
         const originalDeathTimer = this.deathTimer;
@@ -746,6 +779,7 @@ export default class Player extends Entity {
     }
 
     private completeRespawn(notify: boolean): void {
+        this.clearMusicCombatState();
         super.respawn();
         this._deathExpiresAtMs = 0;
         this.progress.reset(PlayerRuntimeProgressIds.DEATH_EXPIRES_AT);

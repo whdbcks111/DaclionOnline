@@ -881,6 +881,23 @@ export default abstract class Entity implements TagReadable {
     /** Monster가 직접/지속 피해의 실제 결과를 한 경로에서 기록하는 확장 경계. */
     protected onDamageResolved(_result: DamageResult, _cause: DamageCause | null): void {}
 
+    /** Player처럼 최근 실제 교전을 비영속 상태로 기록하는 소유자 확장 경계. */
+    protected onCombatEngagement(_opponent: Entity): void {}
+
+    /**
+     * 공격 Entity와 대상의 최종 owner에게 실제 교전을 알린다.
+     * 플레이어·몬스터 사이만 인정해 광맥과 일반 월드 오브젝트 공격은 전투 상태를 만들지 않는다.
+     */
+    recordCombatEngagement(opponent: Entity): boolean {
+        const owner = this.attackOwner;
+        const opponentOwner = opponent.attackOwner;
+        if (owner === opponentOwner || owner.locationId !== opponentOwner.locationId) return false;
+        if (!isCombatParticipant(owner) || !isCombatParticipant(opponentOwner)) return false;
+        owner.onCombatEngagement(opponentOwner);
+        opponentOwner.onCombatEngagement(owner);
+        return true;
+    }
+
     /** 현재 대상이 비어 있으면 공격자의 최종 owner를 전투 대상으로 획득한다. */
     acquireCombatTarget(attacker: Entity): boolean {
         const owner = attacker.attackOwner;
@@ -966,6 +983,9 @@ export default abstract class Entity implements TagReadable {
             effectSourceTag: effect.sourceTag || undefined,
             effectTargetTag: effect.targetTag || undefined,
         };
+        if (cause?.causeEntity && result.finalDamage > 0) {
+            cause.causeEntity.recordCombatEngagement(this);
+        }
         this.onDamageResolved(result, cause);
         return result;
     }
@@ -1066,6 +1086,7 @@ export default abstract class Entity implements TagReadable {
         }
         this.attackOwner.revealForOffensiveAction();
         target.acquireCombatTarget(this);
+        this.recordCombatEngagement(target);
         const combatType = combat.damageType;
         const combatOptions = combat.options;
 
@@ -1396,6 +1417,10 @@ function getAttackWeaponType(owner: Entity): string {
         ['staff', GameTags.WEAPON_STAFF],
     ] as const) if (weapon.hasTag(tag)) return type;
     return 'other';
+}
+
+function isCombatParticipant(entity: Entity): boolean {
+    return entity.isPlayer || entity.hasTag(GameTags.ENTITY_MONSTER);
 }
 
 function addActionDisableSource(

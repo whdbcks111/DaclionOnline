@@ -9,6 +9,9 @@
 | `useSocket()` | `socket`, `isConnected`, `sessionInfo`, `updateProfileImage`, `updateNickname` | App, 인증 화면, Home, 알림, 채팅 button, quick slot |
 | `useTheme()` | 현재 theme와 theme 변경 API | `ThemeToggle` 및 테마 소비 UI |
 | `useHud()` | HUD 설정/편집 API, playerStats/locationInfo, 표시 옵션, quick slot·개별 버튼과 이름 있는 서버 프리셋 API | Home, HudContainer, HudSettings, 개별 HUD |
+| `useGameAudio()` | 기기별 `musicVolume`, `musicMuted`, `setMusicVolume`, `toggleMusicMute` | Home, Drawer |
+
+`GameAudioProvider`는 Home의 `HudProvider` 안에서만 마운트한다. `LocationInfoData.locationId/mapColor`와 `PlayerStatsData.musicCombatState`를 순수 resolver에 전달하며 같은 장소·전투 key가 다시 와도 Tone Part를 재구성하지 않는다. 첫 실제 pointer·keydown·touch gesture가 있고 저장 음량이 0보다 클 때만 AudioContext를 시작한다. 숨김·비활성·연결 끊김 화면은 저장 음량과 별개로 fade out하고 route unmount 때 엔진을 dispose한다. Drawer는 오디오 node를 직접 참조하지 않고 Context의 0~100 음량과 음소거 API만 호출한다. 전체 설계와 35개 악보 계약은 [적응형 지역 음악](../systems/adaptive-music.md)을 따른다.
 
 `useHud()`의 설정 API는 `setVisible`, `setPosition`, `setAnchor`, `setPosUnit`, `setPosAnchor`, `setHudOpacity`, `setHudScale`, `resetPosition`이다. 위치 편집 공통 설정은 `setGridSnapEnabled`, `setGridExponent`를 사용하며 slider exponent `2~6`은 실제 `gridSize` `4/8/16/32/64px`로 환산된다. 위치 정보 HUD의 오브젝트·NPC 행동 버튼은 `setLocationObjectActionsVisible`, 미니맵의 인접 지역 이동 목록은 `setMinimapTravelActionsVisible`로 표시한다. 퀵슬롯은 `addQuickSlot`, `removeQuickSlot`, `moveQuickSlot`, `updateQuickSlot`으로만 변경한다. 전투 퀵 버튼은 `setSkillHudVisible`, `setSkillHudPosition`, `resetSkillHudPosition`으로, 사용 아이템 퀵 버튼은 `setItemHudVisible`, `setItemHudPosition`, `resetItemHudPosition`으로 표시와 개별 좌표를 바꾸며 각 config record를 직접 수정하지 않는다. 전용 크기는 `setQuickButtonScale`, 공통 X/Y `%`·`px` 단위는 `setQuickButtonPosUnit`, 네 모서리 좌표 기준점은 `setQuickButtonPosAnchor`로 변경한다. 좌표 체계 변경 시 Context가 기존 화면 위치를 보존해 환산하고 계정 ID가 포함된 localStorage key에 저장한다.
 

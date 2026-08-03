@@ -1,5 +1,6 @@
 // 서버-클라이언트 공통 타입 정의
 import type { TagId } from './tags.js'
+import type { MusicCombatState } from './adaptiveMusic.js'
 import type {
     HudPresetData,
     HudPresetOperationResult,
@@ -296,6 +297,8 @@ export interface SnapshotRevision {
 export interface LocationInfoData extends SnapshotRevision {
     locationId: string
     name: string
+    /** 현재 장소의 적응형 음악 테마를 고르는 검증된 #RRGGBB 대표색. */
+    mapColor?: string
     zoneType: ZoneType
     zoneLabel: string
     pvpAllowed: boolean
@@ -420,6 +423,8 @@ export interface UsableItemHudData {
 export interface PlayerStatsData extends SnapshotRevision {
     userId: number
     nickname: string
+    /** 수동 타게팅이 아니라 서버가 확인한 최근 실제 교전 상태. */
+    musicCombatState: MusicCombatState['key']
     equippedTitle?: string
     level: number
     exp: number
