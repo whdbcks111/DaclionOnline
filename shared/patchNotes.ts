@@ -73,6 +73,13 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.39', '2026-08-05',
+        [CHANGED,
+            '플레이어 상태 HUD의 상세 설정에서 보호구 내구도 표시를 켜거나 끌 수 있습니다. 이 설정은 계정과 이름 있는 서버 HUD 프리셋에 함께 저장되며, 무기 내구도 표시는 유지됩니다.',
+            '자동공격 전투 퀵버튼은 별도로 켜지 않은 신규 설정에서 기본적으로 숨깁니다. 기존 계정과 HUD 프리셋에 명시적으로 저장된 버튼 표시 설정은 유지됩니다.',
+            '모바일에서 화면을 가로로 돌렸다가 세로로 복귀할 때 브라우저의 임시 축소 배율이 누적되어 UI가 작아지던 문제를 수정했습니다.',
+        ],
+    ),
     definePatchNote('1.0.38', '2026-08-05',
         [FEATURE,
             '이름을 붙인 `소모품 묶음`을 최대 8개까지 만들고, 묶음마다 최대 8종의 소모품을 퀵버튼 한 번으로 순서대로 사용할 수 있습니다. 묶음은 계정과 서버 HUD 프리셋에 함께 저장되어 다른 기기에서도 불러올 수 있습니다.',

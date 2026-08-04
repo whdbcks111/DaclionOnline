@@ -117,12 +117,17 @@ function DurabilityGroup({
 }
 
 export default function PlayerStatusHud() {
-  const { playerStats } = useHud()
+  const { playerStats, configs } = useHud()
   if (!playerStats) return null
 
   const { userId, nickname, equippedTitle, level, exp, maxExp, life, maxLife, shields, mentality, maxMentality, thirsty, maxThirsty, hungry, maxHungry, attackCooldown, maxAttackCooldown } = playerStats
   const statusEffects = playerStats.statusEffects ?? []
   const equipmentDurability = playerStats.equipmentDurability ?? []
+  const weaponDurability = equipmentDurability.filter(item => item.group === 'weapon')
+  const armorDurability = equipmentDurability.filter(item => item.group === 'armor')
+  const showArmorDurability = configs['player-status']?.showArmorDurability ?? true
+  const hasVisibleDurability = weaponDurability.length > 0
+    || (showArmorDurability && armorDurability.length > 0)
   const statusVisualState = resolveStatusScreenVisualState(statusEffects)
   const attackReady = maxAttackCooldown > 0 ? pct(maxAttackCooldown - attackCooldown, maxAttackCooldown) : 100
 
@@ -195,16 +200,13 @@ export default function PlayerStatusHud() {
           </div>
         </div>
       </div>
-      {equipmentDurability.length > 0 && (
+      {hasVisibleDurability && (
         <div className={styles.durability} aria-label="장착 장비 내구도">
           <DurabilityGroup
             label="무기"
-            items={equipmentDurability.filter(item => item.group === 'weapon')}
+            items={weaponDurability}
           />
-          <DurabilityGroup
-            label="보호구"
-            items={equipmentDurability.filter(item => item.group === 'armor')}
-          />
+          {showArmorDurability && <DurabilityGroup label="보호구" items={armorDurability} />}
         </div>
       )}
       <StatusEffectList effects={statusEffects} />

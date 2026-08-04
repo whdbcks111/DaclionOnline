@@ -23,6 +23,7 @@ export interface HudPresetConfig {
     anchor: HudPresetAnchorPoint
     opacity?: number
     scale?: number
+    showArmorDurability?: boolean
     showObjectActions?: boolean
     showTravelActions?: boolean
 }
@@ -180,6 +181,7 @@ export function normalizeHudPresetData(value: unknown): HudPresetData | undefine
         const configScale = finite(config.scale, 0.1, 2)
         if (configOpacity !== undefined) normalized.opacity = configOpacity
         if (configScale !== undefined) normalized.scale = configScale
+        if (typeof config.showArmorDurability === 'boolean') normalized.showArmorDurability = config.showArmorDurability
         if (typeof config.showObjectActions === 'boolean') normalized.showObjectActions = config.showObjectActions
         if (typeof config.showTravelActions === 'boolean') normalized.showTravelActions = config.showTravelActions
         configs[id] = normalized

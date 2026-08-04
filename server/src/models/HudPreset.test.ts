@@ -49,6 +49,19 @@ test('HUD 프리셋 이름은 공백을 정리하고 한글 이름을 허용한�
 
 test('HUD 프리셋 데이터는 크기와 범위를 서버 경계에서 정규화한다', () => {
     const normalized = normalizeHudPresetData(preset({
+        configs: {
+            'player-status': {
+                id: 'player-status',
+                visible: true,
+                x: 10,
+                y: 20,
+                posUnitX: '%',
+                posUnitY: '%',
+                posAnchor: 'topRight',
+                anchor: 'topRight',
+                showArmorDurability: false,
+            },
+        },
         quickSlots: Array.from({ length: 20 }, (_, index) => `/명령 ${index}`),
         opacity: 9,
         gridExponent: 3.7,
@@ -61,15 +74,31 @@ test('HUD 프리셋 데이터는 크기와 범위를 서버 경계에서 정규�
     assert.equal(normalized.quickSlots.length, 10);
     assert.equal(normalized.opacity, 1);
     assert.equal(normalized.gridExponent, 4);
+    assert.equal(normalized.configs['player-status'].showArmorDurability, false);
     assert.equal(normalized.skillHudConfigs.fireball.x, 100);
     assert.equal(normalized.skillHudConfigs.fireball.y, 100);
     assert.equal(normalizeHudPresetData({ ...preset(), version: 999 }), undefined);
 });
 
 test('기존 HUD 프리셋은 소모품 묶음 필드가 없어도 로드되고 묶음은 8개 아이템까지 유지한다', () => {
-    const legacy = preset() as unknown as Record<string, unknown>;
+    const legacy = preset({
+        configs: {
+            'player-status': {
+                id: 'player-status',
+                visible: true,
+                x: 10,
+                y: 20,
+                posUnitX: '%',
+                posUnitY: '%',
+                posAnchor: 'topRight',
+                anchor: 'topRight',
+            },
+        },
+    }) as unknown as Record<string, unknown>;
     delete legacy.consumableBundleHudConfigs;
-    assert.deepEqual(normalizeHudPresetData(legacy)?.consumableBundleHudConfigs, {});
+    const normalizedLegacy = normalizeHudPresetData(legacy);
+    assert.deepEqual(normalizedLegacy?.consumableBundleHudConfigs, {});
+    assert.equal(normalizedLegacy?.configs['player-status'].showArmorDurability, undefined);
 
     const normalized = normalizeHudPresetData(preset({
         consumableBundleHudConfigs: {

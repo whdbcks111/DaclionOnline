@@ -40,6 +40,7 @@ export interface HudConfig {
   anchor: AnchorPoint
   opacity?: number   // undefined = use global
   scale?: number     // undefined = use global
+  showArmorDurability?: boolean
   showObjectActions?: boolean
   showTravelActions?: boolean
 }
@@ -252,7 +253,7 @@ export const HUD_DEFINITIONS: HudDefinition[] = [
 ]
 
 const DEFAULT_CONFIGS: Record<string, HudConfig> = {
-  'player-status':   { id: 'player-status',   visible: true,  x: 5,  y: 10, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight' },
+  'player-status':   { id: 'player-status',   visible: true,  x: 5,  y: 10, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight', showArmorDurability: true },
   'target-status':   { id: 'target-status',   visible: true,  x: 50, y: 5,  posUnitX: '%', posUnitY: '%', posAnchor: 'topLeft',     anchor: 'topMiddle' },
   'player-location': { id: 'player-location', visible: false, x: 5,  y: 30, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight', showObjectActions: true },
   'minimap':         { id: 'minimap',         visible: false, x: 5,  y: 45, posUnitX: '%', posUnitY: '%', posAnchor: 'topRight',    anchor: 'topRight', showTravelActions: false },
@@ -278,6 +279,7 @@ interface HudContextType {
   setPosAnchor: (id: string, posAnchor: PosAnchor) => void
   setHudOpacity: (id: string, opacity: number | undefined) => void
   setHudScale: (id: string, scale: number | undefined) => void
+  setPlayerStatusArmorDurabilityVisible: (visible: boolean) => void
   setLocationObjectActionsVisible: (visible: boolean) => void
   setMinimapTravelActionsVisible: (visible: boolean) => void
   resetPosition: (id: string) => void
@@ -645,6 +647,9 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   }, [hudViewport])
   const setHudOpacity = useCallback((id: string, opacity: number | undefined)   => patchConfig(id, { opacity }), [patchConfig])
   const setHudScale   = useCallback((id: string, scale: number | undefined)     => patchConfig(id, { scale }), [patchConfig])
+  const setPlayerStatusArmorDurabilityVisible = useCallback((visible: boolean) => {
+    patchConfig('player-status', { showArmorDurability: visible })
+  }, [patchConfig])
   const setLocationObjectActionsVisible = useCallback((visible: boolean) => {
     patchConfig('player-location', { showObjectActions: visible })
   }, [patchConfig])
@@ -1084,6 +1089,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
       gridSnapEnabled, setGridSnapEnabled, gridExponent, gridSize, setGridExponent,
       hudViewportWidth: hudViewport.width, hudViewportHeight: hudViewport.height,
       setVisible, setPosition, setAnchor, setPosUnit, setPosAnchor, setHudOpacity, setHudScale,
+      setPlayerStatusArmorDurabilityVisible,
       setLocationObjectActionsVisible, setMinimapTravelActionsVisible, resetPosition,
       playerStats, setPlayerStats, playerStatsReceivedAt, locationInfo, setLocationInfo,
       opacity, setOpacity, scale, setScale,

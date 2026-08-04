@@ -18,7 +18,7 @@ export function createDefaultSkillHudConfig(skillId: string, index = 0): SkillHu
   const row = Math.floor(Math.max(0, index) / columns)
   return {
     skillId,
-    visible: skillId === AUTO_ATTACK_HUD_ID,
+    visible: false,
     x: (column + 1) * 100 / (columns + 1),
     y: Math.max(12, 78 - row * 12),
   }

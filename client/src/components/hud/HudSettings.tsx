@@ -45,6 +45,7 @@ const POS_ANCHOR_LABELS: Record<PosAnchor, string> = {
 export default function HudSettings({ onClose }: Props) {
   const {
     configs, setVisible, setAnchor, setPosUnit, setPosAnchor, setHudOpacity, setHudScale, resetPosition,
+    setPlayerStatusArmorDurabilityVisible,
     setLocationObjectActionsVisible, setMinimapTravelActionsVisible,
     editMode, setEditMode, opacity, setOpacity, scale, setScale,
     gridSnapEnabled, setGridSnapEnabled, gridExponent, gridSize, setGridExponent,
@@ -774,6 +775,20 @@ export default function HudSettings({ onClose }: Props) {
                           type="checkbox"
                           checked={cfg?.showObjectActions ?? true}
                           onChange={event => setLocationObjectActionsVisible(event.target.checked)}
+                        />
+                        <span className={styles.slider} />
+                      </label>
+                    </div>
+                  )}
+
+                  {def.id === 'player-status' && (
+                    <div className={styles.detailRow}>
+                      <span className={styles.detailLabel}>보호구 내구도 표시</span>
+                      <label className={styles.switch}>
+                        <input
+                          type="checkbox"
+                          checked={cfg?.showArmorDurability ?? true}
+                          onChange={event => setPlayerStatusArmorDurabilityVisible(event.target.checked)}
                         />
                         <span className={styles.slider} />
                       </label>

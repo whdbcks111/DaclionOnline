@@ -75,7 +75,7 @@ Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook�
 - `physical` 피해는 `max(0, raw - max(0, 대상 def - 공격자 armorPen))`, `magic`은 대상 magicDef/공격자 magicPen을 사용한다. `absolute`는 방어·관통만 생략하고 회피·치명타·속성 상성은 유지하므로 모든 계산을 생략하는 `fixedDamage`와 구분한다.
 - 최종 피해가 계산되면 해당 피해 타입을 흡수하는 보호막을 남은 지속시간이 짧은 순으로 소모한 뒤 나머지만 생명력에서 차감한다. 일반/물리/마법 보호막의 타입, key 중첩과 UI 계약은 [보호막 시스템](shields.md)을 참고한다.
 - 공격 속도로 cooldown을 `1 / attackSpeed`초 설정한다.
-- Player의 접속 중 `autoAttackEnabled` 모드는 `/자동공격` 또는 기본 표시되는 전투 퀵 버튼으로 토글한다. 활성화 상태에서 현재 타겟이 같은 장소의 유효한 공격 대상이고 공격 행동이 가능하며 cooldown이 0이면 `Player.performBasicAttack()`을 한 번 실행한다. 대상이 없거나 사망·이탈·상호작용 전용이면 조용히 대기하고 모드 자체는 유지한다.
+- Player의 접속 중 `autoAttackEnabled` 모드는 `/자동공격` 또는 HUD 설정에서 표시한 전투 퀵 버튼으로 토글한다. 자동공격 퀵 버튼은 신규 설정에서 기본 숨김이다. 활성화 상태에서 현재 타겟이 같은 장소의 유효한 공격 대상이고 공격 행동이 가능하며 cooldown이 0이면 `Player.performBasicAttack()`을 한 번 실행한다. 대상이 없거나 사망·이탈·상호작용 전용이면 조용히 대기하고 모드 자체는 유지한다.
 - 현재 별도 원거리 분류가 없으므로 성공적으로 실행된 물리 기본 공격을 근접 공격으로 취급하며, 공격자의 `mainHand:0` 아이템에 내구도가 있으면 공격마다 1 차감한다. 0이 되면 장비에서 파괴되고 슬롯 modifier가 즉시 제거된다.
 - `Player.performBasicAttack`은 주무기의 `basicAttackOverride`를 먼저 실행한다. 오버라이드가 없거나 `false`를 반환하면 기존 직접 근접 공격으로 폴백한다.
 - Projectile은 좌표가 없는 현재 월드 모델에 맞춰 `기본 비행 시간 ÷ 최종 투사체 가속` 뒤 같은 위치의 target을 공격하고 즉시 소멸한다. 영속 저장하지 않으며 `spawnProjectile` 또는 마스터 데이터 기반 `spawnProjectileFromData`로 생성한다. `ProjectileData.accelerationCoefficient`는 owner의 투사체 가속 보너스 반영 비율, override `accelerationMultiplier`는 스킬 같은 발사원 고유 배율이다. 생성 시 owner의 치명타 확률·치명타 피해와 계산된 투사체 가속을 스냅샷으로 동기화한다.
@@ -164,7 +164,7 @@ Lv.200 이후 권역 표시명은 카이로스·아셴바흐·벨카인·루나�
 
 ## HUD 데이터
 
-`sendPlayerStats()`는 `Equipment.getDurabilityHudSnapshots()`의 무기·보호구 슬롯별 현재/최대 내구도를 500ms 변경 snapshot에 포함한다. 화면 크기는 `displayPreferences.ts`가 단일 stable viewport로 갱신하며, 회전 중간 resize와 편집 중 키보드 높이를 구분해 가로↔세로 전환 후에도 CSS·HUD 좌표계를 일치시킨다. 저장된 px 좌표가 줄어든 화면을 벗어나면 영속 설정은 그대로 두고 렌더 좌표만 clamp한다. Location HUD의 행동 버튼은 편집기가 실제 focus된 동안 pointer focus 이동만 막아 모바일 화상 키보드를 유지하고, 뒤로가기로 닫힌 키보드를 다시 열기 위해 focus를 조작하지 않는다.
+`sendPlayerStats()`는 `Equipment.getDurabilityHudSnapshots()`의 무기·보호구 슬롯별 현재/최대 내구도를 500ms 변경 snapshot에 포함한다. 플레이어 상태 HUD 상세 설정은 `showArmorDurability`를 계정 설정과 이름 있는 서버 프리셋에 보존하며, 끄면 보호구 내구도 묶음만 숨기고 무기 내구도는 계속 표시한다. 화면 크기는 `displayPreferences.ts`가 단일 stable viewport로 갱신하며, 회전 중간 resize와 편집 중 키보드 높이를 구분해 가로↔세로 전환 후에도 CSS·HUD 좌표계를 일치시킨다. 저장된 px 좌표가 줄어든 화면을 벗어나면 영속 설정은 그대로 두고 렌더 좌표만 clamp한다. Location HUD의 행동 버튼은 편집기가 실제 focus된 동안 pointer focus 이동만 막아 모바일 화상 키보드를 유지하고, 뒤로가기로 닫힌 키보드를 다시 열기 위해 focus를 조작하지 않는다.
 
 `locationInfo.objects[].icon`은 `Entity.getDisplayIcon()`의 가공된 표시 key이며 Monster만 기본 초상을 제공한다. `respawn`은 기본 리젠 주기가 5분을 초과하는 비일회성 보스에만 존재하며 기본 주기와 처치 후 남은 초를 함께 제공한다.
 
