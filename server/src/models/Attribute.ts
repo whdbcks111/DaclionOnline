@@ -254,6 +254,14 @@ export interface AttributeModifierSummary {
     multiplier: number
 }
 
+/** modifier source 하나를 교체했을 때 달라지는 최종 능력치만 담는 읽기 전용 스냅샷. */
+export interface AttributeValueChangeSnapshot {
+    readonly attribute: AttributeKey
+    readonly before: number
+    readonly after: number
+    readonly delta: number
+}
+
 /** 실제 add 합산 → multiply 곱산 규칙을 보존하면서 modifier를 능력치별로 묶는다. */
 export function summarizeAttributeModifiers(
     modifiers: readonly AttributeModifier[],
@@ -361,24 +369,61 @@ export default class Attribute {
         return this._computed
     }
 
+    /**
+     * 현재 상태를 변경하지 않고 지정 source의 modifier를 교체한 최종 능력치 차이를 계산한다.
+     * 장비 비교처럼 실제 적용 순서와 같은 add 합산 → multiply 곱산을 사용한다.
+     */
+    previewModifierSourceReplacement(
+        source: string,
+        replacements: readonly AttributeModifier[],
+        epsilon = 1e-9,
+    ): readonly AttributeValueChangeSnapshot[] {
+        const normalizedSource = source.trim()
+        if (!normalizedSource) return Object.freeze([])
+        const before = this.calculate(this._modifiers)
+        const after = this.calculate([
+            ...this._modifiers.filter(modifier => modifier.source !== normalizedSource),
+            ...replacements.map(modifier => ({ ...modifier, source: normalizedSource })),
+        ])
+        const changes = AttributeType.values().flatMap(type => {
+            const previous = before[type.key]
+            const next = after[type.key]
+            const tolerance = Math.max(0, epsilon) * Math.max(1, Math.abs(previous), Math.abs(next))
+            if (Math.abs(next - previous) <= tolerance) return []
+            return [Object.freeze({
+                attribute: type.key,
+                before: previous,
+                after: next,
+                delta: next - previous,
+            })]
+        })
+        return Object.freeze(changes)
+    }
+
     // -- 내부 --
 
-    private recalc(): void {
-        this._computed = { ...this._base }
+    private calculate(modifiers: readonly AttributeModifier[]): AttributeRecord {
+        const computed = { ...this._base }
 
         // 1단계: add 합산
-        for (const mod of this._modifiers) {
+        for (const mod of modifiers) {
             if (mod.op === 'add') {
-                this._computed[mod.attribute] += mod.value
+                computed[mod.attribute] += mod.value
             }
         }
 
         // 2단계: multiply 곱산
-        for (const mod of this._modifiers) {
+        for (const mod of modifiers) {
             if (mod.op === 'multiply') {
-                this._computed[mod.attribute] *= mod.value
+                computed[mod.attribute] *= mod.value
             }
         }
+
+        return computed
+    }
+
+    private recalc(): void {
+        this._computed = this.calculate(this._modifiers)
 
         this._dirty = false
     }

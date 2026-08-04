@@ -21,7 +21,7 @@ import { markLocationVisited } from './WorldMap.js';
 import { cancelNavigation } from '../modules/navigation.js';
 import CareerProfile from './Career.js';
 import { Item, type ItemMetadata } from './Item.js';
-import { SLOT_MAX, type EquipSlot } from './Equipment.js';
+import type { EquipmentAttributePreviewSnapshot, EquipSlot } from './Equipment.js';
 import {
     RankingVisibility,
     createRankingMetricRecord,
@@ -892,17 +892,9 @@ export default class Player extends Entity {
         if (!slot || this.inventory.getItem(item.id) !== item
             || Player.prototype.getItemRequirementDeniedReason.call(this, item)) return null;
 
-        let slotIndex = targetSlotIndex;
-        if (slotIndex === undefined) {
-            let firstEmpty = -1;
-            let lastOccupied = -1;
-            for (let index = 0; index < SLOT_MAX[slot]; index++) {
-                if (this.equipment.getEquipped(slot, index)) lastOccupied = index;
-                else if (firstEmpty === -1) firstEmpty = index;
-            }
-            slotIndex = firstEmpty !== -1 ? firstEmpty : lastOccupied;
-        }
-        if (slotIndex < 0 || slotIndex >= SLOT_MAX[slot]) return null;
+        const target = this.equipment.resolveEquipTarget(slot, targetSlotIndex);
+        if (!target) return null;
+        const slotIndex = target.slotIndex;
 
         const current = this.equipment.getEquipped(slot, slotIndex);
         const equipCount = item.stackable ? item.count : 1;
@@ -925,6 +917,14 @@ export default class Player extends Entity {
             data: { itemDataId: equippedCopy.itemDataId, slot, slotIndex },
         });
         return { slot, slotIndex, displaced };
+    }
+
+    /** `/감정`이 실제 장착 규칙과 같은 슬롯에서 최종 능력치 변화를 읽는 공개 snapshot API. */
+    getItemEquipmentAttributePreview(
+        item: Item,
+        targetSlotIndex?: number,
+    ): EquipmentAttributePreviewSnapshot | undefined {
+        return this.equipment.previewItemAttributeChange(item, this.attribute, targetSlotIndex);
     }
 
     canSpendMentality(amount: number): boolean {

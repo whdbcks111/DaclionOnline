@@ -435,6 +435,171 @@ test('가방 슬롯 장비는 다른 장비와 독립적으로 최대 중량 mod
     assert.equal(attribute.get(AttributeType.MAX_WEIGHT), 100);
 });
 
+test('장비 교체 미리보기는 실제 슬롯 교체와 같은 최종 add·multiply 결과를 상태 변경 없이 계산한다', () => {
+    defineItem({
+        ...itemData('preview_filler_charm'),
+        equipSlot: 'accessory',
+    });
+    defineItem({
+        ...itemData('preview_zero_charm'),
+        equipSlot: 'accessory',
+        modifiers: [
+            { attribute: 'atk', op: 'add', value: 10, source: 'item-template:old' },
+            { attribute: 'atk', op: 'multiply', value: 0, source: 'item-template:old' },
+            { attribute: 'maxLife', op: 'add', value: 20, source: 'item-template:old' },
+        ],
+        experienceGainMultiplier: 0.8,
+    });
+    defineItem({
+        ...itemData('preview_candidate_charm'),
+        equipSlot: 'accessory',
+        modifiers: [
+            { attribute: 'atk', op: 'add', value: 30, source: 'item-template:candidate' },
+            { attribute: 'atk', op: 'multiply', value: 1.1, source: 'item-template:candidate' },
+            { attribute: 'maxLife', op: 'add', value: 50, source: 'item-template:candidate' },
+            { attribute: 'maxWeight', op: 'add', value: 25, source: 'item-template:candidate' },
+        ],
+        experienceGainMultiplier: 2,
+    });
+    const equipment = Equipment.createEmpty();
+    const attribute = new Attribute({ atk: 100, maxLife: 1_000, maxMentality: 500, maxWeight: 100 });
+    attribute.addModifiers([
+        { attribute: 'atk', op: 'add', value: 20, source: 'buff:attack' },
+        { attribute: 'atk', op: 'multiply', value: 1.5, source: 'buff:attack' },
+        { attribute: 'maxLife', op: 'multiply', value: 1.2, source: 'skill:life' },
+    ]);
+    equipment.equip('accessory', new Item('preview_filler_charm', 1, null, null), attribute, 0);
+    equipment.equip('accessory', new Item('preview_filler_charm', 1, null, null), attribute, 1);
+    const oldItem = new Item('preview_zero_charm', 1, null, null);
+    equipment.equip('accessory', oldItem, attribute, 2);
+    const candidate = new Item('preview_candidate_charm', 1, null, null);
+    const inventory = Inventory.createEmpty(1, 777);
+    const playerState = {
+        equipment,
+        attribute,
+        inventory,
+        life: 321,
+        mentality: 123,
+    } as unknown as Player;
+    const experienceModifiers = new Map<string, number>();
+    equipment.applyOwnerEffects({
+        removeExperienceGainModifier: (source: string) => experienceModifiers.delete(source),
+        setExperienceGainModifier: (source: string, multiplier: number) => {
+            experienceModifiers.set(source, multiplier);
+        },
+    } as any);
+
+    const computedBefore = { ...attribute.computed };
+    const modifiersBefore = attribute.modifiers.map(modifier => ({ ...modifier }));
+    const equippedBefore = equipment.getAllEquipped().map(entry => ({ ...entry }));
+    const dirtyBefore = equipment.dirty;
+    const experienceBefore = [...experienceModifiers];
+    const preview = Player.prototype.getItemEquipmentAttributePreview.call(playerState, candidate)!;
+
+    assert.equal(preview.slot, 'accessory');
+    assert.equal(preview.slotIndex, 2);
+    assert.equal(preview.slotLabel, '장신구3');
+    assert.equal(preview.currentItemName, 'preview_zero_charm');
+    assert.deepEqual(preview.changes.map(change => change.attribute), ['maxLife', 'maxWeight', 'atk']);
+    const attackChange = preview.changes.find(change => change.attribute === 'atk')!;
+    assert.equal(attackChange.attribute, 'atk');
+    assert.equal(attackChange.before, 0);
+    assert.ok(Math.abs(attackChange.after - 247.5) < 1e-9);
+    assert.ok(Math.abs(attackChange.delta - 247.5) < 1e-9);
+    assert.deepEqual(preview.changes.find(change => change.attribute === 'maxLife'), {
+        attribute: 'maxLife', before: 1_224, after: 1_260, delta: 36,
+    });
+    assert.equal(preview.changes.find(change => change.attribute === 'maxWeight')?.after, 125);
+    assert.deepEqual(attribute.computed, computedBefore);
+    assert.deepEqual(attribute.modifiers, modifiersBefore);
+    assert.deepEqual(equipment.getAllEquipped(), equippedBefore);
+    assert.equal(equipment.dirty, dirtyBefore);
+    assert.equal(playerState.life, 321);
+    assert.equal(playerState.mentality, 123);
+    assert.equal(inventory.maxWeight, 777);
+    assert.deepEqual([...experienceModifiers], experienceBefore);
+
+    const displaced = equipment.equipSwap('accessory', candidate, attribute);
+    assert.equal(displaced, oldItem);
+    assert.equal(equipment.getEquipped('accessory', 2), candidate);
+    for (const change of preview.changes) {
+        assert.equal(attribute.get(AttributeType.fromKey(change.attribute)!), change.after);
+    }
+});
+
+test('장착 대상 resolver는 다중 슬롯의 첫 빈칸·가득 찬 마지막 칸·명시 인덱스를 공유한다', () => {
+    defineItem({ ...itemData('preview_slot_charm'), equipSlot: 'accessory' });
+    const equipment = Equipment.createEmpty();
+    const attribute = new Attribute();
+    equipment.equip('accessory', new Item('preview_slot_charm', 1, null, null), attribute, 0);
+    const exactItem = new Item('preview_slot_charm', 1, null, null);
+    equipment.equip('accessory', exactItem, attribute, 2);
+
+    assert.equal(equipment.resolveEquipTarget('accessory')?.slotIndex, 1);
+    assert.equal(equipment.resolveEquipTarget('accessory', 0)?.slotIndex, 0);
+    assert.equal(equipment.previewItemAttributeChange(exactItem, attribute, 2)?.changes.length, 0);
+    equipment.equip('accessory', new Item('preview_slot_charm', 1, null, null), attribute, 1);
+    assert.equal(equipment.resolveEquipTarget('accessory')?.slotIndex, 2);
+    assert.equal(equipment.resolveEquipTarget('accessory', 3), undefined);
+});
+
+test('머리·몸통·다리·발·주무기·보조무기·장신구·가방 모든 장비 슬롯에서 교체 미리보기를 만든다', () => {
+    const equipment = Equipment.createEmpty();
+    const attribute = new Attribute({ def: 10 });
+
+    for (const [index, slotType] of EquipSlotType.values().entries()) {
+        const itemId = `preview_all_slots_${slotType.key}`;
+        defineItem({
+            ...itemData(itemId),
+            equipSlot: slotType.key,
+            modifiers: [{ attribute: 'def', op: 'add', value: index + 1, source: 'item-template' }],
+        });
+
+        const preview = equipment.previewItemAttributeChange(
+            new Item(itemId, 1, null, null),
+            attribute,
+        );
+        assert.equal(preview?.slot, slotType.key);
+        assert.equal(preview?.slotIndex, 0);
+        assert.equal(preview?.slotLabel, slotType.max > 1 ? `${slotType.label}1` : slotType.label);
+        assert.equal(preview?.currentItemName, null);
+        assert.deepEqual(preview?.changes, [{
+            attribute: 'def',
+            before: 10,
+            after: 11 + index,
+            delta: index + 1,
+        }]);
+    }
+});
+
+test('능력치 교체 미리보기는 부동 오차를 숨기고 클래스형 능력치 순서를 유지한다', () => {
+    const attribute = new Attribute({ maxLife: 100, atk: 10, def: 5 });
+    const changes = attribute.previewModifierSourceReplacement('equip:test:0', [
+        { attribute: 'def', op: 'add', value: 2, source: 'ignored' },
+        { attribute: 'atk', op: 'add', value: 1e-12, source: 'ignored' },
+        { attribute: 'maxLife', op: 'add', value: 10, source: 'ignored' },
+    ]);
+    assert.deepEqual(changes.map(change => change.attribute), ['maxLife', 'def']);
+    assert.equal(attribute.hasSource('equip:test:0'), false);
+});
+
+test('스택형 장착 아이템 미리보기는 묶음 수량과 무관하게 modifier를 한 번만 적용한다', () => {
+    defineItem({
+        ...itemData('preview_stack_bait'),
+        stackable: true,
+        maxStack: 99,
+        equipSlot: 'offHand',
+        modifiers: [{ attribute: 'luck', op: 'add', value: 2, source: 'item-template' }],
+    });
+    const equipment = Equipment.createEmpty();
+    const attribute = new Attribute({ luck: 3 });
+    const preview = equipment.previewItemAttributeChange(
+        new Item('preview_stack_bait', 20, null, null),
+        attribute,
+    );
+    assert.equal(preview?.changes.find(change => change.attribute === 'luck')?.after, 5);
+});
+
 test('인벤토리는 종류별·이름순·자동 기준으로 아이템 표시 순서를 정리한다', () => {
     for (const data of [
         { id: 'sort_potion', name: '마법약', category: '소모품', onUse: 'heal_mp', durability: null },

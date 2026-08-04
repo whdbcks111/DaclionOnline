@@ -2,6 +2,7 @@ import prisma from "../config/prisma.js";
 import { Item, getItemData } from "./Item.js";
 import type { ItemDurabilityRepairResult } from "./Item.js";
 import type Attribute from "./Attribute.js";
+import type { AttributeValueChangeSnapshot } from './Attribute.js';
 import type Entity from './Entity.js';
 import type { DamageResult } from './Entity.js';
 import { GameTags } from "../../../shared/tags.js";
@@ -66,6 +67,19 @@ export interface ArmorDurabilityDamageSnapshot {
     readonly previousDurability: number;
     readonly durability: number;
     readonly broken: boolean;
+}
+
+/** 실제 장착과 미리보기가 공유하는 교체 대상 슬롯의 불변 스냅샷. */
+export interface EquipTargetSnapshot {
+    readonly slot: EquipSlot;
+    readonly slotIndex: number;
+    readonly slotLabel: string;
+    readonly currentItemName: string | null;
+}
+
+/** 현재 최종 능력치에 장비 교체를 가상 적용한 감정용 불변 스냅샷. */
+export interface EquipmentAttributePreviewSnapshot extends EquipTargetSnapshot {
+    readonly changes: readonly AttributeValueChangeSnapshot[];
 }
 
 const DEFAULT_ARMOR_DURABILITY_DAMAGE_RANDOM: ArmorDurabilityDamageRandom = Object.freeze({
@@ -241,6 +255,51 @@ export default class Equipment implements TagReadable {
     getEquipped(slot: EquipSlot, slotIndex = 0): Item | undefined {
         const entry = this._slots.get(slotKey(slot, slotIndex));
         return entry && entry.state !== EquipState.Deleted ? entry.item : undefined;
+    }
+
+    /**
+     * 인덱스가 없으면 첫 빈 슬롯, 모두 찼으면 마지막 점유 슬롯을 선택한다.
+     * equipSwap과 Player 장착, 감정 미리보기가 같은 규칙을 재사용한다.
+     */
+    resolveEquipTarget(slot: EquipSlot, targetSlotIndex?: number): EquipTargetSnapshot | undefined {
+        const type = EquipSlotType.fromKey(slot);
+        if (!type) return undefined;
+        let slotIndex = targetSlotIndex;
+        if (slotIndex !== undefined) {
+            if (!Number.isSafeInteger(slotIndex) || slotIndex < 0 || slotIndex >= type.max) return undefined;
+        } else {
+            let firstEmpty = -1;
+            let lastOccupied = -1;
+            for (let index = 0; index < type.max; index++) {
+                if (this.getEquipped(slot, index)) lastOccupied = index;
+                else if (firstEmpty === -1) firstEmpty = index;
+            }
+            slotIndex = firstEmpty !== -1 ? firstEmpty : lastOccupied;
+        }
+        if (slotIndex < 0) return undefined;
+        return Object.freeze({
+            slot,
+            slotIndex,
+            slotLabel: type.max > 1 ? `${type.label}${slotIndex + 1}` : type.label,
+            currentItemName: this.getEquipped(slot, slotIndex)?.name ?? null,
+        });
+    }
+
+    /** 파손·요구조건과 무관하게 실제 교체 슬롯의 최종 능력치 변화만 읽기 전용으로 계산한다. */
+    previewItemAttributeChange(
+        item: Item,
+        attribute: Attribute,
+        targetSlotIndex?: number,
+    ): EquipmentAttributePreviewSnapshot | undefined {
+        const slot = item.equipSlot as EquipSlot | null;
+        if (!slot) return undefined;
+        const target = this.resolveEquipTarget(slot, targetSlotIndex);
+        if (!target) return undefined;
+        const changes = attribute.previewModifierSourceReplacement(
+            modSource(target.slot, target.slotIndex),
+            item.modifiers ?? [],
+        );
+        return Object.freeze({ ...target, changes });
     }
 
     /** 특정 장비 슬롯 아이템의 태그를 내부 슬롯 Map 노출 없이 검사한다. */
@@ -450,27 +509,9 @@ export default class Equipment implements TagReadable {
         if (!data || data.equipSlot !== slot || item.isBroken) return undefined;
         this.ownerAttribute = attribute;
 
-        const max = SLOT_MAX[slot];
-        let useIndex: number;
-
-        if (targetSlotIndex !== undefined) {
-            if (targetSlotIndex < 0 || targetSlotIndex >= max) return undefined;
-            useIndex = targetSlotIndex;
-        } else {
-            let emptyIndex = -1;
-            let lastOccupied = -1;
-            for (let i = 0; i < max; i++) {
-                const entry = this._slots.get(slotKey(slot, i));
-                if (!entry || entry.state === EquipState.Deleted) {
-                    if (emptyIndex === -1) emptyIndex = i;
-                } else {
-                    lastOccupied = i;
-                }
-            }
-            useIndex = emptyIndex !== -1 ? emptyIndex : lastOccupied;
-        }
-
-        if (useIndex < 0) return undefined;
+        const target = this.resolveEquipTarget(slot, targetSlotIndex);
+        if (!target) return undefined;
+        const useIndex = target.slotIndex;
 
         const displaced = this.unequip(slot, useIndex, attribute);
 

@@ -3,7 +3,7 @@ import Monster from '../models/Monster.js';
 import type { Item, ItemDurabilityRepairResult, ItemInspectionSnapshot } from '../models/Item.js';
 import { getItemData, MAX_STACKABLE_ITEM_COUNT } from '../models/Item.js';
 import { getSkillData } from '../models/Skill.js';
-import { EquipSlotType } from '../models/Equipment.js';
+import { EquipSlotType, type EquipmentAttributePreviewSnapshot } from '../models/Equipment.js';
 import { AttributeType, summarizeAttributeModifiers } from '../models/Attribute.js';
 import { StatType } from '../models/Stat.js';
 import StatusEffect, { StatusEffectType } from '../models/StatusEffect.js';
@@ -36,6 +36,8 @@ export const STATUS_EFFECT_INFO_SENSIBILITY = 50;
 export interface ItemInspectionTarget {
     item: Item;
     sourceLabel: string;
+    /** 장착 중인 아이템은 감정한 정확한 다중 슬롯을 비교 대상으로 유지한다. */
+    equippedSlotIndex?: number;
     increaseDurability(amount: number): number | null | undefined;
     repairDurability(amount: number, maxDurabilityLossRate: number): ItemDurabilityRepairResult | null | undefined;
     destroy(): boolean;
@@ -97,6 +99,7 @@ export function resolveItemInspectionTarget(player: Player, rawInput: string): I
         return item ? {
             item,
             sourceLabel: parsed.slot.max > 1 ? `${parsed.slot.label}${parsed.index + 1}` : parsed.slot.label,
+            equippedSlotIndex: parsed.index,
             increaseDurability: amount => player.equipment.increaseItemDurability(parsed.slot.key, parsed.index!, amount),
             repairDurability: (amount, lossRate) =>
                 player.equipment.repairItemDurability(parsed.slot.key, parsed.index!, amount, lossRate),
@@ -119,6 +122,7 @@ export function resolveItemInspectionTarget(player: Player, rawInput: string): I
         if (item) return {
             item,
             sourceLabel: parsed.slot.max > 1 ? `${parsed.slot.label}${index + 1}` : parsed.slot.label,
+            equippedSlotIndex: index,
             increaseDurability: amount => player.equipment.increaseItemDurability(parsed.slot.key, index, amount),
             repairDurability: (amount, lossRate) =>
                 player.equipment.repairItemDurability(parsed.slot.key, index, amount, lossRate),
@@ -267,7 +271,12 @@ function appendAffinities(builder: ReturnType<typeof chat>, tags: readonly strin
     builder.text('\n');
 }
 
-export function buildItemInspection(snapshot: ItemInspectionSnapshot, sourceLabel: string, sensibility: number) {
+export function buildItemInspection(
+    snapshot: ItemInspectionSnapshot,
+    sourceLabel: string,
+    sensibility: number,
+    equipmentPreview?: EquipmentAttributePreviewSnapshot,
+) {
     const tier = getItemInspectionTier(sensibility);
     return chat()
         .text('[ 감정 결과 ] ')
@@ -343,6 +352,29 @@ export function buildItemInspection(snapshot: ItemInspectionSnapshot, sourceLabe
                 for (const detail of details) {
                     builder.tab(120, b => b.text(detail.label)).text(`${detail.value}\n`);
                 }
+            }
+
+            if (tier >= 2 && equipmentPreview) {
+                appendSection(builder, '착용 시 변화');
+                builder.tab(120, b => b.text('비교 슬롯'))
+                    .text(`${equipmentPreview.slotLabel} · ${equipmentPreview.currentItemName ?? '빈 슬롯'}\n`);
+                if (equipmentPreview.changes.length === 0) {
+                    builder.color('$text-tertiary', b => b.text('능력치 변화 없음\n'));
+                }
+                for (const change of equipmentPreview.changes) {
+                    const type = AttributeType.fromKey(change.attribute);
+                    if (!type) continue;
+                    builder.icon(type.icon).text(' ')
+                        .tab(120, b => b.text(type.label))
+                        .text(`${type.format(change.before)} → ${type.format(change.after)} `)
+                        .color(change.delta > 0 ? 'green' : 'red', b => b.text(
+                            `(${change.delta > 0 ? '+' : ''}${type.format(change.delta)})`,
+                        ))
+                        .text('\n');
+                }
+                builder.color('$text-tertiary', b => b.text(
+                    '가상 능력치 비교이며 실제 장착에는 위 필요 조건과 내구도 검사가 적용됩니다.\n',
+                ));
             }
             return builder;
         })
@@ -447,7 +479,16 @@ export function initInspectionCommands(): void {
                 sendBotMessageToUser(userId, '유효한 인벤토리 번호 또는 장착 중인 장착칸을 입력해주세요.');
                 return;
             }
-            sendBotMessageToUser(userId, buildItemInspection(target.item.getInspectionSnapshot(), target.sourceLabel, sensibilityOf(player)));
+            const sensibility = sensibilityOf(player);
+            const equipmentPreview = getItemInspectionTier(sensibility) >= 2
+                ? player.getItemEquipmentAttributePreview(target.item, target.equippedSlotIndex)
+                : undefined;
+            sendBotMessageToUser(userId, buildItemInspection(
+                target.item.getInspectionSnapshot(),
+                target.sourceLabel,
+                sensibility,
+                equipmentPreview,
+            ));
         },
     });
 

@@ -5,7 +5,7 @@ import Equipment from '../models/Equipment.js';
 import Inventory from '../models/Inventory.js';
 import { defineItem, Item, MAX_STACKABLE_ITEM_COUNT } from '../models/Item.js';
 import Monster, { defineMonster } from '../models/Monster.js';
-import type Player from '../models/Player.js';
+import Player from '../models/Player.js';
 import Stat, { StatType } from '../models/Stat.js';
 import {
     buildItemInspection,
@@ -63,6 +63,25 @@ defineItem({
     tags: ['item:weapon'],
 });
 
+defineItem({
+    id: 'inspection_test_upgrade_sword',
+    name: '감정 시험 강화검',
+    description: '교체 능력치 비교용 검',
+    category: 'weapon',
+    weight: 2,
+    stackable: false,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: 'mainHand',
+    modifiers: [
+        { attribute: 'atk', op: 'add', value: 12, source: 'item-template' },
+        { attribute: 'def', op: 'add', value: -3, source: 'item-template' },
+    ],
+    baseDurability: 30,
+    tags: ['item:weapon'],
+});
+
 defineMonster({
     id: 'inspection_test_monster',
     name: '감정 시험 몬스터',
@@ -82,14 +101,16 @@ function createPlayer(): Player {
     const inventory = Inventory.createEmpty(99001, 100);
     inventory.addItem('inspection_test_potion', 2);
     const equipment = Equipment.createEmpty();
+    const attribute = new Attribute();
     equipment.equip(
         'mainHand',
         new Item('inspection_test_sword', 1, 20, null),
-        new Attribute(),
+        attribute,
     );
     return {
         inventory,
         equipment,
+        attribute,
         stat: new Stat({ sensibility: 49 }),
     } as Player;
 }
@@ -132,6 +153,7 @@ test('감각 요구 조건과 인벤토리·장착칸 감정 대상을 공개 AP
     assert.equal(resolveItemInspectionTarget(player, '1')?.item.itemDataId, 'inspection_test_potion');
     assert.equal(resolveItemInspectionTarget(player, '손')?.item.itemDataId, 'inspection_test_sword');
     assert.equal(resolveItemInspectionTarget(player, '주무기')?.sourceLabel, '손');
+    assert.equal(resolveItemInspectionTarget(player, '주무기')?.equippedSlotIndex, 0);
     assert.equal(resolveItemInspectionTarget(player, '손')?.increaseDurability(5), 25);
     assert.equal(resolveItemInspectionTarget(player, '999'), undefined);
 });
@@ -165,6 +187,45 @@ test('감정 결과는 같은 능력치의 고정값과 비율 modifier를 한 �
     assert.equal(text.match(/물리 관통력/g)?.length, 1);
     assert.match(text, /\+18 \+32%/);
     assert.doesNotMatch(text, /\+110%|\+120%/);
+});
+
+test('감각 75 장비 감정은 상세 맨 마지막에 실제 교체 최종 능력치 증감을 표시한다', () => {
+    const player = createPlayer();
+    const candidate = new Item('inspection_test_upgrade_sword', 1, 30, null);
+    const preview = Player.prototype.getItemEquipmentAttributePreview.call(player, candidate)!;
+    const locked = buildItemInspection(candidate.getInspectionSnapshot(), '인벤토리 2번', 74, preview);
+    const visible = buildItemInspection(candidate.getInspectionSnapshot(), '인벤토리 2번', 75, preview);
+    const visibleText = collectRenderedText(visible);
+    const visibleJson = JSON.stringify(visible);
+
+    assert.doesNotMatch(JSON.stringify(locked), /착용 시 변화|비교 슬롯|감정 시험 검|→/);
+    assert.match(visibleJson, /착용 시 변화/);
+    assert.match(visibleText, /비교 슬롯손 · 감정 시험 검/);
+    assert.match(visibleText, /공격력15 → 22 \(\+7\)/);
+    assert.match(visibleText, /방어력0 → -3 \(-3\)/);
+    assert.ok(visibleJson.lastIndexOf('착용 시 변화') > visibleJson.lastIndexOf('특수 효과 분석'));
+    assert.match(visibleJson, /attributes\/atk/);
+    assert.match(visibleJson, /"color":"green"/);
+    assert.match(visibleJson, /"color":"red"/);
+    assert.match(visibleText, /실제 장착에는 위 필요 조건과 내구도 검사가 적용/);
+});
+
+test('비장비와 낮은 감각에는 비교 섹션이 없고 현재 장착 인스턴스는 변화 없음으로 표시한다', () => {
+    const player = createPlayer();
+    const potion = player.inventory.getItemByIndex(0)!;
+    assert.equal(Player.prototype.getItemEquipmentAttributePreview.call(player, potion), undefined);
+    assert.doesNotMatch(
+        collectRenderedText(buildItemInspection(potion.getInspectionSnapshot(), '인벤토리 1번', 100)),
+        /착용 시 변화/,
+    );
+
+    const equipped = player.equipment.getEquipped('mainHand', 0)!;
+    const noChange = Player.prototype.getItemEquipmentAttributePreview.call(player, equipped, 0)!;
+    assert.equal(noChange.changes.length, 0);
+    assert.match(
+        JSON.stringify(buildItemInspection(equipped.getInspectionSnapshot(), '손', 75, noChange)),
+        /착용 시 변화[\s\S]*능력치 변화 없음/,
+    );
 });
 
 test('사용자용 감정·몬스터정보·속성표에는 내부 ID, raw 태그와 metadata key가 노출되지 않는다', () => {

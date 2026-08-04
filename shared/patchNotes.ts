@@ -73,6 +73,11 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.37', '2026-08-05',
+        [CHANGED,
+            '감각 75 이상에서 `/감정`으로 장비를 확인하면 머리·몸통·다리·발·주무기·보조무기·장신구·가방을 실제로 교체했을 때의 최종 능력치 변화를 맨 아래에서 미리 볼 수 있습니다. 비교할 장착칸과 현재 장비, 능력치별 증가·감소도 함께 표시됩니다.',
+        ],
+    ),
     definePatchNote('1.0.36', '2026-08-04',
         [FEATURE,
             '연금술사 엘리트 전직 시 조제 기능을 나타내는 최대 1레벨 패시브 `가마솥 연성`을 획득합니다. 기존 연금술사도 접속하면 누락된 스킬을 자동으로 받습니다.',
