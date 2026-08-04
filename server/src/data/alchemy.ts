@@ -1,17 +1,33 @@
 import { GameTags } from '../../../shared/tags.js';
 import {
     ALCHEMY_WATER_BOTTLE_ITEM_ID,
+    AlchemyDelivery,
     AlchemyEffectType,
     AlchemyReagentTrait,
     FAILED_ALCHEMY_POTION_ITEM_ID,
     defineAlchemyFormula,
     defineAlchemyReagent,
+    resolveAlchemyPotionUse,
 } from '../models/Alchemy.js';
-import { ItemBalanceRole, MAX_STACKABLE_ITEM_COUNT, defineItem } from '../models/Item.js';
+import {
+    ItemBalanceRole,
+    ItemMetadataKeys,
+    MAX_STACKABLE_ITEM_COUNT,
+    defineItem,
+} from '../models/Item.js';
 import { registerItemUse } from '../modules/itemUse.js';
 import { useAlchemyPotion } from '../modules/alchemy.js';
 
-registerItemUse('alchemy_potion', useAlchemyPotion);
+registerItemUse('alchemy_potion', useAlchemyPotion, {
+    quickBundle: item => {
+        const resolved = resolveAlchemyPotionUse(
+            item.itemDataId,
+            item.getMetadata(ItemMetadataKeys.ALCHEMY),
+        );
+        return resolved?.metadata.delivery === AlchemyDelivery.DRINK.key
+            && resolved.effectType.audience === 'beneficial';
+    },
+});
 
 // TODO(art): 1차 콘텐츠 확장 기간에는 의미가 가까운 기존 128×128 아이콘을 명시적으로 재사용한다.
 defineItem({

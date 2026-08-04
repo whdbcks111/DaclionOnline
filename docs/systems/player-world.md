@@ -35,7 +35,7 @@ Location ── objects[] (Monster | Resource)
 
 ## 게임 루프와 갱신 주기
 
-- `modules/game.ts`: 20 FPS. 모든 온라인 Player의 `earlyUpdate → update(SkillBook 포함) → lateUpdate`, 활성 Projectile의 전체 Entity lifecycle, Location의 모든 월드 오브젝트, Shop, Coroutine 순으로 갱신한다.
+- `modules/game.ts`: 20 FPS. 온라인 registry에 있고 `isWorldActive`인 Player의 `earlyUpdate → update(SkillBook 포함) → lateUpdate`, 활성 Projectile의 전체 Entity lifecycle, Location의 모든 월드 오브젝트, Shop, Coroutine 순으로 갱신한다.
 - 일회성 미니게임과 낚시 대기는 전투 Entity 프레임과 별도의 런타임 세션이다. 마지막 연결 종료·명시적 unload에서는 `cancelFishing()`이 대기 timer와 미니게임을 함께 정리하며 장소/생존/장비 유효성은 입질과 결과 확정 시 다시 검사한다.
 - `modules/player.ts`: 500ms마다 현재 경험치/다음 레벨 요구량을 포함한 `playerStats`와 `locationInfo`를 계산하되, `stateSync.ts`가 내용이 바뀐 완전한 snapshot만 socket별로 전송한다. `locationInfo.players`는 메모리 등록 여부만 믿지 않고 실제 연결 중인 userId만 포함한다. 각 payload의 `syncId/revision`으로 오래된 순서를 거르고, 30초마다 dirty 상태를 DB에 저장한다.
 - 같은 snapshot에서 `locationInfo.mapColor`는 현재 장소의 검증된 음악 권역색을, `playerStats.musicCombatState`는 수동 타게팅과 분리된 최근 실제 교전 단계를 제공한다. 직접 공격·회피·공격 source 피해는 Player의 비영속 9초 교전 시간을 갱신하고 보스가 우선하며, 이동·사망·부활 때 즉시 초기화한다. 저장하지 않는 이 상태와 클라이언트 전환 규칙은 [적응형 지역 음악](adaptive-music.md)을 참고한다.
@@ -47,9 +47,9 @@ Location ── objects[] (Monster | Resource)
 
 ## 플레이어 수명
 
-로그인 또는 세션 복원 시 `loadPlayerByUserId()`가 DB의 Player, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook을 한 객체 그래프로 로드한다. 레코드가 없으면 기본 Player를 생성한다. 온라인 동안 `modules/player.ts`의 Map이 동일 userId 객체를 공유한다. 마지막 socket이 끊기면 다시 연결되었는지 저장 전후로 확인한 뒤 Player를 저장·unload하므로 접속자 수는 줄었는데 위치 목록에는 남는 유령 플레이어를 만들지 않는다. 명시적 로그아웃은 저장 전에 세션·socket을 폐기하고 unload 진행 userId를 조회 경계에서 숨겨, 저장이 끝나기 전에 지연 전송된 경제 명령이 같은 객체를 다시 변경하지 못하게 한다.
+로그인 또는 세션 복원 시 `loadPlayerByUserId()`가 DB의 Player, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook과 상태효과 snapshot을 한 객체 그래프로 로드한다. 레코드가 없으면 기본 Player를 생성한다. 온라인 동안 registry가 동일 userId 객체를 공유한다. 마지막 socket이 끊기면 Player를 즉시 world-inactive로 전환하고 registry에서 내려 10초 동안 별도 userId Map에 보관한다. 이 동안 위치 목록·게임 tick·공격·위협 타게팅에서는 완전히 제외되지만 같은 세션이 돌아오면 동일 Player와 일반 유한 상태효과를 이어받고, 끊긴 실제 시간만 효과 duration에서 차감한다. 유예 만료 뒤 저장·unload하며, 명시적 로그아웃·비밀번호 재설정·서버 종료는 유예를 건너뛴다. 따라서 접속자 수는 줄었는데 위치 목록에는 남는 유령 플레이어를 만들지 않는다. 명시적 unload는 저장 전에 세션·socket을 폐기하고 진행 userId를 조회 경계에서 숨겨, 저장이 끝나기 전에 지연 전송된 경제 명령이 같은 객체를 다시 변경하지 못하게 한다.
 
-Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook은 변경 상태를 추적한다. `Player.save()`는 Player/Stat을 갱신하고 이어서 나머지 소유 상태를 저장한다. 같은 Player에서 자동 저장과 unload/보상 저장이 겹치면 save promise를 공유하고 추가 pass를 예약해 직렬화한다. Player scalar revision과 Inventory 변경 구독은 저장 도중 골드 또는 아이템이 바뀐 경우 완료된 이전 snapshot이 새 dirty를 지우지 못하게 하고 같은 save 호출의 다음 pass에서 최신 상태를 확정한다.
+Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook과 `WALL_CLOCK` 상태효과의 구조 변경은 변경 상태를 추적한다. 상태효과의 매 tick 남은 시간 감소와 `DERIVED/COMBAT_TRANSIENT` 변경은 dirty를 만들지 않고 unload 저장 시 절대 만료 시각으로 최신화한다. `Player.save()`는 Player/Stat을 갱신하고 이어서 나머지 소유 상태를 저장한다. 같은 Player에서 자동 저장과 unload/보상 저장이 겹치면 save promise를 공유하고 추가 pass를 예약해 직렬화한다. Player scalar revision과 Inventory 변경 구독은 저장 도중 골드 또는 아이템이 바뀐 경우 완료된 이전 snapshot이 새 dirty를 지우지 못하게 하고 같은 save 호출의 다음 pass에서 최신 상태를 확정한다.
 
 ## 능력치와 스탯
 
@@ -79,7 +79,7 @@ Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook�
 - 현재 별도 원거리 분류가 없으므로 성공적으로 실행된 물리 기본 공격을 근접 공격으로 취급하며, 공격자의 `mainHand:0` 아이템에 내구도가 있으면 공격마다 1 차감한다. 0이 되면 장비에서 파괴되고 슬롯 modifier가 즉시 제거된다.
 - `Player.performBasicAttack`은 주무기의 `basicAttackOverride`를 먼저 실행한다. 오버라이드가 없거나 `false`를 반환하면 기존 직접 근접 공격으로 폴백한다.
 - Projectile은 좌표가 없는 현재 월드 모델에 맞춰 `기본 비행 시간 ÷ 최종 투사체 가속` 뒤 같은 위치의 target을 공격하고 즉시 소멸한다. 영속 저장하지 않으며 `spawnProjectile` 또는 마스터 데이터 기반 `spawnProjectileFromData`로 생성한다. `ProjectileData.accelerationCoefficient`는 owner의 투사체 가속 보너스 반영 비율, override `accelerationMultiplier`는 스킬 같은 발사원 고유 배율이다. 생성 시 owner의 치명타 확률·치명타 피해와 계산된 투사체 가속을 스냅샷으로 동기화한다.
-- 투사체가 실제 `DamageCause.causeEntity`이므로 상성·관통·치명타는 투사체 자체 태그와 능력치를 사용한다. `attackOwner`는 최종 발사자를 반환해 메시지, Monster 어그로와 처치 보상만 owner에게 귀속한다.
+- 투사체가 실제 `DamageCause.causeEntity`이므로 상성·관통·치명타는 투사체 자체 태그와 능력치를 사용한다. `attackOwner`는 최종 발사자를 반환해 메시지, Monster 어그로와 처치 보상만 owner에게 귀속한다. Player 상태효과 복원처럼 raw source 수명이 끝난 피해는 `actorPlayerId`만 보존하고, 실제 양수 피해가 확정된 뒤에만 기여·막타와 현재 온라인 PVP 공격자를 해석한다.
 - 투사체 무기 발사 성공 시 owner의 공격 cooldown과 주무기 내구도 1을 확정한다. Projectile 자신의 적중 공격은 owner의 근접 무기 태그나 내구도에 접근하지 않는다.
 - 일반 Monster와 야외 필드 보스는 처음 맞힌 실제 공격원의 `attackOwner`를 target으로 삼고 같은 위치에 살아 있는 동안 자동 공격한다. `location:boss_room`으로 지정된 전용 보스방에서는 살아 있는 보스가 입장한 온라인 플레이어를 피해 발생 전에 발견해 먼저 공격한다. 모든 입장자를 위협도 후보로 등록하므로 보조 오브젝트를 먼저 공격해도 보스 교전을 피할 수 없다. `MonsterData.attack`은 선택적으로 `damageType`과 적중 시 확률형 `statusEffectId/chance/duration/level`을 지정해 속성 지역 몬스터가 화염·맹독·마비독을 실제로 시험하게 한다. `skills`와 `skillPattern`이 있으면 비영속 `SkillBook`으로 실제 SkillData를 순서대로 발동하고, 활성 스킬 시전 중에는 기본 공격을 멈춘다.
 - `MonsterData.skillPattern.randomOrder`를 켜면 매 주기 시작 스킬을 무작위로 고르고, 자원·생명력 조건 때문에 사용할 수 없는 기술은 같은 패턴의 다른 기술로 넘어간다. 따라서 보스는 고정 순환만 반복하지 않으며 회복기 하나가 막혀도 AI 전체가 정지하지 않는다.
@@ -91,7 +91,7 @@ Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook�
 - 다음 레벨 요구 경험치는 Lv.200까지 기존 `round(level × 100 × (1 + 3 × min(49, level - 1) / 49))`를 유지한다. Lv.200을 넘으면 `1 + 4 × ((level - 200) / 180)^1.5` 후반 배율을 추가한다. `Entity.getStandardMonsterExpOfLevel(level)`의 일반 동급 몬스터 기준 보상은 계속 `level × 20`이며, 요구 처치 수는 Lv.200의 20마리에서 Lv.250 약 32마리, Lv.300 약 53마리, Lv.330 약 69마리, Lv.380 100마리, Lv.500 약 192마리로 점진 증가한다. 보스는 긴 전투 시간을 반영해 별도 배율 경험치를 가진다. 낚시는 현재 캐릭터 레벨의 이 기준값에 물고기 희귀도 배율을, 단조는 완성품 장비 레벨의 기준값에 품질 배율을 적용하므로 생활 성장도 레벨대에 맞게 증가한다. 마력 제련은 처리량과 현재 `maxExp` 비율을 사용한다. 레벨업마다 모든 Stat +1, 가용 statPoint +3이며 현재 Lv.500 월드에서도 별도 레벨 상한 없이 성장한다.
 - Player 사망 시간은 기본 10초, 레벨 10 이상 30초, 50 이상 5분이며 지역 위험도에 따라 0.5/1/1.5배를 적용한 뒤 첫 respawn location으로 이동한다. 적대 구역에서 적대 귀환 두루마리를 보유했다면 같은 사망의 중복 여부를 먼저 확인하고 한 장을 자동 소모해 지역·카르마까지 반영된 최종 대기를 절반으로 줄인다. 사망 처리 완료 여부와 실제 부활 만료 시각은 숨김 `PlayerProgress` state로 주기 저장·unload 시 기록한다. 로그인 시 현재 시각과 비교해 오프라인 경과분을 차감하고, 이미 만료됐다면 사망 메시지나 패널티·두루마리 소모를 반복하지 않고 즉시 부활 상태로 복원한다. 따라서 `life=0`을 다시 `onDeath()`로 처리해 메시지와 경험치·골드 손실을 중복 적용하지 않는다. 구버전의 남은 시간 state는 첫 복원 때 절대 만료 시각으로 이전하며, state 없이 `life=0`만 남은 저장도 이미 처리된 사망으로 간주한다. 안전/중립/적대 사망 손실과 PVP 판정은 [PVP·지역 위험도](pvp-regions.md)를 따른다. 부활 시 생명력·정신력·배고픔·수분은 각각 현재 최대값까지 회복된다.
 
-상태효과와 행동 제한의 병합·틱 순서, 화염·화상·맹독·마비독 공식은 [상태효과·행동 제한 시스템](status-effects.md)을 참고한다. 생명력 회복은 직접 `life +=` 대신 `Entity.heal()`을 사용해야 화상/맹독의 받는 치유량 modifier가 적용된다.
+상태효과와 행동 제한의 병합·틱 순서, 영속 정책, 화염·화상·맹독·마비독 공식은 [상태효과·행동 제한 시스템](status-effects.md)을 참고한다. 사망은 영속 대상 효과도 모두 지우고, 연결 종료는 보호막과 전투 한정 효과를 같은 경계에서 제거해 복합 효과의 절반만 남지 않게 한다. 생명력 회복은 직접 `life +=` 대신 `Entity.heal()`을 사용해야 화상/맹독의 받는 치유량 modifier가 적용된다.
 
 치명타 성공, 공격 적중, 공격 회피, 제압, 자원 파괴는 `GameEvent`로 발행된다. 회피 이벤트 `combat:attack_evaded`에는 계산된 회피율과 피해 타입이 들어가며, 적중 이벤트 `combat:attack_hit`에는 최종 피해와 장착 무기 분류가 들어간다. 치명타 이벤트는 `combat:critical_hits` 통계를 증가시켜 강타 자동 획득에 쓰이고, 무기별 적중 통계는 200회 숙련 패시브 획득에 쓰인다. 진행 상태와 스킬 수명주기의 상세 계약은 [이벤트·진행 상태·스킬 시스템](progress-skills.md)을 참고한다.
 
@@ -112,6 +112,7 @@ Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook�
 - Lv.420부터 성운제의 왕좌 너머 에버프로스트 정원에 진입한다. 16개 장소는 입구 사냥 루프와 얼어붙은 분침/진자 빙하, 모래시계 묘역/뒤집힌 설원, 어제 회랑/내일 금고로 갈라졌다 합쳐진다. Lv.440 빙시계 파수장은 영시 절단과 진자뢰를 순서대로 사용하고, Lv.460 영시여왕 크로니아는 정지와 역행을 무작위로 사용한다.
 - Lv.460부터 영시여왕의 왕좌 너머 라그나벨 성단에 진입한다. 17개 장소는 잿빛 궤도 사냥 루프와 재별무리/부서진 성좌, 침묵태양/맹세혜성, 창세/소멸 항로로 갈라졌다 최후지평에서 합쳐진다. Lv.480 종성의 전령 에녹은 신성과 침묵을 번갈아 사용하고, Lv.500 최후성좌 라스트라는 붕괴·창세·소멸을 무작위로 선고한다.
 - Lv.500부터 최후성좌 너머 승천 변경에 진입한다. 세라핀 하늘묘지부터 아르케 끝자락까지 50레벨 폭의 10개 권역이 이어지며 각 권역은 전초거점, 외곽 순환로, 상·하층 회귀로, 갈라졌다 합쳐지는 나선 심층, 막다른 보물실과 가짜 종착지를 포함한 31개 장소를 가진다. 다음 권역 이행단층과 보스 심층이 서로 다른 갈래라 보스를 잡지 않아도 레벨 조건을 만족하면 탐험을 계속할 수 있다. 보스는 Lv.550~1000에 50레벨 간격으로 배치되고 치유·보호·제어 위협을 우선하는 고지능 AI와 두 개의 SkillData를 사용한다.
+- 승천 지도의 그라벨 이후 아오이·니힐·아르케는 기존 대륙 안쪽으로 되감지 않고 남쪽의 빈 회랑으로 이어진다. 권역 내부 지형·이동 거리는 90° 회전만으로 보존하고, 각 이행단층→다음 들머리 거리 120과 타 권역 노드 최소 간격 40을 데이터 테스트로 검증한다. 네레이아·루스카 낚시터 가지도 앞 권역 나선 입구와 겹치지 않게 바깥으로 이동한다.
 - 승천 권역의 적대 장소에는 3초짜리 환경 상태효과를 짧게 갱신한다. 희박한 대기·심해 수압·몽진·전자기 폭풍·산화 대기·백식 잔광·중력 홍수·무언의 기도·공백 침식·기원 공명은 재생, 이동·공격속도, 방어·관통, 공격력·마법력 중 서로 다른 장단점을 적용한다. `Location` passive callback은 해당 장소의 온라인 Player snapshot만 받아 다른 장소나 오프라인 객체를 순회하지 않는다.
 - `LocationData.npcIds`는 NPC 정의 ID만 저장한다. 런타임 NPC는 `Location.getNpcs/getNpc/hasNpc`로 조회하며 대화 규칙은 [NPC·대화 시스템](npc-dialogue.md)이 소유한다.
 - `LocationData.mapIcon`은 `/icons/map/{key}.png` 랜드마크를 지정한다. 없으면 지도에서 점으로, 있으면 아이콘으로 표시하며 현재 광장·상점·광산 입구·초원 거점과 11개 성장 낚시터에 적용한다. 낚시터는 전용 `fishing-spot` 아이콘을 공유한다.
@@ -162,6 +163,8 @@ Lv.200 이후 권역 표시명은 카이로스·아셴바흐·벨카인·루나�
 `treasure_chest`는 공격할 수 없는 상호작용 자원이다. 여러 야외·갱도 장소에 흩어져 있으며 골드, 포션, 화살, 광물, 희귀 보석 또는 각각 0.75% 가중치의 낚시 특화 장비 중 하나를 지급한다. `너울그물 낚싯대`는 채집 범위만 극단적으로 넓고 느리며, `급류바늘 낚싯대`는 범위가 작은 대신 채집 영역 이동 속도가 매우 빠르다. 인벤토리 공간이 부족하면 보상을 확정하지 않고, 성공한 뒤 해당 상자 인스턴스에 1~2시간의 랜덤 쿨타임이 적용된다. 쿨타임은 프로세스 메모리 상태라 서버 재시작 시 초기화된다.
 
 ## HUD 데이터
+
+`sendPlayerStats()`는 `Equipment.getDurabilityHudSnapshots()`의 무기·보호구 슬롯별 현재/최대 내구도를 500ms 변경 snapshot에 포함한다. 화면 크기는 `displayPreferences.ts`가 단일 stable viewport로 갱신하며, 회전 중간 resize와 편집 중 키보드 높이를 구분해 가로↔세로 전환 후에도 CSS·HUD 좌표계를 일치시킨다. 저장된 px 좌표가 줄어든 화면을 벗어나면 영속 설정은 그대로 두고 렌더 좌표만 clamp한다. Location HUD의 행동 버튼은 편집기가 실제 focus된 동안 pointer focus 이동만 막아 모바일 화상 키보드를 유지하고, 뒤로가기로 닫힌 키보드를 다시 열기 위해 focus를 조작하지 않는다.
 
 `locationInfo.objects[].icon`은 `Entity.getDisplayIcon()`의 가공된 표시 key이며 Monster만 기본 초상을 제공한다. `respawn`은 기본 리젠 주기가 5분을 초과하는 비일회성 보스에만 존재하며 기본 주기와 처치 후 남은 초를 함께 제공한다.
 

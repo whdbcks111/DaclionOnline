@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.js";
-import Entity from "./Entity.js";
+import Entity, { resolveDamageCauseActor } from "./Entity.js";
 import Inventory from "./Inventory.js";
 import Equipment from "./Equipment.js";
 import { StatType } from "./Stat.js";
@@ -15,7 +15,11 @@ import { defineProgress, PlayerProgress, ProgressType } from "./Progress.js";
 import SkillBook from "./SkillBook.js";
 import { updateCraftingRecipeDiscovery } from "./Crafting.js";
 import { DialogueEndReason, endNpcDialogue } from "./NpcDialogue.js";
-import { StatusEffectRemovalReason, StatusEffectType } from './StatusEffect.js';
+import {
+    StatusEffectPersistencePolicy,
+    StatusEffectRemovalReason,
+    StatusEffectType,
+} from './StatusEffect.js';
 import QuestBook from './QuestBook.js';
 import { markLocationVisited } from './WorldMap.js';
 import { cancelNavigation } from '../modules/navigation.js';
@@ -135,6 +139,7 @@ interface PlayerLevelAdjustmentPlan extends PlayerLevelAdjustmentResult {
 export interface PlayerStatResetResult {
     readonly automaticFloor: number;
     readonly maxRefundPerStat?: number;
+    readonly maxRefundTotal?: number;
     readonly refundedStatPoints: number;
     readonly statDeltas: Readonly<StatRecord>;
     readonly stats: Readonly<StatRecord>;
@@ -154,6 +159,7 @@ export function calculatePlayerStatReset(
     currentStats: Readonly<StatRecord>,
     currentStatPoint: number,
     maxRefundPerStat?: number,
+    maxRefundTotal?: number,
 ): PlayerStatResetResult {
     if (!Number.isSafeInteger(level) || level < 1 || level > 10_000) {
         throw new Error('스탯 초기화 레벨은 1~10000 사이의 정수여야 합니다.');
@@ -165,25 +171,55 @@ export function calculatePlayerStatReset(
         && (!Number.isSafeInteger(maxRefundPerStat) || maxRefundPerStat < 1)) {
         throw new Error('스탯별 최대 환급량은 1 이상의 정수여야 합니다.');
     }
+    if (maxRefundTotal !== undefined
+        && (!Number.isSafeInteger(maxRefundTotal) || maxRefundTotal < 1)) {
+        throw new Error('전체 최대 환급량은 1 이상의 정수여야 합니다.');
+    }
     const automaticFloor = Math.max(0, Math.floor(level) - 1);
     const stats = { ...currentStats };
     const statDeltas = {} as StatRecord;
-    let refundedStatPoints = 0;
+    const refundableByStat = {} as StatRecord;
 
     for (const stat of StatType.values()) {
         if (!Number.isSafeInteger(stats[stat.key]) || stats[stat.key] < 0) {
             throw new Error(`${stat.label} 스탯이 올바르지 않습니다.`);
         }
         const freelyAllocated = Math.max(0, stats[stat.key] - automaticFloor);
-        const refund = Math.min(freelyAllocated, maxRefundPerStat ?? freelyAllocated);
-        stats[stat.key] -= refund;
-        statDeltas[stat.key] = -refund;
-        refundedStatPoints += refund;
+        refundableByStat[stat.key] = Math.min(freelyAllocated, maxRefundPerStat ?? freelyAllocated);
+        statDeltas[stat.key] = 0;
     }
+
+    // 전체 상한이 각 스탯 환급 합보다 작으면 특정 스탯에 몰아주지 않고
+    // 남은 환급 가능량을 반복해 균등하게 나눈다.
+    let remaining = Math.min(
+        Object.values(refundableByStat).reduce((sum, value) => sum + value, 0),
+        maxRefundTotal ?? Number.MAX_SAFE_INTEGER,
+    );
+    while (remaining > 0) {
+        const available = StatType.values().filter(stat =>
+            -statDeltas[stat.key] < refundableByStat[stat.key]);
+        if (available.length === 0) break;
+        const share = Math.max(1, Math.floor(remaining / available.length));
+        for (const stat of available) {
+            if (remaining <= 0) break;
+            const alreadyRefunded = -statDeltas[stat.key];
+            const refund = Math.min(
+                refundableByStat[stat.key] - alreadyRefunded,
+                share,
+                remaining,
+            );
+            statDeltas[stat.key] -= refund;
+            remaining -= refund;
+        }
+    }
+    const refundedStatPoints = Object.values(statDeltas)
+        .reduce((sum, delta) => sum - delta, 0);
+    for (const stat of StatType.values()) stats[stat.key] += statDeltas[stat.key];
 
     return {
         automaticFloor,
         maxRefundPerStat,
+        maxRefundTotal,
         refundedStatPoints,
         statDeltas,
         stats,
@@ -323,6 +359,7 @@ export default class Player extends Entity {
     private _autoAttackEnabled = false;
     private _musicCombatRemaining = 0;
     private _musicBossRemaining = 0;
+    private _worldActive = true;
 
     private constructor(
         userId: number, nickname: string, level: number, exp: number,
@@ -337,6 +374,7 @@ export default class Player extends Entity {
         karma = 0,
         karmaUpdatedAt: Date = new Date(),
         hudPresets?: unknown,
+        statusEffectPersistence?: unknown,
     ) {
         super(
             level,
@@ -383,7 +421,17 @@ export default class Player extends Entity {
         // 모든 영속 상태 복원이 끝난 뒤 직업을 초기화한다. Lv.200 자동 전직이
         // 생성자 중간에서 save를 시작해 아직 없는 karma/ranking 상태를 읽어서는 안 된다.
         const promotedDuringLoad = this.career.initialize();
+        const statusEffectRestore = statusEffectPersistence === undefined || statusEffectPersistence === null
+            ? { restored: 0, rejected: 0, expired: 0 }
+            : this.restoreStatusEffectPersistenceSnapshot(statusEffectPersistence);
+        this.setStatusEffectChangeHandler(effect => {
+            if (effect.type.persistencePolicy === StatusEffectPersistencePolicy.WALL_CLOCK) {
+                this.markDirty();
+            }
+        });
+        if (statusEffectRestore.rejected > 0 || statusEffectRestore.expired > 0) this.markDirty();
         this.inventory.maxWeight = this.attribute.get(AttributeType.MAX_WEIGHT);
+        this.clampVitals();
         if (promotedDuringLoad) void this.save();
     }
 
@@ -392,6 +440,19 @@ export default class Player extends Entity {
 
     override get isPlayer() { return true; }
     override get playerUserId(): number { return this.userId; }
+    override get isWorldActive(): boolean { return this._worldActive; }
+
+    /** 짧은 재접속 유예 동안 객체는 보존하되 월드의 공격·대상·tick에서는 제외한다. */
+    suspendWorldActivity(): void {
+        this._worldActive = false;
+        this.currentTarget = null;
+        this.clearMusicCombatState();
+    }
+
+    /** 같은 Player 인스턴스를 재접속한 세션의 월드 대상으로 다시 활성화한다. */
+    resumeWorldActivity(): void {
+        this._worldActive = true;
+    }
 
     get moving() { return this._moving; }
     set moving(val: boolean) {
@@ -444,6 +505,11 @@ export default class Player extends Entity {
         this._changeRevision += 1;
         // 저장 도중 생긴 경제·생존 상태 변경은 같은 save() 호출의 다음 pass에서 확정한다.
         if (this._savePromise) this._saveRequested = true;
+    }
+
+    /** unload/종료 직전 안전 metadata까지 최신 상태효과 snapshot에 포함하도록 다음 저장을 예약한다. */
+    markStatusEffectPersistenceDirty(): void {
+        if (this.getStatusEffectPersistenceSnapshot().effects.length > 0) this.markDirty();
     }
 
     override get level() { return this._level; }
@@ -746,7 +812,7 @@ export default class Player extends Entity {
         cancelNavigation(this, false);
         this._deathExpiresAtMs = Date.now() + this.deathTimer * 1_000;
         this.persistDeathState();
-        const killer = this.lastDamageCause?.causeEntity?.attackOwner;
+        const killer = resolveDamageCauseActor(this.lastLethalDamageCause ?? this.lastDamageCause);
         if (killer instanceof Player && killer !== this) {
             const credit = evaluatePvpKillCredit(killer, this);
             emitGameEvent(GameEventIds.PVP_KILL, {
@@ -990,12 +1056,16 @@ export default class Player extends Entity {
     }
 
     /** 스탯 초기화 아이템이 소모 전에 환급 가능 여부를 확인하는 불변 preview. */
-    previewAllocatedStatReset(maxRefundPerStat?: number): PlayerStatResetPreview {
+    previewAllocatedStatReset(
+        maxRefundPerStat?: number,
+        maxRefundTotal?: number,
+    ): PlayerStatResetPreview {
         const plan = calculatePlayerStatReset(
             this.level,
             this.stat.points,
             this.statPoint,
             maxRefundPerStat,
+            maxRefundTotal,
         );
         const blocked = this.equipment.getAllEquipped().flatMap(({ item }) => {
             const requirements = item.requirements;
@@ -1014,8 +1084,8 @@ export default class Player extends Entity {
     }
 
     /** 자동 성장분을 보존하고 직접 분배한 스탯만 미사용 포인트로 되돌린다. */
-    resetAllocatedStats(maxRefundPerStat?: number): PlayerStatResetResult {
-        const plan = this.previewAllocatedStatReset(maxRefundPerStat);
+    resetAllocatedStats(maxRefundPerStat?: number, maxRefundTotal?: number): PlayerStatResetResult {
+        const plan = this.previewAllocatedStatReset(maxRefundPerStat, maxRefundTotal);
         if (plan.deniedReason) throw new Error(plan.deniedReason);
         if (plan.refundedStatPoints <= 0) return plan;
         for (const stat of StatType.values()) this.stat.set(stat, plan.stats[stat.key]);
@@ -1069,6 +1139,7 @@ export default class Player extends Entity {
             data.karma,
             data.karmaUpdatedAt,
             data.hudPresets,
+            data.statusEffects,
         );
     }
 
@@ -1165,6 +1236,7 @@ export default class Player extends Entity {
                     rankingMetrics: this.getRankingMetricSnapshot() as any,
                     rankingVisibility: this.rankingVisibility.toPersistence() as any,
                     hudPresets: this.hudPresets.toPersistence() as any,
+                    statusEffects: this.getStatusEffectPersistenceSnapshot() as any,
                 } as any,
             });
             if (playerRevision === this._changeRevision) {

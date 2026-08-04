@@ -15,6 +15,7 @@ import TabNode from './nodes/TabNode'
 import WeightNode from './nodes/WeightNode'
 import TooltipNode from './nodes/TooltipNode'
 import WorldMapNode from './nodes/WorldMapNode'
+import { preserveActiveEditableFocus } from '../../utils/focus'
 import styles from './ChatMessage.module.scss'
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
@@ -81,15 +82,6 @@ export function resolveColor(color: string): string {
         return `var(--color-${color.slice(1)})`
     }
     return color
-}
-
-function preserveActiveComposerFocus(event: React.PointerEvent<HTMLDivElement>): void {
-    const target = event.target
-    if (!(target instanceof Element) || !target.closest('button')) return
-    const activeElement = document.activeElement
-    if (activeElement instanceof HTMLElement && activeElement.isContentEditable) {
-        event.preventDefault()
-    }
 }
 
 interface Props {
@@ -171,7 +163,7 @@ export default function ChatMessage({
                         </button>
                     )}
                     <div className={`${styles.body} ${hasTopLevelImage ? styles.mediaBody : ''}`}>
-                        <div className={styles.content} onPointerDownCapture={preserveActiveComposerFocus}>
+                        <div className={styles.content} onPointerDownCapture={preserveActiveEditableFocus}>
                             {nodes.map((node, i) => renderNode(node, i))}
                         </div>
                     </div>

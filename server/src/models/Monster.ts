@@ -1,4 +1,7 @@
-import Entity from "./Entity.js";
+import Entity, {
+    getDamageCauseActorPlayerId,
+    resolveDamageCauseActor,
+} from "./Entity.js";
 import type { DamageCause, DamageResult, DamageType } from "./Entity.js";
 import Equipment from "./Equipment.js";
 import { Item, getItemData } from "./Item.js";
@@ -15,6 +18,7 @@ import type { TagId } from "../../../shared/tags.js";
 import StatusEffect, { ControlCategory, StatusEffectType } from "./StatusEffect.js";
 import SkillBook from "./SkillBook.js";
 import type { RuntimeSkillEntry, SkillActivationOutcome } from "./SkillBook.js";
+import { SkillFinishReason } from './Skill.js';
 import { partyManager } from '../modules/party.js';
 import type { ChatNode, ShieldBarSegment } from '../../../shared/types.js';
 import {
@@ -442,7 +446,9 @@ export default class Monster extends Entity {
         const target = this.currentTarget;
         if (!target || target.isDefeated || target.locationId !== this.locationId) {
             this.currentTarget = null;
+            this.skills.finishAll(SkillFinishReason.CANCELLED);
             this.skillPatternTimer = this.skillPattern?.initialDelay ?? 0;
+            this.skillPatternIndex = 0;
             this.resetChallengePattern();
             this.resetBossEncounter();
             this.updateBossRecovery(dt);
@@ -504,9 +510,13 @@ export default class Monster extends Entity {
         // 이후 super/on-shot dispose/reset이 런타임 참조를 정리해도 지급 입력이 바뀌지 않게 먼저 복사한다.
         const claimedUserIds = this.getCombatClaimUserIds();
         const contributions = this.getDefeatContributionSnapshot();
+        const lethalCause = this.lastLethalDamageCause;
+        const lethalOwner = resolveDamageCauseActor(lethalCause);
         const rewardOwner = this.threat.getPrimaryContributor()
-            ?? this.lastDamageCause?.causeEntity?.attackOwner;
-        const lastAttackOwnerUserId = this.lastDamageCause?.causeEntity?.attackOwner.playerUserId;
+            ?? lethalOwner
+            ?? resolveDamageCauseActor(this.lastDamageCause);
+        const lastAttackOwnerUserId = getDamageCauseActorPlayerId(this.lastDamageCause);
+        const actualLethalUserId = getDamageCauseActorPlayerId(lethalCause);
         this.resetBossRecovery();
         this.resetBossEncounter();
         this.resetChallengePattern();
@@ -517,6 +527,7 @@ export default class Monster extends Entity {
             claimedUserIds,
             contributions,
             ...(lastAttackOwnerUserId !== undefined ? { lastAttackOwnerUserId } : {}),
+            ...(actualLethalUserId !== undefined ? { actualLethalUserId } : {}),
         });
         // 전리품·골드 소유자는 기존 최고 위협 기여자 semantics를 유지하고 EXP eligibility와 분리한다.
         const causePlayer = rewardOwner?.isPlayer ? rewardOwner as Player : undefined;
@@ -670,7 +681,11 @@ export default class Monster extends Entity {
     private updateBossEncounter(dt: number): boolean {
         const narrative = this.bossNarrative;
         if (!narrative || !this.bossEncounterActive) return false;
-        const target = this.currentTarget;
+        let target = this.currentTarget;
+        if (!target || target.isDefeated || target.locationId !== this.locationId) {
+            this.currentTarget = this.threat.selectTarget(null);
+            target = this.currentTarget;
+        }
         if (!target || target.isDefeated || target.locationId !== this.locationId) {
             this.resetBossEncounter();
             return false;
@@ -764,7 +779,16 @@ export default class Monster extends Entity {
     protected override onDamageResolved(result: DamageResult, cause: DamageCause | null): void {
         const actor = cause?.causeEntity;
         const amount = result.lifeDamage + result.absorbedDamage;
-        if (actor && amount > 0) this.recordThreat(actor, ThreatAction.DAMAGE, amount);
+        if (actor && amount > 0) {
+            this.recordThreat(actor, ThreatAction.DAMAGE, amount);
+            return;
+        }
+        const actorPlayerId = getDamageCauseActorPlayerId(cause);
+        // raw source가 사라진 효과는 AI 타겟을 되살리지 않고 실제 생명력 피해만 보상 원장에 남긴다.
+        if (actorPlayerId === undefined || result.lifeDamage <= 0) return;
+        if (this.combatClaimUserIds.size === 0) this.combatClaimUserIds.add(actorPlayerId);
+        if (!this.combatClaimUserIds.has(actorPlayerId)) return;
+        this.threat.recordDetachedDamageByUserId(actorPlayerId, result.lifeDamage);
     }
 
     protected override onStatusEffectUptime(effect: StatusEffect, activeDuration: number): void {

@@ -6,7 +6,9 @@ import {
     inferMonsterStatProfile,
     MonsterRank,
     MonsterStatProfile,
+    normalizeMonsterDefenseForScale,
 } from './MonsterStats.js';
+import { calculateDefenseScale } from './Combat.js';
 
 test('몬스터 스탯 프로필과 등급은 클래스형 enum 조회 API를 제공한다', () => {
     assert.equal(MonsterStatProfile.fromKey('caster'), MonsterStatProfile.CASTER);
@@ -128,6 +130,34 @@ test('고유 가중치와 최종 오버라이드는 프로필을 복제하지 �
     assert.equal(attributes.speed, 0.42);
     assert.equal(attributes.critRate, 0);
     assert.ok((attributes.maxLife ?? 0) > 0);
+});
+
+test('고레벨 몬스터 방어 정규화는 새 척도에서도 기존 동레벨 피해 감소율을 보존한다', () => {
+    for (const level of [1, 100, 200, 201, 350, 500, 1_000]) {
+        const authoredDefense = 0.9 * level + 0.007 * level ** 2;
+        const legacyScale = 100 + 2 * level + 0.005 * level ** 2;
+        const normalizedDefense = normalizeMonsterDefenseForScale(level, authoredDefense);
+        const legacyDamageRatio = legacyScale / (legacyScale + authoredDefense);
+        const normalizedDamageRatio = calculateDefenseScale(level)
+            / (calculateDefenseScale(level) + normalizedDefense);
+
+        assert.ok(
+            Math.abs(legacyDamageRatio - normalizedDamageRatio) < 1e-12,
+            `Lv.${level}: ${legacyDamageRatio} !== ${normalizedDamageRatio}`,
+        );
+        if (level <= 200) assert.equal(normalizedDefense, authoredDefense);
+    }
+});
+
+test('명시한 몬스터 방어·마법 방어 오버라이드도 같은 척도로 정규화한다', () => {
+    const attributes = calculateMonsterBaseAttributes({
+        level: 500,
+        profile: MonsterStatProfile.TANK,
+        overrides: { def: 900, magicDef: 700 },
+    });
+
+    assert.equal(attributes.def, normalizeMonsterDefenseForScale(500, 900));
+    assert.equal(attributes.magicDef, normalizeMonsterDefenseForScale(500, 700));
 });
 
 test('기존 마스터의 공격 방식과 능력치에서 점진 이전용 역할을 추론한다', () => {

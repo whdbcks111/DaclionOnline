@@ -101,6 +101,39 @@ test('빛바랜 초기화는 스탯마다 10개, 전체 50개까지만 환급한
     assert.equal(result.statPoint, 54);
 });
 
+test('정련·복원 되돌림은 스탯별 상한과 전체 상한을 균등하게 함께 적용한다', () => {
+    const stats = {
+        strength: 200, agility: 200, vitality: 200, sensibility: 200, mentality: 200,
+    };
+    const refined = calculatePlayerStatReset(21, stats, 0, 25, 100);
+    assert.deepEqual(refined.stats, {
+        strength: 180, agility: 180, vitality: 180, sensibility: 180, mentality: 180,
+    });
+    assert.equal(refined.refundedStatPoints, 100);
+    assert.equal(refined.statPoint, 100);
+
+    const restored = calculatePlayerStatReset(21, stats, 0, 50, 200);
+    assert.deepEqual(restored.stats, {
+        strength: 160, agility: 160, vitality: 160, sensibility: 160, mentality: 160,
+    });
+    assert.equal(restored.refundedStatPoints, 200);
+    assert.equal(restored.statPoint, 200);
+});
+
+test('전체 환급 상한의 못 채운 분량은 다른 스탯의 남은 배분량으로 재분배한다', () => {
+    const result = calculatePlayerStatReset(21, {
+        strength: 25,
+        agility: 100,
+        vitality: 100,
+        sensibility: 100,
+        mentality: 100,
+    }, 0, 25, 100);
+    assert.equal(result.stats.strength, 20);
+    assert.equal(result.refundedStatPoints, 100);
+    assert.equal(Object.values(result.statDeltas).reduce((sum, delta) => sum - delta, 0), 100);
+    assert.ok(Object.values(result.statDeltas).every(delta => delta >= -25));
+});
+
 test('스탯 하한 미만의 구버전 값은 초기화가 임의로 올리지 않는다', () => {
     const result = calculatePlayerStatReset(21, {
         strength: 5,
@@ -125,6 +158,7 @@ test('초기화 계산은 DB Int 경계를 벗어나는 입력을 거부한다',
     assert.throws(() => calculatePlayerStatReset(21, { ...stats, strength: 20.5 }, 0));
     assert.throws(() => calculatePlayerStatReset(21, stats, -1));
     assert.throws(() => calculatePlayerStatReset(21, stats, 0, 0));
+    assert.throws(() => calculatePlayerStatReset(21, stats, 0, 10, 0));
 });
 
 test('Player 초기화 API는 modifier·현재 자원·인벤토리 중량 상한까지 즉시 동기화한다', () => {

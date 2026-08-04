@@ -8,4 +8,8 @@
 
 `TargetStatusHud`는 대상이 없으면 숨고 편집 모드에서만 미리보기를 제공한다. 서버가 가공한 이름·레벨·HP/MP·보호막·상태이상과 감각 단계별 몬스터 분석을 표시하며 PlayerStatus의 상태이상 hover primitive를 재사용한다. 몬스터 대상의 `icon`은 이름 바로 앞에 표시하고 플레이어처럼 아이콘이 없는 대상은 텍스트만 표시한다.
 
+`displayPreferences.ts`의 단일 stable viewport snapshot을 CSS 변수와 `HudContext`가 같이 구독한다. 화면 회전은 double-rAF과 trailing 재측정 후 반영하고, 실제 편집 포커스가 있을 때 높이만 감소한 모바일 키보드 resize만 무시한다. 가로 화면에서 저장한 px 좌표는 세로 화면에서 영속값을 변경하지 않고 렌더 좌표만 현재 viewport에 clamp한다.
+
+`ConsumableBundleHud`와 `HudSettings`는 서버가 허용한 회복·생존·강화 소모품을 최대 8종까지 순서대로 묶어 이름 있는 버튼을 최대 8개 만든다. 표시·위치·이름·아이템 순서는 계정 localStorage와 명시적 서버 HUD 프리셋에 함께 저장된다. 위치 HUD 행동 버튼은 현재 채팅 편집기의 focus를 빼앗지 않도록 pointer 기본 동작만 막으며, 편집기를 신규 focus하지 않아 사용자가 뒤로가기로 닫은 키보드를 재개방하지 않는다.
+
 HUD ID나 설정 계약이 바뀌면 `HudContext`, Container, Settings, 하위 HUD와 이 문서를 함께 갱신한다. 위치/크기는 viewport와 다양한 화면 폭에서 검증한다.

@@ -18,11 +18,29 @@ class ThreatEntity extends Entity {
 }
 
 class ThreatPlayer extends ThreatEntity {
+    worldActive = true;
     override get isPlayer(): boolean { return true; }
     override get playerUserId(): number { return this.userId; }
+    override get isWorldActive(): boolean { return this.worldActive; }
 
     constructor(readonly userId: number, name: string) { super(name); }
 }
+
+test('재접속 유예로 월드에서 빠진 플레이어는 공격 대상에서 즉시 제외하되 기존 기여는 보존한다', () => {
+    const owner = new ThreatEntity('보스');
+    const player = new ThreatPlayer(100, '새로고침 중인 플레이어');
+    const table = new ThreatTable(owner, normalizeMonsterAiProfile());
+    table.record(player, ThreatAction.DAMAGE, 20);
+    assert.equal(table.selectTarget(null), player);
+
+    player.worldActive = false;
+    table.update(0.05);
+
+    assert.equal(table.selectTarget(null), null);
+    assert.deepEqual(table.getContributionSnapshots(), []);
+    assert.equal(table.getDefeatContributionSnapshot()[0]?.total, 20);
+    table.dispose();
+});
 
 defineMonster({
     id: 'defeat_credit_test_monster',

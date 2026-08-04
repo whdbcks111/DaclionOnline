@@ -53,6 +53,7 @@ model Player {
   rankingMetrics      Json?    @map("ranking_metrics")
   rankingVisibility   Json?    @map("ranking_visibility")
   hudPresets           Json?    @map("hud_presets")
+  statusEffects        Json?    @map("status_effects")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

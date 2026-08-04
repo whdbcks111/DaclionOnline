@@ -48,6 +48,11 @@ class CombatEntity extends Entity {
     }
 }
 
+class WorldActiveEntity extends CombatEntity {
+    active = true;
+    override get isWorldActive(): boolean { return this.active; }
+}
+
 function defensiveTestItemData(
     id: string,
     onDamageTaken: NonNullable<ItemData['onDamageTaken']>,
@@ -133,6 +138,24 @@ test('현재 대상 표시 스냅샷은 같은 장소 대상의 자원·보호�
     target.locationId = 'other';
     assert.equal(owner.getCurrentTarget(), null);
     assert.equal(owner.getCurrentTargetDisplaySnapshot(), null);
+});
+
+test('재접속 유예로 월드 비활성화된 Entity는 대상·공격·교전 획득에서 제외된다', () => {
+    const attacker = new WorldActiveEntity('공격자');
+    const target = new WorldActiveEntity('유예 대상');
+    target.active = false;
+    attacker.currentTarget = target;
+
+    assert.equal(attacker.getCurrentTarget(), null);
+    assert.equal(attacker.canAttack(target), false);
+    assert.equal(target.acquireCombatTarget(attacker), false);
+    assert.equal(target.getAttackDeniedReason(attacker), '현재 월드에 활성화된 대상이 아닙니다.');
+
+    target.active = true;
+    attacker.active = false;
+    assert.equal(target.acquireCombatTarget(attacker), false);
+    assert.equal(target.getAttackDeniedReason(attacker), '현재 월드에 활성화된 공격자가 아닙니다.');
+    assert.equal(attacker.recordCombatEngagement(target), false);
 });
 
 test('피해를 받은 대상의 보조 장비는 실제 피해가 발생한 뒤 한 번만 방어 효과를 실행한다', () => {

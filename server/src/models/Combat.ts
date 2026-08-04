@@ -3,6 +3,32 @@ export interface CriticalResult {
     critical: boolean;
 }
 
+/** 레벨 차이 300에서 도달하는 전투 피해 배율 상·하한. 두 값은 서로 역수다. */
+export const LEVEL_GAP_DAMAGE_MIN_MULTIPLIER = 0.5;
+export const LEVEL_GAP_DAMAGE_MAX_MULTIPLIER = 2;
+export const LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL = 300;
+
+/**
+ * 공격자와 방어자의 레벨 차이를 양방향 전투 배율로 바꾼다.
+ * 동레벨은 정확히 1이며, 상·하한에 닿기 전까지 반대 방향 배율은 정확한 역수다.
+ */
+export function calculateLevelGapDamageMultiplier(
+    attackerLevel: number,
+    defenderLevel: number,
+): number {
+    assertFiniteNonNegative('attackerLevel', attackerLevel);
+    assertFiniteNonNegative('defenderLevel', defenderLevel);
+    const boundedGap = Math.max(
+        -LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL,
+        Math.min(LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL, attackerLevel - defenderLevel),
+    );
+    const multiplier = 2 ** (boundedGap / LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL);
+    return Math.max(
+        LEVEL_GAP_DAMAGE_MIN_MULTIPLIER,
+        Math.min(LEVEL_GAP_DAMAGE_MAX_MULTIPLIER, multiplier),
+    );
+}
+
 /**
  * 피격자가 공격자보다 빠를 때의 회피율을 계산한다.
  * 같은 속도 이하는 0%, 2배 빠르면 50%, 3배 이상 빠르면 최대 90%다.
@@ -30,30 +56,33 @@ export function applyCritical(baseAmount: number, critRate: number, critDmg: num
     };
 }
 
-/** 레벨에 따라 방어 효율을 정규화하는 척도. */
-export function calculateDefenseScale(defenderLevel: number): number {
-    assertFiniteNonNegative('defenderLevel', defenderLevel);
-    const scale = 100 + 2 * defenderLevel + 0.005 * defenderLevel * defenderLevel;
+/**
+ * 위협 레벨에 따라 방어 효율을 정규화하는 척도.
+ * Lv.200까지는 기존 곡선을 유지하고, 이후는 그 지점의 접선으로 연장해 이차 성장을 막는다.
+ */
+export function calculateDefenseScale(referenceLevel: number): number {
+    assertFiniteNonNegative('referenceLevel', referenceLevel);
+    const scale = referenceLevel <= 200
+        ? 100 + 2 * referenceLevel + 0.005 * referenceLevel * referenceLevel
+        : 4 * referenceLevel - 100;
     if (!Number.isFinite(scale)) throw new RangeError(`defense scale must be finite: ${scale}`);
     return scale;
 }
 
-/** 방어와 관통을 비례 감산·나눗셈 혼합 방식으로 반영한 최종 damage 계산. */
+/** 관통 후 방어를 위협 레벨 척도로 나눈 최종 damage 계산. */
 export function calculateFinalDamage(
     rawAmount: number,
     defense: number,
     penetration: number,
-    defenderLevel: number,
+    referenceLevel: number,
 ): number {
     assertFiniteNonNegative('rawAmount', rawAmount);
     assertFiniteNonNegative('defense', defense);
     assertFiniteNonNegative('penetration', penetration);
-    const defenseScale = calculateDefenseScale(defenderLevel);
+    const defenseScale = calculateDefenseScale(referenceLevel);
     const effectiveDefense = Math.max(0, defense - penetration);
     if (rawAmount === 0 || effectiveDefense === 0) return rawAmount;
-    const proportionalReduction = effectiveDefense / (defenseScale + effectiveDefense);
-    const afterSubtraction = rawAmount - rawAmount * proportionalReduction * 0.25;
-    return afterSubtraction / (1 + 0.75 * effectiveDefense / defenseScale);
+    return rawAmount * defenseScale / (defenseScale + effectiveDefense);
 }
 
 function assertFiniteNonNegative(label: string, value: number): void {

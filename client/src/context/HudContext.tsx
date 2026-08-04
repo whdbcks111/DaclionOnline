@@ -5,14 +5,22 @@ import type { SkillHudConfig } from './skillHudConfig'
 import { createDefaultItemHudConfig } from './itemHudConfig'
 import type { ItemHudConfig } from './itemHudConfig'
 import type { UsableItemHudData } from '@shared/types'
-import { getUiViewportSize, UI_SCALE_CHANGE_EVENT } from '../utils/displayPreferences'
+import {
+  getUiViewportSize,
+  UI_SCALE_CHANGE_EVENT,
+  UI_VIEWPORT_CHANGE_EVENT,
+} from '../utils/displayPreferences'
 import { useSocket } from './SocketContext'
 import {
   HUD_PRESET_VERSION,
+  MAX_CONSUMABLE_BUNDLES,
+  MAX_CONSUMABLE_BUNDLE_ITEMS,
   MAX_HUD_PRESET_QUICK_SLOTS,
   normalizeHudPresetData,
   normalizeHudPresetName,
   type HudPresetData,
+  type HudPresetConsumableBundleConfig,
+  type HudPresetConsumableBundleItem,
   type HudPresetOperationResult,
   type HudPresetSummary,
 } from '@shared/hudPresets'
@@ -41,6 +49,7 @@ const SCALE_KEY = 'hud-scale'
 const QUICK_SLOTS_KEY = 'hud-quick-slots'
 const SKILL_HUD_KEY = 'hud-skill-buttons'
 const ITEM_HUD_KEY = 'hud-item-buttons'
+const CONSUMABLE_BUNDLE_HUD_KEY = 'hud-consumable-bundles'
 const QUICK_BUTTON_SCALE_KEY = 'hud-quick-button-scale'
 const SKILL_QUICK_BUTTON_OPACITY_KEY = 'hud-skill-quick-button-opacity'
 const GRID_SNAP_KEY = 'hud-grid-snap'
@@ -59,6 +68,7 @@ const HUD_STORAGE_KEYS = [
   QUICK_SLOTS_KEY,
   SKILL_HUD_KEY,
   ITEM_HUD_KEY,
+  CONSUMABLE_BUNDLE_HUD_KEY,
   QUICK_BUTTON_SCALE_KEY,
   SKILL_QUICK_BUTTON_OPACITY_KEY,
   GRID_SNAP_KEY,
@@ -101,6 +111,46 @@ function isPosAnchor(value: unknown): value is PosAnchor {
 
 function isPosUnit(value: unknown): value is PosUnit {
   return value === '%' || value === 'px'
+}
+
+function parseStoredConsumableBundles(value: string | null): Record<string, HudPresetConsumableBundleConfig> {
+  if (!value) return {}
+  try {
+    const parsed: unknown = JSON.parse(value)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    const result: Record<string, HudPresetConsumableBundleConfig> = {}
+    for (const [id, raw] of Object.entries(parsed).slice(0, MAX_CONSUMABLE_BUNDLES)) {
+      if (!/^[a-z0-9:_-]{1,100}$/i.test(id) || !raw || typeof raw !== 'object' || Array.isArray(raw)) continue
+      const candidate = raw as Partial<HudPresetConsumableBundleConfig>
+      if (typeof candidate.name !== 'string' || !candidate.name.trim()
+        || !Number.isFinite(candidate.x) || !Number.isFinite(candidate.y)
+        || !Array.isArray(candidate.items)) continue
+      const items: HudPresetConsumableBundleItem[] = []
+      const seen = new Set<string>()
+      for (const item of candidate.items.slice(0, MAX_CONSUMABLE_BUNDLE_ITEMS)) {
+        if (!item || typeof item !== 'object') continue
+        const value = item as Partial<HudPresetConsumableBundleItem>
+        if (typeof value.itemDataId !== 'string' || !/^[a-z0-9:_-]{1,100}$/i.test(value.itemDataId)
+          || typeof value.name !== 'string' || !value.name
+          || typeof value.icon !== 'string' || !value.icon
+          || seen.has(value.itemDataId)) continue
+        seen.add(value.itemDataId)
+        items.push({ itemDataId: value.itemDataId, name: value.name, icon: value.icon })
+      }
+      if (items.length === 0) continue
+      result[id] = {
+        id,
+        name: candidate.name.trim().slice(0, 24),
+        items,
+        visible: candidate.visible === true,
+        x: Math.max(0, candidate.x!),
+        y: Math.max(0, candidate.y!),
+      }
+    }
+    return result
+  } catch {
+    return {}
+  }
 }
 
 function getHudGridSize(exponent: number): number {
@@ -157,11 +207,34 @@ function createAnchoredItemHudConfig(
   }
 }
 
-function isKeyboardInputFocused(): boolean {
-  const active = document.activeElement
-  return active instanceof HTMLInputElement
-    || active instanceof HTMLTextAreaElement
-    || (active instanceof HTMLElement && active.isContentEditable)
+function createAnchoredConsumableBundleConfig(
+  id: string,
+  name: string,
+  items: HudPresetConsumableBundleItem[],
+  index: number,
+  posAnchor: PosAnchor,
+  unitX: PosUnit,
+  unitY: PosUnit,
+  viewportWidth: number,
+  viewportHeight: number,
+): HudPresetConsumableBundleConfig {
+  const columns = viewportWidth <= 600 ? 4 : 8
+  const column = Math.max(0, index) % columns
+  const row = Math.floor(Math.max(0, index) / columns)
+  const defaultX = (column + 1) * 100 / (columns + 1)
+  const defaultY = Math.max(12, 50 - row * 12)
+  const isRight = posAnchor === 'topRight' || posAnchor === 'bottomRight'
+  const isBottom = posAnchor === 'bottomLeft' || posAnchor === 'bottomRight'
+  const xPercent = isRight ? 100 - defaultX : defaultX
+  const yPercent = isBottom ? 100 - defaultY : defaultY
+  return {
+    id,
+    name,
+    items,
+    visible: true,
+    x: unitX === '%' ? xPercent : xPercent / 100 * viewportWidth,
+    y: unitY === '%' ? yPercent : yPercent / 100 * viewportHeight,
+  }
 }
 
 export interface HudDefinition {
@@ -230,6 +303,12 @@ interface HudContextType {
   setItemHudVisible: (item: UsableItemHudData, visible: boolean, defaultIndex?: number) => void
   setItemHudPosition: (itemDataId: string, x: number, y: number) => void
   resetItemHudPosition: (itemDataId: string, defaultIndex?: number) => void
+  consumableBundleHudConfigs: Record<string, HudPresetConsumableBundleConfig>
+  createConsumableBundle: (name: string, items: readonly UsableItemHudData[]) => boolean
+  removeConsumableBundle: (id: string) => void
+  setConsumableBundleVisible: (id: string, visible: boolean) => void
+  setConsumableBundlePosition: (id: string, x: number, y: number) => void
+  resetConsumableBundlePosition: (id: string, defaultIndex?: number) => void
   quickButtonScale: number
   setQuickButtonScale: (scale: number) => void
   skillQuickButtonOpacity: number
@@ -370,6 +449,11 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     } catch { /* ignore */ }
     return {}
   })
+  const [consumableBundleHudConfigs, setConsumableBundleHudConfigs] = useState<
+    Record<string, HudPresetConsumableBundleConfig>
+  >(() => parseStoredConsumableBundles(
+    getAccountHudStorageItem(storageUserId, CONSUMABLE_BUNDLE_HUD_KEY),
+  ))
 
   const saveQuickSlots = useCallback((slots: string[]) => {
     setQuickSlots(slots)
@@ -465,22 +549,14 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     const updateHudViewport = () => {
       const { width, height } = getUiViewportSize()
       setHudViewport(previous => {
-        const sameOrientation = (previous.width >= previous.height) === (width >= height)
-        const keyboardResize = sameOrientation
-          && Math.abs(width - previous.width) < 48
-          && height < previous.height - 120
-          && (isKeyboardInputFocused() || navigator.maxTouchPoints > 0)
-        if (keyboardResize) return previous
         if (previous.width === width && previous.height === height) return previous
         return { width, height }
       })
     }
-    window.addEventListener('resize', updateHudViewport)
-    window.addEventListener('orientationchange', updateHudViewport)
+    window.addEventListener(UI_VIEWPORT_CHANGE_EVENT, updateHudViewport)
     window.addEventListener(UI_SCALE_CHANGE_EVENT, updateHudViewport)
     return () => {
-      window.removeEventListener('resize', updateHudViewport)
-      window.removeEventListener('orientationchange', updateHudViewport)
+      window.removeEventListener(UI_VIEWPORT_CHANGE_EVENT, updateHudViewport)
       window.removeEventListener(UI_SCALE_CHANGE_EVENT, updateHudViewport)
     }
   }, [])
@@ -496,6 +572,14 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setAccountHudStorageItem(storageUserId, ITEM_HUD_KEY, JSON.stringify(itemHudConfigs))
   }, [itemHudConfigs, storageUserId])
+
+  useEffect(() => {
+    setAccountHudStorageItem(
+      storageUserId,
+      CONSUMABLE_BUNDLE_HUD_KEY,
+      JSON.stringify(consumableBundleHudConfigs),
+    )
+  }, [consumableBundleHudConfigs, storageUserId])
 
   const patchConfig = useCallback((id: string, patch: Partial<HudConfig>) => {
     setConfigs(prev => ({
@@ -689,6 +773,99 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     quickButtonPosUnitY,
   ])
 
+  const createConsumableBundle = useCallback((
+    rawName: string,
+    sourceItems: readonly UsableItemHudData[],
+  ): boolean => {
+    const name = rawName.trim().replace(/\s+/g, ' ')
+    if (!name || Array.from(name).length > 24
+      || Object.keys(consumableBundleHudConfigs).length >= MAX_CONSUMABLE_BUNDLES) return false
+    const seen = new Set<string>()
+    const items = sourceItems.flatMap(item => {
+      if (!item.bundleEligible || seen.has(item.itemDataId)
+        || seen.size >= MAX_CONSUMABLE_BUNDLE_ITEMS) return []
+      seen.add(item.itemDataId)
+      return [{ itemDataId: item.itemDataId, name: item.name, icon: item.icon }]
+    })
+    if (items.length === 0) return false
+    const randomPart = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+    const id = `bundle_${randomPart}`
+    const config = createAnchoredConsumableBundleConfig(
+      id,
+      name,
+      items,
+      Object.keys(consumableBundleHudConfigs).length,
+      quickButtonPosAnchor,
+      quickButtonPosUnitX,
+      quickButtonPosUnitY,
+      hudViewport.width,
+      hudViewport.height,
+    )
+    setConsumableBundleHudConfigs(previous => ({ ...previous, [id]: config }))
+    return true
+  }, [
+    consumableBundleHudConfigs,
+    hudViewport,
+    quickButtonPosAnchor,
+    quickButtonPosUnitX,
+    quickButtonPosUnitY,
+  ])
+
+  const removeConsumableBundle = useCallback((id: string) => {
+    setConsumableBundleHudConfigs(previous => Object.fromEntries(
+      Object.entries(previous).filter(([bundleId]) => bundleId !== id),
+    ))
+  }, [])
+
+  const setConsumableBundleVisible = useCallback((id: string, visible: boolean) => {
+    setConsumableBundleHudConfigs(previous => {
+      const config = previous[id]
+      return config ? { ...previous, [id]: { ...config, visible } } : previous
+    })
+  }, [])
+
+  const setConsumableBundlePosition = useCallback((id: string, x: number, y: number) => {
+    setConsumableBundleHudConfigs(previous => {
+      const config = previous[id]
+      if (!config) return previous
+      const nextX = gridSnapEnabled
+        ? snapHudCoordinate(x, quickButtonPosUnitX, hudViewport.width, gridSize)
+        : x
+      const nextY = gridSnapEnabled
+        ? snapHudCoordinate(y, quickButtonPosUnitY, hudViewport.height, gridSize)
+        : y
+      return {
+        ...previous,
+        [id]: {
+          ...config,
+          x: Math.max(0, quickButtonPosUnitX === '%' ? Math.min(100, nextX) : nextX),
+          y: Math.max(0, quickButtonPosUnitY === '%' ? Math.min(100, nextY) : nextY),
+        },
+      }
+    })
+  }, [gridSize, gridSnapEnabled, hudViewport, quickButtonPosUnitX, quickButtonPosUnitY])
+
+  const resetConsumableBundlePosition = useCallback((id: string, defaultIndex = 0) => {
+    setConsumableBundleHudConfigs(previous => {
+      const config = previous[id]
+      if (!config) return previous
+      const defaults = createAnchoredConsumableBundleConfig(
+        id,
+        config.name,
+        config.items,
+        defaultIndex,
+        quickButtonPosAnchor,
+        quickButtonPosUnitX,
+        quickButtonPosUnitY,
+        hudViewport.width,
+        hudViewport.height,
+      )
+      return { ...previous, [id]: { ...config, x: defaults.x, y: defaults.y } }
+    })
+  }, [hudViewport, quickButtonPosAnchor, quickButtonPosUnitX, quickButtonPosUnitY])
+
   const setQuickButtonPosAnchor = useCallback((posAnchor: PosAnchor) => {
     if (posAnchor === quickButtonPosAnchor) return
     const oldIsRight = quickButtonPosAnchor === 'topRight' || quickButtonPosAnchor === 'bottomRight'
@@ -707,6 +884,14 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     ])))
     setItemHudConfigs(prev => Object.fromEntries(Object.entries(prev).map(([itemDataId, config]) => [
       itemDataId,
+      {
+        ...config,
+        x: oldIsRight !== newIsRight ? Math.max(0, maxX - config.x) : config.x,
+        y: oldIsBottom !== newIsBottom ? Math.max(0, maxY - config.y) : config.y,
+      },
+    ])))
+    setConsumableBundleHudConfigs(prev => Object.fromEntries(Object.entries(prev).map(([id, config]) => [
+      id,
       {
         ...config,
         x: oldIsRight !== newIsRight ? Math.max(0, maxX - config.x) : config.x,
@@ -735,6 +920,13 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
         [axis]: currentUnit === '%' ? config[axis] / 100 * viewportSize : config[axis] / viewportSize * 100,
       },
     ])))
+    setConsumableBundleHudConfigs(prev => Object.fromEntries(Object.entries(prev).map(([id, config]) => [
+      id,
+      {
+        ...config,
+        [axis]: currentUnit === '%' ? config[axis] / 100 * viewportSize : config[axis] / viewportSize * 100,
+      },
+    ])))
     if (axis === 'x') {
       setQuickButtonPosUnitX(unit)
       setAccountHudStorageItem(storageUserId, QUICK_BUTTON_POS_UNIT_X_KEY, unit)
@@ -750,6 +942,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     quickSlots,
     skillHudConfigs,
     itemHudConfigs,
+    consumableBundleHudConfigs,
     opacity,
     scale,
     quickButtonScale,
@@ -761,6 +954,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     quickButtonPosUnitY,
   }), [
     configs,
+    consumableBundleHudConfigs,
     gridExponent,
     gridSnapEnabled,
     itemHudConfigs,
@@ -789,6 +983,7 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     setQuickSlots(preset.quickSlots)
     setSkillHudConfigs(preset.skillHudConfigs)
     setItemHudConfigs(preset.itemHudConfigs)
+    setConsumableBundleHudConfigs(preset.consumableBundleHudConfigs)
     setOpacityState(preset.opacity)
     setScaleState(preset.scale)
     setQuickButtonScaleState(preset.quickButtonScale)
@@ -803,6 +998,11 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
     setAccountHudStorageItem(storageUserId, QUICK_SLOTS_KEY, JSON.stringify(preset.quickSlots))
     setAccountHudStorageItem(storageUserId, SKILL_HUD_KEY, JSON.stringify(preset.skillHudConfigs))
     setAccountHudStorageItem(storageUserId, ITEM_HUD_KEY, JSON.stringify(preset.itemHudConfigs))
+    setAccountHudStorageItem(
+      storageUserId,
+      CONSUMABLE_BUNDLE_HUD_KEY,
+      JSON.stringify(preset.consumableBundleHudConfigs),
+    )
     setAccountHudStorageItem(storageUserId, OPACITY_KEY, String(preset.opacity))
     setAccountHudStorageItem(storageUserId, SCALE_KEY, String(preset.scale))
     setAccountHudStorageItem(storageUserId, QUICK_BUTTON_SCALE_KEY, String(preset.quickButtonScale))
@@ -890,6 +1090,8 @@ export function HudProvider({ children }: { children: React.ReactNode }) {
       quickSlots, addQuickSlot, removeQuickSlot, moveQuickSlot, updateQuickSlot,
       skillHudConfigs, setSkillHudVisible, setSkillHudPosition, resetSkillHudPosition,
       itemHudConfigs, setItemHudVisible, setItemHudPosition, resetItemHudPosition,
+      consumableBundleHudConfigs, createConsumableBundle, removeConsumableBundle,
+      setConsumableBundleVisible, setConsumableBundlePosition, resetConsumableBundlePosition,
       quickButtonScale, setQuickButtonScale,
       skillQuickButtonOpacity, setSkillQuickButtonOpacity,
       quickButtonPosAnchor, setQuickButtonPosAnchor,

@@ -145,6 +145,7 @@ test('인벤토리 퀵 HUD는 사용 가능한 아이템을 정의별로 합산�
         name: '시험 포션',
         icon: 'items/health_potion',
         count: 5,
+        bundleEligible: false,
     }]);
     assert.equal(inventory.getFirstUsableItemByData('test_quick_potion')?.itemDataId, 'test_quick_potion');
     assert.equal(inventory.getFirstUsableItemByData('test_quick_material'), undefined);
@@ -244,6 +245,42 @@ test('내구도 API는 설정·증가·차감을 범위 안에서 처리하고 �
     assert.equal(item.decreaseDurability(), 0);
     assert.equal(changes, 3);
     assert.throws(() => item.changeDurability(Number.NaN));
+});
+
+test('장비 내구도 HUD snapshot은 무기·보호구만 고정 슬롯 순서로 노출한다', () => {
+    const definitions = [
+        { id: 'test_hud_weapon', slot: 'mainHand', tags: ['item:weapon'], image: 'items/old_sword' },
+        { id: 'test_hud_shield', slot: 'offHand', tags: ['item:armor'], image: 'items/old_shield' },
+        { id: 'test_hud_body', slot: 'body', tags: ['item:armor'], image: 'items/armor' },
+        { id: 'test_hud_accessory', slot: 'accessory', tags: ['item:armor'], image: 'items/ring' },
+    ] as const;
+    const equipment = Equipment.createEmpty();
+    const attribute = new Attribute({});
+    for (const definition of definitions) {
+        defineItem({
+            ...itemData(definition.id, definition.image, null, 20),
+            equipSlot: definition.slot,
+            tags: [...definition.tags],
+        });
+        assert.equal(equipment.equip(
+            definition.slot,
+            new Item(definition.id, 1, definition.id === 'test_hud_body' ? 8 : 15, null),
+            attribute,
+        ), true);
+    }
+
+    assert.deepEqual(equipment.getDurabilityHudSnapshots().map(snapshot => ({
+        group: snapshot.group,
+        slot: snapshot.slot,
+        itemDataId: snapshot.itemDataId,
+        current: snapshot.current,
+        max: snapshot.max,
+        ratio: snapshot.ratio,
+    })), [
+        { group: 'weapon', slot: 'mainHand', itemDataId: 'test_hud_weapon', current: 15, max: 20, ratio: 0.75 },
+        { group: 'armor', slot: 'body', itemDataId: 'test_hud_body', current: 8, max: 20, ratio: 0.4 },
+        { group: 'armor', slot: 'offHand', itemDataId: 'test_hud_shield', current: 15, max: 20, ratio: 0.75 },
+    ]);
 });
 
 test('수리는 손상률에 따라 최대 내구도를 영구 감소시키고 새 상한 안에서 복구한다', () => {

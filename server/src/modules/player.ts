@@ -19,7 +19,7 @@ import { DialogueEndReason, endNpcDialogue } from "../models/NpcDialogue.js";
 import { parseChatMessage } from "../utils/chatParser.js";
 import { partyManager } from './party.js';
 import { clearInformationMode } from './informationVisibility.js';
-import { cancelFishing } from './fishing.js';
+import { cancelFishing, isFishing } from './fishing.js';
 import { clearUserSnapshotStreams, publishUserSnapshot } from './stateSync.js';
 import { clearDungeonPuzzleSession } from '../models/DungeonPuzzle.js';
 import { migrateLegacyBlacksmithProfession } from './forging.js';
@@ -32,10 +32,110 @@ import { StatType } from '../models/Stat.js';
 import { createMonsterTargetAnalysis } from '../models/Inspection.js';
 import { GameTags } from '../../../shared/tags.js';
 import { getShop } from '../models/Shop.js';
+import { cancelGameTask, scheduleGameTask } from './scheduler.js';
+import { cancelMiniGame } from './minigame.js';
+import { StatusEffectRemovalReason } from '../models/StatusEffect.js';
+import { sendBotMessageToUser } from './message.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
+export const PLAYER_RECONNECT_GRACE_SECONDS = 10;
 const unloadingPlayers = new Map<number, Promise<void>>();
+const loadingPlayers = new Map<number, Promise<Player>>();
+const reconnectGracePlayers = new Map<number, { player: Player; disconnectedAtMs: number }>();
+const pendingReconnectGraceStartedAt = new Map<number, number>();
+
+function reconnectGraceTaskKey(userId: number): string {
+    return `player:reconnect-grace:${userId}`;
+}
+
+function elapseRetainedPlayerTo(
+    retained: { player: Player; disconnectedAtMs: number },
+    nowMs: number,
+): void {
+    retained.player.elapseWallClockStatusEffects(
+        Math.max(0, nowMs - retained.disconnectedAtMs) / 1_000,
+    );
+    // unload 저장 중 실제 연결이 돌아오면 그 대기 시간만 이어서 차감하고,
+    // 이미 반영한 유예 구간을 resume에서 다시 차감하지 않는다.
+    retained.disconnectedAtMs = nowMs;
+}
+
+function scheduleReconnectGraceExpiry(userId: number, disconnectedAtMs: number, nowMs: number): void {
+    const elapsedSeconds = Math.max(0, nowMs - disconnectedAtMs) / 1_000;
+    scheduleGameTask(
+        reconnectGraceTaskKey(userId),
+        Math.max(0, PLAYER_RECONNECT_GRACE_SECONDS - elapsedSeconds),
+        () => {
+            pendingReconnectGraceStartedAt.delete(userId);
+            void unloadPlayerByUserId(userId, true)
+                .catch(error => logger.error(`재접속 유예 만료 Player 정리 실패: UID ${userId}`, error));
+            return false;
+        },
+    );
+}
+
+/** 연결이 끝난 순간 중단해야 하는 상호작용만 정리하고 영속 Player aggregate는 보존한다. */
+function suspendPlayerRuntime(player: Player, cancelAnyMiniGame: boolean): void {
+    player.suspendWorldActivity();
+    // 보호막은 비영속 전투 상태다. 마력 보호막처럼 상태효과와 한 덩어리인 효과가
+    // 새로고침 뒤 절반만 남지 않도록 둘 다 같은 경계에서 제거한다.
+    player.clearShields();
+    endNpcDialogue(player, DialogueEndReason.UNLOADED, false);
+    cancelCrafting(player);
+    if (isFishing(player.userId)) cancelFishing(player.userId, '접속 종료로 낚시가 취소되었습니다.');
+    else if (cancelAnyMiniGame) cancelMiniGame(player.userId, '접속 종료로 미니게임이 취소되었습니다.');
+    cancelNavigation(player, false);
+    void import('./alchemy.js').then(({ clearAlchemyDraft }) => {
+        clearAlchemyDraft(player.userId, '접속이 종료되어 연금술 준비가 취소되었습니다.');
+    });
+    detachHumanVerification(player);
+    clearDungeonPuzzleSession(player.userId);
+    tradeManager.cancelForPlayer(player, '접속이 종료되어 거래가 취소되었습니다.');
+    player.skills.finishAll();
+    player.removeNonPersistentStatusEffects(StatusEffectRemovalReason.DISCONNECTED);
+    player.markStatusEffectPersistenceDirty();
+    clearUserSnapshotStreams(player.userId);
+}
+
+function retainPlayerForReconnectGrace(player: Player, disconnectedAtMs: number, nowMs: number): void {
+    suspendPlayerRuntime(player, false);
+    unregisterOnlinePlayer(player.userId);
+    reconnectGracePlayers.set(player.userId, { player, disconnectedAtMs });
+    scheduleReconnectGraceExpiry(player.userId, disconnectedAtMs, nowMs);
+}
+
+/** 같은 세션의 짧은 새로고침을 위해 Player 인스턴스를 월드 밖에 보관한다. */
+export function beginPlayerReconnectGrace(userId: number, nowMs = Date.now()): boolean {
+    if (isUserOnline(userId)) return false;
+    const disconnectedAtMs = pendingReconnectGraceStartedAt.get(userId) ?? nowMs;
+    pendingReconnectGraceStartedAt.set(userId, disconnectedAtMs);
+    if (reconnectGracePlayers.has(userId)) return true;
+    const player = getOnlinePlayer(userId);
+    if (!player) {
+        scheduleReconnectGraceExpiry(userId, disconnectedAtMs, nowMs);
+        return true;
+    }
+    retainPlayerForReconnectGrace(player, disconnectedAtMs, nowMs);
+    return true;
+}
+
+/** 유예 중 돌아온 연결에 동일 Player를 다시 붙이고 오프라인 경과 시간만 차감한다. */
+export function resumePlayerFromReconnectGrace(userId: number, nowMs = Date.now()): Player | undefined {
+    pendingReconnectGraceStartedAt.delete(userId);
+    const retained = reconnectGracePlayers.get(userId);
+    cancelGameTask(reconnectGraceTaskKey(userId));
+    if (!retained) return undefined;
+    elapseRetainedPlayerTo(retained, nowMs);
+    reconnectGracePlayers.delete(userId);
+    retained.player.resumeWorldActivity();
+    registerOnlinePlayer(retained.player);
+    return retained.player;
+}
+
+export function isPlayerInReconnectGrace(userId: number): boolean {
+    return reconnectGracePlayers.has(userId) || pendingReconnectGraceStartedAt.has(userId);
+}
 
 /** 현재 장소에서 실제 사용할 수 있는 생활·시설 기능의 HUD 표시 단일 원본. */
 class LocationCapability {
@@ -86,49 +186,95 @@ class LocationCapability {
 export async function loadPlayerByUserId(userId: number): Promise<Player> {
     const unloading = unloadingPlayers.get(userId);
     if (unloading) await unloading;
-    const existing = getOnlinePlayer(userId);
+    const existing = (isUserOnline(userId) ? resumePlayerFromReconnectGrace(userId) : undefined)
+        ?? getOnlinePlayer(userId);
     if (existing) {
         initializeTutorialSession(existing, { newPlayer: false, showCard: false });
+        initializeHumanVerification(existing);
         return existing;
     }
 
-    let player = await Player.loadByUserId(userId);
-    const newPlayer = player === null;
-    if (!player) {
-        player = await Player.create(userId);
+    let operation = loadingPlayers.get(userId);
+    if (!operation) {
+        operation = (async () => {
+            let player = await Player.loadByUserId(userId);
+            const newPlayer = player === null;
+            if (!player) player = await Player.create(userId);
+
+            if (migrateLegacyBlacksmithProfession(player)) await player.save();
+
+            registerOnlinePlayer(player);
+            initializeTutorialSession(player, { newPlayer, showCard: !newPlayer });
+            initializeHumanVerification(player);
+            // DB 로드 중 마지막 socket이 먼저 끝난 경우에도 완료된 Player를 월드에 유령으로 남기지 않는다.
+            if (!isUserOnline(userId)) {
+                const nowMs = Date.now();
+                const disconnectedAtMs = pendingReconnectGraceStartedAt.get(userId);
+                if (disconnectedAtMs !== undefined
+                    && nowMs - disconnectedAtMs < PLAYER_RECONNECT_GRACE_SECONDS * 1_000) {
+                    retainPlayerForReconnectGrace(player, disconnectedAtMs, nowMs);
+                } else {
+                    pendingReconnectGraceStartedAt.delete(userId);
+                    cancelGameTask(reconnectGraceTaskKey(userId));
+                    suspendPlayerRuntime(player, true);
+                    unregisterOnlinePlayer(userId);
+                    await player.save();
+                }
+            }
+            return player;
+        })();
+        loadingPlayers.set(userId, operation);
     }
-
-    if (migrateLegacyBlacksmithProfession(player)) await player.save();
-
-    registerOnlinePlayer(player);
-    initializeTutorialSession(player, { newPlayer, showCard: !newPlayer });
-    initializeHumanVerification(player);
-    return player;
+    let loaded: Player;
+    try {
+        loaded = await operation;
+    } finally {
+        if (loadingPlayers.get(userId) === operation) loadingPlayers.delete(userId);
+    }
+    if (!isUserOnline(userId)) return loaded;
+    const resumed = resumePlayerFromReconnectGrace(userId) ?? getOnlinePlayer(userId);
+    if (resumed) return resumed;
+    loaded.resumeWorldActivity();
+    registerOnlinePlayer(loaded);
+    initializeTutorialSession(loaded, { newPlayer: false, showCard: false });
+    initializeHumanVerification(loaded);
+    return loaded;
 }
 
-/** 로그아웃/연결끊김 시 호출: 저장 후 메모리에서 제거. 연결 종료 경로는 재접속 시 제거를 취소한다. */
+/** 명시적 로그아웃·보안 폐기·유예 만료·종료 시 저장 후 메모리에서 제거한다. */
 export async function unloadPlayerByUserId(userId: number, requireOffline = false): Promise<void> {
     const inProgress = unloadingPlayers.get(userId);
     if (inProgress) return inProgress;
     if (requireOffline && isUserOnline(userId)) return;
-    const player = getOnlinePlayer(userId);
-    if (!player) return;
+    const loading = loadingPlayers.get(userId);
+    if (loading) await loading;
+    const startedWhileLoading = unloadingPlayers.get(userId);
+    if (startedWhileLoading) return startedWhileLoading;
+    if (requireOffline && isUserOnline(userId)) return;
+    const retained = reconnectGracePlayers.get(userId);
+    const player = getOnlinePlayer(userId) ?? retained?.player;
+    if (!player) {
+        pendingReconnectGraceStartedAt.delete(userId);
+        cancelGameTask(reconnectGraceTaskKey(userId));
+        return;
+    }
+    cancelGameTask(reconnectGraceTaskKey(userId));
     const operation = (async () => {
-        endNpcDialogue(player, DialogueEndReason.UNLOADED, false);
-        cancelCrafting(player);
-        cancelFishing(userId, '접속 종료로 낚시가 취소되었습니다.');
-        cancelNavigation(player, false);
-        const { clearAlchemyDraft } = await import('./alchemy.js');
-        clearAlchemyDraft(userId, '접속이 종료되어 연금술 준비가 취소되었습니다.');
-        detachHumanVerification(player);
-        clearDungeonPuzzleSession(userId);
-        tradeManager.cancelForPlayer(player, '접속이 종료되어 거래가 취소되었습니다.');
-        player.skills.finishAll();
-        partyManager.removeDisconnectedPlayer(player);
+        if (retained) elapseRetainedPlayerTo(retained, Date.now());
+        suspendPlayerRuntime(player, true);
+        const partyResult = partyManager.removeDisconnectedPlayer(player);
+        for (const affectedUserId of partyResult?.affectedUserIds ?? []) {
+            if (affectedUserId === userId || !isUserOnline(affectedUserId)) continue;
+            sendBotMessageToUser(
+                affectedUserId,
+                `${player.name}님이 접속을 종료해 파티에서 나갔습니다.`,
+            );
+        }
         clearInformationMode(userId);
-        clearUserSnapshotStreams(userId);
         await player.save();
         if (requireOffline && isUserOnline(userId)) return;
+        pendingReconnectGraceStartedAt.delete(userId);
+        reconnectGracePlayers.delete(userId);
         unregisterOnlinePlayer(player.userId);
     })();
     unloadingPlayers.set(userId, operation);
@@ -154,6 +300,11 @@ export function getOnlinePlayers(): Player[] {
 export async function fetchPlayerByUserId(userId: number): Promise<Player | null> {
     const online = getOnlinePlayer(userId);
     if (online) return online;
+    const retained = reconnectGracePlayers.get(userId);
+    if (retained) {
+        elapseRetainedPlayerTo(retained, Date.now());
+        return retained.player;
+    }
     const player = await Player.loadByUserId(userId);
     if (player && migrateLegacyBlacksmithProfession(player)) await player.save();
     return player;
@@ -162,11 +313,28 @@ export async function fetchPlayerByUserId(userId: number): Promise<Player | null
 /** 모든 온라인 플레이어 저장 */
 export async function saveAllPlayers(): Promise<void> {
     const promises: Promise<void>[] = [];
-    for (const player of getOnlinePlayerSnapshot()) {
+    const players = new Map<number, Player>();
+    for (const player of getOnlinePlayerSnapshot()) players.set(player.userId, player);
+    const nowMs = Date.now();
+    for (const retained of reconnectGracePlayers.values()) {
+        elapseRetainedPlayerTo(retained, nowMs);
+        players.set(retained.player.userId, retained.player);
+    }
+    for (const player of players.values()) {
         if (tradeManager.hasActiveSession(player.userId)) continue;
         promises.push(player.save());
     }
     await Promise.all(promises);
+}
+
+/** 서버 종료는 재접속 유예를 기다리지 않고 모든 보존 Player를 정리·저장한다. */
+export async function shutdownAllPlayers(): Promise<void> {
+    await Promise.allSettled([...loadingPlayers.values()]);
+    const userIds = new Set<number>([
+        ...getOnlinePlayerSnapshot().map(player => player.userId),
+        ...reconnectGracePlayers.keys(),
+    ]);
+    await Promise.all([...userIds].map(userId => unloadPlayerByUserId(userId, false)));
 }
 
 /** 특정 유저의 플레이어 HUD 데이터를 해당 유저 소켓에 전송 */
@@ -220,6 +388,7 @@ export function sendPlayerStats(userId: number): void {
         autoAttackEnabled: player.autoAttackEnabled,
         skills:             player.skills.getHudSnapshots(),
         usableItems:        player.inventory.getUsableItemHudSnapshots(),
+        equipmentDurability: player.equipment.getDurabilityHudSnapshots(),
         statusEffects:     player.getStatusEffectDisplaySnapshots().map(effect => ({
             ...effect,
             description: parseChatMessage(effect.description),

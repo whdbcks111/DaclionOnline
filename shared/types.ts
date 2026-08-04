@@ -418,6 +418,37 @@ export interface UsableItemHudData {
     name: string
     icon: string
     count: number
+    /** 서버 item-use registry가 일괄 퀵 사용에 안전하다고 허용한 아이템만 true. */
+    bundleEligible: boolean
+}
+
+export interface EquipmentDurabilityHudData {
+    group: 'weapon' | 'armor'
+    slot: string
+    slotLabel: string
+    itemDataId: string
+    name: string
+    icon: string
+    current: number
+    max: number
+    ratio: number
+}
+
+export interface ConsumableBundleUseRequest {
+    requestId: string
+    itemDataIds: string[]
+}
+
+export interface ConsumableBundleSkippedItem {
+    itemDataId: string
+    reason: string
+}
+
+export interface ConsumableBundleUseResult {
+    requestId: string
+    usedItemDataIds: string[]
+    skipped: ConsumableBundleSkippedItem[]
+    stoppedReason?: string
 }
 
 export interface PlayerStatsData extends SnapshotRevision {
@@ -443,6 +474,7 @@ export interface PlayerStatsData extends SnapshotRevision {
     autoAttackEnabled: boolean
     skills: SkillHudData[]
     usableItems: UsableItemHudData[]
+    equipmentDurability: EquipmentDurabilityHudData[]
     statusEffects: StatusEffectHudData[]
     target: TargetHudData | null
     party: PartyHudData | null
@@ -622,6 +654,7 @@ export interface ServerToClientEvents {
     hudPresetList: (presets: HudPresetSummary[]) => void
     hudPresetLoaded: (data: { name: string; preset: HudPresetData }) => void
     hudPresetResult: (result: HudPresetOperationResult) => void
+    consumableBundleUseResult: (result: ConsumableBundleUseResult) => void
 }
 
 export interface ClientToServerEvents {
@@ -664,4 +697,5 @@ export interface ClientToServerEvents {
     saveHudPreset: (request: HudPresetSaveRequest) => void
     loadHudPreset: (name: string) => void
     deleteHudPreset: (name: string) => void
+    useConsumableBundle: (request: ConsumableBundleUseRequest) => void
 }

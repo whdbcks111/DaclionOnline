@@ -7,7 +7,7 @@ Prisma 스키마는 `server/prisma/schema.prisma`, 런타임 클라이언트 설
 | 모델/테이블 | 키와 관계 | 주요 필드 |
 | --- | --- | --- |
 | `User` / `users` | `id`, Player 1:0..1 | username, email, passwordHash/salt, nickname/nicknameChangedAt, profileImage, permission, timestamps |
-| `Player` / `players` | `userId` PK/FK | level, exp, maxWeight, stats/tags JSON, locationId, life/mentality/thirsty/hungry, statPoint, gold, karma/karmaUpdatedAt, rankingMetrics/rankingVisibility/hudPresets JSON |
+| `Player` / `players` | `userId` PK/FK | level, exp, maxWeight, stats/tags JSON, locationId, life/mentality/thirsty/hungry, statPoint, gold, karma/karmaUpdatedAt, rankingMetrics/rankingVisibility/hudPresets/statusEffects JSON |
 | `Item` / `items` | id, Player N:1 cascade | itemDataId, count, durability, metadata/tags JSON, sortOrder, timestamps |
 | `Equipment` / `equipments` | id, Player N:1 cascade | itemDataId, count, slot, slotIndex, durability, metadata/tags JSON; `(playerId, slot, slotIndex)` unique |
 | `PlayerProgress` / `player_progress` | `(playerId, key)` 복합 PK, Player N:1 cascade | kind, intValue, textValue, updatedAt |
@@ -32,7 +32,7 @@ Item/Equipment의 `metadata` JSON은 전체 유효값이 아니라 `{ "__daclion
 NPC 대화 결과 flag/state도 같은 `player_progress`에 저장한다. 진행 중인 대화 세션은 접속 중 메모리에만 존재하며 이동·사망·로그아웃·연결 이탈 시 폐기되므로 별도 NPC 마이그레이션은 없다.
 지도 방문 기록은 `world:visited/{locationId}` FLAG로 같은 `player_progress`에 저장한다. Player가 로드된 현재 위치와 이후 도착 위치를 메모리에서 dirty 표시해 기존 30초/unload 저장 경로로 flush하므로 별도 지도 테이블이나 migration은 없다.
 직업은 `career:main_job`, `career:sub_job`, `career:elite_job` STATE로 같은 `player_progress`에 저장한다. 원래 메인 ID를 보존해 엘리트 하위 계보 호환을 계산하며 별도 직업 테이블이나 migration은 없다.
-StatusEffect 인스턴스와 ActionType 제한도 Entity의 런타임 메모리에만 존재한다. 상태효과 metadata delta는 실행 중 누적값을 기본 metadata와 분리하기 위한 구조이며 DB에 flush하지 않으므로 스키마 변경은 없다.
+ActionType 제한과 Monster/Resource의 StatusEffect 인스턴스는 런타임 메모리에만 존재한다. Player의 일반 유한 상태효과는 `players.status_effects`에 `{ version: 1, effects: [...] }` snapshot으로 저장한다. 각 효과는 ID·레벨·절대 만료 시각·최대 duration과 선택적 `sourcePlayerId`, 타입이 whitelist한 안전 metadata delta만 가진다. 공복·갈증·장소 환경처럼 다른 상태에서 재생성되는 효과와 시전·보호막에 묶인 전투 한정 효과는 저장하지 않는다. 로드는 버전·크기·개수·ID·중복·정책·수치·metadata를 현재 master data 기준으로 검증하고 만료된 효과를 버린다.
 퀘스트는 코드 `QuestData`를 원본으로 삼고 `player_quests`에는 플레이어별 인스턴스만 저장한다. 목표 진행 JSON key는 `{stageId}/{objectiveId}`이며 metadata는 Item/Skill과 같은 versioned top-level delta다. 반복 완료 횟수와 재수락 가능 시각을 같은 행에 유지한다.
 
 ## 계정 보존 운영 초기화
@@ -57,6 +57,7 @@ login/session restore
      -> PlayerProgress.load
      -> SkillBook.load
      -> QuestBook.load
+     -> versioned status effect snapshot restore
   -> online Player Map
 
 30초 / logout / process signal
@@ -65,6 +66,7 @@ login/session restore
         + karma 기준값/시각
         + ranking metrics/visibility JSON
         + named HUD presets JSON
+        + absolute-expiry status effects JSON
      -> Inventory.save
      -> Equipment.save
      -> PlayerProgress.save
@@ -72,7 +74,7 @@ login/session restore
      -> QuestBook.save
 ```
 
-- Player scalar setter와 Player/Item/Skill/Quest 영속 태그·metadata·내구도 callback, Stat/Inventory/Equipment/PlayerProgress/SkillBook/QuestBook이 dirty 상태를 추적한다.
+- Player scalar setter와 Player/Item/Skill/Quest 영속 태그·metadata·내구도 callback, Stat/Inventory/Equipment/PlayerProgress/SkillBook/QuestBook, `WALL_CLOCK` 상태효과의 구조 변경이 dirty 상태를 추적한다. 상태효과의 tick별 duration 감소와 비영속 효과 변경은 dirty가 아니며 unload·종료 저장에서 현재 절대 만료 시각과 whitelist metadata를 계산한다.
 - 동일 Player의 save 호출은 진행 중 promise를 공유하고 겹친 요청을 다음 pass로 예약해 자동 저장·보상 저장·unload 저장을 직렬화한다. Player scalar는 revision을 기록해 `prisma.player.update` 도중 골드·생존 상태가 바뀌면 dirty를 지우지 않고 다음 pass를 강제한다. Inventory 변경 구독도 진행 중 Player 저장에 다음 pass를 예약한다. Inventory는 저장 시작 시 dirty snapshot과 revision을 잡고 하나의 transaction에서 `playerId` 범위의 멱등 삭제·수정·누락 행 복구를 처리하며, 저장 중 변경은 Clean으로 덮지 않는다. 신규 Equipment는 `(playerId, slot, slotIndex)` upsert를 사용해 이미 생성된 슬롯 행과 충돌해도 복구한다.
 - `fetchPlayerByUserId()`는 오프라인 Player를 DB에서 읽지만 온라인 Map에는 올리지 않는다.
 - 위치 JSON, 채팅/세션/온라인 상태, 몬스터/드롭, 상점 재고는 DB에 저장되지 않는다.
@@ -102,6 +104,7 @@ login/session restore
 - 인벤토리 표시 순서 컬럼 migration은 `20260726000000_add_inventory_sort_order`다.
 - 카르마 기준값·감소 기준 시각 migration은 `20260723000000_add_player_karma`다.
 - 계정별 이름 있는 HUD 프리셋 JSON migration은 `20260731000000_add_player_hud_presets`다.
+- Player 상태효과 snapshot JSON migration은 `20260805000000_add_player_status_effects`다.
 - 일반 운영 배포에서는 `cd server && npm run db:migrate:deploy`를 실행한다. 이 명령은 pending schema migration 적용, Prisma Client 생성, 아이템 metadata delta 데이터 마이그레이션을 순서대로 실행한다.
 - metadata 데이터 마이그레이션은 `src/scripts/migrateItemMetadataDeltas.ts`가 담당한다. 이미 버전 1인 행과 `null` 행은 건너뛰므로 재실행할 수 있다. 구형 전체 metadata 중 현재 `baseMetadata`와 같은 값은 기본값으로 간주해 제거하므로, 기본 metadata를 변경하기 전에 서버를 중지한 상태에서 운영 명령을 먼저 실행해야 한다.
 - `migrate reset`은 전체 데이터를 삭제하므로 운영 DB에서 금지한다.

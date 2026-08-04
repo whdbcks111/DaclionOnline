@@ -19,6 +19,7 @@ import {
     analyzeSkillBalance,
     BalanceEncounterType,
     BALANCE_PROFILE_LEVELS,
+    calculateProjectedCombatDamage,
     createBalanceScenario,
     replayBalanceSurvival,
 } from './Balance.js';
@@ -36,6 +37,43 @@ test('projected profile uses the same eight stat points earned per level', () =>
 
 test('밸런스 프로필은 Lv.1000까지의 고레벨 회귀 구간을 포함한다', () => {
     assert.deepEqual(BALANCE_PROFILE_LEVELS, [20, 50, 75, 100, 140, 180, 200, 350, 500, 750, 1000]);
+});
+
+test('밸런스 피해 진단은 실제 Entity와 같은 양방향 레벨차 계산 경계를 사용한다', () => {
+    const scenario = createBalanceScenario(100, 'career:warrior');
+    const rawDamage = 1_000;
+    const defense = 100;
+    const sameLevel = calculateProjectedCombatDamage(
+        rawDamage,
+        scenario.entity,
+        scenario.target,
+        defense,
+        0,
+    );
+
+    scenario.target.level = 400;
+    const attackingHigherTarget = calculateProjectedCombatDamage(
+        rawDamage,
+        scenario.entity,
+        scenario.target,
+        defense,
+        0,
+    );
+    const attackingLowerTarget = calculateProjectedCombatDamage(
+        rawDamage,
+        scenario.target,
+        scenario.entity,
+        defense,
+        0,
+    );
+
+    assert.equal(
+        attackingHigherTarget,
+        scenario.target.calculateDefendedDamageFrom(rawDamage, defense, 0, scenario.entity),
+    );
+    assert.ok(attackingHigherTarget < sameLevel);
+    assert.ok(attackingLowerTarget > sameLevel);
+    assert.ok(Math.abs(attackingHigherTarget * attackingLowerTarget - sameLevel ** 2) < 1e-8);
 });
 
 test('후반 직업 패시브와 역할기는 Lv.240·320 경계 및 메인 계보만 밸런스 프로필에 반영한다', () => {
@@ -327,6 +365,20 @@ test('skill report applies skill-specific penetration and unavoidable attacks', 
     assert.equal(lance.penetration, 74);
 });
 
+test('Lv.50 그림자 단검은 회피 오탐 없이 이전 암살자 공격보다 높은 단발 티어를 유지한다', () => {
+    const scenario = createBalanceScenario(50, 'career:assassin', undefined, BalanceEncounterType.BOSS);
+    const rupture = analyzeSkillBalance(scenario, 'rupture_cut', 1);
+    const dagger = analyzeSkillBalance(scenario, 'shadow_dagger', 1);
+
+    assert.equal(dagger.evasionChance, 0);
+    assert.equal(dagger.manaCost, 18);
+    assert.equal(dagger.cooldown, 9);
+    assert.ok(
+        dagger.expectedTotalDamage > rupture.expectedTotalDamage,
+        `그림자 단검 ${dagger.expectedTotalDamage.toFixed(1)} / 혈맥 절단 ${rupture.expectedTotalDamage.toFixed(1)}`,
+    );
+});
+
 test('all first jobs produce finite offensive and defensive baselines', () => {
     const reports = analyzeAllFirstJobs(50);
     assert.equal(reports.length, 6);
@@ -564,7 +616,14 @@ test('single-loadout elite combinations stay within the measured 1.7x boss DPS b
         }
     }
     const bossDps = profiles.map(profile => profile.boss.dps);
-    assert.ok(Math.max(...bossDps) / Math.min(...bossDps) <= 1.7);
+    const weakest = [...profiles].sort((left, right) => left.boss.dps - right.boss.dps)[0]!;
+    const strongest = [...profiles].sort((left, right) => right.boss.dps - left.boss.dps)[0]!;
+    const spread = Math.max(...bossDps) / Math.min(...bossDps);
+    assert.ok(
+        spread <= 1.7,
+        `${weakest.name} ${weakest.boss.dps.toFixed(1)} [${weakest.boss.skills.map(skill => `${skill.skillId}:${skill.casts}/${skill.damage.toFixed(0)}`).join(', ')}]`
+            + ` → ${strongest.name} ${strongest.boss.dps.toFixed(1)} (${spread.toFixed(3)}x)`,
+    );
     assert.ok(profiles.every(profile => profile.boss.basicDamageShare >= 0.13));
 });
 
@@ -597,6 +656,30 @@ test('blacksmith elite attacks also retain forging precision scaling', () => {
 test('combat rotation removes temporary balance modifiers after analysis', () => {
     const scenario = createBalanceScenario(100, 'career:mage');
     analyzeCombatRotation(scenario);
+    assert.equal(scenario.entity.attribute.modifiers.some(modifier => modifier.source.startsWith('balance:rotation:')), false);
+});
+
+test('암살자 로테이션은 은신 뒤에만 암습을 사용하고 피해 snapshot 뒤 은신 보정을 소모한다', () => {
+    const scenario = createBalanceScenario(100, 'career:assassin', undefined, BalanceEncounterType.BOSS);
+    const report = analyzeCombatRotation(scenario, 90);
+    const stealth = report.skills.find(skill => skill.skillId === 'stealth');
+    const ambush = report.skills.find(skill => skill.skillId === 'ambush');
+
+    assert.ok(stealth && stealth.casts > 0);
+    assert.ok(ambush && ambush.casts > 0);
+    assert.ok(ambush.casts <= stealth.casts);
+    let previousAmbushAt = Number.NEGATIVE_INFINITY;
+    for (const ambushAt of ambush.castTimes) {
+        const precedingStealthAt = stealth.castTimes.find(stealthAt =>
+            stealthAt > previousAmbushAt && stealthAt < ambushAt);
+        assert.notEqual(precedingStealthAt, undefined, `암습 ${ambushAt}초의 선행 은신`);
+        previousAmbushAt = ambushAt;
+    }
+    const standalone = analyzeSkillBalance(scenario, 'ambush', ambush.skillLevel);
+    assert.ok(ambush.damage / ambush.casts > standalone.expectedDamagePerTarget);
+    assert.equal(ambush.manaSpent, ambush.casts * 10);
+    assert.equal(stealth.manaSpent, stealth.casts * 16);
+    assert.notEqual(report.maxOpeningActionName, '암습');
     assert.equal(scenario.entity.attribute.modifiers.some(modifier => modifier.source.startsWith('balance:rotation:')), false);
 });
 

@@ -159,8 +159,14 @@ export default function SkillQuickHud() {
         const coolingDown = cooldown.remaining > 0
         const isRight = quickButtonPosAnchor === 'topRight' || quickButtonPosAnchor === 'bottomRight'
         const isBottom = quickButtonPosAnchor === 'bottomLeft' || quickButtonPosAnchor === 'bottomRight'
-        const x = quickButtonPosUnitX === '%' ? config.x / 100 * hudViewportWidth : config.x
-        const y = quickButtonPosUnitY === '%' ? config.y / 100 * hudViewportHeight : config.y
+        const x = Math.max(0, Math.min(
+          hudViewportWidth,
+          quickButtonPosUnitX === '%' ? config.x / 100 * hudViewportWidth : config.x,
+        ))
+        const y = Math.max(0, Math.min(
+          hudViewportHeight,
+          quickButtonPosUnitY === '%' ? config.y / 100 * hudViewportHeight : config.y,
+        ))
         return (
           <div
             key={skill.id}

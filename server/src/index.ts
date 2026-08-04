@@ -11,7 +11,7 @@ import { initPasswordReset } from './modules/passwordReset.js';
 import { initLogin } from './modules/login.js';
 import { initChat } from './modules/chat.js';
 import { initBot } from './modules/bot.js';
-import { initPlayer, saveAllPlayers } from './modules/player.js';
+import { initPlayer, shutdownAllPlayers } from './modules/player.js';
 import { initGame } from './modules/game.js';
 import './data/projectiles.js';
 import './data/items.js';
@@ -42,6 +42,7 @@ import { initTutorial } from './modules/tutorial.js';
 import { initKarma } from './modules/karma.js';
 import { initHumanVerification } from './modules/humanVerification.js';
 import { initHudPreset } from './modules/hudPreset.js';
+import { initConsumableBundle } from './modules/consumableBundle.js';
 import { initCodexEventTracking } from './modules/codex.js';
 import { recordServerBoot } from './modules/serverBoot.js';
 import { getPatchNotes } from '../../shared/patchNotes.js';
@@ -72,6 +73,7 @@ initAllCommands();
 initKarma();
 initHumanVerification();
 initHudPreset();
+initConsumableBundle();
 initTutorial();
 initLocation();
 initializeCodexData();
@@ -157,14 +159,14 @@ httpServer.listen(SERVER_PORT, async () => {
 // 프로세스 종료 시 정리
 process.on('SIGINT', async () => {
   logger.warn('SIGINT: 서버 종료 중...');
-  await saveAllPlayers();
+  await shutdownAllPlayers();
   await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   logger.warn('SIGTERM: 서버 종료 중...');
-  await saveAllPlayers();
+  await shutdownAllPlayers();
   await prisma.$disconnect();
   process.exit(0);
 });

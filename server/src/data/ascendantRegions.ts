@@ -155,10 +155,12 @@ export const ASCENDANT_REGION_LAYOUTS: readonly AscendantRegionLayout[] = Object
     { x: 6_100, y: -4_800, quarterTurns: 3 },
     { x: 6_100, y: -5_950, quarterTurns: 2 },
     { x: 4_950, y: -5_950, quarterTurns: 2 },
-    { x: 3_800, y: -5_950, quarterTurns: 1 },
-    { x: 4_100, y: -4_800, quarterTurns: 1 },
-    { x: 4_100, y: -3_650, quarterTurns: 1 },
-    { x: 4_100, y: -2_500, quarterTurns: 0 },
+    // 후반 권역은 남쪽의 빈 회랑으로 이어 붙인다. 기존처럼 안쪽으로 되감으면
+    // 아오이부터 앞선 권역의 노드와 선이 겹쳐 지도를 판독하기 어렵다.
+    { x: 3_800, y: -5_950, quarterTurns: 3 },
+    { x: 3_800, y: -7_100, quarterTurns: 0 },
+    { x: 4_950, y: -7_100, quarterTurns: 0 },
+    { x: 6_100, y: -7_100, quarterTurns: 0 },
 ]);
 
 export interface HighLevelMineDefinition {
@@ -536,12 +538,15 @@ export function buildAscendantLocations(): LocationData[] {
         if (fishingSpot) {
             const equipmentTier = getFishingEquipmentTierByLocation(fishingSpot.id);
             if (!equipmentTier) throw new Error(`Missing fishing equipment tier: ${fishingSpot.id}`);
+            // 네레이아·루스카의 기존 330 오프셋은 회전 뒤 앞 권역 나선 입구와 15만큼만
+            // 떨어졌다. 물길 분기를 조금 더 바깥으로 빼 노드와 라벨을 분리한다.
+            const fishingBranchOffsetY = id === 'abyssglass' || id === 'rustworld' ? 410 : 330;
             locations.find(location => location.id === `${id}_waystation`)!.connections.push(connect(fishingSpot.id));
             locations.push({
                 id: fishingSpot.id,
                 name: fishingSpot.name,
                 x: x - 80,
-                y: y - 330,
+                y: y - fishingBranchOffsetY,
                 z: z - 25,
                 mapColor: region.mapColor,
                 mapIcon: 'fishing-spot',

@@ -2,6 +2,8 @@ export const HUD_PRESET_VERSION = 1 as const
 export const MAX_HUD_PRESETS = 10
 export const MAX_HUD_PRESET_NAME_LENGTH = 24
 export const MAX_HUD_PRESET_QUICK_SLOTS = 10
+export const MAX_CONSUMABLE_BUNDLES = 8
+export const MAX_CONSUMABLE_BUNDLE_ITEMS = 8
 
 export type HudPresetAnchorPoint =
     | 'topLeft' | 'topMiddle' | 'topRight'
@@ -41,12 +43,28 @@ export interface HudPresetItemConfig {
     y: number
 }
 
+export interface HudPresetConsumableBundleItem {
+    itemDataId: string
+    name: string
+    icon: string
+}
+
+export interface HudPresetConsumableBundleConfig {
+    id: string
+    name: string
+    items: HudPresetConsumableBundleItem[]
+    visible: boolean
+    x: number
+    y: number
+}
+
 export interface HudPresetData {
     version: typeof HUD_PRESET_VERSION
     configs: Record<string, HudPresetConfig>
     quickSlots: string[]
     skillHudConfigs: Record<string, HudPresetSkillConfig>
     itemHudConfigs: Record<string, HudPresetItemConfig>
+    consumableBundleHudConfigs: Record<string, HudPresetConsumableBundleConfig>
     opacity: number
     scale: number
     quickButtonScale: number
@@ -198,6 +216,33 @@ export function normalizeHudPresetData(value: unknown): HudPresetData | undefine
             y,
         }
     }
+    const consumableBundleHudConfigs: Record<string, HudPresetConsumableBundleConfig> = {}
+    for (const [id, config] of entries(value.consumableBundleHudConfigs, MAX_CONSUMABLE_BUNDLES)) {
+        const name = text(config.name, MAX_HUD_PRESET_NAME_LENGTH)
+        const x = finite(config.x, 0, quickButtonPosUnitX === '%' ? 100 : 10_000)
+        const y = finite(config.y, 0, quickButtonPosUnitY === '%' ? 100 : 10_000)
+        if (!name || x === undefined || y === undefined || !Array.isArray(config.items)) continue
+        const items: HudPresetConsumableBundleItem[] = []
+        const seen = new Set<string>()
+        for (const candidate of config.items.slice(0, MAX_CONSUMABLE_BUNDLE_ITEMS)) {
+            if (!isRecord(candidate)) continue
+            const itemDataId = text(candidate.itemDataId, 100)
+            const itemName = text(candidate.name, 100)
+            const icon = text(candidate.icon, 200)
+            if (!itemDataId || !RECORD_KEY_PATTERN.test(itemDataId) || !itemName || !icon || seen.has(itemDataId)) continue
+            seen.add(itemDataId)
+            items.push({ itemDataId, name: itemName, icon })
+        }
+        if (items.length === 0) continue
+        consumableBundleHudConfigs[id] = {
+            id,
+            name,
+            items,
+            visible: config.visible === true,
+            x,
+            y,
+        }
+    }
 
     return {
         version: HUD_PRESET_VERSION,
@@ -205,6 +250,7 @@ export function normalizeHudPresetData(value: unknown): HudPresetData | undefine
         quickSlots,
         skillHudConfigs,
         itemHudConfigs,
+        consumableBundleHudConfigs,
         opacity,
         scale,
         quickButtonScale,

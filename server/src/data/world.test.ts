@@ -214,6 +214,42 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     );
 });
 
+test('승천 후반 권역은 기존 권역을 되감지 않고 지도 노드 간격을 유지한다', () => {
+    const generated = buildAscendantLocations();
+    const regionIdOf = (locationId: string) => ASCENDANT_REGIONS
+        .find(region => locationId.startsWith(`${region.id}_`))?.id;
+
+    for (let index = 1; index < ASCENDANT_REGIONS.length; index++) {
+        const previous = generated.find(location =>
+            location.id === `${ASCENDANT_REGIONS[index - 1].id}_transition`);
+        const threshold = generated.find(location =>
+            location.id === `${ASCENDANT_REGIONS[index].id}_threshold`);
+        assert.ok(previous && threshold);
+        assert.equal(Math.hypot(previous.x - threshold.x, previous.y - threshold.y), 120);
+    }
+
+    for (let leftIndex = 0; leftIndex < generated.length; leftIndex++) {
+        for (let rightIndex = leftIndex + 1; rightIndex < generated.length; rightIndex++) {
+            const left = generated[leftIndex];
+            const right = generated[rightIndex];
+            if (regionIdOf(left.id) === regionIdOf(right.id)) continue;
+            const distance = Math.hypot(left.x - right.x, left.y - right.y);
+            assert.ok(distance >= 40, `${left.id} / ${right.id}: ${distance.toFixed(2)}`);
+        }
+    }
+
+    const earlierLocations = locations.filter(location =>
+        !['silentdivine', 'nulllibrary', 'originboundary'].includes(regionIdOf(location.id) ?? ''));
+    const reroutedLocations = generated.filter(location =>
+        ['silentdivine', 'nulllibrary', 'originboundary'].includes(regionIdOf(location.id) ?? ''));
+    for (const later of reroutedLocations) {
+        for (const earlier of earlierLocations) {
+            const distance = Math.hypot(later.x - earlier.x, later.y - earlier.y);
+            assert.ok(distance >= 40, `${later.id} / ${earlier.id}: ${distance.toFixed(2)}`);
+        }
+    }
+});
+
 test('성장 구간별 대체 사냥터는 기존 관문을 건너뛰지 않는 양방향 루프를 이룬다', () => {
     const loops = [
         ['ember_foothills', 'ember_hunt_ashplain', 'ember_hunt_basalt', 'volcanic_slope'],
@@ -1243,7 +1279,8 @@ test('Lv.500~1000 승천 권역은 50레벨 단위 미궁·선택형 보스·환
             );
         }
     }
-    assert.deepEqual(mapDirections, new Set(['1:0', '0:-1', '-1:0', '0:1']));
+    // 아오이 이후 동선이 기존 권역 쪽으로 되감기는 +Y 방향은 의도적으로 사용하지 않는다.
+    assert.deepEqual(mapDirections, new Set(['1:0', '0:-1', '-1:0']));
 });
 
 test('고레벨 광산은 전용 희귀 광물 두 종을 낮은 확률로 제공한다', () => {
@@ -1713,4 +1750,18 @@ test('원거리 단조 장비는 지팡이 틀과 활·화살 부품 제작 경�
     }
     assert.ok(getItemData('silverweb_silk')?.tags.includes(GameTags.CRAFTING_BOWSTRING_MATERIAL));
     assert.ok(generalStore?.data.buyList.some(entry => entry.create().itemDataId === 'hardwood_stick'));
+});
+
+test('업그레이드된 부분 되돌림권은 고레벨 제작 경로와 제한 메타데이터를 가진다', () => {
+    const recipeIds = new Set(getAllCraftingRecipes().map(recipe => recipe.id));
+    assert.ok(recipeIds.has('utility:refined_stat_refund_ticket'));
+    assert.ok(recipeIds.has('utility:restored_stat_refund_ticket'));
+    assert.deepEqual(getItemData('refined_stat_refund_ticket')?.baseMetadata, {
+        maxRefundPerStat: 25,
+        maxRefundTotal: 100,
+    });
+    assert.deepEqual(getItemData('restored_stat_refund_ticket')?.baseMetadata, {
+        maxRefundPerStat: 50,
+        maxRefundTotal: 200,
+    });
 });

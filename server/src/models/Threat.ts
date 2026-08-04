@@ -145,22 +145,12 @@ export class ThreatTable {
 
         const userId = source.playerUserId;
         if (contributesToDefeat && userId !== undefined) {
-            const contribution = this.defeatContributions.get(userId) ?? {
-                userId,
-                damage: 0,
-                healing: 0,
-                shielding: 0,
-                control: 0,
-            };
-            if (action === ThreatAction.DAMAGE) contribution.damage += amount;
-            else if (action === ThreatAction.HEALING) contribution.healing += amount;
-            else if (action === ThreatAction.SHIELDING) contribution.shielding += amount;
-            else if (action === ThreatAction.CONTROL) contribution.control += amount;
-            this.defeatContributions.set(userId, contribution);
+            this.recordDefeatContribution(userId, action, amount);
         }
 
-        // 사망한 source의 지속 효과 기여는 보존하되 새 AI 공격 대상으로 되살리지는 않는다.
-        if (source.isDefeated) return contributesToDefeat;
+        // 사망했거나 연결 유예로 월드에서 빠진 source의 지속 효과 기여는 보존하되
+        // 새 AI 공격 대상으로 되살리지는 않는다.
+        if (source.isDefeated || !source.isWorldActive) return contributesToDefeat;
         const entry = this.entries.get(source) ?? {
             actor: source,
             score: 0,
@@ -181,6 +171,29 @@ export class ThreatTable {
         return true;
     }
 
+    /** raw Entity가 사라진 영속 DoT의 실제 생명력 피해만 primitive userId 원장에 기록한다. */
+    recordDetachedDamageByUserId(userId: number, lifeDamage: number): boolean {
+        if (!Number.isSafeInteger(userId) || userId <= 0
+            || !Number.isFinite(lifeDamage) || lifeDamage <= 0) return false;
+        this.recordDefeatContribution(userId, ThreatAction.DAMAGE, lifeDamage);
+        return true;
+    }
+
+    private recordDefeatContribution(userId: number, action: ThreatAction, amount: number): void {
+        const contribution = this.defeatContributions.get(userId) ?? {
+            userId,
+            damage: 0,
+            healing: 0,
+            shielding: 0,
+            control: 0,
+        };
+        if (action === ThreatAction.DAMAGE) contribution.damage += amount;
+        else if (action === ThreatAction.HEALING) contribution.healing += amount;
+        else if (action === ThreatAction.SHIELDING) contribution.shielding += amount;
+        else if (action === ThreatAction.CONTROL) contribution.control += amount;
+        this.defeatContributions.set(userId, contribution);
+    }
+
     hasParticipant(entity: Entity): boolean {
         return this.entries.has(entity.attackOwner);
     }
@@ -191,7 +204,8 @@ export class ThreatTable {
             const actor = entry.actor.attackOwner;
             const userId = actor.playerUserId;
             if (userId !== undefined && userIds.has(userId)
-                && !actor.isDefeated && actor.locationId === this.owner.locationId) return true;
+                && actor.isWorldActive && !actor.isDefeated
+                && actor.locationId === this.owner.locationId) return true;
         }
         return false;
     }
@@ -210,13 +224,17 @@ export class ThreatTable {
     update(dt: number): void {
         const decay = Math.max(0, 1 - this.profile.decayPerSecond * dt);
         for (const [actor, entry] of this.entries) {
-            if (actor.isDefeated || actor.locationId !== this.owner.locationId) this.entries.delete(actor);
+            if (!actor.isWorldActive || actor.isDefeated || actor.locationId !== this.owner.locationId) {
+                this.entries.delete(actor);
+            }
             else entry.score *= decay;
         }
     }
 
     selectTarget(current: Entity | null): Entity | null {
-        const valid = [...this.entries.values()].filter(entry => !entry.actor.isDefeated && entry.actor.locationId === this.owner.locationId);
+        const valid = [...this.entries.values()].filter(entry => entry.actor.isWorldActive
+            && !entry.actor.isDefeated
+            && entry.actor.locationId === this.owner.locationId);
         if (valid.length === 0) return null;
         if (this.profile.disposition === MonsterAiDisposition.LAST_ATTACKER) {
             return valid.reduce((latest, entry) => entry.sequence > latest.sequence ? entry : latest).actor;

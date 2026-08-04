@@ -6,6 +6,7 @@ import type {
   LocationObjectAction,
 } from '@shared/types'
 import HealthBarNode from '../../chat/nodes/HealthBarNode'
+import { preserveActiveEditableFocus } from '../../../utils/focus'
 import styles from './LocationHud.module.scss'
 
 const OBJECT_ACTIONS: Record<LocationObjectAction, { command: string; label: string }> = {
@@ -148,7 +149,7 @@ export default function LocationHud() {
   const showObjectActions = configs['player-location']?.showObjectActions ?? true
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} onPointerDownCapture={preserveActiveEditableFocus}>
       <div className={styles.header}>
         <span className={styles.locationName}>{locationInfo.name}</span>
         <span className={styles.zone}>{locationInfo.zoneLabel}</span>

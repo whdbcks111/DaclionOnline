@@ -100,33 +100,9 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
             if (onlineUserId !== undefined) {
                 setUserOffline(onlineUserId, socket.id);
                 if (!isUserOnline(onlineUserId)) {
-                    void import('../models/NpcDialogue.js').then(({ endNpcDialogueByUserId }) => {
-                        if (!isUserOnline(onlineUserId)) {
-                            endNpcDialogueByUserId(onlineUserId);
-                        }
-                    });
-                    void Promise.all([
-                        import('./playerRegistry.js'),
-                        import('./party.js'),
-                        import('./informationVisibility.js'),
-                        import('./fishing.js'),
-                    ]).then(async ([registry, party, visibility, fishing]) => {
-                        if (isUserOnline(onlineUserId)) return;
-                        const player = registry.getOnlinePlayer(onlineUserId);
-                        const result = player ? party.partyManager.removeDisconnectedPlayer(player) : undefined;
-                        visibility.clearInformationMode(onlineUserId);
-                        fishing.cancelFishing(onlineUserId, '연결이 종료되어 낚시가 취소되었습니다.');
-                        for (const affectedUserId of result?.affectedUserIds ?? []) {
-                            if (affectedUserId !== onlineUserId && registry.getOnlinePlayer(affectedUserId)) {
-                                void import('./message.js').then(({ sendBotMessageToUser }) =>
-                                    sendBotMessageToUser(affectedUserId, `${player?.name ?? '파티원'}님이 접속을 종료해 파티에서 나갔습니다.`));
-                            }
-                        }
-                        if (!isUserOnline(onlineUserId)) {
-                            const { unloadPlayerByUserId } = await import('./player.js');
-                            await unloadPlayerByUserId(onlineUserId, true);
-                        }
-                    }).catch(error => logger.error(`연결 종료 Player 정리 실패: UID ${onlineUserId}`, error));
+                    void import('./player.js').then(({ beginPlayerReconnectGrace }) => {
+                        if (!isUserOnline(onlineUserId)) beginPlayerReconnectGrace(onlineUserId);
+                    }).catch(error => logger.error(`연결 종료 Player 유예 시작 실패: UID ${onlineUserId}`, error));
                 }
                 logger.warn(`로그아웃: ${currentSession?.username ?? `UID ${onlineUserId}`} (${socket.id})`);
             } else {

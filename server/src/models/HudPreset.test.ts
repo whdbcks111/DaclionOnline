@@ -27,6 +27,7 @@ function preset(overrides: Partial<HudPresetData> = {}): HudPresetData {
         quickSlots: ['/공격', '/스킬 화염구'],
         skillHudConfigs: {},
         itemHudConfigs: {},
+        consumableBundleHudConfigs: {},
         opacity: 0.8,
         scale: 0.9,
         quickButtonScale: 1.2,
@@ -63,6 +64,30 @@ test('HUD 프리셋 데이터는 크기와 범위를 서버 경계에서 정규�
     assert.equal(normalized.skillHudConfigs.fireball.x, 100);
     assert.equal(normalized.skillHudConfigs.fireball.y, 100);
     assert.equal(normalizeHudPresetData({ ...preset(), version: 999 }), undefined);
+});
+
+test('기존 HUD 프리셋은 소모품 묶음 필드가 없어도 로드되고 묶음은 8개 아이템까지 유지한다', () => {
+    const legacy = preset() as unknown as Record<string, unknown>;
+    delete legacy.consumableBundleHudConfigs;
+    assert.deepEqual(normalizeHudPresetData(legacy)?.consumableBundleHudConfigs, {});
+
+    const normalized = normalizeHudPresetData(preset({
+        consumableBundleHudConfigs: {
+            recovery: {
+                id: 'recovery',
+                name: '회복 세트',
+                visible: true,
+                x: 20,
+                y: 30,
+                items: Array.from({ length: 10 }, (_, index) => ({
+                    itemDataId: `potion_${index}`,
+                    name: `물약 ${index}`,
+                    icon: 'items/health_potion',
+                })),
+            },
+        },
+    }));
+    assert.equal(normalized?.consumableBundleHudConfigs.recovery.items.length, 8);
 });
 
 test('이름 있는 HUD 프리셋은 대소문자와 무관하게 덮어쓰고 다시 불러온다', () => {

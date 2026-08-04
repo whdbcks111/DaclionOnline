@@ -158,6 +158,58 @@ test('양수 기여가 전혀 없을 때만 claim 안의 유효한 마지막 공
     assert.deepEqual(blockedFallback, []);
 });
 
+test('다른 장소에서 실제 DoT 막타를 낸 생존 플레이어는 현장 지급 대상이 없을 때 솔로 경험치를 받는다', () => {
+    const remoteLethal = new FakePlayer(1, '원격 지속 피해 막타', 20, 'town');
+    const { manager } = fixture(remoteLethal);
+
+    const grants = manager.distributeMonsterExp(100, 'field', {
+        claimedUserIds: [remoteLethal.userId],
+        contributions: [{ userId: remoteLethal.userId, total: 100 }],
+        actualLethalUserId: remoteLethal.userId,
+    });
+
+    assert.deepEqual(grants.map(grant => [grant.userId, grant.poolShare, grant.contributionRatio]), [
+        [remoteLethal.userId, 100, 1],
+    ]);
+    assert.equal(remoteLethal.gainedExp, 100);
+});
+
+test('현장 기여자가 있으면 원격 실제 막타자를 추가하지 않고 하나의 경험치 풀만 분배한다', () => {
+    const local = new FakePlayer(1, '현장 기여자', 20, 'field');
+    const remoteLethal = new FakePlayer(2, '원격 지속 피해 막타', 20, 'town');
+    const { manager } = fixture(local, remoteLethal);
+
+    const grants = manager.distributeMonsterExp(100, 'field', {
+        claimedUserIds: [local.userId, remoteLethal.userId],
+        contributions: [
+            { userId: local.userId, total: 10 },
+            { userId: remoteLethal.userId, total: 90 },
+        ],
+        actualLethalUserId: remoteLethal.userId,
+    });
+
+    assert.deepEqual(grants.map(grant => [grant.userId, grant.poolShare]), [[local.userId, 100]]);
+    assert.equal(local.gainedExp, 100);
+    assert.equal(remoteLethal.gainedExp, 0);
+});
+
+test('실제 막타 원인은 이후 0피해 현장 공격자 fallback보다 우선한다', () => {
+    const remoteLethal = new FakePlayer(1, '실제 원격 막타', 20, 'town');
+    const zeroDamageLocal = new FakePlayer(2, '0피해 현장 공격자', 20, 'field');
+    const { manager } = fixture(remoteLethal, zeroDamageLocal);
+
+    const grants = manager.distributeMonsterExp(100, 'field', {
+        claimedUserIds: [remoteLethal.userId, zeroDamageLocal.userId],
+        contributions: [],
+        lastAttackOwnerUserId: zeroDamageLocal.userId,
+        actualLethalUserId: remoteLethal.userId,
+    });
+
+    assert.deepEqual(grants.map(grant => grant.userId), [remoteLethal.userId]);
+    assert.equal(remoteLethal.gainedExp, 100);
+    assert.equal(zeroDamageLocal.gainedExp, 0);
+});
+
 test('파티 경험치 풀은 유효 인원 한 명당 20%씩 늘고 솔로 보상은 그대로다', () => {
     assert.equal(calculatePartyExpPool(100, 0), 0);
     assert.equal(calculatePartyExpPool(100, 1), 100);

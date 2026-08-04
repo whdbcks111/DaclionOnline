@@ -8,6 +8,8 @@ import './items.js';
 import {
     defineWorldMonster,
     MASTERY_ESSENCE_ITEM_ID,
+    REFINED_STAT_REFUND_TICKET_ITEM_ID,
+    RESTORED_STAT_REFUND_TICKET_ITEM_ID,
 } from './monsters.js';
 import './ascendantFrontier.js';
 
@@ -71,9 +73,38 @@ test('Lv.400 이상 BOSS는 현재와 미래 정의 모두 숙련의 정수를 �
 
     assert.equal(getMonsterData(HIGH_BOSS_ID)?.statRank, MonsterRank.BOSS);
     assert.deepEqual(
-        getMonsterData(HIGH_BOSS_ID)?.drops.filter(drop => drop.itemDataId !== MASTERY_ESSENCE_ITEM_ID),
+        getMonsterData(HIGH_BOSS_ID)?.drops.filter(drop => ![
+            MASTERY_ESSENCE_ITEM_ID,
+            REFINED_STAT_REFUND_TICKET_ITEM_ID,
+            RESTORED_STAT_REFUND_TICKET_ITEM_ID,
+        ].includes(drop.itemDataId)),
         [{ itemDataId: 'gold_ore', minCount: 2, maxCount: 3, chance: 0.4 }],
     );
+});
+
+test('고레벨 보스는 정련·복원 되돌림권을 보수적인 확률로 드롭한다', () => {
+    const highBosses = getAllMonsterData()
+        .filter(monster => monster.statRank === MonsterRank.BOSS && monster.level >= 400);
+    for (const boss of highBosses) {
+        assert.deepEqual(
+            boss.drops.filter(drop => drop.itemDataId === REFINED_STAT_REFUND_TICKET_ITEM_ID),
+            [{
+                itemDataId: REFINED_STAT_REFUND_TICKET_ITEM_ID,
+                minCount: 1,
+                maxCount: 1,
+                chance: 0.025,
+            }],
+            boss.id,
+        );
+        const restored = boss.drops
+            .filter(drop => drop.itemDataId === RESTORED_STAT_REFUND_TICKET_ITEM_ID);
+        assert.deepEqual(restored, boss.level >= 800 ? [{
+            itemDataId: RESTORED_STAT_REFUND_TICKET_ITEM_ID,
+            minCount: 1,
+            maxCount: 1,
+            chance: 0.008,
+        }] : [], boss.id);
+    }
 });
 
 test('Lv.399 이하 BOSS에는 숙련의 정수가 자동 추가되지 않는다', () => {

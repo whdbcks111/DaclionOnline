@@ -7,17 +7,21 @@ import Monster, {
     STANDARD_MONSTER_RESPAWN_SECONDS,
     defineMonster,
 } from './Monster.js';
-import Entity from './Entity.js';
+import Entity, { getDamageCauseActorPlayerId } from './Entity.js';
 import Equipment from './Equipment.js';
 import { defineLocation } from './Location.js';
 import { StatusEffectType } from './StatusEffect.js';
 import { ShieldType } from './Shield.js';
+import { defineSkill } from './Skill.js';
 import '../data/statusEffects.js';
 
 const LONG_RESPAWN_BOSS_ID = 'test:long_respawn_boss';
 const STANDARD_RESPAWN_MONSTER_ID = 'test:standard_respawn_monster';
 const CONTRIBUTION_MONSTER_ID = 'test:contribution_monster';
+const CAST_RESET_BOSS_ID = 'test:cast_reset_boss';
+const CAST_RESET_SKILL_ID = 'test_boss_delayed_cast';
 const MONSTER_TEST_LOCATION_ID = 'monster-test';
+const castFinishReasons: string[] = [];
 
 class TestMonsterAttacker extends Entity {
     override readonly name = '보스 도입 시험 공격자';
@@ -33,6 +37,29 @@ class TestContributionPlayer extends Entity {
         this.name = name;
     }
 }
+
+defineSkill({
+    id: CAST_RESET_SKILL_ID,
+    name: '지연 폭발 시험',
+    icon: 'skills/test',
+    maxLevel: 1,
+    descriptionTemplate: '',
+    costTemplate: '',
+    activationConditionTemplate: '',
+    baseMetadata: null,
+    onStart: () => ({ duration: 2 }),
+    onUpdate: context => {
+        if (context.elapsed < 2) return 'continue';
+        context.owner.currentTarget?.damage(20, 'absolute', {
+            type: 'attack',
+            causeEntity: context.owner,
+            fixedDamage: true,
+        });
+        return 'finish';
+    },
+    onFinish: context => { castFinishReasons.push(context.reason.key); },
+    tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT],
+});
 
 defineMonster({
     id: LONG_RESPAWN_BOSS_ID,
@@ -68,6 +95,31 @@ defineMonster({
     goldReward: 0,
     equipments: [],
     tags: [],
+});
+
+defineMonster({
+    id: CAST_RESET_BOSS_ID,
+    name: '캐스팅 초기화 시험 보스',
+    description: '교전 이탈 캐스팅 초기화 시험용 몬스터',
+    level: 1,
+    exp: 0,
+    baseAttribute: { maxLife: 100, atk: 1, speed: 1 },
+    drops: [],
+    expReward: 0,
+    goldReward: 0,
+    equipments: [],
+    skills: [{ skillDataId: CAST_RESET_SKILL_ID, level: 1 }],
+    skillPattern: {
+        sequence: [CAST_RESET_SKILL_ID],
+        initialDelay: 1,
+        interval: { min: 10, max: 10 },
+    },
+    bossNarrative: {
+        introDuration: 3,
+        introLine: '도망친 주문은 처음부터 다시 외운다.',
+        phases: [{ lifeRatio: 0.5, line: '절반의 경계다.' }],
+    },
+    tags: [GameTags.ENTITY_BOSS],
 });
 
 defineMonster({
@@ -148,6 +200,41 @@ test('보스 첫 공격은 도입 무적에 막히고 도입 시간이 끝나야
     assert.equal(boss.life, boss.maxLife - 25);
 });
 
+test('보스 도입 중 현재 대상이 이탈해도 남은 대상에게 조우 상태와 무적을 이어간다', () => {
+    const boss = new Monster(LONG_RESPAWN_BOSS_ID, MONSTER_TEST_LOCATION_ID, 600);
+    const first = new TestMonsterAttacker(
+        1,
+        0,
+        MONSTER_TEST_LOCATION_ID,
+        { maxLife: 100, atk: 100 },
+        Equipment.createEmpty(),
+    );
+    const second = new TestMonsterAttacker(
+        1,
+        0,
+        MONSTER_TEST_LOCATION_ID,
+        { maxLife: 100, atk: 100 },
+        Equipment.createEmpty(),
+    );
+    const secondCause = { type: 'attack', causeEntity: second, fixedDamage: true } as const;
+
+    boss.acquireCombatTarget(first);
+    boss.engageIntruder(second);
+    boss.update(1);
+    first.locationId = 'outside-boss-room';
+
+    boss.update(1);
+    assert.equal(boss.currentTarget, second);
+    assert.equal(boss.isBossIntroActive, true);
+    assert.equal(boss.getDamageReceivedModifier(), 0);
+    boss.damage(25, 'absolute', secondCause);
+    assert.equal(boss.life, boss.maxLife);
+
+    boss.update(1);
+    assert.equal(boss.isBossIntroActive, false);
+    assert.equal(boss.getDamageReceivedModifier(), 1);
+});
+
 test('보스는 전투 대상이 사라진 지 10초 후부터 초당 최대 생명력의 10%를 회복한다', () => {
     const boss = new Monster(LONG_RESPAWN_BOSS_ID, MONSTER_TEST_LOCATION_ID, 600);
     const attacker = new TestMonsterAttacker(
@@ -211,6 +298,44 @@ test('보스가 새 전투 대상을 얻으면 이탈 대기와 회복이 즉시
     assert.equal(boss.life, recoveredLife);
 });
 
+test('보스전 이탈은 진행 중 캐스팅을 취소하고 재진입 시 도입과 패턴 대기를 처음부터 시작한다', () => {
+    castFinishReasons.length = 0;
+    const boss = new Monster(CAST_RESET_BOSS_ID, MONSTER_TEST_LOCATION_ID, 600);
+    const target = new TestMonsterAttacker(
+        1,
+        0,
+        MONSTER_TEST_LOCATION_ID,
+        { maxLife: 100, speed: 1 },
+        Equipment.createEmpty(),
+    );
+    boss.acquireCombatTarget(target);
+
+    boss.update(3);
+    boss.update(1);
+    assert.equal(boss.skills.hasActiveSkill(), true);
+    assert.equal(target.life, target.maxLife);
+
+    target.locationId = 'outside-boss-room';
+    boss.update(0.1);
+    assert.equal(boss.skills.hasActiveSkill(), false);
+    assert.equal(castFinishReasons.at(-1), 'cancelled');
+    assert.equal(boss.isBossIntroActive, false);
+
+    target.locationId = MONSTER_TEST_LOCATION_ID;
+    boss.acquireCombatTarget(target);
+    assert.equal(boss.isBossIntroActive, true);
+    boss.update(3);
+    boss.update(0.9);
+    assert.equal(boss.skills.hasActiveSkill(), false);
+    boss.update(0.1);
+    assert.equal(boss.skills.hasActiveSkill(), true);
+    const lifeBeforeCastCompletes = target.life;
+    boss.update(1.9);
+    assert.equal(target.life, lifeBeforeCastCompletes);
+    boss.update(0.1);
+    assert.equal(target.life, lifeBeforeCastCompletes - 20);
+});
+
 test('직접 피해와 source가 있는 DoT는 실제 피해만 각각 한 번 기여 원장에 기록한다', () => {
     const locationId = 'contribution-direct-dot';
     const monster = new Monster(CONTRIBUTION_MONSTER_ID, locationId);
@@ -230,6 +355,35 @@ test('직접 피해와 source가 있는 DoT는 실제 피해만 각각 한 번 �
     assert.equal(snapshot?.userId, attacker.userId);
     assert.equal(snapshot?.damage, 13.5);
     assert.equal(monster.lastDamageCause?.causeEntity?.attackOwner, attacker);
+});
+
+test('raw source가 사라진 DoT는 userId로 실제 생명력 피해와 막타만 기록한다', () => {
+    const monster = new Monster(CONTRIBUTION_MONSTER_ID, 'contribution-detached-dot');
+    const sourcePlayerId = 10_011;
+    monster.setShield('test:detached-dot', 50, ShieldType.GENERAL, 30, monster);
+
+    const absorbed = monster.damage(50, 'absolute', {
+        type: 'poison', causeEntity: null, actorPlayerId: sourcePlayerId, fixedDamage: true,
+    });
+    assert.equal(absorbed.lifeDamage, 0);
+    assert.deepEqual(monster.getDefeatContributionSnapshot(), []);
+
+    const partial = monster.damage(60, 'absolute', {
+        type: 'poison', causeEntity: null, actorPlayerId: sourcePlayerId, fixedDamage: true,
+    });
+    assert.equal(partial.lifeDamage, 60);
+    assert.equal(monster.getDefeatContributionSnapshot()[0]?.damage, 60);
+
+    monster.damage(0, 'absolute', {
+        type: 'poison', causeEntity: null, actorPlayerId: 10_012, fixedDamage: true,
+    });
+    assert.equal(monster.getDefeatContributionSnapshot().length, 1);
+
+    monster.damage(40, 'absolute', {
+        type: 'poison', causeEntity: null, actorPlayerId: sourcePlayerId, fixedDamage: true,
+    });
+    assert.equal(getDamageCauseActorPlayerId(monster.lastLethalDamageCause), sourcePlayerId);
+    assert.equal(monster.lastLethalDamageCause?.causeEntity, null);
 });
 
 test('과잉 피해는 남은 생명력까지만 lifeDamage와 기여도로 인정한다', () => {

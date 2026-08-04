@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.js";
-import { executeItemUse } from "../modules/itemUse.js";
+import { executeItemUse, isItemQuickBundleEligible } from "../modules/itemUse.js";
 import { Item, createItemMetadataDelta, getItemData } from "./Item.js";
 import type { ItemDurabilityRepairResult, ItemMetadata, ItemSnapshot } from "./Item.js";
 import type { TagId } from "../../../shared/tags.js";
@@ -210,7 +210,11 @@ export default class Inventory {
             if (!item.data?.onUse || item.count <= 0) continue;
             const previous = snapshots.get(item.itemDataId);
             if (previous) {
-                snapshots.set(item.itemDataId, { ...previous, count: previous.count + item.count });
+                snapshots.set(item.itemDataId, {
+                    ...previous,
+                    count: previous.count + item.count,
+                    bundleEligible: previous.bundleEligible || isItemQuickBundleEligible(item),
+                });
                 continue;
             }
             snapshots.set(item.itemDataId, {
@@ -218,6 +222,7 @@ export default class Inventory {
                 name: item.data.name,
                 icon: item.image,
                 count: item.count,
+                bundleEligible: isItemQuickBundleEligible(item),
             });
         }
         return [...snapshots.values()].sort((left, right) =>
@@ -231,6 +236,14 @@ export default class Inventory {
             item.itemDataId === itemDataId
             && item.count > 0
             && Boolean(item.data?.onUse));
+    }
+
+    /** 일괄 퀵 사용 정책까지 통과한 첫 인스턴스를 내부 순서대로 찾는다. */
+    getFirstQuickBundleItemByData(itemDataId: string): Item | undefined {
+        return this._items.find(item =>
+            item.itemDataId === itemDataId
+            && item.count > 0
+            && isItemQuickBundleEligible(item));
     }
 
     /**

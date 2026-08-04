@@ -2,6 +2,7 @@ import { AttributeType, type AttributeModifier } from '../models/Attribute.js';
 import { ActionType } from '../models/Action.js';
 import StatusEffect, {
     ControlCategory,
+    StatusEffectPersistencePolicy,
     StatusEffectType,
     type StatusEffectContext,
     type StatusEffectLifecycleResult,
@@ -12,6 +13,21 @@ import {
     StatusEffectInteractionMode,
 } from '../models/StatusEffectInteraction.js';
 import { GameTags } from '../../../shared/tags.js';
+import { ASCENDANT_REGIONS } from './ascendantRegions.js';
+
+// 이 파일은 skills/ascendantFrontier보다 먼저 로드되므로 복합 전투 상태와 장소 파생 효과의
+// 수명 정책을 ID 기준으로 선등록한다. 정의부는 정책을 별도 중복 하드코딩하지 않는다.
+for (const id of [
+    'battle_rush',
+    'indomitable',
+    'mana_barrier',
+    'elemental_insight',
+    'wind_evasion',
+    'stealth',
+]) StatusEffectType.configurePersistencePolicy(id, StatusEffectPersistencePolicy.COMBAT_TRANSIENT);
+for (const region of ASCENDANT_REGIONS) {
+    StatusEffectType.configurePersistencePolicy(region.environment.id, StatusEffectPersistencePolicy.DERIVED);
+}
 
 // TODO(icons): 레거시 효과별 전용 캐주얼 아이콘을 제작하기 전까지 기존 의미상 가까운 아이콘을 공유한다.
 const ICON = Object.freeze({
@@ -56,6 +72,7 @@ function defineAttributeEffect(options: {
     calculatedFields?: Readonly<Record<string, (context: StatusEffectContext) => string | number | boolean>>;
     calculatedFieldTooltips?: Readonly<Record<string, string | ((context: StatusEffectContext) => string)>>;
     controlCategory?: ControlCategory;
+    persistencePolicy?: StatusEffectPersistencePolicy;
     modifiers: (level: number) => readonly Omit<AttributeModifier, 'source'>[];
 }): StatusEffectType {
     const apply = (context: StatusEffectContext) => refreshModifiers(context, options.modifiers(context.effect.level));
@@ -86,7 +103,10 @@ const POISON = StatusEffectType.define({
         if (livingOnly(context) === 'remove') return 'remove';
         applyPoisonModifiers(context);
         context.target.damage(dt * context.effect.level * 20, 'absolute', {
-            type: 'poison', causeEntity: context.effect.source ?? null, effectSource: context.effect,
+            type: 'poison',
+            causeEntity: context.effect.source ?? null,
+            actorPlayerId: context.effect.sourcePlayerId,
+            effectSource: context.effect,
         });
     },
     onRemove: removeModifiers,
@@ -109,6 +129,7 @@ const BLEEDING = StatusEffectType.define({
         context.target.damage(damage, 'absolute', {
             type: 'bleeding',
             causeEntity: context.effect.source ?? null,
+            actorPlayerId: context.effect.sourcePlayerId,
             effectSource: context.effect,
         });
     },
@@ -139,7 +160,10 @@ const DECAY = StatusEffectType.define({
             context.target.maxLife * 0.02,
         );
         context.target.damage(dt * damagePerSecond, 'absolute', {
-            type: 'decay', causeEntity: context.effect.source ?? null, effectSource: context.effect,
+            type: 'decay',
+            causeEntity: context.effect.source ?? null,
+            actorPlayerId: context.effect.sourcePlayerId,
+            effectSource: context.effect,
         });
     },
     onRemove: removeModifiers,
@@ -211,6 +235,7 @@ const RAMPART_VOLLEY = defineAttributeEffect({
     calculatedFieldTooltips: {
         defense: '중첩당 방어력 70, 최대 5중첩',
     },
+    persistencePolicy: StatusEffectPersistencePolicy.COMBAT_TRANSIENT,
     modifiers: level => [{ attribute: AttributeType.DEF.key, op: 'add', value: Math.min(5, level) * 70 }],
 });
 
@@ -235,6 +260,7 @@ const REGENERATION = StatusEffectType.define({
     },
     onStart: livingOnly,
     onUpdate: updateRegeneration,
+    persistenceMetadataKeys: ['tickElapsed'],
     aliases: ['재생'],
     tags: [],
 });
@@ -390,6 +416,7 @@ const INVULNERABLE = StatusEffectType.define({
     onStart: applyInvulnerable,
     onUpdate: applyInvulnerable,
     onRemove: ({ target, effect }) => { target.removeDamageReceivedModifier(modifierSource(effect)); },
+    persistencePolicy: StatusEffectPersistencePolicy.COMBAT_TRANSIENT,
     aliases: ['무적'], tags: [],
 });
 
@@ -399,6 +426,7 @@ const INVISIBLE = StatusEffectType.define({
     onStart: applyInvisible,
     onUpdate: applyInvisible,
     onRemove: ({ target, effect }) => { target.tags.removeRuntime(modifierSource(effect)); },
+    persistencePolicy: StatusEffectPersistencePolicy.COMBAT_TRANSIENT,
     aliases: ['투명화', '은신'], tags: [GameTags.PROPERTY_DARK],
 });
 
@@ -438,7 +466,10 @@ const FROZEN = StatusEffectType.define({
         if (livingOnly(context) === 'remove') return 'remove';
         applyFrozen(context);
         context.target.damage(dt * context.effect.level * 15, 'absolute', {
-            type: 'frozen', causeEntity: context.effect.source ?? null, effectSource: context.effect,
+            type: 'frozen',
+            causeEntity: context.effect.source ?? null,
+            actorPlayerId: context.effect.sourcePlayerId,
+            effectSource: context.effect,
         });
     },
     onRemove: removeModifiers,

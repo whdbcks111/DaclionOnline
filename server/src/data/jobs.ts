@@ -93,7 +93,8 @@ const eliteRecipes = [
     ['blacksmith', 'cleric', 'master_craftsman', '명장'],
     // 성직자를 메인으로 택한 조합은 빛과 교단의 역할을 다른 직업 방식과 융합한다.
     ['cleric', 'warrior', 'saint_knight', '세인트 나이트'],
-    ['cleric', 'archer', 'dawn_ranger', '여명 순찰자'],
+    // 장거리 유도 전용기와 성직자 장기 버프가 함께 증폭되므로 계보 공격 보정을 낮춰 30조합 상한을 지킨다.
+    ['cleric', 'archer', 'dawn_ranger', '여명 순찰자', 0.94],
     ['cleric', 'assassin', 'light_judicator', '빛의 심판자', 0.9],
     ['cleric', 'mage', 'priest_of_light', '빛의 사제', 0.8],
     ['cleric', 'blacksmith', 'relic_keeper', '성물지기'],

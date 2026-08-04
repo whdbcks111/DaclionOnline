@@ -35,6 +35,8 @@ export interface PartyMonsterExpContext {
     readonly claimedUserIds: readonly number[];
     readonly contributions: readonly PartyMonsterContribution[];
     readonly lastAttackOwnerUserId?: number;
+    /** 서버 damage 결과가 실제 생명력을 0으로 만든 순간의 최종 공격 소유자. */
+    readonly actualLethalUserId?: number;
 }
 
 export interface PartySnapshot {
@@ -258,8 +260,18 @@ export class PartyManager {
                 return player ? [{ player, contribution }] : [];
             });
 
-        // 원장에 양수 기여 자체가 없을 때만 유효한 마지막 공격 소유자를 1인 보상 대상으로 삼는다.
-        if (contributionByUserId.size === 0 && context.lastAttackOwnerUserId !== undefined) {
+        // 독·출혈 등 서버 지속 피해로 다른 장소에서 막타를 낸 경우를 포함해,
+        // 현장 정상 분배 대상이 아예 없을 때는 실제 생명력을 0으로 만든 소유자를 우선한다.
+        if (participants.length === 0 && context.actualLethalUserId !== undefined) {
+            const lethalPlayer = this.resolvePlayer(context.actualLethalUserId);
+            if (lethalPlayer && !lethalPlayer.isDefeated) {
+                participants.push({ player: lethalPlayer, contribution: 1 });
+            }
+        }
+        // 실제 막타 정보가 없는 구형·환경 경로만 claim 안 마지막 공격자로 복구한다.
+        if (participants.length === 0
+            && contributionByUserId.size === 0
+            && context.lastAttackOwnerUserId !== undefined) {
             const fallback = resolveEligible(context.lastAttackOwnerUserId);
             if (fallback) participants.push({ player: fallback, contribution: 1 });
         }

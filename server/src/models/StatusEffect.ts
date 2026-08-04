@@ -5,6 +5,7 @@ import { sendNotificationToUser } from '../modules/message.js';
 import {
     cloneMetadata,
     cloneMetadataValue,
+    isMetadataRecord,
 } from './Metadata.js';
 import type { MetadataRecord, MetadataValue } from './Metadata.js';
 import type Entity from './Entity.js';
@@ -45,9 +46,74 @@ export interface StatusEffectTypeOptions {
     onRemove?: (context: StatusEffectContext, reason: StatusEffectRemovalReason) => void;
     /** 전투 제어 점감 분류. 피해·지속 피해·일반 버프는 기본 NONE이다. */
     controlCategory?: ControlCategory;
+    /** Player 저장 경계에서 이 효과를 다루는 방식. 일반 효과는 실제 시각 기준 영속이 기본이다. */
+    persistencePolicy?: StatusEffectPersistencePolicy;
+    /** DB snapshot에 포함해도 안전한 runtime metadata delta key. 생략하면 metadata를 저장하지 않는다. */
+    persistenceMetadataKeys?: readonly string[];
     tags?: readonly TagId[];
     aliases?: readonly string[];
 }
+
+/** Player 상태효과의 재접속·영속 수명을 나타내는 클래스형 enum. */
+export class StatusEffectPersistencePolicy {
+    private static readonly all: StatusEffectPersistencePolicy[] = [];
+
+    /** 오프라인 중에도 실제 시간이 흐르며 DB snapshot에 포함되는 일반 효과. */
+    static readonly WALL_CLOCK = new StatusEffectPersistencePolicy('wallClock', '실제 시간 영속');
+    /** 생존 수치·현재 장소처럼 다른 권위 상태에서 다시 만드는 효과. */
+    static readonly DERIVED = new StatusEffectPersistencePolicy('derived', '조건 재생성');
+    /** 시전·보호막 등 현재 전투 세션과 한 덩어리라 연결 종료 때 폐기하는 효과. */
+    static readonly COMBAT_TRANSIENT = new StatusEffectPersistencePolicy('combatTransient', '전투 세션 한정');
+
+    private constructor(readonly key: string, readonly label: string) {
+        StatusEffectPersistencePolicy.all.push(this);
+    }
+
+    static values(): readonly StatusEffectPersistencePolicy[] { return [...StatusEffectPersistencePolicy.all]; }
+    static fromKey(key: string): StatusEffectPersistencePolicy | undefined {
+        const normalized = key.trim().toLowerCase();
+        return StatusEffectPersistencePolicy.all.find(policy => policy.key.toLowerCase() === normalized);
+    }
+
+    static fromInput(input: string): StatusEffectPersistencePolicy | undefined {
+        const normalized = input.trim().toLocaleLowerCase('ko-KR');
+        return StatusEffectPersistencePolicy.all.find(policy => policy.key.toLocaleLowerCase('ko-KR') === normalized
+            || policy.label.toLocaleLowerCase('ko-KR') === normalized);
+    }
+}
+
+export const STATUS_EFFECT_PERSISTENCE_VERSION = 1 as const;
+export const MAX_PERSISTED_STATUS_EFFECTS = 64;
+export const MAX_PERSISTED_STATUS_EFFECT_DURATION_SECONDS = 30 * 24 * 60 * 60;
+export const MAX_PERSISTED_STATUS_EFFECT_LEVEL = 1_000_000;
+const MAX_PERSISTED_STATUS_EFFECT_METADATA_KEYS = 16;
+const MAX_PERSISTED_STATUS_EFFECT_METADATA_LENGTH = 4 * 1024;
+const MAX_PERSISTED_STATUS_EFFECT_SNAPSHOT_LENGTH = 64 * 1024;
+
+export interface PersistedStatusEffectSnapshot {
+    readonly id: string;
+    readonly level: number;
+    /** 서버 Unix epoch millisecond 기준 만료 시각. */
+    readonly expiresAtMs: number;
+    /** HUD 진행률과 시간 기반 계산을 복원하기 위한 최초/최대 지속시간. */
+    readonly maxDuration: number;
+    readonly metadata?: Readonly<StatusEffectMetadata>;
+    /** raw Entity 대신 보관하는 최종 Player 공격 소유자 ID. */
+    readonly sourcePlayerId?: number;
+}
+
+export interface StatusEffectPersistenceSnapshot {
+    readonly version: typeof STATUS_EFFECT_PERSISTENCE_VERSION;
+    readonly effects: readonly PersistedStatusEffectSnapshot[];
+}
+
+export interface DecodedStatusEffectPersistenceSnapshot {
+    readonly effects: readonly PersistedStatusEffectSnapshot[];
+    readonly rejected: number;
+    readonly expired: number;
+}
+
+const configuredPersistencePolicies = new Map<string, StatusEffectPersistencePolicy>();
 
 /** 연속 적용 점감이 공유되는 전투 제어 분류. */
 export class ControlCategory {
@@ -81,6 +147,7 @@ export class StatusEffectRemovalReason {
     static readonly MANUAL = new StatusEffectRemovalReason('manual', '직접 제거');
     static readonly INVALID_TARGET = new StatusEffectRemovalReason('invalidTarget', '대상 조건 불충족');
     static readonly TARGET_DEFEATED = new StatusEffectRemovalReason('targetDefeated', '대상 제압');
+    static readonly DISCONNECTED = new StatusEffectRemovalReason('disconnected', '최종 연결 종료');
     static readonly ERROR = new StatusEffectRemovalReason('error', '오류');
     static readonly INTERACTION = new StatusEffectRemovalReason('interaction', '다른 효과와 상쇄');
 
@@ -141,6 +208,7 @@ export class StatusEffectType implements TagReadable {
             burnThreshold: '20초 - 효과 레벨 (최소 0초)',
         },
         onUpdate: updateFireEffect,
+        persistenceMetadataKeys: ['tickElapsed', 'accumulatedDuration', 'burnApplied'],
         tags: [GameTags.PROPERTY_FIRE],
         aliases: ['화염', '불'],
     });
@@ -195,6 +263,7 @@ export class StatusEffectType implements TagReadable {
         onRemove: ({ target, effect }) => {
             target.removeHealingReceivedModifier(getStatusModifierSource(effect));
         },
+        persistenceMetadataKeys: ['tickElapsed'],
         tags: [GameTags.PROPERTY_POISON],
         aliases: ['맹독', '독'],
     });
@@ -234,6 +303,7 @@ export class StatusEffectType implements TagReadable {
         onStart: startSurvivalDepletionEffect,
         onUpdate: updateSurvivalDepletionEffect,
         onRemove: removeSurvivalDepletionEffect,
+        persistencePolicy: StatusEffectPersistencePolicy.DERIVED,
         aliases: ['공복', '배고픔'],
     });
 
@@ -250,6 +320,7 @@ export class StatusEffectType implements TagReadable {
         onStart: startSurvivalDepletionEffect,
         onUpdate: updateSurvivalDepletionEffect,
         onRemove: removeSurvivalDepletionEffect,
+        persistencePolicy: StatusEffectPersistencePolicy.DERIVED,
         aliases: ['갈증', '목마름'],
     });
 
@@ -265,6 +336,8 @@ export class StatusEffectType implements TagReadable {
     readonly onUpdate?: StatusEffectUpdateCallback;
     readonly onRemove?: (context: StatusEffectContext, reason: StatusEffectRemovalReason) => void;
     readonly controlCategory: ControlCategory;
+    readonly persistencePolicy: StatusEffectPersistencePolicy;
+    readonly persistenceMetadataKeys: readonly string[];
     readonly tags: readonly TagId[];
     readonly aliases: readonly string[];
 
@@ -283,6 +356,10 @@ export class StatusEffectType implements TagReadable {
         this.onUpdate = options.onUpdate;
         this.onRemove = options.onRemove;
         this.controlCategory = options.controlCategory ?? ControlCategory.NONE;
+        this.persistencePolicy = options.persistencePolicy
+            ?? configuredPersistencePolicies.get(this.id)
+            ?? StatusEffectPersistencePolicy.WALL_CLOCK;
+        this.persistenceMetadataKeys = Object.freeze(normalizePersistenceMetadataKeys(options.persistenceMetadataKeys));
         this.tags = Object.freeze(normalizeTags(options.tags ?? []));
         this.aliases = Object.freeze((options.aliases ?? []).map(alias => alias.trim()).filter(Boolean));
         if (!this.label) throw new Error(`StatusEffectType label must not be empty: ${this.id}`);
@@ -296,6 +373,19 @@ export class StatusEffectType implements TagReadable {
         const type = new StatusEffectType({ ...options, id });
         StatusEffectType.all.push(type);
         return type;
+    }
+
+    /** 다른 data bootstrap보다 먼저 로드되는 파일이 이후 정의될 효과의 수명 정책을 등록한다. */
+    static configurePersistencePolicy(id: string, policy: StatusEffectPersistencePolicy): void {
+        const normalized = normalizeStatusEffectId(id);
+        const existing = StatusEffectType.fromKey(normalized);
+        if (existing) {
+            if (existing.persistencePolicy !== policy) {
+                throw new Error(`StatusEffect persistence policy is already fixed: ${normalized}`);
+            }
+            return;
+        }
+        configuredPersistencePolicies.set(normalized, policy);
     }
 
     static values(): readonly StatusEffectType[] { return StatusEffectType.all; }
@@ -330,13 +420,147 @@ function normalizeStatusEffectIcon(icon: string): string {
     return normalized;
 }
 
-/** Entity 한 개에 붙어 갱신되는 비영속 상태효과 인스턴스. */
+function normalizePersistenceMetadataKeys(keys: readonly string[] | undefined): string[] {
+    if (!keys) return [];
+    if (keys.length > MAX_PERSISTED_STATUS_EFFECT_METADATA_KEYS) {
+        throw new Error(`Too many StatusEffect persistence metadata keys: ${keys.length}`);
+    }
+    const normalized = [...new Set(keys.map(key => key.trim()))];
+    for (const key of normalized) {
+        if (!/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,63}$/.test(key)) {
+            throw new Error(`Invalid StatusEffect persistence metadata key: ${key}`);
+        }
+    }
+    return normalized;
+}
+
+/** DB JSON을 신뢰하지 않고 현재 master data와 정책에 맞는 효과만 복원 가능한 DTO로 정규화한다. */
+export function decodeStatusEffectPersistenceSnapshot(
+    value: unknown,
+    nowMs = Date.now(),
+): DecodedStatusEffectPersistenceSnapshot {
+    if (!Number.isFinite(nowMs)) throw new Error(`Invalid StatusEffect persistence time: ${nowMs}`);
+    let serialized: string;
+    try {
+        serialized = JSON.stringify(value);
+    } catch {
+        return { effects: [], rejected: 1, expired: 0 };
+    }
+    if (!serialized || serialized.length > MAX_PERSISTED_STATUS_EFFECT_SNAPSHOT_LENGTH
+        || !isMetadataRecord(value)
+        || value.version !== STATUS_EFFECT_PERSISTENCE_VERSION
+        || !Array.isArray(value.effects)
+        || value.effects.length > MAX_PERSISTED_STATUS_EFFECTS
+        || Object.keys(value).some(key => key !== 'version' && key !== 'effects')) {
+        return { effects: [], rejected: 1, expired: 0 };
+    }
+
+    const effects: PersistedStatusEffectSnapshot[] = [];
+    const seenIds = new Set<string>();
+    let rejected = 0;
+    let expired = 0;
+    for (const raw of value.effects) {
+        const rawLevel = isMetadataRecord(raw) ? raw.level : undefined;
+        const rawExpiresAtMs = isMetadataRecord(raw) ? raw.expiresAtMs : undefined;
+        const rawMaxDuration = isMetadataRecord(raw) ? raw.maxDuration : undefined;
+        const rawSourcePlayerId = isMetadataRecord(raw) ? raw.sourcePlayerId : undefined;
+        if (!isMetadataRecord(raw)
+            || Object.keys(raw).some(key => ![
+                'id', 'level', 'expiresAtMs', 'maxDuration', 'metadata', 'sourcePlayerId',
+            ].includes(key))
+            || typeof raw.id !== 'string'
+            || typeof rawLevel !== 'number'
+            || !Number.isInteger(rawLevel)
+            || rawLevel < 1
+            || rawLevel > MAX_PERSISTED_STATUS_EFFECT_LEVEL
+            || typeof rawExpiresAtMs !== 'number'
+            || !Number.isSafeInteger(rawExpiresAtMs)
+            || typeof rawMaxDuration !== 'number'
+            || !Number.isFinite(rawMaxDuration)
+            || rawMaxDuration <= 0
+            || rawMaxDuration > MAX_PERSISTED_STATUS_EFFECT_DURATION_SECONDS) {
+            rejected++;
+            continue;
+        }
+        const type = StatusEffectType.fromKey(raw.id);
+        if (!type
+            || type.persistencePolicy !== StatusEffectPersistencePolicy.WALL_CLOCK
+            || seenIds.has(type.id)) {
+            rejected++;
+            continue;
+        }
+        const remainingMs = rawExpiresAtMs - nowMs;
+        if (remainingMs <= 0) {
+            expired++;
+            seenIds.add(type.id);
+            continue;
+        }
+        if (remainingMs > rawMaxDuration * 1_000 + 1) {
+            rejected++;
+            continue;
+        }
+        if (rawSourcePlayerId !== undefined
+            && (typeof rawSourcePlayerId !== 'number'
+                || !Number.isSafeInteger(rawSourcePlayerId)
+                || rawSourcePlayerId <= 0)) {
+            rejected++;
+            continue;
+        }
+        let metadata: StatusEffectMetadata | undefined;
+        if (raw.metadata !== undefined) {
+            if (!isMetadataRecord(raw.metadata)
+                || Object.keys(raw.metadata).some(key => !type.persistenceMetadataKeys.includes(key))
+                || !isSafePersistenceMetadata(raw.metadata)) {
+                rejected++;
+                continue;
+            }
+            metadata = cloneMetadata(raw.metadata);
+        }
+        seenIds.add(type.id);
+        effects.push({
+            id: type.id,
+            level: rawLevel,
+            expiresAtMs: rawExpiresAtMs,
+            maxDuration: rawMaxDuration,
+            ...(metadata ? { metadata } : {}),
+            ...(typeof rawSourcePlayerId === 'number' ? { sourcePlayerId: rawSourcePlayerId } : {}),
+        });
+    }
+    return { effects, rejected, expired };
+}
+
+function isSafePersistenceMetadata(metadata: MetadataRecord): boolean {
+    let serialized: string;
+    try {
+        serialized = JSON.stringify(metadata);
+    } catch {
+        return false;
+    }
+    return serialized.length <= MAX_PERSISTED_STATUS_EFFECT_METADATA_LENGTH
+        && isSafePersistenceValue(metadata, 0);
+}
+
+function isSafePersistenceValue(value: unknown, depth: number): boolean {
+    if (depth > 5) return false;
+    if (value === null || typeof value === 'boolean') return true;
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value === 'string') return value.length <= 512;
+    if (Array.isArray(value)) {
+        return value.length <= 32 && value.every(entry => isSafePersistenceValue(entry, depth + 1));
+    }
+    if (!isMetadataRecord(value) || Object.keys(value).length > 32) return false;
+    return Object.entries(value).every(([key, entry]) => /^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,63}$/.test(key)
+        && isSafePersistenceValue(entry, depth + 1));
+}
+
+/** Entity 한 개에 붙어 갱신되며 Player 소유 시 정책에 따라 snapshot할 수 있는 상태효과 인스턴스. */
 export default class StatusEffect implements TagReadable {
     readonly type: StatusEffectType;
     private _duration: number;
     private _maxDuration: number;
     private _level: number;
     private _source?: Entity;
+    private _sourcePlayerId?: number;
     private _metadataDelta: StatusEffectMetadata = {};
 
     constructor(type: StatusEffectType, duration: number, level: number, source?: Entity) {
@@ -345,6 +569,19 @@ export default class StatusEffect implements TagReadable {
         this._maxDuration = this._duration;
         this._level = type.normalizeLevel(level);
         this._source = source?.attackOwner;
+        this._sourcePlayerId = this._source?.playerUserId;
+    }
+
+    static fromPersistenceSnapshot(
+        type: StatusEffectType,
+        snapshot: PersistedStatusEffectSnapshot,
+        remainingDuration: number,
+    ): StatusEffect {
+        const effect = new StatusEffect(type, remainingDuration, snapshot.level);
+        effect._maxDuration = snapshot.maxDuration;
+        effect._sourcePlayerId = snapshot.sourcePlayerId;
+        effect.restorePersistenceMetadata(snapshot.metadata);
+        return effect;
     }
 
     get duration(): number { return this._duration; }
@@ -352,6 +589,8 @@ export default class StatusEffect implements TagReadable {
     get level(): number { return this._level; }
     /** 지속 피해·치유·제어의 보상 귀속에만 쓰는 비영속 최종 소유자. */
     get source(): Entity | undefined { return this._source; }
+    /** 영속 경계가 raw Entity 대신 보존하는 최종 Player 공격 소유자 ID. */
+    get sourcePlayerId(): number | undefined { return this._sourcePlayerId; }
     get durationRatio(): number { return this._maxDuration > 0 ? this._duration / this._maxDuration : 0; }
 
     hasTag(tag: TagId): boolean { return this.type.hasTag(tag); }
@@ -374,6 +613,27 @@ export default class StatusEffect implements TagReadable {
         return Object.keys(this._metadataDelta).length > 0
             ? cloneMetadata(this._metadataDelta) as StatusEffectMetadata
             : null;
+    }
+
+    createPersistenceSnapshot(nowMs = Date.now()): PersistedStatusEffectSnapshot | undefined {
+        if (this.type.persistencePolicy !== StatusEffectPersistencePolicy.WALL_CLOCK
+            || !Number.isFinite(nowMs)
+            || this._duration <= 0
+            || this._duration > MAX_PERSISTED_STATUS_EFFECT_DURATION_SECONDS
+            || this._maxDuration < this._duration
+            || this._maxDuration > MAX_PERSISTED_STATUS_EFFECT_DURATION_SECONDS
+            || this._level > MAX_PERSISTED_STATUS_EFFECT_LEVEL) return undefined;
+        const expiresAtMs = Math.ceil(nowMs + this._duration * 1_000);
+        if (!Number.isSafeInteger(expiresAtMs)) return undefined;
+        const metadata = this.getSafePersistenceMetadata();
+        return {
+            id: this.type.id,
+            level: this._level,
+            expiresAtMs,
+            maxDuration: this._maxDuration,
+            ...(metadata ? { metadata } : {}),
+            ...(this._sourcePlayerId !== undefined ? { sourcePlayerId: this._sourcePlayerId } : {}),
+        };
     }
 
     setMetadata(key: string, value: unknown): void {
@@ -444,7 +704,9 @@ export default class StatusEffect implements TagReadable {
 
     /** 실제 추가·강화·갱신이 확정된 경우에만 호출한다. */
     replaceSource(source?: Entity): void {
-        if (source) this._source = source.attackOwner;
+        if (!source) return;
+        this._source = source.attackOwner;
+        this._sourcePlayerId = this._source.playerUserId;
     }
 
     /** 상쇄 규칙이 인스턴스와 metadata를 유지한 채 남은 시간만 소모한다. */
@@ -454,6 +716,11 @@ export default class StatusEffect implements TagReadable {
         }
         this._duration = Math.max(0, this._duration - duration);
         return this._duration;
+    }
+
+    /** 접속하지 않은 실제 시간은 callback 피해·치유를 재생하지 않고 남은 시간에만 반영한다. */
+    elapseWithoutUpdate(duration: number): number {
+        return this.reduceDuration(duration);
     }
 
     start(target: Entity): StatusEffectLifecycleResult | void {
@@ -484,6 +751,24 @@ export default class StatusEffect implements TagReadable {
         this.type.onRemove?.({ target, effect: this }, reason);
     }
 
+    /** 복원 전후 onStart가 같은 key를 초기화해도 저장된 안전 delta를 우선한다. */
+    restorePersistenceMetadata(metadata: Readonly<StatusEffectMetadata> | undefined): void {
+        if (!metadata) return;
+        for (const key of this.type.persistenceMetadataKeys) {
+            if (Object.hasOwn(metadata, key)) this.setMetadata(key, metadata[key]);
+        }
+    }
+
+    private getSafePersistenceMetadata(): StatusEffectMetadata | null {
+        if (this.type.persistenceMetadataKeys.length === 0) return null;
+        const snapshot: StatusEffectMetadata = {};
+        for (const key of this.type.persistenceMetadataKeys) {
+            if (Object.hasOwn(this._metadataDelta, key)) snapshot[key] = cloneMetadataValue(this._metadataDelta[key]);
+        }
+        if (Object.keys(snapshot).length === 0 || !isSafePersistenceMetadata(snapshot)) return null;
+        return cloneMetadata(snapshot);
+    }
+
     private resolveTemplateValue(
         key: string,
         target: Entity,
@@ -510,6 +795,7 @@ function updateFireEffect({ target, effect }: StatusEffectContext, dt: number): 
         const result = target.damage(getFireDamage(effect), 'absolute', {
             type: 'fire',
             causeEntity: effect.source ?? null,
+            actorPlayerId: effect.sourcePlayerId,
             effectSource: effect,
         });
         if (target.isPlayer && target.playerUserId !== undefined) {
@@ -579,6 +865,7 @@ function updateDeadlyPoisonEffect(
         const result = target.damage(damage, 'absolute', {
             type: 'poison',
             causeEntity: effect.source ?? null,
+            actorPlayerId: effect.sourcePlayerId,
             effectSource: effect,
         });
         if (target.isPlayer && target.playerUserId !== undefined) {

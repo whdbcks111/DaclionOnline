@@ -101,9 +101,20 @@ test('낚시 보물은 장소별 희귀 보상표를 사용하고 행운 보정�
         'originboundary_genesis_tide',
     ];
     for (const locationId of treasureLocations) {
-        const faded = getFishingTreasureTable(locationId)?.entries.find(entry =>
+        const table = getFishingTreasureTable(locationId);
+        const faded = table?.entries.find(entry =>
             entry.itemDataId === 'faded_stat_reset_ticket');
         assert.equal(faded?.weight, 4, locationId);
+        assert.equal(
+            table?.entries.find(entry => entry.itemDataId === 'refined_stat_refund_ticket')?.weight,
+            (table?.chance ?? 0) >= 0.02 ? 1 : undefined,
+            locationId,
+        );
+        assert.equal(
+            table?.entries.find(entry => entry.itemDataId === 'restored_stat_refund_ticket')?.weight,
+            (table?.chance ?? 0) >= 0.028 ? 0.25 : undefined,
+            locationId,
+        );
         assert.deepEqual(
             rollFishingTreasure(locationId, 0, sequence(0, 0.999999, 0)),
             { itemDataId: 'faded_stat_reset_ticket', count: 1 },

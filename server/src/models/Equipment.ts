@@ -7,6 +7,7 @@ import type Entity from './Entity.js';
 import type { DamageResult } from './Entity.js';
 import { GameTags } from "../../../shared/tags.js";
 import type { TagId, TagReadable } from "../../../shared/tags.js";
+import type { EquipmentDurabilityHudData } from '../../../shared/types.js';
 import logger from '../utils/logger.js';
 
 /** 장비 슬롯 키 */
@@ -146,6 +147,16 @@ const ARMOR_DURABILITY_SLOT_WEIGHTS = Object.freeze([
     Object.freeze({ slot: EquipSlotType.LEGS, weight: 25 }),
     Object.freeze({ slot: EquipSlotType.HEAD, weight: 20 }),
     Object.freeze({ slot: EquipSlotType.FEET, weight: 15 }),
+] as const);
+
+const DURABILITY_HUD_SLOTS = Object.freeze([
+    Object.freeze({ slot: EquipSlotType.MAIN_HAND, group: 'weapon' as const, tag: GameTags.ITEM_WEAPON }),
+    Object.freeze({ slot: EquipSlotType.OFF_HAND, group: 'weapon' as const, tag: GameTags.ITEM_WEAPON }),
+    Object.freeze({ slot: EquipSlotType.HEAD, group: 'armor' as const, tag: GameTags.ITEM_ARMOR }),
+    Object.freeze({ slot: EquipSlotType.BODY, group: 'armor' as const, tag: GameTags.ITEM_ARMOR }),
+    Object.freeze({ slot: EquipSlotType.LEGS, group: 'armor' as const, tag: GameTags.ITEM_ARMOR }),
+    Object.freeze({ slot: EquipSlotType.FEET, group: 'armor' as const, tag: GameTags.ITEM_ARMOR }),
+    Object.freeze({ slot: EquipSlotType.OFF_HAND, group: 'armor' as const, tag: GameTags.ITEM_ARMOR }),
 ] as const);
 
 function normalizeArmorDurabilityRandom(value: number, fallback: number): number {
@@ -316,6 +327,34 @@ export default class Equipment implements TagReadable {
             }
         }
         return result;
+    }
+
+    /** 상태 HUD가 내부 슬롯 Map을 보지 않고 무기·보호구 내구도만 고정 순서로 읽는다. */
+    getDurabilityHudSnapshots(): readonly EquipmentDurabilityHudData[] {
+        const snapshots: EquipmentDurabilityHudData[] = [];
+        for (const definition of DURABILITY_HUD_SLOTS) {
+            for (let slotIndex = 0; slotIndex < definition.slot.max; slotIndex++) {
+                const item = this.getEquipped(definition.slot.key, slotIndex);
+                if (!item || !item.hasTag(definition.tag)) continue;
+                const current = item.durability;
+                const max = item.baseDurability;
+                if (current === null || max === null) continue;
+                snapshots.push(Object.freeze({
+                    group: definition.group,
+                    slot: definition.slot.key,
+                    slotLabel: definition.slot.max > 1
+                        ? `${definition.slot.label}${slotIndex + 1}`
+                        : definition.slot.label,
+                    itemDataId: item.itemDataId,
+                    name: item.name,
+                    icon: item.image,
+                    current,
+                    max,
+                    ratio: Math.max(0, Math.min(1, item.durabilityRatio ?? 0)),
+                }));
+            }
+        }
+        return Object.freeze(snapshots);
     }
 
     /** 장착 아이템 metadata override를 변경하고 dirty 상태로 표시한다. */

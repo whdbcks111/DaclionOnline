@@ -359,7 +359,9 @@ export const initLogin = () => {
                         if (connectedSocket.id !== socket.id) connectedSocket.emit('sessionInvalid');
                     }
                     removeSession(token);
-                    if (getUserSessionCount(logoutSession.userId) === 0) {
+                    // 다른 기기의 살아 있는 연결은 유지하되, 연결 없는 휴면 token만으로
+                    // 명시적 로그아웃 Player가 재접속 유예나 registry에 남아서는 안 된다.
+                    if (!isUserOnline(logoutSession.userId)) {
                         await unloadPlayerByUserId(logoutSession.userId);
                     }
                 } else {

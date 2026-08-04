@@ -45,6 +45,7 @@
 | `saveHudPreset` | `{ name, preset }` | 필요 | `modules/hudPreset.ts` | 이름·snapshot 범위·최대 10개를 검증해 즉시 Player 저장 후 결과와 목록 응답 |
 | `loadHudPreset` | `name: string` | 필요 | `modules/hudPreset.ts` | 사용자가 요청한 이름의 snapshot만 `hudPresetLoaded`로 응답 |
 | `deleteHudPreset` | `name: string` | 필요 | `modules/hudPreset.ts` | 이름으로 삭제하고 즉시 Player 저장 후 결과와 목록 응답 |
+| `useConsumableBundle` | `{ requestId, itemDataIds }` | 필요 | `modules/consumableBundle.ts` | 1~8개 중복 없는 정의 ID, item-use registry 허용, 보유·요구·행동 조건을 재검증하고 순서대로 직렬 사용 |
 
 클라이언트 emit 위치는 주로 `pages/Login.tsx`, `pages/Register.tsx`, `pages/PasswordReset.tsx`, `pages/Home.tsx`, `pages/LocationEditor.tsx`, `components/chat/nodes/ButtonNode.tsx`, `components/hud/huds/QuickSlotHud.tsx`다.
 
@@ -75,7 +76,7 @@
 | `commandList` | `CommandInfo[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `argCompletions` | `CompletionItem[]` | `modules/bot.ts` | `pages/Home.tsx` |
 | `mentionCompletions` | `CompletionItem[]` | `modules/chat.ts` | `pages/Home.tsx` |
-| `playerStats` | `PlayerStatsData` (`syncId/revision`, 장착 칭호, 서버가 실제 교전으로 판정한 `musicCombatState`, 현재 `level/exp/maxExp`·자원·타입색 `shields`·공격 cooldown·`autoAttackEnabled`·`statusEffects`, 표시 가능한 스킬과 전투 기술의 선택적 `cadenceRemaining/cadenceDuration`, nullable 파티 HUD, nullable 현재 대상의 선택적 아이콘·보스 왕관 여부·HP/MP/보호막/상태이상과 감각 단계별 몬스터 분석). 내용이 바뀐 완전한 snapshot만 socket별 1회 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 `HudContext` → HUD |
+| `playerStats` | `PlayerStatsData` (`syncId/revision`, 장착 칭호, 서버가 실제 교전으로 판정한 `musicCombatState`, 현재 `level/exp/maxExp`·자원·타입색 `shields`·공격 cooldown·`autoAttackEnabled`·`statusEffects`, 묶음 사용 허용 여부가 포함된 사용 아이템, 무기·보호구 슬롯별 `equipmentDurability`, 표시 가능한 스킬과 전투 기술의 선택적 `cadenceRemaining/cadenceDuration`, nullable 파티 HUD, nullable 현재 대상의 선택적 아이콘·보스 왕관 여부·HP/MP/보호막/상태이상과 감각 단계별 몬스터 분석). 내용이 바뀐 완전한 snapshot만 socket별 1회 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 `HudContext` → HUD |
 | `informationMode` | `isPublic: boolean` | `modules/bot.ts` | `pages/Home.tsx` 입력창 공개/비공개 전환 버튼 |
 | `locationInfo` | `LocationInfoData` (`syncId/revision`, 현재 장소의 선택적 `mapColor`, `zoneType/zoneLabel/pvpAllowed`, 현재 플레이어가 이용 가능한 낚시·상점 `capabilities`, objects의 선택적 아이콘·보스 왕관 여부·생명력·`shields`·가능한 `actions`, NPC 이름·설명·퀘스트 표식, 플레이어 생명력·보호막, 5분 초과 보스의 선택적 `respawn`, 플레이어 기준 인접 장소). 내용 변경 시 완전한 snapshot 전송 | `modules/player.ts`/`stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 Location/Minimap HUD |
 | `userCount` | `UserCountData` (다중 탭을 합친 고유 사용자 기준 전체/채널 인원) | `modules/login.ts` | `pages/Home.tsx` |
@@ -100,6 +101,7 @@
 | `hudPresetList` | `HudPresetSummary[]` | `modules/hudPreset.ts` | `HudContext.tsx`; 이름 선택 목록만 갱신 |
 | `hudPresetLoaded` | `{ name, preset: HudPresetData }` | `modules/hudPreset.ts` | `HudContext.tsx`; 명시적 불러오기 요청 결과를 현재 계정 HUD에 적용 |
 | `hudPresetResult` | `HudPresetOperationResult` | `modules/hudPreset.ts` | `HudContext.tsx`; 저장·불러오기·삭제 상태 안내 |
+| `consumableBundleUseResult` | `{ requestId, usedItemDataIds, skipped, stoppedReason? }` | `modules/consumableBundle.ts` | `ConsumableBundleHud.tsx`; matching 버튼 busy 해제, 서버는 별도 요약 notification도 전송 |
 
 `ChatMessage`와 `NotificationData` 안의 progress/health `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다. 플레이어 메시지는 전송 시점의 `newcomer/karmaMarked/equippedTitle`을 선택적으로 포함해 `🌱/🥀` 표식과 `[칭호]`를 히스토리와 실시간 메시지에서 일관되게 표시한다. `newcomer`는 누적 플레이 24시간 미만이면서 Lv.30 미만인 경우에만 서버가 넣는다. health 노드는 생명력·최대 생명력과 `ShieldBarSegment[]`를 한 snapshot으로 전달한다. image 노드는 서버가 정한 `src/alt/maxHeight`와 선택적 원본 `width/height` snapshot으로 채팅 업로드와 향후 스킬 연출 이미지를 공통 렌더링하고, divider는 선택적 제목을 가진 구분선을 렌더링한다. `/지도` private `ChatMessage`의 worldMap 노드는 별도 socket event 없이 방문지·인접 미방문지로 제한된 `WorldMapData` snapshot을 포함하며, 방문 장소의 검증된 `mapColor`와 방문 뒤 공개된 `isBossRoom`만 지도 표시에 사용한다.
 

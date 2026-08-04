@@ -126,6 +126,80 @@
     white-space: nowrap;
 }
 
+.durability {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: 0.5rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.durabilityGroup {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+}
+
+.durabilityGroupLabel {
+    flex: 0 0 2.5rem;
+    padding-top: 0.18rem;
+    color: rgba(232, 232, 232, 0.68);
+    font-size: 0.62rem;
+    text-align: right;
+}
+
+.durabilityItems {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.durabilityItem {
+    display: grid;
+    grid-template-columns: 1rem auto minmax(1.8rem, 3rem) auto;
+    align-items: center;
+    gap: 0.2rem;
+    min-width: 6.9rem;
+    padding: 0.16rem 0.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.25rem;
+    background: rgba(0, 0, 0, 0.24);
+    font-size: 0.56rem;
+    font-variant-numeric: tabular-nums;
+
+    img {
+        width: 1rem;
+        height: 1rem;
+        border-radius: 0.18rem;
+        object-fit: cover;
+    }
+}
+
+.durabilitySlot,
+.durabilityValue {
+    white-space: nowrap;
+}
+
+.durabilityTrack {
+    height: 0.26rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.durabilityFill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+}
+
+.durabilityHealthy { background: #61b67a; }
+.durabilityWarning { background: #d49c3f; }
+.durabilityDanger { background: #d15e5e; }
+
 .effects {
     display: flex;
     flex-wrap: wrap;

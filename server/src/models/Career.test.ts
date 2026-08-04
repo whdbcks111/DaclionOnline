@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { createServer } from 'node:http';
-import Attribute, { AttributeType } from './Attribute.js';
+import Attribute, { AttributeType, type AttributeRecord } from './Attribute.js';
 import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import CareerProfile, { CareerProgressIds } from './Career.js';
@@ -10,8 +10,14 @@ import { getAllJobs, getJob, JobSlotType, JobTier, resolveEliteJob, resolveThird
 import { PlayerProgress } from './Progress.js';
 import type Player from './Player.js';
 import '../data/jobs.js';
-import { selectLowestLifePartyTargets, selectSanctuaryAegisTargets } from '../data/skills.js';
-import Skill, { getAllSkillData, getSkillData } from './Skill.js';
+import {
+    ELITE_DEEPENING_SKILL_IDS,
+    ELITE_TECHNIQUE_DEEPENING_LEVEL,
+    selectDawnBenedictionTargets,
+    selectLowestLifePartyTargets,
+    selectSanctuaryAegisTargets,
+} from '../data/skills.js';
+import Skill, { createSkillContext, getAllSkillData, getSkillData } from './Skill.js';
 import { getAllQuestData, getQuestData } from './Quest.js';
 import '../data/quests.js';
 import '../data/items.js';
@@ -64,6 +70,14 @@ class TestClericPartyEntity extends Entity {
     }
 }
 
+class TestCareerSkillEntity extends Entity {
+    override readonly name = '직업 스킬 시험체';
+
+    constructor(level: number, baseAttribute: Partial<AttributeRecord>) {
+        super(level, 0, 'test_chapel', baseAttribute, Equipment.createEmpty());
+    }
+}
+
 test('6개 1차·30개 ordered 엘리트·기존 5개 3차 계보가 완전한 마스터 데이터를 가진다', () => {
     const firstJobs = getAllJobs().filter(job => job.tier === JobTier.FIRST);
     const eliteJobs = getAllJobs().filter(job => job.tier === JobTier.ELITE);
@@ -88,12 +102,20 @@ test('6개 1차·30개 ordered 엘리트·기존 5개 3차 계보가 완전한 �
     assert.equal(getSkillData(ALCHEMY_FEATURE_SKILL_ID)?.maxLevel, 1);
     assert.equal(getSkillData(ALCHEMY_FEATURE_SKILL_ID)?.tags.includes(GameTags.SKILL_PASSIVE), true);
     for (const skill of getAllSkillData()) {
+        const dedicatedIcon = new URL(`../../../client/public/icons/skills/${skill.id}.png`, import.meta.url);
+        if (existsSync(dedicatedIcon)) {
+            assert.equal(skill.icon, `skills/${skill.id}`, `${skill.id} must not regress to a fallback icon`);
+        }
         assert.match(skill.icon, /^(skills|items|affinities|jobs)\/[a-z0-9_-]+$/, `${skill.id} declared icon key`);
         const png = readFileSync(new URL(`../../../client/public/icons/${skill.icon}.png`, import.meta.url));
         assert.equal(png.readUInt32BE(16), 128, `${skill.id} icon width`);
         assert.equal(png.readUInt32BE(20), 128, `${skill.id} icon height`);
     }
     for (const skill of getAllSkillData().filter(data => data.activationMessage)) {
+        const dedicatedHeader = new URL(`../../../client/public/icons/skill-headers/${skill.id}.png`, import.meta.url);
+        if (existsSync(dedicatedHeader)) {
+            assert.equal(skill.activationHeader, skill.id, `${skill.id} must not regress to a fallback cast header`);
+        }
         assert.match(skill.activationHeader ?? '', /^[a-z0-9_-]+$/, `${skill.id} declared cast header key`);
         const icon = readFileSync(new URL(`../../../client/public/icons/${skill.icon}.png`, import.meta.url));
         assert.equal(icon.readUInt32BE(16), 128, `${skill.id} icon width`);
@@ -118,6 +140,7 @@ test('6개 1차·30개 ordered 엘리트·기존 5개 3차 계보가 완전한 �
         assert.ok(skill?.tags.includes(GameTags.SKILL_ACTIVE), skillId);
     }
     for (const [skillId, unlockLevel] of [
+        ['dawn_benediction', 120],
         ['unfading_devotion', 240],
         ['dawn_covenant', 320],
     ] as const) {
@@ -228,6 +251,90 @@ test('축복의 파동은 공격 대상과 분리해 같은 장소의 부상당�
         selectLowestLifePartyTargets(owner, [owner, first, second, third, elsewhere]),
         [second, third, first],
     );
+});
+
+test('새벽의 축도는 시전자를 항상 포함하고 같은 장소의 생존 파티원만 최대 3명 선택한다', () => {
+    const owner = new TestClericPartyEntity(9251);
+    const first = new TestClericPartyEntity(9252);
+    const second = new TestClericPartyEntity(9253);
+    const third = new TestClericPartyEntity(9254);
+    const elsewhere = new TestClericPartyEntity(9255, 'other_location');
+    first.life = 70;
+    second.life = 20;
+    third.life = 45;
+    elsewhere.life = 1;
+
+    assert.deepEqual(
+        selectDawnBenedictionTargets(owner, [owner, first, second, third, elsewhere]),
+        [owner, second, third],
+    );
+});
+
+test('새벽의 축도는 Lv.1~5에서 지속시간·재사용 대기·지원 보정을 정확히 성장시킨다', () => {
+    const owner = new TestCareerSkillEntity(120, {
+        atk: 100,
+        magicForce: 100,
+        def: 100,
+        magicDef: 100,
+        maxMentality: 500,
+    });
+    const levelOne = new Skill({ playerId: null, skillDataId: 'dawn_benediction', level: 1 });
+    const levelFive = new Skill({ playerId: null, skillDataId: 'dawn_benediction', level: 5 });
+    const data = getSkillData('dawn_benediction');
+    const levelOneContext = createSkillContext(owner, levelOne);
+    const levelFiveContext = createSkillContext(owner, levelFive);
+
+    assert.equal(data?.balance?.calculateEffectDuration?.(levelOneContext), 45);
+    assert.equal(data?.balance?.calculateEffectDuration?.(levelFiveContext), 57);
+    assert.deepEqual((data?.balance?.calculateRotationModifiers?.(levelOneContext) ?? []).map(modifier => modifier.value), [
+        1.06, 1.06, 1.08, 1.08,
+    ]);
+    assert.deepEqual((data?.balance?.calculateRotationModifiers?.(levelFiveContext) ?? []).map(modifier => modifier.value), [
+        1.1, 1.1, 1.12, 1.12,
+    ]);
+    assert.equal(levelOne.getMaxCooldown(owner), 90);
+    assert.equal(levelFive.getMaxCooldown(owner), 82);
+    assert.equal(data?.balance?.targetCount, 3);
+    assert.equal(data?.balance?.calculateManaCost?.(levelOneContext), 42);
+});
+
+test('30개 ordered 엘리트는 Lv.240 심화 패시브와 Lv.320 기존 전용기 강화를 모두 가진다', () => {
+    const elites = getAllJobs().filter(job => job.tier === JobTier.ELITE);
+    assert.equal(ELITE_DEEPENING_SKILL_IDS.length, 30);
+    assert.equal(new Set(ELITE_DEEPENING_SKILL_IDS).size, 30);
+    for (const elite of elites) {
+        const id = elite.id.slice('career:'.length);
+        const deepening = getSkillData(`${id}_deepening`);
+        const technique = getSkillData(`${id}_technique`);
+        assert.equal(deepening?.unlockLevel, 240, elite.id);
+        assert.equal(deepening?.tags.includes(GameTags.SKILL_PASSIVE), true, elite.id);
+        assert.deepEqual(deepening?.jobRequirement?.anyOf, [elite.id], elite.id);
+        assert.equal(technique?.tags.includes(GameTags.SKILL_ACTIVE), true, elite.id);
+        assert.match(technique?.descriptionTemplate ?? '', new RegExp(`Lv\\.${ELITE_TECHNIQUE_DEEPENING_LEVEL}`), elite.id);
+    }
+
+    const baseAttributes = {
+        atk: 180,
+        magicForce: 180,
+        speed: 120,
+        maxLife: 1_000,
+        maxMentality: 600,
+    };
+    const before = new TestCareerSkillEntity(ELITE_TECHNIQUE_DEEPENING_LEVEL - 1, baseAttributes);
+    const after = new TestCareerSkillEntity(ELITE_TECHNIQUE_DEEPENING_LEVEL, baseAttributes);
+    const damageSkill = new Skill({ playerId: null, skillDataId: 'spellblade_technique', level: 1 });
+    const damageBalance = getSkillData('spellblade_technique')?.balance;
+    const beforeDamage = damageBalance?.calculateDamage?.(createSkillContext(before, damageSkill)) ?? 0;
+    const afterDamage = damageBalance?.calculateDamage?.(createSkillContext(after, damageSkill)) ?? 0;
+    assert.ok(Math.abs(afterDamage / beforeDamage - 1.12) < 1e-9);
+
+    const shieldSkill = new Skill({ playerId: null, skillDataId: 'battle_magus_technique', level: 1 });
+    const shieldBalance = getSkillData('battle_magus_technique')?.balance;
+    const beforeShield = shieldBalance?.calculateShield?.(createSkillContext(before, shieldSkill)) ?? 0;
+    const afterShield = shieldBalance?.calculateShield?.(createSkillContext(after, shieldSkill)) ?? 0;
+    const beforeGrowth = Math.min(3, 1 + (before.level - 50) / 150);
+    const afterGrowth = Math.min(3, 1 + (after.level - 50) / 150);
+    assert.ok(Math.abs((afterShield / beforeShield) / (afterGrowth / beforeGrowth) - 1.15) < 1e-9);
 });
 
 test('전직 시험 하나가 진행 또는 보고 대기 중이면 세레나와 교단의 다른 시험을 동시에 노출하지 않는다', () => {

@@ -9,6 +9,7 @@ import QuickSlotHud from './huds/QuickSlotHud'
 import PartyHud from './huds/PartyHud'
 import SkillQuickHud from './huds/SkillQuickHud'
 import ItemQuickHud from './huds/ItemQuickHud'
+import ConsumableBundleHud from './huds/ConsumableBundleHud'
 import { getUiScale } from '../../utils/displayPreferences'
 import styles from './HudContainer.module.scss'
 
@@ -39,8 +40,8 @@ function getPositionStyle(cfg: HudConfig, viewportWidth: number, viewportHeight:
   const pa = cfg.posAnchor ?? 'topLeft'
   const isRight  = pa === 'topRight'  || pa === 'bottomRight'
   const isBottom = pa === 'bottomLeft' || pa === 'bottomRight'
-  const x = ux === '%' ? cfg.x / 100 * viewportWidth : cfg.x
-  const y = uy === '%' ? cfg.y / 100 * viewportHeight : cfg.y
+  const x = Math.max(0, Math.min(viewportWidth, ux === '%' ? cfg.x / 100 * viewportWidth : cfg.x))
+  const y = Math.max(0, Math.min(viewportHeight, uy === '%' ? cfg.y / 100 * viewportHeight : cfg.y))
   return {
     left: `${isRight ? viewportWidth - x : x}px`,
     top: `${isBottom ? viewportHeight - y : y}px`,
@@ -147,6 +148,7 @@ export default function HudContainer() {
       )}
       <SkillQuickHud />
       <ItemQuickHud />
+      <ConsumableBundleHud />
       {HUD_DEFINITIONS.map(def => {
         const cfg = configs[def.id]
         if (!cfg?.visible) return null

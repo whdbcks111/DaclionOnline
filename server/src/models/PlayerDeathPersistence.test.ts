@@ -15,6 +15,8 @@ import { reloadAllLocations } from './Location.js';
 import { getKarmaDeathPenalty } from './Karma.js';
 import { RegionRiskPolicy } from './RegionRisk.js';
 import { initSocket } from '../modules/socket.js';
+import { registerOnlinePlayer, unregisterOnlinePlayer } from '../modules/playerRegistry.js';
+import { GameEventIds, subscribeGameEvent, type GameEvent } from './GameEvent.js';
 import '../data/items.js';
 
 initSocket(createServer(), '*');
@@ -210,4 +212,31 @@ test('중복 onDeath 호출과 저장된 사망 상태 복원은 적대 귀환 �
     assert.equal(restored.isDead, true);
     assert.equal(countReturnScrolls(restored), 2);
     assert.ok(restored.deathTimer > 89 && restored.deathTimer <= 90);
+});
+
+test('복원된 DoT의 actorPlayerId는 온라인 공격자의 PVP 막타로 해석된다', () => {
+    const killer = createLivePlayer('death-test-neutral');
+    const victim = createLivePlayer('death-test-neutral');
+    let pvpKillEvent: GameEvent | undefined;
+    registerOnlinePlayer(killer);
+    const unsubscribe = subscribeGameEvent(GameEventIds.PVP_KILL, event => {
+        if (event.subject === victim) pvpKillEvent = event;
+    });
+    try {
+        const result = victim.damage(victim.maxLife, 'absolute', {
+            type: 'poison',
+            causeEntity: null,
+            actorPlayerId: killer.userId,
+            fixedDamage: true,
+        });
+        assert.ok(result.lifeDamage > 0);
+        victim.lateUpdate(0.05);
+
+        assert.equal(victim.lastLethalDamageCause?.actorPlayerId, killer.userId);
+        assert.equal(pvpKillEvent?.actor, killer);
+        assert.equal(pvpKillEvent?.subject, victim);
+    } finally {
+        unsubscribe();
+        unregisterOnlinePlayer(killer.userId);
+    }
 });

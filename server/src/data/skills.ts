@@ -546,12 +546,14 @@ function defineJobPassive(options: {
     unlockLevel?: number;
     slot?: JobSlotType;
     isVisible?: (player?: Player | null) => boolean;
+    /** 대량 확장 패시브가 기존 계보 아트를 명시적으로 재사용할 때만 설정한다. */
+    reuseDeclaredArt?: boolean;
 }): void {
     const source = `skill:${options.id}:passive`;
     defineSkill({
         id: options.id,
         name: options.name,
-        icon: options.icon,
+        icon: options.reuseDeclaredArt ? options.icon : `skills/${options.id}`,
         maxLevel: 1,
         unlockLevel: options.unlockLevel,
         descriptionTemplate: options.description,
@@ -907,7 +909,65 @@ const clericElitePassives = [
     },
 ] as const;
 
-for (const passive of clericElitePassives) defineJobPassive(passive);
+for (const passive of clericElitePassives) defineJobPassive({ ...passive, reuseDeclaredArt: true });
+
+function createEliteDeepeningModifier(
+    modifier: JobPassiveModifier,
+): JobPassiveModifier {
+    const attribute = AttributeType.fromKey(modifier.attribute);
+    if (!attribute) throw new Error(`엘리트 심화 능력치가 올바르지 않습니다: ${modifier.attribute}`);
+    if (modifier.op === 'multiply') {
+        return {
+            attribute: modifier.attribute,
+            op: 'multiply',
+            value: 1.04,
+            label: `${attribute.label} 심화`,
+            display: '+4%',
+        };
+    }
+    const flat = (() => {
+        switch (attribute) {
+            case AttributeType.CRIT_RATE:
+            case AttributeType.FORGING_PRECISION:
+                return { value: 0.02, display: '+2%p' };
+            case AttributeType.CRIT_DMG:
+                return { value: 0.08, display: '+8%p' };
+            case AttributeType.MENTALITY_REGEN:
+            case AttributeType.LIFE_REGEN:
+                return { value: 1, display: '+1/초' };
+            default:
+                return { value: 4, display: '+4' };
+        }
+    })();
+    return {
+        attribute: modifier.attribute,
+        op: 'add',
+        value: flat.value,
+        label: `${attribute.label} 심화`,
+        display: flat.display,
+    };
+}
+
+/** 30개 ordered 엘리트 조합은 Lv.240에 기존 계승 패시브의 보조 축을 한 단계 더 깊게 연결한다. */
+export const ELITE_DEEPENING_SKILL_IDS = Object.freeze([
+    ...elitePassives,
+    ...clericElitePassives,
+].map(passive => {
+    const modifier = createEliteDeepeningModifier(passive.modifiers.at(-1)!);
+    const eliteId = passive.jobId.slice('career:'.length);
+    const id = `${eliteId}_deepening`;
+    defineJobPassive({
+        id,
+        name: `${passive.name} 심화`,
+        jobId: passive.jobId,
+        icon: passive.icon,
+        reuseDeclaredArt: true,
+        unlockLevel: 240,
+        description: `{{icon.${modifier.attribute}}} ${modifier.label.replace(' 심화', '')} 수치가 [color=gold]{{${modifier.attribute}}}[/color] 추가로 증가합니다.`,
+        modifiers: [modifier],
+    });
+    return id;
+}));
 
 const statAwakenings = [
     {
@@ -1394,6 +1454,12 @@ const ASSASSIN_AMBUSH_TERMS: readonly AttributeDamageTerm[] = [
     { attribute: AttributeType.SPEED, scale: MOBILITY_DAMAGE_SCALE, basePercent: 75, perLevelPercent: 6 },
     { attribute: AttributeType.ATK, basePercent: 100, perLevelPercent: 8 },
 ];
+const ASSASSIN_AMBUSH_STEALTH_MULTIPLIER = 1.15;
+
+function calculateAmbushDamage(context: SkillContext): number {
+    return combinedAttributeDamage(context, ASSASSIN_AMBUSH_TERMS)
+        * ASSASSIN_AMBUSH_STEALTH_MULTIPLIER;
+}
 const ASSASSIN_VENOM_BLADE_TERMS: readonly AttributeDamageTerm[] = [
     { attribute: AttributeType.SPEED, scale: MOBILITY_DAMAGE_SCALE, basePercent: 55, perLevelPercent: 5 },
     { attribute: AttributeType.ATK, basePercent: 90, perLevelPercent: 7 },
@@ -1676,6 +1742,7 @@ defineSkill({
             op: 'multiply',
             value: 1 + percentByLevel(context.skill.level, 25, 5) / 100,
         }],
+        grantsRotationStatusEffectId: STEALTH.id,
         notes: ['은신과 이동속도는 상황 의존 효과라 DPM에 임의 환산하지 않습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 20, 1, 16),
@@ -1694,32 +1761,36 @@ defineSkill({
 
 defineSkill({
     id: 'ambush', name: '암습', icon: 'skills/ambush', maxLevel: 5,
-    descriptionTemplate: '은신을 해제하며 이동속도를 살린 채 대상의 급소를 기습합니다. 이 공격은 회피할 수 없고 반드시 치명타로 적중하며, {{icon.speed}}{{icon.atk}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
-    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 18[/color]',
+    descriptionTemplate: '은신을 해제하며 이동속도를 살린 채 대상의 급소를 기습합니다. 은신 소모 보정으로 피해가 15% 증가합니다. 이 공격은 회피할 수 없고 반드시 치명타로 적중하며, {{icon.speed}}{{icon.atk}}{{icon.critDmg}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 10[/color]',
     activationConditionTemplate: activationGuide('대상을 지정하고 은신 상태에서'), activationMessage: '암습!', baseMetadata: null,
     calculatedFields: { damage: context => {
-        const damage = combinedAttributeDamage(context, ASSASSIN_AMBUSH_TERMS)
+        const damage = calculateAmbushDamage(context)
             * context.owner.attribute.get(AttributeType.CRIT_DMG);
         return tooltipValue(
             damage,
-            `(${combinedAttributeDamageFormula(context, ASSASSIN_AMBUSH_TERMS)}) × 치명타 피해 ${formatNumber(context.owner.attribute.get(AttributeType.CRIT_DMG) * 100)}%`,
+            `(${combinedAttributeDamageFormula(context, ASSASSIN_AMBUSH_TERMS)}) × 은신 소모 115% × 치명타 피해 ${formatNumber(context.owner.attribute.get(AttributeType.CRIT_DMG) * 100)}%`,
         );
     } },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'physical',
-        calculateDamage: context => combinedAttributeDamage(context, ASSASSIN_AMBUSH_TERMS),
+        calculateDamage: calculateAmbushDamage,
         criticalMode: SkillCriticalMode.GUARANTEED,
-        calculateManaCost: () => 18,
-        notes: ['선행 은신의 재사용 대기시간과 정신력 소모는 별도이며, 이 명령은 암습 단독 사용량을 계산합니다.'],
+        calculateManaCost: () => 10,
+        requiresRotationStatusEffectId: STEALTH.id,
+        consumesRequiredRotationStatusEffect: true,
+        notes: ['로테이션은 선행 은신의 정신력·재사용 대기시간과 이동속도 버프 소모를 함께 계산합니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 10, 0.5, 8),
     sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ASSASSIN),
     jobRequirement: jobRequirement(JOBS.assassin),
-    canActivate: context => context.owner.getStatusEffect(STEALTH) ? simpleCheck(18)(context) : denySkill('은신 상태에서만 사용할 수 있습니다.'),
+    canActivate: context => context.owner.getStatusEffect(STEALTH) ? simpleCheck(10)(context) : denySkill('은신 상태에서만 사용할 수 있습니다.'),
     onStart: context => {
-        spend(context, 18);
+        spend(context, 10);
+        // 은신의 이동속도 증가를 포함한 피해를 먼저 고정한 뒤 상태를 소모한다.
+        const damage = calculateAmbushDamage(context);
         context.owner.removeStatusEffect(STEALTH);
-        directDamageAttack(context, combinedAttributeDamage(context, ASSASSIN_AMBUSH_TERMS), {
+        directDamageAttack(context, damage, {
             criticalRate: 1,
             unavoidable: true,
             consumeMainHandDurability: true,
@@ -1832,9 +1903,8 @@ defineSkill({
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC],
 });
 
-// TODO(art): 성직자 전용 아이콘·시전 배너 제작 전까지 마력탄/마력 보호막 아트를 명시적으로 재사용한다.
 defineSkill({
-    id: 'radiant_bolt', name: '광휘탄', icon: 'skills/magic_bolt', activationHeader: 'magic_bolt', maxLevel: 5,
+    id: 'radiant_bolt', name: '광휘탄', icon: 'skills/radiant_bolt', activationHeader: 'radiant_bolt', maxLevel: 5,
     descriptionTemplate: `빛을 응축한 탄환을 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 11[/color]',
     activationConditionTemplate: targetActivationGuide(), activationMessage: '광휘탄!', baseMetadata: null,
@@ -1926,8 +1996,70 @@ export function getLowestLifeClericPartyTargets(context: SkillContext): readonly
     return selectLowestLifePartyTargets(context.owner, getClericPartyMembers(context));
 }
 
+/** 축도는 시전자를 항상 포함하고 남은 두 자리를 같은 장소의 부상당한 파티원에게 배정한다. */
+export function selectDawnBenedictionTargets(
+    owner: Entity,
+    partyMembers: readonly Entity[],
+): readonly Entity[] {
+    const allies = partyMembers
+        .filter(member => member !== owner
+            && member.locationId === owner.locationId
+            && !member.isDefeated)
+        .filter((member, index, values) => values.indexOf(member) === index)
+        .sort((left, right) => left.life / Math.max(1, left.maxLife)
+            - right.life / Math.max(1, right.maxLife));
+    return [owner, ...allies].slice(0, 3);
+}
+
+function getDawnBenedictionTargets(context: SkillContext): readonly Entity[] {
+    return selectDawnBenedictionTargets(context.owner, getClericPartyMembers(context));
+}
+
+function dawnBenedictionOffensePercent(level: number): number {
+    return percentByLevel(level, 6, 1);
+}
+
+function dawnBenedictionDefensePercent(level: number): number {
+    return percentByLevel(level, 8, 1);
+}
+
+function dawnBenedictionDuration(level: number): number {
+    return valueByLevel(level, 45, 3);
+}
+
+function applyDawnBenedictionModifiers(target: Entity, level: number): void {
+    const source = 'status:dawn_benediction';
+    target.attribute.removeBySource(source);
+    target.attribute.addModifiers([
+        { attribute: AttributeType.ATK.key, op: 'multiply', value: 1 + dawnBenedictionOffensePercent(level) / 100, source },
+        { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1 + dawnBenedictionOffensePercent(level) / 100, source },
+        { attribute: AttributeType.DEF.key, op: 'multiply', value: 1 + dawnBenedictionDefensePercent(level) / 100, source },
+        { attribute: AttributeType.MAGIC_DEF.key, op: 'multiply', value: 1 + dawnBenedictionDefensePercent(level) / 100, source },
+    ]);
+}
+
+const DAWN_BENEDICTION = StatusEffectType.define({
+    id: 'dawn_benediction',
+    label: '새벽의 축도',
+    icon: 'skills/dawn_benediction',
+    descriptionTemplate: '지속되는 동안 공격력·마법력이 [color=gold]{{calc.offensePercent}}%[/color], 방어력·마법 저항력이 [color=yellow]{{calc.defensePercent}}%[/color] 증가합니다.',
+    calculatedFields: {
+        offensePercent: ({ effect }) => dawnBenedictionOffensePercent(effect.level),
+        defensePercent: ({ effect }) => dawnBenedictionDefensePercent(effect.level),
+    },
+    calculatedFieldTooltips: {
+        offensePercent: '기본 6% + 효과 레벨당 1%p',
+        defensePercent: '기본 8% + 효과 레벨당 1%p',
+    },
+    onStart: ({ target, effect }) => applyDawnBenedictionModifiers(target, effect.level),
+    onUpdate: ({ target, effect }) => applyDawnBenedictionModifiers(target, effect.level),
+    onRemove: ({ target, effect }) => target.attribute.removeBySource(`status:${effect.type.id}`),
+    tags: [GameTags.PROPERTY_LIGHT, GameTags.PROPERTY_HOLY],
+    aliases: ['새벽의 축도', '축도'],
+});
+
 defineSkill({
-    id: 'sanctuary_aegis', name: '성역의 가호', icon: 'skills/mana_barrier', activationHeader: 'mana_barrier', maxLevel: 5,
+    id: 'sanctuary_aegis', name: '성역의 가호', icon: 'skills/sanctuary_aegis', activationHeader: 'sanctuary_aegis', maxLevel: 5,
     descriptionTemplate: '현재 지정한 생존 파티원을 우선해 같은 장소의 아군 최대 3명을 보호합니다. 대상이 없으면 자신에게 적용하며, '
         + '각 대상은 생명력을 최대치의 [color=green]{{healPercent}}[/color]만큼 회복하고 {{duration}} 동안 '
         + '{{icon.magicForce}}{{icon.maxMentality}}{{icon.maxLife}} [color=#d9d9d9]{{shieldAmount}}만큼의 피해를 막는 보호막[/color]을 얻습니다.',
@@ -1968,6 +2100,68 @@ defineSkill({
         }
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC, GameTags.PROPERTY_LIGHT],
+});
+
+defineSkill({
+    id: 'dawn_benediction',
+    name: '새벽의 축도',
+    icon: 'skills/dawn_benediction',
+    activationHeader: 'dawn_benediction',
+    maxLevel: 5,
+    unlockLevel: 120,
+    descriptionTemplate: '시전자를 포함한 같은 장소의 생존 파티원 최대 3명을 {{duration}} 동안 축복합니다. '
+        + '{{icon.atk}} 공격력과 {{icon.magicForce}} 마법력이 [color=gold]{{offenseBonus}}%[/color], '
+        + '{{icon.def}} 방어력과 {{icon.magicDef}} 마법 저항력이 [color=yellow]{{defenseBonus}}%[/color] 증가합니다.',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 42[/color]',
+    activationConditionTemplate: activationGuide(),
+    activationMessage: '새벽의 축도!',
+    baseMetadata: null,
+    activationFeedback: context => buffFeedback(
+        context.skill.name,
+        dawnBenedictionDuration(context.skill.level),
+        `시전자 포함 아군 최대 3명 · 공격력·마법력 +${formatNumber(dawnBenedictionOffensePercent(context.skill.level))}%`
+            + ` · 방어력·마법 저항력 +${formatNumber(dawnBenedictionDefensePercent(context.skill.level))}%`,
+    ),
+    calculatedFields: {
+        duration: context => tooltipValue(
+            dawnBenedictionDuration(context.skill.level),
+            '기본 45초 + 스킬 레벨당 3초',
+        ),
+        offenseBonus: context => levelValueTooltip(context, '공격·마법 증가', 6, 1, '%'),
+        defenseBonus: context => levelValueTooltip(context, '방어·마법 저항 증가', 8, 1, '%'),
+    },
+    balance: {
+        role: SkillBalanceRole.SUPPORT,
+        targetCount: 3,
+        calculateManaCost: () => 42,
+        calculateEffectDuration: context => dawnBenedictionDuration(context.skill.level),
+        calculateRotationModifiers: context => [
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1 + dawnBenedictionOffensePercent(context.skill.level) / 100 },
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1 + dawnBenedictionOffensePercent(context.skill.level) / 100 },
+            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1 + dawnBenedictionDefensePercent(context.skill.level) / 100 },
+            { attribute: AttributeType.MAGIC_DEF.key, op: 'multiply', value: 1 + dawnBenedictionDefensePercent(context.skill.level) / 100 },
+        ],
+        notes: ['시전자를 항상 포함하고 같은 장소의 생존 파티원에게만 적용되며, 같은 축도는 중첩 대신 갱신됩니다.'],
+    },
+    calculateMaxCooldown: context => cooldownByLevel(context, 90, 2, 82),
+    sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_MAGIC, MAGIC_SHARED_COOLDOWN_SECONDS),
+    autoAcquire: careerLevelAutoAcquire(JOBS.cleric, 120, JobSlotType.MAIN),
+    jobRequirement: mainJobRequirement(JOBS.cleric),
+    canActivate: simpleCheck(42, false),
+    onStart: context => {
+        spend(context, 42);
+        const duration = dawnBenedictionDuration(context.skill.level);
+        for (const target of getDawnBenedictionTargets(context)) {
+            target.applyStatusEffect(DAWN_BENEDICTION, duration, context.skill.level, context.owner);
+        }
+    },
+    tags: [
+        GameTags.SKILL_ACTIVE,
+        GameTags.SKILL_COMBAT,
+        GameTags.SKILL_GROUP_MAGIC,
+        GameTags.PROPERTY_LIGHT,
+        GameTags.PROPERTY_HOLY,
+    ],
 });
 
 defineSkill({
@@ -2325,6 +2519,7 @@ const lateCareerPassives: readonly LateCareerPassiveDefinition[] = [
 
 for (const passive of lateCareerPassives) defineJobPassive({
     ...passive,
+    reuseDeclaredArt: passive.id !== 'unfading_devotion',
     unlockLevel: 240,
     slot: JobSlotType.MAIN,
 });
@@ -2389,7 +2584,7 @@ const thirdCareerPassives: readonly LateCareerPassiveDefinition[] = [
     },
 ];
 
-for (const passive of thirdCareerPassives) defineJobPassive(passive);
+for (const passive of thirdCareerPassives) defineJobPassive({ ...passive, reuseDeclaredArt: true });
 
 const LATE_TACTICAL_UNLOCK_LEVEL = 320;
 const LATE_TACTICAL_DURATION = 10;
@@ -2722,12 +2917,11 @@ function dawnCovenantShield(context: SkillContext): number {
         ) / 100;
 }
 
-// TODO(art): 성직자 Lv.320 역할기 전용 아이콘·시전 배너 제작 전까지 마력 보호막 fallback을 재사용한다.
 defineSkill({
     id: 'dawn_covenant',
     name: '여명의 서약',
-    icon: 'skills/mana_barrier',
-    activationHeader: 'mana_barrier',
+    icon: 'skills/dawn_covenant',
+    activationHeader: 'dawn_covenant',
     maxLevel: 5,
     unlockLevel: LATE_TACTICAL_UNLOCK_LEVEL,
     descriptionTemplate: '같은 장소의 생존 파티원 최대 3명과 여명의 서약을 맺습니다. 현재 지정한 파티원을 우선하며, '
@@ -2837,10 +3031,11 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
     {
         id: 'shadow_dagger', name: '그림자 단검', icon: 'skills/venom_blade', activationHeader: 'venom_blade',
         damageType: 'physical', attribute: AttributeType.SPEED, attributeScale: MOBILITY_DAMAGE_SCALE,
-        basePercent: 129, perLevelPercent: 8,
-        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 106, secondaryPerLevelPercent: 7,
-        manaCost: 24, cooldown: 11, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 50,
+        basePercent: 285, perLevelPercent: 16,
+        secondaryAttribute: AttributeType.ATK, secondaryBasePercent: 240, secondaryPerLevelPercent: 14,
+        manaCost: 18, cooldown: 9, jobId: JOBS.assassin, groupTag: GameTags.SKILL_GROUP_ASSASSIN, unlockLevel: 50,
         projectile: 'basic_arrow', projectileName: '그림자 단검', propertyTag: GameTags.PROPERTY_DARK,
+        unavoidable: true,
         penetration: { attribute: AttributeType.ARMOR_PEN, base: 16, perLevel: 4 },
         descriptionIntro: '암흑으로 빚은 단검을 대상에게 투척합니다.',
     },
@@ -3187,7 +3382,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         penetration: { attribute: AttributeType.ARMOR_PEN, base: 64, perLevel: 11 },
         descriptionIntro: '하늘의 별을 거대한 모루로 상상해 대상의 결함점 위로 그대로 떨어뜨립니다.',
     },
-    // TODO(art): 성직자 성장기 전용 128×128 아이콘·256×64 시전 배너 제작 전까지 기존 빛·마법 기술 fallback을 재사용한다.
+    // 성직자 성장기도 공통 등록부에서 데이터 ID와 같은 전용 아이콘·시전 배너를 사용한다.
     {
         id: 'dawn_lance', name: '여명창', icon: 'skills/mana_lance', activationHeader: 'mana_lance',
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 170, perLevelPercent: 11,
@@ -3552,8 +3747,10 @@ function growthTechniqueDescription(technique: GrowthTechniqueDefinition): strin
 for (const technique of growthTechniques) defineSkill({
     id: technique.id,
     name: technique.name,
-    icon: technique.icon,
-    activationHeader: technique.activationHeader,
+    // 성장 기술은 전용 아트를 사용한다. 신규 기술의 임시 아트는 파일 자체를
+    // 명시적으로 준비하며, 공통 생성부를 fallback으로 되돌리지 않는다.
+    icon: `skills/${technique.id}`,
+    activationHeader: technique.id,
     maxLevel: 5,
     unlockLevel: technique.unlockLevel,
     descriptionTemplate: growthTechniqueDescription(technique),
@@ -3761,12 +3958,11 @@ function benedictionWaveHealing(context: SkillContext): number {
         ) / 100;
 }
 
-// TODO(art): 성직자 Lv.50 성장기 전용 아이콘·시전 배너 제작 전까지 마나 원천 fallback을 재사용한다.
 defineSkill({
     id: 'benediction_wave',
     name: '축복의 파동',
-    icon: 'skills/mana_spring',
-    activationHeader: 'mana_barrier',
+    icon: 'skills/benediction_wave',
+    activationHeader: 'benediction_wave',
     maxLevel: 5,
     unlockLevel: 50,
     descriptionTemplate: `지정한 대상에게 빛의 파동을 발사해 {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입힙니다. `
@@ -4351,6 +4547,27 @@ function eliteTechniqueTierMultiplier(technique: EliteTechniqueDefinition): numb
     return technique.tierDamageMultiplier ?? (technique.damageType === 'magic' ? 4.6 : 3);
 }
 
+export const ELITE_TECHNIQUE_DEEPENING_LEVEL = 320;
+const ELITE_TECHNIQUE_DAMAGE_DEEPENING_MULTIPLIER = 1.12;
+const ELITE_TECHNIQUE_SHIELD_DEEPENING_MULTIPLIER = 1.15;
+
+function eliteTechniqueDamageDeepeningMultiplier(
+    context: SkillContext,
+    technique: EliteTechniqueDefinition,
+): number {
+    if (context.owner.level < ELITE_TECHNIQUE_DEEPENING_LEVEL || technique.shieldPercent) return 1;
+    return ELITE_TECHNIQUE_DAMAGE_DEEPENING_MULTIPLIER;
+}
+
+function eliteTechniqueShieldDeepeningMultiplier(
+    context: SkillContext,
+    technique: EliteTechniqueDefinition,
+): number {
+    return context.owner.level >= ELITE_TECHNIQUE_DEEPENING_LEVEL && technique.shieldPercent
+        ? ELITE_TECHNIQUE_SHIELD_DEEPENING_MULTIPLIER
+        : 1;
+}
+
 function eliteTechniqueDamage(context: SkillContext, technique: EliteTechniqueDefinition): number {
     const primary = scaledAttributeValue(context, technique.attribute, technique.attributeScale)
         * percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent) / 100;
@@ -4379,7 +4596,9 @@ function eliteTechniqueDamage(context: SkillContext, technique: EliteTechniqueDe
                 technique.forgingPrecisionPerLevelPercent ?? 0,
             ) / 100
         : 0;
-    return (primary + secondary + tertiary + precision) * eliteTechniqueTierMultiplier(technique);
+    return (primary + secondary + tertiary + precision)
+        * eliteTechniqueTierMultiplier(technique)
+        * eliteTechniqueDamageDeepeningMultiplier(context, technique);
 }
 
 function eliteTechniqueDamageTooltip(context: SkillContext, technique: EliteTechniqueDefinition): string {
@@ -4397,10 +4616,35 @@ function eliteTechniqueDamageTooltip(context: SkillContext, technique: EliteTech
         ? ` + ${scaledLabel(technique.attribute, technique.attributeScale)} × ${AttributeType.FORGING_PRECISION.label} × ${formatNumber(percentByLevel(context.skill.level, technique.forgingPrecisionBasePercent, technique.forgingPrecisionPerLevelPercent ?? 0))}%`
         : '';
     const tierMultiplier = eliteTechniqueTierMultiplier(technique);
+    const deepeningMultiplier = eliteTechniqueDamageDeepeningMultiplier(context, technique);
     return tooltipValue(
         damage,
-        `(${scaledLabel(technique.attribute, technique.attributeScale)} × ${formatNumber(primaryPercent)}%${secondary}${tertiary}${precision}) × 엘리트 기술 보정 ${formatNumber(tierMultiplier)}`,
+        `(${scaledLabel(technique.attribute, technique.attributeScale)} × ${formatNumber(primaryPercent)}%${secondary}${tertiary}${precision}) × 엘리트 기술 보정 ${formatNumber(tierMultiplier)}`
+            + (deepeningMultiplier > 1 ? ` × Lv.${ELITE_TECHNIQUE_DEEPENING_LEVEL} 심화 ${formatNumber(deepeningMultiplier)}` : ''),
     );
+}
+
+function eliteTechniqueShieldAmount(
+    context: SkillContext,
+    technique: EliteTechniqueDefinition,
+    magicGroup: boolean,
+): number {
+    if (!technique.shieldPercent) return 0;
+    return followupShieldAmount(context, technique.shieldPercent, magicGroup)
+        * eliteTechniqueShieldDeepeningMultiplier(context, technique);
+}
+
+function eliteTechniqueShieldFormula(
+    context: SkillContext,
+    technique: EliteTechniqueDefinition,
+    magicGroup: boolean,
+): string {
+    if (!technique.shieldPercent) return '';
+    const multiplier = eliteTechniqueShieldDeepeningMultiplier(context, technique);
+    return followupShieldFormula(context, technique.shieldPercent, magicGroup)
+        + (multiplier > 1
+            ? ` × Lv.${ELITE_TECHNIQUE_DEEPENING_LEVEL} 심화 ${formatNumber(multiplier)}`
+            : '');
 }
 
 function eliteTechniqueDescription(technique: EliteTechniqueDefinition): string {
@@ -4430,6 +4674,9 @@ function eliteTechniqueDescription(technique: EliteTechniqueDefinition): string 
         technique.shieldPercent
             ? '공격 후 {{shieldAmount}}만큼의 피해를 막는 일반 보호막을 8초 동안 얻습니다.'
             : '',
+        technique.shieldPercent
+            ? `Lv.${ELITE_TECHNIQUE_DEEPENING_LEVEL} 심화: 이 보호막이 15% 강화됩니다.`
+            : `Lv.${ELITE_TECHNIQUE_DEEPENING_LEVEL} 심화: 직접 피해가 12% 강화됩니다.`,
         technique.projectile ? PROJECTILE_FLIGHT_TEXT : '',
     ].filter(Boolean).join(' ');
 }
@@ -4452,14 +4699,14 @@ for (const technique of eliteTechniques) {
             damage: context => eliteTechniqueDamageTooltip(context, technique),
             shieldAmount: context => technique.shieldPercent
                 ? tooltipValue(
-                    followupShieldAmount(
+                    eliteTechniqueShieldAmount(
                         context,
-                        technique.shieldPercent,
+                        technique,
                         groupTag === GameTags.SKILL_GROUP_MAGIC,
                     ),
-                    followupShieldFormula(
+                    eliteTechniqueShieldFormula(
                         context,
-                        technique.shieldPercent,
+                        technique,
                         groupTag === GameTags.SKILL_GROUP_MAGIC,
                     ),
                 )
@@ -4485,9 +4732,9 @@ for (const technique of eliteTechniques) {
             criticalMode: technique.guaranteedCritical ? SkillCriticalMode.GUARANTEED : SkillCriticalMode.NORMAL,
             calculateManaCost: () => technique.manaCost,
             calculateShield: technique.shieldPercent
-                ? context => followupShieldAmount(
+                ? context => eliteTechniqueShieldAmount(
                     context,
-                    technique.shieldPercent!,
+                    technique,
                     groupTag === GameTags.SKILL_GROUP_MAGIC,
                 )
                 : undefined,
@@ -4542,9 +4789,9 @@ for (const technique of eliteTechniques) {
             if (technique.shieldPercent) {
                 context.owner.setShield(
                     `skill:${technique.id}`,
-                    followupShieldAmount(
+                    eliteTechniqueShieldAmount(
                         context,
-                        technique.shieldPercent,
+                        technique,
                         groupTag === GameTags.SKILL_GROUP_MAGIC,
                     ),
                     ShieldType.GENERAL,

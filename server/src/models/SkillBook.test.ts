@@ -462,6 +462,30 @@ test('직접 공격과 투사체 발사는 적중 여부를 기다리지 않고 
     if (projectile) removeProjectile(projectile);
 });
 
+test('암습은 은신 이동속도를 피해에 snapshot한 뒤 상태를 소모하고 정신력 10을 사용한다', () => {
+    const player = new TestSkillPlayer(9314);
+    const target = new TestTarget();
+    const stealth = StatusEffectType.fromKey('stealth');
+    assert.ok(stealth);
+    player.progress.setState(CareerProgressIds.MAIN, 'career:assassin');
+    player.currentTarget = target;
+    player.mentality = 100;
+    player.skills.grant('ambush', 'test');
+    player.applyStatusEffect(stealth, 10, 1, player);
+
+    const speedWithStealth = player.attribute.get(AttributeType.SPEED);
+    const attack = player.attribute.get(AttributeType.ATK);
+    const criticalDamage = player.attribute.get(AttributeType.CRIT_DMG);
+    const expectedDamage = (speedWithStealth * 40 * 0.75 + attack) * 1.15 * criticalDamage;
+    const outcome = player.skills.activateByInput('암습');
+
+    assert.equal(outcome.activated, true);
+    assert.ok(Math.abs(target.life - (target.maxLife - expectedDamage)) < 1e-10);
+    assert.equal(player.mentality, 90);
+    assert.equal(player.hasStatusEffect(stealth), false);
+    assert.ok(player.attribute.get(AttributeType.SPEED) < speedWithStealth);
+});
+
 test('바람 회피는 Lv.1부터 짧은 확정 회피 상태를 유지하고 지속시간을 4초로 제한한다', () => {
     const clock = installManualClock();
     const player = new TestSkillPlayer(9313);

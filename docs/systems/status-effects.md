@@ -18,7 +18,15 @@ Entity
             └─ metadataDelta
 ```
 
-상태효과는 런타임 전용이며 DB에 저장하지 않는다. 사망·파괴 시 모두 제거되고 respawn 뒤에는 남지 않는다. Player와 Location 오브젝트는 기존 20 FPS lifecycle에서, Projectile은 `updateProjectiles()`의 `earlyUpdate → update → lateUpdate`에서 갱신된다.
+상태효과의 실행 인스턴스는 메모리에 있고 Player만 정책에 따라 version 1 snapshot을 `players.status_effects` JSON에 저장한다. `StatusEffectPersistencePolicy`는 Java 스타일 클래스형 enum이며 다음 세 수명을 구분한다.
+
+| 정책 | 처리 |
+| --- | --- |
+| `WALL_CLOCK` | 일반 유한 버프·디버프의 기본값. 절대 `expiresAtMs`를 저장해 오프라인 시간도 흐른다. |
+| `DERIVED` | 공복·갈증·승천 권역 환경 효과처럼 생존 수치나 현재 장소에서 다시 만드는 효과. 저장하지 않는다. |
+| `COMBAT_TRANSIENT` | 무적·투명화·전투 시전/회피/보호막과 한 덩어리인 효과. 최종 연결 종료 시 즉시 제거한다. |
+
+Player 사망 시 정책과 관계없이 모두 제거하므로 respawn 뒤에는 남지 않는다. Player와 Location 오브젝트는 기존 20 FPS lifecycle에서, Projectile은 `updateProjectiles()`의 `earlyUpdate → update → lateUpdate`에서 갱신된다.
 
 외부 기능은 raw Map을 읽지 않고 다음 `Entity` 공개 API를 사용한다.
 
@@ -26,7 +34,10 @@ Entity
 - 적용: `applyStatusEffect(type, duration, level, source?)`
 - 제거: `removeStatusEffect`, `clearStatusEffects`
 - lifecycle: `updateStatusEffects`는 일반적으로 게임 루프가 호출한다.
+- 영속 수명: `getStatusEffectPersistenceSnapshot`, `restoreStatusEffectPersistenceSnapshot`, `removeNonPersistentStatusEffects`, `elapseWallClockStatusEffects`
 - 상쇄 정의: `defineStatusEffectInteraction`, `defineStatusEffectNeutralization`, 조회용 `getStatusEffectInteractionSnapshots`.
+
+영속 snapshot은 최대 64개, 전체 64KiB, 효과당 최대 30일·레벨 1,000,000으로 제한한다. 복원은 현재 master data에 없는 ID, 중복 ID, 잘못된 정책·만료 시각·source player ID·필드를 개별 거절한다. Runtime metadata는 타입이 명시한 `persistenceMetadataKeys`의 안전한 값만 최대 4KiB로 보관한다. 복원 시 modifier를 구성하기 위한 `onStart`는 한 번 실행하지만 적용 이벤트와 제어 점감 기록은 재생하지 않는다. `WALL_CLOCK` 효과의 추가·강화·갱신·제거·만료만 Player dirty를 만들고 매 tick duration 감소와 비영속 효과 변경은 DB write를 만들지 않으며, unload 직전 현재 만료 시각과 안전 metadata를 snapshot한다.
 
 ## 적용과 병합 규칙
 
@@ -41,7 +52,7 @@ Entity
 
 모든 갱신은 기존 `StatusEffect` 객체를 유지한다. `onStart`를 재실행하지 않고 `metadataDelta`, 누적 틱 시간과 기존 `onUpdate` 흐름이 이어진다. 결과는 클래스형 enum `StatusEffectApplyAction`의 `ADDED/UPGRADED/REFRESHED/IGNORED/REJECTED`로 확인할 수 있다.
 
-선택적인 source는 적용자의 최종 `attackOwner`만 비영속으로 보관한다. 신규 추가는 그 source를 저장하고, source가 명시된 강화·시간 갱신이 실제로 성공했을 때만 기존 source를 교체한다. `IGNORED/REJECTED` 결과나 source 없는 재적용은 기존 source를 유지하므로 약한 재적용으로 지속 피해의 보상 귀속을 가로챌 수 없다.
+선택적인 source는 적용자의 최종 `attackOwner`를 실행 중 객체로 보관한다. Player의 `WALL_CLOCK` snapshot에는 raw Entity 대신 양수 `sourcePlayerId`만 보존하며 복원 시 stale 객체 참조를 만들지 않는다. 복원된 독·출혈·부패·빙결·화염·맹독이 실제 피해 tick을 만들면 이 ID를 `DamageCause.actorPlayerId`로 전달한다. 따라서 효과 적용 자체를 처치로 기록하지 않으면서 raw source가 사라진 뒤의 양수 생명력 피해와 막타만 userId 원장·온라인 PVP 공격자에 귀속한다. 신규 추가는 그 source를 저장하고, source가 명시된 강화·시간 갱신이 실제로 성공했을 때만 기존 source를 교체한다. `IGNORED/REJECTED` 결과나 source 없는 재적용은 기존 source를 유지하므로 약한 재적용으로 지속 피해의 보상 귀속을 가로챌 수 없다.
 
 ### 전투 제어 저항과 연속 적용 점감
 
@@ -84,7 +95,7 @@ Metadata는 Skill/Item과 같은 원본+top-level delta 방식이다. `getMetada
 - `playerStats.statusEffects`는 `getStatusEffectDisplaySnapshots()`을 ChatNode 설명으로 변환해 전송한다. PlayerStatusHud는 아이콘 위에 남은 지속시간 비율을 반시계 방향 fill로 표시하고 hover/focus 상세 정보를 제공한다.
 - 클라이언트 `StatusScreenEffectPreset`은 같은 HUD snapshot을 화염·독·빙결·감전·출혈·어둠성 저주·석화 화면 피드백으로 가공한다. 투명 알파 가장자리 WebP는 CSS `border-image` 9-slice로 늘려 중앙 UI를 덮지 않으며, `pointer-events: none`, 반응형 테두리 두께와 모션 감소 설정을 유지한다. 화염·빙결·감전은 `plus-lighter` 가산 합성(`screen` fallback)을 사용하고 합성 레이어가 paint containment에 격리되지 않으므로 어두운 사각 배경을 만들지 않는다. 독·맹독·마비독은 HP를 보라색으로, 출혈은 붉은색으로 바꾸며, 부패·쇠약의 저주·공포·실명은 어둠 계열 가장자리, 석화는 돌 균열 가장자리를 사용한다. 마비독·기절·제압·감전 계열은 채팅 메시지 외곽선을 점멸시킨다. 감전 preset은 이후 해당 서버 효과 ID가 등록되면 별도 UI 수정 없이 활성화된다. 재생·강화처럼 장시간 유지되는 단순 수치 버프는 화면을 점유하지 않고 기존 HUD 아이콘만 사용한다.
 - 감각 50 이상인 플레이어는 `/상태이상정보 <효과 이름> [레벨]`로 임의 레벨의 가공된 설명을 확인한다. 레벨을 생략하면 1레벨이며, 계산 결과 hover에는 등록된 레벨식·대상 능력치 계수가 표시된다. 명령 출력과 자동완성은 내부 상태이상 ID·metadata key를 노출하지 않는다.
-- 관리자 `/상태이상부여 대상 상태이상코드 레벨 시간`은 온라인 Player만 대상으로 `Entity.applyStatusEffect()`를 호출한다. 상태효과가 런타임 전용이므로 오프라인 객체에 적용하거나 DB에 저장하지 않는다.
+- 관리자 `/상태이상부여 대상 상태이상코드 레벨 시간`은 온라인 Player만 대상으로 `Entity.applyStatusEffect()`를 호출한다. 지급된 효과도 타입의 영속 정책을 따르며 오프라인 객체에는 직접 적용하지 않는다.
 
 ## Lifecycle callback
 
@@ -93,7 +104,7 @@ Metadata는 Skill/Item과 같은 원본+top-level delta 방식이다. `getMetada
 - `onUpdate(context, dt)`: duration 감소와 함께 실행. 누적 시간·주기 피해 등 일반 효과를 처리한다.
 - `onRemove(context, reason)`: 만료, 직접 제거, 대상 제압, 조건 불충족, 오류에서 한 번 실행하며 modifier를 정리한다.
 
-callback은 대상의 raw 필드를 우회하지 않고 `damage`, `heal`, 상태효과, 태그, 행동 제한 같은 Entity 공개 API를 사용한다. `StatusEffect.source`는 등록 당시의 최종 공격 소유자를 제공하며, 지속 피해는 `damage()`의 원인으로, 재생은 `heal()`의 source로 전달한다. source가 없는 자체 재생은 대상 자신을 사용한다.
+callback은 대상의 raw 필드를 우회하지 않고 `damage`, `heal`, 상태효과, 태그, 행동 제한 같은 Entity 공개 API를 사용한다. `StatusEffect.source`는 등록 당시의 최종 공격 소유자를, `sourcePlayerId`는 영속 경계 뒤의 primitive 소유자를 제공한다. 지속 피해는 둘을 `damage()`의 원인으로, 재생은 실행 중 source를 `heal()`에 전달한다. source가 없는 자체 재생은 대상 자신을 사용한다.
 
 ## 기본 상태효과
 
@@ -107,7 +118,7 @@ callback은 대상의 raw 필드를 우회하지 않고 `damage`, `heal`, 상태
 
 `영웅`은 카르마 `100` 이상 현상 대상을 PVP로 처치하면 15~60분 동안 부여되며 레벨에 따라 획득 경험치를 15~35% 높인다. 1차 콘텐츠 기간에는 `attributes/luck` 아이콘을 명시적 fallback으로 사용하고 전용 아트 교체 TODO를 유지한다.
 
-Lv.500 이후의 10개 권역 환경 효과는 별도 플레이어 영속값을 만들지 않는다. `Location` passive가 현재 장소의 온라인 Player에게 3초 효과를 짧게 갱신하고 장소를 벗어나면 자연 만료시킨다. 각 효과는 `status-effect:{id}` modifier source만 교체·제거하므로 장비·스킬·다른 상태효과와 독립적으로 합성된다. 희박한 대기부터 기원 공명까지의 환경 효과는 이로운 값과 불리한 값을 함께 가져 권역마다 전투 빌드의 유불리가 달라진다.
+Lv.500 이후의 10개 권역 환경 효과는 `DERIVED`라 별도 플레이어 영속값을 만들지 않는다. `Location` passive가 현재 장소의 온라인 Player에게 3초 효과를 짧게 갱신하고 장소를 벗어나면 자연 만료시킨다. 각 효과는 `status-effect:{id}` modifier source만 교체·제거하므로 장비·스킬·다른 상태효과와 독립적으로 합성된다. 희박한 대기부터 기원 공명까지의 환경 효과는 이로운 값과 불리한 값을 함께 가져 권역마다 전투 빌드의 유불리가 달라진다.
 
 `쇠약의 저주`는 레벨당 공격력·마법력을 복리 5%, 받는 치유량을 복리 4% 낮추되 각 감소는 50%에서 멈춘다. `석화`는 아이템 사용은 허용하고 공격·스킬·이동·회피·장소 이동을 제한하며, 방어력 +20%와 마법 저항력 -20%를 동시에 적용한다. `열병`은 생명체에게만 적용되며 레벨당 이동속도·공격속도를 복리 4% 낮추고 초당 수분 감소량을 0.02씩 늘린다. 열병과 빙결은 `레벨 × 남은 지속시간`을 세기로 비교해 양방향으로 상쇄한다.
 
@@ -143,6 +154,7 @@ Lv.500 이후의 10개 권역 환경 효과는 별도 플레이어 영속값을 
 ### 공복·갈증 (`StatusEffectType.HUNGER/THIRST`)
 
 - Player의 배고픔 또는 수분이 0이면 각각 `공복`, `갈증`이 자동 적용되고 해당 자원이 회복되면 제거된다. 사망 중에는 새로 적용하지 않으며 사망 처리에서 다른 상태효과와 함께 정리된다.
+- 두 효과는 생존 수치에서 다시 생성하는 `DERIVED` 정책이라 DB snapshot이나 재접속 유예에 직접 보존하지 않는다.
 - 둘 중 하나라도 활성화되면 각 효과가 자기 source의 `lifeRegen × 0` modifier를 등록하므로 자연 생명력 재생으로 고갈 피해를 무한히 상쇄할 수 없다. 효과 하나를 제거해도 다른 source가 남아 있으면 억제가 유지된다.
 - 기본 1레벨은 합산해서 초당 최대 생명력의 `1/60`을 고정 피해로 준다. 두 효과가 동시에 있으면 피해를 둘이 나눠 총 기본 피해가 두 배가 되지 않는다.
 - 같은 조건이 60초 지속될 때마다 최대 10레벨까지 상승하며, 레벨당 피해가 25% 증가한다. 현재 레벨과 계산된 초당 피해율은 상태창 hover 설명에 표시된다.
@@ -163,3 +175,5 @@ Lv.500 이후의 10개 권역 환경 효과는 별도 플레이어 영속값을 
 ## 이벤트
 
 최초 적용, 상위 레벨/시간 갱신, 제거는 `status_effect:applied`, `status_effect:updated`, `status_effect:removed` GameEvent를 발행한다. 이벤트 data에는 effect ID, level, duration 또는 적용 action/제거 reason이 들어간다.
+
+DB snapshot 복원은 과거 적용을 새 사건으로 재생하지 않으므로 이 이벤트를 발행하지 않는다. 연결 종료 때 비영속 효과를 정리하는 제거에는 `DISCONNECTED` reason을 사용한다.

@@ -10,6 +10,7 @@ import {
     inferMonsterStatProfile,
     MonsterRank,
     MonsterStatProfile,
+    normalizeMonsterDefenseForScale,
     type MonsterStatWeightMap,
 } from '../models/MonsterStats.js';
 import type { AttributeRecord } from '../models/Attribute.js';
@@ -30,8 +31,10 @@ export type WorldMonsterData = Omit<
     };
 
 export const MASTERY_ESSENCE_ITEM_ID = 'mastery_essence';
+export const REFINED_STAT_REFUND_TICKET_ITEM_ID = 'refined_stat_refund_ticket';
+export const RESTORED_STAT_REFUND_TICKET_ITEM_ID = 'restored_stat_refund_ticket';
 
-/** Lv.400 이상 보스의 숙련 정수 드롭을 다른 전리품 순서·수치와 무관하게 하나로 정규화한다. */
+/** Lv.400 이상 보스의 공통 성장 전리품을 기존 드롭과 중복 없이 정규화한다. */
 export function normalizeWorldMonsterDrops(
     drops: readonly DropInfo[],
     level: number,
@@ -40,16 +43,31 @@ export function normalizeWorldMonsterDrops(
     if (statRank !== MonsterRank.BOSS || level < 400) {
         return drops.map(drop => ({ ...drop }));
     }
+    const normalizedDrops = drops
+        .filter(drop => drop.itemDataId !== MASTERY_ESSENCE_ITEM_ID
+            && drop.itemDataId !== REFINED_STAT_REFUND_TICKET_ITEM_ID
+            && drop.itemDataId !== RESTORED_STAT_REFUND_TICKET_ITEM_ID)
+        .map(drop => ({ ...drop }));
     return [
-        ...drops
-            .filter(drop => drop.itemDataId !== MASTERY_ESSENCE_ITEM_ID)
-            .map(drop => ({ ...drop })),
+        ...normalizedDrops,
         {
             itemDataId: MASTERY_ESSENCE_ITEM_ID,
             minCount: 1,
             maxCount: 1,
             chance: 1,
         },
+        {
+            itemDataId: REFINED_STAT_REFUND_TICKET_ITEM_ID,
+            minCount: 1,
+            maxCount: 1,
+            chance: 0.025,
+        },
+        ...(level >= 800 ? [{
+            itemDataId: RESTORED_STAT_REFUND_TICKET_ITEM_ID,
+            minCount: 1,
+            maxCount: 1,
+            chance: 0.008,
+        }] : []),
     ];
 }
 
@@ -84,6 +102,12 @@ export function defineWorldMonster(data: WorldMonsterData): void {
         drops: normalizeWorldMonsterDrops(definition.drops, data.level, statRank),
         baseAttribute: explicitProfile ? calculatedAttributes : {
             ...authoredAttributes,
+            ...(authoredAttributes.def === undefined ? {} : {
+                def: normalizeMonsterDefenseForScale(data.level, authoredAttributes.def),
+            }),
+            ...(authoredAttributes.magicDef === undefined ? {} : {
+                magicDef: normalizeMonsterDefenseForScale(data.level, authoredAttributes.magicDef),
+            }),
             ...(usesGeneralMonsterOffense ? {
                 atk: calculatedAttributes.atk,
                 magicForce: calculatedAttributes.magicForce,

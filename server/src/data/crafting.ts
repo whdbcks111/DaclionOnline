@@ -303,6 +303,42 @@ for (const recipe of [
     tags: recipe.tags,
 });
 
+// 부분 되돌림권은 동일 단계 권표를 합쳐 스탯별 배분 유연성을 높이는 고레벨 제작법이다.
+for (const recipe of [
+    {
+        id: 'utility:refined_stat_refund_ticket',
+        result: 'refined_stat_refund_ticket',
+        aliases: ['정련된 되돌림권', '정련 되돌림권'],
+        time: 20,
+        description: '빛바랜 권표 두 장을 논리핵과 정제 마나 결정으로 다시 엮어 더 넓은 배분을 되돌릴 수 있게 만듭니다.',
+        ingredients: [['faded_stat_reset_ticket', 2], ['logic_core', 2], ['refined_mana_crystal', 5]],
+    },
+    {
+        id: 'utility:restored_stat_refund_ticket',
+        result: 'restored_stat_refund_ticket',
+        aliases: ['복원된 되돌림권', '복원 되돌림권'],
+        time: 30,
+        description: '정련된 권표 두 장에 창세의 프리즘과 시간유리를 봉합해 잃어버린 권능을 상당 부분 복원합니다.',
+        ingredients: [['refined_stat_refund_ticket', 2], ['origin_prism', 2], ['timeglass_crystal', 3]],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    aliases: recipe.aliases,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) =>
+        CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: ['crafting:consumable', 'crafting:stat-refund'],
+});
+
 for (const recipe of [
     {
         id: 'nebula:nebula_ration', result: 'nebula_ration', time: 7,

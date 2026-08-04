@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState } from 'react'
+import { useRef, useCallback, useEffect, useState } from 'react'
 import {
   useHud,
   HUD_DEFINITIONS,
@@ -13,6 +13,7 @@ import {
   createDefaultSkillHudConfig,
 } from '../../context/skillHudConfig'
 import { getUiScale } from '../../utils/displayPreferences'
+import { MAX_CONSUMABLE_BUNDLES, MAX_CONSUMABLE_BUNDLE_ITEMS } from '@shared/hudPresets'
 import styles from './HudSettings.module.scss'
 
 interface Props {
@@ -49,6 +50,8 @@ export default function HudSettings({ onClose }: Props) {
     gridSnapEnabled, setGridSnapEnabled, gridExponent, gridSize, setGridExponent,
     playerStats, skillHudConfigs, setSkillHudVisible, resetSkillHudPosition,
     itemHudConfigs, setItemHudVisible, resetItemHudPosition,
+    consumableBundleHudConfigs, createConsumableBundle, removeConsumableBundle,
+    setConsumableBundleVisible, resetConsumableBundlePosition,
     quickButtonScale, setQuickButtonScale,
     skillQuickButtonOpacity, setSkillQuickButtonOpacity,
     quickButtonPosAnchor, setQuickButtonPosAnchor,
@@ -60,9 +63,12 @@ export default function HudSettings({ onClose }: Props) {
   const [openSettingsId, setOpenSettingsId] = useState<string | null>(null)
   const [isSkillListOpen, setIsSkillListOpen] = useState(false)
   const [isItemListOpen, setIsItemListOpen] = useState(false)
+  const [isBundleListOpen, setIsBundleListOpen] = useState(false)
   const [isQuickButtonSettingsOpen, setIsQuickButtonSettingsOpen] = useState(false)
   const [presetName, setPresetName] = useState('')
   const [selectedPresetName, setSelectedPresetName] = useState('')
+  const [bundleName, setBundleName] = useState('')
+  const [selectedBundleItemIds, setSelectedBundleItemIds] = useState<string[]>([])
   const panelRef = useRef<HTMLDivElement>(null)
   const [initialPanelPosition] = useState(() => ({ x: Math.max(8, hudViewportWidth - 316), y: 60 }))
   const posRef = useRef(initialPanelPosition)
@@ -88,11 +94,24 @@ export default function HudSettings({ onClose }: Props) {
     ...ownedItems,
     ...Object.values(itemHudConfigs)
       .filter(config => config.visible && !ownedItemIds.has(config.itemDataId))
-      .map(config => ({ ...config, count: 0 })),
+      .map(config => ({ ...config, count: 0, bundleEligible: false })),
   ]
   const enabledItemButtonCount = itemButtonSettings
     .filter(item => itemHudConfigs[item.itemDataId]?.visible)
     .length
+  const bundleEligibleItems = ownedItems.filter(item => item.bundleEligible)
+  const bundleConfigs = Object.values(consumableBundleHudConfigs)
+
+  useEffect(() => {
+    posRef.current = {
+      x: Math.max(0, Math.min(hudViewportWidth - 300, posRef.current.x)),
+      y: Math.max(0, Math.min(hudViewportHeight - 60, posRef.current.y)),
+    }
+    if (panelRef.current) {
+      panelRef.current.style.left = `${posRef.current.x}px`
+      panelRef.current.style.top = `${posRef.current.y}px`
+    }
+  }, [hudViewportHeight, hudViewportWidth])
 
   const handleClose = () => {
     setEditMode(false)
@@ -500,6 +519,109 @@ export default function HudSettings({ onClose }: Props) {
                 <div className={styles.rowDesc}>현재 퀵 버튼에 등록할 수 있는 사용 아이템이 없습니다.</div>
               )}
             </div>
+          </div>
+        )}
+      </section>
+
+      <div className={styles.divider} />
+
+      <section className={styles.skillSection}>
+        <div className={styles.skillSectionHeader}>
+          <button
+            type="button"
+            className={styles.skillSectionToggle}
+            aria-expanded={isBundleListOpen}
+            aria-controls="hud-consumable-bundle-list"
+            onClick={() => setIsBundleListOpen(open => !open)}
+          >
+            <span className={styles.sectionTitle}>
+              소모품 묶음 버튼
+              <span className={styles.skillCount}>{bundleConfigs.length}/{MAX_CONSUMABLE_BUNDLES}</span>
+            </span>
+            <span className={`${styles.sectionChevron} ${isBundleListOpen ? styles.sectionChevronOpen : ''}`} aria-hidden>▾</span>
+          </button>
+        </div>
+        {isBundleListOpen && (
+          <div id="hud-consumable-bundle-list" className={styles.skillSectionContent}>
+            <div className={styles.rowDesc}>
+              회복·강화처럼 서버가 허용한 소모품을 최대 {MAX_CONSUMABLE_BUNDLE_ITEMS}종 등록합니다. 버튼 한 번에 위에서부터 한 개씩 사용합니다.
+            </div>
+            <div className={styles.presetRow}>
+              <input
+                className={styles.presetInput}
+                value={bundleName}
+                maxLength={24}
+                placeholder="묶음 이름"
+                aria-label="소모품 묶음 이름"
+                onChange={event => setBundleName(event.target.value)}
+              />
+              <button
+                type="button"
+                className={styles.presetPrimaryButton}
+                disabled={!bundleName.trim() || selectedBundleItemIds.length === 0
+                  || bundleConfigs.length >= MAX_CONSUMABLE_BUNDLES}
+                onClick={() => {
+                  const selected = bundleEligibleItems.filter(item =>
+                    selectedBundleItemIds.includes(item.itemDataId))
+                  if (!createConsumableBundle(bundleName, selected)) return
+                  setBundleName('')
+                  setSelectedBundleItemIds([])
+                }}
+              >추가</button>
+            </div>
+            <div className={styles.skillList}>
+              {bundleEligibleItems.map(item => {
+                const selected = selectedBundleItemIds.includes(item.itemDataId)
+                return (
+                  <label key={item.itemDataId} className={styles.skillRow}>
+                    <img src={`/icons/${item.icon}.png`} alt="" className={styles.skillIcon} />
+                    <span className={styles.skillInfo}>
+                      <span className={styles.skillLabel}>{item.name}</span>
+                      <span className={styles.skillLevel}>{item.count}개 보유</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      disabled={!selected && selectedBundleItemIds.length >= MAX_CONSUMABLE_BUNDLE_ITEMS}
+                      onChange={event => setSelectedBundleItemIds(previous => event.target.checked
+                        ? [...previous, item.itemDataId]
+                        : previous.filter(itemDataId => itemDataId !== item.itemDataId))}
+                    />
+                  </label>
+                )
+              })}
+              {bundleEligibleItems.length === 0 && (
+                <div className={styles.rowDesc}>현재 등록할 수 있는 안전한 소모품이 없습니다.</div>
+              )}
+            </div>
+            {bundleConfigs.map((bundle, index) => (
+              <div key={bundle.id} className={styles.skillRow}>
+                <img src={`/icons/${bundle.items[0].icon}.png`} alt="" className={styles.skillIcon} />
+                <div className={styles.skillInfo}>
+                  <span className={styles.skillLabel}>{bundle.name}</span>
+                  <span className={styles.skillLevel}>{bundle.items.map(item => item.name).join(' → ')}</span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.skillResetBtn}
+                  title="버튼 위치 초기화"
+                  onClick={() => resetConsumableBundlePosition(bundle.id, index)}
+                >↺</button>
+                <label className={styles.switch}>
+                  <input
+                    type="checkbox"
+                    checked={bundle.visible}
+                    onChange={event => setConsumableBundleVisible(bundle.id, event.target.checked)}
+                  />
+                  <span className={styles.slider} />
+                </label>
+                <button
+                  type="button"
+                  className={styles.presetDeleteButton}
+                  onClick={() => removeConsumableBundle(bundle.id)}
+                >삭제</button>
+              </div>
+            ))}
           </div>
         )}
       </section>

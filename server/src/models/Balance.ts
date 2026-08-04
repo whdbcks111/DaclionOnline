@@ -2,7 +2,7 @@ import Entity from './Entity.js';
 import Equipment from './Equipment.js';
 import { AttributeType } from './Attribute.js';
 import type { AttributeModifier, AttributeRecord } from './Attribute.js';
-import { calculateEvasionChance, calculateFinalDamage } from './Combat.js';
+import { calculateEvasionChance } from './Combat.js';
 import { DEFAULT_PLAYER_BASE_ATTRIBUTE } from './PlayerDefaults.js';
 import {
     getAllJobs,
@@ -140,6 +140,20 @@ export interface BalanceScenario {
     readonly mainHandTags: readonly TagId[];
     readonly basicAttackType: 'physical' | 'magic';
     readonly basicProjectileDataId?: string;
+}
+
+/**
+ * 밸런스 진단에서 실제 Entity와 같은 방어 기준 레벨·양방향 레벨차 배율을 적용한다.
+ * 고정·환경 피해는 이 경계를 호출하지 않고 각각의 원래 계산을 유지한다.
+ */
+export function calculateProjectedCombatDamage(
+    rawAmount: number,
+    attacker: Entity,
+    defender: Entity,
+    defense: number,
+    penetration: number,
+): number {
+    return defender.calculateDefendedDamageFrom(rawAmount, defense, penetration, attacker);
 }
 
 export interface RotationSkillReport {
@@ -454,7 +468,13 @@ export function analyzeSkillBalance(
     );
     const defendedDamage = damageType === 'absolute'
         ? rawDamage * criticalMultiplier
-        : calculateFinalDamage(rawDamage * criticalMultiplier, defense, penetration, scenario.target.level);
+        : calculateProjectedCombatDamage(
+            rawDamage * criticalMultiplier,
+            scenario.entity,
+            scenario.target,
+            defense,
+            penetration,
+        );
     const evasion = balance?.unavoidable || balance?.criticalMode === SkillCriticalMode.DISABLED && damageType === 'absolute'
         ? 0
         : calculateEvasionChance(
@@ -508,11 +528,12 @@ export function analyzeJobBalance(level: number, mainJobId: string, subJobId?: s
     const entity = scenario.entity;
     const target = scenario.target;
     const expectedCrit = getExpectedCriticalMultiplier(entity, SkillCriticalMode.NORMAL);
-    const physicalHit = calculateFinalDamage(
+    const physicalHit = calculateProjectedCombatDamage(
         entity.attribute.get(AttributeType.ATK) * expectedCrit,
+        entity,
+        target,
         target.attribute.get(AttributeType.DEF),
         entity.attribute.get(AttributeType.ARMOR_PEN),
-        target.level,
     );
     const hitChance = 1 - calculateEvasionChance(
         entity.attribute.get(AttributeType.SPEED),
@@ -526,17 +547,19 @@ export function analyzeJobBalance(level: number, mainJobId: string, subJobId?: s
         target.attribute.get(AttributeType.SPEED),
         entity.attribute.get(AttributeType.SPEED),
     );
-    const incomingPhysicalDps = calculateFinalDamage(
+    const incomingPhysicalDps = calculateProjectedCombatDamage(
         target.attribute.get(AttributeType.ATK) * targetExpectedCrit,
+        target,
+        entity,
         entity.attribute.get(AttributeType.DEF),
         target.attribute.get(AttributeType.ARMOR_PEN),
-        entity.level,
     ) * targetHitChance * target.attribute.get(AttributeType.ATTACK_SPEED);
-    const incomingMagicDps = calculateFinalDamage(
+    const incomingMagicDps = calculateProjectedCombatDamage(
         target.attribute.get(AttributeType.MAGIC_FORCE) * targetExpectedCrit,
+        target,
+        entity,
         entity.attribute.get(AttributeType.MAGIC_DEF),
         target.attribute.get(AttributeType.MAGIC_PEN),
-        entity.level,
     ) * targetHitChance * target.attribute.get(AttributeType.ATTACK_SPEED);
     return {
         jobId: scenario.effectiveJob.id,
@@ -630,10 +653,17 @@ export function analyzeCombatRotation(
     let nextCombatSkillAt = 0;
     const supportEvents: BalanceSupportTimelineEvent[] = [];
     const guaranteedEvasionWindows: Array<{ start: number; end: number }> = [];
+    type RotationEntry = (typeof entries)[number];
+    const rotationStatuses = new Map<string, { source: string; entry: RotationEntry }>();
     while (time < window - 0.0001) {
         for (const entry of entries) {
             if (entry.activeUntil > 0 && entry.activeUntil <= time + 0.0001) {
-                entity.attribute.removeBySource(`balance:rotation:${entry.data.id}`);
+                const source = `balance:rotation:${entry.data.id}`;
+                entity.attribute.removeBySource(source);
+                const grantedStatusId = entry.data.balance?.grantsRotationStatusEffectId;
+                if (grantedStatusId && rotationStatuses.get(grantedStatusId)?.source === source) {
+                    rotationStatuses.delete(grantedStatusId);
+                }
                 entry.activeUntil = 0;
             }
         }
@@ -643,8 +673,10 @@ export function analyzeCombatRotation(
             const cost = finiteNonNegative(entry.data.balance?.calculateManaCost?.(context) ?? 0);
             const cadenceReady = !entry.data.tags.includes(GameTags.SKILL_COMBAT)
                 || nextCombatSkillAt <= time + 0.0001;
+            const requiredStatusId = entry.data.balance?.requiresRotationStatusEffectId;
             return entry.cooldownEndsAt <= time + 0.0001
                 && cadenceReady
+                && (!requiredStatusId || rotationStatuses.has(requiredStatusId))
                 && cost <= mentality + 0.0001;
         });
         const shouldBasic = skillsSinceBasic >= 2 || ready.length === 0;
@@ -677,6 +709,15 @@ export function analyzeCombatRotation(
             entry.manaSpent += cost;
             entry.lastCastAt = time;
             entry.cooldownEndsAt = time + Math.max(actionInterval, report.cooldown);
+            const requiredStatusId = entry.data.balance?.requiresRotationStatusEffectId;
+            if (requiredStatusId && entry.data.balance?.consumesRequiredRotationStatusEffect) {
+                const requiredStatus = rotationStatuses.get(requiredStatusId);
+                if (requiredStatus) {
+                    entity.attribute.removeBySource(requiredStatus.source);
+                    requiredStatus.entry.activeUntil = 0;
+                    rotationStatuses.delete(requiredStatusId);
+                }
+            }
             if (entry.data.tags.includes(GameTags.SKILL_COMBAT)) {
                 nextCombatSkillAt = time + PLAYER_COMBAT_SKILL_CADENCE_SECONDS;
             }
@@ -697,6 +738,20 @@ export function analyzeCombatRotation(
                 entity.attribute.removeBySource(source);
                 entity.attribute.addModifiers(modifiers.map(modifier => ({ ...modifier, source })));
                 entry.activeUntil = time + effectDuration;
+            }
+            const grantedStatusId = entry.data.balance?.grantsRotationStatusEffectId;
+            if (grantedStatusId && effectDuration > 0) {
+                const source = `balance:rotation:${entry.data.id}`;
+                const previous = rotationStatuses.get(grantedStatusId);
+                if (previous && previous.source !== source) {
+                    entity.attribute.removeBySource(previous.source);
+                    previous.entry.activeUntil = 0;
+                }
+                entry.activeUntil = Math.max(entry.activeUntil, time + effectDuration);
+                rotationStatuses.set(grantedStatusId, {
+                    source,
+                    entry,
+                });
             }
             totalHealing += report.healing;
             totalShield += report.shield;
@@ -758,6 +813,7 @@ export function analyzeCombatRotation(
         `평타 1회 뒤 스킬을 최대 2회까지 사용하며, 전투 기술은 ${PLAYER_COMBAT_SKILL_CADENCE_SECONDS}초 공용 연계 간격과 같은 행동 시간·정신력·개별 및 태그 공유 재사용 대기시간을 사용합니다.`,
         '선공 폭딜은 모든 기술이 준비된 교전 시작 시점에서 첫 반격 전에 끝낼 수 있는 직접 피해 행동을 큰 순서대로 계산합니다.',
         '생존은 대상의 실제 평타·보스 기술과 직접 회복·보호막을 한 시간축에서 재생하고, 같은 시각에는 피해를 먼저 확정합니다.',
+        '은신처럼 선행 상태가 필요한 기술은 선행기 발동 뒤에만 사용하고, 후속 피해를 계산한 직후 해당 상태와 능력치 보정을 소모합니다.',
         '제어·은신·지속 피해와 다중 대상 추가 피해는 직접 피해나 임의 전투력 점수로 더하지 않습니다.',
     ];
     return {
@@ -1022,17 +1078,19 @@ function createCombatSnapshot(entity: Entity, target: Entity): CombatBalanceSnap
         target.attribute.get(AttributeType.SPEED),
     );
     const attacksPerSecond = entity.attribute.get(AttributeType.ATTACK_SPEED);
-    const physicalBasicDps = calculateFinalDamage(
+    const physicalBasicDps = calculateProjectedCombatDamage(
         entity.attribute.get(AttributeType.ATK) * expectedCrit,
+        entity,
+        target,
         target.attribute.get(AttributeType.DEF),
         entity.attribute.get(AttributeType.ARMOR_PEN),
-        target.level,
     ) * hitChance * attacksPerSecond;
-    const magicBasicDps = calculateFinalDamage(
+    const magicBasicDps = calculateProjectedCombatDamage(
         entity.attribute.get(AttributeType.MAGIC_FORCE) * expectedCrit,
+        entity,
+        target,
         target.attribute.get(AttributeType.MAGIC_DEF),
         entity.attribute.get(AttributeType.MAGIC_PEN),
-        target.level,
     ) * hitChance * attacksPerSecond;
     const targetCrit = getExpectedCriticalMultiplier(target, SkillCriticalMode.NORMAL);
     const targetHitChance = 1 - calculateEvasionChance(
@@ -1040,17 +1098,19 @@ function createCombatSnapshot(entity: Entity, target: Entity): CombatBalanceSnap
         entity.attribute.get(AttributeType.SPEED),
     );
     const targetAttackSpeed = target.attribute.get(AttributeType.ATTACK_SPEED);
-    const incomingPhysicalDps = calculateFinalDamage(
+    const incomingPhysicalDps = calculateProjectedCombatDamage(
         target.attribute.get(AttributeType.ATK) * targetCrit,
+        target,
+        entity,
         entity.attribute.get(AttributeType.DEF),
         target.attribute.get(AttributeType.ARMOR_PEN),
-        entity.level,
     ) * targetHitChance * targetAttackSpeed;
-    const incomingMagicDps = calculateFinalDamage(
+    const incomingMagicDps = calculateProjectedCombatDamage(
         target.attribute.get(AttributeType.MAGIC_FORCE) * targetCrit,
+        target,
+        entity,
         entity.attribute.get(AttributeType.MAGIC_DEF),
         target.attribute.get(AttributeType.MAGIC_PEN),
-        entity.level,
     ) * targetHitChance * targetAttackSpeed;
     return {
         attack: entity.attribute.get(AttributeType.ATK),
@@ -1252,32 +1312,35 @@ function calculateOpeningBurst(
 ): OpeningBurstSnapshot {
     const basicDamage = calculateExpectedBasicHit(scenario);
     const basicMaximumDamage = calculateMaximumBasicHit(scenario, basicDamage);
-    const skillCandidates = getRotationSkills(scenario).map(data => {
-        const skillLevel = projectSkillLevel(scenario.level, data, scenario);
-        const report = analyzeSkillBalance(
-            scenario,
-            data.id,
-            skillLevel,
-        );
-        const expectedCriticalMultiplier = getExpectedCriticalMultiplier(
-            scenario.entity,
-            data.balance?.criticalMode,
-        );
-        const maximumCriticalMultiplier = getMaximumCriticalMultiplier(
-            scenario.entity,
-            data.balance?.criticalMode,
-        );
-        const hitChance = 1 - report.evasionChance;
-        return {
-            name: report.name,
-            damage: report.expectedDamagePerTarget,
-            maximumDamage: hitChance > 0 && expectedCriticalMultiplier > 0
-                ? report.expectedDamagePerTarget / hitChance / expectedCriticalMultiplier * maximumCriticalMultiplier
-                : 0,
-            manaCost: report.manaCost,
-            combat: data.tags.includes(GameTags.SKILL_COMBAT),
-        };
-    }).filter(candidate => candidate.damage > 0)
+    const skillCandidates = getRotationSkills(scenario)
+        // 선행 준비 행동 없이 단독으로 쓸 수 없는 기술은 1행동 선공치로 과대평가하지 않는다.
+        .filter(data => !data.balance?.requiresRotationStatusEffectId)
+        .map(data => {
+            const skillLevel = projectSkillLevel(scenario.level, data, scenario);
+            const report = analyzeSkillBalance(
+                scenario,
+                data.id,
+                skillLevel,
+            );
+            const expectedCriticalMultiplier = getExpectedCriticalMultiplier(
+                scenario.entity,
+                data.balance?.criticalMode,
+            );
+            const maximumCriticalMultiplier = getMaximumCriticalMultiplier(
+                scenario.entity,
+                data.balance?.criticalMode,
+            );
+            const hitChance = 1 - report.evasionChance;
+            return {
+                name: report.name,
+                damage: report.expectedDamagePerTarget,
+                maximumDamage: hitChance > 0 && expectedCriticalMultiplier > 0
+                    ? report.expectedDamagePerTarget / hitChance / expectedCriticalMultiplier * maximumCriticalMultiplier
+                    : 0,
+                manaCost: report.manaCost,
+                combat: data.tags.includes(GameTags.SKILL_COMBAT),
+            };
+        }).filter(candidate => candidate.damage > 0)
         .sort((left, right) => right.damage - left.damage || left.name.localeCompare(right.name));
     const maxCandidate = [
         { name: '기본 공격', maximumDamage: basicMaximumDamage },
@@ -1319,11 +1382,12 @@ function calculateIncomingBasicAttack(scenario: BalanceScenario): IncomingAttack
     const absolute = data?.attack?.damageType === 'absolute';
     const rawPower = scenario.target.attribute.get(magic ? AttributeType.MAGIC_FORCE : AttributeType.ATK)
         * getExpectedCriticalMultiplier(scenario.target, SkillCriticalMode.NORMAL);
-    const defended = absolute ? rawPower : calculateFinalDamage(
+    const defended = absolute ? rawPower : calculateProjectedCombatDamage(
         rawPower,
+        scenario.target,
+        scenario.entity,
         scenario.entity.attribute.get(magic ? AttributeType.MAGIC_DEF : AttributeType.DEF),
         scenario.target.attribute.get(magic ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN),
-        scenario.entity.level,
     );
     const damageOnHit = applyTagEffectValue(defended, scenario.target, scenario.entity).value;
     const evasionChance = calculateEvasionChance(
@@ -1367,7 +1431,13 @@ function calculateIncomingSkillAttacks(
         const penetration = finiteNonNegative(balance.calculatePenetration?.(context) ?? defaultPenetration);
         const defended = damageType === 'absolute'
             ? raw
-            : calculateFinalDamage(raw, defense, penetration, scenario.entity.level);
+            : calculateProjectedCombatDamage(
+                raw,
+                scenario.target,
+                scenario.entity,
+                defense,
+                penetration,
+            );
         const affinitySource = balance.effectTags?.length ? {
             hasTag: (tag: TagId) => balance.effectTags!.includes(tag),
         } : scenario.target;
@@ -1618,11 +1688,12 @@ function calculateExpectedBasicHit(scenario: BalanceScenario): number {
     const rawPower = entity.attribute.get(magic ? AttributeType.MAGIC_FORCE : AttributeType.ATK);
     const raw = (rawPower * (projectile?.damageMultiplier ?? 1) + (projectile?.damageBonus ?? 0))
         * getExpectedCriticalMultiplier(entity, SkillCriticalMode.NORMAL);
-    const defended = calculateFinalDamage(
+    const defended = calculateProjectedCombatDamage(
         raw,
+        entity,
+        target,
         target.attribute.get(magic ? AttributeType.MAGIC_DEF : AttributeType.DEF),
         entity.attribute.get(magic ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN),
-        target.level,
     );
     const affinitySource = projectile ? {
         hasTag: (tag: TagId) => projectile.tags.includes(tag),

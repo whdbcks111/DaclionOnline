@@ -10,7 +10,13 @@ import {
     sendNotificationToUsers,
 } from "../modules/message.js";
 import { chat } from "../utils/chatBuilder.js";
-import { applyCritical, calculateEvasionChance, calculateFinalDamage, rollEvasion } from "./Combat.js";
+import {
+    applyCritical,
+    calculateEvasionChance,
+    calculateFinalDamage,
+    calculateLevelGapDamageMultiplier,
+    rollEvasion,
+} from "./Combat.js";
 import { applyTagEffectValue } from "./TagEffect.js";
 import type { TagEffectReadable } from "./TagEffect.js";
 import { GameTags, TagCollection } from "../../../shared/tags.js";
@@ -20,10 +26,15 @@ import type Player from "./Player.js";
 import { emitGameEvent, GameEventIds } from "./GameEvent.js";
 import StatusEffect, {
     ControlCategory,
+    decodeStatusEffectPersistenceSnapshot,
+    MAX_PERSISTED_STATUS_EFFECTS,
     StatusEffectApplyAction,
+    StatusEffectPersistencePolicy,
     StatusEffectRemovalReason,
     StatusEffectType,
+    STATUS_EFFECT_PERSISTENCE_VERSION,
 } from "./StatusEffect.js";
+import type { StatusEffectPersistenceSnapshot } from './StatusEffect.js';
 import logger from "../utils/logger.js";
 import { ActionType } from "./Action.js";
 import Shield, { ShieldType, type ShieldDisplaySnapshot } from './Shield.js';
@@ -32,6 +43,7 @@ import { CombatStage, createCombatContext, runCombatStage } from './CombatPipeli
 import { reportSupportThreat, ThreatAction } from './Threat.js';
 import { resolveStatusEffectInteractions } from './StatusEffectInteraction.js';
 import { partyManager } from '../modules/party.js';
+import { getOnlinePlayer } from '../modules/playerRegistry.js';
 
 /** 대미지 타입 */
 export type DamageType = 'physical' | 'magic' | 'absolute';
@@ -96,6 +108,8 @@ export type DamageCauseType = 'void' | 'attack' | 'thirsty' | 'starvation' | 'fi
 export interface DamageCause {
     type: DamageCauseType;
     causeEntity: Entity | null;
+    /** raw Entity 수명이 끝난 뒤에도 실제 양수 피해·막타 귀속에 사용하는 최종 Player ID. */
+    actorPlayerId?: number;
     critical?: boolean;
     /** 고정 피해는 속성 상성·방어·관통을 거치지 않는다. */
     fixedDamage?: boolean;
@@ -105,6 +119,40 @@ export interface DamageCause {
     miningPower?: number;
     /** AttackOptions에서 확정한 방어구 내구도 손상 범위. */
     armorDurabilityDamageMode?: ArmorDurabilityDamageMode;
+}
+
+/** DamageCause의 직접 Entity를 우선하고, 없을 때 서버가 기록한 안전한 Player ID를 반환한다. */
+export function getDamageCauseActorPlayerId(cause: DamageCause | null | undefined): number | undefined {
+    if (cause?.causeEntity) {
+        const directUserId = cause.causeEntity.attackOwner.playerUserId;
+        return Number.isSafeInteger(directUserId) && (directUserId as number) > 0
+            ? directUserId
+            : undefined;
+    }
+    const storedUserId = cause?.actorPlayerId;
+    return Number.isSafeInteger(storedUserId) && (storedUserId as number) > 0
+        ? storedUserId
+        : undefined;
+}
+
+/** 보상·이벤트처럼 Entity가 필요한 경계에서만 actorPlayerId를 현재 온라인 Player로 해석한다. */
+export function resolveDamageCauseActor(cause: DamageCause | null | undefined): Entity | undefined {
+    const directActor = cause?.causeEntity?.attackOwner;
+    if (directActor) return directActor;
+    const actorPlayerId = getDamageCauseActorPlayerId(cause);
+    return actorPlayerId === undefined ? undefined : getOnlinePlayer(actorPlayerId);
+}
+
+function normalizeDamageCauseActor(cause: DamageCause | null): DamageCause | null {
+    if (!cause) return null;
+    const actorPlayerId = getDamageCauseActorPlayerId(cause);
+    if (actorPlayerId === undefined) {
+        if (cause.actorPlayerId === undefined) return cause;
+        const { actorPlayerId: _discarded, ...sanitized } = cause;
+        return sanitized;
+    }
+    if (cause.actorPlayerId === actorPlayerId) return cause;
+    return { ...cause, actorPlayerId };
 }
 
 export interface HealingResult {
@@ -129,6 +177,12 @@ export interface StatusEffectDisplaySnapshot {
     maxDuration: number;
     durationRatio: number;
     description: string;
+}
+
+export interface StatusEffectPersistenceRestoreResult {
+    restored: number;
+    rejected: number;
+    expired: number;
 }
 
 interface ControlDurationRule {
@@ -211,6 +265,7 @@ export default abstract class Entity implements TagReadable {
     readonly stat: Stat;
     readonly tags: TagCollection;
     private readonly statusEffects = new Map<string, StatusEffect>();
+    private statusEffectChangeHandler?: (effect: StatusEffect) => void;
     private readonly shields = new Map<string, Shield>();
     private readonly healingReceivedModifiers = new Map<string, number>();
     private readonly damageReceivedModifiers = new Map<string, number>();
@@ -234,6 +289,8 @@ export default abstract class Entity implements TagReadable {
 
     currentTarget: Entity | null = null;
     lastDamageCause: DamageCause | null = null;
+    /** 실제 생명력 피해로 생명력을 0으로 만든 서버 판정 원인. */
+    lastLethalDamageCause: DamageCause | null = null;
     isDead: boolean = false;
     deathTimer: number = 0;
 
@@ -284,6 +341,9 @@ export default abstract class Entity implements TagReadable {
     /** 플레이어 userId (Player에서 override, 비플레이어는 undefined) */
     get playerUserId(): number | undefined { return undefined; }
 
+    /** reconnect grace처럼 메모리에는 있으나 월드 상호작용에서 제외할 객체는 하위 타입이 false로 override한다. */
+    get isWorldActive(): boolean { return true; }
+
     /** 공격 보상·어그로를 귀속할 최종 소유자. Projectile은 owner를 반환한다. */
     get attackOwner(): Entity { return this; }
 
@@ -308,6 +368,8 @@ export default abstract class Entity implements TagReadable {
 
     /** 공격 불가 사유. undefined이면 공격 가능하다. */
     getAttackDeniedReason(attacker: Entity): string | undefined {
+        if (!this.isWorldActive) return '현재 월드에 활성화된 대상이 아닙니다.';
+        if (!attacker.attackOwner.isWorldActive) return '현재 월드에 활성화된 공격자가 아닙니다.';
         return attacker !== this && this.hasTag(GameTags.TRAIT_STEALTH) ? '대상이 은신 중이라 공격할 수 없습니다.' : undefined;
     }
 
@@ -384,7 +446,9 @@ export default abstract class Entity implements TagReadable {
     /** 같은 장소에 남아 있는 현재 전투 대상만 반환한다. */
     getCurrentTarget(): Entity | null {
         const target = this.currentTarget;
-        return target && target !== this && target.locationId === this.locationId ? target : null;
+        return this.isWorldActive && target?.isWorldActive && target !== this && target.locationId === this.locationId
+            ? target
+            : null;
     }
 
     /** 타게팅 HUD가 내부 Entity 참조와 상태효과 Map을 직접 읽지 않도록 하는 표시 스냅샷. */
@@ -699,6 +763,72 @@ export default abstract class Entity implements TagReadable {
         }));
     }
 
+    /** Player aggregate가 상태효과 구조 변경을 dirty로 연결하는 단일 callback 경계. */
+    setStatusEffectChangeHandler(handler?: (effect: StatusEffect) => void): void {
+        this.statusEffectChangeHandler = handler;
+    }
+
+    /** WALL_CLOCK 효과만 서버 시각 기반의 버전형 DB DTO로 만든다. */
+    getStatusEffectPersistenceSnapshot(nowMs = Date.now()): StatusEffectPersistenceSnapshot {
+        if (!Number.isFinite(nowMs)) throw new Error(`Invalid StatusEffect snapshot time: ${nowMs}`);
+        const effects = this.getStatusEffects()
+            .flatMap(effect => {
+                const snapshot = effect.createPersistenceSnapshot(nowMs);
+                return snapshot ? [snapshot] : [];
+            })
+            .sort((left, right) => left.id.localeCompare(right.id));
+        if (effects.length > MAX_PERSISTED_STATUS_EFFECTS) {
+            throw new Error(`Too many persisted StatusEffects: ${effects.length}`);
+        }
+        return { version: STATUS_EFFECT_PERSISTENCE_VERSION, effects };
+    }
+
+    /**
+     * 신뢰하지 않는 DB JSON을 검증하고 적용 이벤트·상호작용·CC 점감 없이 복원한다.
+     * onStart는 modifier 재구성을 위해 정확히 한 번 실행하며 저장 metadata를 그 전후에 보존한다.
+     */
+    restoreStatusEffectPersistenceSnapshot(
+        snapshot: unknown,
+        nowMs = Date.now(),
+    ): StatusEffectPersistenceRestoreResult {
+        const decoded = decodeStatusEffectPersistenceSnapshot(snapshot, nowMs);
+        let restored = 0;
+        let rejected = decoded.rejected;
+        if (this.isDefeated) {
+            return { restored, rejected: rejected + decoded.effects.length, expired: decoded.expired };
+        }
+        for (const persisted of decoded.effects) {
+            const type = StatusEffectType.fromKey(persisted.id);
+            if (!type || this.statusEffects.has(type.id)) {
+                rejected++;
+                continue;
+            }
+            const remainingDuration = (persisted.expiresAtMs - nowMs) / 1_000;
+            const effect = StatusEffect.fromPersistenceSnapshot(type, persisted, remainingDuration);
+            this.statusEffects.set(type.id, effect);
+            try {
+                if (effect.start(this) === 'remove') {
+                    this.statusEffects.delete(type.id);
+                    effect.remove(this, StatusEffectRemovalReason.INVALID_TARGET);
+                    rejected++;
+                    continue;
+                }
+                effect.restorePersistenceMetadata(persisted.metadata);
+                restored++;
+            } catch (error) {
+                this.statusEffects.delete(type.id);
+                try {
+                    effect.remove(this, StatusEffectRemovalReason.ERROR);
+                } catch (cleanupError) {
+                    logger.error(`StatusEffect 복원 정리 실패: ${type.id}/${this.name}`, cleanupError);
+                }
+                logger.error(`StatusEffect 복원 실패: ${type.id}/${this.name}`, error);
+                rejected++;
+            }
+        }
+        return { restored, rejected, expired: decoded.expired };
+    }
+
     getStatusEffect(type: StatusEffectType | string): StatusEffect | undefined {
         const resolved = typeof type === 'string' ? StatusEffectType.fromKey(type) : type;
         return resolved ? this.statusEffects.get(resolved.id) : undefined;
@@ -706,6 +836,33 @@ export default abstract class Entity implements TagReadable {
 
     hasStatusEffect(type: StatusEffectType | string): boolean {
         return this.getStatusEffect(type) !== undefined;
+    }
+
+    /** 최종 연결 종료 시 조건 재생성·전투 세션 효과를 정상 cleanup callback과 함께 제거한다. */
+    removeNonPersistentStatusEffects(
+        reason = StatusEffectRemovalReason.DISCONNECTED,
+    ): number {
+        let removed = 0;
+        for (const effect of [...this.statusEffects.values()]) {
+            if (effect.type.persistencePolicy === StatusEffectPersistencePolicy.WALL_CLOCK) continue;
+            if (this.removeStatusEffect(effect.type, reason)) removed++;
+        }
+        return removed;
+    }
+
+    /** 오프라인 경과를 tick 피해·치유 재생 없이 WALL_CLOCK 효과 시간에만 반영한다. */
+    elapseWallClockStatusEffects(seconds: number): number {
+        if (!Number.isFinite(seconds) || seconds < 0) {
+            throw new Error(`StatusEffect offline elapsed time must be non-negative: ${seconds}`);
+        }
+        if (seconds === 0) return 0;
+        let expired = 0;
+        for (const effect of [...this.statusEffects.values()]) {
+            if (effect.type.persistencePolicy !== StatusEffectPersistencePolicy.WALL_CLOCK) continue;
+            if (effect.elapseWithoutUpdate(seconds) <= 0
+                && this.removeStatusEffect(effect.type, StatusEffectRemovalReason.EXPIRED)) expired++;
+        }
+        return expired;
     }
 
     /** 대상 종류와 최근 성공한 제어 적용 횟수를 반영한 실제 지속시간을 계산한다. */
@@ -788,6 +945,7 @@ export default abstract class Entity implements TagReadable {
                     subject: this,
                     data: { effectId: type.id, level: existing.level, duration: existing.duration, action: action.key },
                 });
+                this.notifyStatusEffectChange(existing);
             }
             return { action, effect: existing };
         }
@@ -812,6 +970,7 @@ export default abstract class Entity implements TagReadable {
             data: { effectId: type.id, level: effect.level, duration: effect.duration },
         });
         this.recordControlApplication(type);
+        this.notifyStatusEffectChange(effect);
         return { action: StatusEffectApplyAction.ADDED, effect };
     }
 
@@ -831,7 +990,16 @@ export default abstract class Entity implements TagReadable {
             subject: this,
             data: { effectId: effect.type.id, level: effect.level, reason: reason.key },
         });
+        this.notifyStatusEffectChange(effect);
         return true;
+    }
+
+    private notifyStatusEffectChange(effect: StatusEffect): void {
+        try {
+            this.statusEffectChangeHandler?.(effect);
+        } catch (error) {
+            logger.error(`StatusEffect 변경 callback 실패: ${this.name}`, error);
+        }
     }
 
     /** 직접 공격·투사체 발사가 확정되면 은신 계열 상태를 즉시 해제한다. */
@@ -885,13 +1053,42 @@ export default abstract class Entity implements TagReadable {
     protected onCombatEngagement(_opponent: Entity): void {}
 
     /**
+     * source의 최종 공격 owner와 이 대상의 레벨 차이로 비고정 전투 피해 배율을 계산한다.
+     * 환경 피해처럼 source가 없거나 같은 owner의 자해라면 기존 의미를 보존해 1을 반환한다.
+     */
+    getIncomingLevelGapDamageMultiplier(source?: Entity | null): number {
+        const sourceOwner = source?.attackOwner;
+        if (!sourceOwner || sourceOwner === this.attackOwner) return 1;
+        return calculateLevelGapDamageMultiplier(sourceOwner.level, this.level);
+    }
+
+    /**
+     * 방어·관통과 source/target 레벨 차이를 함께 적용하는 비고정 피해 계산 경계.
+     * 실제 전투와 밸런스 진단이 같은 기준 레벨·양방향 배율을 공유한다.
+     */
+    calculateDefendedDamageFrom(
+        rawAmount: number,
+        defense: number,
+        penetration: number,
+        source?: Entity | null,
+    ): number {
+        const sourceOwner = source?.attackOwner;
+        const referenceLevel = sourceOwner
+            ? Math.min(sourceOwner.level, this.level)
+            : this.level;
+        return calculateFinalDamage(rawAmount, defense, penetration, referenceLevel)
+            * this.getIncomingLevelGapDamageMultiplier(source);
+    }
+
+    /**
      * 공격 Entity와 대상의 최종 owner에게 실제 교전을 알린다.
      * 플레이어·몬스터 사이만 인정해 광맥과 일반 월드 오브젝트 공격은 전투 상태를 만들지 않는다.
      */
     recordCombatEngagement(opponent: Entity): boolean {
         const owner = this.attackOwner;
         const opponentOwner = opponent.attackOwner;
-        if (owner === opponentOwner || owner.locationId !== opponentOwner.locationId) return false;
+        if (!owner.isWorldActive || !opponentOwner.isWorldActive
+            || owner === opponentOwner || owner.locationId !== opponentOwner.locationId) return false;
         if (!isCombatParticipant(owner) || !isCombatParticipant(opponentOwner)) return false;
         owner.onCombatEngagement(opponentOwner);
         opponentOwner.onCombatEngagement(owner);
@@ -901,13 +1098,15 @@ export default abstract class Entity implements TagReadable {
     /** 현재 대상이 비어 있으면 공격자의 최종 owner를 전투 대상으로 획득한다. */
     acquireCombatTarget(attacker: Entity): boolean {
         const owner = attacker.attackOwner;
-        if (this.currentTarget || owner === this || owner.isDefeated) return false;
+        if (!this.isWorldActive || !owner.isWorldActive
+            || this.currentTarget || owner === this || owner.isDefeated) return false;
         this.currentTarget = owner;
         if (this.isPlayer) (this as unknown as Player).titles?.refreshPassiveEffects();
         return true;
     }
 
     damage(rawAmount: number, type: DamageType = 'physical', cause: DamageCause | null = null): DamageResult {
+        cause = normalizeDamageCauseActor(cause);
         if (cause?.type === 'attack' && cause.causeEntity) {
             this.acquireCombatTarget(cause.causeEntity);
         }
@@ -932,7 +1131,12 @@ export default abstract class Entity implements TagReadable {
         const receivedModifier = this.getDamageReceivedModifier();
         const finalDamage = (fixedDamage
             ? Math.max(0, rawAmount)
-            : calculateFinalDamage(effect.value, defense, penetration, this.level)) * receivedModifier;
+            : this.calculateDefendedDamageFrom(
+                effect.value,
+                defense,
+                penetration,
+                cause?.causeEntity,
+            )) * receivedModifier;
         const absorbedDamage = this.absorbShieldDamage(finalDamage, type);
         const beforeLife = Math.max(0, this.life);
         const lifeDamage = Math.min(beforeLife, Math.max(0, finalDamage - absorbedDamage));
@@ -943,7 +1147,12 @@ export default abstract class Entity implements TagReadable {
         if (this.life <= 0) this.clearShields();
         const remainingLife = this.life;
 
-        if (cause) this.lastDamageCause = cause;
+        if (cause) {
+            this.lastDamageCause = cause;
+            if (lifeDamage > 0 && remainingLife <= 0) {
+                this.lastLethalDamageCause = { ...cause };
+            }
+        }
         if (cause?.type === 'attack' && lifeDamage > 0) {
             const damagedArmor = this.equipment.damageArmorDurability(
                 lifeDamage,
@@ -995,7 +1204,7 @@ export default abstract class Entity implements TagReadable {
 
     /** 공격 시작 가능 여부를 검사하고 플레이어라면 실패 이유를 안내한다. */
     canAttack(target: Entity): boolean {
-        if (this.isDefeated) return false;
+        if (!this.attackOwner.isWorldActive || !target.isWorldActive || this.isDefeated) return false;
 
         if (!this.canPerformAction(ActionType.ATTACK)) {
             if (this.isPlayer && this.playerUserId) {
@@ -1378,14 +1587,18 @@ export default abstract class Entity implements TagReadable {
         this.life = 0;
         this.isDead = true;
         this.deathTimer = this.deathDuration;
-        const attackOwner = this.lastDamageCause?.causeEntity?.attackOwner;
+        const defeatCause = this.lastLethalDamageCause ?? this.lastDamageCause;
+        const attackOwner = resolveDamageCauseActor(defeatCause);
         if (this.hasTag(GameTags.ENTITY_MONSTER) && attackOwner && attackOwner !== this) {
             attackOwner.equipment.triggerOwnerDefeatedEntity(attackOwner, this);
         }
         emitGameEvent(GameEventIds.ENTITY_DEFEATED, {
-            actor: this.lastDamageCause?.causeEntity ?? undefined,
+            actor: defeatCause?.causeEntity ?? attackOwner,
             subject: this,
-            data: { causeType: this.lastDamageCause?.type ?? 'unknown' },
+            data: {
+                causeType: defeatCause?.type ?? 'unknown',
+                actorPlayerId: getDamageCauseActorPlayerId(defeatCause) ?? null,
+            },
         });
         this.clearStatusEffects(StatusEffectRemovalReason.TARGET_DEFEATED);
         this.clearControlDiminishing();
@@ -1402,6 +1615,7 @@ export default abstract class Entity implements TagReadable {
         this.thirsty = this.maxThirsty;
         this.currentTarget = null;
         this.lastDamageCause = null;
+        this.lastLethalDamageCause = null;
     }
 }
 

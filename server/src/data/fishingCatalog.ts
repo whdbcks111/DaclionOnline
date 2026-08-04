@@ -262,6 +262,12 @@ for (const [locationId, table] of Object.entries({
 } as const)) {
     defineFishingTreasureTable(locationId, table.chance, [
         ...table.entries,
+        ...(table.chance >= 0.02
+            ? [{ itemDataId: 'refined_stat_refund_ticket', weight: 1 }]
+            : []),
+        ...(table.chance >= 0.028
+            ? [{ itemDataId: 'restored_stat_refund_ticket', weight: 0.25 }]
+            : []),
         { itemDataId: 'faded_stat_reset_ticket', weight: 4 },
     ]);
 }

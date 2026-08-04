@@ -113,6 +113,33 @@ test('빛바랜 초기화권은 각 스탯에서 최대 10개씩 총 50개를 �
     assert.equal(player.inventory.getCount('faded_stat_reset_ticket'), 0);
 });
 
+test('정련·복원 되돌림권은 지정된 스탯별·전체 상한만큼 반복 사용할 수 있다', async t => {
+    const refined = createPlayer({
+        strength: 200, agility: 200, vitality: 200, sensibility: 200, mentality: 200,
+    });
+    const restored = createPlayer({
+        strength: 300, agility: 300, vitality: 300, sensibility: 300, mentality: 300,
+    });
+    t.after(() => {
+        unregisterOnlinePlayer(refined.userId);
+        unregisterOnlinePlayer(restored.userId);
+    });
+
+    await useTicket(refined, 'refined_stat_refund_ticket');
+    assert.equal(refined.statPoint, 100);
+    assert.deepEqual(refined.stat.points, {
+        strength: 180, agility: 180, vitality: 180, sensibility: 180, mentality: 180,
+    });
+    assert.equal(refined.inventory.getCount('refined_stat_refund_ticket'), 0);
+
+    await useTicket(restored, 'restored_stat_refund_ticket');
+    assert.equal(restored.statPoint, 200);
+    assert.deepEqual(restored.stat.points, {
+        strength: 260, agility: 260, vitality: 260, sensibility: 260, mentality: 260,
+    });
+    assert.equal(restored.inventory.getCount('restored_stat_refund_ticket'), 0);
+});
+
 test('장착 요구치를 잃는 초기화는 거부하고 티켓을 보존한다', async t => {
     defineItem({
         id: 'stat_reset_item_requirement_blade',

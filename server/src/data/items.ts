@@ -145,7 +145,7 @@ registerItemUse('heal_hp', (inv, item, finish) => {
         }
     }
     startCoroutine(healRoutine(item.getMetadata<number>('amount') ?? 0, item.getMetadata<number>('time') ?? 1));
-});
+}, { quickBundle: true });
 
 registerItemUse('heal_mp', (inv, item, finish) => {
     function* healRoutine(amount: number, time: number) {
@@ -171,7 +171,7 @@ registerItemUse('heal_mp', (inv, item, finish) => {
         }
     }
     startCoroutine(healRoutine(item.getMetadata<number>('amount') ?? 0, item.getMetadata<number>('time') ?? 1));
-});
+}, { quickBundle: true });
 
 registerItemUse('learn_skill', (inv, item, finish) => {
     try {
@@ -229,7 +229,7 @@ registerItemUse('restore_survival', (inv, item, finish) => {
         }
     }
     startCoroutine(restoreRoutine());
-});
+}, { quickBundle: true });
 
 registerItemUse('apply_status_effect', (inv, item, finish) => {
     try {
@@ -261,7 +261,7 @@ registerItemUse('apply_status_effect', (inv, item, finish) => {
     } finally {
         finish();
     }
-});
+}, { quickBundle: true });
 
 registerItemUse('reduce_skill_cooldowns', (inv, item, finish) => {
     try {
@@ -286,7 +286,7 @@ registerItemUse('reduce_skill_cooldowns', (inv, item, finish) => {
     } finally {
         finish();
     }
-});
+}, { quickBundle: true });
 
 registerItemUse('labyrinth_compass', (inv, item, finish) => {
     try {
@@ -338,7 +338,7 @@ registerItemUse('grant_single_evasion', (inv, item, finish) => {
     } finally {
         finish();
     }
-});
+}, { quickBundle: true });
 
 registerItemUse('refund_allocated_stats', (inv, item, finish) => {
     try {
@@ -346,7 +346,9 @@ registerItemUse('refund_allocated_stats', (inv, item, finish) => {
         if (!player) return;
         const configuredLimit = item.getMetadata<number>('maxRefundPerStat');
         const maxRefundPerStat = configuredLimit === undefined ? undefined : configuredLimit;
-        const preview = player.previewAllocatedStatReset(maxRefundPerStat);
+        const configuredTotalLimit = item.getMetadata<number>('maxRefundTotal');
+        const maxRefundTotal = configuredTotalLimit === undefined ? undefined : configuredTotalLimit;
+        const preview = player.previewAllocatedStatReset(maxRefundPerStat, maxRefundTotal);
         if (preview.refundedStatPoints <= 0) {
             sendNotificationToUser(player.userId, {
                 key: 'item:stat-reset:no-points',
@@ -365,7 +367,7 @@ registerItemUse('refund_allocated_stats', (inv, item, finish) => {
         if (!inv.removeItemInstance(item, 1)) return;
         let result: ReturnType<typeof player.resetAllocatedStats>;
         try {
-            result = player.resetAllocatedStats(maxRefundPerStat);
+            result = player.resetAllocatedStats(maxRefundPerStat, maxRefundTotal);
         } catch (error) {
             if (!inv.restoreItemSnapshot(ticketSnapshot)) {
                 logger.error(`스탯 초기화 실패 후 티켓 복원 실패: user=${player.userId}`);
@@ -559,6 +561,40 @@ defineItem({
     stackable: true,
     maxStack: MAX_STACKABLE_ITEM_COUNT,
     baseMetadata: { maxRefundPerStat: 10 },
+    onUse: 'refund_allocated_stats',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE],
+});
+
+defineItem({
+    id: 'refined_stat_refund_ticket',
+    name: '정련된 스탯포인트 되돌림권',
+    description: '레벨업 자동 상승분은 유지하고 직접 분배한 포인트를 스탯마다 최대 25개, 총 100개까지 균등하게 되돌린다.',
+    image: 'items/refined_stat_refund_ticket',
+    category: '소모품',
+    weight: 0.05,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: { maxRefundPerStat: 25, maxRefundTotal: 100 },
+    onUse: 'refund_allocated_stats',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE],
+});
+
+defineItem({
+    id: 'restored_stat_refund_ticket',
+    name: '복원된 스탯포인트 되돌림권',
+    description: '레벨업 자동 상승분은 유지하고 직접 분배한 포인트를 스탯마다 최대 50개, 총 200개까지 균등하게 되돌린다.',
+    image: 'items/restored_stat_refund_ticket',
+    category: '소모품',
+    weight: 0.05,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: { maxRefundPerStat: 50, maxRefundTotal: 200 },
     onUse: 'refund_allocated_stats',
     equipSlot: null,
     modifiers: null,

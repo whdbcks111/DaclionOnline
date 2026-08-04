@@ -191,6 +191,12 @@ export interface SkillData {
         /** 로테이션 진단에서 실제 지속 버프의 능력치 변화를 재현한다. */
         calculateEffectDuration?: (context: SkillContext) => number;
         calculateRotationModifiers?: (context: SkillContext) => readonly Omit<import('./Attribute.js').AttributeModifier, 'source'>[];
+        /** 로테이션에서 후속기 선행 조건으로 쓰는 상태 ID. */
+        grantsRotationStatusEffectId?: string;
+        /** 이 상태가 있어야 로테이션 시뮬레이터가 발동을 허용한다. */
+        requiresRotationStatusEffectId?: string;
+        /** 실제 후속기처럼 피해 snapshot 후 선행 상태를 소모한다. */
+        consumesRequiredRotationStatusEffect?: boolean;
         notes?: readonly string[];
     };
     calculateMaxCooldown?: (context: SkillContext) => number;

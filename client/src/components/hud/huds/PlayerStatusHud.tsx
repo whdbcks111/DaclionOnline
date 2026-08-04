@@ -2,7 +2,7 @@ import { useHud } from '../../../context/HudContext'
 import ProgressNode from '../../chat/nodes/ProgressNode'
 import HealthBarNode from '../../chat/nodes/HealthBarNode'
 import { renderNode } from '../../chat/ChatMessage'
-import type { StatusEffectHudData } from '@shared/types'
+import type { EquipmentDurabilityHudData, StatusEffectHudData } from '@shared/types'
 import { resolveStatusScreenVisualState } from '../../status-effects/statusEffectVisuals'
 import styles from './PlayerStatusHud.module.scss'
 
@@ -73,12 +73,56 @@ export function StatusEffectList({
   )
 }
 
+function DurabilityGroup({
+  label,
+  items,
+}: {
+  label: string
+  items: readonly EquipmentDurabilityHudData[]
+}) {
+  if (items.length === 0) return null
+  return (
+    <div className={styles.durabilityGroup}>
+      <span className={styles.durabilityGroupLabel}>{label}</span>
+      <div className={styles.durabilityItems}>
+        {items.map(item => {
+          const percent = Math.round(Math.max(0, Math.min(1, item.ratio)) * 100)
+          const conditionClass = percent <= 20
+            ? styles.durabilityDanger
+            : percent <= 50
+              ? styles.durabilityWarning
+              : styles.durabilityHealthy
+          return (
+            <div
+              key={`${item.slot}:${item.itemDataId}`}
+              className={styles.durabilityItem}
+              title={`${item.slotLabel} · ${item.name}: ${item.current}/${item.max}`}
+              aria-label={`${item.slotLabel} ${item.name} 내구도 ${item.current}/${item.max}`}
+            >
+              <img src={`/icons/${item.icon}.png`} alt="" aria-hidden="true" />
+              <span className={styles.durabilitySlot}>{item.slotLabel}</span>
+              <span className={styles.durabilityTrack} aria-hidden="true">
+                <span
+                  className={`${styles.durabilityFill} ${conditionClass}`}
+                  style={{ width: `${percent}%` }}
+                />
+              </span>
+              <span className={styles.durabilityValue}>{percent}%</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function PlayerStatusHud() {
   const { playerStats } = useHud()
   if (!playerStats) return null
 
   const { userId, nickname, equippedTitle, level, exp, maxExp, life, maxLife, shields, mentality, maxMentality, thirsty, maxThirsty, hungry, maxHungry, attackCooldown, maxAttackCooldown } = playerStats
   const statusEffects = playerStats.statusEffects ?? []
+  const equipmentDurability = playerStats.equipmentDurability ?? []
   const statusVisualState = resolveStatusScreenVisualState(statusEffects)
   const attackReady = maxAttackCooldown > 0 ? pct(maxAttackCooldown - attackCooldown, maxAttackCooldown) : 100
 
@@ -151,6 +195,18 @@ export default function PlayerStatusHud() {
           </div>
         </div>
       </div>
+      {equipmentDurability.length > 0 && (
+        <div className={styles.durability} aria-label="장착 장비 내구도">
+          <DurabilityGroup
+            label="무기"
+            items={equipmentDurability.filter(item => item.group === 'weapon')}
+          />
+          <DurabilityGroup
+            label="보호구"
+            items={equipmentDurability.filter(item => item.group === 'armor')}
+          />
+        </div>
+      )}
       <StatusEffectList effects={statusEffects} />
     </div>
   )

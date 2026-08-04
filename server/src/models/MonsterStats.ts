@@ -1,4 +1,5 @@
 import type { AttributeKey, AttributeRecord } from './Attribute.js';
+import { calculateDefenseScale } from './Combat.js';
 
 export type MonsterStatWeightMap = Partial<Record<MonsterCombatStatKey, number>>;
 
@@ -285,7 +286,9 @@ export function calculateMonsterBaseAttributes(input: MonsterStatCalculation): P
         if (!Number.isFinite(value) || value! < 0) {
             throw new Error(`Invalid monster stat override: ${rawKey}=${value}`);
         }
-        result[key] = value;
+        result[key] = key === 'def' || key === 'magicDef'
+            ? normalizeMonsterDefenseForScale(level, value!)
+            : value;
     }
     return result;
 }
@@ -325,7 +328,7 @@ function validateWeights(weights?: MonsterStatWeightMap): MonsterStatWeightMap {
 
 function getLevelStatBudget(level: number): Record<MonsterCombatStatKey, number> {
     const offense = getRawMonsterOffenseBudget(level);
-    const defense = 0.9 * level + 0.007 * level ** 2;
+    const defense = normalizeMonsterDefenseForScale(level, 0.9 * level + 0.007 * level ** 2);
     const penetration = Math.max(0, (level - 25) * 0.55);
     return {
         maxLife: 300 + 75 * level + 4 * level ** 2 + 0.002 * level ** 3,
@@ -340,6 +343,14 @@ function getLevelStatBudget(level: number): Record<MonsterCombatStatKey, number>
         critRate: Math.min(0.28, 0.05 + level * 0.00065),
         critDmg: 1.5 + Math.min(0.95, level * 0.0027),
     };
+}
+
+/** 방어 척도 개편 전후에도 동레벨 몬스터의 무관통 피해 감소율을 보존한다. */
+export function normalizeMonsterDefenseForScale(level: number, defense: number): number {
+    const normalizedLevel = normalizeMonsterLevel(level);
+    if (!Number.isFinite(defense) || defense < 0) throw new Error(`Invalid monster defense: ${defense}`);
+    const legacyScale = 100 + 2 * normalizedLevel + 0.005 * normalizedLevel ** 2;
+    return defense * calculateDefenseScale(normalizedLevel) / legacyScale;
 }
 
 function getRawMonsterOffenseBudget(level: number): number {
