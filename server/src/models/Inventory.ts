@@ -20,6 +20,19 @@ export interface InventoryItemSelection {
     count: number;
 }
 
+export interface InventoryItemRequirementAvailability {
+    readonly requirementIndex: number;
+    readonly requiredCount: number;
+    readonly selectedCount: number;
+    readonly missingCount: number;
+}
+
+export interface InventoryItemSelectionPlan {
+    readonly complete: boolean;
+    readonly selections: readonly InventoryItemSelection[];
+    readonly requirements: readonly InventoryItemRequirementAvailability[];
+}
+
 export interface RemovedInventoryItemSnapshot {
     readonly name: string;
     readonly snapshot: ItemSnapshot;
@@ -329,15 +342,14 @@ export default class Inventory {
         return true;
     }
 
-    /**
-     * 여러 필터 요구량에 실제 아이템 수량을 중복 없이 배정한다.
-     * 최대 유량으로 겹치는 필터도 가능한 조합이 있으면 찾아낸다.
-     */
-    selectItems(requirements: readonly InventoryItemRequirement[]): InventoryItemSelection[] | null {
+    /** 여러 필터 요구량에 실제 아이템 수량을 중복 없이 최대한 배정하고 부족량을 함께 반환한다. */
+    planItemRequirements(requirements: readonly InventoryItemRequirement[]): InventoryItemSelectionPlan | null {
         if (requirements.some(requirement => !Number.isSafeInteger(requirement.count) || requirement.count <= 0)) {
             return null;
         }
-        if (requirements.length === 0) return [];
+        if (requirements.length === 0) {
+            return { complete: true, selections: [], requirements: [] };
+        }
 
         const itemCount = this._items.length;
         const source = 0;
@@ -388,9 +400,6 @@ export default class Inventory {
             totalFlow += flow;
         }
 
-        const requiredTotal = requirements.reduce((sum, requirement) => sum + requirement.count, 0);
-        if (totalFlow !== requiredTotal) return null;
-
         const selections: InventoryItemSelection[] = [];
         for (let itemIndex = 0; itemIndex < itemCount; itemIndex++) {
             for (let requirementIndex = 0; requirementIndex < requirements.length; requirementIndex++) {
@@ -402,7 +411,33 @@ export default class Inventory {
                 });
             }
         }
-        return selections;
+        const availability = requirements.map((requirement, requirementIndex) => {
+            const selectedCount = selections.reduce(
+                (sum, selection) => sum + (selection.requirementIndex === requirementIndex ? selection.count : 0),
+                0,
+            );
+            return {
+                requirementIndex,
+                requiredCount: requirement.count,
+                selectedCount,
+                missingCount: requirement.count - selectedCount,
+            };
+        });
+        const requiredTotal = requirements.reduce((sum, requirement) => sum + requirement.count, 0);
+        return {
+            complete: totalFlow === requiredTotal,
+            selections,
+            requirements: availability,
+        };
+    }
+
+    /**
+     * 여러 필터 요구량에 실제 아이템 수량을 중복 없이 배정한다.
+     * 최대 유량으로 겹치는 필터도 가능한 조합이 있으면 찾아낸다.
+     */
+    selectItems(requirements: readonly InventoryItemRequirement[]): InventoryItemSelection[] | null {
+        const plan = this.planItemRequirements(requirements);
+        return plan?.complete ? [...plan.selections] : null;
     }
 
     /** 아이템 metadata override를 변경하고 dirty 상태로 표시한다. */

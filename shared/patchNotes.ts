@@ -73,6 +73,11 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.40', '2026-08-06',
+        [CHANGED,
+            '`/제작법목록`에서 재료마다 현재 보유량과 필요량을 확인할 수 있습니다. 여러 개를 제작할 재료가 부족하면 어떤 재료가 몇 개 부족한지와 현재 최대 제작 가능 개수도 안내합니다.',
+        ],
+    ),
     definePatchNote('1.0.39', '2026-08-05',
         [CHANGED,
             '플레이어 상태 HUD의 상세 설정에서 보호구 내구도 표시를 켜거나 끌 수 있습니다. 이 설정은 계정과 이름 있는 서버 HUD 프리셋에 함께 저장되며, 무기 내구도 표시는 유지됩니다.',

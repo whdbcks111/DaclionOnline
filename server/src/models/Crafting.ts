@@ -56,6 +56,18 @@ export interface CraftingExecutionResult {
     outputs?: readonly ItemSnapshot[];
 }
 
+export interface CraftingIngredientAvailability {
+    readonly label: string;
+    readonly requiredCount: number;
+    readonly selectedCount: number;
+    readonly missingCount: number;
+}
+
+export interface CraftingMaterialAvailability {
+    readonly craftable: boolean;
+    readonly ingredients: readonly CraftingIngredientAvailability[];
+}
+
 export class CraftingRecipeIngredient {
     readonly label: string;
     readonly count: number;
@@ -131,6 +143,46 @@ export class CraftingRecipe {
         })));
         if (!selected) return null;
         return this.groupSelections(selected);
+    }
+
+    getMaterialAvailability(inventory: Inventory, quantity = 1): CraftingMaterialAvailability {
+        if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+            return {
+                craftable: false,
+                ingredients: this.ingredients.map(ingredient => ({
+                    label: ingredient.label,
+                    requiredCount: 0,
+                    selectedCount: 0,
+                    missingCount: 0,
+                })),
+            };
+        }
+        const plan = inventory.planItemRequirements(this.ingredients.map(ingredient => ({
+            count: ingredient.count * quantity,
+            matches: (item: Item) => ingredient.matches(item),
+        })));
+        if (!plan) return { craftable: false, ingredients: [] };
+        return {
+            craftable: plan.complete,
+            ingredients: plan.requirements.map(requirement => ({
+                label: this.ingredients[requirement.requirementIndex].label,
+                requiredCount: requirement.requiredCount,
+                selectedCount: requirement.selectedCount,
+                missingCount: requirement.missingCount,
+            })),
+        };
+    }
+
+    getMaxCraftableQuantity(inventory: Inventory, limit = 99): number {
+        if (!Number.isSafeInteger(limit) || limit <= 0) return 0;
+        let possible = 0;
+        let impossible = limit + 1;
+        while (possible + 1 < impossible) {
+            const quantity = Math.floor((possible + impossible) / 2);
+            if (this.selectIngredients(inventory, quantity)) possible = quantity;
+            else impossible = quantity;
+        }
+        return possible;
     }
 
     canDiscover(player: Player): boolean {
@@ -255,7 +307,7 @@ export function executeCrafting(
     quantity: number,
 ): CraftingExecutionResult {
     const ingredients = recipe.selectIngredients(player.inventory, quantity);
-    if (!ingredients) return { success: false, reason: '필요한 제작 재료가 부족합니다.' };
+    if (!ingredients) return { success: false, reason: formatCraftingShortage(player, recipe, quantity) };
 
     let outputs: ItemSnapshot[];
     try {
@@ -274,6 +326,9 @@ export function executeCrafting(
         })),
     );
     if (!player.inventory.replaceSelectedItems(selections, outputs)) {
+        if (!recipe.getMaterialAvailability(player.inventory, quantity).craftable) {
+            return { success: false, reason: formatCraftingShortage(player, recipe, quantity) };
+        }
         return { success: false, reason: '재료가 변경되었거나 결과물을 보관할 공간이 부족합니다.' };
     }
     emitGameEvent(GameEventIds.ITEM_CRAFTED, {
@@ -298,7 +353,7 @@ export function startCrafting(
     if (player.isDefeated) return { success: false, reason: '사망 상태에서는 제작할 수 없습니다.' };
     if (isCrafting(player)) return { success: false, reason: '이미 다른 아이템을 제작 중입니다.' };
     if (!recipe.selectIngredients(player.inventory, quantity)) {
-        return { success: false, reason: '필요한 제작 재료가 부족합니다.' };
+        return { success: false, reason: formatCraftingShortage(player, recipe, quantity) };
     }
 
     const totalTime = recipe.craftTime * quantity;
@@ -355,6 +410,18 @@ export function startCrafting(
     }
     startCoroutine(routine());
     return { success: true };
+}
+
+function formatCraftingShortage(player: Player, recipe: CraftingRecipe, quantity: number): string {
+    const availability = recipe.getMaterialAvailability(player.inventory, quantity);
+    const missing = availability.ingredients.filter(ingredient => ingredient.missingCount > 0);
+    if (missing.length === 0) return '필요한 제작 재료가 부족합니다.';
+    const lines = missing.map(ingredient =>
+        `- ${ingredient.label}: 보유 ${ingredient.selectedCount} / 필요 ${ingredient.requiredCount} (${ingredient.missingCount}개 부족)`,
+    );
+    const maxCraftable = recipe.getMaxCraftableQuantity(player.inventory);
+    if (maxCraftable > 0) lines.push(`현재 최대 ${maxCraftable}개까지 제작할 수 있습니다.`);
+    return `제작 재료가 부족합니다.\n${lines.join('\n')}`;
 }
 
 export function cancelCrafting(player: Player): boolean {

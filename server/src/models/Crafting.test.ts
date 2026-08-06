@@ -137,6 +137,37 @@ test('제작 factory는 실제 선택된 재료를 받고 소비와 결과 추�
     assert.equal(player.inventory.getFirstItemByData('craft_test_old_sword')?.durability, 100);
 });
 
+test('제작 재료 충족도는 요청 수량과 겹치는 조건을 반영해 부족량과 최대 제작량을 계산한다', () => {
+    const recipe = defineCraftingRecipe({
+        id: 'test:material_availability',
+        name: '재료 충족도 시험',
+        ingredients: [
+            new CraftingRecipeIngredient('검', 1, item => item.category === '검'),
+            CraftingRecipeIngredient.item('craft_test_repair_kit', 2),
+        ],
+        craftTime: 0,
+        create: () => ({ itemDataId: 'craft_test_result', count: 1, durability: null, metadataDelta: null, tags: [] }),
+    });
+    const player = new TestCraftingPlayer();
+    player.inventory.addItem('craft_test_old_sword', 1);
+    player.inventory.addItem('craft_test_repair_kit', 5);
+
+    assert.deepEqual(recipe.getMaterialAvailability(player.inventory, 3), {
+        craftable: false,
+        ingredients: [
+            { label: '검', requiredCount: 3, selectedCount: 1, missingCount: 2 },
+            { label: 'craft_test_repair_kit', requiredCount: 6, selectedCount: 5, missingCount: 1 },
+        ],
+    });
+    assert.equal(recipe.getMaxCraftableQuantity(player.inventory), 1);
+
+    const result = executeCrafting(player as unknown as Player, recipe, 3);
+    assert.equal(result.success, false);
+    assert.match(result.reason ?? '', /검: 보유 1 \/ 필요 3 \(2개 부족\)/);
+    assert.match(result.reason ?? '', /craft_test_repair_kit: 보유 5 \/ 필요 6 \(1개 부족\)/);
+    assert.match(result.reason ?? '', /현재 최대 1개/);
+});
+
 test('제작법 기본 발견 조건은 재료 소지이며 정의에서 override할 수 있다', () => {
     const defaultRecipe = defineCraftingRecipe({
         id: 'test:default_discovery',

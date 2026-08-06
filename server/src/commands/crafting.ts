@@ -53,18 +53,22 @@ export function initCraftingCommands(): void {
                 builder.text('\n아직 발견한 제작법이 없습니다.');
             } else {
                 for (const [index, recipe] of recipes.entries()) {
-                    const craftable = recipe.selectIngredients(player.inventory, 1) !== null;
+                    const availability = recipe.getMaterialAvailability(player.inventory, 1);
+                    const craftable = availability.craftable;
                     builder.text('\n')
                         .color('gray', b => b.text(`${index + 1}. `));
                     if (recipe.resultItemDataId) builder.icon(`items/${recipe.resultItemDataId}`);
                     builder.weight('bold', b => b.color('gold', b2 => b2.text(recipe.name)))
                         .text(`  ${recipe.craftTime}초  `)
                         .color(craftable ? 'lime' : 'gray', b => b.text(craftable ? '제작 가능' : '재료 부족'))
-                        .text('\n   재료: ')
-                        .color('gray', b => b.text(recipe.ingredients
-                            .map(ingredient => `${ingredient.label} x${ingredient.count}`)
-                            .join(', ')))
-                        .text('  ')
+                        .text('\n   재료: ');
+                    for (const [ingredientIndex, ingredient] of availability.ingredients.entries()) {
+                        if (ingredientIndex > 0) builder.text(', ');
+                        builder.color(ingredient.missingCount > 0 ? 'red' : 'lime', b => b.text(
+                            `${ingredient.label} ${ingredient.selectedCount}/${ingredient.requiredCount}`,
+                        ));
+                    }
+                    builder.text('  ')
                         .closeButton(`/제작 ${recipe.name}`, b => b.color('gold', b2 => b2.text('[제작]')));
                 }
             }
