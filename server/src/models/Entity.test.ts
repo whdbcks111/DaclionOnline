@@ -7,11 +7,13 @@ import { AttributeType } from './Attribute.js';
 import { defineItem, Item, type ItemData } from './Item.js';
 import Stat, {
     calculateMentalityRegenBonus,
+    calculateSensibilityCritDamageBonus,
     calculateSensibilityCritRateBonus,
     calculateVitalityLifeRegenBonus,
     MENTALITY_MAGIC_DEF_PER_POINT,
     MENTALITY_MAX_MENTALITY_PER_POINT,
     MENTALITY_REGEN_PER_POINT,
+    SENSIBILITY_CRIT_DAMAGE_BONUS_CAP,
     SENSIBILITY_CRIT_RATE_CAP,
     STAT_REGEN_DIMINISHING_SCALE,
     StatType,
@@ -344,10 +346,25 @@ test('감각은 치명타 능력치와 대장장이용 제련 정밀도를 함�
     stat.applyModifiers(entity);
 
     assert.ok(Math.abs(entity.attribute.get(AttributeType.CRIT_RATE) - (0.05 + calculateSensibilityCritRateBonus(100))) < 1e-10);
-    assert.equal(entity.attribute.get(AttributeType.CRIT_DMG), 2.5);
+    assert.ok(Math.abs(entity.attribute.get(AttributeType.CRIT_DMG)
+        - (1.5 + calculateSensibilityCritDamageBonus(100))) < 1e-10);
     assert.ok(Math.abs(entity.attribute.get(AttributeType.FORGING_PRECISION) - 0.15) < 1e-10);
     assert.match(StatType.SENSIBILITY.getDescription(100), /치명타율 \+9\.1%p/);
     assert.match(StatType.SENSIBILITY.getDescription(100), /제련 정밀도 \+15\.0%/);
+});
+
+test('감각 치명타 피해는 초반 기울기를 보존하고 최대 200% 기여에 점근한다', () => {
+    assert.equal(calculateSensibilityCritDamageBonus(0), 0);
+    assert.ok(Math.abs(calculateSensibilityCritDamageBonus(100) - 0.7869386805747332) < 1e-12);
+    assert.ok(calculateSensibilityCritDamageBonus(1_256) < SENSIBILITY_CRIT_DAMAGE_BONUS_CAP);
+    assert.ok(calculateSensibilityCritDamageBonus(10_000) <= SENSIBILITY_CRIT_DAMAGE_BONUS_CAP);
+
+    const earlyGain = calculateSensibilityCritDamageBonus(100);
+    const lateGain = calculateSensibilityCritDamageBonus(1_000)
+        - calculateSensibilityCritDamageBonus(900);
+    assert.ok(lateGain < earlyGain);
+    assert.match(StatType.SENSIBILITY.getDescription(1_000), /치명타 피해 \+198\.7%/);
+    assert.match(StatType.SENSIBILITY.getDescription(1_000), /최대 \+200%/);
 });
 
 test('감각 치명타율은 낮은 구간의 기울기를 보존하면서 50%p에 점근한다', () => {

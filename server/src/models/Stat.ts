@@ -6,6 +6,10 @@ interface AttributeOwner { attribute: Attribute }
 export const SENSIBILITY_CRIT_RATE_CAP = 0.5
 /** 0 근처에서 기존 1포인트당 0.1%p 기울기를 유지하는 지수 포화 척도. */
 export const SENSIBILITY_CRIT_RATE_SCALE = SENSIBILITY_CRIT_RATE_CAP / 0.001
+/** 감각만으로 얻을 수 있는 치명타 피해 배율 기여 상한. */
+export const SENSIBILITY_CRIT_DAMAGE_BONUS_CAP = 2
+/** 0 근처에서 기존 1포인트당 1% 기울기를 유지하는 지수 포화 척도. */
+export const SENSIBILITY_CRIT_DAMAGE_SCALE = SENSIBILITY_CRIT_DAMAGE_BONUS_CAP / 0.01
 /** 정신력 스탯 1포인트가 제공하는 최대 정신력. */
 export const MENTALITY_MAX_MENTALITY_PER_POINT = 5.25
 /** 정신력 스탯 1포인트가 제공하는 마법 저항력. */
@@ -26,6 +30,14 @@ export function calculateSensibilityCritRateBonus(points: number): number {
     if (points === Number.POSITIVE_INFINITY) return SENSIBILITY_CRIT_RATE_CAP
     if (!Number.isFinite(points) || points <= 0) return 0
     return SENSIBILITY_CRIT_RATE_CAP * (1 - Math.exp(-points / SENSIBILITY_CRIT_RATE_SCALE))
+}
+
+/** 감각의 치명타 피해 기여가 제련 정밀도와 곱해져 고레벨에 제곱 성장하지 않게 한다. */
+export function calculateSensibilityCritDamageBonus(points: number): number {
+    if (points === Number.POSITIVE_INFINITY) return SENSIBILITY_CRIT_DAMAGE_BONUS_CAP
+    if (!Number.isFinite(points) || points <= 0) return 0
+    return SENSIBILITY_CRIT_DAMAGE_BONUS_CAP
+        * (1 - Math.exp(-points / SENSIBILITY_CRIT_DAMAGE_SCALE))
 }
 
 function calculateDiminishingStatBonus(points: number, perPoint: number): number {
@@ -98,10 +110,10 @@ export class StatType {
     static readonly SENSIBILITY = new StatType('sensibility', '감각',
         (entity, points, source) => {
             entity.attribute.addModifier({ attribute: 'critRate', op: 'add', value: calculateSensibilityCritRateBonus(points), source })
-            entity.attribute.addModifier({ attribute: 'critDmg', op: 'add', value: 0.01 * points, source })
+            entity.attribute.addModifier({ attribute: 'critDmg', op: 'add', value: calculateSensibilityCritDamageBonus(points), source })
             entity.attribute.addModifier({ attribute: 'forgingPrecision', op: 'add', value: 0.0015 * points, source })
         },
-        p => `감각 치명타율 → 낮은 구간에서 1당 최대 +0.1%p, 높을수록 효율 감소, 최대 +${(SENSIBILITY_CRIT_RATE_CAP * 100).toFixed(0)}%p\n현재 감각 ${p}: 치명타율 +${(calculateSensibilityCritRateBonus(p) * 100).toFixed(1)}%p, 치명타 피해 +${p}%, 제련 정밀도 +${(0.15 * p).toFixed(1)}%`
+        p => `감각 치명타율 → 낮은 구간에서 1당 최대 +0.1%p, 높을수록 효율 감소, 최대 +${(SENSIBILITY_CRIT_RATE_CAP * 100).toFixed(0)}%p\n감각 치명타 피해 → 낮은 구간에서 1당 약 +1%, 높을수록 효율 감소, 최대 +${(SENSIBILITY_CRIT_DAMAGE_BONUS_CAP * 100).toFixed(0)}%\n현재 감각 ${p}: 치명타율 +${(calculateSensibilityCritRateBonus(p) * 100).toFixed(1)}%p, 치명타 피해 +${(calculateSensibilityCritDamageBonus(p) * 100).toFixed(1)}%, 제련 정밀도 +${(0.15 * p).toFixed(1)}%`
     )
 
     static readonly MENTALITY = new StatType('mentality', '정신력',

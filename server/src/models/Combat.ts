@@ -8,11 +8,6 @@ export const LEVEL_GAP_DAMAGE_MIN_MULTIPLIER = 0.5;
 export const LEVEL_GAP_DAMAGE_MAX_MULTIPLIER = 2;
 export const LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL = 300;
 
-/** PvP에서 이 비율보다 낮은 레벨의 공격자부터 상대 레벨 비례 감쇠를 적용한다. */
-export const PVP_UNDERLEVEL_DAMAGE_THRESHOLD_RATIO = 0.75;
-export const PVP_UNDERLEVEL_DAMAGE_MIN_MULTIPLIER = 0.1;
-export const PVP_UNDERLEVEL_DAMAGE_EXPONENT = 1.5;
-
 /**
  * 공격자와 방어자의 레벨 차이를 양방향 전투 배율로 바꾼다.
  * 동레벨은 정확히 1이며, 상·하한에 닿기 전까지 반대 방향 배율은 정확한 역수다.
@@ -31,27 +26,6 @@ export function calculateLevelGapDamageMultiplier(
     return Math.max(
         LEVEL_GAP_DAMAGE_MIN_MULTIPLIER,
         Math.min(LEVEL_GAP_DAMAGE_MAX_MULTIPLIER, multiplier),
-    );
-}
-
-/**
- * 저레벨 플레이어가 고레벨 플레이어를 공격할 때만 쓰는 PvP 전용 배율.
- * 방어·관통 계산 뒤 적용해 높은 스킬 계수나 관통력으로 레벨 격차를 우회하지 못하게 한다.
- */
-export function calculatePvpUnderlevelDamageMultiplier(
-    attackerLevel: number,
-    defenderLevel: number,
-): number {
-    assertFiniteNonNegative('attackerLevel', attackerLevel);
-    assertFiniteNonNegative('defenderLevel', defenderLevel);
-    if (defenderLevel <= 0 || attackerLevel >= defenderLevel * PVP_UNDERLEVEL_DAMAGE_THRESHOLD_RATIO) {
-        return 1;
-    }
-    const normalizedRatio = attackerLevel
-        / (defenderLevel * PVP_UNDERLEVEL_DAMAGE_THRESHOLD_RATIO);
-    return Math.max(
-        PVP_UNDERLEVEL_DAMAGE_MIN_MULTIPLIER,
-        Math.min(1, normalizedRatio ** PVP_UNDERLEVEL_DAMAGE_EXPONENT),
     );
 }
 
