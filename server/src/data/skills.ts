@@ -902,10 +902,11 @@ const clericElitePassives = [
     },
     {
         id: 'relic_keeper_mastery', name: '성물 수호', jobId: 'career:relic_keeper', icon: 'jobs/cleric',
-        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color] 증가합니다.',
+        description: '{{icon.magicForce}} 마법력이 [color=$magic]{{magicForce}}[/color], {{icon.def}} 방어력이 [color=yellow]{{def}}[/color], {{icon.maxLife}} 최대 생명력이 [color=green]{{maxLife}}[/color] 증가합니다.',
         modifiers: [
-            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.1, label: '마법력 증가', display: '+10%' },
-            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.1, label: '방어력 증가', display: '+10%' },
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.08, label: '마법력 증가', display: '+8%' },
+            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1.08, label: '방어력 증가', display: '+8%' },
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.08, label: '최대 생명력 증가', display: '+8%' },
         ],
     },
 ] as const;
@@ -4558,10 +4559,10 @@ const eliteTechniques: readonly EliteTechniqueDefinition[] = [
     {
         id: 'relic_keeper_technique', name: '성물 해방', jobId: 'career:relic_keeper', icon: 'jobs/cleric',
         reuseDeclaredArt: true, activationHeader: 'mana_barrier',
-        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 240, perLevelPercent: 15,
-        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 2, secondaryPerLevelPercent: 0.15,
+        damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 230, perLevelPercent: 14,
+        secondaryAttribute: AttributeType.MAX_LIFE, secondaryBasePercent: 3, secondaryPerLevelPercent: 0.2,
         manaCost: 32, cooldown: 14, projectile: 'magic_bolt', shieldPercent: 11,
-        descriptionIntro: '봉인된 성물의 힘을 잠시 해방해 빛의 파동을 내보냅니다.', propertyTag: GameTags.PROPERTY_LIGHT,
+        descriptionIntro: '자신의 생명력을 성물의 핵에 실어 봉인된 힘을 해방하고 빛의 파동을 내보냅니다.', propertyTag: GameTags.PROPERTY_LIGHT,
     },
 ];
 

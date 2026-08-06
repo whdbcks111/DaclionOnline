@@ -15,6 +15,7 @@ import {
     calculateEvasionChance,
     calculateFinalDamage,
     calculateLevelGapDamageMultiplier,
+    calculatePvpUnderlevelDamageMultiplier,
     rollEvasion,
 } from "./Combat.js";
 import { applyTagEffectValue } from "./TagEffect.js";
@@ -1058,7 +1059,11 @@ export default abstract class Entity implements TagReadable {
      */
     getIncomingLevelGapDamageMultiplier(source?: Entity | null): number {
         const sourceOwner = source?.attackOwner;
-        if (!sourceOwner || sourceOwner === this.attackOwner) return 1;
+        const targetOwner = this.attackOwner;
+        if (!sourceOwner || sourceOwner === targetOwner) return 1;
+        if (sourceOwner.isPlayer && targetOwner.isPlayer && sourceOwner.level < targetOwner.level) {
+            return calculatePvpUnderlevelDamageMultiplier(sourceOwner.level, targetOwner.level);
+        }
         return calculateLevelGapDamageMultiplier(sourceOwner.level, this.level);
     }
 

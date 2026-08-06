@@ -312,6 +312,26 @@ test('낙성은 마법력 주계수를 유지하면서 활의 공격력도 피�
     assert.ok(gained < baseDamage * 0.25);
 });
 
+test('성물지기는 패시브와 전용기 모두 최대 생명력 투자를 직접 계승한다', () => {
+    const scenario = createBalanceScenario(200, 'career:cleric', 'career:blacksmith');
+    const mastery = new Skill({ playerId: null, skillDataId: 'relic_keeper_mastery', level: 1 });
+    assert.match(mastery.formatDescription(scenario.entity), /최대 생명력/);
+
+    const base = analyzeSkillBalance(scenario, 'relic_keeper_technique', 1);
+    const previousMaxLife = scenario.entity.maxLife;
+    scenario.entity.attribute.addModifier({
+        attribute: AttributeType.MAX_LIFE.key,
+        op: 'add',
+        value: 1_000,
+        source: 'test:relic-keeper-life',
+    });
+    const lifeBuffed = analyzeSkillBalance(scenario, 'relic_keeper_technique', 1);
+    const maxLifeGain = scenario.entity.maxLife - previousMaxLife;
+
+    assert.ok(Math.abs(lifeBuffed.rawDamage - base.rawDamage - maxLifeGain * 0.03 * 4.6) < 1e-8);
+    assert.ok(lifeBuffed.shield > base.shield);
+});
+
 test('skill report uses real cooldown, resource and damage callbacks', () => {
     const scenario = createBalanceScenario(50, 'career:mage');
     const report = analyzeSkillBalance(scenario, 'magic_bolt', 5);

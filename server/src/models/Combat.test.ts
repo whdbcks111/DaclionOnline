@@ -9,9 +9,11 @@ import {
     calculateEvasionChance,
     calculateFinalDamage,
     calculateLevelGapDamageMultiplier,
+    calculatePvpUnderlevelDamageMultiplier,
     LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL,
     LEVEL_GAP_DAMAGE_MAX_MULTIPLIER,
     LEVEL_GAP_DAMAGE_MIN_MULTIPLIER,
+    PVP_UNDERLEVEL_DAMAGE_MIN_MULTIPLIER,
     rollEvasion,
 } from './Combat.js';
 import { CombatStage, registerCombatHook } from './CombatPipeline.js';
@@ -23,6 +25,15 @@ class TestEntity extends Entity {
     constructor(name: string, attributes: Partial<AttributeRecord> = {}, level = 1) {
         super(level, 0, 'combat-test', { maxLife: 100, ...attributes }, Equipment.createEmpty());
         this.name = name;
+    }
+}
+
+class TestPlayerEntity extends TestEntity {
+    override get isPlayer(): boolean { return true; }
+    override get playerUserId(): number { return this.id; }
+
+    constructor(name: string, readonly id: number, attributes: Partial<AttributeRecord> = {}, level = 1) {
+        super(name, attributes, level);
     }
 }
 
@@ -133,6 +144,39 @@ test('레벨차 피해 배율은 동레벨 1·상하한 0.5~2이며 반대 방�
     assert.equal(calculateLevelGapDamageMultiplier(0, 10_000), LEVEL_GAP_DAMAGE_MIN_MULTIPLIER);
     assert.throws(() => calculateLevelGapDamageMultiplier(-1, 1), /attackerLevel/);
     assert.throws(() => calculateLevelGapDamageMultiplier(1, Number.NaN), /defenderLevel/);
+});
+
+test('저레벨 플레이어의 PvP 피해는 상대 레벨 비율로 감쇠하고 PvE 배율은 유지한다', () => {
+    assert.equal(calculatePvpUnderlevelDamageMultiplier(75, 100), 1);
+    assert.equal(calculatePvpUnderlevelDamageMultiplier(100, 100), 1);
+    assert.ok(Math.abs(
+        calculatePvpUnderlevelDamageMultiplier(25, 100) - (1 / 3) ** 1.5,
+    ) < 1e-12);
+    assert.equal(
+        calculatePvpUnderlevelDamageMultiplier(1, 1_000),
+        PVP_UNDERLEVEL_DAMAGE_MIN_MULTIPLIER,
+    );
+
+    const attacker = new TestPlayerEntity('Lv.100 플레이어 공격자', 1, { speed: 1 }, 100);
+    const target = new TestPlayerEntity('Lv.400 플레이어 방어자', 2, { def: 100, speed: 1 }, 400);
+    const pvpDamage = target.damage(100, 'physical', {
+        type: 'attack',
+        causeEntity: attacker,
+    }).finalDamage;
+    const defended = calculateFinalDamage(100, 100, 0, 100);
+    assert.ok(Math.abs(
+        pvpDamage - defended * calculatePvpUnderlevelDamageMultiplier(100, 400),
+    ) < 1e-12);
+
+    const monsterAttacker = new TestEntity('Lv.100 몬스터 공격자', { speed: 1 }, 100);
+    const monsterTarget = new TestEntity('Lv.400 몬스터 방어자', { def: 100, speed: 1 }, 400);
+    assert.equal(
+        monsterTarget.damage(100, 'physical', {
+            type: 'attack',
+            causeEntity: monsterAttacker,
+        }).finalDamage,
+        defended * calculateLevelGapDamageMultiplier(100, 400),
+    );
 });
 
 test('방어 척도는 Lv.200까지 기존 곡선, 이후 연속적인 선형 곡선을 사용한다', () => {

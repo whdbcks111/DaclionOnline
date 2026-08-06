@@ -73,6 +73,12 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.41', '2026-08-06',
+        [CHANGED,
+            '자신보다 훨씬 높은 레벨의 플레이어를 공격하면 상대 레벨 비율에 따라 PvP 피해가 감소합니다. 대상 레벨의 75%부터 감쇠가 시작되어 4배 차이에서는 방어 계산 후 피해의 약 19%, 매우 큰 차이에서는 최소 10%가 적용되며 몬스터 전투와 반대 방향 공격은 유지됩니다.',
+            '성물지기의 `성물 수호`가 마법력·방어력과 함께 최대 생명력을 8% 높입니다. `성물 해방`은 전체 위력을 크게 바꾸지 않으면서 마법력 계수 일부를 최대 생명력 계수로 옮겨 체력형 성장의 공격·보호막 기여를 강화했습니다.',
+        ],
+    ),
     definePatchNote('1.0.40', '2026-08-06',
         [CHANGED,
             '`/제작법목록`에서 재료마다 현재 보유량과 필요량을 확인할 수 있습니다. 여러 개를 제작할 재료가 부족하면 어떤 재료가 몇 개 부족한지와 현재 최대 제작 가능 개수도 안내합니다.',
