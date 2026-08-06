@@ -526,6 +526,8 @@ export default class Monster extends Entity {
         const expGrants = partyManager.distributeMonsterExp(this.expReward, this.locationId, {
             claimedUserIds,
             contributions,
+            monsterLevel: this.level,
+            lowLevelPenaltyEligible: !this.hasTag(GameTags.ENTITY_BOSS),
             ...(lastAttackOwnerUserId !== undefined ? { lastAttackOwnerUserId } : {}),
             ...(actualLethalUserId !== undefined ? { actualLethalUserId } : {}),
         });
@@ -556,6 +558,9 @@ export default class Monster extends Entity {
 
             if ((killerGrant?.levelGapMultiplier ?? 1) < 1) {
                 killMsg.color('red', b => b.text(` (${Math.round((killerGrant?.levelGapMultiplier ?? 1) * 100)}% · 레벨 차이 ${killerGrant?.levelGap})`));
+            }
+            if ((killerGrant?.lowLevelMonsterMultiplier ?? 1) < 1) {
+                killMsg.color('red', b => b.text(` (${Math.round((killerGrant?.lowLevelMonsterMultiplier ?? 1) * 100)}% · 저레벨 일반 몬스터)`));
             }
 
             if (goldGained > 0) {
@@ -590,6 +595,9 @@ export default class Monster extends Entity {
                     .text(`\nEXP +${grant.grantedExp}`);
                 if (grant.levelGapMultiplier < 1) {
                     shared.color('red', b => b.text(` (${Math.round(grant.levelGapMultiplier * 100)}% · 최고 레벨과 ${grant.levelGap} 차이)`));
+                }
+                if (grant.lowLevelMonsterMultiplier < 1) {
+                    shared.color('red', b => b.text(` (${Math.round(grant.lowLevelMonsterMultiplier * 100)}% · 저레벨 일반 몬스터)`));
                 }
                 if (grant.levelsGained.length > 0) {
                     shared.text('\n').color('aqua', b => b.text(`레벨 업! Lv.${grant.levelsGained[grant.levelsGained.length - 1]}`));

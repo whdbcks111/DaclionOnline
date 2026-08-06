@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
     PartyManager,
     allocateContributionWeightedExp,
+    calculateLowLevelMonsterExpMultiplier,
     calculatePartyExpGrant,
     calculatePartyExpPool,
 } from './party.js';
@@ -264,6 +265,31 @@ test('Hamilton 분배는 중복 userId를 합치고 invalid 기여를 버리며 
 test('30레벨 이상 차이는 10% 감쇠와 다음 레벨 요구 경험치 10% 상한을 모두 적용한다', () => {
     assert.deepEqual(calculatePartyExpGrant(10_000, 30, 500), { amount: 50, multiplier: 0.1 });
     assert.deepEqual(calculatePartyExpGrant(100, 9, 500), { amount: 100, multiplier: 1 });
+});
+
+test('일반 몬스터는 개인 레벨의 60% 미만부터 최대 절반까지 경험치가 감쇠된다', () => {
+    assert.equal(calculateLowLevelMonsterExpMultiplier(100, 60), 1);
+    assert.equal(calculateLowLevelMonsterExpMultiplier(100, 50), 5 / 6);
+    assert.equal(calculateLowLevelMonsterExpMultiplier(100, 30), 0.5);
+
+    const player = new FakePlayer(1, 'Lv100', 100);
+    const { manager } = fixture(player);
+    const context = {
+        claimedUserIds: [player.userId],
+        contributions: [{ userId: player.userId, total: 1 }],
+        monsterLevel: 50,
+        lowLevelPenaltyEligible: true,
+    } as const;
+    const [normalGrant] = manager.distributeMonsterExp(120, 'field', context);
+    assert.equal(normalGrant.levelAdjustedShare, 100);
+    assert.equal(normalGrant.lowLevelMonsterMultiplier, 5 / 6);
+
+    const [bossGrant] = manager.distributeMonsterExp(120, 'field', {
+        ...context,
+        lowLevelPenaltyEligible: false,
+    });
+    assert.equal(bossGrant.levelAdjustedShare, 120);
+    assert.equal(bossGrant.lowLevelMonsterMultiplier, 1);
 });
 
 test('파티 초대는 만료되고 파티 최대 인원은 5명이다', () => {

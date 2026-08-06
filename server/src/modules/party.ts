@@ -4,6 +4,8 @@ import { isUserOnline } from './login.js';
 
 export const PARTY_MAX_MEMBERS = 5;
 export const PARTY_INVITATION_TTL_MS = 60_000;
+export const LOW_LEVEL_MONSTER_EXP_THRESHOLD_RATIO = 0.6;
+export const LOW_LEVEL_MONSTER_EXP_MIN_MULTIPLIER = 0.5;
 
 export interface PartyExperienceGainOptions {
     readonly protectFromPendingDeathPenalty?: boolean;
@@ -37,6 +39,10 @@ export interface PartyMonsterExpContext {
     readonly lastAttackOwnerUserId?: number;
     /** 서버 damage 결과가 실제 생명력을 0으로 만든 순간의 최종 공격 소유자. */
     readonly actualLethalUserId?: number;
+    /** 일반 몬스터 적정 레벨 감쇠에 사용하는 처치 대상 레벨. */
+    readonly monsterLevel?: number;
+    /** 보스 등 감쇠 예외를 Monster 소유 경계에서 제외한 경우에만 true다. */
+    readonly lowLevelPenaltyEligible?: boolean;
 }
 
 export interface PartySnapshot {
@@ -66,12 +72,13 @@ export interface PartyExpGrant {
     poolShare: number;
     /** 전체 유효 기여도 중 이 플레이어의 비율. fallback 1인은 1이다. */
     contributionRatio: number;
-    /** poolShare에 개인 레벨 차이 감쇠와 상한을 적용한 gainExp 입력값. */
+    /** poolShare에 파티 레벨 차이와 저레벨 일반 몬스터 감쇠를 적용한 gainExp 입력값. */
     levelAdjustedShare: number;
     /** gainExp의 개인 경험치 배율까지 적용해 실제로 지급된 경험치. */
     grantedExp: number;
     levelGap: number;
     levelGapMultiplier: number;
+    lowLevelMonsterMultiplier: number;
     levelsGained: number[];
 }
 
@@ -296,20 +303,26 @@ export class PartyManager {
             const share = shareByUserId.get(entry.userId)!;
             const levelGap = Math.max(0, highestLevel - entry.level);
             const levelGrant = calculatePartyExpGrant(share.poolShare, levelGap, entry.maxExp);
+            const lowLevelMonsterMultiplier = context.lowLevelPenaltyEligible
+                && context.monsterLevel !== undefined
+                ? calculateLowLevelMonsterExpMultiplier(entry.level, context.monsterLevel)
+                : 1;
+            const levelAdjustedShare = Math.floor(levelGrant.amount * lowLevelMonsterMultiplier);
             const experienceGainModifier = Number.isFinite(entry.experienceGainModifier)
                 ? Math.max(0, entry.experienceGainModifier)
                 : 0;
-            const grantedExp = Math.floor(levelGrant.amount * experienceGainModifier);
+            const grantedExp = Math.floor(levelAdjustedShare * experienceGainModifier);
             return {
                 userId: entry.userId,
                 nickname: entry.nickname,
                 poolShare: share.poolShare,
                 contributionRatio: share.contributionRatio,
-                levelAdjustedShare: levelGrant.amount,
+                levelAdjustedShare,
                 grantedExp,
                 levelGap,
                 levelGapMultiplier: levelGrant.multiplier,
-                levelsGained: entry.player.gainExp(levelGrant.amount, { protectFromPendingDeathPenalty: true }),
+                lowLevelMonsterMultiplier,
+                levelsGained: entry.player.gainExp(levelAdjustedShare, { protectFromPendingDeathPenalty: true }),
             };
         });
     }
@@ -387,6 +400,18 @@ export function calculatePartyExpGrant(baseExp: number, levelGap: number, maxExp
     let amount = Math.max(0, Math.floor(baseExp * multiplier));
     if (levelGap >= 30) amount = Math.min(amount, Math.max(0, Math.floor(maxExp * 0.1)));
     return { amount, multiplier };
+}
+
+/** 플레이어 레벨의 60% 미만 일반 몬스터만 부드럽게 감쇠하되 기존 저레벨 보상의 절반은 보존한다. */
+export function calculateLowLevelMonsterExpMultiplier(playerLevel: number, monsterLevel: number): number {
+    const normalizedPlayerLevel = Number.isFinite(playerLevel) ? Math.max(1, Math.floor(playerLevel)) : 1;
+    const normalizedMonsterLevel = Number.isFinite(monsterLevel) ? Math.max(1, Math.floor(monsterLevel)) : 1;
+    const thresholdLevel = normalizedPlayerLevel * LOW_LEVEL_MONSTER_EXP_THRESHOLD_RATIO;
+    if (normalizedMonsterLevel >= thresholdLevel) return 1;
+    return Math.max(
+        LOW_LEVEL_MONSTER_EXP_MIN_MULTIPLIER,
+        normalizedMonsterLevel / thresholdLevel,
+    );
 }
 
 /** 유효 인원 1명은 원래 보상, 이후 한 명마다 전체 풀을 20%씩 늘린다. */
