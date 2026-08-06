@@ -143,17 +143,62 @@ export interface BalanceScenario {
 }
 
 /**
- * 밸런스 진단에서 실제 Entity와 같은 방어 기준 레벨·양방향 레벨차 배율을 적용한다.
+ * 밸런스 진단에서 실제 Entity와 같은 피격자 기준 방어 계산을 적용한다.
  * 고정·환경 피해는 이 경계를 호출하지 않고 각각의 원래 계산을 유지한다.
  */
 export function calculateProjectedCombatDamage(
+    rawAmount: number,
+    _attacker: Entity,
+    defender: Entity,
+    defense: number,
+    penetration: number,
+): number {
+    return defender.calculateDefendedDamageFrom(rawAmount, defense, penetration);
+}
+
+export interface ProjectedCriticalDamage {
+    readonly expected: number;
+    readonly maximum: number;
+}
+
+/**
+ * 일반타와 치명타를 각각 방어한 뒤 확률 합산한다.
+ * 고정 방어가 있는 혼합식은 방어 전에 평균 치명타 배율을 곱하는 계산과 선형 동치가 아니다.
+ */
+export function calculateProjectedCriticalDamage(
     rawAmount: number,
     attacker: Entity,
     defender: Entity,
     defense: number,
     penetration: number,
-): number {
-    return defender.calculateDefendedDamageFrom(rawAmount, defense, penetration, attacker);
+    mode = SkillCriticalMode.NORMAL,
+): ProjectedCriticalDamage {
+    const normal = calculateProjectedCombatDamage(
+        rawAmount,
+        attacker,
+        defender,
+        defense,
+        penetration,
+    );
+    if (mode === SkillCriticalMode.DISABLED) return { expected: normal, maximum: normal };
+
+    const criticalMultiplier = Math.max(0, attacker.attribute.get(AttributeType.CRIT_DMG));
+    const critical = calculateProjectedCombatDamage(
+        rawAmount * criticalMultiplier,
+        attacker,
+        defender,
+        defense,
+        penetration,
+    );
+    if (mode === SkillCriticalMode.GUARANTEED) return { expected: critical, maximum: critical };
+
+    const criticalRate = Math.max(0, Math.min(1, attacker.attribute.get(AttributeType.CRIT_RATE)));
+    return {
+        expected: normal * (1 - criticalRate) + critical * criticalRate,
+        maximum: criticalRate === 0
+            ? normal
+            : criticalRate === 1 ? critical : Math.max(normal, critical),
+    };
 }
 
 export interface RotationSkillReport {
@@ -452,7 +497,6 @@ export function analyzeSkillBalance(
     const rawDamage = finiteNonNegative(balance?.calculateDamage?.(context) ?? 0);
     const hitCount = positiveInteger(balance?.hitCount ?? 1);
     const targetCount = positiveInteger(balance?.targetCount ?? 1);
-    const criticalMultiplier = getExpectedCriticalMultiplier(scenario.entity, balance?.criticalMode);
     const damageType = balance?.damageType ?? 'absolute';
     const defense = damageType === 'physical'
         ? scenario.target.attribute.get(AttributeType.DEF)
@@ -466,16 +510,15 @@ export function analyzeSkillBalance(
         balance?.calculateEvasionAttackSpeed?.(context)
             ?? scenario.entity.getEvasionAttackSpeed(),
     );
-    const defendedDamage = damageType === 'absolute'
-        ? rawDamage * criticalMultiplier
-        : calculateProjectedCombatDamage(
-            rawDamage * criticalMultiplier,
-            scenario.entity,
-            scenario.target,
-            defense,
-            penetration,
-        );
-    const evasion = balance?.unavoidable || balance?.criticalMode === SkillCriticalMode.DISABLED && damageType === 'absolute'
+    const defendedDamage = calculateProjectedCriticalDamage(
+        rawDamage,
+        scenario.entity,
+        scenario.target,
+        defense,
+        penetration,
+        balance?.criticalMode,
+    ).expected;
+    const evasion = balance?.unavoidable
         ? 0
         : calculateEvasionChance(
             evasionAttackSpeed,
@@ -527,14 +570,13 @@ export function analyzeJobBalance(level: number, mainJobId: string, subJobId?: s
     const scenario = createBalanceScenario(level, mainJobId, subJobId);
     const entity = scenario.entity;
     const target = scenario.target;
-    const expectedCrit = getExpectedCriticalMultiplier(entity, SkillCriticalMode.NORMAL);
-    const physicalHit = calculateProjectedCombatDamage(
-        entity.attribute.get(AttributeType.ATK) * expectedCrit,
+    const physicalHit = calculateProjectedCriticalDamage(
+        entity.attribute.get(AttributeType.ATK),
         entity,
         target,
         target.attribute.get(AttributeType.DEF),
         entity.attribute.get(AttributeType.ARMOR_PEN),
-    );
+    ).expected;
     const hitChance = 1 - calculateEvasionChance(
         entity.attribute.get(AttributeType.SPEED),
         target.attribute.get(AttributeType.SPEED),
@@ -542,25 +584,24 @@ export function analyzeJobBalance(level: number, mainJobId: string, subJobId?: s
     const skillReports = getRotationSkills(scenario)
         .map(data => analyzeSkillBalance(scenario, data.id, projectSkillLevel(level, data, scenario)))
         .sort((a, b) => b.sustainableDpm - a.sustainableDpm || a.name.localeCompare(b.name));
-    const targetExpectedCrit = getExpectedCriticalMultiplier(target, SkillCriticalMode.NORMAL);
     const targetHitChance = 1 - calculateEvasionChance(
         target.attribute.get(AttributeType.SPEED),
         entity.attribute.get(AttributeType.SPEED),
     );
-    const incomingPhysicalDps = calculateProjectedCombatDamage(
-        target.attribute.get(AttributeType.ATK) * targetExpectedCrit,
+    const incomingPhysicalDps = calculateProjectedCriticalDamage(
+        target.attribute.get(AttributeType.ATK),
         target,
         entity,
         entity.attribute.get(AttributeType.DEF),
         target.attribute.get(AttributeType.ARMOR_PEN),
-    ) * targetHitChance * target.attribute.get(AttributeType.ATTACK_SPEED);
-    const incomingMagicDps = calculateProjectedCombatDamage(
-        target.attribute.get(AttributeType.MAGIC_FORCE) * targetExpectedCrit,
+    ).expected * targetHitChance * target.attribute.get(AttributeType.ATTACK_SPEED);
+    const incomingMagicDps = calculateProjectedCriticalDamage(
+        target.attribute.get(AttributeType.MAGIC_FORCE),
         target,
         entity,
         entity.attribute.get(AttributeType.MAGIC_DEF),
         target.attribute.get(AttributeType.MAGIC_PEN),
-    ) * targetHitChance * target.attribute.get(AttributeType.ATTACK_SPEED);
+    ).expected * targetHitChance * target.attribute.get(AttributeType.ATTACK_SPEED);
     return {
         jobId: scenario.effectiveJob.id,
         name: scenario.effectiveJob.name,
@@ -1072,46 +1113,44 @@ function applyJobPassives(
 }
 
 function createCombatSnapshot(entity: Entity, target: Entity): CombatBalanceSnapshot {
-    const expectedCrit = getExpectedCriticalMultiplier(entity, SkillCriticalMode.NORMAL);
     const hitChance = 1 - calculateEvasionChance(
         entity.attribute.get(AttributeType.SPEED),
         target.attribute.get(AttributeType.SPEED),
     );
     const attacksPerSecond = entity.attribute.get(AttributeType.ATTACK_SPEED);
-    const physicalBasicDps = calculateProjectedCombatDamage(
-        entity.attribute.get(AttributeType.ATK) * expectedCrit,
+    const physicalBasicDps = calculateProjectedCriticalDamage(
+        entity.attribute.get(AttributeType.ATK),
         entity,
         target,
         target.attribute.get(AttributeType.DEF),
         entity.attribute.get(AttributeType.ARMOR_PEN),
-    ) * hitChance * attacksPerSecond;
-    const magicBasicDps = calculateProjectedCombatDamage(
-        entity.attribute.get(AttributeType.MAGIC_FORCE) * expectedCrit,
+    ).expected * hitChance * attacksPerSecond;
+    const magicBasicDps = calculateProjectedCriticalDamage(
+        entity.attribute.get(AttributeType.MAGIC_FORCE),
         entity,
         target,
         target.attribute.get(AttributeType.MAGIC_DEF),
         entity.attribute.get(AttributeType.MAGIC_PEN),
-    ) * hitChance * attacksPerSecond;
-    const targetCrit = getExpectedCriticalMultiplier(target, SkillCriticalMode.NORMAL);
+    ).expected * hitChance * attacksPerSecond;
     const targetHitChance = 1 - calculateEvasionChance(
         target.attribute.get(AttributeType.SPEED),
         entity.attribute.get(AttributeType.SPEED),
     );
     const targetAttackSpeed = target.attribute.get(AttributeType.ATTACK_SPEED);
-    const incomingPhysicalDps = calculateProjectedCombatDamage(
-        target.attribute.get(AttributeType.ATK) * targetCrit,
+    const incomingPhysicalDps = calculateProjectedCriticalDamage(
+        target.attribute.get(AttributeType.ATK),
         target,
         entity,
         entity.attribute.get(AttributeType.DEF),
         target.attribute.get(AttributeType.ARMOR_PEN),
-    ) * targetHitChance * targetAttackSpeed;
-    const incomingMagicDps = calculateProjectedCombatDamage(
-        target.attribute.get(AttributeType.MAGIC_FORCE) * targetCrit,
+    ).expected * targetHitChance * targetAttackSpeed;
+    const incomingMagicDps = calculateProjectedCriticalDamage(
+        target.attribute.get(AttributeType.MAGIC_FORCE),
         target,
         entity,
         entity.attribute.get(AttributeType.MAGIC_DEF),
         target.attribute.get(AttributeType.MAGIC_PEN),
-    ) * targetHitChance * targetAttackSpeed;
+    ).expected * targetHitChance * targetAttackSpeed;
     return {
         attack: entity.attribute.get(AttributeType.ATK),
         magicForce: entity.attribute.get(AttributeType.MAGIC_FORCE),
@@ -1311,7 +1350,7 @@ function calculateOpeningBurst(
     counterattackDelay: number,
 ): OpeningBurstSnapshot {
     const basicDamage = calculateExpectedBasicHit(scenario);
-    const basicMaximumDamage = calculateMaximumBasicHit(scenario, basicDamage);
+    const basicMaximumDamage = calculateMaximumBasicHit(scenario);
     const skillCandidates = getRotationSkills(scenario)
         // 선행 준비 행동 없이 단독으로 쓸 수 없는 기술은 1행동 선공치로 과대평가하지 않는다.
         .filter(data => !data.balance?.requiresRotationStatusEffectId)
@@ -1322,21 +1361,30 @@ function calculateOpeningBurst(
                 data.id,
                 skillLevel,
             );
-            const expectedCriticalMultiplier = getExpectedCriticalMultiplier(
+            const damageType = data.balance?.damageType ?? 'absolute';
+            const defense = damageType === 'physical'
+                ? scenario.target.attribute.get(AttributeType.DEF)
+                : damageType === 'magic' ? scenario.target.attribute.get(AttributeType.MAGIC_DEF) : 0;
+            const maximumDefendedDamage = calculateProjectedCriticalDamage(
+                report.rawDamage,
                 scenario.entity,
+                scenario.target,
+                defense,
+                report.penetration,
                 data.balance?.criticalMode,
-            );
-            const maximumCriticalMultiplier = getMaximumCriticalMultiplier(
-                scenario.entity,
-                data.balance?.criticalMode,
-            );
-            const hitChance = 1 - report.evasionChance;
+            ).maximum;
+            const affinitySource = data.balance?.effectTags?.length ? {
+                hasTag: (tag: TagId) => data.balance!.effectTags!.includes(tag),
+            } : scenario.entity;
+            const maximumDamage = applyTagEffectValue(
+                maximumDefendedDamage,
+                affinitySource,
+                scenario.target,
+            ).value * positiveInteger(data.balance?.hitCount ?? 1);
             return {
                 name: report.name,
                 damage: report.expectedDamagePerTarget,
-                maximumDamage: hitChance > 0 && expectedCriticalMultiplier > 0
-                    ? report.expectedDamagePerTarget / hitChance / expectedCriticalMultiplier * maximumCriticalMultiplier
-                    : 0,
+                maximumDamage,
                 manaCost: report.manaCost,
                 combat: data.tags.includes(GameTags.SKILL_COMBAT),
             };
@@ -1380,15 +1428,20 @@ function calculateIncomingBasicAttack(scenario: BalanceScenario): IncomingAttack
     const data = getMonsterData(scenario.targetDataId);
     const magic = data?.attack?.damageType === 'magic';
     const absolute = data?.attack?.damageType === 'absolute';
-    const rawPower = scenario.target.attribute.get(magic ? AttributeType.MAGIC_FORCE : AttributeType.ATK)
-        * getExpectedCriticalMultiplier(scenario.target, SkillCriticalMode.NORMAL);
-    const defended = absolute ? rawPower : calculateProjectedCombatDamage(
+    const rawPower = scenario.target.attribute.get(magic ? AttributeType.MAGIC_FORCE : AttributeType.ATK);
+    const defense = absolute
+        ? 0
+        : scenario.entity.attribute.get(magic ? AttributeType.MAGIC_DEF : AttributeType.DEF);
+    const penetration = absolute
+        ? 0
+        : scenario.target.attribute.get(magic ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN);
+    const defended = calculateProjectedCriticalDamage(
         rawPower,
         scenario.target,
         scenario.entity,
-        scenario.entity.attribute.get(magic ? AttributeType.MAGIC_DEF : AttributeType.DEF),
-        scenario.target.attribute.get(magic ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN),
-    );
+        defense,
+        penetration,
+    ).expected;
     const damageOnHit = applyTagEffectValue(defended, scenario.target, scenario.entity).value;
     const evasionChance = calculateEvasionChance(
         scenario.target.getEvasionAttackSpeed(),
@@ -1419,8 +1472,7 @@ function calculateIncomingSkillAttacks(
         });
         const context = createSkillContext(scenario.target, skill);
         const balance = skillData.balance;
-        const raw = finiteNonNegative(calculateDamage(context))
-            * getExpectedCriticalMultiplier(scenario.target, balance.criticalMode);
+        const raw = finiteNonNegative(calculateDamage(context));
         const damageType = balance.damageType ?? 'absolute';
         const defense = damageType === 'physical'
             ? scenario.entity.attribute.get(AttributeType.DEF)
@@ -1429,15 +1481,14 @@ function calculateIncomingSkillAttacks(
             ? scenario.target.attribute.get(AttributeType.ARMOR_PEN)
             : damageType === 'magic' ? scenario.target.attribute.get(AttributeType.MAGIC_PEN) : 0;
         const penetration = finiteNonNegative(balance.calculatePenetration?.(context) ?? defaultPenetration);
-        const defended = damageType === 'absolute'
-            ? raw
-            : calculateProjectedCombatDamage(
-                raw,
-                scenario.target,
-                scenario.entity,
-                defense,
-                penetration,
-            );
+        const defended = calculateProjectedCriticalDamage(
+            raw,
+            scenario.target,
+            scenario.entity,
+            defense,
+            penetration,
+            balance.criticalMode,
+        ).expected;
         const affinitySource = balance.effectTags?.length ? {
             hasTag: (tag: TagId) => balance.effectTags!.includes(tag),
         } : scenario.target;
@@ -1686,15 +1737,14 @@ function calculateExpectedBasicHit(scenario: BalanceScenario): number {
         ? getProjectileData(scenario.basicProjectileDataId)
         : undefined;
     const rawPower = entity.attribute.get(magic ? AttributeType.MAGIC_FORCE : AttributeType.ATK);
-    const raw = (rawPower * (projectile?.damageMultiplier ?? 1) + (projectile?.damageBonus ?? 0))
-        * getExpectedCriticalMultiplier(entity, SkillCriticalMode.NORMAL);
-    const defended = calculateProjectedCombatDamage(
+    const raw = rawPower * (projectile?.damageMultiplier ?? 1) + (projectile?.damageBonus ?? 0);
+    const defended = calculateProjectedCriticalDamage(
         raw,
         entity,
         target,
         target.attribute.get(magic ? AttributeType.MAGIC_DEF : AttributeType.DEF),
         entity.attribute.get(magic ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN),
-    );
+    ).expected;
     const affinitySource = projectile ? {
         hasTag: (tag: TagId) => projectile.tags.includes(tag),
     } : entity;
@@ -1705,19 +1755,24 @@ function calculateExpectedBasicHit(scenario: BalanceScenario): number {
     ));
 }
 
-function calculateMaximumBasicHit(scenario: BalanceScenario, expectedDamage: number): number {
-    const hitChance = 1 - calculateEvasionChance(
-        getBasicAttackEvasionSpeed(scenario),
-        scenario.target.attribute.get(AttributeType.SPEED),
-    );
-    const expectedCriticalMultiplier = getExpectedCriticalMultiplier(
+function calculateMaximumBasicHit(scenario: BalanceScenario): number {
+    const magic = scenario.basicAttackType === 'magic';
+    const projectile = scenario.basicProjectileDataId
+        ? getProjectileData(scenario.basicProjectileDataId)
+        : undefined;
+    const rawPower = scenario.entity.attribute.get(magic ? AttributeType.MAGIC_FORCE : AttributeType.ATK);
+    const raw = rawPower * (projectile?.damageMultiplier ?? 1) + (projectile?.damageBonus ?? 0);
+    const defended = calculateProjectedCriticalDamage(
+        raw,
         scenario.entity,
-        SkillCriticalMode.NORMAL,
-    );
-    return hitChance > 0 && expectedCriticalMultiplier > 0
-        ? expectedDamage / hitChance / expectedCriticalMultiplier
-            * getMaximumCriticalMultiplier(scenario.entity, SkillCriticalMode.NORMAL)
-        : 0;
+        scenario.target,
+        scenario.target.attribute.get(magic ? AttributeType.MAGIC_DEF : AttributeType.DEF),
+        scenario.entity.attribute.get(magic ? AttributeType.MAGIC_PEN : AttributeType.ARMOR_PEN),
+    ).maximum;
+    const affinitySource = projectile ? {
+        hasTag: (tag: TagId) => projectile.tags.includes(tag),
+    } : scenario.entity;
+    return applyTagEffectValue(defended, affinitySource, scenario.target).value;
 }
 
 /** 추천 무기의 실제 투사체 계수까지 반영한 기본 공격 회피 판정 속도. */
@@ -1747,24 +1802,6 @@ function resolveItemStatusEffect(data: ItemData): {
     if (!type || typeof rawDuration !== 'number' || !Number.isFinite(rawDuration) || rawDuration <= 0) return undefined;
     const level = typeof rawLevel === 'number' && Number.isFinite(rawLevel) ? type.normalizeLevel(rawLevel) : 1;
     return { type, level, duration: rawDuration };
-}
-
-function getExpectedCriticalMultiplier(entity: Entity, mode = SkillCriticalMode.NORMAL): number {
-    if (mode === SkillCriticalMode.DISABLED) return 1;
-    const criticalDamage = Math.max(0, entity.attribute.get(AttributeType.CRIT_DMG));
-    if (mode === SkillCriticalMode.GUARANTEED) return criticalDamage;
-    const criticalRate = Math.max(0, Math.min(1, entity.attribute.get(AttributeType.CRIT_RATE)));
-    return 1 + criticalRate * (criticalDamage - 1);
-}
-
-function getMaximumCriticalMultiplier(entity: Entity, mode = SkillCriticalMode.NORMAL): number {
-    if (mode === SkillCriticalMode.DISABLED) return 1;
-    if (mode === SkillCriticalMode.GUARANTEED) {
-        return Math.max(0, entity.attribute.get(AttributeType.CRIT_DMG));
-    }
-    return entity.attribute.get(AttributeType.CRIT_RATE) > 0
-        ? Math.max(0, entity.attribute.get(AttributeType.CRIT_DMG))
-        : 1;
 }
 
 function finiteNonNegative(value: number): number {

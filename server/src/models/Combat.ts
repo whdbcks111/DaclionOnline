@@ -3,30 +3,10 @@ export interface CriticalResult {
     critical: boolean;
 }
 
-/** 레벨 차이 300에서 도달하는 전투 피해 배율 상·하한. 두 값은 서로 역수다. */
-export const LEVEL_GAP_DAMAGE_MIN_MULTIPLIER = 0.5;
-export const LEVEL_GAP_DAMAGE_MAX_MULTIPLIER = 2;
-export const LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL = 300;
-
-/**
- * 공격자와 방어자의 레벨 차이를 양방향 전투 배율로 바꾼다.
- * 동레벨은 정확히 1이며, 상·하한에 닿기 전까지 반대 방향 배율은 정확한 역수다.
- */
-export function calculateLevelGapDamageMultiplier(
-    attackerLevel: number,
-    defenderLevel: number,
-): number {
-    assertFiniteNonNegative('attackerLevel', attackerLevel);
-    assertFiniteNonNegative('defenderLevel', defenderLevel);
-    const boundedGap = Math.max(
-        -LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL,
-        Math.min(LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL, attackerLevel - defenderLevel),
-    );
-    const multiplier = 2 ** (boundedGap / LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL);
-    return Math.max(
-        LEVEL_GAP_DAMAGE_MIN_MULTIPLIER,
-        Math.min(LEVEL_GAP_DAMAGE_MAX_MULTIPLIER, multiplier),
-    );
+export interface DefenseBreakdown {
+    readonly effectiveDefense: number;
+    readonly fixedReduction: number;
+    readonly proportionalReduction: number;
 }
 
 /**
@@ -69,7 +49,29 @@ export function calculateDefenseScale(referenceLevel: number): number {
     return scale;
 }
 
-/** 관통 후 방어를 위협 레벨 척도로 나눈 최종 damage 계산. */
+/**
+ * 한 방어 수치에서 관통 후 고정 감산량과 비율 완화율을 함께 계산한다.
+ * 유효 방어가 낮을 때는 대부분 고정 방어로 작동하고, 높아질수록 고정 방어는 K에
+ * 점근하는 대신 비율 방어가 강해져 동레벨의 큰 공격까지 전부 0으로 만들지 않는다.
+ */
+export function calculateDefenseBreakdown(
+    defense: number,
+    penetration: number,
+    referenceLevel: number,
+): DefenseBreakdown {
+    assertFiniteNonNegative('defense', defense);
+    assertFiniteNonNegative('penetration', penetration);
+    const effectiveDefense = Math.max(0, defense - penetration);
+    const defenseScale = calculateDefenseScale(referenceLevel);
+    const remainingDamageRatio = defenseScale / (defenseScale + effectiveDefense);
+    return {
+        effectiveDefense,
+        fixedReduction: effectiveDefense * remainingDamageRatio,
+        proportionalReduction: 1 - remainingDamageRatio,
+    };
+}
+
+/** 관통 후 고정 방어로 먼저 감산하고 남은 피해에 비율 방어를 적용한다. */
 export function calculateFinalDamage(
     rawAmount: number,
     defense: number,
@@ -77,16 +79,92 @@ export function calculateFinalDamage(
     referenceLevel: number,
 ): number {
     assertFiniteNonNegative('rawAmount', rawAmount);
-    assertFiniteNonNegative('defense', defense);
-    assertFiniteNonNegative('penetration', penetration);
-    const defenseScale = calculateDefenseScale(referenceLevel);
-    const effectiveDefense = Math.max(0, defense - penetration);
-    if (rawAmount === 0 || effectiveDefense === 0) return rawAmount;
-    return rawAmount * defenseScale / (defenseScale + effectiveDefense);
+    const breakdown = calculateDefenseBreakdown(defense, penetration, referenceLevel);
+    if (rawAmount === 0 || breakdown.effectiveDefense === 0) return rawAmount;
+    const afterFixedReduction = Math.max(0, rawAmount - breakdown.fixedReduction);
+    return afterFixedReduction * (1 - breakdown.proportionalReduction);
+}
+
+/** 방어 후 목표 피해를 정확히 남기는 데 필요한 비치명 raw damage를 역산한다. */
+export function calculateRequiredRawDamage(
+    targetFinalDamage: number,
+    defense: number,
+    penetration: number,
+    referenceLevel: number,
+): number {
+    assertFiniteNonNegative('targetFinalDamage', targetFinalDamage);
+    if (targetFinalDamage === 0) return 0;
+    const breakdown = calculateDefenseBreakdown(defense, penetration, referenceLevel);
+    const remainingDamageRatio = 1 - breakdown.proportionalReduction;
+    return breakdown.fixedReduction + targetFinalDamage / remainingDamageRatio;
+}
+
+/** 치명타가 방어 전에 적용되는 실제 순서로 한 번의 기대 피해를 계산한다. */
+export function calculateExpectedFinalDamage(
+    rawAmount: number,
+    defense: number,
+    penetration: number,
+    referenceLevel: number,
+    criticalRate: number,
+    criticalDamage: number,
+): number {
+    assertFiniteProbability('criticalRate', criticalRate);
+    assertFiniteAtLeastOne('criticalDamage', criticalDamage);
+    const normal = calculateFinalDamage(rawAmount, defense, penetration, referenceLevel);
+    const critical = calculateFinalDamage(
+        rawAmount * criticalDamage,
+        defense,
+        penetration,
+        referenceLevel,
+    );
+    return normal * (1 - criticalRate) + critical * criticalRate;
+}
+
+/** 방어·치명타를 모두 거친 목표 기대 피해에서 기본 raw damage를 역산한다. */
+export function calculateRequiredRawDamageForExpectedDamage(
+    targetExpectedDamage: number,
+    defense: number,
+    penetration: number,
+    referenceLevel: number,
+    criticalRate: number,
+    criticalDamage: number,
+): number {
+    assertFiniteNonNegative('targetExpectedDamage', targetExpectedDamage);
+    assertFiniteProbability('criticalRate', criticalRate);
+    assertFiniteAtLeastOne('criticalDamage', criticalDamage);
+    if (targetExpectedDamage === 0) return 0;
+
+    const breakdown = calculateDefenseBreakdown(defense, penetration, referenceLevel);
+    const remainingDamageRatio = 1 - breakdown.proportionalReduction;
+    const expectedCriticalMultiplier = 1 + criticalRate * (criticalDamage - 1);
+    const bothHitCandidate = (
+        breakdown.fixedReduction + targetExpectedDamage / remainingDamageRatio
+    ) / expectedCriticalMultiplier;
+    if (bothHitCandidate >= breakdown.fixedReduction || criticalRate === 0 || criticalDamage === 1) {
+        return bothHitCandidate;
+    }
+
+    // 일반타는 고정 방어에 막히고 치명타만 통과하는 낮은 목표 피해 구간.
+    return (
+        breakdown.fixedReduction
+        + targetExpectedDamage / (criticalRate * remainingDamageRatio)
+    ) / criticalDamage;
 }
 
 function assertFiniteNonNegative(label: string, value: number): void {
     if (!Number.isFinite(value) || value < 0) {
         throw new RangeError(`${label} must be finite and non-negative: ${value}`);
+    }
+}
+
+function assertFiniteProbability(label: string, value: number): void {
+    if (!Number.isFinite(value) || value < 0 || value > 1) {
+        throw new RangeError(`${label} must be between 0 and 1: ${value}`);
+    }
+}
+
+function assertFiniteAtLeastOne(label: string, value: number): void {
+    if (!Number.isFinite(value) || value < 1) {
+        throw new RangeError(`${label} must be finite and at least 1: ${value}`);
     }
 }

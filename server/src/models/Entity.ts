@@ -14,7 +14,6 @@ import {
     applyCritical,
     calculateEvasionChance,
     calculateFinalDamage,
-    calculateLevelGapDamageMultiplier,
     rollEvasion,
 } from "./Combat.js";
 import { applyTagEffectValue } from "./TagEffect.js";
@@ -1053,31 +1052,15 @@ export default abstract class Entity implements TagReadable {
     protected onCombatEngagement(_opponent: Entity): void {}
 
     /**
-     * source의 최종 공격 owner와 이 대상의 레벨 차이로 비고정 전투 피해 배율을 계산한다.
-     * 환경 피해처럼 source가 없거나 같은 owner의 자해라면 기존 의미를 보존해 1을 반환한다.
-     */
-    getIncomingLevelGapDamageMultiplier(source?: Entity | null): number {
-        const sourceOwner = source?.attackOwner;
-        if (!sourceOwner || sourceOwner === this.attackOwner) return 1;
-        return calculateLevelGapDamageMultiplier(sourceOwner.level, this.level);
-    }
-
-    /**
-     * 방어·관통과 source/target 레벨 차이를 함께 적용하는 비고정 피해 계산 경계.
-     * 실제 전투와 밸런스 진단이 같은 기준 레벨·양방향 배율을 공유한다.
+     * 이 대상의 레벨에서 방어·관통을 적용하는 비고정 피해 계산 경계.
+     * 공격자 레벨의 별도 강제 배율 없이 실제 방어 능력치만 결과를 바꾼다.
      */
     calculateDefendedDamageFrom(
         rawAmount: number,
         defense: number,
         penetration: number,
-        source?: Entity | null,
     ): number {
-        const sourceOwner = source?.attackOwner;
-        const referenceLevel = sourceOwner
-            ? Math.min(sourceOwner.level, this.level)
-            : this.level;
-        return calculateFinalDamage(rawAmount, defense, penetration, referenceLevel)
-            * this.getIncomingLevelGapDamageMultiplier(source);
+        return calculateFinalDamage(rawAmount, defense, penetration, this.level);
     }
 
     /**
@@ -1135,7 +1118,6 @@ export default abstract class Entity implements TagReadable {
                 effect.value,
                 defense,
                 penetration,
-                cause?.causeEntity,
             )) * receivedModifier;
         const absorbedDamage = this.absorbShieldDamage(finalDamage, type);
         const beforeLife = Math.max(0, this.life);

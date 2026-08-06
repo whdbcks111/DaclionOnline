@@ -1,5 +1,6 @@
 import type { AttributeKey, AttributeRecord } from './Attribute.js';
-import { calculateDefenseScale } from './Combat.js';
+import { calculateRequiredRawDamageForExpectedDamage } from './Combat.js';
+import { calculateDefensiveStatGrowthUnits, calculateVitalityDefenseBonus } from './Stat.js';
 
 export type MonsterStatWeightMap = Partial<Record<MonsterCombatStatKey, number>>;
 
@@ -96,7 +97,9 @@ export class MonsterStatProfile {
         atk: 0.62,
         magicForce: 1.25,
         def: 0.7,
-        magicDef: 1.18,
+        // 혼합 방어식에서는 지나친 저항 편중이 마법 직업의 고정·비율 피해를 동시에
+        // 이중으로 누르므로, 물리 방어보다 높되 단일 직업군을 봉쇄하지 않는 범위로 둔다.
+        magicDef: 0.9,
         armorPen: 0,
         magicPen: 1.12,
         speed: 0.96,
@@ -228,37 +231,81 @@ export interface MonsterStatCalculation {
 }
 
 const GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS = Object.freeze([
-    { level: 1, offense: 5 },
-    { level: 50, offense: 38 },
+    { level: 1, offense: 4 },
+    { level: 20, offense: 16 },
+    { level: 50, offense: 50 },
     { level: 100, offense: 90 },
     { level: 200, offense: 175 },
-    { level: 350, offense: 185 },
-    { level: 1000, offense: 400 },
+    { level: 350, offense: 175 },
+    { level: 500, offense: 200 },
+    { level: 750, offense: 500 },
+    { level: 1000, offense: 650 },
 ] as const);
-
+/** 자동 성장선과 추천 체력 배분 사이에서 몬스터 공방을 맞추는 기준 투자량. */
+const MONSTER_BASELINE_VITALITY_POINTS_PER_LEVEL = 1.15;
+/** 공격 성장이 보강된 플레이어와 일반·정예의 교전 시간을 맞추는 기대 피해 최대 보정. */
+const GENERAL_MONSTER_PRESSURE_PEAK_MULTIPLIER = 1.15;
+/** 공용 몬스터 곡선의 치명타 한 방 분산 상한. 명시 최종 override는 예외다. */
+const MONSTER_CRITICAL_DAMAGE_CAP = 2;
 /**
- * 일반·정예 몬스터의 동레벨 전투 압력을 플레이어 성장선에 맞추는 공용 배율.
- * 보스 계열은 별도 패턴과 파티 압력을 보존하기 위해 기존 공격 예산을 그대로 쓴다.
+ * 몬스터 한 번의 공격이 동레벨 기준 방어와 실제 치명타를 거친 뒤 남길 기대 피해.
+ * 일반·정예는 기존 앵커에 플레이어 최대 생명력 증가율을 한 번만 반영하고,
+ * 필드 보스·보스는 기존 이차 공격 예산을 체급 공격 배율과 함께 사용한다.
  */
-export function getMonsterOffensePressureScale(rank: MonsterRank, level: number): number {
+export function getMonsterTargetDamageBudget(rank: MonsterRank, level: number): number {
     const normalizedLevel = normalizeMonsterLevel(level);
-    if (rank === MonsterRank.FIELD_BOSS || rank === MonsterRank.BOSS) return 1;
-    return getGeneralMonsterOffenseBudget(normalizedLevel) / getRawMonsterOffenseBudget(normalizedLevel);
+    const baseDamageBudget = rank === MonsterRank.FIELD_BOSS || rank === MonsterRank.BOSS
+        ? getRawMonsterOffenseBudget(normalizedLevel)
+        : getGeneralMonsterDamageBudget(normalizedLevel);
+    const pressureMultiplier = rank === MonsterRank.FIELD_BOSS || rank === MonsterRank.BOSS
+        ? 1
+        : getGeneralMonsterPressureMultiplier(normalizedLevel);
+    return baseDamageBudget * rank.multipliers.offense * pressureMultiplier;
 }
 
-function getGeneralMonsterOffenseBudget(level: number): number {
+/**
+ * 이미 압력이 높은 입문·후반 이정표는 원래 예산을 유지하고, 공격 기술이 빠르게
+ * 늘어나는 Lv.50~500 구간만 기대 피해를 보강한다. 경계는 선형 보간해 급변을 막는다.
+ */
+function getGeneralMonsterPressureMultiplier(level: number): number {
+    if (level <= 20 || level >= 750) return 1;
+    if (level < 50) {
+        return 1 + (GENERAL_MONSTER_PRESSURE_PEAK_MULTIPLIER - 1) * (level - 20) / 30;
+    }
+    if (level <= 500) return GENERAL_MONSTER_PRESSURE_PEAK_MULTIPLIER;
+    return GENERAL_MONSTER_PRESSURE_PEAK_MULTIPLIER
+        - (GENERAL_MONSTER_PRESSURE_PEAK_MULTIPLIER - 1) * (level - 500) / 250;
+}
+
+function getGeneralMonsterDamageBudget(level: number): number {
     const upperIndex = GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS.findIndex(anchor => anchor.level >= level);
     if (upperIndex < 0) {
         const last = GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS.at(-1)!;
         const previous = GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS.at(-2)!;
         const slope = (last.offense - previous.offense) / (last.level - previous.level);
-        return last.offense + (level - last.level) * slope;
+        return applyDefensiveGrowthPressure(level, last.offense + (level - last.level) * slope);
     }
     if (upperIndex === 0) return GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS[0].offense;
     const lower = GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS[upperIndex - 1];
     const upper = GENERAL_MONSTER_OFFENSE_BUDGET_ANCHORS[upperIndex];
     const progress = (level - lower.level) / (upper.level - lower.level);
-    return lower.offense + (upper.offense - lower.offense) * progress;
+    return applyDefensiveGrowthPressure(
+        level,
+        lower.offense + (upper.offense - lower.offense) * progress,
+    );
+}
+
+/** 플레이어 최대 생명력의 새/기존 스탯 기여 비율만큼 목표 피해도 함께 높인다. */
+function applyDefensiveGrowthPressure(level: number, offense: number): number {
+    const baselinePoints = Math.max(1, level - 1);
+    const growthRatio = calculateDefensiveStatGrowthUnits(baselinePoints) / baselinePoints;
+    return offense * growthRatio;
+}
+
+/** 몬스터 공방 예산이 상대하는 동레벨 기본 체력 투자의 방어력. */
+export function getMonsterBaselineDefense(level: number): number {
+    const earnedLevels = Math.max(0, normalizeMonsterLevel(level) - 1);
+    return calculateVitalityDefenseBonus(earnedLevels * MONSTER_BASELINE_VITALITY_POINTS_PER_LEVEL);
 }
 
 /**
@@ -270,15 +317,43 @@ export function calculateMonsterBaseAttributes(input: MonsterStatCalculation): P
     const rank = input.rank ?? MonsterRank.NORMAL;
     const weights = validateWeights(input.weights);
     const base = getLevelStatBudget(level);
-    const offensePressureScale = getMonsterOffensePressureScale(rank, level);
     const result: Partial<AttributeRecord> = {};
 
     for (const key of COMBAT_STAT_KEYS) {
+        if (key === 'atk' || key === 'magicForce') continue;
         const profileRatio = input.profile.coefficients[key];
         const weight = weights[key] ?? 1;
         const rankRatio = getRankMultiplier(rank, key, level);
-        const pressureScale = key === 'atk' || key === 'magicForce' ? offensePressureScale : 1;
-        result[key] = roundMonsterStat(key, base[key] * profileRatio * weight * rankRatio * pressureScale);
+        result[key] = roundMonsterStat(key, base[key] * profileRatio * weight * rankRatio);
+    }
+
+    // 관통·치명타 override가 있으면 공격력 역산 전에 먼저 반영한다.
+    for (const key of ['armorPen', 'magicPen', 'critRate', 'critDmg'] as const) {
+        const value = input.overrides?.[key];
+        if (value === undefined) continue;
+        if (!Number.isFinite(value) || value < 0) {
+            throw new Error(`Invalid monster stat override: ${key}=${value}`);
+        }
+        result[key] = value;
+    }
+
+    const baselineDefense = getMonsterBaselineDefense(level);
+    const criticalRate = result.critRate ?? 0;
+    const criticalDamage = Math.max(1, result.critDmg ?? 1);
+    for (const key of ['atk', 'magicForce'] as const) {
+        const profileRatio = input.profile.coefficients[key];
+        const targetExpectedDamage = getMonsterTargetDamageBudget(rank, level)
+            * profileRatio
+            * (weights[key] ?? 1);
+        const penetration = key === 'atk' ? result.armorPen ?? 0 : result.magicPen ?? 0;
+        result[key] = roundMonsterStat(key, calculateRequiredRawDamageForExpectedDamage(
+            targetExpectedDamage,
+            baselineDefense,
+            penetration,
+            level,
+            criticalRate,
+            criticalDamage,
+        ));
     }
 
     for (const [rawKey, value] of Object.entries(input.overrides ?? {})) {
@@ -286,9 +361,7 @@ export function calculateMonsterBaseAttributes(input: MonsterStatCalculation): P
         if (!Number.isFinite(value) || value! < 0) {
             throw new Error(`Invalid monster stat override: ${rawKey}=${value}`);
         }
-        result[key] = key === 'def' || key === 'magicDef'
-            ? normalizeMonsterDefenseForScale(level, value!)
-            : value;
+        result[key] = value;
     }
     return result;
 }
@@ -328,7 +401,7 @@ function validateWeights(weights?: MonsterStatWeightMap): MonsterStatWeightMap {
 
 function getLevelStatBudget(level: number): Record<MonsterCombatStatKey, number> {
     const offense = getRawMonsterOffenseBudget(level);
-    const defense = normalizeMonsterDefenseForScale(level, 0.9 * level + 0.007 * level ** 2);
+    const defense = getMonsterBaselineDefense(level);
     const penetration = Math.max(0, (level - 25) * 0.55);
     return {
         maxLife: 300 + 75 * level + 4 * level ** 2 + 0.002 * level ** 3,
@@ -343,14 +416,6 @@ function getLevelStatBudget(level: number): Record<MonsterCombatStatKey, number>
         critRate: Math.min(0.28, 0.05 + level * 0.00065),
         critDmg: 1.5 + Math.min(0.95, level * 0.0027),
     };
-}
-
-/** 방어 척도 개편 전후에도 동레벨 몬스터의 무관통 피해 감소율을 보존한다. */
-export function normalizeMonsterDefenseForScale(level: number, defense: number): number {
-    const normalizedLevel = normalizeMonsterLevel(level);
-    if (!Number.isFinite(defense) || defense < 0) throw new Error(`Invalid monster defense: ${defense}`);
-    const legacyScale = 100 + 2 * normalizedLevel + 0.005 * normalizedLevel ** 2;
-    return defense * calculateDefenseScale(normalizedLevel) / legacyScale;
 }
 
 function getRawMonsterOffenseBudget(level: number): number {
@@ -372,5 +437,6 @@ function roundMonsterStat(key: MonsterCombatStatKey, value: number): number {
         return Math.max(0, Math.round(value));
     }
     if (key === 'critRate') return Math.max(0, Number(value.toFixed(4)));
+    if (key === 'critDmg') return Math.max(0, Math.min(MONSTER_CRITICAL_DAMAGE_CAP, Number(value.toFixed(2))));
     return Math.max(0, Number(value.toFixed(2)));
 }

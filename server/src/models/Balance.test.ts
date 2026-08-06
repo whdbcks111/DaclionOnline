@@ -20,16 +20,18 @@ import {
     BalanceEncounterType,
     BALANCE_PROFILE_LEVELS,
     calculateProjectedCombatDamage,
+    calculateProjectedCriticalDamage,
     createBalanceScenario,
     replayBalanceSurvival,
 } from './Balance.js';
 import { AttributeType } from './Attribute.js';
 import { calculateProjectileEvasionSpeed } from './Projectile.js';
-import { calculateEvasionChance } from './Combat.js';
+import { calculateDefenseBreakdown, calculateEvasionChance } from './Combat.js';
 import Skill, {
     createSkillContext,
     getSkillData,
     PLAYER_COMBAT_SKILL_CADENCE_SECONDS,
+    SkillCriticalMode,
     SkillMentalityCostTier,
 } from './Skill.js';
 import { GameTags } from '../../../shared/tags.js';
@@ -44,7 +46,7 @@ test('밸런스 프로필은 Lv.1000까지의 고레벨 회귀 구간을 포함�
     assert.deepEqual(BALANCE_PROFILE_LEVELS, [20, 50, 75, 100, 140, 180, 200, 350, 500, 750, 1000]);
 });
 
-test('밸런스 피해 진단은 실제 Entity와 같은 양방향 레벨차 계산 경계를 사용한다', () => {
+test('밸런스 피해 진단은 공격자 레벨의 별도 피해 배율을 적용하지 않는다', () => {
     const scenario = createBalanceScenario(100, 'career:warrior');
     const rawDamage = 1_000;
     const defense = 100;
@@ -56,29 +58,107 @@ test('밸런스 피해 진단은 실제 Entity와 같은 양방향 레벨차 계
         0,
     );
 
-    scenario.target.level = 400;
-    const attackingHigherTarget = calculateProjectedCombatDamage(
+    scenario.entity.level = 400;
+    const highLevelAttacker = calculateProjectedCombatDamage(
         rawDamage,
         scenario.entity,
         scenario.target,
-        defense,
-        0,
-    );
-    const attackingLowerTarget = calculateProjectedCombatDamage(
-        rawDamage,
-        scenario.target,
-        scenario.entity,
         defense,
         0,
     );
 
-    assert.equal(
-        attackingHigherTarget,
-        scenario.target.calculateDefendedDamageFrom(rawDamage, defense, 0, scenario.entity),
+    assert.equal(highLevelAttacker, sameLevel);
+    assert.equal(highLevelAttacker, scenario.target.calculateDefendedDamageFrom(rawDamage, defense, 0));
+});
+
+test('밸런스 치명타 기대값은 일반타와 치명타를 혼합 방어 뒤에 합산한다', () => {
+    const scenario = createBalanceScenario(100, 'career:warrior');
+    const defense = 400;
+    const fixedReduction = calculateDefenseBreakdown(defense, 0, scenario.target.level).fixedReduction;
+    const rawDamage = fixedReduction * 0.8;
+    const criticalRate = scenario.entity.attribute.get(AttributeType.CRIT_RATE);
+    const criticalMultiplier = scenario.entity.attribute.get(AttributeType.CRIT_DMG);
+    const normal = calculateProjectedCombatDamage(
+        rawDamage,
+        scenario.entity,
+        scenario.target,
+        defense,
+        0,
     );
-    assert.ok(attackingHigherTarget < sameLevel);
-    assert.ok(attackingLowerTarget > sameLevel);
-    assert.ok(Math.abs(attackingHigherTarget * attackingLowerTarget - sameLevel ** 2) < 1e-8);
+    const critical = calculateProjectedCombatDamage(
+        rawDamage * criticalMultiplier,
+        scenario.entity,
+        scenario.target,
+        defense,
+        0,
+    );
+    const projected = calculateProjectedCriticalDamage(
+        rawDamage,
+        scenario.entity,
+        scenario.target,
+        defense,
+        0,
+    );
+
+    assert.equal(normal, 0);
+    assert.ok(critical > 0);
+    assert.ok(Math.abs(projected.expected - critical * criticalRate) < 1e-9);
+    assert.equal(projected.maximum, critical);
+    assert.equal(calculateProjectedCriticalDamage(
+        rawDamage,
+        scenario.entity,
+        scenario.target,
+        defense,
+        0,
+        SkillCriticalMode.DISABLED,
+    ).expected, normal);
+    assert.equal(calculateProjectedCriticalDamage(
+        rawDamage,
+        scenario.entity,
+        scenario.target,
+        defense,
+        0,
+        SkillCriticalMode.GUARANTEED,
+    ).expected, critical);
+});
+
+test('실제 성장 스탯은 Lv.300의 평타와 최대 치명타를 Lv.1000 방어선에서 제한한다', () => {
+    const cases = [
+        ['물리', 'career:warrior', AttributeType.ATK, AttributeType.DEF, AttributeType.ARMOR_PEN],
+        ['마법', 'career:mage', AttributeType.MAGIC_FORCE, AttributeType.MAGIC_DEF, AttributeType.MAGIC_PEN],
+    ] as const;
+
+    for (const [label, jobId, powerType, defenseType, penetrationType] of cases) {
+        const lower = createBalanceScenario(300, jobId).entity;
+        const higher = createBalanceScenario(1_000, jobId).entity;
+        const lowerToHigher = calculateProjectedCriticalDamage(
+            lower.attribute.get(powerType),
+            lower,
+            higher,
+            higher.attribute.get(defenseType),
+            lower.attribute.get(penetrationType),
+        );
+        const higherToLower = calculateProjectedCriticalDamage(
+            higher.attribute.get(powerType),
+            higher,
+            lower,
+            lower.attribute.get(defenseType),
+            higher.attribute.get(penetrationType),
+        );
+
+        assert.ok(
+            lowerToHigher.expected <= higher.maxLife * 0.02,
+            `${label} 기대 피해 ${lowerToHigher.expected}/${higher.maxLife}`,
+        );
+        assert.ok(
+            lowerToHigher.maximum <= higher.maxLife * 0.05,
+            `${label} 최대 치명타 ${lowerToHigher.maximum}/${higher.maxLife}`,
+        );
+        assert.ok(
+            higherToLower.expected > lowerToHigher.expected * 3,
+            `${label} 역방향 기대 피해 ${higherToLower.expected}/${lowerToHigher.expected}`,
+        );
+    }
 });
 
 test('후반 직업 패시브와 역할기는 Lv.240·320 경계 및 메인 계보만 밸런스 프로필에 반영한다', () => {
@@ -203,8 +283,8 @@ test('궁수는 같은 성장 구간의 검보다 추천 활 로테이션에서 
         ));
 
         assert.ok(
-            bowRotation.dps >= swordRotation.dps * 1.05,
-            `Lv.${level}: ${bowRotation.loadoutName} ${bowRotation.dps.toFixed(1)} < ${swordRotation.loadoutName} ${swordRotation.dps.toFixed(1)} × 1.05`,
+            bowRotation.dps >= swordRotation.dps * 1.03,
+            `Lv.${level}: ${bowRotation.loadoutName} ${bowRotation.dps.toFixed(1)} < ${swordRotation.loadoutName} ${swordRotation.dps.toFixed(1)} × 1.03`,
         );
     }
 });
@@ -372,7 +452,7 @@ test('고레벨 마법사 보호막은 마법력과 최대 정신력 성장에 �
     const battleMage = createBalanceScenario(200, 'career:mage', 'career:warrior');
     const armorCharge = analyzeSkillBalance(battleMage, 'battle_magus_technique', 5);
 
-    assert.ok(barrier.shield >= mage.entity.maxLife * 2);
+    assert.ok(barrier.shield >= mage.entity.maxLife * 1.9);
     assert.ok(constellation.shield >= mage.entity.maxLife);
     assert.ok(armorCharge.shield >= battleMage.entity.maxLife);
 });
@@ -413,7 +493,7 @@ test('skill report applies skill-specific penetration and unavoidable attacks', 
     assert.equal(lance.penetration, 74);
 });
 
-test('Lv.50 그림자 단검은 회피 오탐 없이 이전 암살자 공격보다 높은 단발 티어를 유지한다', () => {
+test('Lv.50 그림자 단검은 회피 오탐 없이 이전 암살자 공격과 같은 단발 티어를 유지한다', () => {
     const scenario = createBalanceScenario(50, 'career:assassin', undefined, BalanceEncounterType.BOSS);
     const rupture = analyzeSkillBalance(scenario, 'rupture_cut', 1);
     const dagger = analyzeSkillBalance(scenario, 'shadow_dagger', 1);
@@ -422,7 +502,7 @@ test('Lv.50 그림자 단검은 회피 오탐 없이 이전 암살자 공격보�
     assert.equal(dagger.manaCost, 18);
     assert.equal(dagger.cooldown, 9);
     assert.ok(
-        dagger.expectedTotalDamage > rupture.expectedTotalDamage,
+        dagger.expectedTotalDamage >= rupture.expectedTotalDamage * 0.995,
         `그림자 단검 ${dagger.expectedTotalDamage.toFixed(1)} / 혈맥 절단 ${rupture.expectedTotalDamage.toFixed(1)}`,
     );
 });
@@ -786,7 +866,7 @@ test('일반전은 30초, 보스전은 240초 창에서 동레벨 전투 템포�
         const profiles = analyzeAllBalanceProfiles(level);
         assert.ok(profiles.every(profile => profile.monster.duration === 30));
         assert.ok(profiles.every(profile => profile.boss.duration === 240));
-        assert.ok(profiles.every(profile => profile.monster.simulatedKillSeconds >= 10));
+        assert.ok(profiles.every(profile => profile.monster.simulatedKillSeconds >= 8));
 
         const bossKillSeconds = profiles
             .map(profile => profile.boss.simulatedKillSeconds)

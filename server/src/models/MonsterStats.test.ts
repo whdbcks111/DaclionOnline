@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
     calculateMonsterBaseAttributes,
-    getMonsterOffensePressureScale,
+    getMonsterBaselineDefense,
+    getMonsterTargetDamageBudget,
     inferMonsterStatProfile,
     MonsterRank,
     MonsterStatProfile,
-    normalizeMonsterDefenseForScale,
 } from './MonsterStats.js';
-import { calculateDefenseScale } from './Combat.js';
+import { calculateExpectedFinalDamage } from './Combat.js';
 
 test('몬스터 스탯 프로필과 등급은 클래스형 enum 조회 API를 제공한다', () => {
     assert.equal(MonsterStatProfile.fromKey('caster'), MonsterStatProfile.CASTER);
@@ -38,13 +38,28 @@ test('같은 레벨에서도 역할과 체급에 따라 일관된 능력치 예�
     assert.ok((boss.attackSpeed ?? 0) < (bruiser.attackSpeed ?? 0));
 });
 
-test('일반 몬스터 공격 압력은 후반 플레이어 성장선에 맞춰 낮아지고 보스 공격은 보존된다', () => {
-    assert.ok(getMonsterOffensePressureScale(MonsterRank.NORMAL, 20) > 0.3);
-    assert.ok(getMonsterOffensePressureScale(MonsterRank.ELITE, 180) > 0.2);
-    assert.ok(getMonsterOffensePressureScale(MonsterRank.NORMAL, 500) < 0.07);
-    assert.ok(getMonsterOffensePressureScale(MonsterRank.NORMAL, 1000) < 0.04);
-    assert.equal(getMonsterOffensePressureScale(MonsterRank.FIELD_BOSS, 1000), 1);
-    assert.equal(getMonsterOffensePressureScale(MonsterRank.BOSS, 1000), 1);
+test('모든 체급의 공격력은 동레벨 방어와 치명타 후 목표 기대 피해를 남긴다', () => {
+    for (const level of [20, 100, 335, 500, 1_000]) {
+        for (const rank of MonsterRank.values()) {
+            const attributes = calculateMonsterBaseAttributes({
+                level,
+                profile: MonsterStatProfile.BALANCED,
+                rank,
+            });
+            const expected = calculateExpectedFinalDamage(
+                attributes.atk ?? 0,
+                getMonsterBaselineDefense(level),
+                attributes.armorPen ?? 0,
+                level,
+                attributes.critRate ?? 0,
+                attributes.critDmg ?? 1,
+            );
+            assert.ok(
+                Math.abs(expected - getMonsterTargetDamageBudget(rank, level)) <= 1,
+                `${rank.label} Lv.${level}: ${expected}`,
+            );
+        }
+    }
 
     let previous = 0;
     for (let level = 1; level <= 1000; level++) {
@@ -132,32 +147,26 @@ test('고유 가중치와 최종 오버라이드는 프로필을 복제하지 �
     assert.ok((attributes.maxLife ?? 0) > 0);
 });
 
-test('고레벨 몬스터 방어 정규화는 새 척도에서도 기존 동레벨 피해 감소율을 보존한다', () => {
-    for (const level of [1, 100, 200, 201, 350, 500, 1_000]) {
-        const authoredDefense = 0.9 * level + 0.007 * level ** 2;
-        const legacyScale = 100 + 2 * level + 0.005 * level ** 2;
-        const normalizedDefense = normalizeMonsterDefenseForScale(level, authoredDefense);
-        const legacyDamageRatio = legacyScale / (legacyScale + authoredDefense);
-        const normalizedDamageRatio = calculateDefenseScale(level)
-            / (calculateDefenseScale(level) + normalizedDefense);
-
-        assert.ok(
-            Math.abs(legacyDamageRatio - normalizedDamageRatio) < 1e-12,
-            `Lv.${level}: ${legacyDamageRatio} !== ${normalizedDamageRatio}`,
-        );
-        if (level <= 200) assert.equal(normalizedDefense, authoredDefense);
+test('공용 몬스터 방어는 플레이어 체력 투자와 같은 연속 성장선을 사용한다', () => {
+    for (const level of [1, 100, 200, 500, 1_000]) {
+        const attributes = calculateMonsterBaseAttributes({
+            level,
+            profile: MonsterStatProfile.BALANCED,
+        });
+        assert.equal(attributes.def, Math.round(getMonsterBaselineDefense(level)));
+        assert.equal(attributes.magicDef, Math.round(getMonsterBaselineDefense(level)));
     }
 });
 
-test('명시한 몬스터 방어·마법 방어 오버라이드도 같은 척도로 정규화한다', () => {
+test('명시한 몬스터 방어·마법 방어 오버라이드는 최종 수치로 그대로 적용한다', () => {
     const attributes = calculateMonsterBaseAttributes({
         level: 500,
         profile: MonsterStatProfile.TANK,
         overrides: { def: 900, magicDef: 700 },
     });
 
-    assert.equal(attributes.def, normalizeMonsterDefenseForScale(500, 900));
-    assert.equal(attributes.magicDef, normalizeMonsterDefenseForScale(500, 700));
+    assert.equal(attributes.def, 900);
+    assert.equal(attributes.magicDef, 700);
 });
 
 test('기존 마스터의 공격 방식과 능력치에서 점진 이전용 역할을 추론한다', () => {

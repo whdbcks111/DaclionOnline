@@ -79,14 +79,14 @@ export class AttributeType {
         '방어력',         
         0,   
         undefined, 
-        v => `방어력 ${v.toFixed(1)}로 물리 피해를 비례 감산·나눗셈 혼합 방식으로 완화합니다. 관통력과 자신의 레벨에 따라 효율이 달라집니다.`
+        v => `방어력 수치 ${v.toFixed(1)}은 관통 후 고정 방어와 비율 방어를 함께 제공합니다.`
     )
     static readonly MAGIC_DEF    = new AttributeType(
         'magicDef',     
         '마법 저항력',
         0,   
         undefined, 
-        v => `마법 저항력 ${v.toFixed(1)}로 마법 피해를 비례 감산·나눗셈 혼합 방식으로 완화합니다. 관통력과 자신의 레벨에 따라 효율이 달라집니다.`
+        v => `마법 저항력 수치 ${v.toFixed(1)}은 관통 후 고정 방어와 비율 방어를 함께 제공합니다.`
     )
     static readonly ARMOR_PEN    = new AttributeType(
         'armorPen',     

@@ -1319,7 +1319,7 @@ defineItem({
     onUse: null,
     equipSlot: 'mainHand',
     modifiers: [
-        { attribute: 'atk', op: 'add', value: 31, source: '' },
+        { attribute: 'atk', op: 'add', value: 32, source: '' },
         { attribute: 'critRate', op: 'add', value: 0.025, source: '' },
         { attribute: 'projectileAcceleration', op: 'multiply', value: 1.13, source: '' },
     ],

@@ -10,7 +10,6 @@ import {
     inferMonsterStatProfile,
     MonsterRank,
     MonsterStatProfile,
-    normalizeMonsterDefenseForScale,
     type MonsterStatWeightMap,
 } from '../models/MonsterStats.js';
 import type { AttributeRecord } from '../models/Attribute.js';
@@ -22,7 +21,7 @@ export type WorldMonsterData = Omit<
     'exp' | 'expReward' | 'equipments' | 'baseAttribute' | 'statProfile' | 'statRank' | 'statWeights'
 > & Partial<Pick<MonsterData, 'expReward' | 'equipments'>>
     & {
-        /** 미이전 마스터의 실전 수치를 보존하는 호환 입력. */
+        /** 미이전 마스터의 프로필 추론과 관통·속도·치명타율 성향을 보존하는 호환 입력. */
         baseAttribute?: Partial<AttributeRecord>;
         statProfile?: MonsterStatProfile;
         statRank?: MonsterRank;
@@ -87,32 +86,31 @@ export function defineWorldMonster(data: WorldMonsterData): void {
         ?? (data.tags.includes(GameTags.ENTITY_BOSS) ? MonsterRank.BOSS : MonsterRank.NORMAL);
     const bossNarrative = data.bossNarrative
         ?? (data.tags.includes(GameTags.ENTITY_BOSS) ? createBossNarrative(data.id, data.tags) : undefined);
-    // 명시 프로필로 이전된 마스터는 기존처럼 계산값 전체를 사용한다.
-    // 레거시 마스터는 authored 전투 성향을 유지하되 최대 생명력만 공용 성장식으로 통일한다.
+    const legacyTraitOverrides: Partial<AttributeRecord> = explicitProfile ? {} : {
+        ...(authoredAttributes.armorPen === undefined ? {} : { armorPen: authoredAttributes.armorPen }),
+        ...(authoredAttributes.magicPen === undefined ? {} : { magicPen: authoredAttributes.magicPen }),
+        ...(authoredAttributes.speed === undefined ? {} : { speed: authoredAttributes.speed }),
+        ...(authoredAttributes.attackSpeed === undefined ? {} : { attackSpeed: authoredAttributes.attackSpeed }),
+        ...(authoredAttributes.critRate === undefined ? {} : { critRate: authoredAttributes.critRate }),
+    };
+    // 명시 프로필과 레거시 마스터 모두 공용 공방 성장식을 사용한다.
+    // 레거시가 직접 작성한 관통·속도·치명타율 성향은 최종 override로 보존한다.
+    // 치명타 피해는 공용 곡선으로 옮겨 후반 한 방 분산을 함께 제어한다.
     const calculatedAttributes = calculateMonsterBaseAttributes({
         level: data.level,
         profile: statProfile,
         rank: statRank,
         weights: statWeights,
-        overrides: explicitProfile ? { ...authoredAttributes, ...statOverrides } : undefined,
+        overrides: explicitProfile
+            ? { ...authoredAttributes, ...statOverrides }
+            : legacyTraitOverrides,
     });
-    const usesGeneralMonsterOffense = statRank === MonsterRank.NORMAL || statRank === MonsterRank.ELITE;
     defineMonster({
         ...definition,
         drops: normalizeWorldMonsterDrops(definition.drops, data.level, statRank),
         baseAttribute: explicitProfile ? calculatedAttributes : {
             ...authoredAttributes,
-            ...(authoredAttributes.def === undefined ? {} : {
-                def: normalizeMonsterDefenseForScale(data.level, authoredAttributes.def),
-            }),
-            ...(authoredAttributes.magicDef === undefined ? {} : {
-                magicDef: normalizeMonsterDefenseForScale(data.level, authoredAttributes.magicDef),
-            }),
-            ...(usesGeneralMonsterOffense ? {
-                atk: calculatedAttributes.atk,
-                magicForce: calculatedAttributes.magicForce,
-            } : {}),
-            maxLife: calculatedAttributes.maxLife,
+            ...calculatedAttributes,
         },
         statProfile,
         statRank,

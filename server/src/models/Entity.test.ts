@@ -6,14 +6,16 @@ import Equipment, { ArmorDurabilityDamageMode } from './Equipment.js';
 import { AttributeType } from './Attribute.js';
 import { defineItem, Item, type ItemData } from './Item.js';
 import Stat, {
+    calculateDefensiveStatGrowthUnits,
+    calculateMentalityMagicDefenseBonus,
     calculateMentalityRegenBonus,
-    calculateSensibilityCritDamageBonus,
     calculateSensibilityCritRateBonus,
+    calculateVitalityDefenseBonus,
     calculateVitalityLifeRegenBonus,
-    MENTALITY_MAGIC_DEF_PER_POINT,
+    calculateVitalityMaxLifeBonus,
+    MENTALITY_MAGIC_PEN_PER_POINT,
     MENTALITY_MAX_MENTALITY_PER_POINT,
     MENTALITY_REGEN_PER_POINT,
-    SENSIBILITY_CRIT_DAMAGE_BONUS_CAP,
     SENSIBILITY_CRIT_RATE_CAP,
     STAT_REGEN_DIMINISHING_SCALE,
     StatType,
@@ -253,8 +255,8 @@ test('재생 능력치는 상태창 순회 목록과 표시 메타데이터를 �
     assert.equal(AttributeType.fromKey('mentalityRegen'), AttributeType.MENTALITY_REGEN);
     assert.equal(AttributeType.LIFE_REGEN.format(1), '1.00/초');
     assert.equal(AttributeType.MENTALITY_REGEN.getDescription(1), '초당 정신력을 1.00 회복합니다.');
-    assert.match(AttributeType.DEF.getDescription(100), /비례 감산·나눗셈 혼합/);
-    assert.match(AttributeType.MAGIC_DEF.getDescription(100), /비례 감산·나눗셈 혼합/);
+    assert.match(AttributeType.DEF.getDescription(100), /고정 방어와 비율 방어/);
+    assert.match(AttributeType.MAGIC_DEF.getDescription(100), /고정 방어와 비율 방어/);
 });
 
 test('근력은 공격력과 함께 물리 관통력과 최대 중량을 높인다', () => {
@@ -282,7 +284,11 @@ test('민첩과 정신력은 레벨 성장에 쓰이는 투사체 가속 능력�
     );
     assert.equal(
         entity.attribute.get(AttributeType.MAGIC_DEF),
-        100 * MENTALITY_MAGIC_DEF_PER_POINT,
+        calculateMentalityMagicDefenseBonus(100),
+    );
+    assert.equal(
+        entity.attribute.get(AttributeType.MAGIC_PEN),
+        100 * MENTALITY_MAGIC_PEN_PER_POINT,
     );
     assert.ok(Math.abs(
         entity.attribute.get(AttributeType.MENTALITY_REGEN)
@@ -291,7 +297,8 @@ test('민첩과 정신력은 레벨 성장에 쓰이는 투사체 가속 능력�
     assert.match(StatType.MENTALITY.getDescription(100), /최대 정신력 \+525/);
     assert.match(StatType.AGILITY.getDescription(100), /투사체 가속/);
     assert.match(StatType.MENTALITY.getDescription(100), /투사체 가속/);
-    assert.match(StatType.MENTALITY.getDescription(100), /마법 저항력 \+50/);
+    assert.match(StatType.MENTALITY.getDescription(100), /마법 관통력 \+50/);
+    assert.match(StatType.MENTALITY.getDescription(100), /마법 저항력 \+150\.0/);
     assert.match(StatType.MENTALITY.getDescription(100), /정신력 재생 \+1\.19\/초/);
 });
 
@@ -346,25 +353,43 @@ test('감각은 치명타 능력치와 대장장이용 제련 정밀도를 함�
     stat.applyModifiers(entity);
 
     assert.ok(Math.abs(entity.attribute.get(AttributeType.CRIT_RATE) - (0.05 + calculateSensibilityCritRateBonus(100))) < 1e-10);
-    assert.ok(Math.abs(entity.attribute.get(AttributeType.CRIT_DMG)
-        - (1.5 + calculateSensibilityCritDamageBonus(100))) < 1e-10);
+    assert.equal(entity.attribute.get(AttributeType.CRIT_DMG), 2.5);
     assert.ok(Math.abs(entity.attribute.get(AttributeType.FORGING_PRECISION) - 0.15) < 1e-10);
     assert.match(StatType.SENSIBILITY.getDescription(100), /치명타율 \+9\.1%p/);
     assert.match(StatType.SENSIBILITY.getDescription(100), /제련 정밀도 \+15\.0%/);
+    assert.equal(
+        StatType.SENSIBILITY.getAffectedAttributeSummary(),
+        '치명타 확률 · 치명타 피해 · 제련 정밀도',
+    );
 });
 
-test('감각 치명타 피해는 초반 기울기를 보존하고 최대 200% 기여에 점근한다', () => {
-    assert.equal(calculateSensibilityCritDamageBonus(0), 0);
-    assert.ok(Math.abs(calculateSensibilityCritDamageBonus(100) - 0.7869386805747332) < 1e-12);
-    assert.ok(calculateSensibilityCritDamageBonus(1_256) < SENSIBILITY_CRIT_DAMAGE_BONUS_CAP);
-    assert.ok(calculateSensibilityCritDamageBonus(10_000) <= SENSIBILITY_CRIT_DAMAGE_BONUS_CAP);
+test('모든 스탯은 상태창에 표시할 파생 능력치 목록을 순서대로 제공한다', () => {
+    assert.deepEqual(
+        StatType.values().map(stat => [stat.label, stat.getAffectedAttributeSummary()]),
+        [
+            ['근력', '공격력 · 물리 관통력 · 최대 중량'],
+            ['민첩', '이동속도 · 공격속도 · 투사체 가속'],
+            ['체력', '최대 생명력 · 방어력 · 생명력 재생'],
+            ['감각', '치명타 확률 · 치명타 피해 · 제련 정밀도'],
+            ['정신력', '최대 정신력 · 마법력 · 마법 관통력 · 마법 저항력 · 투사체 가속 · 정신력 재생'],
+        ],
+    );
+});
 
-    const earlyGain = calculateSensibilityCritDamageBonus(100);
-    const lateGain = calculateSensibilityCritDamageBonus(1_000)
-        - calculateSensibilityCritDamageBonus(900);
-    assert.ok(lateGain < earlyGain);
-    assert.match(StatType.SENSIBILITY.getDescription(1_000), /치명타 피해 \+198\.7%/);
-    assert.match(StatType.SENSIBILITY.getDescription(1_000), /최대 \+200%/);
+test('생존 능력치는 특정 레벨 경계 없이 투자량에 따라 함께 가속한다', () => {
+    assert.equal(calculateDefensiveStatGrowthUnits(100), 106);
+    assert.equal(calculateVitalityMaxLifeBonus(100), 1_060);
+    assert.equal(calculateVitalityDefenseBonus(100), 200);
+    assert.equal(calculateMentalityMagicDefenseBonus(100), 150);
+
+    assert.ok(Math.abs(calculateDefensiveStatGrowthUnits(334) - 400.9336) < 1e-10);
+    assert.equal(calculateDefensiveStatGrowthUnits(1_000), 1_600);
+    assert.equal(calculateVitalityMaxLifeBonus(1_000), 16_000);
+    assert.equal(calculateVitalityDefenseBonus(1_000), 11_000);
+    assert.equal(calculateMentalityMagicDefenseBonus(1_000), 10_500);
+
+    assert.match(StatType.VITALITY.getDescription(1_000), /최대 생명력 \+16000/);
+    assert.match(StatType.MENTALITY.getDescription(1_000), /마법 저항력 \+10500\.0/);
 });
 
 test('감각 치명타율은 낮은 구간의 기울기를 보존하면서 50%p에 점근한다', () => {

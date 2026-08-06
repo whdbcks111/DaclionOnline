@@ -6,12 +6,12 @@ import Equipment from './Equipment.js';
 import { ActionType } from './Action.js';
 import {
     calculateDefenseScale,
+    calculateDefenseBreakdown,
     calculateEvasionChance,
+    calculateExpectedFinalDamage,
     calculateFinalDamage,
-    calculateLevelGapDamageMultiplier,
-    LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL,
-    LEVEL_GAP_DAMAGE_MAX_MULTIPLIER,
-    LEVEL_GAP_DAMAGE_MIN_MULTIPLIER,
+    calculateRequiredRawDamage,
+    calculateRequiredRawDamageForExpectedDamage,
     rollEvasion,
 } from './Combat.js';
 import { CombatStage, registerCombatHook } from './CombatPipeline.js';
@@ -36,7 +36,7 @@ test('속도 비율 2배는 50%, 3배 이상은 최대 90% 회피율을 만든�
     assert.equal(rollEvasion(1, () => 0.999999), true);
 });
 
-test('비례 방어 공식은 방어가 높을수록 피해를 줄이고 관통이 높을수록 피해를 복원한다', () => {
+test('방어력 하나가 고정 감산과 비율 완화를 함께 제공하고 관통이 둘을 낮춘다', () => {
     const rawDamage = 1_000;
     const level = 100;
     assert.equal(calculateFinalDamage(rawDamage, 0, 0, level), rawDamage);
@@ -54,85 +54,83 @@ test('비례 방어 공식은 방어가 높을수록 피해를 줄이고 관통�
         assert.ok(byPenetration[index] > byPenetration[index - 1]);
     }
 
-    const scale = calculateDefenseScale(level);
-    const effectiveDefense = 500;
-    const expected = rawDamage * scale / (scale + effectiveDefense);
+    const breakdown = calculateDefenseBreakdown(500, 0, level);
+    const remainingDamageRatio = calculateDefenseScale(level)
+        / (calculateDefenseScale(level) + 500);
+    assert.deepEqual(breakdown, {
+        effectiveDefense: 500,
+        fixedReduction: 500 * remainingDamageRatio,
+        proportionalReduction: 1 - remainingDamageRatio,
+    });
+    const expected = (rawDamage - breakdown.fixedReduction)
+        * (1 - breakdown.proportionalReduction);
     assert.ok(Math.abs(byDefense[3] - expected) < 1e-10);
 });
 
-test('치명타 배율은 방어 적용 뒤에도 정확히 같은 비율을 유지한다', () => {
-    const normal = calculateFinalDamage(100, 400, 75, 200);
-    const critical = calculateFinalDamage(200, 400, 75, 200);
-    assert.equal(critical, normal * 2);
+test('고정 방어는 약한 공격을 더 강하게 거르고 큰 치명타의 초과 위력은 보존한다', () => {
+    assert.equal(calculateFinalDamage(200, 400, 75, 200), 0);
+    const normal = calculateFinalDamage(1_000, 400, 75, 200);
+    const critical = calculateFinalDamage(2_000, 400, 75, 200);
+    assert.ok(critical > normal * 2);
 });
 
-test('Entity 피해는 낮은 방어 기준 레벨을 유지하면서 공격자·방어자 레벨 차이를 양방향 적용한다', () => {
+test('Entity 피해는 공격자 레벨 강제 배율 없이 피격자의 표시 방어 효과만 적용한다', () => {
     const attacker = new TestEntity('Lv.100 공격자', { speed: 1 }, 100);
-    const sameLevelTarget = new TestEntity('Lv.100 방어자', { def: 100, speed: 1 }, 100);
     const highLevelTarget = new TestEntity('Lv.1000 방어자', { def: 100, speed: 1 }, 1_000);
     const highLevelAttacker = new TestEntity('Lv.1000 공격자', { speed: 1 }, 1_000);
-    const lowLevelTarget = new TestEntity('Lv.100 방어자 2', { def: 100, speed: 1 }, 100);
     const cause = { type: 'attack', causeEntity: attacker } as const;
 
-    const sameLevelDamage = sameLevelTarget.damage(100, 'physical', cause).finalDamage;
-    const highTargetDamage = highLevelTarget.damage(100, 'physical', cause).finalDamage;
-    const lowTargetDamage = lowLevelTarget.damage(100, 'physical', {
+    const lowAttackerDamage = highLevelTarget.damage(1_000, 'physical', cause).finalDamage;
+    highLevelTarget.life = highLevelTarget.maxLife;
+    const highAttackerDamage = highLevelTarget.damage(1_000, 'physical', {
         type: 'attack',
         causeEntity: highLevelAttacker,
     }).finalDamage;
-    const expected = calculateFinalDamage(100, 100, 0, 100);
-    assert.equal(sameLevelDamage, expected);
-    assert.equal(
-        highTargetDamage,
-        expected * calculateLevelGapDamageMultiplier(attacker.level, highLevelTarget.level),
-    );
-    assert.equal(
-        lowTargetDamage,
-        expected * calculateLevelGapDamageMultiplier(highLevelAttacker.level, lowLevelTarget.level),
-    );
-    assert.ok(highTargetDamage < sameLevelDamage);
-    assert.ok(lowTargetDamage > sameLevelDamage);
+    const expected = calculateFinalDamage(1_000, 100, 0, highLevelTarget.level);
+    assert.equal(lowAttackerDamage, expected);
+    assert.equal(highAttackerDamage, expected);
 
     const environmentalTarget = new TestEntity('환경 피해 대상', { def: 100, speed: 1 }, 1_000);
     assert.equal(
-        environmentalTarget.damage(100, 'physical').finalDamage,
-        calculateFinalDamage(100, 100, 0, 1_000),
+        environmentalTarget.damage(1_000, 'physical').finalDamage,
+        calculateFinalDamage(1_000, 100, 0, 1_000),
     );
 
     const selfDamageTarget = new TestEntity('자해 피해 대상', { def: 100, speed: 1 }, 1_000);
     assert.equal(
-        selfDamageTarget.damage(100, 'physical', {
+        selfDamageTarget.damage(1_000, 'physical', {
             type: 'attack',
             causeEntity: selfDamageTarget,
         }).finalDamage,
-        calculateFinalDamage(100, 100, 0, 1_000),
+        calculateFinalDamage(1_000, 100, 0, 1_000),
     );
 });
 
-test('레벨차 피해 배율은 동레벨 1·상하한 0.5~2이며 반대 방향과 서로 역수다', () => {
-    assert.equal(calculateLevelGapDamageMultiplier(1, 1), 1);
-    assert.equal(calculateLevelGapDamageMultiplier(1_000, 1_000), 1);
+test('방어 역산은 비치명 피해와 치명타 포함 기대 피해를 정확히 왕복한다', () => {
+    for (const level of [1, 100, 335, 1_000]) {
+        const defense = level * 10;
+        const penetration = level * 0.4;
+        const target = 25 + level;
+        const raw = calculateRequiredRawDamage(target, defense, penetration, level);
+        assert.ok(Math.abs(calculateFinalDamage(raw, defense, penetration, level) - target) < 1e-9);
 
-    for (const gap of [1, 25, 100, 299]) {
-        const higher = calculateLevelGapDamageMultiplier(500 + gap, 500);
-        const lower = calculateLevelGapDamageMultiplier(500, 500 + gap);
-        assert.ok(higher > 1 && higher < LEVEL_GAP_DAMAGE_MAX_MULTIPLIER);
-        assert.ok(lower < 1 && lower > LEVEL_GAP_DAMAGE_MIN_MULTIPLIER);
-        assert.ok(Math.abs(higher * lower - 1) < 1e-12, `gap=${gap}`);
+        const expectedRaw = calculateRequiredRawDamageForExpectedDamage(
+            target,
+            defense,
+            penetration,
+            level,
+            0.25,
+            2.2,
+        );
+        assert.ok(Math.abs(calculateExpectedFinalDamage(
+            expectedRaw,
+            defense,
+            penetration,
+            level,
+            0.25,
+            2.2,
+        ) - target) < 1e-9);
     }
-
-    assert.equal(
-        calculateLevelGapDamageMultiplier(500 + LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL, 500),
-        LEVEL_GAP_DAMAGE_MAX_MULTIPLIER,
-    );
-    assert.equal(
-        calculateLevelGapDamageMultiplier(500, 500 + LEVEL_GAP_DAMAGE_DOUBLING_INTERVAL),
-        LEVEL_GAP_DAMAGE_MIN_MULTIPLIER,
-    );
-    assert.equal(calculateLevelGapDamageMultiplier(10_000, 0), LEVEL_GAP_DAMAGE_MAX_MULTIPLIER);
-    assert.equal(calculateLevelGapDamageMultiplier(0, 10_000), LEVEL_GAP_DAMAGE_MIN_MULTIPLIER);
-    assert.throws(() => calculateLevelGapDamageMultiplier(-1, 1), /attackerLevel/);
-    assert.throws(() => calculateLevelGapDamageMultiplier(1, Number.NaN), /defenderLevel/);
 });
 
 test('방어 척도는 Lv.200까지 기존 곡선, 이후 연속적인 선형 곡선을 사용한다', () => {
@@ -144,11 +142,11 @@ test('방어 척도는 Lv.200까지 기존 곡선, 이후 연속적인 선형 �
     assert.equal(calculateDefenseScale(1_000), 3_900);
 });
 
-test('비례 방어 공식은 Lv.1~1000에서 유한하고 잘못된 입력을 거부한다', () => {
+test('고정·비율 방어 공식은 Lv.1~1000에서 유한하고 잘못된 입력을 거부한다', () => {
     for (let level = 1; level <= 1_000; level++) {
         const damage = calculateFinalDamage(1_000_000, level * 10, level, level);
         assert.ok(Number.isFinite(damage));
-        assert.ok(damage > 0 && damage <= 1_000_000);
+        assert.ok(damage >= 0 && damage <= 1_000_000);
     }
 
     assert.throws(() => calculateFinalDamage(-1, 0, 0, 1), /rawAmount/);

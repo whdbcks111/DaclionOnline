@@ -1,3 +1,4 @@
+import { AttributeType } from './Attribute.js'
 import type Attribute from './Attribute.js'
 
 interface AttributeOwner { attribute: Attribute }
@@ -6,14 +7,16 @@ interface AttributeOwner { attribute: Attribute }
 export const SENSIBILITY_CRIT_RATE_CAP = 0.5
 /** 0 근처에서 기존 1포인트당 0.1%p 기울기를 유지하는 지수 포화 척도. */
 export const SENSIBILITY_CRIT_RATE_SCALE = SENSIBILITY_CRIT_RATE_CAP / 0.001
-/** 감각만으로 얻을 수 있는 치명타 피해 배율 기여 상한. */
-export const SENSIBILITY_CRIT_DAMAGE_BONUS_CAP = 2
-/** 0 근처에서 기존 1포인트당 1% 기울기를 유지하는 지수 포화 척도. */
-export const SENSIBILITY_CRIT_DAMAGE_SCALE = SENSIBILITY_CRIT_DAMAGE_BONUS_CAP / 0.01
 /** 정신력 스탯 1포인트가 제공하는 최대 정신력. */
 export const MENTALITY_MAX_MENTALITY_PER_POINT = 5.25
 /** 정신력 스탯 1포인트가 제공하는 마법 저항력. */
 export const MENTALITY_MAGIC_DEF_PER_POINT = 0.5
+/** 정신력 스탯 1포인트가 제공하는 마법 관통력. */
+export const MENTALITY_MAGIC_PEN_PER_POINT = 0.5
+/** 최대 생명력 `10p + 0.006p²`을 만드는 성장 단위의 제곱 기여 계수. */
+export const DEFENSIVE_STAT_ACCELERATION_RATE = 0.0006
+/** 방어력·마법 저항력의 제곱 기여 계수. */
+export const DEFENSE_STAT_ACCELERATION_RATE = 0.01
 /** 낮은 구간에서 체력 1포인트가 제공하는 초당 생명력 재생량. */
 export const VITALITY_LIFE_REGEN_PER_POINT = 0.025
 /** 낮은 구간에서 정신력 1포인트가 제공하는 초당 정신력 재생량. */
@@ -32,12 +35,27 @@ export function calculateSensibilityCritRateBonus(points: number): number {
     return SENSIBILITY_CRIT_RATE_CAP * (1 - Math.exp(-points / SENSIBILITY_CRIT_RATE_SCALE))
 }
 
-/** 감각의 치명타 피해 기여가 제련 정밀도와 곱해져 고레벨에 제곱 성장하지 않게 한다. */
-export function calculateSensibilityCritDamageBonus(points: number): number {
-    if (points === Number.POSITIVE_INFINITY) return SENSIBILITY_CRIT_DAMAGE_BONUS_CAP
+/**
+ * 최대 생명력의 성장 단위. 별도 구간 경계 없이 투자량의 제곱만큼 가속한다.
+ */
+export function calculateDefensiveStatGrowthUnits(points: number): number {
     if (!Number.isFinite(points) || points <= 0) return 0
-    return SENSIBILITY_CRIT_DAMAGE_BONUS_CAP
-        * (1 - Math.exp(-points / SENSIBILITY_CRIT_DAMAGE_SCALE))
+    return points + DEFENSIVE_STAT_ACCELERATION_RATE * points * points
+}
+
+export function calculateVitalityMaxLifeBonus(points: number): number {
+    return 10 * calculateDefensiveStatGrowthUnits(points)
+}
+
+export function calculateVitalityDefenseBonus(points: number): number {
+    if (!Number.isFinite(points) || points <= 0) return 0
+    return points + DEFENSE_STAT_ACCELERATION_RATE * points * points
+}
+
+export function calculateMentalityMagicDefenseBonus(points: number): number {
+    if (!Number.isFinite(points) || points <= 0) return 0
+    return MENTALITY_MAGIC_DEF_PER_POINT * points
+        + DEFENSE_STAT_ACCELERATION_RATE * points * points
 }
 
 function calculateDiminishingStatBonus(points: number, perPoint: number): number {
@@ -76,6 +94,7 @@ export class StatType {
     private static _all: StatType[] = []
 
     static readonly STRENGTH = new StatType('strength', '근력',
+        [AttributeType.ATK, AttributeType.ARMOR_PEN, AttributeType.MAX_WEIGHT],
         (entity, points, source) => {
             entity.attribute.addModifier({ attribute: 'atk', op: 'add', value: 2 * points, source })
             entity.attribute.addModifier({ attribute: 'armorPen', op: 'add', value: 0.5 * points, source })
@@ -85,6 +104,7 @@ export class StatType {
     )
 
     static readonly AGILITY = new StatType('agility', '민첩',
+        [AttributeType.SPEED, AttributeType.ATTACK_SPEED, AttributeType.PROJECTILE_ACCELERATION],
         (entity, points, source) => {
             entity.attribute.addModifier({ attribute: 'speed', op: 'add', value: 0.05 * points, source })
             entity.attribute.addModifier({ attribute: 'attackSpeed', op: 'add', value: 0.01 * points, source })
@@ -94,9 +114,10 @@ export class StatType {
     )
 
     static readonly VITALITY = new StatType('vitality', '체력',
+        [AttributeType.MAX_LIFE, AttributeType.DEF, AttributeType.LIFE_REGEN],
         (entity, points, source) => {
-            entity.attribute.addModifier({ attribute: 'maxLife', op: 'add', value: 10 * points, source })
-            entity.attribute.addModifier({ attribute: 'def', op: 'add', value: 1 * points, source })
+            entity.attribute.addModifier({ attribute: 'maxLife', op: 'add', value: calculateVitalityMaxLifeBonus(points), source })
+            entity.attribute.addModifier({ attribute: 'def', op: 'add', value: calculateVitalityDefenseBonus(points), source })
             entity.attribute.addModifier({
                 attribute: 'lifeRegen',
                 op: 'add',
@@ -104,19 +125,28 @@ export class StatType {
                 source,
             })
         },
-        p => `체력 1 → 최대 생명력 +10, 방어력 +1, 생명력 재생 증가(고체력 구간에서 포인트 효율 회복)\n현재 체력 ${p}: 최대 생명력 +${10 * p}, 방어력 +${p}, 생명력 재생 +${calculateVitalityLifeRegenBonus(p).toFixed(2)}/초`
+        p => `체력 투자량에 따라 최대 생명력·방어력 효율이 함께 증가하며 생명력 재생도 상승\n현재 체력 ${p}: 최대 생명력 +${calculateVitalityMaxLifeBonus(p).toFixed(0)}, 방어력 +${calculateVitalityDefenseBonus(p).toFixed(1)}, 생명력 재생 +${calculateVitalityLifeRegenBonus(p).toFixed(2)}/초`
     )
 
     static readonly SENSIBILITY = new StatType('sensibility', '감각',
+        [AttributeType.CRIT_RATE, AttributeType.CRIT_DMG, AttributeType.FORGING_PRECISION],
         (entity, points, source) => {
             entity.attribute.addModifier({ attribute: 'critRate', op: 'add', value: calculateSensibilityCritRateBonus(points), source })
-            entity.attribute.addModifier({ attribute: 'critDmg', op: 'add', value: calculateSensibilityCritDamageBonus(points), source })
+            entity.attribute.addModifier({ attribute: 'critDmg', op: 'add', value: 0.01 * points, source })
             entity.attribute.addModifier({ attribute: 'forgingPrecision', op: 'add', value: 0.0015 * points, source })
         },
-        p => `감각 치명타율 → 낮은 구간에서 1당 최대 +0.1%p, 높을수록 효율 감소, 최대 +${(SENSIBILITY_CRIT_RATE_CAP * 100).toFixed(0)}%p\n감각 치명타 피해 → 낮은 구간에서 1당 약 +1%, 높을수록 효율 감소, 최대 +${(SENSIBILITY_CRIT_DAMAGE_BONUS_CAP * 100).toFixed(0)}%\n현재 감각 ${p}: 치명타율 +${(calculateSensibilityCritRateBonus(p) * 100).toFixed(1)}%p, 치명타 피해 +${(calculateSensibilityCritDamageBonus(p) * 100).toFixed(1)}%, 제련 정밀도 +${(0.15 * p).toFixed(1)}%`
+        p => `감각 1 → 치명타 피해 +1%, 제련 정밀도 +0.15%, 치명타율은 낮은 구간에서 약 +0.1%p(최대 +${(SENSIBILITY_CRIT_RATE_CAP * 100).toFixed(0)}%p)\n현재 감각 ${p}: 치명타율 +${(calculateSensibilityCritRateBonus(p) * 100).toFixed(1)}%p, 치명타 피해 +${p}%, 제련 정밀도 +${(0.15 * p).toFixed(1)}%`
     )
 
     static readonly MENTALITY = new StatType('mentality', '정신력',
+        [
+            AttributeType.MAX_MENTALITY,
+            AttributeType.MAGIC_FORCE,
+            AttributeType.MAGIC_PEN,
+            AttributeType.MAGIC_DEF,
+            AttributeType.PROJECTILE_ACCELERATION,
+            AttributeType.MENTALITY_REGEN,
+        ],
         (entity, points, source) => {
             entity.attribute.addModifier({
                 attribute: 'maxMentality',
@@ -126,9 +156,15 @@ export class StatType {
             })
             entity.attribute.addModifier({ attribute: 'magicForce', op: 'add', value: 2 * points, source })
             entity.attribute.addModifier({
+                attribute: 'magicPen',
+                op: 'add',
+                value: MENTALITY_MAGIC_PEN_PER_POINT * points,
+                source,
+            })
+            entity.attribute.addModifier({
                 attribute: 'magicDef',
                 op: 'add',
-                value: MENTALITY_MAGIC_DEF_PER_POINT * points,
+                value: calculateMentalityMagicDefenseBonus(points),
                 source,
             })
             entity.attribute.addModifier({ attribute: 'projectileAcceleration', op: 'add', value: 0.002 * points, source })
@@ -139,17 +175,25 @@ export class StatType {
                 source,
             })
         },
-        p => `정신력 1 → 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT}, 마법력 +2, 마법 저항력 +${MENTALITY_MAGIC_DEF_PER_POINT}, 투사체 가속 +0.002, 정신력 재생 증가(고정신력 구간에서 포인트 효율 회복)\n현재 정신력 ${p}: 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT * p}, 마법력 +${2 * p}, 마법 저항력 +${MENTALITY_MAGIC_DEF_PER_POINT * p}, 투사체 가속 +${(0.002 * p).toFixed(3)}, 정신력 재생 +${calculateMentalityRegenBonus(p).toFixed(2)}/초`
+        p => `정신력 투자량에 따라 마법 저항력 효율이 증가하며 최대 정신력·마법력·마법 관통력·투사체 가속·정신력 재생도 상승\n현재 정신력 ${p}: 최대 정신력 +${MENTALITY_MAX_MENTALITY_PER_POINT * p}, 마법력 +${2 * p}, 마법 관통력 +${MENTALITY_MAGIC_PEN_PER_POINT * p}, 마법 저항력 +${calculateMentalityMagicDefenseBonus(p).toFixed(1)}, 투사체 가속 +${(0.002 * p).toFixed(3)}, 정신력 재생 +${calculateMentalityRegenBonus(p).toFixed(2)}/초`
     )
 
     readonly key: StatKey
     readonly label: string
+    readonly affectedAttributes: readonly AttributeType[]
     readonly modify: StatModifyFn
     readonly getDescription: (points: number) => string
 
-    private constructor(key: StatKey, label: string, modify: StatModifyFn, getDescription: (points: number) => string) {
+    private constructor(
+        key: StatKey,
+        label: string,
+        affectedAttributes: readonly AttributeType[],
+        modify: StatModifyFn,
+        getDescription: (points: number) => string,
+    ) {
         this.key = key
         this.label = label
+        this.affectedAttributes = Object.freeze([...affectedAttributes])
         this.modify = modify
         this.getDescription = getDescription
         StatType._all.push(this)
@@ -167,6 +211,10 @@ export class StatType {
     static fromInput(input: string): StatType | undefined {
         const lower = input.toLowerCase()
         return StatType._all.find(s => s.key === lower || s.label === input)
+    }
+
+    getAffectedAttributeSummary(): string {
+        return this.affectedAttributes.map(attribute => attribute.label).join(' · ')
     }
 
     toString(): string { return this.key }

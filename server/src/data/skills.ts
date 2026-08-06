@@ -3396,7 +3396,7 @@ const growthTechniques: readonly GrowthTechniqueDefinition[] = [
         damageType: 'magic', attribute: AttributeType.MAGIC_FORCE, basePercent: 1_350, perLevelPercent: 82,
         manaCost: 76, cooldown: 18, jobId: JOBS.mage, groupTag: GameTags.SKILL_GROUP_MAGIC, unlockLevel: 180,
         projectile: 'magic_bolt', projectileName: '파열 성좌', unavoidable: true,
-        penetration: { attribute: AttributeType.MAGIC_PEN, base: 62, perLevel: 11 }, shieldPercent: 10,
+        penetration: { attribute: AttributeType.MAGIC_PEN, base: 62, perLevel: 11 }, shieldPercent: 11.25,
         descriptionIntro: '작은 성좌를 마력으로 그린 뒤 모든 별의 선을 대상 한 점에서 파열시킵니다.',
     },
     {

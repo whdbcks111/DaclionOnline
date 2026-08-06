@@ -29,6 +29,7 @@ import { formatWeight } from "../utils/format.js";
 import { emitGameEvent, GameEventIds } from "../models/GameEvent.js";
 import { InventorySortMode } from "../models/Inventory.js";
 import { GameTags } from "../../../shared/tags.js";
+import { calculateDefenseBreakdown } from '../models/Combat.js';
 
 function formatStatusDuration(seconds: number): string {
     const totalSeconds = Math.max(0, Math.ceil(seconds));
@@ -41,6 +42,14 @@ function itemDurabilityColor(ratio: number): string {
     if (ratio <= 0.2) return 'red';
     if (ratio <= 0.5) return 'gold';
     return 'lime';
+}
+
+function getStatusAttributeDescription(attribute: AttributeType, value: number, level: number): string {
+    if (attribute !== AttributeType.DEF && attribute !== AttributeType.MAGIC_DEF) {
+        return attribute.getDescription(value);
+    }
+    const defense = calculateDefenseBreakdown(value, 0, level);
+    return `${attribute.label} ${value.toFixed(1)}\n고정 방어: ${defense.fixedReduction.toFixed(1)}\n비율 방어: ${(defense.proportionalReduction * 100).toFixed(1)}%\n상대 관통력만큼 두 효과가 함께 감소합니다.`;
 }
 
 export function resolveItemRemovalCount(input: string | undefined, available: number): number | undefined {
@@ -225,7 +234,7 @@ export function initPlayerCommands(): void {
                                 .icon(attribute.icon)
                                 .text(' ')
                                 .tooltip(
-                                    attribute.getDescription(attr[attribute.key]),
+                                    getStatusAttributeDescription(attribute, attr[attribute.key], player.level),
                                     name => name.weight('bold', text => text.text(attribute.label)),
                                 ))
                                 .text(`${attribute.format(attr[attribute.key])}\n`);
@@ -234,18 +243,11 @@ export function initPlayerCommands(): void {
                         b.divider('스탯')
                          .tab(L, b2 => b2.weight('bold',b3 => b3.text('스탯포인트'))).text(`${player.statPoint}\n`);
 
-                        const statTypes = StatType.values();
-                        for (let i = 0; i < statTypes.length; i += 2) {
-                            const left = statTypes[i];
-                            const right = statTypes[i + 1];
-                            b.tab(L, b2 => b2.tooltip(left.getDescription(stats[left.key]), b3 => b3.weight('bold', b4 => b4.text(left.label))))
-                             .tab(V, b2 => b2.text(String(stats[left.key])));
-                            if (right) {
-                                b.tab(L, b2 => b2.tooltip(right.getDescription(stats[right.key]), b3 => b3.weight('bold', b4 => b4.text(right.label))))
-                                 .text(`${stats[right.key]}\n`);
-                            } else {
-                                b.text('\n');
-                            }
+                        for (const stat of StatType.values()) {
+                            b.tab(L, b2 => b2.tooltip(stat.getDescription(stats[stat.key]), b3 => b3.weight('bold', b4 => b4.text(stat.label))))
+                             .tab(V, b2 => b2.text(String(stats[stat.key])))
+                             .color('gray', b2 => b2.text(stat.getAffectedAttributeSummary()))
+                             .text('\n');
                         }
 
                         const statusEffects = player.getStatusEffectDisplaySnapshots();
@@ -960,7 +962,9 @@ export function initPlayerCommands(): void {
                     if (available > 0) {
                         b.button(`/스탯분배 ${stat.key} 1`, b2 => b2.color('lime', b3 => b3.text('[+1]')));
                     }
-                    b.text('\n');
+                    b.text('\n')
+                     .color('gray', b2 => b2.text(`  ${stat.getAffectedAttributeSummary()}`))
+                     .text('\n');
                 }
 
                 sendBotMessageToUser(userId, b.build());
