@@ -31,6 +31,35 @@ export class SkillBalanceRole {
     }
 }
 
+/** 고레벨 전투 기술의 고정 정신력 하한에 최대 정신력 비례 비용을 더하는 단계. */
+export class SkillMentalityCostTier {
+    private static readonly all: SkillMentalityCostTier[] = [];
+
+    static readonly ADVANCED = new SkillMentalityCostTier('advanced', '상급', 0.01);
+    static readonly EXPERT = new SkillMentalityCostTier('expert', '숙련', 0.015);
+    static readonly MASTER = new SkillMentalityCostTier('master', '달인', 0.025);
+    static readonly ULTIMATE = new SkillMentalityCostTier('ultimate', '극의', 0.04);
+
+    private constructor(
+        readonly key: string,
+        readonly label: string,
+        readonly maxMentalityRatio: number,
+    ) {
+        SkillMentalityCostTier.all.push(this);
+    }
+
+    static values(): readonly SkillMentalityCostTier[] { return SkillMentalityCostTier.all; }
+    static fromKey(key: string): SkillMentalityCostTier | undefined {
+        return SkillMentalityCostTier.all.find(value => value.key === key.trim().toLowerCase());
+    }
+
+    calculate(flatCost: number, maxMentality: number): number {
+        if (!Number.isFinite(flatCost) || flatCost < 0) throw new Error('Skill mentality flat cost must be non-negative');
+        if (!Number.isFinite(maxMentality) || maxMentality < 0) throw new Error('Skill max mentality must be non-negative');
+        return Math.ceil(Math.max(flatCost, maxMentality * this.maxMentalityRatio));
+    }
+}
+
 export class SkillCriticalMode {
     private static readonly all: SkillCriticalMode[] = [];
     static readonly NORMAL = new SkillCriticalMode('normal', '일반 치명타');

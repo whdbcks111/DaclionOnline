@@ -26,7 +26,12 @@ import {
 import { AttributeType } from './Attribute.js';
 import { calculateProjectileEvasionSpeed } from './Projectile.js';
 import { calculateEvasionChance } from './Combat.js';
-import Skill, { createSkillContext, getSkillData, PLAYER_COMBAT_SKILL_CADENCE_SECONDS } from './Skill.js';
+import Skill, {
+    createSkillContext,
+    getSkillData,
+    PLAYER_COMBAT_SKILL_CADENCE_SECONDS,
+    SkillMentalityCostTier,
+} from './Skill.js';
 import { GameTags } from '../../../shared/tags.js';
 
 test('projected profile uses the same eight stat points earned per level', () => {
@@ -315,6 +320,29 @@ test('skill report uses real cooldown, resource and damage callbacks', () => {
     assert.ok(report.rawDamage > 0);
     assert.ok(report.sustainableDpm > report.rawDamage);
     assert.equal(report.coverage, 'complete');
+});
+
+test('고레벨 전투 기술 정신력 비용은 고정 하한과 최대 정신력 비례 단계를 함께 사용한다', () => {
+    assert.equal(SkillMentalityCostTier.fromKey('ultimate'), SkillMentalityCostTier.ULTIMATE);
+    assert.deepEqual(
+        SkillMentalityCostTier.values().map(tier => tier.maxMentalityRatio),
+        [0.01, 0.015, 0.025, 0.04],
+    );
+
+    const mage = createBalanceScenario(200, 'career:mage', 'career:warrior');
+    const maxMentality = mage.entity.maxMentality;
+    const lowLevelSkill = analyzeSkillBalance(mage, 'mana_lance', 5);
+    const constellation = analyzeSkillBalance(mage, 'constellation_rupture', 5);
+    const elite = analyzeSkillBalance(mage, 'battle_magus_technique', 1);
+    const lateRole = analyzeSkillBalance(mage, 'mana_rift', 1);
+
+    assert.equal(lowLevelSkill.manaCost, 24);
+    assert.equal(constellation.manaCost, Math.ceil(Math.max(76, maxMentality * 0.04)));
+    assert.equal(elite.manaCost, Math.ceil(Math.max(30, maxMentality * 0.025)));
+    assert.equal(lateRole.manaCost, Math.ceil(Math.max(42, maxMentality * 0.04)));
+
+    const skill = new Skill({ playerId: null, skillDataId: 'constellation_rupture', level: 5 });
+    assert.match(skill.formatCost(mage.entity), new RegExp(`정신력 ${constellation.manaCost}`));
 });
 
 test('고레벨 마법사 보호막은 마법력과 최대 정신력 성장에 맞춰 보스 기술을 받아낸다', () => {

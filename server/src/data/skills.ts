@@ -6,6 +6,7 @@ import {
     denySkill,
     SkillBalanceRole,
     SkillCriticalMode,
+    SkillMentalityCostTier,
 } from '../models/Skill.js';
 import type { SkillContext } from '../models/Skill.js';
 import type Player from '../models/Player.js';
@@ -1377,10 +1378,25 @@ function targetOrDeny(context: SkillContext): { target: Entity } | { reason: str
     const denied = target.getAttackDeniedReason(player);
     return denied ? { reason: denied } : { target };
 }
-function spend(context: SkillContext, amount: number): void {
+type MentalityCost = number | ((context: SkillContext) => number);
+
+function resolveMentalityCost(context: SkillContext, cost: MentalityCost): number {
+    return typeof cost === 'number' ? cost : cost(context);
+}
+
+function scaledMentalityCost(
+    context: SkillContext,
+    flatCost: number,
+    tier: SkillMentalityCostTier,
+): number {
+    return tier.calculate(flatCost, context.owner.maxMentality);
+}
+
+function spend(context: SkillContext, cost: MentalityCost): void {
+    const amount = resolveMentalityCost(context, cost);
     if (!requirePlayer(context).spendMentality(amount)) throw new Error('정신력 소모에 실패했습니다.');
 }
-function simpleCheck(cost: number, needsTarget = true, requiresAttackReady = needsTarget) {
+function simpleCheck(cost: MentalityCost, needsTarget = true, requiresAttackReady = needsTarget) {
     return (context: SkillContext) => {
         if (needsTarget) {
             const found = targetOrDeny(context);
@@ -1389,7 +1405,8 @@ function simpleCheck(cost: number, needsTarget = true, requiresAttackReady = nee
         const player = requirePlayer(context);
         if (requiresAttackReady && player.attackCooldown > 0) return denySkill(`공격 대기시간이 ${player.attackCooldown.toFixed(1)}초 남았습니다.`);
         if (requiresAttackReady && !player.canPerformAction(ActionType.ATTACK)) return denySkill('현재 공격할 수 없는 상태입니다.');
-        return player.canSpendMentality(cost) ? { accepted: true } as const : denySkill(`정신력이 ${cost} 필요합니다.`);
+        const amount = resolveMentalityCost(context, cost);
+        return player.canSpendMentality(amount) ? { accepted: true } as const : denySkill(`정신력이 ${amount} 필요합니다.`);
     };
 }
 function directAttack(context: SkillContext, multiplier: number, options: Parameters<Player['attack']>[3] = {}) {
@@ -2112,7 +2129,7 @@ defineSkill({
     descriptionTemplate: '시전자를 포함한 같은 장소의 생존 파티원 최대 3명을 {{duration}} 동안 축복합니다. '
         + '{{icon.atk}} 공격력과 {{icon.magicForce}} 마법력이 [color=gold]{{offenseBonus}}%[/color], '
         + '{{icon.def}} 방어력과 {{icon.magicDef}} 마법 저항력이 [color=yellow]{{defenseBonus}}%[/color] 증가합니다.',
-    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 42[/color]',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
     activationConditionTemplate: activationGuide(),
     activationMessage: '새벽의 축도!',
     baseMetadata: null,
@@ -2123,6 +2140,7 @@ defineSkill({
             + ` · 방어력·마법 저항력 +${formatNumber(dawnBenedictionDefensePercent(context.skill.level))}%`,
     ),
     calculatedFields: {
+        manaCost: context => scaledMentalityCost(context, 42, SkillMentalityCostTier.EXPERT),
         duration: context => tooltipValue(
             dawnBenedictionDuration(context.skill.level),
             '기본 45초 + 스킬 레벨당 3초',
@@ -2133,7 +2151,7 @@ defineSkill({
     balance: {
         role: SkillBalanceRole.SUPPORT,
         targetCount: 3,
-        calculateManaCost: () => 42,
+        calculateManaCost: context => scaledMentalityCost(context, 42, SkillMentalityCostTier.EXPERT),
         calculateEffectDuration: context => dawnBenedictionDuration(context.skill.level),
         calculateRotationModifiers: context => [
             { attribute: AttributeType.ATK.key, op: 'multiply', value: 1 + dawnBenedictionOffensePercent(context.skill.level) / 100 },
@@ -2147,9 +2165,9 @@ defineSkill({
     sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_MAGIC, MAGIC_SHARED_COOLDOWN_SECONDS),
     autoAcquire: careerLevelAutoAcquire(JOBS.cleric, 120, JobSlotType.MAIN),
     jobRequirement: mainJobRequirement(JOBS.cleric),
-    canActivate: simpleCheck(42, false),
+    canActivate: simpleCheck(context => scaledMentalityCost(context, 42, SkillMentalityCostTier.EXPERT), false),
     onStart: context => {
-        spend(context, 42);
+        spend(context, current => scaledMentalityCost(current, 42, SkillMentalityCostTier.EXPERT));
         const duration = dawnBenedictionDuration(context.skill.level);
         for (const target of getDawnBenedictionTargets(context)) {
             target.applyStatusEffect(DAWN_BENEDICTION, duration, context.skill.level, context.owner);
@@ -2167,7 +2185,7 @@ defineSkill({
 defineSkill({
     id: 'elemental_bind', name: '원소 속박', icon: 'skills/elemental_bind', maxLevel: 5,
     descriptionTemplate: `얼음 마력을 구체로 응축해 대상에게 발사합니다. {{icon.magicForce}} [color=$magic]{{damage}}[/color]의 마법 피해를 입히고, 적중한 대상을 {{bindDuration}} 동안 속박해 공격·스킬·이동·장소 이동을 막습니다. ${PROJECTILE_CRITICAL_TEXT} ${PROJECTILE_FLIGHT_TEXT}`,
-    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 24[/color]',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
     activationConditionTemplate: targetActivationGuide(), activationMessage: '원소 속박!', baseMetadata: null,
     calculatedFields: {
         damage: context => attributeDamageTooltip(context, AttributeType.MAGIC_FORCE, 75, 6),
@@ -2329,6 +2347,33 @@ interface GrowthTechniqueDefinition {
         prerequisiteLevel: number;
     };
     descriptionIntro: string;
+}
+
+function growthTechniqueMentalityCostTier(definition: GrowthTechniqueDefinition): SkillMentalityCostTier | undefined {
+    if (definition.unlockLevel !== undefined && definition.unlockLevel < 75) return undefined;
+    if ((definition.unlockLevel ?? 0) >= 180 || definition.manaCost >= 70) {
+        return SkillMentalityCostTier.ULTIMATE;
+    }
+    if ((definition.unlockLevel ?? 0) >= 140 || definition.manaCost >= 55) {
+        return SkillMentalityCostTier.MASTER;
+    }
+    if ((definition.unlockLevel ?? 0) >= 100 || definition.manaCost >= 40) {
+        return SkillMentalityCostTier.EXPERT;
+    }
+    return SkillMentalityCostTier.ADVANCED;
+}
+
+function growthTechniqueMentalityCost(
+    context: SkillContext,
+    definition: GrowthTechniqueDefinition,
+): number {
+    const tier = growthTechniqueMentalityCostTier(definition);
+    if (!tier) return definition.manaCost;
+    return scaledMentalityCost(
+        context,
+        definition.manaCost,
+        tier,
+    );
 }
 
 function scaledAttributeValue(
@@ -2591,6 +2636,10 @@ const LATE_TACTICAL_DURATION = 10;
 const THIRD_ROLE_POWER_MULTIPLIER = 1.22;
 const THIRD_EXECUTION_CAP_MULTIPLIER = 1.18;
 
+function lateTacticalMentalityCost(context: SkillContext, flatCost: number): number {
+    return scaledMentalityCost(context, flatCost, SkillMentalityCostTier.ULTIMATE);
+}
+
 function hasThirdRole(context: SkillContext, thirdJobId: string): boolean {
     return Boolean(context.player?.career.hasJob(thirdJobId, JobSlotType.MAIN)
         || (typeof context.owner.hasTag === 'function' && context.owner.hasTag(thirdJobId)));
@@ -2633,11 +2682,12 @@ defineSkill({
     maxLevel: 5,
     unlockLevel: LATE_TACTICAL_UNLOCK_LEVEL,
     descriptionTemplate: '지정한 몬스터의 위협을 자신에게 끌어오고, {{duration}} 동안 {{icon.maxLife}}{{icon.def}} [color=green]{{shield}}[/color]만큼의 피해를 막는 일반 보호막을 얻습니다. 도발은 대상의 도발 저항과 위협도 규칙을 그대로 따르며, 철혈군주는 보호막과 도발 위력이 22% 증가합니다.',
-    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 40[/color]',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
     activationConditionTemplate: activationGuide('몬스터를 대상으로 지정하고'),
     activationMessage: '선봉의 호령!',
     baseMetadata: null,
     calculatedFields: {
+        manaCost: context => lateTacticalMentalityCost(context, 40),
         duration: () => `${LATE_TACTICAL_DURATION}초`,
         shield: context => tooltipValue(
             vanguardCommandShield(context),
@@ -2646,7 +2696,7 @@ defineSkill({
     },
     balance: {
         role: SkillBalanceRole.DEFENSE,
-        calculateManaCost: () => 40,
+        calculateManaCost: context => lateTacticalMentalityCost(context, 40),
         calculateShield: vanguardCommandShield,
         calculateEffectDuration: () => LATE_TACTICAL_DURATION,
         notes: ['도발은 몬스터의 도발 저항과 현재 위협도에 따라 대상을 전환하며 피해량으로 환산하지 않습니다.'],
@@ -2659,14 +2709,14 @@ defineSkill({
         const found = targetOrDeny(context);
         if ('reason' in found) return denySkill(found.reason);
         if (!(found.target instanceof Monster)) return denySkill('선봉의 호령은 몬스터에게만 사용할 수 있습니다.');
-        return simpleCheck(40, true, false)(context);
+        return simpleCheck(current => lateTacticalMentalityCost(current, 40), true, false)(context);
     },
     onStart: context => {
         const found = targetOrDeny(context);
         if ('reason' in found || !(found.target instanceof Monster)) {
             throw new Error('도발할 몬스터가 발동 직전에 사라졌습니다.');
         }
-        spend(context, 40);
+        spend(context, current => lateTacticalMentalityCost(current, 40));
         found.target.acquireCombatTarget(context.owner);
         found.target.taunt(context.owner, vanguardCommandTauntPower(context));
         context.owner.setShield(
@@ -2737,11 +2787,12 @@ for (const tactic of defenseDebuffTactics) defineSkill({
     maxLevel: 5,
     unlockLevel: LATE_TACTICAL_UNLOCK_LEVEL,
     descriptionTemplate: `${tactic.intro} 대상에게 {{effectLevel}}레벨 ${tactic.effects.map(effect => effect.label).join('·')} 효과를 {{duration}} 동안 부여합니다. 3차 계보에서는 약화 레벨이 1 증가하며, 이 약화는 행동을 막는 군중 제어 효과가 아닙니다.`,
-    costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${tactic.manaCost}[/color]`,
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
     activationConditionTemplate: targetActivationGuide(),
     activationMessage: `${tactic.name}!`,
     baseMetadata: null,
     calculatedFields: {
+        manaCost: context => lateTacticalMentalityCost(context, tactic.manaCost),
         effectLevel: context => tooltipValue(
             defenseDebuffEffectLevel(context, tactic),
             `스킬 레벨 ${context.skill.level} 기준${hasThirdRole(context, tactic.thirdJobId) ? ' + 3차 계보 1레벨' : ''}`,
@@ -2750,7 +2801,7 @@ for (const tactic of defenseDebuffTactics) defineSkill({
     },
     balance: {
         role: SkillBalanceRole.SUPPORT,
-        calculateManaCost: () => tactic.manaCost,
+        calculateManaCost: context => lateTacticalMentalityCost(context, tactic.manaCost),
         calculateEffectDuration: () => LATE_TACTICAL_DURATION,
         notes: [`${tactic.effects.map(effect => effect.label).join('·')}의 파티 전술 가치는 직접 피해로 환산하지 않습니다.`],
     },
@@ -2763,11 +2814,11 @@ for (const tactic of defenseDebuffTactics) defineSkill({
     sharedCooldowns: combatSharedCooldowns(tactic.groupTag),
     autoAcquire: careerLevelAutoAcquire(tactic.jobId, LATE_TACTICAL_UNLOCK_LEVEL, JobSlotType.MAIN),
     jobRequirement: mainJobRequirement(tactic.jobId),
-    canActivate: simpleCheck(tactic.manaCost, true, false),
+    canActivate: simpleCheck(context => lateTacticalMentalityCost(context, tactic.manaCost), true, false),
     onStart: context => {
         const found = targetOrDeny(context);
         if ('reason' in found) throw new Error(found.reason);
-        spend(context, tactic.manaCost);
+        spend(context, current => lateTacticalMentalityCost(current, tactic.manaCost));
         engageTacticalTarget(context, found.target);
         for (const effect of tactic.effects) {
             found.target.applyStatusEffect(
@@ -2828,11 +2879,12 @@ defineSkill({
     maxLevel: 5,
     unlockLevel: LATE_TACTICAL_UNLOCK_LEVEL,
     descriptionTemplate: '대상의 남은 힘이 무너지는 순간을 베어 {{icon.atk}}{{icon.speed}} [color=orange]{{damage}}[/color]의 물리 피해를 입힙니다. 잃은 생명력의 {{missingRatio}}를 보너스로 더하지만 보너스는 {{bonusCap}}, 최종 피해는 {{totalCap}}을 넘지 않습니다. 월영집행자는 두 상한이 18% 증가하며, 치명타와 군중 제어는 발생하지 않습니다.',
-    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 48[/color]',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
     activationConditionTemplate: targetActivationGuide(),
     activationMessage: '종막!',
     baseMetadata: null,
     calculatedFields: {
+        manaCost: context => lateTacticalMentalityCost(context, 48),
         damage: context => {
             const result = calculateFinaleExecutionDamage(context);
             return tooltipValue(
@@ -2849,18 +2901,18 @@ defineSkill({
         damageType: 'physical',
         calculateDamage: context => calculateFinaleExecutionDamage(context).totalDamage,
         criticalMode: SkillCriticalMode.DISABLED,
-        calculateManaCost: () => 48,
+        calculateManaCost: context => lateTacticalMentalityCost(context, 48),
         notes: ['잃은 생명력 보너스와 총 피해에 공격력·기동력 기반 상한을 각각 적용해 보스 체력에 비례한 즉사를 막습니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 28, 1, 24),
     sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_ASSASSIN),
     autoAcquire: careerLevelAutoAcquire(JOBS.assassin, LATE_TACTICAL_UNLOCK_LEVEL, JobSlotType.MAIN),
     jobRequirement: mainJobRequirement(JOBS.assassin),
-    canActivate: simpleCheck(48),
+    canActivate: simpleCheck(context => lateTacticalMentalityCost(context, 48)),
     onStart: context => {
         const found = targetOrDeny(context);
         if ('reason' in found) throw new Error(found.reason);
-        spend(context, 48);
+        spend(context, current => lateTacticalMentalityCost(current, 48));
         const damage = calculateFinaleExecutionDamage(context, found.target).totalDamage;
         const result = context.owner.attack(found.target, 'physical', damage, {
             criticalRate: 0,
@@ -2927,7 +2979,7 @@ defineSkill({
     descriptionTemplate: '같은 장소의 생존 파티원 최대 3명과 여명의 서약을 맺습니다. 현재 지정한 파티원을 우선하며, '
         + '각 대상의 생명력을 {{icon.magicForce}}{{icon.maxLife}} [color=green]{{healing}}[/color] 회복하고 {{duration}} 동안 '
         + '{{icon.magicForce}}{{icon.maxMentality}}{{icon.maxLife}} [color=#d9d9d9]{{shield}}[/color]만큼의 피해를 막는 일반 보호막을 부여합니다.',
-    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 48[/color]',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
     activationConditionTemplate: activationGuide(),
     activationMessage: '여명의 서약!',
     baseMetadata: null,
@@ -2937,6 +2989,7 @@ defineSkill({
         `아군 최대 3명 · 생명력 ${formatNumber(dawnCovenantHealing(context))} 회복 · 일반 보호막 ${formatNumber(dawnCovenantShield(context))}`,
     ),
     calculatedFields: {
+        manaCost: context => lateTacticalMentalityCost(context, 48),
         healing: context => tooltipValue(
             dawnCovenantHealing(context),
             `마법력 × ${formatNumber(percentByLevel(context.skill.level, DAWN_COVENANT_FORMULA.healingMagicBase, DAWN_COVENANT_FORMULA.healingMagicPerLevel))}%`
@@ -2953,7 +3006,7 @@ defineSkill({
     balance: {
         role: SkillBalanceRole.SUPPORT,
         targetCount: 3,
-        calculateManaCost: () => 48,
+        calculateManaCost: context => lateTacticalMentalityCost(context, 48),
         calculateHealing: dawnCovenantHealing,
         calculateShield: dawnCovenantShield,
         calculateEffectDuration: context => valueByLevel(context.skill.level, 10, 1),
@@ -2963,9 +3016,9 @@ defineSkill({
     sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_MAGIC, MAGIC_SHARED_COOLDOWN_SECONDS),
     autoAcquire: careerLevelAutoAcquire(JOBS.cleric, LATE_TACTICAL_UNLOCK_LEVEL, JobSlotType.MAIN),
     jobRequirement: mainJobRequirement(JOBS.cleric),
-    canActivate: simpleCheck(48, false),
+    canActivate: simpleCheck(context => lateTacticalMentalityCost(context, 48), false),
     onStart: context => {
-        spend(context, 48);
+        spend(context, current => lateTacticalMentalityCost(current, 48));
         const duration = valueByLevel(context.skill.level, 10, 1);
         for (const target of getSanctuaryAegisTargets(context)) {
             target.heal(dawnCovenantHealing(context), context.owner);
@@ -3754,11 +3807,12 @@ for (const technique of growthTechniques) defineSkill({
     maxLevel: 5,
     unlockLevel: technique.unlockLevel,
     descriptionTemplate: growthTechniqueDescription(technique),
-    costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${technique.manaCost}[/color]`,
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
     activationConditionTemplate: targetActivationGuide(technique.weaponDescription),
     activationMessage: `${technique.name}!`,
     baseMetadata: null,
     calculatedFields: {
+        manaCost: context => growthTechniqueMentalityCost(context, technique),
         damage: context => growthTechniqueDamageTooltip(context, technique),
         hitCount: () => technique.hitCount ?? 1,
         penetration: context => technique.penetration
@@ -3817,7 +3871,7 @@ for (const technique of growthTechniques) defineSkill({
         unavoidable: technique.unavoidable,
         criticalMode: technique.guaranteedCritical ? SkillCriticalMode.GUARANTEED : SkillCriticalMode.NORMAL,
         hitCount: technique.hitCount,
-        calculateManaCost: () => technique.manaCost,
+        calculateManaCost: context => growthTechniqueMentalityCost(context, technique),
         calculateShield: technique.shieldPercent
             ? context => followupShieldAmount(
                 context,
@@ -3839,11 +3893,11 @@ for (const technique of growthTechniques) defineSkill({
     ...(technique.weaponDescription && technique.weaponTags?.length ? {
         weaponRequirement: weaponRequirement(technique.weaponDescription, ...technique.weaponTags),
     } : {}),
-    canActivate: simpleCheck(technique.manaCost),
+    canActivate: simpleCheck(context => growthTechniqueMentalityCost(context, technique)),
     onStart: context => {
         const found = targetOrDeny(context);
         if ('reason' in found) throw new Error(found.reason);
-        spend(context, technique.manaCost);
+        spend(context, current => growthTechniqueMentalityCost(current, technique));
         const damage = growthTechniqueDamage(context, technique);
         const hit = (result: ReturnType<Entity['attack']>) => {
             if (!result || result.evaded || result.finalDamage <= 0 || !technique.statusEffect) return;
@@ -4094,6 +4148,7 @@ defineSkill({
     activationMessage: '은린 장막!',
     baseMetadata: null,
     calculatedFields: {
+        manaCost: context => scaledMentalityCost(context, 24, SkillMentalityCostTier.EXPERT),
         shieldAmount: context => tooltipValue(
             silverScaleVeilAmount(context),
             `최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 10, 1.5))}%`
@@ -4103,14 +4158,14 @@ defineSkill({
     },
     balance: {
         role: SkillBalanceRole.DEFENSE,
-        calculateManaCost: () => 24,
+        calculateManaCost: context => scaledMentalityCost(context, 24, SkillMentalityCostTier.EXPERT),
         calculateShield: silverScaleVeilAmount,
         calculateEffectDuration: context => valueByLevel(context.skill.level, 8, 1),
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 30, 2, 22),
-    canActivate: simpleCheck(24, false),
+    canActivate: simpleCheck(context => scaledMentalityCost(context, 24, SkillMentalityCostTier.EXPERT), false),
     onStart: context => {
-        spend(context, 24);
+        spend(context, current => scaledMentalityCost(current, 24, SkillMentalityCostTier.EXPERT));
         context.owner.setShield(
             'skill:silver_scale_veil',
             silverScaleVeilAmount(context),
@@ -4140,11 +4195,12 @@ defineSkill({
         '도감에 새긴 심해 생물의 흔적을 작살로 응축해 지정한 대상에게 '
         + '{{icon.atk}}{{icon.magicForce}} [color=$magic]{{damage}}[/color]의 회피 불가 마법 피해를 입힙니다. '
         + '공격력과 마법력 중 더 높은 수치를 사용하고, 적중한 대상에게 Lv.{{statusLevel}} 둔화를 {{statusDuration}} 동안 부여합니다.',
-    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 58[/color]',
+    costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
     activationConditionTemplate: targetActivationGuide(),
     activationMessage: '해연의 작살!',
     baseMetadata: null,
     calculatedFields: {
+        manaCost: context => scaledMentalityCost(context, 58, SkillMentalityCostTier.ULTIMATE),
         damage: context => tooltipValue(
             abyssalHarpoonDamage(context),
             `공격력·마법력 중 높은 값 × ${formatNumber(percentByLevel(context.skill.level, 550, 45))}%`,
@@ -4157,17 +4213,17 @@ defineSkill({
         damageType: 'magic',
         effectTags: [GameTags.PROPERTY_WATER],
         calculateDamage: abyssalHarpoonDamage,
-        calculateManaCost: () => 58,
+        calculateManaCost: context => scaledMentalityCost(context, 58, SkillMentalityCostTier.ULTIMATE),
         unavoidable: true,
         criticalMode: SkillCriticalMode.NORMAL,
         notes: ['공격력과 마법력 중 더 높은 수치를 사용하며 둔화의 전술 가치는 직접 피해와 분리합니다.'],
     },
     calculateMaxCooldown: () => 18,
-    canActivate: simpleCheck(58),
+    canActivate: simpleCheck(context => scaledMentalityCost(context, 58, SkillMentalityCostTier.ULTIMATE)),
     onStart: context => {
         const found = targetOrDeny(context);
         if ('reason' in found) throw new Error(found.reason);
-        spend(context, 58);
+        spend(context, current => scaledMentalityCost(current, 58, SkillMentalityCostTier.ULTIMATE));
         const result = context.owner.attack(found.target, 'magic', abyssalHarpoonDamage(context), {
             unavoidable: true,
             effectTags: [GameTags.PROPERTY_WATER],
@@ -4222,6 +4278,10 @@ interface EliteTechniqueDefinition {
     activationHeader?: string;
     /** 기본 물리 3배·마법 4.6배와 다른 엘리트 티어 보정이 필요한 기술만 명시한다. */
     tierDamageMultiplier?: number;
+}
+
+function eliteTechniqueMentalityCost(context: SkillContext, technique: EliteTechniqueDefinition): number {
+    return scaledMentalityCost(context, technique.manaCost, SkillMentalityCostTier.MASTER);
 }
 
 const eliteTechniques: readonly EliteTechniqueDefinition[] = [
@@ -4691,11 +4751,12 @@ for (const technique of eliteTechniques) {
         activationHeader: technique.reuseDeclaredArt ? technique.activationHeader : undefined,
         maxLevel: 5,
         descriptionTemplate: eliteTechniqueDescription(technique),
-        costTemplate: `{{icon.maxMentality}} [color=$magic]정신력 ${technique.manaCost}[/color]`,
+        costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
         activationConditionTemplate: targetActivationGuide(technique.weaponDescription),
         activationMessage: `${technique.name}!`,
         baseMetadata: null,
         calculatedFields: {
+            manaCost: context => eliteTechniqueMentalityCost(context, technique),
             damage: context => eliteTechniqueDamageTooltip(context, technique),
             shieldAmount: context => technique.shieldPercent
                 ? tooltipValue(
@@ -4730,7 +4791,7 @@ for (const technique of eliteTechniques) {
                 ? context => projectileEvasionAttackSpeed(context, technique.projectile!, technique.damageType === 'magic')
                 : undefined,
             criticalMode: technique.guaranteedCritical ? SkillCriticalMode.GUARANTEED : SkillCriticalMode.NORMAL,
-            calculateManaCost: () => technique.manaCost,
+            calculateManaCost: context => eliteTechniqueMentalityCost(context, technique),
             calculateShield: technique.shieldPercent
                 ? context => eliteTechniqueShieldAmount(
                     context,
@@ -4747,11 +4808,11 @@ for (const technique of eliteTechniques) {
         ...(technique.weaponDescription && technique.weaponTags?.length ? {
             weaponRequirement: weaponRequirement(technique.weaponDescription, ...technique.weaponTags),
         } : {}),
-        canActivate: simpleCheck(technique.manaCost),
+        canActivate: simpleCheck(context => eliteTechniqueMentalityCost(context, technique)),
         onStart: context => {
             const found = targetOrDeny(context);
             if ('reason' in found) throw new Error(found.reason);
-            spend(context, technique.manaCost);
+            spend(context, current => eliteTechniqueMentalityCost(current, technique));
             const damage = eliteTechniqueDamage(context, technique);
             if (technique.projectile) {
                 projectileAttack(
