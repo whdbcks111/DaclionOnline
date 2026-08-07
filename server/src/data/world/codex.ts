@@ -15,6 +15,19 @@ const BOSS_THRESHOLDS = { bronze: 1, silver: 5, gold: 20 } as const;
 const ORE_THRESHOLDS = { bronze: 5, silver: 25, gold: 100 } as const;
 const EXPLORATION_THRESHOLDS = { bronze: 1, silver: 1, gold: 1 } as const;
 const COOKING_THRESHOLDS = { bronze: 1, silver: 5, gold: 20 } as const;
+const NO_HIT_PLATINUM = Object.freeze({
+    type: 'no-hit' as const,
+    description: '금 달성 후 한 번도 피격되지 않고 처치',
+});
+const BAREHAND_PLATINUM = Object.freeze({
+    type: 'barehand' as const,
+    description: '금 달성 후 맨손으로 채굴 성공',
+});
+const COOKING_PLATINUM = Object.freeze({
+    type: 'count' as const,
+    threshold: COOKING_THRESHOLDS.gold * 10,
+    description: `${COOKING_THRESHOLDS.gold * 10}회 요리`,
+});
 const COOKING_ITEM_CATEGORIES = new Set(['음식', '생선 요리']);
 
 /**
@@ -42,6 +55,7 @@ export function initializeCodexData(): void {
                 category: CodexCategory.MONSTER,
                 name: monster.name,
                 thresholds: MONSTER_THRESHOLDS,
+                platinum: NO_HIT_PLATINUM,
             })),
         ...monsters
             .filter(monster => monster.tags.includes(GameTags.ENTITY_BOSS))
@@ -50,12 +64,14 @@ export function initializeCodexData(): void {
                 category: CodexCategory.BOSS,
                 name: monster.name,
                 thresholds: BOSS_THRESHOLDS,
+                platinum: NO_HIT_PLATINUM,
             })),
         ...ores.map(resource => ({
             id: createCodexEntryId(CodexCategory.ORE, resource.id),
             category: CodexCategory.ORE,
             name: resource.name,
             thresholds: ORE_THRESHOLDS,
+            platinum: BAREHAND_PLATINUM,
         })),
         ...locations.map(location => ({
             id: createCodexEntryId(CodexCategory.EXPLORATION, location.id),
@@ -69,6 +85,7 @@ export function initializeCodexData(): void {
                 category: CodexCategory.COOKING,
                 name: recipe.name,
                 thresholds: COOKING_THRESHOLDS,
+                platinum: COOKING_PLATINUM,
             })),
     ]);
 }

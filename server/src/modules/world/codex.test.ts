@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 import test from 'node:test';
 import { AttributeType } from '../../models/core/Attribute.js';
 import CodexBook, {
@@ -17,12 +18,15 @@ import { PlayerProgress } from '../../models/progression/Progress.js';
 import Resource, { defineResource } from '../../models/actors/Resource.js';
 import { markLocationVisited } from '../../models/world/WorldMap.js';
 import { GameTags } from '../../../../shared/tags.js';
+import { initSocket } from '../infrastructure/socket.js';
 import {
     initCodexEventTracking,
     initializePlayerCodex,
     refreshCodexBonuses,
     resetCodexEventTracking,
 } from './codex.js';
+
+initSocket(createServer(), '*');
 
 const NORMAL_MONSTER_ID = 'codex_event_normal';
 const BOSS_MONSTER_ID = 'codex_event_boss';
@@ -79,11 +83,23 @@ function definition(
 
 function eventDefinitions(): CodexEntryDefinition[] {
     const definitions = [
-        definition(CodexCategory.MONSTER, NORMAL_MONSTER_ID, { bronze: 10, silver: 50, gold: 200 }),
-        definition(CodexCategory.BOSS, BOSS_MONSTER_ID, { bronze: 1, silver: 5, gold: 20 }),
-        definition(CodexCategory.ORE, ORE_ID, { bronze: 5, silver: 25, gold: 100 }),
+        {
+            ...definition(CodexCategory.MONSTER, NORMAL_MONSTER_ID, { bronze: 10, silver: 50, gold: 200 }),
+            platinum: { type: 'no-hit' as const, description: '금 달성 후 무피격 처치' },
+        },
+        {
+            ...definition(CodexCategory.BOSS, BOSS_MONSTER_ID, { bronze: 1, silver: 5, gold: 20 }),
+            platinum: { type: 'no-hit' as const, description: '금 달성 후 무피격 처치' },
+        },
+        {
+            ...definition(CodexCategory.ORE, ORE_ID, { bronze: 5, silver: 25, gold: 100 }),
+            platinum: { type: 'barehand' as const, description: '금 달성 후 맨손 채굴' },
+        },
         definition(CodexCategory.EXPLORATION, LOCATION_ID),
-        definition(CodexCategory.COOKING, RECIPE_ID, { bronze: 1, silver: 5, gold: 20 }),
+        {
+            ...definition(CodexCategory.COOKING, RECIPE_ID, { bronze: 1, silver: 5, gold: 20 }),
+            platinum: { type: 'count' as const, threshold: 200, description: '200회 요리' },
+        },
     ];
     for (const category of CodexCategory.values()) {
         for (let index = 0; index < 12; index++) {
@@ -107,7 +123,7 @@ defineMonster({
     description: '',
     level: 1,
     exp: 0,
-    baseAttribute: { maxLife: 1 },
+    baseAttribute: { maxLife: 1, atk: 10 },
     drops: [],
     expReward: 0,
     equipments: [],
@@ -119,7 +135,7 @@ defineMonster({
     description: '',
     level: 1,
     exp: 0,
-    baseAttribute: { maxLife: 1 },
+    baseAttribute: { maxLife: 2 },
     drops: [],
     expReward: 0,
     equipments: [],
@@ -216,6 +232,67 @@ test('확정 이벤트는 최종 attackOwner 플레이어에게만 종별로 한
     assert.equal(count(other, CodexCategory.MONSTER, NORMAL_MONSTER_ID), 1);
 });
 
+test('금 달성 후 무피격 처치·맨손 채굴은 백금을, 보스 처치는 최고 기록을 남긴다', () => {
+    reloadCodexRegistry(eventDefinitions());
+    resetCodexEventTracking();
+    initCodexEventTracking();
+    const player = new CodexTestPlayer(83_050);
+    const monsterEntryId = createCodexEntryId(CodexCategory.MONSTER, NORMAL_MONSTER_ID);
+    const oreEntryId = createCodexEntryId(CodexCategory.ORE, ORE_ID);
+    player.codex.record(monsterEntryId, 200);
+    player.codex.record(oreEntryId, 100);
+
+    const noHitMonster = new Monster(NORMAL_MONSTER_ID, LOCATION_ID);
+    noHitMonster.damage(1, 'absolute', {
+        type: 'attack',
+        causeEntity: player,
+        fixedDamage: true,
+    });
+    noHitMonster.lateUpdate(0);
+    assert.equal(player.codex.getEntrySnapshot(monsterEntryId)?.rankKey, 'platinum');
+
+    const hitPlayer = new CodexTestPlayer(83_051);
+    hitPlayer.codex.record(monsterEntryId, 200);
+    const hitMonster = new Monster(NORMAL_MONSTER_ID, LOCATION_ID);
+    hitMonster.acquireCombatTarget(hitPlayer);
+    hitPlayer.damage(1, 'absolute', {
+        type: 'attack',
+        causeEntity: hitMonster,
+        fixedDamage: true,
+    });
+    hitMonster.damage(1, 'absolute', {
+        type: 'attack',
+        causeEntity: hitPlayer,
+        fixedDamage: true,
+    });
+    hitMonster.lateUpdate(0);
+    assert.equal(hitPlayer.codex.getEntrySnapshot(monsterEntryId)?.rankKey, 'gold');
+
+    emitGameEvent(GameEventIds.RESOURCE_DESTROYED, {
+        actor: player,
+        subject: new Resource(ORE_ID, LOCATION_ID),
+    });
+    assert.equal(player.codex.getEntrySnapshot(oreEntryId)?.rankKey, 'platinum');
+
+    const boss = new Monster(BOSS_MONSTER_ID, LOCATION_ID);
+    boss.damage(1, 'absolute', {
+        type: 'attack',
+        causeEntity: player,
+        fixedDamage: true,
+    });
+    boss.update(59);
+    boss.damage(1, 'absolute', {
+        type: 'attack',
+        causeEntity: player,
+        fixedDamage: true,
+    });
+    boss.lateUpdate(0);
+    const time = player.codex.getBossTimeAttackSnapshots()
+        .find(snapshot => snapshot.entryId === createCodexEntryId(CodexCategory.BOSS, BOSS_MONSTER_ID));
+    assert.equal(time?.bestMilliseconds, 59_000);
+    assert.equal(time?.penetration, 0.4);
+});
+
 test('로그인 복원과 progress 변경은 최고 rank modifier만 즉시 적용하고 중복하지 않는다', () => {
     const entries = CodexCategory.values().map(category => definition(category, `bonus_${category.key}`));
     reloadCodexRegistry(entries);
@@ -233,13 +310,15 @@ test('로그인 복원과 progress 변경은 최고 rank modifier만 즉시 적�
     assert.equal(first.attribute.get(AttributeType.SPEED), 10.2);
     assert.equal(first.attribute.get(AttributeType.MAX_LIFE), 1_010);
     assert.equal(first.attribute.get(AttributeType.MAX_MENTALITY), 505);
-    assert.equal(first.attribute.modifiers.filter(modifier => modifier.source.startsWith('codex:')).length, 9);
+    assert.equal(first.attribute.get(AttributeType.ARMOR_PEN), 20);
+    assert.equal(first.attribute.get(AttributeType.MAGIC_PEN), 20);
+    assert.equal(first.attribute.modifiers.filter(modifier => modifier.source.startsWith('codex:')).length, 19);
 
     const restored = new CodexTestPlayer(83_101, progress);
     initializePlayerCodex(restored as unknown as Player);
     initializePlayerCodex(restored as unknown as Player);
     assert.equal(restored.attribute.get(AttributeType.ATK), 102.01);
-    assert.equal(restored.attribute.modifiers.filter(modifier => modifier.source.startsWith('codex:')).length, 9);
+    assert.equal(restored.attribute.modifiers.filter(modifier => modifier.source.startsWith('codex:')).length, 19);
 
     const immediateProgress = PlayerProgress.createEmpty(83_102);
     const immediate = new CodexTestPlayer(83_102, immediateProgress);
@@ -259,5 +338,5 @@ test('기존 location visited flag 소급과 재초기화가 탐험 counter를 1
 
     assert.equal(count(player, CodexCategory.EXPLORATION, LOCATION_ID), 1);
     assert.equal(player.attribute.modifiers.filter(modifier =>
-        modifier.source === 'codex:exploration').length, 1);
+        modifier.source === 'codex:exploration:entries').length, 1);
 });

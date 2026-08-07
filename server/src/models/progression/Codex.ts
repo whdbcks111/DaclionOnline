@@ -12,23 +12,23 @@ export class CodexCategory {
     private static readonly all: CodexCategory[] = [];
 
     static readonly MONSTER = new CodexCategory(
-        'monster', '몬스터', '공격력·마법력 영구 보너스',
+        'monster', '몬스터', '개별 공격력·마법력 / 전체 관통력 보너스',
         ['몬스터도감', '일반몬스터', '몹'],
     );
     static readonly BOSS = new CodexCategory(
-        'boss', '보스', '공격력·마법력 영구 보너스',
+        'boss', '보스', '개별 공격력·마법력 / 전체·타임어택 관통력 보너스',
         ['보스도감', '우두머리'],
     );
     static readonly ORE = new CodexCategory(
-        'ore', '광물', '방어력·마법 방어력 영구 보너스',
+        'ore', '광물', '개별 방어력·마법 방어력 / 전체 관통력 보너스',
         ['광물도감', '광석', '채광'],
     );
     static readonly EXPLORATION = new CodexCategory(
-        'exploration', '지역 탐험', '이동속도 영구 보너스',
+        'exploration', '지역 탐험', '개별 이동속도 / 전체 관통력 보너스',
         ['지역탐험도감', '탐험', '지역'],
     );
     static readonly COOKING = new CodexCategory(
-        'cooking', '음식·요리', '최대 생명력·최대 정신력 영구 보너스',
+        'cooking', '음식·요리', '개별 최대 생명력·정신력 / 전체 관통력 보너스',
         ['음식요리도감', '음식', '요리'],
     );
 
@@ -65,7 +65,7 @@ export class CodexCategory {
     }
 }
 
-export type CodexRankKey = 'bronze' | 'silver' | 'gold';
+export type CodexRankKey = 'bronze' | 'silver' | 'gold' | 'platinum';
 
 /** 엔트리 점수와 카테고리 영구 해금 비율을 함께 소유하는 도감 단계. */
 export class CodexRank {
@@ -74,6 +74,7 @@ export class CodexRank {
     static readonly BRONZE = new CodexRank('bronze', '동', 1, 0.10, ['동급', '브론즈']);
     static readonly SILVER = new CodexRank('silver', '은', 2, 0.35, ['은급', '실버']);
     static readonly GOLD = new CodexRank('gold', '금', 3, 0.70, ['금급', '골드']);
+    static readonly PLATINUM = new CodexRank('platinum', '백금', 4, 1, ['백금급', '플래티넘']);
 
     readonly aliases: readonly string[];
 
@@ -111,18 +112,29 @@ export interface CodexEntryThresholds {
     readonly gold: number;
 }
 
+export type CodexPlatinumRequirementType = 'no-hit' | 'barehand' | 'count';
+
+export interface CodexPlatinumRequirement {
+    readonly type: CodexPlatinumRequirementType;
+    readonly description: string;
+    /** count 조건에서만 사용한다. */
+    readonly threshold?: number;
+}
+
 export interface CodexEntryDefinition {
     readonly id: string;
     readonly category: CodexCategory;
     readonly name: string;
     readonly thresholds: CodexEntryThresholds;
+    readonly platinum?: CodexPlatinumRequirement;
 }
 
 export interface CodexEntryStageSnapshot {
     readonly key: CodexRankKey;
     readonly label: string;
     readonly score: number;
-    readonly threshold: number;
+    readonly threshold?: number;
+    readonly requirement: string;
     readonly achieved: boolean;
 }
 
@@ -163,13 +175,45 @@ export type CodexRecordResult =
         readonly recorded: true;
         readonly entry: CodexEntrySnapshot;
         readonly category: CodexCategorySnapshot;
+        readonly newlyAchievedEntryRanks: readonly CodexRank[];
         readonly newlyUnlockedRanks: readonly CodexRank[];
     }
     | {
         readonly recorded: false;
         readonly reason: 'missing';
+        readonly newlyAchievedEntryRanks: readonly CodexRank[];
         readonly newlyUnlockedRanks: readonly CodexRank[];
     };
+
+export interface BossTimeAttackTierSnapshot {
+    readonly thresholdSeconds: number;
+    readonly penetration: number;
+    readonly achieved: boolean;
+}
+
+export interface BossTimeAttackSnapshot {
+    readonly entryId: string;
+    readonly name: string;
+    readonly bestMilliseconds?: number;
+    readonly bestSeconds?: number;
+    readonly penetration: number;
+    readonly tiers: readonly BossTimeAttackTierSnapshot[];
+}
+
+export type BossTimeAttackRecordResult =
+    | {
+        readonly recorded: true;
+        readonly improved: boolean;
+        readonly snapshot: BossTimeAttackSnapshot;
+        readonly newlyAchievedTiers: readonly BossTimeAttackTierSnapshot[];
+    }
+    | { readonly recorded: false; readonly reason: 'missing' | 'not-boss' };
+
+export const BOSS_TIME_ATTACK_TIERS = Object.freeze([
+    Object.freeze({ thresholdSeconds: 240, penetration: 0.1 }),
+    Object.freeze({ thresholdSeconds: 120, penetration: 0.2 }),
+    Object.freeze({ thresholdSeconds: 60, penetration: 0.4 }),
+] as const);
 
 const codexEntryRegistry = new Map<string, Readonly<CodexEntryDefinition>>();
 let codexRegistryFrozen = false;
@@ -206,6 +250,14 @@ function entryProgressId(entryId: string): string {
         .replaceAll('_', '__')
         .replaceAll(':', '_c');
     return `codex-entry:${namespace}/${path}`;
+}
+
+function entryRankProgressId(entryId: string, rank: CodexRank): string {
+    return `${entryProgressId(entryId)}-rank/${rank.key}`;
+}
+
+function bossTimeProgressId(entryId: string): string {
+    return entryProgressId(entryId).replace('codex-entry:', 'codex-time:');
 }
 
 function rankProgressId(category: CodexCategory, rank: CodexRank): string {
@@ -254,11 +306,28 @@ function normalizeCodexEntry(data: CodexEntryDefinition): Readonly<CodexEntryDef
     if (thresholds.bronze > thresholds.silver || thresholds.silver > thresholds.gold) {
         throw new Error(`Codex thresholds must be non-decreasing: ${id}`);
     }
+    let platinum: Readonly<CodexPlatinumRequirement> | undefined;
+    if (data.platinum) {
+        const description = data.platinum.description.trim();
+        if (!description) throw new Error(`Codex platinum description must not be empty: ${id}`);
+        const threshold = data.platinum.type === 'count'
+            ? normalizeThreshold(data.platinum.threshold ?? 0, 'platinum', id)
+            : undefined;
+        if (threshold !== undefined && threshold < thresholds.gold) {
+            throw new Error(`Codex platinum threshold must be at least gold: ${id}`);
+        }
+        platinum = Object.freeze({
+            type: data.platinum.type,
+            description,
+            ...(threshold !== undefined ? { threshold } : {}),
+        });
+    }
     return Object.freeze({
         id,
         category: data.category,
         name,
         thresholds: Object.freeze(thresholds),
+        ...(platinum ? { platinum } : {}),
     });
 }
 
@@ -279,6 +348,26 @@ function registerEntryProgress(entry: Readonly<CodexEntryDefinition>): void {
         visible: false,
         tags: ['codex:entry', `codex-category:${entry.category.key}`],
     });
+    if (entry.platinum && entry.platinum.type !== 'count') {
+        defineProgress({
+            id: entryRankProgressId(entry.id, CodexRank.PLATINUM),
+            type: ProgressType.FLAG,
+            label: `${entry.name} 도감 백금 달성`,
+            description: entry.platinum.description,
+            visible: false,
+            tags: ['codex:entry-rank', `codex-category:${entry.category.key}`],
+        });
+    }
+    if (entry.category === CodexCategory.BOSS) {
+        defineProgress({
+            id: bossTimeProgressId(entry.id),
+            type: ProgressType.STATE,
+            label: `${entry.name} 타임어택 최고 기록`,
+            description: `${entry.name} 처치 최고 기록(밀리초)입니다.`,
+            visible: false,
+            tags: ['codex:boss-time', `codex-category:${entry.category.key}`],
+        });
+    }
 }
 
 export function defineCodexEntry(data: CodexEntryDefinition): Readonly<CodexEntryDefinition> {
@@ -331,16 +420,18 @@ export function getAllCodexEntries(
         .filter(entry => !resolved || entry.category === resolved));
 }
 
-function getThreshold(entry: Readonly<CodexEntryDefinition>, rank: CodexRank): number {
-    return entry.thresholds[rank.key];
+function getCountThreshold(
+    entry: Readonly<CodexEntryDefinition>,
+    rank: CodexRank,
+): number | undefined {
+    if (rank === CodexRank.PLATINUM) return entry.platinum?.type === 'count'
+        ? entry.platinum.threshold
+        : undefined;
+    return entry.thresholds[rank.key as keyof CodexEntryThresholds];
 }
 
-function getEntryRank(entry: Readonly<CodexEntryDefinition>, count: number): CodexRank | undefined {
-    let achieved: CodexRank | undefined;
-    for (const rank of CodexRank.values()) {
-        if (count >= getThreshold(entry, rank)) achieved = rank;
-    }
-    return achieved;
+function getEntrySupportedRanks(entry: Readonly<CodexEntryDefinition>): readonly CodexRank[] {
+    return CodexRank.values().filter(rank => rank !== CodexRank.PLATINUM || entry.platinum);
 }
 
 export default class CodexBook {
@@ -355,10 +446,12 @@ export default class CodexBook {
             return Object.freeze({
                 recorded: false,
                 reason: 'missing',
+                newlyAchievedEntryRanks: Object.freeze([]),
                 newlyUnlockedRanks: Object.freeze([]),
             });
         }
         const progressId = entryProgressId(entry.id);
+        const before = this.createEntrySnapshot(entry);
         if (amount > 0) {
             const current = this.progress.getCounterNumber(progressId);
             const next = current + amount;
@@ -374,11 +467,75 @@ export default class CodexBook {
         const newlyUnlockedRanks = amount > 0
             ? this.unlockEligibleRanks(entry.category)
             : [];
+        const entrySnapshot = this.createEntrySnapshot(entry);
+        const newlyAchievedEntryRanks = getEntrySupportedRanks(entry).filter(rank =>
+            entrySnapshot.stages.some(stage => stage.key === rank.key && stage.achieved)
+            && !before.stages.some(stage => stage.key === rank.key && stage.achieved));
         return Object.freeze({
             recorded: true,
-            entry: this.createEntrySnapshot(entry),
+            entry: entrySnapshot,
             category: this.createCategorySnapshot(entry.category),
+            newlyAchievedEntryRanks: Object.freeze(newlyAchievedEntryRanks),
             newlyUnlockedRanks: Object.freeze(newlyUnlockedRanks),
+        });
+    }
+
+    /** 금 등급을 이미 달성한 특수 조건형 엔트리의 백금 flag를 기록한다. */
+    recordPlatinum(entryId: string): CodexRecordResult {
+        const entry = getCodexEntry(entryId);
+        if (!entry) {
+            return Object.freeze({
+                recorded: false,
+                reason: 'missing',
+                newlyAchievedEntryRanks: Object.freeze([]),
+                newlyUnlockedRanks: Object.freeze([]),
+            });
+        }
+        const before = this.createEntrySnapshot(entry);
+        const goldAchieved = before.stages.some(stage => stage.key === CodexRank.GOLD.key && stage.achieved);
+        if (goldAchieved && entry.platinum && entry.platinum.type !== 'count') {
+            this.progress.setFlag(entryRankProgressId(entry.id, CodexRank.PLATINUM));
+        }
+        const after = this.createEntrySnapshot(entry);
+        const newlyAchievedEntryRanks = !before.stages.some(stage => stage.key === 'platinum' && stage.achieved)
+            && after.stages.some(stage => stage.key === 'platinum' && stage.achieved)
+            ? [CodexRank.PLATINUM]
+            : [];
+        const newlyUnlockedRanks = newlyAchievedEntryRanks.length > 0
+            ? this.unlockEligibleRanks(entry.category)
+            : [];
+        return Object.freeze({
+            recorded: true,
+            entry: after,
+            category: this.createCategorySnapshot(entry.category),
+            newlyAchievedEntryRanks: Object.freeze(newlyAchievedEntryRanks),
+            newlyUnlockedRanks: Object.freeze(newlyUnlockedRanks),
+        });
+    }
+
+    recordBossTimeAttack(entryId: string, elapsedSeconds: number): BossTimeAttackRecordResult {
+        const entry = getCodexEntry(entryId);
+        if (!entry) return Object.freeze({ recorded: false, reason: 'missing' });
+        if (entry.category !== CodexCategory.BOSS) {
+            return Object.freeze({ recorded: false, reason: 'not-boss' });
+        }
+        if (!Number.isFinite(elapsedSeconds) || elapsedSeconds <= 0) {
+            throw new Error(`Boss time attack duration must be positive: ${elapsedSeconds}`);
+        }
+        const previous = this.createBossTimeAttackSnapshot(entry);
+        const milliseconds = Math.max(1, Math.round(elapsedSeconds * 1_000));
+        const improved = previous.bestMilliseconds === undefined || milliseconds < previous.bestMilliseconds;
+        if (improved) this.progress.setState(bossTimeProgressId(entry.id), String(milliseconds));
+        const snapshot = this.createBossTimeAttackSnapshot(entry);
+        const newlyAchievedTiers = improved
+            ? snapshot.tiers.filter(tier => tier.achieved
+                && !previous.tiers.some(old => old.thresholdSeconds === tier.thresholdSeconds && old.achieved))
+            : [];
+        return Object.freeze({
+            recorded: true,
+            improved,
+            snapshot,
+            newlyAchievedTiers: Object.freeze(newlyAchievedTiers),
         });
     }
 
@@ -407,16 +564,31 @@ export default class CodexBook {
         return Object.freeze(CodexCategory.values().map(category => this.createCategorySnapshot(category)));
     }
 
+    getBossTimeAttackSnapshots(): readonly BossTimeAttackSnapshot[] {
+        return Object.freeze(getAllCodexEntries(CodexCategory.BOSS)
+            .map(entry => this.createBossTimeAttackSnapshot(entry)));
+    }
+
     private createEntrySnapshot(entry: Readonly<CodexEntryDefinition>): CodexEntrySnapshot {
         const count = this.progress.getCounterNumber(entryProgressId(entry.id));
-        const rank = getEntryRank(entry, count);
-        const stages = CodexRank.values().map(candidate => Object.freeze({
-            key: candidate.key,
-            label: candidate.label,
-            score: candidate.score,
-            threshold: getThreshold(entry, candidate),
-            achieved: count >= getThreshold(entry, candidate),
-        }));
+        const stages = getEntrySupportedRanks(entry).map(candidate => {
+            const threshold = getCountThreshold(entry, candidate);
+            const achieved = candidate === CodexRank.PLATINUM && entry.platinum?.type !== 'count'
+                ? this.progress.getFlag(entryRankProgressId(entry.id, candidate))
+                : threshold !== undefined && count >= threshold;
+            return Object.freeze({
+                key: candidate.key,
+                label: candidate.label,
+                score: candidate.score,
+                ...(threshold !== undefined ? { threshold } : {}),
+                requirement: candidate === CodexRank.PLATINUM
+                    ? entry.platinum!.description
+                    : `${threshold}회 기록`,
+                achieved,
+            });
+        });
+        const rank = [...getEntrySupportedRanks(entry)].reverse()
+            .find(candidate => stages.some(stage => stage.key === candidate.key && stage.achieved));
         return Object.freeze({
             id: entry.id,
             categoryKey: entry.category.key,
@@ -432,9 +604,11 @@ export default class CodexBook {
     private createCategorySnapshot(category: CodexCategory): CodexCategorySnapshot {
         const entries = this.getEntrySnapshots(category);
         const score = entries.reduce((sum, entry) => sum + entry.score, 0);
-        const maxScore = entries.length * CodexRank.GOLD.score;
+        const maxScore = entries.reduce((sum, entry) =>
+            sum + (entry.stages.at(-1)?.score ?? 0), 0);
         const completionRatio = maxScore > 0 ? score / maxScore : 0;
-        const ranks = CodexRank.values().map(rank => Object.freeze({
+        const supportedRankKeys = new Set(entries.flatMap(entry => entry.stages.map(stage => stage.key)));
+        const ranks = CodexRank.values().filter(rank => supportedRankKeys.has(rank.key)).map(rank => Object.freeze({
             key: rank.key,
             label: rank.label,
             score: rank.score,
@@ -457,11 +631,33 @@ export default class CodexBook {
     private unlockEligibleRanks(category: CodexCategory): CodexRank[] {
         const snapshot = this.createCategorySnapshot(category);
         const newlyUnlocked: CodexRank[] = [];
-        for (const rank of CodexRank.values()) {
+        for (const rank of CodexRank.values().filter(candidate =>
+            snapshot.ranks.some(rank => rank.key === candidate.key))) {
             if (snapshot.completionRatio < rank.unlockRatio || this.isRankUnlocked(category, rank)) continue;
             this.progress.setFlag(rankProgressId(category, rank));
             newlyUnlocked.push(rank);
         }
         return newlyUnlocked;
+    }
+
+    private createBossTimeAttackSnapshot(
+        entry: Readonly<CodexEntryDefinition>,
+    ): BossTimeAttackSnapshot {
+        const raw = this.progress.getState(bossTimeProgressId(entry.id));
+        const parsed = raw ? Number(raw) : NaN;
+        const bestMilliseconds = Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+        const bestSeconds = bestMilliseconds !== undefined ? bestMilliseconds / 1_000 : undefined;
+        const tiers = BOSS_TIME_ATTACK_TIERS.map(tier => Object.freeze({
+            ...tier,
+            achieved: bestSeconds !== undefined && bestSeconds <= tier.thresholdSeconds,
+        }));
+        const penetration = [...tiers].reverse().find(tier => tier.achieved)?.penetration ?? 0;
+        return Object.freeze({
+            entryId: entry.id,
+            name: entry.name,
+            ...(bestMilliseconds !== undefined ? { bestMilliseconds, bestSeconds } : {}),
+            penetration,
+            tiers: Object.freeze(tiers),
+        });
     }
 }

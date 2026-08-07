@@ -27,13 +27,15 @@ function bonus(category: CodexCategory, rankLabel?: string): CodexBonusSnapshot 
     return {
         categoryKey: category.key,
         categoryLabel: category.label,
-        source: `codex:${category.key}`,
+        source: `codex:${category.key}:entries`,
+        completionSource: `codex:${category.key}:completion`,
         ...(rankLabel ? { rankKey: 'bronze' as const, rankLabel } : {}),
         ratio: rankLabel ? 0.0025 : 0,
         percent: rankLabel ? 0.25 : 0,
         attributeLabels: category === CodexCategory.EXPLORATION
             ? ['이동속도']
             : ['공격력', '마법력'],
+        completionPenetration: rankLabel ? 1 : 0,
     };
 }
 
@@ -47,6 +49,7 @@ function createSnapshots(): {
             category: CodexCategory.MONSTER,
             name: '알려진 몬스터',
             thresholds: { bronze: 1, silver: 5, gold: 20 },
+            platinum: { type: 'no-hit', description: '금 달성 후 무피격 처치' },
         },
         {
             id: 'monster:secret',
@@ -78,7 +81,7 @@ test('도감 요약은 다섯 분류의 진척·등급·보너스와 별도 낚�
     assert.match(text, /\/낚시도감/);
 });
 
-test('분류 상세는 발견한 이름만 노출하고 현재 횟수·동은금 목표를 접이식 구간으로 표시한다', () => {
+test('분류 상세는 발견한 이름만 노출하고 현재 횟수·단계·백금 조건을 접이식 구간으로 표시한다', () => {
     const { categories, bonuses } = createSnapshots();
     const snapshot = categories.find(category => category.key === 'monster')!;
     const nodes = buildCodexCategoryMessage(snapshot, bonuses[0]!);
@@ -88,6 +91,7 @@ test('분류 상세는 발견한 이름만 노출하고 현재 횟수·동은금
     assert.doesNotMatch(text, /숨겨야 할 몬스터 이름/);
     assert.match(text, /미발견 — 0회/);
     assert.match(text, /동 ✓ · 은 1\/5 · 금 1\/20/);
+    assert.match(text, /백금 금 달성 후 무피격 처치/);
     assert.match(text, /동 0\/10 · 은 0\/50 · 금 0\/200/);
     assert.equal(nodes.filter(node => node.type === 'hide').length, 1);
 });

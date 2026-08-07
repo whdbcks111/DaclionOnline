@@ -49,6 +49,7 @@ import { recordServerBoot } from './modules/infrastructure/serverBoot.js';
 import { getPatchNotes } from '../../shared/patchNotes.js';
 import { initInstanceDungeons } from './modules/world/instanceDungeon.js';
 import { initAscensionDiscovery } from './modules/world/ascension.js';
+import { initPassiveTrainingEventTracking } from './modules/player/passiveTraining.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -83,6 +84,7 @@ initInstanceDungeons();
 initAscensionDiscovery();
 initializeCodexData();
 initCodexEventTracking();
+initPassiveTrainingEventTracking();
 initPlayer();
 initAdminPanel();
 initGame();

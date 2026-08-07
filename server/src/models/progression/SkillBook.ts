@@ -41,6 +41,29 @@ export interface SkillActivationOutcome {
     skill?: Skill;
 }
 
+export interface TrainablePassiveSkillSnapshot {
+    readonly id: string;
+    readonly name: string;
+    readonly icon: string;
+    readonly level: number;
+    readonly maxLevel: number;
+    readonly experience: number;
+    readonly requiredExperience: number;
+    readonly experienceGain: number;
+}
+
+export type PassiveSkillExperienceResult =
+    | {
+        readonly awarded: true;
+        readonly skill: TrainablePassiveSkillSnapshot;
+        readonly gained: number;
+        readonly levelsGained: number;
+    }
+    | {
+        readonly awarded: false;
+        readonly reason: 'missing' | 'not-passive' | 'max-level' | 'disabled';
+    };
+
 export interface RuntimeSkillEntry {
     skillDataId: string;
     level?: number;
@@ -188,6 +211,54 @@ export default class SkillBook {
 
     getAll(): readonly Skill[] {
         return [...this.skills.values()];
+    }
+
+    /** 생활 콘텐츠가 성장 가능한 패시브 후보만 가공된 불변 목록으로 조회한다. */
+    getTrainablePassiveSnapshots(): readonly TrainablePassiveSkillSnapshot[] {
+        const owner = this.requireOwner();
+        return Object.freeze(this.getAll().flatMap(skill => {
+            if (!skill.isPassive || skill.level >= skill.maxLevel) return [];
+            const experienceGain = skill.getExperienceGain(owner);
+            if (experienceGain <= 0) return [];
+            return [Object.freeze({
+                id: skill.skillDataId,
+                name: skill.name,
+                icon: skill.data.icon,
+                level: skill.level,
+                maxLevel: skill.maxLevel,
+                experience: skill.experience,
+                requiredExperience: skill.getRequiredExperience(owner),
+                experienceGain,
+            })];
+        }));
+    }
+
+    /** 대상 지정/무작위 생활 수련이 raw Skill을 노출하지 않고 패시브 경험치를 확정한다. */
+    awardPassiveExperience(skillDataId: string, amount: number): PassiveSkillExperienceResult {
+        const skill = this.get(skillDataId);
+        if (!skill) return { awarded: false, reason: 'missing' };
+        if (!skill.isPassive) return { awarded: false, reason: 'not-passive' };
+        if (skill.level >= skill.maxLevel) return { awarded: false, reason: 'max-level' };
+        const owner = this.requireOwner();
+        if (skill.getExperienceGain(owner) <= 0) return { awarded: false, reason: 'disabled' };
+        const result = skill.addExperience(owner, amount);
+        const snapshot = this.getTrainablePassiveSnapshots().find(candidate => candidate.id === skill.skillDataId)
+            ?? Object.freeze({
+                id: skill.skillDataId,
+                name: skill.name,
+                icon: skill.data.icon,
+                level: skill.level,
+                maxLevel: skill.maxLevel,
+                experience: skill.experience,
+                requiredExperience: skill.getRequiredExperience(owner),
+                experienceGain: skill.getExperienceGain(owner),
+            });
+        return {
+            awarded: true,
+            skill: snapshot,
+            gained: result.gained,
+            levelsGained: result.levelsGained,
+        };
     }
 
     /** 아이템·버프가 raw Skill 목록을 수정하지 않고 모든 진행 중 쿨다운을 감소시킨다. */

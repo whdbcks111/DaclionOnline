@@ -35,7 +35,7 @@ Entity/Resource/SkillBook
 
 `defineStatistic()`은 하나의 게임 이벤트를 구독하고 최종 `attackOwner`가 Player일 때 해당 counter를 증가시킨다. `combat:critical_hits`와 14종 속성 몬스터 처치 횟수가 공개 통계로 등록되어 `/통계`에 표시된다. 불·얼음·전기는 자동 주문 해금과 저장 호환을 위해 기존 `career:mage_*_kills` ID를 유지하고, 물·자연·독·돌·어둠·빛·언데드·신성·벌레·금속·땅은 `combat:property_kills/{key}` ID를 사용한다. 처치 통계는 권위적 `combat:entity_defeated` 이벤트의 subject가 실제 몬스터이면서 해당 `property:*` 태그를 가질 때만 증가하며 `/속성표`의 기존 표시명과 아이콘을 재사용한다. `QuestBook`만 처치 이벤트에서 `Entity.getDefeatCreditUserIds()`의 양수 기여자를 추가 수신자로 확장하고, 통계·도감 구독자는 기존 최종 owner 이벤트 한 번만 처리해 중복 집계를 만들지 않는다.
 
-전문 도감은 총합 통계를 종별 기록으로 추측하지 않고 `codex-entry:*` counter와 `codex-rank:*` 영구 flag를 별도로 사용한다. `CodexBook`이 진행·분류 점수·10%/35%/70% rank 해금을 소유하고 `modules/world/codex.ts`가 확정 처치·광맥 파괴·장소 도착·요리 제작 이벤트만 연결한다. 기존 `world:visited/*` flag는 로그인 시 탐험 엔트리 0→1 소급의 유일한 원본이다. 기존 `FishingCollection`과 `/낚시도감`은 이 registry에 합치지 않는다.
+전문 도감은 총합 통계를 종별 기록으로 추측하지 않고 `codex-entry:*` counter, 특수 백금 flag, `codex-rank:*` 영구 flag와 `codex-time:*` 보스 최고 기록을 별도로 사용한다. `CodexBook`이 동·은·금·선택적 백금과 10%/35%/70%/100% 분류 해금을 소유하고 확정 처치·광맥 파괴·장소 도착·요리 제작 이벤트만 연결한다. 기존 `world:visited/*` flag는 로그인 시 탐험 엔트리 0→1 소급의 유일한 원본이다.
 
 성공한 공격은 `combat:attack_hit` 이벤트에 직렬화 가능한 `weaponType`과 최종 피해량을 담는다. 검·도끼·활·단검·지팡이 적중 통계는 숨김 counter로 누적되며 각 200회에 해당 무기 숙련 패시브를 자동 획득한다. 숙련 효과는 올바른 주무기를 장착한 동안에만 적용되고, 투사체 공격은 최종 `attackOwner`의 장착 무기를 기준으로 분류한다. 활 숙련은 공격력 4%와 치명타율 3%p를 함께 올려 검 숙련으로 갈아타는 편이 유리해지지 않게 한다.
 
@@ -62,6 +62,8 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 동적 최대 레벨에 도달한 스킬만 다음 요구 경험치 0을 반환한다. 자동 경험치 획득이 없는 정적 패시브도 돌파 후에는 기본 양수 요구량 `100 + (현재 레벨 - 1) × 50`을 유지하며, 최대 레벨이 아닌 스킬의 요구량 0은 무료 연속 레벨업을 막기 위해 데이터 오류로 거부한다.
 
 `/스킬돌파 <보유 스킬 이름>`(`숙련돌파`, `skillbreak`)는 패시브와 현재 숨김 상태를 포함한 보유 스킬을 `SkillBook.findOwnedByInput()`으로 찾고, 숙련의 정수 10개를 소비해 최대 레벨을 1 높인다. 자동완성은 `getMaxLevelBreakthroughSnapshots()`의 돌파 가능 스킬과 현재/누적 상한만 사용한다. `performSkillBreakthrough()`는 재료 소비와 `increaseMaxLevel()`을 동기식 rollback 경계로 묶어 스킬 상태가 바뀌면 정수를 복구하고, 성공 직후 `Player.save()`를 요청한다. 즉시 저장이 실패해도 이미 확정된 돌파를 실패로 안내하지 않으며 남은 dirty 상태를 정기 저장에서 재시도한다.
+
+`/패시브수련 [자동|보유 패시브]`은 최대 레벨이 아니고 양수 경험치 획득량이 정의된 패시브만 후보로 표시한다. 낚시 성공 1회와 등록된 요리 1개마다 무작위 후보 하나 또는 지정 후보가 해당 스킬의 설정 경험치를 얻으며, 모든 후보를 합친 생활 수련 획득량은 KST 하루 300 EXP로 제한한다. 집중 대상과 날짜별 획득량은 기존 `PlayerProgress` STATE에 저장한다.
 
 Lv.400 이상 `MonsterRank.BOSS`는 등록 경계에서 `숙련의 정수` 1개 확정 드롭을 정확히 하나 갖도록 정규화된다. 기존 위협도 우선·마지막 공격 owner 전리품 귀속은 그대로 사용하므로 고레벨 보스 반복 처치가 선택형 스킬 상한 성장의 공급 루프가 된다.
 

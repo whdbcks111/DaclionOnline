@@ -3,6 +3,7 @@ import {
     CodexCategory,
     type CodexCategorySnapshot,
     type CodexEntrySnapshot,
+    type BossTimeAttackSnapshot,
 } from '../../models/progression/Codex.js';
 import { registerCommand } from '../../modules/communication/bot.js';
 import { getCodexBonusSnapshots, type CodexBonusSnapshot } from '../../modules/world/codex.js';
@@ -20,9 +21,13 @@ function formatPercent(ratio: number): string {
 }
 
 function formatBonus(bonus: CodexBonusSnapshot): string {
-    if (!bonus.rankLabel || bonus.percent <= 0) return '미해금';
     const percent = bonus.percent.toFixed(2).replace(/\.00$/, '').replace(/0$/, '');
-    return `${bonus.attributeLabels.join('·')} +${percent}%`;
+    const individual = bonus.percent > 0
+        ? `개별 ${bonus.attributeLabels.join('·')} +${percent}%`
+        : '개별 보상 미달성';
+    return bonus.completionPenetration > 0
+        ? `${individual} · 전체 물리·마법 관통력 +${bonus.completionPenetration}`
+        : individual;
 }
 
 function highestUnlockedRank(snapshot: CodexCategorySnapshot): string {
@@ -31,7 +36,9 @@ function highestUnlockedRank(snapshot: CodexCategorySnapshot): string {
 
 function formatEntryLine(entry: CodexEntrySnapshot, index: number): string {
     const stages = entry.stages.map(stage =>
-        `${stage.label} ${stage.achieved ? '✓' : `${entry.count}/${stage.threshold}`}`);
+        `${stage.label} ${stage.achieved ? '✓' : stage.threshold !== undefined
+            ? `${entry.count}/${stage.threshold}`
+            : stage.requirement}`);
     return `${index + 1}. ${entry.count > 0 ? entry.name : '미발견'} — ${entry.count}회 · ${stages.join(' · ')}`;
 }
 
@@ -60,6 +67,7 @@ export function buildCodexOverviewMessage(
 export function buildCodexCategoryMessage(
     snapshot: CodexCategorySnapshot,
     bonus: CodexBonusSnapshot,
+    bossTimes: readonly BossTimeAttackSnapshot[] = [],
 ): ChatNode[] {
     const discovered = snapshot.entries.filter(entry => entry.count > 0).length;
     const builder = chat()
@@ -83,6 +91,15 @@ export function buildCodexCategoryMessage(
     }
     builder.text(`\n현재 영구 보너스: ${formatBonus(bonus)}`)
         .text(`\n${snapshot.bonusDescription}`);
+
+    if (snapshot.key === CodexCategory.BOSS.key && bossTimes.length > 0) {
+        const totalPenetration = bossTimes.reduce((sum, time) => sum + time.penetration, 0);
+        builder.text('\n\n').hide('보스 타임어택', nested => nested
+            .text(`\n누적 물리·마법 관통력 +${totalPenetration.toFixed(1).replace(/\.0$/, '')}`)
+            .text(`\n${bossTimes.map(time => `${time.name} — ${time.bestSeconds !== undefined
+                ? `${time.bestSeconds.toFixed(2)}초 · 관통력 +${time.penetration}`
+                : '기록 없음'}`).join('\n')}`));
+    }
 
     if (snapshot.entries.length === 0) {
         return builder.text('\n\n등록된 엔트리가 없습니다.').build();
@@ -127,7 +144,11 @@ export function initCodexCommands(): void {
             const snapshot = player.codex.getCategorySnapshot(category);
             const bonus = bonuses.find(candidate => candidate.categoryKey === category.key);
             if (!snapshot || !bonus) return;
-            sendBotMessageToUser(userId, buildCodexCategoryMessage(snapshot, bonus));
+            sendBotMessageToUser(userId, buildCodexCategoryMessage(
+                snapshot,
+                bonus,
+                category === CodexCategory.BOSS ? player.codex.getBossTimeAttackSnapshots() : [],
+            ));
         },
     });
 }

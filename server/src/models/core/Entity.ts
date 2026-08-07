@@ -1091,6 +1091,9 @@ export default abstract class Entity implements TagReadable {
         return true;
     }
 
+    /** 도감 무피격 도전처럼 공격 주체가 플레이어 피격을 관찰할 수 있는 확장 지점. */
+    recordChallengePlayerHit(_playerUserId: number): void {}
+
     damage(rawAmount: number, type: DamageType = 'physical', cause: DamageCause | null = null): DamageResult {
         cause = normalizeDamageCauseActor(cause);
         if (cause?.type === 'attack' && cause.causeEntity) {
@@ -1179,6 +1182,10 @@ export default abstract class Entity implements TagReadable {
         };
         if (cause?.causeEntity && result.finalDamage > 0) {
             cause.causeEntity.recordCombatEngagement(this);
+            const playerUserId = this.playerUserId;
+            if (playerUserId !== undefined) {
+                cause.causeEntity.attackOwner.recordChallengePlayerHit(playerUserId);
+            }
         }
         this.onDamageResolved(result, cause);
         return result;

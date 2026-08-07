@@ -47,7 +47,7 @@ Express + Socket.io (`server/src/index.ts`)
 | 위치 런타임, Monster/Resource 통합 오브젝트, 바닥 아이템 | `models/world/Location.ts` | 프로세스 메모리; 위치 정의만 JSON 저장 |
 | 상점 재고/재입고 타이머 | `models/economy/Shop.ts` | 프로세스 메모리 |
 | Player Progress/Skill | `Player.progress`, `Player.skills` | 로그인 중 메모리, Player와 같은 30초/unload/종료 dirty flush |
-| 전문 도감 진행/rank | `Player.codex` → `Player.progress` | 로그인 중 CodexBook snapshot, 횟수·해금 flag는 기존 PlayerProgress dirty flush; 능력치 보너스는 flag에서 source별 복원 |
+| 전문 도감 진행/rank | `Player.codex` → `Player.progress` | 횟수·백금/분류 flag·보스 최고 기록은 기존 PlayerProgress dirty flush; 엔트리/분류/타임어택 보너스는 source별 복원 |
 | 제작법 발견/진행 | `Player.progress` flag / `models/professions/Crafting.ts` | 발견은 PlayerProgress로 영속, 진행 작업은 접속 중 메모리에만 유지 |
 | 최근 GameEvent trace | `models/core/GameEvent.ts` | 최근 500개 메모리 스냅샷, 재시작 시 소실 |
 | NPC 정의/활성 대화 | `models/actors/NPC.ts` / `models/actors/NpcDialogue.ts` | 정의는 코드 레지스트리, player별 세션은 메모리이며 이동·사망·logout 시 폐기 |

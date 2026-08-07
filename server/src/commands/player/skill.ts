@@ -7,6 +7,10 @@ import type { CompletionItem } from '../../../../shared/types.js';
 import type Skill from '../../models/progression/Skill.js';
 import { performSkillBreakthrough } from '../../modules/player/skillBreakthrough.js';
 import logger from '../../utils/logger.js';
+import {
+    getPassiveTrainingSnapshot,
+    setPassiveTrainingFocus,
+} from '../../modules/player/passiveTraining.js';
 
 interface SkillListStatus {
     label: string;
@@ -42,6 +46,18 @@ function skillBreakthroughCompletions(userId: number): CompletionItem[] {
             value: snapshot.name,
             description: `최대 Lv.${snapshot.maxLevel} · 돌파 +${snapshot.maxLevelBonus}/${snapshot.maxLevelBonusCap}`,
         }));
+}
+
+function passiveTrainingCompletions(userId: number): CompletionItem[] {
+    const player = getPlayerByUserId(userId);
+    if (!player) return [];
+    return [
+        { value: '자동', description: '성장 가능한 패시브 중 하나를 성공할 때마다 무작위 선택' },
+        ...player.skills.getTrainablePassiveSnapshots().map(snapshot => ({
+            value: snapshot.name,
+            description: `Lv.${snapshot.level}/${snapshot.maxLevel} · 1회 +${snapshot.experienceGain} 경험치`,
+        })),
+    ];
 }
 
 function getSkillListStatus(skill: Skill): SkillListStatus | null {
@@ -207,6 +223,53 @@ export function initSkillCommands(): void {
                     .build() : []),
             ];
             sendBotMessageToUser(userId, nodes);
+        },
+    });
+
+    registerCommand({
+        name: '패시브수련',
+        aliases: ['패시브훈련', 'passivetraining', 'pt'],
+        description: '낚시·요리 성공 시 경험치를 받을 패시브를 확인하거나 지정합니다.',
+        showCommandUse: 'private',
+        information: true,
+        args: [{
+            name: '대상',
+            description: '자동 또는 집중 수련할 성장 가능한 패시브',
+            isText: true,
+            completions: passiveTrainingCompletions,
+        }],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            if (args[0]) {
+                const changed = setPassiveTrainingFocus(player, args[0]);
+                if (!changed.changed) {
+                    sendNotificationToUser(userId, { key: 'passive-training-denied', message: changed.message });
+                    sendBotMessageToUser(userId, changed.message);
+                    return;
+                }
+            }
+            const snapshot = getPassiveTrainingSnapshot(player);
+            const builder = chat()
+                .weight('bold', nested => nested.text('[ 패시브 수련 ]'))
+                .text(`\n수련 방식: ${snapshot.automatic ? '성공할 때마다 무작위' : `${snapshot.focusSkillName} 집중`}`)
+                .text(`\n오늘 획득: ${snapshot.gainedToday}/${snapshot.dailyCap} EXP`)
+                .text(`\n남은 한도: ${snapshot.remainingToday} EXP`)
+                .text('\n\n낚시 1회 또는 요리 1개 성공마다 선택된 패시브의 설정 경험치를 획득합니다.');
+            if (snapshot.candidates.length === 0) {
+                builder.text('\n현재 성장 가능한 패시브가 없습니다. 최대 레벨 돌파 뒤 다시 확인할 수 있습니다.');
+            } else {
+                builder.text('\n\n').closeButton('/패시브수련 자동', nested => nested.text('[자동 선택]'));
+                for (const candidate of snapshot.candidates) {
+                    builder.text('\n')
+                        .icon(candidate.icon)
+                        .text(` ${candidate.name} Lv.${candidate.level}/${candidate.maxLevel}`)
+                        .text(` · ${candidate.experience}/${candidate.requiredExperience} EXP`)
+                        .text(' ')
+                        .closeButton(`/패시브수련 ${candidate.name}`, nested => nested.text('[집중]'));
+                }
+            }
+            sendBotMessageToUser(userId, builder.build());
         },
     });
 

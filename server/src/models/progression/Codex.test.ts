@@ -32,20 +32,22 @@ test('CodexCategory와 CodexRank는 순회·key·한국어 입력과 보너스 �
     assert.equal(CodexCategory.fromInput('지역 탐험 도감'), CodexCategory.EXPLORATION);
     assert.equal(CodexCategory.fromInput('요리'), CodexCategory.COOKING);
     assert.deepEqual(CodexCategory.values().map(category => category.bonusDescription), [
-        '공격력·마법력 영구 보너스',
-        '공격력·마법력 영구 보너스',
-        '방어력·마법 방어력 영구 보너스',
-        '이동속도 영구 보너스',
-        '최대 생명력·최대 정신력 영구 보너스',
+        '개별 공격력·마법력 / 전체 관통력 보너스',
+        '개별 공격력·마법력 / 전체·타임어택 관통력 보너스',
+        '개별 방어력·마법 방어력 / 전체 관통력 보너스',
+        '개별 이동속도 / 전체 관통력 보너스',
+        '개별 최대 생명력·정신력 / 전체 관통력 보너스',
     ]);
 
     assert.deepEqual(CodexRank.values().map(rank => [rank.key, rank.score, rank.unlockRatio]), [
         ['bronze', 1, 0.10],
         ['silver', 2, 0.35],
         ['gold', 3, 0.70],
+        ['platinum', 4, 1],
     ]);
     assert.equal(CodexRank.fromKey('silver'), CodexRank.SILVER);
     assert.equal(CodexRank.fromInput('금급'), CodexRank.GOLD);
+    assert.equal(CodexRank.fromInput('플래티넘'), CodexRank.PLATINUM);
     assert.equal(Object.isFrozen(CodexCategory.values()), true);
     assert.equal(Object.isFrozen(CodexRank.values()), true);
     assert.equal(
@@ -96,6 +98,7 @@ test('record는 확정 엔트리만 1씩 증가시키고 단계·카테고리 �
     assert.deepEqual(codex.record('monster:missing'), {
         recorded: false,
         reason: 'missing',
+        newlyAchievedEntryRanks: [],
         newlyUnlockedRanks: [],
     });
     assert.equal(progress.dirty, false);
@@ -170,7 +173,7 @@ test('탐험 엔트리의 1/1/1 threshold는 첫 방문 기록에서 즉시 gold
     assert.equal(changes, 0);
     assert.equal(result.entry.score, 3);
     assert.deepEqual(result.entry.stages.map(stage => stage.achieved), [true, true, true]);
-    assert.deepEqual(result.newlyUnlockedRanks, CodexRank.values());
+    assert.deepEqual(result.newlyUnlockedRanks, [CodexRank.BRONZE, CodexRank.SILVER, CodexRank.GOLD]);
 });
 
 test('registry 교체는 같은 id의 progress 표시 정의도 최신 master로 갱신한다', () => {
@@ -187,7 +190,9 @@ test('영구 category rank flag는 신규 엔트리로 현재 비율이 낮아�
     reloadCodexRegistry([first]);
     const progress = PlayerProgress.createEmpty(7_003);
     const codex = new CodexBook(progress);
-    assert.deepEqual(codex.record(first.id).newlyUnlockedRanks, CodexRank.values());
+    assert.deepEqual(codex.record(first.id).newlyUnlockedRanks, [
+        CodexRank.BRONZE, CodexRank.SILVER, CodexRank.GOLD,
+    ]);
 
     reloadCodexRegistry([
         first,
@@ -203,6 +208,54 @@ test('영구 category rank flag는 신규 엔트리로 현재 비율이 낮아�
         ['silver', true, false],
         ['gold', true, false],
     ]);
+});
+
+test('백금은 엔트리별 특수 조건만 제공하고 탐험에는 추가되지 않는다', () => {
+    reloadCodexRegistry([
+        {
+            ...entry('monster:platinum_target', CodexCategory.MONSTER, { bronze: 1, silver: 2, gold: 3 }),
+            platinum: { type: 'no-hit', description: '금 달성 후 무피격 처치' },
+        },
+        {
+            ...entry('cooking:platinum_meal', CodexCategory.COOKING, { bronze: 1, silver: 2, gold: 3 }),
+            platinum: { type: 'count', threshold: 30, description: '30회 요리' },
+        },
+        entry('exploration:no_platinum', CodexCategory.EXPLORATION, { bronze: 1, silver: 1, gold: 1 }),
+    ]);
+    const codex = new CodexBook(PlayerProgress.createEmpty(7_005));
+
+    codex.record('monster:platinum_target', 2);
+    assert.deepEqual(codex.recordPlatinum('monster:platinum_target').newlyAchievedEntryRanks, []);
+    codex.record('monster:platinum_target');
+    const platinum = codex.recordPlatinum('monster:platinum_target');
+    assert.equal(platinum.recorded && platinum.entry.rankKey, 'platinum');
+    assert.deepEqual(platinum.newlyAchievedEntryRanks, [CodexRank.PLATINUM]);
+    assert.equal(getProgressDefinition('codex-entry:monster/platinum__target-rank/platinum')?.type, ProgressType.FLAG);
+
+    const cooking = codex.record('cooking:platinum_meal', 30);
+    assert.equal(cooking.recorded && cooking.entry.rankKey, 'platinum');
+    assert.deepEqual(cooking.newlyAchievedEntryRanks, CodexRank.values());
+    assert.equal(codex.getEntrySnapshot('exploration:no_platinum')?.stages.length, 3);
+});
+
+test('보스 타임어택은 최고 기록만 저장하고 달성 단계의 관통력만 적용한다', () => {
+    reloadCodexRegistry([entry('boss:clockwork_king', CodexCategory.BOSS)]);
+    const codex = new CodexBook(PlayerProgress.createEmpty(7_006));
+
+    const first = codex.recordBossTimeAttack('boss:clockwork_king', 180);
+    assert.equal(first.recorded && first.improved, true);
+    assert.equal(first.recorded && first.snapshot.penetration, 0.1);
+    assert.equal(first.recorded && first.newlyAchievedTiers.length, 1);
+
+    const slower = codex.recordBossTimeAttack('boss:clockwork_king', 200);
+    assert.equal(slower.recorded && slower.improved, false);
+    assert.equal(slower.recorded && slower.snapshot.bestSeconds, 180);
+
+    const faster = codex.recordBossTimeAttack('boss:clockwork_king', 59.876);
+    assert.equal(faster.recorded && faster.snapshot.bestSeconds, 59.876);
+    assert.equal(faster.recorded && faster.snapshot.penetration, 0.4);
+    assert.deepEqual(faster.recorded && faster.newlyAchievedTiers.map(tier => tier.thresholdSeconds), [120, 60]);
+    assert.equal(getProgressDefinition('codex-time:boss/clockwork__king')?.type, ProgressType.STATE);
 });
 
 test('threshold는 양의 안전 정수이며 동≤은≤금 순서를 지켜야 한다', () => {

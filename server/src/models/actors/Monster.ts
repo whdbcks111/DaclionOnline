@@ -179,6 +179,11 @@ export interface MonsterInspectionSnapshot {
     readonly equipments: readonly { slot: EquipSlot; slotIndex: number; itemDataId: string; name: string }[];
 }
 
+export interface MonsterCodexChallengeSnapshot {
+    readonly elapsedSeconds: number;
+    readonly noHit: boolean;
+}
+
 export interface MonsterRespawnDisplaySnapshot {
     readonly duration: number;
     readonly remaining: number;
@@ -242,12 +247,36 @@ export default class Monster extends Entity {
     private readonly spokenBossPhases = new Set<number>();
     private bossRecoveryDelayTimer = 0;
     private bossRecoveryActive = false;
+    private codexEncounterActive = false;
+    private codexEncounterElapsed = 0;
+    private readonly codexEncounterHitUserIds = new Set<number>();
+    private completedCodexEncounter?: {
+        readonly elapsedSeconds: number;
+        readonly hitUserIds: ReadonlySet<number>;
+    };
 
     override get deathDuration(): number { return this.respawnTime; }
     get isChallengePatternActive(): boolean { return this.challengeActive; }
     get isBossIntroActive(): boolean { return this.bossIntroTimer > 0; }
     get isBossRecovering(): boolean { return this.bossRecoveryActive; }
     override getDisplayIcon(): string { return getMonsterData(this.monsterDataId)?.icon ?? `monsters/${this.monsterDataId}`; }
+
+    getCodexChallengeSnapshot(playerUserId: number): MonsterCodexChallengeSnapshot | undefined {
+        const completed = this.completedCodexEncounter;
+        if (completed) return Object.freeze({
+            elapsedSeconds: completed.elapsedSeconds,
+            noHit: !completed.hitUserIds.has(playerUserId),
+        });
+        if (!this.codexEncounterActive) return undefined;
+        return Object.freeze({
+            elapsedSeconds: Math.max(0.001, this.codexEncounterElapsed),
+            noHit: !this.codexEncounterHitUserIds.has(playerUserId),
+        });
+    }
+
+    override recordChallengePlayerHit(playerUserId: number): void {
+        if (this.codexEncounterActive) this.codexEncounterHitUserIds.add(playerUserId);
+    }
 
     /** 위치 UI가 장기 리젠 보스만 가공해 표시하도록 반환하는 공개 스냅샷. */
     getRespawnDisplaySnapshot(): MonsterRespawnDisplaySnapshot | undefined {
@@ -451,6 +480,8 @@ export default class Monster extends Entity {
     override update(dt: number): void {
         if (this.isDead) return;
 
+        if (this.codexEncounterActive) this.codexEncounterElapsed += Math.max(0, dt);
+
         if (this.updateBossEncounter(dt)) return;
 
         const location = getLocation(this.locationId);
@@ -571,6 +602,7 @@ export default class Monster extends Entity {
             ?? resolveDamageCauseActor(this.lastDamageCause);
         const lastAttackOwnerUserId = getDamageCauseActorPlayerId(this.lastDamageCause);
         const actualLethalUserId = getDamageCauseActorPlayerId(lethalCause);
+        this.completeCodexEncounter();
         this.resetBossRecovery();
         this.resetBossEncounter();
         this.resetChallengePattern();
@@ -672,6 +704,7 @@ export default class Monster extends Entity {
 
     override respawn(): void {
         super.respawn();
+        this.completedCodexEncounter = undefined;
         this.resetBossRecovery();
         this.resetBossEncounter();
         this.combatClaimUserIds.clear();
@@ -724,6 +757,12 @@ export default class Monster extends Entity {
     }
 
     private startBossEncounter(): void {
+        if (!this.codexEncounterActive && !this.isDefeated) {
+            this.codexEncounterActive = true;
+            this.codexEncounterElapsed = 0;
+            this.codexEncounterHitUserIds.clear();
+            this.completedCodexEncounter = undefined;
+        }
         const narrative = this.bossNarrative;
         if (!narrative || this.bossEncounterActive || this.isDefeated) return;
         this.bossEncounterActive = true;
@@ -783,6 +822,17 @@ export default class Monster extends Entity {
         this.bossIntroTimer = 0;
         this.spokenBossPhases.clear();
         this.removeDamageReceivedModifier('boss:introduction');
+        this.codexEncounterActive = false;
+        this.codexEncounterElapsed = 0;
+        this.codexEncounterHitUserIds.clear();
+    }
+
+    private completeCodexEncounter(): void {
+        if (!this.codexEncounterActive) return;
+        this.completedCodexEncounter = {
+            elapsedSeconds: Math.max(0.001, this.codexEncounterElapsed),
+            hitUserIds: new Set(this.codexEncounterHitUserIds),
+        };
     }
 
     /**
