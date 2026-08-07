@@ -18,8 +18,8 @@ TitleBook
   └─ CombatPipeline 준비·피해 후 hook
 ```
 
-- `models/Title.ts`는 `TitleData` 레지스트리와 플레이어별 `TitleBook`을 소유한다.
-- `data/titles.ts`는 획득 통계, 레거시 이식 칭호와 신규 칭호, 전투 hook을 등록한다.
+- `models/progression/Title.ts`는 `TitleData` 레지스트리와 플레이어별 `TitleBook`을 소유한다.
+- `data/progression/titles.ts`는 획득 통계, 레거시 이식 칭호와 신규 칭호, 전투 hook을 등록한다.
 - 소유 여부와 장착 ID는 기존 `PlayerProgress`에 저장하므로 별도 Prisma 모델이나 마이그레이션이 필요 없다.
 - 기능 코드는 Progress key나 칭호 레지스트리를 직접 수정하지 않고 `TitleBook.grant/revoke/equip/unequip`을 사용한다.
 

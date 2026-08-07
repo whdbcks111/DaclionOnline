@@ -15,10 +15,10 @@ Browser
   └─ profile upload ───────────── HTTP ───────┤
                                               v
 Express + Socket.io (`server/src/index.ts`)
-  ├─ modules: 인증, 채팅, 정보 공개 모드, 채널, 플레이어, 파티, 위치, 게임 루프
-  ├─ commands: 채팅 명령을 도메인 호출로 변환
-  ├─ models: Entity/Player/Monster/Resource/Projectile/Location/NPC/StatusEffect/Inventory/Progress/Codex/Skill/Crafting
-  ├─ data: 아이템·몬스터·자원·투사체·상점·위치·NPC·통계·도감·스킬·제작법 마스터 데이터
+  ├─ modules/{domain}: 인증·통신·인프라·플레이어·생활·소셜·월드 애플리케이션 서비스
+  ├─ commands/{domain}: 채팅 명령을 도메인 호출로 변환
+  ├─ models/{domain}: actor·전투·core·경제·성장·월드 상태와 규칙
+  ├─ data/{domain}: 전투·경제·생활·성장·월드 마스터 데이터
   └─ Prisma ─────────────────────────────── MariaDB
 ```
 
@@ -28,7 +28,7 @@ Express + Socket.io (`server/src/index.ts`)
 
 1. 환경 변수와 Express/HTTP 서버를 준비한다.
 2. `initSocket()`으로 Socket.io와 쿠키 기반 세션 바인딩 미들웨어를 연다.
-3. `data/items.ts`, `data/monsters.ts`, `data/resources.ts`, `data/projectiles.ts`, `data/shops.ts`, `data/progress.ts`, `data/skills.ts`, `data/crafting.ts`, `data/npcs.ts`의 import 부작용으로 마스터 데이터를 레지스트리에 등록한다. 통계/플래그 정의가 참조 기능보다 먼저 등록되도록 순서를 유지한다.
+3. `data/economy/items.ts`, `data/world/monsters.ts`, `data/world/resources.ts`, `data/combat/projectiles.ts`, `data/economy/shops.ts`, `data/progression/progress.ts`, `data/combat/skills.ts`, `data/professions/crafting.ts`, `data/world/npcs.ts`의 import 부작용으로 마스터 데이터를 레지스트리에 등록한다. 통계/플래그 정의가 참조 기능보다 먼저 등록되도록 순서를 유지한다.
 4. 회원가입, 로그인, 채팅과 봇/명령어를 초기화한 뒤 Location JSON·승천 권역을 등록한다. 그 다음 `initializeCodexData()`로 전문 도감 엔트리를 만들고 확정 이벤트 구독을 시작한 후 Player 로드와 게임 루프를 초기화한다.
 5. `/uploads` 정적 파일과 `/api/profile-image` 라우트를 연결한다.
 6. 리슨 시작 후 Prisma 연결을 확인한다. 종료 신호에서는 온라인 플레이어를 저장한 후 DB 연결을 닫는다.
@@ -39,36 +39,36 @@ Express + Socket.io (`server/src/index.ts`)
 
 | 상태 | 소유 위치 | 수명/저장 |
 | --- | --- | --- |
-| 세션 토큰, 다중 세션, userId별 온라인 socket ID Set | `modules/login.ts` | 프로세스 메모리, 재시작 시 소실 |
-| 현재 채널, 채팅 히스토리 | `modules/channel.ts` | 프로세스 메모리, 채널당 공개 100개 |
-| 정보 열람 공개 모드 | `modules/informationVisibility.ts` | 사용자별 프로세스 메모리, 기본 비공개, 마지막 연결 종료 시 소실 |
-| 온라인 Player 인스턴스 | `modules/player.ts` | 로그인 중 메모리, 30초 자동 저장 및 정상 로그아웃/종료 시 저장 |
-| 파티·초대 | `modules/party.ts` | 최대 5명/초대 60초의 프로세스 메모리, 연결 종료·나가기·강퇴·해산 시 소실 |
-| 위치 런타임, Monster/Resource 통합 오브젝트, 바닥 아이템 | `models/Location.ts` | 프로세스 메모리; 위치 정의만 JSON 저장 |
-| 상점 재고/재입고 타이머 | `models/Shop.ts` | 프로세스 메모리 |
+| 세션 토큰, 다중 세션, userId별 온라인 socket ID Set | `modules/auth/login.ts` | 프로세스 메모리, 재시작 시 소실 |
+| 현재 채널, 채팅 히스토리 | `modules/communication/channel.ts` | 프로세스 메모리, 채널당 공개 100개 |
+| 정보 열람 공개 모드 | `modules/player/informationVisibility.ts` | 사용자별 프로세스 메모리, 기본 비공개, 마지막 연결 종료 시 소실 |
+| 온라인 Player 인스턴스 | `modules/player/player.ts` | 로그인 중 메모리, 30초 자동 저장 및 정상 로그아웃/종료 시 저장 |
+| 파티·초대 | `modules/social/party.ts` | 최대 5명/초대 60초의 프로세스 메모리, 연결 종료·나가기·강퇴·해산 시 소실 |
+| 위치 런타임, Monster/Resource 통합 오브젝트, 바닥 아이템 | `models/world/Location.ts` | 프로세스 메모리; 위치 정의만 JSON 저장 |
+| 상점 재고/재입고 타이머 | `models/economy/Shop.ts` | 프로세스 메모리 |
 | Player Progress/Skill | `Player.progress`, `Player.skills` | 로그인 중 메모리, Player와 같은 30초/unload/종료 dirty flush |
 | 전문 도감 진행/rank | `Player.codex` → `Player.progress` | 로그인 중 CodexBook snapshot, 횟수·해금 flag는 기존 PlayerProgress dirty flush; 능력치 보너스는 flag에서 source별 복원 |
-| 제작법 발견/진행 | `Player.progress` flag / `models/Crafting.ts` | 발견은 PlayerProgress로 영속, 진행 작업은 접속 중 메모리에만 유지 |
-| 최근 GameEvent trace | `models/GameEvent.ts` | 최근 500개 메모리 스냅샷, 재시작 시 소실 |
-| NPC 정의/활성 대화 | `models/NPC.ts` / `models/NpcDialogue.ts` | 정의는 코드 레지스트리, player별 세션은 메모리이며 이동·사망·logout 시 폐기 |
-| Entity 상태효과/행동 제한 | `models/StatusEffect.ts` / `models/Action.ts` | 효과와 tick/source별 제한은 메모리, 제압·재시작 시 소실 |
+| 제작법 발견/진행 | `Player.progress` flag / `models/professions/Crafting.ts` | 발견은 PlayerProgress로 영속, 진행 작업은 접속 중 메모리에만 유지 |
+| 최근 GameEvent trace | `models/core/GameEvent.ts` | 최근 500개 메모리 스냅샷, 재시작 시 소실 |
+| NPC 정의/활성 대화 | `models/actors/NPC.ts` / `models/actors/NpcDialogue.ts` | 정의는 코드 레지스트리, player별 세션은 메모리이며 이동·사망·logout 시 폐기 |
+| Entity 상태효과/행동 제한 | `models/combat/StatusEffect.ts` / `models/core/Action.ts` | 효과와 tick/source별 제한은 메모리, 제압·재시작 시 소실 |
 | User/Player/Item/Equipment/PlayerProgress/PlayerSkill | Prisma 모델 | MariaDB 영속 저장 |
 | 현재 HUD 배치·투명도·퀵슬롯·스킬/아이템 버튼 | `HudContext.tsx`, `skillHudConfig.ts` | 계정 ID로 분리한 브라우저 `localStorage` |
-| 이름 있는 HUD 프리셋 | `Player.hudPresets`, `modules/hudPreset.ts` | `players.hud_presets` JSON; 명시적 저장/불러오기/삭제 |
+| 이름 있는 HUD 프리셋 | `Player.hudPresets`, `modules/player/hudPreset.ts` | `players.hud_presets` JSON; 명시적 저장/불러오기/삭제 |
 
 ## 주요 요청 흐름
 
 ### 로그인
 
-`Login.tsx` → `login` 이벤트 → `modules/login.ts` → Prisma `User` 검증 → 세션 생성 → `modules/player.ts`가 Player/Inventory/Equipment/Progress/SkillBook 로드 → `loginResult` → `SocketContext`가 세션 상태 저장.
+`Login.tsx` → `login` 이벤트 → `modules/auth/login.ts` → Prisma `User` 검증 → 세션 생성 → `modules/player/player.ts`가 Player/Inventory/Equipment/Progress/SkillBook 로드 → `loginResult` → `SocketContext`가 세션 상태 저장.
 
 ### 채팅과 명령어
 
-`Home.tsx` → `sendMessage` → `modules/chat.ts`. `/` 또는 슬래시 없는 별칭은 `modules/bot.ts`가 명령을 찾아 `commands/*.ts` 핸들러를 실행한다. `information: true` 명령은 `informationVisibility.ts`의 사용자 모드와 async 문맥에 따라 입력·결과를 현재 room 또는 본인에게 전송한다. 남은 일반 문장은 스킬 message trigger를 먼저 검사하고 일치하지 않을 때 `modules/message.ts`와 `modules/channel.ts`를 통해 현재 room에 저장·전송한다.
+`Home.tsx` → `sendMessage` → `modules/communication/chat.ts`. `/` 또는 슬래시 없는 별칭은 `modules/communication/bot.ts`가 명령을 찾아 `commands/{domain}/*.ts` 핸들러를 실행한다. `information: true` 명령은 `modules/player/informationVisibility.ts`의 사용자 모드와 async 문맥에 따라 입력·결과를 현재 room 또는 본인에게 전송한다. 남은 일반 문장은 스킬 message trigger를 먼저 검사하고 일치하지 않을 때 `modules/communication/message.ts`와 `modules/communication/channel.ts`를 통해 현재 room에 저장·전송한다.
 
 ### 게임 루프
 
-`modules/game.ts`가 20 FPS로 온라인 Player의 `earlyUpdate → update → lateUpdate`, Projectile, 모든 Location 오브젝트, Shop, Coroutine과 NPC 대화 세션 유효성을 갱신한다. Player update는 제작법 발견 조건도 주기적으로 검사하고, Coroutine이 제작 대기 시간을 처리한다. 별도 500ms 타이머가 `playerStats`와 `locationInfo` HUD 데이터를 각 사용자에게 보낸다.
+`modules/infrastructure/game.ts`가 20 FPS로 온라인 Player의 `earlyUpdate → update → lateUpdate`, Projectile, 모든 Location 오브젝트, Shop, Coroutine과 NPC 대화 세션 유효성을 갱신한다. Player update는 제작법 발견 조건도 주기적으로 검사하고, Coroutine이 제작 대기 시간을 처리한다. 별도 500ms 타이머가 `playerStats`와 `locationInfo` HUD 데이터를 각 사용자에게 보낸다.
 
 ## 신뢰 경계
 

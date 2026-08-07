@@ -4,7 +4,7 @@
 
 ## 감지 흐름
 
-`server/src/modules/humanVerification.ts`가 `combat:entity_defeated`를 구독해 플레이어별 최근 사냥 표본을 메모리에 보관한다.
+`server/src/modules/auth/humanVerification.ts`가 `combat:entity_defeated`를 구독해 플레이어별 최근 사냥 표본을 메모리에 보관한다.
 
 1. 충분히 오래 이어진 처치 기록에서 장소·대상 순환 반복도, 처치 간격의 규칙성, 연속 시간을 계산한다.
 2. 한 가지 지표만으로 즉시 차단하지 않고 복합 점수가 기준을 넘은 경우에만 후보로 둔다.

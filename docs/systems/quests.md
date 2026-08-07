@@ -7,7 +7,7 @@
 ## 구성
 
 ```text
-data/quests.ts
+data/progression/quests.ts
   └─ defineQuest(QuestData)
        ├─ QuestStage[]
        │    └─ QuestObjective[]
@@ -111,7 +111,7 @@ Lv.500이며 현재 메인·서브에 맞는 엘리트 직업을 가진 플레�
 
 ## 추가 체크리스트
 
-1. `data/quests.ts`에 stable ID와 단계/목표/보상을 정의한다.
+1. `data/progression/quests.ts`에 stable ID와 단계/목표/보상을 정의한다.
 2. 목표에 필요한 동작이 아직 이벤트가 아니면 실제 상태가 확정되는 소유 모델에서 표준 `GameEventIds`를 추가한다.
 3. NPC 대화 진입점에서 `canAccept/isActive/canTurnIn`으로 분기하고 수락·보고 액션을 넣는다.
 4. 보유/제출 아이템은 Inventory 목적형 API만 사용한다.

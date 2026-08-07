@@ -1,9 +1,9 @@
 import prisma from '../config/prisma.js';
-import '../data/items.js';
+import '../data/economy/items.js';
 import {
     isPersistedItemMetadataDelta,
     migratePersistedItemMetadata,
-} from '../models/Item.js';
+} from '../models/economy/Item.js';
 
 const BATCH_SIZE = 100;
 const dryRun = process.argv.includes('--dry-run');

@@ -1,0 +1,43 @@
+import { registerCommand } from '../../modules/communication/bot.js';
+import { sendBotMessageToUser } from '../../modules/communication/message.js';
+import { getPlayerByUserId } from '../../modules/player/player.js';
+import { getFullWorldMapSnapshot, getWorldMapSnapshot } from '../../models/world/WorldMap.js';
+import { chat } from '../../utils/chatBuilder.js';
+
+export function initMapCommands(): void {
+    registerCommand({
+        name: '지도',
+        aliases: ['map'],
+        description: '방문한 장소와 인접한 미방문 장소를 지도로 확인합니다.',
+        showCommandUse: 'private',
+        information: true,
+        handler(userId) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+
+            const snapshot = getWorldMapSnapshot(player);
+            sendBotMessageToUser(userId, chat()
+                .text(`[ 지도 ] 방문한 장소 ${snapshot.locations.filter(location => location.visited).length}곳\n`)
+                .hide('지도 보기', builder => builder.worldMap(snapshot))
+                .build());
+        },
+    });
+
+    registerCommand({
+        name: '전체지도',
+        aliases: ['fullmap'],
+        description: 'hidden과 미방문 장소를 포함한 전체 월드 지도를 확인합니다.',
+        permission: 10,
+        showCommandUse: 'private',
+        handler(userId) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+
+            const snapshot = getFullWorldMapSnapshot(player);
+            sendBotMessageToUser(userId, chat()
+                .text(`[ 전체 지도 ] 모든 장소 ${snapshot.locations.length}곳\n`)
+                .hide('지도 보기', builder => builder.worldMap(snapshot))
+                .build());
+        },
+    });
+}

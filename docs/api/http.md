@@ -4,7 +4,7 @@
 
 ## `POST /api/profile-image`
 
-- 구현: `server/src/modules/upload.ts`
+- 구현: `server/src/modules/infrastructure/upload.ts`
 - 호출: `client/src/components/Drawer.tsx`
 - 인증: `sessionToken` 쿠키. 클라이언트는 `credentials: 'include'`를 사용한다.
 - Content-Type: `multipart/form-data`
@@ -28,7 +28,7 @@
 
 ## `POST /api/chat-image`
 
-- 구현: `server/src/modules/upload.ts`
+- 구현: `server/src/modules/infrastructure/upload.ts`
 - 호출: `client/src/pages/Home.tsx`
 - 인증: `sessionToken` 쿠키
 - Content-Type: `multipart/form-data`

@@ -8,7 +8,7 @@
 
 ## 마스터 데이터와 초기화
 
-`data/codex.ts::initializeCodexData()`는 다른 마스터 데이터를 직접 보관하지 않고 각 소유 모델의 공개 snapshot API를 사용해 도감 registry 전체를 원자적으로 교체한다. 서버 시작 시 몬스터·자원·아이템·제작법과 장소 JSON/승천 권역이 모두 등록된 뒤, Player 로드를 시작하기 전에 호출한다. 관리자 장소 저장으로 Location registry가 바뀐 경우에도 다시 호출한다.
+`data/world/codex.ts::initializeCodexData()`는 다른 마스터 데이터를 직접 보관하지 않고 각 소유 모델의 공개 snapshot API를 사용해 도감 registry 전체를 원자적으로 교체한다. 서버 시작 시 몬스터·자원·아이템·제작법과 장소 JSON/승천 권역이 모두 등록된 뒤, Player 로드를 시작하기 전에 호출한다. 관리자 장소 저장으로 Location registry가 바뀐 경우에도 다시 호출한다.
 
 | 분류 | 엔트리 원본 | 현재 수 | 동/은/금 목표 |
 | --- | --- | ---: | --- |

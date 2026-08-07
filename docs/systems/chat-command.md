@@ -6,11 +6,11 @@
 Home/QuickSlot/ButtonNode
         │ sendMessage / sendImageMessages / chatButtonClick
         v
-modules/chat.ts ── 일반문장 ──> 귓속말 / Skill message trigger 또는 modules/message.ts ──> Socket room
+modules/communication/chat.ts ── 일반문장 ──> 귓속말 / Skill message trigger 또는 modules/communication/message.ts ──> Socket room
         │                              │
-        │ '/' 또는 첫 단어=별칭         └─ modules/channel.ts history
+        │ '/' 또는 첫 단어=별칭         └─ modules/communication/channel.ts history
         v
-modules/bot.ts ──> commands/*.ts ──> models/modules ──> bot/notification output
+modules/communication/bot.ts ──> commands/{domain}/*.ts ──> models/modules ──> bot/notification output
 ```
 
 `ChatMessage.content`는 사용자 일반 입력에서는 text node 배열이고, 시스템 메시지는 `chat()` 빌더 또는 `parseChatMessage()`로 만든 `ChatNode[]`다. 클라이언트 `ChatMessage.tsx`가 노드 트리를 재귀 렌더링한다.

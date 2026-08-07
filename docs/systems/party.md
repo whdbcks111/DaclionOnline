@@ -4,7 +4,7 @@
 
 ## 수명주기와 공개 API
 
-`modules/party.ts`의 `partyManager`가 내부 Party/초대 Map을 단독 소유한다. 외부 코드는 raw 멤버 배열을 수정하지 않고 다음 API만 사용한다.
+`modules/social/party.ts`의 `partyManager`가 내부 Party/초대 Map을 단독 소유한다. 외부 코드는 raw 멤버 배열을 수정하지 않고 다음 API만 사용한다.
 
 - `invite/accept/decline`: 60초 초대 생성과 수락·거절. 파티가 있으면 파티장만 초대할 수 있고 수락 시점에도 정원과 파티장 상태를 재검사한다.
 - `leave/disband/kick`: 나가기, 파티장 전용 해산, 파티장 전용 강퇴. 파티장이 나가면 가입 순서상 다음 멤버가 파티장이 되고 1명만 남으면 파티를 종료한다.

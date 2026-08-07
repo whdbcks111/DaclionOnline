@@ -4,8 +4,8 @@
 
 ## 마스터 데이터와 인스턴스
 
-- `models/Item.ts::ItemData`는 이름, 이미지 key, 분류, 무게, 스택, 기본 metadata, 사용 handler ID, 장비 슬롯, modifier, 내구도와 정의 태그를 정의한다. 일반 stackable 아이템은 Prisma `Int` 안전 범위 안의 공용 `MAX_STACKABLE_ITEM_COUNT`를 사용해 사실상 스택 제한이 없고, 실제 휴대 한계는 인벤토리 중량으로 결정한다. 장비처럼 인스턴스 상태가 중요한 non-stackable 아이템은 한 칸에 한 개만 둔다.
-- `data/items.ts`가 `defineItem()`으로 마스터 데이터를 프로세스 레지스트리에 등록한다.
+- `models/economy/Item.ts::ItemData`는 이름, 이미지 key, 분류, 무게, 스택, 기본 metadata, 사용 handler ID, 장비 슬롯, modifier, 내구도와 정의 태그를 정의한다. 일반 stackable 아이템은 Prisma `Int` 안전 범위 안의 공용 `MAX_STACKABLE_ITEM_COUNT`를 사용해 사실상 스택 제한이 없고, 실제 휴대 한계는 인벤토리 중량으로 결정한다. 장비처럼 인스턴스 상태가 중요한 non-stackable 아이템은 한 칸에 한 개만 둔다.
+- `data/economy/items.ts`가 `defineItem()`으로 마스터 데이터를 프로세스 레지스트리에 등록한다.
 - DB `Item`과 런타임 `Item` 객체는 플레이어가 실제 보유한 수량·내구도와 인스턴스 metadata delta를 표현한다.
 - 장착된 항목은 DB `Equipment`와 런타임 `Equipment` 슬롯 맵에 별도로 존재한다.
 - 주무기를 소모하는 공격은 무기 내구도를 감소시킨다. 직접 피격은 보호막을 뚫고 실제 생명력 피해가 생겼을 때만 방어구 손상을 판정한다. 일반 공격은 `clamp(0.10 + 1.20 × 실제 피해/최대 생명력, 0.10, 0.70)` 확률로 장착 중인 몸통 40·다리 25·머리 20·발 15 가중치 중 한 부위만 감소시키며, 없는 부위는 남은 후보끼리 재정규화한다. 명시적인 전 부위 손상 특수 공격만 모든 방어구를 한 번씩 감소시킨다. 내구도가 0이 되면 장비와 modifier를 즉시 제거하고, 파괴된 인스턴스 이름을 본인 채팅 메시지와 notification에 함께 표시한다.
@@ -112,7 +112,7 @@ HP·MP 포션과 `apply_status_effect` 영약·회복약은 음용 성공 시 �
 
 ## 기본 공격 오버라이드와 투사체 아이템
 
-장착 무기는 metadata의 `basicAttackOverride` 문자열로 `modules/itemAttack.ts`의 key→함수 레지스트리를 선택한다. 현재 `projectile` handler가 있으며 처리할 수 없으면 `false`를 반환해 `Player.performBasicAttack`이 직접 근접 공격으로 폴백한다. 가벼운 활은 탄약이 없거나 탄약 설정이 유효하지 않을 때 이 폴백을 사용한다.
+장착 무기는 metadata의 `basicAttackOverride` 문자열로 `modules/player/itemAttack.ts`의 key→함수 레지스트리를 선택한다. 현재 `projectile` handler가 있으며 처리할 수 없으면 `false`를 반환해 `Player.performBasicAttack`이 직접 근접 공격으로 폴백한다. 가벼운 활은 탄약이 없거나 탄약 설정이 유효하지 않을 때 이 폴백을 사용한다.
 
 탄약 소비형 metadata 예시는 다음과 같다.
 
@@ -149,7 +149,7 @@ HP·MP 포션과 `apply_status_effect` 영약·회복약은 음용 성공 시 �
 }
 ```
 
-`overrides`는 `name`, 절대 `damage`, `damageType`, `travelTime`, `accelerationCoefficient`, `accelerationMultiplier`, `damageMultiplier`, `damageBonus`, `tags`, `attributeOverrides`를 지원한다. 값은 `parseProjectileReference`가 검증하며 투사체 템플릿은 `data/projectiles.ts`에서 `defineProjectileData`로 등록한다. 피해량을 직접 지정하지 않으면 물리는 owner `atk`, 마법은 `magicForce`에 multiplier와 bonus를 적용한다. 실제 비행 시간은 owner의 `projectileAcceleration` 보너스를 템플릿 계수만큼 반영하며 활·지팡이 modifier도 같은 능력치 API를 사용한다.
+`overrides`는 `name`, 절대 `damage`, `damageType`, `travelTime`, `accelerationCoefficient`, `accelerationMultiplier`, `damageMultiplier`, `damageBonus`, `tags`, `attributeOverrides`를 지원한다. 값은 `parseProjectileReference`가 검증하며 투사체 템플릿은 `data/combat/projectiles.ts`에서 `defineProjectileData`로 등록한다. 피해량을 직접 지정하지 않으면 물리는 owner `atk`, 마법은 `magicForce`에 multiplier와 bonus를 적용한다. 실제 비행 시간은 owner의 `projectileAcceleration` 보너스를 템플릿 계수만큼 반영하며 활·지팡이 modifier도 같은 능력치 API를 사용한다.
 
 `basic_arrow`는 중립 물리 투사체다. 나무·철·금속 같은 탄약의 태그는 제작 재료와 아이템 분류에는 보존하지만 일반 화살 피해 전체의 속성 상성으로 사용하지 않는다. 새 단조 화살은 투사체 override에서 `property:*`를 제외하며, `executeProjectileItemAttack()`도 과거 저장 화살의 같은 override를 발사 시 정규화한다. 화염 화살·금속 관통 화살처럼 실제 공격에 속성이 필요한 기술은 SkillData 또는 별도 투사체 정의가 `tags`를 명시해야 한다.
 
@@ -212,7 +212,7 @@ HP·MP 포션과 `apply_status_effect` 영약·회복약은 음용 성공 시 �
 
 Lv.500~1000 승천 변경의 10개 전초 상점은 권역 소재 하나를 매입하고 단층검·원환궁·경계송곳니·공명지팡이·심층방패와 성장 가방, 대용량 HP/MP 포션과 화살을 판매한다. 장비 수치는 50레벨 단위로 상승하고 군주 보스는 같은 권역 소재, 숨은 제단용 군주 인장과 낮은 확률의 양면 능력 장신구를 드롭한다. 권역 유물함은 4~8시간마다 소재 묶음 또는 역할 장비 하나를 지급하며 중량이 부족하면 `Player.receiveLoot()`가 현재 장소 바닥에 보존한다.
 
-`data/shops.ts`가 `ShopData`를 등록하고 Location의 `shopId`가 상점을 노출한다. `BuyEntry`는 생성 함수·가격·1회 수량·최대 재고·재입고 시간을, `SellEntry`는 필터·가격을 가진다.
+`data/economy/shops.ts`가 `ShopData`를 등록하고 Location의 `shopId`가 상점을 노출한다. `BuyEntry`는 생성 함수·가격·1회 수량·최대 재고·재입고 시간을, `SellEntry`는 필터·가격을 가진다.
 
 - `facility:lawful` 상점은 `Shop.getAccessDeniedReason(player)`로 카르마 정책을 검사한다. `/상점`, 구매, 개별 판매, 전체 판매와 자동완성에 같은 API를 적용해 우회 경로를 막는다.
 - 구매는 현재 위치 상점, 생존 상태, 번호/수량, 재고, 골드, 인벤토리 무게를 검사한 뒤 재고와 골드를 차감하고 아이템을 추가한다.

@@ -2,9 +2,9 @@
 
 ## 구성
 
-- `models/Ranking.ts`: `RankingCategory` 클래스형 enum, 계산 지표 snapshot, `RankingVisibility` dirty 상태를 소유한다.
-- `modules/ranking.ts`: 10초간 캐시한 DB의 마지막 저장 snapshot에 온라인 Player의 현재 메모리 snapshot을 덮어쓰고 값 내림차순 공동 순위를 계산한다.
-- `commands/ranking.ts`: 순위 조회와 전체·카테고리별 공개 설정 UI를 제공한다.
+- `models/progression/Ranking.ts`: `RankingCategory` 클래스형 enum, 계산 지표 snapshot, `RankingVisibility` dirty 상태를 소유한다.
+- `modules/social/ranking.ts`: 10초간 캐시한 DB의 마지막 저장 snapshot에 온라인 Player의 현재 메모리 snapshot을 덮어쓰고 값 내림차순 공동 순위를 계산한다.
+- `commands/player/ranking.ts`: 순위 조회와 전체·카테고리별 공개 설정 UI를 제공한다.
 
 ## 카테고리
 

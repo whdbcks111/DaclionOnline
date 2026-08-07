@@ -1,0 +1,920 @@
+import { CraftingRecipeIngredient, defineCraftingRecipe } from '../../models/professions/Crafting.js';
+import type { CraftingDiscoveryContext } from '../../models/professions/Crafting.js';
+import { getItemData } from '../../models/economy/Item.js';
+import type { Item, ItemSnapshot } from '../../models/economy/Item.js';
+import {
+    createAssembledBowSnapshot,
+    createForgedArrowSnapshot,
+    ForgeForm,
+} from '../../models/professions/Forging.js';
+import { GameTags } from '../../../../shared/tags.js';
+import { canForgeAdvancedWeapon } from '../../modules/professions/forging.js';
+
+function artificerDiscovery({ player, recipe }: CraftingDiscoveryContext): boolean {
+    return player.skills.has('artificer_manufacturing')
+        && recipe.selectIngredients(player.inventory, 1) !== null;
+}
+
+function advancedBowDiscovery(context: CraftingDiscoveryContext): boolean {
+    return (context.player.skills.has('artificer_manufacturing')
+        || canForgeAdvancedWeapon(context.player))
+        && context.recipe.selectIngredients(context.player.inventory, 1) !== null;
+}
+
+function selectedUnits(items: readonly { item: Item; count: number }[]): Item[] {
+    return items.flatMap(selected =>
+        Array.from({ length: selected.count }, () => selected.item));
+}
+
+function unwrapForgedOutput(
+    result: ReturnType<typeof createAssembledBowSnapshot>,
+): ItemSnapshot {
+    if (!result.success || !result.snapshot) {
+        throw new Error(result.reason ?? '단조 부품 조립 결과가 없습니다.');
+    }
+    return result.snapshot;
+}
+
+defineCraftingRecipe({
+    id: 'artificer:reinforced_bowstring',
+    name: '강화 활시위',
+    aliases: ['활시위', '시위'],
+    resultItemDataId: 'reinforced_bowstring',
+    description: '호환되는 실이나 섬유 두 가닥을 여러 겹 꼬아 단조 활대용 시위로 만듭니다.',
+    ingredients: [new CraftingRecipeIngredient(
+        '활시위용 실 또는 섬유',
+        2,
+        item => item.itemDataId !== 'reinforced_bowstring'
+            && item.hasTag(GameTags.CRAFTING_BOWSTRING_MATERIAL),
+    )],
+    craftTime: 4,
+    create: ({ quantity }) => ({
+        itemDataId: 'reinforced_bowstring',
+        count: quantity,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    discoveryCondition: advancedBowDiscovery,
+    tags: ['crafting:component', 'crafting:artificer'],
+});
+
+defineCraftingRecipe({
+    id: 'artificer:arrow_shafts',
+    name: '화살대 10개',
+    aliases: ['화살대'],
+    resultItemDataId: 'arrow_shaft',
+    description: '단단한 나무 막대기를 곧고 가볍게 다듬어 화살대 열 개를 만듭니다.',
+    ingredients: [CraftingRecipeIngredient.item('hardwood_stick', 2)],
+    craftTime: 4,
+    create: ({ quantity }) => ({
+        itemDataId: 'arrow_shaft',
+        count: quantity * 10,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    discoveryCondition: artificerDiscovery,
+    tags: ['crafting:component', 'crafting:artificer'],
+});
+
+defineCraftingRecipe({
+    id: 'artificer:forged_bow',
+    name: '단조 활 조립',
+    aliases: ['단조활', '활조립'],
+    resultItemDataId: 'forged_bow',
+    description: '단조 활대마다 장력에 맞는 강화 활시위를 연결해 완성 활로 조립합니다.',
+    ingredients: [
+        CraftingRecipeIngredient.item(ForgeForm.BOW_LIMB.itemDataId, 1),
+        CraftingRecipeIngredient.item('reinforced_bowstring', 1),
+    ],
+    craftTime: 7,
+    create: ({ ingredients }) => selectedUnits(ingredients[0].items)
+        .map(limb => unwrapForgedOutput(createAssembledBowSnapshot(limb))),
+    discoveryCondition: advancedBowDiscovery,
+    tags: ['crafting:weapon', 'crafting:artificer'],
+});
+
+defineCraftingRecipe({
+    id: 'artificer:forged_arrows',
+    name: '단조 화살 10개',
+    aliases: ['단조화살', '화살조립'],
+    resultItemDataId: 'wooden_arrow',
+    description: '단조 화살촉 한 묶음을 화살대 열 개에 고정해 기존 활과 호환되는 화살을 만듭니다.',
+    ingredients: [
+        CraftingRecipeIngredient.item(ForgeForm.ARROWHEADS.itemDataId, 1),
+        CraftingRecipeIngredient.item('arrow_shaft', 10),
+    ],
+    craftTime: 6,
+    create: ({ ingredients }) => selectedUnits(ingredients[0].items)
+        .map(arrowheads => unwrapForgedOutput(createForgedArrowSnapshot(arrowheads))),
+    discoveryCondition: artificerDiscovery,
+    tags: ['crafting:ammunition', 'crafting:artificer'],
+});
+
+defineCraftingRecipe({
+    id: 'basic:iron_pickaxe',
+    resultItemDataId: 'iron_pickaxe',
+    aliases: ['철곡괭이'],
+    description: '철과 돌을 다듬어 기본 곡괭이보다 튼튼한 철 곡괭이를 제작합니다.',
+    ingredients: [
+        CraftingRecipeIngredient.item('iron_ore', 3),
+        CraftingRecipeIngredient.item('stone', 2),
+    ],
+    craftTime: 4,
+    create: ({ quantity }) => ({
+        itemDataId: 'iron_pickaxe',
+        count: quantity,
+        durability: getItemData('iron_pickaxe')?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: ['crafting:tool', 'crafting:mining'],
+});
+
+for (const recipe of [
+    {
+        id: 'fishing:oasis_sunray_skewer', result: 'oasis_sunray_skewer', time: 4,
+        description: '신기루 송사리와 햇살가오리를 구워 몸놀림을 가볍게 하는 오아시스 꼬치를 만듭니다.',
+        ingredients: [['mirage_killifish', 2], ['oasis_sunray', 1], ['coal', 1]],
+    },
+    {
+        id: 'fishing:kelpmoon_chowder', result: 'kelpmoon_chowder', time: 5,
+        description: '청해초 달대구와 안개진주 문어를 맑은 물에 끓여 회복 차우더를 만듭니다.',
+        ingredients: [['kelpmoon_cod', 2], ['fogpearl_octopus', 1], ['fresh_water', 1]],
+    },
+    {
+        id: 'fishing:gearscale_hotpot', result: 'gearscale_hotpot', time: 6,
+        description: '톱니비늘 잉어와 중계전류 장어를 함께 끓여 정신력 재생을 돕는 전골을 만듭니다.',
+        ingredients: [['gearscale_carp', 2], ['relay_eel', 1], ['fresh_water', 1]],
+    },
+    {
+        id: 'fishing:eclipse_sailfish_steak', result: 'eclipse_sailfish_steak', time: 7,
+        description: '월염수 대구와 월식 돛새치를 구워 마력을 높이는 심해 스테이크를 만듭니다.',
+        ingredients: [['moonbrine_cod', 2], ['eclipse_sailfish', 1], ['coal', 1]],
+    },
+    {
+        id: 'fishing:lastlight_oarfish_banquet', result: 'lastlight_oarfish_banquet', time: 8,
+        description: '잿별 테트라와 마지막빛 산갈치를 조리해 힘을 높이는 라그나벨 성단 만찬을 만듭니다.',
+        ingredients: [['ashstar_tetra', 2], ['lastlight_oarfish', 1]],
+    },
+    {
+        id: 'fishing:abyss_glass_sashimi', result: 'abyss_glass_sashimi', time: 5,
+        description: '압해 등불어와 유리날개 참치를 손질해 장시간 회복력을 높이는 회접시를 만듭니다.',
+        ingredients: [['pressure_lanternfish', 2], ['glassfin_tuna', 1]],
+    },
+    {
+        id: 'fishing:dream_memory_stew', result: 'dream_memory_stew', time: 6,
+        description: '먹꿈 잉어와 기억 만타를 맑은 물에 우려 정신력 재생을 돕는 탕을 만듭니다.',
+        ingredients: [['inkdream_carp', 2], ['memory_manta', 1], ['fresh_water', 1]],
+    },
+    {
+        id: 'fishing:rustscale_power_grill', result: 'rustscale_power_grill', time: 6,
+        description: '녹비늘 창꼬치와 수은수염 메기를 철판에 구워 근력을 높이는 요리를 만듭니다.',
+        ingredients: [['rustscale_pike', 2], ['mercury_catfish', 1], ['coal', 1]],
+    },
+    {
+        id: 'fishing:prayer_koi_clear_soup', result: 'prayer_koi_clear_soup', time: 6,
+        description: '기도 비단잉어와 광륜 철갑상어로 몸놀림을 가볍게 하는 맑은탕을 만듭니다.',
+        ingredients: [['prayer_koi', 2], ['halo_sturgeon', 1], ['fresh_water', 1]],
+    },
+    {
+        id: 'fishing:genesis_dragonfish_platter', result: 'genesis_dragonfish_platter', time: 9,
+        description: '아르케 끝자락의 세 희귀 어종을 함께 조리해 마력을 크게 높이는 만찬을 만듭니다.',
+        ingredients: [['firstlight_coelacanth', 1], ['endshadow_moonfish', 1], ['genesis_dragonfish', 1]],
+    },
+] as const) {
+    defineCraftingRecipe({
+        id: recipe.id,
+        resultItemDataId: recipe.result,
+        description: recipe.description,
+        ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+        craftTime: recipe.time,
+        create: ({ quantity }) => ({
+            itemDataId: recipe.result,
+            count: quantity,
+            durability: null,
+            metadataDelta: null,
+            tags: [],
+        }),
+        tags: ['crafting:consumable', 'crafting:fishing'],
+    });
+}
+
+for (const recipe of [
+    {
+        id: 'twilight:graveward_tonic', result: 'graveward_tonic', time: 3,
+        description: '애도의 백합과 혼불을 맑은 물에 안정시켜 묘지기 향약을 만듭니다.',
+        ingredients: [['mourning_lily', 2], ['soul_ember', 1], ['fresh_water', 1]],
+        tags: ['crafting:consumable', 'region:twilight-tombs'],
+    },
+    {
+        id: 'twilight:oathiron_sword', result: 'oathiron_sword', time: 8,
+        description: '깨진 기사 휘장과 제련된 철을 다시 접어 맹세철 장검을 만듭니다.',
+        ingredients: [['broken_oath_badge', 4], ['refined_iron', 2]],
+        tags: ['crafting:weapon', 'region:twilight-tombs'],
+    },
+    {
+        id: 'twilight:requiem_bow', result: 'requiem_bow', time: 7,
+        description: '묘지기 천과 은빛 거미실로 소리를 죽인 진혼 시위를 만듭니다.',
+        ingredients: [['gravecloth', 4], ['silverweb_silk', 2]],
+        tags: ['crafting:weapon', 'region:twilight-tombs'],
+    },
+    {
+        id: 'twilight:mourning_staff', result: 'mourning_staff', time: 8,
+        description: '애도의 백합과 혼불을 제련된 금에 묶어 애도목 지팡이를 만듭니다.',
+        ingredients: [['mourning_lily', 3], ['soul_ember', 2], ['refined_gold', 1]],
+        tags: ['crafting:weapon', 'region:twilight-tombs'],
+    },
+    {
+        id: 'twilight:gravekeeper_shield', result: 'gravekeeper_shield', time: 9,
+        description: '맹세 휘장과 뼛조각을 제련된 철로 고정해 묘문 수호방패를 만듭니다.',
+        ingredients: [['broken_oath_badge', 3], ['weathered_bone', 4], ['refined_iron', 2]],
+        tags: ['crafting:armor', 'region:twilight-tombs'],
+    },
+] as const) {
+    defineCraftingRecipe({
+        id: recipe.id,
+        resultItemDataId: recipe.result,
+        description: recipe.description,
+        ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+        craftTime: recipe.time,
+        create: ({ quantity }) => ({
+            itemDataId: recipe.result,
+            count: quantity,
+            durability: getItemData(recipe.result)?.baseDurability ?? null,
+            metadataDelta: null,
+            tags: [],
+        }),
+        tags: recipe.tags,
+    });
+}
+
+for (const recipe of [
+    {
+        id: 'glassdune:shade_canteen', result: 'shade_canteen', time: 3,
+        description: '유리모래로 수통 안감을 만들고 맑은 물을 담아 사막용 음료를 만듭니다.',
+        ingredients: [['glass_sand', 2], ['fresh_water', 1]],
+        tags: ['crafting:consumable', 'region:glassdune'],
+    },
+    {
+        id: 'glassdune:dunebreaker_sword', result: 'dunebreaker_sword', time: 10,
+        description: '제련된 철 사이에 유리모래를 접어 넣어 모래맥 파검을 만듭니다.',
+        ingredients: [['glass_sand', 8], ['refined_iron', 4], ['sun_glyph_fragment', 1]],
+        tags: ['crafting:weapon', 'region:glassdune'],
+    },
+    {
+        id: 'glassdune:sunwire_bow', result: 'sunwire_bow', time: 9,
+        description: '황금갑 성충갑을 가는 섬유로 풀어 화살의 비행을 잡는 태양사 장궁을 만듭니다.',
+        ingredients: [['sunscarab_shell', 6], ['silverweb_silk', 3], ['refined_gold', 2]],
+        tags: ['crafting:weapon', 'region:glassdune'],
+    },
+    {
+        id: 'glassdune:mirage_fang_dagger', result: 'mirage_fang_dagger', time: 9,
+        description: '신기루 수정을 단검 형태로 깨고 전갈 독을 결정 사이에 봉합니다.',
+        ingredients: [['mirage_crystal', 3], ['dune_scorpion_venom', 4], ['refined_iron', 2]],
+        tags: ['crafting:weapon', 'region:glassdune'],
+    },
+    {
+        id: 'glassdune:helioglass_staff', result: 'helioglass_staff', time: 11,
+        description: '신기루 수정과 태양 문양을 결합해 마력 굴절경을 가진 지팡이를 만듭니다.',
+        ingredients: [['mirage_crystal', 4], ['sun_glyph_fragment', 3], ['refined_gold', 2]],
+        tags: ['crafting:weapon', 'region:glassdune'],
+    },
+    {
+        id: 'glassdune:sunmirror_shield', result: 'sunmirror_shield', time: 12,
+        description: '성충갑과 태양 문양을 유리모래 판 위에 고정해 태양거울 방패를 만듭니다.',
+        ingredients: [['sunscarab_shell', 5], ['glass_sand', 7], ['sun_glyph_fragment', 2]],
+        tags: ['crafting:armor', 'region:glassdune'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+// 부분 되돌림권은 동일 단계 권표를 합쳐 스탯별 배분 유연성을 높이는 고레벨 제작법이다.
+for (const recipe of [
+    {
+        id: 'utility:refined_stat_refund_ticket',
+        result: 'refined_stat_refund_ticket',
+        aliases: ['정련된 되돌림권', '정련 되돌림권'],
+        time: 20,
+        description: '빛바랜 권표 두 장을 논리핵과 정제 마나 결정으로 다시 엮어 더 넓은 배분을 되돌릴 수 있게 만듭니다.',
+        ingredients: [['faded_stat_reset_ticket', 2], ['logic_core', 2], ['refined_mana_crystal', 5]],
+    },
+    {
+        id: 'utility:restored_stat_refund_ticket',
+        result: 'restored_stat_refund_ticket',
+        aliases: ['복원된 되돌림권', '복원 되돌림권'],
+        time: 30,
+        description: '정련된 권표 두 장에 창세의 프리즘과 시간유리를 봉합해 잃어버린 권능을 상당 부분 복원합니다.',
+        ingredients: [['refined_stat_refund_ticket', 2], ['origin_prism', 2], ['timeglass_crystal', 3]],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    aliases: recipe.aliases,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) =>
+        CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: ['crafting:consumable', 'crafting:stat-refund'],
+});
+
+for (const recipe of [
+    {
+        id: 'nebula:nebula_ration', result: 'nebula_ration', time: 7,
+        description: '성사로 여행자 빵과 성운유리 가루를 묶어 무중력에서도 흩어지지 않는 건량을 만듭니다.',
+        ingredients: [['star_silk', 2], ['nebula_glass', 2], ['traveler_bread', 2]],
+        tags: ['crafting:consumable', 'region:nebula-corridor'],
+    },
+    {
+        id: 'nebula:nebula_tonic', result: 'nebula_tonic', time: 10,
+        description: '중력핵의 흐름을 성운유리와 회복약에 안정시켜 성운맥 영약을 만듭니다.',
+        ingredients: [['gravity_core', 3], ['nebula_glass', 5], ['health_potion', 2]],
+        tags: ['crafting:consumable', 'region:nebula-corridor'],
+    },
+    {
+        id: 'nebula:nebula_edge', result: 'nebula_edge', time: 31,
+        description: '혜철 칼날에 궤도편과 중력핵을 박아 움직임을 따라가는 성운궤도검을 만듭니다.',
+        ingredients: [['comet_iron', 18], ['orbit_fragment', 8], ['gravity_core', 5]],
+        tags: ['crafting:weapon', 'region:nebula-corridor'],
+    },
+    {
+        id: 'nebula:gravity_arc_bow', result: 'gravity_arc_bow', time: 29,
+        description: '성사 시위와 중력핵을 성운유리 활대에 연결해 낙차를 지우는 장궁을 만듭니다.',
+        ingredients: [['star_silk', 16], ['gravity_core', 8], ['nebula_glass', 10]],
+        tags: ['crafting:weapon', 'region:nebula-corridor'],
+    },
+    {
+        id: 'nebula:orbit_fang', result: 'orbit_fang', time: 28,
+        description: '혜철을 얇게 벼리고 궤도편으로 칼끝의 방향을 비트는 단검을 만듭니다.',
+        ingredients: [['comet_iron', 13], ['orbit_fragment', 11], ['gravity_core', 4]],
+        tags: ['crafting:weapon', 'region:nebula-corridor'],
+    },
+    {
+        id: 'nebula:starwell_staff', result: 'starwell_staff', time: 32,
+        description: '성운유리와 중력핵을 성사 회로로 연결해 별빛을 순환시키는 지팡이를 만듭니다.',
+        ingredients: [['nebula_glass', 16], ['gravity_core', 9], ['star_silk', 10]],
+        tags: ['crafting:weapon', 'region:nebula-corridor'],
+    },
+    {
+        id: 'nebula:meteor_bulwark', result: 'meteor_bulwark', time: 33,
+        description: '혜철판 사이에 중력핵과 성운유리를 겹쳐 충격을 중심에 묶는 방패를 만듭니다.',
+        ingredients: [['comet_iron', 20], ['gravity_core', 9], ['nebula_glass', 8]],
+        tags: ['crafting:armor', 'region:nebula-corridor'],
+    },
+    {
+        id: 'chronofrost:chronofrost_ration', result: 'chronofrost_ration', time: 7,
+        description: '영겁실로 여행자 빵과 시빙정을 밀봉해 변하지 않는 보존식을 만듭니다.',
+        ingredients: [['aeon_thread', 2], ['chronofrost_ice', 2], ['traveler_bread', 2]],
+        tags: ['crafting:consumable', 'region:chronofrost'],
+    },
+    {
+        id: 'chronofrost:chronofrost_tonic', result: 'chronofrost_tonic', time: 11,
+        description: '동결초와 역행사를 회복약에 풀어 상처의 시간을 되돌리는 영시 회복약을 만듭니다.',
+        ingredients: [['frozen_second', 3], ['reverse_sand', 5], ['health_potion', 2]],
+        tags: ['crafting:consumable', 'region:chronofrost'],
+    },
+    {
+        id: 'chronofrost:chronoblade', result: 'chronoblade', time: 34,
+        description: '진자강 칼날에 동결초와 시빙정을 겹쳐 영시 절단검을 만듭니다.',
+        ingredients: [['pendulum_steel', 20], ['frozen_second', 8], ['chronofrost_ice', 10]],
+        tags: ['crafting:weapon', 'region:chronofrost'],
+    },
+    {
+        id: 'chronofrost:pendulum_bow', result: 'pendulum_bow', time: 32,
+        description: '진자강 활대와 영겁실 시위에 역행사의 왕복 흐름을 새깁니다.',
+        ingredients: [['pendulum_steel', 14], ['aeon_thread', 17], ['reverse_sand', 9]],
+        tags: ['crafting:weapon', 'region:chronofrost'],
+    },
+    {
+        id: 'chronofrost:yesterglass_dagger', result: 'yesterglass_dagger', time: 31,
+        description: '시빙정 칼날에 동결초를 봉하고 역행사로 어제의 궤적을 새깁니다.',
+        ingredients: [['chronofrost_ice', 15], ['frozen_second', 11], ['reverse_sand', 8]],
+        tags: ['crafting:weapon', 'region:chronofrost'],
+    },
+    {
+        id: 'chronofrost:zero_hour_staff', result: 'zero_hour_staff', time: 35,
+        description: '동결초를 영겁실 회로로 감싸 주변 시간과 정신력 흐름을 분리하는 지팡이를 만듭니다.',
+        ingredients: [['frozen_second', 12], ['aeon_thread', 14], ['chronofrost_ice', 12]],
+        tags: ['crafting:weapon', 'region:chronofrost'],
+    },
+    {
+        id: 'chronofrost:aeon_bulwark', result: 'aeon_bulwark', time: 36,
+        description: '진자강과 시빙정 사이에 영겁실을 겹쳐 충격의 시간을 저장하는 방패를 만듭니다.',
+        ingredients: [['pendulum_steel', 22], ['chronofrost_ice', 12], ['aeon_thread', 10]],
+        tags: ['crafting:armor', 'region:chronofrost'],
+    },
+    {
+        id: 'endstar:endstar_ration', result: 'endstar_ration', time: 8,
+        description: '종성재의 온기로 여행자 빵과 잔광편을 익혀 마지막 별찬을 만듭니다.',
+        ingredients: [['endstar_ash', 3], ['last_light', 2], ['traveler_bread', 2]],
+        tags: ['crafting:consumable', 'region:endstar'],
+    },
+    {
+        id: 'endstar:endstar_tonic', result: 'endstar_tonic', time: 12,
+        description: '창세정과 성좌핵의 박동을 회복약에 안정시켜 창세맥 영약을 만듭니다.',
+        ingredients: [['genesis_crystal', 4], ['constellation_core', 2], ['health_potion', 3]],
+        tags: ['crafting:consumable', 'region:endstar'],
+    },
+    {
+        id: 'endstar:endstar_edge', result: 'endstar_edge', time: 38,
+        description: '소멸금 칼날에 종성재와 잔광편을 겹쳐 빛과 어둠을 함께 끊는 장검을 만듭니다.',
+        ingredients: [['entropy_metal', 22], ['endstar_ash', 12], ['last_light', 10]],
+        tags: ['crafting:weapon', 'region:endstar'],
+    },
+    {
+        id: 'endstar:constellation_bow', result: 'constellation_bow', time: 36,
+        description: '성좌핵과 잔광편을 연결해 미래 좌표를 겨누는 성좌연결궁을 만듭니다.',
+        ingredients: [['constellation_core', 10], ['last_light', 16], ['entropy_metal', 12]],
+        tags: ['crafting:weapon', 'region:endstar'],
+    },
+    {
+        id: 'endstar:entropy_fang', result: 'entropy_fang', time: 35,
+        description: '소멸금 단검에 종성재와 성좌핵을 새겨 주변 질서를 깎는 송곳니를 만듭니다.',
+        ingredients: [['entropy_metal', 17], ['endstar_ash', 13], ['constellation_core', 7]],
+        tags: ['crafting:weapon', 'region:endstar'],
+    },
+    {
+        id: 'endstar:genesis_staff', result: 'genesis_staff', time: 39,
+        description: '창세정과 성좌핵을 잔광 회로에 묶어 새 별의 순환을 재현하는 지팡이를 만듭니다.',
+        ingredients: [['genesis_crystal', 15], ['constellation_core', 11], ['last_light', 14]],
+        tags: ['crafting:weapon', 'region:endstar'],
+    },
+    {
+        id: 'endstar:horizon_bulwark', result: 'horizon_bulwark', time: 40,
+        description: '소멸금과 창세정을 겹쳐 충격을 지평선 밖으로 밀어내는 방패를 만듭니다.',
+        ingredients: [['entropy_metal', 24], ['genesis_crystal', 13], ['endstar_ash', 12], ['constellation_core', 6]],
+        tags: ['crafting:armor', 'region:endstar'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
+        id: 'voidcrown:voidcrown_ration', result: 'voidcrown_ration', time: 6,
+        description: '기아덩굴을 여행자 빵에 섞고 별먹으로 밀봉해 무광 행군식을 만듭니다.',
+        ingredients: [['starved_vine', 3], ['traveler_bread', 2], ['astral_ink', 1]],
+        tags: ['crafting:consumable', 'region:voidcrown'],
+    },
+    {
+        id: 'voidcrown:voidcrown_draught', result: 'voidcrown_draught', time: 8,
+        description: '기아덩굴과 왕관유리의 마력 흡수 흐름을 회복약에 안정시킵니다.',
+        ingredients: [['starved_vine', 4], ['crown_glass', 2], ['health_potion', 2]],
+        tags: ['crafting:consumable', 'region:voidcrown'],
+    },
+    {
+        id: 'voidcrown:nullsilver_greatsword', result: 'nullsilver_greatsword', time: 24,
+        description: '무광은을 섭정 인장과 함께 접고 왕관유리로 칼등을 고정해 파성검을 만듭니다.',
+        ingredients: [['nullsilver', 14], ['regent_insignia', 4], ['crown_glass', 5]],
+        tags: ['crafting:weapon', 'region:voidcrown'],
+    },
+    {
+        id: 'voidcrown:crownstring_longbow', result: 'crownstring_longbow', time: 22,
+        description: '공허비단을 여러 겹 꼬아 왕관유리와 무광은 활대에 고정합니다.',
+        ingredients: [['void_silk', 12], ['crown_glass', 7], ['nullsilver', 6]],
+        tags: ['crafting:weapon', 'region:voidcrown'],
+    },
+    {
+        id: 'voidcrown:voidsilk_stiletto', result: 'voidsilk_stiletto', time: 21,
+        description: '무광은 날을 공허비단으로 감고 별먹을 새겨 뒤늦게 나타나는 칼끝을 만듭니다.',
+        ingredients: [['nullsilver', 9], ['void_silk', 8], ['astral_ink', 5]],
+        tags: ['crafting:weapon', 'region:voidcrown'],
+    },
+    {
+        id: 'voidcrown:starless_scepter', result: 'starless_scepter', time: 25,
+        description: '왕관유리에 별먹으로 지운 성좌를 새기고 공허비단으로 마력 회로를 묶습니다.',
+        ingredients: [['crown_glass', 10], ['astral_ink', 9], ['void_silk', 7]],
+        tags: ['crafting:weapon', 'region:voidcrown'],
+    },
+    {
+        id: 'voidcrown:regent_aegis', result: 'regent_aegis', time: 26,
+        description: '무광은 판 사이에 왕관유리와 공허비단을 겹쳐 섭정의 무광방패를 만듭니다.',
+        ingredients: [['nullsilver', 16], ['crown_glass', 8], ['void_silk', 8], ['regent_insignia', 4]],
+        tags: ['crafting:armor', 'region:voidcrown'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
+        id: 'eclipse:eclipse_ration', result: 'eclipse_ration', time: 6,
+        description: '해구섬유의 속살을 월염수에 절이고 여행자 빵으로 말아 월식 해초말이를 만듭니다.',
+        ingredients: [['abyss_fiber', 3], ['moon_brine', 2], ['traveler_bread', 2]],
+        tags: ['crafting:consumable', 'region:eclipse-trench'],
+    },
+    {
+        id: 'eclipse:tideheart_tonic', result: 'tideheart_tonic', time: 8,
+        description: '밤진주의 마력과 월염수를 비전 영약에 안정시켜 조류심장 영약을 만듭니다.',
+        ingredients: [['night_pearl', 3], ['moon_brine', 4], ['arcane_tonic', 2]],
+        tags: ['crafting:consumable', 'region:eclipse-trench'],
+    },
+    {
+        id: 'eclipse:drowned_edge', result: 'drowned_edge', time: 26,
+        description: '침은의 푸른 결을 월식비늘로 고정하고 조류인장으로 무게 중심을 봉합니다.',
+        ingredients: [['drowned_silver', 15], ['eclipse_scale', 7], ['tide_sigil', 4]],
+        tags: ['crafting:weapon', 'region:eclipse-trench'],
+    },
+    {
+        id: 'eclipse:mooncurrent_bow', result: 'mooncurrent_bow', time: 24,
+        description: '해구섬유를 여러 겹 꼬아 월식비늘 활대와 밤진주 도르래에 연결합니다.',
+        ingredients: [['abyss_fiber', 14], ['eclipse_scale', 8], ['night_pearl', 5]],
+        tags: ['crafting:weapon', 'region:eclipse-trench'],
+    },
+    {
+        id: 'eclipse:nightpearl_knife', result: 'nightpearl_knife', time: 23,
+        description: '침은 단검의 칼등에 밤진주를 박고 월염수로 빛의 흔적을 지웁니다.',
+        ingredients: [['drowned_silver', 10], ['night_pearl', 8], ['moon_brine', 6]],
+        tags: ['crafting:weapon', 'region:eclipse-trench'],
+    },
+    {
+        id: 'eclipse:eclipse_oracle_staff', result: 'eclipse_oracle_staff', time: 27,
+        description: '밤진주와 조류인장을 해구섬유 회로로 묶어 빛과 어둠을 함께 다루는 예언봉을 만듭니다.',
+        ingredients: [['night_pearl', 11], ['tide_sigil', 8], ['abyss_fiber', 8]],
+        tags: ['crafting:weapon', 'region:eclipse-trench'],
+    },
+    {
+        id: 'eclipse:white_night_bulwark', result: 'white_night_bulwark', time: 28,
+        description: '월식비늘과 침은 판 사이에 해구섬유를 겹쳐 충격이 순환하는 조류방패를 만듭니다.',
+        ingredients: [['eclipse_scale', 16], ['drowned_silver', 12], ['abyss_fiber', 8], ['tide_sigil', 4]],
+        tags: ['crafting:armor', 'region:eclipse-trench'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
+        id: 'worldroot:worldroot_ration', result: 'worldroot_ration', time: 6,
+        description: '천근수피 속살을 태초수액과 함께 구워 오래 보존되는 수피 빵을 만듭니다.',
+        ingredients: [['skyroot_bark', 3], ['primal_sap', 2], ['traveler_bread', 2]],
+        tags: ['crafting:consumable', 'region:worldroot'],
+    },
+    {
+        id: 'worldroot:primordial_draught', result: 'primordial_draught', time: 9,
+        description: '태초수액과 심장씨앗의 맥동을 회복약에 안정시켜 태초맥 영약을 만듭니다.',
+        ingredients: [['primal_sap', 5], ['heart_seed', 2], ['health_potion', 2]],
+        tags: ['crafting:consumable', 'region:worldroot'],
+    },
+    {
+        id: 'worldroot:rootbone_cleaver', result: 'rootbone_cleaver', time: 28,
+        description: '근골철의 결을 천근수피로 고정하고 심장씨앗의 맥동으로 칼날을 깨웁니다.',
+        ingredients: [['rootbone_iron', 16], ['skyroot_bark', 8], ['heart_seed', 4]],
+        tags: ['crafting:weapon', 'region:worldroot'],
+    },
+    {
+        id: 'worldroot:heartstring_greatbow', result: 'heartstring_greatbow', time: 26,
+        description: '천근수피 활대에 심장씨앗과 기억호박을 연결해 맥동하는 활시위를 만듭니다.',
+        ingredients: [['skyroot_bark', 15], ['heart_seed', 7], ['memory_amber', 6]],
+        tags: ['crafting:weapon', 'region:worldroot'],
+    },
+    {
+        id: 'worldroot:amber_memory_fang', result: 'amber_memory_fang', time: 25,
+        description: '근골철 단검에 기억호박을 박고 태초수액으로 사냥의 기억을 고정합니다.',
+        ingredients: [['rootbone_iron', 11], ['memory_amber', 9], ['primal_sap', 6]],
+        tags: ['crafting:weapon', 'region:worldroot'],
+    },
+    {
+        id: 'worldroot:origin_heart_staff', result: 'origin_heart_staff', time: 29,
+        description: '태초수액과 심장씨앗을 기억호박 회로에 순환시켜 기원심장 지팡이를 만듭니다.',
+        ingredients: [['primal_sap', 12], ['heart_seed', 9], ['memory_amber', 8]],
+        tags: ['crafting:weapon', 'region:worldroot'],
+    },
+    {
+        id: 'worldroot:canopy_heartshield', result: 'canopy_heartshield', time: 30,
+        description: '천근수피와 근골철 사이에 태초수액과 심장씨앗을 봉해 충격을 순환시키는 방패를 만듭니다.',
+        ingredients: [['skyroot_bark', 16], ['rootbone_iron', 13], ['primal_sap', 8], ['heart_seed', 4]],
+        tags: ['crafting:armor', 'region:worldroot'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
+        id: 'ashen:ashmarch_ration', result: 'ashmarch_ration', time: 5,
+        description: '여행자 빵에 잿빛 힘줄의 열기를 스며들게 하고 맑은 물과 함께 밀봉해 재길 행군식을 만듭니다.',
+        ingredients: [['ashen_sinew', 2], ['traveler_bread', 2], ['fresh_water', 1]],
+        tags: ['crafting:consumable', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:blackflame_ward', result: 'blackflame_ward', time: 7,
+        description: '흑염 잔재를 비전 영약에 역류시켜 불꽃의 열을 밀어내는 흑염막이 영약을 만듭니다.',
+        ingredients: [['blackflame_residue', 3], ['mourning_eye', 1], ['arcane_tonic', 1]],
+        tags: ['crafting:consumable', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:ashblood_elixir', result: 'ashblood_elixir', time: 7,
+        description: '잿빛 힘줄과 심연가죽의 생명력을 회복약에 정제해 회혈 영약을 만듭니다.',
+        ingredients: [['ashen_sinew', 4], ['abyssal_hide', 2], ['health_potion', 2]],
+        tags: ['crafting:consumable', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:sootcleaver_sword', result: 'sootcleaver_sword', time: 21,
+        description: '밤쇠를 흑염 잔재와 함께 접고 재왕 인장으로 칼등을 고정해 재가름 장검을 만듭니다.',
+        ingredients: [['night_iron', 12], ['blackflame_residue', 6], ['sovereign_seal_fragment', 3]],
+        tags: ['crafting:weapon', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:hornstring_bow', result: 'hornstring_bow', time: 20,
+        description: '공허뿔을 활대로 다듬고 잿빛 힘줄과 심연가죽을 겹쳐 공허뿔 장궁을 만듭니다.',
+        ingredients: [['hollow_horn', 8], ['ashen_sinew', 10], ['abyssal_hide', 5]],
+        tags: ['crafting:weapon', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:gloamfang_dagger', result: 'gloamfang_dagger', time: 19,
+        description: '밤쇠 단검에 애도의 눈을 박고 저주뼈 가루를 봉해 황혼송곳을 만듭니다.',
+        ingredients: [['night_iron', 8], ['mourning_eye', 5], ['cursebone_fragment', 7]],
+        tags: ['crafting:weapon', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:blackflame_staff', result: 'blackflame_staff', time: 22,
+        description: '공허뿔 내부에 흑염 잔재와 애도의 눈을 배열해 흑염각 지팡이를 만듭니다.',
+        ingredients: [['hollow_horn', 7], ['blackflame_residue', 9], ['mourning_eye', 6]],
+        tags: ['crafting:weapon', 'region:ashen-abyss'],
+    },
+    {
+        id: 'ashen:ashguard_bulwark', result: 'ashguard_bulwark', time: 23,
+        description: '밤쇠 판 사이에 심연가죽과 저주뼈를 겹쳐 재성벽 방패를 만듭니다.',
+        ingredients: [['night_iron', 14], ['abyssal_hide', 8], ['cursebone_fragment', 8]],
+        tags: ['crafting:armor', 'region:ashen-abyss'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
+        id: 'paradox:cogwork_ration', result: 'cogwork_ration', time: 5,
+        description: '여행자 빵을 얇게 압축하고 기억 톱니의 온도 유지 장치로 밀봉해 태엽 작업식을 만듭니다.',
+        ingredients: [['traveler_bread', 2], ['memory_gear', 1], ['mist_salt', 1]],
+        tags: ['crafting:consumable', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:phase_tonic', result: 'phase_tonic', time: 6,
+        description: '공허 용수철의 반동을 균열 수정에 가둬 위상 촉진제를 만듭니다.',
+        ingredients: [['void_spring', 3], ['fracture_crystal', 2], ['fresh_water', 1]],
+        tags: ['crafting:consumable', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:logic_elixir', result: 'logic_elixir', time: 6,
+        description: '논리핵과 광자 렌즈를 비전 영약에 안정시켜 논리회로 영약을 만듭니다.',
+        ingredients: [['logic_core', 2], ['photon_lens', 2], ['arcane_tonic', 1]],
+        tags: ['crafting:consumable', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:temporal_salve', result: 'temporal_salve', time: 7,
+        description: '역설 실과 균열 수정에 회복약을 스며들게 해 시간봉합 연고를 만듭니다.',
+        ingredients: [['paradox_thread', 2], ['fracture_crystal', 2], ['health_potion', 2]],
+        tags: ['crafting:consumable', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:paradox_edge', result: 'paradox_edge', time: 18,
+        description: '시간강을 반복해 접고 역설 실로 두 궤적을 묶어 역설절단검을 만듭니다.',
+        ingredients: [['chronosteel_shard', 10], ['paradox_thread', 4], ['automaton_plate', 4]],
+        tags: ['crafting:weapon', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:photon_repeater', result: 'photon_repeater', time: 17,
+        description: '광자 렌즈와 기억 톱니를 시위의 보조 연산 장치로 엮어 광자연사궁을 만듭니다.',
+        ingredients: [['photon_lens', 7], ['memory_gear', 9], ['paradox_thread', 4]],
+        tags: ['crafting:weapon', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:voidspring_dagger', result: 'voidspring_dagger', time: 16,
+        description: '시간강 단검 안에 공허 용수철을 압축해 공허태엽 단검을 만듭니다.',
+        ingredients: [['chronosteel_shard', 7], ['void_spring', 7], ['fracture_crystal', 3]],
+        tags: ['crafting:weapon', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:logic_core_staff', result: 'logic_core_staff', time: 19,
+        description: '논리핵과 광자 렌즈를 시간강 지지대에 배열해 논리핵 지팡이를 만듭니다.',
+        ingredients: [['logic_core', 7], ['photon_lens', 6], ['chronosteel_shard', 6]],
+        tags: ['crafting:weapon', 'region:paradox-clockwork'],
+    },
+    {
+        id: 'paradox:causality_aegis', result: 'causality_aegis', time: 20,
+        description: '자동인형 장갑판 사이에 논리핵과 역설 실을 넣어 인과율 방패를 만듭니다.',
+        ingredients: [['automaton_plate', 12], ['logic_core', 5], ['paradox_thread', 5]],
+        tags: ['crafting:armor', 'region:paradox-clockwork'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
+        id: 'misttide:brine_trail_ration', result: 'brine_trail_ration', time: 4,
+        description: '여행자 빵과 말린 식재료에 해무 소금을 더해 오래 보관되는 염풍 행군식을 만듭니다.',
+        ingredients: [['mist_salt', 3], ['traveler_bread', 1], ['fresh_water', 1]],
+        tags: ['crafting:consumable', 'region:misttide'],
+    },
+    {
+        id: 'misttide:seafoam_tonic', result: 'seafoam_tonic', time: 5,
+        description: '해무 소금과 청해초 수지를 정신력 물약에 안정시켜 해포말 영약을 만듭니다.',
+        ingredients: [['mist_salt', 3], ['kelp_resin', 3], ['mana_potion', 1]],
+        tags: ['crafting:consumable', 'region:misttide'],
+    },
+    {
+        id: 'misttide:tideheart_draught', result: 'tideheart_draught', time: 6,
+        description: '조류진주의 박동을 청해초 수지로 붙잡아 조류심장 회복약을 만듭니다.',
+        ingredients: [['tide_pearl', 2], ['kelp_resin', 4], ['health_potion', 1]],
+        tags: ['crafting:consumable', 'region:misttide'],
+    },
+    {
+        id: 'misttide:tidebreaker_sword', result: 'tidebreaker_sword', time: 14,
+        description: '심해철과 침수 군단 휘장을 겹쳐 파도를 가르는 파식 조류검을 만듭니다.',
+        ingredients: [['abyssal_iron', 8], ['drowned_insignia', 5], ['black_coral', 4]],
+        tags: ['crafting:weapon', 'region:misttide'],
+    },
+    {
+        id: 'misttide:mistcurrent_bow', result: 'mistcurrent_bow', time: 13,
+        description: '해무비늘을 청해초 수지로 겹쳐 화살의 흔들림을 지우는 해무 조류궁을 만듭니다.',
+        ingredients: [['siren_scale', 7], ['kelp_resin', 6], ['tide_pearl', 3]],
+        tags: ['crafting:weapon', 'region:misttide'],
+    },
+    {
+        id: 'misttide:blackcoral_sting', result: 'blackcoral_sting', time: 12,
+        description: '흑산호를 얇은 날로 갈아 심해철 자루에 고정해 흑산호 침을 만듭니다.',
+        ingredients: [['black_coral', 9], ['abyssal_iron', 4], ['kelp_resin', 3]],
+        tags: ['crafting:weapon', 'region:misttide'],
+    },
+    {
+        id: 'misttide:deeppearl_staff', result: 'deeppearl_staff', time: 15,
+        description: '조류진주와 해수룡 골편을 결합해 심해의 마력을 압축하는 지팡이를 만듭니다.',
+        ingredients: [['tide_pearl', 7], ['leviathan_bone', 5], ['siren_scale', 5]],
+        tags: ['crafting:weapon', 'region:misttide'],
+    },
+    {
+        id: 'misttide:drowned_admiral_shield', result: 'drowned_admiral_shield', time: 16,
+        description: '해수룡 골편과 심해철을 침수 군단 휘장으로 묶어 침몰제독 방패를 만듭니다.',
+        ingredients: [['leviathan_bone', 8], ['abyssal_iron', 9], ['drowned_insignia', 7]],
+        tags: ['crafting:armor', 'region:misttide'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});
+
+for (const recipe of [
+    {
+        id: 'frostveil:frostward_tonic', result: 'frostward_tonic', time: 4,
+        description: '눈솔이끼와 상고 수정을 맑은 물에 달여 상고막이 영약을 만듭니다.',
+        ingredients: [['snowmoss', 3], ['rime_crystal', 1], ['fresh_water', 1]],
+        tags: ['crafting:consumable', 'region:frostveil'],
+    },
+    {
+        id: 'frostveil:aurora_recovery_draught', result: 'aurora_recovery_draught', time: 5,
+        description: '극광 파편과 눈솔이끼의 흐름을 안정시켜 극광 회복약을 만듭니다.',
+        ingredients: [['aurora_shard', 2], ['snowmoss', 3], ['mana_potion', 1]],
+        tags: ['crafting:consumable', 'region:frostveil'],
+    },
+    {
+        id: 'frostveil:rimecleaver_sword', result: 'rimecleaver_sword', time: 12,
+        description: '경철과 제련된 철 사이에 상고 수정을 접어 넣어 빙맥 절단검을 만듭니다.',
+        ingredients: [['mirrorsteel_fragment', 6], ['rime_crystal', 5], ['refined_iron', 4]],
+        tags: ['crafting:weapon', 'region:frostveil'],
+    },
+    {
+        id: 'frostveil:icesilk_longbow', result: 'icesilk_longbow', time: 11,
+        description: '빙실 거미줄과 서리늑대 가죽을 겹쳐 빠르고 안정적인 빙실 연궁을 만듭니다.',
+        ingredients: [['ice_silk', 7], ['frostwolf_hide', 4], ['rime_crystal', 3]],
+        tags: ['crafting:weapon', 'region:frostveil'],
+    },
+    {
+        id: 'frostveil:mirrorfang_dagger', result: 'mirrorfang_dagger', time: 10,
+        description: '경철 파편을 얇게 갈아 상고 수정의 냉기를 품은 경빙 송곳니를 만듭니다.',
+        ingredients: [['mirrorsteel_fragment', 5], ['rime_crystal', 4], ['frozen_core', 2]],
+        tags: ['crafting:weapon', 'region:frostveil'],
+    },
+    {
+        id: 'frostveil:auroraprism_staff', result: 'auroraprism_staff', time: 13,
+        description: '극광 파편을 상고 수정 프리즘에 고정해 극광분광 지팡이를 만듭니다.',
+        ingredients: [['aurora_shard', 6], ['rime_crystal', 5], ['refined_gold', 3]],
+        tags: ['crafting:weapon', 'region:frostveil'],
+    },
+    {
+        id: 'frostveil:frostglass_bulwark', result: 'frostglass_bulwark', time: 14,
+        description: '경철판과 빙결 핵을 포개어 깨져도 다시 얼어붙는 빙경 성벽방패를 만듭니다.',
+        ingredients: [['mirrorsteel_fragment', 8], ['frozen_core', 4], ['rime_crystal', 5]],
+        tags: ['crafting:armor', 'region:frostveil'],
+    },
+] as const) defineCraftingRecipe({
+    id: recipe.id,
+    resultItemDataId: recipe.result,
+    description: recipe.description,
+    ingredients: recipe.ingredients.map(([itemDataId, count]) => CraftingRecipeIngredient.item(itemDataId, count)),
+    craftTime: recipe.time,
+    create: ({ quantity }) => ({
+        itemDataId: recipe.result,
+        count: quantity,
+        durability: getItemData(recipe.result)?.baseDurability ?? null,
+        metadataDelta: null,
+        tags: [],
+    }),
+    tags: recipe.tags,
+});

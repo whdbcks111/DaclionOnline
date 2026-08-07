@@ -5,12 +5,12 @@
 | 계층 | 파일 | 책임 |
 | --- | --- | --- |
 | 공유 계약 | `shared/types.ts` | 로그인/회원가입/세션 복원/결과 타입 |
-| 서버 | `modules/register.ts` | 이메일 코드, 입력 중복 검사, PBKDF2 해시, 계정 생성 |
-| 서버 | `modules/login.ts` | 로그인, 세션, 접속자 수, 닉네임, 로그아웃 |
-| 서버 | `modules/passwordReset.ts` | 가입 이메일 확인 코드와 비밀번호 재설정, 기존 세션 폐기 |
-| 서버 | `modules/socket.ts` | 연결 handshake 쿠키를 `socket.data.sessionToken`에 바인딩 |
-| 서버 | `modules/upload.ts` | 인증된 프로필·채팅 이미지 업로드와 임시 미디어 정리 |
-| 서버 | `modules/mail.ts` | Gmail 전송과 HTML 템플릿 치환 |
+| 서버 | `modules/auth/register.ts` | 이메일 코드, 입력 중복 검사, PBKDF2 해시, 계정 생성 |
+| 서버 | `modules/auth/login.ts` | 로그인, 세션, 접속자 수, 닉네임, 로그아웃 |
+| 서버 | `modules/auth/passwordReset.ts` | 가입 이메일 확인 코드와 비밀번호 재설정, 기존 세션 폐기 |
+| 서버 | `modules/infrastructure/socket.ts` | 연결 handshake 쿠키를 `socket.data.sessionToken`에 바인딩 |
+| 서버 | `modules/infrastructure/upload.ts` | 인증된 프로필·채팅 이미지 업로드와 임시 미디어 정리 |
+| 서버 | `modules/communication/mail.ts` | Gmail 전송과 HTML 템플릿 치환 |
 | 클라이언트 | `context/SocketContext.tsx` | 소켓 연결과 현재 `SessionInfo` 보관 |
 | 클라이언트 | `pages/Login.tsx`, `pages/Register.tsx` | 인증 UI와 이벤트 호출 |
 | 클라이언트 | `pages/PasswordReset.tsx` | 이메일 코드 기반 비밀번호 재설정 UI |
@@ -58,8 +58,8 @@
 
 `User.permission`과 메모리 `Session.permission`이 권한 원본이다. 일반 사용자는 0, 현재 관리자 기능은 10 이상을 요구한다.
 
-- 명령 실행: `modules/bot.ts`가 `CommandConfig.permission` 검사.
-- 위치 편집 이벤트: `modules/location.ts`가 각 요청에서 재검사.
+- 명령 실행: `modules/communication/bot.ts`가 `CommandConfig.permission` 검사.
+- 위치 편집 이벤트: `modules/world/location.ts`가 각 요청에서 재검사.
 - 관리자 UI 라우트는 편의 기능일 뿐, 보안은 서버 검사에 의존한다.
 
 ## 닉네임과 프로필

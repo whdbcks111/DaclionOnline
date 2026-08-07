@@ -4,7 +4,7 @@
 
 ## 질문형 장치
 
-`models/DungeonPuzzle.ts`의 `defineQuestionPuzzle()`로 질문, 허용 정답, 선택지, 성공 플래그를 등록한다. 상호작용 handler는 `beginQuestionPuzzle()`을 호출하고 플레이어는 `/퍼즐답 <정답>`으로 응답한다.
+`models/world/DungeonPuzzle.ts`의 `defineQuestionPuzzle()`로 질문, 허용 정답, 선택지, 성공 플래그를 등록한다. 상호작용 handler는 `beginQuestionPuzzle()`을 호출하고 플레이어는 `/퍼즐답 <정답>`으로 응답한다.
 
 - 세션은 userId별 메모리에 최대 120초 유지되며 장소를 벗어나거나 시간이 지나면 무효가 된다.
 - 정답은 NFKC 정규화 후 공백·문장부호·대소문자 차이를 무시한다.
@@ -61,7 +61,7 @@
                                                                             └─ 지핵 수정실
 ```
 
-신규 퍼즐은 `data/dungeonPuzzles.ts`에 정의와 condition/interaction 연결을 모으고, 대응하는 `ResourceData`와 `locations.json` 배치를 같은 변경에 추가한다.
+신규 퍼즐은 `data/world/dungeonPuzzles.ts`에 정의와 condition/interaction 연결을 모으고, 대응하는 `ResourceData`와 `locations.json` 배치를 같은 변경에 추가한다.
 
 ## 승천 제단과 지옥문 설계
 

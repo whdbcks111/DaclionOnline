@@ -1,9 +1,9 @@
 # 제작법·제작 시스템
 
-제작법은 `models/Crafting.ts`의 정적 레지스트리에 등록하며, 제작법 발견 상태는 기존 `PlayerProgress` flag로 저장한다. 재료 판정과 교환은 제작 코드가 Inventory raw 배열을 읽지 않고 `Inventory.selectItems/replaceSelectedItems`를 사용한다.
+제작법은 `models/professions/Crafting.ts`의 정적 레지스트리에 등록하며, 제작법 발견 상태는 기존 `PlayerProgress` flag로 저장한다. 재료 판정과 교환은 제작 코드가 Inventory raw 배열을 읽지 않고 `Inventory.selectItems/replaceSelectedItems`를 사용한다.
 
 ```text
-data/crafting.ts::defineCraftingRecipe
+data/professions/crafting.ts::defineCraftingRecipe
   ↓
 Player.update → updateCraftingRecipeDiscovery → PlayerProgress flag
   ↓

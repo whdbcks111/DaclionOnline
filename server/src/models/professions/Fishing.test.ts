@@ -1,0 +1,460 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+import {
+    appendMiniGameInputSample,
+    calculateForgeQualityScore,
+    createFishingCaptureProof,
+    createForgeBeatTimesMs,
+    FISHING_CAPTURE_PROOF_VERSION,
+    resolveForgeStrikeTime,
+    getHazardDodgeHazards,
+    MAX_MINIGAME_INPUT_SAMPLES,
+    MAX_FISHING_CAPTURE_PROOF_BYTES,
+    MAX_FISHING_CAPTURE_TRAJECTORY_SAMPLES,
+    MINIGAME_INPUT_SAMPLE_INTERVAL_MS,
+    simulateFishingCapture,
+    simulateForgeRhythm,
+    simulateHazardDodge,
+    snapshotMiniGameInputs,
+    type FishingCaptureConfig,
+    type ForgeRhythmConfig,
+    type HazardDodgeConfig,
+} from '../../../../shared/minigames.js';
+import { getItemData } from '../economy/Item.js';
+import {
+    FishRarity,
+    getAllFish,
+    getFishByRarity,
+    getFishRarityChances,
+    getFishingTable,
+    getFishingTreasureTable,
+    rollFishAtLocation,
+    rollFishingTreasure,
+    rollFishRarity,
+    rollFishingExp,
+    rollFishingWaitSeconds,
+} from './Fishing.js';
+import '../../data/economy/items.js';
+import '../../data/professions/fishing.js';
+
+test('고레벨 낚시터는 장소마다 독립 어종 풀과 가중치를 사용한다', () => {
+    const abyss = getFishingTable('abyssglass_pressure_lagoon');
+    const origin = getFishingTable('originboundary_genesis_tide');
+    assert.equal(abyss?.length, 5);
+    assert.equal(origin?.length, 5);
+    assert.ok(abyss?.some(entry => entry.fishId === 'pressure_lanternfish'));
+    assert.ok(!origin?.some(entry => entry.fishId === 'pressure_lanternfish'));
+    assert.ok(rollFishAtLocation('abyssglass_pressure_lagoon', 0, () => 0));
+});
+
+test('Lv.500 이전 낚시터도 성장 구간별 독립 어종 풀을 사용한다', () => {
+    const spots = [
+        ['glassdune_hidden_oasis', 'mirage_killifish'],
+        ['misttide_kelp_inlet', 'kelpmoon_cod'],
+        ['paradox_scrap_reservoir', 'gearscale_carp'],
+        ['eclipse_luminous_reef', 'moonbrine_cod'],
+        ['endstar_silent_sun', 'ashstar_tetra'],
+    ] as const;
+    for (const [locationId, signatureFishId] of spots) {
+        const table = getFishingTable(locationId);
+        assert.equal(table?.length, 5, locationId);
+        assert.ok(table?.some(entry => entry.fishId === signatureFishId), locationId);
+        assert.ok(rollFishAtLocation(locationId, 0, () => 0), locationId);
+    }
+});
+
+test('낚시 보물은 장소별 희귀 보상표를 사용하고 행운 보정은 1.5배에서 멈춘다', () => {
+    const table = getFishingTreasureTable('endstar_silent_sun');
+    assert.equal(table?.chance, 0.02);
+    const categories = new Set(table?.entries.map(entry => getItemData(entry.itemDataId)?.category));
+    assert.ok(categories.has('경험치 물약'));
+    assert.ok(categories.has('제련 재료'));
+    assert.ok(categories.has('스킬북'));
+    assert.ok(table?.entries.some(entry => {
+        const item = getItemData(entry.itemDataId);
+        return item?.onUse === 'apply_status_effect' && item.category !== '경험치 물약';
+    }));
+
+    const sequence = (...values: number[]) => {
+        let index = 0;
+        return () => values[Math.min(index++, values.length - 1)] ?? 0;
+    };
+    assert.equal(rollFishingTreasure('endstar_silent_sun', 0, sequence(0.024, 0, 0)), undefined);
+    assert.ok(rollFishingTreasure('endstar_silent_sun', 100, sequence(0.024, 0, 0)));
+    assert.equal(
+        rollFishingTreasure('endstar_silent_sun', 10_000, sequence(0.031, 0, 0)),
+        undefined,
+    );
+
+    const treasureLocations = [
+        'luminous_pond',
+        'glassdune_hidden_oasis',
+        'misttide_kelp_inlet',
+        'paradox_scrap_reservoir',
+        'eclipse_luminous_reef',
+        'endstar_silent_sun',
+        'abyssglass_pressure_lagoon',
+        'dreamarchive_inkwater_pool',
+        'rustworld_mercury_reservoir',
+        'silentdivine_prayer_spring',
+        'originboundary_genesis_tide',
+    ];
+    for (const locationId of treasureLocations) {
+        const table = getFishingTreasureTable(locationId);
+        const faded = table?.entries.find(entry =>
+            entry.itemDataId === 'faded_stat_reset_ticket');
+        assert.equal(faded?.weight, 4, locationId);
+        assert.equal(
+            table?.entries.find(entry => entry.itemDataId === 'refined_stat_refund_ticket')?.weight,
+            (table?.chance ?? 0) >= 0.02 ? 1 : undefined,
+            locationId,
+        );
+        assert.equal(
+            table?.entries.find(entry => entry.itemDataId === 'restored_stat_refund_ticket')?.weight,
+            (table?.chance ?? 0) >= 0.028 ? 0.25 : undefined,
+            locationId,
+        );
+        assert.deepEqual(
+            rollFishingTreasure(locationId, 0, sequence(0, 0.999999, 0)),
+            { itemDataId: 'faded_stat_reset_ticket', count: 1 },
+            locationId,
+        );
+    }
+});
+
+const baseConfig: FishingCaptureConfig = {
+    seed: 12345,
+    durationMs: 10_000,
+    rarityLabel: '일반',
+    rarityColor: '#ffffff',
+    fishIcon: 'items/silver_minnow',
+    difficulty: 1,
+    netShape: 'circle',
+    netWidth: 100,
+    netHeight: 100,
+    netSpeed: 30,
+    initialGauge: 0.5,
+    fillPerSecond: 0.2,
+    drainPerSecond: 0.2,
+};
+
+test('낚시 trace 시뮬레이터는 채집 유지와 이탈을 서버에서 재현한다', () => {
+    const input = [{ at: 0, x: 0, y: 0 }];
+    const caught = simulateFishingCapture(baseConfig, input, 3_000);
+    assert.equal(caught.finished, true);
+    assert.equal(caught.success, true);
+
+    const escaped = simulateFishingCapture({ ...baseConfig, netWidth: 1, netHeight: 1 }, input, 3_000);
+    assert.equal(escaped.finished, true);
+    assert.equal(escaped.success, false);
+});
+
+test('위험 회피 미니게임은 같은 seed와 입력을 서버에서 결정론적으로 재현한다', () => {
+    const config: HazardDodgeConfig = {
+        seed: 7788,
+        durationMs: 5_000,
+        label: '결정론 시험',
+        mode: 'mixed',
+        theme: 'neutral',
+        difficulty: 4,
+        playerLabel: 'T',
+        playerSpeed: 18,
+        playerSize: 6,
+        telegraphMs: 700,
+    };
+    const inputs = [{ at: 0, x: 1, y: 0 }, { at: 900, x: 0, y: -1 }];
+    assert.deepEqual(
+        simulateHazardDodge(config, inputs, 2_000),
+        simulateHazardDodge(config, inputs, 2_000),
+    );
+    const safeShortGame = simulateHazardDodge({ ...config, durationMs: 200 }, [{ at: 0, x: 0, y: 0 }], 200);
+    assert.equal(safeShortGame.finished, true);
+    assert.equal(safeShortGame.success, true);
+});
+
+test('후반 보스용 위험 회피 난이도는 6을 넘어 위험 구역 크기까지 확장된다', () => {
+    const config: HazardDodgeConfig = {
+        seed: 7788,
+        durationMs: 7_000,
+        label: '후반 난이도 시험',
+        mode: 'mixed',
+        theme: 'neutral',
+        difficulty: 6,
+        playerLabel: 'T',
+        playerSpeed: 18,
+        playerSize: 7,
+        telegraphMs: 300,
+    };
+    const normal = getHazardDodgeHazards(config, 600)[0];
+    const endgame = getHazardDodgeHazards({ ...config, difficulty: 10 }, 600)[0];
+    assert.ok(normal && endgame);
+    assert.equal(endgame.type, normal.type);
+    assert.ok(Math.min(endgame.width, endgame.height) > Math.min(normal.width, normal.height));
+});
+
+test('공명 폭주는 같은 seed로 예고 후 세 줄 레이저 연사를 재현한다', () => {
+    const config: HazardDodgeConfig = {
+        seed: 7788,
+        durationMs: 10_000,
+        label: '지핵 공명 폭주',
+        mode: 'resonance',
+        theme: 'ironroot',
+        difficulty: 10,
+        playerLabel: 'T',
+        playerSpeed: 18,
+        playerSize: 7,
+        telegraphMs: 300,
+    };
+    const barrage = getHazardDodgeHazards(config, 1_350)
+        .filter(hazard => hazard.id.startsWith('laser-barrage:3:'));
+    assert.equal(barrage.length, 3);
+    assert.equal(barrage.every(hazard => hazard.type === 'laser'), true);
+    assert.ok(barrage.some(hazard => hazard.active));
+    assert.ok(barrage.some(hazard => !hazard.active));
+});
+
+test('성계 교차포화는 폭탄 없이 가로·세로 레이저를 시간차 발사한다', () => {
+    const config: HazardDodgeConfig = {
+        seed: 7788,
+        durationMs: 10_000,
+        label: '성계 교차포화',
+        mode: 'crossfire',
+        theme: 'astral',
+        difficulty: 8,
+        playerLabel: 'T',
+        playerSpeed: 18,
+        playerSize: 7,
+        telegraphMs: 300,
+    };
+    const hazards = getHazardDodgeHazards(config, 600);
+    assert.equal(hazards.length, 2);
+    assert.equal(hazards.every(hazard => hazard.type === 'laser'), true);
+    assert.ok(hazards.some(hazard => hazard.width === 100));
+    assert.ok(hazards.some(hazard => hazard.height === 100));
+    assert.ok(hazards.some(hazard => hazard.active));
+    assert.ok(hazards.some(hazard => !hazard.active));
+});
+
+test('수정 낙석은 중앙 예고가 커진 뒤 상하좌우 순서로 연쇄된다', () => {
+    const config: HazardDodgeConfig = {
+        seed: 7788,
+        durationMs: 5_000,
+        label: '수정 낙석',
+        mode: 'chain_bombs',
+        theme: 'crystal',
+        difficulty: 3,
+        playerLabel: 'T',
+        playerSpeed: 18,
+        playerSize: 6,
+        telegraphMs: 700,
+    };
+    const growingCenter = getHazardDodgeHazards(config, 500)[0];
+    const fullCenter = getHazardDodgeHazards(config, 960)[0];
+    assert.equal(growingCenter.id, 'chain-bomb:0');
+    assert.equal(growingCenter.x, 50);
+    assert.equal(growingCenter.y, 50);
+    assert.ok(growingCenter.width < fullCenter.width);
+    const next = getHazardDodgeHazards(config, 1_740)
+        .find(hazard => hazard.id === 'chain-bomb:1');
+    assert.ok(next);
+    assert.notDeepEqual([next.x, next.y], [50, 50]);
+});
+
+test('단조 리듬 미니게임은 타격 시각을 서버에서 재현해 정확도와 성공을 판정한다', () => {
+    const config: ForgeRhythmConfig = {
+        durationMs: 3_000,
+        label: '시험 단조',
+        difficulty: 5,
+        qualityBonus: 0.05,
+        beatTimesMs: [500, 1_000, 1_500, 2_000],
+        hitWindowMs: 200,
+        perfectWindowMs: 60,
+        requiredAccuracy: 0.75,
+    };
+    const perfect = simulateForgeRhythm(config, config.beatTimesMs.map(at => ({ at, action: 'strike' as const })), 3_000);
+    assert.equal(perfect.success, true);
+    assert.equal(perfect.perfectCount, 4);
+    assert.equal(perfect.maxCombo, 4);
+    assert.equal(perfect.accuracy, 1);
+
+    const missed = simulateForgeRhythm(config, [{ at: 500, action: 'strike' }], 3_000);
+    assert.equal(missed.success, false);
+    assert.equal(missed.missCount, 3);
+    assert.equal(missed.accuracy, 0.25);
+    assert.equal(calculateForgeQualityScore(config, missed.accuracy), 0.3);
+});
+
+test('단조 연타는 놓친 앞 박자가 다음 박자의 정확한 타격을 빼앗지 않는다', () => {
+    const config: ForgeRhythmConfig = {
+        durationMs: 3_000,
+        label: '연타 시험',
+        difficulty: 7,
+        qualityBonus: 0,
+        beatTimesMs: [1_000, 1_250, 1_500],
+        hitWindowMs: 300,
+        perfectWindowMs: 70,
+        requiredAccuracy: 0.6,
+    };
+    const progress = simulateForgeRhythm(config, [
+        { at: 1_250, action: 'strike' },
+        { at: 1_500, action: 'strike' },
+    ], 1_600);
+    assert.equal(progress.hitCount, 2);
+    assert.equal(progress.perfectCount, 2);
+    assert.equal(progress.missCount, 1);
+    assert.equal(progress.accuracy, 2 / 3);
+});
+
+test('단조 진행 정확도는 미래 박자를 실패로 계산하지 않고 짧은 터치 표시 지연만 보정한다', () => {
+    const config: ForgeRhythmConfig = {
+        durationMs: 3_000,
+        label: '진행 시험',
+        difficulty: 3,
+        qualityBonus: 0,
+        beatTimesMs: [500, 1_000, 1_500],
+        hitWindowMs: 200,
+        perfectWindowMs: 60,
+        requiredAccuracy: 0.75,
+    };
+    const progress = simulateForgeRhythm(config, [{ at: 500, action: 'strike' }], 700);
+    assert.equal(progress.accuracy, 1);
+    assert.equal(resolveForgeStrikeTime(1_020, 990, true), 990);
+    assert.equal(resolveForgeStrikeTime(1_250, 990, true), 1_250);
+    assert.equal(resolveForgeStrikeTime(1_020, 990, false), 1_020);
+});
+
+test('상급 단조 박자는 정박 외에 엇박과 연속박자를 포함한다', () => {
+    const beats = createForgeBeatTimesMs(500, 7, 16);
+    const gaps = beats.slice(1).map((beat, index) => beat - beats[index]);
+    assert.ok(gaps.includes(250), '반 박자 연속 타격');
+    assert.ok(gaps.includes(375), '엇박 타격');
+    assert.ok(new Set(gaps).size >= 4);
+});
+
+test('연속 조작 trace는 20ms 단위로 합쳐지고 전송 시 불변 snapshot이 된다', () => {
+    const inputs = [{ at: 0, x: 0, y: 0 }];
+    for (let at = 1; at <= 1_000; at++) {
+        appendMiniGameInputSample(inputs, { at, x: at % 2, y: 0 });
+    }
+    assert.ok(inputs.length <= 52);
+    assert.ok(MAX_MINIGAME_INPUT_SAMPLES * MINIGAME_INPUT_SAMPLE_INTERVAL_MS > 30_000);
+
+    const snapshot = snapshotMiniGameInputs(inputs, 500);
+    assert.ok(snapshot.every(input => input.at <= 500));
+    const originalX = snapshot[0].x;
+    inputs[0].x = 99;
+    assert.equal(snapshot[0].x, originalX);
+});
+
+test('낚시 proof는 불변 입력과 100ms 궤적 및 정확한 마지막 checkpoint를 생성한다', () => {
+    const source = [
+        { at: 0, x: 0, y: 0 },
+        { at: 400, x: 0, y: 0 },
+    ];
+    const proof = createFishingCaptureProof(baseConfig, source, 5_108);
+    assert.equal(proof.version, FISHING_CAPTURE_PROOF_VERSION);
+    assert.equal(proof.elapsedMs, 5_108);
+    assert.equal(proof.trajectory[0].at, 0);
+    assert.equal(proof.trajectory.at(-1)?.at, 5_108);
+    assert.equal(proof.trajectory.at(-2)?.at, 5_000);
+    assert.ok(proof.trajectory.every((sample, index) => index === 0
+        || Math.floor(sample.at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)
+        !== Math.floor(proof.trajectory[index - 1].at / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)));
+    assert.ok(proof.trajectory.length <= MAX_FISHING_CAPTURE_TRAJECTORY_SAMPLES);
+
+    source[0].x = 1;
+    assert.equal(proof.inputs[0].x, 0);
+});
+
+test('최장 낚시 proof는 160KiB 상한과 Socket.io 256KiB 상한 안에 머문다', () => {
+    const durationMs = 30_000;
+    const maximumInputs = Array.from(
+        { length: Math.ceil(durationMs / MINIGAME_INPUT_SAMPLE_INTERVAL_MS) + 1 },
+        (_, index) => ({
+            at: index === Math.ceil(durationMs / MINIGAME_INPUT_SAMPLE_INTERVAL_MS)
+                ? durationMs
+                : index * MINIGAME_INPUT_SAMPLE_INTERVAL_MS + 0.123456789,
+            x: index % 2 === 0 ? Math.SQRT1_2 : -Math.SQRT1_2,
+            y: index % 3 === 0 ? Math.SQRT1_2 : -Math.SQRT1_2,
+        }),
+    );
+    const proof = createFishingCaptureProof({
+        ...baseConfig,
+        durationMs,
+        initialGauge: 0.5,
+        fillPerSecond: 0.001,
+        drainPerSecond: 0.001,
+    }, maximumInputs, durationMs);
+    const bytes = Buffer.byteLength(JSON.stringify(proof), 'utf8');
+    assert.ok(bytes <= MAX_FISHING_CAPTURE_PROOF_BYTES, `${bytes} > ${MAX_FISHING_CAPTURE_PROOF_BYTES}`);
+    assert.ok(bytes < 256 * 1024);
+    assert.ok(proof.trajectory.length <= MAX_FISHING_CAPTURE_TRAJECTORY_SAMPLES);
+});
+
+test('행운은 상위 물고기 등급의 가중치를 증가시킨다', () => {
+    const rolls = Array.from({ length: 10_000 }, (_, index) => (index + 0.5) / 10_000);
+    const highTierCount = (luck: number) => rolls
+        .map(value => rollFishRarity(luck, () => value))
+        .filter(rarity => rarity.difficulty >= FishRarity.RARE.difficulty)
+        .length;
+    assert.ok(highTierCount(30) > highTierCount(0));
+    assert.deepEqual(FishRarity.values().map(rarity => rarity.label), ['일반', '고급', '희귀', '서사', '전설', '신화']);
+    assert.deepEqual(FishRarity.values().map(rarity => rarity.sellPrice), [5, 20, 90, 400, 1800, 8000]);
+    const baseChances = getFishRarityChances(0);
+    const luckyChances = getFishRarityChances(100);
+    assert.ok(Math.abs(baseChances.reduce((sum, chance) => sum + chance.probability, 0) - 1) < 1e-12);
+    assert.ok(luckyChances[0].probability < baseChances[0].probability);
+    assert.ok(luckyChances.at(-1)!.probability > baseChances.at(-1)!.probability);
+});
+
+test('낚시 경험치는 현재 레벨의 동급 사냥 보상을 기준으로 희귀도에 따라 증가한다', () => {
+    assert.equal(rollFishingExp(FishRarity.COMMON, 200, () => 0.5), 3_200);
+    assert.equal(rollFishingExp(FishRarity.RARE, 200, () => 0.5), 4_700);
+    assert.equal(rollFishingExp(FishRarity.MYTHIC, 200, () => 0.5), 14_000);
+    assert.ok(
+        rollFishingExp(FishRarity.LEGENDARY, 50, () => 0)
+        > rollFishingExp(FishRarity.COMMON, 50, () => 1),
+    );
+});
+
+test('입질 대기 시간은 45~65초 기본 범위와 입질 속도를 그대로 반영한다', () => {
+    const beginnerBiteSpeed = 1 + 0.1 + 0.35;
+    assert.equal(rollFishingWaitSeconds(1, () => 0), 45);
+    assert.equal(rollFishingWaitSeconds(1, () => 1), 65);
+    assert.equal(rollFishingWaitSeconds(beginnerBiteSpeed, () => 0), 45 / beginnerBiteSpeed);
+    assert.ok(rollFishingWaitSeconds(beginnerBiteSpeed, () => 0) >= 30);
+    assert.equal(rollFishingWaitSeconds(100, () => 0), 45 / 100);
+});
+
+test('모든 낚시 보상 아이템은 128px 투명 아이콘을 가진다', () => {
+    assert.equal(getAllFish().length, 61);
+    const expectedCounts = new Map([
+        [FishRarity.COMMON, 6],
+        [FishRarity.UNCOMMON, 7],
+        [FishRarity.RARE, 15],
+        [FishRarity.EPIC, 13],
+        [FishRarity.LEGENDARY, 11],
+        [FishRarity.MYTHIC, 9],
+    ]);
+    for (const rarity of FishRarity.values()) {
+        assert.equal(getFishByRarity(rarity).length, expectedCounts.get(rarity), rarity.label);
+        for (const fish of getFishByRarity(rarity)) {
+            assert.ok(getItemData(fish.itemDataId)?.tags.includes(rarity.tag), `${fish.id}: ${rarity.tag}`);
+        }
+    }
+    const itemIds = [
+        'beginner_fishing_rod',
+        'refined_fishing_rod',
+        'wide_net_fishing_rod',
+        'swift_current_fishing_rod',
+        'earthworm_bait',
+        ...getAllFish().map(fish => fish.itemDataId),
+    ];
+    for (const itemDataId of itemIds) {
+        const png = readFileSync(new URL(`../../../../client/public/icons/items/${itemDataId}.png`, import.meta.url));
+        assert.equal(png.readUInt32BE(16), 128, itemDataId);
+        assert.equal(png.readUInt32BE(20), 128, itemDataId);
+        assert.equal(png[25], 6, `${itemDataId} must be RGBA`);
+    }
+});

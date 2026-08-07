@@ -1,0 +1,184 @@
+import { summarizeChatContent } from "../../../../shared/chat.js";
+import type { ChatMessage, ChatReplyReference, ChannelInfo } from "../../../../shared/types.js";
+
+const MAX_CHANNEL_HISTORY = 100;
+
+/** 미리 정의된 채널 목록 */
+const CHANNELS: ChannelInfo[] = [
+    { id: null, name: '메인', description: '기본 채팅 채널' },
+    { id: '공지', name: '공지', description: '공지사항 채널' },
+    { id: '잡담', name: '잡담', description: '자유로운 잡담' },
+    { id: '거래', name: '거래', description: '아이템 거래' },
+    { id: '파티', name: '파티', description: '파티원 모집' },
+];
+
+/** 채널별 공개 메시지 히스토리 (null = 메인 채널) */
+const channelHistories = new Map<string | null, ChatMessage[]>();
+
+/** 채널별 필터 히스토리 (특정 유저에게만 보이는 메시지) */
+interface FilteredHistoryEntry {
+    filter: (userId: number) => boolean;
+    msg: ChatMessage;
+}
+const MAX_FILTERED_HISTORY = 200;
+const filteredChannelHistories = new Map<string | null, FilteredHistoryEntry[]>();
+
+/** 유저별 현재 채널 (userId → channel, 기본값 null = 메인 채널) */
+const userChannels = new Map<number, string | null>();
+
+/** 사용 가능한 채널 목록 반환 */
+export function getAvailableChannels(): ChannelInfo[] {
+    return CHANNELS.map(channel => ({ ...channel }));
+}
+
+/** 클라이언트가 참가할 수 있는 사전 정의 공개 채널인지 검사한다. */
+export function isAvailablePublicChannel(channel: string | null): boolean {
+    return CHANNELS.some(candidate => candidate.id === channel);
+}
+
+/** 개인 채널은 본인 것만, 공개 채널은 마스터 목록에 등록된 것만 허용한다. */
+export function canUserJoinChannel(userId: number, channel: string | null): boolean {
+    return isAvailablePublicChannel(channel) || channel === `private_${userId}`;
+}
+
+/** Socket.io room 이름 변환 */
+export function getChannelRoomKey(channel: string | null): string {
+    return channel === null ? 'channel:main' : `channel:${channel}`;
+}
+
+/** 유저의 현재 채널 반환 (미설정 시 null = 메인 채널) */
+export function getUserChannel(userId: number): string | null {
+    return userChannels.get(userId) ?? null;
+}
+
+/** 유저의 채널 설정 */
+export function setUserChannel(userId: number, channel: string | null): void {
+    userChannels.set(userId, channel);
+}
+
+/** 채널의 메시지 히스토리 반환 */
+export function getChannelHistory(channel: string | null): ChatMessage[] {
+    return channelHistories.get(channel) ?? [];
+}
+
+/** 현재 공개 채널 히스토리의 메시지를 안전한 답장 표시 스냅샷으로 변환한다. */
+export function getPublicReplyReference(channel: string | null, messageId: string): ChatReplyReference | undefined {
+    const message = channelHistories.get(channel)?.find(candidate => candidate.id === messageId);
+    if (!message?.id || message.replyable === false) return undefined;
+    return {
+        messageId: message.id,
+        userId: message.userId,
+        nickname: message.nickname,
+        preview: summarizeChatContent(message.content),
+    };
+}
+
+/** 채널 히스토리에 메시지 추가 */
+export function addToChannelHistory(channel: string | null, msg: ChatMessage): void {
+    if (!channelHistories.has(channel)) {
+        channelHistories.set(channel, []);
+    }
+    const history = channelHistories.get(channel)!;
+    history.push(msg);
+    if (history.length > MAX_CHANNEL_HISTORY) {
+        history.shift();
+    }
+}
+
+/** 모든 사전 정의 공개 채널 히스토리에 메시지 추가한다. */
+export function addToAllChannelHistories(msg: ChatMessage): void {
+    for (const channel of CHANNELS) addToChannelHistory(channel.id, msg);
+}
+
+/** 채널 필터 히스토리에 메시지 추가 */
+export function addToFilteredChannelHistory(channel: string | null, filter: (userId: number) => boolean, msg: ChatMessage): void {
+    if (!filteredChannelHistories.has(channel)) {
+        filteredChannelHistories.set(channel, []);
+    }
+    const history = filteredChannelHistories.get(channel)!;
+    history.push({ filter, msg });
+    if (history.length > MAX_FILTERED_HISTORY) {
+        history.shift();
+    }
+}
+
+/** 해당 채널에서 특정 유저가 받아야 할 필터 히스토리 반환 */
+export function getFilteredHistoryForUser(userId: number, channel: string | null): ChatMessage[] {
+    return (filteredChannelHistories.get(channel) ?? [])
+        .filter(entry => entry.filter(userId))
+        .map(entry => entry.msg);
+}
+
+export interface ChannelHistoryClearResult {
+    readonly channel: string | null;
+    readonly removed: number;
+}
+
+/** 개인 채널의 공개·본인 필터 기록을 시간 역순으로 지정 개수만큼 제거한다. */
+export function clearPrivateChannelHistory(userId: number, count = Number.POSITIVE_INFINITY): ChannelHistoryClearResult {
+    const channel = `private_${userId}`;
+    const publicHistory = channelHistories.get(channel) ?? [];
+    const filteredHistory = filteredChannelHistories.get(channel) ?? [];
+    const candidates = [
+        ...publicHistory.map((msg, index) => ({ kind: 'public' as const, msg, index, timestamp: msg.timestamp })),
+        ...filteredHistory
+            .filter(entry => entry.filter(userId))
+            .map((entry, index) => ({ kind: 'filtered' as const, entry, index, timestamp: entry.msg.timestamp })),
+    ].sort((left, right) => right.timestamp - left.timestamp || right.index - left.index)
+        .slice(0, normalizeClearCount(count));
+
+    for (const candidate of candidates) {
+        if (candidate.kind === 'public') {
+            const index = publicHistory.indexOf(candidate.msg);
+            if (index >= 0) publicHistory.splice(index, 1);
+        } else {
+            const index = filteredHistory.indexOf(candidate.entry);
+            if (index >= 0) filteredHistory.splice(index, 1);
+        }
+    }
+    if (publicHistory.length === 0) channelHistories.delete(channel);
+    if (filteredHistory.length === 0) filteredChannelHistories.delete(channel);
+    return { channel, removed: candidates.length };
+}
+
+/** 관리자가 현재 일반 채널의 공개 기록을 시간 역순으로 제거할 때 사용하는 목적형 API. */
+export function clearPublicChannelHistory(
+    channel: string | null,
+    count = Number.POSITIVE_INFINITY,
+): ChannelHistoryClearResult {
+    const history = channelHistories.get(channel) ?? [];
+    const removeCount = Math.min(history.length, normalizeClearCount(count));
+    if (removeCount > 0) history.splice(history.length - removeCount, removeCount);
+    if (history.length === 0) channelHistories.delete(channel);
+    return { channel, removed: removeCount };
+}
+
+/** ID로 메시지 내용 수정 (공개/필터 히스토리 모두 탐색) */
+export function editMessageInHistory(id: string, newContent: ChatMessage['content']): void {
+    for (const history of channelHistories.values()) {
+        const msg = history.find(m => m.id === id);
+        if (msg) { msg.content = newContent; return; }
+    }
+    for (const history of filteredChannelHistories.values()) {
+        const entry = history.find(e => e.msg.id === id);
+        if (entry) { entry.msg.content = newContent; return; }
+    }
+}
+
+/** ID로 메시지 삭제 (공개/필터 히스토리 모두 탐색) */
+export function deleteMessageFromHistory(id: string): void {
+    for (const history of channelHistories.values()) {
+        const idx = history.findIndex(m => m.id === id);
+        if (idx !== -1) { history.splice(idx, 1); return; }
+    }
+    for (const history of filteredChannelHistories.values()) {
+        const idx = history.findIndex(e => e.msg.id === id);
+        if (idx !== -1) { history.splice(idx, 1); return; }
+    }
+}
+
+function normalizeClearCount(count: number): number {
+    if (count === Number.POSITIVE_INFINITY) return Number.MAX_SAFE_INTEGER;
+    if (!Number.isInteger(count) || count < 1) throw new Error(`Invalid chat clear count: ${count}`);
+    return count;
+}

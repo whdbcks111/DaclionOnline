@@ -1,10 +1,10 @@
-import '../data/projectiles.js';
-import '../data/items.js';
-import '../data/jobs.js';
-import '../data/statusEffects.js';
-import '../data/tagEffects.js';
-import '../data/skills.js';
-import '../data/monsters.js';
+import '../data/combat/projectiles.js';
+import '../data/economy/items.js';
+import '../data/progression/jobs.js';
+import '../data/combat/statusEffects.js';
+import '../data/combat/tagEffects.js';
+import '../data/combat/skills.js';
+import '../data/world/monsters.js';
 import {
     analyzeAllBalanceProfiles,
     analyzeAllEliteJobs,
@@ -16,7 +16,7 @@ import {
     BalanceEncounterType,
     BALANCE_PROFILE_LEVELS,
     createBalanceScenario,
-} from '../models/Balance.js';
+} from '../models/progression/Balance.js';
 
 const levelInput = process.argv[2] ?? '50';
 const requestedLevel = Number.parseInt(levelInput, 10);

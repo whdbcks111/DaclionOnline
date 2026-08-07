@@ -1,28 +1,28 @@
 import { readFileSync } from 'node:fs';
 import type { LocationData } from '../../../shared/types.js';
-import '../data/items.js';
-import '../data/statusEffects.js';
-import '../data/alchemy.js';
-import '../data/projectiles.js';
-import '../data/resources.js';
-import '../data/shops.js';
-import '../data/tagEffects.js';
-import '../data/jobs.js';
-import '../data/progress.js';
-import '../data/titles.js';
-import '../data/skills.js';
-import '../data/crafting.js';
-import '../data/quests.js';
-import '../data/npcs.js';
-import '../data/monsters.js';
-import '../data/bossPatterns.js';
-import '../data/fishing.js';
-import '../data/ascendantFrontier.js';
-import { mergeAscendantLocations } from '../data/ascendantRegions.js';
-import { validateMasterData } from '../modules/masterDataValidation.js';
+import '../data/economy/items.js';
+import '../data/combat/statusEffects.js';
+import '../data/professions/alchemy.js';
+import '../data/combat/projectiles.js';
+import '../data/world/resources.js';
+import '../data/economy/shops.js';
+import '../data/combat/tagEffects.js';
+import '../data/progression/jobs.js';
+import '../data/progression/progress.js';
+import '../data/progression/titles.js';
+import '../data/combat/skills.js';
+import '../data/professions/crafting.js';
+import '../data/progression/quests.js';
+import '../data/world/npcs.js';
+import '../data/world/monsters.js';
+import '../data/combat/bossPatterns.js';
+import '../data/professions/fishing.js';
+import '../data/world/ascendantFrontier.js';
+import { mergeAscendantLocations } from '../data/world/ascendantRegions.js';
+import { validateMasterData } from '../modules/infrastructure/masterDataValidation.js';
 
 const locations = mergeAscendantLocations(
-    JSON.parse(readFileSync(new URL('../data/locations.json', import.meta.url), 'utf8')) as LocationData[],
+    JSON.parse(readFileSync(new URL('../data/world/locations.json', import.meta.url), 'utf8')) as LocationData[],
 );
 const issues = validateMasterData({ locations });
 if (issues.length > 0) {

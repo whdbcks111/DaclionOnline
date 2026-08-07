@@ -35,9 +35,9 @@ Location ── objects[] (Monster | Resource)
 
 ## 게임 루프와 갱신 주기
 
-- `modules/game.ts`: 20 FPS. 온라인 registry에 있고 `isWorldActive`인 Player의 `earlyUpdate → update(SkillBook 포함) → lateUpdate`, 활성 Projectile의 전체 Entity lifecycle, Location의 모든 월드 오브젝트, Shop, Coroutine 순으로 갱신한다.
+- `modules/infrastructure/game.ts`: 20 FPS. 온라인 registry에 있고 `isWorldActive`인 Player의 `earlyUpdate → update(SkillBook 포함) → lateUpdate`, 활성 Projectile의 전체 Entity lifecycle, Location의 모든 월드 오브젝트, Shop, Coroutine 순으로 갱신한다.
 - 일회성 미니게임과 낚시 대기는 전투 Entity 프레임과 별도의 런타임 세션이다. 마지막 연결 종료·명시적 unload에서는 `cancelFishing()`이 대기 timer와 미니게임을 함께 정리하며 장소/생존/장비 유효성은 입질과 결과 확정 시 다시 검사한다.
-- `modules/player.ts`: 500ms마다 현재 경험치/다음 레벨 요구량을 포함한 `playerStats`와 `locationInfo`를 계산하되, `stateSync.ts`가 내용이 바뀐 완전한 snapshot만 socket별로 전송한다. `locationInfo.players`는 메모리 등록 여부만 믿지 않고 실제 연결 중인 userId만 포함한다. 각 payload의 `syncId/revision`으로 오래된 순서를 거르고, 30초마다 dirty 상태를 DB에 저장한다.
+- `modules/player/player.ts`: 500ms마다 현재 경험치/다음 레벨 요구량을 포함한 `playerStats`와 `locationInfo`를 계산하되, `modules/infrastructure/stateSync.ts`가 내용이 바뀐 완전한 snapshot만 socket별로 전송한다. `locationInfo.players`는 메모리 등록 여부만 믿지 않고 실제 연결 중인 userId만 포함한다. 각 payload의 `syncId/revision`으로 오래된 순서를 거르고, 30초마다 dirty 상태를 DB에 저장한다.
 - 같은 snapshot에서 `locationInfo.mapColor`는 현재 장소의 검증된 음악 권역색을, `playerStats.musicCombatState`는 수동 타게팅과 분리된 최근 실제 교전 단계를 제공한다. 직접 공격·회피·공격 source 피해는 Player의 비영속 9초 교전 시간을 갱신하고 보스가 우선하며, 이동·사망·부활 때 즉시 초기화한다. 저장하지 않는 이 상태와 클라이언트 전환 규칙은 [적응형 지역 음악](adaptive-music.md)을 참고한다.
 - `Entity.earlyUpdate`: tick 행동 제한 초기화 → Shield 만료 갱신 → StatusEffect early/update → 공격 cooldown 감소 → `lifeRegen` 생명력 및 `mentalityRegen` 정신력 자연 회복 → 사망 timer와 respawn. 생명력 재생은 받는 치유량 modifier를 적용하고 정신력 재생은 최대 정신력까지만 직접 회복한다.
 - 자연 재생의 기본값은 각 1/초이다. 체력의 생명력 재생과 정신력의 정신력 재생은 300까지 각각 기존 `포인트당 계수 × 스탯 / (1 + 스탯 / 2000)` 점감식을 유지한다. 포인트당 계수는 체력 `0.025/초`, 정신력 `0.0125/초`다. 300 이후에는 둘 다 `1 - e^-((스탯-300)/600)^2` 비율로 선형값과의 차이를 부드럽게 회복한다. 따라서 저수치 기울기는 그대로지만 고스탯에서 고정된 50/초 한계에 점근하지 않고 원래 포인트당 효율로 돌아간다. 상태창 능력치와 실제 `earlyUpdate` 회복은 모두 이 modifier 결과를 사용한다.
@@ -98,8 +98,8 @@ Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook�
 
 ## 위치와 이동
 
-- 정의 원본은 `server/src/data/locations.json`, 공유 스키마는 `LocationData`다.
-- `modules/location.ts`가 시작할 때 JSON을 런타임 Location 레지스트리로 바꾼다.
+- 정의 원본은 `server/src/data/world/locations.json`, 공유 스키마는 `LocationData`다.
+- `modules/world/location.ts`가 시작할 때 JSON을 런타임 Location 레지스트리로 바꾼다.
 - `LocationData.objects`의 각 항목은 `type: monster | resource`, `dataId`, `maxCount`, `respawnTime`을 가진다. 런타임에서는 둘 모두 `Location.getObjects/getObject/hasObject/addObject/removeObject` API로 다루며 별도 몬스터 배열을 두지 않는다. 일반 몬스터는 레벨 구간에 따라 사냥 밀도가 떨어지지 않도록 장소의 과거 수치와 무관하게 30초 표준 리젠을 사용하고, 보스만 장소별 특수 리젠 시간을 유지한다. 자원은 배치 설정을 사용하되 `resource:ore` 광맥은 초반의 더 짧은 설정을 유지하면서 최대 3분으로 제한한다.
 - 전용 보스 전투 공간은 `location:boss_room` 태그로 명시한다. 현재 41개 왕좌·제단·관문·심실 등에 적용하며, 마스터 검증은 이 태그가 붙은 장소에 실제 `entity:boss` 몬스터가 배치됐는지 검사한다.
 - 피버릭 갱도 심층에서 Lv.28 조건으로 `수정 왕좌`에 진입할 수 있다. 이곳에는 일반 심층 몬스터 대비 6배 이상의 체력, 0.22 공격속도, 실제 스킬 패턴과 10분 리스폰을 가진 보스 `수정맥의 군주` 한 개체가 배치된다.
@@ -118,7 +118,7 @@ Player setter, Stat, Inventory, Equipment, PlayerProgress, SkillBook, QuestBook�
 - `LocationData.npcIds`는 NPC 정의 ID만 저장한다. 런타임 NPC는 `Location.getNpcs/getNpc/hasNpc`로 조회하며 대화 규칙은 [NPC·대화 시스템](npc-dialogue.md)이 소유한다.
 - `LocationData.mapIcon`은 `/icons/map/{key}.png` 랜드마크를 지정한다. 없으면 지도에서 점으로, 있으면 아이콘으로 표시하며 현재 광장·상점·광산 입구·초원 거점과 11개 성장 낚시터에 적용한다. 낚시터는 전용 `fishing-spot` 아이콘을 공유한다.
 - `LocationData.mapColor`는 선택적인 `#RRGGBB` 바이옴 대표색이다. 같은 월드 권역은 정확히 같은 대표색을 공유한다. 방문 장소와 발견한 연결을 색상별 단일 도형으로 합성하므로 내부 겹침 얼룩이 생기지 않으며, 서로 다른 대표색의 연결에는 방향성 선형 그라데이션을 적용한다. 미방문 장소와 일반 지도에서 제외된 hidden 장소의 색은 노출하지 않는다.
-- 연결 condition은 `data/locations.ts`의 handler registry가 `visible | locked | hidden` 또는 `{ status, publicReason }`을 반환한다. `publicReason`은 사용자에게 공개 가능한 잠금 사유일 때만 넣으며, `/이동 장소명`으로 실제 진입을 시도해 잠긴 경우에만 실패 메시지에 표시한다. 레벨 조건은 `필요 레벨: Lv.28` 형식을 사용한다.
+- 연결 condition은 `data/world/locations.ts`의 handler registry가 `visible | locked | hidden` 또는 `{ status, publicReason }`을 반환한다. `publicReason`은 사용자에게 공개 가능한 잠금 사유일 때만 넣으며, `/이동 장소명`으로 실제 진입을 시도해 잠긴 경우에만 실패 메시지에 표시한다. 레벨 조건은 `필요 레벨: Lv.28` 형식을 사용한다.
 - `/이동` 시간은 `max(1, distance / speed / 5)`초이고 0.5초 단위 coroutine 알림을 갱신한다. 명령 입력과 시작·진행·도착 메시지는 항상 이동 중인 플레이어 본인에게만 보인다. 대상은 정식 장소명 외에도 location ID, 공백·가운뎃점·하이픈을 생략한 이름, 현재 연결 중 유일한 부분 이름으로 찾을 수 있다. 양의 정수는 `getAvailableConnections()` 목록의 1부터 시작하는 순번으로 먼저 해석하므로 `go 1`, `mv 2`도 장소 이름의 숫자 포함 여부와 무관하게 일관되게 동작한다. 예: `/이동 초원3`, `/이동 meadow_3`.
 - `/자동이동 <장소명검색어>`는 `location:hidden`을 제외한 방문 장소에서 공백·가운뎃점·하이픈을 무시하고 `정확히 일치 → 이름/ID 시작 → 포함 → LCS 오타 유사도` 순서로 검색한다. 후보가 여러 개면 선택 버튼을 표시하고, 하나로 확정되면 A*가 좌표상 이동 거리를 간선 비용과 휴리스틱으로 사용해 현재 `visible` 연결만 통과하는 최단 경로를 찾는다. 각 장소 도착 뒤 조건 변화를 반영해 남은 경로를 다시 계산한다. `/이동취소`는 같은 사용자별 navigation session을 종료하므로 자동이동뿐 아니라 기존 한 칸 이동도 다음 위치가 적용되기 전에 취소된다. 사망·로그아웃·관리자 순간이동도 같은 API로 세션을 정리한다.
 - `/위치`는 정보 공개 모드를 따르며 기본적으로 본인에게만 보이고 공개 모드에서만 현재 채널에 공유된다. 구역 위험도와 PVP 허용 여부를 먼저 표시하고 Monster와 Resource를 경계 없이 `[ 오브젝트 ]` 번호 목록으로 표시한다. `entity:boss` 오브젝트는 레벨과 이름 앞에 금색 왕관을 표시하며 같은 표식을 위치 HUD·대상 HUD·대상 선택·`/몬스터정보`도 재사용한다. PVP 가능 지역의 다른 생존 플레이어에는 `PVP 대상` 버튼을 표시한다. 사망·파괴된 오브젝트는 체력 progress 대신 붉은 `(사망)`·`(파괴됨)` 상태를 표시한다. 기본 리젠 주기가 5분을 초과하는 보스는 이름 옆에 리젠 주기를 표시하고, 처치된 동안에는 남은 시간을 표시한다. 등록된 상호작용 handler가 있는 살아 있는 오브젝트에는 `/상호작용 번호` 버튼을 붙이며, 나머지는 같은 명령을 실행해도 불가 알림을 보낸다.

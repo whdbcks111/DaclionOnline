@@ -1,0 +1,255 @@
+import { registerCommand } from '../../modules/communication/bot.js';
+import { sendBotMessageToUser, sendNotificationToUser } from '../../modules/communication/message.js';
+import { getPlayerByUserId } from '../../modules/player/player.js';
+import { chat } from '../../utils/chatBuilder.js';
+import { parseChatMessage } from '../../utils/chatParser.js';
+import type { CompletionItem } from '../../../../shared/types.js';
+import type Skill from '../../models/progression/Skill.js';
+import { performSkillBreakthrough } from '../../modules/player/skillBreakthrough.js';
+import logger from '../../utils/logger.js';
+
+interface SkillListStatus {
+    label: string;
+    color: string;
+}
+
+function visibleSkillCompletions(userId: number): CompletionItem[] {
+    const player = getPlayerByUserId(userId);
+    if (!player) return [];
+    return player.skills.getVisible().map(skill => ({
+        value: skill.name,
+        description: `Lv.${skill.level} · ${skill.formatCost(player).replace(/\[[^\]]+\]/g, '')}`,
+    }));
+}
+
+function activeSkillCompletions(userId: number): CompletionItem[] {
+    const player = getPlayerByUserId(userId);
+    if (!player) return [];
+    return player.skills.getVisible()
+        .filter(skill => !skill.isPassive)
+        .map(skill => ({
+            value: skill.name,
+            description: `Lv.${skill.level} · ${skill.formatCost(player).replace(/\[[^\]]+\]/g, '')}`,
+        }));
+}
+
+function skillBreakthroughCompletions(userId: number): CompletionItem[] {
+    const player = getPlayerByUserId(userId);
+    if (!player) return [];
+    return player.skills.getMaxLevelBreakthroughSnapshots()
+        .filter(snapshot => snapshot.remainingMaxLevelBonus > 0)
+        .map(snapshot => ({
+            value: snapshot.name,
+            description: `최대 Lv.${snapshot.maxLevel} · 돌파 +${snapshot.maxLevelBonus}/${snapshot.maxLevelBonusCap}`,
+        }));
+}
+
+function getSkillListStatus(skill: Skill): SkillListStatus | null {
+    if (skill.isPassive) return { label: '패시브', color: 'cyan' };
+    if (skill.isActive) return { label: '발동 중', color: 'gold' };
+    const remaining = skill.getRemainingCooldown();
+    if (remaining > 0) {
+        return { label: `재사용 대기 ${remaining.toFixed(1)}초`, color: 'red' };
+    }
+    return null;
+}
+
+export function initSkillCommands(): void {
+    registerCommand({
+        name: '스킬목록',
+        aliases: ['skilllist', 'sl'],
+        description: '현재 표시 가능한 보유 스킬 목록을 확인합니다.',
+        showCommandUse: 'hide',
+        information: true,
+        handler(userId) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            const skills = player.skills.getVisible();
+            const builder = chat()
+                .color('gray', b => b.text(`[ 스킬 목록 ]  ${skills.length}개`));
+
+            if (skills.length === 0) {
+                builder.text('\n현재 표시 가능한 보유 스킬이 없습니다.');
+            } else {
+                for (const [index, skill] of skills.entries()) {
+                    const status = getSkillListStatus(skill);
+                    builder.text('\n')
+                        .color('gray', b => b.text(`${index + 1}. `))
+                        .icon(skill.data.icon)
+                        .weight('bold', b => b.color('gold', b2 => b2.text(skill.name)))
+                        .text(`  Lv.${skill.level}`);
+                    if (status) {
+                        builder.text('  ').color(status.color, b => b.text(status.label));
+                    }
+                    builder.text('  ').closeButton(`/스킬정보 ${skill.name}`, b => b.text('[정보]'));
+                    if (!skill.isPassive) builder.text(' ')
+                        .closeButton(`/스킬 ${skill.name}`, b => b.color('gold', b2 => b2.text('[사용]')));
+                }
+            }
+            sendBotMessageToUser(userId, builder.build());
+        },
+    });
+
+    registerCommand({
+        name: '스킬',
+        aliases: ['skill', 'su', 'k'],
+        description: '보유한 스킬을 이름으로 발동합니다.',
+        showCommandUse: 'hide',
+        args: [{
+            name: '스킬이름',
+            description: '발동할 스킬 이름',
+            required: true,
+            isText: true,
+            completions: activeSkillCompletions,
+        }],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            const outcome = player.skills.activateByInput(args[0] ?? '');
+            if (outcome.matched) return;
+            const reason = outcome.reason ?? '발동할 스킬을 찾을 수 없습니다.';
+            sendNotificationToUser(userId, { key: 'skill-not-found', message: reason });
+            sendBotMessageToUser(userId, reason);
+        },
+    });
+
+    registerCommand({
+        name: '스킬정보',
+        aliases: ['skillinfo', 'si'],
+        description: '보유한 스킬의 상세 정보를 확인합니다.',
+        showCommandUse: 'hide',
+        information: true,
+        args: [{
+            name: '스킬이름',
+            description: '확인할 스킬 이름',
+            required: true,
+            isText: true,
+            completions: visibleSkillCompletions,
+        }],
+        handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            const skill = player.skills.findVisibleByInput(args[0] ?? '');
+            if (!skill) {
+                sendBotMessageToUser(userId, '보유하고 있거나 현재 표시 가능한 스킬이 아닙니다.');
+                return;
+            }
+
+            const requiredExperience = skill.getRequiredExperience(player);
+            const tagInfo = skill.getInformationTagsSnapshot();
+            const classificationBuilder = chat();
+            if (tagInfo.groups.length > 0) {
+                classificationBuilder.color('gray', b => b.text('계열  '));
+                for (const tag of tagInfo.groups) classificationBuilder.icon(tag.icon).text(` ${tag.label}  `);
+                classificationBuilder.text('\n');
+            }
+            if (tagInfo.affinities.length > 0) {
+                classificationBuilder.color('gray', b => b.text('속성  '));
+                for (const tag of tagInfo.affinities) classificationBuilder.icon(tag.icon).text(` ${tag.label}  `);
+                classificationBuilder.text('\n');
+            }
+            const sharedCooldownBuilder = chat();
+            for (const [index, cooldown] of tagInfo.sharedCooldowns.entries()) {
+                if (index > 0) sharedCooldownBuilder.text('\n');
+                sharedCooldownBuilder.icon(cooldown.icon)
+                    .text(` ${cooldown.label} 보유 스킬  `)
+                    .color('gold', b => b.text(`최소 ${cooldown.seconds}초`));
+            }
+            const experienceNodes = skill.level >= skill.maxLevel
+                ? chat()
+                    .color('gray', b => b.text('경험치  '))
+                    .weight('bold', b => b.color('gold', b2 => b2.text('MAX')))
+                    .text('\n')
+                    .build()
+                : chat()
+                    .color('gray', b => b.text('경험치  '))
+                    .color('gold', b => b.text(`${skill.experience} / ${requiredExperience}`))
+                    .text('  ')
+                    .progress({
+                        value: requiredExperience > 0 ? skill.experience / requiredExperience : 1,
+                        length: '8em',
+                        color: 'gold',
+                        thickness: 6,
+                    })
+                    .text('\n')
+                    .build();
+
+            const nodes = [
+                ...chat()
+                    .color('gray', b => b.text('[ 스킬 정보 ]  '))
+                    .icon(skill.data.icon)
+                    .weight('bold', b => b.color('gold', b2 => b2.text(skill.name)))
+                    .text(`  Lv.${skill.level} / ${skill.maxLevel}\n`)
+                    .build(),
+                ...experienceNodes,
+                ...(tagInfo.groups.length > 0 || tagInfo.affinities.length > 0
+                    ? [
+                        ...chat().divider('스킬 분류').build(),
+                        ...classificationBuilder.build(),
+                    ] : []),
+                ...chat().divider('효과').build(),
+                ...parseChatMessage(skill.formatDescription(player)),
+                ...chat().divider('소모값').build(),
+                ...parseChatMessage(skill.formatCost(player)),
+                ...chat()
+                    .divider('재사용 대기시간')
+                    .color('gold', b => b.text(skill.isPassive ? '없음' : skill.format('{{maxCooldown}}초', player)))
+                    .build(),
+                ...(tagInfo.sharedCooldowns.length > 0 ? [
+                    ...chat().divider('공유 재사용 대기시간').build(),
+                    ...sharedCooldownBuilder.build(),
+                ] : []),
+                ...chat().divider('발동 조건').build(),
+                ...parseChatMessage(skill.formatActivationCondition(player)),
+                ...(!skill.isPassive ? chat()
+                    .text('\n')
+                    .closeButton(`/스킬 ${skill.name}`, b => b.color('gold', b2 => b2.text('[사용]')))
+                    .build() : []),
+            ];
+            sendBotMessageToUser(userId, nodes);
+        },
+    });
+
+    registerCommand({
+        name: '스킬돌파',
+        aliases: ['숙련돌파', 'skillbreak'],
+        description: '숙련의 정수 10개로 선택한 보유 스킬의 최대 레벨을 1 높입니다.',
+        showCommandUse: 'private',
+        args: [{
+            name: '스킬이름',
+            description: '최대 레벨을 돌파할 보유 스킬 이름',
+            required: true,
+            isText: true,
+            completions: skillBreakthroughCompletions,
+        }],
+        async handler(userId, args) {
+            const player = getPlayerByUserId(userId);
+            if (!player) return;
+            try {
+                const result = await performSkillBreakthrough(player, args[0] ?? '');
+                if (!result.success) {
+                    sendBotMessageToUser(userId, result.message);
+                    sendNotificationToUser(userId, {
+                        key: `skill-breakthrough-denied:${result.code}`,
+                        message: result.message,
+                    });
+                    return;
+                }
+                const message = `[ ${result.snapshot.name} ] 최대 레벨 돌파 성공! `
+                    + `Lv.${result.previousMaxLevel} → Lv.${result.snapshot.maxLevel} `
+                    + `(돌파 +${result.snapshot.maxLevelBonus}/${result.snapshot.maxLevelBonusCap}, 숙련의 정수 ${result.consumed}개 소모)`
+                    + (result.saveDeferred ? ' 저장은 자동으로 다시 시도됩니다.' : '');
+                sendBotMessageToUser(userId, chat()
+                    .color('gold', builder => builder.weight('bold', bold => bold.text(message)))
+                    .build());
+                sendNotificationToUser(userId, {
+                    key: `skill-breakthrough:${result.snapshot.id}`,
+                    message,
+                });
+            } catch (error) {
+                logger.error(`스킬 돌파 명령 실패: ${userId}`, error);
+                sendBotMessageToUser(userId, '스킬 돌파 결과를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.');
+            }
+        },
+    });
+}

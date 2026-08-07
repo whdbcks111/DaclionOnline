@@ -33,8 +33,8 @@
 
 ## 검증 기준
 
-- `server/src/data/world.test.ts`가 장소 양방향 연결, 오브젝트 ID, 권역 대표색, 상점·제작법·퀘스트·퍼즐·보물·보스 패턴을 권역 단위로 검증한다.
-- `server/src/scripts/validateMasterData.ts`가 모든 참조와 명시된 fallback 아이콘 경로를 검증하며, `server/src/data/world.test.ts`가 몬스터 전용 초상의 64×64 RGBA 규격과 ID별 유일성을 검증한다.
+- `server/src/data/world/world.test.ts`가 장소 양방향 연결, 오브젝트 ID, 권역 대표색, 상점·제작법·퀘스트·퍼즐·보물·보스 패턴을 권역 단위로 검증한다.
+- `server/src/scripts/validateMasterData.ts`가 모든 참조와 명시된 fallback 아이콘 경로를 검증하며, `server/src/data/world/world.test.ts`가 몬스터 전용 초상의 64×64 RGBA 규격과 ID별 유일성을 검증한다.
 - `server/src/scripts/reportBalance.ts`가 공용 레벨 구간과 황혼왕릉부터 라그나벨 성단까지의 장비를 같은 직업/레벨 기준선에서 비교하고, 지역 전승 기술의 회피·관통·자원·쿨다운을 함께 출력한다.
-- `server/src/models/Balance.test.ts`가 6개 1차 직업과 순서 있는 엘리트 30조합의 보스 DPS 편차 1.55/1.7배, 강화 후 평타 피해 비중 13% 이상을 회귀 검증한다.
+- `server/src/models/progression/Balance.test.ts`가 6개 1차 직업과 순서 있는 엘리트 30조합의 보스 DPS 편차 1.55/1.7배, 강화 후 평타 피해 비중 13% 이상을 회귀 검증한다.
 - 수량은 문서의 추정이 아니라 현재 마스터 데이터를 실제로 import한 런타임 레지스트리 수와 `locations.json` 길이로 갱신한다.

@@ -64,6 +64,17 @@ client/src  ── Socket.io / HTTP ──>  server/src/modules
 - `server/src/commands/`는 `/명령어` 진입점, `server/src/models/`는 재사용 가능한 게임 규칙과 상태를 담당한다.
 - `client/src/pages/`는 라우트 단위 화면, `components/`는 UI, `context/`는 소켓·세션·HUD·테마 상태를 담당한다.
 
+서버의 기술 계층 아래는 도메인별 2단계 폴더를 사용한다.
+
+| 계층 | 하위 도메인 | 역할 |
+| --- | --- | --- |
+| `commands/` | `community`, `economy`, `operations`, `player`, `world` | 사용자 명령 진입점과 입력 검증 |
+| `data/` | `combat`, `economy`, `professions`, `progression`, `world` | 안정 ID를 가진 코드·JSON 마스터 데이터 |
+| `models/` | `actors`, `combat`, `core`, `economy`, `player`, `professions`, `progression`, `world` | 서버 권위 상태, 규칙, registry |
+| `modules/` | `auth`, `communication`, `infrastructure`, `operations`, `player`, `professions`, `social`, `world` | Socket/HTTP 연결과 애플리케이션 서비스 |
+
+각 도메인 폴더의 `Overview.md`가 소유 파일과 공개 경계를 설명한다. 최상위에는 `index.ts` 같은 조립점과 Overview만 두며 테스트는 대상 구현 옆에 둔다.
+
 ## 필수 구현 원칙
 
 다음 원칙은 새 기능과 의미 있는 기존 코드 수정에 모두 적용한다. 기존 코드가 원칙과 다르면 수정 범위 안에서 공개 API를 먼저 보강하고 점진적으로 원칙에 맞춘다.
@@ -72,7 +83,7 @@ client/src  ── Socket.io / HTTP ──>  server/src/modules
 
 서버의 영속 데이터 중 입출력이 잦고 즉시 확정이 중요하지 않은 게임 상태는 요청마다 DB를 읽고 쓰지 않는다. 시작/로그인 시 메모리에 로드하고, 도메인 API를 통한 변경에서 dirty를 표시한 뒤 주기적 flush와 정상 종료·unload 시 저장하는 구조를 기본으로 한다.
 
-- 현재 기준 구현은 `modules/player.ts`의 온라인 Player map과 30초 저장, `Player/Inventory/Equipment/Stat/PlayerProgress/SkillBook`의 dirty 추적이다.
+- 현재 기준 구현은 `modules/player/player.ts`의 온라인 Player map과 30초 저장, `Player/Inventory/Equipment/Stat/PlayerProgress/SkillBook`의 dirty 추적이다.
 - 계정 생성, 인증 정보 변경처럼 즉시 성공 여부가 중요하거나 유실되면 안 되는 데이터는 트랜잭션/즉시 저장이 가능하다. 이 예외는 의도를 코드와 문서에 남긴다.
 - 새 영속 상태는 메모리 소유자, dirty 설정 지점, flush 주기, unload/종료 저장, 실패 처리 방식을 설계한다.
 
@@ -97,6 +108,8 @@ UI 스타일은 고정 px 배치와 크기에 의존하지 않는다. 기존 SCS
 ### 5. 짧고 재사용 중심의 구현
 
 코드는 중복, 우회 계층, 불필요한 boilerplate를 줄여 가능한 한 짧고 명확하게 작성한다. 기능 구현 전 현재 폴더와 상위 폴더의 `Overview.md`, 이 문서의 빠른 탐색 표, `docs/api/`를 먼저 확인한다. 이미 존재하는 모델/manager/정적 API와 UI primitive를 재사용하고, 기존 API 조합으로 해결할 수 없을 때만 가장 작은 새 API를 소유 계층에 추가한다.
+
+서버 파일은 `commands/data/models/modules` 기술 계층 바로 아래에 쌓지 않고 기존 도메인 폴더에 배치한다. 한 폴더가 구현·테스트 12개를 넘거나 서로 다른 책임이 둘 이상이면 도메인 분리를 검토하고, 새 소스 폴더에는 `Overview.md`를 함께 만든다.
 
 ### 6. 열거 가능한 도메인 타입은 클래스형 enum
 

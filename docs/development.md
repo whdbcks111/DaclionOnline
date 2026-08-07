@@ -50,7 +50,7 @@ cd server && npm run balance:report -- 50  # 실제 전투식으로 Lv.50 직업
 
 - 클라이언트는 `@shared/*` alias로 루트 `shared/`를 참조하며 `client/src/shared` 심볼릭 링크도 사용한다.
 - 서버 TypeScript import는 ESM 출력에 맞춰 소스에서도 `.js` 확장자를 쓴다.
-- 서버 빌드는 `locations.json`을 `dist/server/src/data/`로 복사한다.
+- 서버 빌드는 `data/` 아래 JSON의 상대 경로를 보존해 복사한다. 현재 장소 원본은 `src/data/world/locations.json`에서 `dist/server/src/data/world/locations.json`으로 배포된다.
 - 프로필 이미지는 서버 작업 디렉터리 기준 `uploads/profiles/`에 저장되고 `/uploads`로 제공된다.
 
 ## 변경 완료 체크

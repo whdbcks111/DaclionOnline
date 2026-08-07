@@ -38,7 +38,7 @@ Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만
 
 ## 단방향 효과 modifier
 
-`server/src/models/TagEffect.ts`는 대미지 전용 상성표가 아니라 모든 수치 효과에 재사용할 수 있는 단방향 modifier 레지스트리다.
+`server/src/models/combat/TagEffect.ts`는 대미지 전용 상성표가 아니라 모든 수치 효과에 재사용할 수 있는 단방향 modifier 레지스트리다.
 
 - 등록: `defineTagEffectModifier(sourceTag, targetTag, modifier)`
 - 판정: `resolveTagEffect(source, target)`
@@ -51,7 +51,7 @@ Projectile은 예외적으로 `hasEffectSourceTag`가 투사체 본체 태그만
 
 공격자와 대상이 복수 태그를 가져 여러 행이 일치해도 배율을 곱하지 않는다. 일치한 값 중 가장 낮은 단일 modifier만 사용해 면역·저항을 우선하고 상성 중첩 폭주를 방지한다. 일치 행이 없으면 중립 1배다.
 
-현재 마스터 테이블은 `server/src/data/tagEffects.ts`에 있다.
+현재 마스터 테이블은 `server/src/data/combat/tagEffects.ts`에 있다.
 
 같은 파일은 `/속성표`에 필요한 14개 속성과 무생물의 라벨 및 `affinities/*` 아이콘 key도 등록한다. `/속성표`는 내부 Map이나 태그 배열을 직접 읽지 않고 `getTagEffectAffinitySnapshots()`만 사용하며, 속성 아래 `공격/방어`, 그 아래 `우세·열세·무효/취약·저항·면역`을 각각 독립된 줄로 표시한다. 실제 아이콘은 `client/public/icons/affinities/`의 128×128 투명 PNG다. 새 속성이나 표시 태그는 modifier 행, 표시 메타데이터, 아이콘을 같은 변경에 추가하고 property 태그 누락·PNG 규격 테스트를 통과해야 한다.
 

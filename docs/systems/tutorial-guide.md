@@ -9,7 +9,7 @@
 
 ## 진행 흐름
 
-`modules/tutorial.ts`의 `TutorialStep`과 `TutorialContent`는 `values/fromKey/fromInput`을 제공하는 클래스형 enum이다. 순서는 다음과 같다.
+`modules/world/tutorial.ts`의 `TutorialStep`과 `TutorialContent`는 `values/fromKey/fromInput`을 제공하는 클래스형 enum이다. 순서는 다음과 같다.
 
 1. 텍스트 MUD와 버튼 우선 조작 안내
 2. 상태창과 위치 확인, 광장 안내인과 실제 대화
@@ -59,10 +59,10 @@
 
 ## 변경 지점
 
-- 단계·보상·진행 API: `server/src/modules/tutorial.ts`
-- 명령 등록: `server/src/commands/tutorial.ts`
-- 실제 퀘스트 마스터 데이터: `server/src/data/quests.ts`
-- 신규 Player 연결: `server/src/modules/player.ts`
+- 단계·보상·진행 API: `server/src/modules/world/tutorial.ts`
+- 명령 등록: `server/src/commands/player/tutorial.ts`
+- 실제 퀘스트 마스터 데이터: `server/src/data/progression/quests.ts`
+- 신규 Player 연결: `server/src/modules/player/player.ts`
 - 정적 안내 페이지: `client/src/pages/GameGuide.tsx`, `client/src/data/gameGuide.ts`
 
 새 튜토리얼 단계는 `TutorialStep`, 카드 내용, 성공 후 발행되는 `GameEvent`, 이 문서와 테스트를 같은 변경에서 갱신한다. 실제 기능을 수행하지 않고 설명만 확인하는 단계만 `/튜토리얼다음`을 사용한다.

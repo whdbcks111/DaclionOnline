@@ -16,7 +16,7 @@
 
 ## 서버 권위와 에스크로
 
-`modules/trade.ts`의 단일 `TradeManager`가 초대와 거래 세션을 메모리에 소유한다. 외부 명령은 내부 Map이나 제안 배열을 읽지 않고 `getSessionSnapshot()`과 명령형 API만 사용한다. 아이템을 제안하면 내구도, metadata delta, 영속 태그를 포함한 `ItemSnapshot`을 인벤토리에서 제거해 런타임 에스크로에 보관하고, 골드도 플레이어 잔액에서 즉시 분리한다.
+`modules/social/trade.ts`의 단일 `TradeManager`가 초대와 거래 세션을 메모리에 소유한다. 외부 명령은 내부 Map이나 제안 배열을 읽지 않고 `getSessionSnapshot()`과 명령형 API만 사용한다. 아이템을 제안하면 내구도, metadata delta, 영속 태그를 포함한 `ItemSnapshot`을 인벤토리에서 제거해 런타임 에스크로에 보관하고, 골드도 플레이어 잔액에서 즉시 분리한다.
 
 양쪽 최종 확인 시 받을 아이템 전체에 대해 두 인벤토리의 중량을 먼저 검사한다. 한쪽이라도 받을 수 없으면 교환하지 않고 양쪽 확인만 해제한다. 통과하면 snapshot과 골드를 상대에게 옮기고 두 Player aggregate를 즉시 저장한다. 완료 전 정기 저장은 거래 참여자를 건너뛰므로 서버가 진행 중 세션을 잃어도 DB에는 거래 전 소유 상태가 남는다. 완료에는 스키마 변경이나 별도 Prisma 테이블이 필요하지 않다.
 
@@ -24,6 +24,6 @@
 
 ## 표시 이벤트
 
-TradeManager는 `invitation-created/ended`, `session-updated/ended`의 불변 DTO만 구독자에게 발행한다. `commands/trade.ts`가 이 이벤트를 비공개 거래 카드와 notification으로 변환한다. `sendPrivateBotMessageToUser()`가 반환한 message ID를 세션·사용자별로 추적하고 다음 갱신에서 `deleteMessage()`로 이전 히스토리와 클라이언트 메시지를 함께 제거한다.
+TradeManager는 `invitation-created/ended`, `session-updated/ended`의 불변 DTO만 구독자에게 발행한다. `commands/community/trade.ts`가 이 이벤트를 비공개 거래 카드와 notification으로 변환한다. `sendPrivateBotMessageToUser()`가 반환한 message ID를 세션·사용자별로 추적하고 다음 갱신에서 `deleteMessage()`로 이전 히스토리와 클라이언트 메시지를 함께 제거한다.
 
 거래 세션은 프로세스 재시작을 넘어 영속하지 않는다. 거래 중 상태를 DB에 쓰지 않고 완료된 결과만 즉시 저장하는 방식이 중간 세션 복구보다 단순하며 아이템 복제·유실 경계를 명확하게 유지한다.

@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc && cp src/data/*.json dist/server/src/data/",
-    "test": "tsx --test src/**/*.test.ts",
+    "build": "tsc && find src/data -name '*.json' -exec cp --parents {} dist/server/ \\;",
+    "test": "find src -name '*.test.ts' -exec tsx --test {} +",
     "data:validate": "tsx src/scripts/validateMasterData.ts",
     "balance:report": "tsx src/scripts/reportBalance.ts",
     "db:migrate:item-metadata": "tsx src/scripts/migrateItemMetadataDeltas.ts",

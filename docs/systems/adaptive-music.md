@@ -46,6 +46,6 @@ Transport의 PPQ는 192로 고정하고 Part의 event·duration·loop·start를 
 
 ## 검증
 
-- `server/src/data/adaptiveMusic.test.ts`: 35개 고정 2마디 악구와 전조 정규화 훅 고유성, 624 장소 coverage·동일 권역 훅 보존·편곡 고유성, 32마디 A/A′/B/A″ 형식, 선율 진행·도약·파트별 음역·종지, 강박 chord-tone·화음 coverage·chord-linked bass, MIDI→Hz 경계, 실제 3/4, PPQ 192 tick engine, 전투 resolver, 음량 곡선·storage.
-- `server/src/models/AdaptiveMusicCombat.test.ts`: 실제 공격·회피·피격·보스 우선순위·9초 만료·이동/사망 초기화·자원 제외.
+- `server/src/data/world/adaptiveMusic.test.ts`: 35개 고정 2마디 악구와 전조 정규화 훅 고유성, 624 장소 coverage·동일 권역 훅 보존·편곡 고유성, 32마디 A/A′/B/A″ 형식, 선율 진행·도약·파트별 음역·종지, 강박 chord-tone·화음 coverage·chord-linked bass, MIDI→Hz 경계, 실제 3/4, PPQ 192 tick engine, 전투 resolver, 음량 곡선·storage.
+- `server/src/models/combat/AdaptiveMusicCombat.test.ts`: 실제 공격·회피·피격·보스 우선순위·9초 만료·이동/사망 초기화·자원 제외.
 - 클라이언트는 TypeScript/Vite build와 ESLint로 Tone node·React lifecycle 계약을 검증하고, 첫 gesture·모바일 autoplay·두 탭·숨김/복귀·빠른 연속 이동은 실제 브라우저에서 확인한다.

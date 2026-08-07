@@ -1,0 +1,213 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import Entity from '../core/Entity.js';
+import Equipment from '../economy/Equipment.js';
+import { AttributeType } from '../core/Attribute.js';
+import { PlayerProgress } from './Progress.js';
+import TitleBook, { getAllTitles } from './Title.js';
+import type Player from '../actors/Player.js';
+import { emitGameEvent, GameEventIds } from '../core/GameEvent.js';
+import { GameTags } from '../../../../shared/tags.js';
+import '../../data/progression/jobs.js';
+import '../../data/progression/progress.js';
+import '../../data/combat/statusEffects.js';
+import '../../data/progression/titles.js';
+
+class TestTitlePlayer extends Entity {
+    override readonly name = '칭호 시험 플레이어';
+    readonly userId: number;
+    readonly progress: PlayerProgress;
+    readonly titles: TitleBook;
+    readonly career = { hasJob: (_id: string) => false };
+
+    constructor(progress = PlayerProgress.createEmpty(9701)) {
+        super(100, 0, 'title-test', {
+            maxLife: 1_000,
+            atk: 100,
+            magicForce: 80,
+        }, Equipment.createEmpty(), undefined, [GameTags.ENTITY_PLAYER, GameTags.TRAIT_LIVING]);
+        this.userId = progress.playerId;
+        this.progress = progress;
+        this.titles = new TitleBook(this as unknown as Player);
+    }
+
+    override get isPlayer(): boolean { return true; }
+    override get playerUserId(): number { return this.userId; }
+}
+
+class TestWolf extends Entity {
+    override readonly name = '시험 늑대';
+
+    constructor() {
+        super(1, 0, 'title-test', { maxLife: 100 }, Equipment.createEmpty(), undefined, [
+            GameTags.ENTITY_MONSTER,
+            GameTags.ENTITY_BEAST,
+            GameTags.ENTITY_WOLF,
+            GameTags.TRAIT_LIVING,
+        ]);
+    }
+}
+
+class TestTitleMonster extends Entity {
+    override readonly name = '칭호 대상 시험 몬스터';
+
+    constructor(tags: readonly string[]) {
+        super(1, 0, 'title-test', { maxLife: 100 }, Equipment.createEmpty(), undefined, [
+            GameTags.ENTITY_MONSTER,
+            GameTags.TRAIT_LIVING,
+            ...tags,
+        ]);
+    }
+}
+
+test('늑대 50마리를 처치하면 늑대 학살자를 획득한다', () => {
+    const player = new TestTitlePlayer();
+    for (let i = 0; i < 50; i++) {
+        emitGameEvent(GameEventIds.ENTITY_DEFEATED, {
+            actor: player,
+            subject: new TestWolf(),
+            data: { causeType: 'attack' },
+        });
+    }
+
+    const acquired = player.titles.refreshAcquisitions(false);
+
+    assert.ok(acquired.some(title => title.id === 'title:wolf_slayer'));
+    assert.equal(player.titles.isOwned('늑대 학살자'), true);
+});
+
+test('늑대 학살자는 늑대를 대상으로 지정한 동안 공격력과 마법력을 5% 높인다', () => {
+    const player = new TestTitlePlayer();
+    player.titles.grant('title:wolf_slayer', 'test', false);
+    assert.equal(player.titles.equip('늑대학살자').success, true);
+    assert.equal(player.attribute.get(AttributeType.ATK), 100);
+    assert.equal(player.attribute.get(AttributeType.MAGIC_FORCE), 80);
+
+    player.currentTarget = new TestWolf();
+    player.titles.refreshPassiveEffects();
+
+    assert.equal(player.attribute.get(AttributeType.ATK), 105);
+    assert.equal(player.attribute.get(AttributeType.MAGIC_FORCE), 84);
+
+    player.currentTarget = null;
+    player.titles.refreshPassiveEffects();
+    assert.equal(player.attribute.get(AttributeType.ATK), 100);
+    assert.equal(player.attribute.get(AttributeType.MAGIC_FORCE), 80);
+});
+
+test('삼원소 조율자는 속성 종류와 무관하게 원소 몬스터만 대상으로 판정한다', () => {
+    const player = new TestTitlePlayer();
+    player.titles.grant('title:elemental_tuner', 'test', false);
+    assert.equal(player.titles.equip('삼원소 조율자').success, true);
+
+    player.currentTarget = new TestTitleMonster([
+        GameTags.ENTITY_ELEMENTAL,
+        GameTags.PROPERTY_WATER,
+    ]);
+    player.titles.refreshPassiveEffects();
+    assert.ok(Math.abs(player.attribute.get(AttributeType.MAGIC_FORCE) - 85.6) < 0.000_001);
+
+    player.currentTarget = new TestTitleMonster([
+        GameTags.ENTITY_BEAST,
+        GameTags.PROPERTY_FIRE,
+    ]);
+    player.titles.refreshPassiveEffects();
+    assert.equal(player.attribute.get(AttributeType.MAGIC_FORCE), 80);
+});
+
+test('칭호 소유와 장착 상태는 PlayerProgress로 복원된다', () => {
+    const progress = PlayerProgress.createEmpty(9702);
+    const first = new TestTitlePlayer(progress);
+    first.titles.grant('title:slime_researcher', 'test', false);
+    assert.equal(first.titles.equip('슬라임 연구가').success, true);
+
+    const restored = new TestTitlePlayer(progress);
+
+    assert.equal(restored.titles.isOwned('title:slime_researcher'), true);
+    assert.equal(restored.titles.equippedName, '슬라임 연구가');
+});
+
+test('관리자 회수 칭호는 패시브와 장착을 제거하고 다시 부여할 때까지 자동 획득을 막는다', () => {
+    const player = new TestTitlePlayer();
+    for (let i = 0; i < 50; i++) {
+        emitGameEvent(GameEventIds.ENTITY_DEFEATED, {
+            actor: player,
+            subject: new TestWolf(),
+        });
+    }
+    player.titles.refreshAcquisitions(false);
+    player.titles.equip('늑대 학살자');
+    player.currentTarget = new TestWolf();
+    player.titles.refreshPassiveEffects();
+    assert.equal(player.attribute.get(AttributeType.ATK), 105);
+
+    const revoked = player.titles.revoke('늑대 학살자', 'test', false);
+
+    assert.equal(revoked.success, true);
+    assert.equal(player.titles.isOwned('늑대 학살자'), false);
+    assert.equal(player.titles.equippedName, '');
+    assert.equal(player.attribute.get(AttributeType.ATK), 100);
+    assert.equal(player.titles.refreshAcquisitions(false).length, 0);
+
+    assert.equal(player.titles.grant('늑대 학살자', 'test', false).success, true);
+    assert.equal(player.titles.isOwned('늑대 학살자'), true);
+});
+
+test('PVP 학살자는 100킬, 상위 몰살자는 500킬에 순차 획득한다', () => {
+    const player = new TestTitlePlayer();
+    player.progress.setCounter('combat:pvp_credited_kills', 100);
+    player.titles.refreshAcquisitions(false);
+
+    assert.equal(player.titles.isOwned('학살자'), true);
+    assert.equal(player.titles.isOwned('몰살자'), false);
+
+    player.progress.setCounter('combat:pvp_credited_kills', 500);
+    player.titles.refreshAcquisitions(false);
+
+    assert.equal(player.titles.isOwned('몰살자'), true);
+});
+
+test('PVP 칭호 통계는 유효 판정을 통과한 처치만 누적한다', () => {
+    const player = new TestTitlePlayer();
+    const victim = new TestTitlePlayer(PlayerProgress.createEmpty(9703));
+    emitGameEvent(GameEventIds.PVP_KILL, {
+        actor: player,
+        subject: victim,
+        data: { creditEligible: false },
+    });
+    emitGameEvent(GameEventIds.PVP_KILL, {
+        actor: player,
+        subject: victim,
+        data: { creditEligible: true },
+    });
+
+    assert.equal(player.progress.getCounterNumber('combat:pvp_kills'), 2);
+    assert.equal(player.progress.getCounterNumber('combat:pvp_credited_kills'), 1);
+});
+
+test('낚시 성공 횟수 칭호는 첫 10회부터 단계적으로 획득한다', () => {
+    const player = new TestTitlePlayer();
+    for (let i = 0; i < 10; i++) {
+        emitGameEvent(GameEventIds.FISH_CAUGHT, {
+            actor: player,
+            data: { itemDataId: 'silver_minnow', rarity: 'common', exp: 1 },
+        });
+    }
+    player.titles.refreshAcquisitions(false);
+
+    assert.equal(player.titles.isOwned('물가의 초심자'), true);
+    assert.equal(player.titles.isOwned('잔물결 낚시꾼'), false);
+});
+
+test('레거시 칭호 대부분과 신규 생활·보스 칭호를 등록한다', () => {
+    const names = new Set(getAllTitles().map(title => title.name));
+    for (const name of [
+        '늑대 학살자', '언데드 킬러', '언데드 슬레이어', '벌레 사냥꾼', '불꽃 수집가',
+        '곡괭이 살해자', '액스 파이터', '격투가', '광부의 길', '학살자', '몰살자',
+        '아크스펠', '마도사', '속사', '페이탈디드', '초감각',
+        '슬라임 연구가', '거인에게 맞서는 자', '광맥을 읽는 자', '전설을 낚은 자',
+        '물가의 초심자', '잔물결 낚시꾼', '물결을 읽는 자', '대양의 사냥꾼',
+        '만해의 낚시왕', '만어도감의 주인', '불꽃과 망치의 주인', '삼원소 조율자',
+    ]) assert.equal(names.has(name), true, name);
+    assert.equal(names.size, 28);
+});

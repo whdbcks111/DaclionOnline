@@ -1,6 +1,6 @@
 # 보호막 시스템
 
-보호막은 모든 `Entity`가 공통으로 가지는 비영속 런타임 전투 상태다. 기능 구현부는 `server/src/models/Shield.ts`와 `Entity`의 공개 API이며, 다른 기능은 내부 Map을 읽지 않고 아래 메서드만 사용한다.
+보호막은 모든 `Entity`가 공통으로 가지는 비영속 런타임 전투 상태다. 기능 구현부는 `server/src/models/combat/Shield.ts`와 `Entity`의 공개 API이며, 다른 기능은 내부 Map을 읽지 않고 아래 메서드만 사용한다.
 
 ## 타입과 중첩
 

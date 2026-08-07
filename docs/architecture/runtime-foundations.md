@@ -2,7 +2,7 @@
 
 ## Key 기반 게임 Scheduler
 
-`server/src/modules/scheduler.ts`는 게임 루프의 `dt`로 갱신되는 비영속 예약 작업을 소유한다. 스킬 지연 효과, 무기 적중 후 효과, 아이템 사용 효과처럼 취소·교체가 필요한 타이머는 Node의 `setTimeout`을 직접 만들지 않고 다음 정적 API를 사용한다.
+`server/src/modules/infrastructure/scheduler.ts`는 게임 루프의 `dt`로 갱신되는 비영속 예약 작업을 소유한다. 스킬 지연 효과, 무기 적중 후 효과, 아이템 사용 효과처럼 취소·교체가 필요한 타이머는 Node의 `setTimeout`을 직접 만들지 않고 다음 정적 API를 사용한다.
 
 ```ts
 scheduleGameTask(`skill:${ownerId}:burst`, 1.5, () => applyBurst())
@@ -21,7 +21,7 @@ cancelGameTasksByPrefix(`skill:${ownerId}:`)
 
 ## 단순 GameAction 트랜잭션
 
-`server/src/models/GameAction.ts`는 여러 메모리 도메인 변경을 검증한 뒤 적용하는 작은 동기식 빌더다.
+`server/src/models/core/GameAction.ts`는 여러 메모리 도메인 변경을 검증한 뒤 적용하는 작은 동기식 빌더다.
 
 ```ts
 const result = gameAction('아이템 구매')
@@ -35,7 +35,7 @@ const result = gameAction('아이템 구매')
 
 ## Revision 기반 완전한 HUD Snapshot
 
-`modules/stateSync.ts`는 `playerStats`와 `locationInfo` 내용을 직렬화해 이전 내용과 다를 때만 revision을 증가시킨다. 각 socket별 마지막 전달 stamp를 따로 저장하므로 기존 탭에는 중복 전송하지 않지만 새 탭은 현재 전체 snapshot을 즉시 받는다.
+`modules/infrastructure/stateSync.ts`는 `playerStats`와 `locationInfo` 내용을 직렬화해 이전 내용과 다를 때만 revision을 증가시킨다. 각 socket별 마지막 전달 stamp를 따로 저장하므로 기존 탭에는 중복 전송하지 않지만 새 탭은 현재 전체 snapshot을 즉시 받는다.
 
 - payload는 항상 전체 DTO다. 클라이언트에서 부분 delta를 병합하지 않는다.
 - 클라이언트는 같은 `syncId`의 더 낮거나 같은 revision을 버리고, 새 `syncId`는 revision이 낮아도 전체 교체한다.
@@ -50,6 +50,6 @@ const result = gameAction('아이템 구매')
 
 ## 서버 부팅·패치 적용 경계
 
-`modules/serverBoot.ts`는 HTTP listen이 성공할 때 기본 경로 `.runtime/server-boot.json`에 누적 부팅 횟수, 마지막 부팅 ID·시각, 그 시점 `shared/patchNotes.ts`의 최신 적용 버전과 다음 patch 버전을 원자적으로 기록한다. 임시 파일을 같은 디렉터리에 쓴 뒤 rename하므로 다른 작업자가 부분 JSON을 읽지 않는다. 파일은 운영 상태라 Git에 포함하지 않으며, 별도 영속 볼륨이 필요하면 `SERVER_BOOT_STATE_PATH`로 경로를 지정한다.
+`modules/infrastructure/serverBoot.ts`는 HTTP listen이 성공할 때 기본 경로 `.runtime/server-boot.json`에 누적 부팅 횟수, 마지막 부팅 ID·시각, 그 시점 `shared/patchNotes.ts`의 최신 적용 버전과 다음 patch 버전을 원자적으로 기록한다. 임시 파일을 같은 디렉터리에 쓴 뒤 rename하므로 다른 작업자가 부분 JSON을 읽지 않는다. 파일은 운영 상태라 Git에 포함하지 않으며, 별도 영속 볼륨이 필요하면 `SERVER_BOOT_STATE_PATH`로 경로를 지정한다.
 
 에이전트는 사용자에게 보이는 변경의 패치 버전을 정하기 전에 이 파일을 읽는다. `appliedPatchVersion`이 소스 최신 버전과 같으면 그 버전은 이미 재부팅으로 적용됐으므로 `nextPatchVersion`을 시작한다. 소스 최신 버전이 더 높으면 아직 재부팅 전인 같은 작업 묶음에 합칠 수 있다. 파일이 없거나 유효하지 않으면 적용 여부를 추측하지 않는다.

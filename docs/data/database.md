@@ -15,7 +15,7 @@ Prisma 스키마는 `server/prisma/schema.prisma`, 런타임 클라이언트 설
 | `PlayerQuest` / `player_quests` | `(playerId, questDataId)` 복합 PK, Player N:1 cascade | status, currentStageId, objectiveProgress/metadata/tags JSON, completionCount, 수락·보고·완료·반복 시각 |
 | `MailboxMessage` / `mailbox_messages` | id, Player N:1 cascade, `(recipientId, sourceKey)` unique | 발신 표시·제목·본문, versioned attachments JSON/수량, 읽음·수령·만료·archive 시각 |
 
-`itemDataId`는 DB 외래키가 아니라 코드의 `data/items.ts` 마스터 데이터 ID다. `locationId`도 JSON 마스터 데이터 ID다. 마스터 ID 변경 시 기존 DB 레코드 호환을 직접 처리해야 한다.
+`itemDataId`는 DB 외래키가 아니라 코드의 `data/economy/items.ts` 마스터 데이터 ID다. `locationId`도 JSON 마스터 데이터 ID다. 마스터 ID 변경 시 기존 DB 레코드 호환을 직접 처리해야 한다.
 
 Item/Equipment의 `metadata` JSON은 전체 유효값이 아니라 `{ "__daclionItemMetadata": 1, "values": { ...delta } }` 형식의 top-level delta만 저장한다. 런타임 `Item`이 `ItemData.baseMetadata`와 합쳐 읽으며, Item setter callback이 Inventory/Equipment dirty 상태를 만든다. `PlayerSkill.metadata`도 같은 공용 codec으로 `{ "__daclionSkillMetadata": 1, "values": { ...delta } }`만 저장한다. 이 구조 덕분에 delta에 없는 기본 필드는 기존 아이템과 스킬에도 최신 마스터 값이 적용된다.
 
