@@ -462,7 +462,8 @@
       { "type": "monster", "dataId": "flame_salamander", "maxCount": 3, "respawnTime": 58 },
       { "type": "monster", "dataId": "crater_heart", "maxCount": 1, "respawnTime": 90 },
       { "type": "resource", "dataId": "ember_ore_vein", "maxCount": 3, "respawnTime": 180 },
-      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "eternal_caldera_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "volcanic_slope" },
@@ -1525,7 +1526,8 @@
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "sun_shard_elemental", "maxCount": 2, "respawnTime": 92 },
-      { "type": "resource", "dataId": "glassdune_sundial", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "glassdune_sundial", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "primal_glassdune_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "glassdune_mirage_path" },
@@ -1630,7 +1632,8 @@
     "tags": ["location:safe", "location:shop", "location:frozen", "property:ice"],
     "npcIds": ["frostveil_warden"],
     "objects": [
-      { "type": "resource", "dataId": "snowmoss_patch", "maxCount": 2, "respawnTime": 0 }
+      { "type": "resource", "dataId": "snowmoss_patch", "maxCount": 2, "respawnTime": 0 },
+      { "type": "resource", "dataId": "everfrost_loom_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "frostveil_pass" },
@@ -2297,7 +2300,9 @@
     "shopId": "paradox_relay_store",
     "tags": ["location:town", "location:clockwork", "property:metal", "shop:clockwork"],
     "npcIds": ["paradox_curator"],
-    "objects": [],
+    "objects": [
+      { "type": "resource", "dataId": "clockwork_origin_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
+    ],
     "connections": [
       { "locationId": "paradox_foundry_threshold" },
       { "locationId": "paradox_rusted_conveyor" },
@@ -3204,7 +3209,9 @@
     "shopId": "voidcrown_waystation_store",
     "tags": ["location:town", "location:voidcrown", "property:light", "shop:voidcrown"],
     "npcIds": ["voidcrown_warden"],
-    "objects": [],
+    "objects": [
+      { "type": "resource", "dataId": "uncrowned_void_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
+    ],
     "connections": [
       { "locationId": "voidcrown_threshold" },
       { "locationId": "voidcrown_lower_court" }
@@ -4091,7 +4098,8 @@
     "tags": ["location:safe", "location:outpost", "location:worldroot", "property:natural", "property:light"],
     "npcIds": ["worldroot_keeper"],
     "objects": [
-      { "type": "resource", "dataId": "worldroot_reliquary", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "worldroot_reliquary", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "first_worldroot_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "worldroot_threshold" },
@@ -4510,7 +4518,9 @@
     "shopId": "nebula_waystation_store",
     "tags": ["location:safe", "location:shop", "location:nebula-corridor", "property:light"],
     "npcIds": ["nebula_navigator"],
-    "objects": [],
+    "objects": [
+      { "type": "resource", "dataId": "starbirth_orbit_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
+    ],
     "connections": [
       { "locationId": "nebula_threshold" },
       { "locationId": "nebula_lower_fork" }
@@ -4988,7 +4998,9 @@
     "shopId": "endstar_bastion_store",
     "tags": ["location:safe", "location:shop", "location:endstar", "property:light"],
     "npcIds": ["endstar_observer"],
-    "objects": [],
+    "objects": [
+      { "type": "resource", "dataId": "preterminal_constellation_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
+    ],
     "connections": [
       { "locationId": "endstar_threshold" },
       { "locationId": "endstar_lower_fork" }

@@ -78,6 +78,11 @@ export function getInstanceDungeonDefinition(id: string): NormalizedInstanceDung
     return definitions.get(id.trim().toLowerCase());
 }
 
+/** 등록된 인스턴스 원본을 registry 내부 Map 노출 없이 조회한다. */
+export function getAllInstanceDungeonDefinitions(): readonly NormalizedInstanceDungeonDefinition[] {
+    return [...definitions.values()];
+}
+
 /** 한 원정이 소유할 선형 동적 Location 원본을 만든다. */
 export function buildInstanceDungeonLocations(
     definition: NormalizedInstanceDungeonDefinition,

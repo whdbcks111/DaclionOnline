@@ -6,6 +6,7 @@ import Equipment from '../../models/economy/Equipment.js';
 import Inventory from '../../models/economy/Inventory.js';
 import type Player from '../../models/actors/Player.js';
 import { getAllLocations, getLocation, normalizeLocationInput, reloadAllLocations } from '../../models/world/Location.js';
+import { getAllInstanceDungeonDefinitions } from '../../models/world/InstanceDungeon.js';
 import { getAllMonsterData, getMonsterData } from '../../models/actors/Monster.js';
 import { getResourceData } from '../../models/actors/Resource.js';
 import {
@@ -27,7 +28,7 @@ import './npcs.js';
 import './locations.js';
 import './dungeonPuzzles.js';
 import '../combat/bossPatterns.js';
-import './instanceDungeons.js';
+import { RIFT_FAMILIES } from './instanceDungeons.js';
 import '../economy/shops.js';
 import '../professions/fishing.js';
 import './ascendantFrontier.js';
@@ -215,6 +216,29 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
     );
 });
 
+test('차원 균열은 Lv.10~980의 19개 계열과 각 4개 전투 구역을 실제 성장 거점에 연결한다', () => {
+    const definitions = getAllInstanceDungeonDefinitions()
+        .filter(definition => RIFT_FAMILIES.some(family => `${family.key}_rift` === definition.id));
+
+    assert.equal(RIFT_FAMILIES.length, 19);
+    assert.equal(definitions.length, 19);
+    assert.equal(Math.min(...definitions.map(definition => definition.recommendedLevel)), 10);
+    assert.equal(Math.max(...definitions.map(definition => definition.recommendedLevel)), 960);
+
+    for (const family of RIFT_FAMILIES) {
+        const definition = definitions.find(candidate => candidate.id === `${family.key}_rift`);
+        assert.ok(definition, family.key);
+        assert.equal(definition.rooms.length, 4, family.key);
+        assert.equal(definition.gateOpenSeconds, 10, family.key);
+        assert.equal(definition.rooms.at(-1)?.objects.length, 1, `${family.key} 보스방`);
+
+        const gatePlacements = locations.flatMap(location => location.objects
+            .filter(object => object.type === 'resource' && object.dataId === family.gateId));
+        assert.equal(gatePlacements.length, 1, `${family.gateName} 배치`);
+        assert.equal(getResourceData(family.gateId)?.interaction, 'enter_dimensional_rift', family.gateId);
+    }
+});
+
 test('승천 후반 권역은 기존 권역을 되감지 않고 지도 노드 간격을 유지한다', () => {
     const generated = buildAscendantLocations();
     const regionIdOf = (locationId: string) => ASCENDANT_REGIONS
@@ -281,16 +305,19 @@ test('성장 구간별 대체 사냥터는 기존 관문을 건너뛰지 않는 
     }
 });
 
-test('모든 몬스터는 데이터 ID별 64px RGBA 전용 아이콘을 제공한다', () => {
+test('기존 월드 몬스터는 전용 아이콘을, 콘텐츠 확장 중인 균열 원형은 명시적 fallback 아이콘을 제공한다', () => {
     const monsters = getAllMonsterData();
     const icons = new Set<string>();
 
-    assert.equal(monsters.length, 198);
+    assert.equal(monsters.length, 274);
+    assert.equal(monsters.filter(monster => monster.tags.includes('monster:dimensional-rift-origin')).length, 76);
     for (const monster of monsters) {
         const icon = monster.icon ?? `monsters/${monster.id}`;
-        assert.equal(icon, `monsters/${monster.id}`);
-        assert.equal(icons.has(icon), false, icon);
-        icons.add(icon);
+        if (!monster.tags.includes('monster:dimensional-rift-origin')) {
+            assert.equal(icon, `monsters/${monster.id}`);
+            assert.equal(icons.has(icon), false, icon);
+            icons.add(icon);
+        }
 
         const png = readFileSync(new URL(`../../../../client/public/icons/${icon}.png`, import.meta.url));
         assert.equal(png.readUInt32BE(16), 64, icon);
@@ -460,6 +487,12 @@ test('모든 월드 몬스터의 생명력과 일반 몬스터 공격력은 공�
             profile: monster.statProfile!,
             rank: monster.statRank!,
             weights: monster.statWeights,
+            overrides: {
+                armorPen: monster.baseAttribute.armorPen,
+                magicPen: monster.baseAttribute.magicPen,
+                critRate: monster.baseAttribute.critRate,
+                critDmg: monster.baseAttribute.critDmg,
+            },
         });
         assert.equal(monster.baseAttribute.maxLife, expected.maxLife, monster.id);
         if (monster.statRank === MonsterRank.NORMAL || monster.statRank === MonsterRank.ELITE) {
@@ -480,7 +513,12 @@ test('모든 월드 몬스터의 생명력과 일반 몬스터 공격력은 공�
         rank: legacy!.statRank!,
         weights: legacy!.statWeights,
     }).atk);
-    assert.equal(legacy?.baseAttribute.def, 7);
+    assert.equal(legacy?.baseAttribute.def, calculateMonsterBaseAttributes({
+        level: legacy!.level,
+        profile: legacy!.statProfile!,
+        rank: legacy!.statRank!,
+        weights: legacy!.statWeights,
+    }).def);
     assert.equal(legacy?.baseAttribute.speed, 1.55);
 });
 
@@ -506,7 +544,13 @@ test('성장 구간 보스는 Lv.500까지 30레벨, 이후 50레벨 간격이�
         const placements = locations.flatMap(location => location.objects
             .filter(object => object.type === 'monster' && object.dataId === boss.id)
             .map(object => ({ location, object })));
-        assert.ok(placements.some(placement => placement.object.maxCount === 1), `${boss.name} 전용 보스 장소`);
+        const instancePlacements = getAllInstanceDungeonDefinitions().flatMap(definition => definition.rooms
+            .flatMap(room => room.objects.filter(object => object.type === 'monster' && object.dataId === boss.id)));
+        assert.ok(
+            placements.some(placement => placement.object.maxCount === 1)
+                || instancePlacements.some(object => object.maxCount === 1),
+            `${boss.name} 전용 보스 장소`,
+        );
     }
     assert.ok(bosses.filter(boss => boss.skillPattern?.randomOrder).length >= 3);
 });

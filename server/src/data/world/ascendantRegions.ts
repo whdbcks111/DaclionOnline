@@ -236,7 +236,9 @@ export function buildAscendantLocations(): LocationData[] {
                 id: `${id}_waystation`, name: `${region.name} 쉼터`,
                 x: x + 120, y: y - 160, z, mapColor: region.mapColor, mapIcon: 'town-plaza',
                 zoneType: 'safe', shopId: `${id}_waystation_store`, tags: [GameTags.LOCATION_SAFE, GameTags.LOCATION_SHOP, regionTag],
-                npcIds: [], objects: [], connections: [connect(`${id}_threshold`), connect(`${id}_outer_fork`)],
+                npcIds: [],
+                objects: [{ type: 'resource', dataId: `${id}_dimensional_rift`, maxCount: 1, respawnTime: 0 }],
+                connections: [connect(`${id}_threshold`), connect(`${id}_outer_fork`)],
             },
             {
                 id: `${id}_outer_fork`, name: `${region.name} 바깥 갈림길`,

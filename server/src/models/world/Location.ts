@@ -188,6 +188,21 @@ export default class Location implements TagReadable {
         return engaged;
     }
 
+    /** 인스턴스 몬스터 무리가 참가자 전원을 한 사람에게 몰지 않고 순환 배정한다. */
+    engageHostileMonsterGroup(intruders: readonly Entity[]): number {
+        if (!this.isInstanceDungeon) return 0;
+        const present = intruders.filter(intruder => !intruder.isDefeated && intruder.locationId === this.id);
+        if (present.length === 0) return 0;
+        const monsters = this._objects.filter((object): object is Monster => (
+            object instanceof Monster && !object.isDefeated
+        ));
+        let engaged = 0;
+        for (const [index, monster] of monsters.entries()) {
+            if (monster.engageIntruder(present[index % present.length]!)) engaged++;
+        }
+        return engaged;
+    }
+
     getFirstMonsterObjectNumber(includeDefeated = false): number | undefined {
         const index = this._objects.findIndex(object => object instanceof Monster
             && (includeDefeated || !object.isDefeated));
@@ -373,10 +388,12 @@ export default class Location implements TagReadable {
 
     update(dt: number, onlinePlayers: readonly Player[] = []): void {
         if (this.isBossRoom || this.isInstanceDungeon) {
-            for (const player of onlinePlayers) {
-                if (player.locationId !== this.id || player.isDefeated) continue;
-                if (this.isInstanceDungeon) this.engageHostileMonsters(player);
-                else this.engageBosses(player);
+            const presentPlayers = onlinePlayers.filter(player => (
+                player.locationId === this.id && !player.isDefeated
+            ));
+            if (this.isInstanceDungeon) this.engageHostileMonsterGroup(presentPlayers);
+            else {
+                for (const player of presentPlayers) this.engageBosses(player);
             }
         }
 
