@@ -125,6 +125,8 @@ export interface ItemData {
     category: string;
     weight: number;
     stackable: boolean;
+    /** 캐릭터에 귀속되어 버리기·소각·플레이어 거래로 소유권을 옮길 수 없는 아이템. */
+    bound?: boolean;
     /** 일반 stackable 아이템은 MAX_STACKABLE_ITEM_COUNT를 사용하고, 특별한 게임 규칙이 있을 때만 더 작게 제한한다. */
     maxStack: number;
     baseMetadata: ItemMetadata | null;
@@ -368,6 +370,8 @@ export class Item implements TagReadable {
 
     /** 인벤토리·장비 이동 시 사용하는 스택 가능 여부. */
     get stackable(): boolean { return this.data?.stackable ?? false; }
+
+    get isBound(): boolean { return this.data?.bound === true; }
 
     /** metadata → 마스터 데이터 → ID 기반 기본 경로 순서로 결정한 이미지 key */
     get image(): string {

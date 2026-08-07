@@ -20,6 +20,7 @@
 | Information visibility | `set/is/clearInformationPublicMode`, `runInformationCommand`, `shouldPublishInformationOutput` | 사용자별 런타임 정보 공개 설정과 async 출력 문맥 |
 | Party | `partyManager.invite/accept/decline/leave/disband/kick/removeDisconnectedPlayer/getParty/areInSameParty/getHudData/distributeMonsterExp`, `calculatePartyExpPool`, `allocateContributionWeightedExp`, `calculatePartyExpGrant`, `calculateLowLevelMonsterExpMultiplier` | 내부 Map을 숨긴 초대·구성·PVP 아군 판정·HUD, claim·양수 기여·온라인·동일 장소·생존 검증과 현장 적격자가 없을 때 실제 서버 막타 owner 1인 fallback, 추가 유효 인원당 20% 증가하는 풀의 20% 균등·80% 기여 Hamilton 배분, 파티 레벨 차이·개인 기준 저레벨 일반 몬스터·개인 배율·즉시 사망 패널티 보호 적용 |
 | Trade | `tradeManager.invite/accept/decline/addItem/removeItem/setGold/confirm/unconfirm/cancel/cancelForPlayer/update/getSessionSnapshot/subscribe` | 같은 장소 플레이어 거래의 요청·런타임 에스크로·양쪽 확인·자동 취소와 불변 표시 snapshot/event |
+| Ascension | `getAscensionDeniedReason`, `ascendPlayer`, `grantOriginboundaryDefeatProgress` | 아르케 기여 자격 기록, 다클레비스 정보·Lv.1000·미초월 상태 재검증, 환생 초기화와 영구 보상 지급·즉시 저장 요청 |
 | Channel | `getUserChannel`, `setUserChannel`, `getChannelRoomKey`, `getChannelHistory`, `getFilteredHistoryForUser`, `getPublicReplyReference`, `clearPrivateChannelHistory`, `clearPublicChannelHistory` | room·히스토리 상태, 공개 원문의 안전한 답장 요약, 개인 채널 또는 관리자 공개 채널의 최근 기록 목적형 삭제 |
 | Chat delivery | `deliverChatMessage`, `tryStartAdvertisementCooldown`, `ChatType.values/fromKey/fromInput` | 채널·장소·파티·전체 광고·관리자 공지 audience, 권한과 30초 광고 제한 검증 |
 | Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageToAudience`, `sendMessageFiltered`, `sendMessageToUser`, `sendPlayerTextToCurrentChannel`, `sendPrivatePlayerTextToCurrentChannel`, `sendPrivatePlayerContentToCurrentChannel`, `sendPlayerTextToPartyMembers`, `sendPlayerContentToPartyMembers`, `sendWhisperMessage` | 구조화 메시지의 공개·지정 audience 전송, `[파티]` 필터 피드와 회색 양방향 비공개 귓속말 |
@@ -48,6 +49,8 @@
 `sendSystemMailToRecipients(ids, input)`은 ID를 정렬·중복 제거하고 같은 transaction에서 존재를 확인하며, `sendSystemMailToAllPlayers(input)`은 오프라인을 포함한 `Player` 행 전체를 transaction 안에서 조회한다. 후자는 가입 `User` 전체가 아니라 캐릭터가 생성된 행만 대상으로 한다. 두 API는 payload를 호출당 한 번 정규화하고 수신자 100명씩 `createMany`를 하나의 interactive transaction에서 순차 실행하므로 한 청크라도 실패하면 전부 rollback한다. 0명은 생성 없이 `{ recipientCount: 0 }`을 반환한다. 대량 입력은 `recipientId/sourceKey`를 받지 않아 같은 관리자 발송을 반복하면 새 우편이 만들어지며 결과 count는 관리자 비공개 피드백에만 사용한다.
 
 ## 게임 모델 (`server/src/models`)
+
+초월 초기화 공개 경계는 `Player.resetForAscension`, `CareerProfile.resetForAscension`, `SkillBook.resetForAscension`, `QuestBook.resetForAscension`이다. 호출 순서는 `modules/world/ascension.ts::ascendPlayer`만 조립하며, 장착품 복귀·레벨/스탯 초기화·직업/스킬/퀘스트 삭제와 보상 지급을 외부 NPC 스크립트가 raw 상태로 나누어 수행하지 않는다. `models/progression/Ascension.ts`의 `isAscended/getAscensionExperienceMultiplier/getAscensionLevelCap`은 경험치와 성장 상한의 단일 정책 API다.
 
 | 모델/레지스트리 | 주요 API | 용도 |
 | --- | --- | --- |

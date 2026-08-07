@@ -17,6 +17,8 @@
 
 `forging.ts`는 선택 성능 상한을 단조 세션 결과까지 보존하고, `fishing.ts`는 입질이 시작될 때 장소별 테이블에서 확정한 물고기를 미니게임 완료까지 유지해 다른 풀의 물고기로 바뀌지 않게 한다. 포획 성공 뒤에는 현재 장소와 행운으로 희귀 보물을 별도 추첨해 인벤토리 또는 바닥에 안전하게 지급한다.
 
+`world/ascension.ts`는 아르케 처치 기여 자격과 실제 초월 환생의 유일한 조립점이다. 잔재 NPC의 최종 선택에서 자격을 재검증하고 Player·Career·SkillBook·QuestBook 공개 초기화 API를 호출한 뒤 초월 단계·패시브·귀속 아티팩트를 지급하고 즉시 aggregate 저장을 요청한다.
+
 `partyManager.areInSameParty()`는 내부 멤버 Map을 노출하지 않고 PVP 아군 공격을 차단하며, `getEventAudienceUserIds()`는 스킬·공격·회피 파티 피드 수신자 snapshot을 제공한다. `distributeMonsterExp()`는 기여도 분배 뒤 파티 레벨 차이와 참여자별 저레벨 일반 몬스터 감쇠를 적용하고 보스는 제외한다. `sendLocationInfo()`는 위험도 표시명과 PVP 허용 여부, 장소 태그·등록 상점·카르마 접근 조건으로 판정한 `낚시 가능`·`상점 이용 가능` 기능을 가공된 HUD snapshot으로 제공한다.
 
 `sendLocationInfo()`의 오브젝트 행은 `entity:boss` 왕관 표시 여부와 5분을 초과해 리젠되는 보스의 기본 주기·현재 남은 시간을 선택적으로 포함하고, 현재 플레이어 기준 가능한 공격·대상·상호작용 행동만 전송한다. NPC 행은 `Location`과 `QuestBook` 공개 API로 가공한 이름·설명·퀘스트 표식을 전송한다.

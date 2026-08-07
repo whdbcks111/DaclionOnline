@@ -1044,3 +1044,12 @@ test('스킬북은 신규 스킬 획득 때만 아이템 한 개를 소비한다
         unregisterOnlinePlayer(player.userId);
     }
 });
+
+test('초월 초기화는 보유 스킬의 레벨과 숙련도를 포함해 전부 삭제 대상으로 전환한다', () => {
+    const player = new TestSkillPlayer(9412);
+    player.skills.grant('seismic_crush', 'test');
+    player.skills.grant('transcendent_soul', 'test');
+    assert.equal(player.skills.resetForAscension(), 2);
+    assert.equal(player.skills.getAll().length, 0);
+    assert.equal(player.skills.dirty, true);
+});

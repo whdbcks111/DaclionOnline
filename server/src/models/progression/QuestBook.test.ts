@@ -265,3 +265,13 @@ test('진행 중 퀘스트는 포기 후 다시 수락하면 단계 진행도가
         cleanup();
     }
 });
+
+test('초월 초기화는 완료 여부를 포함한 모든 퀘스트를 비워 다시 수락할 수 있게 한다', () => {
+    const actual = new TestQuestPlayer(88004);
+    const player = actual as unknown as Player;
+    assert.equal(player.quests.accept(HUNT_QUEST_ID, 'test_guide').success, true);
+    assert.equal(player.quests.resetForAscension(), 1);
+    assert.equal(player.quests.get(HUNT_QUEST_ID), undefined);
+    assert.equal(player.quests.canAccept(HUNT_QUEST_ID, 'test_guide'), true);
+    assert.equal(player.quests.dirty, true);
+});

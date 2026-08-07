@@ -35,6 +35,8 @@ import {
     DACLEVIS_REVELATION_FLAG,
     ORIGINBOUNDARY_SOVEREIGN_DEFEATED_FLAG,
 } from '../progression/ascension.js';
+import { isAscended } from '../../models/progression/Ascension.js';
+import { ascendPlayer, getAscensionDeniedReason } from '../../modules/world/ascension.js';
 
 export const MONSTER_HUNT_QUESTION_FLAG = 'npc:monster-hunt-question';
 
@@ -1268,9 +1270,9 @@ NPC.define({
     description: '아르케가 무너진 자리에 남은 빛과 어둠의 형상. 세계 바깥을 응시하고 있습니다.',
     tags: ['npc:ascension', 'npc:remnant', GameTags.NPC_BENEVOLENT],
     isVisible: ({ player }) => player.progress.getFlag(ORIGINBOUNDARY_SOVEREIGN_DEFEATED_FLAG),
-    entryScenario: ({ player }) => player.progress.getFlag(DACLEVIS_REVELATION_FLAG)
-        ? 'returning'
-        : 'awakening',
+    entryScenario: ({ player }) => isAscended(player.progress)
+        ? 'ascended'
+        : player.progress.getFlag(DACLEVIS_REVELATION_FLAG) ? 'returning' : 'awakening',
     scenarios: [
         new DialogueScenario('awakening', function* () {
             yield Dialogue.say('마침내 아르케의 경계가 갈라졌다. 나를 쓰러진 적의 망령이라 여기지 마라. 나는 그가 마지막까지 지키려 했던 경고다.');
@@ -1306,11 +1308,50 @@ NPC.define({
             yield Dialogue.end();
         }),
         new DialogueScenario('returning', function* () {
-            yield Dialogue.say('다클레비스의 차원으로 향할 결심이 섰느냐? 아직은 경고와 초월의 원리만 다시 들려줄 수 있다.');
+            yield Dialogue.say('다클레비스의 차원으로 향할 결심이 섰느냐? 네가 원한다면 지금 한 생의 힘을 영혼에 새길 수 있다.');
             yield Dialogue.choice([
+                { label: '초월 환생의 대가와 보상을 확인하겠습니다.', target: 'ascension_offer' },
                 { label: '균열과 지옥문의 정체를 다시 듣겠습니다.', target: 'fractures' },
                 { label: '초월이 필요한 이유를 다시 듣겠습니다.', target: 'transcendence' },
                 { label: '아직 준비 중입니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('ascension_offer', function* ({ player }) {
+            const deniedReason = getAscensionDeniedReason(player);
+            if (deniedReason) {
+                yield Dialogue.say(deniedReason);
+                yield Dialogue.goto('returning');
+                return;
+            }
+            yield Dialogue.say('초월하면 레벨·경험치·분배 능력치·직업·모든 스킬과 퀘스트 기록이 초기화되고, 장착품은 인벤토리로 돌아간다. 인벤토리·골드·도감·칭호와 그 밖의 수집 기록은 보존된다.');
+            yield Dialogue.say('대신 Lv.1로 환생하며 보너스 스탯 포인트 25, 영구 패시브 [초월자의 혼], 귀속 아티팩트 [초월자의 나침반]을 받는다. 나침반은 Lv.1000 미만 경험치를 10배로 만든다.');
+            yield Dialogue.choice([
+                { label: '초기화 내용을 이해했습니다. 최종 확인으로 갑니다.', target: 'ascension_confirm' },
+                { label: '아직 초월하지 않겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('ascension_confirm', function* () {
+            yield Dialogue.say('마지막으로 묻겠다. 이 선택은 되돌릴 수 없다. 지금의 삶을 영혼에 새기고 Lv.1로 환생하겠느냐?');
+            yield Dialogue.choice([
+                { label: '되돌릴 수 없음을 이해했습니다. 초월합니다.', target: 'ascension_execute' },
+                { label: '취소합니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('ascension_execute', function* ({ player }) {
+            const deniedReason = getAscensionDeniedReason(player);
+            if (deniedReason) {
+                yield Dialogue.say(deniedReason);
+                yield Dialogue.end();
+                return;
+            }
+            yield Dialogue.say('한 생의 경계를 접는다. 다음 눈을 뜰 때 너는 처음의 땅에 서 있겠지만, 영혼은 이미 세계 바깥을 기억할 것이다.');
+            yield Dialogue.event(({ player: ascender }) => { ascendPlayer(ascender); });
+        }),
+        new DialogueScenario('ascended', function* () {
+            yield Dialogue.say('네 영혼에는 이미 바깥 차원의 방향이 새겨졌다. 다시 Lv.1000의 경계에 도달하면 아르케와 싸울 필요 없이 다음 원정로를 열 수 있다.');
+            yield Dialogue.choice([
+                { label: '균열과 다클레비스의 정체를 다시 듣겠습니다.', target: 'fractures' },
+                { label: '새 삶을 시작하겠습니다.', target: 'end' },
             ]);
         }),
         new DialogueScenario('end', function* () {

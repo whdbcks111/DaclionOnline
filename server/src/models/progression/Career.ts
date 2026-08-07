@@ -149,6 +149,15 @@ export default class CareerProfile {
         return { success: true };
     }
 
+    /** 초월 환생 전용 경계. 기술 삭제는 SkillBook이 일괄 소유하므로 직업 상태와 modifier만 비운다. */
+    resetForAscension(): void {
+        this.player.progress.setState(CareerProgressIds.MAIN, '');
+        this.player.progress.setState(CareerProgressIds.SUB, '');
+        this.player.progress.setState(CareerProgressIds.ELITE, '');
+        this.player.progress.setState(CareerProgressIds.THIRD, '');
+        this.refreshModifiers();
+    }
+
     evaluateElitePromotion(options: { persist?: boolean } = {}): boolean {
         if (this.player.level < 200 || !this.mainJobId || !this.subJobId || this.eliteJob) return false;
         if (this.mainJobId === this.subJobId) return false;

@@ -56,6 +56,31 @@ defineSkillTagDisplay(GameTags.SKILL_GROUP_FIRE, '화염 계열', 'affinities/fi
 defineSkillTagDisplay(GameTags.SKILL_GROUP_ICE, '빙결 계열', 'affinities/ice');
 defineSkillTagDisplay(GameTags.SKILL_GROUP_ELECTRIC, '전격 계열', 'affinities/electric');
 
+const TRANSCENDENT_SOUL_SOURCE = 'skill:transcendent_soul:passive';
+defineSkill({
+    id: 'transcendent_soul',
+    name: '초월자의 혼',
+    icon: 'skills/transcendent_soul',
+    maxLevel: 1,
+    descriptionTemplate: '한 생의 힘을 영혼에 새겨 {{icon.maxLife}} 최대 생명력과 {{icon.maxMentality}} 최대 정신력이 10%, {{icon.atk}} 공격력과 {{icon.magicForce}} 마법력이 5% 증가합니다.',
+    costTemplate: '소모값 없음',
+    activationConditionTemplate: '초월한 캐릭터에게 영구 적용됩니다.',
+    baseMetadata: null,
+    calculateExperienceGain: () => 0,
+    canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
+    onPassiveUpdate: ({ owner }) => {
+        if (owner.attribute.hasSource(TRANSCENDENT_SOUL_SOURCE)) return;
+        owner.attribute.addModifiers([
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.1, source: TRANSCENDENT_SOUL_SOURCE },
+            { attribute: AttributeType.MAX_MENTALITY.key, op: 'multiply', value: 1.1, source: TRANSCENDENT_SOUL_SOURCE },
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.05, source: TRANSCENDENT_SOUL_SOURCE },
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.05, source: TRANSCENDENT_SOUL_SOURCE },
+        ]);
+    },
+    onPassiveInactive: ({ owner }) => owner.attribute.removeBySource(TRANSCENDENT_SOUL_SOURCE),
+    tags: [GameTags.SKILL_PASSIVE, 'skill:ascension'],
+});
+
 const CAREER_SHARED_COOLDOWN_SECONDS = 0.75;
 const MAGIC_SHARED_COOLDOWN_SECONDS = 0.5;
 /** 이동속도는 공격력보다 단위가 작으므로 피해 계수에서만 이 비율로 전투력 단위를 맞춘다. */

@@ -248,6 +248,7 @@ export default class QuestBook {
     readonly playerId: number;
     private readonly quests = new Map<string, Quest>();
     private readonly dirtyVersions = new Map<string, number>();
+    private readonly deletedQuestIds = new Set<string>();
     private version = 0;
     private owner: Player | null = null;
     private refreshing = false;
@@ -292,7 +293,7 @@ export default class QuestBook {
         return book;
     }
 
-    get dirty(): boolean { return this.dirtyVersions.size > 0; }
+    get dirty(): boolean { return this.dirtyVersions.size > 0 || this.deletedQuestIds.size > 0; }
 
     bindOwner(player: Player): void {
         if (player.userId !== this.playerId) throw new Error('QuestBook owner mismatch');
@@ -444,6 +445,15 @@ export default class QuestBook {
         return { success: true };
     }
 
+    /** 초월 뒤 세계의 의뢰와 전직 시험을 처음부터 다시 밟을 수 있도록 모든 퀘스트 기록을 비운다. */
+    resetForAscension(): number {
+        const ids = [...this.quests.keys()];
+        for (const id of ids) this.deletedQuestIds.add(id);
+        this.quests.clear();
+        this.dirtyVersions.clear();
+        return ids.length;
+    }
+
     getSnapshots(includeCompleted = true): QuestDisplaySnapshot[] {
         this.refreshSnapshotObjectives();
         return [...this.quests.values()]
@@ -506,21 +516,31 @@ export default class QuestBook {
 
     async save(): Promise<void> {
         if (!this.dirty) return;
+        const deletedIds = [...this.deletedQuestIds];
         const snapshots = [...this.dirtyVersions].flatMap(([id, version]) => {
             const quest = this.quests.get(id);
             return quest ? [{ id, version, quest }] : [];
         });
-        await Promise.all(snapshots.map(({ quest }) => prisma.playerQuest.upsert({
+        await Promise.all([
+            ...deletedIds.map(questDataId => prisma.playerQuest.deleteMany({
+                where: { playerId: this.playerId, questDataId },
+            })),
+            ...snapshots.map(({ quest }) => prisma.playerQuest.upsert({
             where: { playerId_questDataId: { playerId: this.playerId, questDataId: quest.questDataId } },
             create: serializeQuest(this.playerId, quest),
             update: serializeQuestUpdate(quest),
-        })));
+            })),
+        ]);
+        for (const id of deletedIds) {
+            if (!this.quests.has(id)) this.deletedQuestIds.delete(id);
+        }
         for (const snapshot of snapshots) {
             if (this.dirtyVersions.get(snapshot.id) === snapshot.version) this.dirtyVersions.delete(snapshot.id);
         }
     }
 
     private attach(quest: Quest): void {
+        this.deletedQuestIds.delete(quest.questDataId);
         this.quests.set(quest.questDataId, quest);
         quest.setPersistentChangeHandler(() => this.markDirty(quest.questDataId));
     }

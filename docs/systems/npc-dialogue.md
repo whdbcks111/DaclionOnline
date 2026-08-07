@@ -22,6 +22,8 @@ NPC 정의는 `models/actors/NPC.ts`의 정적 레지스트리가 소유한다. 
 
 `NPCData.isVisible(context)`는 플레이어별 영속 진행에 따른 조건부 존재를 제공한다. `Location.getNpcs/getNpc/getNpcNumber/hasNpc`는 Player를 받으면 이 조건을 적용하고, `/위치`·HUD·자동완성·실제 대화 시작이 모두 같은 필터를 사용한다. 아르케의 은신처에 배치된 `기원종언의 잔재`는 아르케 처치 기여 flag가 있는 플레이어에게만 나타나며, 다클레비스·균열 원형·지옥문·초월의 필요성을 순서대로 공개한다.
 
+진실을 확인한 Lv.1000 이상 플레이어는 잔재에게서 초기화 대상과 영구 보상을 먼저 확인하고, 되돌릴 수 없다는 별도 최종 선택을 한 뒤에만 초월한다. 실행 직전에 자격을 다시 검사하며, 성공하면 대화 장소에서 시작 마을로 이동하므로 기존 대화 세션도 위치 변경 수명주기에 따라 종료된다.
+
 활성 대화는 `models/actors/NpcDialogue.ts`의 player별 메모리 세션이다. 재접속이나 서버 재시작 시 이어지지 않는다. 대화에서 설정한 flag/state는 `PlayerProgress` 공개 API를 통해 기존 `player_progress` 테이블에 dirty 저장되므로 별도 NPC DB 테이블은 없다.
 
 ## 대화 정의

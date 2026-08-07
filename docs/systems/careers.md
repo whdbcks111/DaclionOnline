@@ -4,6 +4,8 @@
 
 `JobData`는 코드 마스터 정의이며 `defineJob/getJob/getAllJobs` 정적 레지스트리로 찾는다. `JobTier`는 1차/엘리트/3차, `JobSlotType`은 메인/서브와 요구 레벨을 소유하는 클래스형 enum이다. Player의 `CareerProfile`은 내부 Progress key를 숨기고 직업 선택·계보 호환·능력치 modifier·스킬 지급·엘리트/3차 전직을 담당한다.
 
+초월 환생은 `CareerProfile.resetForAscension()`을 통해 메인·서브·엘리트·3차 직업 상태와 modifier를 모두 비운다. 같은 환생에서 QuestBook의 전직 시험 기록과 SkillBook도 함께 초기화하므로, 새 회차에서는 Lv.20부터 직업 시험과 기술 성장을 다시 진행할 수 있다.
+
 - 메인 직업: Lv.20부터 전직소 퀘스트 완료로 선택한다.
 - 서브 직업: Lv.50부터 전직소 퀘스트 완료로 선택한다.
 - 메인과 같은 직업은 서브로 선택할 수 없다. `CareerProfile.canAssign/assign`과 퀘스트 조건 양쪽에서 거부한다.

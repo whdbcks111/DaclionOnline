@@ -13,6 +13,8 @@
 
 구현과 테스트는 같은 도메인 폴더에 두고, 최상위에는 이 Overview만 둔다.
 
+초월 환생은 `progression/Ascension.ts`의 단계·경험치·레벨 상한 정책, `Player.resetForAscension()`의 장비/레벨/스탯 조립, Career·SkillBook·QuestBook의 소유 상태 초기화 API로 나뉜다. 미초월자는 Lv.1000부터 경험치 20%와 Lv.1500 상한을 적용받고, 초월자는 Lv.1000 미만에서 10배를 적용받는다. `ItemData.bound/Item.isBound`는 귀속 아이템을 버리기·소각·거래 반출 전에 판정하도록 노출한다.
+
 `JobTier.THIRD`와 메인별 `defineThirdJobLineage/resolveThirdJob`, `CareerProfile.thirdJob/canPromoteThird/promoteThird`가 Lv.500 퀘스트 전용 3차 계승을 소유한다. 원래 메인·서브·정확한 엘리트 ID를 보존하고 손상된 조합은 무시하며 `effectiveMainJob`만 3차를 우선한다. `QuestObjective.arrive`는 현재 장소 snapshot과 달리 수락 후 도착 이벤트만 인정한다. `BalanceScenario`는 Lv.500부터 3차 완수를 가정하되 엘리트와 3차를 별도 필드로 유지해 기존 modifier·스킬을 누락하지 않는다. `ThreatContributionSnapshot.threat`는 도발 저항과 행동 가중치를 적용한 현재 AI 위협 점수를 복사한다.
 
 `Entity.recordCombatEngagement()`는 준비 단계를 통과한 공격·회피와 source가 있는 실제 피해의 양쪽 최종 owner를 연결하되 자원·일반 오브젝트를 제외한다. Player는 일반/보스 교전을 각각 9초 비영속 타이머로 유지해 `musicCombatState`를 `exploration | combat | boss` 클래스형 상태로 제공하고, 일반 교전이 보스 상태를 무기한 연장하지 않게 한다. 장소 이동·사망·부활은 두 타이머를 초기화한다.

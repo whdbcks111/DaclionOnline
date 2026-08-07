@@ -481,6 +481,10 @@ export function initPlayerCommands(): void {
                 sendBotMessageToUser(userId, '인벤토리에 해당 아이템이 없습니다.');
                 return;
             }
+            if (item.isBound) {
+                sendBotMessageToUser(userId, `${item.name}은(는) 캐릭터에 귀속되어 버릴 수 없습니다.`);
+                return;
+            }
 
             const countInput = args[1] ?? '1';
             const count = resolveDropCount(countInput, item.count);
@@ -541,6 +545,10 @@ export function initPlayerCommands(): void {
             const item = player.inventory.getItemByIndex(idx);
             if (!item) {
                 sendBotMessageToUser(userId, '인벤토리에 해당 아이템이 없습니다.');
+                return;
+            }
+            if (item.isBound) {
+                sendBotMessageToUser(userId, `${item.name}은(는) 캐릭터에 귀속되어 소각할 수 없습니다.`);
                 return;
             }
 

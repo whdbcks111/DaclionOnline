@@ -58,6 +58,10 @@ import { RegionRiskPolicy } from '../world/RegionRisk.js';
 import CodexBook from '../progression/Codex.js';
 import { initializePlayerCodex } from '../../modules/world/codex.js';
 import { MusicCombatState } from '../../../../shared/adaptiveMusic.js';
+import {
+    getAscensionExperienceMultiplier,
+    getAscensionLevelCap,
+} from '../progression/Ascension.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
 export const LEVEL_SURVIVAL_CAPACITY_PER_LEVEL = 1;
@@ -317,6 +321,14 @@ export interface ExperienceGainOptions {
      * 이번 획득분까지 소급해 차감하지 않도록 한다.
      */
     readonly protectFromPendingDeathPenalty?: boolean;
+}
+
+export interface PlayerAscensionResetResult {
+    readonly previousLevel: number;
+    readonly revokedSkills: number;
+    readonly resetQuests: number;
+    readonly unequippedItems: number;
+    readonly bonusStatPoints: number;
 }
 
 /** 현재 레벨 경험치 중 아직 처리되지 않은 사망 패널티가 차감할 수 있는 양만 반환한다. */
@@ -1007,13 +1019,23 @@ export default class Player extends Entity {
     gainExp(amount: number, options: ExperienceGainOptions = {}): number[] {
         const experienceBefore = Math.max(0, Math.floor(this._exp));
         const protectedBefore = Math.min(experienceBefore, this._pendingDeathPenaltyProtectedExp);
-        const appliedGain = Math.floor(amount * this.getExperienceGainModifier());
-        this._exp += appliedGain;
-        this.markDirty();
-
+        let remainingBaseExperience = Math.max(0, amount * this.getExperienceGainModifier());
+        let appliedGain = 0;
         const levelsGained: number[] = [];
-        while (this._exp >= this.maxExp) {
-            this._exp -= this.maxExp;
+        const levelCap = getAscensionLevelCap(this.progress);
+        while (remainingBaseExperience > 0 && this._level < levelCap) {
+            const multiplier = getAscensionExperienceMultiplier(this.progress, this._level);
+            const required = Math.max(1, this.maxExp - this._exp);
+            const available = Math.floor(remainingBaseExperience * multiplier);
+            if (available < required) {
+                this._exp += available;
+                appliedGain += available;
+                break;
+            }
+
+            remainingBaseExperience = Math.max(0, remainingBaseExperience - required / multiplier);
+            appliedGain += required;
+            this._exp = 0;
             this._level++;
             levelsGained.push(this._level);
 
@@ -1024,6 +1046,8 @@ export default class Player extends Entity {
             this._statPoint += 3;
             this.stat.applyModifiers(this);
         }
+        if (this._level >= levelCap) this._exp = 0;
+        this.markDirty();
         const experienceSpentOnLevelUps = Math.max(0, experienceBefore + appliedGain - this._exp);
         const protectedPool = protectedBefore
             + (options.protectFromPendingDeathPenalty ? Math.max(0, appliedGain) : 0);
@@ -1039,6 +1063,55 @@ export default class Player extends Entity {
         if (levelsGained.length > 0) this.quests.refreshSnapshotObjectives();
         if (levelsGained.length > 0) this.career.evaluateElitePromotion();
         return levelsGained;
+    }
+
+    /**
+     * 초월 서비스가 자격과 보상 지급을 확정한 뒤 호출하는 초기화 경계.
+     * 경제·수집 기록은 보존하고 장착품은 무게를 무시해 원래 소유자의 인벤토리로 안전하게 돌린다.
+     */
+    resetForAscension(bonusStatPoints: number): PlayerAscensionResetResult {
+        if (!Number.isSafeInteger(bonusStatPoints) || bonusStatPoints < 0) {
+            throw new Error('초월 보너스 스탯 포인트는 0 이상의 정수여야 합니다.');
+        }
+        const previousLevel = this.level;
+        cancelNavigation(this, false);
+        this.currentTarget = null;
+        this.skills.finishAll();
+
+        const equipped = this.equipment.getAllEquipped();
+        for (const { slot, slotIndex } of equipped) {
+            const item = this.equipment.unequip(slot, slotIndex, this.attribute);
+            if (item && !this.inventory.restoreItemSnapshot(item.snapshot(item.count))) {
+                throw new Error(`초월 장착 해제 아이템을 복원하지 못했습니다: ${item.itemDataId}`);
+            }
+        }
+
+        this.career.resetForAscension();
+        const revokedSkills = this.skills.resetForAscension();
+        const resetQuests = this.quests.resetForAscension();
+        for (const stat of StatType.values()) this.stat.set(stat, 0);
+        this._statPoint = bonusStatPoints;
+        this.level = 1;
+        this.exp = 0;
+        this._pendingDeathPenaltyProtectedExp = 0;
+        this.stat.applyModifiers(this);
+        this.inventory.maxWeight = this.attribute.get(AttributeType.MAX_WEIGHT);
+        this.clearStatusEffects(StatusEffectRemovalReason.TARGET_DEFEATED);
+        this.clearMusicCombatState();
+        const respawn = getRespawnLocation();
+        if (respawn) this.locationId = respawn.id;
+        this.life = this.maxLife;
+        this.mentality = this.maxMentality;
+        this.hungry = this.maxHungry;
+        this.thirsty = this.maxThirsty;
+        this.markDirty();
+        return {
+            previousLevel,
+            revokedSkills,
+            resetQuests,
+            unequippedItems: equipped.length,
+            bonusStatPoints,
+        };
     }
 
     /** 스탯 포인트 분배. 성공 여부를 반환 */

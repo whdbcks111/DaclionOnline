@@ -1,4 +1,12 @@
 import { defineProgress, ProgressType } from '../../models/progression/Progress.js';
+export {
+    ASCENSION_ARTIFACT_ITEM_ID,
+    ASCENSION_BONUS_STAT_POINTS,
+    ASCENSION_LEVEL,
+    ASCENSION_PASSIVE_SKILL_ID,
+    ASCENSION_RANK_COUNTER,
+    MORTAL_LEVEL_CAP,
+} from '../../models/progression/Ascension.js';
 
 export const ORIGINBOUNDARY_SOVEREIGN_DEFEATED_FLAG = 'ascension:originboundary-sovereign-defeated';
 export const DACLEVIS_REVELATION_FLAG = 'ascension:daclevis-revealed';

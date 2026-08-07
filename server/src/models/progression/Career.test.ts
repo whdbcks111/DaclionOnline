@@ -693,3 +693,22 @@ test('스킬 정보 문구에는 기계적인 조건·효과 나열을 남기지
         );
     }
 });
+
+test('초월 초기화는 네 직업 상태와 직업 능력치 modifier를 함께 비운다', () => {
+    const { career, player } = createCareer(500);
+    player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+    player.progress.setState(CareerProgressIds.SUB, 'career:mage');
+    player.progress.setState(CareerProgressIds.ELITE, 'career:spellblade');
+    player.progress.setState(CareerProgressIds.THIRD, 'career:ironblood_lord');
+    career.refreshModifiers();
+
+    career.resetForAscension();
+    assert.equal(career.mainJobId, '');
+    assert.equal(career.subJobId, '');
+    assert.equal(career.eliteJobId, '');
+    assert.equal(career.thirdJobId, '');
+    assert.equal(player.attribute.hasSource('career:main'), false);
+    assert.equal(player.attribute.hasSource('career:sub'), false);
+    assert.equal(player.attribute.hasSource('career:elite'), false);
+    assert.equal(player.attribute.hasSource('career:third'), false);
+});

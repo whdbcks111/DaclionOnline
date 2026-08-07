@@ -15,6 +15,11 @@ defineItem({
     weight: 5, stackable: false, maxStack: 1, baseMetadata: null, onUse: null,
     equipSlot: null, modifiers: null, baseDurability: 100, tags: [],
 });
+defineItem({
+    id: 'trade_test_bound_artifact', name: '귀속 시험 유물', description: '', category: '유물',
+    weight: 0, stackable: false, bound: true, maxStack: 1, baseMetadata: null, onUse: null,
+    equipSlot: null, modifiers: null, baseDurability: null, tags: [],
+});
 
 function createPlayer(userId: number, name: string, maxWeight = 100): Player {
     return {
@@ -109,4 +114,18 @@ test('거래 중 장소 이탈이나 접속 종료가 감지되면 에스크로�
     assert.equal(manager.hasActiveSession(first.userId), false);
     assert.equal(first.inventory.getCount('trade_test_ore'), 4);
     assert.equal(second.gold, 1_000);
+});
+
+test('캐릭터 귀속 아이템은 거래 에스크로로 옮기기 전에 거부된다', () => {
+    const manager = new TradeManager();
+    const first = createPlayer(9, '아홉째');
+    const second = createPlayer(10, '열째');
+    first.inventory.addItem('trade_test_bound_artifact', 1);
+    manager.invite(first, second, 5_000);
+    manager.accept(second, 5_100);
+
+    const result = manager.addItem(first, 0, 1);
+    assert.equal(result.success, false);
+    assert.match(result.reason ?? '', /귀속/);
+    assert.equal(first.inventory.getCount('trade_test_bound_artifact'), 1);
 });

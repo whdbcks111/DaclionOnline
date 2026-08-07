@@ -121,7 +121,7 @@ export default class SkillBook {
         return book;
     }
 
-    get dirty(): boolean { return this.dirtyVersions.size > 0; }
+    get dirty(): boolean { return this.dirtyVersions.size > 0 || this.deletedSkills.size > 0; }
 
     bindOwner(owner: Entity): void {
         if (this.playerId !== null && owner.playerUserId !== this.playerId) {
@@ -331,6 +331,15 @@ export default class SkillBook {
         this.dirtyVersions.delete(skill.skillDataId);
         if (this.playerId !== null) this.deletedSkills.add(skill.skillDataId);
         return true;
+    }
+
+    /** 초월 환생에서 보유 기술과 그 레벨·숙련도를 모두 영속 삭제 대상으로 돌린다. */
+    resetForAscension(): number {
+        let revoked = 0;
+        for (const skill of [...this.getAll()]) {
+            if (this.revoke(skill.skillDataId)) revoked++;
+        }
+        return revoked;
     }
 
     activateByInput(input: string): SkillActivationOutcome {

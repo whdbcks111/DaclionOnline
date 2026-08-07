@@ -49,6 +49,8 @@ NPC 조건부 진입과 대화 결과도 같은 flag/state API를 사용한다. 
 
 초월 서사의 첫 영속 경계는 `ascension:originboundary-sovereign-defeated`와 `ascension:daclevis-revealed` 숨김 FLAG다. 전자는 `originboundary_sovereign` 처치 순간 양수 기여 원장에 남은 온라인 참가자 전원에게 기록되어 잔재 NPC를 노출하고, 후자는 잔재의 진실 대화를 끝냈을 때 기록되어 재방문 대화로 전환한다. 이벤트 구독은 `modules/world/ascension.ts`가 소유하고 NPC와 HUD는 Progress 원본 Map을 읽지 않는다.
 
+실제 초월은 표시 COUNTER `ascension:rank`를 영속 자격으로 사용한다. 첫 초월은 레벨·경험치·분배 능력치·직업·SkillBook·QuestBook을 초기화한 뒤 `transcendent_soul`을 Lv.1로 직접 지급한다. 이 패시브는 최대 생명력·최대 정신력 10%, 공격력·마법력 5%를 source modifier로 제공한다. 초월자의 Lv.1000 미만 경험치 10배, 미초월자의 Lv.1000 이상 20%와 Lv.1500 상한은 모든 경험치 지급이 통과하는 `Player.gainExp()`에서 레벨 경계를 넘을 때마다 다시 판정한다.
+
 ## 스킬 정의와 인스턴스
 
 `data/combat/skills.ts`의 `defineSkill()`이 코드 마스터 데이터를 등록하고, Player별 `Skill`은 레벨·경험치·쿨다운 종료 시각·획득 정보·영속 태그·metadata delta만 가진다. `SkillBook`이 보유 목록과 수명주기, 자동 획득·자동 발동, dirty 저장을 소유한다. `SkillContext.owner`는 실제 시전자 Entity이며 `player`는 플레이어 시전자일 때만 존재하므로 같은 `SkillData`를 Monster도 실행할 수 있다. `SkillBook.createRuntime()`은 몬스터 수명 동안만 유지되는 비영속 스킬북을 만든다.

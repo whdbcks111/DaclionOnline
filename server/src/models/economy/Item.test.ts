@@ -55,6 +55,12 @@ test('아이템 이미지는 metadata, 정의, ID 기본 경로 순서로 결정
     );
 });
 
+test('귀속 마스터 데이터는 아이템 인스턴스의 소유권 제한으로 노출된다', () => {
+    defineItem({ ...itemData('test_bound_artifact'), bound: true });
+    assert.equal(new Item('test_bound_artifact', 1, null, null).isBound, true);
+    assert.equal(new Item('test_default_image', 1, null, null).isBound, false);
+});
+
 test('아이템 레벨·스탯 조건은 유효한 값만 영속 snapshot으로 정규화한다', () => {
     defineItem({ ...itemData('required_blade'), equipSlot: 'mainHand' });
     const item = new Item('required_blade', 1, null, {

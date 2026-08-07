@@ -96,6 +96,7 @@ login/session restore
 - 태그 JSON 컬럼 추가 migration은 `20260714000000_add_object_tags`다.
 - 통계·플래그와 스킬 인스턴스 테이블 migration은 `20260715000000_add_progress_and_skills`다.
 - 플레이어 퀘스트 인스턴스 테이블 migration은 `20260716000000_add_player_quests`다.
+- 초월은 새 스키마를 추가하지 않는다. `ascension:rank`는 기존 PlayerProgress COUNTER에 저장하고, 환생 시 Player 본체 레벨·경험치·스탯을 갱신하며 SkillBook 행과 QuestBook 행을 각각 삭제 대상으로 flush한다. 인벤토리로 돌아간 장비와 귀속 아티팩트도 기존 Equipment/Inventory 저장 경계를 사용하고 성공 직후 Player aggregate 저장을 요청한다.
 - 시스템 우편과 원자적 아이템 첨부 수령 테이블 migration은 `20260803020000_add_mailbox_messages`다.
 - 플레이어 스킬 경험치 컬럼 migration은 `20260717000000_add_skill_experience`다.
 - 장착 스택 수량 컬럼 migration은 `20260718000000_add_equipment_count`다.

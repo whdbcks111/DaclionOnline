@@ -4241,3 +4241,23 @@ for (const bag of [
     tags: [GameTags.ITEM_BAG],
     balance: { role: ItemBalanceRole.UTILITY },
 });
+
+defineItem({
+    id: 'transcendent_compass',
+    name: '초월자의 나침반',
+    description: '다클레비스의 차원에 난 균열을 가리키는 영혼 귀속 아티팩트. 초월자가 Lv.1000에 다시 도달할 때까지 캐릭터 경험치 획득량을 10배로 증폭합니다.',
+    image: 'items/transcendent_compass',
+    category: '귀속 아티팩트',
+    weight: 0,
+    stackable: false,
+    bound: true,
+    maxStack: 1,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: ['item:artifact', 'item:ascension', 'item:bound'],
+    balance: { role: ItemBalanceRole.UTILITY },
+    gameplayEffects: ['초월 후 Lv.1000 미만 캐릭터 경험치 획득량 10배', '버리기·소각·플레이어 거래 불가'],
+});

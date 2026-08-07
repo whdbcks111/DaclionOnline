@@ -177,6 +177,7 @@ export class TradeManager {
         if (!session) return { success: false, reason: '진행 중인 거래가 없습니다.' };
         const item = player.inventory.getItemByIndex(inventoryIndex);
         if (!item) return { success: false, reason: '해당 인벤토리 번호에 아이템이 없습니다.' };
+        if (item.isBound) return { success: false, reason: `${item.name}은(는) 캐릭터에 귀속되어 거래할 수 없습니다.` };
         if (!Number.isSafeInteger(count) || count <= 0 || count > item.count) {
             return { success: false, reason: `추가 개수는 1~${item.count} 사이여야 합니다.` };
         }

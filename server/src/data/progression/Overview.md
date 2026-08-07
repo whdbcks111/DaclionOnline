@@ -4,4 +4,4 @@
 
 스킬 실행 정의는 `data/combat`, 스킬 보유·성장은 `models/progression`에 둔다.
 
-`ascension.ts`는 Lv.1000 아르케 제압 자격과 다클레비스 정보 확인에 쓰는 숨김 FLAG의 안정 ID를 소유한다. 이벤트 구독은 `modules/world/ascension.ts`, 조건부 NPC 대화는 `data/world/npcs.ts`가 이 공개 ID를 사용한다.
+`ascension.ts`는 Lv.1000 아르케 제압 자격과 다클레비스 정보 확인에 쓰는 숨김 FLAG를 정의하고, 모델이 소유한 초월 단계·보상 안정 ID를 다시 공개한다. 이벤트 구독과 실제 환생 조립은 `modules/world/ascension.ts`, 조건부 NPC 대화와 2단계 재확인은 `data/world/npcs.ts`가 담당한다.

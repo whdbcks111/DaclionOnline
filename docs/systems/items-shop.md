@@ -2,6 +2,8 @@
 
 주무기는 `weapon:sword/axe/bow/dagger/staff` 태그로 직업 스킬 사용 조건을 제공한다. 전직 시험의 기본 장비 보상은 훈련용 도끼·가벼운 활·독 단검·견습 마법 지팡이이며 스킬은 `Equipment.hasEquippedItemTag` API로만 검사한다.
 
+`ItemData.bound`는 캐릭터 귀속 아이템의 소유권 제한이다. 귀속 아이템은 인벤토리에는 정상 보관되지만 `/버리기`, `/소각`, 플레이어 거래 에스크로로 옮길 수 없다. 초월 보상 `초월자의 나침반`은 무게 0의 비장착 귀속 아티팩트이며, 효과의 권위는 아이템 callback이 아니라 영속 `ascension:rank`와 `Player.gainExp()`가 가진다.
+
 ## 마스터 데이터와 인스턴스
 
 - `models/economy/Item.ts::ItemData`는 이름, 이미지 key, 분류, 무게, 스택, 기본 metadata, 사용 handler ID, 장비 슬롯, modifier, 내구도와 정의 태그를 정의한다. 일반 stackable 아이템은 Prisma `Int` 안전 범위 안의 공용 `MAX_STACKABLE_ITEM_COUNT`를 사용해 사실상 스택 제한이 없고, 실제 휴대 한계는 인벤토리 중량으로 결정한다. 장비처럼 인스턴스 상태가 중요한 non-stackable 아이템은 한 칸에 한 개만 둔다.
