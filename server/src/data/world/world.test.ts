@@ -239,6 +239,17 @@ test('차원 균열은 Lv.10~980의 19개 계열과 각 4개 전투 구역을 �
     }
 });
 
+test('아르케의 은신처는 최초 처치 뒤 나타날 기원종언의 잔재를 배치한다', () => {
+    const sanctum = locations.find(location => location.id === 'originboundary_boss_sanctum');
+    const remnant = NPC.getNpc('origin_end_remnant');
+
+    assert.ok(remnant);
+    assert.deepEqual(sanctum?.npcIds, ['origin_end_remnant']);
+    assert.ok(sanctum?.objects.some(object => (
+        object.type === 'monster' && object.dataId === 'originboundary_sovereign'
+    )));
+});
+
 test('승천 후반 권역은 기존 권역을 되감지 않고 지도 노드 간격을 유지한다', () => {
     const generated = buildAscendantLocations();
     const regionIdOf = (locationId: string) => ASCENDANT_REGIONS

@@ -221,22 +221,23 @@ export default class Location implements TagReadable {
 
     // -- NPC 조회 --
 
-    getNpcs(): readonly NPC[] {
-        return this.data.npcIds.map(id => NPC.getNpc(id)).filter((npc): npc is NPC => npc !== undefined);
+    getNpcs(player?: Player): readonly NPC[] {
+        return this.data.npcIds
+            .map(id => NPC.getNpc(id))
+            .filter((npc): npc is NPC => npc !== undefined && (!player || npc.isVisibleTo(player)));
     }
 
-    getNpc(index: number): NPC | undefined {
-        const id = this.data.npcIds[index];
-        return id ? NPC.getNpc(id) : undefined;
+    getNpc(index: number, player?: Player): NPC | undefined {
+        return this.getNpcs(player)[index];
     }
 
-    getNpcNumber(npcId: string): number | undefined {
-        const index = this.data.npcIds.indexOf(normalizeNpcId(npcId));
+    getNpcNumber(npcId: string, player?: Player): number | undefined {
+        const index = this.getNpcs(player).findIndex(npc => npc.id === normalizeNpcId(npcId));
         return index >= 0 ? index + 1 : undefined;
     }
 
-    hasNpc(npc: NPC): boolean {
-        return this.data.npcIds.includes(npc.id);
+    hasNpc(npc: NPC, player?: Player): boolean {
+        return this.data.npcIds.includes(npc.id) && (!player || npc.isVisibleTo(player));
     }
 
     // -- 바닥 아이템 관리 --

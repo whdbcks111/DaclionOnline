@@ -5,7 +5,7 @@ import { initSocket } from '../../modules/infrastructure/socket.js';
 import { registerOnlinePlayer, unregisterOnlinePlayer } from '../../modules/player/playerRegistry.js';
 import Equipment from '../economy/Equipment.js';
 import Entity from '../core/Entity.js';
-import { defineLocation } from '../world/Location.js';
+import { defineLocation, getLocation } from '../world/Location.js';
 import NPC, { Dialogue, DialogueScenario } from './NPC.js';
 import {
     DialogueEndReason,
@@ -21,11 +21,18 @@ import { defineProgress, PlayerProgress, ProgressType } from '../progression/Pro
 initSocket(createServer(), '*');
 
 const TEST_FLAG = 'test:npc-dialogue-flag';
+const TEST_VISIBILITY_FLAG = 'test:npc-visibility-flag';
 defineProgress({
     id: TEST_FLAG,
     type: ProgressType.FLAG,
     label: 'NPC 대화 시험 플래그',
     description: 'NPC 대화 테스트용입니다.',
+});
+defineProgress({
+    id: TEST_VISIBILITY_FLAG,
+    type: ProgressType.FLAG,
+    label: 'NPC 노출 시험 플래그',
+    description: '플레이어별 조건부 NPC 노출 테스트용입니다.',
 });
 
 let eventRuns = 0;
@@ -54,6 +61,19 @@ const testNpc = NPC.define({
     ],
 });
 
+const hiddenNpc = NPC.define({
+    id: 'test_hidden_dialogue_npc',
+    name: '숨은 시험 안내인',
+    isVisible: ({ player }) => player.progress.getFlag(TEST_VISIBILITY_FLAG),
+    entryScenario: () => 'greeting',
+    scenarios: [
+        new DialogueScenario('greeting', function* () {
+            yield Dialogue.say('조건을 충족했군요.');
+            yield Dialogue.end();
+        }),
+    ],
+});
+
 defineLocation({
     id: 'test_dialogue_location',
     name: '대화 시험 장소',
@@ -61,7 +81,7 @@ defineLocation({
     x: 0,
     y: 0,
     z: 0,
-    npcIds: [testNpc.id],
+    npcIds: [testNpc.id, hiddenNpc.id],
     objects: [],
     connections: [],
     tags: [],
@@ -107,6 +127,20 @@ test('generator 대화는 이벤트·선택지·플래그·장면 이동을 순�
     assert.equal(startNpcDialogue(player, testNpc).success, true);
     assert.equal(getActiveNpcDialogue(player)?.scenarioKey, 'returning');
     endNpcDialogue(player, DialogueEndReason.USER, false);
+    unregisterOnlinePlayer(player.userId);
+});
+
+test('조건부 NPC는 플레이어의 영속 flag를 만족한 뒤에만 목록과 대화 경계에 나타난다', () => {
+    const { player } = registerTestPlayer(91005);
+    const location = getLocation(player.locationId);
+
+    assert.deepEqual(location?.getNpcs(player).map(npc => npc.id), [testNpc.id]);
+    assert.equal(startNpcDialogue(player, hiddenNpc).success, false);
+
+    player.progress.setFlag(TEST_VISIBILITY_FLAG, true);
+    assert.deepEqual(location?.getNpcs(player).map(npc => npc.id), [testNpc.id, hiddenNpc.id]);
+    assert.equal(location?.getNpc(1, player), hiddenNpc);
+    assert.equal(startNpcDialogue(player, hiddenNpc).success, true);
     unregisterOnlinePlayer(player.userId);
 });
 

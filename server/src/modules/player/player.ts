@@ -462,7 +462,7 @@ export function sendLocationInfo(userId: number): void {
                 actions,
             };
         }),
-        npcs: location.getNpcs().map(npc => {
+        npcs: location.getNpcs(player).map(npc => {
             const marker = player.quests.getNpcMarker(npc.id);
             return {
                 name: npc.name,

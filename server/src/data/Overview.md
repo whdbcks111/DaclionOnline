@@ -54,6 +54,7 @@ v1.0.9 데이터는 Lv.1~345 안전 거점의 최대 중량 성장 가방 11종�
 - `dungeonPuzzles.ts`: 기존 질문 퍼즐과 월식 조류제단의 해답 Progress, Resource interaction과 hidden 경로 condition을 연결한다.
 - `progress.ts`: 게임 이벤트에 연결되는 통계와 낚시도감 정의. 공개 치명타 누적과 불·물·얼음·자연·독·전기·돌·어둠·빛·언데드·신성·벌레·금속·땅 14종 몬스터 처치, 전체 PVP 처치와 반복 처치 방지 조건을 통과한 유효 PVP 처치, 숨김 검·도끼·활·단검·지팡이 적중 횟수, 61종 어종별 최초 포획·일반 및 전투 단계 보상 flag와 KST 일일 의뢰 마지막 보상일이 있다. 속성 처치는 권위적 처치 subject의 몬스터·속성 태그를 판정하고 기존 속성표 아이콘을 표시한다. 도감 전투 보상은 버프·회복 소모품과 35종 `은린 장막`, 61종 `해연의 작살` 전용 스킬을 포함한다.
 - `instanceDungeons.ts`: Lv.10~960 권장 구간의 차원 균열 19종, 원형 몬스터 76종, 입구 자원 19종과 네 구역 선형 템플릿을 단일 계열 원본에서 생성한다. 기존 지역 9곳과 승천 쉼터 10곳의 입구 Resource ID가 각 템플릿 ID로 매핑되며, 모든 지배자는 두 플레이어 공명 패턴을 사용한다.
+- `progression/ascension.ts`·`world/npcs.ts`: 아르케 처치와 다클레비스 정보 확인 영속 flag, 처치 기여자에게만 보이는 `기원종언의 잔재`, 균열·지옥문·초월의 진실을 단계적으로 공개하는 대화를 정의한다.
 - `codex.ts`: 몬스터·자원·장소·제작법·아이템 공개 snapshot으로 일반 몬스터 210종, 보스 64종, 광맥 18종, 숨김 포함 장소 624곳, 음식/생선 요리 recipe 19종의 전문 도감 엔트리를 만든다. 모든 마스터와 장소 JSON을 등록한 뒤 `initializeCodexData()`로 전체 registry를 교체하며 관리자 장소 저장 뒤에도 재실행한다. 기존 `FishingCollection`은 합치지 않는다.
 - `progress.ts`의 숨은 `security:human_verification_required/failures`는 반복 사냥 사람 확인의 재접속 복원과 운영 실패 기록을 기존 PlayerProgress dirty 저장으로 유지한다.
 - `progress.ts`의 숨은 `profession:blacksmith` flag는 구형 독립 대장장이 데이터를 정식 직업 슬롯으로 이전하는 호환 값이다.

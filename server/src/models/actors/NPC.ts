@@ -90,6 +90,8 @@ export interface NPCData {
     name: string;
     description?: string;
     tags?: readonly TagId[];
+    /** 플레이어별 영속 진행에 따라 위치·대화 목록에서 숨길 때 사용한다. */
+    isVisible?: (context: DialogueContext) => boolean;
     entryScenario: (context: DialogueContext) => string;
     scenarios: readonly DialogueScenario[];
 }
@@ -104,6 +106,7 @@ export default class NPC implements TagReadable {
     readonly tags: TagCollection;
     private readonly scenarios = new Map<string, DialogueScenario>();
     private readonly entryScenario: NPCData['entryScenario'];
+    private readonly visibility: NonNullable<NPCData['isVisible']>;
 
     private constructor(data: NPCData) {
         this.id = normalizeNpcId(data.id);
@@ -111,6 +114,7 @@ export default class NPC implements TagReadable {
         this.description = data.description?.trim() ?? '';
         this.tags = new TagCollection({ definition: normalizeTags(data.tags ?? []) });
         this.entryScenario = data.entryScenario;
+        this.visibility = data.isVisible ?? (() => true);
         if (!this.name) throw new Error(`NPC 이름은 비어 있을 수 없습니다: ${this.id}`);
         for (const scenario of data.scenarios) {
             if (this.scenarios.has(scenario.key)) {
@@ -145,6 +149,10 @@ export default class NPC implements TagReadable {
 
     hasTag(tag: TagId): boolean {
         return this.tags.hasTag(tag);
+    }
+
+    isVisibleTo(player: Player): boolean {
+        return this.visibility({ player, npc: this });
     }
 }
 

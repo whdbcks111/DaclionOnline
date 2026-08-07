@@ -24,7 +24,7 @@ export function initNpcCommands(): void {
                 const player = getPlayerByUserId(userId);
                 const location = player ? getLocation(player.locationId) : undefined;
                 if (!location) return [];
-                return location.getNpcs().map((npc, index): CompletionItem => ({
+                return location.getNpcs(player).map((npc, index): CompletionItem => ({
                     value: String(index + 1),
                     description: npc.name,
                 }));
@@ -35,7 +35,7 @@ export function initNpcCommands(): void {
             if (!player) return;
             const number = Number(args[0]);
             const location = getLocation(player.locationId);
-            const npc = Number.isInteger(number) ? location?.getNpc(number - 1) : undefined;
+            const npc = Number.isInteger(number) ? location?.getNpc(number - 1, player) : undefined;
             if (!npc) {
                 sendBotMessageToUser(userId, '유효한 NPC 번호를 입력해주세요.');
                 return;

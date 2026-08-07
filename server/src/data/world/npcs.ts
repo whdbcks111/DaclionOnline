@@ -31,6 +31,10 @@ import { getQuestData } from '../../models/progression/Quest.js';
 import { canAcquireBlacksmithProfession, hasBlacksmithProfession } from '../../modules/professions/forging.js';
 import { GameTags } from '../../../../shared/tags.js';
 import type Player from '../../models/actors/Player.js';
+import {
+    DACLEVIS_REVELATION_FLAG,
+    ORIGINBOUNDARY_SOVEREIGN_DEFEATED_FLAG,
+} from '../progression/ascension.js';
 
 export const MONSTER_HUNT_QUESTION_FLAG = 'npc:monster-hunt-question';
 
@@ -1256,4 +1260,62 @@ defineFrontierQuestNpc({
     secondGuidance: '전령 에녹은 폭발 뒤 침묵으로 반격을 막고, 라스트라는 창세·소멸·붕괴 중 하나를 무작위로 선고합니다. 한 가지 방어만으로는 버틸 수 없습니다.',
     lore: '성단 요새 뒤 길은 재별무리와 침묵태양으로 나뉘어 종언 합류환에서 만납니다. 전령의 고리 뒤에는 창세 항로와 소멸 항로가 최후지평에서 다시 합쳐집니다.',
     completion: '라스트라가 정한 마지막 별자리가 풀렸습니다. 이제 Lv.500의 지평선 너머는 정해진 종말이 아니라 다음 확장을 기다리는 빈 하늘입니다.',
+});
+
+NPC.define({
+    id: 'origin_end_remnant',
+    name: '기원종언의 잔재',
+    description: '아르케가 무너진 자리에 남은 빛과 어둠의 형상. 세계 바깥을 응시하고 있습니다.',
+    tags: ['npc:ascension', 'npc:remnant', GameTags.NPC_BENEVOLENT],
+    isVisible: ({ player }) => player.progress.getFlag(ORIGINBOUNDARY_SOVEREIGN_DEFEATED_FLAG),
+    entryScenario: ({ player }) => player.progress.getFlag(DACLEVIS_REVELATION_FLAG)
+        ? 'returning'
+        : 'awakening',
+    scenarios: [
+        new DialogueScenario('awakening', function* () {
+            yield Dialogue.say('마침내 아르케의 경계가 갈라졌다. 나를 쓰러진 적의 망령이라 여기지 마라. 나는 그가 마지막까지 지키려 했던 경고다.');
+            yield Dialogue.choice([
+                { label: '무엇을 경고하려는 겁니까?', target: 'fractures' },
+                { label: '지금은 듣지 않겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('fractures', function* () {
+            yield Dialogue.say('루미나르 곳곳의 균열은 자연재해가 아니다. 그 안의 원형 개체가 이 세계로 새어 나오며 약해지고 갈라져, 네가 알던 몬스터가 되었다.');
+            yield Dialogue.say('옛사람들이 지옥문이라 부른 의식도 지옥 하나를 여는 문이 아니었다. 세계보다 높은 적대 차원에 좌표를 고정하려던 불완전한 통로였다.');
+            yield Dialogue.choice([
+                { label: '그 균열을 만든 존재는 누구입니까?', target: 'witch' },
+                { label: '여기까지만 듣겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('witch', function* () {
+            yield Dialogue.say('대마녀 다클레비스. 루미나르 밖의 차원에서 시선과 저주만으로 세계의 경계를 찢는 자다. 네가 균열에서 느낀 주시는 그녀가 아직 직접 내려오지 않았다는 증거에 불과하다.');
+            yield Dialogue.say('아르케는 그녀의 부하가 아니었다. 시작과 종말의 경계를 지켜, 이 세계의 존재가 준비 없이 바깥으로 흩어지는 것을 막고 있었다.');
+            yield Dialogue.choice([
+                { label: '다클레비스에게 갈 방법을 알려주세요.', target: 'transcendence' },
+                { label: '이 사실을 정리할 시간이 필요합니다.', target: 'remember' },
+            ]);
+        }),
+        new DialogueScenario('transcendence', function* () {
+            yield Dialogue.say('지금의 육체로 경계를 넘으면 힘이 아니라 존재 자체가 무너진다. 한 생의 성장과 기술을 영혼의 격으로 압축하고, 처음부터 다시 걸어 경계를 견딜 그릇을 만드는 초월이 필요하다.');
+            yield Dialogue.say('초월은 되돌릴 수 없는 선택이다. 준비가 끝나 다시 나를 찾으면, 무엇을 잃고 무엇을 영원히 지닐지 네게 확인시키겠다.');
+            yield Dialogue.goto('remember');
+        }),
+        new DialogueScenario('remember', function* () {
+            yield Dialogue.setFlag(DACLEVIS_REVELATION_FLAG);
+            yield Dialogue.say('다클레비스의 이름을 기억하라. 이제부터 균열은 우연한 재난이 아니라, 그녀에게 닿기 위한 역방향의 길이다.');
+            yield Dialogue.end();
+        }),
+        new DialogueScenario('returning', function* () {
+            yield Dialogue.say('다클레비스의 차원으로 향할 결심이 섰느냐? 아직은 경고와 초월의 원리만 다시 들려줄 수 있다.');
+            yield Dialogue.choice([
+                { label: '균열과 지옥문의 정체를 다시 듣겠습니다.', target: 'fractures' },
+                { label: '초월이 필요한 이유를 다시 듣겠습니다.', target: 'transcendence' },
+                { label: '아직 준비 중입니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('경계를 넘는 선택은 서두를 일이 아니다. 준비가 되었을 때 다시 오라.');
+            yield Dialogue.end();
+        }),
+    ],
 });

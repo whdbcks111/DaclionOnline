@@ -20,6 +20,8 @@ player별 ActiveNpcDialogue (메모리)
 
 NPC 정의는 `models/actors/NPC.ts`의 정적 레지스트리가 소유한다. 장소 JSON은 정의 전체를 복사하지 않고 `npcIds`만 저장하며, `Location` 공개 API가 ID를 NPC 객체로 해석한다. 현재 안내인 리아·전직관 세레나와 함께 은맥 광부 보급소의 마도 대장장이 로안도 광맥 파괴 퀘스트를 통해 현재 사용 가능한 메인 또는 서브 슬롯에 대장장이를 부여하는 별도 경로를 제공한다. 전직소의 새벽교단 고해사제 세라는 `Player.atoneKarma()`를 통해 헌금과 카르마 감소를 처리하며 `facility:sanctuary` 제한 이상의 카르마에는 대화를 거부한다. 황혼왕릉 마지막 등불의 묘지기 이벤은 언데드 사냥 뒤 기사왕 보스 퀘스트를, 유리모래 기록관 마온은 성충갑 제출 뒤 태양고 거신 토벌을 이어 준다. 설원 파수대장 베른은 빙실 보급 의뢰 뒤 빙경 여왕 토벌을 제안하고 진행 수치·회피 불가 관통창·침묵·분광 퍼즐 전술을 상태에 맞게 안내한다. 염등 항로지기 소마는 흑산호 제출 뒤 세이렌 군주와 침몰제독을 차례 없이 제압하는 항로 복구 의뢰를 제공하고, 해안·왕도 분기와 조류시계의 숨은 길을 안내한다. 슬롯 해금 레벨이 부족하거나 두 슬롯이 모두 차 있으면 조건에 맞는 별도 대사를 출력한다.
 
+`NPCData.isVisible(context)`는 플레이어별 영속 진행에 따른 조건부 존재를 제공한다. `Location.getNpcs/getNpc/getNpcNumber/hasNpc`는 Player를 받으면 이 조건을 적용하고, `/위치`·HUD·자동완성·실제 대화 시작이 모두 같은 필터를 사용한다. 아르케의 은신처에 배치된 `기원종언의 잔재`는 아르케 처치 기여 flag가 있는 플레이어에게만 나타나며, 다클레비스·균열 원형·지옥문·초월의 필요성을 순서대로 공개한다.
+
 활성 대화는 `models/actors/NpcDialogue.ts`의 player별 메모리 세션이다. 재접속이나 서버 재시작 시 이어지지 않는다. 대화에서 설정한 flag/state는 `PlayerProgress` 공개 API를 통해 기존 `player_progress` 테이블에 dirty 저장되므로 별도 NPC DB 테이블은 없다.
 
 ## 대화 정의
@@ -82,5 +84,5 @@ NPC.define({
 
 1. `data/world/npcs.ts`에 `NPC.define()`과 필요한 `DialogueScenario`를 추가한다.
 2. 영속 조건/결과가 있으면 먼저 `defineProgress()`로 flag/state를 등록하고 PlayerProgress API만 사용한다.
-3. `data/world/locations.json`의 대상 장소 `npcIds`에 NPC ID를 넣는다. 관리자는 위치 편집기의 NPC 배치 영역에서도 ID를 수정할 수 있다.
+3. `data/world/locations.json` 또는 런타임 장소 원본의 대상 `npcIds`에 NPC ID를 넣는다. 플레이어별 조건이 있으면 `isVisible`을 정의하고 목록·직접 대화 우회를 함께 테스트한다. 관리자는 위치 편집기의 NPC 배치 영역에서도 ID를 수정할 수 있다.
 4. 새 대화 분기, 이벤트, 종료 경로를 테스트하고 이 문서와 data/models/commands Overview를 갱신한다.

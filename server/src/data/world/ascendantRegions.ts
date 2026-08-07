@@ -485,7 +485,8 @@ export function buildAscendantLocations(): LocationData[] {
                 id: `${id}_boss_sanctum`, name: `${region.name} 군주의 은신처`,
                 x: x + 1_000, y: y - 300, z: z - 120, mapColor: region.mapColor,
                 zoneType: 'hostile', tags: [...commonTags, GameTags.LOCATION_DUNGEON, GameTags.LOCATION_BOSS_ROOM],
-                npcIds: [], objects: [{ type: 'monster', dataId: `${id}_sovereign`, maxCount: 1, respawnTime: 1_800 }],
+                npcIds: id === 'originboundary' ? ['origin_end_remnant'] : [],
+                objects: [{ type: 'monster', dataId: `${id}_sovereign`, maxCount: 1, respawnTime: 1_800 }],
                 connections: [connect(`${id}_transition`)],
             },
         ];

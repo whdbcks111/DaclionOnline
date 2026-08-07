@@ -48,6 +48,7 @@ import { initCodexEventTracking } from './modules/world/codex.js';
 import { recordServerBoot } from './modules/infrastructure/serverBoot.js';
 import { getPatchNotes } from '../../shared/patchNotes.js';
 import { initInstanceDungeons } from './modules/world/instanceDungeon.js';
+import { initAscensionDiscovery } from './modules/world/ascension.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -79,6 +80,7 @@ initConsumableBundle();
 initTutorial();
 initLocation();
 initInstanceDungeons();
+initAscensionDiscovery();
 initializeCodexData();
 initCodexEventTracking();
 initPlayer();

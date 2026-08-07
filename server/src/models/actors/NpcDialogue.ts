@@ -68,7 +68,7 @@ export function startNpcDialogue(player: Player, npc: NPC): DialogueOperationRes
     if (player.isDead) return { success: false, reason: '사망 상태에서는 대화할 수 없습니다.' };
     if (player.moving) return { success: false, reason: '이동 중에는 대화할 수 없습니다.' };
     const location = getLocation(player.locationId);
-    if (!location?.hasNpc(npc)) return { success: false, reason: '현재 장소에 없는 NPC입니다.' };
+    if (!location?.hasNpc(npc, player)) return { success: false, reason: '현재 장소에 없는 NPC입니다.' };
     if (npc.hasTag(GameTags.FACILITY_SANCTUARY)) {
         const deniedReason = player.getKarmaAccessDeniedReason(KarmaAccessPolicy.SANCTUARY);
         if (deniedReason) return { success: false, reason: deniedReason };
@@ -286,6 +286,6 @@ function getInvalidSessionReason(session: ActiveNpcDialogue): DialogueEndReason 
     if (getOnlinePlayer(session.player.userId) !== session.player) return DialogueEndReason.UNLOADED;
     if (session.player.isDead) return DialogueEndReason.DEFEATED;
     if (session.player.locationId !== session.locationId || session.player.moving) return DialogueEndReason.MOVED;
-    if (!getLocation(session.locationId)?.hasNpc(session.npc)) return DialogueEndReason.MOVED;
+    if (!getLocation(session.locationId)?.hasNpc(session.npc, session.player)) return DialogueEndReason.MOVED;
     return undefined;
 }

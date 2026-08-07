@@ -87,7 +87,7 @@
 | Shop registry | `defineShop`, `getShop`, `Shop.getStock/getStockCapacity`, `Shop.getAccessDeniedReason`, `updateAllShops` | 상점 정의/조회, 5인분 공유 재고·재입고 처리량과 실제 상한 snapshot, lawful 카르마 거래 제한, 프레임 갱신 |
 | Game events | `emitGameEvent`, `subscribeGameEvent`, `subscribeAllGameEvents`, `getRecentGameEvents` | 동기식 내부 이벤트와 원시 Entity 없는 최근 trace 스냅샷. 장소 도착·대상 지정·상호작용·장착·사용·낚시 성공·스탯 분배를 포함한 성공 결과와 공격 최종 피해를 primitive data로 제공 |
 | `GameAction` | `gameAction(name).require(...).step(apply, rollback).run()` | 사전 검증 뒤 메모리 변경을 적용하고 실패한 경우 완료 step을 역순 롤백 |
-| `NPC`, `DialogueScenario`, `Dialogue` | `NPC.define/getNpc/getAll`, `getEntryScenario/getScenario`, `say/event/setFlag/acceptQuest/turnInQuest/goto/choice/end` | NPC 정적 정의, 조건부 generator 장면과 타입별 대화·퀘스트 액션 생성 |
+| `NPC`, `DialogueScenario`, `Dialogue` | `NPC.define/getNpc/getAll`, `isVisibleTo`, `getEntryScenario/getScenario`, `say/event/setFlag/acceptQuest/turnInQuest/goto/choice/end` | NPC 정적 정의, 플레이어 Progress 기반 조건부 노출, 조건부 generator 장면과 타입별 대화·퀘스트 액션 생성 |
 | NPC dialogue | `startNpcDialogue`, `chooseNpcDialogue`, `endNpcDialogue/endNpcDialogueByUserId`, `is/getActiveNpcDialogue`, `updateNpcDialogues` | player별 비영속 대화 세션 시작·선택·종료와 이탈 안전망 |
 | `ProgressType`, `PlayerProgress` | `values/fromKey`, `getCounter/setCounter/increment`, `getFlag/setFlag`, `getState/setState`, `reset`, `getSnapshots`, `subscribeChanges`, `load/save` | 통계·NPC 플래그·분기 상태의 메모리 dirty 영속 API |
 | `CodexCategory`, `CodexRank`, `CodexBook` | `values/fromKey/fromInput`, `createCodexEntryId`, `record`, `isRankUnlocked`, `getEntrySnapshot(s)`, `getCategorySnapshot(s)` | 다섯 전문 도감 분류와 동·은·금 점수/10%·35%·70% 해금, PlayerProgress 기반 종별 횟수·영구 rank와 불변 표시 DTO |

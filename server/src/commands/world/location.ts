@@ -393,7 +393,7 @@ export function initLocationCommands(): void {
 
             b.text('\n').color('gray', b2 => b2.text('[ NPC ]\n'));
 
-            const npcs = location.getNpcs();
+            const npcs = location.getNpcs(player);
             if (npcs.length === 0) {
                 b.color('gray', b2 => b2.text('없음\n'));
             } else {
