@@ -690,6 +690,7 @@ function HomeContent() {
               || prev.userId !== msg.userId
               || prev.nickname !== msg.nickname
               || prev.profileImage !== msg.profileImage
+              || prev.ascended !== msg.ascended
               || JSON.stringify(prev.flags) !== JSON.stringify(msg.flags)
               || Math.floor(prev.timestamp / 60000) !== Math.floor(msg.timestamp / 60000)
             return (

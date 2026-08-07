@@ -10,6 +10,7 @@ export {
 
 export const ORIGINBOUNDARY_SOVEREIGN_DEFEATED_FLAG = 'ascension:originboundary-sovereign-defeated';
 export const DACLEVIS_REVELATION_FLAG = 'ascension:daclevis-revealed';
+export const UPPER_DIMENSION_EXPEDITION_UNLOCKED_FLAG = 'ascension:upper-dimension-expedition-unlocked';
 
 defineProgress({
     id: ORIGINBOUNDARY_SOVEREIGN_DEFEATED_FLAG,
@@ -18,6 +19,15 @@ defineProgress({
     description: 'Lv.1000 경계의 수호자를 제압하고 기원종언의 잔재를 볼 수 있게 된 영속 기록입니다.',
     visible: false,
     tags: ['ascension:qualification', 'boss:originboundary-sovereign'],
+});
+
+defineProgress({
+    id: UPPER_DIMENSION_EXPEDITION_UNLOCKED_FLAG,
+    type: ProgressType.FLAG,
+    label: '상위차원 원정로 개방',
+    description: '초월 후 Lv.1000에 다시 도달해 아르케를 우회하는 역지옥문 통과 권한을 얻었습니다.',
+    visible: false,
+    tags: ['ascension:expedition', 'lore:hellgate'],
 });
 
 defineProgress({

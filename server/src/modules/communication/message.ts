@@ -16,6 +16,7 @@ import type { ChatMessage, ChatFlag, ChatNode, NotificationData } from "../../..
 import { ChatType, CHAT_WHISPER_DISPLAY } from '../../../../shared/chat.js';
 import { shouldPublishInformationOutput } from '../player/informationVisibility.js';
 import { getOnlinePlayer } from '../player/playerRegistry.js';
+import { isAscended } from '../../models/progression/Ascension.js';
 
 const BOT_USER_ID = 0;
 const BOT_NICKNAME = "Daclion System";
@@ -37,6 +38,7 @@ function withId(msg: ChatMessage): ChatMessage {
         ...(player?.isNewcomer ? { newcomer: true } : {}),
         ...(player?.isKarmaMarked ? { karmaMarked: true } : {}),
         ...(equippedTitle ? { equippedTitle } : {}),
+        ...(player?.progress && isAscended(player.progress) ? { ascended: true } : {}),
     };
 }
 

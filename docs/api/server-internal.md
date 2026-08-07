@@ -20,7 +20,7 @@
 | Information visibility | `set/is/clearInformationPublicMode`, `runInformationCommand`, `shouldPublishInformationOutput` | 사용자별 런타임 정보 공개 설정과 async 출력 문맥 |
 | Party | `partyManager.invite/accept/decline/leave/disband/kick/removeDisconnectedPlayer/getParty/areInSameParty/getHudData/distributeMonsterExp`, `calculatePartyExpPool`, `allocateContributionWeightedExp`, `calculatePartyExpGrant`, `calculateLowLevelMonsterExpMultiplier` | 내부 Map을 숨긴 초대·구성·PVP 아군 판정·HUD, claim·양수 기여·온라인·동일 장소·생존 검증과 현장 적격자가 없을 때 실제 서버 막타 owner 1인 fallback, 추가 유효 인원당 20% 증가하는 풀의 20% 균등·80% 기여 Hamilton 배분, 파티 레벨 차이·개인 기준 저레벨 일반 몬스터·개인 배율·즉시 사망 패널티 보호 적용 |
 | Trade | `tradeManager.invite/accept/decline/addItem/removeItem/setGold/confirm/unconfirm/cancel/cancelForPlayer/update/getSessionSnapshot/subscribe` | 같은 장소 플레이어 거래의 요청·런타임 에스크로·양쪽 확인·자동 취소와 불변 표시 snapshot/event |
-| Ascension | `getAscensionDeniedReason`, `ascendPlayer`, `grantOriginboundaryDefeatProgress` | 아르케 기여 자격 기록, 다클레비스 정보·Lv.1000·미초월 상태 재검증, 환생 초기화와 영구 보상 지급·즉시 저장 요청 |
+| Ascension | `getAscensionDeniedReason`, `ascendPlayer`, `grantOriginboundaryDefeatProgress`, `getUpperDimensionExpeditionDeniedReason`, `enterUpperDimensionExpedition` | 아르케 최초 기여 자격, 환생 초기화·영구 보상, 초월 후 Lv.1000 재도달 검증과 아르케 우회 원정 권한·이동·즉시 저장 |
 | Channel | `getUserChannel`, `setUserChannel`, `getChannelRoomKey`, `getChannelHistory`, `getFilteredHistoryForUser`, `getPublicReplyReference`, `clearPrivateChannelHistory`, `clearPublicChannelHistory` | room·히스토리 상태, 공개 원문의 안전한 답장 요약, 개인 채널 또는 관리자 공개 채널의 최근 기록 목적형 삭제 |
 | Chat delivery | `deliverChatMessage`, `tryStartAdvertisementCooldown`, `ChatType.values/fromKey/fromInput` | 채널·장소·파티·전체 광고·관리자 공지 audience, 권한과 30초 광고 제한 검증 |
 | Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageToAudience`, `sendMessageFiltered`, `sendMessageToUser`, `sendPlayerTextToCurrentChannel`, `sendPrivatePlayerTextToCurrentChannel`, `sendPrivatePlayerContentToCurrentChannel`, `sendPlayerTextToPartyMembers`, `sendPlayerContentToPartyMembers`, `sendWhisperMessage` | 구조화 메시지의 공개·지정 audience 전송, `[파티]` 필터 피드와 회색 양방향 비공개 귓속말 |
@@ -51,6 +51,8 @@
 ## 게임 모델 (`server/src/models`)
 
 초월 초기화 공개 경계는 `Player.resetForAscension`, `CareerProfile.resetForAscension`, `SkillBook.resetForAscension`, `QuestBook.resetForAscension`이다. 호출 순서는 `modules/world/ascension.ts::ascendPlayer`만 조립하며, 장착품 복귀·레벨/스탯 초기화·직업/스킬/퀘스트 삭제와 보상 지급을 외부 NPC 스크립트가 raw 상태로 나누어 수행하지 않는다. `models/progression/Ascension.ts`의 `isAscended/getAscensionExperienceMultiplier/getAscensionLevelCap`은 경험치와 성장 상한의 단일 정책 API다.
+
+상위차원 진입은 `enterUpperDimensionExpedition()`만 `ascension:upper-dimension-expedition-unlocked`를 설정하고 첫 도착지로 이동시킨다. `data/world/locations.ts`의 전용 연결 조건은 이 영속 권한을 사용하며, 미초월자에게 숨김·재도달 미확인 초월자에게 공개 잠금·확인 완료자에게 이동 가능 상태를 반환한다. 정적 장소 원본은 `buildUpperDimensionExpeditionLocations()`가 제공한다.
 
 | 모델/레지스트리 | 주요 API | 용도 |
 | --- | --- | --- |

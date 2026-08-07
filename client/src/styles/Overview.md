@@ -3,7 +3,7 @@
 전역 스타일 기반과 재사용 token/mixin을 둔다.
 
 - `variables.scss`: font, spacing, breakpoint, shadow 등 SCSS 변수.
-- `themes.scss`: light/dark CSS custom properties.
+- `themes.scss`: light/dark CSS custom properties. 초월자 채팅 닉네임은 라이트 `#006f75`, 다크 `#49e6ee` 전용 token으로 각 배경의 대비를 유지한다.
 - `mixins.scss`: layout, button, card, responsive helper.
 - `global.scss`: reset, font, document 기본 스타일과 인게임 배율을 역보정하는 논리 viewport 변수. `body`와 `#root`는 이 크기를 사용해 축소·확대 후에도 실제 화면 전체를 채운다.
 

@@ -41,6 +41,12 @@ import {
     mergeAscendantLocations,
 } from './ascendantRegions.js';
 import {
+    buildUpperDimensionExpeditionLocations,
+    UPPER_DIMENSION_EXPEDITION_CONNECTION_CONDITION,
+    UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID,
+    UPPER_DIMENSION_EXPEDITION_HUB_LOCATION_ID,
+} from './upperDimensionExpedition.js';
+import {
     rollAshenReliquaryReward,
     rollEclipseReliquaryReward,
     rollFrostveilReliquaryReward,
@@ -73,6 +79,9 @@ import {
 } from '../../models/actors/MonsterStats.js';
 import { StatusEffectType } from '../../models/combat/StatusEffect.js';
 import { getFishingTreasureTable } from '../../models/professions/Fishing.js';
+import { PlayerProgress } from '../../models/progression/Progress.js';
+import { ASCENSION_RANK_COUNTER } from '../../models/progression/Ascension.js';
+import { UPPER_DIMENSION_EXPEDITION_UNLOCKED_FLAG } from '../progression/ascension.js';
 
 const baseLocations = JSON.parse(
     readFileSync(new URL('./locations.json', import.meta.url), 'utf-8'),
@@ -102,7 +111,10 @@ test('일반 스택 아이템은 중량 한도까지 하나의 사실상 무제�
 
 test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남아 있지 않다', () => {
     const ids = new Set(locations.map(location => location.id));
-    assert.equal(locations.length, baseLocations.length + buildAscendantLocations().length);
+    assert.equal(
+        locations.length,
+        baseLocations.length + buildAscendantLocations().length + buildUpperDimensionExpeditionLocations().length,
+    );
     assert.equal(ids.size, locations.length);
 
     for (const location of locations) {
@@ -138,7 +150,7 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
             zoneType,
             locations.filter(location => location.zoneType === zoneType).length,
         ])),
-        { safe: 29, neutral: 69, hostile: 526 },
+        { safe: 32, neutral: 74, hostile: 526 },
     );
     for (const id of ['tempest_peak', 'nightwood_heart', 'dawn_sanctum', 'necropolis_depths', 'ironroot_core', 'astral_nexus']) {
         assert.equal(locations.find(location => location.id === id)?.zoneType, 'hostile');
@@ -239,15 +251,68 @@ test('차원 균열은 Lv.10~980의 19개 계열과 각 4개 전투 구역을 �
     }
 });
 
-test('아르케의 은신처는 최초 처치 뒤 나타날 기원종언의 잔재를 배치한다', () => {
+test('아르케의 은신처와 직전 경계는 최초 처치 뒤 나타날 기원종언의 잔재를 배치한다', () => {
     const sanctum = locations.find(location => location.id === 'originboundary_boss_sanctum');
+    const transition = locations.find(location => location.id === 'originboundary_transition');
     const remnant = NPC.getNpc('origin_end_remnant');
 
     assert.ok(remnant);
     assert.deepEqual(sanctum?.npcIds, ['origin_end_remnant']);
+    assert.deepEqual(transition?.npcIds, ['origin_end_remnant']);
     assert.ok(sanctum?.objects.some(object => (
         object.type === 'monster' && object.dataId === 'originboundary_sovereign'
     )));
+});
+
+test('초월자 재도달 통로는 아르케 보스방을 우회해 다지역 상위차원 원정 거점으로 이어진다', () => {
+    const upperLocations = buildUpperDimensionExpeditionLocations();
+    const originTransition = locations.find(location => location.id === 'originboundary_transition');
+    const entry = locations.find(location => location.id === UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID);
+    const hub = locations.find(location => location.id === UPPER_DIMENSION_EXPEDITION_HUB_LOCATION_ID);
+    const crossing = locations.find(location => location.id === 'first_invasion_crossing');
+
+    assert.equal(upperLocations.length, 8);
+    assert.equal(
+        originTransition?.connections.find(connection => (
+            connection.locationId === UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID
+        ))?.condition,
+        UPPER_DIMENSION_EXPEDITION_CONNECTION_CONDITION,
+    );
+    assert.ok(entry?.connections.some(connection => connection.locationId === 'originboundary_transition'));
+    assert.equal(hub?.zoneType, 'safe');
+    assert.equal(hub?.isRespawnLocation, true);
+    assert.deepEqual(hub?.npcIds, ['upper_expedition_warden']);
+    assert.ok(NPC.getNpc('upper_expedition_warden'));
+    assert.ok(hub?.connections.some(connection => connection.locationId === 'witchscar_east_survey'));
+    assert.ok(hub?.connections.some(connection => connection.locationId === 'witchscar_west_survey'));
+    assert.ok(crossing?.connections.some(connection => connection.locationId === 'witchscar_east_survey'));
+    assert.ok(crossing?.connections.some(connection => connection.locationId === 'witchscar_west_survey'));
+    assert.equal(originTransition?.connections.some(connection => (
+        connection.locationId === UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID
+    )), true);
+    assert.equal(originTransition?.connections.some(connection => (
+        connection.locationId === 'originboundary_boss_sanctum'
+    )), true);
+});
+
+test('상위차원 우회로는 미초월자에게 숨고 재도달 초월자에게 잔재 확인 뒤 영구 공개된다', () => {
+    reloadAllLocations(locations);
+    const progress = PlayerProgress.createEmpty(96_701);
+    const player = { level: 1_000, progress } as Player;
+    const transition = getLocation('originboundary_transition');
+    const getExpeditionConnection = () => transition?.getAvailableConnections(player)
+        .find(connection => connection.locationId === UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID);
+
+    assert.equal(getExpeditionConnection(), undefined);
+    progress.increment(ASCENSION_RANK_COUNTER);
+    assert.deepEqual(getExpeditionConnection(), {
+        locationId: UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID,
+        name: '마녀흔 균열낙하지',
+        status: 'locked',
+        lockReason: '기원종언의 잔재에게 경계 통과 권한을 확인해야 합니다.',
+    });
+    progress.setFlag(UPPER_DIMENSION_EXPEDITION_UNLOCKED_FLAG, true);
+    assert.equal(getExpeditionConnection()?.status, 'visible');
 });
 
 test('승천 후반 권역은 기존 권역을 되감지 않고 지도 노드 간격을 유지한다', () => {

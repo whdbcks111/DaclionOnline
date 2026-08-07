@@ -196,6 +196,8 @@ export interface ChatMessage {
     karmaMarked?: boolean
     /** 전송 시점에 장착 중인 칭호 표시명. */
     equippedTitle?: string
+    /** 전송 시점에 초월 단계가 1 이상인 Player 표시. */
+    ascended?: boolean
     content: string | ChatNode[]
     timestamp: number
     private?: boolean

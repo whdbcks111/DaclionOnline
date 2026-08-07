@@ -1,7 +1,9 @@
 import {
     DACLEVIS_REVELATION_FLAG,
     ORIGINBOUNDARY_SOVEREIGN_DEFEATED_FLAG,
+    UPPER_DIMENSION_EXPEDITION_UNLOCKED_FLAG,
 } from '../../data/progression/ascension.js';
+import { UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID } from '../../data/world/upperDimensionExpedition.js';
 import Monster from '../../models/actors/Monster.js';
 import type Player from '../../models/actors/Player.js';
 import { GameEventIds, subscribeGameEvent, type GameEvent } from '../../models/core/GameEvent.js';
@@ -24,6 +26,12 @@ export interface AscensionOperationResult {
     readonly success: boolean;
     readonly reason?: string;
     readonly previousLevel?: number;
+}
+
+export interface UpperDimensionExpeditionResult {
+    readonly success: boolean;
+    readonly reason?: string;
+    readonly newlyUnlocked?: boolean;
 }
 
 export function getAscensionDeniedReason(player: Player): string | undefined {
@@ -52,6 +60,30 @@ export function ascendPlayer(player: Player): AscensionOperationResult {
     }
     void player.save().catch(error => logger.error(`초월 환생 즉시 저장 실패: user=${player.userId}`, error));
     return { success: true, previousLevel: reset.previousLevel };
+}
+
+export function getUpperDimensionExpeditionDeniedReason(player: Player): string | undefined {
+    if (!isAscended(player.progress)) return '상위차원의 경계는 초월한 영혼만 견딜 수 있습니다.';
+    if (player.level < ASCENSION_LEVEL) {
+        return `환생한 육체로 Lv.${ASCENSION_LEVEL}의 경계에 다시 도달해야 합니다.`;
+    }
+    if (!player.progress.getFlag(DACLEVIS_REVELATION_FLAG)) {
+        return '다클레비스와 지옥문의 진실을 먼저 확인해야 합니다.';
+    }
+    if (player.isDefeated) return '사망하거나 파괴된 상태에서는 차원 경계를 넘을 수 없습니다.';
+    return undefined;
+}
+
+/** 아르케 재전투 없이 역지옥문 좌표를 영구 개방하고 상위차원 첫 거점으로 보낸다. */
+export function enterUpperDimensionExpedition(player: Player): UpperDimensionExpeditionResult {
+    const deniedReason = getUpperDimensionExpeditionDeniedReason(player);
+    if (deniedReason) return { success: false, reason: deniedReason };
+
+    const newlyUnlocked = !player.progress.getFlag(UPPER_DIMENSION_EXPEDITION_UNLOCKED_FLAG);
+    if (newlyUnlocked) player.progress.setFlag(UPPER_DIMENSION_EXPEDITION_UNLOCKED_FLAG, true);
+    player.locationId = UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID;
+    void player.save().catch(error => logger.error(`상위차원 원정로 즉시 저장 실패: user=${player.userId}`, error));
+    return { success: true, newlyUnlocked };
 }
 
 /** 처치 원장에 양수 기여가 남은 온라인 참가자에게 아르케 제압 자격을 부여한다. */

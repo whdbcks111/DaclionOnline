@@ -42,6 +42,8 @@ import {
     unregisterOnlinePlayer,
 } from '../player/playerRegistry.js';
 import { getIO, initSocket } from '../infrastructure/socket.js';
+import { PlayerProgress } from '../../models/progression/Progress.js';
+import { ASCENSION_RANK_COUNTER } from '../../models/progression/Ascension.js';
 
 const httpServer = createServer();
 initSocket(httpServer, 'http://localhost');
@@ -148,6 +150,34 @@ test('전체 브로드캐스트는 전체 대신 공지 또는 광고 플래그�
         timestamp: Date.now(),
     }, ChatType.ADVERTISEMENT);
     assert.equal(getChannelHistory(null).at(-1)?.flags?.[0]?.text, '광고');
+});
+
+test('플레이어 채팅은 전송 시점의 초월 여부를 히스토리에 스냅샷한다', () => {
+    const userId = 96_831;
+    const progress = PlayerProgress.createEmpty(userId);
+    const player = { userId, progress } as Player;
+    registerOnlinePlayer(player);
+
+    try {
+        sendMessageToChannel({
+            userId,
+            nickname: '초월 시험자',
+            content: [{ type: 'text', text: '초월 전' }],
+            timestamp: Date.now(),
+        }, 'ascended-nickname-test');
+        assert.equal(getChannelHistory('ascended-nickname-test').at(-1)?.ascended, undefined);
+
+        progress.increment(ASCENSION_RANK_COUNTER);
+        sendMessageToChannel({
+            userId,
+            nickname: '초월 시험자',
+            content: [{ type: 'text', text: '초월 후' }],
+            timestamp: Date.now(),
+        }, 'ascended-nickname-test');
+        assert.equal(getChannelHistory('ascended-nickname-test').at(-1)?.ascended, true);
+    } finally {
+        unregisterOnlinePlayer(userId);
+    }
 });
 
 test('일반 사용자가 변조한 공지 요청은 서버 전달 경계에서 거절한다', () => {

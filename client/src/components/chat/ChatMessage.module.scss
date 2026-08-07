@@ -217,6 +217,10 @@ $avatar-size: 40px;
     color: $color-text;
 }
 
+.ascendedNickname {
+    color: var(--color-ascended-nickname);
+}
+
 .titleBadge {
     max-width: min(11rem, 35vw);
     overflow: hidden;

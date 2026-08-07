@@ -15,7 +15,7 @@
 | 일반 몬스터 | `entity:boss`가 없는 모든 `MonsterData` | 153 | 10 / 50 / 200회 처치 |
 | 보스 | `entity:boss`가 있는 모든 `MonsterData` | 45 | 1 / 5 / 20회 처치 |
 | 광물 | `resource:ore`가 있는 `ResourceData` 광맥 종류 | 18 | 5 / 25 / 100회 파괴 |
-| 지역 탐험 | 숨김을 포함한 모든 `LocationData` | 624 | 최초 방문 즉시 금 |
+| 지역 탐험 | 숨김을 포함한 모든 `LocationData` | 632 | 최초 방문 즉시 금 |
 | 음식·요리 | 결과 ItemData 종류가 `음식` 또는 `생선 요리`인 성공 제작 가능 recipe | 19 | 1 / 5 / 20회 제작 |
 
 요리는 결과 아이템이 같더라도 recipe ID가 다르면 별도 엔트리다. `createCodexEntryId(category, sourceId)`가 recipe의 `namespace:path`를 도감 ID의 안전한 `namespace/path`로 바꿔 데이터 생성과 이벤트 기록이 같은 ID를 사용하게 한다.

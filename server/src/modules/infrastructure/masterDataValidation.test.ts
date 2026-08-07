@@ -18,6 +18,7 @@ import '../../data/progression/quests.js';
 import '../../data/world/npcs.js';
 import '../../data/world/monsters.js';
 import '../../data/combat/bossPatterns.js';
+import '../../data/world/ascendantFrontier.js';
 import '../../data/world/instanceDungeons.js';
 import '../../data/professions/fishing.js';
 import { getAllAlchemyFormulas, getAllAlchemyReagents } from '../../models/professions/Alchemy.js';

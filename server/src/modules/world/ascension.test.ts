@@ -3,7 +3,9 @@ import test from 'node:test';
 import {
     DACLEVIS_REVELATION_FLAG,
     ORIGINBOUNDARY_SOVEREIGN_DEFEATED_FLAG,
+    UPPER_DIMENSION_EXPEDITION_UNLOCKED_FLAG,
 } from '../../data/progression/ascension.js';
+import { UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID } from '../../data/world/upperDimensionExpedition.js';
 import type Player from '../../models/actors/Player.js';
 import { PlayerProgress } from '../../models/progression/Progress.js';
 import {
@@ -12,7 +14,13 @@ import {
     ASCENSION_PASSIVE_SKILL_ID,
     ASCENSION_RANK_COUNTER,
 } from '../../models/progression/Ascension.js';
-import { ascendPlayer, getAscensionDeniedReason, grantOriginboundaryDefeatProgress } from './ascension.js';
+import {
+    ascendPlayer,
+    enterUpperDimensionExpedition,
+    getAscensionDeniedReason,
+    getUpperDimensionExpeditionDeniedReason,
+    grantOriginboundaryDefeatProgress,
+} from './ascension.js';
 
 function createPlayerShell(userId: number): Player {
     return { progress: PlayerProgress.createEmpty(userId) } as Player;
@@ -77,4 +85,45 @@ test('초월 실행은 초기화 뒤 단계·패시브·귀속 아티팩트를 �
         'save',
     ]);
     assert.equal(ascendPlayer(player).success, false);
+});
+
+test('상위차원 원정은 초월 후 Lv.1000 재도달을 요구하고 아르케 재처치를 요구하지 않는다', () => {
+    const player = createPlayerShell(93_005);
+    Object.assign(player, { level: 1_000, isDefeated: false });
+    player.progress.setFlag(DACLEVIS_REVELATION_FLAG, true);
+    assert.match(getUpperDimensionExpeditionDeniedReason(player) ?? '', /초월/);
+
+    player.progress.increment(ASCENSION_RANK_COUNTER);
+    Object.assign(player, { level: 999 });
+    assert.match(getUpperDimensionExpeditionDeniedReason(player) ?? '', /Lv\.1000/);
+
+    Object.assign(player, { level: 1_000 });
+    assert.equal(getUpperDimensionExpeditionDeniedReason(player), undefined);
+    assert.equal(player.progress.getFlag(ORIGINBOUNDARY_SOVEREIGN_DEFEATED_FLAG), false);
+});
+
+test('잔재의 경계 통과는 원정 권한을 영구 기록하고 상위차원 첫 지역으로 이동·저장한다', () => {
+    const progress = PlayerProgress.createEmpty(93_006);
+    progress.increment(ASCENSION_RANK_COUNTER);
+    progress.setFlag(DACLEVIS_REVELATION_FLAG, true);
+    const calls: string[] = [];
+    let locationId = 'originboundary_transition';
+    const player = {
+        userId: 93_006,
+        level: 1_000,
+        isDefeated: false,
+        progress,
+        get locationId() { return locationId; },
+        set locationId(value: string) { locationId = value; calls.push(`move:${value}`); },
+        save: async () => { calls.push('save'); },
+    } as unknown as Player;
+
+    const first = enterUpperDimensionExpedition(player);
+    assert.deepEqual(first, { success: true, newlyUnlocked: true });
+    assert.equal(progress.getFlag(UPPER_DIMENSION_EXPEDITION_UNLOCKED_FLAG), true);
+    assert.equal(player.locationId, UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID);
+    assert.deepEqual(calls, [`move:${UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID}`, 'save']);
+
+    const second = enterUpperDimensionExpedition(player);
+    assert.deepEqual(second, { success: true, newlyUnlocked: false });
 });

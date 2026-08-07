@@ -2,6 +2,11 @@ import type { LocationData } from '../../../../shared/types.js';
 import type { TagId } from '../../../../shared/tags.js';
 import { GameTags } from '../../../../shared/tags.js';
 import { getFishingEquipmentTierByLocation } from '../professions/fishingEquipmentCatalog.js';
+import {
+    buildUpperDimensionExpeditionLocations,
+    UPPER_DIMENSION_EXPEDITION_CONNECTION_CONDITION,
+    UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID,
+} from './upperDimensionExpedition.js';
 
 export interface AscendantRegionDefinition {
     readonly id: string;
@@ -474,7 +479,7 @@ export function buildAscendantLocations(): LocationData[] {
             {
                 id: `${id}_transition`, name: `${region.name} 다음 경계`,
                 x: x + 1_030, y, z, mapColor: region.mapColor, zoneType: 'hostile', tags: commonTags,
-                npcIds: [], objects: [spawn(monsterIds[1], 2)],
+                npcIds: id === 'originboundary' ? ['origin_end_remnant'] : [], objects: [spawn(monsterIds[1], 2)],
                 connections: [
                     connect(`${id}_final_fork`),
                     connect(`${id}_boss_sanctum`),
@@ -588,7 +593,10 @@ export function buildAscendantLocations(): LocationData[] {
 
 /** JSON 원본에 생성 권역을 합치고 기존 Lv.500 종점과 첫 권역을 양방향 연결한다. */
 export function mergeAscendantLocations(baseLocations: readonly LocationData[]): LocationData[] {
-    const generated = buildAscendantLocations();
+    const generated = [
+        ...buildAscendantLocations(),
+        ...buildUpperDimensionExpeditionLocations(),
+    ];
     const merged = baseLocations.map(location => ({
         ...location,
         npcIds: [...location.npcIds],
@@ -611,6 +619,14 @@ export function mergeAscendantLocations(baseLocations: readonly LocationData[]):
     }
     if (firstThreshold && !firstThreshold.connections.some(connection => connection.locationId === 'endstar_last_constellation')) {
         firstThreshold.connections.push(connect('endstar_last_constellation'));
+    }
+    const originTransition = merged.find(location => location.id === 'originboundary_transition');
+    if (originTransition
+        && !originTransition.connections.some(connection => connection.locationId === UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID)) {
+        originTransition.connections.push(connect(
+            UPPER_DIMENSION_EXPEDITION_ENTRY_LOCATION_ID,
+            UPPER_DIMENSION_EXPEDITION_CONNECTION_CONDITION,
+        ));
     }
     return merged;
 }

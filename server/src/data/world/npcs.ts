@@ -34,9 +34,15 @@ import type Player from '../../models/actors/Player.js';
 import {
     DACLEVIS_REVELATION_FLAG,
     ORIGINBOUNDARY_SOVEREIGN_DEFEATED_FLAG,
+    UPPER_DIMENSION_EXPEDITION_UNLOCKED_FLAG,
 } from '../progression/ascension.js';
-import { isAscended } from '../../models/progression/Ascension.js';
-import { ascendPlayer, getAscensionDeniedReason } from '../../modules/world/ascension.js';
+import { ASCENSION_LEVEL, isAscended } from '../../models/progression/Ascension.js';
+import {
+    ascendPlayer,
+    enterUpperDimensionExpedition,
+    getAscensionDeniedReason,
+    getUpperDimensionExpeditionDeniedReason,
+} from '../../modules/world/ascension.js';
 
 export const MONSTER_HUNT_QUESTION_FLAG = 'npc:monster-hunt-question';
 
@@ -1271,7 +1277,9 @@ NPC.define({
     tags: ['npc:ascension', 'npc:remnant', GameTags.NPC_BENEVOLENT],
     isVisible: ({ player }) => player.progress.getFlag(ORIGINBOUNDARY_SOVEREIGN_DEFEATED_FLAG),
     entryScenario: ({ player }) => isAscended(player.progress)
-        ? 'ascended'
+        ? player.progress.getFlag(UPPER_DIMENSION_EXPEDITION_UNLOCKED_FLAG)
+            ? 'expedition_open'
+            : player.level >= ASCENSION_LEVEL ? 'expedition_ready' : 'ascended'
         : player.progress.getFlag(DACLEVIS_REVELATION_FLAG) ? 'returning' : 'awakening',
     scenarios: [
         new DialogueScenario('awakening', function* () {
@@ -1347,15 +1355,78 @@ NPC.define({
             yield Dialogue.say('한 생의 경계를 접는다. 다음 눈을 뜰 때 너는 처음의 땅에 서 있겠지만, 영혼은 이미 세계 바깥을 기억할 것이다.');
             yield Dialogue.event(({ player: ascender }) => { ascendPlayer(ascender); });
         }),
-        new DialogueScenario('ascended', function* () {
-            yield Dialogue.say('네 영혼에는 이미 바깥 차원의 방향이 새겨졌다. 다시 Lv.1000의 경계에 도달하면 아르케와 싸울 필요 없이 다음 원정로를 열 수 있다.');
+        new DialogueScenario('ascended', function* ({ player }) {
+            yield Dialogue.say(`네 영혼에는 이미 바깥 차원의 방향이 새겨졌다. 현재 Lv.${player.level}. 다시 Lv.1000의 경계에 도달하면 아르케와 싸울 필요 없이 다음 원정로를 열 수 있다.`);
             yield Dialogue.choice([
                 { label: '균열과 다클레비스의 정체를 다시 듣겠습니다.', target: 'fractures' },
                 { label: '새 삶을 시작하겠습니다.', target: 'end' },
             ]);
         }),
+        new DialogueScenario('expedition_ready', function* ({ player }) {
+            const deniedReason = getUpperDimensionExpeditionDeniedReason(player);
+            if (deniedReason) {
+                yield Dialogue.say(deniedReason);
+                yield Dialogue.end();
+                return;
+            }
+            yield Dialogue.say('두 번째 삶으로 다시 Lv.1000의 경계까지 왔구나. 아르케는 이미 첫 생에서 네 의지를 확인했다. 같은 수호자를 다시 쓰러뜨릴 필요는 없다.');
+            yield Dialogue.say('그의 인장과 네 나침반을 겹치면, 옛 지옥문을 반대로 고정한 역지옥문이 열린다. 그 너머의 원정기지는 다클레비스의 차원에 박는 첫 번째 경계닻이 될 것이다.');
+            yield Dialogue.choice([
+                { label: '아르케를 우회해 상위차원 원정을 시작합니다.', target: 'expedition_enter' },
+                { label: '아직 경계를 넘지 않겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('expedition_open', function* () {
+            yield Dialogue.say('역지옥문의 좌표는 이미 네 영혼에 고정되었다. 아르케의 은신처를 거치지 않고 다음 경계에서 곧바로 상위차원 원정로를 건널 수 있다.');
+            yield Dialogue.choice([
+                { label: '상위차원 원정기지로 건너갑니다.', target: 'expedition_enter' },
+                { label: '다클레비스의 정체를 다시 듣겠습니다.', target: 'fractures' },
+                { label: '지금은 머무르겠습니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('expedition_enter', function* ({ player }) {
+            const deniedReason = getUpperDimensionExpeditionDeniedReason(player);
+            if (deniedReason) {
+                yield Dialogue.say(deniedReason);
+                yield Dialogue.end();
+                return;
+            }
+            yield Dialogue.say('경계가 뒤집힌다. 마녀의 시선이 닿기 전에 역지옥문의 닻을 붙잡아라.');
+            yield Dialogue.event(({ player: expeditioner }) => { enterUpperDimensionExpedition(expeditioner); });
+        }),
         new DialogueScenario('end', function* () {
             yield Dialogue.say('경계를 넘는 선택은 서두를 일이 아니다. 준비가 되었을 때 다시 오라.');
+            yield Dialogue.end();
+        }),
+    ],
+});
+
+NPC.define({
+    id: 'upper_expedition_warden',
+    name: '경계닻 수문장 세르카',
+    description: '역지옥문을 루미나르 쪽으로 무너지지 않게 붙드는 초월 원정대의 첫 수문장입니다.',
+    tags: ['npc:ascension', 'npc:expedition', GameTags.NPC_BENEVOLENT],
+    entryScenario: () => 'arrival',
+    scenarios: [
+        new DialogueScenario('arrival', function* () {
+            yield Dialogue.say('여기가 다클레비스의 차원에 세운 첫 원정기지다. 뒤의 역지옥문은 탈출구이자 보급로이며, 경계닻 공방과 마녀시선 관측소가 문을 붙들고 있다.');
+            yield Dialogue.say('동부와 서부 정찰로는 첫 침공흔에서 다시 합쳐진다. 이곳부터는 루미나르의 열화된 생물이 아니라, 균열 속 원형이 태어난 상위차원의 질서를 추적하게 된다.');
+            yield Dialogue.choice([
+                { label: '역지옥문에 대해 묻습니다.', target: 'hellgate' },
+                { label: '원정 동선을 확인합니다.', target: 'routes' },
+                { label: '대화를 마칩니다.', target: 'end' },
+            ]);
+        }),
+        new DialogueScenario('hellgate', function* () {
+            yield Dialogue.say('루미나르에서 지옥문이라 부르던 것은 바깥 재앙을 끌어들이던 불완전한 좌표였다. 우리는 아르케의 인장으로 방향을 뒤집어, 같은 상처를 귀환 가능한 원정로로 고정했다.');
+            yield Dialogue.goto('arrival');
+        }),
+        new DialogueScenario('routes', function* () {
+            yield Dialogue.say('경계닻 공방은 문을 안정시키고, 관측소는 다클레비스의 주시가 옮겨가는 주기를 읽는다. 두 정찰로는 서로 다른 흔적을 확인하므로 어느 한쪽만으로는 앞으로의 원정 좌표를 완성할 수 없다.');
+            yield Dialogue.goto('arrival');
+        }),
+        new DialogueScenario('end', function* () {
+            yield Dialogue.say('원정의 시작은 도착이 아니라 돌아올 길을 확보하는 일이다. 역지옥문의 위치를 잊지 마라.');
             yield Dialogue.end();
         }),
     ],

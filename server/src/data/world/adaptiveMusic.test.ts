@@ -345,10 +345,10 @@ test('32마디 권역 선율은 계단 진행 중심이고 큰 도약을 절제�
     }
 });
 
-test('624개 장소의 35색은 누락·고아 테마 없이 대응하고 같은 권역은 훅을 보존한 채 편곡만 달라진다', () => {
+test('632개 장소의 35색은 누락·고아 테마 없이 대응하고 같은 권역은 훅을 보존한 채 편곡만 달라진다', () => {
     assert.equal(baseLocations.length, 293);
     assert.equal(generatedLocations.length, 331);
-    assert.equal(locations.length, 624);
+    assert.equal(locations.length, 632);
     assert.equal(new Set(locations.map(location => location.id)).size, locations.length);
     assert.ok(locations.every(location => location.mapColor));
 
