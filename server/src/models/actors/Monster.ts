@@ -12,7 +12,7 @@ import type Player from "./Player.js";
 import { chat } from "../../utils/chatBuilder.js";
 import logger from '../../utils/logger.js';
 import { sendBotMessageToUser, sendBotMessageToUsers } from "../../modules/communication/message.js";
-import { getOnlinePlayerUserIdsAtLocation } from '../../modules/player/playerRegistry.js';
+import { getOnlinePlayer, getOnlinePlayerUserIdsAtLocation } from '../../modules/player/playerRegistry.js';
 import { GameTags, normalizeTags } from "../../../../shared/tags.js";
 import type { TagId } from "../../../../shared/tags.js";
 import StatusEffect, { ControlCategory, StatusEffectType } from "../combat/StatusEffect.js";
@@ -192,6 +192,12 @@ export const BOSS_RECOVERY_DELAY_SECONDS = 10;
 /** 교전이 끊긴 보스가 초당 회복하는 최대 생명력 비율. */
 export const BOSS_RECOVERY_RATIO_PER_SECOND = 0.1;
 
+/** 보스의 두 공격 몫을 배분한다. 혼자면 같은 대상이 두 몫, 둘 이상이면 서로 다른 대상이 한 몫씩 받는다. */
+export function allocateBossPressureTargets<T>(primary: T, candidates: readonly T[]): readonly [T, T] {
+    const secondary = candidates.find(candidate => candidate !== primary) ?? primary;
+    return [primary, secondary];
+}
+
 export function resolveMonsterRespawnTime(
     monsterDataId: string,
     configuredRespawnTime: number,
@@ -222,6 +228,8 @@ export default class Monster extends Entity {
     private readonly threat: ThreatTable;
     /** 최초로 공격한 플레이어와 당시 파티원에게만 허용되는 런타임 교전 선점. */
     private readonly combatClaimUserIds = new Set<number>();
+    /** 인스턴스 참가 권한은 아직 비어 있는 방에서 위협도가 소멸해도 유지한다. */
+    private readonly authorizedCombatUserIds = new Set<number>();
     private skillPatternIndex = 0;
     private skillPatternTimer = 0;
     private challengePatternTimer = 0;
@@ -350,6 +358,17 @@ export default class Monster extends Entity {
         return [...this.combatClaimUserIds];
     }
 
+    /** 명단 비강제 인스턴스 참가자가 파티 claim과 무관하게 같은 몬스터를 공격하도록 허용한다. */
+    authorizeCombatParticipants(userIds: readonly number[]): void {
+        for (const userId of userIds) {
+            if (!Number.isSafeInteger(userId) || userId <= 0) continue;
+            this.authorizedCombatUserIds.add(userId);
+            this.combatClaimUserIds.add(userId);
+        }
+        this.threat.retainPlayerUserIds(this.combatClaimUserIds);
+        this.currentTarget = this.threat.selectTarget(this.currentTarget);
+    }
+
     /**
      * 보스방 감지처럼 피해가 발생하기 전 시작되는 교전을 위협도 테이블에 등록한다.
      * 이미 참여 중인 대상은 매 tick 위협도가 중복 누적되지 않는다.
@@ -441,6 +460,7 @@ export default class Monster extends Entity {
         if (this.combatClaimUserIds.size > 0
             && !this.threat.hasActiveParticipantUserIds(this.combatClaimUserIds)) {
             this.combatClaimUserIds.clear();
+            for (const userId of this.authorizedCombatUserIds) this.combatClaimUserIds.add(userId);
         }
         this.currentTarget = this.threat.selectTarget(this.currentTarget);
         const target = this.currentTarget;
@@ -498,12 +518,37 @@ export default class Monster extends Entity {
                 this.skillPatternTimer = 0.5;
             }
         }
-        const result = this.attack(target, this.attackProfile?.damageType ?? 'physical');
-        const effect = this.attackProfile?.effect;
-        if (result && !result.evaded && effect && Math.random() < effect.chance) {
-            const type = StatusEffectType.fromKey(effect.statusEffectId);
-            if (type) target.applyStatusEffect(type, effect.duration, effect.level, this);
-        }
+        this.performBasicAttack(target);
+    }
+
+    private performBasicAttack(primaryTarget: Entity): void {
+        const targets = this.hasTag(GameTags.ENTITY_BOSS)
+            ? allocateBossPressureTargets(primaryTarget, this.getEligibleBossPressureTargets(primaryTarget))
+            : [primaryTarget] as const;
+        targets.forEach((target, index) => {
+            if (target.isDefeated || target.locationId !== this.locationId) return;
+            // 한 AI 행동 안의 두 몫은 하나의 공격 주기를 공유한다.
+            if (index > 0) this._attackCooldown = 0;
+            const result = this.attack(target, this.attackProfile?.damageType ?? 'physical');
+            const effect = this.attackProfile?.effect;
+            if (result && !result.evaded && effect && Math.random() < effect.chance) {
+                const type = StatusEffectType.fromKey(effect.statusEffectId);
+                if (type) target.applyStatusEffect(type, effect.duration, effect.level, this);
+            }
+        });
+    }
+
+    private getEligibleBossPressureTargets(primaryTarget: Entity): Entity[] {
+        const claimed = this.combatClaimUserIds;
+        const players = getOnlinePlayerUserIdsAtLocation(this.locationId)
+            .filter(userId => claimed.size === 0 || claimed.has(userId))
+            .flatMap(userId => {
+                const player = getOnlinePlayer(userId);
+                return player && player.isWorldActive && !player.isDefeated ? [player] : [];
+            });
+        return primaryTarget.isWorldActive && !primaryTarget.isDefeated
+            ? [primaryTarget, ...players.filter(player => player !== primaryTarget)]
+            : players;
     }
 
     override onDeath(): void {
@@ -612,6 +657,7 @@ export default class Monster extends Entity {
             getLocation(this.locationId)?.removeObject(this);
         }
         this.combatClaimUserIds.clear();
+        this.authorizedCombatUserIds.clear();
         this.threat.clear();
     }
 
@@ -620,6 +666,7 @@ export default class Monster extends Entity {
         this.resetBossRecovery();
         this.resetBossEncounter();
         this.combatClaimUserIds.clear();
+        this.authorizedCombatUserIds.clear();
         this.threat.clear();
         this.skillPatternTimer = this.skillPattern?.initialDelay ?? 0;
         this.skillPatternIndex = 0;
@@ -764,6 +811,7 @@ export default class Monster extends Entity {
         if (this.life < this.maxLife) return;
 
         this.combatClaimUserIds.clear();
+        for (const userId of this.authorizedCombatUserIds) this.combatClaimUserIds.add(userId);
         this.threat.clear();
         this.resetBossRecovery();
     }

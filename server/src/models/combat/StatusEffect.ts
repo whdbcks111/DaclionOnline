@@ -50,6 +50,8 @@ export interface StatusEffectTypeOptions {
     persistencePolicy?: StatusEffectPersistencePolicy;
     /** DB snapshot에 포함해도 안전한 runtime metadata delta key. 생략하면 metadata를 저장하지 않는다. */
     persistenceMetadataKeys?: readonly string[];
+    /** false이면 일반 직접 제거와 상태 상쇄로 해제할 수 없고 시스템 수명주기만 제거한다. */
+    removable?: boolean;
     tags?: readonly TagId[];
     aliases?: readonly string[];
 }
@@ -338,6 +340,7 @@ export class StatusEffectType implements TagReadable {
     readonly controlCategory: ControlCategory;
     readonly persistencePolicy: StatusEffectPersistencePolicy;
     readonly persistenceMetadataKeys: readonly string[];
+    readonly removable: boolean;
     readonly tags: readonly TagId[];
     readonly aliases: readonly string[];
 
@@ -360,6 +363,7 @@ export class StatusEffectType implements TagReadable {
             ?? configuredPersistencePolicies.get(this.id)
             ?? StatusEffectPersistencePolicy.WALL_CLOCK;
         this.persistenceMetadataKeys = Object.freeze(normalizePersistenceMetadataKeys(options.persistenceMetadataKeys));
+        this.removable = options.removable ?? true;
         this.tags = Object.freeze(normalizeTags(options.tags ?? []));
         this.aliases = Object.freeze((options.aliases ?? []).map(alias => alias.trim()).filter(Boolean));
         if (!this.label) throw new Error(`StatusEffectType label must not be empty: ${this.id}`);

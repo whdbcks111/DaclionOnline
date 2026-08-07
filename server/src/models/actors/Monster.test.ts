@@ -5,6 +5,7 @@ import Monster, {
     BOSS_RECOVERY_DELAY_SECONDS,
     BOSS_RECOVERY_RATIO_PER_SECOND,
     STANDARD_MONSTER_RESPAWN_SECONDS,
+    allocateBossPressureTargets,
     defineMonster,
 } from './Monster.js';
 import Entity, { getDamageCauseActorPlayerId } from '../core/Entity.js';
@@ -147,6 +148,15 @@ defineLocation({
     objects: [],
     connections: [],
     tags: [],
+});
+
+test('보스의 두 공격 몫은 솔로에게 중첩되고 두 명 이상이면 서로 다른 대상에게 분산된다', () => {
+    const first = { id: 1 };
+    const second = { id: 2 };
+    const third = { id: 3 };
+
+    assert.deepEqual(allocateBossPressureTargets(first, [first]), [first, first]);
+    assert.deepEqual(allocateBossPressureTargets(first, [first, second, third]), [first, second]);
 });
 
 test('일반 몬스터는 장소의 레벨별 설정과 관계없이 표준 리젠 시간을 사용한다', () => {

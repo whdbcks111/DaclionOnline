@@ -5,7 +5,7 @@ import Equipment from "../economy/Equipment.js";
 import { StatType } from "../core/Stat.js";
 import type { StatRecord } from "../core/Stat.js";
 import { AttributeType } from "../core/Attribute.js";
-import { getLocation, getRespawnLocation } from "../world/Location.js";
+import { getLocation, getRespawnLocation, isRuntimeLocation } from "../world/Location.js";
 import { sendBotMessageToUser, sendNotificationToUser } from "../../modules/communication/message.js";
 import { chat } from "../../utils/chatBuilder.js";
 import { GameTags } from "../../../../shared/tags.js";
@@ -552,7 +552,7 @@ export default class Player extends Entity {
         if (val !== previousLocationId) this.clearMusicCombatState();
         this._locationId = val;
         this.markDirty();
-        if (this.progress) markLocationVisited(this, val);
+        if (this.progress && !isRuntimeLocation(val)) markLocationVisited(this, val);
         this.quests?.refreshSnapshotObjectives();
         if (val !== previousLocationId) {
             emitGameEvent(GameEventIds.LOCATION_CHANGED, {

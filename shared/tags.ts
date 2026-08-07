@@ -138,6 +138,8 @@ export const GameTags = Object.freeze({
     LOCATION_ENDSTAR: 'location:endstar',
     /** 분기·순환·막다른 방으로 구성된 탐험형 장소. */
     LOCATION_DUNGEON: 'location:dungeon',
+    /** 정적 월드·지도·방문 기록과 분리된 일회성 런타임 던전 장소. */
+    LOCATION_INSTANCE_DUNGEON: 'location:instance_dungeon',
     /** 전용 보스 전투 공간. 살아 있는 보스가 입장한 플레이어를 먼저 감지한다. */
     LOCATION_BOSS_ROOM: 'location:boss_room',
     LOCATION_HIDDEN: 'location:hidden',

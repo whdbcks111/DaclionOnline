@@ -115,7 +115,8 @@
     "objects": [
       { "type": "monster", "dataId": "slime", "maxCount": 5, "respawnTime": 20 },
       { "type": "resource", "dataId": "treasure_chest", "maxCount": 1, "respawnTime": 0 },
-      { "type": "resource", "dataId": "tutorial_training_dummy", "maxCount": 1, "respawnTime": 5 }
+      { "type": "resource", "dataId": "tutorial_training_dummy", "maxCount": 1, "respawnTime": 5 },
+      { "type": "resource", "dataId": "unstable_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "town_square" },

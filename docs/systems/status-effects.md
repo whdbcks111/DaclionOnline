@@ -28,6 +28,8 @@ Entity
 
 Player 사망 시 정책과 관계없이 모두 제거하므로 respawn 뒤에는 남지 않는다. Player와 Location 오브젝트는 기존 20 FPS lifecycle에서, Projectile은 `updateProjectiles()`의 `earlyUpdate → update → lateUpdate`에서 갱신된다.
 
+`StatusEffectType.removable`이 `false`인 효과는 `MANUAL` 직접 제거와 `INTERACTION` 상쇄를 거부한다. 만료·대상 사망·잘못된 대상·연결 종료·오류처럼 시스템 수명주기 사유는 cleanup을 위해 제거할 수 있다. 차원 균열의 `마녀의 주시`와 `마녀의 저주`가 이 경계를 사용한다. 주시는 원정의 절대 종료시각까지 유지되며 자연 만료 때만 5초 저주로 전환한다. 정상 귀환은 `INVALID_TARGET`으로 정리해 저주를 만들지 않는다. 저주는 최대 생명력의 20%를 초당 직접 소진하고 만료 때 생명력을 0으로 확정한다.
+
 외부 기능은 raw Map을 읽지 않고 다음 `Entity` 공개 API를 사용한다.
 
 - 조회: `getStatusEffects`, `getStatusEffect`, `hasStatusEffect`, `getStatusEffectDisplaySnapshots`

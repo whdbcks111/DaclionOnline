@@ -14,6 +14,10 @@ import type { TagId } from '../../../../shared/tags.js';
 import { ActionType } from '../core/Action.js';
 import { AttributeType } from '../core/Attribute.js';
 import '../../data/combat/statusEffects.js';
+import {
+    WITCH_CURSE_STATUS_EFFECT,
+    WITCH_GAZE_STATUS_EFFECT,
+} from '../../data/combat/statusEffects.js';
 
 class TestStatusEntity extends Entity {
     override readonly name: string;
@@ -79,6 +83,33 @@ test('제어 분류는 클래스형 enum 조회 API를 제공하고 일반 효�
     assert.equal(other.applyStatusEffect(stun, 10, 1).effect?.duration, 10);
     other.removeStatusEffect(stun);
     assert.equal(other.applyStatusEffect(sleep, 10, 1).effect?.duration, 10);
+});
+
+test('마녀의 주시는 직접 해제할 수 없고 만료되면 5초 생명력 소진 저주로 전환된다', () => {
+    const target = new TestStatusEntity('균열 참가자', [GameTags.TRAIT_LIVING], 1000);
+    target.applyStatusEffect(WITCH_GAZE_STATUS_EFFECT, 1, 1);
+
+    assert.equal(target.removeStatusEffect(WITCH_GAZE_STATUS_EFFECT), false);
+    target.updateStatusEffects(1);
+    assert.equal(target.hasStatusEffect(WITCH_GAZE_STATUS_EFFECT), false);
+    assert.equal(target.hasStatusEffect(WITCH_CURSE_STATUS_EFFECT), true);
+    assert.equal(target.removeStatusEffect(WITCH_CURSE_STATUS_EFFECT, StatusEffectRemovalReason.INTERACTION), false);
+
+    target.updateStatusEffects(2.5);
+    assert.equal(target.life, 500);
+    target.updateStatusEffects(2.5);
+    assert.equal(target.life, 0);
+});
+
+test('시스템 정상 귀환 제거는 마녀의 주시를 저주로 바꾸지 않는다', () => {
+    const target = new TestStatusEntity('귀환자', [GameTags.TRAIT_LIVING]);
+    target.applyStatusEffect(WITCH_GAZE_STATUS_EFFECT, 10, 1);
+
+    assert.equal(target.removeStatusEffect(
+        WITCH_GAZE_STATUS_EFFECT,
+        StatusEffectRemovalReason.INVALID_TARGET,
+    ), true);
+    assert.equal(target.hasStatusEffect(WITCH_CURSE_STATUS_EFFECT), false);
 });
 
 test('hard 제어는 대상별 최초 저항과 12초 공유 점감 100/50/25/면역을 적용한다', () => {

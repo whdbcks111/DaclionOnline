@@ -36,6 +36,10 @@ defineLocation({
 });
 test.after(() => { getIO().close(); });
 
+test('균열 보스의 이중 공명 2인 파훼 handler가 전투 데이터보다 먼저 등록된다', () => {
+    assert.equal(hasMonsterChallengePattern('rift:twofold-resonance'), true);
+});
+
 test('보스 challengePattern은 현재 위협 대상에게 실제 미니게임 세션을 시작한다', () => {
     const monster = new Monster('crystal_vein_overlord', 'challenge-test');
     const target = new ChallengeTarget();
@@ -69,7 +73,11 @@ test('철근 심장수호자는 고속·고마법저항 대상 한 명에게 방
     assert.equal(outcome.activated, true);
     monster.skills.update(1.5);
 
-    assert.equal(target.life, target.maxLife * 0.75);
+    const expectedDamage = Math.max(
+        target.maxLife * 0.25,
+        monster.attribute.get(AttributeType.MAGIC_FORCE) * 1.2,
+    );
+    assert.equal(target.life, target.maxLife - expectedDamage);
     assert.equal(target.hasStatusEffect(StatusEffectType.fromKey('overmaster')!), true);
     assert.equal(target.canPerformAction(ActionType.ATTACK), false);
     assert.equal(target.canPerformAction(ActionType.EVASION), false);

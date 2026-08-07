@@ -7,6 +7,7 @@ import { updateProjectiles } from "../../models/combat/Projectile.js";
 import { updateNpcDialogues } from "../../models/actors/NpcDialogue.js";
 import { updateGameScheduler } from './scheduler.js';
 import { tradeManager } from '../social/trade.js';
+import { updateInstanceDungeons } from '../world/instanceDungeon.js';
 
 const TARGET_FPS = 20;
 const FRAME_TIME = 1000 / TARGET_FPS;
@@ -33,6 +34,7 @@ function tick(): void {
 
     updateProjectiles(dt);
     updateLocations(dt, players);
+    updateInstanceDungeons();
     updateAllShops(dt);
     tickCoroutines(dt);
     updateNpcDialogues();

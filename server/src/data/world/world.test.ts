@@ -27,6 +27,7 @@ import './npcs.js';
 import './locations.js';
 import './dungeonPuzzles.js';
 import '../combat/bossPatterns.js';
+import './instanceDungeons.js';
 import '../economy/shops.js';
 import '../professions/fishing.js';
 import './ascendantFrontier.js';

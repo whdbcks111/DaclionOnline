@@ -174,6 +174,61 @@ registerHazardBossPattern({
     failureEffect: { statusEffectId: 'blindness', duration: 5, level: 10 },
 });
 
+registerMonsterChallengePattern('rift:twofold-resonance', ({ monster, complete }) => {
+    const wardSource = 'boss:rift:twofold-resonance:ward';
+    const vulnerabilitySource = 'boss:rift:twofold-resonance:vulnerability';
+    const attackers = new Set<number>();
+    let collecting = true;
+    let remaining = 8;
+
+    const cleanup = () => {
+        monster.removeDamageReceivedModifier(wardSource);
+        monster.removeDamageReceivedModifier(vulnerabilitySource);
+        unsubscribe();
+    };
+    const unsubscribe = subscribeGameEvent(GameEventIds.ATTACK_HIT, event => {
+        if (!collecting || event.subject !== monster) return;
+        const userId = event.actor?.attackOwner.playerUserId;
+        if (userId === undefined) return;
+        attackers.add(userId);
+        if (attackers.size < 2) return;
+        collecting = false;
+        remaining = 6;
+        monster.removeDamageReceivedModifier(wardSource);
+        monster.setDamageReceivedModifier(vulnerabilitySource, 1.3);
+        sendRoleBreakMessage(monster, chat()
+            .color('lime', builder => builder.weight('bold', nested => nested.text('[ 이중 공명 파훼 ]')))
+            .text(`\n서로 다른 두 존재의 공격이 공명했습니다. 6초 동안 ${monster.name}이 받는 피해가 130%가 됩니다.`)
+            .build());
+    });
+
+    monster.setDamageReceivedModifier(wardSource, 0.35);
+    sendRoleBreakMessage(monster, chat()
+        .color('red', builder => builder.weight('bold', nested => nested.text('[ 이중 공명 ]')))
+        .text('\n8초 안에 서로 다른 두 플레이어가 보스를 공격해야 보호막이 무너집니다.')
+        .build());
+    return {
+        update: dt => {
+            remaining -= Math.max(0, dt);
+            if (remaining > 0) return;
+            if (collecting) {
+                for (const player of getRoleBreakFailurePlayers(monster)) {
+                    player.damage(player.maxLife * 0.3, 'absolute', {
+                        type: 'attack', causeEntity: monster, fixedDamage: true,
+                    });
+                }
+                sendRoleBreakMessage(monster, chat()
+                    .color('red', builder => builder.weight('bold', nested => nested.text('[ 공명 실패 ]')))
+                    .text('\n두 존재의 공명을 만들지 못해 참가자들이 최대 생명력의 30% 고정 피해를 받았습니다.')
+                    .build());
+            }
+            cleanup();
+            complete();
+        },
+        cancel: cleanup,
+    };
+});
+
 type RoleBreakState = 'collecting' | 'exposed' | 'done';
 
 function sendRoleBreakMessage(monster: Monster, content: ChatNode[]): void {

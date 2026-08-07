@@ -979,6 +979,9 @@ export default abstract class Entity implements TagReadable {
     ): boolean {
         const effect = this.getStatusEffect(type);
         if (!effect || this.statusEffects.get(effect.type.id) !== effect) return false;
+        if (!effect.type.removable
+            && (reason === StatusEffectRemovalReason.MANUAL
+                || reason === StatusEffectRemovalReason.INTERACTION)) return false;
         this.statusEffects.delete(effect.type.id);
         try {
             effect.remove(this, reason);

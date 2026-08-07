@@ -95,6 +95,7 @@ export default class Location implements TagReadable {
 
     get riskPolicy(): RegionRiskPolicy { return RegionRiskPolicy.require(this.data.zoneType); }
     get isBossRoom(): boolean { return this.hasTag(GameTags.LOCATION_BOSS_ROOM); }
+    get isInstanceDungeon(): boolean { return this.hasTag(GameTags.LOCATION_INSTANCE_DUNGEON); }
 
     // -- 월드 오브젝트 관리 --
 
@@ -153,6 +154,18 @@ export default class Location implements TagReadable {
             && object.monsterDataId === monsterDataId);
     }
 
+    getActiveMonsterCount(): number {
+        return this._objects.filter(object => object instanceof Monster && !object.isDefeated).length;
+    }
+
+    /** 인스턴스 참가자 전체를 방 몬스터의 교전 claim에 한 번에 등록한다. */
+    authorizeMonsterCombatParticipants(userIds: readonly number[]): void {
+        if (!this.isInstanceDungeon) return;
+        for (const object of this._objects) {
+            if (object instanceof Monster) object.authorizeCombatParticipants(userIds);
+        }
+    }
+
     /** 보스방 선공과 보조 오브젝트 교전을 raw 오브젝트 배열 없이 시작한다. */
     engageBosses(intruder: Entity): number {
         if (!this.isBossRoom || intruder.isDefeated || intruder.locationId !== this.id) return 0;
@@ -161,6 +174,16 @@ export default class Location implements TagReadable {
             if (object instanceof Monster
                 && object.hasTag(GameTags.ENTITY_BOSS)
                 && object.engageIntruder(intruder)) engaged++;
+        }
+        return engaged;
+    }
+
+    /** 인스턴스 방의 동시 교전을 raw 오브젝트 순회 없이 시작한다. */
+    engageHostileMonsters(intruder: Entity): number {
+        if (!this.isInstanceDungeon || intruder.isDefeated || intruder.locationId !== this.id) return 0;
+        let engaged = 0;
+        for (const object of this._objects) {
+            if (object instanceof Monster && object.engageIntruder(intruder)) engaged++;
         }
         return engaged;
     }
@@ -349,9 +372,11 @@ export default class Location implements TagReadable {
     // -- 게임 루프 --
 
     update(dt: number, onlinePlayers: readonly Player[] = []): void {
-        if (this.isBossRoom) {
+        if (this.isBossRoom || this.isInstanceDungeon) {
             for (const player of onlinePlayers) {
-                if (player.locationId === this.id && !player.isDefeated) this.engageBosses(player);
+                if (player.locationId !== this.id || player.isDefeated) continue;
+                if (this.isInstanceDungeon) this.engageHostileMonsters(player);
+                else this.engageBosses(player);
             }
         }
 
@@ -372,6 +397,7 @@ export default class Location implements TagReadable {
 
 const locationDataCache = new Map<string, LocationData>();
 const locationInstances = new Map<string, Location>();
+const runtimeLocationInstances = new Map<string, Location>();
 
 /** 외부 LocationData를 검증하고 내부 보관용 복사본으로 정규화 */
 export function normalizeLocationData(data: LocationData): LocationData {
@@ -442,14 +468,33 @@ export function reloadAllLocations(locations: LocationData[]): void {
     }
 }
 
+/** 지도·도감·관리자 JSON과 분리된 일회성 런타임 장소를 등록한다. */
+export function defineRuntimeLocation(data: LocationData): Location {
+    const normalized = normalizeLocationData(data);
+    if (locationInstances.has(normalized.id) || runtimeLocationInstances.has(normalized.id)) {
+        throw new Error(`Duplicate runtime Location ID: ${normalized.id}`);
+    }
+    const location = new Location(normalized);
+    runtimeLocationInstances.set(normalized.id, location);
+    return location;
+}
+
+export function removeRuntimeLocation(locationId: string): boolean {
+    return runtimeLocationInstances.delete(locationId);
+}
+
+export function isRuntimeLocation(locationId: string): boolean {
+    return runtimeLocationInstances.has(locationId);
+}
+
 /** 런타임 Location 인스턴스 조회 */
 export function getLocation(id: string): Location | undefined {
-    return locationInstances.get(id);
+    return runtimeLocationInstances.get(id) ?? locationInstances.get(id);
 }
 
 /** 모든 Location 인스턴스 반환 */
 export function getAllLocations(): Location[] {
-    return Array.from(locationInstances.values());
+    return [...locationInstances.values(), ...runtimeLocationInstances.values()];
 }
 
 /** isRespawnLocation이 true인 첫 번째 장소 반환 */

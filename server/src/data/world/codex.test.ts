@@ -35,6 +35,7 @@ import '../progression/quests.js';
 import './npcs.js';
 import '../professions/fishing.js';
 import './ascendantFrontier.js';
+import './instanceDungeons.js';
 import { mergeAscendantLocations } from './ascendantRegions.js';
 import { initializeCodexData } from './codex.js';
 
@@ -104,8 +105,8 @@ test('도감 마스터 데이터는 현재 전체 분류와 미래 등록을 재
             exploration: entryIds(CodexCategory.EXPLORATION).length,
             cooking: entryIds(CodexCategory.COOKING).length,
         }, {
-            monster: 153,
-            boss: 45,
+            monster: 155,
+            boss: 46,
             ore: 18,
             exploration: 624,
             cooking: 19,

@@ -3,6 +3,7 @@ import { ActionType } from '../../models/core/Action.js';
 import StatusEffect, {
     ControlCategory,
     StatusEffectPersistencePolicy,
+    StatusEffectRemovalReason,
     StatusEffectType,
     type StatusEffectContext,
     type StatusEffectLifecycleResult,
@@ -61,6 +62,56 @@ function removeModifiers({ target, effect }: StatusEffectContext): void {
 function livingOnly({ target }: StatusEffectContext): StatusEffectLifecycleResult | void {
     return target.hasEffectTargetTag(GameTags.TRAIT_LIVING) ? undefined : 'remove';
 }
+
+/**
+ * 균열 제한시간이 끝난 뒤 5초에 걸쳐 현재 방어·보호막과 무관하게 생명력을 소진한다.
+ * 만료 순간 생존해 있으면 남은 생명력을 0으로 고정해 회복으로 저주를 버틸 수 없게 한다.
+ */
+export const WITCH_CURSE_STATUS_EFFECT = StatusEffectType.define({
+    id: 'witch_curse',
+    label: '마녀의 저주',
+    icon: ICON.poison,
+    descriptionTemplate: '다클레비스의 저주가 생명력을 직접 잠식합니다. 5초 뒤 반드시 사망합니다.',
+    calculatedFields: {
+        lifeDrainPerSecond: ({ target }) => Math.ceil(target.maxLife / 5),
+    },
+    calculatedFieldTooltips: {
+        lifeDrainPerSecond: '최대 생명력의 20%',
+    },
+    onStart: livingOnly,
+    onUpdate: (context, dt) => {
+        if (livingOnly(context) === 'remove') return 'remove';
+        context.target.life = Math.max(
+            0,
+            context.target.life - context.target.maxLife * 0.2 * Math.max(0, dt),
+        );
+    },
+    onRemove: ({ target }, reason) => {
+        if (reason === StatusEffectRemovalReason.EXPIRED && !target.isDefeated) target.life = 0;
+    },
+    persistencePolicy: StatusEffectPersistencePolicy.COMBAT_TRANSIENT,
+    removable: false,
+    tags: [GameTags.PROPERTY_DARK],
+    aliases: ['마녀의 저주'],
+});
+
+/** 균열의 남은 공략 시간을 나타내며 정상 만료 때만 마녀의 저주로 변한다. */
+export const WITCH_GAZE_STATUS_EFFECT = StatusEffectType.define({
+    id: 'witch_gaze',
+    label: '마녀의 주시',
+    icon: ICON.mentality,
+    descriptionTemplate: '상위차원의 마녀가 침입자를 지켜봅니다. 남은 시간이 끝나면 마녀의 저주가 발동합니다.',
+    onStart: livingOnly,
+    onRemove: ({ target }, reason) => {
+        if (reason === StatusEffectRemovalReason.EXPIRED && !target.isDefeated) {
+            target.applyStatusEffect(WITCH_CURSE_STATUS_EFFECT, 5, 1);
+        }
+    },
+    persistencePolicy: StatusEffectPersistencePolicy.COMBAT_TRANSIENT,
+    removable: false,
+    tags: [GameTags.PROPERTY_DARK],
+    aliases: ['마녀의 주시'],
+});
 
 function defineAttributeEffect(options: {
     id: string;

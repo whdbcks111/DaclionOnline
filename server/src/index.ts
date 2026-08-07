@@ -32,6 +32,7 @@ import './data/progression/quests.js';
 import './data/world/npcs.js';
 import './data/professions/fishing.js';
 import './data/world/ascendantFrontier.js';
+import './data/world/instanceDungeons.js';
 import { initializeCodexData } from './data/world/codex.js';
 import { initLocation } from './modules/world/location.js';
 import { initUploadMaintenance, uploadRouter } from './modules/infrastructure/upload.js';
@@ -46,6 +47,7 @@ import { initConsumableBundle } from './modules/player/consumableBundle.js';
 import { initCodexEventTracking } from './modules/world/codex.js';
 import { recordServerBoot } from './modules/infrastructure/serverBoot.js';
 import { getPatchNotes } from '../../shared/patchNotes.js';
+import { initInstanceDungeons } from './modules/world/instanceDungeon.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -76,6 +78,7 @@ initHudPreset();
 initConsumableBundle();
 initTutorial();
 initLocation();
+initInstanceDungeons();
 initializeCodexData();
 initCodexEventTracking();
 initPlayer();

@@ -18,6 +18,7 @@ import '../data/world/monsters.js';
 import '../data/combat/bossPatterns.js';
 import '../data/professions/fishing.js';
 import '../data/world/ascendantFrontier.js';
+import '../data/world/instanceDungeons.js';
 import { mergeAscendantLocations } from '../data/world/ascendantRegions.js';
 import { validateMasterData } from '../modules/infrastructure/masterDataValidation.js';
 

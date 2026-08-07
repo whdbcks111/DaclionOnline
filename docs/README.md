@@ -42,6 +42,7 @@
 | NPC 퀘스트·목표 추적·보상 | [systems/quests.md](systems/quests.md) |
 | 계층형 게임 안내·첫 접속 튜토리얼 | [systems/tutorial-guide.md](systems/tutorial-guide.md) |
 | 질문문·순간이동 유물·파괴문 던전 퍼즐 | [systems/dungeon-puzzles.md](systems/dungeon-puzzles.md) |
+| 차원 균열·인스턴스 던전·다클레비스·초월 기획 | [systems/instance-dungeons.md](systems/instance-dungeons.md) |
 | 관리자 플레이어·월드 운영 도구 | [systems/admin-panel.md](systems/admin-panel.md) |
 | DB 모델과 저장 경계 | [data/database.md](data/database.md) |
 | 실행·빌드·환경 설정 | [development.md](development.md) |
