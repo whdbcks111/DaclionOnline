@@ -73,6 +73,11 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.44', '2026-08-07',
+        [CHANGED,
+            '보스의 분산 기본 공격이 정상 공격속도를 무시하고 게임 갱신 주기마다 반복되던 문제를 수정했습니다. 두 공격 몫은 이제 하나의 정상 공격 주기 안에서만 처리됩니다.',
+        ],
+    ),
     definePatchNote('1.0.43', '2026-08-07',
         [FEATURE,
             '필드 던전과 분리된 `차원 균열` 인스턴스 원정을 추가했습니다. 첫 진입자가 연 게이트로 10초 동안 누구나 직접 합류할 수 있으며, 게이트가 닫힌 뒤에는 방의 몬스터를 모두 쓰러뜨려야 다음 구역으로 진행할 수 있습니다.',

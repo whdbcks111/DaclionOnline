@@ -522,20 +522,29 @@ export default class Monster extends Entity {
     }
 
     private performBasicAttack(primaryTarget: Entity): void {
+        // 보스의 추가 공격 몫은 같은 공격 주기 안에서만 쿨다운을 우회해야 한다.
+        // 주기 대기 중 매 AI tick마다 두 번째 몫이 쿨다운을 0으로 만들면 초고속 연타가 된다.
+        if (this._attackCooldown > 0) return;
         const targets = this.hasTag(GameTags.ENTITY_BOSS)
             ? allocateBossPressureTargets(primaryTarget, this.getEligibleBossPressureTargets(primaryTarget))
             : [primaryTarget] as const;
-        targets.forEach((target, index) => {
-            if (target.isDefeated || target.locationId !== this.locationId) return;
+        for (const [index, target] of targets.entries()) {
+            if (target.isDefeated || target.locationId !== this.locationId) continue;
             // 한 AI 행동 안의 두 몫은 하나의 공격 주기를 공유한다.
+            const committedCycleCooldown = this._attackCooldown;
             if (index > 0) this._attackCooldown = 0;
             const result = this.attack(target, this.attackProfile?.damageType ?? 'physical');
+            if (!result) {
+                // 추가 몫이 다른 공격 제한으로 실패해도 첫 공격이 확정한 주기는 보존한다.
+                if (index > 0) this._attackCooldown = committedCycleCooldown;
+                return;
+            }
             const effect = this.attackProfile?.effect;
-            if (result && !result.evaded && effect && Math.random() < effect.chance) {
+            if (!result.evaded && effect && Math.random() < effect.chance) {
                 const type = StatusEffectType.fromKey(effect.statusEffectId);
                 if (type) target.applyStatusEffect(type, effect.duration, effect.level, this);
             }
-        });
+        }
     }
 
     private getEligibleBossPressureTargets(primaryTarget: Entity): Entity[] {

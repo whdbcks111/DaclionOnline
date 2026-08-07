@@ -14,6 +14,7 @@ import { defineLocation } from '../world/Location.js';
 import { StatusEffectType } from '../combat/StatusEffect.js';
 import { ShieldType } from '../combat/Shield.js';
 import { defineSkill } from '../progression/Skill.js';
+import { ActionType } from '../core/Action.js';
 import '../../data/combat/statusEffects.js';
 
 const LONG_RESPAWN_BOSS_ID = 'test:long_respawn_boss';
@@ -157,6 +158,30 @@ test('보스의 두 공격 몫은 솔로에게 중첩되고 두 명 이상이면
 
     assert.deepEqual(allocateBossPressureTargets(first, [first]), [first, first]);
     assert.deepEqual(allocateBossPressureTargets(first, [first, second, third]), [first, second]);
+});
+
+test('보스의 두 공격 몫은 하나의 공격 주기만 사용하고 AI tick마다 쿨다운을 해제하지 않는다', () => {
+    const boss = new Monster(LONG_RESPAWN_BOSS_ID, MONSTER_TEST_LOCATION_ID, 600);
+    const target = new TestMonsterAttacker(
+        1,
+        0,
+        MONSTER_TEST_LOCATION_ID,
+        { maxLife: 10_000, speed: 1 },
+        Equipment.createEmpty(),
+    );
+    target.disableAction(ActionType.EVASION, 'test:no-evasion');
+    boss.acquireCombatTarget(target);
+    boss.update(3);
+
+    boss.update(0);
+    const lifeAfterFirstCycle = target.life;
+    assert.ok(lifeAfterFirstCycle < target.maxLife);
+    assert.ok(boss.attackCooldown > 0);
+
+    boss.earlyUpdate(0.01);
+    boss.update(0.01);
+    assert.equal(target.life, lifeAfterFirstCycle);
+    assert.ok(boss.attackCooldown > 0);
 });
 
 test('일반 몬스터는 장소의 레벨별 설정과 관계없이 표준 리젠 시간을 사용한다', () => {
