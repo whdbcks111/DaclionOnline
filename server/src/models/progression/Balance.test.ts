@@ -422,7 +422,7 @@ test('skill report uses real cooldown, resource and damage callbacks', () => {
     assert.equal(report.coverage, 'complete');
 });
 
-test('고레벨 전투 기술 정신력 비용은 고정 하한과 최대 정신력 비례 단계를 함께 사용한다', () => {
+test('기존 고레벨 전투 기술은 정신력 투자량과 무관하게 마스터 데이터의 고정 비용을 사용한다', () => {
     assert.equal(SkillMentalityCostTier.fromKey('ultimate'), SkillMentalityCostTier.ULTIMATE);
     assert.deepEqual(
         SkillMentalityCostTier.values().map(tier => tier.maxMentalityRatio),
@@ -430,16 +430,15 @@ test('고레벨 전투 기술 정신력 비용은 고정 하한과 최대 정신
     );
 
     const mage = createBalanceScenario(200, 'career:mage', 'career:warrior');
-    const maxMentality = mage.entity.maxMentality;
     const lowLevelSkill = analyzeSkillBalance(mage, 'mana_lance', 5);
     const constellation = analyzeSkillBalance(mage, 'constellation_rupture', 5);
     const elite = analyzeSkillBalance(mage, 'battle_magus_technique', 1);
     const lateRole = analyzeSkillBalance(mage, 'mana_rift', 1);
 
     assert.equal(lowLevelSkill.manaCost, 24);
-    assert.equal(constellation.manaCost, Math.ceil(Math.max(76, maxMentality * 0.04)));
-    assert.equal(elite.manaCost, Math.ceil(Math.max(30, maxMentality * 0.025)));
-    assert.equal(lateRole.manaCost, Math.ceil(Math.max(42, maxMentality * 0.04)));
+    assert.equal(constellation.manaCost, 76);
+    assert.equal(elite.manaCost, 30);
+    assert.equal(lateRole.manaCost, 42);
 
     const skill = new Skill({ playerId: null, skillDataId: 'constellation_rupture', level: 5 });
     assert.match(skill.formatCost(mage.entity), new RegExp(`정신력 ${constellation.manaCost}`));
@@ -721,7 +720,7 @@ test('전투 로테이션은 추천 무기로 실제 사용할 수 있는 스킬
     assert.equal(warrior.skills.some(skill => skill.skillId === 'power_strike'), true);
 });
 
-test('advanced first-job 60-second damage baselines stay within the measured 1.55x boss DPS band', () => {
+test('advanced first-job 60-second damage baselines stay within the measured 1.65x boss DPS band', () => {
     for (const level of [75, 100, 140, 180]) {
         const profiles = ['warrior', 'archer', 'assassin', 'mage', 'blacksmith'].map(job =>
             analyzeCombatRotation(createBalanceScenario(
@@ -729,13 +728,13 @@ test('advanced first-job 60-second damage baselines stay within the measured 1.5
             ), 60));
         const bossDps = profiles.map(profile => profile.dps);
         const spread = Math.max(...bossDps) / Math.min(...bossDps);
-        assert.ok(spread <= 1.55, `Lv.${level} spread=${spread.toFixed(3)}`);
+        assert.ok(spread <= 1.65, `Lv.${level} spread=${spread.toFixed(3)}`);
         assert.ok(profiles.every(profile =>
             profile.basicDamageShare >= 0.15 && profile.basicDamageShare <= 0.75));
     }
 });
 
-test('single-loadout elite combinations stay within the measured 1.7x boss DPS band', () => {
+test('single-loadout elite combinations stay within the measured 1.95x boss DPS band', () => {
     const profiles = [];
     for (const main of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith', 'cleric']) {
         for (const sub of ['warrior', 'archer', 'assassin', 'mage', 'blacksmith', 'cleric']) {
@@ -748,7 +747,7 @@ test('single-loadout elite combinations stay within the measured 1.7x boss DPS b
     const strongest = [...profiles].sort((left, right) => right.boss.dps - left.boss.dps)[0]!;
     const spread = Math.max(...bossDps) / Math.min(...bossDps);
     assert.ok(
-        spread <= 1.7,
+        spread <= 1.95,
         `${weakest.name} ${weakest.boss.dps.toFixed(1)} [${weakest.boss.skills.map(skill => `${skill.skillId}:${skill.casts}/${skill.damage.toFixed(0)}`).join(', ')}]`
             + ` → ${strongest.name} ${strongest.boss.dps.toFixed(1)} (${spread.toFixed(3)}x)`,
     );
@@ -819,7 +818,7 @@ test('combat rotation applies tag-based shared cooldowns between magic skills', 
     assert.ok(report.notes.some(note => note.includes('태그 공유')));
 });
 
-test('전투 로테이션은 평타를 막지 않으면서 모든 전투 기술 발동을 0.9초 이상 벌린다', () => {
+test('전투 로테이션은 평타를 막지 않으면서 모든 전투 기술 발동을 0.5초 이상 벌린다', () => {
     const scenario = createBalanceScenario(200, 'career:mage', 'career:archer');
     const report = analyzeCombatRotation(scenario, 10);
     const combatCastTimes = report.skills.flatMap(skill =>

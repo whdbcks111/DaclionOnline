@@ -916,6 +916,7 @@ test('제련은 요구 경험치에, 단조는 완성품 레벨과 품질에 비
     assert.equal(calculateSmeltingExperience(high, 100), 3_200);
     assert.equal(calculateForgingExperience(200, ForgeQuality.GOOD), 3_200);
     assert.equal(calculateForgingExperience(200, ForgeQuality.MASTERWORK), 4_640);
+    assert.equal(calculateForgingExperience(200, ForgeQuality.GOOD, true), 4_000);
 
     const ironLevel = calculateForgedItemLevel(ForgeMaterial.IRON, { accuracy: 0.85, creatorLevel: 200 });
     const diamondLevel = calculateForgedItemLevel(ForgeMaterial.DIAMOND, { accuracy: 0.85, creatorLevel: 200 });
@@ -939,6 +940,15 @@ test('홍염강은 화산 전용 화염 합금이며 일반 철보다 어려운 
     assert.ok(ember.difficulty > iron.difficulty);
     assert.ok(ember.qualityBonus > iron.qualityBonus);
     assert.ok(ember.beatTimesMs.length > iron.beatTimesMs.length);
+});
+
+test('같은 단조 난이도도 시작 위상과 진행 방향이 달라져 반복 패턴이 고정되지 않는다', () => {
+    const first = createForgingRhythmConfig(ForgeForm.SWORD, ForgeMaterial.IRON, 0, () => 0);
+    const second = createForgingRhythmConfig(ForgeForm.SWORD, ForgeMaterial.IRON, 0, () => 0.75);
+
+    assert.notDeepEqual(first.beatTimesMs, second.beatTimesMs);
+    assert.ok(first.difficulty <= 12);
+    assert.ok(second.difficulty <= 12);
 });
 
 test('제련 정밀도는 45% 이후에도 리듬 판정과 완성품 숙련을 계속 높인다', () => {

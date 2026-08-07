@@ -66,12 +66,14 @@ test('아이템 레벨·스탯 조건은 유효한 값만 영속 snapshot으로 
     const item = new Item('required_blade', 1, null, {
         [ItemMetadataKeys.REQUIREMENTS]: {
             level: 80.9,
+            maximumLevel: 2_000.9,
             stats: { strength: 20.8, unknown: 999, agility: -1 },
             source: 'treasure',
         },
     });
     assert.deepEqual(item.requirements, {
         level: 80,
+        maximumLevel: 2_000,
         stats: { strength: 20 },
         source: 'treasure',
     });
@@ -86,11 +88,13 @@ test('상점 장비는 완만한 성장 조건을 받고 보물 장비는 같은
     });
     assert.deepEqual(createAcquisitionRequirements('high_greatsword', 1000, 'shop'), {
         level: 720,
+        maximumLevel: null,
         stats: { strength: 200 },
         source: 'shop',
     });
     assert.deepEqual(createAcquisitionRequirements('high_greatsword', 1000, 'treasure'), {
         level: 500,
+        maximumLevel: null,
         stats: { strength: 120 },
         source: 'treasure',
     });

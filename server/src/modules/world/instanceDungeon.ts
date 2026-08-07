@@ -121,6 +121,15 @@ export class InstanceDungeonManager {
         return getLocation(player.locationId)?.getActiveMonsterCount() === 0;
     }
 
+    /** 명시적 로그아웃·유예 만료 unload는 원정을 포기하고 저장 전에 원래 게이트로 돌려보낸다. */
+    leaveForUnload(player: Player): boolean {
+        const run = this.getRunForPlayer(player);
+        if (!run) return false;
+        this.removeParticipant(run, player.userId, true);
+        if (run.participants.size === 0) this.disposeRun(run);
+        return true;
+    }
+
     update(now = Date.now()): void {
         for (const run of [...this.runs.values()]) {
             if (!run.gateClosed && now >= run.closesAt) {

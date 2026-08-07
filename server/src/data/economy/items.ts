@@ -2838,6 +2838,28 @@ for (const component of [
 });
 
 defineItem({
+    id: 'transcendent_wayfarer_pack',
+    name: '초월자의 귀환 배낭',
+    description: '환생 직후에도 지난 생의 짐을 정리할 수 있도록 경계의 잔재가 접어 준 영혼 귀속 배낭. Lv.2000 이하에서 장착하면 최대 중량이 1,000kg 증가합니다.',
+    image: 'items/endstar_horizon_pack', // TODO: 초월 전용 가방 아트 제작 시 전용 아이콘으로 교체
+    category: '가방',
+    weight: 0,
+    stackable: false,
+    bound: true,
+    maxStack: 1,
+    baseMetadata: {
+        [ItemMetadataKeys.REQUIREMENTS]: { level: 1, maximumLevel: 2_000, stats: {}, source: 'treasure' },
+    },
+    onUse: null,
+    equipSlot: 'bag',
+    modifiers: [{ attribute: 'maxWeight', op: 'add', value: 1_000, source: '' }],
+    baseDurability: null,
+    tags: [GameTags.ITEM_BAG, 'item:ascension', 'item:bound'],
+    balance: { role: ItemBalanceRole.UTILITY },
+    gameplayEffects: ['Lv.2000 이하에서 최대 중량 1,000kg 증가', '버리기·소각·플레이어 거래 불가'],
+});
+
+defineItem({
     id: 'forged_staff',
     name: '단조 지팡이',
     description: '단조 틀에 마력 회로를 열어 완성한 주문용 지팡이.',
@@ -3213,12 +3235,31 @@ for (const dish of [
         description: '기원의 빛과 어둠을 한 접시에 담아 마력을 증폭하는 최상급 만찬.',
         effect: { id: 'magic_enhancement', level: 25, duration: 240 },
     },
+    {
+        id: 'moonlight_sturgeon_soup', name: '월광 철갑상어 수프', image: 'items/moonlight_sturgeon',
+        description: '월광 철갑상어의 빛나는 살을 오래 우려 정신력의 흐름을 회복하는 신화어 수프.',
+        effect: { id: 'mentality_regeneration', level: 24, duration: 240 },
+        fallbackImage: 'items/moonlight_sturgeon',
+    },
+    {
+        id: 'oxidized_leviathan_grill', name: '산화 레비아탄 철판구이', image: 'items/oxidized_leviathan',
+        description: '산화 레비아탄의 단단한 살을 고열로 구워 육체의 힘을 끌어올리는 신화어 요리.',
+        effect: { id: 'strength_enhancement', level: 24, duration: 240 },
+        fallbackImage: 'items/oxidized_leviathan',
+    },
+    {
+        id: 'worldleaf_arapaima_stew', name: '세계잎 피라루쿠 보양탕', image: 'items/worldleaf_arapaima',
+        description: '세계잎 피라루쿠의 생명력을 국물에 담아 생명력 회복을 돕는 신화어 보양탕.',
+        effect: { id: 'regeneration', level: 26, duration: 240 },
+        fallbackImage: 'items/worldleaf_arapaima',
+    },
 ] as const) {
     defineItem({
         id: dish.id,
         name: dish.name,
         description: dish.description,
-        image: `items/${dish.id}`, // TODO: 전용 요리 아트 제작 단계에서 현재 어종 fallback을 교체
+        image: 'fallbackImage' in dish ? dish.fallbackImage : `items/${dish.id}`,
+        // TODO: 새 신화어 요리의 전용 아트 제작 단계에서 현재 재료 어종 fallback을 교체
         category: '생선 요리',
         weight: 0.8,
         stackable: true,

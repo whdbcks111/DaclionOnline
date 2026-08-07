@@ -260,7 +260,7 @@ const ACTIVE_MAX_LEVEL_BONUS_CAP = 5;
 const PASSIVE_MAX_LEVEL_BONUS_CAP = 2;
 const DEFAULT_EXPERIENCE_GAIN = 10;
 /** 플레이어 전투 기술 사이에 보장하는 최소 발동 간격. 평타·아이템·생활 기술에는 적용하지 않는다. */
-export const PLAYER_COMBAT_SKILL_CADENCE_SECONDS = 0.9;
+export const PLAYER_COMBAT_SKILL_CADENCE_SECONDS = 0.5;
 const skillDataRegistry = new Map<string, Readonly<SkillData>>();
 
 export interface SkillExperienceResult {

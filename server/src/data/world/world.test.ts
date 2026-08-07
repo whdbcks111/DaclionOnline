@@ -1621,10 +1621,17 @@ test('가방은 성장 지역 상점과 희귀 보물함에서 최대 중량 장
 
 });
 
-test('모든 아이템은 데이터 ID별 128px RGBA 전용 아이콘을 가진다', () => {
+test('모든 아이템은 데이터 ID별 전용 아이콘 또는 명시한 콘텐츠 확장 fallback을 가진다', () => {
+    const explicitFallbackIcons = new Map([
+        ['transcendent_wayfarer_pack', 'items/endstar_horizon_pack'],
+        ['moonlight_sturgeon_soup', 'items/moonlight_sturgeon'],
+        ['oxidized_leviathan_grill', 'items/oxidized_leviathan'],
+        ['worldleaf_arapaima_stew', 'items/worldleaf_arapaima'],
+    ]);
     for (const item of getAllItemData()) {
-        assert.equal(item.image, `items/${item.id}`, `${item.id} dedicated icon key`);
-        const png = readFileSync(new URL(`../../../../client/public/icons/items/${item.id}.png`, import.meta.url));
+        const expectedImage = explicitFallbackIcons.get(item.id) ?? `items/${item.id}`;
+        assert.equal(item.image, expectedImage, `${item.id} dedicated or approved fallback icon key`);
+        const png = readFileSync(new URL(`../../../../client/public/icons/${expectedImage}.png`, import.meta.url));
         assert.equal(png.readUInt32BE(16), 128, `${item.id} icon width`);
         assert.equal(png.readUInt32BE(20), 128, `${item.id} icon height`);
         assert.equal(png[25], 6, `${item.id} must be RGBA`);
@@ -1685,6 +1692,12 @@ test('대용량 체력·마나 포션은 후반 거점의 고가 반복 골드 �
             entry.price === 100_000 && entry.stock === 20 && entry.restockTime === 180
         ), shopId);
     }
+
+    const buybackEntries = getShop('general_store')?.data.sellList.filter(entry =>
+        entry.label === '대용량 체력 포션' || entry.label === '대용량 마나 포션'
+    );
+    assert.equal(buybackEntries?.length, 2);
+    assert.ok(buybackEntries?.every(entry => entry.count === 99 && entry.price === 20_000));
 });
 
 test('묘지기 향약은 황혼왕릉 증량 재고와 여섯 안전 거점의 독립 재고로 공급된다', () => {

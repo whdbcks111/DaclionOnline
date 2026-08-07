@@ -261,6 +261,8 @@ export async function unloadPlayerByUserId(userId: number, requireOffline = fals
     cancelGameTask(reconnectGraceTaskKey(userId));
     const operation = (async () => {
         if (retained) elapseRetainedPlayerTo(retained, Date.now());
+        const { instanceDungeonManager } = await import('../world/instanceDungeon.js');
+        instanceDungeonManager.leaveForUnload(player);
         suspendPlayerRuntime(player, true);
         const partyResult = partyManager.removeDisconnectedPlayer(player);
         for (const affectedUserId of partyResult?.affectedUserIds ?? []) {

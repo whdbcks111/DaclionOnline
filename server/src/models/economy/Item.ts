@@ -210,16 +210,20 @@ export type ItemRequirementSource = 'shop' | 'treasure' | 'forge';
 
 export interface ItemRequirementSnapshot {
     readonly level: number;
+    readonly maximumLevel: number | null;
     readonly stats: Readonly<Partial<Record<StatKey, number>>>;
     readonly source: ItemRequirementSource;
 }
 
 function normalizeItemRequirements(value: unknown): ItemRequirementSnapshot | null {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-    const candidate = value as { level?: unknown; stats?: unknown; source?: unknown };
+    const candidate = value as { level?: unknown; maximumLevel?: unknown; stats?: unknown; source?: unknown };
     const level = typeof candidate.level === 'number' && Number.isFinite(candidate.level)
         ? Math.max(1, Math.floor(candidate.level))
         : 1;
+    const maximumLevel = typeof candidate.maximumLevel === 'number' && Number.isFinite(candidate.maximumLevel)
+        ? Math.max(level, Math.floor(candidate.maximumLevel))
+        : null;
     const stats: Partial<Record<StatKey, number>> = {};
     if (candidate.stats && typeof candidate.stats === 'object' && !Array.isArray(candidate.stats)) {
         for (const stat of StatType.values()) {
@@ -232,7 +236,7 @@ function normalizeItemRequirements(value: unknown): ItemRequirementSnapshot | nu
     const source: ItemRequirementSource = candidate.source === 'treasure' || candidate.source === 'forge'
         ? candidate.source
         : 'shop';
-    return { level, stats, source };
+    return { level, maximumLevel, stats, source };
 }
 
 function requirementStatForItem(data: ItemData): StatType | undefined {
@@ -272,7 +276,7 @@ export function createAcquisitionRequirements(
             progressionLevel * (source === 'treasure' ? 0.12 : 0.2),
         ));
     }
-    return { level, stats: stats as MetadataRecord, source };
+    return { level, maximumLevel: null, stats: stats as MetadataRecord, source };
 }
 
 /** 인벤토리·장비·바닥이 같은 규칙으로 두 아이템 스냅샷의 스택 호환성을 검사한다. */

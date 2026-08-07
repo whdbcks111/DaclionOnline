@@ -25,6 +25,7 @@ import {
 } from './minigame.js';
 import { AttributeType } from '../../models/core/Attribute.js';
 import { StatType } from '../../models/core/Stat.js';
+import { JobSlotType } from '../../models/progression/Job.js';
 
 export const BLACKSMITH_JOB_ID = 'career:blacksmith';
 export const BLACKSMITH_PROFESSION_FLAG = 'profession:blacksmith';
@@ -42,9 +43,11 @@ export function calculateSmeltingExperience(player: BlacksmithExperienceOwner, p
 export function calculateForgingExperience(
     itemLevel: number,
     quality: ForgeQuality,
+    mainBlacksmith = false,
 ): number {
     return Math.max(1, Math.round(
-        Entity.getStandardMonsterExpOfLevel(itemLevel) * 0.8 * quality.experienceMultiplier,
+        Entity.getStandardMonsterExpOfLevel(itemLevel) * 0.8 * quality.experienceMultiplier
+            * (mainBlacksmith ? 1.25 : 1),
     ));
 }
 
@@ -98,11 +101,12 @@ export function createForgingRhythmConfig(
     form: ForgeForm,
     material: ForgeMaterial,
     forgingPrecision: number,
+    random: () => number = Math.random,
 ): ForgeRhythmConfig {
     const precision = calculateForgingRhythmPrecisionBonus(forgingPrecision);
-    const difficulty = Math.max(1, Math.min(10, Math.round(1 + material.power * 2 + form.materialCount * 0.3)));
+    const difficulty = Math.max(1, Math.min(12, Math.round(1 + material.power * 2.5 + form.materialCount * 0.4)));
     const interval = Math.max(390, 680 - material.power * 115);
-    const beatTimesMs = createForgeBeatTimesMs(interval, difficulty, 12 + difficulty);
+    const beatTimesMs = createForgeBeatTimesMs(interval, difficulty, 12 + difficulty, 1_200, random);
     return {
         durationMs: beatTimesMs.at(-1)! + 900,
         label: `${material.label} ${form.label} 단조`,
@@ -209,7 +213,8 @@ export function startForging(
             const itemName = getItemSnapshotDisplay(output).name;
             const itemLevel = calculateForgedItemLevel(material, forgeOptions);
             const quality = ForgeQuality.fromAccuracy(accuracy);
-            const experience = calculateForgingExperience(itemLevel, quality);
+            const mainBlacksmith = player.career.hasJob(BLACKSMITH_JOB_ID, JobSlotType.MAIN);
+            const experience = calculateForgingExperience(itemLevel, quality, mainBlacksmith);
             const levelsGained = player.gainExp(experience);
             emitGameEvent(GameEventIds.ITEM_FORGED, {
                 actor: player,
@@ -218,7 +223,7 @@ export function startForging(
             const levelText = levelsGained.length ? ` · Lv.${levelsGained.at(-1)} 달성` : '';
             sendBotMessageToUser(player.userId, chat()
                 .color('gold', b => b.text('[ 단조 완료 ] '))
-                .text(`${itemName} · 성능 Lv.${itemLevel} · 착용 Lv.${Math.ceil(itemLevel * 0.8)}${performanceLevelCap ? ` · 상한 Lv.${performanceLevelCap}` : ''} · ${quality.label} · 정확도 ${Math.round(accuracy * 100)}% · 제련 정밀도 ${Math.round(precision * 100)}% · +${experience} EXP${levelText}`)
+                .text(`${itemName} · 성능 Lv.${itemLevel} · 착용 Lv.${Math.ceil(itemLevel * 0.8)}${performanceLevelCap ? ` · 상한 Lv.${performanceLevelCap}` : ''} · ${quality.label} · 정확도 ${Math.round(accuracy * 100)}% · 제련 정밀도 ${Math.round(precision * 100)}% · +${experience} EXP${mainBlacksmith ? ' (메인 대장장이 +25%)' : ''}${levelText}`)
                 .build());
             sendNotificationToUser(player.userId, { key: 'forging:complete', message: `${itemName} 단조를 완료했습니다!` });
         },

@@ -8,6 +8,7 @@ export const MORTAL_LATE_EXPERIENCE_MULTIPLIER = 0.2;
 export const ASCENSION_BONUS_STAT_POINTS = 25;
 export const ASCENSION_PASSIVE_SKILL_ID = 'transcendent_soul';
 export const ASCENSION_ARTIFACT_ITEM_ID = 'transcendent_compass';
+export const ASCENSION_BAG_ITEM_ID = 'transcendent_wayfarer_pack';
 
 defineProgress({
     id: ASCENSION_RANK_COUNTER,

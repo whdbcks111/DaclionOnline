@@ -279,7 +279,7 @@ export interface HazardDodgeConfig {
 export interface ForgeRhythmConfig {
     durationMs: number
     label: string
-    /** 1~10. 엇박·연속박자 밀도와 UI 표시에 사용한다. */
+    /** 1~12. 엇박·연속박자 밀도와 UI 표시에 사용한다. */
     difficulty: number
     /** 어려운 패턴을 완료했을 때 최종 단조 품질에 더하는 보정값. */
     qualityBonus: number
@@ -296,19 +296,27 @@ export function createForgeBeatTimesMs(
     difficulty: number,
     count = 16,
     firstBeatMs = 1_200,
+    random: () => number = Math.random,
 ): number[] {
-    const level = clamp(Math.round(difficulty), 1, 10)
-    const patterns = level >= 7
-        ? [1, 0.5, 0.5, 1.25, 0.75, 1, 0.5, 0.5, 1.5, 0.75]
-        : level >= 5
+    const level = clamp(Math.round(difficulty), 1, 12)
+    const patterns = level >= 11
+        ? [1, 0.5, 0.25, 0.25, 1.25, 0.5, 0.75, 0.5, 1.5, 0.25, 0.25, 0.75]
+        : level >= 8
+            ? [1, 0.5, 0.5, 1.25, 0.75, 1, 0.5, 0.5, 1.5, 0.75]
+            : level >= 5
             ? [1, 0.75, 1.25, 0.5, 0.5, 1, 1.5, 0.75]
             : level >= 3
                 ? [1, 1, 0.75, 1.25, 1, 0.75, 1.25]
                 : [1, 1, 1, 1]
+    const normalizedRandom = () => clamp(random(), 0, 0.999999)
+    const patternOffset = Math.floor(normalizedRandom() * patterns.length)
+    const direction = normalizedRandom() < 0.5 ? -1 : 1
     const beats = [Math.max(0, Math.round(firstBeatMs))]
     const safeInterval = Math.max(260, intervalMs)
     while (beats.length < Math.max(1, Math.floor(count))) {
-        const multiplier = patterns[(beats.length - 1) % patterns.length]
+        const index = (patternOffset + direction * (beats.length - 1) + patterns.length * beats.length)
+            % patterns.length
+        const multiplier = patterns[index]!
         beats.push(beats.at(-1)! + Math.round(safeInterval * multiplier))
     }
     return beats

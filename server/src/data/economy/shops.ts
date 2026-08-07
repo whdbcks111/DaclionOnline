@@ -217,6 +217,18 @@ defineShop({
     ],
     sellList: [
         {
+            label: '대용량 체력 포션',
+            filter: item => item.itemDataId === 'large_health_potion',
+            count: 99,
+            price: 20_000,
+        },
+        {
+            label: '대용량 마나 포션',
+            filter: item => item.itemDataId === 'large_mana_potion',
+            count: 99,
+            price: 20_000,
+        },
+        {
             label: '소모품',
             filter: (item) => item.data?.category === '소모품',
             count: 99,

@@ -9,6 +9,7 @@ import type Player from '../../models/actors/Player.js';
 import { GameEventIds, subscribeGameEvent, type GameEvent } from '../../models/core/GameEvent.js';
 import {
     ASCENSION_ARTIFACT_ITEM_ID,
+    ASCENSION_BAG_ITEM_ID,
     ASCENSION_BONUS_STAT_POINTS,
     ASCENSION_LEVEL,
     ASCENSION_PASSIVE_SKILL_ID,
@@ -55,6 +56,9 @@ export function ascendPlayer(player: Player): AscensionOperationResult {
     const reset = player.resetForAscension(ASCENSION_BONUS_STAT_POINTS);
     player.progress.increment(ASCENSION_RANK_COUNTER);
     player.skills.grant(ASCENSION_PASSIVE_SKILL_ID, 'ascension:reincarnation');
+    if (!player.inventory.addItem(ASCENSION_BAG_ITEM_ID, 1)) {
+        throw new Error('초월자의 귀환 배낭을 인벤토리에 지급하지 못했습니다.');
+    }
     if (!player.inventory.addItem(ASCENSION_ARTIFACT_ITEM_ID, 1)) {
         throw new Error('초월자의 나침반을 인벤토리에 지급하지 못했습니다.');
     }

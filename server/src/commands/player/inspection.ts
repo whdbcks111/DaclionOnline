@@ -297,7 +297,10 @@ export function buildItemInspection(
                 builder.tab(120, b => b.text('장착 부위')).text(`${EquipSlotType.fromInput(snapshot.equipSlot)?.label ?? snapshot.equipSlot}\n`);
             }
             if (snapshot.requirements) {
-                const requirementParts = [`Lv.${snapshot.requirements.level}`];
+                const levelRequirement = snapshot.requirements.maximumLevel === null
+                    ? `Lv.${snapshot.requirements.level} 이상`
+                    : `Lv.${snapshot.requirements.level}~${snapshot.requirements.maximumLevel}`;
+                const requirementParts = [levelRequirement];
                 for (const stat of StatType.values()) {
                     const amount = snapshot.requirements.stats[stat.key];
                     if (amount) requirementParts.push(`${stat.label} ${amount}`);

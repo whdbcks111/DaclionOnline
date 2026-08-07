@@ -183,6 +183,21 @@ for (const recipe of [
         description: '아르케 끝자락의 세 희귀 어종을 함께 조리해 마력을 크게 높이는 만찬을 만듭니다.',
         ingredients: [['firstlight_coelacanth', 1], ['endshadow_moonfish', 1], ['genesis_dragonfish', 1]],
     },
+    {
+        id: 'fishing:moonlight_sturgeon_soup', result: 'moonlight_sturgeon_soup', time: 7,
+        description: '월광 철갑상어를 맑은 물에 오래 끓여 정신력 회복을 돕는 신화어 수프를 만듭니다.',
+        ingredients: [['moonlight_sturgeon', 1], ['fresh_water', 2]],
+    },
+    {
+        id: 'fishing:oxidized_leviathan_grill', result: 'oxidized_leviathan_grill', time: 9,
+        description: '산화 레비아탄을 강한 화력으로 구워 공격력을 크게 높이는 신화어 철판구이를 만듭니다.',
+        ingredients: [['oxidized_leviathan', 1], ['coal', 2]],
+    },
+    {
+        id: 'fishing:worldleaf_arapaima_stew', result: 'worldleaf_arapaima_stew', time: 9,
+        description: '세계잎 피라루쿠를 맑은 물에 우려 생명력 회복을 크게 돕는 신화어 보양탕을 만듭니다.',
+        ingredients: [['worldleaf_arapaima', 1], ['fresh_water', 2]],
+    },
 ] as const) {
     defineCraftingRecipe({
         id: recipe.id,

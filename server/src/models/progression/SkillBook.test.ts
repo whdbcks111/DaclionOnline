@@ -272,7 +272,7 @@ test('스킬 HUD snapshot은 표시 가능한 스킬의 아이콘과 남은 쿨�
         remainingCooldown: 5,
         maxCooldown: 7.5,
         cadenceRemaining: 0,
-        cadenceDuration: 0.9,
+        cadenceDuration: 0.5,
     }]);
 });
 
@@ -287,7 +287,7 @@ test('HUD 연계 대기 필드는 플레이어 전투 기술에만 포함된다'
     const lifestyle = snapshots.find(skill => skill.id === 'arcane_smelting');
 
     assert.equal(combat?.cadenceRemaining, 0);
-    assert.equal(combat?.cadenceDuration, 0.9);
+    assert.equal(combat?.cadenceDuration, 0.5);
     assert.equal('cadenceRemaining' in (lifestyle ?? {}), false);
     assert.equal('cadenceDuration' in (lifestyle ?? {}), false);
 });
@@ -327,28 +327,29 @@ test('공유 쿨다운은 보유 스킬의 표시 계열 태그에 최소 시간
     ]);
 });
 
-test('플레이어 전투 기술은 성공 후 0.9초 전역 연계 간격을 공유한다', () => {
+test('플레이어 전투 기술은 성공 후 0.5초 전역 연계 간격을 공유한다', () => {
     const clock = installManualClock();
     try {
         const player = new TestSkillPlayer();
         player.progress.setState(CareerProgressIds.MAIN, 'career:warrior');
+        player.progress.setState(CareerProgressIds.SUB, 'career:mage');
         player.skills.grant('battle_rush', 'test');
-        player.skills.grant('indomitable', 'test');
+        player.skills.grant('mana_barrier', 'test');
 
         assert.equal(player.skills.activateByInput('전투 질주').activated, true);
-        clock.advance(0.899);
-        const denied = player.skills.activateByInput('불굴');
+        clock.advance(0.499);
+        const denied = player.skills.activateByInput('마력 보호막');
         assert.equal(denied.activated, false);
         assert.match(denied.reason ?? '', /전투 기술 연계 대기/);
 
         clock.advance(0.001);
-        assert.equal(player.skills.activateByInput('불굴').activated, true);
+        assert.equal(player.skills.activateByInput('마력 보호막').activated, true);
     } finally {
         clock.restore();
     }
 });
 
-test('개인·공유 쿨다운과 전투 연계 대기 중 더 긴 제한을 안내한다', () => {
+test('개인·계열 공유 쿨다운이 0.5초 연계 대기보다 길면 재사용 대기를 안내한다', () => {
     const clock = installManualClock();
     try {
         const player = new TestSkillPlayer();
@@ -357,7 +358,7 @@ test('개인·공유 쿨다운과 전투 연계 대기 중 더 긴 제한을 안
         player.skills.grant('battle_rush', 'test');
 
         assert.equal(player.skills.activateByInput('전투 질주').activated, true);
-        assert.match(player.skills.activateByInput('불굴').reason ?? '', /전투 기술 연계 대기/);
+        assert.match(player.skills.activateByInput('불굴').reason ?? '', /재사용 대기시간/);
 
         indomitable.startCooldown(2);
         assert.match(player.skills.activateByInput('불굴').reason ?? '', /재사용 대기시간/);
@@ -509,7 +510,7 @@ test('바람 회피는 Lv.1부터 짧은 확정 회피 상태를 유지하고 �
         });
         player.skills.get('wind_evasion')!.startCooldown(0);
         player.mentality = player.maxMentality;
-        clock.advance(0.9);
+        clock.advance(0.5);
         assert.equal(player.skills.activateByInput('바람 회피').activated, true);
         assert.equal(player.getStatusEffect('wind_evasion')?.duration, 4);
         assert.equal(player.skills.get('wind_evasion')?.getMaxCooldown(player), 20);
@@ -531,7 +532,7 @@ test('낚시도감 전용 스킬은 직업과 무기 없이 보호막과 수속�
         assert.equal(player.skills.activateByInput('은린 장막').activated, true);
         assert.ok(player.getShield('skill:silver_scale_veil'));
 
-        clock.advance(0.9);
+        clock.advance(0.5);
         assert.equal(player.skills.activateByInput('해연의 작살').activated, true);
         assert.ok(target.life < target.maxLife);
         assert.equal(target.hasStatusEffect('slowness'), true);

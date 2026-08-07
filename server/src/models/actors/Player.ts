@@ -957,6 +957,9 @@ export default class Player extends Entity {
         if (!requirement) return undefined;
         const missing: string[] = [];
         if (this.level < requirement.level) missing.push(`레벨 ${requirement.level}`);
+        if (requirement.maximumLevel !== null && this.level > requirement.maximumLevel) {
+            missing.push(`레벨 ${requirement.maximumLevel} 이하`);
+        }
         for (const stat of StatType.values()) {
             const required = requirement.stats[stat.key];
             if (required && this.stat.get(stat) < required) missing.push(`${stat.label} ${required}`);

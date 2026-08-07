@@ -1411,11 +1411,14 @@ function resolveMentalityCost(context: SkillContext, cost: MentalityCost): numbe
 }
 
 function scaledMentalityCost(
-    context: SkillContext,
+    _context: SkillContext,
     flatCost: number,
-    tier: SkillMentalityCostTier,
+    _tier: SkillMentalityCostTier,
 ): number {
-    return tier.calculate(flatCost, context.owner.maxMentality);
+    // 기존 기술 전체에 최대 정신력 비례 비용을 일괄 적용하면 정신력 투자 자체가
+    // 회전 유지력을 낮춘다. 비례 비용 단계는 향후 명시적으로 설계한 신규 기술의
+    // metadata로만 남기고, 현재 기술은 마스터 데이터의 고정 비용을 사용한다.
+    return flatCost;
 }
 
 function spend(context: SkillContext, cost: MentalityCost): void {

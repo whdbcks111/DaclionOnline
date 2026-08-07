@@ -10,6 +10,7 @@ import type Player from '../../models/actors/Player.js';
 import { PlayerProgress } from '../../models/progression/Progress.js';
 import {
     ASCENSION_ARTIFACT_ITEM_ID,
+    ASCENSION_BAG_ITEM_ID,
     ASCENSION_BONUS_STAT_POINTS,
     ASCENSION_PASSIVE_SKILL_ID,
     ASCENSION_RANK_COUNTER,
@@ -81,6 +82,7 @@ test('초월 실행은 초기화 뒤 단계·패시브·귀속 아티팩트를 �
     assert.deepEqual(calls, [
         'reset',
         `skill:${ASCENSION_PASSIVE_SKILL_ID}`,
+        `item:${ASCENSION_BAG_ITEM_ID}`,
         `item:${ASCENSION_ARTIFACT_ITEM_ID}`,
         'save',
     ]);
