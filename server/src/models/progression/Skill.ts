@@ -259,6 +259,8 @@ const MAX_LEVEL_BONUS_METADATA_KEY = 'progression.maxLevelBonus';
 const ACTIVE_MAX_LEVEL_BONUS_CAP = 5;
 const PASSIVE_MAX_LEVEL_BONUS_CAP = 2;
 const DEFAULT_EXPERIENCE_GAIN = 10;
+/** 액티브 돌파 레벨 하나가 기존 일반 레벨 계수 증가량 몇 단계로 계산되는지 나타낸다. */
+export const ACTIVE_BREAKTHROUGH_COEFFICIENT_MULTIPLIER = 2;
 /** 플레이어 전투 기술 사이에 보장하는 최소 발동 간격. 평타·아이템·생활 기술에는 적용하지 않는다. */
 export const PLAYER_COMBAT_SKILL_CADENCE_SECONDS = 0.5;
 const skillDataRegistry = new Map<string, Readonly<SkillData>>();
@@ -352,6 +354,15 @@ export default class Skill implements TagReadable {
     get activeElapsed(): number { return this._activeElapsed; }
     get activeDuration(): number | null { return this._activeDuration; }
     get isPassive(): boolean { return this.hasTag(GameTags.SKILL_PASSIVE); }
+    /**
+     * 실제 레벨·경험치와 분리된 효과 계산용 레벨이다.
+     * 패시브와 원래 상한 구간은 그대로이며, 액티브의 돌파 후 레벨만 단계당 두 배로 계산한다.
+     */
+    get coefficientLevel(): number {
+        if (this.isPassive || this.level <= this.baseMaxLevel) return this.level;
+        return this.baseMaxLevel
+            + (this.level - this.baseMaxLevel) * ACTIVE_BREAKTHROUGH_COEFFICIENT_MULTIPLIER;
+    }
 
     hasTag(tag: TagId): boolean { return this.tags.hasTag(tag); }
 
@@ -402,6 +413,12 @@ export default class Skill implements TagReadable {
             this.data.calculateExperienceGain?.(createSkillContext(owner, this)) ?? DEFAULT_EXPERIENCE_GAIN,
             'gain',
         );
+    }
+
+    /** 자동 경험치가 꺼진 정적 패시브도 돌파 뒤 생활 수련으로 성장할 수 있다. */
+    getPassiveTrainingExperienceGain(owner: Entity): number {
+        if (!this.isPassive || this.level >= this.maxLevel) return 0;
+        return Math.max(DEFAULT_EXPERIENCE_GAIN, this.getExperienceGain(owner));
     }
 
     getRequiredExperience(owner: Entity): number {
@@ -628,6 +645,7 @@ export default class Skill implements TagReadable {
     private resolveTemplateValue(key: string, owner: Entity): SkillCalculatedValue | MetadataValue | undefined {
         if (key === 'skill.name' || key === 'name') return this.name;
         if (key === 'skill.level' || key === 'level') return this.level;
+        if (key === 'skill.coefficientLevel') return this.coefficientLevel;
         if (key === 'skill.maxLevel' || key === 'maxLevel') return this.maxLevel;
         if (key === 'skill.experience' || key === 'experience') return this.experience;
         if (key === 'skill.requiredExperience' || key === 'requiredExperience') {

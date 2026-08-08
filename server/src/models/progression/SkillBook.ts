@@ -262,7 +262,7 @@ export default class SkillBook {
         const owner = this.requireOwner();
         return Object.freeze(this.getAll().flatMap(skill => {
             if (!skill.isPassive || skill.level >= skill.maxLevel) return [];
-            const experienceGain = skill.getExperienceGain(owner);
+            const experienceGain = skill.getPassiveTrainingExperienceGain(owner);
             if (experienceGain <= 0) return [];
             return [Object.freeze({
                 id: skill.skillDataId,
@@ -284,7 +284,7 @@ export default class SkillBook {
         if (!skill.isPassive) return { awarded: false, reason: 'not-passive' };
         if (skill.level >= skill.maxLevel) return { awarded: false, reason: 'max-level' };
         const owner = this.requireOwner();
-        if (skill.getExperienceGain(owner) <= 0) return { awarded: false, reason: 'disabled' };
+        if (skill.getPassiveTrainingExperienceGain(owner) <= 0) return { awarded: false, reason: 'disabled' };
         const result = skill.addExperience(owner, amount);
         const snapshot = this.getTrainablePassiveSnapshots().find(candidate => candidate.id === skill.skillDataId)
             ?? Object.freeze({
@@ -295,7 +295,7 @@ export default class SkillBook {
                 maxLevel: skill.maxLevel,
                 experience: skill.experience,
                 requiredExperience: skill.getRequiredExperience(owner),
-                experienceGain: skill.getExperienceGain(owner),
+                experienceGain: skill.getPassiveTrainingExperienceGain(owner),
             });
         return {
             awarded: true,

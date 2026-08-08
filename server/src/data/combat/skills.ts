@@ -167,7 +167,7 @@ function manaCost(context: SkillContext): number {
 
 function attackPower(context: SkillContext): number {
     const multiplier = numberMeta(context, 'baseAttackMultiplier')
-        + (context.skill.level - 1) * numberMeta(context, 'attackMultiplierPerLevel');
+        + (context.skill.coefficientLevel - 1) * numberMeta(context, 'attackMultiplierPerLevel');
     return context.owner.attribute.get(AttributeType.ATK) * multiplier;
 }
 
@@ -194,7 +194,7 @@ function levelValueTooltip(
     perLevel: number,
     suffix = '',
 ): string {
-    const value = valueByLevel(context.skill.level, base, perLevel);
+    const value = valueByLevel(context.skill.coefficientLevel, base, perLevel);
     const growth = perLevel === 0 ? '' : ` · 스킬 레벨당 +${formatNumber(perLevel)}${suffix}`;
     return tooltipValue(value, `${label}: 기본 ${formatNumber(base)}${suffix}${growth}`, suffix);
 }
@@ -205,7 +205,7 @@ function attributeDamageTooltip(
     basePercent: number,
     perLevelPercent: number,
 ): string {
-    const percent = percentByLevel(context.skill.level, basePercent, perLevelPercent);
+    const percent = percentByLevel(context.skill.coefficientLevel, basePercent, perLevelPercent);
     const damage = context.owner.attribute.get(attribute) * percent / 100;
     const growth = perLevelPercent === 0 ? '' : ` · 스킬 레벨당 계수 +${formatNumber(perLevelPercent)}%p`;
     return tooltipValue(damage, `${attribute.label} × ${formatNumber(percent)}%${growth}`);
@@ -224,12 +224,12 @@ function attributeTermValue(context: SkillContext, term: AttributeDamageTerm): n
 
 function combinedAttributeDamage(context: SkillContext, terms: readonly AttributeDamageTerm[]): number {
     return terms.reduce((sum, term) => sum + attributeTermValue(context, term)
-        * percentByLevel(context.skill.level, term.basePercent, term.perLevelPercent) / 100, 0);
+        * percentByLevel(context.skill.coefficientLevel, term.basePercent, term.perLevelPercent) / 100, 0);
 }
 
 function combinedAttributeDamageFormula(context: SkillContext, terms: readonly AttributeDamageTerm[]): string {
     return terms.map(term => {
-        const percent = percentByLevel(context.skill.level, term.basePercent, term.perLevelPercent);
+        const percent = percentByLevel(context.skill.coefficientLevel, term.basePercent, term.perLevelPercent);
         const scale = term.scale && term.scale !== 1 ? ` × ${formatNumber(term.scale)}` : '';
         return `${term.attribute.label}${scale} × ${formatNumber(percent)}%`;
     }).join(' + ');
@@ -256,10 +256,10 @@ function magicShieldGrowthMultiplier(context: SkillContext): number {
 }
 
 function manaBarrierShieldAmount(context: SkillContext): number {
-    const flat = valueByLevel(context.skill.level, 120, 30);
-    const magicForcePercent = percentByLevel(context.skill.level, 125, 10);
-    const mentalityPercent = percentByLevel(context.skill.level, 20, 2.5);
-    const lifePercent = percentByLevel(context.skill.level, 6, 1);
+    const flat = valueByLevel(context.skill.coefficientLevel, 120, 30);
+    const magicForcePercent = percentByLevel(context.skill.coefficientLevel, 125, 10);
+    const mentalityPercent = percentByLevel(context.skill.coefficientLevel, 20, 2.5);
+    const lifePercent = percentByLevel(context.skill.coefficientLevel, 6, 1);
     return (
         flat
         + context.owner.attribute.get(AttributeType.MAGIC_FORCE) * magicForcePercent / 100
@@ -269,10 +269,10 @@ function manaBarrierShieldAmount(context: SkillContext): number {
 }
 
 function manaBarrierShieldFormula(context: SkillContext): string {
-    const flat = valueByLevel(context.skill.level, 120, 30);
-    const magicForcePercent = percentByLevel(context.skill.level, 125, 10);
-    const mentalityPercent = percentByLevel(context.skill.level, 20, 2.5);
-    const lifePercent = percentByLevel(context.skill.level, 6, 1);
+    const flat = valueByLevel(context.skill.coefficientLevel, 120, 30);
+    const magicForcePercent = percentByLevel(context.skill.coefficientLevel, 125, 10);
+    const mentalityPercent = percentByLevel(context.skill.coefficientLevel, 20, 2.5);
+    const lifePercent = percentByLevel(context.skill.coefficientLevel, 6, 1);
     return `(기본 ${formatNumber(flat)} + 마법력 × ${formatNumber(magicForcePercent)}%`
         + ` + 최대 정신력 × ${formatNumber(mentalityPercent)}%`
         + ` + 최대 생명력 × ${formatNumber(lifePercent)}%)`
@@ -321,7 +321,7 @@ const PROJECTILE_CRITICAL_TEXT = '이 투사체에는 시전자의 {{icon.critRa
 const PROJECTILE_FLIGHT_TEXT = '{{icon.projectileAcceleration}} 대상에게 도달하기까지 [color=cyan]{{projectileTravelTime}}[/color]가 걸립니다.';
 
 function magicSkillAccelerationMultiplier(context: SkillContext): number {
-    const levelBonus = Math.max(0, context.skill.level - 1) * 0.08;
+    const levelBonus = Math.max(0, context.skill.coefficientLevel - 1) * 0.08;
     const magicForceBonus = Math.min(0.75, Math.max(0, context.owner.attribute.get(AttributeType.MAGIC_FORCE)) * 0.002);
     return 1 + levelBonus + magicForceBonus;
 }
@@ -384,7 +384,7 @@ defineSkill({
         attackPower,
         damage: context => {
             const attackMultiplier = numberMeta(context, 'baseAttackMultiplier')
-                + (context.skill.level - 1) * numberMeta(context, 'attackMultiplierPerLevel');
+                + (context.skill.coefficientLevel - 1) * numberMeta(context, 'attackMultiplierPerLevel');
             const critMultiplier = context.owner.attribute.get(AttributeType.CRIT_DMG);
             return tooltipValue(
                 attackPower(context) * critMultiplier,
@@ -1165,11 +1165,11 @@ function createArcaneSmeltingPlan(player: Player, skillLevel: number) {
 }
 
 function precisionBreakDamage(context: SkillContext): number {
-    return context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 135, 10) / 100
-        + context.owner.maxLife * percentByLevel(context.skill.level, 2, 0.25) / 100
+    return context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.coefficientLevel, 135, 10) / 100
+        + context.owner.maxLife * percentByLevel(context.skill.coefficientLevel, 2, 0.25) / 100
         + context.owner.attribute.get(AttributeType.ATK)
             * context.owner.attribute.get(AttributeType.FORGING_PRECISION)
-            * percentByLevel(context.skill.level, 60, 6) / 100;
+            * percentByLevel(context.skill.coefficientLevel, 60, 6) / 100;
 }
 
 defineSkill({
@@ -1185,9 +1185,9 @@ defineSkill({
     calculatedFields: {
         damage: context => tooltipValue(
             precisionBreakDamage(context) * context.owner.attribute.get(AttributeType.CRIT_DMG),
-            `(${AttributeType.ATK.label} × ${formatNumber(percentByLevel(context.skill.level, 135, 10))}%`
-            + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 2, 0.25))}%`
-            + ` + ${AttributeType.ATK.label} × ${AttributeType.FORGING_PRECISION.label} × ${formatNumber(percentByLevel(context.skill.level, 60, 6))}%) × 치명타 피해`,
+            `(${AttributeType.ATK.label} × ${formatNumber(percentByLevel(context.skill.coefficientLevel, 135, 10))}%`
+            + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, 2, 0.25))}%`
+            + ` + ${AttributeType.ATK.label} × ${AttributeType.FORGING_PRECISION.label} × ${formatNumber(percentByLevel(context.skill.coefficientLevel, 60, 6))}%) × 치명타 피해`,
         ),
     },
     balance: {
@@ -1224,7 +1224,7 @@ defineSkill({
     activationMessage: '마력 제련!',
     baseMetadata: { baseManaCost: 18 },
     calculatedFields: {
-        batch: context => 2 + context.skill.level + Math.floor((context.owner.attribute?.get?.(AttributeType.FORGING_PRECISION) ?? 0) * 10),
+        batch: context => 2 + context.skill.coefficientLevel + Math.floor((context.owner.attribute?.get?.(AttributeType.FORGING_PRECISION) ?? 0) * 10),
         manaCost: context => numberMeta(context, 'baseManaCost'),
     },
     activationFeedback: context => {
@@ -1237,7 +1237,7 @@ defineSkill({
     canActivate: context => {
         const player = requirePlayer(context);
         if (!hasBlacksmithSkillAccess(player)) return denySkill('대장장이 직업이 필요합니다.');
-        const plan = createArcaneSmeltingPlan(player, context.skill.level);
+        const plan = createArcaneSmeltingPlan(player, context.skill.coefficientLevel);
         if (!plan) return denySkill('제련할 광물이나 보석이 없습니다.');
         if (!player.inventory.canReplaceSelectedItems(plan.selections, plan.outputs)) {
             return denySkill('제련 결과물을 담을 인벤토리 무게 여유가 부족합니다.');
@@ -1247,7 +1247,7 @@ defineSkill({
     },
     onStart: context => {
         const player = requirePlayer(context);
-        const plan = createArcaneSmeltingPlan(player, context.skill.level);
+        const plan = createArcaneSmeltingPlan(player, context.skill.coefficientLevel);
         if (!plan || !player.inventory.replaceSelectedItems(plan.selections, plan.outputs)) {
             throw new Error('마력 제련 재료 교환에 실패했습니다.');
         }
@@ -1304,7 +1304,7 @@ defineSkill({
     activationConditionTemplate: '내구도가 남아 있는 장비와 호환 수리 소재를 준비한 뒤 `/수리 <아이템 번호 또는 장착칸>`을 입력합니다.',
     baseMetadata: { baseManaCost: 20 },
     calculatedFields: {
-        repairPercent: context => 20 + context.skill.level * 10,
+        repairPercent: context => 20 + context.skill.coefficientLevel * 10,
         manaCost: context => numberMeta(context, 'baseManaCost'),
     },
     calculateExperienceGain: () => 12,
@@ -1517,7 +1517,7 @@ function speedScaledDuration(
     perLevel: number,
     speedRatio: number,
 ): number {
-    return valueByLevel(context.skill.level, base, perLevel)
+    return valueByLevel(context.skill.coefficientLevel, base, perLevel)
         + Math.max(0, context.owner.attribute.get(AttributeType.SPEED) - AttributeType.SPEED.defaultValue) * speedRatio;
 }
 
@@ -1537,7 +1537,7 @@ defineSkill({
     calculatedFields: { damage: context => attributeDamageTooltip(context, AttributeType.ATK, 175, 12) },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'physical',
-        calculateDamage: context => context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.level, 175, 12) / 100,
+        calculateDamage: context => context.owner.attribute.get(AttributeType.ATK) * percentByLevel(context.skill.coefficientLevel, 175, 12) / 100,
         calculateManaCost: () => 10,
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 5, 0.2, 4.2),
@@ -1545,7 +1545,7 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.warrior), weaponRequirement: weaponRequirement('검 또는 도끼를 장착해야 합니다.', GameTags.WEAPON_SWORD, GameTags.WEAPON_AXE),
     canActivate: simpleCheck(10), onStart: context => {
         spend(context, 10);
-        directAttack(context, percentByLevel(context.skill.level, 175, 12) / 100, { consumeMainHandDurability: true });
+        directAttack(context, percentByLevel(context.skill.coefficientLevel, 175, 12) / 100, { consumeMainHandDurability: true });
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_WARRIOR],
 });
@@ -1557,8 +1557,8 @@ defineSkill({
     activationConditionTemplate: activationGuide(), activationMessage: '전투 질주!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
-        valueByLevel(context.skill.level, 8, 1),
-        `공격력 +${formatNumber(percentByLevel(context.skill.level, 15, 3))}%, 이동속도 +${formatNumber(percentByLevel(context.skill.level, 20, 3))}%`,
+        valueByLevel(context.skill.coefficientLevel, 8, 1),
+        `공격력 +${formatNumber(percentByLevel(context.skill.coefficientLevel, 15, 3))}%, 이동속도 +${formatNumber(percentByLevel(context.skill.coefficientLevel, 20, 3))}%`,
     ),
     calculatedFields: {
         duration: context => levelValueTooltip(context, '지속시간', 8, 1, '초'),
@@ -1567,10 +1567,10 @@ defineSkill({
     },
     balance: {
         role: SkillBalanceRole.SUPPORT, calculateManaCost: () => 14,
-        calculateEffectDuration: context => valueByLevel(context.skill.level, 8, 1),
+        calculateEffectDuration: context => valueByLevel(context.skill.coefficientLevel, 8, 1),
         calculateRotationModifiers: context => [
-            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1 + percentByLevel(context.skill.level, 15, 3) / 100 },
-            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1 + percentByLevel(context.skill.level, 20, 3) / 100 },
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1 + percentByLevel(context.skill.coefficientLevel, 15, 3) / 100 },
+            { attribute: AttributeType.SPEED.key, op: 'multiply', value: 1 + percentByLevel(context.skill.coefficientLevel, 20, 3) / 100 },
         ],
         notes: ['지속 중 공격력·이동속도 증가량은 수치로 표시하되 DPM에 임의 환산하지 않습니다.'],
     },
@@ -1579,7 +1579,7 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.warrior), canActivate: simpleCheck(14, false),
     onStart: context => {
         spend(context, 14);
-        context.owner.applyStatusEffect(BATTLE_RUSH, valueByLevel(context.skill.level, 8, 1), context.skill.level, context.owner);
+        context.owner.applyStatusEffect(BATTLE_RUSH, valueByLevel(context.skill.coefficientLevel, 8, 1), context.skill.coefficientLevel, context.owner);
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_WARRIOR],
 });
@@ -1591,8 +1591,8 @@ defineSkill({
     activationConditionTemplate: activationGuide(), activationMessage: '불굴!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
-        valueByLevel(context.skill.level, 10, 1),
-        `방어력 +${formatNumber(valueByLevel(context.skill.level, 15, 5))}, 최대 생명력 +${formatNumber(percentByLevel(context.skill.level, 20, 3))}%, 생명력 ${formatNumber(percentByLevel(context.skill.level, 15, 2))}% 회복`,
+        valueByLevel(context.skill.coefficientLevel, 10, 1),
+        `방어력 +${formatNumber(valueByLevel(context.skill.coefficientLevel, 15, 5))}, 최대 생명력 +${formatNumber(percentByLevel(context.skill.coefficientLevel, 20, 3))}%, 생명력 ${formatNumber(percentByLevel(context.skill.coefficientLevel, 15, 2))}% 회복`,
     ),
     calculatedFields: {
         duration: context => levelValueTooltip(context, '지속시간', 10, 1, '초'),
@@ -1603,11 +1603,11 @@ defineSkill({
     balance: {
         role: SkillBalanceRole.DEFENSE,
         calculateManaCost: () => 18,
-        calculateHealing: context => context.owner.maxLife * percentByLevel(context.skill.level, 15, 2) / 100,
-        calculateEffectDuration: context => valueByLevel(context.skill.level, 10, 1),
+        calculateHealing: context => context.owner.maxLife * percentByLevel(context.skill.coefficientLevel, 15, 2) / 100,
+        calculateEffectDuration: context => valueByLevel(context.skill.coefficientLevel, 10, 1),
         calculateRotationModifiers: context => [
-            { attribute: AttributeType.DEF.key, op: 'add', value: valueByLevel(context.skill.level, 15, 5) },
-            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1 + percentByLevel(context.skill.level, 20, 3) / 100 },
+            { attribute: AttributeType.DEF.key, op: 'add', value: valueByLevel(context.skill.coefficientLevel, 15, 5) },
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1 + percentByLevel(context.skill.coefficientLevel, 20, 3) / 100 },
         ],
         notes: ['방어력·최대 생명력 증가는 지속형 효과라 단발 회복량과 분리합니다.'],
     },
@@ -1616,8 +1616,8 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.warrior), canActivate: simpleCheck(18, false),
     onStart: context => {
         spend(context, 18);
-        context.owner.applyStatusEffect(INDOMITABLE, valueByLevel(context.skill.level, 10, 1), context.skill.level, context.owner);
-        context.owner.heal(context.owner.maxLife * percentByLevel(context.skill.level, 15, 2) / 100, context.owner);
+        context.owner.applyStatusEffect(INDOMITABLE, valueByLevel(context.skill.coefficientLevel, 10, 1), context.skill.coefficientLevel, context.owner);
+        context.owner.heal(context.owner.maxLife * percentByLevel(context.skill.coefficientLevel, 15, 2) / 100, context.owner);
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_WARRIOR],
 });
@@ -1698,7 +1698,7 @@ defineSkill({
         damage: context => combinedAttributeDamageTooltip(context, ARCHER_STUNNING_SHOT_TERMS),
         stunDuration: context => tooltipValue(
             speedScaledDuration(context, 2, 0.25, 0.02),
-            `기본 ${formatNumber(valueByLevel(context.skill.level, 2, 0.25))}초 + 기본치를 넘는 이동속도 × 0.02초`,
+            `기본 ${formatNumber(valueByLevel(context.skill.coefficientLevel, 2, 0.25))}초 + 기본치를 넘는 이동속도 × 0.02초`,
             '초',
         ),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'basic_arrow', false),
@@ -1719,7 +1719,7 @@ defineSkill({
             if (!result.evaded) _p.target.applyStatusEffect(
                 STUN,
                 speedScaledDuration(context, 2, 0.25, 0.02),
-                context.skill.level,
+                context.skill.coefficientLevel,
                 context.owner,
             );
         }, { damage: combinedAttributeDamage(context, ARCHER_STUNNING_SHOT_TERMS) });
@@ -1739,7 +1739,7 @@ defineSkill({
     ),
     calculatedFields: { duration: context => tooltipValue(
         calculateWindEvasionDuration(context),
-        `기본 ${formatNumber(valueByLevel(context.skill.level, 2.5, 0.25))}초 + 기본치를 넘는 이동속도 × 0.005초 (최대 ${WIND_EVASION_MAX_DURATION}초)`,
+        `기본 ${formatNumber(valueByLevel(context.skill.coefficientLevel, 2.5, 0.25))}초 + 기본치를 넘는 이동속도 × 0.005초 (최대 ${WIND_EVASION_MAX_DURATION}초)`,
         '초',
     ) },
     balance: {
@@ -1756,7 +1756,7 @@ defineSkill({
         context.owner.applyStatusEffect(
             WIND_EVASION,
             calculateWindEvasionDuration(context),
-            context.skill.level,
+            context.skill.coefficientLevel,
             context.owner,
         );
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ARCHER],
@@ -1770,12 +1770,12 @@ defineSkill({
     activationFeedback: context => buffFeedback(
         context.skill.name,
         speedScaledDuration(context, 8, 0.75, 0.05),
-        `공격 대상 지정 방지, 이동속도 +${formatNumber(percentByLevel(context.skill.level, 25, 5))}%`,
+        `공격 대상 지정 방지, 이동속도 +${formatNumber(percentByLevel(context.skill.coefficientLevel, 25, 5))}%`,
     ),
     calculatedFields: {
         duration: context => tooltipValue(
             speedScaledDuration(context, 8, 0.75, 0.05),
-            `기본 ${formatNumber(valueByLevel(context.skill.level, 8, 0.75))}초 + 기본치를 넘는 이동속도 × 0.05초`,
+            `기본 ${formatNumber(valueByLevel(context.skill.coefficientLevel, 8, 0.75))}초 + 기본치를 넘는 이동속도 × 0.05초`,
             '초',
         ),
         speedBonus: context => levelValueTooltip(context, '이동속도 증가', 25, 5, '%'),
@@ -1786,7 +1786,7 @@ defineSkill({
         calculateRotationModifiers: context => [{
             attribute: AttributeType.SPEED.key,
             op: 'multiply',
-            value: 1 + percentByLevel(context.skill.level, 25, 5) / 100,
+            value: 1 + percentByLevel(context.skill.coefficientLevel, 25, 5) / 100,
         }],
         grantsRotationStatusEffectId: STEALTH.id,
         notes: ['은신과 이동속도는 상황 의존 효과라 DPM에 임의 환산하지 않습니다.'],
@@ -1799,7 +1799,7 @@ defineSkill({
         context.owner.applyStatusEffect(
             STEALTH,
             speedScaledDuration(context, 8, 0.75, 0.05),
-            context.skill.level,
+            context.skill.coefficientLevel,
             context.owner,
         );
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_ASSASSIN],
@@ -1873,8 +1873,8 @@ defineSkill({
         if (!result.evaded && result.finalDamage > 0) {
             found.target.applyStatusEffect(
                 StatusEffectType.DEADLY_POISON,
-                valueByLevel(context.skill.level, 8, 1),
-                context.skill.level,
+                valueByLevel(context.skill.coefficientLevel, 8, 1),
+                context.skill.coefficientLevel,
                 context.owner,
             );
         }
@@ -1893,7 +1893,7 @@ defineSkill({
     },
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
-        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 95, 7) / 100,
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.coefficientLevel, 95, 7) / 100,
         calculateEvasionAttackSpeed: context => projectileEvasionAttackSpeed(context, 'magic_bolt', true),
         calculateManaCost: () => 10,
     },
@@ -1902,7 +1902,7 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.mage),
     canActivate: simpleCheck(10), onStart: context => {
         spend(context, 10);
-        projectileAttack(context, 'magic_bolt', percentByLevel(context.skill.level, 95, 7) / 100);
+        projectileAttack(context, 'magic_bolt', percentByLevel(context.skill.coefficientLevel, 95, 7) / 100);
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC],
 });
 
@@ -1915,8 +1915,8 @@ defineSkill({
     activationConditionTemplate: activationGuide(), activationMessage: '마력 보호막!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
-        valueByLevel(context.skill.level, 10, 1),
-        `일반 보호막 ${formatNumber(manaBarrierShieldAmount(context))}, 방어력 +${formatNumber(valueByLevel(context.skill.level, 12, 4))}, 마법 저항력 +${formatNumber(valueByLevel(context.skill.level, 20, 5))}`,
+        valueByLevel(context.skill.coefficientLevel, 10, 1),
+        `일반 보호막 ${formatNumber(manaBarrierShieldAmount(context))}, 방어력 +${formatNumber(valueByLevel(context.skill.coefficientLevel, 12, 4))}, 마법 저항력 +${formatNumber(valueByLevel(context.skill.coefficientLevel, 20, 5))}`,
     ),
     calculatedFields: {
         duration: context => levelValueTooltip(context, '지속시간', 10, 1, '초'),
@@ -1931,10 +1931,10 @@ defineSkill({
         role: SkillBalanceRole.DEFENSE,
         calculateManaCost: () => 22,
         calculateShield: manaBarrierShieldAmount,
-        calculateEffectDuration: context => valueByLevel(context.skill.level, 10, 1),
+        calculateEffectDuration: context => valueByLevel(context.skill.coefficientLevel, 10, 1),
         calculateRotationModifiers: context => [
-            { attribute: AttributeType.DEF.key, op: 'add', value: valueByLevel(context.skill.level, 12, 4) },
-            { attribute: AttributeType.MAGIC_DEF.key, op: 'add', value: valueByLevel(context.skill.level, 20, 5) },
+            { attribute: AttributeType.DEF.key, op: 'add', value: valueByLevel(context.skill.coefficientLevel, 12, 4) },
+            { attribute: AttributeType.MAGIC_DEF.key, op: 'add', value: valueByLevel(context.skill.coefficientLevel, 20, 5) },
         ],
         notes: ['방어력·마법저항 증가는 지속형 효과라 보호막량과 분리합니다.'],
     },
@@ -1943,9 +1943,9 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.mage), canActivate: simpleCheck(22, false),
     onStart: context => {
         spend(context, 22);
-        const duration = valueByLevel(context.skill.level, 10, 1);
+        const duration = valueByLevel(context.skill.coefficientLevel, 10, 1);
         context.owner.setShield('skill:mana_barrier', manaBarrierShieldAmount(context), ShieldType.GENERAL, duration, context.owner);
-        context.owner.applyStatusEffect(MANA_BARRIER, duration, context.skill.level, context.owner);
+        context.owner.applyStatusEffect(MANA_BARRIER, duration, context.skill.coefficientLevel, context.owner);
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC],
 });
 
@@ -1963,7 +1963,7 @@ defineSkill({
         damageType: 'magic',
         effectTags: [GameTags.PROPERTY_LIGHT],
         calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE)
-            * percentByLevel(context.skill.level, 105, 8) / 100,
+            * percentByLevel(context.skill.coefficientLevel, 105, 8) / 100,
         calculateEvasionAttackSpeed: context => projectileEvasionAttackSpeed(context, 'magic_bolt', true),
         calculateManaCost: () => 11,
     },
@@ -1973,17 +1973,17 @@ defineSkill({
     canActivate: simpleCheck(11),
     onStart: context => {
         spend(context, 11);
-        projectileAttack(context, 'magic_bolt', percentByLevel(context.skill.level, 105, 8) / 100, [GameTags.PROPERTY_LIGHT]);
+        projectileAttack(context, 'magic_bolt', percentByLevel(context.skill.coefficientLevel, 105, 8) / 100, [GameTags.PROPERTY_LIGHT]);
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC, GameTags.PROPERTY_LIGHT],
 });
 
 function sanctuaryAegisAmount(context: SkillContext): number {
     return context.owner.attribute.get(AttributeType.MAGIC_FORCE)
-            * percentByLevel(context.skill.level, 60, 6) / 100
+            * percentByLevel(context.skill.coefficientLevel, 60, 6) / 100
         + context.owner.attribute.get(AttributeType.MAX_MENTALITY)
-            * percentByLevel(context.skill.level, 10, 1) / 100
-        + context.owner.maxLife * percentByLevel(context.skill.level, 3, 0.5) / 100;
+            * percentByLevel(context.skill.coefficientLevel, 10, 1) / 100
+        + context.owner.maxLife * percentByLevel(context.skill.coefficientLevel, 3, 0.5) / 100;
 }
 
 /** 검증된 파티원 목록 안에서만 현재 아군 대상을 우선하고 최대 3명을 고른다. */
@@ -2113,24 +2113,24 @@ defineSkill({
     activationConditionTemplate: activationGuide(), activationMessage: '성역의 가호!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
-        valueByLevel(context.skill.level, 8, 1),
-        `아군 최대 3명 · 생명력 ${formatNumber(percentByLevel(context.skill.level, 5, 1))}% 회복 · 일반 보호막 ${formatNumber(sanctuaryAegisAmount(context))}`,
+        valueByLevel(context.skill.coefficientLevel, 8, 1),
+        `아군 최대 3명 · 생명력 ${formatNumber(percentByLevel(context.skill.coefficientLevel, 5, 1))}% 회복 · 일반 보호막 ${formatNumber(sanctuaryAegisAmount(context))}`,
     ),
     calculatedFields: {
         healPercent: context => levelValueTooltip(context, '즉시 회복량', 5, 1, '%'),
         duration: context => levelValueTooltip(context, '보호막 지속시간', 8, 1, '초'),
         shieldAmount: context => tooltipValue(
             sanctuaryAegisAmount(context),
-            `마법력 × ${formatNumber(percentByLevel(context.skill.level, 60, 6))}% + 최대 정신력 × ${formatNumber(percentByLevel(context.skill.level, 10, 1))}% + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 3, 0.5))}%`,
+            `마법력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, 60, 6))}% + 최대 정신력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, 10, 1))}% + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, 3, 0.5))}%`,
         ),
     },
     balance: {
         role: SkillBalanceRole.DEFENSE,
         targetCount: 3,
         calculateManaCost: () => 20,
-        calculateHealing: context => context.owner.maxLife * percentByLevel(context.skill.level, 5, 1) / 100,
+        calculateHealing: context => context.owner.maxLife * percentByLevel(context.skill.coefficientLevel, 5, 1) / 100,
         calculateShield: sanctuaryAegisAmount,
-        calculateEffectDuration: context => valueByLevel(context.skill.level, 8, 1),
+        calculateEffectDuration: context => valueByLevel(context.skill.coefficientLevel, 8, 1),
         notes: ['현재 지정한 생존 아군을 우선하며 같은 장소의 같은 파티원만 최대 3명까지 적용합니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 24, 1, 20),
@@ -2139,9 +2139,9 @@ defineSkill({
     canActivate: simpleCheck(20, false),
     onStart: context => {
         spend(context, 20);
-        const duration = valueByLevel(context.skill.level, 8, 1);
+        const duration = valueByLevel(context.skill.coefficientLevel, 8, 1);
         for (const target of getSanctuaryAegisTargets(context)) {
-            target.heal(target.maxLife * percentByLevel(context.skill.level, 5, 1) / 100, context.owner);
+            target.heal(target.maxLife * percentByLevel(context.skill.coefficientLevel, 5, 1) / 100, context.owner);
             target.setShield('skill:sanctuary_aegis', sanctuaryAegisAmount(context), ShieldType.GENERAL, duration, context.owner);
         }
     },
@@ -2164,14 +2164,14 @@ defineSkill({
     baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
-        dawnBenedictionDuration(context.skill.level),
-        `시전자 포함 아군 최대 3명 · 공격력·마법력 +${formatNumber(dawnBenedictionOffensePercent(context.skill.level))}%`
-            + ` · 방어력·마법 저항력 +${formatNumber(dawnBenedictionDefensePercent(context.skill.level))}%`,
+        dawnBenedictionDuration(context.skill.coefficientLevel),
+        `시전자 포함 아군 최대 3명 · 공격력·마법력 +${formatNumber(dawnBenedictionOffensePercent(context.skill.coefficientLevel))}%`
+            + ` · 방어력·마법 저항력 +${formatNumber(dawnBenedictionDefensePercent(context.skill.coefficientLevel))}%`,
     ),
     calculatedFields: {
         manaCost: context => scaledMentalityCost(context, 42, SkillMentalityCostTier.EXPERT),
         duration: context => tooltipValue(
-            dawnBenedictionDuration(context.skill.level),
+            dawnBenedictionDuration(context.skill.coefficientLevel),
             '기본 45초 + 스킬 레벨당 3초',
         ),
         offenseBonus: context => levelValueTooltip(context, '공격·마법 증가', 6, 1, '%'),
@@ -2181,12 +2181,12 @@ defineSkill({
         role: SkillBalanceRole.SUPPORT,
         targetCount: 3,
         calculateManaCost: context => scaledMentalityCost(context, 42, SkillMentalityCostTier.EXPERT),
-        calculateEffectDuration: context => dawnBenedictionDuration(context.skill.level),
+        calculateEffectDuration: context => dawnBenedictionDuration(context.skill.coefficientLevel),
         calculateRotationModifiers: context => [
-            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1 + dawnBenedictionOffensePercent(context.skill.level) / 100 },
-            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1 + dawnBenedictionOffensePercent(context.skill.level) / 100 },
-            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1 + dawnBenedictionDefensePercent(context.skill.level) / 100 },
-            { attribute: AttributeType.MAGIC_DEF.key, op: 'multiply', value: 1 + dawnBenedictionDefensePercent(context.skill.level) / 100 },
+            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1 + dawnBenedictionOffensePercent(context.skill.coefficientLevel) / 100 },
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1 + dawnBenedictionOffensePercent(context.skill.coefficientLevel) / 100 },
+            { attribute: AttributeType.DEF.key, op: 'multiply', value: 1 + dawnBenedictionDefensePercent(context.skill.coefficientLevel) / 100 },
+            { attribute: AttributeType.MAGIC_DEF.key, op: 'multiply', value: 1 + dawnBenedictionDefensePercent(context.skill.coefficientLevel) / 100 },
         ],
         notes: ['시전자를 항상 포함하고 같은 장소의 생존 파티원에게만 적용되며, 같은 축도는 중첩 대신 갱신됩니다.'],
     },
@@ -2197,9 +2197,9 @@ defineSkill({
     canActivate: simpleCheck(context => scaledMentalityCost(context, 42, SkillMentalityCostTier.EXPERT), false),
     onStart: context => {
         spend(context, current => scaledMentalityCost(current, 42, SkillMentalityCostTier.EXPERT));
-        const duration = dawnBenedictionDuration(context.skill.level);
+        const duration = dawnBenedictionDuration(context.skill.coefficientLevel);
         for (const target of getDawnBenedictionTargets(context)) {
-            target.applyStatusEffect(DAWN_BENEDICTION, duration, context.skill.level, context.owner);
+            target.applyStatusEffect(DAWN_BENEDICTION, duration, context.skill.coefficientLevel, context.owner);
         }
     },
     tags: [
@@ -2223,7 +2223,7 @@ defineSkill({
     },
     balance: {
         role: SkillBalanceRole.CONTROL, damageType: 'magic',
-        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 75, 6) / 100,
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.coefficientLevel, 75, 6) / 100,
         calculateEvasionAttackSpeed: context => projectileEvasionAttackSpeed(context, 'basic_magic_orb', true),
         calculateManaCost: () => 24,
         notes: ['속박의 가치는 적 패턴에 따라 달라 피해량에 임의 합산하지 않습니다.'],
@@ -2233,11 +2233,11 @@ defineSkill({
     jobRequirement: jobRequirement(JOBS.mage),
     canActivate: simpleCheck(24), onStart: context => {
         spend(context, 24);
-        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 75, 6) / 100, [GameTags.PROPERTY_ICE], (_p, result) => {
+        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.coefficientLevel, 75, 6) / 100, [GameTags.PROPERTY_ICE], (_p, result) => {
             if (!result.evaded) _p.target.applyStatusEffect(
                 STUN,
-                valueByLevel(context.skill.level, 1.5, 0.2),
-                context.skill.level,
+                valueByLevel(context.skill.coefficientLevel, 1.5, 0.2),
+                context.skill.coefficientLevel,
                 context.owner,
             );
         });
@@ -2252,8 +2252,8 @@ defineSkill({
     activationConditionTemplate: activationGuide(), activationMessage: '원소 통찰!', baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
-        valueByLevel(context.skill.level, 12, 1),
-        `마법력 +${formatNumber(percentByLevel(context.skill.level, 12, 2))}%, 정신력 재생 +${formatNumber(valueByLevel(context.skill.level, 2, 0.75))}/초`,
+        valueByLevel(context.skill.coefficientLevel, 12, 1),
+        `마법력 +${formatNumber(percentByLevel(context.skill.coefficientLevel, 12, 2))}%, 정신력 재생 +${formatNumber(valueByLevel(context.skill.coefficientLevel, 2, 0.75))}/초`,
     ),
     calculatedFields: {
         duration: context => levelValueTooltip(context, '지속시간', 12, 1, '초'),
@@ -2262,10 +2262,10 @@ defineSkill({
     },
     balance: {
         role: SkillBalanceRole.SUPPORT, calculateManaCost: () => 16,
-        calculateEffectDuration: context => valueByLevel(context.skill.level, 12, 1),
+        calculateEffectDuration: context => valueByLevel(context.skill.coefficientLevel, 12, 1),
         calculateRotationModifiers: context => [
-            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1 + percentByLevel(context.skill.level, 12, 2) / 100 },
-            { attribute: AttributeType.MENTALITY_REGEN.key, op: 'add', value: valueByLevel(context.skill.level, 2, 0.75) },
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1 + percentByLevel(context.skill.coefficientLevel, 12, 2) / 100 },
+            { attribute: AttributeType.MENTALITY_REGEN.key, op: 'add', value: valueByLevel(context.skill.coefficientLevel, 2, 0.75) },
         ],
         notes: ['마법력·정신력 재생 증가는 지속형 효과라 단일 스킬 DPM에 임의 합산하지 않습니다.'],
     },
@@ -2276,8 +2276,8 @@ defineSkill({
         spend(context, 16);
         context.owner.applyStatusEffect(
             ELEMENTAL_INSIGHT,
-            valueByLevel(context.skill.level, 12, 1),
-            context.skill.level,
+            valueByLevel(context.skill.coefficientLevel, 12, 1),
+            context.skill.coefficientLevel,
             context.owner,
         );
     }, tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_MAGIC],
@@ -2301,7 +2301,7 @@ for (const elemental of [
     balance: {
         role: SkillBalanceRole.DAMAGE, damageType: 'magic',
         effectTags: [elemental.tag],
-        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.level, 100, 7) / 100,
+        calculateDamage: context => context.owner.attribute.get(AttributeType.MAGIC_FORCE) * percentByLevel(context.skill.coefficientLevel, 100, 7) / 100,
         calculateEvasionAttackSpeed: context => projectileEvasionAttackSpeed(context, 'basic_magic_orb', true),
         calculateManaCost: () => 28,
         notes: [`${elemental.effectLabel} 효과는 대상 상태에 따라 달라 직접 타격 DPM과 분리합니다.`],
@@ -2312,12 +2312,12 @@ for (const elemental of [
     autoAcquire: { watchedProgress: [elemental.stat], check: ({ player }) => Boolean(player?.career?.hasJob(JOBS.mage) && player.progress.getCounter(elemental.stat) >= 5n) },
     canActivate: simpleCheck(28), onStart: context => {
         spend(context, 28);
-        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.level, 100, 7) / 100, [elemental.tag], (_p, result) => {
+        projectileAttack(context, 'basic_magic_orb', percentByLevel(context.skill.coefficientLevel, 100, 7) / 100, [elemental.tag], (_p, result) => {
             if (!result.evaded) {
                 _p.target.applyStatusEffect(
                     elemental.effect,
-                    valueByLevel(context.skill.level, elemental.duration, elemental.durationPerLevel),
-                    context.skill.level,
+                    valueByLevel(context.skill.coefficientLevel, elemental.duration, elemental.durationPerLevel),
+                    context.skill.coefficientLevel,
                     context.owner,
                 );
             }
@@ -2415,11 +2415,11 @@ function scaledAttributeValue(
 
 function growthTechniqueDamage(context: SkillContext, definition: GrowthTechniqueDefinition): number {
     const primary = scaledAttributeValue(context, definition.attribute, definition.attributeScale)
-        * percentByLevel(context.skill.level, definition.basePercent, definition.perLevelPercent) / 100;
+        * percentByLevel(context.skill.coefficientLevel, definition.basePercent, definition.perLevelPercent) / 100;
     const secondary = definition.secondaryAttribute
         ? scaledAttributeValue(context, definition.secondaryAttribute, definition.secondaryAttributeScale)
             * percentByLevel(
-                context.skill.level,
+                context.skill.coefficientLevel,
                 definition.secondaryBasePercent ?? 0,
                 definition.secondaryPerLevelPercent ?? 0,
             ) / 100
@@ -2427,7 +2427,7 @@ function growthTechniqueDamage(context: SkillContext, definition: GrowthTechniqu
     const tertiary = definition.tertiaryAttribute
         ? scaledAttributeValue(context, definition.tertiaryAttribute, definition.tertiaryAttributeScale)
             * percentByLevel(
-                context.skill.level,
+                context.skill.coefficientLevel,
                 definition.tertiaryBasePercent ?? 0,
                 definition.tertiaryPerLevelPercent ?? 0,
             ) / 100
@@ -2436,7 +2436,7 @@ function growthTechniqueDamage(context: SkillContext, definition: GrowthTechniqu
         ? scaledAttributeValue(context, definition.attribute, definition.attributeScale)
             * context.owner.attribute.get(AttributeType.FORGING_PRECISION)
             * percentByLevel(
-                context.skill.level,
+                context.skill.coefficientLevel,
                 definition.forgingPrecisionBasePercent,
                 definition.forgingPrecisionPerLevelPercent ?? 0,
             ) / 100
@@ -2445,7 +2445,7 @@ function growthTechniqueDamage(context: SkillContext, definition: GrowthTechniqu
 }
 
 function growthTechniqueDamageTooltip(context: SkillContext, definition: GrowthTechniqueDefinition): string {
-    const primaryPercent = percentByLevel(context.skill.level, definition.basePercent, definition.perLevelPercent);
+    const primaryPercent = percentByLevel(context.skill.coefficientLevel, definition.basePercent, definition.perLevelPercent);
     const scaledLabel = (attribute: AttributeType, scale = 1) =>
         `${attribute.label}${scale === 1 ? '' : ` × ${formatNumber(scale)}`}`;
     const formulas = [
@@ -2454,7 +2454,7 @@ function growthTechniqueDamageTooltip(context: SkillContext, definition: GrowthT
     if (definition.secondaryAttribute) {
         formulas.push(
             `${scaledLabel(definition.secondaryAttribute, definition.secondaryAttributeScale)} × ${formatNumber(percentByLevel(
-                context.skill.level,
+                context.skill.coefficientLevel,
                 definition.secondaryBasePercent ?? 0,
                 definition.secondaryPerLevelPercent ?? 0,
             ))}%`,
@@ -2463,7 +2463,7 @@ function growthTechniqueDamageTooltip(context: SkillContext, definition: GrowthT
     if (definition.tertiaryAttribute) {
         formulas.push(
             `${scaledLabel(definition.tertiaryAttribute, definition.tertiaryAttributeScale)} × ${formatNumber(percentByLevel(
-                context.skill.level,
+                context.skill.coefficientLevel,
                 definition.tertiaryBasePercent ?? 0,
                 definition.tertiaryPerLevelPercent ?? 0,
             ))}%`,
@@ -2473,7 +2473,7 @@ function growthTechniqueDamageTooltip(context: SkillContext, definition: GrowthT
         formulas.push(
             `${scaledLabel(definition.attribute, definition.attributeScale)} × ${AttributeType.FORGING_PRECISION.label} × `
             + `${formatNumber(percentByLevel(
-                context.skill.level,
+                context.skill.coefficientLevel,
                 definition.forgingPrecisionBasePercent,
                 definition.forgingPrecisionPerLevelPercent ?? 0,
             ))}%`,
@@ -2691,14 +2691,14 @@ function engageTacticalTarget(context: SkillContext, target: Entity): void {
 }
 
 function vanguardCommandShield(context: SkillContext): number {
-    const base = context.owner.maxLife * percentByLevel(context.skill.level, 10, 1) / 100
-        + context.owner.attribute.get(AttributeType.DEF) * valueByLevel(context.skill.level, 1.5, 0.15);
+    const base = context.owner.maxLife * percentByLevel(context.skill.coefficientLevel, 10, 1) / 100
+        + context.owner.attribute.get(AttributeType.DEF) * valueByLevel(context.skill.coefficientLevel, 1.5, 0.15);
     return base * thirdRolePowerMultiplier(context, THIRD_JOB_IDS.warrior);
 }
 
 function vanguardCommandTauntPower(context: SkillContext): number {
-    const base = context.owner.maxLife * percentByLevel(context.skill.level, 60, 5) / 100
-        + context.owner.attribute.get(AttributeType.DEF) * valueByLevel(context.skill.level, 8, 1);
+    const base = context.owner.maxLife * percentByLevel(context.skill.coefficientLevel, 60, 5) / 100
+        + context.owner.attribute.get(AttributeType.DEF) * valueByLevel(context.skill.coefficientLevel, 8, 1);
     return base * thirdRolePowerMultiplier(context, THIRD_JOB_IDS.warrior);
 }
 
@@ -2720,7 +2720,7 @@ defineSkill({
         duration: () => `${LATE_TACTICAL_DURATION}초`,
         shield: context => tooltipValue(
             vanguardCommandShield(context),
-            `최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 10, 1))}% + 방어력 × ${formatNumber(valueByLevel(context.skill.level, 1.5, 0.15))}${hasThirdRole(context, THIRD_JOB_IDS.warrior) ? ' · 철혈군주 × 122%' : ''}`,
+            `최대 생명력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, 10, 1))}% + 방어력 × ${formatNumber(valueByLevel(context.skill.coefficientLevel, 1.5, 0.15))}${hasThirdRole(context, THIRD_JOB_IDS.warrior) ? ' · 철혈군주 × 122%' : ''}`,
         ),
     },
     balance: {
@@ -2805,7 +2805,7 @@ const defenseDebuffTactics: readonly DefenseDebuffTacticDefinition[] = [
 ];
 
 function defenseDebuffEffectLevel(context: SkillContext, tactic: DefenseDebuffTacticDefinition): number {
-    return tactic.effectLevel(context.skill.level) + (hasThirdRole(context, tactic.thirdJobId) ? 1 : 0);
+    return tactic.effectLevel(context.skill.coefficientLevel) + (hasThirdRole(context, tactic.thirdJobId) ? 1 : 0);
 }
 
 for (const tactic of defenseDebuffTactics) defineSkill({
@@ -2824,7 +2824,7 @@ for (const tactic of defenseDebuffTactics) defineSkill({
         manaCost: context => lateTacticalMentalityCost(context, tactic.manaCost),
         effectLevel: context => tooltipValue(
             defenseDebuffEffectLevel(context, tactic),
-            `스킬 레벨 ${context.skill.level} 기준${hasThirdRole(context, tactic.thirdJobId) ? ' + 3차 계보 1레벨' : ''}`,
+            `효과 계수 레벨 ${context.skill.coefficientLevel} 기준${hasThirdRole(context, tactic.thirdJobId) ? ' + 3차 계보 1레벨' : ''}`,
         ),
         duration: () => `${LATE_TACTICAL_DURATION}초`,
     },
@@ -2874,7 +2874,7 @@ export function calculateFinaleExecutionDamage(
     context: SkillContext,
     target: Entity | null = context.owner.currentTarget,
 ): FinaleExecutionDamageSnapshot {
-    const levelOffset = Math.max(0, context.skill.level - 1);
+    const levelOffset = Math.max(0, context.skill.coefficientLevel - 1);
     const attack = Math.max(0, context.owner.attribute.get(AttributeType.ATK));
     const mobilityPower = Math.max(0, context.owner.attribute.get(AttributeType.SPEED)) * MOBILITY_DAMAGE_SCALE;
     const referencePower = attack + mobilityPower;
@@ -2921,7 +2921,7 @@ defineSkill({
                 `기본 피해 ${formatNumber(result.baseDamage)} + 잃은 생명력 보너스 ${formatNumber(result.missingLifeBonus)} · 최종 상한 ${formatNumber(result.totalDamageCap)}`,
             );
         },
-        missingRatio: context => `${formatNumber(percentByLevel(context.skill.level, 4, 0.5))}%`,
+        missingRatio: context => `${formatNumber(percentByLevel(context.skill.coefficientLevel, 4, 0.5))}%`,
         bonusCap: context => formatNumber(calculateFinaleExecutionDamage(context).missingLifeBonusCap),
         totalCap: context => formatNumber(calculateFinaleExecutionDamage(context).totalDamageCap),
     },
@@ -2968,12 +2968,12 @@ const DAWN_COVENANT_FORMULA = Object.freeze({
 function dawnCovenantHealing(context: SkillContext): number {
     return context.owner.attribute.get(AttributeType.MAGIC_FORCE)
             * percentByLevel(
-                context.skill.level,
+                context.skill.coefficientLevel,
                 DAWN_COVENANT_FORMULA.healingMagicBase,
                 DAWN_COVENANT_FORMULA.healingMagicPerLevel,
             ) / 100
         + context.owner.maxLife * percentByLevel(
-            context.skill.level,
+            context.skill.coefficientLevel,
             DAWN_COVENANT_FORMULA.healingLifeBase,
             DAWN_COVENANT_FORMULA.healingLifePerLevel,
         ) / 100;
@@ -2982,17 +2982,17 @@ function dawnCovenantHealing(context: SkillContext): number {
 function dawnCovenantShield(context: SkillContext): number {
     return context.owner.attribute.get(AttributeType.MAGIC_FORCE)
             * percentByLevel(
-                context.skill.level,
+                context.skill.coefficientLevel,
                 DAWN_COVENANT_FORMULA.shieldMagicBase,
                 DAWN_COVENANT_FORMULA.shieldMagicPerLevel,
             ) / 100
         + context.owner.maxMentality * percentByLevel(
-            context.skill.level,
+            context.skill.coefficientLevel,
             DAWN_COVENANT_FORMULA.shieldMentalityBase,
             DAWN_COVENANT_FORMULA.shieldMentalityPerLevel,
         ) / 100
         + context.owner.maxLife * percentByLevel(
-            context.skill.level,
+            context.skill.coefficientLevel,
             DAWN_COVENANT_FORMULA.shieldLifeBase,
             DAWN_COVENANT_FORMULA.shieldLifePerLevel,
         ) / 100;
@@ -3014,21 +3014,21 @@ defineSkill({
     baseMetadata: null,
     activationFeedback: context => buffFeedback(
         context.skill.name,
-        valueByLevel(context.skill.level, 10, 1),
+        valueByLevel(context.skill.coefficientLevel, 10, 1),
         `아군 최대 3명 · 생명력 ${formatNumber(dawnCovenantHealing(context))} 회복 · 일반 보호막 ${formatNumber(dawnCovenantShield(context))}`,
     ),
     calculatedFields: {
         manaCost: context => lateTacticalMentalityCost(context, 48),
         healing: context => tooltipValue(
             dawnCovenantHealing(context),
-            `마법력 × ${formatNumber(percentByLevel(context.skill.level, DAWN_COVENANT_FORMULA.healingMagicBase, DAWN_COVENANT_FORMULA.healingMagicPerLevel))}%`
-                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, DAWN_COVENANT_FORMULA.healingLifeBase, DAWN_COVENANT_FORMULA.healingLifePerLevel))}%`,
+            `마법력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, DAWN_COVENANT_FORMULA.healingMagicBase, DAWN_COVENANT_FORMULA.healingMagicPerLevel))}%`
+                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, DAWN_COVENANT_FORMULA.healingLifeBase, DAWN_COVENANT_FORMULA.healingLifePerLevel))}%`,
         ),
         shield: context => tooltipValue(
             dawnCovenantShield(context),
-            `마법력 × ${formatNumber(percentByLevel(context.skill.level, DAWN_COVENANT_FORMULA.shieldMagicBase, DAWN_COVENANT_FORMULA.shieldMagicPerLevel))}%`
-                + ` + 최대 정신력 × ${formatNumber(percentByLevel(context.skill.level, DAWN_COVENANT_FORMULA.shieldMentalityBase, DAWN_COVENANT_FORMULA.shieldMentalityPerLevel))}%`
-                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, DAWN_COVENANT_FORMULA.shieldLifeBase, DAWN_COVENANT_FORMULA.shieldLifePerLevel))}%`,
+            `마법력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, DAWN_COVENANT_FORMULA.shieldMagicBase, DAWN_COVENANT_FORMULA.shieldMagicPerLevel))}%`
+                + ` + 최대 정신력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, DAWN_COVENANT_FORMULA.shieldMentalityBase, DAWN_COVENANT_FORMULA.shieldMentalityPerLevel))}%`
+                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, DAWN_COVENANT_FORMULA.shieldLifeBase, DAWN_COVENANT_FORMULA.shieldLifePerLevel))}%`,
         ),
         duration: context => levelValueTooltip(context, '보호막 지속시간', 10, 1, '초'),
     },
@@ -3038,7 +3038,7 @@ defineSkill({
         calculateManaCost: context => lateTacticalMentalityCost(context, 48),
         calculateHealing: dawnCovenantHealing,
         calculateShield: dawnCovenantShield,
-        calculateEffectDuration: context => valueByLevel(context.skill.level, 10, 1),
+        calculateEffectDuration: context => valueByLevel(context.skill.coefficientLevel, 10, 1),
         notes: ['현재 지정한 생존 아군을 우선하며 같은 장소의 같은 파티원만 최대 3명까지 적용합니다.'],
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 24, 1, 20),
@@ -3048,7 +3048,7 @@ defineSkill({
     canActivate: simpleCheck(context => lateTacticalMentalityCost(context, 48), false),
     onStart: context => {
         spend(context, current => lateTacticalMentalityCost(current, 48));
-        const duration = valueByLevel(context.skill.level, 10, 1);
+        const duration = valueByLevel(context.skill.coefficientLevel, 10, 1);
         for (const target of getSanctuaryAegisTargets(context)) {
             target.heal(dawnCovenantHealing(context), context.owner);
             target.setShield(
@@ -3847,7 +3847,7 @@ for (const technique of growthTechniques) defineSkill({
         penetration: context => technique.penetration
             ? levelValueTooltip(context, technique.penetration.attribute.label, technique.penetration.base, technique.penetration.perLevel)
             : 0,
-        statusLevel: context => technique.statusLevel?.(context.skill.level) ?? context.skill.level,
+        statusLevel: context => technique.statusLevel?.(context.skill.coefficientLevel) ?? context.skill.coefficientLevel,
         statusDuration: context => levelValueTooltip(
             context,
             `${technique.statusLabel ?? '효과'} 지속시간`,
@@ -3886,7 +3886,7 @@ for (const technique of growthTechniques) defineSkill({
         calculatePenetration: technique.penetration
             ? context => {
                 const granted = valueByLevel(
-                    context.skill.level,
+                    context.skill.coefficientLevel,
                     technique.penetration!.base,
                     technique.penetration!.perLevel,
                 );
@@ -3932,15 +3932,15 @@ for (const technique of growthTechniques) defineSkill({
             if (!result || result.evaded || result.finalDamage <= 0 || !technique.statusEffect) return;
             found.target.applyStatusEffect(
                 technique.statusEffect,
-                valueByLevel(context.skill.level, technique.statusDuration ?? 0, technique.statusDurationPerLevel ?? 0),
-                technique.statusLevel?.(context.skill.level) ?? context.skill.level,
+                valueByLevel(context.skill.coefficientLevel, technique.statusDuration ?? 0, technique.statusDurationPerLevel ?? 0),
+                technique.statusLevel?.(context.skill.coefficientLevel) ?? context.skill.coefficientLevel,
                 context.owner,
             );
         };
         if (technique.projectile) {
             for (let index = 0; index < (technique.hitCount ?? 1); index++) {
                 const penetration = technique.penetration
-                    ? valueByLevel(context.skill.level, technique.penetration.base, technique.penetration.perLevel)
+                    ? valueByLevel(context.skill.coefficientLevel, technique.penetration.base, technique.penetration.perLevel)
                     : undefined;
                 projectileAttack(
                     context,
@@ -3962,7 +3962,7 @@ for (const technique of growthTechniques) defineSkill({
         } else {
             const penetrationSource = `skill:${technique.id}:penetration`;
             const penetration = technique.penetration
-                ? valueByLevel(context.skill.level, technique.penetration.base, technique.penetration.perLevel)
+                ? valueByLevel(context.skill.coefficientLevel, technique.penetration.base, technique.penetration.perLevel)
                 : 0;
             if (technique.penetration) {
                 context.owner.attribute.removeBySource(penetrationSource);
@@ -4021,7 +4021,7 @@ const BENEDICTION_WAVE_FORMULA = Object.freeze({
 function benedictionWaveDamage(context: SkillContext): number {
     return context.owner.attribute.get(AttributeType.MAGIC_FORCE)
         * percentByLevel(
-            context.skill.level,
+            context.skill.coefficientLevel,
             BENEDICTION_WAVE_FORMULA.damageBase,
             BENEDICTION_WAVE_FORMULA.damagePerLevel,
         ) / 100;
@@ -4030,12 +4030,12 @@ function benedictionWaveDamage(context: SkillContext): number {
 function benedictionWaveHealing(context: SkillContext): number {
     return context.owner.attribute.get(AttributeType.MAGIC_FORCE)
             * percentByLevel(
-                context.skill.level,
+                context.skill.coefficientLevel,
                 BENEDICTION_WAVE_FORMULA.healingMagicBase,
                 BENEDICTION_WAVE_FORMULA.healingMagicPerLevel,
             ) / 100
         + context.owner.maxLife * percentByLevel(
-            context.skill.level,
+            context.skill.coefficientLevel,
             BENEDICTION_WAVE_FORMULA.healingLifeBase,
             BENEDICTION_WAVE_FORMULA.healingLifePerLevel,
         ) / 100;
@@ -4058,12 +4058,12 @@ defineSkill({
     calculatedFields: {
         damage: context => tooltipValue(
             benedictionWaveDamage(context),
-            `마법력 × ${formatNumber(percentByLevel(context.skill.level, BENEDICTION_WAVE_FORMULA.damageBase, BENEDICTION_WAVE_FORMULA.damagePerLevel))}%`,
+            `마법력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, BENEDICTION_WAVE_FORMULA.damageBase, BENEDICTION_WAVE_FORMULA.damagePerLevel))}%`,
         ),
         healing: context => tooltipValue(
             benedictionWaveHealing(context),
-            `마법력 × ${formatNumber(percentByLevel(context.skill.level, BENEDICTION_WAVE_FORMULA.healingMagicBase, BENEDICTION_WAVE_FORMULA.healingMagicPerLevel))}%`
-                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, BENEDICTION_WAVE_FORMULA.healingLifeBase, BENEDICTION_WAVE_FORMULA.healingLifePerLevel))}%`,
+            `마법력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, BENEDICTION_WAVE_FORMULA.healingMagicBase, BENEDICTION_WAVE_FORMULA.healingMagicPerLevel))}%`
+                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, BENEDICTION_WAVE_FORMULA.healingLifeBase, BENEDICTION_WAVE_FORMULA.healingLifePerLevel))}%`,
         ),
         projectileTravelTime: context => projectileTravelTimeTooltip(context, 'magic_bolt', true),
     },
@@ -4088,7 +4088,7 @@ defineSkill({
             context,
             'magic_bolt',
             percentByLevel(
-                context.skill.level,
+                context.skill.coefficientLevel,
                 BENEDICTION_WAVE_FORMULA.damageBase,
                 BENEDICTION_WAVE_FORMULA.damagePerLevel,
             ) / 100,
@@ -4102,9 +4102,9 @@ defineSkill({
 });
 
 function temperedAegisAmount(context: SkillContext): number {
-    const lifePercent = percentByLevel(context.skill.level, 12, 1.5);
-    const attackPercent = percentByLevel(context.skill.level, 45, 5);
-    const precisionPercent = percentByLevel(context.skill.level, 4, 0.5);
+    const lifePercent = percentByLevel(context.skill.coefficientLevel, 12, 1.5);
+    const attackPercent = percentByLevel(context.skill.coefficientLevel, 45, 5);
+    const precisionPercent = percentByLevel(context.skill.coefficientLevel, 4, 0.5);
     return context.owner.maxLife * lifePercent / 100
         + context.owner.attribute.get(AttributeType.ATK) * attackPercent / 100
         + context.owner.maxLife
@@ -4121,9 +4121,9 @@ defineSkill({
     activationMessage: '담금질 방벽!', baseMetadata: null,
     calculatedFields: {
         shieldAmount: context => {
-            const lifePercent = percentByLevel(context.skill.level, 12, 1.5);
-            const attackPercent = percentByLevel(context.skill.level, 45, 5);
-            const precisionPercent = percentByLevel(context.skill.level, 4, 0.5);
+            const lifePercent = percentByLevel(context.skill.coefficientLevel, 12, 1.5);
+            const attackPercent = percentByLevel(context.skill.coefficientLevel, 45, 5);
+            const precisionPercent = percentByLevel(context.skill.coefficientLevel, 4, 0.5);
             return tooltipValue(
                 temperedAegisAmount(context),
                 `최대 생명력 × ${formatNumber(lifePercent)}% + 공격력 × ${formatNumber(attackPercent)}%`
@@ -4136,7 +4136,7 @@ defineSkill({
         role: SkillBalanceRole.DEFENSE,
         calculateManaCost: () => 26,
         calculateShield: temperedAegisAmount,
-        calculateEffectDuration: context => valueByLevel(context.skill.level, 10, 1),
+        calculateEffectDuration: context => valueByLevel(context.skill.coefficientLevel, 10, 1),
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 22, 1, 18),
     sharedCooldowns: careerSharedCooldown(GameTags.SKILL_GROUP_BLACKSMITH),
@@ -4146,14 +4146,14 @@ defineSkill({
     onStart: context => {
         spend(context, 26);
         context.owner.setShield('skill:tempered_aegis', temperedAegisAmount(context), ShieldType.GENERAL,
-            valueByLevel(context.skill.level, 10, 1), context.owner);
+            valueByLevel(context.skill.coefficientLevel, 10, 1), context.owner);
     },
     tags: [GameTags.SKILL_ACTIVE, GameTags.SKILL_COMBAT, GameTags.SKILL_GROUP_BLACKSMITH],
 });
 
 function silverScaleVeilAmount(context: SkillContext): number {
-    const lifePercent = percentByLevel(context.skill.level, 10, 1.5);
-    const combatPercent = percentByLevel(context.skill.level, 80, 10);
+    const lifePercent = percentByLevel(context.skill.coefficientLevel, 10, 1.5);
+    const combatPercent = percentByLevel(context.skill.coefficientLevel, 80, 10);
     const combatPower = Math.max(
         context.owner.attribute.get(AttributeType.ATK),
         context.owner.attribute.get(AttributeType.MAGIC_FORCE),
@@ -4180,8 +4180,8 @@ defineSkill({
         manaCost: context => scaledMentalityCost(context, 24, SkillMentalityCostTier.EXPERT),
         shieldAmount: context => tooltipValue(
             silverScaleVeilAmount(context),
-            `최대 생명력 × ${formatNumber(percentByLevel(context.skill.level, 10, 1.5))}%`
-            + ` + 공격력·마법력 중 높은 값 × ${formatNumber(percentByLevel(context.skill.level, 80, 10))}%`,
+            `최대 생명력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, 10, 1.5))}%`
+            + ` + 공격력·마법력 중 높은 값 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, 80, 10))}%`,
         ),
         duration: context => levelValueTooltip(context, '보호막 지속시간', 8, 1, '초'),
     },
@@ -4189,7 +4189,7 @@ defineSkill({
         role: SkillBalanceRole.DEFENSE,
         calculateManaCost: context => scaledMentalityCost(context, 24, SkillMentalityCostTier.EXPERT),
         calculateShield: silverScaleVeilAmount,
-        calculateEffectDuration: context => valueByLevel(context.skill.level, 8, 1),
+        calculateEffectDuration: context => valueByLevel(context.skill.coefficientLevel, 8, 1),
     },
     calculateMaxCooldown: context => cooldownByLevel(context, 30, 2, 22),
     canActivate: simpleCheck(context => scaledMentalityCost(context, 24, SkillMentalityCostTier.EXPERT), false),
@@ -4199,7 +4199,7 @@ defineSkill({
             'skill:silver_scale_veil',
             silverScaleVeilAmount(context),
             ShieldType.GENERAL,
-            valueByLevel(context.skill.level, 8, 1),
+            valueByLevel(context.skill.coefficientLevel, 8, 1),
             context.owner,
         );
     },
@@ -4211,7 +4211,7 @@ function abyssalHarpoonDamage(context: SkillContext): number {
         context.owner.attribute.get(AttributeType.ATK),
         context.owner.attribute.get(AttributeType.MAGIC_FORCE),
     );
-    return combatPower * percentByLevel(context.skill.level, 550, 45) / 100;
+    return combatPower * percentByLevel(context.skill.coefficientLevel, 550, 45) / 100;
 }
 
 defineSkill({
@@ -4232,9 +4232,9 @@ defineSkill({
         manaCost: context => scaledMentalityCost(context, 58, SkillMentalityCostTier.ULTIMATE),
         damage: context => tooltipValue(
             abyssalHarpoonDamage(context),
-            `공격력·마법력 중 높은 값 × ${formatNumber(percentByLevel(context.skill.level, 550, 45))}%`,
+            `공격력·마법력 중 높은 값 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, 550, 45))}%`,
         ),
-        statusLevel: context => context.skill.level,
+        statusLevel: context => context.skill.coefficientLevel,
         statusDuration: context => levelValueTooltip(context, '둔화 지속시간', 5, 0.5, '초'),
     },
     balance: {
@@ -4260,8 +4260,8 @@ defineSkill({
         if (result && !result.evaded && result.finalDamage > 0) {
             found.target.applyStatusEffect(
                 LegacyStatusEffects.SLOWNESS,
-                valueByLevel(context.skill.level, 5, 0.5),
-                context.skill.level,
+                valueByLevel(context.skill.coefficientLevel, 5, 0.5),
+                context.skill.coefficientLevel,
                 context.owner,
             );
         }
@@ -4659,11 +4659,11 @@ function eliteTechniqueShieldDeepeningMultiplier(
 
 function eliteTechniqueDamage(context: SkillContext, technique: EliteTechniqueDefinition): number {
     const primary = scaledAttributeValue(context, technique.attribute, technique.attributeScale)
-        * percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent) / 100;
+        * percentByLevel(context.skill.coefficientLevel, technique.basePercent, technique.perLevelPercent) / 100;
     const secondary = technique.secondaryAttribute
         ? scaledAttributeValue(context, technique.secondaryAttribute, technique.secondaryAttributeScale)
         * percentByLevel(
-            context.skill.level,
+            context.skill.coefficientLevel,
             technique.secondaryBasePercent ?? 0,
             technique.secondaryPerLevelPercent ?? 0,
         ) / 100
@@ -4671,7 +4671,7 @@ function eliteTechniqueDamage(context: SkillContext, technique: EliteTechniqueDe
     const tertiary = technique.tertiaryAttribute
         ? scaledAttributeValue(context, technique.tertiaryAttribute, technique.tertiaryAttributeScale)
             * percentByLevel(
-                context.skill.level,
+                context.skill.coefficientLevel,
                 technique.tertiaryBasePercent ?? 0,
                 technique.tertiaryPerLevelPercent ?? 0,
             ) / 100
@@ -4680,7 +4680,7 @@ function eliteTechniqueDamage(context: SkillContext, technique: EliteTechniqueDe
         ? scaledAttributeValue(context, technique.attribute, technique.attributeScale)
             * context.owner.attribute.get(AttributeType.FORGING_PRECISION)
             * percentByLevel(
-                context.skill.level,
+                context.skill.coefficientLevel,
                 technique.forgingPrecisionBasePercent,
                 technique.forgingPrecisionPerLevelPercent ?? 0,
             ) / 100
@@ -4692,17 +4692,17 @@ function eliteTechniqueDamage(context: SkillContext, technique: EliteTechniqueDe
 
 function eliteTechniqueDamageTooltip(context: SkillContext, technique: EliteTechniqueDefinition): string {
     const damage = eliteTechniqueDamage(context, technique);
-    const primaryPercent = percentByLevel(context.skill.level, technique.basePercent, technique.perLevelPercent);
+    const primaryPercent = percentByLevel(context.skill.coefficientLevel, technique.basePercent, technique.perLevelPercent);
     const scaledLabel = (attribute: AttributeType, scale = 1) =>
         `${attribute.label}${scale === 1 ? '' : ` × ${formatNumber(scale)}`}`;
     const secondary = technique.secondaryAttribute
-        ? ` + ${scaledLabel(technique.secondaryAttribute, technique.secondaryAttributeScale)} × ${formatNumber(percentByLevel(context.skill.level, technique.secondaryBasePercent ?? 0, technique.secondaryPerLevelPercent ?? 0))}%`
+        ? ` + ${scaledLabel(technique.secondaryAttribute, technique.secondaryAttributeScale)} × ${formatNumber(percentByLevel(context.skill.coefficientLevel, technique.secondaryBasePercent ?? 0, technique.secondaryPerLevelPercent ?? 0))}%`
         : '';
     const tertiary = technique.tertiaryAttribute
-        ? ` + ${scaledLabel(technique.tertiaryAttribute, technique.tertiaryAttributeScale)} × ${formatNumber(percentByLevel(context.skill.level, technique.tertiaryBasePercent ?? 0, technique.tertiaryPerLevelPercent ?? 0))}%`
+        ? ` + ${scaledLabel(technique.tertiaryAttribute, technique.tertiaryAttributeScale)} × ${formatNumber(percentByLevel(context.skill.coefficientLevel, technique.tertiaryBasePercent ?? 0, technique.tertiaryPerLevelPercent ?? 0))}%`
         : '';
     const precision = technique.forgingPrecisionBasePercent !== undefined
-        ? ` + ${scaledLabel(technique.attribute, technique.attributeScale)} × ${AttributeType.FORGING_PRECISION.label} × ${formatNumber(percentByLevel(context.skill.level, technique.forgingPrecisionBasePercent, technique.forgingPrecisionPerLevelPercent ?? 0))}%`
+        ? ` + ${scaledLabel(technique.attribute, technique.attributeScale)} × ${AttributeType.FORGING_PRECISION.label} × ${formatNumber(percentByLevel(context.skill.coefficientLevel, technique.forgingPrecisionBasePercent, technique.forgingPrecisionPerLevelPercent ?? 0))}%`
         : '';
     const tierMultiplier = eliteTechniqueTierMultiplier(technique);
     const deepeningMultiplier = eliteTechniqueDamageDeepeningMultiplier(context, technique);
@@ -4851,7 +4851,7 @@ for (const technique of eliteTechniques) {
                     technique.propertyTag ? [technique.propertyTag] : undefined,
                     (_projectile, result) => {
                         if (!result.evaded && result.finalDamage > 0) {
-                            technique.onHit?.(_projectile.target, context.skill.level, context.owner);
+                            technique.onHit?.(_projectile.target, context.skill.coefficientLevel, context.owner);
                         }
                     },
                     {
@@ -4873,7 +4873,7 @@ for (const technique of eliteTechniques) {
                     });
                 if (!result) throw new Error(`${technique.name} 공격이 확정되지 않았습니다.`);
                 if (!result.evaded && result.finalDamage > 0) {
-                    technique.onHit?.(found.target, context.skill.level, context.owner);
+                    technique.onHit?.(found.target, context.skill.coefficientLevel, context.owner);
                 }
             }
             if (technique.shieldPercent) {
@@ -4909,7 +4909,7 @@ function seismicManaCost(context: SkillContext): number {
 
 function seismicDamage(context: SkillContext): number {
     const multiplier = numberMeta(context, 'baseDamageMultiplier')
-        + (context.skill.level - 1) * numberMeta(context, 'damageMultiplierPerLevel');
+        + (context.skill.coefficientLevel - 1) * numberMeta(context, 'damageMultiplierPerLevel');
     return context.owner.attribute.get(AttributeType.MAGIC_FORCE) * multiplier;
 }
 
@@ -4941,7 +4941,7 @@ defineSkill({
         manaCost: seismicManaCost,
         damage: context => {
             const multiplier = numberMeta(context, 'baseDamageMultiplier')
-                + (context.skill.level - 1) * numberMeta(context, 'damageMultiplierPerLevel');
+                + (context.skill.coefficientLevel - 1) * numberMeta(context, 'damageMultiplierPerLevel');
             return tooltipValue(
                 seismicDamage(context),
                 `마법력 × ${formatNumber(multiplier * 100)}% · 스킬 레벨당 계수 +${formatNumber(numberMeta(context, 'damageMultiplierPerLevel') * 100)}%p`,
@@ -4992,7 +4992,7 @@ defineSkill({
             'seismic_crush',
             '지각 붕괴',
             castTime,
-            `적중 시 ${formatNumber(numberMeta(context, 'paralysisChance'))}% 확률로 마비독 Lv.${context.skill.level} · ${formatNumber(numberMeta(context, 'paralysisDuration'))}초`,
+            `적중 시 ${formatNumber(numberMeta(context, 'paralysisChance'))}% 확률로 마비독 Lv.${context.skill.coefficientLevel} · ${formatNumber(numberMeta(context, 'paralysisDuration'))}초`,
         );
         return { duration: castTime, state: { released: false } };
     },
@@ -5014,7 +5014,7 @@ defineSkill({
             target.applyStatusEffect(
                 StatusEffectType.PARALYTIC_POISON,
                 numberMeta(context, 'paralysisDuration'),
-                Math.max(1, context.skill.level),
+                Math.max(1, context.skill.coefficientLevel),
                 context.owner,
             );
         }
@@ -5093,7 +5093,7 @@ defineSkill({
             target.applyStatusEffect(
                 LegacyStatusEffects.OVERMASTER,
                 numberMeta(context, 'controlDuration'),
-                Math.max(1, context.skill.level * 2),
+                Math.max(1, context.skill.coefficientLevel * 2),
                 context.owner,
             );
         }
@@ -5125,7 +5125,7 @@ export interface BossStrikeSkillDefinition {
 
 export function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): void {
     const damage = (context: SkillContext) => context.owner.attribute.get(definition.attribute)
-        * (definition.baseMultiplier + Math.max(0, context.skill.level - 1) * definition.perLevelMultiplier);
+        * (definition.baseMultiplier + Math.max(0, context.skill.coefficientLevel - 1) * definition.perLevelMultiplier);
     const statusEffect = definition.statusEffectId ? StatusEffectType.fromKey(definition.statusEffectId) : undefined;
     defineSkill({
         id: definition.id,
@@ -5143,7 +5143,7 @@ export function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): vo
         calculatedFields: {
             damage: context => tooltipValue(
                 damage(context),
-                `${definition.attribute.label} × ${formatNumber((definition.baseMultiplier + Math.max(0, context.skill.level - 1) * definition.perLevelMultiplier) * 100)}% · 스킬 레벨당 계수 +${formatNumber(definition.perLevelMultiplier * 100)}%p`,
+                `${definition.attribute.label} × ${formatNumber((definition.baseMultiplier + Math.max(0, context.skill.coefficientLevel - 1) * definition.perLevelMultiplier) * 100)}% · 스킬 레벨당 계수 +${formatNumber(definition.perLevelMultiplier * 100)}%p`,
             ),
         },
         balance: {
@@ -5167,7 +5167,7 @@ export function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): vo
         },
         onStart: context => {
             const effectPreview = statusEffect
-                ? `적중 시 ${statusEffect.label} Lv.${context.skill.level} · ${formatNumber(definition.statusDuration ?? 5)}초`
+                ? `적중 시 ${statusEffect.label} Lv.${context.skill.coefficientLevel} · ${formatNumber(definition.statusDuration ?? 5)}초`
                 : '강력한 직접 피해';
             announceMonsterSkill(
                 context,
@@ -5193,7 +5193,7 @@ export function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): vo
                     comment: [
                         definition.combatComment ?? `${definition.name}이(가) 대상을 강타했습니다.`,
                         ...(statusEffect
-                            ? [` ${statusEffect.label} Lv.${context.skill.level} 효과가 ${formatNumber(definition.statusDuration ?? 5)}초 동안 적용됩니다.`]
+                            ? [` ${statusEffect.label} Lv.${context.skill.coefficientLevel} 효과가 ${formatNumber(definition.statusDuration ?? 5)}초 동안 적용됩니다.`]
                             : []),
                     ].join(''),
                 },
@@ -5203,7 +5203,7 @@ export function defineBossStrikeSkill(definition: BossStrikeSkillDefinition): vo
                 if (effect) target.applyStatusEffect(
                     effect,
                     definition.statusDuration ?? 5,
-                    context.skill.level,
+                    context.skill.coefficientLevel,
                     context.owner,
                 );
             }
@@ -5551,7 +5551,7 @@ defineSkill({
     baseMetadata: null,
     calculatedFields: {
         healing: context => {
-            const percent = 6 + context.skill.level * 1.5;
+            const percent = 6 + context.skill.coefficientLevel * 1.5;
             return tooltipValue(context.owner.maxLife * percent / 100, `최대 생명력 × ${formatNumber(percent)}%`);
         },
     },
@@ -5568,7 +5568,7 @@ defineSkill({
     onUpdate: context => {
         if (context.elapsed < 2 || context.skill.getActiveState<boolean>('released')) return 'continue';
         context.skill.setActiveState('released', true);
-        const result = context.owner.heal(context.owner.maxLife * (0.06 + context.skill.level * 0.015), context.owner);
+        const result = context.owner.heal(context.owner.maxLife * (0.06 + context.skill.coefficientLevel * 0.015), context.owner);
         recordMonsterSkillResult(context, '검은 심재 재생', `${formatNumber(result.healedAmount)}의 생명력을 회복했습니다.`);
         return 'finish';
     },

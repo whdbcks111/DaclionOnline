@@ -1,7 +1,12 @@
 import type Player from '../../models/actors/Player.js';
 import Monster from '../../models/actors/Monster.js';
 import type { Item, ItemDurabilityRepairResult, ItemInspectionSnapshot } from '../../models/economy/Item.js';
-import { getItemData, MAX_STACKABLE_ITEM_COUNT } from '../../models/economy/Item.js';
+import {
+    DEFAULT_POTION_THIRST_RESTORE,
+    getItemData,
+    ItemMetadataKeys,
+    MAX_STACKABLE_ITEM_COUNT,
+} from '../../models/economy/Item.js';
 import { getSkillData } from '../../models/progression/Skill.js';
 import { EquipSlotType, type EquipmentAttributePreviewSnapshot } from '../../models/economy/Equipment.js';
 import { AttributeType, summarizeAttributeModifiers } from '../../models/core/Attribute.js';
@@ -25,6 +30,12 @@ import {
     getMonsterInspectionTier,
 } from '../../models/combat/Inspection.js';
 import { GameTags } from '../../../../shared/tags.js';
+import {
+    ALCHEMY_HARMFUL_DAMAGE_SCALE,
+    AlchemyDelivery,
+    AlchemyEffectType,
+    resolveAlchemyPotionUse,
+} from '../../models/professions/Alchemy.js';
 
 export { getMonsterInspectionTier } from '../../models/combat/Inspection.js';
 
@@ -209,22 +220,105 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function nonNegativeNumber(value: unknown): number | undefined {
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+function describeAlchemyPotion(snapshot: ItemInspectionSnapshot): string | undefined {
+    const resolved = resolveAlchemyPotionUse(
+        snapshot.itemDataId,
+        snapshot.metadata?.[ItemMetadataKeys.ALCHEMY],
+    );
+    if (!resolved) return undefined;
+    const { metadata, effectType } = resolved;
+    const effect = metadata.effect;
+    let value: string;
+    if (effectType === AlchemyEffectType.RESTORE_LIFE || effectType === AlchemyEffectType.FAILED) {
+        value = `생명력 ${formatNumber(effect.power)} 회복`;
+    } else if (effectType === AlchemyEffectType.RESTORE_MENTALITY) {
+        value = `정신력 ${formatNumber(effect.power)} 회복`;
+    } else if (effectType === AlchemyEffectType.UNSTABLE) {
+        const damageType = effect.damageType === 'physical' ? '물리'
+            : effect.damageType === 'absolute' ? '고정' : '마법';
+        value = `불안정 ${damageType} 피해 ${formatNumber(effect.power * ALCHEMY_HARMFUL_DAMAGE_SCALE)}`;
+    } else {
+        const status = effect.statusEffectId ? StatusEffectType.fromKey(effect.statusEffectId) : undefined;
+        const level = status?.normalizeLevel(Math.max(1, Math.round(effect.power)))
+            ?? Math.max(1, Math.round(effect.power));
+        value = `${status?.label ?? effectType.label} Lv.${level} · ${formatNumber(effect.duration)}초`;
+        if (effectType === AlchemyEffectType.HARMFUL_STATUS) {
+            const damageType = effect.damageType === 'physical' ? '물리'
+                : effect.damageType === 'absolute' ? '고정' : '마법';
+            value = `${damageType} 피해 ${formatNumber(effect.power * ALCHEMY_HARMFUL_DAMAGE_SCALE)} · ${value}`;
+        }
+    }
+    if (metadata.delivery === AlchemyDelivery.THROW.key) {
+        const audience = effect.audience === 'beneficial' ? '아군' : '적';
+        value += ` · 대상 중심 ${audience} 최대 ${metadata.areaTargetCap}명`;
+    } else {
+        value += ` · 수분 ${DEFAULT_POTION_THIRST_RESTORE} 회복`;
+    }
+    return value;
+}
+
+function describeItemUse(snapshot: ItemInspectionSnapshot): string | undefined {
+    const data = getItemData(snapshot.itemDataId);
+    const metadata = snapshot.metadata ?? {};
+    if (!data?.onUse) return undefined;
+    const amount = nonNegativeNumber(metadata.amount);
+    const thirst = nonNegativeNumber(metadata.thirst) ?? 0;
+    const potionThirst = nonNegativeNumber(metadata.thirst) ?? DEFAULT_POTION_THIRST_RESTORE;
+    if (data.onUse === 'heal_hp' && amount !== undefined) {
+        return `생명력 ${formatNumber(amount)} 회복${potionThirst > 0 ? ` · 수분 ${formatNumber(potionThirst)} 회복` : ''}`;
+    }
+    if (data.onUse === 'heal_mp' && amount !== undefined) {
+        return `정신력 ${formatNumber(amount)} 회복${potionThirst > 0 ? ` · 수분 ${formatNumber(potionThirst)} 회복` : ''}`;
+    }
+    if (data.onUse === 'learn_skill' && typeof metadata.skillDataId === 'string') {
+        const skill = getSkillData(metadata.skillDataId);
+        return skill ? `스킬 [ ${skill.name} ] 획득` : '알 수 없는 스킬 획득';
+    }
+    if (data.onUse === 'restore_survival') {
+        const hunger = nonNegativeNumber(metadata.hunger) ?? 0;
+        const parts = [
+            ...(hunger > 0 ? [`배고픔 ${formatNumber(hunger)} 회복`] : []),
+            ...(thirst > 0 ? [`수분 ${formatNumber(thirst)} 회복`] : []),
+        ];
+        return parts.length > 0 ? parts.join(' · ') : '배고픔·수분 회복';
+    }
+    if (data.onUse === 'apply_status_effect') {
+        const config = metadata[ItemMetadataKeys.STATUS_EFFECT];
+        if (!isRecord(config) || typeof config.id !== 'string') return '효과 정보가 올바르지 않음';
+        const effect = StatusEffectType.fromKey(config.id);
+        const duration = nonNegativeNumber(config.duration);
+        if (!effect || duration === undefined || duration <= 0) return '효과 정보가 올바르지 않음';
+        const level = effect.normalizeLevel(Math.max(1, Math.floor(nonNegativeNumber(config.level) ?? 1)));
+        return `${effect.label} Lv.${level} · ${formatNumber(duration)}초${potionThirst > 0 ? ` · 수분 ${formatNumber(potionThirst)} 회복` : ''}`;
+    }
+    if (data.onUse === 'reduce_skill_cooldowns') {
+        const seconds = nonNegativeNumber(metadata.seconds) ?? 0;
+        return `진행 중인 모든 스킬 재사용 대기시간을 최대 ${formatNumber(seconds)}초 감소`;
+    }
+    if (data.onUse === 'labyrinth_compass') return '현재 장소의 잠기지 않은 길 하나로 무작위 순간이동';
+    if (data.onUse === 'grant_single_evasion') return '다음 회피 가능한 공격 1회를 확정 회피';
+    if (data.onUse === 'draw_chat_emote') return '미보유 감정표현 1종을 중복 없이 무작위 해금';
+    if (data.onUse === 'refund_allocated_stats') {
+        const perStat = nonNegativeNumber(metadata.maxRefundPerStat);
+        const total = nonNegativeNumber(metadata.maxRefundTotal);
+        if (perStat === undefined && total === undefined) return '직접 분배한 모든 스탯 포인트 환급';
+        return `직접 분배 포인트 환급${perStat !== undefined ? ` · 스탯별 최대 ${formatNumber(perStat)}` : ''}${total !== undefined ? ` · 전체 최대 ${formatNumber(total)}` : ''}`;
+    }
+    if (data.onUse === 'alchemy_potion') return describeAlchemyPotion(snapshot) ?? '조제약 효과 정보가 올바르지 않음';
+    return snapshot.description || '아이템 설명에 명시된 효과 발동';
+}
+
 /** 내부 metadata key를 사용자에게 노출하지 않고 알려진 게임 효과로만 변환한다. */
 export function getItemGameplayDetails(snapshot: ItemInspectionSnapshot): ItemGameplayDetail[] {
     const data = getItemData(snapshot.itemDataId);
     const metadata = snapshot.metadata ?? {};
     const details: ItemGameplayDetail[] = [];
-    const amount = metadata.amount;
-    if (data?.onUse === 'heal_hp' && typeof amount === 'number') {
-        details.push({ label: '사용 효과', value: `생명력 ${formatNumber(amount)} 회복` });
-    } else if (data?.onUse === 'heal_mp' && typeof amount === 'number') {
-        details.push({ label: '사용 효과', value: `정신력 ${formatNumber(amount)} 회복` });
-    } else if (data?.onUse === 'learn_skill' && typeof metadata.skillDataId === 'string') {
-        const skill = getSkillData(metadata.skillDataId);
-        details.push({ label: '사용 효과', value: skill ? `스킬 [ ${skill.name} ] 획득` : '알 수 없는 스킬 획득' });
-    } else if (data?.onUse) {
-        details.push({ label: '사용 효과', value: '사용 시 고유 효과 발동' });
-    }
+    const useDescription = describeItemUse(snapshot);
+    if (useDescription) details.push({ label: '사용 효과', value: useDescription });
 
     const projectileAttack = metadata.projectileAttack;
     if (isRecord(projectileAttack)) {

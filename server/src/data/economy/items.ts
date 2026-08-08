@@ -1,5 +1,6 @@
 import {
     defineItem,
+    DEFAULT_POTION_THIRST_RESTORE,
     ItemBalanceRole,
     ItemMetadataKeys,
     MAX_STACKABLE_ITEM_COUNT,
@@ -33,8 +34,6 @@ import { drawRandomChatEmote } from '../../models/progression/PlayerCosmetics.js
 
 registerItemAttackOverride(ItemAttackOverrideKeys.PROJECTILE, executeProjectileItemAttack);
 registerItemAttackOverride(ItemAttackOverrideKeys.BURST_FIREARM, executeBurstFirearmAttack);
-
-export const DEFAULT_POTION_THIRST_RESTORE = 5;
 
 function restorePotionThirst(player: { thirsty: number; restoreThirst(amount: number): number }, item: {
     getMetadata<T>(key: string): T | undefined;

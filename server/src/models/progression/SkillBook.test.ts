@@ -6,7 +6,7 @@ import Entity from '../core/Entity.js';
 import Equipment from '../economy/Equipment.js';
 import { AttributeType } from '../core/Attribute.js';
 import { PlayerProgress } from './Progress.js';
-import Skill, { getAllSkillData } from './Skill.js';
+import Skill, { createSkillContext, getAllSkillData } from './Skill.js';
 import SkillBook from './SkillBook.js';
 import Inventory from '../economy/Inventory.js';
 import { Item } from '../economy/Item.js';
@@ -673,6 +673,7 @@ test('모든 패시브 마스터는 돌파 뒤 최대 레벨 미도달 상태에
         if (!skill.isPassive) continue;
         assert.equal(skill.increaseMaxLevelBonus(), 1, data.id);
         assert.ok(skill.getRequiredExperience(player) > 0, data.id);
+        assert.ok(skill.getPassiveTrainingExperienceGain(player) >= 10, data.id);
         checked.push(data.id);
     }
 
@@ -680,6 +681,30 @@ test('모든 패시브 마스터는 돌파 뒤 최대 레벨 미도달 상태에
     assert.ok(checked.includes('titan_strength'));
     assert.ok(checked.includes('sword_mastery'));
     assert.ok(checked.includes('artisan_naming'));
+});
+
+test('액티브 돌파 레벨은 실제 전투 계수 증가량을 기존 레벨의 두 배로 적용한다', () => {
+    const player = new TestSkillPlayer(9_308);
+    player.attribute.addModifier({ attribute: 'atk', op: 'add', value: 100, source: 'test:breakthrough' });
+    const skill = player.skills.grant('power_strike', 'test', 4).skill;
+    const calculateDamage = skill.data.balance?.calculateDamage;
+    const calculateManaCost = skill.data.balance?.calculateManaCost;
+    assert.ok(calculateDamage);
+    assert.ok(calculateManaCost);
+
+    const damageAt4 = calculateDamage(createSkillContext(player, skill));
+    skill.setLevel(5);
+    const damageAt5 = calculateDamage(createSkillContext(player, skill));
+    const manaAt5 = calculateManaCost(createSkillContext(player, skill));
+    const cooldownAt5 = skill.getMaxCooldown(player);
+    player.skills.increaseMaxLevel('power_strike');
+    skill.setLevel(6);
+    const damageAt6 = calculateDamage(createSkillContext(player, skill));
+
+    assert.equal(skill.coefficientLevel, 7);
+    assert.ok(Math.abs((damageAt6 - damageAt5) - (damageAt5 - damageAt4) * 2) < 1e-9);
+    assert.equal(calculateManaCost(createSkillContext(player, skill)) - manaAt5, 2);
+    assert.equal(skill.getMaxCooldown(player) - cooldownAt5, -0.5);
 });
 
 test('최대 레벨 돌파는 미보유·상한 도달을 명시적으로 거부하고 cap no-op을 유지한다', () => {

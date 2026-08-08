@@ -189,6 +189,15 @@ export function initSkillCommands(): void {
                     })
                     .text('\n')
                     .build();
+            const breakthroughNodes = skill.maxLevelBonus > 0
+                ? chat()
+                    .color('gray', b => b.text('돌파  '))
+                    .color('gold', b => b.text(`+${skill.maxLevelBonus}/${skill.maxLevelBonusCap}`))
+                    .text(skill.isPassive
+                        ? ' · 낚시·요리 패시브 수련 가능\n'
+                        : ` · 돌파 레벨 계수 성장 ×2 · 현재 효과 계수 Lv.${skill.coefficientLevel}\n`)
+                    .build()
+                : [];
 
             const nodes = [
                 ...chat()
@@ -198,6 +207,7 @@ export function initSkillCommands(): void {
                     .text(`  Lv.${skill.level} / ${skill.maxLevel}\n`)
                     .build(),
                 ...experienceNodes,
+                ...breakthroughNodes,
                 ...(tagInfo.groups.length > 0 || tagInfo.affinities.length > 0
                     ? [
                         ...chat().divider('스킬 분류').build(),
@@ -301,6 +311,7 @@ export function initSkillCommands(): void {
                 const message = `[ ${result.snapshot.name} ] 최대 레벨 돌파 성공! `
                     + `Lv.${result.previousMaxLevel} → Lv.${result.snapshot.maxLevel} `
                     + `(돌파 +${result.snapshot.maxLevelBonus}/${result.snapshot.maxLevelBonusCap}, 숙련의 정수 ${result.consumed}개 소모)`
+                    + (!result.snapshot.isPassive ? ' · 돌파 레벨은 기존 계수 증가량의 2배로 성장합니다.' : '')
                     + (result.saveDeferred ? ' 저장은 자동으로 다시 시도됩니다.' : '');
                 sendBotMessageToUser(userId, chat()
                     .color('gold', builder => builder.weight('bold', bold => bold.text(message)))

@@ -117,6 +117,22 @@ test('최대 레벨 돌파는 액티브 +5, 패시브 +2로 누적 상한을 제
     assert.equal(passive.remainingMaxLevelBonus, 0);
 });
 
+test('액티브 돌파 레벨은 기존 레벨 계수 증가량의 두 배로 계산하고 패시브는 실제 레벨을 유지한다', () => {
+    const active = new Skill({ playerId: 1, skillDataId: 'test_breakthrough_active', level: 5 });
+    const passive = new Skill({ playerId: 1, skillDataId: 'test_breakthrough_passive' });
+
+    assert.equal(active.coefficientLevel, 5);
+    active.increaseMaxLevelBonus(2);
+    active.setLevel(6);
+    assert.equal(active.coefficientLevel, 7);
+    active.setLevel(7);
+    assert.equal(active.coefficientLevel, 9);
+
+    passive.increaseMaxLevelBonus(2);
+    passive.setLevel(3);
+    assert.equal(passive.coefficientLevel, 3);
+});
+
 test('손상된 최대 레벨 보너스 metadata는 안전한 범위로 정규화되고 일반 metadata API에서 숨겨진다', () => {
     for (const invalid of [-1, Number.NaN, Number.POSITIVE_INFINITY, '2', null, {}, []]) {
         const skill = new Skill({

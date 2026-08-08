@@ -111,7 +111,7 @@ export function setPassiveTrainingFocus(
         return {
             changed: false,
             reason: 'not-trainable',
-            message: '현재 최대 레벨이 아니고 경험치 성장이 활성화된 패시브만 집중 수련할 수 있습니다.',
+            message: '현재 최대 레벨이 아닌 패시브만 집중 수련할 수 있습니다. 최대 레벨이라면 먼저 /스킬돌파로 성장 상한을 열어주세요.',
         };
     }
     player.progress.setState(PASSIVE_TRAINING_FOCUS_PROGRESS_ID, candidate.id);

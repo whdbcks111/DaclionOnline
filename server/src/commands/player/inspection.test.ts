@@ -11,6 +11,7 @@ import {
     buildItemInspection,
     buildMonsterInspection,
     getItemInspectionTier,
+    getItemGameplayDetails,
     getMonsterInspectionTier,
     getSensibilityRequirementReason,
     resolveItemInspectionTarget,
@@ -45,6 +46,38 @@ defineItem({
     modifiers: null,
     baseDurability: null,
     tags: ['property:water'],
+});
+
+defineItem({
+    id: 'inspection_test_meal',
+    name: '감정 시험 식사',
+    description: '배고픔과 수분을 회복하는 시험 식사',
+    category: '음식',
+    weight: 0.4,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: { hunger: 35, thirst: 12 },
+    onUse: 'restore_survival',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [],
+});
+
+defineItem({
+    id: 'inspection_test_cooldown_item',
+    name: '감정 시험 모래시계',
+    description: '재사용 대기시간을 줄이는 시험 아이템',
+    category: '소모품',
+    weight: 0.1,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: { seconds: 15 },
+    onUse: 'reduce_skill_cooldowns',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [],
 });
 
 defineItem({
@@ -171,6 +204,22 @@ test('아이템과 몬스터 감정 스냅샷은 설명과 전투 정보를 복�
     assert.equal(monsterSnapshot.attributes.maxLife, 200);
     assert.equal(monsterSnapshot.attack?.damageType, 'magic');
     assert.equal(monsterSnapshot.drops[0].chance, 0.5);
+});
+
+test('아이템 감정은 음식과 기능 아이템의 실제 사용 수치를 공개한다', () => {
+    const mealDetails = getItemGameplayDetails(
+        new Item('inspection_test_meal', 1, null, null).getInspectionSnapshot(),
+    );
+    const cooldownDetails = getItemGameplayDetails(
+        new Item('inspection_test_cooldown_item', 1, null, null).getInspectionSnapshot(),
+    );
+
+    assert.deepEqual(mealDetails, [{ label: '사용 효과', value: '배고픔 35 회복 · 수분 12 회복' }]);
+    assert.deepEqual(cooldownDetails, [{
+        label: '사용 효과',
+        value: '진행 중인 모든 스킬 재사용 대기시간을 최대 15초 감소',
+    }]);
+    assert.doesNotMatch(JSON.stringify([...mealDetails, ...cooldownDetails]), /고유 효과 발동/);
 });
 
 test('감정 결과는 같은 능력치의 고정값과 비율 modifier를 한 줄로 합친다', () => {

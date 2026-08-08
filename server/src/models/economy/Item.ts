@@ -86,6 +86,8 @@ export interface ItemBalanceProfile {
  * 일반 플레이에서는 중량이 먼저 한계가 되므로 stackable 아이템에는 사실상 무제한이다.
  */
 export const MAX_STACKABLE_ITEM_COUNT = 2_000_000_000;
+/** 일반 물약에 별도 metadata가 없을 때 함께 회복하는 기본 수분량. */
+export const DEFAULT_POTION_THIRST_RESTORE = 5;
 /** 아이템 metadata와 장비 강화 규칙이 공유하는 영속 강화 단계 상한. */
 export const MAX_ITEM_REINFORCEMENT_LEVEL = 15;
 /** 후반 단조 장비 성장 공식을 저장한 metadata 버전. */

@@ -119,3 +119,31 @@ test('낚시와 등록된 요리 제작 성공 이벤트만 패시브 수련 경
     assert.equal(actual.skills.get(FIRST_SKILL_ID)?.experience, 30);
     resetPassiveTrainingEventTracking();
 });
+
+test('자동 경험치가 꺼진 정적 패시브도 돌파 뒤 생활 수련 후보가 되고 경험치를 얻는다', () => {
+    const skillId = 'test_passive_training_static';
+    defineSkill({
+        id: skillId,
+        name: '정적 돌파 패시브',
+        icon: 'skills/power_strike',
+        maxLevel: 1,
+        descriptionTemplate: '',
+        costTemplate: '',
+        activationConditionTemplate: '',
+        baseMetadata: null,
+        calculateExperienceGain: () => 0,
+        tags: [GameTags.SKILL_PASSIVE],
+    });
+    const actual = new PassiveTrainingPlayer(981_004);
+    const player = actual as unknown as Player;
+    actual.skills.grant(skillId, 'test');
+    assert.equal(actual.skills.get(skillId)?.increaseMaxLevelBonus(), 1);
+
+    const candidate = getPassiveTrainingSnapshot(player).candidates.find(skill => skill.id === skillId);
+    assert.equal(candidate?.experienceGain, 10);
+    assert.equal(setPassiveTrainingFocus(player, '정적 돌파 패시브').changed, true);
+    const result = awardPassiveTrainingExperience(player, 1, () => 0);
+    assert.equal(result.skillId, skillId);
+    assert.equal(result.gained, 10);
+    assert.equal(actual.skills.get(skillId)?.experience, 10);
+});
