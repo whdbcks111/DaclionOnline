@@ -12,6 +12,7 @@ import {
     getFishingCollectionCount,
     getFishingCollectionTotalCount,
 } from '../../models/professions/FishingCollection.js';
+import { NPC_COMMISSION_COMPLETED_PROGRESS_ID } from '../../models/progression/NpcRelationship.js';
 
 const TitleStatisticIds = Object.freeze({
     WOLF_KILLS: 'title-stat:kills/wolf',
@@ -113,6 +114,14 @@ function targetHas(tag: string) {
 function mainHandHas(player: Player, tag: string): boolean {
     return player.equipment.hasEquippedItemTag('mainHand', tag);
 }
+
+defineTitle({
+    id: 'title:trusted_supplier',
+    name: '마을의 해결사',
+    acquisitionDescription: 'NPC 제작 의뢰 30회 완료',
+    description: '여러 NPC의 부탁을 성실히 해결해 신뢰받는 제작 공급자가 되었다는 칭호입니다.',
+    canAcquire: player => counter(player, NPC_COMMISSION_COMPLETED_PROGRESS_ID) >= 30,
+});
 
 defineTitle({
     id: 'title:wolf_slayer',

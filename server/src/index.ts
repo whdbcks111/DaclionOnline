@@ -50,6 +50,8 @@ import { getPatchNotes } from '../../shared/patchNotes.js';
 import { initInstanceDungeons } from './modules/world/instanceDungeon.js';
 import { initAscensionDiscovery } from './modules/world/ascension.js';
 import { initPassiveTrainingEventTracking } from './modules/player/passiveTraining.js';
+import { initializeNpcRelationshipProgress } from './models/progression/NpcRelationship.js';
+import { initNpcRelationshipEventTracking } from './modules/social/npcRelationship.js';
 
 // 환경 변수 로드
 dotenv.config();
@@ -73,6 +75,7 @@ initPasswordReset();
 initLogin();
 initChat();
 initBot();
+initializeNpcRelationshipProgress();
 initAllCommands();
 initKarma();
 initHumanVerification();
@@ -85,6 +88,7 @@ initAscensionDiscovery();
 initializeCodexData();
 initCodexEventTracking();
 initPassiveTrainingEventTracking();
+initNpcRelationshipEventTracking();
 initPlayer();
 initAdminPanel();
 initGame();
