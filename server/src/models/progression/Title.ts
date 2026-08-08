@@ -8,6 +8,7 @@ import { normalizeTag } from '../../../../shared/tags.js';
 import { sendBotMessageToUser, sendNotificationToUser } from '../../modules/communication/message.js';
 import { chat } from '../../utils/chatBuilder.js';
 import logger from '../../utils/logger.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 
 const EQUIPPED_TITLE_PROGRESS_ID = 'title:equipped';
 const TITLE_MODIFIER_SOURCE = 'title:equipped';
@@ -61,6 +62,31 @@ function ownershipProgressId(titleId: string): string {
 function acquisitionBlockedProgressId(titleId: string): string {
     const [namespace, path] = normalizeTag(titleId).split(':', 2);
     return `title-blocked:${namespace}/${path}`;
+}
+
+/** 우편처럼 자체 transaction을 소유하는 보상 기능이 칭호 지급을 같은 commit에 포함하는 경계. */
+export async function persistTitleRewardGrants(
+    transaction: Prisma.TransactionClient,
+    playerId: number,
+    titleIds: readonly string[],
+): Promise<readonly Readonly<TitleData>[]> {
+    const titles = titleIds.map(titleId => {
+        const title = getTitle(titleId);
+        if (!title) throw new Error(`등록되지 않은 칭호입니다: ${titleId}`);
+        return title;
+    });
+    for (const title of titles) {
+        const ownedKey = ownershipProgressId(title.id);
+        await transaction.playerProgress.upsert({
+            where: { playerId_key: { playerId, key: ownedKey } },
+            create: { playerId, key: ownedKey, kind: ProgressType.FLAG.key, intValue: 1n },
+            update: { kind: ProgressType.FLAG.key, intValue: 1n, textValue: null },
+        });
+        await transaction.playerProgress.deleteMany({
+            where: { playerId, key: acquisitionBlockedProgressId(title.id) },
+        });
+    }
+    return Object.freeze(titles);
 }
 
 function normalizedInput(value: string): string {

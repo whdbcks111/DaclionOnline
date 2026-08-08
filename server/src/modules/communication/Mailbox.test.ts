@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test, { type TestContext } from 'node:test';
 import '../../data/economy/items.js';
+import '../../data/combat/skills.js';
+import '../../data/progression/titles.js';
 import prisma from '../../config/prisma.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import Inventory from '../../models/economy/Inventory.js';
@@ -9,14 +11,19 @@ import { defineItem, getItemData, type ItemSnapshot } from '../../models/economy
 import {
     MAILBOX_ATTACHMENT_VERSION,
     MAILBOX_BULK_INSERT_BATCH_SIZE,
+    MAILBOX_REWARD_VERSION,
     MAILBOX_SOURCE_KEY_PATTERN,
     decodeMailboxAttachments,
+    decodeMailboxRewards,
     encodeMailboxAttachments,
+    encodeMailboxRewards,
+    claimMailboxMessage,
     sendSystemMail,
     sendSystemMailToAllPlayers,
     sendSystemMailToRecipients,
     type SendBulkSystemMailInput,
 } from './mailbox.js';
+import type Player from '../../models/actors/Player.js';
 
 type PlayerFindManyArguments = {
     readonly where?: { readonly userId?: { readonly in?: readonly number[] } };
@@ -137,6 +144,120 @@ test('우편 첨부는 version 1 ItemSnapshot JSON으로 왕복하며 원본 배
     const decoded = decodeMailboxAttachments(encoded);
     assert.equal(decoded?.[0].itemDataId, 'health_potion');
     assert.equal(decoded?.[0].count, 3);
+});
+
+test('복합 우편은 여러 아이템·Gold·칭호·스킬을 version 2로 검증하고 왕복한다', () => {
+    const encoded = encodeMailboxRewards([
+        snapshot('health_potion', 3),
+        snapshot('mana_potion', 5),
+    ], {
+        gold: 12_345,
+        titleIds: ['title:wolf_slayer'],
+        skills: [{ skillDataId: 'power_strike', level: 2 }],
+    });
+    assert.equal(encoded?.version, MAILBOX_REWARD_VERSION);
+    const decoded = decodeMailboxRewards(encoded);
+    assert.deepEqual(decoded?.items.map(item => [item.itemDataId, item.count]), [
+        ['health_potion', 3],
+        ['mana_potion', 5],
+    ]);
+    assert.equal(decoded?.gold, 12_345);
+    assert.deepEqual(decoded?.titleIds, ['title:wolf_slayer']);
+    assert.deepEqual(decoded?.skills, [{ skillDataId: 'power_strike', level: 2 }]);
+    assert.equal(decodeMailboxAttachments(encoded)?.length, 2, '기존 아이템 조회 API도 v2를 읽어야 한다.');
+});
+
+test('복합 우편은 존재하지 않는 칭호·스킬과 허용 범위 밖 Gold·레벨을 거부한다', () => {
+    assert.throws(() => encodeMailboxRewards([], { gold: 1_000_000_001 }), /Gold/);
+    assert.throws(() => encodeMailboxRewards([], { titleIds: ['title:missing'] }), /존재하지 않는.*칭호/);
+    assert.throws(() => encodeMailboxRewards([], {
+        skills: [{ skillDataId: 'missing_skill', level: 1 }],
+    }), /존재하지 않는.*스킬/);
+    assert.throws(() => encodeMailboxRewards([], {
+        skills: [{ skillDataId: 'power_strike', level: 999_999 }],
+    }), /보상 레벨/);
+});
+
+test('복합 우편 수령은 claim·Gold·칭호·스킬을 한 transaction에 확정하고 메모리를 동기화한다', async context => {
+    const userId = 51_099;
+    const attachments = encodeMailboxRewards([], {
+        gold: 7_500,
+        titleIds: ['title:wolf_slayer'],
+        skills: [{ skillDataId: 'power_strike', level: 2 }],
+    });
+    const ownedTitles = new Set<string>();
+    const ownedSkills = new Map<string, { level: number }>();
+    let saveCount = 0;
+    const player = {
+        userId,
+        gold: 100,
+        async save() { saveCount += 1; },
+        inventory: {
+            preparePersistedGrant() { throw new Error('아이템 없는 보상은 지급 계획을 만들지 않아야 합니다.'); },
+            adoptPersistedGrant() { return true; },
+        },
+        titles: {
+            isOwned(titleId: string) { return ownedTitles.has(titleId); },
+            grant(titleId: string) { ownedTitles.add(titleId); return { success: true }; },
+        },
+        skills: {
+            get(skillDataId: string) { return ownedSkills.get(skillDataId); },
+            setLevel(skillDataId: string, level: number) { ownedSkills.set(skillDataId, { level }); return level; },
+            grant(skillDataId: string, _source: string, level: number) {
+                const skill = { level };
+                ownedSkills.set(skillDataId, skill);
+                return { skill, acquired: true };
+            },
+        },
+    } as unknown as Player;
+
+    const mailboxDelegate = prisma.mailboxMessage as unknown as { findFirst(args: unknown): Promise<unknown> };
+    const transactionHost = prisma as unknown as TransactionRunnerHost;
+    const originalFindFirst = mailboxDelegate.findFirst;
+    const originalTransaction = transactionHost.$transaction;
+    let goldIncrement = 0;
+    let skillCreated = false;
+    let titlePersisted = false;
+    mailboxDelegate.findFirst = context.mock.fn(async () => ({
+        id: 991,
+        recipientId: userId,
+        attachments,
+        attachmentCount: 3,
+        readAt: null,
+        claimedAt: null,
+        expiresAt: null,
+    }));
+    transactionHost.$transaction = context.mock.fn(async action => action({
+        mailboxMessage: { updateMany: async () => ({ count: 1 }) },
+        player: { update: async (args: { data: { gold: { increment: number } } }) => { goldIncrement = args.data.gold.increment; } },
+        playerProgress: {
+            upsert: async () => { titlePersisted = true; },
+            deleteMany: async () => ({ count: 0 }),
+        },
+        playerSkill: {
+            findUnique: async () => null,
+            create: async () => { skillCreated = true; },
+            update: async () => undefined,
+        },
+    } as unknown as Prisma.TransactionClient));
+    try {
+        const result = await claimMailboxMessage(player, 991);
+        assert.equal(result.success, true);
+        if (!result.success) return;
+        assert.equal(result.gold, 7_500);
+        assert.deepEqual(result.titles.map(title => title.titleId), ['title:wolf_slayer']);
+        assert.deepEqual(result.skills.map(skill => [skill.skillDataId, skill.level]), [['power_strike', 2]]);
+        assert.equal(goldIncrement, 7_500);
+        assert.equal(titlePersisted, true);
+        assert.equal(skillCreated, true);
+        assert.equal(player.gold, 7_600);
+        assert.equal(ownedTitles.has('title:wolf_slayer'), true);
+        assert.equal(ownedSkills.get('power_strike')?.level, 2);
+        assert.equal(saveCount, 2);
+    } finally {
+        mailboxDelegate.findFirst = originalFindFirst;
+        transactionHost.$transaction = originalTransaction;
+    }
 });
 
 test('손상·구버전·과도한 우편 첨부 payload는 지급 계획으로 해석하지 않는다', () => {

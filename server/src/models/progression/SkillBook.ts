@@ -31,6 +31,7 @@ import { GameTags, type TagId } from '../../../../shared/tags.js';
 import type { SkillHudData } from '../../../../shared/types.js';
 import { ActionType } from '../core/Action.js';
 import { partyManager } from '../../modules/social/party.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 
 export type { SkillMaxLevelBreakthroughSnapshot } from './Skill.js';
 
@@ -50,6 +51,49 @@ export interface TrainablePassiveSkillSnapshot {
     readonly experience: number;
     readonly requiredExperience: number;
     readonly experienceGain: number;
+}
+
+export interface PersistedSkillRewardGrant {
+    readonly skillDataId: string;
+    readonly level: number;
+}
+
+/** 우편 보상의 조건부 claim transaction 안에서 스킬 최소 레벨을 영속 확정한다. */
+export async function persistSkillRewardGrants(
+    transaction: Prisma.TransactionClient,
+    playerId: number,
+    rewards: readonly PersistedSkillRewardGrant[],
+): Promise<readonly PersistedSkillRewardGrant[]> {
+    const applied: PersistedSkillRewardGrant[] = [];
+    for (const reward of rewards) {
+        const data = getAllSkillData().find(skill => skill.id === reward.skillDataId);
+        if (!data) throw new Error(`등록되지 않은 스킬입니다: ${reward.skillDataId}`);
+        const level = Math.max(1, Math.min(data.maxLevel, Math.floor(reward.level)));
+        const existing = await transaction.playerSkill.findUnique({
+            where: { playerId_skillDataId: { playerId, skillDataId: data.id } },
+            select: { level: true },
+        });
+        const appliedLevel = Math.max(existing?.level ?? 0, level);
+        if (existing) {
+            if (appliedLevel !== existing.level) {
+                await transaction.playerSkill.update({
+                    where: { playerId_skillDataId: { playerId, skillDataId: data.id } },
+                    data: { level: appliedLevel },
+                });
+            }
+        } else {
+            await transaction.playerSkill.create({
+                data: {
+                    playerId,
+                    skillDataId: data.id,
+                    level: appliedLevel,
+                    acquisitionSource: 'mailbox',
+                },
+            });
+        }
+        applied.push(Object.freeze({ skillDataId: data.id, level: appliedLevel }));
+    }
+    return Object.freeze(applied);
 }
 
 export type PassiveSkillExperienceResult =

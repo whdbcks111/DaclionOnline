@@ -22,6 +22,8 @@
 | `requestCommandList` | 없음 | 불필요 | `modules/communication/bot.ts` | `commandList` |
 | `requestCompletions` | `raw: string` | 필요 | `modules/communication/bot.ts` | 슬래시 명령과 슬래시 없는 별칭 입력의 동적 인자 후보 `argCompletions` |
 | `requestMentionCompletions` | `query: string` | 필요 | `modules/communication/chat.ts` | 자기 자신을 제외한 온라인 플레이어 닉네임 prefix 후보 `mentionCompletions` |
+| `requestChatEmotes` | 없음 | 필요 | `modules/communication/chat.ts` | 현재 보유한 감정표현의 안정 ID·이름·이미지 key를 `chatEmoteList`로 응답 |
+| `useChatEmote` | `ChatEmoteKey` | 필요 | `modules/communication/chat.ts` | 보유권과 `ActionType.CHAT`을 재검증한 뒤 현재 채널에 구조화 감정표현 노드 전송 |
 | `requestInformationMode` | 없음 | 필요 | `modules/communication/bot.ts` | 현재 플레이어의 정보 공개 여부를 `informationMode`로 응답 |
 | `setInformationMode` | `isPublic: boolean` | 필요 | `modules/communication/bot.ts` | 런타임 정보 공개 모드 변경, 같은 계정 소켓 동기화와 notification |
 | `requestUserCount` | 없음 | 불필요 | `modules/auth/login.ts` | `userCount` |
@@ -33,8 +35,8 @@
 | `adminSaveLocations` | `LocationData[]` | 권한 10 | `modules/world/location.ts` | `safe/neutral/hostile zoneType`, `objects(type/dataId/maxCount/respawnTime)`, `npcIds`, `tags`, 선택 `mapIcon`·`#RRGGBB mapColor`를 검증·정규화한 뒤 JSON 저장 및 런타임 재로드, `adminSaveResult` |
 | `adminPanelRequestBootstrap` | 없음 | 권한 10 | `modules/operations/adminPanel.ts` | `adminPanelBootstrap`; 아이템·스킬·칭호 등 관리자 form option 목록 |
 | `adminPanelRequestPlayers` | 없음 | 권한 10 | `modules/operations/adminPanel.ts` | `adminPanelPlayers`; 온라인 우선 전체 캐릭터 목록 |
-| `adminPanelRequestPlayer` | `userId: number` | 권한 10 | `modules/operations/adminPanel.ts` | `adminPanelPlayer`; 보유·장착 칭호를 포함한 가공된 캐릭터 상세 snapshot |
-| `adminPanelExecute` | `AdminPanelActionRequest` | 권한 10 | `modules/operations/adminPanel.ts` | 플레이어·월드 action, 칭호 부여·삭제, 전체 채팅/알림·개별 온라인 알림, `analyze_balance_profile` 전투 로테이션 진단을 서버 검증 후 실행하고 result/목록/상세 갱신 |
+| `adminPanelRequestPlayer` | `userId: number` | 권한 10 | `modules/operations/adminPanel.ts` | `adminPanelPlayer`; 보유·장착 칭호와 보관 중인 전체 우편 상태를 포함한 가공된 캐릭터 상세 snapshot |
+| `adminPanelExecute` | `AdminPanelActionRequest` | 권한 10 | `modules/operations/adminPanel.ts` | 플레이어·월드 action, 칭호·꾸미기 지급/삭제, 복합 보상 우편 발송·삭제, 전체 채팅/알림·개별 온라인 알림, `analyze_balance_profile` 전투 로테이션 진단을 서버 검증 후 실행하고 result/목록/상세 갱신 |
 | `miniGameReady` | `{ sessionId, token }` | 필요 | `modules/professions/minigame.ts` | 서버가 현재 조작 화면으로 배정한 socket을 확인한다. 선택적 `onReady` 비용 callback이 성공한 최초 요청만 서버 경과 시계를 시작하며 실패/예외면 시작 전 취소한다. `alchemy_tracking`은 t=0 목표 원 내부 primary pointerdown에서만 보내고 이 시점에 재료·정제수를 원자 소비하며 proof의 최초 표본도 서버가 재검증 |
 | `miniGameInput` | `{ sessionId, token, x, y }` | 필요 | `modules/professions/minigame.ts` | 이동 축을 clamp하고 서버 수신 시각 기준 20ms trace로 기록. 회피 성공 권위와 낚시 audit에 유지 |
 | `miniGameAction` | `{ sessionId, token, action: "strike" }` | 필요 | `modules/professions/minigame.ts` | 단조 타격을 서버 수신 시각으로 즉시 기록 |
@@ -76,6 +78,7 @@
 | `commandList` | `CommandInfo[]` | `modules/communication/bot.ts` | `pages/Home.tsx` |
 | `argCompletions` | `CompletionItem[]` | `modules/communication/bot.ts` | `pages/Home.tsx` |
 | `mentionCompletions` | `CompletionItem[]` | `modules/communication/chat.ts` | `pages/Home.tsx` |
+| `chatEmoteList` | `ChatEmotePickerItem[]` | `modules/communication/chat.ts` | `pages/Home.tsx` 보유 감정표현 선택기 |
 | `playerStats` | `PlayerStatsData` (`syncId/revision`, 장착 칭호, 서버가 실제 교전으로 판정한 `musicCombatState`, 현재 `level/exp/maxExp`·자원·타입색 `shields`·공격 cooldown·`autoAttackEnabled`·`statusEffects`, 묶음 사용 허용 여부가 포함된 사용 아이템, 무기·보호구 슬롯별 `equipmentDurability`, 표시 가능한 스킬과 전투 기술의 선택적 `cadenceRemaining/cadenceDuration`, nullable 파티 HUD, nullable 현재 대상의 선택적 아이콘·보스 왕관 여부·HP/MP/보호막/상태이상과 감각 단계별 몬스터 분석). 내용이 바뀐 완전한 snapshot만 socket별 1회 전송 | `modules/player/player.ts`/`modules/infrastructure/stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 `HudContext` → HUD |
 | `informationMode` | `isPublic: boolean` | `modules/communication/bot.ts` | `pages/Home.tsx` 입력창 공개/비공개 전환 버튼 |
 | `locationInfo` | `LocationInfoData` (`syncId/revision`, 현재 장소의 선택적 `mapColor`, `zoneType/zoneLabel/pvpAllowed`, 현재 플레이어가 이용 가능한 낚시·상점 `capabilities`, objects의 선택적 아이콘·보스 왕관 여부·생명력·`shields`·가능한 `actions`, NPC 이름·설명·퀘스트 표식, 플레이어 생명력·보호막, 5분 초과 보스의 선택적 `respawn`, 플레이어 기준 인접 장소). 내용 변경 시 완전한 snapshot 전송 | `modules/player/player.ts`/`modules/infrastructure/stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 Location/Minimap HUD |
@@ -90,7 +93,7 @@
 | `adminSaveResult` | `SimpleResult` | `modules/world/location.ts` | `pages/LocationEditor.tsx` |
 | `adminPanelBootstrap` | `AdminPanelBootstrapData` | `modules/operations/adminPanel.ts` | `pages/AdminPage.tsx` |
 | `adminPanelPlayers` | `AdminPlayerListItem[]` | `modules/operations/adminPanel.ts` | `pages/AdminPage.tsx` |
-| `adminPanelPlayer` | `AdminPlayerDetailData \| null` (원래 메인·서브, 엘리트, `thirdJobId/thirdJobName` 포함) | `modules/operations/adminPanel.ts` | `pages/AdminPage.tsx` |
+| `adminPanelPlayer` | `AdminPlayerDetailData \| null` (직업, 보유/지급/삭제/장착 꾸미기와 우편 상태 포함) | `modules/operations/adminPanel.ts` | `pages/AdminPage.tsx` |
 | `adminPanelResult` | `AdminPanelResult` (밸런스 분석 시 `details` 포함) | `modules/operations/adminPanel.ts` | `pages/AdminPage.tsx` |
 | `adminPanelResult` | `AdminPanelResult` | `modules/operations/adminPanel.ts` | 요청 소켓 호환용 결과. 사용자 피드백은 같은 요청 소켓의 `notification`으로 표시 |
 | `miniGameStart` | `MiniGameStartData` (session/token/type/만료/config, 위험 회피의 실제 `label/theme`, 가마솥의 seed·5종 경로·속도 프로필·반전 일정·액체/목표 반경) | `modules/professions/minigame.ts`; 같은 계정의 focused 우선 연결 하나에만 전송 | `components/minigame/MiniGameOverlay.tsx` |
@@ -103,7 +106,7 @@
 | `hudPresetResult` | `HudPresetOperationResult` | `modules/player/hudPreset.ts` | `HudContext.tsx`; 저장·불러오기·삭제 상태 안내 |
 | `consumableBundleUseResult` | `{ requestId, usedItemDataIds, skipped, stoppedReason? }` | `modules/player/consumableBundle.ts` | `ConsumableBundleHud.tsx`; matching 버튼 busy 해제, 서버는 별도 요약 notification도 전송 |
 
-`ChatMessage`와 `NotificationData` 안의 progress/health `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다. 플레이어 메시지는 전송 시점의 `newcomer/karmaMarked/equippedTitle/ascended/avatarFrame/chatFrame`을 선택적으로 포함해 `🌱/🥀` 표식, `[칭호]`, 초월자 닉네임과 독립 원형/카드 프레임을 히스토리와 실시간 메시지에서 일관되게 표시한다. `newcomer`는 누적 플레이 24시간 미만이면서 Lv.30 미만인 경우에만 서버가 넣고, `ascended`는 영속 초월 단계가 1 이상일 때만 넣는다. `emote` 노드는 공유 허용 목록의 안정 ID만 담고 클라이언트가 대응 glyph와 접근성 이름을 렌더링한다. health 노드는 생명력·최대 생명력과 `ShieldBarSegment[]`를 한 snapshot으로 전달한다. image 노드는 서버가 정한 `src/alt/maxHeight`와 선택적 원본 `width/height` snapshot으로 채팅 업로드와 향후 스킬 연출 이미지를 공통 렌더링하고, divider는 선택적 제목을 가진 구분선을 렌더링한다. `/지도` private `ChatMessage`의 worldMap 노드는 별도 socket event 없이 방문지·인접 미방문지로 제한된 `WorldMapData` snapshot을 포함하며, 방문 장소의 검증된 `mapColor`와 방문 뒤 공개된 `isBossRoom`만 지도 표시에 사용한다.
+`ChatMessage`와 `NotificationData` 안의 progress/health `ChatNode.length`는 숫자 px 또는 `em`, `%` 같은 CSS 길이 문자열이다. 플레이어 메시지는 전송 시점의 `newcomer/karmaMarked/equippedTitle/ascended/avatarFrame/chatFrame`을 선택적으로 포함해 `🌱/🥀` 표식, `[칭호]`, 초월자 닉네임과 독립 원형/카드 프레임을 히스토리와 실시간 메시지에서 일관되게 표시한다. `newcomer`는 누적 플레이 24시간 미만이면서 Lv.30 미만인 경우에만 서버가 넣고, `ascended`는 영속 초월 단계가 1 이상일 때만 넣는다. `emote` 노드는 공유 허용 목록의 안정 ID만 담고 클라이언트가 대응 128×128 투명 PNG와 접근성 이름을 렌더링한다. health 노드는 생명력·최대 생명력과 `ShieldBarSegment[]`를 한 snapshot으로 전달한다. image 노드는 서버가 정한 `src/alt/maxHeight`와 선택적 원본 `width/height` snapshot으로 채팅 업로드와 향후 스킬 연출 이미지를 공통 렌더링하고, divider는 선택적 제목을 가진 구분선을 렌더링한다. `/지도` private `ChatMessage`의 worldMap 노드는 별도 socket event 없이 방문지·인접 미방문지로 제한된 `WorldMapData` snapshot을 포함하며, 방문 장소의 검증된 `mapColor`와 방문 뒤 공개된 `isBossRoom`만 지도 표시에 사용한다.
 
 ## Room과 전송 범위
 

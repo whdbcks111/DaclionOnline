@@ -14,7 +14,7 @@ import Dialog from '../components/dialog/Dialog'
 import type { FormDialogField, FormDialogValues } from '../components/dialog/FormDialog'
 import styles from './AdminPage.module.scss'
 
-type PlayerCategory = 'travel' | 'growth' | 'inventory' | 'skills' | 'testing' | 'communication'
+type PlayerCategory = 'travel' | 'growth' | 'inventory' | 'skills' | 'cosmetics' | 'testing' | 'communication'
 
 interface ActionDefinition {
   action: AdminPanelAction
@@ -27,7 +27,7 @@ interface ActionDefinition {
 }
 
 const emptyBootstrap: AdminPanelBootstrapData = {
-  items: [], balanceItems: [], skills: [], titles: [], jobs: [], locations: [], monsters: [], resources: [], statusEffects: [], stats: [], miniGamePresets: [],
+  items: [], balanceItems: [], skills: [], titles: [], cosmeticFrames: [], chatEmotes: [], jobs: [], locations: [], monsters: [], resources: [], statusEffects: [], stats: [], miniGamePresets: [],
 }
 
 function option(value: string, label: string): AdminOptionData { return { value, label } }
@@ -38,6 +38,22 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
   const ownedTitleIds = new Set(detail?.titles.map(title => title.id) ?? [])
   const grantableTitles = data.titles.filter(title => !ownedTitleIds.has(title.value))
   const ownedTitles = detail?.titles.map(title => option(title.id, `${title.name}${title.equipped ? ' · 장착 중' : ''}`)) ?? []
+  const unlockedFrameKeys = new Set<string>(detail?.cosmeticFrames.filter(frame => frame.unlocked).map(frame => frame.key) ?? [])
+  const grantableFrames = data.cosmeticFrames.filter(frame => !unlockedFrameKeys.has(frame.value))
+  const removableFrames = detail?.cosmeticFrames.filter(frame => frame.unlocked).map(frame => option(
+    frame.key,
+    `${frame.name}${frame.adminGranted ? ' · 관리자 지급' : ''}${frame.selectedAvatar || frame.selectedChat ? ' · 장착 중' : ''}`,
+  )) ?? []
+  const unlockedEmoteKeys = new Set<string>(detail?.chatEmotes.filter(emote => emote.unlocked).map(emote => emote.key) ?? [])
+  const grantableEmotes = data.chatEmotes.filter(emote => !unlockedEmoteKeys.has(emote.value))
+  const removableEmotes = detail?.chatEmotes.filter(emote => emote.unlocked).map(emote => option(
+    emote.key,
+    `${emote.name}${emote.adminGranted ? ' · 관리자 지급' : emote.owned ? ' · 획득' : ''}`,
+  )) ?? []
+  const removableMails = detail?.mailboxMessages.map(mail => option(
+    String(mail.id),
+    `#${mail.id} ${mail.subject} · ${mail.claimed ? '수령 완료' : mail.expired ? '만료' : mail.attachmentCount > 0 ? `보상 ${mail.attachmentCount}` : mail.read ? '읽음' : '미확인'}`,
+  )) ?? []
   const locationField = (): FormDialogField => ({ name: 'locationId', label: '장소', type: 'select', options: data.locations, required: true })
   return [
     { action: 'broadcast_chat_notice', label: '전체 채팅 공지', description: '모든 채널의 채팅창에 시스템 공지를 발송하고 채널 기록에 남깁니다.', category: 'notice', targetless: true, fields: [
@@ -127,6 +143,18 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
     { action: 'remove_title', label: '칭호 삭제', description: '보유 칭호를 회수하고 관리자 재부여 전까지 자동 재획득을 막습니다.', category: 'skills', danger: true, fields: [
       { name: 'titleId', label: '보유 칭호', type: 'select', options: ownedTitles, required: true },
     ] },
+    { action: 'grant_cosmetic_frame', label: '프레임 지급', description: '레벨·초월 조건을 무시하고 선택한 플레이어에게 프레임을 영구 지급합니다.', category: 'cosmetics', fields: [
+      { name: 'frameKey', label: '미보유 프레임', type: 'select', options: grantableFrames, required: true },
+    ] },
+    { action: 'remove_cosmetic_frame', label: '프레임 삭제', description: '프레임을 삭제하고 장착을 해제합니다. 다시 관리자 지급하기 전까지 정상 조건 해금도 차단됩니다.', category: 'cosmetics', danger: true, fields: [
+      { name: 'frameKey', label: '보유 프레임', type: 'select', options: removableFrames, required: true },
+    ] },
+    { action: 'grant_chat_emote', label: '감정표현 지급', description: 'Gold·레벨·초월 조건을 무시하고 선택한 플레이어에게 감정표현을 영구 지급합니다.', category: 'cosmetics', fields: [
+      { name: 'emoteKey', label: '미보유 감정표현', type: 'select', options: grantableEmotes, required: true },
+    ] },
+    { action: 'remove_chat_emote', label: '감정표현 삭제', description: '구매·조건 해금을 포함한 감정표현 보유권을 삭제합니다. 관리자 재지급 전까지 사용할 수 없습니다.', category: 'cosmetics', danger: true, fields: [
+      { name: 'emoteKey', label: '보유 감정표현', type: 'select', options: removableEmotes, required: true },
+    ] },
     { action: 'apply_status_effect', label: '상태이상 부여', description: '온라인 플레이어에게 상태이상을 적용합니다.', category: 'skills', fields: [
       { name: 'statusEffectId', label: '상태이상', type: 'select', options: data.statusEffects, required: true },
       { name: 'level', label: '레벨', type: 'number', min: 1, defaultValue: 1, required: true },
@@ -141,6 +169,21 @@ function buildActions(data: AdminPanelBootstrapData, detail: AdminPlayerDetailDa
     { action: 'notify_player', label: '개별 알림 발송', description: '선택한 온라인 플레이어 화면에 관리자 알림을 표시합니다.', category: 'communication', fields: [
       { name: 'message', label: '알림 내용', type: 'textarea', placeholder: '선택한 플레이어에게 보낼 내용을 입력하세요.', required: true },
       { name: 'duration', label: '표시 시간 (초)', type: 'number', min: 1, max: 60, defaultValue: 5, required: true },
+    ] },
+    { action: 'send_mail', label: '우편 발송', description: '온라인·오프라인 여부와 관계없이 본문과 복합 보상 묶음을 우편으로 발송합니다.', category: 'communication', fields: [
+      { name: 'senderLabel', label: '보낸 이', defaultValue: '관리자', required: true },
+      { name: 'subject', label: '제목', defaultValue: '관리자 지급 우편', required: true },
+      { name: 'body', label: '본문', type: 'textarea', defaultValue: '관리자가 보낸 우편입니다. 첨부된 보상을 확인해 주세요.', required: true },
+      {
+        name: 'rewardBundle', label: '보상 묶음', type: 'reward-bundle',
+        defaultValue: JSON.stringify({ items: [], gold: 0, titleIds: [], skills: [] }),
+        rewardOptions: { items: data.items, titles: data.titles, skills: data.skills },
+        help: 'Gold와 아이템·칭호·스킬을 함께 구성할 수 있습니다. 보상이 없는 안내 우편도 발송할 수 있습니다.',
+      },
+      { name: 'expiresInHours', label: '만료까지 시간 (0은 무기한)', type: 'number', min: 0, max: 8760, defaultValue: 0, required: true },
+    ] },
+    { action: 'remove_mail', label: '우편 삭제', description: '선택한 우편과 아직 수령하지 않은 보상을 회수합니다. 이미 수령한 보상 자체는 되돌리지 않습니다.', category: 'communication', danger: true, fields: [
+      { name: 'mailId', label: '우편', type: 'select', options: removableMails, required: true },
     ] },
     { action: 'spawn_monster', label: '몬스터 소환', description: '지정 장소에 새 몬스터 인스턴스를 생성합니다.', category: 'world', targetless: true, fields: [locationField(), { name: 'monsterDataId', label: '몬스터', type: 'select', options: data.monsters, required: true }, { name: 'count', label: '수량', type: 'number', min: 1, max: 50, defaultValue: 1, required: true }] },
     { action: 'respawn_monsters', label: '몬스터 리스폰', description: '지정 장소의 죽은 몬스터를 즉시 리스폰합니다. 종류를 비우면 전체를 처리합니다.', category: 'world', targetless: true, fields: [locationField(), { name: 'monsterDataId', label: '몬스터 종류', type: 'select', options: data.monsters }] },
@@ -271,17 +314,19 @@ export default function AdminPage() {
                   <div className={styles.summaryCard}><h3>현재 상태</h3><Meter tone="life" label="생명력" value={detail.life} max={detail.maxLife} /><Meter tone="mentality" label="정신력" value={detail.mentality} max={detail.maxMentality} /><Meter tone="hunger" label="배고픔" value={detail.hungry} max={detail.maxHungry} /><Meter tone="thirst" label="수분" value={detail.thirsty} max={detail.maxThirsty} /></div>
                   <div className={`${styles.summaryCard} ${styles.overviewCard}`}>
                     <section><h3>진행 정보</h3><dl><dt>위치</dt><dd>{detail.locationName}</dd><dt>골드</dt><dd>{detail.gold.toLocaleString()}</dd><dt>카르마</dt><dd>{detail.karma.toFixed(1)} ({detail.karmaTier})</dd><dt>스탯 포인트</dt><dd>{detail.statPoint}</dd><dt>직업</dt><dd>{detail.mainJobName} / {detail.subJobName}</dd><dt>엘리트</dt><dd>{detail.eliteJobName}</dd><dt>3차</dt><dd>{detail.thirdJobName}</dd></dl></section>
-                    <section><h3>보유 현황</h3><dl><dt>인벤토리</dt><dd>{detail.inventory.length}종</dd><dt>장비</dt><dd>{detail.equipment.length}개</dd><dt>스킬</dt><dd>{detail.skills.length}개</dd><dt>칭호</dt><dd>{detail.titles.length}개</dd><dt>상태이상</dt><dd>{detail.statusEffects.length}개</dd></dl></section>
+                    <section><h3>보유 현황</h3><dl><dt>인벤토리</dt><dd>{detail.inventory.length}종</dd><dt>장비</dt><dd>{detail.equipment.length}개</dd><dt>스킬</dt><dd>{detail.skills.length}개</dd><dt>칭호</dt><dd>{detail.titles.length}개</dd><dt>프레임</dt><dd>{detail.cosmeticFrames.filter(frame => frame.unlocked).length}개</dd><dt>감정표현</dt><dd>{detail.chatEmotes.filter(emote => emote.unlocked).length}개</dd><dt>우편</dt><dd>{detail.mailboxMessages.length}통</dd><dt>상태이상</dt><dd>{detail.statusEffects.length}개</dd></dl></section>
                   </div>
                 </div>
                 <details className={styles.inspect}><summary>인벤토리·장비 검사</summary><div className={`${styles.inspectGrid} ${styles.inspectBody}`}><div><h4>인벤토리</h4>{detail.inventory.length ? detail.inventory.map(item => <div key={item.index}><b>{item.index + 1}. {item.name} x{item.count}</b><code>{JSON.stringify(item.metadataDelta ?? {})}</code></div>) : <p>비어 있음</p>}</div><div><h4>장비</h4>{detail.equipment.map(item => <p key={`${item.slot}-${item.index}`}>{item.slotLabel}: {item.name}</p>)}</div></div></details>
                 <details className={styles.inspect}><summary>스탯·스킬·칭호·상태이상 검사</summary><div className={`${styles.inspectGrid} ${styles.inspectBody}`}><div><h4>스탯</h4>{detail.stats.map(stat => <p key={stat.key}>{stat.label}: {stat.value}</p>)}</div><div><h4>스킬</h4>{detail.skills.map(skill => <p key={skill.id}>{skill.name} Lv.{skill.level} · EXP {skill.experience}</p>)}<h4>칭호</h4>{detail.titles.length ? detail.titles.map(title => <p key={title.id}>{title.name}{title.equipped ? ' · 장착 중' : ''}</p>) : <p>보유 칭호 없음</p>}<h4>상태이상</h4>{detail.statusEffects.map(effect => <p key={effect.id}>{effect.label} Lv.{effect.level} · {effect.duration.toFixed(1)}초</p>)}</div></div></details>
+                <details className={styles.inspect}><summary>프레임·감정표현 검사</summary><div className={`${styles.inspectGrid} ${styles.inspectBody}`}><div><h4>프레임</h4>{detail.cosmeticFrames.map(frame => <p key={frame.key}>{frame.name}: {frame.revoked ? '삭제됨' : frame.unlocked ? `보유${frame.adminGranted ? ' · 관리자 지급' : ''}${frame.selectedAvatar ? ' · 프로필 장착' : ''}${frame.selectedChat ? ' · 채팅 장착' : ''}` : '미보유'}</p>)}</div><div><h4>감정표현</h4>{detail.chatEmotes.map(emote => <p className={styles.emoteStatus} key={emote.key}><img src={`/icons/${emote.image}.png`} alt="" /> <span>{emote.name}: {emote.revoked ? '삭제됨' : emote.unlocked ? `보유${emote.adminGranted ? ' · 관리자 지급' : emote.owned ? ' · 획득' : ''}` : '미보유'}</span></p>)}</div></div></details>
+                <details className={styles.inspect}><summary>우편 검사</summary><div className={styles.inspectBody}>{detail.mailboxMessages.length ? detail.mailboxMessages.map(mail => <p key={mail.id}><b>#{mail.id} {mail.subject}</b> · {mail.senderLabel} · {mail.claimed ? '수령 완료' : mail.expired ? '만료' : mail.read ? '읽음' : '미확인'}{mail.attachmentCount > 0 ? ` · 보상 ${mail.attachmentCount}` : ''}<br /><small>{new Date(mail.createdAt).toLocaleString('ko-KR')}</small></p>) : <p>보관 중인 우편 없음</p>}</div></details>
               </div>
             </>}
           </section>
 
           <aside className={styles.actionsPanel}>
-            <div className={styles.categoryTabs}>{(['travel', 'growth', 'inventory', 'skills', 'testing', 'communication'] as const).map(key => <button key={key} className={category === key ? styles.activeTab : ''} onClick={() => setCategory(key)}>{{ travel: '이동', growth: '성장', inventory: '인벤토리', skills: '스킬·효과', testing: '테스트', communication: '메시지' }[key]}</button>)}</div>
+            <div className={styles.categoryTabs}>{(['travel', 'growth', 'inventory', 'skills', 'cosmetics', 'testing', 'communication'] as const).map(key => <button key={key} className={category === key ? styles.activeTab : ''} onClick={() => setCategory(key)}>{{ travel: '이동', growth: '성장', inventory: '인벤토리', skills: '스킬·효과', cosmetics: '꾸미기', testing: '테스트', communication: '메시지' }[key]}</button>)}</div>
             <div className={styles.actionList}>{actions.filter(action => action.category === category).map(action => <button key={action.action} className={styles.actionCard} disabled={!detail} onClick={() => setActiveAction(action)}><b>{action.label}</b><span>{action.description}</span></button>)}</div>
           </aside>
         </div>

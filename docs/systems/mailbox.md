@@ -1,10 +1,10 @@
 # 시스템 우편
 
-시스템 우편은 접속 여부와 무관하게 플레이어에게 안내와 아이템 보상을 전달하는 저빈도 영속 기능이다. 현재 범위는 시스템→플레이어 발송, 목록·읽기, 아이템 첨부 한 통/전체 수령, 완료 우편 정리다. 플레이어 간 발송, 플레이어가 임의로 만드는 첨부, 골드 첨부는 제공하지 않는다.
+시스템 우편은 접속 여부와 무관하게 플레이어에게 안내와 복합 보상을 전달하는 저빈도 영속 기능이다. 현재 범위는 시스템→플레이어 발송, 목록·읽기, 여러 아이템·Gold·칭호·스킬 보상의 한 통/전체 수령, 완료 우편 정리와 관리자 회수다. 플레이어 간 발송과 플레이어가 임의로 만드는 첨부는 제공하지 않는다.
 
 ## 데이터와 발송
 
-`mailbox_messages`는 수신 Player, 발신 표시, 제목·본문, 첨부 JSON, 읽음·수령·만료·archive 시각을 저장한다. 첨부 형식은 다음 version 1 payload 하나만 허용한다.
+`mailbox_messages`는 수신 Player, 발신 표시, 제목·본문, 첨부 JSON, 읽음·수령·만료·archive 시각을 저장한다. 기존 아이템 전용 version 1은 계속 읽으며 복합 보상은 version 2를 사용한다.
 
 ```ts
 {
@@ -13,7 +13,17 @@
 }
 ```
 
-한 통의 제한은 snapshot 20개, 총수량 1,000,000개, 실제 생성 Item 행 100개, JSON 32KiB다. 단일 수신자용 공개 API `sendSystemMail()`은 마스터 아이템·수량·내구도·metadata/tag JSON을 검증한다. 선택적인 `sourceKey`를 주면 `(recipientId, sourceKey)` unique 제약으로 동일 시스템 보상의 재시도를 멱등 처리한다. DB의 대소문자·Unicode collation 차이로 서로 다른 키가 충돌하지 않도록 key는 소문자 영문·숫자로 시작하고 소문자 영문, 숫자, `: _ . / -`만 쓰는 최대 150자 ASCII 문자열이어야 한다.
+```ts
+{
+  version: 2,
+  items: ItemSnapshot[],
+  gold: number,
+  titleIds: string[],
+  skills: Array<{ skillDataId: string; level: number }>
+}
+```
+
+한 통의 제한은 아이템 snapshot 20개, 총수량 1,000,000개, 실제 생성 Item 행 100개, Gold 10억, 칭호·스킬 각 20개, JSON 32KiB다. 단일 수신자용 공개 API `sendSystemMail()`은 마스터 아이템·수량·내구도·metadata/tag, 칭호·스킬 stable ID와 스킬 레벨 상한을 검증한다. 선택적인 `sourceKey`를 주면 `(recipientId, sourceKey)` unique 제약으로 동일 시스템 보상의 재시도를 멱등 처리한다. DB의 대소문자·Unicode collation 차이로 서로 다른 키가 충돌하지 않도록 key는 소문자 영문·숫자로 시작하고 소문자 영문, 숫자, `: _ . / -`만 쓰는 최대 150자 ASCII 문자열이어야 한다.
 
 대량 발송 공개 API는 지정 Player ID 집합용 `sendSystemMailToRecipients(ids, input)`과 오프라인을 포함한 전체 캐릭터용 `sendSystemMailToAllPlayers(input)`이다. 대량 입력에는 `recipientId`와 `sourceKey`를 허용하지 않으며 관리자 명령을 반복 실행하면 매번 새 우편을 만든다. 제목·본문·발신자·첨부·만료 시각은 발송당 한 번만 정규화한 뒤 모든 수신 행에 같은 snapshot을 사용한다.
 
@@ -31,8 +41,8 @@
 
 1. Player의 기존 dirty 상태를 `save()`로 먼저 확정한다.
 2. Inventory가 전체 첨부 중량과 마스터 데이터를 검사하고 최대 100개의 영속 Item 행 계획을 만든다.
-3. 하나의 Prisma transaction에서 `claimedAt IS NULL`, 수신자 일치, 미만료, 미archive 조건으로 우편 한 행만 claim하고 Inventory 공개 API가 실제 `items` 행을 생성한다.
-4. commit 뒤 생성된 DB id 행을 온라인 Inventory에 `Clean` 상태로 흡수한다. 기존 dirty/revision은 초기화하지 않는다.
+3. 하나의 Prisma transaction에서 `claimedAt IS NULL`, 수신자 일치, 미만료, 미archive 조건으로 우편 한 행만 claim하고 Inventory Item 행, Player Gold 증가, 칭호 Progress flag, 스킬 최소 레벨을 함께 확정한다.
+4. commit 뒤 생성된 DB id 행을 온라인 Inventory에 `Clean` 상태로 흡수하고 Gold·칭호·스킬 메모리 모델을 같은 결과로 동기화해 저장한다. commit 직후 메모리 동기화가 실패해도 다음 로그인은 transaction에서 확정된 DB 상태를 불러온다.
 
 조건부 claim count가 0이면 다른 접속의 선행 수령으로 보고 지급하지 않는다. transaction 실패는 claim과 Item 생성을 함께 rollback한다. commit 뒤 프로세스가 종료되거나 메모리 흡수가 실패해도 Item 행은 이미 DB에 있으므로 다음 로그인의 `Inventory.load()`가 복구한다. transaction 대기 중 다른 전리품으로 중량이 바뀐 경우에도 이미 확정된 지급 행은 메모리에서 누락시키지 않고 일시 과중량을 허용한다.
 
@@ -47,8 +57,10 @@
 
 우편 명령과 결과는 정보 공개 모드와 무관한 본인 전용 메시지다. 시스템 보상 기능은 명령 handler나 Prisma row를 직접 만들지 않고 `sendSystemMail()`의 목적형 공개 API를 호출한다.
 
-## 관리자 아이템 발송
+## 관리자 우편 발송
 
 권한 10 관리자는 `/우편발송 <유저ID|me|online|all> <아이템ID> <수량> [제목]`으로 한 캐릭터, 현재 접속자 또는 전체 캐릭터에 마스터 아이템을 보낼 수 있다. 예약 대상어 `me`, `online`, `all`은 정확한 영문 소문자만 허용한다. 대상 자동완성은 `me` → `online` → `all` → 중복 제거한 현재 온라인 Player ID 순서이며, 아이템 자동완성은 등록된 마스터 ID와 표시명을 제공한다. `online`은 실행 시점의 온라인 snapshot, `all`은 오프라인을 포함한 전체 `Player` 행을 뜻한다. 제목을 생략하면 운영 기본 제목을 사용하고 본문은 서버가 정한 안전한 지급 안내문으로 고정한다.
 
 수량은 완전한 양의 정수만 허용하고 운영 1회 상한 10,000개와 우편 수령 시 생성 가능한 Item 행 100개를 모두 지킨다. stackable 아이템은 `maxStack × 100`, non-stackable 아이템은 100개가 추가 상한이다. 명령은 실제 `Item.snapshot()`으로 내구도·인스턴스 metadata·영속 태그 경계를 보존한 뒤 단일 대상은 `sendSystemMail()`, `online`은 `sendSystemMailToRecipients()`, `all`은 `sendSystemMailToAllPlayers()`만 호출한다. 운영자가 같은 명령을 반복한 것은 별도 지급 의도로 보므로 `sourceKey`를 만들지 않으며, 성공·실패와 수신자 0명 no-op 결과는 실행한 관리자에게만 표시한다.
+
+관리자 페이지의 특정 플레이어 `메시지` 탭은 별도의 복합 보상 편집기로 Gold와 최대 20종의 아이템·칭호·스킬을 한 통에 구성한다. 본문·발신 표시·제목·만료 시간도 함께 지정하며 보상이 없는 안내 우편도 허용한다. 선택 상세의 우편 검사에서 보관 중인 전체 우편의 읽음·수령·만료 상태를 확인하고 삭제할 수 있다. 미수령 우편 삭제는 보상을 함께 회수하지만 이미 수령한 보상은 역회수하지 않는다. 일반 수동 우편은 실제 삭제하고 `sourceKey`가 있는 멱등 보상 우편은 목록에서 archive하되 tombstone을 보존한다.

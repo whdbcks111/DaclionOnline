@@ -20,6 +20,8 @@
 
 `mastery_essence`(숙련의 정수)는 사용 handler가 없는 0.1kg stackable 재료다. Lv.400 이상 보스가 1개를 확정 드롭하며 `/스킬돌파`가 10개를 한 번에 소비한다. 재료 소비와 스킬 상한 증가는 `performSkillBreakthrough()`의 rollback 경계에서 함께 확정되므로 부족·미보유·돌파 상한 도달·중간 상태 변경에는 정수가 사라지지 않는다.
 
+`emote_draw_ticket`(감정표현 뽑기권)은 모든 낚시터의 희귀 보물 표에서 얻는 stackable 소모품이다. 사용하면 기본·초월 전용과 관리자 삭제 항목을 제외한 미보유 후보 하나를 무작위로 영구 해금한다. 모든 뽑기 후보를 보유했다면 티켓 snapshot을 복원해 소비하지 않으며, 중복 보상도 발생하지 않는다.
+
 아이템 퀵 HUD 후보는 `Inventory.getUsableItemHudSnapshots()`가 반환한 현재 보유 `onUse` 아이템 정의뿐이다. 버튼 설정은 슬롯 번호가 아니라 `itemDataId`를 저장하고 `/사용 item:<itemDataId>` 내부 동작이 `getFirstUsableItemByData()`로 현재 인스턴스를 다시 찾는다. 따라서 인벤토리 정리나 스택 소비 뒤에도 같은 정의를 사용하며, 수량이 0이면 설정된 버튼을 회색으로 유지한다.
 
 소모품 묶음 퀵 버튼은 `itemUse` registry가 `quickBundle` 정책으로 명시 허용한 회복·생존·강화 아이템만 최대 8종까지 중복 없이 등록한다. 이름 있는 묶음은 최대 8개이며 계정 로컬 HUD 설정과 서버 HUD 프리셋에 순서·위치·표시 상태를 함께 저장한다. 실행 시 서버는 각 정의 ID의 현재 보유 인스턴스·사용 요구·행동 제한·registry 허용을 다시 검사하고 `useItemInstance()`를 등록 순서대로 하나씩 await한다. 보유하지 않거나 효과 조건을 만족하지 않은 항목은 건너뛰고, 사망·행동 불가·연결 종료에서 나머지를 중단한다. 스킬북·스탯 초기화권·순간이동·유해/투척 조제약은 등록할 수 없다.
@@ -35,7 +37,7 @@ Lv.50 이후 지역에서는 직업별 고레벨 무기 `풍뢰강 검`, `뇌운
 metadata의 유효값은 `ItemData.baseMetadata`와 인스턴스 delta를 top-level key 단위로 합쳐 계산한다. `getMetadata/getMetadataSnapshot`으로 읽고 `setMetadata/resetMetadata`로 변경한다. 기본값과 같은 값을 설정하면 delta가 제거되며, override가 없는 필드는 실행 중 `ItemData.baseMetadata`가 바뀌어도 즉시 최신 값을 상속한다. 객체·배열 같은 중첩 값은 해당 top-level 필드 전체가 하나의 override다.
 
 아이템 이미지는 `Item.image` 공개 API로 조회한다. `/icons` 아래의 확장자 없는 key를 사용하며 `getMetadata('image')` → `ItemData.image` → `items/{itemDataId}` 순서로 결정된다. 따라서 일반 아이템은 `client/public/icons/items/{id}.png`를 자동으로 사용하고, 동일 정의의 개별 인스턴스만 다른 외형이 필요하면 `setMetadata('image', 'items/variant_key')`를 호출한다. 경로 이탈이나 URL 형태의 값은 무시되어 기본 이미지로 대체된다.
-현재 등록된 500개 ItemData의 이미지 key는 모두 실제 존재하는 128×128 아이콘으로 검증한다. 일반 마스터는 데이터 ID와 같은 `items/{itemDataId}`를 사용하고, 신규 성장 낚시 장비와 1차 연금술 조제약·정제수는 전용 아트 제작 전까지 의미가 맞는 낚싯대·미끼·물·영약 fallback을 명시적으로 재사용한다. 아이콘 파일이 없거나 존재하지 않는 fallback을 지정하면 데이터 검증과 회귀 테스트가 실패한다.
+현재 등록된 505개 ItemData의 이미지 key는 모두 실제 존재하는 128×128 아이콘으로 검증한다. 일반 마스터는 데이터 ID와 같은 `items/{itemDataId}`를 사용하고, 신규 성장 낚시 장비와 1차 연금술 조제약·정제수는 전용 아트 제작 전까지 의미가 맞는 낚싯대·미끼·물·영약 fallback을 명시적으로 재사용한다. 아이콘 파일이 없거나 존재하지 않는 fallback을 지정하면 데이터 검증과 회귀 테스트가 실패한다.
 
 루미나르 잡화점은 조제약 한 병마다 정확히 하나 필요한 `정제수 물병`을 4 Gold에 판매한다. 마스터 재고 100은 공용 상점의 5인분 정책으로 실제 공유 상한 500개가 되고, 마스터 재입고값 10초도 같은 정책으로 실제 병당 2초가 되어 여러 연금술사가 같은 재고를 함께 사용한다.
 

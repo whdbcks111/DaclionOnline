@@ -528,6 +528,8 @@ export interface AdminPanelBootstrapData {
     balanceItems: AdminOptionData[]
     skills: AdminOptionData[]
     titles: AdminOptionData[]
+    cosmeticFrames: AdminOptionData[]
+    chatEmotes: AdminOptionData[]
     jobs: AdminOptionData[]
     locations: AdminOptionData[]
     monsters: AdminOptionData[]
@@ -535,6 +537,43 @@ export interface AdminPanelBootstrapData {
     statusEffects: AdminOptionData[]
     stats: AdminOptionData[]
     miniGamePresets: AdminOptionData[]
+}
+
+export interface AdminCosmeticFrameData {
+    key: CosmeticFrameKey
+    name: string
+    unlocked: boolean
+    adminGranted: boolean
+    revoked: boolean
+    selectedAvatar: boolean
+    selectedChat: boolean
+}
+
+export interface AdminChatEmoteData {
+    key: ChatEmoteKey
+    name: string
+    image: string
+    unlocked: boolean
+    owned: boolean
+    adminGranted: boolean
+    revoked: boolean
+}
+
+export interface ChatEmotePickerItem {
+    key: ChatEmoteKey
+    name: string
+    image: string
+}
+
+export interface AdminMailboxMessageData {
+    id: number
+    senderLabel: string
+    subject: string
+    attachmentCount: number
+    createdAt: string
+    read: boolean
+    claimed: boolean
+    expired: boolean
 }
 
 export interface AdminPlayerListItem {
@@ -586,6 +625,9 @@ export interface AdminPlayerDetailData extends AdminPlayerListItem {
     equipment: Array<{ slot: string; slotLabel: string; index: number; itemDataId: string; name: string }>
     skills: Array<{ id: string; name: string; level: number; experience: number }>
     titles: Array<{ id: string; name: string; equipped: boolean }>
+    cosmeticFrames: AdminCosmeticFrameData[]
+    chatEmotes: AdminChatEmoteData[]
+    mailboxMessages: AdminMailboxMessageData[]
     statusEffects: Array<{ id: string; label: string; level: number; duration: number }>
     humanVerificationRequired: boolean
     humanVerificationFailures: number
@@ -597,6 +639,8 @@ export type AdminPanelAction =
     | 'grant_item' | 'remove_item' | 'clear_inventory' | 'set_item_metadata'
     | 'grant_skill' | 'set_skill_level' | 'remove_skill' | 'set_jobs'
     | 'grant_title' | 'remove_title'
+    | 'grant_cosmetic_frame' | 'remove_cosmetic_frame' | 'grant_chat_emote' | 'remove_chat_emote'
+    | 'send_mail' | 'remove_mail'
     | 'set_level' | 'adjust_level' | 'set_stat_points' | 'set_stat' | 'set_gold' | 'set_karma' | 'set_vital'
     | 'unlock_all_locations' | 'unlock_all_crafting_recipes'
     | 'apply_status_effect' | 'clear_status_effects' | 'revive_player'
@@ -638,6 +682,7 @@ export interface ServerToClientEvents {
     commandList: (commands: CommandInfo[]) => void
     argCompletions: (items: CompletionItem[]) => void
     mentionCompletions: (items: CompletionItem[]) => void
+    chatEmoteList: (items: ChatEmotePickerItem[]) => void
     playerStats: (data: PlayerStatsData) => void
     informationMode: (isPublic: boolean) => void
     locationInfo: (data: LocationInfoData) => void
@@ -687,6 +732,8 @@ export interface ClientToServerEvents {
     requestLocationInfo: () => void
     requestCompletions: (raw: string) => void
     requestMentionCompletions: (query: string) => void
+    requestChatEmotes: () => void
+    useChatEmote: (key: ChatEmoteKey) => void
     requestInformationMode: () => void
     setInformationMode: (isPublic: boolean) => void
     adminRequestLocations: () => void

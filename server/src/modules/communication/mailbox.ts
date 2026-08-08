@@ -9,15 +9,26 @@ import type { PersistedInventoryGrantRow } from '../../models/economy/Inventory.
 import type { TagId } from '../../../../shared/tags.js';
 import logger from '../../utils/logger.js';
 import type { Prisma } from '../../generated/prisma/client.js';
+import { getTitle, persistTitleRewardGrants } from '../../models/progression/Title.js';
+import { getSkillData } from '../../models/progression/Skill.js';
+import {
+    persistSkillRewardGrants,
+    type PersistedSkillRewardGrant,
+} from '../../models/progression/SkillBook.js';
 
 export const MAILBOX_LIST_LIMIT = 20;
 export const MAILBOX_ATTACHMENT_VERSION = 1;
+export const MAILBOX_REWARD_VERSION = 2;
 export const MAILBOX_MAX_ATTACHMENT_SNAPSHOTS = 20;
 export const MAILBOX_MAX_PERSISTED_ITEM_ROWS = 100;
 export const MAILBOX_MAX_TOTAL_ITEM_COUNT = 1_000_000;
 export const MAILBOX_MAX_ATTACHMENT_JSON_BYTES = 32 * 1024;
 export const MAILBOX_CLAIM_ALL_MAIL_LIMIT = 20;
 export const MAILBOX_CLAIM_ALL_ROW_LIMIT = 100;
+export const MAILBOX_MAX_GOLD_REWARD = 1_000_000_000;
+export const MAILBOX_MAX_PLAYER_GOLD = 2_000_000_000;
+export const MAILBOX_MAX_TITLE_REWARDS = 20;
+export const MAILBOX_MAX_SKILL_REWARDS = 20;
 /** 32KiB 첨부와 긴 본문을 함께 발송해도 MySQL packet 여유를 남기는 대량 INSERT 크기. */
 export const MAILBOX_BULK_INSERT_BATCH_SIZE = 100;
 export const MAILBOX_SOURCE_KEY_PATTERN = /^[a-z0-9][a-z0-9:_./-]{0,149}$/;
@@ -29,12 +40,41 @@ interface StoredMailboxAttachmentsV1 {
     readonly items: readonly ItemSnapshot[];
 }
 
+interface StoredMailboxRewardsV2 {
+    readonly version: typeof MAILBOX_REWARD_VERSION;
+    readonly items: readonly ItemSnapshot[];
+    readonly gold: number;
+    readonly titleIds: readonly string[];
+    readonly skills: readonly MailboxSkillReward[];
+}
+
+type StoredMailboxPayload = StoredMailboxAttachmentsV1 | StoredMailboxRewardsV2;
+
+export interface MailboxSkillReward {
+    readonly skillDataId: string;
+    readonly level: number;
+}
+
+export interface MailboxRewardInput {
+    readonly gold?: number;
+    readonly titleIds?: readonly string[];
+    readonly skills?: readonly MailboxSkillReward[];
+}
+
+export interface MailboxRewardBundle {
+    readonly items: readonly ItemSnapshot[];
+    readonly gold: number;
+    readonly titleIds: readonly string[];
+    readonly skills: readonly MailboxSkillReward[];
+}
+
 export interface SendSystemMailInput {
     readonly recipientId: number;
     readonly senderLabel?: string;
     readonly subject: string;
     readonly body: string;
     readonly items?: readonly ItemSnapshot[];
+    readonly rewards?: MailboxRewardInput;
     /** 같은 수신자에게 동일 보상을 재시도해도 한 통만 생성하기 위한 멱등 key. */
     readonly sourceKey?: string;
     readonly expiresAt?: Date;
@@ -49,6 +89,7 @@ export interface SendBulkSystemMailInput {
     readonly subject: string;
     readonly body: string;
     readonly items?: readonly ItemSnapshot[];
+    readonly rewards?: MailboxRewardInput;
     readonly expiresAt?: Date;
     readonly recipientId?: never;
     readonly sourceKey?: never;
@@ -76,9 +117,21 @@ export interface MailboxAttachmentDisplay {
     readonly count: number;
 }
 
+export interface MailboxTitleRewardDisplay {
+    readonly titleId: string;
+    readonly name: string;
+}
+
+export interface MailboxSkillRewardDisplay extends MailboxSkillReward {
+    readonly name: string;
+}
+
 export interface MailboxMessageDetail extends MailboxMessageSummary {
     readonly body: string;
     readonly attachments: readonly MailboxAttachmentDisplay[];
+    readonly gold: number;
+    readonly titles: readonly MailboxTitleRewardDisplay[];
+    readonly skills: readonly MailboxSkillRewardDisplay[];
     readonly attachmentCorrupted: boolean;
 }
 
@@ -97,6 +150,9 @@ export type MailboxClaimResult = {
     readonly success: true;
     readonly mailId: number;
     readonly items: readonly MailboxAttachmentDisplay[];
+    readonly gold: number;
+    readonly titles: readonly MailboxTitleRewardDisplay[];
+    readonly skills: readonly MailboxSkillRewardDisplay[];
     readonly memorySynchronized: boolean;
     /** 이번 수령 transaction에서 실제 생성한 Item 행 수. */
     readonly persistedRowCount: number;
@@ -130,7 +186,7 @@ type NormalizedSystemMailPayload = {
     readonly senderLabel: string;
     readonly subject: string;
     readonly body: string;
-    readonly attachments: StoredMailboxAttachmentsV1 | null;
+    readonly attachments: StoredMailboxPayload | null;
     readonly attachmentCount: number;
     readonly expiresAt: Date | undefined;
 };
@@ -146,7 +202,7 @@ function normalizeText(value: string, label: string, maxLength: number): string 
 }
 
 function normalizeSystemMailPayload(
-    input: Pick<SendSystemMailInput, 'senderLabel' | 'subject' | 'body' | 'items' | 'expiresAt'>,
+    input: Pick<SendSystemMailInput, 'senderLabel' | 'subject' | 'body' | 'items' | 'rewards' | 'expiresAt'>,
 ): NormalizedSystemMailPayload {
     const senderLabel = normalizeText(input.senderLabel ?? '시스템', '발신자', 50);
     const subject = normalizeText(input.subject, '우편 제목', 120);
@@ -155,13 +211,16 @@ function normalizeSystemMailPayload(
         || input.expiresAt.getTime() <= Date.now())) {
         throw new Error('우편 만료 시각은 현재보다 뒤여야 합니다.');
     }
-    const attachments = encodeMailboxAttachments(input.items ?? []);
+    const attachments = encodeMailboxRewards(input.items ?? [], input.rewards);
+    const rewardCount = attachments?.version === MAILBOX_REWARD_VERSION
+        ? (attachments.gold > 0 ? 1 : 0) + attachments.titleIds.length + attachments.skills.length
+        : 0;
     return Object.freeze({
         senderLabel,
         subject,
         body,
         attachments,
-        attachmentCount: attachments?.items.reduce((sum, item) => sum + item.count, 0) ?? 0,
+        attachmentCount: (attachments?.items.reduce((sum, item) => sum + item.count, 0) ?? 0) + rewardCount,
         expiresAt: input.expiresAt,
     });
 }
@@ -287,18 +346,101 @@ export function encodeMailboxAttachments(
     return bundle;
 }
 
-export function decodeMailboxAttachments(value: unknown): readonly ItemSnapshot[] | undefined {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
-    const candidate = value as { version?: unknown; items?: unknown };
-    if (candidate.version !== MAILBOX_ATTACHMENT_VERSION || !Array.isArray(candidate.items)) return undefined;
-    try {
-        if (Buffer.byteLength(JSON.stringify(value), 'utf8') > MAILBOX_MAX_ATTACHMENT_JSON_BYTES) {
-            return undefined;
+/** 아이템과 진행 보상을 하나의 검증된 우편 payload로 직렬화한다. */
+export function encodeMailboxRewards(
+    items: readonly ItemSnapshot[],
+    rewards: MailboxRewardInput = {},
+): StoredMailboxPayload | null {
+    const normalizedItems = normalizeAttachmentSnapshots(items);
+    const gold = rewards.gold ?? 0;
+    if (!Number.isSafeInteger(gold) || gold < 0 || gold > MAILBOX_MAX_GOLD_REWARD) {
+        throw new Error(`우편 Gold는 0~${MAILBOX_MAX_GOLD_REWARD.toLocaleString()} 범위의 정수여야 합니다.`);
+    }
+    const titleIds = [...new Set(rewards.titleIds ?? [])].map(value => {
+        const title = getTitle(value);
+        if (!title) throw new Error(`존재하지 않는 우편 칭호 보상입니다: ${value}`);
+        return title.id;
+    });
+    if (titleIds.length > MAILBOX_MAX_TITLE_REWARDS) {
+        throw new Error(`우편 칭호 보상은 최대 ${MAILBOX_MAX_TITLE_REWARDS}개입니다.`);
+    }
+    const skillLevels = new Map<string, number>();
+    for (const reward of rewards.skills ?? []) {
+        const data = getSkillData(reward.skillDataId);
+        if (!data) throw new Error(`존재하지 않는 우편 스킬 보상입니다: ${reward.skillDataId}`);
+        if (!Number.isSafeInteger(reward.level) || reward.level < 1 || reward.level > data.maxLevel) {
+            throw new Error(`${data.name} 보상 레벨은 1~${data.maxLevel} 범위의 정수여야 합니다.`);
         }
-        return normalizeAttachmentSnapshots(candidate.items as ItemSnapshot[]);
+        skillLevels.set(data.id, Math.max(skillLevels.get(data.id) ?? 0, reward.level));
+    }
+    const skills = Object.freeze([...skillLevels].map(([skillDataId, level]) =>
+        Object.freeze({ skillDataId, level })));
+    if (skills.length > MAILBOX_MAX_SKILL_REWARDS) {
+        throw new Error(`우편 스킬 보상은 최대 ${MAILBOX_MAX_SKILL_REWARDS}개입니다.`);
+    }
+    if (gold === 0 && titleIds.length === 0 && skills.length === 0) {
+        return encodeMailboxAttachments(normalizedItems);
+    }
+    const bundle: StoredMailboxRewardsV2 = Object.freeze({
+        version: MAILBOX_REWARD_VERSION,
+        items: normalizedItems,
+        gold,
+        titleIds: Object.freeze(titleIds),
+        skills,
+    });
+    if (Buffer.byteLength(JSON.stringify(bundle), 'utf8') > MAILBOX_MAX_ATTACHMENT_JSON_BYTES) {
+        throw new Error(`우편 첨부 정보는 최대 ${MAILBOX_MAX_ATTACHMENT_JSON_BYTES / 1024}KiB입니다.`);
+    }
+    return bundle;
+}
+
+export function decodeMailboxRewards(value: unknown): MailboxRewardBundle | undefined {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    try {
+        if (Buffer.byteLength(JSON.stringify(value), 'utf8') > MAILBOX_MAX_ATTACHMENT_JSON_BYTES) return undefined;
+        const candidate = value as Partial<StoredMailboxPayload>;
+        if (candidate.version === MAILBOX_ATTACHMENT_VERSION && Array.isArray(candidate.items)) {
+            return Object.freeze({
+                items: normalizeAttachmentSnapshots(candidate.items as ItemSnapshot[]),
+                gold: 0,
+                titleIds: Object.freeze([]),
+                skills: Object.freeze([]),
+            });
+        }
+        if (candidate.version !== MAILBOX_REWARD_VERSION
+            || !Array.isArray(candidate.items)
+            || !Array.isArray((candidate as Partial<StoredMailboxRewardsV2>).titleIds)
+            || !Array.isArray((candidate as Partial<StoredMailboxRewardsV2>).skills)) return undefined;
+        const rewards = candidate as Partial<StoredMailboxRewardsV2>;
+        return Object.freeze({
+            items: normalizeAttachmentSnapshots(rewards.items as ItemSnapshot[]),
+            ...normalizeDecodedProgressRewards(rewards),
+        });
     } catch {
         return undefined;
     }
+}
+
+function normalizeDecodedProgressRewards(
+    rewards: Partial<StoredMailboxRewardsV2>,
+): Omit<MailboxRewardBundle, 'items'> {
+    const encoded = encodeMailboxRewards([], {
+        gold: rewards.gold,
+        titleIds: rewards.titleIds,
+        skills: rewards.skills,
+    });
+    if (!encoded || encoded.version !== MAILBOX_REWARD_VERSION) {
+        throw new Error('우편 진행 보상이 비어 있습니다.');
+    }
+    return {
+        gold: encoded.gold,
+        titleIds: encoded.titleIds,
+        skills: encoded.skills,
+    };
+}
+
+export function decodeMailboxAttachments(value: unknown): readonly ItemSnapshot[] | undefined {
+    return decodeMailboxRewards(value)?.items;
 }
 
 function toSummary(row: MailboxRow, now = new Date()): MailboxMessageSummary {
@@ -324,14 +466,23 @@ function toAttachmentDisplay(items: readonly ItemSnapshot[]): MailboxAttachmentD
 }
 
 function toDetail(row: MailboxRow, now = new Date()): MailboxMessageDetail {
-    const attachments = row.attachmentCount > 0
-        ? decodeMailboxAttachments(row.attachments)
-        : Object.freeze([] as ItemSnapshot[]);
+    const rewards = row.attachmentCount > 0
+        ? decodeMailboxRewards(row.attachments)
+        : Object.freeze({ items: [], gold: 0, titleIds: [], skills: [] } as MailboxRewardBundle);
     return {
         ...toSummary(row, now),
         body: row.body,
-        attachments: attachments ? toAttachmentDisplay(attachments) : [],
-        attachmentCorrupted: row.attachmentCount > 0 && attachments === undefined,
+        attachments: rewards ? toAttachmentDisplay(rewards.items) : [],
+        gold: rewards?.gold ?? 0,
+        titles: rewards?.titleIds.map(titleId => ({
+            titleId,
+            name: getTitle(titleId)?.name ?? titleId,
+        })) ?? [],
+        skills: rewards?.skills.map(reward => ({
+            ...reward,
+            name: getSkillData(reward.skillDataId)?.name ?? reward.skillDataId,
+        })) ?? [],
+        attachmentCorrupted: row.attachmentCount > 0 && rewards === undefined,
     };
 }
 
@@ -459,6 +610,17 @@ export async function listMailboxMessages(
     return rows.map(row => toSummary(row, now));
 }
 
+/** 관리자 상세/삭제용 전체 목록. 일반 플레이어의 최근 20통 조회 제한과 분리한다. */
+export async function listMailboxMessagesForAdmin(recipientId: number): Promise<MailboxMessageSummary[]> {
+    if (!Number.isSafeInteger(recipientId) || recipientId <= 0) return [];
+    const rows = await prisma.mailboxMessage.findMany({
+        where: { recipientId, archivedAt: null },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+    const now = new Date();
+    return rows.map(row => toSummary(row, now));
+}
+
 export async function readMailboxMessage(
     recipientId: number,
     mailId: number,
@@ -477,6 +639,39 @@ export async function readMailboxMessage(
         row.readAt = readAt;
     }
     return toDetail(row);
+}
+
+export interface RemoveMailboxMessageResult {
+    readonly removed: boolean;
+    readonly subject?: string;
+    readonly archived: boolean;
+}
+
+/** 관리자 회수용 경계. 멱등 sourceKey 우편은 tombstone을 보존하고 일반 우편은 실제 삭제한다. */
+export function removeMailboxMessageByAdmin(
+    recipientId: number,
+    mailId: number,
+): Promise<RemoveMailboxMessageResult> {
+    return enqueueClaim(recipientId, async () => {
+        if (!Number.isSafeInteger(recipientId) || recipientId <= 0
+            || !Number.isSafeInteger(mailId) || mailId <= 0) {
+            return { removed: false, archived: false };
+        }
+        const row = await prisma.mailboxMessage.findFirst({
+            where: { id: mailId, recipientId, archivedAt: null },
+            select: { subject: true, sourceKey: true },
+        });
+        if (!row) return { removed: false, archived: false };
+        if (row.sourceKey) {
+            const result = await prisma.mailboxMessage.updateMany({
+                where: { id: mailId, recipientId, archivedAt: null },
+                data: { archivedAt: new Date() },
+            });
+            return { removed: result.count === 1, subject: row.subject, archived: result.count === 1 };
+        }
+        const result = await prisma.mailboxMessage.deleteMany({ where: { id: mailId, recipientId } });
+        return { removed: result.count === 1, subject: row.subject, archived: false };
+    });
 }
 
 async function claimMailboxMessageUnlocked(
@@ -500,22 +695,30 @@ async function claimMailboxMessageUnlocked(
     if (preview.attachmentCount <= 0) {
         return claimFailure(mailId, 'no-attachments', '이 우편에는 수령할 첨부가 없습니다.');
     }
-    const attachments = decodeMailboxAttachments(preview.attachments);
-    if (!attachments) {
+    const rewards = decodeMailboxRewards(preview.attachments);
+    if (!rewards) {
         return claimFailure(mailId, 'invalid-attachments', '우편 첨부 정보가 손상되어 수령할 수 없습니다.');
     }
     if (saveBeforeClaim) await player.save();
-    const grantPlan = player.inventory.preparePersistedGrant(attachments);
-    if (!grantPlan) {
+    if (player.gold + rewards.gold > MAILBOX_MAX_PLAYER_GOLD) {
+        return claimFailure(mailId, 'capacity', `Gold 보유 상한 ${MAILBOX_MAX_PLAYER_GOLD.toLocaleString()}G을 초과합니다.`);
+    }
+    const grantPlan = rewards.items.length > 0
+        ? player.inventory.preparePersistedGrant(rewards.items)
+        : null;
+    if (rewards.items.length > 0 && !grantPlan) {
         return claimFailure(mailId, 'capacity', '첨부를 모두 받을 만큼 인벤토리 중량 여유가 없습니다.');
     }
-    if (grantPlan.rows.length > maximumPersistedRows) {
+    if (grantPlan && grantPlan.rows.length > maximumPersistedRows) {
         return claimFailure(mailId, 'batch-limit', '이번 전체 수령의 아이템 처리 한도에 도달했습니다.');
     }
 
-    let createdRows: readonly PersistedInventoryGrantRow[] | null;
+    let committed: {
+        readonly rows: readonly PersistedInventoryGrantRow[];
+        readonly skills: readonly PersistedSkillRewardGrant[];
+    } | null;
     try {
-        createdRows = await prisma.$transaction(async transaction => {
+        committed = await prisma.$transaction(async transaction => {
             const claimedAt = new Date();
             const updated = await transaction.mailboxMessage.updateMany({
                 where: {
@@ -531,18 +734,44 @@ async function claimMailboxMessageUnlocked(
                 },
             });
             if (updated.count !== 1) return null;
-            return player.inventory.persistPreparedGrant(transaction, grantPlan);
+            const rows = grantPlan
+                ? await player.inventory.persistPreparedGrant(transaction, grantPlan)
+                : Object.freeze([] as PersistedInventoryGrantRow[]);
+            if (rewards.gold > 0) {
+                await transaction.player.update({
+                    where: { userId: player.userId },
+                    data: { gold: { increment: rewards.gold } },
+                });
+            }
+            await persistTitleRewardGrants(transaction, player.userId, rewards.titleIds);
+            const skills = await persistSkillRewardGrants(transaction, player.userId, rewards.skills);
+            return Object.freeze({ rows, skills });
         }, { timeout: 15_000 });
     } catch (error) {
         logger.error(`우편 첨부 수령 transaction 실패: user=${player.userId}, mail=${mailId}`, error);
         return claimFailure(mailId, 'database-error', '우편 수령을 확정하지 못했습니다. 잠시 뒤 다시 시도해 주세요.');
     }
-    if (!createdRows) {
+    if (!committed) {
         return claimFailure(mailId, 'unavailable', '다른 접속에서 이미 수령했거나 우편이 만료되었습니다.');
     }
     let memorySynchronized = false;
     try {
-        memorySynchronized = player.inventory.adoptPersistedGrant(createdRows);
+        const inventorySynchronized = rewards.items.length === 0
+            || player.inventory.adoptPersistedGrant(committed.rows);
+        player.gold += rewards.gold;
+        for (const titleId of rewards.titleIds) {
+            if (!player.titles.isOwned(titleId)) player.titles.grant(titleId, 'mailbox', false);
+        }
+        for (const reward of committed.skills) {
+            const current = player.skills.get(reward.skillDataId);
+            if (current) {
+                if (current.level < reward.level) player.skills.setLevel(reward.skillDataId, reward.level);
+            } else {
+                player.skills.grant(reward.skillDataId, 'mailbox', reward.level);
+            }
+        }
+        await player.save();
+        memorySynchronized = inventorySynchronized;
     } catch (error) {
         logger.error(`우편 첨부 DB 확정 후 메모리 동기화 예외: user=${player.userId}, mail=${mailId}`, error);
     }
@@ -552,9 +781,15 @@ async function claimMailboxMessageUnlocked(
     return {
         success: true,
         mailId,
-        items: toAttachmentDisplay(attachments),
+        items: toAttachmentDisplay(rewards.items),
+        gold: rewards.gold,
+        titles: rewards.titleIds.map(titleId => ({ titleId, name: getTitle(titleId)?.name ?? titleId })),
+        skills: committed.skills.map(reward => ({
+            ...reward,
+            name: getSkillData(reward.skillDataId)?.name ?? reward.skillDataId,
+        })),
         memorySynchronized,
-        persistedRowCount: createdRows.length,
+        persistedRowCount: committed.rows.length,
     };
 }
 
@@ -585,10 +820,10 @@ export function claimAllMailboxAttachments(player: Player): Promise<MailboxClaim
         let hasMore = rows.length > candidates.length;
         for (let index = 0; index < candidates.length; index++) {
             const row = candidates[index];
-            const attachments = decodeMailboxAttachments(row.attachments);
-            const previewPlan = attachments
-                ? player.inventory.preparePersistedGrant(attachments)
-                : null;
+            const rewards = decodeMailboxRewards(row.attachments);
+            const previewPlan = rewards && rewards.items.length > 0
+                ? player.inventory.preparePersistedGrant(rewards.items)
+                : undefined;
             if (previewPlan && previewPlan.rows.length > remainingRows) {
                 hasMore = true;
                 break;

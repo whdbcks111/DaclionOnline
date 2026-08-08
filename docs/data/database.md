@@ -21,7 +21,7 @@ Item/Equipment의 `metadata` JSON은 전체 유효값이 아니라 `{ "__daclion
 
 `items.sort_order`는 `/인벤토리정리`로 정한 인벤토리 표시 순서를 저장한다. 기존 행은 migration 기본값 0과 ID 보조 정렬로 종전 획득 순서를 유지하며, 최초 정리나 아이템 추가·제거 뒤 Inventory dirty flush가 0부터 시작하는 순서로 다시 저장한다.
 
-`mailbox_messages.attachments`는 `{ version: 1, items: ItemSnapshot[] }`만 허용하며 한 통당 snapshot 20개·생성 Item 행 100개·총수량 1,000,000개·JSON 32KiB 상한을 적용한다. 첨부 수령은 온라인 Player dirty 저장을 먼저 기다린 뒤 `claimed_at IS NULL` 조건 갱신과 실제 `items` 행 생성을 하나의 Prisma transaction에서 확정한다. commit 후 해당 DB id 행을 Inventory에 Clean으로 흡수하므로 재저장 중복이 없고, commit 뒤 프로세스가 종료돼도 다음 로그인 load가 지급 행을 복원한다. `source_key`는 소문자 ASCII 안전 규격만 허용한다. 이 key가 있는 멱등 보상 우편은 정리 시 `archived_at`만 설정해 unique tombstone을 보존하고, 같은 key 재발송이 중복 보상을 만들지 않게 한다. source key 없는 완료 일반 우편은 실제 삭제한다. 플레이어 간 발송과 골드 첨부는 현재 지원하지 않는다.
+`mailbox_messages.attachments`는 기존 `{ version: 1, items: ItemSnapshot[] }`과 복합 `{ version: 2, items, gold, titleIds, skills }`를 함께 읽는다. 한 통당 아이템 snapshot 20개·생성 Item 행 100개·총수량 1,000,000개·Gold 10억·칭호/스킬 각 20개·JSON 32KiB 상한을 적용한다. 첨부 수령은 온라인 Player dirty 저장을 먼저 기다린 뒤 `claimed_at IS NULL` 조건 갱신, 실제 `items` 행 생성, `players.gold` 증가, 칭호 `player_progress`, 스킬 `player_skills` 최소 레벨을 하나의 Prisma transaction에서 확정한다. commit 후 온라인 Player 메모리를 같은 결과로 동기화하며 프로세스가 종료돼도 다음 로그인 load가 DB 지급 상태를 복원한다. `source_key`가 있는 멱등 보상 우편은 정리·관리자 삭제 시 `archived_at`만 설정해 unique tombstone을 보존하고, source key 없는 일반 우편은 실제 삭제한다.
 
 `Equipment.count`는 미끼처럼 장착 가능한 스택 아이템의 남은 묶음 수량을 저장한다. 장착 시 인벤토리 스택 전체가 이동하고 `consumeEquippedItem(count)`는 필요한 수량만 차감해 남은 스택을 슬롯에 유지한다. 기존 장비 행은 `20260718000000_add_equipment_count` 마이그레이션의 기본값 1로 이행한다.
 

@@ -7,6 +7,7 @@ import {
     sendMessageToChannel,
     getFlagsForPermission,
     sendNotificationToUser,
+    sendPlayerContentToCurrentChannel,
     sendWhisperMessage,
 } from "./message.js";
 import {
@@ -42,6 +43,8 @@ import {
 import { getOwnedChatImage } from '../infrastructure/upload.js';
 import { chat } from '../../utils/chatBuilder.js';
 import { partyManager } from '../social/party.js';
+import { getChatEmote } from '../../../../shared/cosmetics.js';
+import { createChatEmoteNode, getChatEmoteSnapshots } from '../../models/progression/PlayerCosmetics.js';
 
 const MAX_MESSAGE_LENGTH = 500;
 const MAX_CHAT_IMAGE_BATCH = 10;
@@ -242,6 +245,45 @@ export const initChat = () => {
                 value: player.nickname,
                 description: `ID ${player.userId}${player.level === undefined ? '' : ` · Lv.${player.level}`}`,
             })));
+        });
+
+        socket.on('requestChatEmotes', () => {
+            const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            if (!session) { socket.emit('sessionInvalid'); return; }
+            const player = getPlayerByUserId(session.userId);
+            if (!player) return;
+            socket.emit('chatEmoteList', getChatEmoteSnapshots(player)
+                .filter(emote => emote.unlocked)
+                .map(emote => ({ key: emote.key, name: emote.name, image: emote.image })));
+        });
+
+        socket.on('useChatEmote', (key: unknown) => {
+            const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            if (!session) { socket.emit('sessionInvalid'); return; }
+            const player = getPlayerByUserId(session.userId);
+            const emote = getChatEmote(key);
+            if (!player || !emote) return;
+            if (!player.canPerformAction(ActionType.CHAT)) {
+                sendNotificationToUser(session.userId, {
+                    key: 'emote:chat-disabled',
+                    message: '현재 채팅 감정표현을 사용할 수 없습니다.',
+                });
+                return;
+            }
+            const node = createChatEmoteNode(player, emote.key);
+            if (!node) {
+                sendNotificationToUser(session.userId, {
+                    key: 'emote:locked',
+                    message: `${emote.name} 감정표현을 보유하고 있지 않습니다.`,
+                });
+                return;
+            }
+            if (!sendPlayerContentToCurrentChannel(session.userId, [node])) {
+                sendNotificationToUser(session.userId, {
+                    key: 'emote:session-missing',
+                    message: '채팅 세션을 확인할 수 없습니다.',
+                });
+            }
         });
 
         // 채널 변경: 유저의 모든 소켓을 새 채널 room으로 이동하고 히스토리 전송

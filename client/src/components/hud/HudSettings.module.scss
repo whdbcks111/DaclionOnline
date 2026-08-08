@@ -32,7 +32,7 @@
     padding: $spacing-xs;
     border: 1px solid $color-border;
     border-radius: $border-radius-sm;
-    background: rgba(0, 0, 0, 0.12);
+    background: color-mix(in srgb, $color-bg-tertiary 70%, $color-bg);
 }
 
 .presetRow {
@@ -50,7 +50,7 @@
     border: 1px solid $color-border;
     border-radius: $border-radius-sm;
     outline: none;
-    background: $color-bg-secondary;
+    background: color-mix(in srgb, $color-bg-tertiary 78%, $color-bg);
     color: $color-text;
     font: inherit;
     font-size: 0.72rem;
@@ -71,7 +71,7 @@
     padding: 0.42rem 0.5rem;
     border: 1px solid $color-border;
     border-radius: $border-radius-sm;
-    background: $color-bg-secondary;
+    background: color-mix(in srgb, $color-bg-tertiary 78%, $color-bg);
     color: $color-text;
     cursor: pointer;
     font: inherit;

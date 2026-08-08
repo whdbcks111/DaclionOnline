@@ -94,7 +94,7 @@ $avatar-size: 80px;
     padding: $spacing-sm;
     border: 1px solid $color-border;
     border-radius: $border-radius-sm;
-    background-color: $color-bg-secondary;
+    background-color: color-mix(in srgb, $color-bg-tertiary 72%, $color-bg);
 }
 
 .musicControlHeader {
@@ -130,7 +130,7 @@ $avatar-size: 80px;
     padding: $spacing-xs $spacing-sm;
     border: 1px solid $color-border;
     border-radius: $border-radius-sm;
-    background-color: $color-bg-tertiary;
+    background-color: color-mix(in srgb, $color-bg-tertiary 82%, $color-bg);
     color: $color-text;
     font-size: 0.75rem;
     cursor: pointer;

@@ -10,7 +10,7 @@ export default function EmoteNode({ id }: Props) {
     if (!emote) return null
     return (
         <span className={styles.emote} role="img" aria-label={emote.name} title={emote.name}>
-            {emote.glyph}
+            <img src={`/icons/${emote.image}.png`} alt="" draggable={false} />
         </span>
     )
 }

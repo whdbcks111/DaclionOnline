@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { LocationData } from '../../../../shared/types.js';
+import { CHAT_EMOTES } from '../../../../shared/cosmetics.js';
 import { GameTags } from '../../../../shared/tags.js';
 import {
     ALCHEMY_WATER_BOTTLE_ITEM_ID,
@@ -105,6 +106,7 @@ export function validateMasterData(options: MasterDataValidationOptions = {}): M
         if (item.weight < 0) issue('item', item.id, '중량은 음수일 수 없습니다.');
         if (item.maxStack < 1) issue('item', item.id, '최대 스택은 1 이상이어야 합니다.');
     }
+    for (const emote of CHAT_EMOTES) icon('chat-emote', emote.key, emote.image);
     issues.push(...validateAlchemyMasterData());
     for (const skill of getAllSkillData()) icon('skill', skill.id, skill.icon);
     for (const job of getAllJobs()) {

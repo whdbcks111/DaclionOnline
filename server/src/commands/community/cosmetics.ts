@@ -53,7 +53,7 @@ function emoteCompletions(userId: number): CompletionItem[] {
     if (!player) return [];
     return getChatEmoteSnapshots(player).map(emote => ({
         value: emote.name,
-        description: `${emote.glyph} · ${emote.unlocked ? '사용 가능' : emote.unlockDescription}`,
+        description: emote.unlocked ? '사용 가능' : emote.unlockDescription,
     }));
 }
 
@@ -100,7 +100,7 @@ function sendEmoteList(userId: number): void {
         .text('\n해금한 감정표현은 현재 채널에 크게 표시됩니다.');
     for (const emote of getChatEmoteSnapshots(player)) {
         builder.text('\n\n')
-            .size('1.35em', glyph => glyph.text(emote.glyph))
+            .image({ src: `/icons/${emote.image}.png`, alt: emote.name, width: 56, height: 56, maxHeight: 56 })
             .text(' ')
             .weight('bold', name => name.text(emote.name))
             .color(emote.unlocked ? '$info' : '$text-tertiary', status => (

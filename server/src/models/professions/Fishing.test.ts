@@ -75,6 +75,7 @@ test('낚시 보물은 장소별 희귀 보상표를 사용하고 행운 보정�
         const item = getItemData(entry.itemDataId);
         return item?.onUse === 'apply_status_effect' && item.category !== '경험치 물약';
     }));
+    assert.equal(getItemData('emote_draw_ticket')?.onUse, 'draw_chat_emote');
 
     const sequence = (...values: number[]) => {
         let index = 0;
@@ -105,6 +106,11 @@ test('낚시 보물은 장소별 희귀 보상표를 사용하고 행운 보정�
         const faded = table?.entries.find(entry =>
             entry.itemDataId === 'faded_stat_reset_ticket');
         assert.equal(faded?.weight, 4, locationId);
+        assert.equal(
+            table?.entries.find(entry => entry.itemDataId === 'emote_draw_ticket')?.weight,
+            10,
+            locationId,
+        );
         assert.equal(
             table?.entries.find(entry => entry.itemDataId === 'refined_stat_refund_ticket')?.weight,
             (table?.chance ?? 0) >= 0.02 ? 1 : undefined,

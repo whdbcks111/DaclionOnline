@@ -70,8 +70,19 @@
 .secondaryButton { color: $color-text; background: $color-bg-tertiary; }
 .dangerButton { color: white; background: $color-danger; }
 
+.rewardEditor { display: grid; gap: $spacing-md; padding: $spacing-sm; background: $color-bg-secondary; border: 1px solid $color-border; border-radius: $border-radius-md; }
+.rewardSection { display: grid; gap: $spacing-xs; }
+.rewardSection header { display: flex; align-items: center; justify-content: space-between; gap: $spacing-sm; }
+.rewardSection header button, .removeReward { min-height: 2rem; padding: 0 $spacing-sm; color: $color-text; background: $color-bg-tertiary; border: 1px solid $color-border; border-radius: $border-radius-md; font: inherit; cursor: pointer; }
+.rewardSection header button:disabled { opacity: .45; cursor: not-allowed; }
+.rewardRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(4.5rem, .25fr) auto; gap: $spacing-xs; align-items: center; }
+.rewardRow > input { width: 100%; box-sizing: border-box; padding: .65rem; color: $color-text; background: $color-bg; border: 1px solid $color-border; border-radius: $border-radius-md; font: inherit; }
+.rewardRow:has(> :nth-child(2):last-child) { grid-template-columns: minmax(0, 1fr) auto; }
+.removeReward { color: $color-danger; }
+
 @media (max-width: $breakpoint-mobile) {
   .backdrop { align-items: end; padding: 0; }
   .dialog { width: 100%; max-height: 94%; border-radius: $border-radius-lg $border-radius-lg 0 0; }
   .footer > button { flex: 1; }
+  .rewardRow { grid-template-columns: minmax(0, 1fr) 4rem auto; }
 }

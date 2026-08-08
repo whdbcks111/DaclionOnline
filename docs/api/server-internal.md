@@ -10,7 +10,7 @@
 | Login | `getSession`, `getSessionByUserId`, `createSession`, `removeSession`, `revokeUserSessions`, `getUserPermission` | 인메모리 세션/권한 조회와 계정 보안 변경 시 전체 세션 폐기 |
 | Online | `setUserOnline`, `setUserOffline`, `isUserOnline`, `getUserCountData`, `broadcastUserCount` | userId별 socket ID Set과 중복 없는 전체/채널 접속 인원 snapshot |
 | Player | `loadPlayerByUserId`, `unloadPlayerByUserId`, `beginPlayerReconnectGrace`, `resumePlayerFromReconnectGrace`, `isPlayerInReconnectGrace`, `getPlayerByUserId`, `getOnlinePlayers`, `fetchPlayerByUserId`, `saveAllPlayers`, `shutdownAllPlayers` | Player 수명·저장, 마지막 연결 종료 뒤 10초간 월드 밖 동일 인스턴스 보존과 명시적 unload/종료 우회 |
-| Admin panel | `initAdminPanel`, `getAdminPanelBootstrap`, `getAdminPlayerList`, `getAdminPlayerDetail`, `executeAdminPanelAction` | 권한 10 운영 도구의 가공된 조회, 플레이어·월드·전체/개별 공지 action 검증과 실행 |
+| Admin panel | `initAdminPanel`, `getAdminPanelBootstrap`, `getAdminPlayerList`, `getAdminPlayerDetail`, `executeAdminPanelAction` | 권한 10 운영 도구의 가공된 조회, 플레이어별 프레임·감정표현 지급/삭제, 월드·전체/개별 공지 action 검증과 실행 |
 | Player registry | `registerOnlinePlayer`, `getOnlinePlayer`, `unregisterOnlinePlayer`, `getOnlinePlayerSnapshot`, `getOnlinePlayerUserIdsAtLocation`, `isOnlinePlayerAtLocation` | 내부 Map을 숨긴 온라인 객체 조회와 위치별 userId snapshot |
 | Player identity | `findOnlinePlayerByIdentity`, `getOnlinePlayerIdentitySnapshots`, `searchOnlinePlayerIdentitySnapshots` | 고유번호/정확한 닉네임 대상 조회와 prefix 온라인 자동완성 DTO. 레벨 순위 비공개 사용자는 `level`을 생략 |
 | HUD | `sendPlayerStats`, `sendLocationInfo` | 특정 사용자의 모든 소켓에 HUD payload 전송 |
@@ -22,7 +22,7 @@
 | Trade | `tradeManager.invite/accept/decline/addItem/removeItem/setGold/confirm/unconfirm/cancel/cancelForPlayer/update/getSessionSnapshot/subscribe` | 같은 장소 플레이어 거래의 요청·런타임 에스크로·양쪽 확인·자동 취소와 불변 표시 snapshot/event |
 | Ascension | `getAscensionDeniedReason`, `ascendPlayer`, `grantOriginboundaryDefeatProgress`, `getUpperDimensionExpeditionDeniedReason`, `enterUpperDimensionExpedition` | 아르케 최초 기여 자격, 환생 초기화·영구 보상, 초월 후 Lv.1000 재도달 검증과 아르케 우회 원정 권한·이동·즉시 저장 |
 | Channel | `getUserChannel`, `setUserChannel`, `getChannelRoomKey`, `getChannelHistory`, `getFilteredHistoryForUser`, `getPublicReplyReference`, `clearPrivateChannelHistory`, `clearPublicChannelHistory` | room·히스토리 상태, 공개 원문의 안전한 답장 요약, 개인 채널 또는 관리자 공개 채널의 최근 기록 목적형 삭제 |
-| Chat delivery | `deliverChatMessage`, `tryStartAdvertisementCooldown`, `ChatType.values/fromKey/fromInput` | 채널·장소·파티·전체 광고·관리자 공지 audience, 권한과 30초 광고 제한 검증 |
+| Chat delivery | `deliverChatMessage`, `tryStartAdvertisementCooldown`, `ChatType.values/fromKey/fromInput` | 채널·장소·파티·전체 광고·관리자 공지 audience, 권한과 30초 광고 제한 검증. 보유 감정표현 목록/사용 socket은 같은 모듈에서 안정 ID·채팅 행동·보유권을 검사한다. |
 | Message | `sendMessageToChannel`, `broadcastMessageAll`, `sendMessageToAudience`, `sendMessageFiltered`, `sendMessageToUser`, `sendPlayerTextToCurrentChannel`, `sendPlayerContentToCurrentChannel`, `sendPrivatePlayerTextToCurrentChannel`, `sendPrivatePlayerContentToCurrentChannel`, `sendPlayerTextToPartyMembers`, `sendPlayerContentToPartyMembers`, `sendWhisperMessage` | 구조화 메시지의 공개·지정 audience 전송, 플레이어 외형 snapshot, `[파티]` 필터 피드와 회색 양방향 비공개 귓속말 |
 | Bot message | `sendBotMessageToChannel`, `broadcastBotMessageAll`, `sendBotMessageFiltered`, `sendBotMessageToUser`, `sendPrivateBotMessageToUser`, `sendBotMessageToUsers`, `sendBotMessageToPartyMembers`, `sendNotificationToUsers` | 정보 명령 문맥을 반영하거나 강제로 비공개인 시스템 메시지, 지정 사용자용 위치 전투 기록 및 파티 전투 피드 전송 |
 | Notification | `broadcastNotification`, `sendNotificationFiltered`, `sendNotificationToUser` | 화면 알림 전송 |
@@ -45,9 +45,11 @@
 | Item use | `registerItemUse`, `executeItemUse`, `hasItemUseHandler` | 아이템 효과 ID와 실행 함수 연결 |
 | Item attack | `registerItemAttackOverride`, `executeItemAttackOverride`, `hasItemAttackOverride`, `executeProjectileItemAttack` | `basicAttackOverride` key와 기본 공격 함수 연결, 일반 물리 화살의 재료 속성 정규화, 탄약/무탄약 투사체 발사·발사 무기 적중 효과와 근접 폴백 신호 |
 | Mail | `loadTemplate`, `sendMail` | 공유 HTML 템플릿과 Nodemailer |
-| System mailbox | `sendSystemMail`, `sendSystemMailToRecipients`, `sendSystemMailToAllPlayers`, `listMailboxMessages`, `readMailboxMessage`, `claimMailboxMessage`, `claimAllMailboxAttachments`, `cleanupCompletedMailboxMessages` | 시스템→플레이어 영속 우편, 지정 ID·전체 Player 대량 발송, versioned 아이템 첨부, 소문자 ASCII source key 단일 멱등 발송, DB 원자 발송·수령과 완료 정리. 플레이어 간 발송·골드 첨부는 제외 |
+| System mailbox | `sendSystemMail`, `sendSystemMailToRecipients`, `sendSystemMailToAllPlayers`, `listMailboxMessages`, `listMailboxMessagesForAdmin`, `readMailboxMessage`, `claimMailboxMessage`, `claimAllMailboxAttachments`, `removeMailboxMessageByAdmin`, `cleanupCompletedMailboxMessages` | 시스템→플레이어 영속 우편, 지정 ID·전체 Player 대량 발송, v1 아이템/v2 복합 보상 첨부, 소문자 ASCII source key 단일 멱등 발송, DB 원자 발송·수령과 관리자 전체 목록·회수·완료 정리 |
 
 `sendSystemMailToRecipients(ids, input)`은 ID를 정렬·중복 제거하고 같은 transaction에서 존재를 확인하며, `sendSystemMailToAllPlayers(input)`은 오프라인을 포함한 `Player` 행 전체를 transaction 안에서 조회한다. 후자는 가입 `User` 전체가 아니라 캐릭터가 생성된 행만 대상으로 한다. 두 API는 payload를 호출당 한 번 정규화하고 수신자 100명씩 `createMany`를 하나의 interactive transaction에서 순차 실행하므로 한 청크라도 실패하면 전부 rollback한다. 0명은 생성 없이 `{ recipientCount: 0 }`을 반환한다. 대량 입력은 `recipientId/sourceKey`를 받지 않아 같은 관리자 발송을 반복하면 새 우편이 만들어지며 결과 count는 관리자 비공개 피드백에만 사용한다.
+
+`encodeMailboxRewards/decodeMailboxRewards`는 아이템 목록과 Gold·칭호·스킬을 stable ID 기반 version 2 payload로 검증한다. `claimMailboxMessage`는 조건부 claim, Item 행, Gold 증가, 칭호 Progress, 스킬 최소 레벨을 같은 transaction에 확정하고 commit 뒤 온라인 Player 메모리를 동기화한다. `removeMailboxMessageByAdmin`은 같은 수신자의 claim queue를 사용하며 일반 우편은 삭제하고 source key가 있는 멱등 우편은 archive한다.
 
 ## 게임 모델 (`server/src/models`)
 
@@ -96,7 +98,7 @@
 | `NPC`, `DialogueScenario`, `Dialogue` | `NPC.define/getNpc/getAll`, `isVisibleTo`, `getEntryScenario/getScenario`, `say/event/setFlag/acceptQuest/turnInQuest/goto/choice/end` | NPC 정적 정의, 플레이어 Progress 기반 조건부 노출, 조건부 generator 장면과 타입별 대화·퀘스트 액션 생성 |
 | NPC dialogue | `startNpcDialogue`, `chooseNpcDialogue`, `endNpcDialogue/endNpcDialogueByUserId`, `is/getActiveNpcDialogue`, `updateNpcDialogues` | player별 비영속 대화 세션 시작·선택·종료와 이탈 안전망 |
 | `NpcFavorTier`, NPC relationship | `initializeNpcRelationshipProgress`, `getNpcFavorSnapshot(s)`, `awardNpcFavor`, `getNpcCommissionSnapshot`, `deliverNpcCommission`, `initNpcRelationshipEventTracking` | NPC별 0~100 호감도·KST 일일 10, 단계별 납품 보상과 NPC별 일일 제작/단조품 의뢰를 기존 PlayerProgress에 저장 |
-| Player cosmetics | `syncPlayerCosmeticUnlocks`, `getCosmeticFrameSnapshots`, `getPlayerCosmeticAppearance`, `selectCosmeticFrame`, `getChatEmoteSnapshots`, `buyChatEmote`, `createChatEmoteNode` | 레벨 변경 전후 이정표 영구 기록, 1000레벨 단위·초월 프레임의 원형/카드 독립 선택, 기본·Gold·조건형 감정표현 소유권 검증 |
+| Player cosmetics | `syncPlayerCosmeticUnlocks`, `getCosmeticFrameSnapshots`, `getPlayerCosmeticAppearance`, `selectCosmeticFrame`, `getChatEmoteSnapshots`, `buyChatEmote`, `drawRandomChatEmote`, `createChatEmoteNode`, `grant/revokeCosmeticFrame`, `grant/revokeChatEmote` | 레벨 변경 전후 이정표 영구 기록, 1000레벨 단위·초월 프레임의 원형/카드 독립 선택, 30종 기본·Gold·레벨·초월·낚시 뽑기형 감정표현과 관리자 지급/삭제 소유권 검증. 뽑기는 기본·초월 전용·관리자 삭제·보유 항목을 후보에서 제외한다. |
 | `ProgressType`, `PlayerProgress` | `values/fromKey`, `getCounter/setCounter/increment`, `getFlag/setFlag`, `getState/setState`, `reset`, `getSnapshots`, `subscribeChanges`, `load/save` | 통계·NPC 플래그·분기 상태의 메모리 dirty 영속 API |
 | `CodexCategory`, `CodexRank`, `CodexBook` | `values/fromKey/fromInput`, `createCodexEntryId`, `record/recordPlatinum/recordBossTimeAttack`, `isRankUnlocked`, `getEntrySnapshot(s)`, `getCategorySnapshot(s)`, `getBossTimeAttackSnapshots` | 다섯 전문 도감의 동·은·금·선택적 백금, 10%·35%·70%·100% 분류 해금과 보스별 최고 기록 DTO |
 | Codex registry/data | `defineCodexEntry`, `reloadCodexRegistry`, `freezeCodexRegistry`, `getCodexEntry`, `getAllCodexEntries`, `initializeCodexData` | raw Map을 숨긴 엔트리 검증·전체 교체와 모든 마스터 등록 뒤 일반 몬스터·보스·광맥·숨김 포함 장소·제작 recipe별 요리 엔트리 생성 |

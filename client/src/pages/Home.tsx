@@ -29,6 +29,7 @@ import type {
   PlayerStatsData,
   LocationInfoData,
   ChannelInfo,
+  ChatEmotePickerItem,
   UserCountData,
   CompletionItem,
 } from '@shared/types'
@@ -104,10 +105,13 @@ function HomeContent() {
   const [replyingTo, setReplyingTo] = useState<ChatReplyReference | null>(null)
   const [chatTypeKey, setChatTypeKey] = useState<ChatTypeKey>(ChatType.CHANNEL.key)
   const [chatTypeMenuOpen, setChatTypeMenuOpen] = useState(false)
+  const [emotePickerOpen, setEmotePickerOpen] = useState(false)
+  const [chatEmotes, setChatEmotes] = useState<ChatEmotePickerItem[]>([])
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const inputRef = useRef<HTMLDivElement>(null)
   const mediaInputRef = useRef<HTMLInputElement>(null)
   const chatTypeMenuRef = useRef<HTMLDivElement>(null)
+  const emotePickerRef = useRef<HTMLDivElement>(null)
   const pendingImagesRef = useRef<PendingChatImage[]>([])
   const imageSendingRef = useRef(false)
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -157,6 +161,22 @@ function HomeContent() {
       document.removeEventListener('keydown', closeOnEscape)
     }
   }, [chatTypeMenuOpen])
+
+  useEffect(() => {
+    if (!emotePickerOpen) return
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!emotePickerRef.current?.contains(event.target as Node)) setEmotePickerOpen(false)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setEmotePickerOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOnOutsidePointer)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [emotePickerOpen])
 
   useEffect(() => {
     if (!socket) return
@@ -218,6 +238,7 @@ function HomeContent() {
     }
     const onArgCompletions = (items: CompletionItem[]) => setDynamicCompletions(items)
     const onMentionCompletions = (items: CompletionItem[]) => setMentionCompletions(items)
+    const onChatEmoteList = (items: ChatEmotePickerItem[]) => setChatEmotes(items)
     const onInformationMode = (isPublic: boolean) => setInformationPublic(isPublic)
 
     socket.on('chatHistory', onChatHistory)
@@ -233,6 +254,7 @@ function HomeContent() {
     socket.on('clearChatView', onClearChatView)
     socket.on('argCompletions', onArgCompletions)
     socket.on('mentionCompletions', onMentionCompletions)
+    socket.on('chatEmoteList', onChatEmoteList)
     socket.on('informationMode', onInformationMode)
     socket.emit('requestChatHistory')
     socket.emit('requestCommandList')
@@ -254,6 +276,7 @@ function HomeContent() {
       socket.off('clearChatView', onClearChatView)
       socket.off('argCompletions', onArgCompletions)
       socket.off('mentionCompletions', onMentionCompletions)
+      socket.off('chatEmoteList', onChatEmoteList)
       socket.off('informationMode', onInformationMode)
     }
   }, [socket, setPlayerStats, setLocationInfo])
@@ -491,6 +514,21 @@ function HomeContent() {
     if (type !== ChatType.CHANNEL) setReplyingTo(null)
     requestAnimationFrame(focusComposerEnd)
   }, [focusComposerEnd])
+
+  const toggleEmotePicker = useCallback(() => {
+    setEmotePickerOpen(open => {
+      const next = !open
+      if (next) socket?.emit('requestChatEmotes')
+      return next
+    })
+    setChatTypeMenuOpen(false)
+  }, [socket])
+
+  const useChatEmote = useCallback((emote: ChatEmotePickerItem) => {
+    socket?.emit('useChatEmote', emote.key)
+    setEmotePickerOpen(false)
+    requestAnimationFrame(focusComposerEnd)
+  }, [focusComposerEnd, socket])
 
   // 명령어가 완성된 후 파라미터 입력 모드 계산
   const paramMode = useMemo(() => {
@@ -868,6 +906,43 @@ function HomeContent() {
                 isComposing.current = false;
               }}
             />
+            <div ref={emotePickerRef} className={styles.emotePicker}>
+              {emotePickerOpen && (
+                <div className={styles.emoteMenu} role="listbox" aria-label="보유 감정표현">
+                  <strong>보유 감정표현</strong>
+                  {chatEmotes.length > 0 ? (
+                    <div className={styles.emoteGrid}>
+                      {chatEmotes.map(emote => (
+                        <button
+                          key={emote.key}
+                          type="button"
+                          role="option"
+                          aria-label={`${emote.name} 사용`}
+                          title={emote.name}
+                          onPointerDown={event => event.preventDefault()}
+                          onClick={() => useChatEmote(emote)}
+                        >
+                          <img src={`/icons/${emote.image}.png`} alt="" draggable={false} />
+                          <span>{emote.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : <span className={styles.emoteEmpty}>사용 가능한 감정표현이 없습니다.</span>}
+                </div>
+              )}
+              <button
+                type="button"
+                className={styles.emoteButton}
+                aria-haspopup="listbox"
+                aria-expanded={emotePickerOpen}
+                aria-label="감정표현 선택"
+                title="감정표현 선택"
+                onPointerDown={event => event.preventDefault()}
+                onClick={toggleEmotePicker}
+              >
+                <img src="/icons/emotes/smile.png" alt="" draggable={false} />
+              </button>
+            </div>
             <button
               type="button"
               className={`${styles.visibilityButton} ${informationPublic ? styles.visibilityPublic : styles.visibilityPrivate}`}

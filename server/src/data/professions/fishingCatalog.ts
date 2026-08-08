@@ -268,6 +268,7 @@ for (const [locationId, table] of Object.entries({
         ...(table.chance >= 0.028
             ? [{ itemDataId: 'restored_stat_refund_ticket', weight: 0.25 }]
             : []),
+        { itemDataId: 'emote_draw_ticket', weight: 10 },
         { itemDataId: 'faded_stat_reset_ticket', weight: 4 },
     ]);
 }

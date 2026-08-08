@@ -29,7 +29,7 @@
 
 `PartyHud`는 nullable `playerStats.party`를 사용해 파티원별 레벨·생명력·정신력과 같은 장소 여부를 표시한다. 파티가 없으면 렌더링하지 않으며 HUD 설정 API로 표시·위치·크기를 조절한다. `Home.tsx`의 정보 공개 버튼은 서버 `informationMode` 이벤트만 상태 원본으로 사용한다. 미디어 버튼 옆의 위쪽 메뉴는 권한으로 필터한 `ChatType.values()`를 사용하며 일반 사용자에게 관리자 전용 공지를 렌더링하지 않는다. 채팅 첫 토큰이 `@`로 시작하면 온라인 플레이어 mention completion을 요청하고 선택한 닉네임을 `@닉네임 ` 형식으로 입력하며, 전송 타입 버튼은 입력 중에만 회색 귓속말 표시로 바뀐다.
 
-`Home.tsx`의 답장 상태는 원문 `messageId/userId/nickname/preview` snapshot 하나만 소유한다. 공개 메시지의 답장 버튼은 모바일 입력 포커스를 빼앗지 않고 입력창 위 미리보기를 열며, 텍스트 또는 이미지만 전송하는 첫 메시지에 `replyToId`를 붙인다. 전송된 `ChatMessage.replyTo` 카드를 누르면 `chat-message-{id}` 요소로 즉시 이동하고 1.6초 동안 강조한다. 원문이 현재 100개 히스토리에 없으면 입력창 안내를 표시한다.
+`Home.tsx`의 답장 상태는 원문 `messageId/userId/nickname/preview` snapshot 하나만 소유한다. 공개 메시지의 답장 버튼은 모바일 입력 포커스를 빼앗지 않고 입력창 위 미리보기를 열며, 텍스트 또는 이미지만 전송하는 첫 메시지에 `replyToId`를 붙인다. 전송된 `ChatMessage.replyTo` 카드를 누르면 `chat-message-{id}` 요소로 즉시 이동하고 1.6초 동안 강조한다. 원문이 현재 100개 히스토리에 없으면 입력창 안내를 표시한다. 비공개 버튼 왼쪽의 감정표현 버튼은 `requestChatEmotes`로 받은 보유 항목만 이미지 격자에 표시하고, 선택 시 텍스트 명령을 조립하지 않고 안정 ID를 `useChatEmote`로 보낸다.
 
 `components/minigame/MiniGameOverlay`는 서버 `miniGameStart`를 전체 화면 overlay로 렌더링한다. 준비 뒤 키보드와 pointer 조이스틱의 축 변경은 `miniGameInput`, Space·Enter·터치 타격은 `miniGameAction`으로 즉시 전송한다. 단조는 난이도·원 정확도·보정 품질을 표시하고 첫 사용자 타격 이후 Web Audio 접근 cue와 충격음을 재생한다. 낚시는 공용 `createFishingCaptureProof()`로 성공/실패 frame의 client elapsed, 불변 입력, 100ms 간격+최종 그물·물고기·게이지 궤적을 만들어 `miniGameResult.fishingProof`에 넣는다. 가마솥 추적은 768×768 WebP 배경 위 4.5~6 반경 목표를 최초 primary pointerdown한 순간에만 `miniGameReady`를 보내고, 최초 down을 보존한 20ms 절대 pointer trace와 100ms 목표·pointer·게이지 궤적을 `createAlchemyTrackingProof()`로 만들어 `miniGameResult.alchemyTrackingProof`에 넣는다. 위험 회피·단조 결과는 기존 session/token만 보내며, proof의 궤적·경과 시간·최종 성공 권한은 서버 재생 검증에 있다.
 
@@ -37,7 +37,7 @@
 
 | API | 위치 | 용도 |
 | --- | --- | --- |
-| `renderNode(node, key)` | `components/chat/ChatMessage.tsx` | ChatNode별 renderer dispatch. `emote`는 공유 안정 ID의 glyph·접근성 이름만 렌더링 |
+| `renderNode(node, key)` | `components/chat/ChatMessage.tsx` | ChatNode별 renderer dispatch. `emote`는 공유 안정 ID의 전용 투명 PNG·접근성 이름을 렌더링 |
 | `resolveColor(color)` | `components/chat/ChatMessage.tsx` | `$token` 또는 CSS color 해석 |
 | `summarizeChatContent(content)` | `shared/chat.ts` | 구조화 메시지를 답장 카드용 최대 120자 한 줄 요약으로 변환 |
 | `resolveCommandInput(commands, raw)` | `utils/commandAutocomplete.ts` | 슬래시 명령 또는 첫 단어가 정확한 별칭인 입력을 CommandInfo에 연결 |
@@ -55,11 +55,12 @@
 | API | 위치 | 용도 |
 | --- | --- | --- |
 | `Dialog` | `components/dialog/Dialog.tsx` | portal 기반 접근 가능한 공용 화면 오버레이, Escape/배경 닫기와 포커스 복원 |
-| `FormDialog` | `components/dialog/FormDialog.tsx` | 필드 정의 배열로 text/number/select/textarea/checkbox 입력 및 비동기 실행 UI 생성. 필수 select는 첫 option을 기본 선택 |
+| `FormDialog` | `components/dialog/FormDialog.tsx` | 기본 필드와 `reward-bundle` 반복 입력 및 비동기 실행 UI 생성. 필수 select는 첫 option을 기본 선택 |
+| `RewardBundleEditor` | `components/dialog/RewardBundleEditor.tsx` | 관리자 우편용 Gold·아이템·칭호·스킬 목록을 검색·추가·삭제해 JSON 경계값으로 직렬화 |
 | `SearchableSelect` | `components/dialog/SearchableSelect.tsx` | label·코드·설명 검색과 viewport 기준 위/아래 배치, Dialog overflow 밖 portal 목록을 제공하는 공용 combobox |
 | `DisplaySettingsDialog` | `components/DisplaySettingsDialog.tsx` | 햄버거 메뉴에서 60~200% 페이지 확대율을 5% 단위로 선택하고 적용 |
 
-`AdminPage`는 이 API로 플레이어·월드 action 입력을 구성한다. 상세·검사 목록은 viewport 내부 스크롤을 사용하고 PC의 중앙 모달은 모바일에서 viewport 폭의 하단 시트로 바뀐다.
+`AdminPage`는 이 API로 플레이어·월드 action 입력을 구성한다. `꾸미기` 카테고리는 선택 유저의 프레임·감정표현 상태로 미보유 지급 목록과 보유 삭제 목록을 각각 만들며 서버가 조건 없는 지급·차단 삭제를 다시 검증한다. `메시지` 카테고리는 복합 보상 우편 발송과 stable 우편 ID 삭제를 제공한다. 상세·검사 목록은 viewport 내부 스크롤을 사용하고 PC의 중앙 모달은 모바일에서 viewport 폭의 하단 시트로 바뀐다.
 
 `utils/displayPreferences.ts`는 `getUiScale/setUiScale/initializeUiScale` 공개 API와 허용 범위를 소유한다. `main.tsx`가 React 렌더 전에 저장 배율을 CSS `zoom` 변수로 복원하므로 body portal인 Dialog·미니게임까지 같은 배율을 사용한다. Drawer의 전체화면 버튼은 표준 Fullscreen API와 WebKit 호환 API를 사용자 클릭 안에서 호출하고 미지원·권한 거절을 화면에 안내한다.
 

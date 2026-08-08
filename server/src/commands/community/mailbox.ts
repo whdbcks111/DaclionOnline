@@ -68,12 +68,17 @@ export function buildMailboxDetailMessage(mail: MailboxMessageDetail): ChatNode[
         .text(mail.body);
     if (mail.attachmentCorrupted) {
         builder.text('\n\n').color('red', warning => warning.text('첨부 정보가 손상되었습니다. 관리자에게 문의해 주세요.'));
-    } else if (mail.attachments.length > 0) {
+    } else if (mail.attachmentCount > 0) {
         builder.text('\n\n').weight('bold', title => title.text(`[ 첨부 · ${attachmentStatus(mail)} ]`));
         for (const item of mail.attachments) builder.text(`\n${item.name} x${item.count}`);
     }
+    if (!mail.attachmentCorrupted && mail.gold > 0) builder.text(`\n${mail.gold.toLocaleString()} Gold`);
+    if (!mail.attachmentCorrupted) {
+        for (const title of mail.titles) builder.text(`\n칭호 [ ${title.name} ]`);
+        for (const skill of mail.skills) builder.text(`\n스킬 [ ${skill.name} ] Lv.${skill.level}`);
+    }
     if (mail.expiresAt) builder.text(`\n\n만료: ${mailDateFormatter.format(mail.expiresAt)}`);
-    if (mail.attachments.length > 0 && !mail.claimedAt && !mail.expired && !mail.attachmentCorrupted) {
+    if (mail.attachmentCount > 0 && !mail.claimedAt && !mail.expired && !mail.attachmentCorrupted) {
         builder.text('\n\n').button(`/우편수령 ${mail.id}`, button => button.text('[첨부 수령]'));
     }
     return builder.build();
@@ -83,6 +88,9 @@ function formatClaimSuccess(result: Extract<MailboxClaimResult, { success: true 
     const builder = chat()
         .weight('bold', title => title.text(`[ 우편 #${result.mailId} 수령 완료 ]`));
     for (const item of result.items) builder.text(`\n${item.name} x${item.count}`);
+    if (result.gold > 0) builder.text(`\n${result.gold.toLocaleString()} Gold`);
+    for (const title of result.titles) builder.text(`\n칭호 [ ${title.name} ]`);
+    for (const skill of result.skills) builder.text(`\n스킬 [ ${skill.name} ] Lv.${skill.level}`);
     if (!result.memorySynchronized) {
         builder.text('\n\n').color('orange', warning =>
             warning.text('첨부는 서버에 안전하게 저장됐습니다. 현재 인벤토리에 보이지 않으면 다시 접속해 주세요.'));
@@ -144,7 +152,7 @@ export function initMailboxCommands(): void {
     registerCommand({
         name: '우편수령',
         aliases: ['mailclaim'],
-        description: '우편 첨부 아이템 한 통 또는 받을 수 있는 전체를 수령합니다.',
+        description: '우편 보상 한 통 또는 받을 수 있는 전체를 수령합니다.',
         showCommandUse: 'private',
         args: [{ name: '우편번호', description: '/우편함에 표시된 번호 또는 전체', required: true }],
         async handler(userId, args) {
@@ -160,11 +168,9 @@ export function initMailboxCommands(): void {
                         sendPrivateBotMessageToUser(userId, '수령할 수 있는 우편 첨부가 없습니다.');
                         return;
                     }
-                    const itemCount = succeeded.reduce((sum, result) =>
-                        sum + (result.success ? result.items.reduce((inner, item) => inner + item.count, 0) : 0), 0);
                     sendPrivateBotMessageToUser(
                         userId,
-                        `우편 ${succeeded.length}통의 첨부 ${itemCount}개를 수령했습니다.${failed.length > 0 ? ` (${failed.length}통 보류)` : ''}${batch.hasMore ? '\n처리 한도 밖의 첨부가 남아 있습니다. /우편수령 전체를 다시 실행해 주세요.' : ''}`,
+                        `우편 ${succeeded.length}통의 보상 묶음을 수령했습니다.${failed.length > 0 ? ` (${failed.length}통 보류)` : ''}${batch.hasMore ? '\n처리 한도 밖의 첨부가 남아 있습니다. /우편수령 전체를 다시 실행해 주세요.' : ''}`,
                     );
                     return;
                 }

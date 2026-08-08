@@ -9,7 +9,7 @@ import type {
     AdminPlayerListItem,
 } from '../../../../shared/types.js';
 import prisma from '../../config/prisma.js';
-import { getAllItemData, getItemData } from '../../models/economy/Item.js';
+import { Item, getAllItemData, getItemData, type ItemSnapshot } from '../../models/economy/Item.js';
 import { getAllSkillData, getSkillData } from '../../models/progression/Skill.js';
 import { getAllTitles } from '../../models/progression/Title.js';
 import { getAllJobs, JobTier } from '../../models/progression/Job.js';
@@ -48,6 +48,21 @@ import {
     type SkillBalanceReport,
     type CombatRotationReport,
 } from '../../models/progression/Balance.js';
+import { CHAT_EMOTES, COSMETIC_FRAMES, getChatEmote, getCosmeticFrame } from '../../../../shared/cosmetics.js';
+import {
+    getChatEmoteSnapshots,
+    getCosmeticFrameSnapshots,
+    grantChatEmote,
+    grantCosmeticFrame,
+    revokeChatEmote,
+    revokeCosmeticFrame,
+} from '../../models/progression/PlayerCosmetics.js';
+import {
+    listMailboxMessagesForAdmin,
+    removeMailboxMessageByAdmin,
+    sendSystemMail,
+    type MailboxRewardInput,
+} from '../communication/mailbox.js';
 
 const ADMIN_PERMISSION = 10;
 const VITAL_TYPES = Object.freeze({
@@ -83,6 +98,8 @@ export function getAdminPanelBootstrap(): AdminPanelBootstrapData {
             data.name,
             `${data.acquisitionDescription} · ${data.description}`,
         )),
+        cosmeticFrames: COSMETIC_FRAMES.map(frame => option(frame.key, frame.name, frame.description)),
+        chatEmotes: CHAT_EMOTES.map(emote => option(emote.key, emote.name, emote.description)),
         jobs: getAllJobs().filter(job => job.tier === JobTier.FIRST).map(job => option(job.id, job.name, job.description)),
         locations: getAllLocations().map(location => option(location.id, location.data.name)),
         monsters: getAllMonsterData().map(monster => option(monster.id, monster.name, `Lv.${monster.level}`)),
@@ -134,6 +151,7 @@ export async function getAdminPlayerDetail(userId: number): Promise<AdminPlayerD
     ]);
     if (!user || !player) return null;
     const location = getLocation(player.locationId);
+    const mailboxMessages = await listMailboxMessagesForAdmin(userId);
     return {
         userId,
         username: user.username,
@@ -193,6 +211,34 @@ export async function getAdminPlayerDetail(userId: number): Promise<AdminPlayerD
             name: title.name,
             equipped: title.equipped,
         })),
+        cosmeticFrames: getCosmeticFrameSnapshots(player).map(frame => ({
+            key: frame.key,
+            name: frame.name,
+            unlocked: frame.unlocked,
+            adminGranted: frame.adminGranted,
+            revoked: frame.revoked,
+            selectedAvatar: frame.selectedAvatar,
+            selectedChat: frame.selectedChat,
+        })),
+        chatEmotes: getChatEmoteSnapshots(player).map(emote => ({
+            key: emote.key,
+            name: emote.name,
+            image: emote.image,
+            unlocked: emote.unlocked,
+            owned: emote.owned,
+            adminGranted: emote.adminGranted,
+            revoked: emote.revoked,
+        })),
+        mailboxMessages: mailboxMessages.map(mail => ({
+            id: mail.id,
+            senderLabel: mail.senderLabel,
+            subject: mail.subject,
+            attachmentCount: mail.attachmentCount,
+            createdAt: mail.createdAt.toISOString(),
+            read: mail.readAt !== null,
+            claimed: mail.claimedAt !== null,
+            expired: mail.expired,
+        })),
         statusEffects: player.getStatusEffectDisplaySnapshots().map(effect => ({
             id: effect.id,
             label: effect.label,
@@ -232,6 +278,54 @@ function noticeMessage(values: ReturnType<typeof valuesOf>): string {
 function notificationLength(values: ReturnType<typeof valuesOf>): number {
     if (values.duration === undefined || values.duration === null || values.duration === '') return 5000;
     return numberValue(values, 'duration', { min: 1, max: 60 }) * 1000;
+}
+
+function parseAdminMailRewards(values: ReturnType<typeof valuesOf>): {
+    items: ItemSnapshot[];
+    rewards: MailboxRewardInput;
+} {
+    const raw = stringValue(values, 'rewardBundle', true) || '{}';
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(raw);
+    } catch {
+        throw new Error('우편 보상 구성이 올바르지 않습니다. 보상 편집기에서 다시 선택해 주세요.');
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('우편 보상 구성이 올바르지 않습니다.');
+    }
+    const bundle = parsed as Record<string, unknown>;
+    const rawItems = bundle.items ?? [];
+    const rawTitles = bundle.titleIds ?? [];
+    const rawSkills = bundle.skills ?? [];
+    if (!Array.isArray(rawItems) || !Array.isArray(rawTitles) || !Array.isArray(rawSkills)) {
+        throw new Error('우편 아이템·칭호·스킬 목록 형식이 올바르지 않습니다.');
+    }
+    const items = rawItems.map(entry => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error('우편 아이템 구성이 올바르지 않습니다.');
+        const candidate = entry as Record<string, unknown>;
+        const itemDataId = typeof candidate.itemDataId === 'string' ? candidate.itemDataId : '';
+        const count = typeof candidate.count === 'number' ? candidate.count : Number(candidate.count);
+        const data = getItemData(itemDataId);
+        if (!data) throw new Error(`아이템 정의를 찾을 수 없습니다: ${itemDataId}`);
+        if (!Number.isSafeInteger(count) || count < 1) throw new Error(`${data.name} 수량은 1 이상의 정수여야 합니다.`);
+        return new Item(data.id, count, null, null).snapshot(count);
+    });
+    return {
+        items,
+        rewards: {
+            gold: typeof bundle.gold === 'number' ? bundle.gold : Number(bundle.gold ?? 0),
+            titleIds: rawTitles.map(value => String(value)),
+            skills: rawSkills.map(entry => {
+                if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error('우편 스킬 구성이 올바르지 않습니다.');
+                const candidate = entry as Record<string, unknown>;
+                return {
+                    skillDataId: String(candidate.skillDataId ?? ''),
+                    level: typeof candidate.level === 'number' ? candidate.level : Number(candidate.level),
+                };
+            }),
+        },
+    };
 }
 
 async function targetPlayer(request: AdminPanelActionRequest): Promise<Player> {
@@ -280,6 +374,28 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
                 length: notificationLength(values),
             });
             return `${online.name}에게 알림 공지를 발송했습니다.`;
+        }
+        case 'send_mail': {
+            const { items, rewards } = parseAdminMailRewards(values);
+            const expiresInHours = numberValue(values, 'expiresInHours', { min: 0, max: 8760 });
+            const mail = await sendSystemMail({
+                recipientId: player.userId,
+                senderLabel: stringValue(values, 'senderLabel'),
+                subject: stringValue(values, 'subject'),
+                body: stringValue(values, 'body'),
+                items,
+                rewards,
+                ...(expiresInHours > 0
+                    ? { expiresAt: new Date(Date.now() + expiresInHours * 60 * 60 * 1000) }
+                    : {}),
+            });
+            return `${player.name}에게 우편 #${mail.id} '${mail.subject}'을(를) 발송했습니다.`;
+        }
+        case 'remove_mail': {
+            const mailId = numberValue(values, 'mailId', { integer: true, min: 1 });
+            const result = await removeMailboxMessageByAdmin(player.userId, mailId);
+            if (!result.removed) throw new Error('삭제할 우편을 찾을 수 없습니다. 이미 수령·정리되었는지 확인해 주세요.');
+            return `${player.name}의 우편 #${mailId} '${result.subject ?? ''}'을(를) 삭제했습니다.`;
         }
         case 'teleport_admin_to_player': {
             const admin = getPlayerByUserId(adminId);
@@ -380,6 +496,42 @@ async function executePlayerAction(adminId: number, request: AdminPanelActionReq
             if (!result.success || !result.title) throw new Error(result.reason ?? '칭호를 삭제할 수 없습니다.');
             await save(player);
             return `${player.name}의 칭호 [ ${result.title.name} ] 을(를) 삭제했습니다.`;
+        }
+        case 'grant_cosmetic_frame': {
+            const frame = getCosmeticFrame(stringValue(values, 'frameKey'));
+            if (!frame) throw new Error('프레임을 찾을 수 없습니다.');
+            const result = grantCosmeticFrame(player, frame.key);
+            await save(player);
+            return result.changed
+                ? `${player.name}에게 ${frame.name} 프레임을 조건 없이 지급했습니다.`
+                : `${player.name}은(는) 이미 ${frame.name} 프레임을 관리자 지급으로 보유하고 있습니다.`;
+        }
+        case 'remove_cosmetic_frame': {
+            const frame = getCosmeticFrame(stringValue(values, 'frameKey'));
+            if (!frame) throw new Error('프레임을 찾을 수 없습니다.');
+            const result = revokeCosmeticFrame(player, frame.key);
+            await save(player);
+            return result.changed
+                ? `${player.name}의 ${frame.name} 프레임을 삭제했습니다.`
+                : `${player.name}의 ${frame.name} 프레임은 이미 삭제된 상태입니다.`;
+        }
+        case 'grant_chat_emote': {
+            const emote = getChatEmote(stringValue(values, 'emoteKey'));
+            if (!emote) throw new Error('감정표현을 찾을 수 없습니다.');
+            const result = grantChatEmote(player, emote.key);
+            await save(player);
+            return result.changed
+                ? `${player.name}에게 ${emote.name} 감정표현을 조건 없이 지급했습니다.`
+                : `${player.name}은(는) 이미 ${emote.name} 감정표현을 관리자 지급으로 보유하고 있습니다.`;
+        }
+        case 'remove_chat_emote': {
+            const emote = getChatEmote(stringValue(values, 'emoteKey'));
+            if (!emote) throw new Error('감정표현을 찾을 수 없습니다.');
+            const result = revokeChatEmote(player, emote.key);
+            await save(player);
+            return result.changed
+                ? `${player.name}의 ${emote.name} 감정표현을 삭제했습니다.`
+                : `${player.name}의 ${emote.name} 감정표현은 이미 삭제된 상태입니다.`;
         }
         case 'set_jobs': {
             const result = player.career.setByAdmin(

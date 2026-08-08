@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Dialog from './Dialog'
 import styles from './Dialog.module.scss'
 import SearchableSelect from './SearchableSelect'
+import RewardBundleEditor, { type RewardBundleOptions } from './RewardBundleEditor'
 
 export interface FormDialogOption {
   value: string
@@ -12,7 +13,7 @@ export interface FormDialogOption {
 export interface FormDialogField {
   name: string
   label: string
-  type?: 'text' | 'number' | 'select' | 'textarea' | 'checkbox'
+  type?: 'text' | 'number' | 'select' | 'textarea' | 'checkbox' | 'reward-bundle'
   options?: readonly FormDialogOption[]
   defaultValue?: string | number | boolean
   placeholder?: string
@@ -21,6 +22,7 @@ export interface FormDialogField {
   min?: number
   max?: number
   step?: number
+  rewardOptions?: RewardBundleOptions
 }
 
 export type FormDialogValues = Record<string, string | number | boolean>
@@ -97,7 +99,17 @@ export default function FormDialog({ open, title, description, fields = [], subm
     >
       <form id="common-form-dialog" className={styles.form} onSubmit={submit}>
         {description && <p className={styles.description}>{description}</p>}
-        {fields.map(field => (
+        {fields.map(field => field.type === 'reward-bundle' ? (
+          <div key={field.name} className={styles.field}>
+            <span>{field.label}{field.required && <b aria-hidden="true"> *</b>}</span>
+            <RewardBundleEditor
+              value={String(values[field.name] ?? '')}
+              options={field.rewardOptions ?? { items: [], titles: [], skills: [] }}
+              onChange={value => setValues(current => ({ ...current, [field.name]: value }))}
+            />
+            {field.help && <small>{field.help}</small>}
+          </div>
+        ) : (
           <label key={field.name} className={field.type === 'checkbox' ? styles.checkboxField : styles.field}>
             {field.type !== 'checkbox' && <span>{field.label}{field.required && <b aria-hidden="true"> *</b>}</span>}
             {field.type === 'select' ? (

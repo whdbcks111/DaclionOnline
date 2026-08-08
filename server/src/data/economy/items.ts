@@ -29,6 +29,7 @@ import type {
 import { AttributeType } from '../../models/core/Attribute.js';
 import { ItemAttackEffectType } from '../../models/economy/ItemAttackEffect.js';
 import { FISHING_EQUIPMENT_TIERS } from '../professions/fishingEquipmentCatalog.js';
+import { drawRandomChatEmote } from '../../models/progression/PlayerCosmetics.js';
 
 registerItemAttackOverride(ItemAttackOverrideKeys.PROJECTILE, executeProjectileItemAttack);
 registerItemAttackOverride(ItemAttackOverrideKeys.BURST_FIREARM, executeBurstFirearmAttack);
@@ -385,6 +386,35 @@ registerItemUse('refund_allocated_stats', (inv, item, finish) => {
     }
 });
 
+registerItemUse('draw_chat_emote', (inv, item, finish) => {
+    try {
+        const player = getPlayerByUserId(inv.playerId);
+        if (!player) return;
+        const ticket = item.snapshot(1);
+        if (!inv.removeItemInstance(item, 1)) return;
+        const result = drawRandomChatEmote(player);
+        if (!result.success) {
+            if (!inv.restoreItemSnapshot(ticket)) {
+                logger.error(`감정표현 뽑기 실패 후 티켓 복원 실패: user=${player.userId}`);
+            }
+            sendNotificationToUser(player.userId, {
+                key: 'item:chat-emote-draw:complete',
+                message: result.reason,
+            });
+            return;
+        }
+        sendNotificationToUser(player.userId, {
+            key: `item:chat-emote-draw:${result.emote.key}`,
+            message: `감정표현 뽑기에서 [ ${result.emote.name} ]을(를) 획득했습니다!`,
+            length: 5_000,
+        });
+    } catch (error) {
+        logger.error('감정표현 뽑기권 사용 실패', error);
+    } finally {
+        finish();
+    }
+});
+
 defineItem({
     id: 'health_potion',
     name: '체력 포션',
@@ -531,6 +561,23 @@ defineItem({
     modifiers: null,
     baseDurability: null,
     tags: [],
+});
+
+defineItem({
+    id: 'emote_draw_ticket',
+    name: '감정표현 뽑기권',
+    description: '낚시 보물에서 발견되는 뽑기권. 사용하면 아직 보유하지 않은 감정표현 하나를 무작위로 영구 해금한다.',
+    image: 'items/emote_draw_ticket',
+    category: '소모품',
+    weight: 0.02,
+    stackable: true,
+    maxStack: MAX_STACKABLE_ITEM_COUNT,
+    baseMetadata: null,
+    onUse: 'draw_chat_emote',
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [GameTags.ITEM_CONSUMABLE],
 });
 
 // TODO: 전용 아트 제작 단계에서 두 초기화권에 복제한 hostile_return_scroll fallback을 교체한다.
