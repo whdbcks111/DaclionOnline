@@ -26,6 +26,7 @@ import { initTitleCommands } from './player/title.js';
 import { initCodexCommands } from './world/codex.js';
 import { initMailboxCommands } from './community/mailbox.js';
 import { initAlchemyCommands } from './economy/alchemy.js';
+import { initCosmeticCommands } from './community/cosmetics.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -56,4 +57,5 @@ export function initAllCommands(): void {
     initCodexCommands();
     initMailboxCommands();
     initAlchemyCommands();
+    initCosmeticCommands();
 }

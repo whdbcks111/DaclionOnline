@@ -52,6 +52,7 @@ Express + Socket.io (`server/src/index.ts`)
 | 최근 GameEvent trace | `models/core/GameEvent.ts` | 최근 500개 메모리 스냅샷, 재시작 시 소실 |
 | NPC 정의/활성 대화 | `models/actors/NPC.ts` / `models/actors/NpcDialogue.ts` | 정의는 코드 레지스트리, player별 세션은 메모리이며 이동·사망·logout 시 폐기 |
 | NPC 호감도/제작 의뢰 | `models/progression/NpcRelationship.ts` → `Player.progress` | NPC별 호감도·KST 일일량·최대 답례·당일 주문과 누적 완료를 기존 dirty flush로 영속 |
+| 프로필/채팅 꾸미기 | `models/progression/PlayerCosmetics.ts` → `Player.progress` | 레벨 이정표·Gold 감정표현 보유·원형/카드 프레임 선택을 영속하고 채팅 히스토리에는 전송 시점 외형만 snapshot |
 | Entity 상태효과/행동 제한 | `models/combat/StatusEffect.ts` / `models/core/Action.ts` | 효과와 tick/source별 제한은 메모리, 제압·재시작 시 소실 |
 | User/Player/Item/Equipment/PlayerProgress/PlayerSkill | Prisma 모델 | MariaDB 영속 저장 |
 | 현재 HUD 배치·투명도·퀵슬롯·스킬/아이템 버튼 | `HudContext.tsx`, `skillHudConfig.ts` | 계정 ID로 분리한 브라우저 `localStorage` |

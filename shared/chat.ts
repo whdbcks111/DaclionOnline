@@ -1,4 +1,5 @@
 import type { ChatMessage, ChatNode, ChatTypeKey } from './types.js'
+import { getChatEmote } from './cosmetics.js'
 
 export const MAX_CHAT_REPLY_PREVIEW_LENGTH = 120
 export const CHAT_ADVERTISEMENT_COOLDOWN_MS = 30_000
@@ -59,6 +60,8 @@ function nodeText(node: ChatNode): string {
             return '사진'
         case 'worldMap':
             return '지도'
+        case 'emote':
+            return getChatEmote(node.id)?.name ?? '감정표현'
         case 'icon':
             return ''
         case 'progress':

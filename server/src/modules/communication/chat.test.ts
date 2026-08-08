@@ -44,6 +44,7 @@ import {
 import { getIO, initSocket } from '../infrastructure/socket.js';
 import { PlayerProgress } from '../../models/progression/Progress.js';
 import { ASCENSION_RANK_COUNTER } from '../../models/progression/Ascension.js';
+import { selectCosmeticFrame } from '../../models/progression/PlayerCosmetics.js';
 
 const httpServer = createServer();
 initSocket(httpServer, 'http://localhost');
@@ -180,6 +181,29 @@ test('플레이어 채팅은 전송 시점의 초월 여부를 히스토리에 �
     }
 });
 
+test('플레이어 채팅은 프로필 원형과 채팅 카드 프레임을 별도 스냅샷한다', () => {
+    const userId = 96_832;
+    const progress = PlayerProgress.createEmpty(userId);
+    const player = { userId, level: 2_000, progress } as Player;
+    selectCosmeticFrame(player, 'avatar', 'azure');
+    selectCosmeticFrame(player, 'chat', 'amethyst');
+    registerOnlinePlayer(player);
+
+    try {
+        sendMessageToChannel({
+            userId,
+            nickname: '프레임 시험자',
+            content: [{ type: 'text', text: '독립 프레임' }],
+            timestamp: Date.now(),
+        }, 'cosmetic-frame-test');
+        const stored = getChannelHistory('cosmetic-frame-test').at(-1);
+        assert.equal(stored?.avatarFrame, 'azure');
+        assert.equal(stored?.chatFrame, 'amethyst');
+    } finally {
+        unregisterOnlinePlayer(userId);
+    }
+});
+
 test('일반 사용자가 변조한 공지 요청은 서버 전달 경계에서 거절한다', () => {
     const before = getChannelHistory(null).length;
     const result = deliverChatMessage(9683, 0, {
@@ -228,6 +252,7 @@ test('답장 요약은 구조화 노드를 한 줄로 만들고 길이를 제한
         { type: 'color', color: '$primary', children: [{ type: 'text', text: '안녕하세요\n모험가' }] },
         { type: 'image', src: '/image.webp', alt: '이미지', maxHeight: 100 },
     ]), '안녕하세요 모험가 사진');
+    assert.equal(summarizeChatContent([{ type: 'emote', id: 'wave' }]), '손흔들기');
     assert.equal(summarizeChatContent('1234567890 ABC', 10), '123456789…');
 });
 

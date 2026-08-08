@@ -17,6 +17,7 @@ import { ChatType, CHAT_WHISPER_DISPLAY } from '../../../../shared/chat.js';
 import { shouldPublishInformationOutput } from '../player/informationVisibility.js';
 import { getOnlinePlayer } from '../player/playerRegistry.js';
 import { isAscended } from '../../models/progression/Ascension.js';
+import { getPlayerCosmeticAppearance } from '../../models/progression/PlayerCosmetics.js';
 
 const BOT_USER_ID = 0;
 const BOT_NICKNAME = "Daclion System";
@@ -32,13 +33,16 @@ function withId(msg: ChatMessage): ChatMessage {
     if (msg.id) return msg;
     const player = msg.userId > 0 ? getOnlinePlayer(msg.userId) : undefined;
     const equippedTitle = player?.titles?.equippedName;
+    const appearance = player?.progress ? getPlayerCosmeticAppearance(player) : {};
+    const { avatarFrame: _ignoredAvatarFrame, chatFrame: _ignoredChatFrame, ...base } = msg;
     return {
-        ...msg,
+        ...base,
         id: generateMessageId(),
         ...(player?.isNewcomer ? { newcomer: true } : {}),
         ...(player?.isKarmaMarked ? { karmaMarked: true } : {}),
         ...(equippedTitle ? { equippedTitle } : {}),
         ...(player?.progress && isAscended(player.progress) ? { ascended: true } : {}),
+        ...appearance,
     };
 }
 
@@ -117,6 +121,11 @@ function makePlayerMessage(userId: number, content: string | ChatNode[]): ChatMe
 
 /** 시스템이 플레이어의 실제 채팅처럼 현재 채널에 짧은 텍스트를 전송한다. */
 export function sendPlayerTextToCurrentChannel(userId: number, content: string): boolean {
+    return sendPlayerContentToCurrentChannel(userId, content);
+}
+
+/** 시스템이 플레이어의 실제 채팅처럼 현재 채널에 구조화 콘텐츠를 전송한다. */
+export function sendPlayerContentToCurrentChannel(userId: number, content: string | ChatNode[]): boolean {
     const message = makePlayerMessage(userId, content);
     if (!message) return false;
     sendMessageToChannel(message, getUserChannel(userId));

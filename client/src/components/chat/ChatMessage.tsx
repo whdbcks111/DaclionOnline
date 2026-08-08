@@ -15,6 +15,7 @@ import TabNode from './nodes/TabNode'
 import WeightNode from './nodes/WeightNode'
 import TooltipNode from './nodes/TooltipNode'
 import WorldMapNode from './nodes/WorldMapNode'
+import EmoteNode from './nodes/EmoteNode'
 import { preserveActiveEditableFocus } from '../../utils/focus'
 import styles from './ChatMessage.module.scss'
 
@@ -58,6 +59,8 @@ export function renderNode(node: ChatNode, key: number): React.ReactNode {
             return <TooltipNode key={key} description={node.description} children={node.children} />
         case 'worldMap':
             return <WorldMapNode key={key} data={node.data} />
+        case 'emote':
+            return <EmoteNode key={key} id={node.id} />
     }
 }
 
@@ -115,6 +118,7 @@ export default function ChatMessage({
                     {showHeader && (
                         <div
                             className={styles.avatar}
+                            data-frame={message.avatarFrame}
                             style={message.profileImage ? {
                                 backgroundImage: getProfileImageURL(message.profileImage)
                             } : undefined}
@@ -164,7 +168,10 @@ export default function ChatMessage({
                             <span className={styles.replyExcerpt}>{message.replyTo.preview}</span>
                         </button>
                     )}
-                    <div className={`${styles.body} ${hasTopLevelImage ? styles.mediaBody : ''}`}>
+                    <div
+                        className={`${styles.body} ${hasTopLevelImage ? styles.mediaBody : ''}`}
+                        data-frame={message.chatFrame}
+                    >
                         <div className={styles.content} onPointerDownCapture={preserveActiveEditableFocus}>
                             {nodes.map((node, i) => renderNode(node, i))}
                         </div>

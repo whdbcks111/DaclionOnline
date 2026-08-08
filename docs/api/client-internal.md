@@ -37,7 +37,7 @@
 
 | API | 위치 | 용도 |
 | --- | --- | --- |
-| `renderNode(node, key)` | `components/chat/ChatMessage.tsx` | ChatNode별 renderer dispatch |
+| `renderNode(node, key)` | `components/chat/ChatMessage.tsx` | ChatNode별 renderer dispatch. `emote`는 공유 안정 ID의 glyph·접근성 이름만 렌더링 |
 | `resolveColor(color)` | `components/chat/ChatMessage.tsx` | `$token` 또는 CSS color 해석 |
 | `summarizeChatContent(content)` | `shared/chat.ts` | 구조화 메시지를 답장 카드용 최대 120자 한 줄 요약으로 변환 |
 | `resolveCommandInput(commands, raw)` | `utils/commandAutocomplete.ts` | 슬래시 명령 또는 첫 단어가 정확한 별칭인 입력을 CommandInfo에 연결 |

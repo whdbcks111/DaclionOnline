@@ -31,6 +31,26 @@ $avatar-size: 40px;
     background: url('/icons/profile_image_basic.png') center / cover no-repeat;
 }
 
+.avatar[data-frame='azure'] {
+    border-color: #48b9ff;
+    box-shadow: 0 0 0 2px rgba(72, 185, 255, 0.32), 0 0 12px rgba(72, 185, 255, 0.5);
+}
+
+.avatar[data-frame='amethyst'] {
+    border-color: #b77cff;
+    box-shadow: 0 0 0 2px rgba(183, 124, 255, 0.36), 0 0 14px rgba(123, 72, 214, 0.55);
+}
+
+.avatar[data-frame='aurora'],
+.avatar[data-frame='transcendent'] {
+    border-color: transparent;
+    animation: cosmetic-avatar-glow 3.2s ease-in-out infinite;
+}
+
+.avatar[data-frame='transcendent'] {
+    animation-name: cosmetic-transcendent-glow;
+}
+
 .bodyWrap {
     min-width: 0;
     flex: 0 1 auto;
@@ -72,6 +92,45 @@ $avatar-size: 40px;
     }
 }
 
+.body[data-frame='azure'] {
+    border-color: rgba(72, 185, 255, 0.75);
+    box-shadow: inset 3px 0 0 #48b9ff, 0 0 9px rgba(72, 185, 255, 0.16);
+}
+
+.body[data-frame='amethyst'] {
+    border-color: rgba(183, 124, 255, 0.78);
+    box-shadow: inset 3px 0 0 #b77cff, 0 0 11px rgba(123, 72, 214, 0.2);
+}
+
+.body[data-frame='aurora'],
+.body[data-frame='transcendent'] {
+    animation: cosmetic-card-glow 3.2s ease-in-out infinite;
+}
+
+.body[data-frame='transcendent'] {
+    animation-name: cosmetic-transcendent-card-glow;
+}
+
+@keyframes cosmetic-avatar-glow {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(55, 216, 255, 0.8), 0 0 12px rgba(55, 216, 255, 0.46); }
+    50% { box-shadow: 0 0 0 2px rgba(223, 93, 255, 0.85), 0 0 16px rgba(223, 93, 255, 0.52); }
+}
+
+@keyframes cosmetic-transcendent-glow {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(73, 230, 238, 0.9), 0 0 15px rgba(73, 230, 238, 0.55); }
+    50% { box-shadow: 0 0 0 2px rgba(255, 214, 94, 0.9), 0 0 19px rgba(146, 92, 255, 0.62); }
+}
+
+@keyframes cosmetic-card-glow {
+    0%, 100% { border-color: rgba(55, 216, 255, 0.8); box-shadow: inset 3px 0 0 #37d8ff, 0 0 10px rgba(55, 216, 255, 0.2); }
+    50% { border-color: rgba(223, 93, 255, 0.85); box-shadow: inset 3px 0 0 #df5dff, 0 0 14px rgba(223, 93, 255, 0.25); }
+}
+
+@keyframes cosmetic-transcendent-card-glow {
+    0%, 100% { border-color: rgba(73, 230, 238, 0.85); box-shadow: inset 3px 0 0 #49e6ee, 0 0 12px rgba(73, 230, 238, 0.24); }
+    50% { border-color: rgba(255, 214, 94, 0.9); box-shadow: inset 3px 0 0 #ffd65e, 0 0 16px rgba(146, 92, 255, 0.28); }
+}
+
 :global([data-status-message-disrupted='true']) .body {
     animation: status-message-disruption 1.15s steps(2, end) infinite;
 }
@@ -92,6 +151,25 @@ $avatar-size: 40px;
     :global([data-status-message-disrupted='true']) .body {
         animation: none;
         box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
+    }
+
+    .avatar[data-frame='aurora'],
+    .avatar[data-frame='transcendent'],
+    .body[data-frame='aurora'],
+    .body[data-frame='transcendent'] {
+        animation: none;
+    }
+
+    .avatar[data-frame='aurora'],
+    .avatar[data-frame='transcendent'] {
+        border-color: #49e6ee;
+        box-shadow: 0 0 0 2px rgba(73, 230, 238, 0.7);
+    }
+
+    .body[data-frame='aurora'],
+    .body[data-frame='transcendent'] {
+        border-color: rgba(73, 230, 238, 0.85);
+        box-shadow: inset 3px 0 0 #49e6ee;
     }
 }
 

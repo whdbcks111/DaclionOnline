@@ -62,6 +62,7 @@ import {
     getAscensionExperienceMultiplier,
     getAscensionLevelCap,
 } from '../progression/Ascension.js';
+import { syncPlayerCosmeticUnlocks } from '../progression/PlayerCosmetics.js';
 
 export const LEVEL_UP_FREE_STAT_POINTS = 3;
 export const LEVEL_SURVIVAL_CAPACITY_PER_LEVEL = 1;
@@ -526,7 +527,9 @@ export default class Player extends Entity {
 
     override get level() { return this._level; }
     override set level(val: number) {
+        if (this.progress && val < this._level) syncPlayerCosmeticUnlocks(this);
         this._level = val;
+        if (this.progress) syncPlayerCosmeticUnlocks(this);
         this.applyLevelSurvivalCapacityModifiers();
         this.clampVitals();
         this.markDirty();
@@ -1050,6 +1053,7 @@ export default class Player extends Entity {
             this.stat.applyModifiers(this);
         }
         if (this._level >= levelCap) this._exp = 0;
+        if (levelsGained.length > 0) syncPlayerCosmeticUnlocks(this);
         this.markDirty();
         const experienceSpentOnLevelUps = Math.max(0, experienceBefore + appliedGain - this._exp);
         const protectedPool = protectedBefore

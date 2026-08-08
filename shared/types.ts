@@ -1,6 +1,7 @@
 // 서버-클라이언트 공통 타입 정의
 import type { TagId } from './tags.js'
 import type { MusicCombatState } from './adaptiveMusic.js'
+import type { ChatEmoteKey, CosmeticFrameKey } from './cosmetics.js'
 import type {
     HudPresetData,
     HudPresetOperationResult,
@@ -153,6 +154,7 @@ export type ChatNode =
     | { type: 'tab'; width: number; children: ChatNode[] }
     | { type: 'tooltip'; description: ChatNode[]; children: ChatNode[] }
     | { type: 'worldMap'; data: WorldMapData }
+    | { type: 'emote'; id: ChatEmoteKey }
 
 // 채팅 플래그 (닉네임 옆 배지)
 export interface ChatFlag {
@@ -198,6 +200,10 @@ export interface ChatMessage {
     equippedTitle?: string
     /** 전송 시점에 초월 단계가 1 이상인 Player 표시. */
     ascended?: boolean
+    /** 전송 시점에 장착한 프로필 원형 프레임. */
+    avatarFrame?: CosmeticFrameKey
+    /** 전송 시점에 장착한 채팅 카드 프레임. */
+    chatFrame?: CosmeticFrameKey
     content: string | ChatNode[]
     timestamp: number
     private?: boolean
