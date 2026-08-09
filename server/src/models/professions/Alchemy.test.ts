@@ -149,7 +149,7 @@ test('조제약 사용 해석은 결과 아이템과 조합식을 대조하고 c
     const resolved = resolveAlchemyPotionUse(snapshot.itemDataId, raw);
     assert.equal(resolved?.formula?.id, formula.id);
     assert.equal(resolved?.effectType.key, 'harmful_status');
-    assert.equal(resolved?.metadata.effect.statusEffectId, 'poison');
+    assert.equal(resolved?.metadata.effect.statusEffectId, 'deadly_poison');
     assert.equal(resolved?.metadata.effect.damageType, 'magic');
     assert.equal(resolveAlchemyPotionUse('alchemy_life_draught', raw), undefined);
 });

@@ -609,7 +609,8 @@ test('독성 투척은 몬스터 대상·독 상성·소모품 공격 옵션을 
         useAlchemyPotion(insectSource.inventory, potion, () => undefined);
         const insectDamage = insectLifeBefore - insect.life;
         assert.ok(insectDamage > 0);
-        assert.equal(insect.hasStatusEffect('poison'), true);
+        assert.equal(insect.hasStatusEffect('deadly_poison'), true);
+        assert.equal(insect.hasStatusEffect('poison'), false);
         assert.deepEqual(insectSource.lastAttackOptions, {
             criticalRate: 0,
             criticalDamage: 1,
@@ -654,7 +655,7 @@ test('독성 투척은 몬스터 대상·독 상성·소모품 공격 옵션을 
     }
 });
 
-test('독성 조제약 음용은 자기 공격 경로 없이 자신에게 독 피해와 상태를 적용한다', () => {
+test('독성 조제약 음용은 자기 공격 경로 없이 자신에게 독 피해와 맹독을 적용한다', () => {
     const player = new TestAlchemyPlayer(78_130);
     registerOnlinePlayer(asPlayer(player));
     try {
@@ -662,7 +663,8 @@ test('독성 조제약 음용은 자기 공격 경로 없이 자신에게 독 �
         const lifeBefore = player.life;
         useAlchemyPotion(player.inventory, potion, () => undefined);
         assert.ok(player.life < lifeBefore);
-        assert.equal(player.hasStatusEffect('poison'), true);
+        assert.equal(player.hasStatusEffect('deadly_poison'), true);
+        assert.equal(player.hasStatusEffect('poison'), false);
         assert.equal(player.lastAttackOptions, undefined);
         assert.equal(player.lastDamageCause?.effectSource?.hasTag(GameTags.PROPERTY_POISON), true);
         assert.equal(player.inventory.getCount('alchemy_toxic_flask'), 0);

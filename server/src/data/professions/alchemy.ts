@@ -190,6 +190,6 @@ for (const formula of [
         id: 'toxic', name: '독성 조제약', aliases: ['독약', '투척독'],
         description: '독성 피해와 맹독을 일으킵니다.', resultItemDataId: 'alchemy_toxic_flask', difficulty: 7,
         ingredients: [{ itemDataId: 'venom_gland', count: 1 }, { itemDataId: 'dune_scorpion_venom', count: 1 }],
-        effect: { type: AlchemyEffectType.HARMFUL_STATUS, basePower: 5, baseDuration: 12, statusEffectId: 'poison', damageType: 'magic' },
+        effect: { type: AlchemyEffectType.HARMFUL_STATUS, basePower: 5, baseDuration: 12, statusEffectId: 'deadly_poison', damageType: 'magic' },
     },
 ] as const) defineAlchemyFormula(formula);

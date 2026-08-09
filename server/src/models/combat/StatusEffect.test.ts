@@ -35,6 +35,12 @@ class TestSurvivalPlayer extends TestStatusEntity {
     override get isPlayer(): boolean { return true; }
 }
 
+test('독과 맹독 입력은 겹친 별칭 없이 서로 다른 정식 상태이상을 찾는다', () => {
+    assert.equal(StatusEffectType.fromInput('독')?.id, 'poison');
+    assert.equal(StatusEffectType.fromInput('맹독')?.id, 'deadly_poison');
+    assert.equal(StatusEffectType.fromInput('deadly_poison')?.label, '맹독');
+});
+
 let starts = 0;
 let updates = 0;
 let removes = 0;

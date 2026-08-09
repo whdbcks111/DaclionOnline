@@ -47,6 +47,70 @@ import { ALCHEMY_FEATURE_SKILL_ID } from '../../models/professions/Alchemy.js';
 
 const CRITICAL_HIT_STAT = 'combat:critical_hits';
 
+interface JobPassiveModifier extends Omit<AttributeModifier, 'source'> {
+    label: string;
+    display: string;
+}
+
+function normalizePassiveLevel(level: number): number {
+    return Math.max(1, Math.floor(Number.isFinite(level) ? level : 1));
+}
+
+function scalePassiveModifierValue(modifier: JobPassiveModifier, level: number): number {
+    const normalizedLevel = normalizePassiveLevel(level);
+    return modifier.op === 'multiply'
+        ? 1 + (modifier.value - 1) * normalizedLevel
+        : modifier.value * normalizedLevel;
+}
+
+function formatPassiveModifierValue(modifier: JobPassiveModifier, level: number): string {
+    const scaled = scalePassiveModifierValue(modifier, level);
+    const formatNumber = (value: number) => String(Number(value.toFixed(4)));
+    if (modifier.op === 'multiply') return `+${formatNumber((scaled - 1) * 100)}%`;
+    if ([AttributeType.CRIT_RATE, AttributeType.CRIT_DMG, AttributeType.FORGING_PRECISION]
+        .some(attribute => attribute.key === modifier.attribute)) {
+        return `+${formatNumber(scaled * 100)}%p`;
+    }
+    if ([AttributeType.LIFE_REGEN, AttributeType.MENTALITY_REGEN]
+        .some(attribute => attribute.key === modifier.attribute)) {
+        return `+${formatNumber(scaled)}/초`;
+    }
+    return `+${formatNumber(scaled)}`;
+}
+
+/** 고정 능력치 패시브의 설명과 실제 modifier를 현재 스킬 레벨에 맞춰 함께 교체한다. */
+function createScalingAttributePassive(
+    source: string,
+    modifiers: readonly JobPassiveModifier[],
+): Pick<NonNullable<Parameters<typeof defineSkill>[0]>, 'calculatedFields' | 'onPassiveUpdate' | 'onPassiveInactive'> {
+    const appliedLevels = new WeakMap<Entity, number>();
+    return {
+        calculatedFields: Object.fromEntries(modifiers.map(modifier => [
+            modifier.attribute,
+            ({ skill }: SkillContext) => {
+                const display = formatPassiveModifierValue(modifier, skill.level);
+                return `[tooltip=${modifier.label}: ${display}]${display}[/tooltip]`;
+            },
+        ])),
+        onPassiveUpdate: ({ owner, skill }) => {
+            const level = normalizePassiveLevel(skill.level);
+            if (appliedLevels.get(owner) === level && owner.attribute.hasSource(source)) return;
+            owner.attribute.removeBySource(source);
+            owner.attribute.addModifiers(modifiers.map(modifier => ({
+                attribute: modifier.attribute,
+                op: modifier.op,
+                value: scalePassiveModifierValue(modifier, level),
+                source,
+            })));
+            appliedLevels.set(owner, level);
+        },
+        onPassiveInactive: ({ owner }) => {
+            owner.attribute.removeBySource(source);
+            appliedLevels.delete(owner);
+        },
+    };
+}
+
 defineSkillTagDisplay(GameTags.SKILL_GROUP_WARRIOR, '전사 기술', 'skills/career_warrior');
 defineSkillTagDisplay(GameTags.SKILL_GROUP_ARCHER, '궁술', 'skills/career_archer');
 defineSkillTagDisplay(GameTags.SKILL_GROUP_ASSASSIN, '암살 기술', 'skills/career_assassin');
@@ -57,27 +121,24 @@ defineSkillTagDisplay(GameTags.SKILL_GROUP_ICE, '빙결 계열', 'affinities/ice
 defineSkillTagDisplay(GameTags.SKILL_GROUP_ELECTRIC, '전격 계열', 'affinities/electric');
 
 const TRANSCENDENT_SOUL_SOURCE = 'skill:transcendent_soul:passive';
+const TRANSCENDENT_SOUL_MODIFIERS: readonly JobPassiveModifier[] = [
+    { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.1, label: '최대 생명력 증가', display: '+10%' },
+    { attribute: AttributeType.MAX_MENTALITY.key, op: 'multiply', value: 1.1, label: '최대 정신력 증가', display: '+10%' },
+    { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.05, label: '공격력 증가', display: '+5%' },
+    { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.05, label: '마법력 증가', display: '+5%' },
+];
 defineSkill({
     id: 'transcendent_soul',
     name: '초월자의 혼',
     icon: 'skills/transcendent_soul',
     maxLevel: 1,
-    descriptionTemplate: '한 생의 힘을 영혼에 새겨 {{icon.maxLife}} 최대 생명력과 {{icon.maxMentality}} 최대 정신력이 10%, {{icon.atk}} 공격력과 {{icon.magicForce}} 마법력이 5% 증가합니다.',
+    descriptionTemplate: '한 생의 힘을 영혼에 새겨 {{icon.maxLife}} 최대 생명력과 {{icon.maxMentality}} 최대 정신력이 각각 {{maxLife}}, {{maxMentality}}, {{icon.atk}} 공격력과 {{icon.magicForce}} 마법력이 각각 {{atk}}, {{magicForce}} 증가합니다.',
     costTemplate: '소모값 없음',
     activationConditionTemplate: '초월한 캐릭터에게 영구 적용됩니다.',
     baseMetadata: null,
     calculateExperienceGain: () => 0,
     canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
-    onPassiveUpdate: ({ owner }) => {
-        if (owner.attribute.hasSource(TRANSCENDENT_SOUL_SOURCE)) return;
-        owner.attribute.addModifiers([
-            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.1, source: TRANSCENDENT_SOUL_SOURCE },
-            { attribute: AttributeType.MAX_MENTALITY.key, op: 'multiply', value: 1.1, source: TRANSCENDENT_SOUL_SOURCE },
-            { attribute: AttributeType.ATK.key, op: 'multiply', value: 1.05, source: TRANSCENDENT_SOUL_SOURCE },
-            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.05, source: TRANSCENDENT_SOUL_SOURCE },
-        ]);
-    },
-    onPassiveInactive: ({ owner }) => owner.attribute.removeBySource(TRANSCENDENT_SOUL_SOURCE),
+    ...createScalingAttributePassive(TRANSCENDENT_SOUL_SOURCE, TRANSCENDENT_SOUL_MODIFIERS),
     tags: [GameTags.SKILL_PASSIVE, 'skill:ascension'],
 });
 
@@ -556,11 +617,6 @@ function hasBlacksmithSkillAccess(player?: Player | null): boolean {
         || player.progress.getFlag('profession:blacksmith')));
 }
 
-interface JobPassiveModifier extends Omit<AttributeModifier, 'source'> {
-    label: string;
-    display: string;
-}
-
 /** 직업의 상시 효과를 일반 스킬과 같은 공개 API로 정의한다. */
 function defineJobPassive(options: {
     id: string;
@@ -588,10 +644,7 @@ function defineJobPassive(options: {
             ? '해당 메인 직업 계열이 활성화되어 있는 동안 항상 적용됩니다.'
             : '해당 직업이 활성화되어 있는 동안 항상 적용됩니다.',
         baseMetadata: null,
-        calculatedFields: Object.fromEntries(options.modifiers.map(modifier => [
-            modifier.attribute,
-            () => `[tooltip=${modifier.label}: ${modifier.display}]${modifier.display}[/tooltip]`,
-        ])),
+        ...createScalingAttributePassive(source, options.modifiers),
         calculateExperienceGain: () => 0,
         autoAcquire: options.unlockLevel
             ? careerLevelAutoAcquire(options.jobId, options.unlockLevel, options.slot)
@@ -599,14 +652,6 @@ function defineJobPassive(options: {
         jobRequirement: options.isVisible ? undefined : jobRequirement(options.jobId, options.slot),
         isVisible: options.isVisible ? ({ player }) => options.isVisible!(player) : undefined,
         canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
-        onPassiveUpdate: ({ owner }) => {
-            if (owner.attribute.hasSource(source)) return;
-            owner.attribute.addModifiers(options.modifiers.map(({ label: _label, display: _display, ...modifier }) => ({
-                ...modifier,
-                source,
-            })));
-        },
-        onPassiveInactive: ({ owner }) => owner.attribute.removeBySource(source),
         tags: [GameTags.SKILL_PASSIVE],
     });
 }
@@ -1051,10 +1096,7 @@ for (const awakening of statAwakenings) {
         costTemplate: '소모값 없음',
         activationConditionTemplate: `${awakening.stat.label} [color=gold]100[/color] 달성 시 자동으로 깨우칩니다.`,
         baseMetadata: null,
-        calculatedFields: Object.fromEntries(awakening.modifiers.map(modifier => [
-            modifier.attribute,
-            () => `[tooltip=${modifier.label}: ${modifier.display}]${modifier.display}[/tooltip]`,
-        ])),
+        ...createScalingAttributePassive(source, awakening.modifiers),
         calculateExperienceGain: () => 0,
         autoAcquire: {
             watchedProgress: [],
@@ -1062,14 +1104,6 @@ for (const awakening of statAwakenings) {
             check: ({ player }) => (player?.stat.get(awakening.stat) ?? 0) >= 100,
         },
         canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
-        onPassiveUpdate: ({ owner }) => {
-            if (owner.attribute.hasSource(source)) return;
-            owner.attribute.addModifiers(awakening.modifiers.map(({ label: _label, display: _display, ...modifier }) => ({
-                ...modifier,
-                source,
-            })));
-        },
-        onPassiveInactive: ({ owner }) => owner.attribute.removeBySource(source),
         tags: [GameTags.SKILL_PASSIVE],
     });
 }
@@ -1116,10 +1150,7 @@ for (const mastery of weaponMasteries) {
         costTemplate: '소모값 없음',
         activationConditionTemplate: `${mastery.label} 장착 중 항상 적용됩니다.`,
         baseMetadata: null,
-        calculatedFields: Object.fromEntries(mastery.modifiers.map(modifier => [
-            modifier.attribute,
-            () => `[tooltip=${modifier.label}: ${modifier.display}]${modifier.display}[/tooltip]`,
-        ])),
+        ...createScalingAttributePassive(source, mastery.modifiers),
         calculateExperienceGain: () => 0,
         autoAcquire: {
             watchedProgress: [`combat:weapon_hits/${mastery.weapon}`],
@@ -1127,14 +1158,6 @@ for (const mastery of weaponMasteries) {
         },
         weaponRequirement: weaponRequirement(`${mastery.label} 장착이 필요합니다.`, mastery.tag),
         canActivate: () => denySkill('패시브 스킬은 직접 발동할 수 없습니다.'),
-        onPassiveUpdate: ({ owner }) => {
-            if (owner.attribute.hasSource(source)) return;
-            owner.attribute.addModifiers(mastery.modifiers.map(({ label: _label, display: _display, ...modifier }) => ({
-                ...modifier,
-                source,
-            })));
-        },
-        onPassiveInactive: ({ owner }) => owner.attribute.removeBySource(source),
         tags: [GameTags.SKILL_PASSIVE],
     });
 }
@@ -1385,10 +1408,14 @@ defineSkill({
     name: '장비 강화',
     icon: 'skills/weapon_reinforcement',
     maxLevel: 5,
-    descriptionTemplate: `지핵 강화석을 소모해 무기와 방어구를 최대 +${MAX_EQUIPMENT_REINFORCEMENT}까지 강화합니다. 높은 단계에서는 실패·단계 하락·장비 파괴 위험이 생기며, 강화 수치는 장비가 원래 가진 모든 긍정 능력치에 비례해 영구적으로 증가합니다.`,
+    descriptionTemplate: `지핵 강화석을 소모해 무기와 방어구를 최대 +${MAX_EQUIPMENT_REINFORCEMENT}까지 강화합니다. 높은 단계에서는 실패·단계 하락·장비 파괴 위험이 생기며, 강화 수치는 장비가 원래 가진 모든 긍정 능력치에 비례해 영구적으로 증가합니다. Lv.2부터 레벨마다 성공률이 [color=gold]+2%p[/color], 하락·파괴 확률이 각각 [color=cyan]-1%p[/color] 보정됩니다. 현재 보정은 성공률 [color=gold]+{{successBonus}}%p[/color], 하락·파괴 각각 [color=cyan]-{{riskReduction}}%p[/color]입니다.`,
     costTemplate: '지핵 강화석 1개',
     activationConditionTemplate: `전투 대장장이가 +${MAX_EQUIPMENT_REINFORCEMENT} 미만인 무기 또는 방어구를 지정해 \`/장비강화 <아이템 번호 또는 장착칸>\`을 입력합니다.`,
     baseMetadata: null,
+    calculatedFields: {
+        successBonus: ({ skill }) => Math.max(0, skill.level - 1) * 2,
+        riskReduction: ({ skill }) => Math.max(0, skill.level - 1),
+    },
     calculateExperienceGain: () => 28,
     jobRequirement: jobRequirement('career:battle_smith'),
     canActivate: () => denySkill('/장비강화 <아이템 번호 또는 장착칸> 명령어를 사용하세요.'),

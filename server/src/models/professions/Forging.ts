@@ -116,6 +116,36 @@ export interface EquipmentReinforcementResult {
     reason?: string;
 }
 
+export interface EquipmentReinforcementRates {
+    readonly successRate: number;
+    readonly retainRate: number;
+    readonly downgradeRate: number;
+    readonly destructionRate: number;
+    readonly chanceDescription: string;
+}
+
+/** 장비 강화 스킬 Lv.2부터 성공률 +2%p, 하락·파괴 확률은 각각 -1%p씩 보정한다. */
+export function calculateEquipmentReinforcementRates(
+    stage: EquipmentReinforcementStage,
+    skillLevel = 1,
+): EquipmentReinforcementRates {
+    const bonusLevels = Math.max(0, Math.floor(Number.isFinite(skillLevel) ? skillLevel : 1) - 1);
+    const successRate = Math.min(100, stage.successRate + bonusLevels * 2);
+    const downgradeRate = Math.max(0, stage.downgradeRate - bonusLevels);
+    const destructionRate = Math.max(0, stage.destructionRate - bonusLevels);
+    const retainRate = 100 - successRate - downgradeRate - destructionRate;
+    const outcomes = [`성공 ${successRate}%`, `유지 ${retainRate}%`];
+    if (downgradeRate > 0) outcomes.push(`하락 ${downgradeRate}%`);
+    if (destructionRate > 0) outcomes.push(`파괴 ${destructionRate}%`);
+    return Object.freeze({
+        successRate,
+        retainRate,
+        downgradeRate,
+        destructionRate,
+        chanceDescription: outcomes.join(' · '),
+    });
+}
+
 export interface ForgedComponentResult {
     success: boolean;
     snapshot?: ItemSnapshot;
@@ -217,6 +247,7 @@ function reinforcementRoll(random: () => number): number {
  */
 export function reinforceEquipment(item: Item, options: {
     random?: () => number;
+    skillLevel?: number;
 }): EquipmentReinforcementResult {
     if (!isReinforceableEquipment(item)) {
         return { success: false, reason: '긍정 능력치가 있는 무기 또는 방어구만 강화할 수 있습니다.' };
@@ -229,10 +260,11 @@ export function reinforceEquipment(item: Item, options: {
     const level = current + 1;
     const stage = EquipmentReinforcementStage.fromLevel(level);
     if (!stage) return { success: false, reason: '유효한 강화 단계를 찾지 못했습니다.' };
+    const rates = calculateEquipmentReinforcementRates(stage, options.skillLevel);
     const roll = reinforcementRoll(options.random ?? Math.random);
-    if (roll >= stage.successRate) {
-        const retainedThreshold = stage.successRate + stage.retainRate;
-        const downgradeThreshold = retainedThreshold + stage.downgradeRate;
+    if (roll >= rates.successRate) {
+        const retainedThreshold = rates.successRate + rates.retainRate;
+        const downgradeThreshold = retainedThreshold + rates.downgradeRate;
         if (roll < retainedThreshold) {
             return { success: false, outcome: 'retained', previousLevel: current, level: current };
         }

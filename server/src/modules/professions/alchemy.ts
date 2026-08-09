@@ -706,7 +706,7 @@ function applyHarmfulAlchemyEffect(
     useThrownAttack = false,
 ): string | undefined {
     const status = statusEffectId ? StatusEffectType.fromKey(statusEffectId) : undefined;
-    const effectTags = statusEffectId === 'poison' ? [GameTags.PROPERTY_POISON] : [];
+    const effectTags = status?.hasTag(GameTags.PROPERTY_POISON) ? [GameTags.PROPERTY_POISON] : [];
     const rawDamage = Math.max(1, power * ALCHEMY_HARMFUL_DAMAGE_SCALE);
     const damage = useThrownAttack
         ? source.attack(target, damageType, rawDamage, {

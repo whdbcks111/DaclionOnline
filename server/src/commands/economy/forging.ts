@@ -16,6 +16,7 @@ import {
     EquipmentReinforcementStage,
     ForgeForm,
     ForgeMaterial,
+    calculateEquipmentReinforcementRates,
     createEquipmentRepairPlan,
     createInfusedStaffSnapshot,
     enchantWeapon,
@@ -317,10 +318,11 @@ export function initForgingCommands(): void {
         description: '목표 강화 단계별 성공·유지·하락·파괴 확률을 확인합니다.',
         information: true,
         handler(userId) {
+            const skillLevel = getPlayerByUserId(userId)?.skills.get('weapon_reinforcement')?.level ?? 1;
             const lines = EquipmentReinforcementStage.values()
-                .map(stage => `+${stage.level} 도전: ${stage.chanceDescription}`);
+                .map(stage => `+${stage.level} 도전: ${calculateEquipmentReinforcementRates(stage, skillLevel).chanceDescription}`);
             sendBotMessageToUser(userId, [
-                `[ 장비 강화 확률 · 최대 +${MAX_EQUIPMENT_REINFORCEMENT} ]`,
+                `[ 장비 강화 확률 · 스킬 Lv.${skillLevel} · 최대 +${MAX_EQUIPMENT_REINFORCEMENT} ]`,
                 ...lines,
                 '강화석은 모든 유효한 시도에 1개 소모됩니다. +7부터 하락, +9부터 파괴가 발생합니다.',
             ].join('\n'));
@@ -367,13 +369,13 @@ export function initForgingCommands(): void {
             if (!stage) return;
             const previousName = target.item.name;
             if (!player.inventory.removeItemByData(ENHANCEMENT_STONE_ITEM_ID, 1)) return;
-            const result = reinforceEquipment(target.item, {});
+            const result = reinforceEquipment(target.item, { skillLevel: skill.level });
             if (!result.outcome) {
                 player.inventory.addItem(ENHANCEMENT_STONE_ITEM_ID, 1);
                 sendBotMessageToUser(userId, result.reason ?? '장비 강화에 실패했습니다.');
                 return;
             }
-            const chance = `+${stage.level} 도전: ${stage.chanceDescription}`;
+            const chance = `+${stage.level} 도전: ${calculateEquipmentReinforcementRates(stage, skill.level).chanceDescription}`;
             if (result.outcome === 'retained') {
                 sendBotMessageToUser(
                     userId,

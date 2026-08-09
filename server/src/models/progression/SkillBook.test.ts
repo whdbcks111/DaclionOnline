@@ -708,6 +708,43 @@ test('성물 수호는 +1 돌파 저장 상태에서 패시브 수련 후보가 
     assert.equal(skill.experience, 10);
 });
 
+test('성물 수호와 고정 능력치 패시브는 레벨마다 실제 수치와 설명이 함께 증가한다', () => {
+    const relicKeeper = new TestSkillPlayer(9_309_1);
+    const relicSkill = relicKeeper.skills.grant('relic_keeper_mastery', 'career:relic_keeper').skill;
+    relicSkill.data.onPassiveUpdate?.(createSkillContext(relicKeeper, relicSkill), 0);
+    assert.equal(relicKeeper.attribute.get(AttributeType.MAGIC_FORCE), 10.8);
+    assert.equal(relicKeeper.attribute.get(AttributeType.MAX_LIFE), 108);
+    assert.match(relicSkill.formatDescription(relicKeeper), /\+8%/);
+
+    relicSkill.increaseMaxLevelBonus(2);
+    relicSkill.setLevel(2);
+    relicSkill.data.onPassiveUpdate?.(createSkillContext(relicKeeper, relicSkill), 0);
+    assert.ok(Math.abs(relicKeeper.attribute.get(AttributeType.MAGIC_FORCE) - 11.6) < 1e-10);
+    assert.ok(Math.abs(relicKeeper.attribute.get(AttributeType.MAX_LIFE) - 116) < 1e-10);
+    assert.match(relicSkill.formatDescription(relicKeeper), /\+16%/);
+
+    relicSkill.setLevel(3);
+    relicSkill.data.onPassiveUpdate?.(createSkillContext(relicKeeper, relicSkill), 0);
+    assert.ok(Math.abs(relicKeeper.attribute.get(AttributeType.MAGIC_FORCE) - 12.4) < 1e-10);
+    assert.ok(Math.abs(relicKeeper.attribute.get(AttributeType.MAX_LIFE) - 124) < 1e-10);
+    assert.match(relicSkill.formatDescription(relicKeeper), /\+24%/);
+
+    for (const [userId, skillDataId, attribute, levelOne, levelTwo] of [
+        [9_309_2, 'titan_strength', AttributeType.ATK, 10.8, 11.6],
+        [9_309_3, 'sword_mastery', AttributeType.ATK, 10.5, 11],
+        [9_309_4, 'transcendent_soul', AttributeType.MAX_LIFE, 110, 120],
+    ] as const) {
+        const player = new TestSkillPlayer(userId);
+        const passive = player.skills.grant(skillDataId, 'test').skill;
+        passive.data.onPassiveUpdate?.(createSkillContext(player, passive), 0);
+        assert.ok(Math.abs(player.attribute.get(attribute) - levelOne) < 1e-10, `${skillDataId} Lv.1`);
+        passive.increaseMaxLevelBonus();
+        passive.setLevel(2);
+        passive.data.onPassiveUpdate?.(createSkillContext(player, passive), 0);
+        assert.ok(Math.abs(player.attribute.get(attribute) - levelTwo) < 1e-10, `${skillDataId} Lv.2`);
+    }
+});
+
 test('액티브 돌파 레벨은 실제 전투 계수 증가량을 기존 레벨의 두 배로 적용한다', () => {
     const player = new TestSkillPlayer(9_308);
     player.attribute.addModifier({ attribute: 'atk', op: 'add', value: 100, source: 'test:breakthrough' });

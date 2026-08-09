@@ -267,7 +267,7 @@ export class StatusEffectType implements TagReadable {
         },
         persistenceMetadataKeys: ['tickElapsed'],
         tags: [GameTags.PROPERTY_POISON],
-        aliases: ['맹독', '독'],
+        aliases: ['맹독'],
     });
 
     static readonly PARALYTIC_POISON = StatusEffectType.define({
@@ -401,9 +401,11 @@ export class StatusEffectType implements TagReadable {
 
     static fromInput(input: string): StatusEffectType | undefined {
         const normalized = input.trim().toLowerCase();
+        // 다른 효과의 과거 alias가 정식 표시명과 겹쳐도 정식 ID·표시명을 우선한다.
         return StatusEffectType.all.find(type => type.id === normalized
-            || type.label.toLowerCase() === normalized
-            || type.aliases.some(alias => alias.toLowerCase() === normalized));
+            || type.label.toLowerCase() === normalized)
+            ?? StatusEffectType.all.find(type =>
+                type.aliases.some(alias => alias.toLowerCase() === normalized));
     }
 
     normalizeLevel(level: number): number {

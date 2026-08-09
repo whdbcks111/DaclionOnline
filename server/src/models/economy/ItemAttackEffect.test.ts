@@ -36,6 +36,23 @@ test('마법 부여는 무기 속성과 signature를 편향에 쓰고 인스턴�
     }).success, false);
 });
 
+test('마법 부여 스킬 레벨은 각인의 발동 확률과 효과 레벨을 실제로 높인다', () => {
+    const low = enchantWeapon(new Item('forged_sword', 1, null, null), {
+        enchanterUserId: 77,
+        skillLevel: 1,
+        sensibility: 500,
+        random: () => 0,
+    });
+    const high = enchantWeapon(new Item('forged_sword', 1, null, null), {
+        enchanterUserId: 77,
+        skillLevel: 5,
+        sensibility: 500,
+        random: () => 0,
+    });
+    assert.ok((high.effect?.chance ?? 0) > (low.effect?.chance ?? 0));
+    assert.ok((high.effect?.level ?? 0) > (low.effect?.level ?? 0));
+});
+
 test('마법 부여 적중 효과는 성공한 무기 공격 후 상태효과 registry를 통해 적용된다', () => {
     const weapon = new Item('forged_sword', 1, null, null);
     const result = enchantWeapon(weapon, {

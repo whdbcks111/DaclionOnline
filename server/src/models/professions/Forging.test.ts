@@ -10,6 +10,7 @@ import {
 } from '../economy/Item.js';
 import {
     MAX_EQUIPMENT_REINFORCEMENT,
+    calculateEquipmentReinforcementRates,
     calculateRepairMaxDurabilityLossRate,
     calculateForgeCraftsmanship,
     calculateForgedItemLevel,
@@ -211,9 +212,11 @@ test('야전 수리는 원 단조 소재를 우선하고 없으면 같은 속성
     ));
     item.setDurability(Math.floor(item.baseDurability! * 0.2));
     const plan = createEquipmentRepairPlan(item, 1)!;
+    const trainedPlan = createEquipmentRepairPlan(item, 5)!;
     assert.equal(plan.requiredMaterialCount, 2);
     assert.equal(plan.preferredMaterialItemDataId, 'refined_ruby');
     assert.equal(plan.maxDurabilityLossRate, 0.12);
+    assert.ok(trainedPlan.repairAmount > plan.repairAmount);
 
     const preferredInventory = Inventory.createEmpty(801, 100);
     preferredInventory.addItem('refined_ruby', 2);
@@ -592,6 +595,36 @@ test('모든 강화 단계 확률은 정확히 100%이며 하락과 파괴는 �
         assert.equal(stage.downgradeRate > 0, stage.level >= 7);
         assert.equal(stage.destructionRate > 0, stage.level >= 9);
     }
+});
+
+test('장비 강화 스킬 레벨은 성공률을 높이고 하락·파괴 확률을 낮춘다', () => {
+    const stage = EquipmentReinforcementStage.PLUS_15;
+    assert.deepEqual(calculateEquipmentReinforcementRates(stage, 1), {
+        successRate: 15,
+        retainRate: 15,
+        downgradeRate: 40,
+        destructionRate: 30,
+        chanceDescription: '성공 15% · 유지 15% · 하락 40% · 파괴 30%',
+    });
+    assert.deepEqual(calculateEquipmentReinforcementRates(stage, 5), {
+        successRate: 23,
+        retainRate: 15,
+        downgradeRate: 36,
+        destructionRate: 26,
+        chanceDescription: '성공 23% · 유지 15% · 하락 36% · 파괴 26%',
+    });
+
+    const createWeapon = () => Item.fromSnapshot(createForgedItemSnapshot(
+        ForgeForm.SWORD,
+        ForgeMaterial.IRON,
+        { accuracy: 0.8, random: () => 0, creatorLevel: 200, sensibility: 1_000 },
+    ));
+    const baseline = createWeapon();
+    const trained = createWeapon();
+    assert.equal(reinforceEquipment(baseline, { random: () => 0 }).success, true);
+    assert.equal(reinforceEquipment(trained, { random: () => 0 }).success, true);
+    assert.equal(reinforceEquipment(baseline, { random: () => 0.97, skillLevel: 1 }).success, false);
+    assert.equal(reinforceEquipment(trained, { random: () => 0.97, skillLevel: 5 }).success, true);
 });
 
 test('방패와 전신 방어구도 원래 방어·생존 부가 수치에 비례해 강화된다', () => {
