@@ -683,6 +683,31 @@ test('모든 패시브 마스터는 돌파 뒤 최대 레벨 미도달 상태에
     assert.ok(checked.includes('artisan_naming'));
 });
 
+test('성물 수호는 +1 돌파 저장 상태에서 패시브 수련 후보가 되고 경험치를 얻는다', () => {
+    const player = new TestSkillPlayer(9_309);
+    const skill = player.skills.grant('relic_keeper_mastery', 'career:relic_keeper').skill;
+    assert.equal(skill.level, 1);
+    assert.equal(skill.increaseMaxLevelBonus(), 1);
+    assert.equal(skill.maxLevel, 2);
+
+    const candidate = player.skills.getTrainablePassiveSnapshots()
+        .find(snapshot => snapshot.id === 'relic_keeper_mastery');
+    assert.deepEqual(candidate, {
+        id: 'relic_keeper_mastery',
+        name: '성물 수호',
+        icon: 'jobs/cleric',
+        level: 1,
+        maxLevel: 2,
+        experience: 0,
+        requiredExperience: 100,
+        experienceGain: 10,
+    });
+
+    const awarded = player.skills.awardPassiveExperience('relic_keeper_mastery', 10);
+    assert.equal(awarded.awarded, true);
+    assert.equal(skill.experience, 10);
+});
+
 test('액티브 돌파 레벨은 실제 전투 계수 증가량을 기존 레벨의 두 배로 적용한다', () => {
     const player = new TestSkillPlayer(9_308);
     player.attribute.addModifier({ attribute: 'atk', op: 'add', value: 100, source: 'test:breakthrough' });
