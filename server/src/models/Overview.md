@@ -19,7 +19,7 @@
 
 `Entity.recordCombatEngagement()`는 준비 단계를 통과한 공격·회피와 source가 있는 실제 피해의 양쪽 최종 owner를 연결하되 자원·일반 오브젝트를 제외한다. Player는 일반/보스 교전을 각각 9초 비영속 타이머로 유지해 `musicCombatState`를 `exploration | combat | boss` 클래스형 상태로 제공하고, 일반 교전이 보스 상태를 무기한 연장하지 않게 한다. 장소 이동·사망·부활은 두 타이머를 초기화한다.
 
-`Item`의 requirements metadata는 레벨·핵심 스탯·획득처를 정규화하고 `Player`가 사용/장착 거부 사유를 만든다. `Fishing`은 장소 ID별 독립 어종 풀과 가중치 registry를 소유하며 행운 등급 확률을 합성한다. `Forging`은 선택 성능 상한과 최종 성능 레벨 80%의 착용 레벨, 원광 ID를 가진 제련 소재 registry를 소유한다. `Alchemy`는 조제 기능 패시브의 안정 ID, 기존 지역 아이템을 연금 성질로 연결하는 공개 reagent registry, 정확한 병 수 배수 조합식, 전달 방식·품질·실패약 profile 클래스형 enum과 JSON-safe 조제약 metadata를 소유한다. `resolveAlchemyPotionUse()`는 영속 metadata의 조합식·실제 결과 item ID·정확도·감각·품질을 대조하고, 신규 실패약은 원재료 signature로 profile까지 다시 계산해 위변조된 효율·지속시간·상태효과를 실행 경계로 넘기지 않는다.
+`Item`의 requirements metadata는 레벨·핵심 스탯·획득처를 정규화하고 `Player`가 사용/장착 거부 사유를 만든다. `Fishing`은 장소 ID별 독립 어종 풀과 가중치 registry를 소유하며 행운 등급 확률을 합성한다. `Forging`은 선택 성능 상한과 최종 성능 레벨 80%의 착용 레벨, 원광 ID를 가진 제련 소재 registry를 소유한다. `Alchemy`는 조제 기능 패시브의 안정 ID, 기존 지역 아이템을 연금 성질로 연결하는 공개 reagent registry, 정확한 병 수 배수 조합식, 전달 방식·품질·실패약 profile 클래스형 enum과 JSON-safe 조제약 metadata를 소유한다. 품질은 약 효율·지속시간·범위 대상 수와 함께 조제 경험치 배율도 제공한다. `resolveAlchemyPotionUse()`는 영속 metadata의 조합식·실제 결과 item ID·정확도·감각·품질을 대조하고, 신규 실패약은 원재료 signature로 profile까지 다시 계산해 위변조된 효율·지속시간·상태효과를 실행 경계로 넘기지 않는다.
 
 `Player.getAttackDeniedReason()`은 지역 PVP·같은 파티·동일 장소 제한을 모든 직접/투사체 공격에 공통 적용한다. `RegionRiskPolicy` 클래스형 enum은 안전·중립·적대 장소의 PVP 허용, 사망 경험치/골드 손실, 부활 시간 배율을 소유한다. 적대 구역 사망은 중복 처리 guard 뒤 `Inventory.removeMatching` 공개 API로 적대 귀환 두루마리 한 장을 자동 소모하고, 지역·카르마가 모두 반영된 대기를 절반으로 줄인 절대 만료 시각을 저장한다. `KarmaState`는 저장 기준값·시각으로 초당 감소를 지연 계산해 매 tick dirty를 만들지 않으며, `KarmaTier/KarmaAccessPolicy`는 악명 표시와 선의 의뢰·질서 상점·교단 성소 제한 임계값을 소유한다.
 

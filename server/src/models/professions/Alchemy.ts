@@ -515,15 +515,15 @@ export function calculateAlchemyQualityScore(accuracy: number, sensibility: numb
     return clamp(normalizedAccuracy * 0.9 + sensibilityBonus, 0, 1);
 }
 
-/** 품질은 결과 이름·효율·지속시간·투척 대상 수가 함께 사용하는 클래스형 enum. */
+/** 품질은 결과 이름·효율·지속시간·투척 대상 수·조제 경험치가 함께 사용하는 클래스형 enum. */
 export class AlchemyQuality {
     private static readonly all: AlchemyQuality[] = [];
 
-    static readonly CLOUDY = new AlchemyQuality('cloudy', '탁한', 0, 0.72, 0.75, 2);
-    static readonly STABLE = new AlchemyQuality('stable', '안정된', 0.45, 0.9, 0.92, 2);
-    static readonly REFINED = new AlchemyQuality('refined', '정제된', 0.62, 1.05, 1.08, 3);
-    static readonly EXCELLENT = new AlchemyQuality('excellent', '우수한', 0.78, 1.2, 1.22, 4);
-    static readonly MASTERWORK = new AlchemyQuality('masterwork', '명인의', 0.92, 1.35, 1.38, 5);
+    static readonly CLOUDY = new AlchemyQuality('cloudy', '탁한', 0, 0.72, 0.75, 2, 0.6);
+    static readonly STABLE = new AlchemyQuality('stable', '안정된', 0.45, 0.9, 0.92, 2, 0.8);
+    static readonly REFINED = new AlchemyQuality('refined', '정제된', 0.62, 1.05, 1.08, 3, 1);
+    static readonly EXCELLENT = new AlchemyQuality('excellent', '우수한', 0.78, 1.2, 1.22, 4, 1.2);
+    static readonly MASTERWORK = new AlchemyQuality('masterwork', '명인의', 0.92, 1.35, 1.38, 5, 1.4);
 
     private constructor(
         readonly key: string,
@@ -532,6 +532,7 @@ export class AlchemyQuality {
         readonly powerMultiplier: number,
         readonly durationMultiplier: number,
         readonly areaTargetCap: number,
+        readonly experienceMultiplier: number,
     ) {
         AlchemyQuality.all.push(this);
     }

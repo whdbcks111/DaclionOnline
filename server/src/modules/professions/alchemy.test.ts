@@ -17,6 +17,7 @@ import {
     ALCHEMY_FEATURE_SKILL_ID,
     ALCHEMY_WATER_BOTTLE_ITEM_ID,
     AlchemyDelivery,
+    AlchemyQuality,
     createAlchemyPotionSnapshot,
     getAlchemyFormula,
     hasExperimentedAlchemyReagent,
@@ -36,6 +37,7 @@ import {
     adjustAlchemyDraftReagent,
     cancelAlchemyDraft,
     canUseAlchemy,
+    calculateAlchemyExperience,
     clearAlchemyDraft,
     createAlchemyTrackingConfig,
     getAlchemyDraftSnapshot,
@@ -124,6 +126,7 @@ class TestAlchemyPlayer extends Entity {
     readonly skills: { has: (skillDataId: string) => boolean };
     lastAttackOptions: AttackOptions | undefined;
     rejectNextAttack = false;
+    readonly gainedExperience: number[] = [];
 
     constructor(
         readonly userId: number,
@@ -150,7 +153,10 @@ class TestAlchemyPlayer extends Entity {
     override get isPlayer(): boolean { return true; }
     override get playerUserId(): number { return this.userId; }
     getExperienceGainModifier(): number { return 1; }
-    gainExp(): number[] { return []; }
+    gainExp(amount: number): number[] {
+        this.gainedExperience.push(amount);
+        return [];
+    }
 
     override attack(...args: Parameters<Entity['attack']>): ReturnType<Entity['attack']> {
         this.lastAttackOptions = args[3];
@@ -170,6 +176,17 @@ test('연금 기능 권한은 현재 연금술사 직업과 가마솥 연성 패
     assert.equal(canUseAlchemy(asPlayer(jobWithoutSkill)), false);
     assert.equal(canUseAlchemy(asPlayer(skillWithoutJob)), false);
     assert.equal(canUseAlchemy(asPlayer(eligible)), true);
+});
+
+test('연금 경험치는 캐릭터 레벨·조합 난도·품질·병 수를 반영하고 미확인 조합은 감액한다', () => {
+    assert.equal(calculateAlchemyExperience(200, 3, AlchemyQuality.REFINED, 1, true), 2_240);
+    assert.equal(calculateAlchemyExperience(200, 7, AlchemyQuality.MASTERWORK, 3, true), 12_096);
+    assert.equal(calculateAlchemyExperience(200, 7, AlchemyQuality.MASTERWORK, 1, false), 1_411);
+    assert.ok(
+        calculateAlchemyExperience(200, 7, AlchemyQuality.CLOUDY, 1, true)
+            < calculateAlchemyExperience(200, 7, AlchemyQuality.MASTERWORK, 1, true),
+    );
+    assert.equal(calculateAlchemyExperience(200, 7, AlchemyQuality.MASTERWORK, 0, true), 0);
 });
 
 function asPlayer(player: TestAlchemyPlayer): Player {
@@ -437,6 +454,7 @@ test('연금술은 ready 전 취소에는 재료를 보존하고 최초 ready에
     assert.equal(player.inventory.getCount('mourning_lily'), 0);
     assert.equal(player.inventory.getCount('oasis_date'), 0);
     assert.equal(player.inventory.getCount(ALCHEMY_WATER_BOTTLE_ITEM_ID), 0);
+    assert.deepEqual(player.gainedExperience, []);
     assert.equal(player.inventory.removeItemByData('mourning_lily', 1), false);
     assert.equal(hasExperimentedAlchemyReagent(player.progress, 'mourning_lily'), true);
     assert.equal(hasExperimentedAlchemyReagent(player.progress, 'oasis_date'), true);
@@ -484,6 +502,8 @@ test('ready에서 확정한 재료는 성공 결과를 정확히 한 번만 지�
     }), true);
     await new Promise<void>(resolve => setImmediate(resolve));
     assert.equal(player.inventory.getCount('alchemy_life_draught'), 1);
+    assert.equal(player.gainedExperience.length, 1);
+    assert.ok(player.gainedExperience[0] > 0);
     assert.equal(hasExperimentedAlchemyReagent(player.progress, 'mourning_lily'), true);
     assert.equal(hasExperimentedAlchemyReagent(player.progress, 'oasis_date'), true);
     assert.equal(submitMiniGameResult(player.userId, socketId, {
@@ -491,6 +511,7 @@ test('ready에서 확정한 재료는 성공 결과를 정확히 한 번만 지�
         alchemyTrackingProof: proof,
     }), false);
     assert.equal(player.inventory.getCount('alchemy_life_draught'), 1);
+    assert.equal(player.gainedExperience.length, 1);
 });
 
 test('성공 결과가 중량 때문에 인벤토리에 들어가지 않으면 현재 위치 바닥에 보존한다', async () => {
@@ -522,6 +543,7 @@ test('성공 결과가 중량 때문에 인벤토리에 들어가지 않으면 �
     const dropped = location.getDroppedItems().filter(item => item.itemDataId === 'alchemy_life_draught');
     assert.equal(dropped.length, droppedBefore + 1);
     assert.equal(dropped.at(-1)?.count, 1);
+    assert.equal(player.gainedExperience.length, 1);
 });
 
 test('회복 투척약은 현재 지정한 같은 장소 파티원을 우선하고 비파티·타 장소 대상을 거부한다', () => {

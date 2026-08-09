@@ -14,6 +14,8 @@ import {
     ALCHEMY_WATER_BOTTLE_ITEM_ID,
     AlchemyDelivery,
     AlchemyEffectType,
+    AlchemyQuality,
+    calculateAlchemyQualityScore,
     createAlchemyInventoryRequirements,
     createAlchemyPotionSnapshot,
     getAlchemyReagent,
@@ -28,6 +30,7 @@ import { Item, ItemMetadataKeys, getItemSnapshotDisplay, type ItemSnapshot } fro
 import { getLocation } from '../../models/world/Location.js';
 import Monster from '../../models/actors/Monster.js';
 import Player from '../../models/actors/Player.js';
+import Entity from '../../models/core/Entity.js';
 import { StatType } from '../../models/core/Stat.js';
 import { StatusEffectType } from '../../models/combat/StatusEffect.js';
 import { partyManager } from '../social/party.js';
@@ -463,6 +466,28 @@ export function createAlchemyCompletionOutputs(options: {
     })];
 }
 
+/** 동레벨 일반 사냥의 80%를 기준으로 난도·품질·병 수를 반영하고 미확인 실험은 감액한다. */
+export function calculateAlchemyExperience(
+    playerLevel: number,
+    difficulty: number,
+    quality: AlchemyQuality,
+    bottleCount: number,
+    knownFormula: boolean,
+): number {
+    const count = Math.max(0, Math.floor(Number.isFinite(bottleCount) ? bottleCount : 0));
+    if (count === 0) return 0;
+    const normalizedDifficulty = clamp(Number.isFinite(difficulty) ? difficulty : 1, 1, 10);
+    const difficultyMultiplier = 0.55 + normalizedDifficulty * 0.05;
+    return Math.max(1, Math.round(
+        Entity.getStandardMonsterExpOfLevel(playerLevel)
+            * 0.8
+            * difficultyMultiplier
+            * quality.experienceMultiplier
+            * count
+            * (knownFormula ? 1 : 0.35),
+    ));
+}
+
 /** `/연금술` 시작점. 첫 ready에서 재료를 한 번만 원자 소비하고 이후 성공 결과만 별도로 지급한다. */
 export function startAlchemy(player: Player, options: StartAlchemyOptions): StartAlchemyResult {
     if (!canUseAlchemy(player)) {
@@ -558,9 +583,24 @@ export function startAlchemy(player: Player, options: StartAlchemyOptions): Star
             const output = outputs[0];
             const display = getItemSnapshotDisplay(output);
             const accuracy = Math.round(clamp(result.score ?? 0, 0, 1) * 100);
+            const quality = AlchemyQuality.fromScore(calculateAlchemyQualityScore(
+                clamp(result.score ?? 0, 0, 1),
+                committedSensibility,
+            ));
+            const difficulty = clamp(formula?.difficulty ?? 4 + ingredients.length, 1, 10);
+            const experience = calculateAlchemyExperience(
+                player.level,
+                difficulty,
+                quality,
+                options.bottleCount,
+                Boolean(formula),
+            );
+            const levelsGained = player.gainExp(experience);
             const formulaText = formula ? '' : ' · 미확인 조합이 재료 성질에 따른 실패약으로 굳었습니다.';
             const dropText = outputDropped ? ' · 중량 초과로 현재 위치 바닥에 놓였습니다.' : '';
-            const message = `[ 연금술 완료 ] ${display.name} x${output.count} · 추적 정확도 ${accuracy}%${formulaText}${dropText}`;
+            const experimentText = formula ? '' : ' (미확인 조합 35%)';
+            const levelText = levelsGained.length ? ` · Lv.${levelsGained.at(-1)} 달성` : '';
+            const message = `[ 연금술 완료 ] ${display.name} x${output.count} · ${quality.label} · 추적 정확도 ${accuracy}% · +${experience} EXP${experimentText}${levelText}${formulaText}${dropText}`;
             sendBotMessageToUser(player.userId, message);
             sendNotificationToUser(player.userId, {
                 key: 'alchemy:complete',
