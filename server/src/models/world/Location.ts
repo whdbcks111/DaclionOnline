@@ -25,6 +25,9 @@ export interface DroppedItemDisplay {
     count: number;
 }
 
+/** 바닥에 놓인 아이템이 월드에 유지되는 시간. */
+export const DROPPED_ITEM_LIFETIME_MS = 5 * 60 * 1_000;
+
 /** 이동 조건 결과 */
 export type ConnectionStatus = 'visible' | 'locked' | 'hidden';
 
@@ -242,8 +245,17 @@ export default class Location implements TagReadable {
 
     // -- 바닥 아이템 관리 --
 
+    private removeExpiredDroppedItems(now = Date.now()): number {
+        const previousCount = this._droppedItems.length;
+        this._droppedItems = this._droppedItems.filter(item => (
+            now - item.droppedAt < DROPPED_ITEM_LIFETIME_MS
+        ));
+        return previousCount - this._droppedItems.length;
+    }
+
     /** 내부 배열을 노출하지 않는 바닥 아이템 스냅샷 */
     getDroppedItems(): DroppedItem[] {
+        this.removeExpiredDroppedItems();
         return this._droppedItems.map(item => ({
             ...item,
             metadataDelta: item.metadataDelta ? { ...item.metadataDelta } : null,
@@ -253,6 +265,7 @@ export default class Location implements TagReadable {
 
     /** metadata delta를 적용한 바닥 아이템 이름·아이콘을 순번과 함께 반환한다. */
     getDroppedItemDisplays(): DroppedItemDisplay[] {
+        this.removeExpiredDroppedItems();
         return this._droppedItems.map((item, index) => ({
             index,
             ...getItemSnapshotDisplay(item),
@@ -264,6 +277,8 @@ export default class Location implements TagReadable {
 
     addDroppedItem(item: ItemSnapshot): void {
         if (!Number.isSafeInteger(item.count) || item.count <= 0) return;
+        const droppedAt = Date.now();
+        this.removeExpiredDroppedItems(droppedAt);
         const data = getItemData(item.itemDataId);
         const stackable = data?.stackable === true;
         const maxStack = stackable ? Math.max(1, data.maxStack) : 1;
@@ -275,6 +290,7 @@ export default class Location implements TagReadable {
                 const added = Math.min(remaining, maxStack - dropped.count);
                 if (added <= 0) continue;
                 dropped.count += added;
+                dropped.droppedAt = droppedAt;
                 remaining -= added;
                 if (remaining === 0) return;
             }
@@ -287,7 +303,7 @@ export default class Location implements TagReadable {
                 count,
                 metadataDelta: item.metadataDelta ? { ...item.metadataDelta } : null,
                 tags: [...item.tags],
-                droppedAt: Date.now(),
+                droppedAt,
             });
             remaining -= count;
         }
@@ -308,6 +324,7 @@ export default class Location implements TagReadable {
     }
 
     pickupItem(index: number, count?: number): DroppedItem | null {
+        this.removeExpiredDroppedItems();
         if (index < 0 || index >= this._droppedItems.length) return null;
         const item = this._droppedItems[index];
         const pickupCount = count ?? item.count;
@@ -324,6 +341,7 @@ export default class Location implements TagReadable {
     }
 
     pickupAllItems(): DroppedItem[] {
+        this.removeExpiredDroppedItems();
         return this._droppedItems.splice(0);
     }
 
@@ -388,6 +406,7 @@ export default class Location implements TagReadable {
     // -- 게임 루프 --
 
     update(dt: number, onlinePlayers: readonly Player[] = []): void {
+        this.removeExpiredDroppedItems();
         if (this.isBossRoom || this.isInstanceDungeon) {
             const presentPlayers = onlinePlayers.filter(player => (
                 player.locationId === this.id && !player.isDefeated

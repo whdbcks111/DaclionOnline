@@ -14,6 +14,10 @@ import QuestBook from '../progression/QuestBook.js';
 import { reloadAllLocations } from '../world/Location.js';
 import { getKarmaDeathPenalty } from '../player/Karma.js';
 import { RegionRiskPolicy } from '../world/RegionRisk.js';
+import {
+    defineTravelHub,
+    RESIDENCE_LOCATION_PROGRESS_ID,
+} from '../world/TravelHub.js';
 import { initSocket } from '../../modules/infrastructure/socket.js';
 import { registerOnlinePlayer, unregisterOnlinePlayer } from '../../modules/player/playerRegistry.js';
 import { GameEventIds, subscribeGameEvent, type GameEvent } from '../core/GameEvent.js';
@@ -38,6 +42,13 @@ reloadAllLocations([
         npcIds: [], objects: [], connections: [], tags: [],
     },
 ]);
+
+defineTravelHub({
+    locationId: 'death-test-neutral',
+    unlockFee: 0,
+    useFee: 0,
+    unlockedByDefault: true,
+});
 
 let nextPlayerId = 20_000;
 
@@ -212,6 +223,15 @@ test('중복 onDeath 호출과 저장된 사망 상태 복원은 적대 귀환 �
     assert.equal(restored.isDead, true);
     assert.equal(countReturnScrolls(restored), 2);
     assert.ok(restored.deathTimer > 89 && restored.deathTimer <= 90);
+});
+
+test('선택한 다른 마을 거주점은 기본 광장 대신 실제 부활 위치로 사용된다', () => {
+    const player = createLivePlayer('death-test-hostile');
+    player.progress.setState(RESIDENCE_LOCATION_PROGRESS_ID, 'death-test-neutral');
+
+    player.respawn();
+
+    assert.equal(player.locationId, 'death-test-neutral');
 });
 
 test('복원된 DoT의 actorPlayerId는 온라인 공격자의 PVP 막타로 해석된다', () => {

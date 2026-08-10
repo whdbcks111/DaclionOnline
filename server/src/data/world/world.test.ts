@@ -25,6 +25,7 @@ import '../combat/skills.js';
 import './monsters.js';
 import './resources.js';
 import './npcs.js';
+import { TRAVEL_HUB_DEFINITIONS } from './travelHubs.js';
 import './locations.js';
 import './dungeonPuzzles.js';
 import '../combat/bossPatterns.js';
@@ -116,6 +117,16 @@ test('월드 맵 연결과 오브젝트 정의가 유효하고 고블린이 남�
         baseLocations.length + buildAscendantLocations().length + buildUpperDimensionExpeditionLocations().length,
     );
     assert.equal(ids.size, locations.length);
+
+    const travelRelayLocationIds = locations
+        .filter(location => location.objects.some(object => object.dataId === 'travel_relay'))
+        .map(location => location.id)
+        .sort();
+    assert.deepEqual(
+        travelRelayLocationIds,
+        TRAVEL_HUB_DEFINITIONS.map(definition => definition.locationId).sort(),
+    );
+    assert.equal(travelRelayLocationIds.length, 13);
 
     for (const location of locations) {
         for (const connection of location.connections) {

@@ -6,6 +6,7 @@ import { StatType } from "../core/Stat.js";
 import type { StatRecord } from "../core/Stat.js";
 import { AttributeType } from "../core/Attribute.js";
 import { getLocation, getRespawnLocation, isRuntimeLocation } from "../world/Location.js";
+import { getPlayerRespawnLocation } from '../world/TravelHub.js';
 import { sendBotMessageToUser, sendNotificationToUser } from "../../modules/communication/message.js";
 import { chat } from "../../utils/chatBuilder.js";
 import { GameTags } from "../../../../shared/tags.js";
@@ -741,7 +742,7 @@ export default class Player extends Entity {
             this.syncSurvivalStatusEffects();
         }
         if (!getLocation(this._locationId)) {
-            const respawn = getRespawnLocation();
+            const respawn = getPlayerRespawnLocation(this);
             if (respawn) this.locationId = respawn.id;
         }
 
@@ -925,7 +926,7 @@ export default class Player extends Entity {
         this.progress.reset(PlayerRuntimeProgressIds.DEATH_EXPIRES_AT);
         this.progress.reset(PlayerRuntimeProgressIds.DEATH_REMAINING);
         recordPvpRespawn(this);
-        const respawnLoc = getRespawnLocation();
+        const respawnLoc = getPlayerRespawnLocation(this);
         if (respawnLoc) this.locationId = respawnLoc.id;
         if (notify) sendBotMessageToUser(this.userId, '리스폰했습니다.');
     }

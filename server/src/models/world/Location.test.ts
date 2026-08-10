@@ -5,6 +5,8 @@ import { defineMonster } from '../actors/Monster.js';
 import Equipment from '../economy/Equipment.js';
 import Entity from '../core/Entity.js';
 import Location from './Location.js';
+import { DROPPED_ITEM_LIFETIME_MS } from './Location.js';
+import { defineItem } from '../economy/Item.js';
 
 defineMonster({
     id: 'test_instance_group_monster',
@@ -17,6 +19,23 @@ defineMonster({
     expReward: 0,
     equipments: [],
     tags: [GameTags.ENTITY_MONSTER],
+});
+
+defineItem({
+    id: 'test_dropped_item_expiration',
+    name: '시험용 바닥 아이템',
+    description: '바닥 아이템 만료 시험용 아이템.',
+    image: 'items/health_potion',
+    category: 'test',
+    weight: 0.1,
+    stackable: true,
+    maxStack: 99,
+    baseMetadata: null,
+    onUse: null,
+    equipSlot: null,
+    modifiers: null,
+    baseDurability: null,
+    tags: [],
 });
 
 class TestIntruder extends Entity {
@@ -68,4 +87,56 @@ test('인스턴스의 몬스터 무리는 참가자가 둘이면 대상을 순�
     assert.equal(soloLocation.engageHostileMonsterGroup([solo]), 4);
     assert.ok(soloLocation.getMonstersByDataId('test_instance_group_monster')
         .every(monster => monster.currentTarget === solo));
+});
+
+test('바닥 아이템은 5분 뒤 조회와 줍기 대상에서 제거된다', t => {
+    let now = 1_000;
+    t.mock.method(Date, 'now', () => now);
+    const location = new Location({
+        id: 'test_dropped_item_expiration_location',
+        name: '시험 바닥',
+        zoneType: 'safe',
+        x: 0, y: 0, z: 0,
+        npcIds: [], objects: [], connections: [], tags: [],
+    });
+
+    location.addDroppedItem({
+        itemDataId: 'test_dropped_item_expiration',
+        count: 2,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    });
+    now += DROPPED_ITEM_LIFETIME_MS - 1;
+    assert.equal(location.getDroppedItems().length, 1);
+
+    now += 1;
+    assert.deepEqual(location.getDroppedItemDisplays(), []);
+    assert.equal(location.pickupItem(0), null);
+});
+
+test('같은 바닥 묶음에 새 아이템이 합쳐지면 전체 묶음의 5분 수명이 갱신된다', t => {
+    let now = 10_000;
+    t.mock.method(Date, 'now', () => now);
+    const location = new Location({
+        id: 'test_dropped_item_stack_expiration_location',
+        name: '시험 바닥 묶음',
+        zoneType: 'safe',
+        x: 0, y: 0, z: 0,
+        npcIds: [], objects: [], connections: [], tags: [],
+    });
+    const snapshot = {
+        itemDataId: 'test_dropped_item_expiration',
+        count: 1,
+        durability: null,
+        metadataDelta: null,
+        tags: [],
+    };
+
+    location.addDroppedItem(snapshot);
+    now += DROPPED_ITEM_LIFETIME_MS - 1;
+    location.addDroppedItem(snapshot);
+    now += DROPPED_ITEM_LIFETIME_MS - 1;
+
+    assert.equal(location.getDroppedItems()[0]?.count, 2);
 });

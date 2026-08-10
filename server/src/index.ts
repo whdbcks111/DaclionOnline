@@ -30,6 +30,7 @@ import './data/combat/skills.js';
 import './data/professions/crafting.js';
 import './data/progression/quests.js';
 import './data/world/npcs.js';
+import './data/world/travelHubs.js';
 import './data/professions/fishing.js';
 import './data/world/ascendantFrontier.js';
 import './data/world/instanceDungeons.js';

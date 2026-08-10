@@ -322,7 +322,7 @@ export interface LocationInfoData extends SnapshotRevision {
 
 /** LocationCapability의 직렬화 경계 key와 HUD 표시 정보. */
 export interface LocationCapabilityData {
-    key: 'fishing' | 'shop'
+    key: 'fishing' | 'shop' | 'travel-relay'
     label: string
     icon: string
 }

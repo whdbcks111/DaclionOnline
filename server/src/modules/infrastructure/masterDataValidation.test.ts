@@ -7,6 +7,7 @@ import '../../data/combat/statusEffects.js';
 import '../../data/professions/alchemy.js';
 import '../../data/combat/projectiles.js';
 import '../../data/world/resources.js';
+import '../../data/world/travelHubs.js';
 import '../../data/economy/shops.js';
 import '../../data/combat/tagEffects.js';
 import '../../data/progression/jobs.js';

@@ -14,6 +14,7 @@ import '../data/combat/skills.js';
 import '../data/professions/crafting.js';
 import '../data/progression/quests.js';
 import '../data/world/npcs.js';
+import '../data/world/travelHubs.js';
 import '../data/world/monsters.js';
 import '../data/combat/bossPatterns.js';
 import '../data/professions/fishing.js';

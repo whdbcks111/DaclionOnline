@@ -11,7 +11,9 @@
     "mapIcon": "town-plaza",
     "tags": ["location:safe"],
     "npcIds": ["town_guide", "daily_commissioner"],
-    "objects": [],
+    "objects": [
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
+    ],
     "connections": [
       { "locationId": "field" },
       { "locationId": "shop_street" },
@@ -1245,7 +1247,9 @@
     "mapIcon": "general-shop",
     "tags": ["location:safe", "location:shop", "location:tomb", "property:dark"],
     "npcIds": ["twilight_keeper"],
-    "objects": [],
+    "objects": [
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
+    ],
     "connections": [
       { "locationId": "twilight_memorial_road" }
     ]
@@ -1425,7 +1429,8 @@
     "tags": ["location:safe", "location:shop", "location:desert", "property:water", "property:natural"],
     "npcIds": ["glassdune_chronicler"],
     "objects": [
-      { "type": "resource", "dataId": "oasis_date_palm", "maxCount": 2, "respawnTime": 0 }
+      { "type": "resource", "dataId": "oasis_date_palm", "maxCount": 2, "respawnTime": 0 },
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "glassdune_border" }
@@ -1633,7 +1638,8 @@
     "npcIds": ["frostveil_warden"],
     "objects": [
       { "type": "resource", "dataId": "snowmoss_patch", "maxCount": 2, "respawnTime": 0 },
-      { "type": "resource", "dataId": "everfrost_loom_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "everfrost_loom_dimensional_rift", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "frostveil_pass" },
@@ -1912,7 +1918,9 @@
     "shopId": "misttide_harbor_store",
     "tags": ["location:town", "location:coast", "property:water", "shop:tidal"],
     "npcIds": ["misttide_navigator"],
-    "objects": [],
+    "objects": [
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
+    ],
     "connections": [
       { "locationId": "misttide_headland" },
       { "locationId": "misttide_wreckshore" },
@@ -2301,7 +2309,8 @@
     "tags": ["location:town", "location:clockwork", "property:metal", "shop:clockwork"],
     "npcIds": ["paradox_curator"],
     "objects": [
-      { "type": "resource", "dataId": "clockwork_origin_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "clockwork_origin_dimensional_rift", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "paradox_foundry_threshold" },
@@ -2753,7 +2762,9 @@
     "shopId": "ashen_waystation_store",
     "tags": ["location:town", "location:ashen_abyss", "property:fire", "shop:ashen_abyss"],
     "npcIds": ["ashen_wayfinder"],
-    "objects": [],
+    "objects": [
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
+    ],
     "connections": [
       { "locationId": "ashen_gate_chasm" },
       { "locationId": "ashen_dead_valley_west" },
@@ -3210,7 +3221,8 @@
     "tags": ["location:town", "location:voidcrown", "property:light", "shop:voidcrown"],
     "npcIds": ["voidcrown_warden"],
     "objects": [
-      { "type": "resource", "dataId": "uncrowned_void_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "uncrowned_void_dimensional_rift", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "voidcrown_threshold" },
@@ -3669,7 +3681,9 @@
     "shopId": "eclipse_dock_store",
     "tags": ["location:town", "location:eclipse-trench", "property:water", "shop:eclipse-trench"],
     "npcIds": ["eclipse_navigator"],
-    "objects": [],
+    "objects": [
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
+    ],
     "connections": [
       { "locationId": "eclipse_threshold" },
       { "locationId": "eclipse_lower_crossing" }
@@ -4099,7 +4113,8 @@
     "npcIds": ["worldroot_keeper"],
     "objects": [
       { "type": "resource", "dataId": "worldroot_reliquary", "maxCount": 1, "respawnTime": 0 },
-      { "type": "resource", "dataId": "first_worldroot_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "first_worldroot_dimensional_rift", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "worldroot_threshold" },
@@ -4519,7 +4534,8 @@
     "tags": ["location:safe", "location:shop", "location:nebula-corridor", "property:light"],
     "npcIds": ["nebula_navigator"],
     "objects": [
-      { "type": "resource", "dataId": "starbirth_orbit_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "starbirth_orbit_dimensional_rift", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "nebula_threshold" },
@@ -4758,7 +4774,9 @@
     "shopId": "chronofrost_refuge_store",
     "tags": ["location:safe", "location:shop", "location:chronofrost", "property:ice"],
     "npcIds": ["chronofrost_keeper"],
-    "objects": [],
+    "objects": [
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
+    ],
     "connections": [
       { "locationId": "chronofrost_threshold" },
       { "locationId": "chronofrost_lower_fork" }
@@ -4999,7 +5017,8 @@
     "tags": ["location:safe", "location:shop", "location:endstar", "property:light"],
     "npcIds": ["endstar_observer"],
     "objects": [
-      { "type": "resource", "dataId": "preterminal_constellation_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "preterminal_constellation_dimensional_rift", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "endstar_threshold" },

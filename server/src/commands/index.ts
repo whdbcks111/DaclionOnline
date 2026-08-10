@@ -27,6 +27,7 @@ import { initCodexCommands } from './world/codex.js';
 import { initMailboxCommands } from './community/mailbox.js';
 import { initAlchemyCommands } from './economy/alchemy.js';
 import { initCosmeticCommands } from './community/cosmetics.js';
+import { initTravelHubCommands } from './world/travelHub.js';
 
 export function initAllCommands(): void {
     initGeneralCommands();
@@ -58,4 +59,5 @@ export function initAllCommands(): void {
     initMailboxCommands();
     initAlchemyCommands();
     initCosmeticCommands();
+    initTravelHubCommands();
 }

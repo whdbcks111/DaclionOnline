@@ -36,6 +36,7 @@ import { cancelGameTask, scheduleGameTask } from '../infrastructure/scheduler.js
 import { cancelMiniGame } from '../professions/minigame.js';
 import { StatusEffectRemovalReason } from '../../models/combat/StatusEffect.js';
 import { sendBotMessageToUser } from '../communication/message.js';
+import { isTravelHubLocation } from '../../models/world/TravelHub.js';
 
 const SAVE_INTERVAL = 30_000;   // 30초
 const STATS_INTERVAL = 500;  // 0.5초 (쿨타임 표시 정확도)
@@ -156,6 +157,13 @@ class LocationCapability {
             const shop = location.data.shopId ? getShop(location.data.shopId) : undefined;
             return Boolean(shop && !shop.getAccessDeniedReason(player));
         },
+    );
+
+    static readonly TRAVEL_RELAY = new LocationCapability(
+        'travel-relay',
+        '중계소·거주점',
+        'map/town-plaza',
+        location => isTravelHubLocation(location.id),
     );
 
     private constructor(

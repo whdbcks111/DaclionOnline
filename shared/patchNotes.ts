@@ -73,6 +73,15 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.49', '2026-08-10',
+        [FEATURE,
+            '루미나르와 황혼왕릉부터 라그나벨까지 13개 성장 거점에 `공간 중계핵`을 추가했습니다. 지역 첫 복구·보급 퀘스트를 완료하고 큰 Gold 비용으로 영구 해금한 뒤, 목적지별 사용료를 내고 순간이동할 수 있습니다.',
+            '해금한 공간 중계소를 `/거주점설정`으로 부활 거점에 지정할 수 있습니다. 다른 마을을 거주점으로 삼으면 사망 후 해당 거점에서 부활합니다.',
+        ],
+        [CHANGED,
+            '바닥에 떨어진 아이템은 5분 뒤 사라집니다. 같은 상태의 새 아이템이 기존 묶음에 합쳐지면 해당 묶음의 5분 유지 시간이 다시 시작됩니다.',
+        ],
+    ),
     definePatchNote('1.0.48', '2026-08-09',
         [CHANGED,
             '액티브 스킬 돌파 후 레벨은 피해·회복·보호막·버프 계수가 기존 레벨 증가량의 2배씩 성장하도록 강화했습니다. 정신력 소모와 재사용 대기시간은 실제 레벨 기준을 유지합니다.',

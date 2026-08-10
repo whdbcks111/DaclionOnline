@@ -23,6 +23,7 @@ import '../combat/statusEffects.js';
 import './monsters.js';
 import '../combat/bossPatterns.js';
 import './resources.js';
+import './travelHubs.js';
 import '../economy/shops.js';
 import '../combat/tagEffects.js';
 import '../progression/jobs.js';
