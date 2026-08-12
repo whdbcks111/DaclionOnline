@@ -1430,7 +1430,8 @@
     "npcIds": ["glassdune_chronicler"],
     "objects": [
       { "type": "resource", "dataId": "oasis_date_palm", "maxCount": 2, "respawnTime": 0 },
-      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "travel_relay", "maxCount": 1, "respawnTime": 0 },
+      { "type": "resource", "dataId": "primal_glassdune_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "glassdune_border" }
@@ -1531,8 +1532,7 @@
     "npcIds": [],
     "objects": [
       { "type": "monster", "dataId": "sun_shard_elemental", "maxCount": 2, "respawnTime": 92 },
-      { "type": "resource", "dataId": "glassdune_sundial", "maxCount": 1, "respawnTime": 0 },
-      { "type": "resource", "dataId": "primal_glassdune_dimensional_rift", "maxCount": 1, "respawnTime": 0 }
+      { "type": "resource", "dataId": "glassdune_sundial", "maxCount": 1, "respawnTime": 0 }
     ],
     "connections": [
       { "locationId": "glassdune_mirage_path" },

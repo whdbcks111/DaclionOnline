@@ -745,6 +745,18 @@ test('성물 수호와 고정 능력치 패시브는 레벨마다 실제 수치�
     }
 });
 
+test('로드 시 패시브 최대 생명력을 현재 생명력 clamp보다 먼저 복원할 수 있다', () => {
+    const player = new TestSkillPlayer(9_309_5);
+    player.life = 110;
+    player.skills.grant('transcendent_soul', 'ascension');
+
+    player.skills.refreshPassiveEffects();
+    player.clampVitals();
+
+    assert.ok(Math.abs(player.maxLife - 110) < 1e-10);
+    assert.equal(player.life, 110);
+});
+
 test('액티브 돌파 레벨은 실제 전투 계수 증가량을 기존 레벨의 두 배로 적용한다', () => {
     const player = new TestSkillPlayer(9_308);
     player.attribute.addModifier({ attribute: 'atk', op: 'add', value: 100, source: 'test:breakthrough' });

@@ -265,6 +265,7 @@ export default class Inventory {
      */
     sortItems(mode: InventorySortMode = InventorySortMode.AUTO): boolean {
         const before = [...this._items];
+        const consolidated = this.consolidateStacks();
         const byName = (left: Item, right: Item) =>
             inventoryCollator.compare(left.name || left.itemDataId, right.name || right.itemDataId)
             || inventoryCollator.compare(left.itemDataId, right.itemDataId);
@@ -286,7 +287,7 @@ export default class Inventory {
             return byCategoryThenName(left, right);
         });
 
-        if (before.every((item, index) => item === this._items[index])) return false;
+        if (!consolidated && before.every((item, index) => item === this._items[index])) return false;
         this.orderDirty = true;
         this.notifyChange();
         return true;
@@ -931,7 +932,8 @@ export default class Inventory {
      * 과거의 작은 maxStack 때문에 DB row가 나뉜 stackable 아이템을 현재 규칙에 맞춰 합친다.
      * 인스턴스 metadata·내구도·영속 태그가 다른 아이템은 별도 스택으로 유지한다.
      */
-    private consolidateLoadedStacks(): void {
+    private consolidateStacks(): boolean {
+        let changed = false;
         for (let targetIndex = 0; targetIndex < this._items.length; targetIndex++) {
             const target = this._items[targetIndex];
             const data = getItemData(target.itemDataId);
@@ -948,19 +950,26 @@ export default class Inventory {
                 if (moved <= 0) break;
                 target.count += moved;
                 source.count -= moved;
-                this._states.set(target, ItemState.Modified);
+                changed = true;
+                if (this._states.get(target) === ItemState.Clean) {
+                    this._states.set(target, ItemState.Modified);
+                }
 
                 if (source.count > 0) {
-                    this._states.set(source, ItemState.Modified);
+                    if (this._states.get(source) === ItemState.Clean) {
+                        this._states.set(source, ItemState.Modified);
+                    }
                     sourceIndex++;
                     continue;
                 }
 
                 this._items.splice(sourceIndex, 1);
-                this._states.set(source, ItemState.Deleted);
+                if (this._states.get(source) === ItemState.New) this._states.delete(source);
+                else this._states.set(source, ItemState.Deleted);
                 this.orderDirty = true;
             }
         }
+        return changed;
     }
 
     /** DB에서 인벤토리 로드 */
@@ -985,7 +994,7 @@ export default class Inventory {
             );
             inv.track(item, ItemState.Clean);
         }
-        inv.consolidateLoadedStacks();
+        inv.consolidateStacks();
         return inv;
     }
 

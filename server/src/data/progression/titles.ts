@@ -26,6 +26,8 @@ const TitleStatisticIds = Object.freeze({
     FISH_CAUGHT: FISHING_CATCH_COUNT_PROGRESS_ID,
     MYTHIC_FISH_CAUGHT: 'title-stat:fishing/mythic',
     ITEMS_FORGED: 'title-stat:forging/completed',
+    ALCHEMY_BOTTLES: 'title-stat:alchemy/bottles',
+    MASTERWORK_ALCHEMY_BOTTLES: 'title-stat:alchemy/masterwork-bottles',
 });
 
 function defineKillStatistic(id: string, label: string, tag: string): void {
@@ -96,6 +98,28 @@ defineStatistic({
     description: '칭호 획득 조건에 사용하는 숨겨진 단조 통계입니다.',
     visible: false,
     format: value => `${value}회`,
+});
+
+defineStatistic({
+    id: TitleStatisticIds.ALCHEMY_BOTTLES,
+    eventId: GameEventIds.ALCHEMY_BREWED,
+    label: '연금 조제약 완성',
+    description: '칭호 획득 조건에 사용하는 숨겨진 연금술 조제 병 수입니다.',
+    visible: false,
+    amount: event => typeof event.data.bottleCount === 'number' ? event.data.bottleCount : 0,
+    format: value => `${value}병`,
+});
+
+defineStatistic({
+    id: TitleStatisticIds.MASTERWORK_ALCHEMY_BOTTLES,
+    eventId: GameEventIds.ALCHEMY_BREWED,
+    label: '명인의 조제약 완성',
+    description: '칭호 획득 조건에 사용하는 숨겨진 명인의 품질 조제 병 수입니다.',
+    visible: false,
+    amount: event => event.data.quality === 'masterwork' && typeof event.data.bottleCount === 'number'
+        ? event.data.bottleCount
+        : 0,
+    format: value => `${value}병`,
 });
 
 function counter(player: Player, id: string): number {
@@ -416,6 +440,43 @@ defineTitle({
     modifiers: () => [
         { attribute: AttributeType.FORGING_PRECISION.key, op: 'multiply', value: 1.05 },
         { attribute: AttributeType.CRIT_DMG.key, op: 'multiply', value: 1.05 },
+    ],
+});
+
+for (const title of [
+    {
+        id: 'title:alchemy_apprentice', name: '초보 연금술사', bottles: 10,
+        description: '행운이 2 증가합니다.',
+        modifiers: [{ attribute: AttributeType.LUCK.key, op: 'add' as const, value: 2 }],
+    },
+    {
+        id: 'title:cauldron_adept', name: '가마솥의 연성가', bottles: 100,
+        description: '최대 정신력이 3%, 마법력이 2% 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAX_MENTALITY.key, op: 'multiply' as const, value: 1.03 },
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply' as const, value: 1.02 },
+        ],
+    },
+] as const) defineTitle({
+    id: title.id,
+    name: title.name,
+    acquisitionDescription: `연금술로 조제약 ${title.bottles.toLocaleString('ko-KR')}병 완성`,
+    description: title.description,
+    canAcquire: player => counter(player, TitleStatisticIds.ALCHEMY_BOTTLES) >= title.bottles,
+    modifiers: () => [...title.modifiers],
+});
+
+defineTitle({
+    id: 'title:master_of_all_elixirs',
+    name: '만병의 연금술사',
+    acquisitionDescription: '연금술로 조제약 500병과 명인의 품질 조제약 50병 완성',
+    description: '최대 정신력이 5%, 마법력이 4% 증가하고 행운이 10 증가합니다.',
+    canAcquire: player => counter(player, TitleStatisticIds.ALCHEMY_BOTTLES) >= 500
+        && counter(player, TitleStatisticIds.MASTERWORK_ALCHEMY_BOTTLES) >= 50,
+    modifiers: () => [
+        { attribute: AttributeType.MAX_MENTALITY.key, op: 'multiply', value: 1.05 },
+        { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.04 },
+        { attribute: AttributeType.LUCK.key, op: 'add', value: 10 },
     ],
 });
 

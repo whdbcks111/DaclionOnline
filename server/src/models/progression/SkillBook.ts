@@ -516,6 +516,29 @@ export default class SkillBook {
             }
         }
 
+        this.refreshPassiveEffects(dt);
+
+        for (const skill of this.getAll()) {
+            if (!skill.isActive) continue;
+            if (owner.isDefeated) {
+                this.finish(skill, SkillFinishReason.OWNER_DEFEATED);
+                continue;
+            }
+            const expired = skill.advanceActive(dt);
+            const context = this.createUpdateContext(skill);
+            try {
+                const result = skill.data.onUpdate?.(context, dt);
+                if (result === 'finish' || expired) this.finish(skill, SkillFinishReason.COMPLETED);
+            } catch (error) {
+                logger.error(`스킬 업데이트 실패: ${skill.skillDataId}`, error);
+                this.finish(skill, SkillFinishReason.ERROR);
+            }
+        }
+    }
+
+    /** 저장된 현재 자원을 clamp하기 전에 보유 패시브의 최대 자원 modifier를 복원한다. */
+    refreshPassiveEffects(dt = 0): void {
+        const owner = this.requireOwner();
         for (const skill of this.getAll()) {
             try {
                 const visible = skill.isVisibleTo(owner);
@@ -532,21 +555,6 @@ export default class SkillBook {
                     logger.error(`스킬 패시브 오류 정리 실패: ${skill.skillDataId}`, cleanupError);
                 }
                 logger.error(`스킬 패시브 조건 또는 업데이트 실패: ${skill.skillDataId}`, error);
-            }
-
-            if (!skill.isActive) continue;
-            if (owner.isDefeated) {
-                this.finish(skill, SkillFinishReason.OWNER_DEFEATED);
-                continue;
-            }
-            const expired = skill.advanceActive(dt);
-            const context = this.createUpdateContext(skill);
-            try {
-                const result = skill.data.onUpdate?.(context, dt);
-                if (result === 'finish' || expired) this.finish(skill, SkillFinishReason.COMPLETED);
-            } catch (error) {
-                logger.error(`스킬 업데이트 실패: ${skill.skillDataId}`, error);
-                this.finish(skill, SkillFinishReason.ERROR);
             }
         }
     }

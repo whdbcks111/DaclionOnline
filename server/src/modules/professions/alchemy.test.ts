@@ -24,6 +24,7 @@ import {
     recordAlchemyReagentExperiments,
 } from '../../models/professions/Alchemy.js';
 import Entity, { type AttackOptions } from '../../models/core/Entity.js';
+import { GameEventIds, getRecentGameEvents } from '../../models/core/GameEvent.js';
 import Equipment from '../../models/economy/Equipment.js';
 import Inventory from '../../models/economy/Inventory.js';
 import { ItemMetadataKeys } from '../../models/economy/Item.js';
@@ -506,12 +507,21 @@ test('ready에서 확정한 재료는 성공 결과를 정확히 한 번만 지�
     assert.ok(player.gainedExperience[0] > 0);
     assert.equal(hasExperimentedAlchemyReagent(player.progress, 'mourning_lily'), true);
     assert.equal(hasExperimentedAlchemyReagent(player.progress, 'oasis_date'), true);
+    assert.deepEqual(
+        getRecentGameEvents({ id: GameEventIds.ALCHEMY_BREWED, actorUserId: player.userId })
+            .map(event => event.data),
+        [{ bottleCount: 1, formulaKnown: true, quality: 'masterwork' }],
+    );
     assert.equal(submitMiniGameResult(player.userId, socketId, {
         ...started.miniGame,
         alchemyTrackingProof: proof,
     }), false);
     assert.equal(player.inventory.getCount('alchemy_life_draught'), 1);
     assert.equal(player.gainedExperience.length, 1);
+    assert.equal(
+        getRecentGameEvents({ id: GameEventIds.ALCHEMY_BREWED, actorUserId: player.userId }).length,
+        1,
+    );
 });
 
 test('성공 결과가 중량 때문에 인벤토리에 들어가지 않으면 현재 위치 바닥에 보존한다', async () => {

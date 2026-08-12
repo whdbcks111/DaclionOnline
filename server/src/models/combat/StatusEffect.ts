@@ -806,7 +806,7 @@ function updateFireEffect({ target, effect }: StatusEffectContext, dt: number): 
         });
         if (target.isPlayer && target.playerUserId !== undefined) {
             const shieldText = result.absorbedDamage > 0
-                ? `, 보호막 ${result.absorbedDamage.toFixed(1)} 흡수`
+                ? `, 보호막 ${result.absorbedDamage.toFixed(1)} 흡수 · 잔량 ${result.remainingShield.toFixed(1)}`
                 : '';
             sendNotificationToUser(target.playerUserId, {
                 key: 'status-effect:fire',
@@ -876,7 +876,7 @@ function updateDeadlyPoisonEffect(
         });
         if (target.isPlayer && target.playerUserId !== undefined) {
             const shieldText = result.absorbedDamage > 0
-                ? `, 보호막 ${result.absorbedDamage.toFixed(1)} 흡수`
+                ? `, 보호막 ${result.absorbedDamage.toFixed(1)} 흡수 · 잔량 ${result.remainingShield.toFixed(1)}`
                 : '';
             sendNotificationToUser(target.playerUserId, {
                 key: 'status-effect:deadly-poison',

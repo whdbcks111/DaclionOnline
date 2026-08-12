@@ -815,10 +815,15 @@ test('유리모래 사막은 분기·필드 보스·해시계·거울 기둥·�
     assert.ok((colossus?.ai?.tauntResistance ?? 0) >= 0.8);
 
     const sea = locations.find(location => location.id === 'glassdune_sea');
+    const caravan = locations.find(location => location.id === 'glassdune_caravan');
     const observatory = locations.find(location => location.id === 'glassdune_observatory');
     const canyon = locations.find(location => location.id === 'glassdune_glass_canyon');
     assert.ok(sea?.connections.some(connection => connection.locationId === 'glassdune_mirage_path'));
     assert.ok(sea?.connections.some(connection => connection.locationId === 'glassdune_sunken_colonnade'));
+    assert.ok(caravan?.objects.some(object => object.type === 'resource'
+        && object.dataId === 'primal_glassdune_dimensional_rift'));
+    assert.ok(!observatory?.objects.some(object => object.type === 'resource'
+        && object.dataId === 'primal_glassdune_dimensional_rift'));
     assert.ok(observatory?.connections.some(connection => connection.condition === 'glassdune_sundial_solved'));
     assert.ok(canyon?.connections.some(connection => connection.locationId === 'dawn_cloister'));
     assert.deepEqual(getResourceData('glassdune_reliquary')?.interactionCooldown, {

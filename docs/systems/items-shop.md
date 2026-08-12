@@ -74,7 +74,7 @@ HP·MP 포션과 `apply_status_effect` 영약·회복약은 음용 성공 시 �
 ## Inventory API와 규칙
 
 - 조회: `getItem`, `getItemByIndex`, UI용 인덱스 snapshot `getIndexedItems`, `getFirstItemByData`, `getItemsByData`, `getCount`, predicate 수량용 `countMatching`.
-- 정렬: `InventorySortMode.values/fromKey/fromInput`이 `종류별`, `이름순`, `자동` 기준을 소유하고 `sortItems(mode)`가 raw 배열을 노출하지 않은 채 표시 순서를 바꾼다. 자동은 사용 가능한 아이템을 먼저, 내구도 아이템을 마지막에 두며 각 묶음은 종류·이름순으로 정렬한다.
+- 정렬: `InventorySortMode.values/fromKey/fromInput`이 `종류별`, `이름순`, `자동` 기준을 소유하고 `sortItems(mode)`가 raw 배열을 노출하지 않은 채 같은 영속 상태의 stackable 아이템을 현재 `maxStack`까지 합친 뒤 표시 순서를 바꾼다. 정의 ID뿐 아니라 metadata delta·내구도·영속 태그가 모두 같아야 병합하며 하나라도 다르면 별도 스택을 유지한다. 자동은 사용 가능한 아이템을 먼저, 내구도 아이템을 마지막에 두며 각 묶음은 종류·이름순으로 정렬한다.
 - 변경 구독: `subscribeChanges`는 수량·metadata·내구도·태그 변화 뒤 호출되며 QuestBook 같은 소유 기능의 현재 보유 조건 갱신에 사용한다. `replaceSelectedItems` 안의 연속 변경은 한 번으로 묶는다.
 - metadata 변경: `setItemMetadata`, `resetItemMetadata`가 대상 Item API를 호출하고 Inventory를 dirty로 표시한다. 조회는 반환된 Item의 `getMetadata`를 사용한다.
 - 내구도 변경: `setItemDurability`, `changeItemDurability`, `increaseItemDurability`, `increaseItemDurabilityByIndex`, `decreaseItemDurability`가 Item API를 호출하고 Inventory를 dirty로 표시한다. `Item.repairDurability`는 복구량과 최대 내구도 손실률을 함께 받아 현재 내구도를 새 상한에 맞추고 metadata delta로 영구 열화를 저장한다. 인벤토리 번호와 장착칸을 함께 받는 `/수리`는 대상 해석기가 제공하는 owner callback과 `Inventory.consumeSelectedItems`로 장비 상태와 호환 소재 소비를 함께 처리한다.
@@ -88,7 +88,7 @@ HP·MP 포션과 `apply_status_effect` 영약·회복약은 음용 성공 시 �
 
 `/인벤토리` 목록과 `/상태창`의 장착 정보는 이름 앞에 `Item.image` 아이콘을 표시한다. 인벤토리 현재/최대 중량과 `/감정`의 아이템 단위·합계 중량은 최대 소수 둘째 자리의 `kg` 단위로 표시한다. 내구도가 있는 아이템은 이름 오른쪽에 `em` 길이의 짧은 progress와 현재/최대값 tooltip을 추가한다. progress 색은 50% 초과 초록, 20% 초과~50% 금색, 20% 이하 빨강이며 존재하지 않는 이미지 에셋은 숨겨진다. PlayerStatus HUD는 `Equipment.getDurabilityHudSnapshots()`으로 무기·보호구만 고정 슬롯 순서로 받아 같은 50%/20% 색 경계의 작은 바와 퍼센트를 표시하고, tooltip에 이름·현재/최대 절대값을 보여준다. 장신구·가방·내구도가 없는 장비는 제외한다.
 
-`/인벤토리정리 [자동|종류별|이름순]`은 현재 인벤토리 번호의 순서를 영속적으로 다시 배치한다. 기준 생략 시 `자동`이다. `종류별`은 카테고리→이름 가나다순, `이름순`은 이름 가나다순이며 `자동`은 사용 아이템→일반 아이템→내구도 아이템 우선순위 안에서 카테고리→이름 가나다순을 적용한다.
+`/인벤토리정리 [자동|종류별|이름순]`은 상태가 같은 분할 스택을 먼저 합치고 현재 인벤토리 번호의 순서를 영속적으로 다시 배치한다. 기준 생략 시 `자동`이다. `종류별`은 카테고리→이름 가나다순, `이름순`은 이름 가나다순이며 `자동`은 사용 아이템→일반 아이템→내구도 아이템 우선순위 안에서 카테고리→이름 가나다순을 적용한다. 품질·강화·연금 효과처럼 metadata가 다른 인스턴스는 같은 마스터 아이템이어도 합치지 않는다.
 
 사용 효과는 `registerItemUse(id, handler)`로 등록한다. handler는 성공·실패를 포함한 모든 비동기 종료 경로에서 `finish()`를 호출해야 Inventory의 사용 잠금이 풀린다. HP/MP 포션은 coroutine으로 지연 후 회복하며 HP 포션은 `Entity.heal()`을 사용해 화상·맹독 등 받는 치유량 modifier를 반영한다. 음식·음료는 `restore_survival` handler가 선택 인스턴스를 한 개 소비하고 `Entity.restoreHunger/restoreThirst`로 최대값 안에서 생존 자원을 회복한다.
 

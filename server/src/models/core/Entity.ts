@@ -1408,7 +1408,7 @@ export default abstract class Entity implements TagReadable {
         const pct = Math.floor(lifeRatio * 100);
         const shieldSegments = target.getShieldBarSegments();
         const absorbedLabel = damageResult.absorbedDamage > 0
-            ? ` (보호막 ${damageResult.absorbedDamage.toFixed(1)} 흡수)`
+            ? ` (보호막 ${damageResult.absorbedDamage.toFixed(1)} 흡수 · 잔량 ${damageResult.remainingShield.toFixed(1)})`
             : '';
 
         const attackerUid = this.playerUserId;

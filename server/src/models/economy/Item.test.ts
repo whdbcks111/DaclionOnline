@@ -689,6 +689,30 @@ test('인벤토리는 종류별·이름순·자동 기준으로 아이템 표시
     assert.equal(InventorySortMode.fromInput('이름순'), InventorySortMode.NAME);
 });
 
+test('인벤토리 정리는 영속 상태가 같은 스택만 합치고 metadata가 다른 스택은 분리한다', () => {
+    const id = 'sort_consolidated_stack';
+    defineItem({
+        ...itemData(id),
+        stackable: true,
+        maxStack: 2,
+    });
+    const inventory = Inventory.createEmpty(1, 100);
+    assert.equal(inventory.addItem(id, 3, { batch: 'same' }), true);
+    assert.equal(inventory.addItem(id, 1, { batch: 'different' }), true);
+    assert.deepEqual(inventory.items.map(item => item.count), [2, 1, 1]);
+
+    defineItem({
+        ...itemData(id),
+        stackable: true,
+        maxStack: 99,
+    });
+    assert.equal(inventory.sortItems(InventorySortMode.CATEGORY), true);
+
+    assert.deepEqual(inventory.items.map(item => item.count), [3, 1]);
+    assert.equal(inventory.items[0].getMetadata('batch'), 'same');
+    assert.equal(inventory.items[1].getMetadata('batch'), 'different');
+});
+
 test('스택형 미끼는 묶음 전체를 장착하고 사용할 때마다 한 개씩 소비한다', () => {
     defineItem({
         ...itemData('test_bait_stack'),

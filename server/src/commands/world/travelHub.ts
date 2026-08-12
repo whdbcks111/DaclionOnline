@@ -61,7 +61,7 @@ function sendTravelHubList(userId: number): void {
 export function initTravelHubCommands(): void {
     registerCommand({
         name: '중계소',
-        aliases: ['텔레포트', 'relay', 'travelhub'],
+        aliases: ['ㅈㄱㅅ', '텔레포트', 'relay', 'travelhub', 'th'],
         description: '해금한 성장 거점 중계소를 확인하거나 유료 순간이동합니다.',
         showCommandUse: 'private',
         args: [{

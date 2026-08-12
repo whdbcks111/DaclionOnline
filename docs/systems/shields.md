@@ -18,7 +18,7 @@
 
 방어력·관통·치명타·속성 상성으로 `finalDamage`를 확정한 뒤 그 피해 타입을 흡수할 수 있는 보호막만 사용한다. 해당 보호막은 남은 지속시간이 짧은 순, 시간이 같으면 key 순으로 소모한다. 남은 피해만 생명력에서 차감한다. 각 보호막이 실제로 흡수한 양만 그 source의 지원 위협·처치 기여도로 기록되며, 덮어쓰기·만료·전투 종료로 사라진 잔여량은 기여도가 아니다.
 
-`DamageResult`에서 `finalDamage`는 보호막 적용 전 확정 피해, `absorbedDamage`는 보호막 흡수량, `lifeDamage`는 실제 생명력 감소량이다. `remainingShield`는 처리 후 전체 보호막량이다. 고정 피해 옵션은 기존 계산 단계만 건너뛰며 피해 타입에 맞는 보호막 흡수는 그대로 적용된다.
+`DamageResult`에서 `finalDamage`는 보호막 적용 전 확정 피해, `absorbedDamage`는 보호막 흡수량, `lifeDamage`는 실제 생명력 감소량이다. `remainingShield`는 처리 후 전체 보호막량이다. 직접 공격과 화염·맹독 피격 안내는 보호막이 실제 흡수했을 때 `흡수량 · 잔량`을 함께 표시한다. 고정 피해 옵션은 기존 계산 단계만 건너뛰며 피해 타입에 맞는 보호막 흡수는 그대로 적용된다.
 
 주요 공개 API는 `setShield`, `getShield`, `hasShield`, `removeShield`, `clearShields`, `getTotalShield`, `getShieldDisplaySnapshots`, `getShieldBarSegments`다. 스킬·아이템·상태효과는 고유하고 안정적인 source key를 사용해야 한다. 예를 들어 마법사 `마력 보호막`은 `skill:mana_barrier` key의 `GENERAL` 보호막을 갱신해 물리·마법·고정 피해를 모두 막고, 마법사 정체성은 같은 지속시간의 방어력·마법 저항력 버프로 유지한다.
 

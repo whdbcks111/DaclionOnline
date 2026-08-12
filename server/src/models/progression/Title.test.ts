@@ -199,6 +199,26 @@ test('낚시 성공 횟수 칭호는 첫 10회부터 단계적으로 획득한�
     assert.equal(player.titles.isOwned('잔물결 낚시꾼'), false);
 });
 
+test('완성한 조제약 수와 명인의 품질 수로 연금술 칭호를 단계 획득한다', () => {
+    const player = new TestTitlePlayer();
+    emitGameEvent(GameEventIds.ALCHEMY_BREWED, {
+        actor: player,
+        data: { bottleCount: 10, formulaKnown: true, quality: 'refined' },
+    });
+    player.titles.refreshAcquisitions(false);
+    assert.equal(player.titles.isOwned('초보 연금술사'), true);
+    assert.equal(player.titles.isOwned('가마솥의 연성가'), false);
+
+    emitGameEvent(GameEventIds.ALCHEMY_BREWED, {
+        actor: player,
+        data: { bottleCount: 490, formulaKnown: true, quality: 'masterwork' },
+    });
+    player.titles.refreshAcquisitions(false);
+
+    assert.equal(player.titles.isOwned('가마솥의 연성가'), true);
+    assert.equal(player.titles.isOwned('만병의 연금술사'), true);
+});
+
 test('레거시 칭호 대부분과 신규 생활·보스 칭호를 등록한다', () => {
     const names = new Set(getAllTitles().map(title => title.name));
     for (const name of [
@@ -208,7 +228,7 @@ test('레거시 칭호 대부분과 신규 생활·보스 칭호를 등록한다
         '슬라임 연구가', '거인에게 맞서는 자', '광맥을 읽는 자', '전설을 낚은 자',
         '물가의 초심자', '잔물결 낚시꾼', '물결을 읽는 자', '대양의 사냥꾼',
         '만해의 낚시왕', '만어도감의 주인', '불꽃과 망치의 주인', '삼원소 조율자',
-        '마을의 해결사',
+        '마을의 해결사', '초보 연금술사', '가마솥의 연성가', '만병의 연금술사',
     ]) assert.equal(names.has(name), true, name);
-    assert.equal(names.size, 29);
+    assert.equal(names.size, 32);
 });

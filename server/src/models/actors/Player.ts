@@ -444,6 +444,7 @@ export default class Player extends Entity {
             }
         });
         if (statusEffectRestore.rejected > 0 || statusEffectRestore.expired > 0) this.markDirty();
+        this.skills.refreshPassiveEffects();
         this.inventory.maxWeight = this.attribute.get(AttributeType.MAX_WEIGHT);
         this.clampVitals();
         if (promotedDuringLoad) void this.save();

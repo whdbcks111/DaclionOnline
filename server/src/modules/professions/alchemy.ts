@@ -25,7 +25,7 @@ import {
     type AlchemyFormulaData,
     type AlchemyIngredientSelectionInput,
 } from '../../models/professions/Alchemy.js';
-import { GameEventIds, subscribeGameEvent } from '../../models/core/GameEvent.js';
+import { emitGameEvent, GameEventIds, subscribeGameEvent } from '../../models/core/GameEvent.js';
 import { Item, ItemMetadataKeys, getItemSnapshotDisplay, type ItemSnapshot } from '../../models/economy/Item.js';
 import { getLocation } from '../../models/world/Location.js';
 import Monster from '../../models/actors/Monster.js';
@@ -595,6 +595,14 @@ export function startAlchemy(player: Player, options: StartAlchemyOptions): Star
                 options.bottleCount,
                 Boolean(formula),
             );
+            emitGameEvent(GameEventIds.ALCHEMY_BREWED, {
+                actor: player,
+                data: {
+                    bottleCount: options.bottleCount,
+                    formulaKnown: Boolean(formula),
+                    quality: quality.key,
+                },
+            });
             const levelsGained = player.gainExp(experience);
             const formulaText = formula ? '' : ' · 미확인 조합이 재료 성질에 따른 실패약으로 굳었습니다.';
             const dropText = outputDropped ? ' · 중량 초과로 현재 위치 바닥에 놓였습니다.' : '';
