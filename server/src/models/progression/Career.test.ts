@@ -78,13 +78,13 @@ class TestCareerSkillEntity extends Entity {
     }
 }
 
-test('6개 1차·30개 ordered 엘리트·기존 5개 3차 계보가 완전한 마스터 데이터를 가진다', () => {
+test('6개 1차·30개 ordered 엘리트·6개 3차 계보가 완전한 마스터 데이터를 가진다', () => {
     const firstJobs = getAllJobs().filter(job => job.tier === JobTier.FIRST);
     const eliteJobs = getAllJobs().filter(job => job.tier === JobTier.ELITE);
     const thirdJobs = getAllJobs().filter(job => job.tier === JobTier.THIRD);
     assert.equal(firstJobs.length, 6);
     assert.equal(eliteJobs.length, 30);
-    assert.equal(thirdJobs.length, 5);
+    assert.equal(thirdJobs.length, 6);
     assert.ok(firstJobs.every(job => job.grantedSkills.length >= 3));
     assert.ok(firstJobs.every(job => job.grantedSkills.some(grant =>
         getSkillData(grant.skillDataId)?.tags.includes('skill:passive'))));
@@ -149,8 +149,8 @@ test('6개 1차·30개 ordered 엘리트·기존 5개 3차 계보가 완전한 �
         assert.deepEqual(skill?.jobRequirement?.anyOf, ['career:cleric'], skillId);
         assert.equal(skill?.jobRequirement?.slot, JobSlotType.MAIN, skillId);
     }
-    assert.equal(getAllQuestData().filter(quest => quest.tags.includes('quest:career')).length, 17);
-    assert.equal(getAllQuestData().filter(quest => quest.tags.includes('career:third')).length, 5);
+    assert.equal(getAllQuestData().filter(quest => quest.tags.includes('quest:career')).length, 18);
+    assert.equal(getAllQuestData().filter(quest => quest.tags.includes('career:third')).length, 6);
     const mageTrial = getAllQuestData().find(quest => quest.id === 'career:main_mage_promotion');
     assert.equal(mageTrial?.stages[0].objectives[0].label, '불·얼음·독·자연 속성 적 처치');
     assert.ok(mageTrial?.rewards.some(reward => reward.label === '견습 마법 지팡이 x1'));
@@ -190,6 +190,7 @@ test('6개 1차·30개 ordered 엘리트·기존 5개 3차 계보가 완전한 �
         ['career:assassin', '월영집행자'],
         ['career:mage', '성계현자'],
         ['career:blacksmith', '신화장인'],
+        ['career:cleric', '천광성자'],
     ]);
     for (const [mainId, thirdName] of thirdNames) {
         const third = resolveThirdJob(mainId);
@@ -201,7 +202,6 @@ test('6개 1차·30개 ordered 엘리트·기존 5개 3차 계보가 완전한 �
         assert.equal(png.readUInt32BE(16), 128);
         assert.equal(png.readUInt32BE(20), 128);
     }
-    assert.equal(resolveThirdJob('career:cleric'), undefined);
     for (const icon of new Set(firstJobs.map(job => job.icon))) {
         const png = readFileSync(new URL(`../../../../client/public/icons/${icon}.png`, import.meta.url));
         assert.equal(png.readUInt32BE(16), 128);

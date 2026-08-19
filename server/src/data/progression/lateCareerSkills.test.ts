@@ -111,6 +111,11 @@ const lateCareerSkills = [
         activeName: '구조 해체', groupTag: GameTags.SKILL_GROUP_BLACKSMITH,
         passiveProbe: AttributeType.FORGING_PRECISION,
     },
+    {
+        jobId: 'career:cleric', passiveId: 'unfading_devotion', activeId: 'dawn_covenant',
+        activeName: '여명의 서약', groupTag: GameTags.SKILL_GROUP_MAGIC,
+        passiveProbe: AttributeType.MAGIC_FORCE,
+    },
 ] as const;
 
 const allLateSkillIds = lateCareerSkills.flatMap(entry => [entry.passiveId, entry.activeId]);
@@ -119,7 +124,7 @@ const httpServer = createServer();
 initSocket(httpServer, 'http://localhost');
 test.after(() => { getIO().close(); });
 
-test('5개 메인 직업은 Lv.240 패시브와 Lv.320 역할기 경계에서 자기 계열만 자동 습득한다', () => {
+test('6개 메인 직업은 Lv.240 패시브와 Lv.320 역할기 경계에서 자기 계열만 자동 습득한다', () => {
     for (const [index, definition] of lateCareerSkills.entries()) {
         const player = new LateCareerPlayer(95_000 + index);
         player.progress.setState(CareerProgressIds.MAIN, definition.jobId);
@@ -183,6 +188,7 @@ test('엘리트 직업은 원래 메인 계보의 후반 스킬만 유지하고 
         ['career:assassin', 'career:mage', 'career:arcane_reaper'],
         ['career:mage', 'career:warrior', 'career:battle_magus'],
         ['career:blacksmith', 'career:warrior', 'career:battle_smith'],
+        ['career:cleric', 'career:warrior', 'career:saint_knight'],
     ] as const;
 
     for (const [index, [mainJobId, subJobId, eliteJobId]] of cases.entries()) {
@@ -216,6 +222,7 @@ const thirdRoleLineages = {
     assassin: { main: 'career:assassin', sub: 'career:mage', elite: 'career:arcane_reaper', third: 'career:moonshadow_executor' },
     mage: { main: 'career:mage', sub: 'career:warrior', elite: 'career:battle_magus', third: 'career:astral_sage' },
     blacksmith: { main: 'career:blacksmith', sub: 'career:warrior', elite: 'career:battle_smith', third: 'career:mythic_artisan' },
+    cleric: { main: 'career:cleric', sub: 'career:warrior', elite: 'career:saint_knight', third: 'career:celestial_saint' },
 } as const;
 
 function createAdvancedRolePlayer(
@@ -395,4 +402,23 @@ test('3차 궁수·마법사·대장장이는 역할기의 non-CC 약화 레벨�
         assert.equal(thirdEffect.duration, 10);
         assert.equal(definition.effect.controlCategory, ControlCategory.NONE);
     }
+});
+
+test('천광성자는 고유 패시브를 유지하고 여명의 서약 회복량·보호막을 22% 강화한다', () => {
+    const base = createAdvancedRolePlayer('cleric', 95_320);
+    const third = createAdvancedRolePlayer('cleric', 95_321, true);
+    assert.equal(third.attribute.hasSource('skill:celestial_grace:passive'), true);
+
+    // 역할기 자체의 22% 계수만 비교하도록 별도 3차 패시브 증분을 제거한다.
+    third.attribute.removeBySource('skill:celestial_grace:passive');
+    base.life = third.life = 1;
+    assert.equal(base.skills.activateByInput('여명의 서약').activated, true);
+    assert.equal(third.skills.activateByInput('여명의 서약').activated, true);
+
+    const baseHealing = base.life - 1;
+    const thirdHealing = third.life - 1;
+    const baseShield = base.getShield('skill:dawn_covenant')!.amount;
+    const thirdShield = third.getShield('skill:dawn_covenant')!.amount;
+    assert.ok(Math.abs(thirdHealing / baseHealing - 1.22) < 1e-9);
+    assert.ok(Math.abs(thirdShield / baseShield - 1.22) < 1e-9);
 });

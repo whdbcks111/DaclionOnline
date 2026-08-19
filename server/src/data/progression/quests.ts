@@ -1252,6 +1252,7 @@ export const THIRD_ADVANCEMENT_QUEST_IDS = Object.freeze({
     assassin: 'career:third_assassin_promotion',
     mage: 'career:third_mage_promotion',
     blacksmith: 'career:third_blacksmith_promotion',
+    cleric: 'career:third_cleric_promotion',
 } as const);
 
 interface ThirdAdvancementDefinition {
@@ -1289,6 +1290,11 @@ export const THIRD_ADVANCEMENT_DEFINITIONS: readonly ThirdAdvancementDefinition[
         lineage: 'blacksmith', mainJobId: 'career:blacksmith', thirdJobId: THIRD_JOB_IDS.blacksmith,
         thirdJobName: '신화장인', questId: THIRD_ADVANCEMENT_QUEST_IDS.blacksmith,
         questName: '신화의 대장간',
+    },
+    {
+        lineage: 'cleric', mainJobId: 'career:cleric', thirdJobId: THIRD_JOB_IDS.cleric,
+        thirdJobName: '천광성자', questId: THIRD_ADVANCEMENT_QUEST_IDS.cleric,
+        questName: '천광의 성약',
     },
 ]);
 
@@ -1384,6 +1390,16 @@ function createThirdMasteryObjectives(lineage: keyof typeof THIRD_JOB_IDS): read
                     eventId: GameEventIds.ITEM_FORGED,
                 }),
             ];
+        case 'cleric':
+            return [QuestObjective.event({
+                id: 'completed-support-prayers',
+                label: '성직자 회복·보호 기술 완수',
+                required: 40,
+                eventId: GameEventIds.SKILL_FINISHED,
+                matches: event => event.data.reason === 'completed'
+                    && ['sanctuary_aegis', 'benediction_wave', 'dawn_benediction', 'dawn_covenant']
+                        .includes(String(event.data.skillDataId ?? '')),
+            })];
     }
 }
 

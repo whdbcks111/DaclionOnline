@@ -73,6 +73,12 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.51', '2026-08-19',
+        [CONTENT,
+            '성직자 Lv.500 3차 직업 `천광성자`를 추가했습니다. 고유 패시브 `천광의 은총`으로 마법력·최대 생명력이 각각 3% 증가하고, `여명의 서약`의 회복량과 보호막이 22% 강화됩니다.',
+            '계승관 아르덴에게 천광성자의 4단계 장기 시험 `천광의 성약`을 받을 수 있습니다. 세 성역 순례, 성직자 회복·보호 기술 40회 완수, 세 왕좌 보스 토벌, 귀환 보고 순서로 진행됩니다.',
+        ],
+    ),
     definePatchNote('1.0.50', '2026-08-12',
         [FEATURE,
             '`/인벤토리정리`가 품질·강화·귀속 등 상태가 완전히 같은 스택 가능 아이템을 한 묶음으로 합친 뒤 정렬합니다. 상태가 다른 아이템은 기존처럼 분리합니다.',

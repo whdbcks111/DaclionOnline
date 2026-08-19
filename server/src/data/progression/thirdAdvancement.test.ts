@@ -35,6 +35,7 @@ const LINEAGES = [
     { lineage: 'assassin', main: 'career:assassin', sub: 'career:mage', elite: 'career:arcane_reaper' },
     { lineage: 'mage', main: 'career:mage', sub: 'career:warrior', elite: 'career:battle_magus' },
     { lineage: 'blacksmith', main: 'career:blacksmith', sub: 'career:warrior', elite: 'career:battle_smith' },
+    { lineage: 'cleric', main: 'career:cleric', sub: 'career:warrior', elite: 'career:saint_knight' },
 ] as const;
 
 class ThirdAdvancementPlayer extends Entity {
@@ -131,6 +132,12 @@ function finishMastery(player: Player, lineage: (typeof LINEAGES)[number]['linea
             );
             emitRepeated(player, GameEventIds.ITEM_FORGED, 10, undefined, { itemLevel: 380 });
             break;
+        case 'cleric':
+            emitRepeated(player, GameEventIds.SKILL_FINISHED, 40, undefined, {
+                skillDataId: 'dawn_covenant',
+                reason: 'completed',
+            });
+            break;
     }
 }
 
@@ -150,16 +157,17 @@ function advanceToThroneTrial(
     assert.equal(player.quests.getSnapshot(questId)?.stageId, 'throne-trial');
 }
 
-test('5개 3차 퀘스트는 순례·직업별 숙련·세 왕좌·귀환의 4단계를 갖는다', () => {
+test('6개 3차 퀘스트는 순례·직업별 숙련·세 왕좌·귀환의 4단계를 갖는다', () => {
     const masteryContracts = new Map([
         ['warrior', [[GameEventIds.ENTITY_DEFEATED, 80]]],
         ['archer', [[GameEventIds.CRITICAL_HIT, 120]]],
         ['assassin', [[GameEventIds.ENTITY_DEFEATED, 40], [GameEventIds.CRITICAL_HIT, 60]]],
         ['mage', Array.from({ length: 4 }, () => [GameEventIds.ENTITY_DEFEATED, 15])],
         ['blacksmith', [[GameEventIds.RESOURCE_DESTROYED, 30], [GameEventIds.ITEM_FORGED, 10]]],
+        ['cleric', [[GameEventIds.SKILL_FINISHED, 40]]],
     ]);
 
-    assert.equal(THIRD_ADVANCEMENT_DEFINITIONS.length, 5);
+    assert.equal(THIRD_ADVANCEMENT_DEFINITIONS.length, 6);
     for (const definition of THIRD_ADVANCEMENT_DEFINITIONS) {
         const quest = getQuestData(definition.questId)!;
         assert.deepEqual(quest.stages.map(stage => stage.id), [
@@ -189,6 +197,40 @@ test('5개 3차 퀘스트는 순례·직업별 숙련·세 왕좌·귀환의 4�
         assert.deepEqual(quest.turnInNpcIds, [THIRD_ADVANCEMENT_NPC_ID]);
         assert.equal(quest.repeat, false);
     }
+});
+
+test('천광성자 숙련은 지정한 회복·보호 기술의 정상 완료만 집계한다', () => {
+    const lineage = LINEAGES.find(entry => entry.lineage === 'cleric')!;
+    const actual = new ThirdAdvancementPlayer(98_050, lineage);
+    const player = actual as unknown as Player;
+    const definition = THIRD_ADVANCEMENT_DEFINITIONS.find(entry => entry.lineage === 'cleric')!;
+
+    assert.equal(player.quests.accept(definition.questId, THIRD_ADVANCEMENT_NPC_ID).success, true);
+    for (const locationId of ['nebula_waystation', 'chronofrost_refuge', 'endstar_bastion']) {
+        emitGameEvent(GameEventIds.LOCATION_CHANGED, {
+            actor: player,
+            data: { fromLocationId: 'test', toLocationId: locationId },
+        });
+    }
+    emitRepeated(player, GameEventIds.SKILL_FINISHED, 10, undefined, {
+        skillDataId: 'radiant_bolt',
+        reason: 'completed',
+    });
+    emitRepeated(player, GameEventIds.SKILL_FINISHED, 10, undefined, {
+        skillDataId: 'dawn_covenant',
+        reason: 'cancelled',
+    });
+    emitRepeated(player, GameEventIds.SKILL_FINISHED, 39, undefined, {
+        skillDataId: 'sanctuary_aegis',
+        reason: 'completed',
+    });
+    assert.equal(player.quests.getSnapshot(definition.questId)?.stageId, 'mastery');
+
+    emitRepeated(player, GameEventIds.SKILL_FINISHED, 1, undefined, {
+        skillDataId: 'dawn_covenant',
+        reason: 'completed',
+    });
+    assert.equal(player.quests.getSnapshot(definition.questId)?.stageId, 'throne-trial');
 });
 
 test('각 3차 계보는 이전 단계 이벤트를 소급하지 않고 정확한 목표로만 완주·승급한다', async () => {

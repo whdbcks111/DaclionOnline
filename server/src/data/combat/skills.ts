@@ -2683,6 +2683,17 @@ const thirdCareerPassives: readonly LateCareerPassiveDefinition[] = [
             { attribute: AttributeType.FORGING_PRECISION.key, op: 'add', value: 0.02, label: '제련 정밀도 증가', display: '+2%p' },
         ],
     },
+    {
+        id: 'celestial_grace',
+        name: '천광의 은총',
+        jobId: THIRD_JOB_IDS.cleric,
+        icon: 'jobs/cleric',
+        description: '{{icon.magicForce}} 마법력과 {{icon.maxLife}} 최대 생명력이 각각 [color=$magic]{{magicForce}}[/color], [color=green]{{maxLife}}[/color] 증가합니다.',
+        modifiers: [
+            { attribute: AttributeType.MAGIC_FORCE.key, op: 'multiply', value: 1.03, label: '마법력 증가', display: '+3%' },
+            { attribute: AttributeType.MAX_LIFE.key, op: 'multiply', value: 1.03, label: '최대 생명력 증가', display: '+3%' },
+        ],
+    },
 ];
 
 for (const passive of thirdCareerPassives) defineJobPassive({ ...passive, reuseDeclaredArt: true });
@@ -2993,26 +3004,27 @@ const DAWN_COVENANT_FORMULA = Object.freeze({
 });
 
 function dawnCovenantHealing(context: SkillContext): number {
-    return context.owner.attribute.get(AttributeType.MAGIC_FORCE)
-            * percentByLevel(
-                context.skill.coefficientLevel,
-                DAWN_COVENANT_FORMULA.healingMagicBase,
-                DAWN_COVENANT_FORMULA.healingMagicPerLevel,
-            ) / 100
+    const base = context.owner.attribute.get(AttributeType.MAGIC_FORCE)
+        * percentByLevel(
+            context.skill.coefficientLevel,
+            DAWN_COVENANT_FORMULA.healingMagicBase,
+            DAWN_COVENANT_FORMULA.healingMagicPerLevel,
+        ) / 100
         + context.owner.maxLife * percentByLevel(
             context.skill.coefficientLevel,
             DAWN_COVENANT_FORMULA.healingLifeBase,
             DAWN_COVENANT_FORMULA.healingLifePerLevel,
         ) / 100;
+    return base * thirdRolePowerMultiplier(context, THIRD_JOB_IDS.cleric);
 }
 
 function dawnCovenantShield(context: SkillContext): number {
-    return context.owner.attribute.get(AttributeType.MAGIC_FORCE)
-            * percentByLevel(
-                context.skill.coefficientLevel,
-                DAWN_COVENANT_FORMULA.shieldMagicBase,
-                DAWN_COVENANT_FORMULA.shieldMagicPerLevel,
-            ) / 100
+    const base = context.owner.attribute.get(AttributeType.MAGIC_FORCE)
+        * percentByLevel(
+            context.skill.coefficientLevel,
+            DAWN_COVENANT_FORMULA.shieldMagicBase,
+            DAWN_COVENANT_FORMULA.shieldMagicPerLevel,
+        ) / 100
         + context.owner.maxMentality * percentByLevel(
             context.skill.coefficientLevel,
             DAWN_COVENANT_FORMULA.shieldMentalityBase,
@@ -3023,6 +3035,7 @@ function dawnCovenantShield(context: SkillContext): number {
             DAWN_COVENANT_FORMULA.shieldLifeBase,
             DAWN_COVENANT_FORMULA.shieldLifePerLevel,
         ) / 100;
+    return base * thirdRolePowerMultiplier(context, THIRD_JOB_IDS.cleric);
 }
 
 defineSkill({
@@ -3034,7 +3047,7 @@ defineSkill({
     unlockLevel: LATE_TACTICAL_UNLOCK_LEVEL,
     descriptionTemplate: '같은 장소의 생존 파티원 최대 3명과 여명의 서약을 맺습니다. 현재 지정한 파티원을 우선하며, '
         + '각 대상의 생명력을 {{icon.magicForce}}{{icon.maxLife}} [color=green]{{healing}}[/color] 회복하고 {{duration}} 동안 '
-        + '{{icon.magicForce}}{{icon.maxMentality}}{{icon.maxLife}} [color=#d9d9d9]{{shield}}[/color]만큼의 피해를 막는 일반 보호막을 부여합니다.',
+        + '{{icon.magicForce}}{{icon.maxMentality}}{{icon.maxLife}} [color=#d9d9d9]{{shield}}[/color]만큼의 피해를 막는 일반 보호막을 부여합니다. 천광성자는 회복량과 보호막이 22% 증가합니다.',
     costTemplate: '{{icon.maxMentality}} [color=$magic]정신력 {{manaCost}}[/color]',
     activationConditionTemplate: activationGuide(),
     activationMessage: '여명의 서약!',
@@ -3049,13 +3062,15 @@ defineSkill({
         healing: context => tooltipValue(
             dawnCovenantHealing(context),
             `마법력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, DAWN_COVENANT_FORMULA.healingMagicBase, DAWN_COVENANT_FORMULA.healingMagicPerLevel))}%`
-                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, DAWN_COVENANT_FORMULA.healingLifeBase, DAWN_COVENANT_FORMULA.healingLifePerLevel))}%`,
+                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, DAWN_COVENANT_FORMULA.healingLifeBase, DAWN_COVENANT_FORMULA.healingLifePerLevel))}%`
+                + `${hasThirdRole(context, THIRD_JOB_IDS.cleric) ? ' · 천광성자 × 122%' : ''}`,
         ),
         shield: context => tooltipValue(
             dawnCovenantShield(context),
             `마법력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, DAWN_COVENANT_FORMULA.shieldMagicBase, DAWN_COVENANT_FORMULA.shieldMagicPerLevel))}%`
                 + ` + 최대 정신력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, DAWN_COVENANT_FORMULA.shieldMentalityBase, DAWN_COVENANT_FORMULA.shieldMentalityPerLevel))}%`
-                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, DAWN_COVENANT_FORMULA.shieldLifeBase, DAWN_COVENANT_FORMULA.shieldLifePerLevel))}%`,
+                + ` + 최대 생명력 × ${formatNumber(percentByLevel(context.skill.coefficientLevel, DAWN_COVENANT_FORMULA.shieldLifeBase, DAWN_COVENANT_FORMULA.shieldLifePerLevel))}%`
+                + `${hasThirdRole(context, THIRD_JOB_IDS.cleric) ? ' · 천광성자 × 122%' : ''}`,
         ),
         duration: context => levelValueTooltip(context, '보호막 지속시간', 10, 1, '초'),
     },

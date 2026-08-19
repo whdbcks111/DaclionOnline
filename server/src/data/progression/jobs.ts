@@ -157,6 +157,7 @@ export const THIRD_JOB_IDS = Object.freeze({
     assassin: 'career:moonshadow_executor',
     mage: 'career:astral_sage',
     blacksmith: 'career:mythic_artisan',
+    cleric: 'career:celestial_saint',
 } as const);
 
 const thirdJobs = [
@@ -179,6 +180,10 @@ const thirdJobs = [
     {
         main: 'blacksmith', id: THIRD_JOB_IDS.blacksmith, name: '신화장인', skill: 'mythic_craft',
         description: '물질과 마력의 하중을 함께 벼려 전설을 실물로 만드는 대장장이의 3차 계보.',
+    },
+    {
+        main: 'cleric', id: THIRD_JOB_IDS.cleric, name: '천광성자', skill: 'celestial_grace',
+        description: '꺼지지 않는 천상의 빛으로 상처 입은 동료를 일으키고 교단의 서약을 완성하는 성직자의 3차 계보.',
     },
 ] as const;
 
