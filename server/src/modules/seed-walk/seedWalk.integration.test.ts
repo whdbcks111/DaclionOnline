@@ -50,6 +50,18 @@ test('실제 두 소켓은 같은 맵에서 상대 이동과 퇴장을 받고 �
         assert.deepEqual(stateA, stateB);
         assert.equal(stateB.players.find(player => player.id === 99611)!.x, beforeA.x + 9);
         assert.equal(stateB.players.find(player => player.id === 99612)!.x, beforeB.x);
+        const chatProcessed = once(serverA, 'seedWalkChat');
+        clients[0].emit('seedWalkChat', '안녕 초원'); await chatProcessed;
+        const bubbleA = clientOnce(clients[0], 'seedWalkState'), bubbleB = clientOnce(clients[1], 'seedWalkState');
+        updateSeedWalk(.05);
+        const withBubble = (await bubbleA)[0] as SeedWalkSnapshot;
+        assert.deepEqual(withBubble, (await bubbleB)[0]);
+        assert.equal(withBubble.players.find(p => p.id === 99611)?.bubble?.text, '안녕 초원');
+        const guestSocket = io.sockets.sockets.get(clients[2].id!)!;
+        const guestChat = once(guestSocket, 'seedWalkChat');
+        clients[2].emit('seedWalkChat', '비인증'); await guestChat;
+        const unchanged = clientOnce(clients[1], 'seedWalkState'); updateSeedWalk(.05);
+        assert.equal(((await unchanged)[0] as SeedWalkSnapshot).players.filter(p => p.bubble).length, 1);
         const disconnected = once(serverA, 'disconnect');
         clients[0].disconnect();
         await disconnected;

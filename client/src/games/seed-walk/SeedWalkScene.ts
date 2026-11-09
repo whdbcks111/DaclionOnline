@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { createSeedWalkMap, seedWalkHash, seedWalkGrassColor, SEED_WALK_SIZE, SEED_WALK_TILE, SEED_WALK_VERSION, SeedWalkTerrain, type SeedWalkSnapshot } from '@shared/seedWalk'
+import { seedWalkHash, seedWalkGrassColor, SEED_WALK_TILE, SEED_WALK_VERSION, type SeedWalkSnapshot } from '@shared/seedWalk'
 
 interface Actor { node: Phaser.GameObjects.Container; x: number; y: number }
 
@@ -9,34 +9,20 @@ export class SeedWalkScene extends Phaser.Scene {
   private readonly readState: () => SeedWalkSnapshot | null
   private readonly actors = new Map<number, Actor>()
   private previousTick = -1
-  constructor(selfId: number, readState: () => SeedWalkSnapshot | null) {
+  private ground!: Phaser.GameObjects.Graphics
+  private groundKey = ''
+  private readonly project: (id: number, x: number, y: number) => void
+  constructor(selfId: number, readState: () => SeedWalkSnapshot | null, project: (id: number, x: number, y: number) => void) {
     super('seed-walk')
     this.selfId = selfId
     this.readState = readState
+    this.project = project
   }
   create() {
     const state = this.readState()
     if (!state || state.version !== SEED_WALK_VERSION) return
-    const map = createSeedWalkMap(state.seed)
-    const tile = SEED_WALK_TILE, size = SEED_WALK_SIZE * tile
-    const art = this.make.graphics({ x: 0, y: 0 })
-    for (let y = 0; y < SEED_WALK_SIZE; y++) for (let x = 0; x < SEED_WALK_SIZE; x++) {
-      const terrain = SeedWalkTerrain.fromCode(map.tiles[y * SEED_WALK_SIZE + x])
-      const px = x * tile, py = y * tile
-      const color = terrain === SeedWalkTerrain.GRASS ? seedWalkGrassColor(state.seed, x, y) : terrain.color
-      art.fillStyle(color).fillRect(px, py, tile, tile)
-      if (terrain === SeedWalkTerrain.GRASS && seedWalkHash(`${state.seed}:${x}:${y}`) % 4 === 0) {
-        art.lineStyle(1, 0x719963, .65).lineBetween(px + 12, py + 19, px + 14, py + 14).lineBetween(px + 14, py + 14, px + 17, py + 18)
-      }
-      if (terrain === SeedWalkTerrain.WATER) art.fillStyle(0x77aab1, .6).fillRect(px + 7, py + 18, 12, 2)
-      if (terrain === SeedWalkTerrain.ROCK) art.fillStyle(0x9da8a4).fillRoundedRect(px + 4, py + 4, tile - 8, tile - 9, 5)
-    }
-    art.generateTexture('land', size, size)
-    art.destroy()
-    this.add.image(0, 0, 'land').setOrigin(0)
-    this.add.circle(32.5 * tile, 32.5 * tile, 38).setStrokeStyle(2, 0xf4e6bf).setFillStyle(0xf4e6bf, .12)
+    this.ground = this.add.graphics().setDepth(-1)
     const camera = this.cameras.main
-    camera.setBounds(0, 0, size, size)
     const resize = () => camera.setZoom(Phaser.Math.Clamp(Math.min(this.scale.width, this.scale.height) / 650, .75, 1.2))
     resize()
     this.scale.on('resize', resize)
@@ -65,11 +51,23 @@ export class SeedWalkScene extends Phaser.Scene {
         actor.x = player.x; actor.y = player.y
       }
     }
+    const camera = this.cameras.main, tile = SEED_WALK_TILE
+    const left = Math.floor(camera.worldView.x / tile) - 3, top = Math.floor(camera.worldView.y / tile) - 3
+    const cols = Math.ceil(this.scale.width / camera.zoom / tile) + 7, rows = Math.ceil(this.scale.height / camera.zoom / tile) + 7
+    const key = `${left}:${top}:${cols}:${rows}`
+    if (key !== this.groundKey) {
+      this.groundKey = key; this.ground.clear()
+      for (let y = top; y < top + rows; y++) for (let x = left; x < left + cols; x++) {
+        const px = x * tile, py = y * tile
+        this.ground.fillStyle(seedWalkGrassColor(state.seed, x, y)).fillRect(px, py, tile, tile)
+        if (seedWalkHash(`${state.seed}:${x}:${y}`) % 4 === 0) this.ground.lineStyle(1, 0x719963, .65).lineBetween(px + 12, py + 19, px + 14, py + 14).lineBetween(px + 14, py + 14, px + 17, py + 18)
+      }
+    }
     const blend = 1 - Math.exp(-Math.min(delta, 100) / 55)
-    for (const actor of this.actors.values()) {
+    for (const [id, actor] of this.actors) {
       actor.node.x = Phaser.Math.Linear(actor.node.x, actor.x, blend)
       actor.node.y = Phaser.Math.Linear(actor.node.y, actor.y, blend)
-      actor.node.setDepth(10 + actor.node.y / 10000)
+      this.project(id, (actor.node.x - camera.worldView.x) * camera.zoom, (actor.node.y - camera.worldView.y) * camera.zoom - 48)
     }
   }
 }

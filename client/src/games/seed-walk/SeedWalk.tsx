@@ -3,7 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { Link } from 'react-router-dom'
 import Phaser from 'phaser'
 import type { SeedWalkJoinResult, SeedWalkSnapshot } from '@shared/seedWalk'
-import { SEED_WALK_VERSION } from '@shared/seedWalk'
+import { SEED_WALK_VERSION, SEED_WALK_CHAT_LIMIT } from '@shared/seedWalk'
 import { useSocket } from '../../context/SocketContext'
 import { SeedWalkScene } from './SeedWalkScene'
 import styles from './SeedWalk.module.scss'
@@ -19,6 +19,11 @@ export default function SeedWalk() {
   const [selfId, setSelfId] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [joining, setJoining] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatText, setChatText] = useState('')
+  const chatEditing = useRef(false)
+  const chatInput = useRef<HTMLInputElement>(null)
+  const bubbles = useRef(new Map<number, HTMLDivElement>())
   const stage = useRef<HTMLDivElement>(null)
   const latest = useRef<SeedWalkSnapshot | null>(null)
   const active = useRef(false)
@@ -30,6 +35,7 @@ export default function SeedWalk() {
 
   const sendInput = () => {
     if (!socket?.connected || !active.current) return
+    if (chatEditing.current) { socket.emit('seedWalkInput', { seq: ++sequence.current, x: 0, y: 0 }); return }
     let x = 0, y = 0
     for (const key of keys.current) {
       const axis = KEY_AXES[key]
@@ -54,6 +60,11 @@ export default function SeedWalk() {
     touch.current = { x: x * strength, y: y * strength }
     sendInput()
   }
+
+  const openChat = () => { stop(); chatEditing.current = true; setChatOpen(true) }
+  const closeChat = () => { chatEditing.current = false; setChatOpen(false); setChatText(''); chatInput.current?.blur() }
+  useEffect(() => { if (chatOpen) chatInput.current?.focus() }, [chatOpen])
+  useEffect(() => { if (!state || !isConnected) closeChat() }, [!!state, isConnected])
 
   useEffect(() => {
     if (isSessionReady && !sessionInfo) {
@@ -87,7 +98,10 @@ export default function SeedWalk() {
     const game = new Phaser.Game({
       type: Phaser.AUTO, parent, width: parent.clientWidth, height: parent.clientHeight,
       backgroundColor: '#90b77d', banner: false, audio: { noAudio: true },
-      render: { antialias: true }, scene: new SeedWalkScene(selfId, () => latest.current),
+      render: { antialias: true }, scene: new SeedWalkScene(selfId, () => latest.current, (id, x, y) => {
+        const bubble = bubbles.current.get(id)
+        if (bubble) { bubble.style.left = `${x}px`; bubble.style.top = `${y}px` }
+      }),
       scale: { mode: Phaser.Scale.NONE },
     })
     const resize = new ResizeObserver(() => { if (parent.clientWidth && parent.clientHeight) game.scale.resize(parent.clientWidth, parent.clientHeight) })
@@ -98,6 +112,10 @@ export default function SeedWalk() {
   useEffect(() => {
     if (!state || !sessionInfo || !isConnected) return
     const down = (event: KeyboardEvent) => {
+      if (event.isComposing || event.keyCode === 229) return
+      const editable = event.target instanceof HTMLElement && (event.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName))
+      if (event.code === 'Enter' && !editable && !event.repeat) { event.preventDefault(); openChat(); return }
+      if (chatEditing.current) return
       if (!KEY_AXES[event.code] || (event.target instanceof HTMLElement && (event.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)))) return
       event.preventDefault(); if (keys.current.has(event.code)) return; keys.current.add(event.code); sendInput()
     }
@@ -114,7 +132,7 @@ export default function SeedWalk() {
   }, [!!state, socket, isConnected, sessionInfo?.userId])
 
   const leave = () => {
-    stop(); active.current = false; socket?.emit('seedWalkLeave')
+    closeChat(); stop(); active.current = false; socket?.emit('seedWalkLeave')
     latest.current = null; setState(null); setSelfId(null); setJoining(false)
   }
   const start = () => {
@@ -135,9 +153,25 @@ export default function SeedWalk() {
       <div className={styles.stage}>
         <div className={styles.canvas} ref={stage} aria-label="SEED WALK 실시간 멀티플레이 맵" />
         {(!isConnected || joining) && <div className={styles.connection} role="status">다시 연결하고 있습니다…</div>}
+        {state.players.filter(player => player.bubble).map(player => <div key={player.id} className={styles.bubble}
+          ref={element => { if (element) bubbles.current.set(player.id, element); else bubbles.current.delete(player.id) }}>{player.bubble!.text}</div>)}
+        <button className={styles.chatButton} onClick={openChat} disabled={!isConnected || joining}>채팅</button>
+        {chatOpen && <form className={styles.chatForm} onSubmit={event => {
+          event.preventDefault()
+          if (!chatEditing.current) return
+          if (chatText.trim() && isConnected) socket?.emit('seedWalkChat', chatText)
+          closeChat()
+        }}>
+          <input ref={chatInput} aria-label="채팅 메시지" value={chatText} onChange={event => setChatText(event.target.value)} maxLength={SEED_WALK_CHAT_LIMIT}
+            autoComplete="off" placeholder="메시지 입력" onKeyDown={event => {
+              if (event.nativeEvent.isComposing || event.keyCode === 229) { if (event.key === 'Enter') event.preventDefault(); return }
+              if (event.key === 'Escape') { event.preventDefault(); closeChat() }
+            }} />
+          <button type="submit" disabled={!isConnected}>보내기</button><button type="button" onClick={closeChat} aria-label="채팅 닫기">×</button>
+        </form>}
         <div className={styles.compass}>N ↑</div>
         <div className={styles.joystick} role="group" aria-label="드래그해서 이동하는 조이스틱" tabIndex={0}
-          onPointerDown={event => { if (stickPointer.current !== null) return; event.preventDefault(); stickPointer.current = event.pointerId; event.currentTarget.setPointerCapture(event.pointerId); moveStick(event) }}
+          onPointerDown={event => { if (chatEditing.current || stickPointer.current !== null) return; event.preventDefault(); stickPointer.current = event.pointerId; event.currentTarget.setPointerCapture(event.pointerId); moveStick(event) }}
           onPointerMove={event => { if (event.pointerId === stickPointer.current) { event.preventDefault(); moveStick(event) } }}
           onPointerUp={event => { if (event.pointerId === stickPointer.current) releaseStick() }}
           onPointerCancel={event => { if (event.pointerId === stickPointer.current) releaseStick() }}
@@ -148,10 +182,10 @@ export default function SeedWalk() {
         </div>
         <span className={styles.position}>{me ? `${Math.floor(me.x)}, ${Math.floor(me.y)}` : '접속 중'}</span>
       </div>
-      <footer className={styles.status}><span>WASD · 방향키 · 모바일 조이스틱</span><span>연못과 바위는 지나갈 수 없어요.</span></footer>
+      <footer className={styles.status}><span>WASD · 방향키 · 모바일 조이스틱</span><span>Enter로 채팅</span></footer>
       {error && <p className={styles.error} role="alert">{error}</p>}
     </> : <section className={styles.lobby}>
-      <div className={styles.intro}><h1>함께 걷는 작은 초원.</h1><p>풀밭과 연못 사이를 자유롭게 산책하세요.</p><div className={styles.legend}><span>● 풀밭</span><span>■ 연못</span><span>◆ 바위</span></div></div>
+      <div className={styles.intro}><h1>함께 걷는 작은 초원.</h1><p>초원을 자유롭게 산책하세요.</p></div>
       <div className={styles.card}><h2>산책 시작하기</h2>
         <form onSubmit={event => { event.preventDefault(); start() }}>
           {isSessionReady && !sessionInfo ? <Link className={styles.login} to="/login?next=seed-walk">로그인하고 시작</Link> : <button disabled={!isConnected || !sessionInfo || joining}>{joining ? '맵에 접속 중…' : '게임 시작 →'}</button>}

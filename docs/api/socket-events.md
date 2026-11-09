@@ -143,8 +143,9 @@
 | --- | --- | --- |
 | `seedWalkJoin` | client → server | 인자 없음, GAME BOX 세션 필수. 서버 고정 `gamebox` 공용 맵에 입장하며 예전 클라이언트의 seed payload는 무시한다. 계정 ID·닉네임은 서버 세션에서 결정 |
 | `seedWalkJoined` | server → client | `{ ok: true, selfId, state }` 또는 `{ ok: false, error }` |
+| `seedWalkChat` | client → server | 문자열 1~120자, 참가/세션 소유권 검사, 계정당 3초 3회. 최신 말풍선은 player.bubble.text로 5초 동안 snapshot에 포함 |
 | `seedWalkInput` | client → server | `{ seq, x, y }`, 증가하는 safe integer seq와 [-1,1] 범위의 유한 방향축만 허용. 연결 소유권·초당 60회 상한 검사 |
 | `seedWalkLeave` | client → server | 해당 연결의 게임 참가만 해제하고 포털 로그인은 유지 |
-| `seedWalkState` | server → client | `{ worldId, seed, version, tick, players: [{id,name,x,y,color}] }` 완전한 20Hz volatile snapshot |
+| `seedWalkState` | server → client | `{ worldId, seed, version, tick, players: [{id,name,x,y,color,bubble?: {text}}] }` 완전한 20Hz volatile snapshot |
 
 새 map/world ID는 새 stream이며 클라이언트는 현재 worldId와 같고 더 큰 tick인 상태만 적용한다. 첫 snapshot은 join 결과로 신뢰성 있게 전달한다. 입력 부재 300ms, disconnect/logout/session 폐기는 정지·퇴장 처리한다. 이 게임은 DaclionOnline gameActive를 활성화하지 않는다.

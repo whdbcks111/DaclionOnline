@@ -89,3 +89,5 @@
 `games/seed-walk/SeedWalk`가 공용 맵 로비·이동 입력·서버 snapshot을 소유한다. `SeedWalkScene(selfId, readState)`는 Phaser 렌더링·카메라·좌표 보간만 담당하며 서버 모델을 직접 참조하지 않는다. unmount에서 Phaser와 ResizeObserver·입력 listener·heartbeat를 정리한다.
 
 SEED WALK 입장은 시드 선택 없이 모든 사용자가 서버 고정 `gamebox` 공용 맵(최대 32명)에 참가한다.
+
+SEED WALK v2는 지형·가장자리 충돌 없는 초원이며 `SeedWalkWorld.say(userId, connectionId, text, now)`가 최신 말풍선을 5초 동안 메모리로 소유한다. 선택적 `player.bubble.text` snapshot과 `seedWalkChat(text)`를 사용하며 채팅은 DB/로그에 저장하지 않는다. 클라이언트는 Enter/채팅 버튼의 중앙 하단 입력 폼과 캐릭터 위 말풍선만 표시한다.

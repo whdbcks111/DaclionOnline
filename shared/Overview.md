@@ -32,6 +32,8 @@
 
 `seedWalk.ts`는 SEED WALK v1의 결정론 시드 맵, 클래스형 Terrain enum, 충돌·속도 계산과 입력/상태 DTO를 소유한다. `types.ts`의 seedWalkJoin/Input/Leave와 seedWalkJoined/State 이벤트가 이 계약을 사용한다.
 
-초원 색상은 `seedWalkGrassNoise/seedWalkGrassColor`의 시드 기반 3-octave Perlin 노이즈로 위치별 밝기를 은은하게 바꾼다. 시드가 같으면 색 분포도 같고, 이 시각 표현은 기존 지형/충돌 v1 fixture를 변경하지 않는다.
+초원 색상은 `seedWalkGrassNoise/seedWalkGrassColor`의 시드 기반 3-octave Perlin 노이즈로 위치별 밝기를 은은하게 바꾼다. 시드가 같으면 색 분포도 같고, 이 시각 표현은 월드 좌표에 따라 무한히 이어진다.
 
 `SEED_WALK_WORLD_SEED`는 서버 공용 맵의 고정 시드다. `seedWalkJoin`은 인자 없이 호출하며 클라이언트가 맵을 선택하지 않는다.
+
+map v2는 연못·길·바위·경계벽 없는 초원이다. `seedWalkChat(text)`와 `SeedWalkWorld.say(userId, connectionId, text, now)`는 120자/계정당 3초 3회 제한의 최신 말풍선 하나를 처리하며 5초 후 기존 루프에서 만료한다. snapshot의 선택적 `player.bubble.text`만 전달하고 영속 저장·채팅 로그는 없다. 클라이언트는 Enter/모바일 채팅 버튼으로 62% 위치의 폼을 열고 입력 중 정지, IME 안전 전송·Esc 취소와 카메라 투영 DOM 말풍선을 제공한다.

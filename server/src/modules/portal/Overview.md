@@ -13,3 +13,5 @@
 `siteRouter.ts`는 gamebox.mcv.kr/daclion.mcv.kr의 HTTP 인증·진입 분기를 소유한다. `loginHandoff.ts`는 30초 일회용 코드를 대상 브라우저의 state에 묶으며 코드 재사용·만료·동시 발급 상한을 검증한다. `/auth/start`의 HttpOnly state 쿠키가 callback에서 일치해야 하며 로그인 토큰은 URL에 노출하지 않는다. 테스트는 실제 HTTP Host 분기와 쿠키·코드 검증을 포함한다.
 
 포털 연결은 seedWalkJoin/Input/Leave를 허용하되 실제 인증·입력 소유권·world 참가 검증은 seed-walk 모듈이 수행한다. 게임 도메인의 `/games/seed-walk/*` HTTP 진입은 GAME BOX로 이동한다.
+
+포털 이벤트 허용 목록은 SEED WALK 말풍선 전용 `seedWalkChat`을 포함한다. 참가와 인증·빈도 검증은 seed-walk 소유 모듈이 수행한다.

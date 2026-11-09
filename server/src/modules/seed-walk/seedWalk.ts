@@ -2,13 +2,14 @@ import type { Socket } from 'socket.io';
 import { getIO } from '../infrastructure/socket.js';
 import { getSession } from '../portal/login.js';
 import { SeedWalkWorld } from '../../models/seed-walk/SeedWalkWorld.js';
-import { SEED_WALK_WORLD_SEED, isSeedWalkInput, type SeedWalkJoinResult } from '../../../../shared/seedWalk.js';
+import { normalizeSeedWalkChat, SEED_WALK_WORLD_SEED, isSeedWalkInput, type SeedWalkJoinResult } from '../../../../shared/seedWalk.js';
 import { FixedWindowRateLimiter } from '../../utils/rateLimit.js';
 
 const worlds = new Map<string, SeedWalkWorld>();
 const members = new Map<string, { socket: Socket; userId: number; seed: string }>();
 const joinLimiter = new FixedWindowRateLimiter(12, 60_000, 20_000);
 const inputLimiter = new FixedWindowRateLimiter(60, 1_000, 20_000);
+const chatLimiter = new FixedWindowRateLimiter(3, 3000, 20_000);
 let accumulated = 0;
 const roomName = (seed: string) => `seed-walk:${seed}`;
 
@@ -48,6 +49,13 @@ export function initSeedWalk(): void {
             const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
             if (!member || session?.userId !== member.userId || !isSeedWalkInput(input) || !inputLimiter.consume(socket.id).allowed) return;
             worlds.get(member.seed)?.input(member.userId, socket.id, input, performance.now());
+        });
+        socket.on('seedWalkChat', (input: unknown) => {
+            const member = members.get(socket.id);
+            const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
+            const text = normalizeSeedWalkChat(input);
+            if (!member || session?.userId !== member.userId || text === undefined || !chatLimiter.consume(String(member.userId)).allowed) return;
+            worlds.get(member.seed)?.say(member.userId, socket.id, text, performance.now());
         });
         socket.on('seedWalkLeave', () => leave(socket));
         socket.on('disconnect', () => leave(socket));

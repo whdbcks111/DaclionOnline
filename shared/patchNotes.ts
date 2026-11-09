@@ -73,6 +73,10 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.57', '2026-11-09',
+        [CHANGED, 'SEED WALK의 연못·길·바위와 경계벽을 없애고, 어디로든 걸어갈 수 있는 초원으로 변경했습니다.'],
+        [FEATURE, 'Enter 또는 채팅 버튼으로 메시지를 보내면 캐릭터 위 말풍선에 잠시 표시됩니다.'],
+    ),
     definePatchNote('1.0.56', '2026-11-09',
         [CHANGED, '로그인·회원가입과 포털에서 불필요한 계정 안내 문구를 정리했습니다.', 'SEED WALK에서 시드 선택을 없애고 모든 플레이어가 하나의 초원에 모이도록 변경했습니다.'],
     ),

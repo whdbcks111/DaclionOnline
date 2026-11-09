@@ -167,3 +167,5 @@
 게임용 개별 메시지와 HUD snapshot은 해당 게임에 참가한 socket에만 전달하고 포털 전용 연결은 제외한다.
 
 `SeedWalkWorld`는 `join/leave/input/update/snapshot/hasPlayer/size` 목적형 API로만 접근한다. `initSeedWalk()`가 연결을 등록하고 `updateSeedWalk(dt)`가 기존 루프에서 월드를 갱신한다. 내부 players/worlds/members Map은 공개하지 않는다.
+
+SEED WALK v2는 지형·가장자리 충돌 없는 초원이며 `SeedWalkWorld.say(userId, connectionId, text, now)`가 최신 말풍선을 5초 동안 메모리로 소유한다. 선택적 `player.bubble.text` snapshot과 `seedWalkChat(text)`를 사용하며 채팅은 DB/로그에 저장하지 않는다. 클라이언트는 Enter/채팅 버튼의 중앙 하단 입력 폼과 캐릭터 위 말풍선만 표시한다.

@@ -43,6 +43,9 @@ test('요청한 시드와 무관하게 인증된 계정은 공용 맵에서 만�
         updateSeedWalk(.05);
         const after = snapshots.at(-1)!;
         assert.equal(after.players.find(player => player.id === 99601)!.x, before.x + 9);
+        for (let i = 0; i < 5; i++) a.send('seedWalkChat', `메시지${i}`);
+        updateSeedWalk(.05);
+        assert.equal(snapshots.at(-1)!.players.find(p => p.id === 99601)?.bubble?.text, '메시지2');
         removeSession(tokenA);
         updateSeedWalk(.05);
         assert.deepEqual(snapshots.at(-1)!.players.map(player => player.id), [99602]);

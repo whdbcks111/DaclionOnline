@@ -13,3 +13,5 @@ GAME BOX의 게임 시작 링크는 `/auth/daclion`을 통해 게임 도메인�
 게임 목록은 DaclionOnline과 SEED WALK 두 카드를 제공한다. SEED WALK는 포털 origin의 `/games/seed-walk/`로 이동하며 `Login`의 `next=seed-walk`는 안전한 고정 게임 경로로만 돌아간다.
 
 인증 화면과 포털은 기존 계정 호환·계정 연결 홍보·중복 부가 안내 문구를 표시하지 않는다. 입력 label, 형식 안내, 인증/연결 상태 및 오류는 유지한다.
+
+SEED WALK 카드 일러스트는 장애물 없는 초원과 플레이어를 표시한다.

@@ -39,9 +39,7 @@ export default function Portal() {
         <div className={styles.art} aria-hidden="true">
           <svg viewBox="0 0 240 160" width="100%" style={{ maxWidth: '16rem' }}>
             <rect width="240" height="160" rx="8" fill="#90b77d" />
-            <path d="M0 80H240M120 0V160" stroke="#d5c49a" strokeWidth="25" />
-            <rect x="22" y="18" width="60" height="40" rx="5" fill="#588f9b" />
-            <rect x="173" y="109" width="39" height="31" rx="5" fill="#727e7e" />
+            <path d="M20 35l3-6 4 5m45 85 3-7 4 6m102-90 3-6 4 5m-30 80 3-6 4 5" fill="none" stroke="#719963" strokeWidth="2" />
             <circle cx="106" cy="81" r="10" fill="#e9b35f" stroke="#fff" strokeWidth="3" />
             <circle cx="150" cy="73" r="10" fill="#6f9ee8" stroke="#344b38" strokeWidth="2" />
             <circle cx="118" cy="119" r="10" fill="#d984a1" stroke="#344b38" strokeWidth="2" />

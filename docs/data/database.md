@@ -121,3 +121,5 @@ login/session restore
 프로필 생성·이름 변경은 중복과 연결 성공 여부를 즉시 확정해야 하므로 DB 즉시 저장 예외다. 캐릭터 상태는 기존 Player dirty/30초·unload·종료 flush를 유지한다. 계정 초기화 도구의 게임 데이터 삭제 시 `daclion` 프로필도 지워 첫 게임 정보 입력부터 다시 시작한다.
 
 SEED WALK는 결정론 맵과 접속 중 위치만 사용하는 비영속 게임으로 추가 DB 테이블이나 GameProfile row를 만들지 않는다. 공통 User 계정/세션은 재사용하되 DaclionOnline Player는 생성하지 않는다. 빈 월드·연결 종료·서버 재시작에서 상태를 폐기하고 지형은 seed/version으로 재생성한다.
+
+SEED WALK v2는 지형·가장자리 충돌 없는 초원이며 `SeedWalkWorld.say(userId, connectionId, text, now)`가 최신 말풍선을 5초 동안 메모리로 소유한다. 선택적 `player.bubble.text` snapshot과 `seedWalkChat(text)`를 사용하며 채팅은 DB/로그에 저장하지 않는다. 클라이언트는 Enter/채팅 버튼의 중앙 하단 입력 폼과 캐릭터 위 말풍선만 표시한다.

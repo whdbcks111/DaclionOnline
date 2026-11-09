@@ -1,5 +1,5 @@
-/** SEED WALK map/physics v1. Changing generation requires a new version. */
-export const SEED_WALK_VERSION = 1;
+/** SEED WALK map/physics v2. Changing generation requires a new version. */
+export const SEED_WALK_VERSION = 2;
 export const SEED_WALK_WORLD_SEED = 'gamebox';
 export const SEED_WALK_SIZE = 64;
 export const SEED_WALK_TILE = 32;
@@ -29,7 +29,7 @@ export class SeedWalkTerrain {
 
 export interface SeedWalkMap { readonly seed: string; readonly version: number; readonly tiles: readonly number[] }
 export interface SeedWalkInput { seq: number; x: number; y: number }
-export interface SeedWalkerSnapshot { id: number; name: string; x: number; y: number; color: number }
+export interface SeedWalkerSnapshot { id: number; name: string; x: number; y: number; color: number; bubble?: { text: string } }
 export interface SeedWalkSnapshot { worldId: string; seed: string; version: number; tick: number; players: SeedWalkerSnapshot[] }
 export type SeedWalkJoinResult = { ok: true; selfId: number; state: SeedWalkSnapshot } | { ok: false; error: string };
 
@@ -48,56 +48,28 @@ export function seedWalkHash(text: string): number {
 export function createSeedWalkMap(seed: string): SeedWalkMap {
     const normalized = normalizeSeedWalkSeed(seed);
     if (normalized === undefined) throw new Error('시드는 48자 이하의 텍스트로 입력해주세요.');
-    const size = SEED_WALK_SIZE;
-    const tiles: number[] = [];
-    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-        const patch = seedWalkHash(`${normalized}:${Math.floor(x / 4)}:${Math.floor(y / 4)}`) % 100;
-        let terrain = patch < 19 ? SeedWalkTerrain.WATER : patch > 86 && seedWalkHash(`${normalized}:${x}:${y}`) % 4 !== 0 ? SeedWalkTerrain.ROCK : SeedWalkTerrain.GRASS;
-        if (x % 12 <= 1 || y % 12 <= 1 || Math.abs(x - 32) <= 2 || Math.abs(y - 32) <= 2) terrain = SeedWalkTerrain.PATH;
-        if (x === 0 || y === 0 || x === size - 1 || y === size - 1) terrain = SeedWalkTerrain.ROCK;
-        tiles.push(terrain.code);
-    }
-    // Keep every walkable tile connected to the central spawn.
-    const visited = new Set<number>([32 * size + 32]);
-    const queue = [32 * size + 32];
-    for (let i = 0; i < queue.length; i++) {
-        const index = queue[i];
-        const x = index % size, y = Math.floor(index / size);
-        for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
-            const next = ny * size + nx;
-            if (nx < 0 || ny < 0 || nx >= size || ny >= size || visited.has(next) || !SeedWalkTerrain.fromCode(tiles[next]).walkable) continue;
-            visited.add(next); queue.push(next);
-        }
-    }
-    for (let i = 0; i < tiles.length; i++) if (!visited.has(i) && SeedWalkTerrain.fromCode(tiles[i]).walkable) tiles[i] = SeedWalkTerrain.WATER.code;
-    return { seed: normalized, version: SEED_WALK_VERSION, tiles };
+    return { seed: normalized, version: SEED_WALK_VERSION, tiles: Array(SEED_WALK_SIZE ** 2).fill(SeedWalkTerrain.GRASS.code) };
 }
 
-export function canSeedWalkerOccupy(map: SeedWalkMap, x: number, y: number): boolean {
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
-    const radius = SEED_WALK_RADIUS;
-    const left = Math.floor((x - radius) / SEED_WALK_TILE), right = Math.floor((x + radius) / SEED_WALK_TILE);
-    const top = Math.floor((y - radius) / SEED_WALK_TILE), bottom = Math.floor((y + radius) / SEED_WALK_TILE);
-    if (left < 0 || top < 0 || right >= SEED_WALK_SIZE || bottom >= SEED_WALK_SIZE) return false;
-    for (let ty = top; ty <= bottom; ty++) for (let tx = left; tx <= right; tx++) {
-        if (!SeedWalkTerrain.fromCode(map.tiles[ty * SEED_WALK_SIZE + tx]).walkable) return false;
-    }
-    return true;
+/** The meadow has no terrain collisions or world edge. */
+export function canSeedWalkerOccupy(_map: SeedWalkMap, x: number, y: number): boolean {
+    return Number.isFinite(x) && Number.isFinite(y);
 }
 
-/** Axis sliding with bounded substeps prevents crossing obstacles, even after a delayed tick. */
-export function moveSeedWalker(map: SeedWalkMap, x: number, y: number, axisX: number, axisY: number, seconds: number): { x: number; y: number } {
+export function moveSeedWalker(_map: SeedWalkMap, x: number, y: number, axisX: number, axisY: number, seconds: number): { x: number; y: number } {
     if (![x, y, axisX, axisY, seconds].every(Number.isFinite) || seconds < 0) return { x, y };
     const magnitude = Math.hypot(axisX, axisY);
     if (!magnitude) return { x, y };
     const distance = SEED_WALK_SPEED * Math.min(seconds, .2) * Math.min(1, magnitude);
-    const steps = Math.max(1, Math.ceil(distance / 8));
-    const dx = axisX / magnitude * distance / steps, dy = axisY / magnitude * distance / steps;
-    for (let i = 0; i < steps; i++) {
-        if (canSeedWalkerOccupy(map, x + dx, y)) x += dx;
-        if (canSeedWalkerOccupy(map, x, y + dy)) y += dy;
-    }
-    return { x, y };
+    return { x: x + axisX / magnitude * distance, y: y + axisY / magnitude * distance };
+}
+
+export const SEED_WALK_CHAT_LIMIT = 120;
+export const SEED_WALK_BUBBLE_MS = 5000;
+export function normalizeSeedWalkChat(input: unknown): string | undefined {
+    if (typeof input !== 'string' || input.length > SEED_WALK_CHAT_LIMIT) return undefined;
+    const text = input.replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
+    return text ? text : undefined;
 }
 
 export function isSeedWalkInput(input: unknown): input is SeedWalkInput {
