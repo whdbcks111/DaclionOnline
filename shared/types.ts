@@ -1,3 +1,4 @@
+import type { SeedWalkInput, SeedWalkJoinResult, SeedWalkSnapshot } from './seedWalk.js';
 // 서버-클라이언트 공통 타입 정의
 import type { TagId } from './tags.js'
 import type { MusicCombatState } from './adaptiveMusic.js'
@@ -667,6 +668,8 @@ export type ClientPresenceState = 'focused' | 'visible' | 'hidden'
 
 // 소켓 이벤트 맵
 export interface ServerToClientEvents {
+    seedWalkJoined: (result: SeedWalkJoinResult) => void
+    seedWalkState: (state: SeedWalkSnapshot) => void
     gameEntryResult: (result: GameEntryResult) => void
     sessionRestore: (data: SessionRestoreData) => void
     sessionInvalid: () => void
@@ -729,6 +732,9 @@ export interface ClientToServerEvents {
     requestUserCount: () => void
     joinChannel: (channel: string | null) => void
     requestChannelList: () => void
+    seedWalkJoin: (request: { seed: string }) => void
+    seedWalkInput: (input: SeedWalkInput) => void
+    seedWalkLeave: () => void
     enterGame: (request: EnterGameRequest) => void
     leaveGame: () => void
     changeNickname: (nickname: string) => void

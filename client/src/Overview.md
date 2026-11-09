@@ -15,3 +15,5 @@
 라우트 화면은 `portal/`의 게임 목록·공통 인증과 `games/daclion/`의 게임 입장·화면으로 분리했다. `/`는 포털이며 이전 게임 경로는 호환 redirect로 유지한다.
 
 운영 루트 화면은 hostname으로 나누며 `daclion.mcv.kr/`는 게임, `gamebox.mcv.kr/`는 포털이다. 로컬과 다른 호스트는 기존 포털 루트를 유지한다.
+
+SEED WALK는 `/games/seed-walk/`의 lazy-loaded Phaser 게임이다. Phaser 코드는 포털과 기존 DaclionOnline 초기 번들에 포함하지 않는다.

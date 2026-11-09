@@ -1,3 +1,4 @@
+import { updateSeedWalk } from '../seed-walk/seedWalk.js';
 import logger from "../../utils/logger.js";
 import { getOnlinePlayers } from "../player/player.js";
 import { tickCoroutines } from "./coroutine.js";
@@ -39,6 +40,7 @@ function tick(): void {
     tickCoroutines(dt);
     updateNpcDialogues();
     updateGameScheduler(dt);
+    updateSeedWalk(dt);
 }
 
 /** 게임 루프 시작 */

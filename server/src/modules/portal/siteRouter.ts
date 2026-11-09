@@ -14,6 +14,10 @@ siteRouter.use((req, res, next) => {
         res.setHeader('Cache-Control', 'no-store');
         res.setHeader('Referrer-Policy', 'no-referrer');
     }
+    if (req.hostname === GAME_HOST && (req.path === '/games/seed-walk' || req.path.startsWith('/games/seed-walk/'))) {
+        res.redirect(302, `${req.protocol}://${PORTAL_HOST}${req.originalUrl}`);
+        return;
+    }
     if (req.hostname === GAME_HOST && ['/login', '/register', '/password-reset'].includes(req.path)) {
         res.redirect(302, `${req.protocol}://${PORTAL_HOST}${req.path}?next=daclion`);
         return;

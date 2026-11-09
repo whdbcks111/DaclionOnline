@@ -29,3 +29,7 @@
 공유 타입 변경은 서버 생산자/소비자와 클라이언트 생산자/소비자를 같은 변경에서 수정하고 [`docs/api/socket-events.md`](../docs/api/socket-events.md)와 이 문서를 갱신한다.
 
 `EnterGameRequest/GameEntryResult`와 `enterGame/leaveGame/gameEntryResult`는 공통 계정 인증 이후 게임 연결·첫 캐릭터 정보 입력을 분리한다. 로그인과 세션 복원은 게임에 자동 입장하지 않는다.
+
+`seedWalk.ts`는 SEED WALK v1의 결정론 시드 맵, 클래스형 Terrain enum, 충돌·속도 계산과 입력/상태 DTO를 소유한다. `types.ts`의 seedWalkJoin/Input/Leave와 seedWalkJoined/State 이벤트가 이 계약을 사용한다.
+
+초원 색상은 `seedWalkGrassNoise/seedWalkGrassColor`의 시드 기반 3-octave Perlin 노이즈로 위치별 밝기를 은은하게 바꾼다. 시드가 같으면 색 분포도 같고, 이 시각 표현은 기존 지형/충돌 v1 fixture를 변경하지 않는다.

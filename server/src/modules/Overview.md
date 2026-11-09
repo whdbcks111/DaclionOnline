@@ -57,3 +57,5 @@ Socket/HTTP 요청, 세션과 온라인 상태, 주기 작업, 도메인 객체 
 이벤트나 공개 함수, 초기화 책임이 바뀌면 이 문서와 [`docs/api/`](../../../docs/api), 관련 [`docs/systems/`](../../../docs/systems) 문서를 갱신한다.
 
 `portal/`은 공통 계정 인증·세션과 게임 프로필 연결을 소유하고 `auth/`는 게임 내 사람 확인을 유지한다. `player/gameAccess`가 실제 게임 입장을 담당한다.
+
+`seed-walk/`는 GAME BOX 공통 세션으로 참가하는 두 번째 게임의 socket 연결과 비영속 시드별 월드 수명을 소유한다.

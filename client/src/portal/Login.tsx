@@ -11,7 +11,8 @@ import type { LoginResult } from '@shared/types';
 function Login() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const destination = params.get("next") === "daclion" ? "/games/daclion/" : "/";
+  const destination = params.get("next") === "daclion" ? "/games/daclion/"
+    : params.get("next") === "seed-walk" ? `/games/seed-walk/?seed=${encodeURIComponent(params.get("seed") ?? "gamebox")}` : "/";
   const { socket, isConnected, sessionInfo, isSessionReady } = useSocket();
   
   const idRef = useRef<HTMLInputElement>(null);
@@ -20,10 +21,11 @@ function Login() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (isSessionReady && sessionInfo && destination.startsWith('/games/seed-walk/')) { navigate(destination, { replace: true }); return; }
     if (isSessionReady && sessionInfo && destination === '/games/daclion/' && getGameStartUrl() === '/auth/daclion') {
       window.location.replace(getGameStartUrl());
     }
-  }, [isSessionReady, sessionInfo, destination]);
+  }, [isSessionReady, sessionInfo, destination, navigate]);
 
   useEffect(() => {
     if (!socket) return;

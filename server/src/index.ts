@@ -1,3 +1,4 @@
+import { initSeedWalk } from './modules/seed-walk/seedWalk.js';
 import { siteRouter, GAME_HOST } from './modules/portal/siteRouter.js';
 import { readFileSync } from 'node:fs';
 import express from 'express';
@@ -78,6 +79,7 @@ initRegister();
 initPasswordReset();
 initLogin();
 initGameAccess();
+initSeedWalk();
 initChat();
 initBot();
 initializeNpcRelationshipProgress();

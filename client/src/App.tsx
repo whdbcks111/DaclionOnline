@@ -10,6 +10,7 @@ import Login from './portal/Login'
 import Register from './portal/Register'
 import PasswordReset from './portal/PasswordReset'
 import GameGate from './games/daclion/GameGate'
+const SeedWalk = lazy(() => import('./games/seed-walk/SeedWalk'))
 const Home = lazy(() => import('./games/daclion/Home'))
 const LocationEditor = lazy(() => import('./games/daclion/LocationEditor'))
 const AdminPage = lazy(() => import('./games/daclion/AdminPage'))
@@ -24,6 +25,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/password-reset" element={<PasswordReset />} />
+      <Route path="/games/seed-walk" element={<SeedWalk />} />
       <Route path="/games/daclion" element={<GameGate />}>
         <Route index element={<Home />} />
         <Route path="guide" element={<GameGuide />} />

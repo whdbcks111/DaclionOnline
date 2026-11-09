@@ -9,3 +9,5 @@
 GAME BOX의 게임 시작 링크는 `/auth/daclion`을 통해 게임 도메인으로 이동한다. `next=daclion` 로그인 성공과 이미 로그인된 계정은 같은 인증 연결로 이동하며 게임 도메인의 쿠키를 공용 부모 도메인에 공유하지 않는다.
 
 `AuthLayout.tsx/AuthLayout.module.scss`는 로그인·회원가입·비밀번호 찾기의 공통 포털 shell과 폼 스타일을 소유한다. 상단 브랜드/포털 복귀, PC 2열 소개·입력 카드와 모바일 단일열·독립 스크롤을 제공한다. 각 화면은 label, autocomplete, form submit, 검증 결과의 alert/status를 사용한다. 가입 인증번호 입력은 발송 이후에만 표시한다. 기존 개별 인증 화면 SCSS는 공통 스타일로 통합했다.
+
+게임 목록은 DaclionOnline과 SEED WALK 두 카드를 제공한다. SEED WALK는 포털 origin의 `/games/seed-walk/`로 이동하며 `Login`의 `next=seed-walk&seed=...`는 안전한 고정 게임 경로로만 돌아간다.

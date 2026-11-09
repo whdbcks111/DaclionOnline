@@ -6,6 +6,7 @@
 
 | 목적 | 먼저 볼 문서 |
 | --- | --- |
+| 시드 기반 탑뷰 멀티플레이 산책 게임 | [systems/seed-walk.md](systems/seed-walk.md) |
 | 전체 구조와 실행 흐름 파악 | [architecture/overview.md](architecture/overview.md) |
 | 이전 텍스트 RPG 버전의 기획·UX 참고 | [legacy-reference.md](legacy-reference.md) |
 | 레거시 대비 현재 콘텐츠 수량과 확장 우선순위 | [content-scale.md](content-scale.md) |

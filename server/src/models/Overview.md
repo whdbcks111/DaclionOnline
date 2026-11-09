@@ -75,3 +75,5 @@
 - 교전·전리품·내구도: Monster는 최초 공격자와 당시 파티의 userId snapshot으로 교전을 선점하고 전원이 이탈하면 해제한다. 감쇠·대상 교체용 위협도와 별개로 userId별 실제 생명력/보호막 피해·유효 치유·보호막 흡수·제어 시간을 primitive 처치 기여도 ledger에 누적하고 사망 직전 불변 DTO로 복사하며, `getDefeatCreditUserIds()`는 양수 기여 userId만 중복 없이 불변 snapshot으로 반환한다. 드롭·골드는 기존 위협도 최우선/마지막 공격 owner 귀속을 유지하고 파티 경험치와 처치 퀘스트만 해당 ledger를 사용한다. 일반 몬스터 경험치는 참여자 본인 레벨의 60% 미만부터 최대 절반까지 개인별로 감쇠하고 보스는 제외한다. `Player.receiveLoot`은 중량 초과 전리품을 현재 Location 바닥에 놓고 Location은 생성·합류 시각부터 5분 수명을 적용한다. TravelHub는 영구 해금 FLAG와 선택 거주점 STATE를 소유하며 Player 부활은 유효한 거주점 또는 기본 광장을 사용한다. 실제 생명력 피해가 있는 직접 공격은 `Equipment.damageArmorDurability()`가 기본 확률·가중치로 방어구 한 부위만, 명시적 특수 공격은 전 부위를 1씩 소모하고 0인 장비를 modifier와 함께 제거한다.
 
 공개 메서드나 모델 관계, 계산식, 저장 경계가 바뀌면 이 문서와 [`docs/api/server-internal.md`](../../../docs/api/server-internal.md), 관련 시스템 문서를 갱신한다.
+
+`seed-walk/`는 다른 게임 모델과 독립된 시드 월드·플레이어 연결·방향 입력·서버 이동 상태를 소유한다.

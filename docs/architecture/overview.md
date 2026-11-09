@@ -92,3 +92,5 @@ Express + Socket.io (`server/src/index.ts`)
 `gamebox.mcv.kr`과 `daclion.mcv.kr`은 같은 서버 IP를 사용한다. Express의 `modules/portal/siteRouter.ts`가 계정 페이지·게임 링크·인증 연결을 Host별로 처리하며 SPA index title도 도메인별로 제공한다. React의 `/`는 게임 도메인에서 게임 진입으로 이동하고 포털 도메인에서 게임 목록을 표시한다. Nginx나 별도 프로세스 없이 현재 Express 서버에서 처리한다.
 
 운영 클라이언트의 Socket.io·HTTP·미디어는 각 도메인의 현재 origin을 사용한다. `client/src/utils/siteNavigation.ts`는 포털 복귀와 게임 시작 URL을, `serverUrl.ts`는 통신 origin을 소유한다. 로그인은 호스트 전용 쿠키와 일회용 연결 코드로 이어지고 기존 Player 저장 구조는 바꾸지 않는다. 로컬 개발은 `/games/daclion/` 경로 방식과 VITE_SERVER_URL 설정을 유지한다.
+
+SEED WALK는 포털 origin `/games/seed-walk/`에서 실행하는 Phaser 2D 게임이다. 공유 시드 맵/충돌 계약, 별도 server models/modules seed-walk 도메인과 기존 20Hz game loop를 사용한다. DaclionOnline Player·진행 저장 경계와 독립이며 공통 인증만 재사용한다.

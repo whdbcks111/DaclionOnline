@@ -136,3 +136,15 @@
 - `changeNickname`은 게임 프로필과 게임 캐릭터 이름만 변경하고 포털 닉네임은 유지한다. `nicknameResult`는 해당 게임의 활성 탭에 전송한다.
 
 게임 HUD·주변 플레이어·채팅·귓속말은 포털 세션 닉네임 대신 게임 캐릭터 이름을 일관되게 사용한다.
+
+## SEED WALK 이벤트
+
+| 이벤트 | 방향 | 계약 |
+| --- | --- | --- |
+| `seedWalkJoin` | client → server | `{ seed: string }`, GAME BOX 세션 필수. NFC/trim/48자 제한, 계정 ID·닉네임은 서버 세션에서 결정 |
+| `seedWalkJoined` | server → client | `{ ok: true, selfId, state }` 또는 `{ ok: false, error }` |
+| `seedWalkInput` | client → server | `{ seq, x, y }`, 증가하는 safe integer seq와 [-1,1] 범위의 유한 방향축만 허용. 연결 소유권·초당 60회 상한 검사 |
+| `seedWalkLeave` | client → server | 해당 연결의 게임 참가만 해제하고 포털 로그인은 유지 |
+| `seedWalkState` | server → client | `{ worldId, seed, version, tick, players: [{id,name,x,y,color}] }` 완전한 20Hz volatile snapshot |
+
+새 map/world ID는 새 stream이며 클라이언트는 현재 worldId와 같고 더 큰 tick인 상태만 적용한다. 첫 snapshot은 join 결과로 신뢰성 있게 전달한다. 입력 부재 300ms, disconnect/logout/session 폐기는 정지·퇴장 처리한다. 이 게임은 DaclionOnline gameActive를 활성화하지 않는다.

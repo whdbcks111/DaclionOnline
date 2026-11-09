@@ -73,6 +73,10 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.55', '2026-11-09',
+        [FEATURE, 'GAME BOX에 2D 멀티플레이 산책 게임 `SEED WALK`를 추가했습니다. 같은 시드로 접속한 플레이어끼리 같은 맵에서 만나 WASD·방향키·모바일 조이스틱으로 이동할 수 있습니다.'],
+        [CONTENT, '풀밭·연못·바위·산책로로 이루어진 시드 기반 맵을 추가했습니다. 초원은 위치에 따라 잔디 색이 은은하게 달라지며, 같은 시드에서는 색 분포도 같습니다. 포털 계정으로 접속하고 맵 주소를 공유해 함께 산책할 수 있습니다.'],
+    ),
     definePatchNote('1.0.54', '2026-11-09',
         [CHANGED,
             '`gamebox.mcv.kr`에서는 GAME BOX, `daclion.mcv.kr`에서는 DaclionOnline이 열립니다. 포털 로그인으로 게임을 바로 시작하고 게임 메뉴에서 포털로 돌아갈 수 있습니다.',

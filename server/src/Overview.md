@@ -17,3 +17,5 @@
 `modules/portal/`은 공통 계정과 게임 프로필 연결을 소유한다. `initGameAccess()`가 게임 입장을 별도로 초기화하며 포털 세션 복원은 Player를 로드하지 않는다.
 
 `siteRouter`는 정적 파일 제공 전에 도메인별 공통 인증 redirect와 일회용 게임 로그인 연결을 처리한다. production SPA index는 도메인별 title을 사용하고 no-cache로 제공한다.
+
+`initSeedWalk()`를 Socket.io 이후 초기화해 기존 Player를 로드하지 않고도 GAME BOX 계정으로 SEED WALK에 참가하게 한다.

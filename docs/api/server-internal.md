@@ -165,3 +165,5 @@
 `loadDaclionNames(userIds)`는 이름을 일괄 로드하고 `getNickname(userId)` 조회 함수만 제공해 순위·관리자 목록에서 프로필 row를 직접 순회하지 않게 한다.
 
 게임용 개별 메시지와 HUD snapshot은 해당 게임에 참가한 socket에만 전달하고 포털 전용 연결은 제외한다.
+
+`SeedWalkWorld`는 `join/leave/input/update/snapshot/hasPlayer/size` 목적형 API로만 접근한다. `initSeedWalk()`가 연결을 등록하고 `updateSeedWalk(dt)`가 기존 루프에서 월드를 갱신한다. 내부 players/worlds/members Map은 공개하지 않는다.

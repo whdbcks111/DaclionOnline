@@ -119,3 +119,5 @@ login/session restore
 `npm run db:migrate:deploy`가 스키마와 최초 연결을 적용한 뒤 `db:migrate:portal` 복구 작업을 실행한다. `server/src/scripts/migratePortalProfiles.ts`는 연결이 누락된 기존 캐릭터만 INSERT하고 기존 게임 프로필을 덮어쓰지 않는다. `--dry-run`은 대상 수만 출력하며 재실행 시 추가 대상은 0이다. 이름 충돌 등 오류는 실패로 보고하고 조용히 다른 계정에 연결하지 않는다. 서버를 정지하고 DB 백업 후 migration → Client 생성 → 데이터 변환 → 새 서버 시작 순서로 배포한다.
 
 프로필 생성·이름 변경은 중복과 연결 성공 여부를 즉시 확정해야 하므로 DB 즉시 저장 예외다. 캐릭터 상태는 기존 Player dirty/30초·unload·종료 flush를 유지한다. 계정 초기화 도구의 게임 데이터 삭제 시 `daclion` 프로필도 지워 첫 게임 정보 입력부터 다시 시작한다.
+
+SEED WALK는 결정론 맵과 접속 중 위치만 사용하는 비영속 게임으로 추가 DB 테이블이나 GameProfile row를 만들지 않는다. 공통 User 계정/세션은 재사용하되 DaclionOnline Player는 생성하지 않는다. 빈 월드·연결 종료·서버 재시작에서 상태를 폐기하고 지형은 seed/version으로 재생성한다.

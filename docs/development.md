@@ -83,3 +83,5 @@ fix(chat): prevent unauthorized channel access
 루트는 게임 포털이며 DaclionOnline 진입 경로는 `/games/daclion/`이다. 기존 도메인·포트·정적 파일 경로를 유지하므로 추가 DNS 설정은 없다. `server/` 작업 디렉터리에서 `npm run db:migrate:deploy` 후 빌드된 서버를 시작한다. 이 명령이 기존 캐릭터를 포털 계정에 자동 연결한다. 별도 확인은 `npm run db:migrate:portal -- --dry-run`으로 실행한다. 기존 계정 ID와 비밀번호를 그대로 사용한다. PM2 설정은 서버 cwd와 실제 빌드 경로를 고정한다.
 
 운영 주소는 `http://gamebox.mcv.kr`과 `http://daclion.mcv.kr`이며 두 A 레코드는 같은 서버 IP를 가리킨다. Host 분기는 Express가 담당한다. 운영 빌드는 `VITE_SERVER_URL` 대신 현재 origin을 사용해 기존 개발 설정이 특정 게임 도메인으로 연결을 고정하지 않게 한다. `VITE_SERVER_URL`은 개발 환경에서만 적용한다. 현재 도메인과 일회용 로그인 연결의 계약은 [HTTP API](api/http.md#game-box와-게임-도메인)에 있다.
+
+SEED WALK는 클라이언트의 Phaser 3.90.0을 사용한다. 서버의 dev dependency socket.io-client는 실제 두 클라이언트를 접속시키는 통합 테스트용이다. 게임 실행 경로는 `/games/seed-walk/?seed=gamebox`이며 로컬에서도 같은 경로로 테스트할 수 있다.

@@ -36,3 +36,5 @@
 .setup input { width: 100%; background: var(--color-input-bg); color: var(--color-text); border: 1px solid var(--color-border); }
 .error { color: var(--color-danger); }
 @media (max-width: 40rem) { .card { grid-template-columns: 1fr; } .art { padding: 1.5rem; } .header nav { gap: .75rem; } }
+
+.card + .card { margin-top: 1.25rem; }

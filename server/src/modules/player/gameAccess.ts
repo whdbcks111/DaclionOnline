@@ -38,6 +38,7 @@ export function initGameAccess(): void {
                 const token = socket.data.sessionToken;
                 const session = token ? getSession(token) : undefined;
                 if (!session) { reply({ error: '포털 로그인이 필요합니다.' }); return; }
+                if (socket.data.seedWalkActive) { reply({ error: 'SEED WALK에서 나온 뒤 접속해주세요.' }); return; }
                 if (request?.gameId !== 'daclion') { reply({ error: '지원하지 않는 게임입니다.' }); return; }
                 let profile = await getDaclionProfile(session.userId);
                 if (generation !== entryGeneration || !socket.connected || socket.data.sessionToken !== token || getSession(token)?.userId !== session.userId) return;
@@ -56,6 +57,7 @@ export function initGameAccess(): void {
                     }
                 }
                 if (generation !== entryGeneration || !socket.connected || socket.data.sessionToken !== token || getSession(token)?.userId !== session.userId) return;
+                if (socket.data.seedWalkActive) { reply({ error: 'SEED WALK에서 나온 뒤 접속해주세요.' }); return; }
                 socket.data.onlineUserId = session.userId;
                 socket.data.gameNickname = profile.nickname;
                 setUserOnline(session.userId, socket.id);

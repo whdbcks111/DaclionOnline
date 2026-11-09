@@ -2,6 +2,7 @@
 const PORTAL_EVENTS = new Set([
     'login', 'logout', 'register', 'sendVerifyCode', 'verifyCode',
     'sendPasswordResetCode', 'resetPassword', 'clientPresence',
+    'seedWalkJoin', 'seedWalkInput', 'seedWalkLeave',
     'enterGame', 'leaveGame', 'requestUserCount',
 ]);
 
