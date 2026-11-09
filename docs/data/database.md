@@ -123,3 +123,5 @@ login/session restore
 SEED WALK는 결정론 맵과 접속 중 위치만 사용하는 비영속 게임으로 추가 DB 테이블이나 GameProfile row를 만들지 않는다. 공통 User 계정/세션은 재사용하되 DaclionOnline Player는 생성하지 않는다. 빈 월드·연결 종료·서버 재시작에서 상태를 폐기하고 지형은 seed/version으로 재생성한다.
 
 SEED WALK v2는 지형·가장자리 충돌 없는 초원이며 `SeedWalkWorld.say(userId, connectionId, text, now)`가 최신 말풍선을 5초 동안 메모리로 소유한다. 선택적 `player.bubble.text` snapshot과 `seedWalkChat(text)`를 사용하며 채팅은 DB/로그에 저장하지 않는다. 클라이언트는 Enter/채팅 버튼의 중앙 하단 입력 폼과 캐릭터 위 말풍선만 표시한다.
+
+테스트2의 위치/체크포인트/완주/추락 횟수/말풍선은 Test2World 메모리 전용이다. 새 DB row/flush는 없고 마지막 연결 종료/재시작 시 사라진다.

@@ -149,3 +149,12 @@
 | `seedWalkState` | server → client | `{ worldId, seed, version, tick, players: [{id,name,x,y,color,bubble?: {text}}] }` 완전한 20Hz volatile snapshot |
 
 새 map/world ID는 새 stream이며 클라이언트는 현재 worldId와 같고 더 큰 tick인 상태만 적용한다. 첫 snapshot은 join 결과로 신뢰성 있게 전달한다. 입력 부재 300ms, disconnect/logout/session 폐기는 정지·퇴장 처리한다. 이 게임은 DaclionOnline gameActive를 활성화하지 않는다.
+
+## 테스트2
+
+- `test2Join()` → `test2Joined({ok,selfId,state}|{ok:false,error})`: 공통 세션으로 단일 공용 맵 참가.
+- `test2Input({seq,x,jump})`: 증가 safe integer seq, [-1,1] 유한 수평축, 증가 safe integer jump 누름 counter. 서버가 위치를 판정한다.
+- `test2Chat(text)`: 참가자만 120자, 계정당 3초 3회. 최신 말풍선 하나가 5초간 snapshot에 포함된다.
+- `test2Respawn()`: 현재 체크포인트로 복귀. 위치/체크포인트 ID를 받지 않는다.
+- `test2Leave()`: 현재 연결의 참가만 제거한다.
+- `test2State(state)`: 20Hz volatile 완전 snapshot. `{worldId,seed:'test2',version:1,tick,players:[{id,name,x,y,color,checkpoint,finished,deaths,bubble?:{text}}]}`. join snapshot 이후 같은 worldId의 증가 tick만 적용한다.

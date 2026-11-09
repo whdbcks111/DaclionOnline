@@ -15,3 +15,5 @@
 포털 연결은 seedWalkJoin/Input/Leave를 허용하되 실제 인증·입력 소유권·world 참가 검증은 seed-walk 모듈이 수행한다. 게임 도메인의 `/games/seed-walk/*` HTTP 진입은 GAME BOX로 이동한다.
 
 포털 이벤트 허용 목록은 SEED WALK 말풍선 전용 `seedWalkChat`을 포함한다. 참가와 인증·빈도 검증은 seed-walk 소유 모듈이 수행한다.
+
+test2Join/Input/Chat/Respawn/Leave는 포털 단계에서 허용하며 테스트2 소유 모듈이 참가/인증/입력을 검증한다. Daclion 호스트의 `/games/test2/`는 포털로 이동한다.

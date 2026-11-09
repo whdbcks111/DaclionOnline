@@ -14,7 +14,7 @@ siteRouter.use((req, res, next) => {
         res.setHeader('Cache-Control', 'no-store');
         res.setHeader('Referrer-Policy', 'no-referrer');
     }
-    if (req.hostname === GAME_HOST && (req.path === '/games/seed-walk' || req.path.startsWith('/games/seed-walk/'))) {
+    if (req.hostname === GAME_HOST && (['/games/seed-walk', '/games/test2'].some(path => req.path === path || req.path.startsWith(path + '/')))) {
         res.redirect(302, `${req.protocol}://${PORTAL_HOST}${req.originalUrl}`);
         return;
     }

@@ -24,7 +24,7 @@ export default function Portal() {
       <p>직접 만든 웹게임을 모아두었습니다. 마음에 드는 게임을 골라 브라우저에서 바로 시작하세요.</p>
     </section>
     <section aria-labelledby="games-title">
-      <div className={styles.sectionTitle}><h2 id="games-title">플레이할 게임</h2><span>2개의 게임</span></div>
+      <div className={styles.sectionTitle}><h2 id="games-title">플레이할 게임</h2><span>3개의 게임</span></div>
       <article className={styles.card}>
         <div className={styles.art} aria-hidden="true"><img src="/icons/map/town-plaza.png" alt="" /></div>
         <div className={styles.cardContent}>
@@ -51,6 +51,10 @@ export default function Portal() {
           <ul><li>공유 초원 맵</li><li>실시간 이동</li><li>모바일 조작</li></ul>
           <Link className={styles.play} to="/games/seed-walk/">게임 시작 →</Link>
         </div>
+      </article>
+      <article className={styles.card}>
+        <div className={styles.art} aria-hidden="true"><svg viewBox="0 0 240 160" width="100%" style={{ maxWidth: '16rem' }}><rect width="240" height="160" fill="#c8dce3"/><path d="M0 130h65m30-35h55m30-40h60" stroke="#596f7d" strokeWidth="14"/><path d="M198 48V15l25 10-25 10" fill="#e7bb64" stroke="#485d66" strokeWidth="2"/><rect x="113" y="59" width="17" height="24" fill="#e9b35f" stroke="#fff" strokeWidth="2"/></svg></div>
+        <div className={styles.cardContent}><span className={styles.eyebrow}>멀티플레이 점프맵</span><h3>테스트2</h3><p>긴 점프맵을 다른 플레이어와 함께 건너보세요. 떨어지면 체크포인트에서 다시 시작합니다.</p><Link className={styles.play} to="/games/test2/">게임 시작 →</Link></div>
       </article>
     </section>
   </main>

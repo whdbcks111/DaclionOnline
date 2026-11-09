@@ -96,3 +96,5 @@ Express + Socket.io (`server/src/index.ts`)
 SEED WALK는 포털 origin `/games/seed-walk/`에서 실행하는 Phaser 2D 게임이다. 공유 시드 맵/충돌 계약, 별도 server models/modules seed-walk 도메인과 기존 20Hz game loop를 사용한다. DaclionOnline Player·진행 저장 경계와 독립이며 공통 인증만 재사용한다.
 
 SEED WALK 입장은 시드 선택 없이 모든 사용자가 서버 고정 `gamebox` 공용 맵(최대 32명)에 참가한다.
+
+테스트2는 포털 공통 계정과 realtime-game UI를 재사용하고 별도 Test2World 모델이 공유 test2.ts 물리를 실행한다. 기존 20Hz 루프 안에서 60Hz substep만 수행하며 독립 게임 timer는 없다.

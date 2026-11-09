@@ -1,3 +1,4 @@
+import { initTest2 } from './modules/test2/test2.js';
 import { initSeedWalk } from './modules/seed-walk/seedWalk.js';
 import { siteRouter, GAME_HOST } from './modules/portal/siteRouter.js';
 import { readFileSync } from 'node:fs';
@@ -80,6 +81,7 @@ initPasswordReset();
 initLogin();
 initGameAccess();
 initSeedWalk();
+initTest2();
 initChat();
 initBot();
 initializeNpcRelationshipProgress();

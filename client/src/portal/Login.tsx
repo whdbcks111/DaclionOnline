@@ -12,7 +12,7 @@ function Login() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const destination = params.get("next") === "daclion" ? "/games/daclion/"
-    : params.get("next") === "seed-walk" ? "/games/seed-walk/" : "/";
+    : params.get("next") === "test2" ? "/games/test2/" : params.get("next") === "seed-walk" ? "/games/seed-walk/" : "/";
   const { socket, isConnected, sessionInfo, isSessionReady } = useSocket();
   
   const idRef = useRef<HTMLInputElement>(null);

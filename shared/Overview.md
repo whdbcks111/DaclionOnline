@@ -37,3 +37,5 @@
 `SEED_WALK_WORLD_SEED`는 서버 공용 맵의 고정 시드다. `seedWalkJoin`은 인자 없이 호출하며 클라이언트가 맵을 선택하지 않는다.
 
 map v2는 연못·길·바위·경계벽 없는 초원이다. `seedWalkChat(text)`와 `SeedWalkWorld.say(userId, connectionId, text, now)`는 120자/계정당 3초 3회 제한의 최신 말풍선 하나를 처리하며 5초 후 기존 루프에서 만료한다. snapshot의 선택적 `player.bubble.text`만 전달하고 영속 저장·채팅 로그는 없다. 클라이언트는 Enter/모바일 채팅 버튼으로 62% 위치의 폼을 열고 입력 중 정지, IME 안전 전송·Esc 취소와 카메라 투영 DOM 말풍선을 제공한다.
+
+`test2.ts`는 map v1, 241개 발판과 20개 체크포인트, 60Hz 점프 물리/100ms 코요테/140ms 버퍼와 테스트2 DTO를 소유한다. 공통 말풍선 정규화 API는 seedWalk.ts 공개 함수를 재사용한다.

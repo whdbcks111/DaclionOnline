@@ -19,3 +19,5 @@
 SEED WALK는 `/games/seed-walk/`의 lazy-loaded Phaser 게임이다. Phaser 코드는 포털과 기존 DaclionOnline 초기 번들에 포함하지 않는다.
 
 `App`은 SEED WALK 경로의 전역 테마 버튼을 숨기고 게임의 Esc 메뉴에서 테마를 바꾸도록 한다.
+
+테스트2는 `/games/test2/` lazy route이며 SEED WALK와 공통 realtime-game UI/Scene을 사용한다. 두 경로의 테마는 Esc 메뉴에서 전환한다.

@@ -31,7 +31,7 @@ export function initSeedWalk(): void {
             const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
             if (!session) { reply({ ok: false, error: 'GAME BOX 로그인이 필요합니다.' }); return; }
             if (!joinLimiter.consume(socket.id).allowed) { reply({ ok: false, error: '접속 요청이 많습니다. 잠시 후 다시 시도해주세요.' }); return; }
-            if (socket.data.onlineUserId !== undefined) { reply({ ok: false, error: '기존 게임에서 나온 뒤 접속해주세요.' }); return; }
+            if (socket.data.onlineUserId !== undefined || socket.data.test2Active) { reply({ ok: false, error: '기존 게임에서 나온 뒤 접속해주세요.' }); return; }
             const seed = SEED_WALK_WORLD_SEED;
             let world = worlds.get(seed);
             if (world && !world.hasPlayer(session.userId) && world.size >= 32) { reply({ ok: false, error: '이 맵은 가득 찼습니다. 잠시 후 다시 접속해주세요.' }); return; }

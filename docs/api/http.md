@@ -66,3 +66,5 @@
 `/auth/*` 응답은 `Cache-Control: no-store`, `Referrer-Policy: no-referrer`를 사용한다. 로그인 토큰을 URL로 보내지 않으며 일회용 코드는 서버 메모리에만 보관하고 최대 1,000개로 제한한다. HTTPS 요청에는 Secure 쿠키를 사용한다. `.mcv.kr` 전체를 대상으로 하는 Domain 쿠키는 발급하지 않는다. 게임 도메인의 로그인/가입/비밀번호 재설정 HTTP 요청은 GAME BOX로 이동하고 포털의 `/games/daclion/*`는 인증 연결을 거쳐 게임으로 이동한다. 게임과 포털은 기존 세션 하나를 연결하므로 로그아웃·비밀번호 재설정의 세션 폐기는 양쪽에 적용된다.
 
 `daclion.mcv.kr/games/seed-walk/*`는 원래 경로와 query를 보존해 GAME BOX 도메인으로 redirect한다. SEED WALK는 포털 origin의 계정 세션을 그대로 사용한다.
+
+`/games/test2/`는 GAME BOX에서 실행하고 Daclion 호스트 접근은 같은 포털 경로로 리다이렉트한다. 로그인 `next=test2`는 이 고정 경로로 돌아간다.

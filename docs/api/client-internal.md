@@ -86,10 +86,12 @@
 
 `portal/AuthLayout({ title, description?, children, footer })`가 공통 계정 화면의 반응형 레이아웃을 제공한다. 각 폼은 공통 CSS module의 field/inline/error/submit을 재사용하고 별도 절대 위치 폼을 만들지 않는다.
 
-`games/seed-walk/SeedWalk`가 공용 맵 로비·이동 입력·서버 snapshot을 소유한다. `SeedWalkScene(selfId, readState)`는 Phaser 렌더링·카메라·좌표 보간만 담당하며 서버 모델을 직접 참조하지 않는다. unmount에서 Phaser와 ResizeObserver·입력 listener·heartbeat를 정리한다.
+`games/seed-walk/SeedWalk`가 공용 맵 로비·이동 입력·서버 snapshot을 소유한다. `RealtimeScene(selfId, readState, project, platformer?)`는 Phaser 렌더링·카메라·좌표 보간만 담당하며 서버 모델을 직접 참조하지 않는다. unmount에서 Phaser와 ResizeObserver·입력 listener·heartbeat를 정리한다.
 
 SEED WALK 입장은 시드 선택 없이 모든 사용자가 서버 고정 `gamebox` 공용 맵(최대 32명)에 참가한다.
 
 SEED WALK v2는 지형·가장자리 충돌 없는 초원이며 `SeedWalkWorld.say(userId, connectionId, text, now)`가 최신 말풍선을 5초 동안 메모리로 소유한다. 선택적 `player.bubble.text` snapshot과 `seedWalkChat(text)`를 사용하며 채팅은 DB/로그에 저장하지 않는다. 클라이언트는 Enter/채팅 버튼의 중앙 하단 입력 폼과 캐릭터 위 말풍선만 표시한다.
 
 SEED WALK 플레이 중에는 헤더·툴바·하단 안내·방향/좌표 라벨 없이 canvas가 전체 viewport를 채운다. Esc 또는 아이콘 메뉴 버튼이 native modal dialog를 열며 계속하기·테마·맵 나가기·포털 이동과 접속 인원을 제공한다. 메뉴 중 자신의 입력만 정지하고 멀티플레이 월드는 계속된다. Esc는 채팅이 열려 있으면 채팅만 취소하고, 그 외 메뉴를 토글한다. dialog의 기본 focus trap을 사용한다.
+
+`components/realtime-game/RealtimeGame({platformer?})`과 `RealtimeScene`은 두 Phaser 게임의 UI/렌더링을 공유한다. 테스트2 진입점이 platformer 옵션을 선택하며 점프 counter를 입력으로 보낸다.

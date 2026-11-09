@@ -87,3 +87,9 @@ fix(chat): prevent unauthorized channel access
 SEED WALK는 클라이언트의 Phaser 3.90.0을 사용한다. 서버의 dev dependency socket.io-client는 실제 두 클라이언트를 접속시키는 통합 테스트용이다. 게임 실행 경로는 `/games/seed-walk/`이며 로컬에서도 같은 경로로 테스트할 수 있다.
 
 SEED WALK 입장은 시드 선택 없이 모든 사용자가 서버 고정 `gamebox` 공용 맵(최대 32명)에 참가한다.
+
+테스트2는 `/games/test2/`에서 실행한다. `server/src/models/test2/Test2World.test.ts`와 `modules/test2/test2.integration.test.ts`가 전체 코스와 점프 보정/체크포인트/실제 두 소켓 통신을 검증한다.
+
+## 운영 클라이언트 반영
+
+`npm run build:client`는 운영 폴더를 건드리지 않고 `client/.build`에 생성한다. 검증 후 `npm run publish:client`로 반영하고 필요한 서버 재시작을 수행한다. `npm run verify`도 운영 파일을 변경하지 않는다. preview는 `.build`를 사용한다. 반영은 이전 해시 assets를 보존하고 모든 새 파일 준비 후 index.html을 마지막에 atomic rename한다. 실행 중 서버는 기존 index를 캐시하므로 재시작 전까지 이전 버전을 계속 제공해도 참조 파일이 사라지지 않는다. 이전 assets는 활성 브라우저의 lazy chunk에 필요하므로 배포 중 삭제하지 않는다. `cd client && npm run test:publish`로 누락 파일 거절과 기존 파일 보존을 검증한다.

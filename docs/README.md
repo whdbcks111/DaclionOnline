@@ -6,6 +6,7 @@
 
 | 목적 | 먼저 볼 문서 |
 | --- | --- |
+| 사이드뷰 멀티플레이 점프맵 | [systems/test2.md](systems/test2.md) |
 | 시드 기반 탑뷰 멀티플레이 산책 게임 | [systems/seed-walk.md](systems/seed-walk.md) |
 | 전체 구조와 실행 흐름 파악 | [architecture/overview.md](architecture/overview.md) |
 | 이전 텍스트 RPG 버전의 기획·UX 참고 | [legacy-reference.md](legacy-reference.md) |

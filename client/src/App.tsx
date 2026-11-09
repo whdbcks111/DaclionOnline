@@ -10,6 +10,7 @@ import Login from './portal/Login'
 import Register from './portal/Register'
 import PasswordReset from './portal/PasswordReset'
 import GameGate from './games/daclion/GameGate'
+const Test2 = lazy(() => import('./games/test2/Test2'))
 const SeedWalk = lazy(() => import('./games/seed-walk/SeedWalk'))
 const Home = lazy(() => import('./games/daclion/Home'))
 const LocationEditor = lazy(() => import('./games/daclion/LocationEditor'))
@@ -19,7 +20,7 @@ const PatchNotes = lazy(() => import('./games/daclion/PatchNotes'))
 
 function PortalThemeToggle() {
   const { pathname } = useLocation()
-  return pathname.replace(/\/$/, '') === '/games/seed-walk' ? null : <ThemeToggle />
+  return ['/games/seed-walk', '/games/test2'].includes(pathname.replace(/\/$/, '')) ? null : <ThemeToggle />
 }
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/password-reset" element={<PasswordReset />} />
+      <Route path="/games/test2" element={<Test2 />} />
       <Route path="/games/seed-walk" element={<SeedWalk />} />
       <Route path="/games/daclion" element={<GameGate />}>
         <Route index element={<Home />} />

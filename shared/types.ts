@@ -1,3 +1,4 @@
+import type { Test2Input, Test2Snapshot, Test2JoinResult } from './test2.js';
 import type { SeedWalkInput, SeedWalkJoinResult, SeedWalkSnapshot } from './seedWalk.js';
 // 서버-클라이언트 공통 타입 정의
 import type { TagId } from './tags.js'
@@ -668,6 +669,8 @@ export type ClientPresenceState = 'focused' | 'visible' | 'hidden'
 
 // 소켓 이벤트 맵
 export interface ServerToClientEvents {
+    test2Joined: (result: Test2JoinResult) => void
+    test2State: (state: Test2Snapshot) => void
     seedWalkJoined: (result: SeedWalkJoinResult) => void
     seedWalkState: (state: SeedWalkSnapshot) => void
     gameEntryResult: (result: GameEntryResult) => void
@@ -733,6 +736,11 @@ export interface ClientToServerEvents {
     joinChannel: (channel: string | null) => void
     requestChannelList: () => void
     seedWalkChat: (text: string) => void
+    test2Join: () => void
+    test2Leave: () => void
+    test2Input: (input: Test2Input) => void
+    test2Chat: (text: string) => void
+    test2Respawn: () => void
     seedWalkJoin: () => void
     seedWalkInput: (input: SeedWalkInput) => void
     seedWalkLeave: () => void

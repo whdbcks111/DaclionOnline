@@ -73,6 +73,11 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.59', '2026-11-09',
+        [CHANGED, '업데이트 준비 중 화면이 하얗게 열리던 문제를 수정했습니다.'],
+        [FEATURE, 'GAME BOX에 사이드뷰 멀티플레이 점프맵 테스트2를 추가했습니다. 점프 버퍼와 코요테 타임으로 점프 입력을 보정하고, 캐릭터 위 말풍선으로 대화할 수 있습니다.'],
+        [CONTENT, '241개 발판과 20개 체크포인트가 이어지는 긴 코스를 추가했습니다. 떨어지면 마지막 체크포인트에서 다시 시작하며 모바일에서도 이동과 점프를 할 수 있습니다.'],
+    ),
     definePatchNote('1.0.58', '2026-11-09',
         [CHANGED, 'SEED WALK의 헤더와 상시 안내를 없애 게임 화면을 넓혔습니다. Esc 또는 메뉴 버튼에서 게임을 계속하거나 테마를 바꾸고, 맵에서 나가거나 포털로 돌아갈 수 있습니다.'],
     ),
