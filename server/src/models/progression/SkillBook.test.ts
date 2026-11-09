@@ -13,7 +13,7 @@ import { Item } from '../economy/Item.js';
 import { getActiveProjectiles, removeProjectile } from '../combat/Projectile.js';
 import { getIO, initSocket } from '../../modules/infrastructure/socket.js';
 import { getChannelHistory, getFilteredHistoryForUser } from '../../modules/communication/channel.js';
-import { createSession, removeSession, setUserOffline, setUserOnline } from '../../modules/auth/login.js';
+import { createSession, removeSession, setUserOffline, setUserOnline } from '../../modules/portal/login.js';
 import { registerOnlinePlayer, unregisterOnlinePlayer } from '../../modules/player/playerRegistry.js';
 import '../../data/progression/progress.js';
 import '../../data/combat/tagEffects.js';

@@ -7,12 +7,8 @@ import { FixedWindowRateLimiter } from "../../utils/rateLimit.js";
 import prisma from "../../config/prisma.js";
 import type { LoginRequest } from "../../../../shared/types.js";
 import { getUserChannel, getChannelRoomKey, getAvailableChannels } from "../communication/channel.js";
+import { getDaclionProfile, changeDaclionNickname } from './gameProfile.js';
 import type { Session } from "../../types/index.js";
-
-// message/socket → login → player → Entity → message 순환 초기화를 피한다.
-async function loadPlayerByUserId(userId: number) {
-    return (await import('../player/player.js')).loadPlayerByUserId(userId);
-}
 
 async function unloadPlayerByUserId(userId: number) {
     return (await import('../player/player.js')).unloadPlayerByUserId(userId);
@@ -85,6 +81,7 @@ export async function revokeUserSessions(userId: number): Promise<void> {
         if (!connectedSocket.data.sessionToken || !tokens.has(connectedSocket.data.sessionToken)) continue;
         connectedSocket.leave(getChannelRoomKey(getUserChannel(userId)));
         setUserOffline(userId, connectedSocket.id);
+        connectedSocket.data.gameActive = false;
         connectedSocket.data.onlineUserId = undefined;
         connectedSocket.data.sessionToken = undefined;
         connectedSocket.emit('sessionInvalid');
@@ -171,8 +168,7 @@ export const initLogin = () => {
                 profileImage: session.profileImage,
                 permission: session.permission,
             });
-            // 세션 복원 시 플레이어가 메모리에 없을 수 있으므로 보장
-            loadPlayerByUserId(session.userId).catch(e => logger.error('세션 복원 중 플레이어 로드 오류:', e));
+            // 포털 로그인은 게임 캐릭터를 생성하거나 월드에 접속시키지 않는다.
         }
         else {
             socket.emit('sessionInvalid');
@@ -210,6 +206,11 @@ export const initLogin = () => {
                     return;
                 }
 
+                if (socket.data.onlineUserId !== undefined) {
+                    socket.emit('loginResult', { error: '게임에서 나간 뒤 로그인해주세요.' });
+                    return;
+                }
+
                 // 같은 기기에서 이미 유효한 세션이 있으면 재사용
                 const existingSession = socket.data.sessionToken
                     ? getSession(socket.data.sessionToken)
@@ -228,10 +229,7 @@ export const initLogin = () => {
                 }
 
                 socket.data.sessionToken = sessionToken;
-                socket.data.onlineUserId = user.id;
-                setUserOnline(user.id, socket.id);
-                socket.join(getChannelRoomKey(getUserChannel(user.id)));
-                await loadPlayerByUserId(user.id);
+
                 socket.emit('loginResult', {
                     ok: true,
                     userId: user.id,
@@ -270,10 +268,7 @@ export const initLogin = () => {
                 }
 
                 const trimmed = newNickname.trim();
-                const currentUser = await prisma.user.findUnique({
-                    where: { id: session.userId },
-                    select: { nickname: true, nicknameChangedAt: true, permission: true },
-                });
+                const currentUser = await getDaclionProfile(session.userId);
                 if (!currentUser) {
                     socket.emit('nicknameResult', { error: '계정 정보를 찾을 수 없습니다.' });
                     return;
@@ -284,7 +279,7 @@ export const initLogin = () => {
                 }
                 const cooldownRemaining = getNicknameChangeCooldownRemaining(
                     currentUser.nicknameChangedAt,
-                    currentUser.permission,
+                    session.permission,
                 );
                 if (cooldownRemaining > 0) {
                     socket.emit('nicknameResult', {
@@ -294,45 +289,29 @@ export const initLogin = () => {
                 }
 
                 // 중복 검사
-                const existing = await prisma.user.findUnique({ where: { nickname: trimmed }, select: { id: true } });
-                if (existing && existing.id !== session.userId) {
+                const existing = await prisma.gameProfile.findUnique({ where: { gameId_nickname: { gameId: 'daclion', nickname: trimmed } } });
+                if (existing && existing.userId !== session.userId) {
                     socket.emit('nicknameResult', { error: '이미 사용 중인 닉네임입니다.' });
                     return;
                 }
 
-                const changedAt = new Date();
-                if (currentUser.permission >= 10) {
-                    await prisma.user.update({
-                        where: { id: session.userId },
-                        data: { nickname: trimmed, nicknameChangedAt: changedAt },
-                    });
-                } else {
-                    const result = await prisma.user.updateMany({
-                        where: {
-                            id: session.userId,
-                            OR: [
-                                { nicknameChangedAt: null },
-                                { nicknameChangedAt: { lte: new Date(changedAt.getTime() - NICKNAME_CHANGE_COOLDOWN_MS) } },
-                            ],
-                        },
-                        data: { nickname: trimmed, nicknameChangedAt: changedAt },
-                    });
-                    if (result.count !== 1) {
-                        socket.emit('nicknameResult', {
-                            error: '다른 창에서 닉네임이 변경되었습니다. 24시간 후 다시 시도해주세요.',
-                        });
-                        return;
+                const result = await changeDaclionNickname(
+                    session.userId, trimmed, new Date(), session.permission >= 10 ? 0 : NICKNAME_CHANGE_COOLDOWN_MS,
+                );
+                if (result.count !== 1) {
+                    socket.emit('nicknameResult', { error: '다른 창에서 이름이 변경되었습니다. 잠시 후 다시 시도해주세요.' });
+                    return;
+                }
+                const { getPlayerByUserId } = await import('../player/player.js');
+                const player = getPlayerByUserId(session.userId);
+                if (player) player.name = trimmed;
+                // 포털 닉네임은 유지하고 게임에 들어온 화면만 갱신한다.
+                for (const [, connected] of io.sockets.sockets) {
+                    if (connected.data.onlineUserId === session.userId) {
+                        connected.data.gameNickname = trimmed;
+                        if (connected.id !== socket.id) connected.emit('nicknameResult', { ok: true, nickname: trimmed });
                     }
                 }
-                const player = await loadPlayerByUserId(session.userId);
-                player.name = trimmed;
-
-                // 해당 유저의 모든 세션 닉네임 업데이트
-                for (const token of userSessions.get(session.userId) ?? []) {
-                    const s = sessionMap.get(token);
-                    if (s) s.nickname = trimmed;
-                }
-
                 socket.emit('nicknameResult', { ok: true, nickname: trimmed });
             } catch(e) {
                 logger.error('닉네임 변경 중 오류:', e);
@@ -354,6 +333,7 @@ export const initLogin = () => {
                             : logoutSession.userId;
                         connectedSocket.leave(getChannelRoomKey(getUserChannel(onlineUserId)));
                         setUserOffline(onlineUserId, connectedSocket.id);
+                        connectedSocket.data.gameActive = false;
                         connectedSocket.data.onlineUserId = undefined;
                         connectedSocket.data.sessionToken = undefined;
                         if (connectedSocket.id !== socket.id) connectedSocket.emit('sessionInvalid');

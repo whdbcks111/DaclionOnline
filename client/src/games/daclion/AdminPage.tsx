@@ -8,10 +8,10 @@ import type {
   AdminPlayerDetailData,
   AdminPlayerListItem,
 } from '@shared/types'
-import { useSocket } from '../context/SocketContext'
-import FormDialog from '../components/dialog/FormDialog'
-import Dialog from '../components/dialog/Dialog'
-import type { FormDialogField, FormDialogValues } from '../components/dialog/FormDialog'
+import { useSocket } from '../../context/SocketContext'
+import FormDialog from '../../components/dialog/FormDialog'
+import Dialog from '../../components/dialog/Dialog'
+import type { FormDialogField, FormDialogValues } from '../../components/dialog/FormDialog'
 import styles from './AdminPage.module.scss'
 
 type PlayerCategory = 'travel' | 'growth' | 'inventory' | 'skills' | 'cosmetics' | 'testing' | 'communication'
@@ -266,14 +266,14 @@ export default function AdminPage() {
   }
 
   if (sessionInfo.permission < 10) {
-    return <main className={styles.denied}><h1>접근 권한 없음</h1><p>관리자 권한이 필요한 페이지입니다.</p><button onClick={() => navigate('/home')}>게임으로 돌아가기</button></main>
+    return <main className={styles.denied}><h1>접근 권한 없음</h1><p>관리자 권한이 필요한 페이지입니다.</p><button onClick={() => navigate('/games/daclion/')}>게임으로 돌아가기</button></main>
   }
 
   return (
     <main className={styles.page}>
       <header className={styles.topbar}>
         <div><p>운영 도구</p><h1>DaclionOnline 관리자</h1></div>
-        <nav><button onClick={() => navigate('/home')}>게임으로</button><button onClick={() => navigate('/admin/locations')}>위치 편집기</button></nav>
+        <nav><button onClick={() => navigate('/games/daclion/')}>게임으로</button><button onClick={() => navigate('/games/daclion/admin/locations')}>위치 편집기</button></nav>
       </header>
       <div className={styles.sectionTabs}>
         <button className={section === 'players' ? styles.activeTab : ''} onClick={() => setSection('players')}>플레이어 관리</button>

@@ -1,6 +1,6 @@
 import logger from "../../utils/logger.js";
 import Player from "../../models/actors/Player.js";
-import { getSessionByUserId, isUserOnline } from "../auth/login.js";
+import { isUserOnline } from "../portal/login.js";
 import { getLocation } from "../../models/world/Location.js";
 import type Location from "../../models/world/Location.js";
 import type {
@@ -378,7 +378,7 @@ export function sendPlayerStats(userId: number): void {
 
     const data = {
         userId:            player.userId,
-        nickname:          getSessionByUserId(userId)?.nickname ?? '',
+        nickname:          player.name,
         musicCombatState:  player.musicCombatState.key,
         equippedTitle:     player.titles.equippedName || undefined,
         level:             player.level,
@@ -489,7 +489,7 @@ export function sendLocationInfo(userId: number): void {
         players: getOnlinePlayers()
             .filter(p => p.locationId === locationId)
             .map(p => ({
-                name: getSessionByUserId(p.userId)?.nickname ?? '',
+                name: p.name,
                 level: p.level,
                 life: p.life,
                 maxLife: p.maxLife,

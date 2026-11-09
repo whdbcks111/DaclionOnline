@@ -29,7 +29,7 @@ cd server && npm run balance:report -- 50  # 실제 전투식으로 Lv.50 직업
 
 기본 포트는 서버 `3001`, Vite `5173`이다.
 
-`db:reset:game`은 `users` 행 전체를 보존하고 `players`를 삭제해 FK cascade로 인벤토리·장비·진행도·스킬·퀘스트를 함께 비운다. 실제 실행은 반드시 게임 서버를 먼저 중지하고 DB 백업을 확인한 뒤 수행한다. 루트에서도 `npm run db:reset:game -- --confirm RESET-DACLION-GAME-DATA`로 같은 명령을 실행할 수 있다. 다음 로그인에는 새 Player가 생성되므로 첫 모험 튜토리얼과 누적 플레이 24시간 미만 `🌱` 표시가 다시 시작된다.
+`db:reset:game`은 `users` 행 전체를 보존하고 `players`를 삭제해 FK cascade로 인벤토리·장비·진행도·스킬·퀘스트를 함께 비운다. 실제 실행은 반드시 게임 서버를 먼저 중지하고 DB 백업을 확인한 뒤 수행한다. 루트에서도 `npm run db:reset:game -- --confirm RESET-DACLION-GAME-DATA`로 같은 명령을 실행할 수 있다. 다음 게임 입장에서 캐릭터 이름을 설정한 뒤 새 Player가 생성되므로 첫 모험 튜토리얼과 누적 플레이 24시간 미만 `🌱` 표시가 다시 시작된다.
 
 ## 환경 변수
 
@@ -77,3 +77,7 @@ fix(chat): prevent unauthorized channel access
 ```
 
 서로 독립적으로 되돌릴 수 있는 변경은 별도 커밋으로 나누고, 한 작업을 설명하는 코드와 문서는 같은 커밋에 포함한다.
+
+## 포털 배포
+
+루트는 게임 포털이며 DaclionOnline 진입 경로는 `/games/daclion/`이다. 기존 도메인·포트·정적 파일 경로를 유지하므로 추가 DNS 설정은 없다. `server/` 작업 디렉터리에서 `npm run db:migrate:deploy` 후 빌드된 서버를 시작한다. 이 명령이 기존 캐릭터를 포털 계정에 자동 연결한다. 별도 확인은 `npm run db:migrate:portal -- --dry-run`으로 실행한다. 기존 계정 ID와 비밀번호를 그대로 사용한다. PM2 설정은 서버 cwd와 실제 빌드 경로를 고정한다.

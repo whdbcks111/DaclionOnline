@@ -5,15 +5,15 @@
 | 계층 | 파일 | 책임 |
 | --- | --- | --- |
 | 공유 계약 | `shared/types.ts` | 로그인/회원가입/세션 복원/결과 타입 |
-| 서버 | `modules/auth/register.ts` | 이메일 코드, 입력 중복 검사, PBKDF2 해시, 계정 생성 |
-| 서버 | `modules/auth/login.ts` | 로그인, 세션, 접속자 수, 닉네임, 로그아웃 |
-| 서버 | `modules/auth/passwordReset.ts` | 가입 이메일 확인 코드와 비밀번호 재설정, 기존 세션 폐기 |
+| 서버 | `modules/portal/register.ts` | 이메일 코드, 입력 중복 검사, PBKDF2 해시, 계정 생성 |
+| 서버 | `modules/portal/login.ts` | 로그인, 세션, 접속자 수, 닉네임, 로그아웃 |
+| 서버 | `modules/portal/passwordReset.ts` | 가입 이메일 확인 코드와 비밀번호 재설정, 기존 세션 폐기 |
 | 서버 | `modules/infrastructure/socket.ts` | 연결 handshake 쿠키를 `socket.data.sessionToken`에 바인딩 |
 | 서버 | `modules/infrastructure/upload.ts` | 인증된 프로필·채팅 이미지 업로드와 임시 미디어 정리 |
 | 서버 | `modules/communication/mail.ts` | Gmail 전송과 HTML 템플릿 치환 |
 | 클라이언트 | `context/SocketContext.tsx` | 소켓 연결과 현재 `SessionInfo` 보관 |
-| 클라이언트 | `pages/Login.tsx`, `pages/Register.tsx` | 인증 UI와 이벤트 호출 |
-| 클라이언트 | `pages/PasswordReset.tsx` | 이메일 코드 기반 비밀번호 재설정 UI |
+| 클라이언트 | `portal/Login.tsx`, `portal/Register.tsx` | 인증 UI와 이벤트 호출 |
+| 클라이언트 | `portal/PasswordReset.tsx` | 이메일 코드 기반 비밀번호 재설정 UI |
 | 클라이언트 | `App.tsx` | 세션 복원/무효에 따른 라우팅 |
 | 클라이언트 | `components/Drawer.tsx` | 닉네임 및 프로필 이미지 변경 UI |
 
@@ -25,7 +25,7 @@
 4. `register`는 verified 상태와 만료 시각을 다시 확인하고, 가입 payload의 이메일을 소문자·공백 제거 후 인증 엔트리 이메일과 정확히 대조한다. 이후 ID/PW/email/nickname 형식과 DB 중복을 검사한다.
 5. 비밀번호는 32-byte hex salt와 PBKDF2-SHA512(10,000회, 64-byte) 해시로 저장한다. 해싱은 기존 DB 문자열과 호환되는 비동기 worker-pool API를 사용해 로그인 요청이 Node 이벤트 루프를 막지 않는다.
 6. 가입 시에는 `User`와 인메모리 세션 토큰만 만들고, 클라이언트가 새 쿠키로 소켓을 재연결한다.
-7. 재연결된 인증 소켓이 `loadPlayerByUserId()`를 호출하면 DB에 Player가 없는 첫 접속만 `Player.create()`와 첫 모험 튜토리얼·지원품 지급을 한 흐름으로 시작한다.
+7. 가입·재연결은 포털 세션만 복원한다. 게임을 선택하고 `enterGame`으로 연결 프로필을 확인한 뒤에만 Player를 로드한다. 새 프로필은 캐릭터 이름을 입력받고 첫 Player 생성과 튜토리얼·지원품 지급을 시작한다.
 
 검증 상태는 socket ID와 정규화 이메일에 함께 묶이므로 연결이 바뀌거나 이메일 입력을 바꾸면 다시 인증해야 한다. 클라이언트는 이메일 입력 변경 즉시 인증 완료 표시와 입력 코드를 초기화하지만 최종 권한 검사는 항상 서버의 `VerifyEntry.email` 대조가 담당한다.
 
@@ -45,7 +45,7 @@
 - 사용자 한 명이 여러 토큰/소켓으로 로그인할 수 있다. `userSessions`는 userId별 토큰 Set, `onlineUsers`는 userId별 socket ID Set을 가진다.
 - 클라이언트는 연결·화면 표시 상태 변경·focus·포인터/키 입력 때 `clientPresence`를 보내고 서버는 연결별 `focused | visible | hidden`과 갱신 시각을 메모리에 둔다. 미니게임처럼 한 화면에서만 실행해야 하는 상호작용은 `focused`, `visible`, `hidden` 순서와 최근 갱신 시각으로 대상 socket 하나를 고른다.
 - 쿠키는 클라이언트 로그인/가입 화면에서 `sessionToken`으로 설정되고 Socket.io와 HTTP upload에서 사용된다.
-- 유효한 쿠키로 연결하면 `sessionRestore`를 보내고 Player를 메모리에 로드한다.
+- 유효한 쿠키로 연결하면 `sessionRestore`만 보내며 게임 입장은 별도로 요청한다.
 - 로그인 요청은 IP당 분당 20회로 제한하고, 비밀번호 일치 여부와 무관하게 같은 제한을 소비한다.
 - 명시적 로그아웃 시 어떤 저장 `await`보다 먼저 해당 토큰과 연결된 모든 socket 바인딩을 폐기한다. 다른 토큰의 실제 연결이 하나도 없으면 휴면 token 존재와 관계없이 Player를 즉시 unload한다. Player는 unload 진행 상태가 되어 지연 도착한 구매·버리기 명령에서 조회되지 않고, 저장을 마친 뒤 온라인 Player 맵에서 내린다.
 - 일반 연결 해제는 세션 토큰을 제거하지 않고 userId별 10초 재접속 유예를 시작한다. Player 인스턴스와 실제 시간형 상태효과는 별도 보관 Map에 유지하지만 온라인 registry에서는 즉시 내려 월드 업데이트·목록·타게팅·피해 대상에서 제외한다. 같은 사용자가 돌아오면 keyed 만료 task를 취소하고 동일 인스턴스를 다시 붙인 뒤 끊겨 있던 실제 시간만 상태효과에서 차감한다.
@@ -65,7 +65,9 @@
 ## 닉네임과 프로필
 
 - 닉네임은 1~12자의 한글 완성형, 한글 초성 `ㄱ-ㅎ`, 영문, 숫자, 언더스코어만 허용하며 다른 사용자와 중복될 수 없다.
-- 닉네임 변경은 서버 validator와 DB unique 검사를 통과한 후 User와 해당 사용자의 모든 메모리 세션을 갱신한다. 일반 계정은 `users.nickname_changed_at`을 기준으로 24시간에 한 번 변경할 수 있고 권한 10 이상은 이 제한을 받지 않는다. 현재 닉네임을 그대로 제출하는 요청은 변경 횟수를 소비하지 않는다.
+- 닉네임 변경은 서버 validator와 DB unique 검사를 통과한 후 GameProfile과 해당 게임의 Player·활성 탭을 갱신한다. 포털 계정 닉네임은 유지한다. 일반 계정은 `game_profiles.nickname_changed_at`을 기준으로 24시간에 한 번 변경할 수 있고 권한 10 이상은 이 제한을 받지 않는다. 현재 닉네임을 그대로 제출하는 요청은 변경 횟수를 소비하지 않는다.
 - 프로필 이미지는 HTTP API가 입력을 512×512 이하 WebP로 재인코딩한 뒤 DB와 요청 세션의 `profileImage`를 갱신한다. 사용자별 업로드를 직렬화하고 DB 갱신 성공 뒤 이전 파일을 삭제하며, 참조가 끊긴 과거 파일도 시작·매시간 정리한다. 다른 활성 세션 객체는 즉시 갱신하지 않는다.
 - 프로필 이미지 바깥 원형 프레임은 업로드 파일이 아니라 `PlayerProgress` 꾸미기 상태다. `/프레임설정 프로필`로 선택하며 채팅 카드 프레임과 독립적으로 저장되고, 메시지 전송 시점의 안정 ID만 클라이언트에 전달된다.
 - 파일 저장/응답 계약은 [HTTP API](../api/http.md)를 참고한다.
+
+기존 계정 자동 연결, 포털/게임 경로와 수명 분리는 [아키텍처](../architecture/overview.md#웹게임-포털과-게임-입장)와 [DB 이전 정책](../data/database.md#포털-계정과-기존-사용자-자동-이전)을 따른다. `modules/portal/`이 공통 인증을, `modules/auth/`는 게임 내 사람 확인을 소유한다.

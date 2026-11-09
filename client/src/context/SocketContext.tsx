@@ -2,10 +2,10 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { io } from 'socket.io-client'
 import type { Socket } from 'socket.io-client'
-import type { ClientPresenceState, LoginResult, SessionRestoreData } from '@shared/types'
+import type { ClientPresenceState, LoginResult, SessionRestoreData, GameEntryResult } from '@shared/types'
 
 // 서버 주소
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)
 
 export interface SessionInfo {
   userId: number
@@ -18,6 +18,8 @@ export interface SessionInfo {
 interface SocketContextType {
   socket: Socket | null
   isConnected: boolean
+  isSessionReady: boolean
+  gameNickname: string | null
   sessionInfo: SessionInfo | null
   updateProfileImage: (filename: string) => void
   updateNickname: (nickname: string) => void
@@ -30,6 +32,8 @@ const SocketContext = createContext<SocketContextType | undefined>(undefined)
 export function SocketProvider({ children }: { children: ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
+  const [isSessionReady, setSessionReady] = useState(false)
+  const [gameNickname, setGameNickname] = useState<string | null>(null)
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null)
   const sessionInfoRef = useRef<SessionInfo | null>(null)
 
@@ -38,7 +42,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   }
 
   const updateNickname = (nickname: string) => {
-    setSessionInfo(prev => prev ? { ...prev, nickname } : prev)
+    setGameNickname(nickname)
   }
 
   useEffect(() => {
@@ -70,6 +74,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     socketInstance.on('disconnect', (reason) => {
       console.log('❌ 서버 연결 해제됨:', reason)
       setIsConnected(false)
+      setSessionReady(false)
+      setGameNickname(null)
     })
 
     // 연결 에러
@@ -80,6 +86,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
     // 세션 복원 시 세션 정보 저장
     socketInstance.on('sessionRestore', (data: SessionRestoreData) => {
+      setSessionReady(true)
       const info: SessionInfo = { userId: data.userId, nickname: data.nickname, profileImage: data.profileImage, permission: data.permission ?? 0 }
       sessionInfoRef.current = info
       setSessionInfo(info)
@@ -88,6 +95,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     // 로그인 성공 시 세션 정보 저장
     socketInstance.on('loginResult', (result: LoginResult) => {
       if (result.ok && result.userId && result.nickname) {
+        setSessionReady(true)
         const info: SessionInfo = { userId: result.userId, nickname: result.nickname, profileImage: result.profileImage, permission: result.permission ?? 0 }
         sessionInfoRef.current = info
         setSessionInfo(info)
@@ -97,11 +105,17 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     // 닉네임 변경 성공 시 세션 정보 업데이트
     socketInstance.on('nicknameResult', (result) => {
       if (result.ok && result.nickname) {
-        setSessionInfo(prev => prev ? { ...prev, nickname: result.nickname! } : prev)
+        setGameNickname(result.nickname)
       }
     })
 
+    socketInstance.on('gameEntryResult', (result: GameEntryResult) => {
+      if (result.ok && result.nickname) setGameNickname(result.nickname)
+    })
+
     const clearSession = () => {
+      setSessionReady(true)
+      setGameNickname(null)
       sessionInfoRef.current = null
       setSessionInfo(null)
     }
@@ -131,7 +145,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected, sessionInfo, updateProfileImage, updateNickname }}>
+    <SocketContext.Provider value={{ socket, isConnected, isSessionReady, gameNickname, sessionInfo, updateProfileImage, updateNickname }}>
       {children}
     </SocketContext.Provider>
   )

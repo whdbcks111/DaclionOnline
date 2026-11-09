@@ -1,6 +1,6 @@
 import type { Socket } from 'socket.io';
 import type { HudPresetSaveRequest } from '../../../../shared/hudPresets.js';
-import { getSession } from '../auth/login.js';
+import { getSession } from '../portal/login.js';
 import { getPlayerByUserId } from './player.js';
 import { getIO } from '../infrastructure/socket.js';
 import logger from '../../utils/logger.js';

@@ -193,3 +193,5 @@ await prisma.user.findMany({
   }
 })
 ```
+
+포털 전환은 `20261109000000_add_portal_game_profiles`로 기존 캐릭터를 자동 연결하며 `db:migrate:deploy`가 멱등 `db:migrate:portal`까지 수행한다. 기존 User와 모든 게임 진행 데이터는 보존한다.

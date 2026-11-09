@@ -2,9 +2,9 @@
 // Home 페이지 스타일 (CSS Modules)
 // ===========================
 
-@use '../styles/variables' as *;
-@use '../styles/mixins' as *;
-@use '../styles/themes' as *;
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+@use '../../styles/themes' as *;
 
 .homeContainer {
     position: fixed;

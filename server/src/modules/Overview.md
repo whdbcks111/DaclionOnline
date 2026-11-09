@@ -55,3 +55,5 @@ Socket/HTTP 요청, 세션과 온라인 상태, 주기 작업, 도메인 객체 
 - `location.ts`/`game.ts`는 JSON 장소에 `ascendantRegions`의 생성 권역을 ID 기준으로 합친 뒤 온라인 Player snapshot을 Location tick에 전달한다. 같은 snapshot으로 `location:boss_room`의 살아 있는 보스 선공과 권역별 환경 passive를 처리한다.
 
 이벤트나 공개 함수, 초기화 책임이 바뀌면 이 문서와 [`docs/api/`](../../../docs/api), 관련 [`docs/systems/`](../../../docs/systems) 문서를 갱신한다.
+
+`portal/`은 공통 계정 인증·세션과 게임 프로필 연결을 소유하고 `auth/`는 게임 내 사람 확인을 유지한다. `player/gameAccess`가 실제 게임 입장을 담당한다.

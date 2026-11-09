@@ -109,3 +109,13 @@ login/session restore
 - 일반 운영 배포에서는 `cd server && npm run db:migrate:deploy`를 실행한다. 이 명령은 pending schema migration 적용, Prisma Client 생성, 아이템 metadata delta 데이터 마이그레이션을 순서대로 실행한다.
 - metadata 데이터 마이그레이션은 `src/scripts/migrateItemMetadataDeltas.ts`가 담당한다. 이미 버전 1인 행과 `null` 행은 건너뛰므로 재실행할 수 있다. 구형 전체 metadata 중 현재 `baseMetadata`와 같은 값은 기본값으로 간주해 제거하므로, 기본 metadata를 변경하기 전에 서버를 중지한 상태에서 운영 명령을 먼저 실행해야 한다.
 - `migrate reset`은 전체 데이터를 삭제하므로 운영 DB에서 금지한다.
+
+## 포털 계정과 기존 사용자 자동 이전
+
+`User/users`가 공통 포털 계정이다. 기존 ID·username·email·passwordHash/salt·권한·프로필·포털 닉네임을 보존한다. `GameProfile/game_profiles`는 `(userId, gameId)` 복합 PK, `(gameId, nickname)` unique, User FK/cascade와 nickname/nicknameChangedAt/createdAt/updatedAt을 소유한다. 게임 캐릭터 이름은 User 닉네임과 독립적으로 생성·변경한다.
+
+`20261109000000_add_portal_game_profiles` migration은 기존 Player가 있는 User만 `gameId=daclion`으로 자동 연결하고 기존 닉네임·이름 변경 제한 시각·캐릭터 생성일을 복사한다. 기존 players, items, equipments, player_progress, player_skills, player_quests, mailbox_messages는 변경하지 않는다. User만 있는 계정은 첫 게임 입장에서 이름을 입력한다.
+
+`npm run db:migrate:deploy`가 스키마와 최초 연결을 적용한 뒤 `db:migrate:portal` 복구 작업을 실행한다. `server/src/scripts/migratePortalProfiles.ts`는 연결이 누락된 기존 캐릭터만 INSERT하고 기존 게임 프로필을 덮어쓰지 않는다. `--dry-run`은 대상 수만 출력하며 재실행 시 추가 대상은 0이다. 이름 충돌 등 오류는 실패로 보고하고 조용히 다른 계정에 연결하지 않는다. 서버를 정지하고 DB 백업 후 migration → Client 생성 → 데이터 변환 → 새 서버 시작 순서로 배포한다.
+
+프로필 생성·이름 변경은 중복과 연결 성공 여부를 즉시 확정해야 하므로 DB 즉시 저장 예외다. 캐릭터 상태는 기존 Player dirty/30초·unload·종료 flush를 유지한다. 계정 초기화 도구의 게임 데이터 삭제 시 `daclion` 프로필도 지워 첫 게임 정보 입력부터 다시 시작한다.

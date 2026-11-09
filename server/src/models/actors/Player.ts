@@ -1,3 +1,4 @@
+import { getDaclionProfile, loadDaclionNames } from '../../modules/portal/gameProfile.js';
 import prisma from "../../config/prisma.js";
 import Entity, { resolveDamageCauseActor } from "../core/Entity.js";
 import Inventory from "../economy/Inventory.js";
@@ -1185,9 +1186,10 @@ export default class Player extends Entity {
     static async loadByUserId(userId: number): Promise<Player | null> {
         const data = await prisma.player.findUnique({
             where: { userId },
-            include: { user: { select: { nickname: true } } },
         });
         if (!data) return null;
+        const profile = await getDaclionProfile(userId);
+        if (!profile) throw new Error("게임 프로필 연결이 필요합니다.");
         const [inventory, equipment, progress, skills, quests] = await Promise.all([
             Inventory.load(data.userId, data.maxWeight),
             Equipment.load(data.userId),
@@ -1198,7 +1200,7 @@ export default class Player extends Entity {
         const stats = data.stats as Partial<StatRecord> | null;
         return new Player(
             data.userId,
-            data.user.nickname,
+            profile.nickname,
             data.level,
             data.exp,
             data.locationId,
@@ -1227,16 +1229,17 @@ export default class Player extends Entity {
 
     /** 새 플레이어 생성 */
     static async create(userId: number): Promise<Player> {
+        const profile = await getDaclionProfile(userId);
+        if (!profile) throw new Error("게임 프로필 연결이 필요합니다.");
         const data = await prisma.player.create({
             data: { userId },
-            include: { user: { select: { nickname: true } } },
         });
         const inventory = await Inventory.load(data.userId, data.maxWeight);
         const equipment = await Equipment.load(data.userId);
         const progress = PlayerProgress.createEmpty(data.userId);
         const skills = SkillBook.createEmpty(data.userId);
         const quests = QuestBook.createEmpty(data.userId);
-        return new Player(data.userId, data.user.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, progress, skills, quests);
+        return new Player(data.userId, profile.nickname, data.level, data.exp, data.locationId, data.maxWeight, inventory, equipment, progress, skills, quests);
     }
 
     /** 순위 서비스에 Player DB row를 노출하지 않고 마지막 저장 snapshot DTO만 반환한다. */
@@ -1250,9 +1253,9 @@ export default class Player extends Entity {
                 stats: true,
                 rankingMetrics: true,
                 rankingVisibility: true,
-                user: { select: { nickname: true } },
             },
         });
+        const names = await loadDaclionNames(rows.map(row => row.userId));
         return rows.map(row => {
             const fallback = createStoredPlayerRankingMetricRecord({
                 level: row.level,
@@ -1263,7 +1266,7 @@ export default class Player extends Entity {
             });
             return {
                 userId: row.userId,
-                nickname: row.user.nickname,
+                nickname: names.getNickname(row.userId) ?? String(row.userId),
                 metrics: parseRankingMetricRecord(row.rankingMetrics, fallback),
                 visibility: parseRankingVisibility(row.rankingVisibility),
             };

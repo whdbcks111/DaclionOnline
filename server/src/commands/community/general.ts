@@ -11,7 +11,7 @@ import {
 import { chat } from "../../utils/chatBuilder.js";
 import { getUserChannel } from "../../modules/communication/channel.js";
 import { parseChatMessage } from "../../utils/chatParser.js";
-import { getSessionByUserId } from "../../modules/auth/login.js";
+import { getSessionByUserId } from "../../modules/portal/login.js";
 import { getPlayerByUserId } from "../../modules/player/player.js";
 import { clearPrivateChannelHistory, clearPublicChannelHistory } from '../../modules/communication/channel.js';
 

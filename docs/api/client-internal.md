@@ -77,3 +77,7 @@
 - Context가 소유한 raw state를 다른 기능이 localStorage나 내부 구조로 직접 수정하지 않는다. 필요한 동작은 Context value에 가장 작은 목적형 함수를 추가한다.
 - 서버 상태를 새로 표시할 때는 공유 payload → Socket listener → 상태 소유 Context → 표시 컴포넌트 순서로 연결한다.
 - 새 UI primitive를 만들기 전에 기존 component, chat node, HUD API와 SCSS token/mixin을 먼저 확인한다.
+
+## 포털과 게임별 화면
+
+`portal/Portal`이 `/`를, `games/daclion/GameGate`가 `/games/daclion/*` 입장과 최초 정보 입력을 담당한다. `SocketContext`의 `isSessionReady`는 인증 복원 응답 수신 여부, `gameNickname`은 게임 표시명, `sessionInfo.nickname`은 포털 표시명이다. `updateNickname`은 게임 이름만 변경한다. production의 서버 URL 기본값은 현재 origin이며 `VITE_SERVER_URL` 명시값과 개발 localhost 기본값을 지원한다. `Drawer.onPortal`로 게임을 나가도 포털 로그인은 유지한다.

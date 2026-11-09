@@ -1,7 +1,7 @@
 import type { Socket } from 'socket.io';
 import type { SnapshotRevision } from '../../../../shared/types.js';
 import { randomHex } from '../../utils/random.js';
-import { getSession } from '../auth/login.js';
+import { getSession } from '../portal/login.js';
 import { getIO } from './socket.js';
 
 interface RevisionStreamState<T extends object> {
@@ -48,7 +48,7 @@ export function publishUserSnapshot<T extends object>(
     let count = 0;
     for (const [, socket] of getIO().sockets.sockets) {
         const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
-        if (session?.userId !== userId) continue;
+        if (session?.userId !== userId || socket.data.onlineUserId !== userId) continue;
         const delivered = deliveredBySocket.get(socket) ?? new Map<string, string>();
         if (delivered.get(key) === stamp) continue;
         emit(socket, stream.payload);

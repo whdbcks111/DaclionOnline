@@ -1,6 +1,6 @@
 # DaclionOnline 개발 문서
 
-이 문서는 DaclionOnline을 수정할 때 가장 먼저 읽는 기준 문서다. 프로젝트는 채팅 입력과 Socket.io 이벤트를 사용자 인터페이스로 삼는 실시간 멀티플레이어 RPG이며, 서버가 게임 상태와 규칙의 권위(authority)를 가진다.
+이 문서는 DaclionOnline을 수정할 때 가장 먼저 읽는 기준 문서다. 프로젝트는 공통 계정으로 여러 웹게임을 이용하는 포털과 첫 번째 게임 DaclionOnline으로 구성된다. DaclionOnline은 채팅 입력과 Socket.io 이벤트를 사용하는 실시간 멀티플레이어 RPG이며 서버가 게임 규칙과 상태를 결정한다.
 
 ## 빠른 탐색
 
@@ -52,7 +52,7 @@
 ```text
 client/src  ── Socket.io / HTTP ──>  server/src/modules
     │                                      │
-    ├─ pages, components, context           ├─ commands (사용자 명령)
+    ├─ portal, games, components, context           ├─ commands (사용자 명령)
     │                                      ├─ models (게임 도메인)
     └──────── shared/types.ts ──────────────┤
                                            ├─ data (마스터 데이터)
@@ -63,7 +63,7 @@ client/src  ── Socket.io / HTTP ──>  server/src/modules
 - `server/src/index.ts`가 서버 조립 지점이다. 새 초기화 모듈이나 마스터 데이터는 여기 또는 각 계층의 배럴 파일에서 로드되어야 한다.
 - `server/src/modules/`는 통신, 세션, 온라인 상태, 주기 실행 같은 애플리케이션 서비스를 담당한다.
 - `server/src/commands/`는 `/명령어` 진입점, `server/src/models/`는 재사용 가능한 게임 규칙과 상태를 담당한다.
-- `client/src/pages/`는 라우트 단위 화면, `components/`는 UI, `context/`는 소켓·세션·HUD·테마 상태를 담당한다.
+- `client/src/portal/`은 포털·공통 인증, `client/src/games/`는 게임별 화면, `components/`는 UI, `context/`는 소켓·포털 세션·HUD·테마 상태를 담당한다.
 
 서버의 기술 계층 아래는 도메인별 2단계 폴더를 사용한다.
 

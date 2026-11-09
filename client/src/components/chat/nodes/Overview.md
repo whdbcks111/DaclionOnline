@@ -5,3 +5,5 @@
 지도에서 방문한 장소 blip을 클릭하거나 터치하면 공용 확인 다이얼로그를 열고, 확인 시 장소 ID를 사용한 숨김 `/자동이동` 명령을 실행한다. 현재 장소와 미방문 장소는 이유를 표시하고 실행 버튼을 비활성화하며, 실제 drag/pinch 뒤에는 클릭으로 오인하지 않는다.
 
 노드 타입을 추가·변경하면 이 폴더의 renderer, `ChatMessage.tsx::renderNode`, `shared/types.ts`, 서버 parser/builder와 이 문서를 함께 갱신한다.
+
+이미지 원본 URL은 production 현재 origin의 `/uploads`를 기본으로 사용해 게임 하위 경로에서도 동일하게 동작한다.

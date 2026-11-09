@@ -39,7 +39,7 @@ import type {
 } from '../../../../shared/minigames.js';
 import { randomHex } from '../../utils/random.js';
 import logger from '../../utils/logger.js';
-import { getSession } from '../auth/login.js';
+import { getSession } from '../portal/login.js';
 import { getIO, getPreferredUserSocket } from '../infrastructure/socket.js';
 import { cancelGameTask, scheduleGameTask } from '../infrastructure/scheduler.js';
 

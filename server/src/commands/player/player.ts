@@ -152,7 +152,7 @@ export function initPlayerCommands(): void {
 
                 const chatNode = chat()
                     .text('[ 상태창 ]  ')
-                    .text(user.nickname)
+                    .text(player.name)
                     .text('  Lv.')
                     .text(String(player.level))
                     .text('\n')

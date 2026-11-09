@@ -9,7 +9,7 @@ import { ActionType } from '../../models/core/Action.js';
 import { emitGameEvent, GameEventIds } from '../../models/core/GameEvent.js';
 import type Player from '../../models/actors/Player.js';
 import logger from '../../utils/logger.js';
-import { getSession } from '../auth/login.js';
+import { getSession } from '../portal/login.js';
 import { sendNotificationToUser } from '../communication/message.js';
 import { getPlayerByUserId } from './player.js';
 import { getIO } from '../infrastructure/socket.js';

@@ -1,3 +1,4 @@
+import { loadDaclionNames } from '../portal/gameProfile.js';
 import type { Socket } from 'socket.io';
 import type {
     AdminOptionData,
@@ -24,7 +25,7 @@ import { markAllLocationsVisited } from '../../models/world/WorldMap.js';
 import { discoverAllCraftingRecipes } from '../../models/professions/Crafting.js';
 import type Player from '../../models/actors/Player.js';
 import { fetchPlayerByUserId, getOnlinePlayers, getPlayerByUserId } from '../player/player.js';
-import { getSession } from '../auth/login.js';
+import { getSession } from '../portal/login.js';
 import { getIO } from '../infrastructure/socket.js';
 import { broadcastBotMessageAll, broadcastNotification, sendNotificationToUser } from '../communication/message.js';
 import logger from '../../utils/logger.js';
@@ -122,6 +123,7 @@ export async function getAdminPlayerList(): Promise<AdminPlayerListItem[]> {
             player: { select: { level: true, locationId: true } },
         },
     });
+    const names = await loadDaclionNames(users.map(user => user.id));
     return users.flatMap(user => {
         if (!user.player) return [];
         const runtime = getPlayerByUserId(user.id);
@@ -129,7 +131,7 @@ export async function getAdminPlayerList(): Promise<AdminPlayerListItem[]> {
         return [{
             userId: user.id,
             username: user.username,
-            nickname: runtime?.name ?? user.nickname,
+            nickname: runtime?.name ?? names.getNickname(user.id) ?? user.nickname,
             permission: user.permission,
             online: onlineIds.has(user.id),
             level: runtime?.level ?? user.player.level,

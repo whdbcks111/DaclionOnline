@@ -89,6 +89,7 @@ async function resetGameData(): Promise<void> {
     console.log('확인 문자열 검증 완료. 트랜잭션으로 Player와 모든 하위 게임 데이터를 삭제합니다.');
     const deletedPlayers = await prisma.$transaction(async transaction => {
         const usersBefore = await transaction.user.count();
+        await transaction.gameProfile.deleteMany({ where: { gameId: 'daclion' } });
         const deleted = await transaction.player.deleteMany();
         const after = await countGameData(transaction);
         if (after.users !== usersBefore) throw new Error('계정 행 개수가 변경되어 초기화를 취소합니다.');
@@ -103,7 +104,7 @@ async function resetGameData(): Promise<void> {
     const after = await countGameData(prisma);
     console.log(`초기화 완료: Player ${deletedPlayers}명과 cascade 하위 데이터를 삭제했습니다.`);
     console.table(after);
-    console.log('다음 로그인 시 각 계정에 새 Player, 첫 모험 튜토리얼과 🌱 표시가 생성됩니다.');
+    console.log('다음 게임 입장 시 캐릭터 이름을 설정하고 새 Player, 첫 모험 튜토리얼과 🌱 표시가 생성됩니다.');
 }
 
 function isMainModule(): boolean {

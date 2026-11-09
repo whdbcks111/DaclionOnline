@@ -1,0 +1,38 @@
+.page {
+  box-sizing: border-box;
+  width: var(--app-viewport-width, 100vw);
+  height: var(--app-viewport-height, 100dvh);
+  overflow-y: auto;
+  padding: clamp(1rem, 4vw, 3rem) max(1rem, calc((100% - 68rem) / 2));
+  color: var(--color-text);
+  background: var(--color-background);
+  a { color: inherit; text-decoration: none; }
+  button, input, .play { min-height: 2.75rem; box-sizing: border-box; }
+  a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 4px; }
+  button:disabled { opacity: .55; cursor: wait; }
+  footer { margin: 3rem 0 1rem; color: var(--color-text-secondary); font-size: .875rem; }
+}
+.header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding-right: 3rem; }
+.header nav { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+.header nav a { padding-block: .75rem; }
+.brand { font-size: 1.25rem; font-weight: 800; }
+.intro { padding-block: clamp(2.5rem, 7vh, 5rem); max-width: 48rem; }
+.intro h1 { font-size: clamp(1.8rem, 4.5vw, 3.5rem); line-height: 1.25; margin-block: 1rem 1.5rem; word-break: keep-all; }
+.intro p, .card p { line-height: 1.8; color: var(--color-text-secondary); }
+.eyebrow { font-size: .8rem; letter-spacing: .08em; color: var(--color-primary); font-weight: 700; }
+.sectionTitle { display: flex; align-items: center; gap: 1rem; }
+.sectionTitle span { color: var(--color-text-secondary); font-size: .875rem; }
+.card { display: grid; grid-template-columns: minmax(10rem, 1fr) 2fr; border: 1px solid var(--color-border); border-radius: .75rem; overflow: hidden; }
+.art { background: var(--color-background-secondary); display: grid; place-items: center; padding: 2rem; }
+.art img { width: clamp(6rem, 15vw, 10rem); image-rendering: auto; }
+.cardContent { padding: clamp(1.25rem, 3vw, 2.5rem); }
+.card h3 { font-size: clamp(1.5rem, 3vw, 2rem); margin-block: .75rem; }
+.card ul { display: flex; flex-wrap: wrap; gap: .5rem 1rem; padding: 0; list-style: none; font-size: .875rem; }
+.play { display: inline-flex; align-items: center; padding: .75rem 1.5rem; border: 1px solid var(--color-primary); border-radius: .375rem; margin-block: 1rem .75rem; font-weight: 700; }
+.card small { display: block; color: var(--color-text-secondary); }
+.setup { max-width: 32rem; margin: clamp(2rem, 10vh, 6rem) auto; }
+.setup p { line-height: 1.7; }
+.setup form { display: grid; gap: .75rem; }
+.setup input { width: 100%; background: var(--color-input-bg); color: var(--color-text); border: 1px solid var(--color-border); }
+.error { color: var(--color-danger); }
+@media (max-width: 40rem) { .card { grid-template-columns: 1fr; } .art { padding: 1.5rem; } .header nav { gap: .75rem; } }

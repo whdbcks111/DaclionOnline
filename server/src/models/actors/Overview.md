@@ -9,3 +9,5 @@ Player 로드는 직업 동기화와 SkillBook 패시브 modifier 복원을 마�
 NPC는 플레이어 진행에 따른 선택적 `isVisibleTo(Player)` 판정을 제공하며 Location의 NPC 목록·번호·존재 확인과 실제 대화 시작이 같은 조건을 사용한다.
 
 Monster는 일반 파티 교전 선점과 별도로 인스턴스 현장 참가 권한을 소유한다. 모든 보스의 기본 공격은 하나의 정상 공격 주기 안에서 두 몫을 솔로에게 중첩하거나 두 참가자에게 분산하며, 추가 몫이 다음 AI tick의 쿨다운을 해제하지 않는다.
+
+Player의 표시명과 순위 snapshot은 포털 계정 닉네임 대신 DaclionOnline 게임 프로필 이름을 사용한다. `Player.create`는 연결 프로필이 존재할 때만 허용한다.

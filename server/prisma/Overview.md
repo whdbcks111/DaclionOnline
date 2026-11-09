@@ -5,3 +5,5 @@
 운영 배포는 `npm run db:migrate:deploy`로 pending migration 적용, Client 생성, item metadata delta 데이터 변환을 한 번에 수행한다. 기존 DB의 최초 baseline 등록과 빈 DB 적용 절차는 [`README.md`](README.md)를 따른다.
 
 모델, 필드, 관계, 기본값 또는 인덱스가 바뀌면 이 문서와 [`docs/data/database.md`](../../docs/data/database.md), 관련 모델의 load/save 코드를 갱신한다.
+
+`GameProfile`과 `20261109000000_add_portal_game_profiles`는 기존 User/Player ID를 유지한 채 게임별 캐릭터 이름을 분리하고 기존 캐릭터를 자동 연결한다. 배포 명령에 멱등 `db:migrate:portal` 복구를 포함한다.

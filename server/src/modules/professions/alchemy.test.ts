@@ -51,7 +51,7 @@ import {
     startAlchemyDraft,
     useAlchemyPotion,
 } from './alchemy.js';
-import { createSession, removeSession, setUserOffline, setUserOnline } from '../auth/login.js';
+import { createSession, removeSession, setUserOffline, setUserOnline } from '../portal/login.js';
 import {
     cancelMiniGame,
     failMiniGameOnDisconnect,

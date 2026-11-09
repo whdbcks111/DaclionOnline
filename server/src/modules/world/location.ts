@@ -7,7 +7,7 @@ import type { LocationData } from "../../models/world/Location.js";
 import { mergeAscendantLocations } from '../../data/world/ascendantRegions.js';
 import type Player from "../../models/actors/Player.js";
 import { getIO } from "../infrastructure/socket.js";
-import { getSession } from "../auth/login.js";
+import { getSession } from "../portal/login.js";
 import '../../data/world/locations.js'
 import { initializeCodexData } from '../../data/world/codex.js';
 

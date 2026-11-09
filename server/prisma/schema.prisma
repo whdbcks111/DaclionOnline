@@ -26,6 +26,7 @@ model User {
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
   player          Player?
+  gameProfiles    GameProfile[]
 
   @@map("users")
 }
@@ -200,4 +201,19 @@ model Equipment {
   @@unique([playerId, slot, slotIndex])
   @@index([playerId])
   @@map("equipments")
+}
+
+// 공통 포털 계정과 게임별 프로필 연결. 비밀번호와 게임 진행은 복제하지 않는다.
+model GameProfile {
+  userId Int @map("user_id")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId String @db.VarChar(50) @map("game_id")
+  nickname String @db.VarChar(50)
+  nicknameChangedAt DateTime? @map("nickname_changed_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([userId, gameId])
+  @@unique([gameId, nickname])
+  @@map("game_profiles")
 }

@@ -1,6 +1,6 @@
 import logger from "../../utils/logger.js";
 import { getIO } from "../infrastructure/socket.js";
-import { getSession, broadcastUserCount, isUserOnline } from "../auth/login.js";
+import { getSession, broadcastUserCount, isUserOnline } from "../portal/login.js";
 import {
     broadcastMessageAll,
     sendMessageToAudience,
@@ -347,7 +347,7 @@ export const initChat = () => {
             const flags = getFlagsForPermission(session.permission);
             const msg: ChatMessage | null = showCommand === true ? {
                 userId: session.userId,
-                nickname: session.nickname,
+                nickname: getPlayerByUserId(session.userId)?.name ?? session.nickname,
                 profileImage: session.profileImage,
                 flags: flags.length > 0 ? flags : undefined,
                 content: [{ type: 'text', text: trimmed }],
@@ -386,7 +386,7 @@ export const initChat = () => {
             const flags = getFlagsForPermission(session.permission);
             const msg: ChatMessage = {
                 userId: session.userId,
-                nickname: session.nickname,
+                nickname: getPlayerByUserId(session.userId)?.name ?? session.nickname,
                 profileImage: session.profileImage,
                 flags: flags.length > 0 ? flags : undefined,
                 content: [{ type: 'text', text: trimmed }],
@@ -502,14 +502,14 @@ export const initChat = () => {
                 if (index > 0) content.text('\n');
                 content.image({
                     src: image.url,
-                    alt: `${session.nickname}님이 보낸 이미지 ${index + 1}`,
+                    alt: `${getPlayerByUserId(session.userId)?.name ?? session.nickname}님이 보낸 이미지 ${index + 1}`,
                     width: image.width,
                     height: image.height,
                 });
             });
             notifyChatDeliveryFailure(session.userId, deliverChatMessage(session.userId, session.permission, {
                 userId: session.userId,
-                nickname: session.nickname,
+                nickname: getPlayerByUserId(session.userId)?.name ?? session.nickname,
                 profileImage: session.profileImage,
                 flags: flags.length > 0 ? flags : undefined,
                 content: content.build(),

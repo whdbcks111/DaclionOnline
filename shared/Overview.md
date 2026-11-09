@@ -27,3 +27,5 @@
 전용 보스 전투 공간은 공용 `GameTags.LOCATION_BOSS_ROOM` (`location:boss_room`) 태그로 표시한다.
 
 공유 타입 변경은 서버 생산자/소비자와 클라이언트 생산자/소비자를 같은 변경에서 수정하고 [`docs/api/socket-events.md`](../docs/api/socket-events.md)와 이 문서를 갱신한다.
+
+`EnterGameRequest/GameEntryResult`와 `enterGame/leaveGame/gameEntryResult`는 공통 계정 인증 이후 게임 연결·첫 캐릭터 정보 입력을 분리한다. 로그인과 세션 복원은 게임에 자동 입장하지 않는다.

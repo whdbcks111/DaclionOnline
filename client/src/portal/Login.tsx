@@ -1,6 +1,6 @@
 // 로그인 페이지
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import styles from './Login.module.scss'
 import { useSocket } from '../context/SocketContext';
 import { validateId, validatePassword } from '../utils/validators';
@@ -8,6 +8,8 @@ import type { LoginResult } from '@shared/types';
 
 function Login() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const destination = params.get("next") === "daclion" ? "/games/daclion/" : "/";
   const { socket, isConnected } = useSocket();
   
   const idRef = useRef<HTMLInputElement>(null);
@@ -21,7 +23,7 @@ function Login() {
     const onLoginResult = (result: LoginResult) => {
       if (result.ok) {
         document.cookie = `sessionToken=${result.sessionToken}; path=/; max-age=${60 * 60 * 24 * 7}`;
-        navigate('/home');
+        navigate(destination);
       } else {
         setError(result.error ?? '오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
       }
@@ -29,7 +31,7 @@ function Login() {
 
     socket.on('loginResult', onLoginResult);
     return () => { socket.off('loginResult', onLoginResult); };
-  }, [socket, navigate]);
+  }, [socket, navigate, destination]);
 
   const login = () => {
     const id = idRef.current?.value ?? '';
@@ -61,7 +63,7 @@ function Login() {
 
   return <>
   
-    <div className={styles.title}>Daclion Online</div>
+    <div className={styles.title}>웹게임 포털</div>
 
     <div className={styles.loginContainer}>
       <div className={styles.label}>로그인</div>
@@ -75,6 +77,7 @@ function Login() {
       { error && error.length > 0 ? <div className={styles.error}>{error}</div> : null }
       <button onClick={login}>로그인</button>
       <div className={styles.nav}>
+        <Link to="/">포털로</Link>
         <Link to='/register'>회원가입</Link>
         <Link to='/password-reset'>비밀번호 찾기</Link>
       </div>

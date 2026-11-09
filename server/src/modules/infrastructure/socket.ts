@@ -1,9 +1,9 @@
+import { canUseSocketEvent } from '../portal/socketPolicy.js';
 import { Server, type Socket } from 'socket.io'
 import { Server as HttpServer } from 'http'
 import type { ClientPresenceState } from '../../../../shared/types.js'
 import logger from '../../utils/logger.js';
-import { getSession, isUserOnline, setUserOnline, setUserOffline } from '../auth/login.js';
-import { getUserChannel, getChannelRoomKey } from '../communication/channel.js';
+import { getSession, isUserOnline, setUserOffline } from '../portal/login.js';
 
 let io: Server;
 
@@ -27,7 +27,7 @@ export function getPreferredUserSocket(userId: number): Socket | undefined {
         const socketUserId = typeof socket.data.onlineUserId === 'number'
             ? socket.data.onlineUserId
             : session?.userId;
-        if (socketUserId !== userId) continue;
+        if (socketUserId !== userId || socket.data.onlineUserId !== userId) continue;
         const rawPresence: unknown = socket.data.clientPresence;
         const presence = isClientPresenceState(rawPresence)
             ? rawPresence
@@ -77,13 +77,11 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
         logger.socket('클라이언트 연결됨:', socket.id);
         socket.data.clientPresence = 'visible' satisfies ClientPresenceState;
         socket.data.clientPresenceUpdatedAt = performance.now();
-        const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
-        if (session) {
-            socket.data.onlineUserId = session.userId;
-            setUserOnline(session.userId, socket.id);
-            socket.join(getChannelRoomKey(getUserChannel(session.userId)));
-            logger.success(`로그인: ${session.username} (${socket.id})`);
-        }
+        // 계정 인증과 게임 입장은 별개다. 포털 연결은 게임 room/접속자 수에 들어가지 않는다.
+        socket.use(([event], next) => {
+            if (!canUseSocketEvent(event, socket.data.gameActive === true)) return;
+            next();
+        });
 
         socket.on('clientPresence', (state: unknown) => {
             if (!isClientPresenceState(state)) return;
@@ -96,7 +94,7 @@ export const initSocket = (httpServer: HttpServer, corsOrigin: string) => {
             const currentSession = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
             const onlineUserId = typeof socket.data.onlineUserId === 'number'
                 ? socket.data.onlineUserId
-                : currentSession?.userId;
+                : undefined;
             if (onlineUserId !== undefined) {
                 setUserOffline(onlineUserId, socket.id);
                 if (!isUserOnline(onlineUserId)) {

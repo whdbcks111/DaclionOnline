@@ -29,7 +29,7 @@
 ## `POST /api/chat-image`
 
 - 구현: `server/src/modules/infrastructure/upload.ts`
-- 호출: `client/src/pages/Home.tsx`
+- 호출: `client/src/games/daclion/Home.tsx`
 - 인증: `sessionToken` 쿠키
 - Content-Type: `multipart/form-data`
 - 필드: `image` 파일 1개

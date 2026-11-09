@@ -73,6 +73,15 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.52', '2026-11-09',
+        [FEATURE,
+            '여러 웹게임을 한 계정으로 즐길 수 있는 게임 포털을 추가했습니다. 포털에서 DaclionOnline을 선택해 모험을 시작할 수 있습니다.',
+            '처음 게임을 시작할 때 포털 닉네임과 별도로 캐릭터 이름을 정할 수 있습니다. 게임을 나가도 포털 로그인은 유지됩니다.',
+        ],
+        [CHANGED,
+            '기존 계정과 캐릭터를 포털에 자동 연결합니다. 사용하던 아이디·비밀번호·캐릭터 이름과 모든 모험 기록을 그대로 이용할 수 있습니다.',
+        ],
+    ),
     definePatchNote('1.0.51', '2026-08-19',
         [CONTENT,
             '성직자 Lv.500 3차 직업 `천광성자`를 추가했습니다. 고유 패시브 `천광의 은총`으로 마법력·최대 생명력이 각각 3% 증가하고, `여명의 서약`의 회복량과 보호막이 22% 강화됩니다.',

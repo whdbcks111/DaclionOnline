@@ -240,7 +240,7 @@ export default function GameGuide() {
           <p>DaclionOnline</p>
           <h1>게임 안내</h1>
         </div>
-        <button type="button" onClick={() => navigate('/home')}>게임으로 돌아가기</button>
+        <button type="button" onClick={() => navigate('/games/daclion/')}>게임으로 돌아가기</button>
       </header>
 
       <div className={styles.layout}>

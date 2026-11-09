@@ -39,7 +39,7 @@ Express + Socket.io (`server/src/index.ts`)
 
 | 상태 | 소유 위치 | 수명/저장 |
 | --- | --- | --- |
-| 세션 토큰, 다중 세션, userId별 온라인 socket ID Set | `modules/auth/login.ts` | 프로세스 메모리, 재시작 시 소실 |
+| 세션 토큰, 다중 세션, userId별 온라인 socket ID Set | `modules/portal/login.ts` | 프로세스 메모리, 재시작 시 소실 |
 | 현재 채널, 채팅 히스토리 | `modules/communication/channel.ts` | 프로세스 메모리, 채널당 공개 100개 |
 | 정보 열람 공개 모드 | `modules/player/informationVisibility.ts` | 사용자별 프로세스 메모리, 기본 비공개, 마지막 연결 종료 시 소실 |
 | 온라인 Player 인스턴스 | `modules/player/player.ts` | 로그인 중 메모리, 30초 자동 저장 및 정상 로그아웃/종료 시 저장 |
@@ -62,7 +62,7 @@ Express + Socket.io (`server/src/index.ts`)
 
 ### 로그인
 
-`Login.tsx` → `login` 이벤트 → `modules/auth/login.ts` → Prisma `User` 검증 → 세션 생성 → `modules/player/player.ts`가 Player/Inventory/Equipment/Progress/SkillBook 로드 → `loginResult` → `SocketContext`가 세션 상태 저장.
+`Login.tsx` → `login` 이벤트 → `modules/portal/login.ts` → Prisma `User` 검증 → 세션 생성 → `loginResult` → `SocketContext`가 포털 세션 상태 저장. 이후 명시적 `enterGame`에서만 `modules/player/player.ts`가 Player/Inventory/Equipment/Progress/SkillBook을 로드한다.
 
 ### 채팅과 명령어
 
@@ -78,3 +78,11 @@ Express + Socket.io (`server/src/index.ts`)
 - 관리자 위치 편집은 서버에서 `permission >= 10`을 다시 확인한다. 클라이언트 라우트 노출 여부는 보안 경계가 아니다.
 - 프로필 업로드는 세션 쿠키, MIME 화이트리스트, 5MB 제한, magic bytes를 확인한 후 저장한다.
 - 게임 규칙과 보상 계산은 서버 모델에서 수행하고 클라이언트는 전달받은 상태를 표시한다.
+
+## 웹게임 포털과 게임 입장
+
+`/`는 웹게임 포털, `/login`, `/register`, `/password-reset`은 공통 계정 화면이다. DaclionOnline은 `/games/daclion/`과 그 하위 경로에서 제공한다. 기존 `/home`, `/guide`, `/patch-notes`, `/admin` 링크는 새 게임 경로로 이동한다. 하나의 React 번들과 Express/Socket.io 프로세스를 사용하므로 기존 mcv.kr 주소에서 추가 서브도메인 없이 서비스할 수 있다. 정적 아이콘·업로드·HTTP API와 Socket.io 전송 경로는 루트 경로를 유지한다.
+
+클라이언트 `portal/`은 공통 계정과 게임 목록, `games/daclion/`은 게임 화면을 소유한다. 서버는 기술 계층을 유지하며 `modules/portal/`에 공통 인증을 분리한다. 게임 데이터는 기존 `models/data/commands` 도메인과 Player 저장 구조를 유지한다. 새 게임은 별도 화면·도메인과 서버 검증 입장 처리를 추가하고 같은 User ID를 참조하는 GameProfile로 연결한다.
+
+포털 연결 → 세션 복원(캐릭터 미로드) → 게임 선택 → `enterGame` → 프로필 조회/최초 이름 등록 → 게임 room·접속자 등록 → Player 로드와 최초 생성 → 입장 성공 → 게임 UI mount 순서다. `leaveGame`은 게임만 종료하고 세션을 유지한다. 다른 게임 탭이 없으면 저장·unload하며 연결 자체가 끊기면 기존 10초 재접속 유예를 적용한다.

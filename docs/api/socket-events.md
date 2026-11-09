@@ -7,13 +7,13 @@
 | 이벤트 | payload | 인증 | 서버 처리 | 주 응답/효과 |
 | --- | --- | --- | --- | --- |
 | `clientPresence` | `"focused" \| "visible" \| "hidden"` | 선택 | `modules/infrastructure/socket.ts` | 연결·화면 상태·실제 입력 때 현재 활성도를 갱신해 다중 접속의 단일 미니게임 대상 선택 |
-| `login` | `LoginRequest { id, pw }` | 불필요 | `modules/auth/login.ts` | `loginResult`; Player 로드, room 참가 |
-| `register` | `RegisterRequest { id, pw, email, nickname }` | 이메일 인증 필요 | `modules/auth/register.ts` | `registerResult`; User+Player 생성, 세션 발급 |
-| `logout` | `token: string` | 토큰 | `modules/auth/login.ts` | `logoutResult`; 마지막 세션이면 Player 저장/언로드 |
-| `sendVerifyCode` | `email: string` | 불필요 | `modules/auth/register.ts` | `verifyCodeSendResult`; 6자리, 5분 만료, 60초 재전송·IP 발송 횟수 제한 |
-| `verifyCode` | `code: string` | 불필요 | `modules/auth/register.ts` | `verifyCodeResult`; 발급 건당 오답 5회·IP+socket 요청 빈도 제한 |
-| `sendPasswordResetCode` | `email: string` | 불필요 | `modules/auth/passwordReset.ts` | `passwordResetCodeSendResult`; 가입 여부 비공개 응답, 6자리·5분 만료·60초 재전송·IP 발송 제한 |
-| `resetPassword` | `PasswordResetRequest { code, pw }` | 이메일 코드 필요 | `modules/auth/passwordReset.ts` | `passwordResetResult`; 오답 5회·요청 제한, 새 PBKDF2 hash 저장과 기존 세션 전체 폐기 |
+| `login` | `LoginRequest { id, pw }` | 불필요 | `modules/portal/login.ts` | `loginResult`; 포털 세션 발급, 게임 입장은 별도 |
+| `register` | `RegisterRequest { id, pw, email, nickname }` | 이메일 인증 필요 | `modules/portal/register.ts` | `registerResult`; User만 생성, 포털 세션 발급 |
+| `logout` | `token: string` | 토큰 | `modules/portal/login.ts` | `logoutResult`; 마지막 세션이면 Player 저장/언로드 |
+| `sendVerifyCode` | `email: string` | 불필요 | `modules/portal/register.ts` | `verifyCodeSendResult`; 6자리, 5분 만료, 60초 재전송·IP 발송 횟수 제한 |
+| `verifyCode` | `code: string` | 불필요 | `modules/portal/register.ts` | `verifyCodeResult`; 발급 건당 오답 5회·IP+socket 요청 빈도 제한 |
+| `sendPasswordResetCode` | `email: string` | 불필요 | `modules/portal/passwordReset.ts` | `passwordResetCodeSendResult`; 가입 여부 비공개 응답, 6자리·5분 만료·60초 재전송·IP 발송 제한 |
+| `resetPassword` | `PasswordResetRequest { code, pw }` | 이메일 코드 필요 | `modules/portal/passwordReset.ts` | `passwordResetResult`; 오답 5회·요청 제한, 새 PBKDF2 hash 저장과 기존 세션 전체 폐기 |
 | `sendMessage` | `string \| { content, replyToId?, chatType? }` | 필요 | `modules/communication/chat.ts` | 최대 500자; `channel/nearby/party/advertisement/notice` 범위와 공지 권한·광고 30초 제한을 서버에서 검증. 답장은 현재 공개 채널 히스토리에서 재검증하고 채널 타입만 허용 |
 | `sendImageMessages` | `{ filenames: string[], replyToId?, chatType? }` (1~10장) | 필요 | `modules/communication/chat.ts` | 모든 HTTP 업로드의 소유권·보관 기간·`ActionType.CHAT`, 선택 범위와 공개 원문을 확인한 뒤 하나의 다중 image ChatNode 메시지 전송 |
 | `sendImageMessage` | `{ filename: string, replyToId?, chatType? }` | 필요 | `modules/communication/chat.ts` | 구형 클라이언트 호환용 단일 이미지 이벤트. `sendImageMessages`와 같은 검증 경계를 사용 |
@@ -26,10 +26,10 @@
 | `useChatEmote` | `ChatEmoteKey` | 필요 | `modules/communication/chat.ts` | 보유권과 `ActionType.CHAT`을 재검증한 뒤 현재 채널에 구조화 감정표현 노드 전송 |
 | `requestInformationMode` | 없음 | 필요 | `modules/communication/bot.ts` | 현재 플레이어의 정보 공개 여부를 `informationMode`로 응답 |
 | `setInformationMode` | `isPublic: boolean` | 필요 | `modules/communication/bot.ts` | 런타임 정보 공개 모드 변경, 같은 계정 소켓 동기화와 notification |
-| `requestUserCount` | 없음 | 불필요 | `modules/auth/login.ts` | `userCount` |
+| `requestUserCount` | 없음 | 불필요 | `modules/portal/login.ts` | `userCount` |
 | `joinChannel` | `string \| null` | 필요 | `modules/communication/chat.ts` | 마스터 공개 채널 또는 본인 `private_{userId}`만 room 변경 후 `channelChanged` |
 | `requestChannelList` | 없음 | 불필요 | `modules/communication/chat.ts` | `channelList` |
-| `changeNickname` | `nickname: string` | 필요 | `modules/auth/login.ts` | `nicknameResult`; DB와 모든 메모리 세션 갱신 |
+| `changeNickname` | `nickname: string` | 필요 | `modules/portal/login.ts` | `nicknameResult`; 게임 프로필·Player 이름과 게임 탭 갱신 |
 | `requestLocationInfo` | 없음 | 필요 | `modules/communication/chat.ts` | `locationInfo` |
 | `adminRequestLocations` | 없음 | 권한 10 | `modules/world/location.ts` | `adminLocations` |
 | `adminSaveLocations` | `LocationData[]` | 권한 10 | `modules/world/location.ts` | `safe/neutral/hostile zoneType`, `objects(type/dataId/maxCount/respawnTime)`, `npcIds`, `tags`, 선택 `mapIcon`·`#RRGGBB mapColor`를 검증·정규화한 뒤 JSON 저장 및 런타임 재로드, `adminSaveResult` |
@@ -49,7 +49,7 @@
 | `deleteHudPreset` | `name: string` | 필요 | `modules/player/hudPreset.ts` | 이름으로 삭제하고 즉시 Player 저장 후 결과와 목록 응답 |
 | `useConsumableBundle` | `{ requestId, itemDataIds }` | 필요 | `modules/player/consumableBundle.ts` | 1~8개 중복 없는 정의 ID, item-use registry 허용, 보유·요구·행동 조건을 재검증하고 순서대로 직렬 사용 |
 
-클라이언트 emit 위치는 주로 `pages/Login.tsx`, `pages/Register.tsx`, `pages/PasswordReset.tsx`, `pages/Home.tsx`, `pages/LocationEditor.tsx`, `components/chat/nodes/ButtonNode.tsx`, `components/hud/huds/QuickSlotHud.tsx`다.
+클라이언트 emit 위치는 주로 `portal/Login.tsx`, `portal/Register.tsx`, `portal/PasswordReset.tsx`, `games/daclion/Home.tsx`, `games/daclion/LocationEditor.tsx`, `components/chat/nodes/ButtonNode.tsx`, `components/hud/huds/QuickSlotHud.tsx`다.
 
 ### `alchemy_tracking` proof 계약
 
@@ -63,38 +63,38 @@
 
 | 이벤트 | payload | 서버 생산자 | 클라이언트 소비자 |
 | --- | --- | --- | --- |
-| `sessionRestore` | `SessionRestoreData` | `modules/auth/login.ts` | `SocketContext.tsx`, `App.tsx` |
-| `sessionInvalid` | 없음 | `modules/auth/login.ts`, `modules/communication/chat.ts` | `App.tsx` |
-| `loginResult` | `LoginResult` | `modules/auth/login.ts` | `SocketContext.tsx`, `pages/Login.tsx` |
-| `registerResult` | `RegisterResult` | `modules/auth/register.ts` | `pages/Register.tsx` |
-| `logoutResult` | `LogoutResult` | `modules/auth/login.ts` | `SocketContext.tsx`, `pages/Home.tsx` |
-| `verifyCodeSendResult` | `SimpleResult` | `modules/auth/register.ts` | `pages/Register.tsx` |
-| `verifyCodeResult` | `SimpleResult` | `modules/auth/register.ts` | `pages/Register.tsx` |
-| `passwordResetCodeSendResult` | `SimpleResult` | `modules/auth/passwordReset.ts` | `pages/PasswordReset.tsx` |
-| `passwordResetResult` | `SimpleResult` | `modules/auth/passwordReset.ts` | `pages/PasswordReset.tsx` |
-| `chatHistory` | `ChatMessage[]` | `modules/communication/chat.ts` | `pages/Home.tsx` |
-| `chatMessage` | `ChatMessage` (`replyTo?`, `replyable?`, `equippedTitle?`, `ascended?` 포함) | `modules/communication/message.ts` | `pages/Home.tsx` |
+| `sessionRestore` | `SessionRestoreData` | `modules/portal/login.ts` | `SocketContext.tsx`, `App.tsx` |
+| `sessionInvalid` | 없음 | `modules/portal/login.ts`, `modules/communication/chat.ts` | `App.tsx` |
+| `loginResult` | `LoginResult` | `modules/portal/login.ts` | `SocketContext.tsx`, `portal/Login.tsx` |
+| `registerResult` | `RegisterResult` | `modules/portal/register.ts` | `portal/Register.tsx` |
+| `logoutResult` | `LogoutResult` | `modules/portal/login.ts` | `SocketContext.tsx`, `games/daclion/Home.tsx` |
+| `verifyCodeSendResult` | `SimpleResult` | `modules/portal/register.ts` | `portal/Register.tsx` |
+| `verifyCodeResult` | `SimpleResult` | `modules/portal/register.ts` | `portal/Register.tsx` |
+| `passwordResetCodeSendResult` | `SimpleResult` | `modules/portal/passwordReset.ts` | `portal/PasswordReset.tsx` |
+| `passwordResetResult` | `SimpleResult` | `modules/portal/passwordReset.ts` | `portal/PasswordReset.tsx` |
+| `chatHistory` | `ChatMessage[]` | `modules/communication/chat.ts` | `games/daclion/Home.tsx` |
+| `chatMessage` | `ChatMessage` (`replyTo?`, `replyable?`, `equippedTitle?`, `ascended?` 포함) | `modules/communication/message.ts` | `games/daclion/Home.tsx` |
 | `notification` | `NotificationData` | `modules/communication/message.ts` | `components/Notification.tsx` |
-| `commandList` | `CommandInfo[]` | `modules/communication/bot.ts` | `pages/Home.tsx` |
-| `argCompletions` | `CompletionItem[]` | `modules/communication/bot.ts` | `pages/Home.tsx` |
-| `mentionCompletions` | `CompletionItem[]` | `modules/communication/chat.ts` | `pages/Home.tsx` |
-| `chatEmoteList` | `ChatEmotePickerItem[]` | `modules/communication/chat.ts` | `pages/Home.tsx` 보유 감정표현 선택기 |
-| `playerStats` | `PlayerStatsData` (`syncId/revision`, 장착 칭호, 서버가 실제 교전으로 판정한 `musicCombatState`, 현재 `level/exp/maxExp`·자원·타입색 `shields`·공격 cooldown·`autoAttackEnabled`·`statusEffects`, 묶음 사용 허용 여부가 포함된 사용 아이템, 무기·보호구 슬롯별 `equipmentDurability`, 표시 가능한 스킬과 전투 기술의 선택적 `cadenceRemaining/cadenceDuration`, nullable 파티 HUD, nullable 현재 대상의 선택적 아이콘·보스 왕관 여부·HP/MP/보호막/상태이상과 감각 단계별 몬스터 분석). 내용이 바뀐 완전한 snapshot만 socket별 1회 전송 | `modules/player/player.ts`/`modules/infrastructure/stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 `HudContext` → HUD |
-| `informationMode` | `isPublic: boolean` | `modules/communication/bot.ts` | `pages/Home.tsx` 입력창 공개/비공개 전환 버튼 |
-| `locationInfo` | `LocationInfoData` (`syncId/revision`, 현재 장소의 선택적 `mapColor`, `zoneType/zoneLabel/pvpAllowed`, 현재 플레이어가 이용 가능한 낚시·상점·공간 중계소 `capabilities`, objects의 선택적 아이콘·보스 왕관 여부·생명력·`shields`·가능한 `actions`, NPC 이름·설명·퀘스트 표식, 플레이어 생명력·보호막, 5분 초과 보스의 선택적 `respawn`, 플레이어 기준 인접 장소). 내용 변경 시 완전한 snapshot 전송 | `modules/player/player.ts`/`modules/infrastructure/stateSync.ts` | `pages/Home.tsx`가 오래된 revision을 거른 뒤 Location/Minimap HUD |
-| `userCount` | `UserCountData` (다중 탭을 합친 고유 사용자 기준 전체/채널 인원) | `modules/auth/login.ts` | `pages/Home.tsx` |
-| `channelChanged` | `(channel, history)` | `modules/communication/chat.ts` | `pages/Home.tsx` |
-| `channelList` | `ChannelInfo[]` | `modules/communication/chat.ts` | `pages/Home.tsx` |
-| `nicknameResult` | `SimpleResult & { nickname? }` | `modules/auth/login.ts` | `SocketContext.tsx`, `pages/Home.tsx` |
-| `editMessage` | `(id, content)` | `modules/communication/message.ts` | `pages/Home.tsx` |
-| `deleteMessage` | `id: string` | `modules/communication/message.ts` | `pages/Home.tsx` |
-| `clearChatView` | `count?: number` | `modules/communication/message.ts` | `pages/Home.tsx`; 생략 시 현재 화면 전체, 숫자면 최근 메시지만 제거하며 서버 기록은 유지 |
-| `adminLocations` | 태그·통합 `objects`·`npcIds`·선택 `mapIcon/mapColor` 포함 `LocationData[]` | `modules/world/location.ts` | `pages/LocationEditor.tsx` |
-| `adminSaveResult` | `SimpleResult` | `modules/world/location.ts` | `pages/LocationEditor.tsx` |
-| `adminPanelBootstrap` | `AdminPanelBootstrapData` | `modules/operations/adminPanel.ts` | `pages/AdminPage.tsx` |
-| `adminPanelPlayers` | `AdminPlayerListItem[]` | `modules/operations/adminPanel.ts` | `pages/AdminPage.tsx` |
-| `adminPanelPlayer` | `AdminPlayerDetailData \| null` (직업, 보유/지급/삭제/장착 꾸미기와 우편 상태 포함) | `modules/operations/adminPanel.ts` | `pages/AdminPage.tsx` |
-| `adminPanelResult` | `AdminPanelResult` (밸런스 분석 시 `details` 포함) | `modules/operations/adminPanel.ts` | `pages/AdminPage.tsx` |
+| `commandList` | `CommandInfo[]` | `modules/communication/bot.ts` | `games/daclion/Home.tsx` |
+| `argCompletions` | `CompletionItem[]` | `modules/communication/bot.ts` | `games/daclion/Home.tsx` |
+| `mentionCompletions` | `CompletionItem[]` | `modules/communication/chat.ts` | `games/daclion/Home.tsx` |
+| `chatEmoteList` | `ChatEmotePickerItem[]` | `modules/communication/chat.ts` | `games/daclion/Home.tsx` 보유 감정표현 선택기 |
+| `playerStats` | `PlayerStatsData` (`syncId/revision`, 장착 칭호, 서버가 실제 교전으로 판정한 `musicCombatState`, 현재 `level/exp/maxExp`·자원·타입색 `shields`·공격 cooldown·`autoAttackEnabled`·`statusEffects`, 묶음 사용 허용 여부가 포함된 사용 아이템, 무기·보호구 슬롯별 `equipmentDurability`, 표시 가능한 스킬과 전투 기술의 선택적 `cadenceRemaining/cadenceDuration`, nullable 파티 HUD, nullable 현재 대상의 선택적 아이콘·보스 왕관 여부·HP/MP/보호막/상태이상과 감각 단계별 몬스터 분석). 내용이 바뀐 완전한 snapshot만 socket별 1회 전송 | `modules/player/player.ts`/`modules/infrastructure/stateSync.ts` | `games/daclion/Home.tsx`가 오래된 revision을 거른 뒤 `HudContext` → HUD |
+| `informationMode` | `isPublic: boolean` | `modules/communication/bot.ts` | `games/daclion/Home.tsx` 입력창 공개/비공개 전환 버튼 |
+| `locationInfo` | `LocationInfoData` (`syncId/revision`, 현재 장소의 선택적 `mapColor`, `zoneType/zoneLabel/pvpAllowed`, 현재 플레이어가 이용 가능한 낚시·상점·공간 중계소 `capabilities`, objects의 선택적 아이콘·보스 왕관 여부·생명력·`shields`·가능한 `actions`, NPC 이름·설명·퀘스트 표식, 플레이어 생명력·보호막, 5분 초과 보스의 선택적 `respawn`, 플레이어 기준 인접 장소). 내용 변경 시 완전한 snapshot 전송 | `modules/player/player.ts`/`modules/infrastructure/stateSync.ts` | `games/daclion/Home.tsx`가 오래된 revision을 거른 뒤 Location/Minimap HUD |
+| `userCount` | `UserCountData` (다중 탭을 합친 고유 사용자 기준 전체/채널 인원) | `modules/portal/login.ts` | `games/daclion/Home.tsx` |
+| `channelChanged` | `(channel, history)` | `modules/communication/chat.ts` | `games/daclion/Home.tsx` |
+| `channelList` | `ChannelInfo[]` | `modules/communication/chat.ts` | `games/daclion/Home.tsx` |
+| `nicknameResult` | `SimpleResult & { nickname? }` | `modules/portal/login.ts` | `SocketContext.tsx`, `games/daclion/Home.tsx` |
+| `editMessage` | `(id, content)` | `modules/communication/message.ts` | `games/daclion/Home.tsx` |
+| `deleteMessage` | `id: string` | `modules/communication/message.ts` | `games/daclion/Home.tsx` |
+| `clearChatView` | `count?: number` | `modules/communication/message.ts` | `games/daclion/Home.tsx`; 생략 시 현재 화면 전체, 숫자면 최근 메시지만 제거하며 서버 기록은 유지 |
+| `adminLocations` | 태그·통합 `objects`·`npcIds`·선택 `mapIcon/mapColor` 포함 `LocationData[]` | `modules/world/location.ts` | `games/daclion/LocationEditor.tsx` |
+| `adminSaveResult` | `SimpleResult` | `modules/world/location.ts` | `games/daclion/LocationEditor.tsx` |
+| `adminPanelBootstrap` | `AdminPanelBootstrapData` | `modules/operations/adminPanel.ts` | `games/daclion/AdminPage.tsx` |
+| `adminPanelPlayers` | `AdminPlayerListItem[]` | `modules/operations/adminPanel.ts` | `games/daclion/AdminPage.tsx` |
+| `adminPanelPlayer` | `AdminPlayerDetailData \| null` (직업, 보유/지급/삭제/장착 꾸미기와 우편 상태 포함) | `modules/operations/adminPanel.ts` | `games/daclion/AdminPage.tsx` |
+| `adminPanelResult` | `AdminPanelResult` (밸런스 분석 시 `details` 포함) | `modules/operations/adminPanel.ts` | `games/daclion/AdminPage.tsx` |
 | `adminPanelResult` | `AdminPanelResult` | `modules/operations/adminPanel.ts` | 요청 소켓 호환용 결과. 사용자 피드백은 같은 요청 소켓의 `notification`으로 표시 |
 | `miniGameStart` | `MiniGameStartData` (session/token/type/만료/config, 위험 회피의 실제 `label/theme`, 가마솥의 seed·5종 경로·속도 프로필·반전 일정·액체/목표 반경) | `modules/professions/minigame.ts`; 같은 계정의 focused 우선 연결 하나에만 전송 | `components/minigame/MiniGameOverlay.tsx` |
 | `miniGameResolved` | `MiniGameResolvedData` | `modules/professions/minigame.ts` | `components/minigame/MiniGameOverlay.tsx` |
@@ -125,3 +125,14 @@
 3. 클라이언트 listener/emit과 cleanup 변경.
 4. 이 문서 및 영향받은 폴더의 `Overview.md` 변경.
 5. 서버와 클라이언트 모두 빌드.
+
+## 포털·게임 입장 계약
+
+- `login/register/sessionRestore`는 포털 인증만 수행하며 Player 생성·로드·게임 room 참가를 수행하지 않는다.
+- `enterGame(EnterGameRequest { gameId: 'daclion', nickname?: string })`: 포털 세션 필수. 계정 ID는 서버가 세션에서 결정한다. 기존 프로필은 재사용하며 새 프로필에만 nickname이 필요하다.
+- `gameEntryResult(GameEntryResult { ok?, needsProfile?, nickname?, error? })`: 추가 정보가 필요하면 `needsProfile: true`, Player 준비가 끝났으면 `ok: true`와 게임 이름을 반환한다. 잘못된 이름·중복 이름은 입력 화면에서 수정할 수 있는 오류를 반환한다.
+- `leaveGame()`: 포털 인증을 유지한 채 해당 연결의 게임 참가를 해제한다. 마지막 게임 연결이면 Player를 저장·unload한다.
+- 포털 연결은 `modules/portal/socketPolicy.ts`의 인증·입장·presence·접속 수 요청만 허용한다. 나머지 게임 이벤트는 입장 완료 전 실행하지 않는다.
+- `changeNickname`은 게임 프로필과 게임 캐릭터 이름만 변경하고 포털 닉네임은 유지한다. `nicknameResult`는 해당 게임의 활성 탭에 전송한다.
+
+게임 HUD·주변 플레이어·채팅·귓속말은 포털 세션 닉네임 대신 게임 캐릭터 이름을 일관되게 사용한다.

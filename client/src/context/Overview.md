@@ -6,3 +6,5 @@
 - `HudContext.tsx`: PlayerStatus/TargetStatus/Party/Location/Minimap HUD 설정, nullable 파티·현재 대상과 스킬 snapshot을 포함한 서버 상태 payload, global/per-HUD 표시 옵션, 플레이어 상태 HUD 보호구 내구도·위치 HUD 오브젝트/NPC 버튼·미니맵 이동 목록 표시 API, quick slot과 공격·스킬·아이템·소모품 묶음 버튼 표시·좌표·전용 크기의 계정별 localStorage persistence. 이름 있는 서버 프리셋은 목록만 자동 조회하고 `saveHudPreset/loadHudPreset/deleteHudPreset` 호출 때만 저장·적용·삭제한다. 소모품 묶음의 이름·순서·표시·좌표와 보호구 내구도 표시 여부도 같은 프리셋에 포함한다. 위치 편집은 4/8/16/32/64px의 2의 거듭제곱 그리드 스냅을 공통 제공하며, 전투 퀵 버튼도 X/Y `%`·`px` 단위와 네 모서리 좌표 기준점을 Context API로 변경한다. 안정 viewport는 `displayPreferences.ts`의 단일 snapshot을 구독해 CSS 좌표계와 항상 일치한다. `skillHudConfig.ts`가 기본 공격·자동공격 ID와 화면 폭별 기본 전투 버튼 격자 좌표를 제공하며, 새 설정에서 전투 퀵 버튼은 기본적으로 숨긴다.
 
 Context value는 소비자가 raw state를 우회 변경하지 않도록 목적별 함수 API로 제공한다. 상태 소유권이나 공개 API가 바뀌면 이 문서와 관련 시스템 문서를 갱신한다.
+
+포털 인증과 게임 입장을 분리해 `isSessionReady`와 게임 전용 `gameNickname`을 제공한다. 게임 이름 변경은 공통 `sessionInfo.nickname`을 바꾸지 않는다.

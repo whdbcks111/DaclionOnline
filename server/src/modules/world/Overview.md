@@ -7,3 +7,5 @@ Location 내부 상태를 외부로 노출하지 않고 공개 이동·조회 AP
 `instanceDungeon.ts`는 10초 게이트, 참가자·절대 제한시간, 마녀의 주시/저주 동기화, 방 잠금, 귀환 균열과 동적 Location 폐기를 소유한다. 짧은 연결 끊김은 같은 Player로 복귀시키고 명시적 unload와 유예 만료는 원래 게이트로 이탈시킨 뒤 저장한다. DB에 원정 상태를 저장하지 않는다.
 
 `ascension.ts`는 Lv.1000 `originboundary_sovereign` 제압 이벤트를 구독해 양수 기여 참가자의 PlayerProgress에 잔재 NPC 노출 자격을 기록한다. 대화·환생 데이터는 직접 소유하지 않는다.
+
+공통 계정 세션은 `modules/portal/login.ts`의 공개 API를 사용한다. 포털 로그인과 실제 게임 입장은 분리되며 게임 이름은 Player의 표시명을 사용한다.

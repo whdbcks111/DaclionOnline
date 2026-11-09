@@ -19,7 +19,7 @@ import {
     registerOnlinePlayer,
     unregisterOnlinePlayer,
 } from './playerRegistry.js';
-import { setUserOffline } from '../auth/login.js';
+import { setUserOffline } from '../portal/login.js';
 
 class ReconnectPlayer extends Entity {
     override readonly name = '재접속 시험 플레이어';

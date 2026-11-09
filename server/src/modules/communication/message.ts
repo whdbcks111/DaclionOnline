@@ -1,5 +1,5 @@
 import { getIO } from "../infrastructure/socket.js";
-import { getSession, getSessionByUserId } from "../auth/login.js";
+import { getSession, getSessionByUserId } from "../portal/login.js";
 import { parseChatMessage } from "../../utils/chatParser.js";
 import {
     getChannelRoomKey,
@@ -111,7 +111,7 @@ function makePlayerMessage(userId: number, content: string | ChatNode[]): ChatMe
     const flags = getFlagsForPermission(session.permission);
     return {
         userId,
-        nickname: session.nickname,
+        nickname: getOnlinePlayer(session.userId)?.name ?? session.nickname,
         profileImage: session.profileImage,
         flags: flags.length > 0 ? flags : undefined,
         content: typeof content === 'string' ? [{ type: 'text', text: content }] : content,
@@ -178,7 +178,7 @@ export function sendWhisperMessage(senderUserId: number, targetUserId: number, c
     sendMessageToUser(targetUserId, received, false);
     sendMessageToUser(senderUserId, {
         ...received,
-        content: [{ type: 'text', text: `→ ${target.nickname}: ${content}` }],
+        content: [{ type: 'text', text: `→ ${getOnlinePlayer(targetUserId)?.name ?? target.nickname}: ${content}` }],
     }, false);
     return true;
 }
@@ -200,7 +200,7 @@ function forEachSocket(
         const session = socket.data.sessionToken
             ? getSession(socket.data.sessionToken)
             : undefined;
-        if (session && filter(session.userId)) {
+        if (session && socket.data.onlineUserId === session.userId && filter(session.userId)) {
             cb(socket);
         }
     }

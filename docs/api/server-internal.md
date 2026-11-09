@@ -157,3 +157,11 @@
 `subscribeCommandExecutions(handler)`는 권한·필수 인자 검증을 통과해 handler가 호출된 뒤 `{ userId, commandName, args, raw }`를 전달하고 해제 함수를 반환한다. `commandName`은 입력한 별칭이 아니라 등록된 canonical 이름이다. 튜토리얼처럼 명령 경로를 관찰할 때만 사용하고, 실제 성공 여부가 필요한 도메인은 각 모델의 결과나 GameEvent를 구독한다.
 
 등록된 사용자 명령 전체 목록과 시스템별 사용 흐름은 [chat-command.md](../systems/chat-command.md)를 참고한다.
+
+## 공통 포털과 게임 연결
+
+`modules/portal/login.ts`의 `getSession/createSession/revokeUserSessions`가 공통 계정을 소유한다. 기존 game online API는 실제 DaclionOnline 참가 연결만 센다. `modules/portal/gameProfile.ts`의 `getDaclionProfile(userId)`, `createDaclionProfile(userId, nickname)`, `changeDaclionNickname(userId, nickname, changedAt, cooldownMs)`로 연결·이름을 조회/확정한다. `modules/player/gameAccess.ts`가 인증된 입장과 이탈을 직렬화하고 기존 `loadPlayerByUserId/unloadPlayerByUserId`를 호출한다. Player 생성은 연결 프로필이 있어야 가능하다.
+
+`loadDaclionNames(userIds)`는 이름을 일괄 로드하고 `getNickname(userId)` 조회 함수만 제공해 순위·관리자 목록에서 프로필 row를 직접 순회하지 않게 한다.
+
+게임용 개별 메시지와 HUD snapshot은 해당 게임에 참가한 socket에만 전달하고 포털 전용 연결은 제외한다.

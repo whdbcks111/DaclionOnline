@@ -19,7 +19,7 @@ function verification(email: string, expirationDate: Date, verified = true): Ver
     };
 }
 
-test('회원가입은 User만 만들고 Player 생성은 인증된 첫 접속에 맡긴다', () => {
+test('회원가입은 User만 만들고 Player 생성은 명시적인 게임 입장에 맡긴다', () => {
     const data = buildRegistrationUserData({
         username: 'new-player',
         email: 'player@example.com',

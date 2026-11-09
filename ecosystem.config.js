@@ -1,7 +1,10 @@
+const path = require('node:path');
+
 module.exports = {
   apps: [{
     name: 'daclion-online',
-    script: './server/dist/index.js',
+    cwd: path.join(__dirname, 'server'),
+    script: 'dist/server/src/index.js',
     instances: 1,
     autorestart: true,
     watch: false,
@@ -10,9 +13,9 @@ module.exports = {
       NODE_ENV: 'production',
       PORT: 3000
     },
-    error_file: './logs/err.log',
-    out_file: './logs/out.log',
-    log_file: './logs/combined.log',
+    error_file: path.join(__dirname, 'logs/err.log'),
+    out_file: path.join(__dirname, 'logs/out.log'),
+    log_file: path.join(__dirname, 'logs/combined.log'),
     time: true
   }]
 };

@@ -9,7 +9,7 @@ import sharp from 'sharp'
 import prisma from '../../config/prisma.js'
 import logger from '../../utils/logger.js'
 import { FixedWindowRateLimiter } from '../../utils/rateLimit.js'
-import { getSession } from '../auth/login.js'
+import { getSession } from '../portal/login.js'
 
 const PROFILE_IMAGE_DIR = path.join(process.cwd(), 'uploads', 'profiles')
 const CHAT_IMAGE_DIR = path.join(process.cwd(), 'uploads', 'chat')

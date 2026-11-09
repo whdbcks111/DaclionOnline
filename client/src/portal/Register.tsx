@@ -22,17 +22,18 @@ function Register() {
     const [isVerifyCodeSent, setVerifyCodeSent] = useState(false);
 
     useEffect(() => {
-        socket?.on('registerResult', (result: RegisterResult) => {
+        const onRegister = (result: RegisterResult) => {
             if(result.ok && result.sessionToken) {
                 document.cookie = `sessionToken=${result.sessionToken}; path=/; max-age=${60 * 60 * 24 * 7}`;
-                // 현재 연결은 가입 전에 시작되어 새 쿠키를 모른다. 재연결해 세션 복원과 최초 Player 생성을 시작한다.
-                socket.disconnect().connect();
-                navigate('/home');
+                // 현재 연결은 가입 전에 시작되어 새 쿠키를 모른다. 재연결해 포털 세션을 복원한다.
+                socket?.disconnect().connect();
+                navigate('/');
             }
             else {
                 setError(result.error ?? '오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
             }
-        });
+        };
+        socket?.on('registerResult', onRegister);
 
         socket?.on('verifyCodeSendResult', (result: SimpleResult) => {
             if(result.ok) {
@@ -53,6 +54,7 @@ function Register() {
         });
 
         return () => {
+            socket?.off('registerResult', onRegister);
             socket?.off('verifyCodeSendResult');
             socket?.off('verifyCodeResult');
         }
@@ -165,7 +167,7 @@ function Register() {
             {isCodeVerified ? <div className={styles.ok}>인증번호 확인이 완료되었습니다.</div> : null}
             <input type='password' name='password' ref={pwRef} className={styles.inputField} placeholder='비밀번호' />
             <input type='password' name='password-confirm' ref={pwConfirmRef} className={styles.inputField} placeholder='비밀번호 확인' />
-            <input type='text' name='nickname' ref={nicknameRef} className={styles.inputField} placeholder='닉네임' />
+            <input type='text' name='nickname' ref={nicknameRef} className={styles.inputField} placeholder='포털 닉네임' />
             {error && error.length > 0 ? <div className={styles.error}>{error}</div> : null}
             <button className={styles.registerBtn} onClick={register}>회원가입</button>
             <div className={styles.nav}>

@@ -8,7 +8,7 @@
 
 1. `shared/types.ts`의 `ClientToServerEvents` 또는 `ServerToClientEvents`에 이벤트와 payload를 정의한다.
 2. `server/src/modules/{domain}/`의 책임에 맞는 모듈에 검증·세션/권한 확인·처리를 추가한다. 도메인은 가장 가까운 `Overview.md`에서 고르고, 새 초기화 module이면 `server/src/index.ts`에 연결한다.
-3. `client/src/pages/`, `components/`, `context/` 중 상태 소유 위치에서 `emit/on`을 연결하고 cleanup에서 `off`한다.
+3. `client/src/portal/`, `games/{gameId}/`, `components/`, `context/` 중 상태 소유 위치에서 `emit/on`을 연결하고 cleanup에서 `off`한다.
 4. [api/socket-events.md](../api/socket-events.md)의 생산자/소비자 표를 갱신한다.
 
 ## 채팅 명령어 추가

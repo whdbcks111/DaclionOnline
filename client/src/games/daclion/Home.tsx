@@ -1,25 +1,25 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styles from './Home.module.scss'
-import { useSocket } from '../context/SocketContext'
-import { HudProvider, useHud } from '../context/HudContext'
-import { GameAudioProvider } from '../context/GameAudioContext'
-import { useGameAudio } from '../context/useGameAudio'
-import ChatMessage from '../components/chat/ChatMessage'
-import CommandAutocomplete from '../components/chat/CommandAutocomplete'
+import { useSocket } from '../../context/SocketContext'
+import { HudProvider, useHud } from '../../context/HudContext'
+import { GameAudioProvider } from '../../context/GameAudioContext'
+import { useGameAudio } from '../../context/useGameAudio'
+import ChatMessage from '../../components/chat/ChatMessage'
+import CommandAutocomplete from '../../components/chat/CommandAutocomplete'
 import {
   getFilteredCommands,
   isCommandAutocompleteInput,
   resolveCommandInput,
-} from '../utils/commandAutocomplete'
-import Header from '../components/Header'
-import Drawer from '../components/Drawer'
-import HudContainer from '../components/hud/HudContainer'
-import HudSettings from '../components/hud/HudSettings'
-import MiniGameOverlay from '../components/minigame/MiniGameOverlay'
-import HumanVerificationOverlay from '../components/security/HumanVerificationOverlay'
-import StatusEffectScreenEffects from '../components/status-effects/StatusEffectScreenEffects'
-import { resolveStatusScreenVisualState } from '../components/status-effects/statusEffectVisuals'
+} from '../../utils/commandAutocomplete'
+import Header from '../../components/Header'
+import Drawer from '../../components/Drawer'
+import HudContainer from '../../components/hud/HudContainer'
+import HudSettings from '../../components/hud/HudSettings'
+import MiniGameOverlay from '../../components/minigame/MiniGameOverlay'
+import HumanVerificationOverlay from '../../components/security/HumanVerificationOverlay'
+import StatusEffectScreenEffects from '../../components/status-effects/StatusEffectScreenEffects'
+import { resolveStatusScreenVisualState } from '../../components/status-effects/statusEffectVisuals'
 import { CHAT_WHISPER_DISPLAY, ChatType, summarizeChatContent } from '@shared/chat'
 import type {
   ChatMessage as ChatMessageType,
@@ -34,7 +34,7 @@ import type {
   CompletionItem,
 } from '@shared/types'
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)
 const MAX_PENDING_IMAGES = 10
 const CHAT_FOLLOW_THRESHOLD_PX = 48
 const MAX_CHAT_INPUT_HISTORY = 100
@@ -83,7 +83,7 @@ function isCollapsedCaretAtStart(element: HTMLElement): boolean {
 
 function HomeContent() {
   const navigate = useNavigate()
-  const { socket, sessionInfo, updateProfileImage, updateNickname } = useSocket()
+  const { socket, sessionInfo, gameNickname, updateProfileImage, updateNickname } = useSocket()
   const { playerStats, setPlayerStats, setLocationInfo } = useHud()
   const { musicVolume, musicMuted, setMusicVolume, toggleMusicMute } = useGameAudio()
   const [messages, setMessages] = useState<ChatMessageType[]>([])
@@ -965,7 +965,7 @@ function HomeContent() {
       <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        nickname={sessionInfo?.nickname}
+        nickname={gameNickname ?? sessionInfo?.nickname}
         profileImage={sessionInfo?.profileImage}
         onProfileUpdate={updateProfileImage}
         onChangeNickname={changeNickname}
@@ -977,11 +977,11 @@ function HomeContent() {
         onOpenHudSettings={() => { setDrawerOpen(false); setHudSettingsOpen(true) }}
         onOpenGuide={() => {
           setDrawerOpen(false)
-          window.location.assign('/guide')
+          window.location.assign('/games/daclion/guide')
         }}
         onOpenPatchNotes={() => {
           setDrawerOpen(false)
-          window.location.assign('/patch-notes')
+          window.location.assign('/games/daclion/patch-notes')
         }}
         onClearServerChat={() => {
           setDrawerOpen(false)
@@ -996,9 +996,10 @@ function HomeContent() {
         permission={sessionInfo?.permission}
         onOpenAdmin={() => {
           setDrawerOpen(false)
-          const adminWindow = window.open('/admin', '_blank')
+          const adminWindow = window.open('/games/daclion/admin', '_blank')
           if (adminWindow) adminWindow.opener = null
         }}
+        onPortal={() => navigate('/')}
         onLogout={() => {
           const token = document.cookie
             .split('; ')

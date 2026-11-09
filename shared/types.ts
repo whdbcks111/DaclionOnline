@@ -667,6 +667,7 @@ export type ClientPresenceState = 'focused' | 'visible' | 'hidden'
 
 // 소켓 이벤트 맵
 export interface ServerToClientEvents {
+    gameEntryResult: (result: GameEntryResult) => void
     sessionRestore: (data: SessionRestoreData) => void
     sessionInvalid: () => void
     loginResult: (result: LoginResult) => void
@@ -728,6 +729,8 @@ export interface ClientToServerEvents {
     requestUserCount: () => void
     joinChannel: (channel: string | null) => void
     requestChannelList: () => void
+    enterGame: (request: EnterGameRequest) => void
+    leaveGame: () => void
     changeNickname: (nickname: string) => void
     requestLocationInfo: () => void
     requestCompletions: (raw: string) => void
@@ -754,3 +757,7 @@ export interface ClientToServerEvents {
     deleteHudPreset: (name: string) => void
     useConsumableBundle: (request: ConsumableBundleUseRequest) => void
 }
+
+/** 포털 인증 후 게임별 최초 정보만 제출한다. 계정 ID는 서버 세션에서 결정한다. */
+export interface EnterGameRequest { gameId: 'daclion'; nickname?: string }
+export interface GameEntryResult { ok?: boolean; needsProfile?: boolean; nickname?: string; error?: string }

@@ -1,5 +1,5 @@
-@use '../styles/variables' as *;
-@use '../styles/themes' as *;
+@use '../../styles/variables' as *;
+@use '../../styles/themes' as *;
 
 .page { min-height: var(--app-viewport-height); box-sizing: border-box; padding: clamp($spacing-md, 2.5vw, $spacing-xl); color: $color-text; background: $color-bg-secondary; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: $spacing-md; margin-bottom: $spacing-md; p, h1 { margin: 0; } p { color: $color-primary; font-weight: 800; } h1 { font-size: clamp(1.35rem, 3vw, 2rem); } nav { display: flex; gap: $spacing-sm; } button { font: inherit; } }

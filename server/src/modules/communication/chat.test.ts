@@ -29,7 +29,7 @@ import {
     removeSession,
     setUserOffline,
     setUserOnline,
-} from '../auth/login.js';
+} from '../portal/login.js';
 import {
     broadcastMessageAll,
     sendMessageFiltered,
@@ -361,11 +361,13 @@ test('온라인 플레이어 mention 검색은 본인을 제외하고 닉네임 
     }
 });
 
-test('귓속말은 서로 다른 채널의 양쪽 필터 히스토리에만 남는다', () => {
+test('귓속말은 포털 이름과 별개인 게임 이름으로 양쪽 필터 히스토리에만 남는다', () => {
     const senderId = 9721;
     const targetId = 9722;
     const senderToken = createSession({ id: senderId, username: 'whisper_sender', nickname: '보내는이' });
     const targetToken = createSession({ id: targetId, username: 'whisper_target', nickname: '받는이' });
+    registerOnlinePlayer({ userId: senderId, name: '게임발신자' } as Player);
+    registerOnlinePlayer({ userId: targetId, name: '게임수신자' } as Player);
     setUserChannel(senderId, null);
     setUserChannel(targetId, '거래');
     const senderPublicCount = getChannelHistory(null).length;
@@ -384,9 +386,12 @@ test('귓속말은 서로 다른 채널의 양쪽 필터 히스토리에만 남�
         assert.equal(received?.flags?.[0]?.color, CHAT_WHISPER_DISPLAY.color);
         assert.equal(sent?.private, undefined);
         assert.equal(received?.private, undefined);
-        assert.deepEqual(sent?.content, [{ type: 'text', text: '→ 받는이: 비밀 메시지' }]);
+        assert.deepEqual(sent?.content, [{ type: 'text', text: '→ 게임수신자: 비밀 메시지' }]);
         assert.deepEqual(received?.content, [{ type: 'text', text: '비밀 메시지' }]);
+        assert.equal(received?.nickname, '게임발신자');
     } finally {
+        unregisterOnlinePlayer(senderId);
+        unregisterOnlinePlayer(targetId);
         removeSession(senderToken);
         removeSession(targetToken);
     }

@@ -5,3 +5,5 @@
 안정 ID 정의는 `data/progression` 및 `data/combat/skills.ts`와 함께 확인한다.
 
 `Ascension.ts`는 초월 단계, Lv.1000 전후 경험치 배율, 미초월 Lv.1500 상한, 환생 보너스 ID와 수치를 소유한다. `CareerProfile/SkillBook/QuestBook.resetForAscension()`은 각자의 영속 상태만 초기화하고 Player가 장비·레벨·능력치 초기화를 함께 조립한다.
+
+공통 계정 세션은 `modules/portal/login.ts`의 공개 API를 사용한다. 포털 로그인과 실제 게임 입장은 분리되며 게임 이름은 Player의 표시명을 사용한다.

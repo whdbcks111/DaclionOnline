@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JSX, RefObject, MouseEvent as RMouseEvent, WheelEvent as RWheelEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { LocationData, ZoneType, LocationObjectSpawnInfo } from '@shared/types'
-import { useSocket } from '../context/SocketContext'
+import { useSocket } from '../../context/SocketContext'
 import styles from './LocationEditor.module.scss'
 
 // ---------- 상수 ----------
@@ -58,7 +58,7 @@ export default function LocationEditor() {
   // --- 권한 체크 ---
   useEffect(() => {
     if (sessionInfo && sessionInfo.permission < 10) {
-      navigate('/home', { replace: true })
+      navigate('/games/daclion/', { replace: true })
     }
   }, [sessionInfo, navigate])
 
@@ -348,7 +348,7 @@ export default function LocationEditor() {
     <div className={styles.root}>
       {/* 상단 툴바 */}
       <div className={styles.toolbar}>
-        <button className={styles.backBtn} onClick={() => navigate('/admin')}>← 관리자 페이지</button>
+        <button className={styles.backBtn} onClick={() => navigate('/games/daclion/admin')}>← 관리자 페이지</button>
         <span className={styles.title}>위치 편집기</span>
         <div className={styles.toolbarRight}>
           {saveStatus !== 'idle' && (

@@ -1,6 +1,6 @@
 import type { PartyHudData, ShieldBarSegment } from '../../../../shared/types.js';
 import { getOnlinePlayer } from '../player/playerRegistry.js';
-import { isUserOnline } from '../auth/login.js';
+import { isUserOnline } from '../portal/login.js';
 
 export const PARTY_MAX_MEMBERS = 5;
 export const PARTY_INVITATION_TTL_MS = 60_000;

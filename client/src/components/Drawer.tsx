@@ -3,7 +3,7 @@ import styles from './Drawer.module.scss'
 import type { ChannelInfo } from '@shared/types'
 import DisplaySettingsDialog from './DisplaySettingsDialog'
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)
 
 interface Props {
     open: boolean
@@ -24,6 +24,7 @@ interface Props {
     onClearClientChat: () => void
     permission?: number
     onOpenAdmin: () => void
+    onPortal: () => void
     onLogout: () => void
     musicVolume: number
     musicMuted: boolean
@@ -54,6 +55,7 @@ export default function Drawer({
     onClearClientChat,
     permission = 0,
     onOpenAdmin,
+    onPortal,
     onLogout,
     musicVolume,
     musicMuted,
@@ -287,6 +289,7 @@ export default function Drawer({
                             관리자 페이지
                         </button>
                     )}
+                    <button className={styles.uploadButton} onClick={onPortal}>게임 포털로 돌아가기</button>
                     <button className={`${styles.uploadButton} ${styles.logoutButton}`} onClick={onLogout}>
                         로그아웃
                     </button>

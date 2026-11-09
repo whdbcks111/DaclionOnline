@@ -1,7 +1,6 @@
 import { registerCommand } from "../../modules/communication/bot.js";
 import { sendBotMessageToUser, sendNotificationToUser, sendPrivateBotMessageToUser } from "../../modules/communication/message.js";
 import { getPlayerByUserId, getOnlinePlayers } from "../../modules/player/player.js";
-import { getSessionByUserId } from "../../modules/auth/login.js";
 import { chat } from "../../utils/chatBuilder.js";
 import { getLocation } from "../../models/world/Location.js";
 import { getItemSnapshotDisplay } from "../../models/economy/Item.js";
@@ -423,7 +422,7 @@ export function initLocationCommands(): void {
                 b.color('gray', b2 => b2.text('없음\n'));
             } else {
                 for (const p of playersHere) {
-                    const nickname = getSessionByUserId(p.userId)?.nickname ?? '(알 수 없음)';
+                    const nickname = p.name;
                     const ratio = p.maxLife > 0 ? p.life / p.maxLife : 0;
                     const pct = Math.floor(ratio * 100);
                     b.text(`#${p.userId} `)

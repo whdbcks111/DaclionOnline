@@ -11,7 +11,7 @@ import { GameEventIds, subscribeGameEvent, type GameEvent } from '../../models/c
 import type Player from '../../models/actors/Player.js';
 import logger from '../../utils/logger.js';
 import { randomHex } from '../../utils/random.js';
-import { getSession } from './login.js';
+import { getSession } from '../portal/login.js';
 import { sendNotificationToUser } from '../communication/message.js';
 import { cancelNavigation } from '../world/navigation.js';
 import { getOnlinePlayer } from '../player/playerRegistry.js';

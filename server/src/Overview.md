@@ -13,3 +13,5 @@
 초기화 순서나 최상위 폴더 책임이 바뀌면 이 문서와 [`docs/architecture/overview.md`](../../docs/architecture/overview.md)를 갱신한다.
 
 각 기술 계층의 최상위에는 조립점과 `Overview.md`만 두고 구현·테스트는 도메인 폴더에 함께 둔다. 새 파일의 위치는 가장 가까운 도메인 `Overview.md`에서 결정한다.
+
+`modules/portal/`은 공통 계정과 게임 프로필 연결을 소유한다. `initGameAccess()`가 게임 입장을 별도로 초기화하며 포털 세션 복원은 Player를 로드하지 않는다.

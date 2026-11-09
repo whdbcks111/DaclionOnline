@@ -8,7 +8,7 @@ import {
     sendPrivateBotMessageToUser,
 } from "./message.js";
 import { getUserChannel } from "./channel.js";
-import { getSession } from "../auth/login.js";
+import { getSession } from "../portal/login.js";
 import type { ChatMessage, CommandInfo, CompletionItem } from "../../../../shared/types.js";
 import { parseCommandInput } from "../../../../shared/commandInput.js";
 import {
