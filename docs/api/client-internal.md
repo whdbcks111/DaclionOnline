@@ -91,3 +91,5 @@
 SEED WALK 입장은 시드 선택 없이 모든 사용자가 서버 고정 `gamebox` 공용 맵(최대 32명)에 참가한다.
 
 SEED WALK v2는 지형·가장자리 충돌 없는 초원이며 `SeedWalkWorld.say(userId, connectionId, text, now)`가 최신 말풍선을 5초 동안 메모리로 소유한다. 선택적 `player.bubble.text` snapshot과 `seedWalkChat(text)`를 사용하며 채팅은 DB/로그에 저장하지 않는다. 클라이언트는 Enter/채팅 버튼의 중앙 하단 입력 폼과 캐릭터 위 말풍선만 표시한다.
+
+SEED WALK 플레이 중에는 헤더·툴바·하단 안내·방향/좌표 라벨 없이 canvas가 전체 viewport를 채운다. Esc 또는 아이콘 메뉴 버튼이 native modal dialog를 열며 계속하기·테마·맵 나가기·포털 이동과 접속 인원을 제공한다. 메뉴 중 자신의 입력만 정지하고 멀티플레이 월드는 계속된다. Esc는 채팅이 열려 있으면 채팅만 취소하고, 그 외 메뉴를 토글한다. dialog의 기본 focus trap을 사용한다.

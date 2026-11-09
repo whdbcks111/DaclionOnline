@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import Phaser from 'phaser'
 import type { SeedWalkJoinResult, SeedWalkSnapshot } from '@shared/seedWalk'
 import { SEED_WALK_VERSION, SEED_WALK_CHAT_LIMIT } from '@shared/seedWalk'
+import { useTheme } from '../../context/ThemeContext'
 import { useSocket } from '../../context/SocketContext'
 import { SeedWalkScene } from './SeedWalkScene'
 import styles from './SeedWalk.module.scss'
@@ -14,6 +15,10 @@ const KEY_AXES: Record<string, readonly [number, number]> = {
 }
 
 export default function SeedWalk() {
+  const { theme, toggleTheme } = useTheme()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const paused = useRef(false)
+  const menu = useRef<HTMLDialogElement>(null)
   const { socket, sessionInfo, isConnected, isSessionReady } = useSocket()
   const [state, setState] = useState<SeedWalkSnapshot | null>(null)
   const [selfId, setSelfId] = useState<number | null>(null)
@@ -35,7 +40,7 @@ export default function SeedWalk() {
 
   const sendInput = () => {
     if (!socket?.connected || !active.current) return
-    if (chatEditing.current) { socket.emit('seedWalkInput', { seq: ++sequence.current, x: 0, y: 0 }); return }
+    if (chatEditing.current || paused.current) { socket.emit('seedWalkInput', { seq: ++sequence.current, x: 0, y: 0 }); return }
     let x = 0, y = 0
     for (const key of keys.current) {
       const axis = KEY_AXES[key]
@@ -61,8 +66,15 @@ export default function SeedWalk() {
     sendInput()
   }
 
-  const openChat = () => { stop(); chatEditing.current = true; setChatOpen(true) }
+  const openChat = () => { if (paused.current) return; stop(); chatEditing.current = true; setChatOpen(true) }
   const closeChat = () => { chatEditing.current = false; setChatOpen(false); setChatText(''); chatInput.current?.blur() }
+  const closeMenu = () => { paused.current = false; setMenuOpen(false) }
+  const openMenu = () => { closeChat(); stop(); paused.current = true; setMenuOpen(true) }
+  useEffect(() => {
+    if (menuOpen) menu.current?.showModal()
+    else menu.current?.close()
+  }, [menuOpen])
+  useEffect(() => { if (!state || !sessionInfo) closeMenu() }, [!!state, !!sessionInfo])
   useEffect(() => { if (chatOpen) chatInput.current?.focus() }, [chatOpen])
   useEffect(() => { if (!state || !isConnected) closeChat() }, [!!state, isConnected])
 
@@ -114,6 +126,14 @@ export default function SeedWalk() {
     const down = (event: KeyboardEvent) => {
       if (event.isComposing || event.keyCode === 229) return
       const editable = event.target instanceof HTMLElement && (event.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName))
+      if (event.code === 'Escape' && !event.repeat) {
+        event.preventDefault()
+        if (chatEditing.current) closeChat()
+        else if (paused.current) closeMenu()
+        else openMenu()
+        return
+      }
+      if (paused.current) return
       if (event.code === 'Enter' && !editable && !event.repeat) { event.preventDefault(); openChat(); return }
       if (chatEditing.current) return
       if (!KEY_AXES[event.code] || (event.target instanceof HTMLElement && (event.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)))) return
@@ -132,7 +152,7 @@ export default function SeedWalk() {
   }, [!!state, socket, isConnected, sessionInfo?.userId])
 
   const leave = () => {
-    closeChat(); stop(); active.current = false; socket?.emit('seedWalkLeave')
+    closeMenu(); closeChat(); stop(); active.current = false; socket?.emit('seedWalkLeave')
     latest.current = null; setState(null); setSelfId(null); setJoining(false)
   }
   const start = () => {
@@ -142,20 +162,18 @@ export default function SeedWalk() {
     socket?.emit('seedWalkJoin')
   }
   const playing = !!state && !!sessionInfo
-  const me = state?.players.find(player => player.id === selfId)
   return <main className={styles.page}>
-    <header className={styles.header}>
+    {!playing && <header className={styles.header}>
       <div><Link to="/" className={styles.brand}>GAME BOX</Link><span className={styles.divider}>/</span><strong>SEED WALK</strong></div>
-      <nav>{playing && <button onClick={leave}>맵 나가기</button>}<Link to="/">포털로 돌아가기</Link></nav>
-    </header>
+      <nav><Link to="/">포털로 돌아가기</Link></nav>
+    </header>}
     {playing ? <>
-      <div className={styles.toolbar}><span>{state.players.length}명 접속</span><span className={styles.keys}>WASD / 방향키로 이동</span></div>
       <div className={styles.stage}>
         <div className={styles.canvas} ref={stage} aria-label="SEED WALK 실시간 멀티플레이 맵" />
         {(!isConnected || joining) && <div className={styles.connection} role="status">다시 연결하고 있습니다…</div>}
         {state.players.filter(player => player.bubble).map(player => <div key={player.id} className={styles.bubble}
           ref={element => { if (element) bubbles.current.set(player.id, element); else bubbles.current.delete(player.id) }}>{player.bubble!.text}</div>)}
-        <button className={styles.chatButton} onClick={openChat} disabled={!isConnected || joining}>채팅</button>
+        <button className={styles.chatButton} onClick={openChat} disabled={!isConnected || joining} aria-label="채팅"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 4h16v12H9l-5 4Z" fill="none" stroke="currentColor" strokeWidth="1.6" /></svg></button>
         {chatOpen && <form className={styles.chatForm} onSubmit={event => {
           event.preventDefault()
           if (!chatEditing.current) return
@@ -165,32 +183,38 @@ export default function SeedWalk() {
           <input ref={chatInput} aria-label="채팅 메시지" value={chatText} onChange={event => setChatText(event.target.value)} maxLength={SEED_WALK_CHAT_LIMIT}
             autoComplete="off" placeholder="메시지 입력" onKeyDown={event => {
               if (event.nativeEvent.isComposing || event.keyCode === 229) { if (event.key === 'Enter') event.preventDefault(); return }
-              if (event.key === 'Escape') { event.preventDefault(); closeChat() }
+              if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeChat() }
             }} />
           <button type="submit" disabled={!isConnected}>보내기</button><button type="button" onClick={closeChat} aria-label="채팅 닫기">×</button>
         </form>}
-        <div className={styles.compass}>N ↑</div>
+        <button className={styles.menuButton} aria-label="메뉴 열기" onClick={openMenu}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" strokeWidth="1.6" /></svg></button>
+        <dialog ref={menu} className={styles.menu} aria-labelledby="walk-menu-title" onCancel={event => { event.preventDefault(); closeMenu() }} onClick={event => { if (event.target === event.currentTarget) closeMenu() }}>
+          <div className={styles.menuContent}>
+            <h2 id="walk-menu-title">SEED WALK</h2>
+            <p>{state.players.length}명 접속</p>
+            <button onClick={closeMenu} autoFocus>계속하기</button>
+            <button onClick={toggleTheme}>{theme === 'dark' ? '밝은 테마' : '어두운 테마'}</button>
+            <button onClick={leave}>맵 나가기</button>
+            <Link to="/">포털로 돌아가기</Link>
+          </div>
+        </dialog>
         <div className={styles.joystick} role="group" aria-label="드래그해서 이동하는 조이스틱" tabIndex={0}
-          onPointerDown={event => { if (chatEditing.current || stickPointer.current !== null) return; event.preventDefault(); stickPointer.current = event.pointerId; event.currentTarget.setPointerCapture(event.pointerId); moveStick(event) }}
+          onPointerDown={event => { if (paused.current || chatEditing.current || stickPointer.current !== null) return; event.preventDefault(); stickPointer.current = event.pointerId; event.currentTarget.setPointerCapture(event.pointerId); moveStick(event) }}
           onPointerMove={event => { if (event.pointerId === stickPointer.current) { event.preventDefault(); moveStick(event) } }}
           onPointerUp={event => { if (event.pointerId === stickPointer.current) releaseStick() }}
           onPointerCancel={event => { if (event.pointerId === stickPointer.current) releaseStick() }}
           onLostPointerCapture={event => { if (event.pointerId === stickPointer.current) releaseStick() }}>
           <span className={styles.stickRing} aria-hidden="true" />
           <span className={styles.stickThumb} aria-hidden="true" style={{ transform: `translate(-50%, -50%) translate(${stick.x * 2.2}rem, ${stick.y * 2.2}rem)` }} />
-          <span className={styles.stickLabel}>이동</span>
         </div>
-        <span className={styles.position}>{me ? `${Math.floor(me.x)}, ${Math.floor(me.y)}` : '접속 중'}</span>
       </div>
-      <footer className={styles.status}><span>WASD · 방향키 · 모바일 조이스틱</span><span>Enter로 채팅</span></footer>
       {error && <p className={styles.error} role="alert">{error}</p>}
     </> : <section className={styles.lobby}>
-      <div className={styles.intro}><h1>함께 걷는 작은 초원.</h1><p>초원을 자유롭게 산책하세요.</p></div>
+      <div className={styles.intro}><h1>SEED WALK</h1></div>
       <div className={styles.card}><h2>산책 시작하기</h2>
         <form onSubmit={event => { event.preventDefault(); start() }}>
           {isSessionReady && !sessionInfo ? <Link className={styles.login} to="/login?next=seed-walk">로그인하고 시작</Link> : <button disabled={!isConnected || !sessionInfo || joining}>{joining ? '맵에 접속 중…' : '게임 시작 →'}</button>}
         </form>
-        <p className={styles.hint}>WASD · 방향키 · 모바일 조이스틱<br />최대 32명 · 전투 없이 자유로운 이동</p>
         {error && <p className={styles.error} role="alert">{error}</p>}
       </div>
     </section>}

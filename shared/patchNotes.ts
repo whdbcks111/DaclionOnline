@@ -73,6 +73,9 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.58', '2026-11-09',
+        [CHANGED, 'SEED WALK의 헤더와 상시 안내를 없애 게임 화면을 넓혔습니다. Esc 또는 메뉴 버튼에서 게임을 계속하거나 테마를 바꾸고, 맵에서 나가거나 포털로 돌아갈 수 있습니다.'],
+    ),
     definePatchNote('1.0.57', '2026-11-09',
         [CHANGED, 'SEED WALK의 연못·길·바위와 경계벽을 없애고, 어디로든 걸어갈 수 있는 초원으로 변경했습니다.'],
         [FEATURE, 'Enter 또는 채팅 버튼으로 메시지를 보내면 캐릭터 위 말풍선에 잠시 표시됩니다.'],

@@ -1,6 +1,6 @@
 import { isDaclionSite } from './utils/siteNavigation'
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { SocketProvider } from './context/SocketContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ThemeToggle from './components/ThemeToggle'
@@ -17,9 +17,14 @@ const AdminPage = lazy(() => import('./games/daclion/AdminPage'))
 const GameGuide = lazy(() => import('./games/daclion/GameGuide'))
 const PatchNotes = lazy(() => import('./games/daclion/PatchNotes'))
 
+function PortalThemeToggle() {
+  const { pathname } = useLocation()
+  return pathname.replace(/\/$/, '') === '/games/seed-walk' ? null : <ThemeToggle />
+}
+
 export default function App() {
   return <ThemeProvider><SocketProvider><BrowserRouter>
-    <ThemeToggle /><Notification />
+    <PortalThemeToggle /><Notification />
     <Suspense fallback={<p role="status">화면을 불러오고 있습니다…</p>}><Routes>
       <Route path="/" element={isDaclionSite() ? <Navigate to="/games/daclion/" replace /> : <Portal />} />
       <Route path="/login" element={<Login />} />

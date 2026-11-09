@@ -7,26 +7,16 @@
 .divider { color: var(--color-text-tertiary); }
 .header strong { font-size: .9rem; letter-spacing: .08em; }
 .header button { margin: 0; padding: .5rem .75rem; background: transparent; border: 1px solid var(--color-border); color: var(--color-text); }
-.toolbar { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; padding: .7rem 1rem; font-size: .8rem; background: var(--color-background-secondary); }
-.seed { overflow-wrap: anywhere; }
-.seed strong { margin-left: .5rem; color: var(--color-primary); }
-.keys { margin-left: auto; color: var(--color-text-secondary); }
 .stage { flex: 1; min-height: 15rem; position: relative; overflow: hidden; background: #90b77d; }
 .canvas { position: absolute; inset: 0; }
 .canvas canvas { display: block; }
 .connection { position: absolute; inset: 0; display: grid; place-items: center; color: white; background: #22352de6; z-index: 2; }
-.compass { position: absolute; right: 1rem; top: 1rem; font-weight: 800; color: #253a30; background: #f4f1d9; padding: .5rem .7rem; border-radius: .3rem; }
-.position { position: absolute; right: 1rem; bottom: 1rem; color: #253a30; background: #f4f1d9; padding: .3rem .65rem; border-radius: .3rem; font-size: .75rem; font-variant-numeric: tabular-nums; }
-.status { flex: none; display: flex; flex-wrap: wrap; justify-content: space-between; padding: .7rem 1rem; gap: .3rem 1rem; font-size: .75rem; color: var(--color-text-secondary); }
 .joystick { display: none; position: absolute; left: max(1rem, env(safe-area-inset-left)); bottom: max(1rem, env(safe-area-inset-bottom)); width: 8rem; height: 8rem; border: 1px solid #4c654db3; border-radius: 50%; background: #f4f1d9a6; touch-action: none; user-select: none; -webkit-user-select: none; }
 .stickRing { position: absolute; inset: 1rem; border: 1px solid #4c654d59; border-radius: 50%; pointer-events: none; }
 .stickThumb { position: absolute; left: 50%; top: 50%; width: 3rem; height: 3rem; background: #edf0d7; border: 2px solid #4c654d; border-radius: 50%; pointer-events: none; }
-.stickLabel { position: absolute; bottom: .35rem; width: 100%; text-align: center; color: #3b523d; font-size: .65rem; pointer-events: none; }
 .lobby { flex: 1; display: grid; grid-template-columns: 1fr minmax(0, 26rem); align-items: center; gap: clamp(2rem, 6vw, 6rem); width: min(68rem, 100%); margin: auto; padding: clamp(1.5rem, 5vw, 4rem); }
-.eyebrow { color: var(--color-primary); font-size: .75rem; font-weight: 700; letter-spacing: .12em; }
 .intro h1 { font-size: clamp(1.9rem, 4vw, 3.3rem); line-height: 1.3; letter-spacing: -.04em; margin-block: 1rem 1.5rem; word-break: keep-all; }
 .intro p, .card > p { color: var(--color-text-secondary); line-height: 1.8; font-size: .9rem; }
-.legend { display: flex; flex-wrap: wrap; gap: 1.25rem; margin-top: 2rem; font-size: .85rem; color: var(--color-text-secondary); }
 .card { min-width: 0; border: 1px solid var(--color-border); border-radius: .2rem; background: var(--color-background-secondary); padding: clamp(1.25rem, 3vw, 2rem); }
 .card h2 { font-size: 1.35rem; margin-bottom: .5rem; }
 .card form { display: grid; gap: .6rem; margin-top: 1.5rem; }
@@ -38,12 +28,20 @@
 .card .hint { margin-top: 1rem; font-size: .75rem; }
 .error { color: var(--color-danger) !important; padding: .75rem; font-size: .85rem; }
 .page :is(input, button, a):focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
-@media (max-width: 48rem) { .lobby { grid-template-columns: 1fr; max-width: 30rem; gap: 1.5rem; }.intro h1 { font-size: 1.9rem; }.legend { margin-top: 1rem; }.keys { display: none; }.header { gap: .25rem; }.status { font-size: .65rem; } }
+@media (max-width: 48rem) { .lobby { grid-template-columns: 1fr; max-width: 30rem; gap: 1.5rem; }.intro h1 { font-size: 1.9rem; }.header { gap: .25rem; } }
 @media (pointer: coarse), (max-width: 48rem) { .joystick { display: block; } }
 
 .bubble { position: absolute; left: -100vw; top: -100vh; transform: translate(-50%, -100%); max-width: min(16rem, 75%); padding: .45rem .65rem; background: #fffdf3; color: #253a30; border: 1px solid #506349; border-radius: .2rem; font-size: .85rem; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; pointer-events: none; z-index: 1; }
 .bubble::after { content: ''; position: absolute; top: 100%; left: calc(50% - .3rem); border: .3rem solid transparent; border-top-color: #506349; }
-.chatButton { position: absolute; right: 1rem; bottom: 3.5rem; min-height: 2.75rem; padding: .5rem 1rem; background: #f4f1d9; color: #253a30; border: 1px solid #506349; border-radius: .2rem; }
+.chatButton { position: absolute; right: 1rem; bottom: max(1rem, env(safe-area-inset-bottom)); min-height: 2.75rem; padding: .5rem 1rem; background: #f4f1d9; color: #253a30; border: 1px solid #506349; border-radius: .2rem; }
 .chatForm { position: absolute; left: 50%; top: 62%; transform: translate(-50%, -50%); width: min(30rem, calc(100% - 2rem)); display: flex; gap: .4rem; padding: .5rem; background: var(--color-background-secondary); border: 1px solid var(--color-border); z-index: 3; }
 .chatForm input { flex: 1; min-width: 0; width: 0; margin: 0; min-height: 2.75rem; font-size: 1rem; color: var(--color-text); background: var(--color-background); border: 1px solid var(--color-border); border-radius: .15rem; padding: .5rem; }
 .chatForm button { flex: none; margin: 0; min-height: 2.75rem; padding: .5rem .6rem; border-radius: .15rem; }
+
+.menuButton { position: absolute; right: max(1rem, env(safe-area-inset-right)); top: max(1rem, env(safe-area-inset-top)); display: grid; place-items: center; width: 2.75rem; height: 2.75rem; margin: 0; background: #f4f1d9; color: #253a30; border: 1px solid #506349; border-radius: .15rem; }
+.menu { position: fixed; inset: 0; width: min(22rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); margin: auto; padding: 1.5rem; border: 1px solid var(--color-border); border-radius: .15rem; color: var(--color-text); background: var(--color-background-secondary); }
+.menu::backdrop { background: #17231bb3; }
+.menuContent { display: grid; gap: .75rem; }
+.menuContent h2 { font-size: 1.25rem; margin: 0; }
+.menuContent p { color: var(--color-text-secondary); font-size: .85rem; margin: 0 0 .5rem; }
+.menuContent button, .menuContent a { min-height: 2.75rem; display: grid; place-items: center; margin: 0; padding: .65rem; border: 1px solid var(--color-border); border-radius: .15rem; background: var(--color-background); color: var(--color-text); font-size: .9rem; }
