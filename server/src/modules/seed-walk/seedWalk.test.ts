@@ -20,7 +20,7 @@ class TestSocket {
     send(event: string, payload?: unknown) { this.handlers.get(event)!(payload); }
 }
 
-test('인증된 계정만 같은 시드에서 만나며 입력과 로그아웃은 해당 연결의 캐릭터에만 적용된다', t => {
+test('요청한 시드와 무관하게 인증된 계정은 공용 맵에서 만나며 입력과 로그아웃은 해당 연결의 캐릭터에만 적용된다', t => {
     const io = initSocket(createServer(), '*');
     initSeedWalk();
     const snapshots: SeedWalkSnapshot[] = [];
@@ -33,9 +33,10 @@ test('인증된 계정만 같은 시드에서 만나며 입력과 로그아웃�
         for (const socket of [a, b, guest]) for (const listener of io.sockets.listeners('connection')) listener(socket as never);
         guest.send('seedWalkJoin', { seed: 'test' });
         assert.equal(guest.result?.ok, false);
-        a.send('seedWalkJoin', { seed: 'test' }); b.send('seedWalkJoin', { seed: 'test' });
+        a.send('seedWalkJoin', { seed: 'test' }); b.send('seedWalkJoin', { seed: 'different-world' });
         assert.ok(a.result?.ok && b.result?.ok);
         assert.equal(b.result.state.players.length, 2);
+        assert.equal(b.result.state.seed, 'gamebox');
         assert.equal(a.result.state.worldId, b.result.state.worldId);
         const before = b.result.state.players.find(player => player.id === 99601)!;
         a.send('seedWalkInput', { seq: 1, x: 1, y: 0, userId: 99602 });

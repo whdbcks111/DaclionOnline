@@ -2,7 +2,7 @@ import type { Socket } from 'socket.io';
 import { getIO } from '../infrastructure/socket.js';
 import { getSession } from '../portal/login.js';
 import { SeedWalkWorld } from '../../models/seed-walk/SeedWalkWorld.js';
-import { normalizeSeedWalkSeed, isSeedWalkInput, type SeedWalkJoinResult } from '../../../../shared/seedWalk.js';
+import { SEED_WALK_WORLD_SEED, isSeedWalkInput, type SeedWalkJoinResult } from '../../../../shared/seedWalk.js';
 import { FixedWindowRateLimiter } from '../../utils/rateLimit.js';
 
 const worlds = new Map<string, SeedWalkWorld>();
@@ -25,21 +25,15 @@ function leave(socket: Socket): void {
 
 export function initSeedWalk(): void {
     getIO().on('connection', socket => {
-        socket.on('seedWalkJoin', (request: unknown) => {
+        socket.on('seedWalkJoin', () => {
             const reply = (result: SeedWalkJoinResult) => socket.emit('seedWalkJoined', result);
             const session = socket.data.sessionToken ? getSession(socket.data.sessionToken) : undefined;
             if (!session) { reply({ ok: false, error: 'GAME BOX 로그인이 필요합니다.' }); return; }
             if (!joinLimiter.consume(socket.id).allowed) { reply({ ok: false, error: '접속 요청이 많습니다. 잠시 후 다시 시도해주세요.' }); return; }
             if (socket.data.onlineUserId !== undefined) { reply({ ok: false, error: '기존 게임에서 나온 뒤 접속해주세요.' }); return; }
-            const seed = normalizeSeedWalkSeed((request as { seed?: unknown } | null)?.seed);
-            if (seed === undefined) { reply({ ok: false, error: '시드는 48자 이하로 입력해주세요.' }); return; }
-            // An account cannot occupy several worlds by opening multiple tabs.
-            for (const member of members.values()) if (member.userId === session.userId && member.seed !== seed && member.socket.id !== socket.id) {
-                reply({ ok: false, error: '다른 창에서 다른 시드에 접속 중입니다. 해당 창에서 먼저 나와주세요.' }); return;
-            }
+            const seed = SEED_WALK_WORLD_SEED;
             let world = worlds.get(seed);
-            if (!world && worlds.size >= 16) { reply({ ok: false, error: '현재 맵이 모두 사용 중입니다. 잠시 후 다시 접속해주세요.' }); return; }
-            if (world && !world.hasPlayer(session.userId) && world.size >= 32) { reply({ ok: false, error: '이 맵은 가득 찼습니다. 다른 시드를 선택해주세요.' }); return; }
+            if (world && !world.hasPlayer(session.userId) && world.size >= 32) { reply({ ok: false, error: '이 맵은 가득 찼습니다. 잠시 후 다시 접속해주세요.' }); return; }
             leave(socket);
             world = worlds.get(seed) ?? new SeedWalkWorld(seed);
             world.join(session.userId, session.nickname, socket.id);

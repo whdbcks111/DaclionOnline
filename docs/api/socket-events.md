@@ -141,7 +141,7 @@
 
 | 이벤트 | 방향 | 계약 |
 | --- | --- | --- |
-| `seedWalkJoin` | client → server | `{ seed: string }`, GAME BOX 세션 필수. NFC/trim/48자 제한, 계정 ID·닉네임은 서버 세션에서 결정 |
+| `seedWalkJoin` | client → server | 인자 없음, GAME BOX 세션 필수. 서버 고정 `gamebox` 공용 맵에 입장하며 예전 클라이언트의 seed payload는 무시한다. 계정 ID·닉네임은 서버 세션에서 결정 |
 | `seedWalkJoined` | server → client | `{ ok: true, selfId, state }` 또는 `{ ok: false, error }` |
 | `seedWalkInput` | client → server | `{ seq, x, y }`, 증가하는 safe integer seq와 [-1,1] 범위의 유한 방향축만 허용. 연결 소유권·초당 60회 상한 검사 |
 | `seedWalkLeave` | client → server | 해당 연결의 게임 참가만 해제하고 포털 로그인은 유지 |

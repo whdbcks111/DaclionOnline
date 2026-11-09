@@ -14,7 +14,7 @@
 - `cosmetics.ts`: 원형/카드 공용 프레임과 30종 채팅 감정표현의 안정 ID, 표시명, 투명 이미지 key, Gold·레벨·초월·낚시 뽑기 전용 조건 및 뽑기 후보 정책을 공유한다.
 - `commandInput.ts`: 슬래시 명령과 슬래시 없는 별칭 입력을 같은 방식으로 첫 토큰/나머지 인자로 분리하는 공용 parser.
 - `adaptiveMusic.ts`: 13개 `MusicScale`, 실제 `4/4·3/4` `MusicMeter`, 탐험·전투·보스 `MusicCombatState`, 현재 월드 대표색 35개의 고정 2마디 `motifA·responseA·motifB·cadence` 악구와 `A8–A′8–B8–A″8` 32마디 형식, 한 마디 단위 화성·chord-linked bass, 7개 rhythm, 8개 Omni timbre/envelope, 탐험 음역·밝기 mix, 음량 곡선·전환 정책과 기기 storage API. `composeLocationScore()`는 lead/counter를 자연스러운 `67~96`에 두고 pad `72~96`과 bass `36~67`만 +12반음 조옮김한 PPQ 192 정수 tick schedule을 만든다. 같은 권역의 훅은 보존한 채 locationId seed로 B구간과 voicing·BPM·타악 편곡만 구분하며 알 수 없는 색을 루미나르로 안전하게 폴백한다.
-- `patchNotes.ts`: 작업 묶음별 SemVer 사용자 공개 변경 기록, 배포일, `[+] 기능/콘텐츠`, `[/] 수정`, `[-] 삭제` 클래스형 분류와 버전 역순 불변 snapshot 조회 API. `v` 접두사를 정규화하며 서버 명령과 클라이언트 화면이 같은 데이터를 사용한다. 현재 v1.0.54는 GAME BOX와 DaclionOnline의 도메인 분리와 로그인 연결을 안내한다.
+- `patchNotes.ts`: 작업 묶음별 SemVer 사용자 공개 변경 기록, 배포일, `[+] 기능/콘텐츠`, `[/] 수정`, `[-] 삭제` 클래스형 분류와 버전 역순 불변 snapshot 조회 API. `v` 접두사를 정규화하며 서버 명령과 클라이언트 화면이 같은 데이터를 사용한다. 현재 v1.0.56은 포털 안내 문구 정리와 SEED WALK 공용 맵 입장을 안내한다.
 - `minigames.ts`: 종류별 미니게임 세션, 준비·실시간 축·실시간 action·결과 확정 요청 DTO와 20ms 입력 병합·2,048개 상한 API. 낚시는 version 1 `FishingCaptureProof`와 불변 입력 snapshot, 100ms 간격+최종 그물·물고기·게이지 궤적 생성기를 제공한다. 가마솥 추적은 클래스형 경로·속도 enum과 직렬화 key, 액체 반경 안의 궤도·팔자·네잎·나선·번개 경로, seed 변형·맥동/급가속·방향 반전 일정, 절대 pointer 입력과 100ms 목표·pointer·게이지 proof, 목표 유지율 70%와 중심 정밀도 30%를 합친 정확도를 공유한다. 낚시 포획, 실제 패턴 label·보스별 단색 theme·난이도 1~10·성장형 연쇄 폭발·세 줄 연사·교차 레이저를 지원하는 위험 회피, 난이도 1~12의 무작위 위상·진행 방향 정박/엇박/연속박자 생성·가장 가까운 note 우선 타격 판정·품질 보정을 서버와 클라이언트가 같은 결정론 simulator로 재생한다.
 - `tags.ts`: `namespace:path` 검증, 액티브/패시브와 직업·원소 공유 쿨다운 계열, 무기·Entity·은신·투사체/탄약/도구/미끼/물고기/스킬북/가방, 제작 부품과 활시위/화살대 호환 소재, 분기형 `location:dungeon`을 포함한 지역·속성 공용 태그 ID와 raw Set을 숨기는 `TagCollection/TagReadable/TagQuery` API.
 - 은빛그물 숲 확장은 `location:forest` 권역과 `shop:hunter` 상점 분류를 동일한 공용 태그 API에 추가한다.
@@ -33,3 +33,5 @@
 `seedWalk.ts`는 SEED WALK v1의 결정론 시드 맵, 클래스형 Terrain enum, 충돌·속도 계산과 입력/상태 DTO를 소유한다. `types.ts`의 seedWalkJoin/Input/Leave와 seedWalkJoined/State 이벤트가 이 계약을 사용한다.
 
 초원 색상은 `seedWalkGrassNoise/seedWalkGrassColor`의 시드 기반 3-octave Perlin 노이즈로 위치별 밝기를 은은하게 바꾼다. 시드가 같으면 색 분포도 같고, 이 시각 표현은 기존 지형/충돌 v1 fixture를 변경하지 않는다.
+
+`SEED_WALK_WORLD_SEED`는 서버 공용 맵의 고정 시드다. `seedWalkJoin`은 인자 없이 호출하며 클라이언트가 맵을 선택하지 않는다.

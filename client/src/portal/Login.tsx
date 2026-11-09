@@ -12,7 +12,7 @@ function Login() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const destination = params.get("next") === "daclion" ? "/games/daclion/"
-    : params.get("next") === "seed-walk" ? `/games/seed-walk/?seed=${encodeURIComponent(params.get("seed") ?? "gamebox")}` : "/";
+    : params.get("next") === "seed-walk" ? "/games/seed-walk/" : "/";
   const { socket, isConnected, sessionInfo, isSessionReady } = useSocket();
   
   const idRef = useRef<HTMLInputElement>(null);
@@ -73,7 +73,7 @@ function Login() {
     setError('서버가 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
   }
 
-  return <AuthLayout title="로그인" description="GAME BOX 계정으로 로그인하고 모험을 이어가세요."
+  return <AuthLayout title="로그인"
     footer={<p>아직 계정이 없나요? <Link to='/register'>회원가입</Link></p>}>
     <form className={styles.form} onSubmit={event => { event.preventDefault(); login(); }}>
       <div className={styles.field}>
@@ -86,7 +86,7 @@ function Login() {
       </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <button className={styles.submit} type="submit" disabled={!isConnected}>로그인</button>
-      <p className={styles.hint}>{isConnected ? '기존 DaclionOnline 계정으로도 로그인할 수 있어요.' : '서버에 연결하고 있습니다…'}</p>
+      {!isConnected && <p className={styles.hint} role="status">서버에 연결하고 있습니다…</p>}
     </form>
   </AuthLayout>;
 }

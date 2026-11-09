@@ -143,7 +143,7 @@ function Register() {
         setError('서버가 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
     }
 
-    return <AuthLayout title="계정 만들기" description="한 번 가입하고, GAME BOX의 게임을 함께 즐겨보세요."
+    return <AuthLayout title="계정 만들기"
         footer={<p>이미 계정이 있나요? <Link to='/login'>로그인</Link></p>}>
         <form className={styles.form} onSubmit={event => { event.preventDefault(); register(); }}>
             <div className={styles.field}>
@@ -160,7 +160,6 @@ function Register() {
                         }} />
                     <button className={styles.secondary} type="button" onClick={sendVerifyCode} disabled={!isConnected || isCodeVerified}>{isVerifyCodeSent ? '다시 받기' : '인증번호 받기'}</button>
                 </div>
-                <p className={styles.hint}>계정 확인과 비밀번호 찾기에 사용해요.</p>
             </div>
             {isVerifyCodeSent && !isCodeVerified && <div className={styles.field}>
                 <label htmlFor="register-code">이메일 인증번호</label>
@@ -181,7 +180,6 @@ function Register() {
             <div className={styles.field}>
                 <label htmlFor="register-nickname">포털 닉네임</label>
                 <input id="register-nickname" type="text" name="nickname" ref={nicknameRef} placeholder="GAME BOX에서 사용할 이름" maxLength={12} autoComplete="nickname" required />
-                <p className={styles.hint}>게임 속 캐릭터 이름은 게임을 시작할 때 따로 정할 수 있어요.</p>
             </div>
             {error && <p className={styles.error} role="alert">{error}</p>}
             <button className={styles.submit} type="submit" disabled={!isConnected}>GAME BOX 시작하기</button>

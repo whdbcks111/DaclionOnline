@@ -732,7 +732,7 @@ export interface ClientToServerEvents {
     requestUserCount: () => void
     joinChannel: (channel: string | null) => void
     requestChannelList: () => void
-    seedWalkJoin: (request: { seed: string }) => void
+    seedWalkJoin: () => void
     seedWalkInput: (input: SeedWalkInput) => void
     seedWalkLeave: () => void
     enterGame: (request: EnterGameRequest) => void

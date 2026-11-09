@@ -1,5 +1,6 @@
 /** SEED WALK map/physics v1. Changing generation requires a new version. */
 export const SEED_WALK_VERSION = 1;
+export const SEED_WALK_WORLD_SEED = 'gamebox';
 export const SEED_WALK_SIZE = 64;
 export const SEED_WALK_TILE = 32;
 export const SEED_WALK_SPEED = 180;

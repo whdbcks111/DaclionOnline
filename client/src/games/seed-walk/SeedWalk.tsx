@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import Phaser from 'phaser'
 import type { SeedWalkJoinResult, SeedWalkSnapshot } from '@shared/seedWalk'
-import { normalizeSeedWalkSeed, SEED_WALK_VERSION } from '@shared/seedWalk'
+import { SEED_WALK_VERSION } from '@shared/seedWalk'
 import { useSocket } from '../../context/SocketContext'
 import { SeedWalkScene } from './SeedWalkScene'
 import styles from './SeedWalk.module.scss'
@@ -15,15 +15,13 @@ const KEY_AXES: Record<string, readonly [number, number]> = {
 
 export default function SeedWalk() {
   const { socket, sessionInfo, isConnected, isSessionReady } = useSocket()
-  const [params, setParams] = useSearchParams()
-  const [seed, setSeed] = useState(normalizeSeedWalkSeed(params.get('seed') ?? '') ?? 'gamebox')
   const [state, setState] = useState<SeedWalkSnapshot | null>(null)
   const [selfId, setSelfId] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [joining, setJoining] = useState(false)
   const stage = useRef<HTMLDivElement>(null)
   const latest = useRef<SeedWalkSnapshot | null>(null)
-  const activeSeed = useRef<string | null>(null)
+  const active = useRef(false)
   const sequence = useRef(0)
   const keys = useRef(new Set<string>())
   const touch = useRef({ x: 0, y: 0 })
@@ -31,7 +29,7 @@ export default function SeedWalk() {
   const [stick, setStick] = useState({ x: 0, y: 0 })
 
   const sendInput = () => {
-    if (!socket?.connected || !activeSeed.current) return
+    if (!socket?.connected || !active.current) return
     let x = 0, y = 0
     for (const key of keys.current) {
       const axis = KEY_AXES[key]
@@ -59,7 +57,7 @@ export default function SeedWalk() {
 
   useEffect(() => {
     if (isSessionReady && !sessionInfo) {
-      keys.current.clear(); touch.current = { x: 0, y: 0 }; activeSeed.current = null; latest.current = null;
+      keys.current.clear(); touch.current = { x: 0, y: 0 }; active.current = false; latest.current = null;
       setState(null); setSelfId(null); setJoining(false)
     }
   }, [isSessionReady, sessionInfo?.userId])
@@ -68,8 +66,8 @@ export default function SeedWalk() {
     if (!socket || !isConnected || !sessionInfo) return
     const joined = (result: SeedWalkJoinResult) => {
       setJoining(false)
-      if (!result.ok) { setError(result.error); activeSeed.current = null; latest.current = null; setState(null); setSelfId(null); return }
-      if (result.state.version !== SEED_WALK_VERSION) { setError('게임이 업데이트되었습니다. 새로고침해주세요.'); socket.emit('seedWalkLeave'); activeSeed.current = null; return }
+      if (!result.ok) { setError(result.error); active.current = false; latest.current = null; setState(null); setSelfId(null); return }
+      if (result.state.version !== SEED_WALK_VERSION) { setError('게임이 업데이트되었습니다. 새로고침해주세요.'); socket.emit('seedWalkLeave'); active.current = false; return }
       latest.current = result.state
       setState(result.state); setSelfId(result.selfId); setError('')
     }
@@ -79,7 +77,7 @@ export default function SeedWalk() {
     }
     socket.on('seedWalkJoined', joined)
     socket.on('seedWalkState', snapshot)
-    if (activeSeed.current) { setJoining(true); sequence.current = 0; socket.emit('seedWalkJoin', { seed: activeSeed.current }) }
+    if (active.current) { setJoining(true); sequence.current = 0; socket.emit('seedWalkJoin') }
     return () => { socket.off('seedWalkJoined', joined); socket.off('seedWalkState', snapshot); socket.emit('seedWalkLeave') }
   }, [socket, isConnected, sessionInfo?.userId])
 
@@ -116,16 +114,14 @@ export default function SeedWalk() {
   }, [!!state, socket, isConnected, sessionInfo?.userId])
 
   const leave = () => {
-    stop(); activeSeed.current = null; socket?.emit('seedWalkLeave')
+    stop(); active.current = false; socket?.emit('seedWalkLeave')
     latest.current = null; setState(null); setSelfId(null); setJoining(false)
   }
   const start = () => {
-    const normalized = normalizeSeedWalkSeed(seed)
-    if (normalized === undefined) { setError('시드는 48자 이하로 입력해주세요.'); return }
-    stop(); activeSeed.current = normalized; sequence.current = 0
-    setError(''); setJoining(true); setParams({ seed: normalized }, { replace: true })
+    stop(); active.current = true; sequence.current = 0
+    setError(''); setJoining(true)
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
-    socket?.emit('seedWalkJoin', { seed: normalized })
+    socket?.emit('seedWalkJoin')
   }
   const playing = !!state && !!sessionInfo
   const me = state?.players.find(player => player.id === selfId)
@@ -135,7 +131,7 @@ export default function SeedWalk() {
       <nav>{playing && <button onClick={leave}>맵 나가기</button>}<Link to="/">포털로 돌아가기</Link></nav>
     </header>
     {playing ? <>
-      <div className={styles.toolbar}><span className={styles.seed}>시드 <strong>{state.seed}</strong></span><span>{state.players.length}명 접속</span><span className={styles.keys}>WASD / 방향키로 이동</span></div>
+      <div className={styles.toolbar}><span>{state.players.length}명 접속</span><span className={styles.keys}>WASD / 방향키로 이동</span></div>
       <div className={styles.stage}>
         <div className={styles.canvas} ref={stage} aria-label="SEED WALK 실시간 멀티플레이 맵" />
         {(!isConnected || joining) && <div className={styles.connection} role="status">다시 연결하고 있습니다…</div>}
@@ -152,13 +148,13 @@ export default function SeedWalk() {
         </div>
         <span className={styles.position}>{me ? `${Math.floor(me.x)}, ${Math.floor(me.y)}` : '접속 중'}</span>
       </div>
-      <footer className={styles.status}><span>같은 시드, 같은 세계. 주소를 공유하면 함께 산책할 수 있어요.</span><span>연못과 바위는 지나갈 수 없어요.</span></footer>
+      <footer className={styles.status}><span>WASD · 방향키 · 모바일 조이스틱</span><span>연못과 바위는 지나갈 수 없어요.</span></footer>
       {error && <p className={styles.error} role="alert">{error}</p>}
     </> : <section className={styles.lobby}>
-      <div className={styles.intro}><span className={styles.eyebrow}>A SMALL SHARED WORLD</span><h1>같은 시드에서<br />함께 걷는 작은 세계.</h1><p>풀밭과 연못 사이를 자유롭게 산책하세요.<br />같은 시드를 입력한 플레이어는 같은 맵에서 만납니다.</p><div className={styles.legend}><span>● 풀밭</span><span>■ 연못</span><span>◆ 바위</span></div></div>
-      <div className={styles.card}><h2>산책 시작하기</h2><p>시드가 같으면 지형도 항상 같아요.</p>
-        <form onSubmit={event => { event.preventDefault(); start() }}><label htmlFor="walk-seed">맵 시드</label><input id="walk-seed" value={seed} onChange={event => setSeed(event.target.value)} maxLength={48} placeholder="예: gamebox, 우리들의 숲" />
-          {isSessionReady && !sessionInfo ? <Link className={styles.login} to={`/login?next=seed-walk&seed=${encodeURIComponent(seed)}`}>GAME BOX 로그인하고 시작</Link> : <button disabled={!isConnected || !sessionInfo || joining}>{joining ? '맵에 접속 중…' : '이 맵에 접속하기 →'}</button>}
+      <div className={styles.intro}><h1>함께 걷는 작은 초원.</h1><p>풀밭과 연못 사이를 자유롭게 산책하세요.</p><div className={styles.legend}><span>● 풀밭</span><span>■ 연못</span><span>◆ 바위</span></div></div>
+      <div className={styles.card}><h2>산책 시작하기</h2>
+        <form onSubmit={event => { event.preventDefault(); start() }}>
+          {isSessionReady && !sessionInfo ? <Link className={styles.login} to="/login?next=seed-walk">로그인하고 시작</Link> : <button disabled={!isConnected || !sessionInfo || joining}>{joining ? '맵에 접속 중…' : '게임 시작 →'}</button>}
         </form>
         <p className={styles.hint}>WASD · 방향키 · 모바일 조이스틱<br />최대 32명 · 전투 없이 자유로운 이동</p>
         {error && <p className={styles.error} role="alert">{error}</p>}

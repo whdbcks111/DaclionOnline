@@ -20,10 +20,8 @@ export default function Portal() {
       </nav>
     </header>
     <section className={styles.intro}>
-      <p className={styles.eyebrow}>WEB GAME COLLECTION</p>
-      <h1>하나의 계정으로,<br />새로운 세계마다 새로운 모험.</h1>
+      <h1>어떤 게임을 플레이할까요?</h1>
       <p>직접 만든 웹게임을 모아두었습니다. 마음에 드는 게임을 골라 브라우저에서 바로 시작하세요.</p>
-      <p>기존 DaclionOnline 계정으로 로그인할 수 있습니다. 캐릭터와 모험 기록도 그대로 이어집니다.</p>
     </section>
     <section aria-labelledby="games-title">
       <div className={styles.sectionTitle}><h2 id="games-title">플레이할 게임</h2><span>2개의 게임</span></div>
@@ -35,7 +33,6 @@ export default function Portal() {
           <p>채팅으로 펼치는 모험. 몬스터를 사냥하고 직업을 성장시키며, 낚시와 제작으로 나만의 일상을 만들어보세요.</p>
           <ul><li>전투와 탐험</li><li>생활과 제작</li><li>파티와 거래</li></ul>
           <a className={styles.play} href={getGameStartUrl()}>게임 시작 →</a>
-          <small>첫 플레이 시 캐릭터 이름만 설정하면 됩니다.</small>
         </div>
       </article>
       <article className={styles.card}>
@@ -52,13 +49,11 @@ export default function Portal() {
         </div>
         <div className={styles.cardContent}>
           <span className={styles.eyebrow}>2D 멀티플레이 산책</span><h3>SEED WALK</h3>
-          <p>시드로 만들어지는 작은 세계에서 함께 걸어보세요. 같은 시드를 입력하면 같은 맵에서 만나고, WASD로 자유롭게 이동할 수 있어요.</p>
-          <ul><li>시드 기반 맵</li><li>실시간 이동</li><li>모바일 조작</li></ul>
+          <p>작은 초원에서 다른 플레이어와 함께 걸어보세요. WASD나 모바일 조이스틱으로 자유롭게 이동할 수 있어요.</p>
+          <ul><li>공유 초원 맵</li><li>실시간 이동</li><li>모바일 조작</li></ul>
           <Link className={styles.play} to="/games/seed-walk/">게임 시작 →</Link>
-          <small>GAME BOX 계정으로 바로 시작할 수 있습니다.</small>
         </div>
       </article>
     </section>
-    <footer>다운로드 없이 브라우저에서 즐기는 웹게임</footer>
   </main>
 }

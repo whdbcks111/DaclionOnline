@@ -26,7 +26,7 @@ test('실제 두 소켓은 같은 맵에서 상대 이동과 퇴장을 받고 �
     const clients = [...tokens, ''].map(token => connect(url, { transports: ['websocket'], reconnection: false, extraHeaders: token ? { Cookie: `sessionToken=${token}` } : {} }));
     const join = async (client: Socket): Promise<SeedWalkJoinResult> => {
         const result = clientOnce(client, 'seedWalkJoined');
-        client.emit('seedWalkJoin', { seed: 'network-test' });
+        client.emit('seedWalkJoin', { seed: client === clients[0] ? 'first' : 'second' });
         return (await result)[0];
     };
     try {
@@ -36,6 +36,7 @@ test('실제 두 소켓은 같은 맵에서 상대 이동과 퇴장을 받고 �
         assert.equal(guest.ok, false);
         assert.equal(first.state.worldId, second.state.worldId);
         assert.equal(second.state.players.length, 2);
+        assert.equal(second.state.seed, 'gamebox');
         const beforeA = second.state.players.find(player => player.id === 99611)!;
         const beforeB = second.state.players.find(player => player.id === 99612)!;
         const serverA = io.sockets.sockets.get(clients[0].id!)!;

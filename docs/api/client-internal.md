@@ -84,6 +84,8 @@
 
 도메인 탐색은 `siteNavigation.getPortalUrl/getGameStartUrl/isDaclionSite`, 통신 URL은 `serverUrl.SERVER_URL`을 재사용한다. GAME BOX에서 게임을 실행할 때는 SPA 라우팅 대신 HTTP 인증 연결을 통해 게임 도메인으로 이동한다.
 
-`portal/AuthLayout({ title, description, children, footer })`가 공통 계정 화면의 반응형 레이아웃을 제공한다. 각 폼은 공통 CSS module의 field/inline/error/submit을 재사용하고 별도 절대 위치 폼을 만들지 않는다.
+`portal/AuthLayout({ title, description?, children, footer })`가 공통 계정 화면의 반응형 레이아웃을 제공한다. 각 폼은 공통 CSS module의 field/inline/error/submit을 재사용하고 별도 절대 위치 폼을 만들지 않는다.
 
-`games/seed-walk/SeedWalk`가 시드 로비·입력·서버 snapshot을 소유한다. `SeedWalkScene(selfId, readState)`는 Phaser 렌더링·카메라·좌표 보간만 담당하며 서버 모델을 직접 참조하지 않는다. unmount에서 Phaser와 ResizeObserver·입력 listener·heartbeat를 정리한다.
+`games/seed-walk/SeedWalk`가 공용 맵 로비·이동 입력·서버 snapshot을 소유한다. `SeedWalkScene(selfId, readState)`는 Phaser 렌더링·카메라·좌표 보간만 담당하며 서버 모델을 직접 참조하지 않는다. unmount에서 Phaser와 ResizeObserver·입력 listener·heartbeat를 정리한다.
+
+SEED WALK 입장은 시드 선택 없이 모든 사용자가 서버 고정 `gamebox` 공용 맵(최대 32명)에 참가한다.
