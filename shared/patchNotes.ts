@@ -73,6 +73,9 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.53', '2026-11-09',
+        [CHANGED, '게임 포털의 이름을 `GAME BOX`로 변경했습니다. 로그인 화면과 인증 메일에도 같은 이름을 표시합니다.'],
+    ),
     definePatchNote('1.0.52', '2026-11-09',
         [FEATURE,
             '여러 웹게임을 한 계정으로 즐길 수 있는 게임 포털을 추가했습니다. 포털에서 DaclionOnline을 선택해 모험을 시작할 수 있습니다.',

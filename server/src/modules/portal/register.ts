@@ -228,7 +228,7 @@ export const initRegister = () => {
 
                 await sendMail({
                     to: normalizedEmail,
-                    subject: '[웹게임 포털] 회원가입 인증번호 안내',
+                    subject: '[GAME BOX] 회원가입 인증번호 안내',
                     html: verifyHtmlTemplate
                 });
 

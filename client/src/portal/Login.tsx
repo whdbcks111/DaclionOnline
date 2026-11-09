@@ -63,7 +63,7 @@ function Login() {
 
   return <>
   
-    <div className={styles.title}>웹게임 포털</div>
+    <div className={styles.title}>GAME BOX</div>
 
     <div className={styles.loginContainer}>
       <div className={styles.label}>로그인</div>

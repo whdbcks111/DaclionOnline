@@ -91,7 +91,7 @@ export function initPasswordReset(): void {
                     const code = randomDigits(6);
                     await sendMail({
                         to: email,
-                        subject: '[웹게임 포털] 비밀번호 재설정 인증번호 안내',
+                        subject: '[GAME BOX] 비밀번호 재설정 인증번호 안내',
                         html: loadTemplate('verify-code', {
                             purpose: '비밀번호 재설정',
                             code,

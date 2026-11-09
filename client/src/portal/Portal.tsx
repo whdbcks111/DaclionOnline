@@ -11,7 +11,7 @@ export default function Portal() {
   }
   return <main className={styles.page}>
     <header className={styles.header}>
-      <Link to="/" className={styles.brand}>웹게임 포털</Link>
+      <Link to="/" className={styles.brand}>GAME BOX</Link>
       <nav aria-label="계정 메뉴">
         {!isSessionReady ? <span>계정 확인 중…</span> : sessionInfo ? <>
           <span>{sessionInfo.nickname}님</span><button onClick={logout} disabled={!isConnected}>로그아웃</button>
