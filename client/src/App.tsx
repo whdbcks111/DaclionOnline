@@ -1,3 +1,4 @@
+import { isDaclionSite } from './utils/siteNavigation'
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { SocketProvider } from './context/SocketContext'
@@ -19,7 +20,7 @@ export default function App() {
   return <ThemeProvider><SocketProvider><BrowserRouter>
     <ThemeToggle /><Notification />
     <Suspense fallback={<p role="status">화면을 불러오고 있습니다…</p>}><Routes>
-      <Route path="/" element={<Portal />} />
+      <Route path="/" element={isDaclionSite() ? <Navigate to="/games/daclion/" replace /> : <Portal />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/password-reset" element={<PasswordReset />} />

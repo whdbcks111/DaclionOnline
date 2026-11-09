@@ -1,5 +1,6 @@
+import { getPortalUrl } from '../../utils/siteNavigation'
 import { useEffect, useState } from 'react'
-import { Link, Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import type { GameEntryResult } from '@shared/types'
 import { useSocket } from '../../context/SocketContext'
 import styles from '../../portal/Portal.module.scss'
@@ -22,11 +23,11 @@ export default function GameGate() {
 
   if (isSessionReady && sessionInfo && isConnected && result.ok) return <Outlet />
   return <main className={styles.page}><div className={styles.setup}>
-    <Link to="/">← 포털로 돌아가기</Link>
+    <a href={getPortalUrl()}>← 포털로 돌아가기</a>
     <h1>DaclionOnline</h1>
     {!isConnected || !isSessionReady ? <p role="status">서버에 연결하고 있습니다…</p> : !sessionInfo ? <>
       <p>포털 계정으로 로그인하면 모험을 시작할 수 있습니다.</p>
-      <Link className={styles.play} to="/login?next=daclion">포털 로그인</Link>
+      <a className={styles.play} href={getPortalUrl("/login?next=daclion")}>포털 로그인</a>
     </> : result.needsProfile || result.error ? <>
       <p>{result.needsProfile ? '처음 오셨군요! 게임에서 사용할 캐릭터 이름을 정해주세요. 포털 닉네임과 다르게 사용할 수 있습니다.' : '게임에 연결하지 못했습니다. 다시 접속해주세요.'}</p>
       <form onSubmit={event => {

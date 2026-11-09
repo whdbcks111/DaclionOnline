@@ -52,3 +52,15 @@
 - 잘못 인코딩된 URI는 400으로 종료한다.
 
 새 HTTP API를 추가할 때는 `server/src/index.ts`의 `/api` 라우팅 경계, 인증/권한, payload 검증, 응답 타입을 함께 정의하고 이 문서를 갱신한다.
+
+## GAME BOX와 게임 도메인
+
+운영 서버는 같은 IP/포트에서 Host로 사이트를 구분한다. `gamebox.mcv.kr/`는 GAME BOX, `daclion.mcv.kr/`는 DaclionOnline 진입 화면이다. 게임 도메인의 HTML title도 Daclion Online으로 제공한다. 다른 호스트와 로컬 개발은 기존 단일 origin 경로를 유지한다.
+
+| 엔드포인트 | 허용 도메인 | 동작 |
+| --- | --- | --- |
+| `GET /auth/start` | daclion.mcv.kr | 120초짜리 HttpOnly/SameSite=Lax state 쿠키를 생성하고 포털 인증 연결로 redirect |
+| `GET /auth/daclion?state=…` | gamebox.mcv.kr | state가 없으면 게임의 연결 시작으로 redirect. 포털 세션이 없으면 로그인으로, 있으면 30초 유효 일회용 코드로 게임 callback에 redirect |
+| `GET /auth/portal?code=…&state=…` | daclion.mcv.kr | 게임 호스트의 state 쿠키 일치와 코드·세션 유효성을 확인하고 호스트 전용 세션 쿠키를 설정한 뒤 게임 루트로 redirect |
+
+`/auth/*` 응답은 `Cache-Control: no-store`, `Referrer-Policy: no-referrer`를 사용한다. 로그인 토큰을 URL로 보내지 않으며 일회용 코드는 서버 메모리에만 보관하고 최대 1,000개로 제한한다. HTTPS 요청에는 Secure 쿠키를 사용한다. `.mcv.kr` 전체를 대상으로 하는 Domain 쿠키는 발급하지 않는다. 게임 도메인의 로그인/가입/비밀번호 재설정 HTTP 요청은 GAME BOX로 이동하고 포털의 `/games/daclion/*`는 인증 연결을 거쳐 게임으로 이동한다. 게임과 포털은 기존 세션 하나를 연결하므로 로그아웃·비밀번호 재설정의 세션 폐기는 양쪽에 적용된다.

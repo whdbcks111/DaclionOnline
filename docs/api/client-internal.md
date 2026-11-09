@@ -81,3 +81,7 @@
 ## 포털과 게임별 화면
 
 `portal/Portal`이 `/`를, `games/daclion/GameGate`가 `/games/daclion/*` 입장과 최초 정보 입력을 담당한다. `SocketContext`의 `isSessionReady`는 인증 복원 응답 수신 여부, `gameNickname`은 게임 표시명, `sessionInfo.nickname`은 포털 표시명이다. `updateNickname`은 게임 이름만 변경한다. production의 서버 URL 기본값은 현재 origin이며 `VITE_SERVER_URL` 명시값과 개발 localhost 기본값을 지원한다. `Drawer.onPortal`로 게임을 나가도 포털 로그인은 유지한다.
+
+도메인 탐색은 `siteNavigation.getPortalUrl/getGameStartUrl/isDaclionSite`, 통신 URL은 `serverUrl.SERVER_URL`을 재사용한다. GAME BOX에서 게임을 실행할 때는 SPA 라우팅 대신 HTTP 인증 연결을 통해 게임 도메인으로 이동한다.
+
+`portal/AuthLayout({ title, description, children, footer })`가 공통 계정 화면의 반응형 레이아웃을 제공한다. 각 폼은 공통 CSS module의 field/inline/error/submit을 재사용하고 별도 절대 위치 폼을 만들지 않는다.

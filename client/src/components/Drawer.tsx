@@ -3,7 +3,7 @@ import styles from './Drawer.module.scss'
 import type { ChannelInfo } from '@shared/types'
 import DisplaySettingsDialog from './DisplaySettingsDialog'
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)
+import { SERVER_URL } from '../utils/serverUrl'
 
 interface Props {
     open: boolean

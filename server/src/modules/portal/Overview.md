@@ -9,3 +9,5 @@
 `loadDaclionNames(userIds)`는 이름을 일괄 로드하고 `getNickname(userId)` 조회 함수만 제공해 순위·관리자 목록에서 프로필 row를 직접 순회하지 않게 한다.
 
 포털의 표시 이름은 `GAME BOX`이며 화면·브라우저 제목·가입/비밀번호 재설정 메일에 동일하게 사용한다.
+
+`siteRouter.ts`는 gamebox.mcv.kr/daclion.mcv.kr의 HTTP 인증·진입 분기를 소유한다. `loginHandoff.ts`는 30초 일회용 코드를 대상 브라우저의 state에 묶으며 코드 재사용·만료·동시 발급 상한을 검증한다. `/auth/start`의 HttpOnly state 쿠키가 callback에서 일치해야 하며 로그인 토큰은 URL에 노출하지 않는다. 테스트는 실제 HTTP Host 분기와 쿠키·코드 검증을 포함한다.

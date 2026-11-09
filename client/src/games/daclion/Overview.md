@@ -18,3 +18,5 @@
 라우트 흐름, 소켓 emit/on, 화면 책임이 바뀌면 이 문서와 [`docs/api/socket-events.md`](../../../../docs/api/socket-events.md) 또는 관련 시스템 문서를 갱신한다.
 
 `GameGate.tsx`는 포털 인증 확인 후 `enterGame`으로 기존 프로필을 조회하거나 최초 캐릭터 이름을 등록한다. 서버 입장 성공 뒤 하위 게임 화면을 mount하며, 게임 영역을 떠나면 `leaveGame`으로 저장·접속 종료하고 포털 로그인은 유지한다. 공개 경로는 `/games/daclion/`, `/games/daclion/guide`, `/games/daclion/patch-notes`, `/games/daclion/admin`이다. 아이콘·미디어는 호환성을 위해 루트 정적 경로를 유지한다.
+
+`daclion.mcv.kr/`에서 게임에 진입한다. GameGate의 포털 로그인과 Home/Drawer의 포털 복귀는 `getPortalUrl`을 사용해 GAME BOX 도메인으로 이동한다. API·Socket·미디어는 현재 origin을 사용한다.

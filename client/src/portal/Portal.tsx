@@ -1,3 +1,4 @@
+import { getGameStartUrl } from '../utils/siteNavigation'
 import { Link } from 'react-router-dom'
 import { useSocket } from '../context/SocketContext'
 import styles from './Portal.module.scss'
@@ -33,7 +34,7 @@ export default function Portal() {
           <h3>DaclionOnline</h3>
           <p>채팅으로 펼치는 모험. 몬스터를 사냥하고 직업을 성장시키며, 낚시와 제작으로 나만의 일상을 만들어보세요.</p>
           <ul><li>전투와 탐험</li><li>생활과 제작</li><li>파티와 거래</li></ul>
-          <Link className={styles.play} to="/games/daclion/">게임 시작 →</Link>
+          <a className={styles.play} href={getGameStartUrl()}>게임 시작 →</a>
           <small>첫 플레이 시 캐릭터 이름만 설정하면 됩니다.</small>
         </div>
       </article>

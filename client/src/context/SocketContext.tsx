@@ -5,7 +5,7 @@ import type { Socket } from 'socket.io-client'
 import type { ClientPresenceState, LoginResult, SessionRestoreData, GameEntryResult } from '@shared/types'
 
 // 서버 주소
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)
+import { SERVER_URL } from '../utils/serverUrl'
 
 export interface SessionInfo {
   userId: number

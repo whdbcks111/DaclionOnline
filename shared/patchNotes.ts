@@ -73,6 +73,12 @@ const CONTENT = PatchNoteCategory.CONTENT_ADDED
 const CHANGED = PatchNoteCategory.CHANGED
 
 const PATCH_NOTES: readonly PatchNoteDefinition[] = [
+    definePatchNote('1.0.54', '2026-11-09',
+        [CHANGED,
+            '`gamebox.mcv.kr`에서는 GAME BOX, `daclion.mcv.kr`에서는 DaclionOnline이 열립니다. 포털 로그인으로 게임을 바로 시작하고 게임 메뉴에서 포털로 돌아갈 수 있습니다.',
+            '로그인·회원가입·비밀번호 찾기 화면을 GAME BOX에 맞춰 새로 디자인했습니다. 포털 복귀 링크를 상단에 분리하고 입력 항목과 이메일 인증 단계를 더 명확하게 표시합니다.',
+        ],
+    ),
     definePatchNote('1.0.53', '2026-11-09',
         [CHANGED, '게임 포털의 이름을 `GAME BOX`로 변경했습니다. 로그인 화면과 인증 메일에도 같은 이름을 표시합니다.'],
     ),

@@ -86,3 +86,9 @@ Express + Socket.io (`server/src/index.ts`)
 클라이언트 `portal/`은 공통 계정과 게임 목록, `games/daclion/`은 게임 화면을 소유한다. 서버는 기술 계층을 유지하며 `modules/portal/`에 공통 인증을 분리한다. 게임 데이터는 기존 `models/data/commands` 도메인과 Player 저장 구조를 유지한다. 새 게임은 별도 화면·도메인과 서버 검증 입장 처리를 추가하고 같은 User ID를 참조하는 GameProfile로 연결한다.
 
 포털 연결 → 세션 복원(캐릭터 미로드) → 게임 선택 → `enterGame` → 프로필 조회/최초 이름 등록 → 게임 room·접속자 등록 → Player 로드와 최초 생성 → 입장 성공 → 게임 UI mount 순서다. `leaveGame`은 게임만 종료하고 세션을 유지한다. 다른 게임 탭이 없으면 저장·unload하며 연결 자체가 끊기면 기존 10초 재접속 유예를 적용한다.
+
+## 도메인별 운영 진입
+
+`gamebox.mcv.kr`과 `daclion.mcv.kr`은 같은 서버 IP를 사용한다. Express의 `modules/portal/siteRouter.ts`가 계정 페이지·게임 링크·인증 연결을 Host별로 처리하며 SPA index title도 도메인별로 제공한다. React의 `/`는 게임 도메인에서 게임 진입으로 이동하고 포털 도메인에서 게임 목록을 표시한다. Nginx나 별도 프로세스 없이 현재 Express 서버에서 처리한다.
+
+운영 클라이언트의 Socket.io·HTTP·미디어는 각 도메인의 현재 origin을 사용한다. `client/src/utils/siteNavigation.ts`는 포털 복귀와 게임 시작 URL을, `serverUrl.ts`는 통신 origin을 소유한다. 로그인은 호스트 전용 쿠키와 일회용 연결 코드로 이어지고 기존 Player 저장 구조는 바꾸지 않는다. 로컬 개발은 `/games/daclion/` 경로 방식과 VITE_SERVER_URL 설정을 유지한다.

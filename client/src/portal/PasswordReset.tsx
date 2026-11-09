@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import type { SimpleResult } from '@shared/types'
 import { useSocket } from '../context/SocketContext'
 import { validateEmail, validatePassword } from '../utils/validators'
-import styles from './PasswordReset.module.scss'
+import styles from './AuthLayout.module.scss'
+import AuthLayout from './AuthLayout'
 
 export default function PasswordReset() {
   const navigate = useNavigate()
@@ -92,26 +93,31 @@ export default function PasswordReset() {
     socket.emit('resetPassword', { code, pw })
   }
 
-  return (
-    <div className={styles.container}>
-      <div className={styles.label}>비밀번호 찾기</div>
-      <input ref={emailRef} type="email" placeholder="가입 이메일" />
-      <button onClick={sendCode}>{codeSent ? '인증번호 다시 받기' : '인증번호 받기'}</button>
-      <input ref={codeRef} inputMode="numeric" maxLength={6} placeholder="6자리 인증번호" />
-      <input ref={passwordRef} type="password" placeholder="새 비밀번호" />
-      <input
-        ref={confirmRef}
-        type="password"
-        placeholder="새 비밀번호 확인"
-        onKeyDown={event => event.key === 'Enter' && resetPassword()}
-      />
-      {message && <div className={styles.ok}>{message}</div>}
-      {error && <div className={styles.error}>{error}</div>}
-      <button className={styles.submit} onClick={resetPassword}>비밀번호 변경</button>
-      <div className={styles.nav}>
-        <Link to="/login">로그인</Link>
-        <Link to="/register">회원가입</Link>
+  return <AuthLayout title="비밀번호 찾기" description="가입한 이메일로 인증번호를 받아 새 비밀번호를 설정하세요."
+    footer={<p>계정이 기억났나요? <Link to="/login">로그인으로 돌아가기</Link></p>}>
+    <form className={styles.form} onSubmit={event => { event.preventDefault(); resetPassword() }}>
+      <div className={styles.field}>
+        <label htmlFor="reset-email">가입 이메일</label>
+        <div className={styles.inline}>
+          <input id="reset-email" ref={emailRef} type="email" autoComplete="email" placeholder="you@example.com" required />
+          <button className={styles.secondary} type="button" onClick={sendCode} disabled={!isConnected}>{codeSent ? '다시 받기' : '인증번호 받기'}</button>
+        </div>
       </div>
-    </div>
-  )
+      <div className={styles.field}>
+        <label htmlFor="reset-code">인증번호</label>
+        <input id="reset-code" ref={codeRef} inputMode="numeric" maxLength={6} autoComplete="one-time-code" placeholder="6자리 인증번호" required />
+      </div>
+      <div className={styles.field}>
+        <label htmlFor="reset-password">새 비밀번호</label>
+        <input id="reset-password" ref={passwordRef} type="password" autoComplete="new-password" placeholder="영문을 포함한 8~30자" required />
+      </div>
+      <div className={styles.field}>
+        <label htmlFor="reset-confirm">새 비밀번호 확인</label>
+        <input id="reset-confirm" ref={confirmRef} type="password" autoComplete="new-password" placeholder="비밀번호를 한 번 더 입력해주세요" required />
+      </div>
+      {message && <p className={styles.ok} role="status">{message}</p>}
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      <button className={styles.submit} type="submit" disabled={!isConnected}>비밀번호 변경</button>
+    </form>
+  </AuthLayout>
 }

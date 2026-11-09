@@ -1,3 +1,5 @@
+import { siteRouter, GAME_HOST } from './modules/portal/siteRouter.js';
+import { readFileSync } from 'node:fs';
 import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
@@ -112,6 +114,9 @@ if (NODE_ENV === 'development') {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// 도메인별 진입과 일회용 포털 인증 연결은 정적 파일보다 먼저 처리한다.
+app.use(siteRouter);
+
 // API 라우트
 app.use('/api', uploadRouter);
 
@@ -119,13 +124,19 @@ app.use('/api', uploadRouter);
 if (NODE_ENV === 'production') {
   const clientDistPath = path.join(process.cwd(), '../client/dist');
 
-  // 정적 파일 제공
-  app.use(express.static(clientDistPath));
+  const indexHtml = readFileSync(path.join(clientDistPath, 'index.html'), 'utf8');
+  const sendSiteIndex: express.RequestHandler = (req, res) => {
+    const html = req.hostname === GAME_HOST
+      ? indexHtml.replace('<title>GAME BOX</title>', '<title>Daclion Online</title>')
+      : indexHtml;
+    res.setHeader('Cache-Control', 'no-cache');
+    res.type('html').send(html);
+  };
+  app.get(['/', '/index.html'], sendSiteIndex);
+  app.use(express.static(clientDistPath, { index: false }));
 
   // SPA를 위한 fallback - 모든 경로를 index.html로
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(clientDistPath, 'index.html'));
-  });
+  app.get('*', sendSiteIndex);
 
   logger.info('정적 파일 제공:', clientDistPath);
 }

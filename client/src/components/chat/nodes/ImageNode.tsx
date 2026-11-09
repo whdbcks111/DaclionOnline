@@ -2,7 +2,7 @@ import { useState } from 'react'
 import ImageViewer from './ImageViewer'
 import styles from './ImageNode.module.scss'
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)
+import { SERVER_URL } from '../../../utils/serverUrl'
 
 interface Props {
   src: string

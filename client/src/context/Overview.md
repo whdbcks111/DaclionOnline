@@ -8,3 +8,5 @@
 Context value는 소비자가 raw state를 우회 변경하지 않도록 목적별 함수 API로 제공한다. 상태 소유권이나 공개 API가 바뀌면 이 문서와 관련 시스템 문서를 갱신한다.
 
 포털 인증과 게임 입장을 분리해 `isSessionReady`와 게임 전용 `gameNickname`을 제공한다. 게임 이름 변경은 공통 `sessionInfo.nickname`을 바꾸지 않는다.
+
+운영 Socket 연결은 `utils/serverUrl.ts`의 현재 origin을 사용한다. 도메인 간 로그인 연결은 HTTP 일회용 코드로 호스트 전용 쿠키를 만든 뒤 기존 sessionRestore를 재사용한다.

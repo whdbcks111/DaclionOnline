@@ -1,3 +1,4 @@
+import { getPortalUrl } from '../../utils/siteNavigation'
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styles from './Home.module.scss'
@@ -34,7 +35,7 @@ import type {
   CompletionItem,
 } from '@shared/types'
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin)
+import { SERVER_URL } from '../../utils/serverUrl'
 const MAX_PENDING_IMAGES = 10
 const CHAT_FOLLOW_THRESHOLD_PX = 48
 const MAX_CHAT_INPUT_HISTORY = 100
@@ -186,7 +187,7 @@ function HomeContent() {
         return
       }
       document.cookie = 'sessionToken=; path=/; max-age=0'
-      navigate('/login', { replace: true })
+      window.location.assign(getPortalUrl('/login'))
     }
     socket.on('logoutResult', onLogout)
     return () => { socket.off('logoutResult', onLogout) }
@@ -999,7 +1000,7 @@ function HomeContent() {
           const adminWindow = window.open('/games/daclion/admin', '_blank')
           if (adminWindow) adminWindow.opener = null
         }}
-        onPortal={() => navigate('/')}
+        onPortal={() => window.location.assign(getPortalUrl())}
         onLogout={() => {
           const token = document.cookie
             .split('; ')
@@ -1007,7 +1008,7 @@ function HomeContent() {
             ?.slice('sessionToken='.length)
           if (!token || !socket) {
             document.cookie = 'sessionToken=; path=/; max-age=0'
-            navigate('/login', { replace: true })
+            window.location.assign(getPortalUrl('/login'))
             return
           }
           socket.emit('logout', decodeURIComponent(token))

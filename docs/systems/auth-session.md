@@ -73,3 +73,7 @@
 기존 계정 자동 연결, 포털/게임 경로와 수명 분리는 [아키텍처](../architecture/overview.md#웹게임-포털과-게임-입장)와 [DB 이전 정책](../data/database.md#포털-계정과-기존-사용자-자동-이전)을 따른다. `modules/portal/`이 공통 인증을, `modules/auth/`는 게임 내 사람 확인을 소유한다.
 
 포털의 표시 이름은 `GAME BOX`이며 화면·브라우저 제목·가입/비밀번호 재설정 메일에 동일하게 사용한다.
+
+운영 도메인은 `gamebox.mcv.kr`(공통 계정/포털)과 `daclion.mcv.kr`(게임)로 나눈다. `siteRouter.ts`와 `LoginHandoff`가 게임 호스트의 브라우저 state 쿠키 + 포털의 기존 세션 + 30초 일회용 코드로 로그인 연결을 검증한다. 포털 로그인 상태이면 게임 진입에서 비밀번호를 다시 입력하지 않는다. 인증 세부 경로는 [HTTP API](../api/http.md#game-box와-게임-도메인)를 따른다. 세션 토큰을 URL 또는 mcv.kr 공용 Domain 쿠키에 넣지 않는다.
+
+인증 화면은 `portal/AuthLayout` 공통 레이아웃을 사용한다. 로그인·가입·재설정 카드와 포털 복귀 링크의 위치를 분리하고, 이메일 인증 발송 후 코드 입력을 표시한다. 각 폼은 native submit과 명시적 label/자동완성을 사용하며 실제 인증 검증과 이벤트 계약은 동일하다.

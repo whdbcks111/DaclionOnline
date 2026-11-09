@@ -1,7 +1,8 @@
 // 로그인 페이지
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import styles from './Register.module.scss'
+import styles from './AuthLayout.module.scss'
+import AuthLayout from './AuthLayout'
 import { useSocket } from '../context/SocketContext';
 import { validateEmail, validateId, validateNickname, validatePassword } from '../utils/validators';
 import type { RegisterResult, SimpleResult } from '@shared/types';
@@ -142,39 +143,50 @@ function Register() {
         setError('서버가 원활하지 않습니다. 잠시 후 다시 시도해주세요.');
     }
 
-    return <>
-
-        <div className={styles.registerContainer}>
-            <div className={styles.label}>회원가입</div>
-            <input type='text' name='id' ref={idRef} className={styles.inputField} placeholder='아이디' />
-            <input
-                type='email'
-                name='email'
-                ref={emailRef}
-                className={styles.inputField}
-                placeholder='이메일'
-                onChange={() => {
-                    setCodeVerified(false);
-                    setVerifyCodeSent(false);
-                    if (verifyCodeRef.current) verifyCodeRef.current.value = '';
-                }}
-            />
-            <button onClick={sendVerifyCode}>{isVerifyCodeSent ? '다시 전송' : '인증번호 발송'}</button>
-            <div className={styles.verifyField}>
-                <input type='text' name='verify-code' ref={verifyCodeRef} placeholder='인증번호 입력' />
-                <button onClick={verifyInputCode}>인증번호 확인</button>
+    return <AuthLayout title="계정 만들기" description="한 번 가입하고, GAME BOX의 게임을 함께 즐겨보세요."
+        footer={<p>이미 계정이 있나요? <Link to='/login'>로그인</Link></p>}>
+        <form className={styles.form} onSubmit={event => { event.preventDefault(); register(); }}>
+            <div className={styles.field}>
+                <label htmlFor="register-id">아이디</label>
+                <input id="register-id" type="text" name="username" ref={idRef} placeholder="영문·숫자·밑줄 4~20자" autoComplete="username" required />
             </div>
-            {isCodeVerified ? <div className={styles.ok}>인증번호 확인이 완료되었습니다.</div> : null}
-            <input type='password' name='password' ref={pwRef} className={styles.inputField} placeholder='비밀번호' />
-            <input type='password' name='password-confirm' ref={pwConfirmRef} className={styles.inputField} placeholder='비밀번호 확인' />
-            <input type='text' name='nickname' ref={nicknameRef} className={styles.inputField} placeholder='포털 닉네임' />
-            {error && error.length > 0 ? <div className={styles.error}>{error}</div> : null}
-            <button className={styles.registerBtn} onClick={register}>회원가입</button>
-            <div className={styles.nav}>
-                <Link to='/login'>로그인</Link>
+            <div className={styles.field}>
+                <label htmlFor="register-email">이메일</label>
+                <div className={styles.inline}>
+                    <input id="register-email" type="email" name="email" ref={emailRef} placeholder="you@example.com" autoComplete="email" required
+                        onChange={() => {
+                            setCodeVerified(false); setVerifyCodeSent(false);
+                            if (verifyCodeRef.current) verifyCodeRef.current.value = '';
+                        }} />
+                    <button className={styles.secondary} type="button" onClick={sendVerifyCode} disabled={!isConnected || isCodeVerified}>{isVerifyCodeSent ? '다시 받기' : '인증번호 받기'}</button>
+                </div>
+                <p className={styles.hint}>계정 확인과 비밀번호 찾기에 사용해요.</p>
             </div>
-        </div>
-    </>;
+            {isVerifyCodeSent && !isCodeVerified && <div className={styles.field}>
+                <label htmlFor="register-code">이메일 인증번호</label>
+                <div className={styles.inline}>
+                    <input id="register-code" type="text" name="verification-code" ref={verifyCodeRef} inputMode="numeric" maxLength={6} autoComplete="one-time-code" placeholder="6자리 인증번호" />
+                    <button className={styles.secondary} type="button" onClick={verifyInputCode} disabled={!isConnected}>확인</button>
+                </div>
+            </div>}
+            {isCodeVerified && <p className={styles.ok} role="status">이메일 인증을 완료했어요.</p>}
+            <div className={styles.field}>
+                <label htmlFor="register-password">비밀번호</label>
+                <input id="register-password" type="password" name="password" ref={pwRef} placeholder="영문을 포함한 8~30자" autoComplete="new-password" required />
+            </div>
+            <div className={styles.field}>
+                <label htmlFor="register-confirm">비밀번호 확인</label>
+                <input id="register-confirm" type="password" name="password-confirm" ref={pwConfirmRef} placeholder="비밀번호를 한 번 더 입력해주세요" autoComplete="new-password" required />
+            </div>
+            <div className={styles.field}>
+                <label htmlFor="register-nickname">포털 닉네임</label>
+                <input id="register-nickname" type="text" name="nickname" ref={nicknameRef} placeholder="GAME BOX에서 사용할 이름" maxLength={12} autoComplete="nickname" required />
+                <p className={styles.hint}>게임 속 캐릭터 이름은 게임을 시작할 때 따로 정할 수 있어요.</p>
+            </div>
+            {error && <p className={styles.error} role="alert">{error}</p>}
+            <button className={styles.submit} type="submit" disabled={!isConnected}>GAME BOX 시작하기</button>
+        </form>
+    </AuthLayout>;
 }
 
 export default Register

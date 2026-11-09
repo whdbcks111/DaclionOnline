@@ -14,9 +14,10 @@ client/src/
 │   ├── variables.scss    # 변수 정의 (색상, 폰트, 간격 등)
 │   ├── mixins.scss       # 재사용 가능한 스타일 함수
 │   └── global.scss       # 전역 스타일
-├── pages/
+├── portal/
 │   ├── Login.tsx
-│   └── Login.module.scss # CSS Modules (컴포넌트 전용)
+│   ├── AuthLayout.tsx
+│   └── AuthLayout.module.scss # 로그인·가입·재설정 공통 스타일
 └── main.tsx              # global.scss import
 ```
 
@@ -31,7 +32,7 @@ client/src/
 **파일명: `Component.module.scss`**
 
 ```scss
-// Login.module.scss
+// Component.module.scss
 @import '../styles/variables.scss';
 @import '../styles/mixins.scss';
 
@@ -54,7 +55,7 @@ client/src/
 **컴포넌트에서 사용:**
 
 ```tsx
-import styles from './Login.module.scss'
+import styles from './Component.module.scss'
 
 function Login() {
   return (
